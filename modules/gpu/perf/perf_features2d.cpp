@@ -1,7 +1,7 @@
 #include "perf_precomp.hpp"
 
 PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_match, testing::Combine(testing::ValuesIn(devices()),
-                                                                        testing::Values(64, 128)))
+                                                                        testing::Values(64, 128, 256)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     int desc_size = std::tr1::get<1>(GetParam());
@@ -19,7 +19,7 @@ PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_match, testing::Combine(testing:
 
     BruteForceMatcher_GPU< L2<float> > matcher;
 
-    declare.time(0.5).iterations(100);
+    declare.time(3.0);
 
     SIMPLE_TEST_CYCLE()
     {
@@ -35,7 +35,7 @@ PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_match, testing::Combine(testing:
 
 PERF_TEST_P(DevInfo_K_DescSize, BruteForceMatcher_knnMatch, testing::Combine(testing::ValuesIn(devices()),
                                                                              testing::Values(2, 3),
-                                                                             testing::Values(64, 128)))
+                                                                             testing::Values(64, 128, 256)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     int k = std::tr1::get<1>(GetParam());
@@ -54,11 +54,11 @@ PERF_TEST_P(DevInfo_K_DescSize, BruteForceMatcher_knnMatch, testing::Combine(tes
 
     BruteForceMatcher_GPU< L2<float> > matcher;
 
-    declare.time(0.5).iterations(100);
+    declare.time(3.0);
 
     SIMPLE_TEST_CYCLE()
     {
-        matcher.knnMatch(query, train, trainIdx, distance, allDist, k);
+        matcher.knnMatchSingle(query, train, trainIdx, distance, allDist, k);
     }
 
     Mat trainIdx_host(trainIdx);
@@ -69,7 +69,7 @@ PERF_TEST_P(DevInfo_K_DescSize, BruteForceMatcher_knnMatch, testing::Combine(tes
 }
 
 PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_radiusMatch, testing::Combine(testing::ValuesIn(devices(SHARED_ATOMICS)),
-                                                                        testing::Values(64, 128)))
+                                                                        testing::Values(64, 128, 256)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     int desc_size = std::tr1::get<1>(GetParam());
@@ -85,7 +85,7 @@ PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_radiusMatch, testing::Combine(te
 
     BruteForceMatcher_GPU< L2<float> > matcher;
 
-    declare.time(0.5).iterations(100);
+    declare.time(3.0);
 
     SIMPLE_TEST_CYCLE()
     {

@@ -121,7 +121,6 @@ namespace cv {  namespace gpu { namespace device
     ///////////////////////////////////////////////////////////////////////////////
     // Reduction
 
-    // reduction
     template <int n, typename T, typename Op> __device__ __forceinline__ void reduce(volatile T* data, T& partial_reduction, int tid, const Op& op)
     {
         StaticAssert<n >= 8 && n <= 512>::check();
@@ -133,6 +132,13 @@ namespace cv {  namespace gpu { namespace device
     {
         StaticAssert<n >= 8 && n <= 512>::check();
         detail::PredValReductionDispatcher<n <= 64>::reduce<n>(myData, myVal, sdata, sval, tid, pred);
+    }
+
+    template <int n, typename T, typename V1, typename V2, typename Pred> 
+    __device__ __forceinline__ void reducePredVal2(volatile T* sdata, T& myData, V1* sval1, V1& myVal1, V2* sval2, V2& myVal2, int tid, const Pred& pred)
+    {
+        StaticAssert<n >= 8 && n <= 512>::check();
+        detail::PredVal2ReductionDispatcher<n <= 64>::reduce<n>(myData, myVal1, myVal2, sdata, sval1, sval2, tid, pred);
     }
     
     ///////////////////////////////////////////////////////////////////////////////

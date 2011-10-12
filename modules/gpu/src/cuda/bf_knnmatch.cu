@@ -49,153 +49,334 @@ using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace bf_knnmatch
 {
-    template <typename VecDiff, typename Dist, typename T, typename Mask>
-    __device__ void distanceCalcLoop(const PtrStep_<T>& query, const DevMem2D_<T>& train, const Mask& m, int queryIdx,
-        typename Dist::result_type& distMin1, typename Dist::result_type& distMin2, int& bestTrainIdx1, int& bestTrainIdx2, 
-        typename Dist::result_type* smem)
+    ///////////////////////////////////////////////////////////////////////////////
+    // Reduction
+
+    template <int BLOCK_SIZE> 
+    __device__ void findBestMatch(float& bestDistance1, float& bestDistance2, 
+                                  int& bestTrainIdx1, int& bestTrainIdx2, 
+                                  float* s_distance, int* s_trainIdx)
     {
-        const VecDiff vecDiff(query.ptr(queryIdx), train.cols, (typename Dist::value_type*)smem, threadIdx.y * blockDim.x + threadIdx.x, threadIdx.x);
-        
-        typename Dist::result_type* sdiffRow = smem + blockDim.x * threadIdx.y;
-        
-        distMin1 = numeric_limits<typename Dist::result_type>::max();
-        distMin2 = numeric_limits<typename Dist::result_type>::max();
+        float myBestDistance1 = numeric_limits<float>::max(); 
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
 
-        bestTrainIdx1 = -1;
-        bestTrainIdx2 = -1;
+        s_distance += threadIdx.y * BLOCK_SIZE;
+        s_trainIdx += threadIdx.y * BLOCK_SIZE;
 
-        for (int trainIdx = threadIdx.y; trainIdx < train.rows; trainIdx += blockDim.y)
+        s_distance[threadIdx.x] = bestDistance1;
+        s_trainIdx[threadIdx.x] = bestTrainIdx1;
+
+        __syncthreads();
+
+        if (threadIdx.x == 0)
         {
-            if (m(queryIdx, trainIdx))
+            #pragma unroll
+            for (int i = 0; i < BLOCK_SIZE; ++i)
             {
-                Dist dist;
+                float val = s_distance[i];
 
-                const T* trainRow = train.ptr(trainIdx);
-                
-                vecDiff.calc(trainRow, train.cols, dist, sdiffRow, threadIdx.x);
-
-                const typename Dist::result_type val = dist;
-
-                if (val < distMin1)
+                if (val < myBestDistance1)
                 {
-                    distMin1 = val;
+                    myBestDistance2 = myBestDistance1;
+                    myBestTrainIdx2 = myBestTrainIdx1;
+
+                    myBestDistance1 = val;
+                    myBestTrainIdx1 = s_trainIdx[i];
+                }
+                else if (val < myBestDistance2)
+                {
+                    myBestDistance2 = val;
+                    myBestTrainIdx2 = s_trainIdx[i];
+                }
+            }
+        }
+
+        __syncthreads();
+
+        s_distance[threadIdx.x] = bestDistance2;
+        s_trainIdx[threadIdx.x] = bestTrainIdx2;
+
+        __syncthreads();
+
+        if (threadIdx.x == 0)
+        {
+            #pragma unroll
+            for (int i = 0; i < BLOCK_SIZE; ++i)
+            {
+                float val = s_distance[i];
+
+                if (val < myBestDistance2)
+                {
+                    myBestDistance2 = val;
+                    myBestTrainIdx2 = s_trainIdx[i];
+                }
+            }
+        }
+
+        bestDistance1 = myBestDistance1;
+        bestDistance2 = myBestDistance2;
+
+        bestTrainIdx1 = myBestTrainIdx1;
+        bestTrainIdx2 = myBestTrainIdx2;
+    }
+
+    template <int BLOCK_SIZE> 
+    __device__ void findBestMatch(float& bestDistance1, float& bestDistance2, 
+                                   int& bestTrainIdx1, int& bestTrainIdx2, 
+                                   int& bestImgIdx1, int& bestImgIdx2, 
+                                   float* s_distance, int* s_trainIdx, int* s_imgIdx)
+    {
+        float myBestDistance1 = numeric_limits<float>::max(); 
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
+        int myBestImgIdx1 = -1;
+        int myBestImgIdx2 = -1;
+
+        s_distance += threadIdx.y * BLOCK_SIZE;
+        s_trainIdx += threadIdx.y * BLOCK_SIZE;
+        s_imgIdx   += threadIdx.y * BLOCK_SIZE;
+
+        s_distance[threadIdx.x] = bestDistance1;
+        s_trainIdx[threadIdx.x] = bestTrainIdx1;
+        s_imgIdx[threadIdx.x]   = bestImgIdx1;
+
+        __syncthreads();
+
+        if (threadIdx.x == 0)
+        {
+            #pragma unroll
+            for (int i = 0; i < BLOCK_SIZE; ++i)
+            {
+                float val = s_distance[i];
+
+                if (val < myBestDistance1)
+                {
+                    myBestDistance2 = myBestDistance1;
+                    myBestTrainIdx2 = myBestTrainIdx1;
+                    myBestImgIdx2   = myBestImgIdx1;
+
+                    myBestDistance1 = val;
+                    myBestTrainIdx1 = s_trainIdx[i];
+                    myBestImgIdx1   = s_imgIdx[i];
+                }
+                else if (val < myBestDistance2)
+                {
+                    myBestDistance2 = val;
+                    myBestTrainIdx2 = s_trainIdx[i];
+                    myBestImgIdx2   = s_imgIdx[i];
+                }
+            }
+        }
+
+        __syncthreads();
+
+        s_distance[threadIdx.x] = bestDistance2;
+        s_trainIdx[threadIdx.x] = bestTrainIdx2;
+        s_imgIdx[threadIdx.x]   = bestImgIdx2;
+
+        __syncthreads();
+
+        if (threadIdx.x == 0)
+        {
+            #pragma unroll
+            for (int i = 0; i < BLOCK_SIZE; ++i)
+            {
+                float val = s_distance[i];
+
+                if (val < myBestDistance2)
+                {
+                    myBestDistance2 = val;
+                    myBestTrainIdx2 = s_trainIdx[i];
+                    myBestImgIdx2   = s_imgIdx[i];
+                }
+            }
+        }
+
+        bestDistance1 = myBestDistance1;
+        bestDistance2 = myBestDistance2;
+
+        bestTrainIdx1 = myBestTrainIdx1;
+        bestTrainIdx2 = myBestTrainIdx2;
+
+        bestImgIdx1 = myBestImgIdx1;
+        bestImgIdx2 = myBestImgIdx2;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Match Unrolled Cached
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename T, typename U> 
+    __device__ void loadQueryToSmem(int queryIdx, const DevMem2D_<T>& query, U* s_query)
+    {
+        #pragma unroll
+        for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; ++i)
+        {
+            const int loadX = threadIdx.x + i * BLOCK_SIZE;
+            s_query[threadIdx.y * MAX_DESC_LEN + loadX] = loadX < query.cols ? query.ptr(min(queryIdx, query.rows - 1))[loadX] : 0;
+        }
+    }
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    __device__ void loopUnrolledCached(int queryIdx, const DevMem2D_<T>& query, int imgIdx, const DevMem2D_<T>& train, const Mask& mask, 
+                                       typename Dist::value_type* s_query, typename Dist::value_type* s_train, 
+                                       float& bestDistance1, float& bestDistance2, 
+                                       int& bestTrainIdx1, int& bestTrainIdx2, 
+                                       int& bestImgIdx1, int& bestImgIdx2)
+    {
+        for (int t = 0, endt = (train.rows + BLOCK_SIZE - 1) / BLOCK_SIZE; t < endt; ++t)
+        {
+            Dist dist;
+
+            #pragma unroll
+            for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; ++i)
+            {
+                const int loadX = threadIdx.x + i * BLOCK_SIZE;
+
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = loadX < train.cols ? train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX] : 0;
+
+                __syncthreads();
+
+                #pragma unroll
+                for (int j = 0; j < BLOCK_SIZE; ++j)
+                    dist.reduceIter(s_query[threadIdx.y * MAX_DESC_LEN + i * BLOCK_SIZE + j], s_train[j * BLOCK_SIZE + threadIdx.x]);
+
+                __syncthreads();
+            }
+
+            typename Dist::result_type distVal = dist;
+
+            const int trainIdx = t * BLOCK_SIZE + threadIdx.x;
+
+            if (queryIdx < query.rows && trainIdx < train.rows && mask(queryIdx, trainIdx))
+            {
+                if (distVal < bestDistance1)
+                {
+                    bestImgIdx2   = bestImgIdx1;
+                    bestDistance2 = bestDistance1;
+                    bestTrainIdx2 = bestTrainIdx1;
+
+                    bestImgIdx1   = imgIdx;
+                    bestDistance1 = distVal;
                     bestTrainIdx1 = trainIdx;
                 }
-                else if (val < distMin2)
+                else if (distVal < bestDistance2)
                 {
-                    distMin2 = val;
+                    bestImgIdx2   = imgIdx;
+                    bestDistance2 = distVal;
                     bestTrainIdx2 = trainIdx;
                 }
             }
         }
     }
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename VecDiff, typename Dist, typename T, typename Mask>
-    __global__ void knnMatch2(const PtrStep_<T> query, const DevMem2D_<T> train, const Mask m, int2* trainIdx, float2* distance)
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    __global__ void matchUnrolledCached(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, int2* bestTrainIdx, float2* bestDistance)
     {
-        typedef typename Dist::result_type result_type;
-        typedef typename Dist::value_type value_type;
+        extern __shared__ int smem[];
 
-        __shared__ result_type smem[BLOCK_DIM_X * BLOCK_DIM_Y];
+        const int queryIdx = blockIdx.x * BLOCK_SIZE + threadIdx.y;
 
-        const int queryIdx = blockIdx.x;
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * MAX_DESC_LEN);
 
-        result_type distMin1;
-        result_type distMin2;
+        loadQueryToSmem<BLOCK_SIZE, MAX_DESC_LEN>(queryIdx, query, s_query);
 
-        int bestTrainIdx1;
-        int bestTrainIdx2;
+        float myBestDistance1 = numeric_limits<float>::max();
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
 
-        distanceCalcLoop<VecDiff, Dist>(query, train, m, queryIdx, distMin1, distMin2, bestTrainIdx1, bestTrainIdx2, smem);
+        loopUnrolledCached<BLOCK_SIZE, MAX_DESC_LEN, Dist>(queryIdx, query, 0, train, mask, s_query, s_train, myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestTrainIdx1, myBestTrainIdx2);
+
         __syncthreads();
 
-        volatile result_type* sdistMinRow = smem;
-        volatile int* sbestTrainIdxRow = (int*)(sdistMinRow + 2 * BLOCK_DIM_Y);
+        float* s_distance = (float*)(smem);
+        int* s_trainIdx = (int*)(smem + BLOCK_SIZE * BLOCK_SIZE);
 
-        if (threadIdx.x == 0)
+        findBestMatch<BLOCK_SIZE>(myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, s_distance, s_trainIdx);
+
+        if (queryIdx < query.rows && threadIdx.x == 0)
         {
-            sdistMinRow[threadIdx.y] = distMin1;
-            sdistMinRow[threadIdx.y + BLOCK_DIM_Y] = distMin2;
-
-            sbestTrainIdxRow[threadIdx.y] = bestTrainIdx1;            
-            sbestTrainIdxRow[threadIdx.y + BLOCK_DIM_Y] = bestTrainIdx2;
-        }
-        __syncthreads();
-
-        if (threadIdx.x == 0 && threadIdx.y == 0)
-        {
-            distMin1 = numeric_limits<result_type>::max();
-            distMin2 = numeric_limits<result_type>::max();
-
-            bestTrainIdx1 = -1;
-            bestTrainIdx2 = -1;
-
-            #pragma unroll
-            for (int i = 0; i < BLOCK_DIM_Y; ++i)
-            {
-                result_type val = sdistMinRow[i];
-
-                if (val < distMin1)
-                {
-                    distMin1 = val;
-                    bestTrainIdx1 = sbestTrainIdxRow[i];
-                }
-                else if (val < distMin2)
-                {
-                    distMin2 = val;
-                    bestTrainIdx2 = sbestTrainIdxRow[i];
-                }
-            }
-
-            #pragma unroll
-            for (int i = BLOCK_DIM_Y; i < 2 * BLOCK_DIM_Y; ++i)
-            {
-                result_type val = sdistMinRow[i];
-
-                if (val < distMin2)
-                {
-                    distMin2 = val;
-                    bestTrainIdx2 = sbestTrainIdxRow[i];
-                }
-            }
-
-            trainIdx[queryIdx] = make_int2(bestTrainIdx1, bestTrainIdx2);
-            distance[queryIdx] = make_float2(distMin1, distMin2);
+            bestTrainIdx[queryIdx] = make_int2(myBestTrainIdx1, myBestTrainIdx2);
+            bestDistance[queryIdx] = make_float2(myBestDistance1, myBestDistance2);
         }
     }
 
-    ///////////////////////////////////////////////////////////////////////////////
-    // Knn 2 Match kernel caller
-
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
-    void knnMatch2Simple_caller(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
-        const DevMem2D_<int2>& trainIdx, const DevMem2D_<float2>& distance, 
-        cudaStream_t stream)
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    void matchUnrolledCached(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
+                             const DevMem2D_<int2>& trainIdx, const DevMem2D_<float2>& distance, 
+                             cudaStream_t stream)
     {
-        const dim3 grid(query.rows, 1, 1);
-        const dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(query.rows, BLOCK_SIZE));
 
-        knnMatch2<BLOCK_DIM_X, BLOCK_DIM_Y, VecDiffGlobal<BLOCK_DIM_X, T>, Dist, T>
-            <<<grid, threads, 0, stream>>>(query, train, mask, trainIdx, distance);
+        const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= BLOCK_SIZE ? MAX_DESC_LEN : BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        matchUnrolledCached<BLOCK_SIZE, MAX_DESC_LEN, Dist><<<grid, block, smemSize, stream>>>(query, train, mask, trainIdx.data, distance.data);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int MAX_LEN, bool LEN_EQ_MAX_LEN, typename Dist, typename T, typename Mask>
-    void knnMatch2Cached_caller(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
-        const DevMem2D_<int2>& trainIdx, const DevMem2D_<float2>& distance, 
-        cudaStream_t stream)
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    __global__ void matchUnrolledCached(const DevMem2D_<T> query, const DevMem2D_<T>* trains, int n, const Mask mask, int2* bestTrainIdx, int2* bestImgIdx, float2* bestDistance)
     {
-        StaticAssert<BLOCK_DIM_X * BLOCK_DIM_Y >= MAX_LEN>::check(); // block size must be greter than descriptors length
-        StaticAssert<MAX_LEN % BLOCK_DIM_X == 0>::check();           // max descriptors length must divide to blockDimX
+        extern __shared__ int smem[];
 
-        const dim3 grid(query.rows, 1, 1);
-        const dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
+        const int queryIdx = blockIdx.x * BLOCK_SIZE + threadIdx.y;
 
-        knnMatch2<BLOCK_DIM_X, BLOCK_DIM_Y, VecDiffCachedRegister<BLOCK_DIM_X, MAX_LEN, LEN_EQ_MAX_LEN, typename Dist::value_type>, Dist, T>
-              <<<grid, threads, 0, stream>>>(query, train, mask, trainIdx.data, distance.data);
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * MAX_DESC_LEN);
+
+        loadQueryToSmem<BLOCK_SIZE, MAX_DESC_LEN>(queryIdx, query, s_query);
+
+        float myBestDistance1 = numeric_limits<float>::max();
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
+        int myBestImgIdx1 = -1;
+        int myBestImgIdx2 = -1;
+
+        Mask m = mask;
+
+        for (int imgIdx = 0; imgIdx < n; ++imgIdx)
+        {
+            const DevMem2D_<T> train = trains[imgIdx];
+            m.next();
+            loopUnrolledCached<BLOCK_SIZE, MAX_DESC_LEN, Dist>(queryIdx, query, imgIdx, train, m, s_query, s_train, myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestImgIdx1, myBestImgIdx2);
+        }
+
+        __syncthreads();
+
+        float* s_distance = (float*)(smem);
+        int* s_trainIdx = (int*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+        int* s_imgIdx = (int*)(smem + 2 * BLOCK_SIZE * BLOCK_SIZE);
+
+        findBestMatch<BLOCK_SIZE>(myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestImgIdx1, myBestImgIdx2, s_distance, s_trainIdx, s_imgIdx);
+
+        if (queryIdx < query.rows && threadIdx.x == 0)
+        {
+            bestTrainIdx[queryIdx] = make_int2(myBestTrainIdx1, myBestTrainIdx2);
+            bestImgIdx[queryIdx] = make_int2(myBestImgIdx1, myBestImgIdx2);
+            bestDistance[queryIdx] = make_float2(myBestDistance1, myBestDistance2);
+        }
+    }
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    void matchUnrolledCached(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask, 
+                             const DevMem2D_<int2>& trainIdx, const DevMem2D_<int2>& imgIdx, const DevMem2D_<float2>& distance, 
+                             cudaStream_t stream)
+    {
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(query.rows, BLOCK_SIZE));
+
+        const size_t smemSize = (BLOCK_SIZE * (MAX_DESC_LEN >= 2 * BLOCK_SIZE ? MAX_DESC_LEN : 2 * BLOCK_SIZE) + BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        matchUnrolledCached<BLOCK_SIZE, MAX_DESC_LEN, Dist><<<grid, block, smemSize, stream>>>(query, trains, n, mask, trainIdx.data, imgIdx.data, distance.data);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
@@ -203,142 +384,597 @@ namespace cv { namespace gpu { namespace bf_knnmatch
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // Knn 2 Match Dispatcher
-    
-    template <typename Dist, typename T, typename Mask>
-    void knnMatch2Dispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& distance, 
-        int cc, cudaStream_t stream)
+    // Match Unrolled
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    __device__ void loopUnrolled(int queryIdx, const DevMem2D_<T>& query, int imgIdx, const DevMem2D_<T>& train, const Mask& mask, 
+                                 typename Dist::value_type* s_query, typename Dist::value_type* s_train, 
+                                 float& bestDistance1, float& bestDistance2, 
+                                 int& bestTrainIdx1, int& bestTrainIdx2, 
+                                 int& bestImgIdx1, int& bestImgIdx2)
     {
-        if (query.cols < 64)
+        for (int t = 0, endt = (train.rows + BLOCK_SIZE - 1) / BLOCK_SIZE; t < endt; ++t)
         {
-            knnMatch2Cached_caller<16, 16, 64, false, Dist>(
-                query, train, mask, 
-                static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> >(distance),
-                stream);
+            Dist dist;
+
+            #pragma unroll
+            for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; ++i)
+            {
+                const int loadX = threadIdx.x + i * BLOCK_SIZE;
+
+                if (loadX < query.cols)
+                {
+                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = query.ptr(min(queryIdx, query.rows - 1))[loadX];
+                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX];
+                }
+                else
+                {                
+                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
+                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+                }
+
+                __syncthreads();
+
+                #pragma unroll
+                for (int j = 0; j < BLOCK_SIZE; ++j)
+                    dist.reduceIter(s_query[threadIdx.y * BLOCK_SIZE + j], s_train[j * BLOCK_SIZE + threadIdx.x]);
+
+                __syncthreads();
+            }
+
+            typename Dist::result_type distVal = dist;
+
+            const int trainIdx = t * BLOCK_SIZE + threadIdx.x;
+
+            if (queryIdx < query.rows && trainIdx < train.rows && mask(queryIdx, trainIdx))
+            {
+                if (distVal < bestDistance1)
+                {
+                    bestImgIdx2   = bestImgIdx1;
+                    bestDistance2 = bestDistance1;
+                    bestTrainIdx2 = bestTrainIdx1;
+
+                    bestImgIdx1   = imgIdx;
+                    bestDistance1 = distVal;
+                    bestTrainIdx1 = trainIdx;
+                }
+                else if (distVal < bestDistance2)
+                {
+                    bestImgIdx2   = imgIdx;
+                    bestDistance2 = distVal;
+                    bestTrainIdx2 = trainIdx;
+                }
+            }
         }
-        else if (query.cols == 64)
+    }
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    __global__ void matchUnrolled(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, int2* bestTrainIdx, float2* bestDistance)
+    {
+        extern __shared__ int smem[];
+
+        const int queryIdx = blockIdx.x * BLOCK_SIZE + threadIdx.y;
+
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+
+        float myBestDistance1 = numeric_limits<float>::max();
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
+
+        loopUnrolled<BLOCK_SIZE, MAX_DESC_LEN, Dist>(queryIdx, query, 0, train, mask, s_query, s_train, myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestTrainIdx1, myBestTrainIdx2);
+
+        __syncthreads();
+
+        float* s_distance = (float*)(smem);
+        int* s_trainIdx = (int*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+
+        findBestMatch<BLOCK_SIZE>(myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, s_distance, s_trainIdx);
+
+        if (queryIdx < query.rows && threadIdx.x == 0)
         {
-            knnMatch2Cached_caller<16, 16, 64, true, Dist>(
-                query, train, mask, 
-                static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> >(distance), 
-                stream);
+            bestTrainIdx[queryIdx] = make_int2(myBestTrainIdx1, myBestTrainIdx2);
+            bestDistance[queryIdx] = make_float2(myBestDistance1, myBestDistance2);
         }
-        else if (query.cols < 128)
+    }
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    void matchUnrolled(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
+                       const DevMem2D_<int2>& trainIdx, const DevMem2D_<float2>& distance, 
+                       cudaStream_t stream)
+    {
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(query.rows, BLOCK_SIZE));
+
+        const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        matchUnrolled<BLOCK_SIZE, MAX_DESC_LEN, Dist><<<grid, block, smemSize, stream>>>(query, train, mask, trainIdx.data, distance.data);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    __global__ void matchUnrolled(const DevMem2D_<T> query, const DevMem2D_<T>* trains, int n, const Mask mask, int2* bestTrainIdx, int2* bestImgIdx, float2* bestDistance)
+    {
+        extern __shared__ int smem[];
+
+        const int queryIdx = blockIdx.x * BLOCK_SIZE + threadIdx.y;
+
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+
+        float myBestDistance1 = numeric_limits<float>::max();
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
+        int myBestImgIdx1 = -1;
+        int myBestImgIdx2 = -1;
+
+        Mask m = mask;
+
+        for (int imgIdx = 0; imgIdx < n; ++imgIdx)
         {
-            knnMatch2Cached_caller<16, 16, 128, false, Dist>(
-                query, train, mask, 
-                static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> >(distance), 
-                stream);
+            const DevMem2D_<T> train = trains[imgIdx];
+            m.next();
+            loopUnrolled<BLOCK_SIZE, MAX_DESC_LEN, Dist>(queryIdx, query, imgIdx, train, m, s_query, s_train, myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestImgIdx1, myBestImgIdx2);
         }
-        else if (query.cols == 128 && cc >= 12)
+
+        __syncthreads();
+
+        float* s_distance = (float*)(smem);
+        int* s_trainIdx = (int*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+        int* s_imgIdx = (int*)(smem + 2 * BLOCK_SIZE * BLOCK_SIZE);
+
+        findBestMatch<BLOCK_SIZE>(myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestImgIdx1, myBestImgIdx2, s_distance, s_trainIdx, s_imgIdx);
+
+        if (queryIdx < query.rows && threadIdx.x == 0)
         {
-            knnMatch2Cached_caller<16, 16, 128, true, Dist>(
-                query, train, mask, 
-                static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> >(distance), 
-                stream);
+            bestTrainIdx[queryIdx] = make_int2(myBestTrainIdx1, myBestTrainIdx2);
+            bestImgIdx[queryIdx] = make_int2(myBestImgIdx1, myBestImgIdx2);
+            bestDistance[queryIdx] = make_float2(myBestDistance1, myBestDistance2);
         }
-        else if (query.cols < 256 && cc >= 12)
+    }
+
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    void matchUnrolled(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask, 
+                       const DevMem2D_<int2>& trainIdx, const DevMem2D_<int2>& imgIdx, const DevMem2D_<float2>& distance, 
+                       cudaStream_t stream)
+    {
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(query.rows, BLOCK_SIZE));
+
+        const size_t smemSize = (3 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        matchUnrolled<BLOCK_SIZE, MAX_DESC_LEN, Dist><<<grid, block, smemSize, stream>>>(query, trains, n, mask, trainIdx.data, imgIdx.data, distance.data);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Match
+
+    template <int BLOCK_SIZE, typename Dist, typename T, typename Mask> 
+    __device__ void loop(int queryIdx, const DevMem2D_<T>& query, int imgIdx, const DevMem2D_<T>& train, const Mask& mask, 
+                         typename Dist::value_type* s_query, typename Dist::value_type* s_train, 
+                         float& bestDistance1, float& bestDistance2, 
+                         int& bestTrainIdx1, int& bestTrainIdx2, 
+                         int& bestImgIdx1, int& bestImgIdx2)
+    {
+        for (int t = 0, endt = (train.rows + BLOCK_SIZE - 1) / BLOCK_SIZE; t < endt; ++t)
         {
-            knnMatch2Cached_caller<16, 16, 256, false, Dist>(
-                query, train, mask, 
-                static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> >(distance), 
-                stream);
+            Dist dist;
+
+            for (int i = 0, endi = (query.cols + BLOCK_SIZE - 1) / BLOCK_SIZE; i < endi; ++i)
+            {
+                const int loadX = threadIdx.x + i * BLOCK_SIZE;
+
+                if (loadX < query.cols)
+                {
+                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = query.ptr(min(queryIdx, query.rows - 1))[loadX];
+                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX];
+                }
+                else
+                {                
+                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
+                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+                }
+
+                __syncthreads();
+
+                #pragma unroll
+                for (int j = 0; j < BLOCK_SIZE; ++j)
+                    dist.reduceIter(s_query[threadIdx.y * BLOCK_SIZE + j], s_train[j * BLOCK_SIZE + threadIdx.x]);
+
+                __syncthreads();
+            }
+
+            typename Dist::result_type distVal = dist;
+
+            const int trainIdx = t * BLOCK_SIZE + threadIdx.x;
+
+            if (queryIdx < query.rows && trainIdx < train.rows && mask(queryIdx, trainIdx))
+            {
+                if (distVal < bestDistance1)
+                {
+                    bestImgIdx2   = bestImgIdx1;
+                    bestDistance2 = bestDistance1;
+                    bestTrainIdx2 = bestTrainIdx1;
+
+                    bestImgIdx1   = imgIdx;
+                    bestDistance1 = distVal;
+                    bestTrainIdx1 = trainIdx;
+                }
+                else if (distVal < bestDistance2)
+                {
+                    bestImgIdx2   = imgIdx;
+                    bestDistance2 = distVal;
+                    bestTrainIdx2 = trainIdx;
+                }
+            }
         }
-        else if (query.cols == 256 && cc >= 12)
+    }
+
+    template <int BLOCK_SIZE, typename Dist, typename T, typename Mask> 
+    __global__ void match(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, int2* bestTrainIdx, float2* bestDistance)
+    {
+        extern __shared__ int smem[];
+
+        const int queryIdx = blockIdx.x * BLOCK_SIZE + threadIdx.y;
+
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+
+        float myBestDistance1 = numeric_limits<float>::max();
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
+
+        loop<BLOCK_SIZE, Dist>(queryIdx, query, 0, train, mask, s_query, s_train, myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestTrainIdx1, myBestTrainIdx2);
+
+        __syncthreads();
+
+        float* s_distance = (float*)(smem);
+        int* s_trainIdx = (int*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+
+        findBestMatch<BLOCK_SIZE>(myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, s_distance, s_trainIdx);
+
+        if (queryIdx < query.rows && threadIdx.x == 0)
         {
-            knnMatch2Cached_caller<16, 16, 256, true, Dist>(
-                query, train, mask, 
-                static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> >(distance), 
-                stream);
+            bestTrainIdx[queryIdx] = make_int2(myBestTrainIdx1, myBestTrainIdx2);
+            bestDistance[queryIdx] = make_float2(myBestDistance1, myBestDistance2);
+        }
+    }
+
+    template <int BLOCK_SIZE, typename Dist, typename T, typename Mask> 
+    void match(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
+               const DevMem2D_<int2>& trainIdx, const DevMem2D_<float2>& distance, 
+               cudaStream_t stream)
+    {
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(query.rows, BLOCK_SIZE));
+
+        const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        match<BLOCK_SIZE, Dist><<<grid, block, smemSize, stream>>>(query, train, mask, trainIdx.data, distance.data);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    template <int BLOCK_SIZE, typename Dist, typename T, typename Mask> 
+    __global__ void match(const DevMem2D_<T> query, const DevMem2D_<T>* trains, int n, const Mask mask, int2* bestTrainIdx, int2* bestImgIdx, float2* bestDistance)
+    {
+        extern __shared__ int smem[];
+
+        const int queryIdx = blockIdx.x * BLOCK_SIZE + threadIdx.y;
+
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+
+        float myBestDistance1 = numeric_limits<float>::max();
+        float myBestDistance2 = numeric_limits<float>::max();
+        int myBestTrainIdx1 = -1;
+        int myBestTrainIdx2 = -1;
+        int myBestImgIdx1 = -1;
+        int myBestImgIdx2 = -1;
+
+        Mask m = mask;
+
+        for (int imgIdx = 0; imgIdx < n; ++imgIdx)
+        {
+            const DevMem2D_<T> train = trains[imgIdx];
+            m.next();
+            loop<BLOCK_SIZE, Dist>(queryIdx, query, imgIdx, train, m, s_query, s_train, myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestImgIdx1, myBestImgIdx2);
+        }
+
+        __syncthreads();
+
+        float* s_distance = (float*)(smem);
+        int* s_trainIdx = (int*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+        int* s_imgIdx = (int*)(smem + 2 * BLOCK_SIZE * BLOCK_SIZE);
+
+        findBestMatch<BLOCK_SIZE>(myBestDistance1, myBestDistance2, myBestTrainIdx1, myBestTrainIdx2, myBestImgIdx1, myBestImgIdx2, s_distance, s_trainIdx, s_imgIdx);
+
+        if (queryIdx < query.rows && threadIdx.x == 0)
+        {
+            bestTrainIdx[queryIdx] = make_int2(myBestTrainIdx1, myBestTrainIdx2);
+            bestImgIdx[queryIdx] = make_int2(myBestImgIdx1, myBestImgIdx2);
+            bestDistance[queryIdx] = make_float2(myBestDistance1, myBestDistance2);
+        }
+    }
+
+    template <int BLOCK_SIZE, typename Dist, typename T, typename Mask> 
+    void match(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask, 
+               const DevMem2D_<int2>& trainIdx, const DevMem2D_<int2>& imgIdx, const DevMem2D_<float2>& distance, 
+               cudaStream_t stream)
+    {
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(query.rows, BLOCK_SIZE));
+
+        const size_t smemSize = (3 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        match<BLOCK_SIZE, Dist><<<grid, block, smemSize, stream>>>(query, trains, n, mask, trainIdx.data, imgIdx.data, distance.data);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // knnMatch 2 dispatcher
+
+    template <typename Dist, typename T, typename Mask> 
+    void match2Dispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
+                          const DevMem2D& trainIdx, const DevMem2D& distance, 
+                          int cc, cudaStream_t stream)
+    {
+        if (query.cols <= 64)
+        {
+            matchUnrolledCached<16, 64, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 128)
+        {
+            matchUnrolledCached<16, 128, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 256)
+        {
+            matchUnrolled<16, 256, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 512)
+        {            
+            matchUnrolled<16, 512, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 1024)
+        {            
+            matchUnrolled<16, 1024, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
         }
         else
         {
-            knnMatch2Simple_caller<16, 16, Dist>(
-                query, train, mask, 
-                static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> >(distance),
-                stream);
+            match<16, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
         }
     }
-    
+
+    template <typename Dist, typename T, typename Mask> 
+    void match2Dispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask, 
+                          const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+                          int cc, cudaStream_t stream)
+    {
+        if (query.cols <= 64)
+        {
+            matchUnrolledCached<16, 64, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 128)
+        {
+            matchUnrolledCached<16, 128, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 256)
+        {
+            matchUnrolled<16, 256, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 512)
+        {            
+            matchUnrolled<16, 512, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else if (query.cols <= 1024)
+        {            
+            matchUnrolled<16, 1024, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+        else
+        {
+            match<16, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
     // Calc distance kernel
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
-    __global__ void calcDistance(const PtrStep_<T> query, const DevMem2D_<T> train, const Mask mask, PtrStepf distance)
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
+    __global__ void calcDistanceUnrolled(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, PtrStepf allDist)
     {
-        __shared__ typename Dist::result_type sdiff[BLOCK_DIM_X * BLOCK_DIM_Y];
+        extern __shared__ int smem[];
 
-        typename Dist::result_type* sdiff_row = sdiff + BLOCK_DIM_X * threadIdx.y;
-        
-        const int queryIdx = blockIdx.x;
-        const T* queryDescs = query.ptr(queryIdx);
+        const int queryIdx = blockIdx.y * BLOCK_SIZE + threadIdx.y;
+        const int trainIdx = blockIdx.x * BLOCK_SIZE + threadIdx.x;
 
-        const int trainIdx = blockIdx.y * BLOCK_DIM_Y + threadIdx.y;
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * BLOCK_SIZE);
 
-        if (trainIdx < train.rows)
+        Dist dist;
+
+        #pragma unroll
+        for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; ++i)
         {
-            const T* trainDescs = train.ptr(trainIdx);
+            const int loadX = threadIdx.x + i * BLOCK_SIZE;
 
-            typename Dist::result_type myDist = numeric_limits<typename Dist::result_type>::max();
+            if (loadX < query.cols)
+            {
+                s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = query.ptr(min(queryIdx, query.rows - 1))[loadX];
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = train.ptr(min(blockIdx.x * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX];
+            }
+            else
+            {                
+                s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+            }
+
+            __syncthreads();
+
+            #pragma unroll
+            for (int j = 0; j < BLOCK_SIZE; ++j)
+                dist.reduceIter(s_query[threadIdx.y * BLOCK_SIZE + j], s_train[j * BLOCK_SIZE + threadIdx.x]);
+
+            __syncthreads();
+        }
+
+        if (queryIdx < query.rows && trainIdx < train.rows)
+        {
+            float distVal = numeric_limits<float>::max();
 
             if (mask(queryIdx, trainIdx))
-            {
-                Dist dist;
+                distVal = (typename Dist::result_type)dist;
 
-                calcVecDiffGlobal<BLOCK_DIM_X>(queryDescs, trainDescs, train.cols, dist, sdiff_row, threadIdx.x);
-
-                myDist = dist;
-            }
-            
-            if (threadIdx.x == 0)
-                distance.ptr(queryIdx)[trainIdx] = myDist;
+            allDist.ptr(queryIdx)[trainIdx] = distVal;
         }
     }
 
-    ///////////////////////////////////////////////////////////////////////////////
-    // Calc distance kernel caller
-
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
-    void calcDistance_caller(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, const DevMem2Df& distance, cudaStream_t stream)
+    template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
+    void calcDistanceUnrolled(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, const DevMem2Df& allDist, cudaStream_t stream)
     {
-        const dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
-        const dim3 grid(query.rows, divUp(train.rows, BLOCK_DIM_Y), 1);
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(train.rows, BLOCK_SIZE), divUp(query.rows, BLOCK_SIZE));
 
-        calcDistance<BLOCK_DIM_X, BLOCK_DIM_Y, Dist, T><<<grid, threads, 0, stream>>>(query, train, mask, distance);
+        const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        calcDistanceUnrolled<BLOCK_SIZE, MAX_DESC_LEN, Dist><<<grid, block, smemSize, stream>>>(query, train, mask, allDist);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template <typename Dist, typename T, typename Mask>
-    void calcDistanceDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, const DevMem2D& allDist, cudaStream_t stream)
+    template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
+    __global__ void calcDistance(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, PtrStepf allDist)
     {
-        calcDistance_caller<16, 16, Dist>(query, train, mask, static_cast<DevMem2Df>(allDist), stream);
+        extern __shared__ int smem[];
+
+        const int queryIdx = blockIdx.y * BLOCK_SIZE + threadIdx.y;
+        const int trainIdx = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+
+        typename Dist::value_type* s_query = (typename Dist::value_type*)(smem);
+        typename Dist::value_type* s_train = (typename Dist::value_type*)(smem + BLOCK_SIZE * BLOCK_SIZE);
+
+        Dist dist;
+
+        for (int i = 0, endi = (query.cols + BLOCK_SIZE - 1) / BLOCK_SIZE; i < endi; ++i)
+        {
+            const int loadX = threadIdx.x + i * BLOCK_SIZE;
+
+            if (loadX < query.cols)
+            {
+                s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = query.ptr(min(queryIdx, query.rows - 1))[loadX];
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = train.ptr(min(blockIdx.x * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX];
+            }
+            else
+            {                
+                s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+            }
+
+            __syncthreads();
+
+            #pragma unroll
+            for (int j = 0; j < BLOCK_SIZE; ++j)
+                dist.reduceIter(s_query[threadIdx.y * BLOCK_SIZE + j], s_train[j * BLOCK_SIZE + threadIdx.x]);
+
+            __syncthreads();
+        }
+
+        if (queryIdx < query.rows && trainIdx < train.rows)
+        {
+            float distVal = numeric_limits<float>::max();
+
+            if (mask(queryIdx, trainIdx))
+                distVal = (typename Dist::result_type)dist;
+
+            allDist.ptr(queryIdx)[trainIdx] = distVal;
+        }
+    }
+
+    template <int BLOCK_SIZE, typename Dist, typename T, typename Mask> 
+    void calcDistance(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, const DevMem2Df& allDist, cudaStream_t stream)
+    {
+        const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
+        const dim3 grid(divUp(train.rows, BLOCK_SIZE), divUp(query.rows, BLOCK_SIZE));
+
+        const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+
+        calcDistance<BLOCK_SIZE, Dist><<<grid, block, smemSize, stream>>>(query, train, mask, allDist);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Calc Distance dispatcher
+
+    template <typename Dist, typename T, typename Mask> 
+    void calcDistanceDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask, 
+                                const DevMem2Df& allDist, 
+                                int cc, cudaStream_t stream)
+    {
+        if (query.cols <= 64)
+        {
+            calcDistanceUnrolled<16, 64, Dist>(query, train, mask, allDist, stream);
+        }
+        else if (query.cols <= 128)
+        {
+            calcDistanceUnrolled<16, 128, Dist>(query, train, mask, allDist, stream);
+        }
+        else if (query.cols <= 256)
+        {
+            calcDistanceUnrolled<16, 256, Dist>(query, train, mask, allDist, stream);
+        }
+        else if (query.cols <= 512)
+        {            
+            calcDistanceUnrolled<16, 512, Dist>(query, train, mask, allDist, stream);
+        }
+        else if (query.cols <= 1024)
+        {            
+            calcDistanceUnrolled<16, 1024, Dist>(query, train, mask, allDist, stream);
+        }
+        else
+        {
+            calcDistance<16, Dist>(query, train, mask, allDist, stream);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
     // find knn match kernel
 
-    template <int BLOCK_SIZE> __global__ void findBestMatch(DevMem2Df allDist_, int i, PtrStepi trainIdx_, PtrStepf distance_)
+    template <int BLOCK_SIZE> 
+    __global__ void findBestMatch(DevMem2Df allDist, int i, PtrStepi trainIdx, PtrStepf distance)
     {
         const int SMEM_SIZE = BLOCK_SIZE > 64 ? BLOCK_SIZE : 64;
-        __shared__ float sdist[SMEM_SIZE];
-        __shared__ int strainIdx[SMEM_SIZE];
+        __shared__ float s_dist[SMEM_SIZE];
+        __shared__ int s_trainIdx[SMEM_SIZE];
 
         const int queryIdx = blockIdx.x;
 
-        float* allDist = allDist_.ptr(queryIdx);
-        int* trainIdx = trainIdx_.ptr(queryIdx);
-        float* distance = distance_.ptr(queryIdx);
+        float* allDistRow = allDist.ptr(queryIdx);
 
         float dist = numeric_limits<float>::max();
         int bestIdx = -1;
         
-        for (int i = threadIdx.x; i < allDist_.cols; i += BLOCK_SIZE)
+        for (int i = threadIdx.x; i < allDist.cols; i += BLOCK_SIZE)
         {
-            float reg = allDist[i];
+            float reg = allDistRow[i];
             if (reg < dist)
             {
                 dist = reg;
@@ -346,34 +982,32 @@ namespace cv { namespace gpu { namespace bf_knnmatch
             }
         }
 
-        sdist[threadIdx.x] = dist;
-        strainIdx[threadIdx.x] = bestIdx;
+        s_dist[threadIdx.x] = dist;
+        s_trainIdx[threadIdx.x] = bestIdx;
         __syncthreads();
 
-        reducePredVal<BLOCK_SIZE>(sdist, dist, strainIdx, bestIdx, threadIdx.x, less<volatile float>());
+        reducePredVal<BLOCK_SIZE>(s_dist, dist, s_trainIdx, bestIdx, threadIdx.x, less<volatile float>());
 
         if (threadIdx.x == 0)
         {
             if (dist < numeric_limits<float>::max())
             {
-                allDist[bestIdx] = numeric_limits<float>::max();
-                trainIdx[i] = bestIdx;
-                distance[i] = dist;
+                allDistRow[bestIdx] = numeric_limits<float>::max();
+                trainIdx.ptr(queryIdx)[i] = bestIdx;
+                distance.ptr(queryIdx)[i] = dist;
             }
         }
     }
-    
-    ///////////////////////////////////////////////////////////////////////////////
-    // find knn match kernel caller
 
-    template <int BLOCK_SIZE> void findKnnMatch_caller(int k, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist, cudaStream_t stream)
+    template <int BLOCK_SIZE> 
+    void findKnnMatch(int k, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist, cudaStream_t stream)
     {
-        const dim3 threads(BLOCK_SIZE, 1, 1);
+        const dim3 block(BLOCK_SIZE, 1, 1);
         const dim3 grid(trainIdx.rows, 1, 1);
 
         for (int i = 0; i < k; ++i)
         {
-            findBestMatch<BLOCK_SIZE><<<grid, threads, 0, stream>>>(allDist, i, trainIdx, distance);
+            findBestMatch<BLOCK_SIZE><<<grid, block, 0, stream>>>(allDist, i, trainIdx, distance);
             cudaSafeCall( cudaGetLastError() );
         }
 
@@ -381,84 +1015,130 @@ namespace cv { namespace gpu { namespace bf_knnmatch
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    void findKnnMatchDispatcher(int k, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, cudaStream_t stream)
+    void findKnnMatchDispatcher(int k, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream)
     {
-        findKnnMatch_caller<256>(k, static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), static_cast<DevMem2Df>(allDist), stream);
+        findKnnMatch<256>(k, static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), allDist, stream);
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////////
     // knn match Dispatcher
 
-    template <typename Dist, typename T>
-    void knnMatchDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, int k, const DevMem2D& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, 
+    template <typename Dist, typename T, typename Mask>
+    void matchDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, int k, const Mask& mask, 
+        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, 
         int cc, cudaStream_t stream)
     {
-        if (mask.data)
+        if (k == 2)
         {
-            if (k == 2)
-            {
-                knnMatch2Dispatcher<Dist>(query, train, SingleMask(mask), trainIdx, distance, cc, stream);
-                return;
-            }
-
-            calcDistanceDispatcher<Dist>(query, train, SingleMask(mask), allDist, stream);
+            match2Dispatcher<Dist>(query, train, mask, trainIdx, distance, cc, stream);
         }
         else
         {
-            if (k == 2)
-            {
-                knnMatch2Dispatcher<Dist>(query, train, WithOutMask(), trainIdx, distance, cc, stream);
-                return;
-            }
-
-            calcDistanceDispatcher<Dist>(query, train, WithOutMask(), allDist, stream);
+            calcDistanceDispatcher<Dist>(query, train, mask, allDist, cc, stream);
+            findKnnMatchDispatcher(k, trainIdx, distance, allDist, cc, stream);
         }
-
-        findKnnMatchDispatcher(k, trainIdx, distance, allDist, stream);
-    }
+    }     
     
     ///////////////////////////////////////////////////////////////////////////////
     // knn match caller
 
-    template <typename T> void knnMatchL1_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, 
+    template <typename T> void matchL1_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
+        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, 
         int cc, cudaStream_t stream)
     {
-        knnMatchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, mask, trainIdx, distance, allDist, cc, stream);
+        if (mask.data)
+            matchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, SingleMask(mask), trainIdx, distance, allDist, cc, stream);
+        else
+            matchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, WithOutMask(), trainIdx, distance, allDist, cc, stream);
     }
 
-    template void knnMatchL1_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    //template void knnMatchL1_gpu<schar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    template void knnMatchL1_gpu<ushort>(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    template void knnMatchL1_gpu<short >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    template void knnMatchL1_gpu<int   >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    template void knnMatchL1_gpu<float >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
+    template void matchL1_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    //template void matchL1_gpu<schar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    template void matchL1_gpu<ushort>(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    template void matchL1_gpu<short >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    template void matchL1_gpu<int   >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    template void matchL1_gpu<float >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
 
-    template <typename T> void knnMatchL2_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist,
+    template <typename T> void matchL2_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
+        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist,
         int cc, cudaStream_t stream)
     {
-        knnMatchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, mask, trainIdx, distance, allDist, cc, stream);
+        if (mask.data)
+            matchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, SingleMask(mask), trainIdx, distance, allDist, cc, stream);
+        else
+            matchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, WithOutMask(), trainIdx, distance, allDist, cc, stream);
     }
 
-    //template void knnMatchL2_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    //template void knnMatchL2_gpu<schar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    //template void knnMatchL2_gpu<ushort>(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    //template void knnMatchL2_gpu<short >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    //template void knnMatchL2_gpu<int   >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    template void knnMatchL2_gpu<float >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
+    //template void matchL2_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    //template void matchL2_gpu<schar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    //template void matchL2_gpu<ushort>(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    //template void matchL2_gpu<short >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    //template void matchL2_gpu<int   >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    template void matchL2_gpu<float >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
 
-    template <typename T> void knnMatchHamming_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask,
-        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, 
+    template <typename T> void matchHamming_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask,
+        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, 
         int cc, cudaStream_t stream)
     {
-        knnMatchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, mask, trainIdx, distance, allDist, cc, stream);
+        if (mask.data)
+            matchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, SingleMask(mask), trainIdx, distance, allDist, cc, stream);
+        else
+            matchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), k, WithOutMask(), trainIdx, distance, allDist, cc, stream);
     }
 
-    template void knnMatchHamming_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    //template void knnMatchHamming_gpu<schar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    template void knnMatchHamming_gpu<ushort>(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    //template void knnMatchHamming_gpu<short >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
-    template void knnMatchHamming_gpu<int   >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& allDist, int cc, cudaStream_t stream);
+    template void matchHamming_gpu<uchar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    //template void matchHamming_gpu<schar >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    template void matchHamming_gpu<ushort>(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    //template void matchHamming_gpu<short >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+    template void matchHamming_gpu<int   >(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int k, const DevMem2D& mask, const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, int cc, cudaStream_t stream);
+
+    template <typename T> void match2L1_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
+        const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+        int cc, cudaStream_t stream)
+    {
+        if (masks.data)
+            match2Dispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data), trainIdx, imgIdx, distance, cc, stream);
+        else
+            match2Dispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, WithOutMask(), trainIdx, imgIdx, distance, cc, stream);
+    }
+    
+    template void match2L1_gpu<uchar >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    //template void match2L1_gpu<schar >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    template void match2L1_gpu<ushort>(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    template void match2L1_gpu<short >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    template void match2L1_gpu<int   >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    template void match2L1_gpu<float >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+
+    template <typename T> void match2L2_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
+        const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+        int cc, cudaStream_t stream)
+    {
+        if (masks.data)
+            match2Dispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data), trainIdx, imgIdx, distance, cc, stream);
+        else
+            match2Dispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, WithOutMask(), trainIdx, imgIdx, distance, cc, stream);
+    }
+    
+    //template void match2L2_gpu<uchar >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    //template void match2L2_gpu<schar >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    //template void match2L2_gpu<ushort>(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    //template void match2L2_gpu<short >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    //template void match2L2_gpu<int   >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2Di& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    template void match2L2_gpu<float >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    
+    template <typename T> void match2Hamming_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
+        const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+        int cc, cudaStream_t stream)
+    {
+        if (masks.data)
+            match2Dispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data), trainIdx, imgIdx, distance, cc, stream);
+        else
+            match2Dispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, WithOutMask(), trainIdx, imgIdx, distance, cc, stream);
+    }
+    
+    template void match2Hamming_gpu<uchar >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    //template void match2Hamming_gpu<schar >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    template void match2Hamming_gpu<ushort>(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    //template void match2Hamming_gpu<short >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
+    template void match2Hamming_gpu<int   >(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, int cc, cudaStream_t stream);
 }}}

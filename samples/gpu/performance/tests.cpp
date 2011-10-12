@@ -413,38 +413,55 @@ TEST(BruteForceMatcher)
 
     // Output
     vector< vector<DMatch> > matches(2);
-    vector< vector<DMatch> > d_matches(2);
+    gpu::GpuMat d_trainIdx, d_distance, d_allDist, d_nMatches;
 
     SUBTEST << "match";
 
+    matcher.match(query, train, matches[0]);
     CPU_ON;
     matcher.match(query, train, matches[0]);
     CPU_OFF;
 
+    d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
     GPU_ON;
-    d_matcher.match(d_query, d_train, d_matches[0]);
+    d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
     GPU_OFF;
 
-    SUBTEST << "knnMatch";
-    int knn = 2;
+    SUBTEST << "knnMatch, 2";
 
+    matcher.knnMatch(query, train, matches, 2);
     CPU_ON;
-    matcher.knnMatch(query, train, matches, knn);
+    matcher.knnMatch(query, train, matches, 2);
     CPU_OFF;
 
+    d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
     GPU_ON;
-    d_matcher.knnMatch(d_query, d_train, d_matches, knn);
+    d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
+    GPU_OFF;
+
+    SUBTEST << "knnMatch, 3";
+
+    matcher.knnMatch(query, train, matches, 3);
+    CPU_ON;
+    matcher.knnMatch(query, train, matches, 3);
+    CPU_OFF;
+
+    d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 3);
+    GPU_ON;
+    d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 3);
     GPU_OFF;
 
     SUBTEST << "radiusMatch";
     float max_distance = 2.0f;
 
+    matcher.radiusMatch(query, train, matches, max_distance);
     CPU_ON;
     matcher.radiusMatch(query, train, matches, max_distance);
     CPU_OFF;
 
+    d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
     GPU_ON;
-    d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
+    d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
     GPU_OFF;
 }
 

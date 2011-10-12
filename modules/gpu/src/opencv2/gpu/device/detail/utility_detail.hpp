@@ -47,6 +47,9 @@ namespace cv { namespace gpu { namespace device
 {
     namespace detail
     {
+        ///////////////////////////////////////////////////////////////////////////////
+        // Reduction
+
         template <int n> struct WarpReductor
         {
             template <typename T, typename Op> static __device__ __forceinline__ void reduce(volatile T* data, T& partial_reduction, int tid, const Op& op)
@@ -209,6 +212,8 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
+        ///////////////////////////////////////////////////////////////////////////////
+        // PredValWarpReductor
         
         template <int n> struct PredValWarpReductor;
         template <> struct PredValWarpReductor<64>
@@ -496,6 +501,335 @@ namespace cv { namespace gpu { namespace device
                         {
                             sdata[tid] = myData = reg;
                             sval[tid] = myVal = sval[tid + 1];
+                        }
+                    }
+                }
+            }
+        };
+
+        ///////////////////////////////////////////////////////////////////////////////
+        // PredVal2WarpReductor
+
+        template <int n> struct PredVal2WarpReductor;
+        template <> struct PredVal2WarpReductor<64>
+        {
+            template <typename T, typename V1, typename V2, typename Pred> 
+            static __device__ void reduce(T& myData, V1& myVal1, V2& myVal2, volatile T* sdata, V1* sval1, V2* sval2, int tid, const Pred& pred)
+            {
+                if (tid < 32)
+                {
+                    myData = sdata[tid];
+                    myVal1 = sval1[tid];
+                    myVal2 = sval2[tid];
+
+                    T reg = sdata[tid + 32];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 32];
+                        sval2[tid] = myVal2 = sval2[tid + 32];
+                    }
+
+                    reg = sdata[tid + 16];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 16];
+                        sval2[tid] = myVal2 = sval2[tid + 16];
+                    }
+
+                    reg = sdata[tid + 8];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 8];
+                        sval2[tid] = myVal2 = sval2[tid + 8];
+                    }
+
+                    reg = sdata[tid + 4];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 4];
+                        sval2[tid] = myVal2 = sval2[tid + 4];
+                    }
+                
+                    reg = sdata[tid + 2];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 2];
+                        sval2[tid] = myVal2 = sval2[tid + 2];
+                    }
+                
+                    reg = sdata[tid + 1];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 1];
+                        sval2[tid] = myVal2 = sval2[tid + 1];
+                    }
+                }
+            }
+        };
+        template <> struct PredVal2WarpReductor<32>
+        {
+            template <typename T, typename V1, typename V2, typename Pred> 
+            static __device__ void reduce(T& myData, V1& myVal1, V2& myVal2, volatile T* sdata, V1* sval1, V2* sval2, int tid, const Pred& pred)
+            {
+                if (tid < 16)
+                {
+                    myData = sdata[tid];
+                    myVal1 = sval1[tid];
+                    myVal2 = sval2[tid];
+
+                    T reg = sdata[tid + 16];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 16];
+                        sval2[tid] = myVal2 = sval2[tid + 16];
+                    }
+
+                    reg = sdata[tid + 8];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 8];
+                        sval2[tid] = myVal2 = sval2[tid + 8];
+                    }
+
+                    reg = sdata[tid + 4];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 4];
+                        sval2[tid] = myVal2 = sval2[tid + 4];
+                    }
+                
+                    reg = sdata[tid + 2];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 2];
+                        sval2[tid] = myVal2 = sval2[tid + 2];
+                    }
+                
+                    reg = sdata[tid + 1];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 1];
+                        sval2[tid] = myVal2 = sval2[tid + 1];
+                    }
+                }
+            }
+        };
+
+        template <> struct PredVal2WarpReductor<16>
+        {
+            template <typename T, typename V1, typename V2, typename Pred> 
+            static __device__ void reduce(T& myData, V1& myVal1, V2& myVal2, volatile T* sdata, V1* sval1, V2* sval2, int tid, const Pred& pred)
+            {
+                if (tid < 8)
+                {
+                    myData = sdata[tid];
+                    myVal1 = sval1[tid];
+                    myVal2 = sval2[tid];
+
+                    T reg = reg = sdata[tid + 8];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 8];
+                        sval2[tid] = myVal2 = sval2[tid + 8];
+                    }
+
+                    reg = sdata[tid + 4];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 4];
+                        sval2[tid] = myVal2 = sval2[tid + 4];
+                    }
+                
+                    reg = sdata[tid + 2];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 2];
+                        sval2[tid] = myVal2 = sval2[tid + 2];
+                    }
+                
+                    reg = sdata[tid + 1];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 1];
+                        sval2[tid] = myVal2 = sval2[tid + 1];
+                    }
+                }
+            }
+        };
+        template <> struct PredVal2WarpReductor<8>
+        {
+            template <typename T, typename V1, typename V2, typename Pred> 
+            static __device__ void reduce(T& myData, V1& myVal1, V2& myVal2, volatile T* sdata, V1* sval1, V2* sval2, int tid, const Pred& pred)
+            {
+                if (tid < 4)
+                {
+                    myData = sdata[tid];
+                    myVal1 = sval1[tid];
+                    myVal2 = sval2[tid];
+
+                    T reg = reg = sdata[tid + 4];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 4];
+                        sval2[tid] = myVal2 = sval2[tid + 4];
+                    }
+                
+                    reg = sdata[tid + 2];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 2];
+                        sval2[tid] = myVal2 = sval2[tid + 2];
+                    }
+                
+                    reg = sdata[tid + 1];
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 1];
+                        sval2[tid] = myVal2 = sval2[tid + 1];
+                    }
+                }
+            }
+        };
+
+        template <bool warp> struct PredVal2ReductionDispatcher;
+        template <> struct PredVal2ReductionDispatcher<true>
+        {
+            template <int n, typename T, typename V1, typename V2, typename Pred> 
+            static __device__ void reduce(T& myData, V1& myVal1, V2& myVal2, volatile T* sdata, V1* sval1, V2* sval2, int tid, const Pred& pred)
+            {
+                PredVal2WarpReductor<n>::reduce(myData, myVal1, myVal2, sdata, sval1, sval2, tid, pred);
+            }
+        };
+        template <> struct PredVal2ReductionDispatcher<false>
+        {
+            template <int n, typename T, typename V1, typename V2, typename Pred> 
+            static __device__ void reduce(T& myData, V1& myVal1, V2& myVal2, volatile T* sdata, V1* sval1, V2* sval2, int tid, const Pred& pred)
+            {
+                myData = sdata[tid];
+                myVal1 = sval1[tid];
+                myVal2 = sval2[tid];
+
+                if (n >= 512 && tid < 256) 
+                {
+                    T reg = sdata[tid + 256];
+
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 256];
+                        sval2[tid] = myVal2 = sval2[tid + 256];
+                    }
+                    __syncthreads(); 
+                }
+                if (n >= 256 && tid < 128) 
+                {
+                    T reg = sdata[tid + 128];
+
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 128];
+                        sval2[tid] = myVal2 = sval2[tid + 128];
+                    }
+                    __syncthreads(); 
+                }
+                if (n >= 128 && tid < 64) 
+                {
+                    T reg = sdata[tid + 64];
+
+                    if (pred(reg, myData))
+                    {
+                        sdata[tid] = myData = reg;
+                        sval1[tid] = myVal1 = sval1[tid + 64];
+                        sval2[tid] = myVal2 = sval2[tid + 64];
+                    }
+                    __syncthreads(); 
+                }        
+
+                if (tid < 32)
+                {
+                    if (n >= 64) 
+                    { 
+                        T reg = sdata[tid + 32];
+
+                        if (pred(reg, myData))
+                        {
+                            sdata[tid] = myData = reg;
+                            sval1[tid] = myVal1 = sval1[tid + 32];
+                            sval2[tid] = myVal2 = sval2[tid + 32];
+                        }
+                    }
+                    if (n >= 32) 
+                    { 
+                        T reg = sdata[tid + 16];
+
+                        if (pred(reg, myData))
+                        {
+                            sdata[tid] = myData = reg;
+                            sval1[tid] = myVal1 = sval1[tid + 16];
+                            sval2[tid] = myVal2 = sval2[tid + 16];
+                        }
+                    }
+                    if (n >= 16) 
+                    { 
+                        T reg = sdata[tid + 8];
+
+                        if (pred(reg, myData))
+                        {
+                            sdata[tid] = myData = reg;
+                            sval1[tid] = myVal1 = sval1[tid + 8];
+                            sval2[tid] = myVal2 = sval2[tid + 8];
+                        }
+                    }
+                    if (n >= 8) 
+                    { 
+                        T reg = sdata[tid + 4];
+
+                        if (pred(reg, myData))
+                        {
+                            sdata[tid] = myData = reg;
+                            sval1[tid] = myVal1 = sval1[tid + 4];
+                            sval2[tid] = myVal2 = sval2[tid + 4];
+                        }
+                    }
+                    if (n >= 4) 
+                    { 
+                        T reg = sdata[tid + 2];
+
+                        if (pred(reg, myData))
+                        {
+                            sdata[tid] = myData = reg;
+                            sval1[tid] = myVal1 = sval1[tid + 2];
+                            sval2[tid] = myVal2 = sval2[tid + 2];
+                        } 
+                    }
+                    if (n >= 2) 
+                    { 
+                        T reg = sdata[tid + 1];
+
+                        if (pred(reg, myData))
+                        {
+                            sdata[tid] = myData = reg;
+                            sval1[tid] = myVal1 = sval1[tid + 1];
+                            sval2[tid] = myVal2 = sval2[tid + 1];
                         }
                     }
                 }

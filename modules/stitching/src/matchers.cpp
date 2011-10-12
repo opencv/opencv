@@ -198,7 +198,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     // Find 1->2 matches
     pair_matches.clear();
-    matcher.knnMatch(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
+    matcher.knnMatchSingle(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
     matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {
@@ -215,7 +215,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     // Find 2->1 matches
     pair_matches.clear();
-    matcher.knnMatch(descriptors2_, descriptors1_, train_idx_, distance_, all_dist_, 2);
+    matcher.knnMatchSingle(descriptors2_, descriptors1_, train_idx_, distance_, all_dist_, 2);
     matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {

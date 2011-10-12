@@ -1221,26 +1221,24 @@ namespace cv
 
             explicit BruteForceMatcher_GPU_base(DistType distType = L2Dist);
 
-            // Add descriptors to train descriptor collection.
+            // Add descriptors to train descriptor collection
             void add(const std::vector<GpuMat>& descCollection);
 
-            // Get train descriptors collection.
+            // Get train descriptors collection
             const std::vector<GpuMat>& getTrainDescriptors() const;
 
-            // Clear train descriptors collection.
+            // Clear train descriptors collection
             void clear();
 
-            // Return true if there are not train descriptors in collection.
+            // Return true if there are not train descriptors in collection
             bool empty() const;
 
-            // Return true if the matcher supports mask in match methods.
+            // Return true if the matcher supports mask in match methods
             bool isMaskSupported() const;
 
-            // Find one best match for each query descriptor.
-            // trainIdx.at<int>(0, queryIdx) will contain best train index for queryIdx
-            // distance.at<float>(0, queryIdx) will contain distance
-            void matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs,
-                GpuMat& trainIdx, GpuMat& distance,
+            // Find one best match for each query descriptor
+            void matchSingle(const GpuMat& query, const GpuMat& train, 
+                GpuMat& trainIdx, GpuMat& distance, 
                 const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
             // Download trainIdx and distance and convert it to CPU vector with DMatch
@@ -1248,21 +1246,16 @@ namespace cv
             // Convert trainIdx and distance to vector with DMatch
             static void matchConvert(const Mat& trainIdx, const Mat& distance, std::vector<DMatch>& matches);
 
-            // Find one best match for each query descriptor.
-            void match(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector<DMatch>& matches,
-                const GpuMat& mask = GpuMat());
+            // Find one best match for each query descriptor
+            void match(const GpuMat& query, const GpuMat& train, std::vector<DMatch>& matches, const GpuMat& mask = GpuMat());
 
             // Make gpu collection of trains and masks in suitable format for matchCollection function
-            void makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection,
-                const vector<GpuMat>& masks = std::vector<GpuMat>());
+            void makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
-            // Find one best match from train collection for each query descriptor.
-            // trainIdx.at<int>(0, queryIdx) will contain best train index for queryIdx
-            // imgIdx.at<int>(0, queryIdx) will contain best image index for queryIdx
-            // distance.at<float>(0, queryIdx) will contain distance
-            void matchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection,
+            // Find one best match from train collection for each query descriptor
+            void matchCollection(const GpuMat& query, const GpuMat& trainCollection, 
                 GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
-                const GpuMat& maskCollection, Stream& stream = Stream::Null());
+                const GpuMat& masks = GpuMat(), Stream& stream = Stream::Null());
 
             // Download trainIdx, imgIdx and distance and convert it to vector with DMatch
             static void matchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>& matches);
@@ -1270,17 +1263,12 @@ namespace cv
             static void matchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector<DMatch>& matches);
 
             // Find one best match from train collection for each query descriptor.
-            void match(const GpuMat& queryDescs, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>());
+            void match(const GpuMat& query, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
-            // Find k best matches for each query descriptor (in increasing order of distances).
-            // trainIdx.at<int>(queryIdx, i) will contain index of i'th best trains (i < k).
-            // distance.at<float>(queryIdx, i) will contain distance.
-            // allDist is a buffer to store all distance between query descriptors and train descriptors
-            // it have size (nQuery,nTrain) and CV_32F type
-            // allDist.at<float>(queryIdx, trainIdx) will contain FLT_MAX, if trainIdx is one from k best,
-            // otherwise it will contain distance between queryIdx and trainIdx descriptors
-            void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
-                GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
+            // Find k best matches for each query descriptor (in increasing order of distances)
+            void knnMatchSingle(const GpuMat& query, const GpuMat& train,
+                GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k,
+                const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
             // Download trainIdx and distance and convert it to vector with DMatch
             // compactResult is used when mask is not empty. If compactResult is false matches
@@ -1296,27 +1284,40 @@ namespace cv
             // compactResult is used when mask is not empty. If compactResult is false matches
             // vector will have the same size as queryDescriptors rows. If compactResult is true
             // matches vector will not contain matches for fully masked out query descriptors.
-            void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+            void knnMatch(const GpuMat& query, const GpuMat& train,
                 std::vector< std::vector<DMatch> >& matches, int k, const GpuMat& mask = GpuMat(),
                 bool compactResult = false);
+
+            // Find k best matches from train collection for each query descriptor (in increasing order of distances)
+            void knnMatch2Collection(const GpuMat& query, const GpuMat& trainCollection,
+                GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
+                const GpuMat& maskCollection = GpuMat(), Stream& stream = Stream::Null());
+
+            // Download trainIdx and distance and convert it to vector with DMatch
+            // compactResult is used when mask is not empty. If compactResult is false matches
+            // vector will have the same size as queryDescriptors rows. If compactResult is true
+            // matches vector will not contain matches for fully masked out query descriptors.
+            static void knnMatch2Download(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance,
+                std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+            // Convert trainIdx and distance to vector with DMatch
+            static void knnMatch2Convert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance,
+                std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
             // Find k best matches  for each query descriptor (in increasing order of distances).
             // compactResult is used when mask is not empty. If compactResult is false matches
             // vector will have the same size as queryDescriptors rows. If compactResult is true
             // matches vector will not contain matches for fully masked out query descriptors.
-            void knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, int knn,
-                const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false );
+            void knnMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, int k,
+                const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
             // Find best matches for each query descriptor which have distance less than maxDistance.
             // nMatches.at<int>(0, queryIdx) will contain matches count for queryIdx.
             // carefully nMatches can be greater than trainIdx.cols - it means that matcher didn't find all matches,
             // because it didn't have enough memory.
-            // trainIdx.at<int>(queruIdx, i) will contain ith train index (i < min(nMatches.at<int>(0, queruIdx), trainIdx.cols))
-            // distance.at<int>(queruIdx, i) will contain ith distance (i < min(nMatches.at<int>(0, queruIdx), trainIdx.cols))
-            // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x (nTrain / 2),
+            // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nTrain / 100), 10),
             // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
             // Matches doesn't sorted.
-            void radiusMatchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs,
+            void radiusMatchSingle(const GpuMat& query, const GpuMat& train,
                 GpuMat& trainIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
                 const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
@@ -1333,15 +1334,16 @@ namespace cv
 
             // Find best matches for each query descriptor which have distance less than maxDistance
             // in increasing order of distances).
-            void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+            void radiusMatch(const GpuMat& query, const GpuMat& train,
                 std::vector< std::vector<DMatch> >& matches, float maxDistance,
                 const GpuMat& mask = GpuMat(), bool compactResult = false);
 
             // Find best matches for each query descriptor which have distance less than maxDistance.
+            // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nQuery / 100), 10),
+            // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
             // Matches doesn't sorted.
-            void radiusMatchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection,
-                GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
-                const GpuMat& maskCollection, Stream& stream = Stream::Null());
+            void radiusMatchCollection(const GpuMat& query, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
+                const std::vector<GpuMat>& masks = std::vector<GpuMat>(), Stream& stream = Stream::Null());
 
             // Download trainIdx, imgIdx, nMatches and distance and convert it to vector with DMatch.
             // matches will be sorted in increasing order of distances.
@@ -1356,7 +1358,7 @@ namespace cv
 
             // Find best matches from train collection for each query descriptor which have distance less than
             // maxDistance (in increasing order of distances).
-            void radiusMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, float maxDistance,
+            void radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, float maxDistance,
                 const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
             DistType distType;
