@@ -968,7 +968,7 @@ CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
 CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n);
 CV_EXPORTS int normHamming(const uchar* a, const uchar* b, int n, int cellSize);
     
-template<> static inline float normL2Sqr(const float* a, const float* b, int n)
+template<> inline float normL2Sqr(const float* a, const float* b, int n)
 {
     if( n >= 8 )
         return normL2Sqr_(a, b, n);
@@ -1000,7 +1000,7 @@ _AccTp normL1(const _Tp* a, const _Tp* b, int n)
     return s;
 }
 
-template<> static inline float normL1(const float* a, const float* b, int n)
+template<> inline float normL1(const float* a, const float* b, int n)
 {
     if( n >= 8 )
         return normL1_(a, b, n);
@@ -1013,7 +1013,7 @@ template<> static inline float normL1(const float* a, const float* b, int n)
     return s;
 }
 
-template<> static inline int normL1(const uchar* a, const uchar* b, int n)
+template<> inline int normL1(const uchar* a, const uchar* b, int n)
 {
     return normL1_(a, b, n);
 }    
