@@ -801,6 +801,11 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchSingle(const GpuMat& query,
         ensureSizeIsEnough(nQuery, std::max((nTrain / 100), 10), CV_32SC1, trainIdx);
         ensureSizeIsEnough(nQuery, std::max((nTrain / 100), 10), CV_32FC1, distance);
     }
+    
+    if (stream)
+        stream.enqueueMemSet(nMatches, Scalar::all(0));
+    else
+        nMatches.setTo(Scalar::all(0));
 
     caller_t func = callers[distType][query.depth()];
     CV_Assert(func != 0);    
@@ -926,6 +931,11 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchCollection(const GpuMat& qu
         ensureSizeIsEnough(nQuery, std::max((nQuery / 100), 10), CV_32SC1, imgIdx);
         ensureSizeIsEnough(nQuery, std::max((nQuery / 100), 10), CV_32FC1, distance);
     }
+    
+    if (stream)
+        stream.enqueueMemSet(nMatches, Scalar::all(0));
+    else
+        nMatches.setTo(Scalar::all(0));
 
     caller_t func = callers[distType][query.depth()];
     CV_Assert(func != 0);
