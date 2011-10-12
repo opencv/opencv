@@ -283,7 +283,7 @@ namespace cv { namespace gpu { namespace bf_radius_match
         {
             matchUnrolled<16, 128, Dist>(query, train, maxDistance, mask, trainIdx, distance, nMatches, stream);
         }
-        else if (query.cols <= 256)
+        /*else if (query.cols <= 256)
         {
             matchUnrolled<16, 256, Dist>(query, train, maxDistance, mask, trainIdx, distance, nMatches, stream);
         }
@@ -294,7 +294,7 @@ namespace cv { namespace gpu { namespace bf_radius_match
         else if (query.cols <= 1024)
         {            
             matchUnrolled<16, 1024, Dist>(query, train, maxDistance, mask, trainIdx, distance, nMatches, stream);
-        }
+        }*/
         else
         {
             match<16, Dist>(query, train, maxDistance, mask, trainIdx, distance, nMatches, stream);
@@ -314,7 +314,7 @@ namespace cv { namespace gpu { namespace bf_radius_match
         {
             matchUnrolled<16, 128, Dist>(query, trains, n, maxDistance, masks, trainIdx, imgIdx, distance, nMatches, stream);
         }
-        else if (query.cols <= 256)
+        /*else if (query.cols <= 256)
         {
             matchUnrolled<16, 256, Dist>(query, trains, n, maxDistance, masks, trainIdx, imgIdx, distance, nMatches, stream);
         }
@@ -325,7 +325,7 @@ namespace cv { namespace gpu { namespace bf_radius_match
         else if (query.cols <= 1024)
         {            
             matchUnrolled<16, 1024, Dist>(query, trains, n, maxDistance, masks, trainIdx, imgIdx, distance, nMatches, stream);
-        }
+        }*/
         else
         {
             match<16, Dist>(query, trains, n, maxDistance, masks, trainIdx, imgIdx, distance, nMatches, stream);

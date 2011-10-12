@@ -742,7 +742,7 @@ namespace cv { namespace gpu { namespace bf_knnmatch
         {
             matchUnrolledCached<16, 128, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
         }
-        else if (query.cols <= 256)
+        /*else if (query.cols <= 256)
         {
             matchUnrolled<16, 256, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
         }
@@ -753,7 +753,7 @@ namespace cv { namespace gpu { namespace bf_knnmatch
         else if (query.cols <= 1024)
         {            
             matchUnrolled<16, 1024, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
-        }
+        }*/
         else
         {
             match<16, Dist>(query, train, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<float2> > (distance), stream);
@@ -773,7 +773,7 @@ namespace cv { namespace gpu { namespace bf_knnmatch
         {
             matchUnrolledCached<16, 128, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
         }
-        else if (query.cols <= 256)
+        /*else if (query.cols <= 256)
         {
             matchUnrolled<16, 256, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
         }
@@ -784,7 +784,7 @@ namespace cv { namespace gpu { namespace bf_knnmatch
         else if (query.cols <= 1024)
         {            
             matchUnrolled<16, 1024, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
-        }
+        }*/
         else
         {
             match<16, Dist>(query, trains, n, mask, static_cast< DevMem2D_<int2> >(trainIdx), static_cast< DevMem2D_<int2> >(imgIdx), static_cast< DevMem2D_<float2> > (distance), stream);
@@ -937,7 +937,7 @@ namespace cv { namespace gpu { namespace bf_knnmatch
         {
             calcDistanceUnrolled<16, 128, Dist>(query, train, mask, allDist, stream);
         }
-        else if (query.cols <= 256)
+        /*else if (query.cols <= 256)
         {
             calcDistanceUnrolled<16, 256, Dist>(query, train, mask, allDist, stream);
         }
@@ -948,7 +948,7 @@ namespace cv { namespace gpu { namespace bf_knnmatch
         else if (query.cols <= 1024)
         {            
             calcDistanceUnrolled<16, 1024, Dist>(query, train, mask, allDist, stream);
-        }
+        }*/
         else
         {
             calcDistance<16, Dist>(query, train, mask, allDist, stream);

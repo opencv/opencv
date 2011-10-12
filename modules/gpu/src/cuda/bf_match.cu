@@ -536,7 +536,7 @@ namespace cv { namespace gpu { namespace bf_match
         const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
         const dim3 grid(divUp(query.rows, BLOCK_SIZE));
 
-        const size_t smemSize = (2 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
+        const size_t smemSize = (3 * BLOCK_SIZE * BLOCK_SIZE) * sizeof(int);
 
         match<BLOCK_SIZE, Dist><<<grid, block, smemSize, stream>>>(query, trains, n, mask, trainIdx.data, imgIdx.data, distance.data);
         cudaSafeCall( cudaGetLastError() );
@@ -561,7 +561,7 @@ namespace cv { namespace gpu { namespace bf_match
         {
             matchUnrolledCached<16, 128, Dist>(query, train, mask, trainIdx, distance, stream);
         }
-        else if (query.cols <= 256)
+        /*else if (query.cols <= 256)
         {
             matchUnrolled<16, 256, Dist>(query, train, mask, trainIdx, distance, stream);
         }
@@ -572,7 +572,7 @@ namespace cv { namespace gpu { namespace bf_match
         else if (query.cols <= 1024)
         {            
             matchUnrolled<16, 1024, Dist>(query, train, mask, trainIdx, distance, stream);
-        }
+        }*/
         else
         {
             match<16, Dist>(query, train, mask, trainIdx, distance, stream);
@@ -592,7 +592,7 @@ namespace cv { namespace gpu { namespace bf_match
         {
             matchUnrolledCached<16, 128, Dist>(query, trains, n, mask, trainIdx, imgIdx, distance, stream);
         }
-        else if (query.cols <= 256)
+        /*else if (query.cols <= 256)
         {
             matchUnrolled<16, 256, Dist>(query, trains, n, mask, trainIdx, imgIdx, distance, stream);
         }
@@ -603,7 +603,7 @@ namespace cv { namespace gpu { namespace bf_match
         else if (query.cols <= 1024)
         {            
             matchUnrolled<16, 1024, Dist>(query, trains, n, mask, trainIdx, imgIdx, distance, stream);
-        }
+        }*/
         else
         {
             match<16, Dist>(query, trains, n, mask, trainIdx, imgIdx, distance, stream);
