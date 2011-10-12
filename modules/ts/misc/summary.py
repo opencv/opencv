@@ -80,7 +80,7 @@ if __name__ == "__main__":
     tbl = table(metrix_table[options.metric][0])
     
     # header
-    tbl.newColumn("name", "Name of Test", align = "left")
+    tbl.newColumn("name", "Name of Test", align = "left", cssclass = "col_name")
     i = 0
     for set in test_sets:
         tbl.newColumn(str(i), set[0].replace(".xml","").replace("_", "\n"), align = "center")
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     if options.calc_relatives:
         i = 1
         for set in test_sets[1:]:
-            tbl.newColumn(str(i) + "%", set[0].replace(".xml","").replace("_", "\n") + "\nvs\n" + test_sets[0][0].replace(".xml","").replace("_", "\n"), align = "center")
+            tbl.newColumn(str(i) + "%", set[0].replace(".xml","").replace("_", "\n") + "\nvs\n" + test_sets[0][0].replace(".xml","").replace("_", "\n"), align = "center", cssclass = "col_rel")
             i += 1
         
     # rows

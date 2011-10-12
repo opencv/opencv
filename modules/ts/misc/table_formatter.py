@@ -354,11 +354,14 @@ class table(object):
             for th in row.cells:
                 align = self.getValue("align", ((None, th)[isinstance(th, tblCell)]), row, row)
                 valign = self.getValue("valign", th, row)
+                cssclass = self.getValue("cssclass", th)
                 attr = ""
                 if align:
                     attr += " align=\"%s\"" % align
                 if valign:
                     attr += " valign=\"%s\"" % valign
+                if cssclass:
+                    attr += " class=\"%s\"" % cssclass
                 css = ""
                 if embeedcss:
                     css = " style=\"border:none;color:#003399;font-size:16px;font-weight:normal;white-space:nowrap;padding:3px 10px;\""
@@ -444,6 +447,91 @@ html, body {font-family: Lucida Console, Courier New, Courier;font-size: 16px;co
 .tbl tbody tr:hover td{color:#000099;}
 .tbl caption{font:italic 16px "Trebuchet MS",Verdana,Arial,Helvetica,sans-serif;padding:0 0 5px;text-align:right;white-space:normal;}
 </style>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+<script type="text/javascript">
+function abs(val) { return val < 0 ? -val : val }
+$(function(){
+  //generate filter rows
+  $("div.tableFormatter table.tbl").each(function(tblIdx, tbl) {
+    var head = $("thead", tbl)
+    var filters = $("<tr></tr>")
+    var hasAny = false
+    $("tr:first th", head).each(function(colIdx, col) {
+      col = $(col)
+      var cell
+      var id = "t" + tblIdx + "r" + colIdx
+      if (col.hasClass("col_name")){
+        cell = $("<th><input id='" + id + "' name='" + id + "' type='text' style='width:100%%' class='filter_col_name' title='Regular expression for name filtering'></input></th>")
+        hasAny = true
+      }
+      else if (col.hasClass("col_rel")){
+        cell = $("<th><input id='" + id + "' name='" + id + "' type='text' style='width:100%%' class='filter_col_rel' title='Filter all lines with speedup less than &lt;value&gt;'></input></th>")
+        hasAny = true
+      }
+      else
+        cell = $("<th></th>")
+      cell.appendTo(filters)
+    })
+
+   if (hasAny){
+     $(tbl).wrap("<form id='form_t" + tblIdx + "' method='get' action=''></form>")
+     $("<input it='test' type='submit' value='Apply Filters' style='margin-left:10px;'></input>")
+       .appendTo($("th:last", filters.appendTo(head)))
+   }
+  })
+
+  //get filter values
+  var vars = []
+  var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&')
+  for(var i = 0; i < hashes.length; ++i)
+  {
+     hash = hashes[i].split('=')
+     vars.push(decodeURIComponent(hash[0]))
+     vars[decodeURIComponent(hash[0])] = decodeURIComponent(hash[1]);
+  }
+
+  //set filter values
+  for(var i = 0; i < vars.length; ++i)
+     $("#" + vars[i]).val(vars[vars[i]])
+
+  //apply filters
+  $("div.tableFormatter table.tbl").each(function(tblIdx, tbl) {
+      filters = $("input:text", tbl)
+      var predicate = function(row) {return true;}
+      var empty = true
+      $.each($("input:text", tbl), function(i, flt) {
+         flt = $(flt)
+         var val = flt.val()
+         var pred = predicate;
+         if(val) {
+           empty = false
+           var colIdx = parseInt(flt.attr("id").slice(flt.attr("id").indexOf('r') + 1))
+           if(flt.hasClass("filter_col_name")) {
+              var re = new RegExp(val);
+              predicate = function(row) {
+                if (re.exec($(row.get(colIdx)).text()) == null)
+                  return false
+                return pred(row)
+	      }
+           } else if(flt.hasClass("filter_col_rel")) {
+              var percent = val.indexOf('.') < 0 ? parseInt(val)*0.01 : parseFloat(val)
+              predicate = function(row) {
+                if (abs(parseFloat($(row.get(colIdx)).text()) - 1) < percent)
+                  return false
+                return pred(row)
+	      }
+           }
+         }
+      });
+      if (!empty){
+         $("tbody tr", tbl).each(function (i, tbl_row) {
+            if(!predicate($("td", tbl_row)))
+               $(tbl_row).remove()
+         })
+      }
+  })
+})
+</script>
 </head>
 <body>
 """ % titletag)
