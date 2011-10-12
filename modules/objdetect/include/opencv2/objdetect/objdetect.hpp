@@ -474,6 +474,7 @@ public:
     {
         public:
             virtual cv::Mat generateMask(const cv::Mat& src)=0;
+            virtual void initializeMask(const cv::Mat& src) {};
     };
     void setMaskGenerator(Ptr<MaskGenerator> maskGenerator);
     Ptr<MaskGenerator> getMaskGenerator();

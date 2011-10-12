@@ -1029,6 +1029,11 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
 
     objects.clear();
 
+    if (!maskGenerator.empty()) {
+        maskGenerator->initializeMask(image);
+    }
+
+
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
         maxObjectSize = image.size();
     
