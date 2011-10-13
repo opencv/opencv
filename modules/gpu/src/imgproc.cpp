@@ -1520,15 +1520,23 @@ void cv::gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags)
 //////////////////////////////////////////////////////////////////////////////
 // convolve
 
-
 void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
 {
     result_size = Size(image_size.width - templ_size.width + 1,
                        image_size.height - templ_size.height + 1);
-    block_size = estimateBlockSize(result_size, templ_size);
+    create(image_size, templ_size, estimateBlockSize(result_size, templ_size));
+}
 
-    dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
-    dft_size.height = getOptimalDFTSize(block_size.width + templ_size.height - 1);
+
+void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size, Size block_size)
+{
+    result_size = Size(image_size.width - templ_size.width + 1,
+                       image_size.height - templ_size.height + 1);   
+
+    this->block_size = block_size;
+
+    dft_size.width = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
+    dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
     createContinuous(dft_size, CV_32F, image_block);
     createContinuous(dft_size, CV_32F, templ_block);
     createContinuous(dft_size, CV_32F, result_data);
@@ -1538,34 +1546,18 @@ void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
     createContinuous(1, spect_len, CV_32FC2, templ_spect);
     createContinuous(1, spect_len, CV_32FC2, result_spect);
 
-    block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
-    block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
+    this->block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
+    this->block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
 }
 
 
 Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size templ_size)
 {
-    int scale = 40;
-    Size bsize_min(512, 512);
-
-    // Check whether we use Fermi generation or newer GPU
-    if (DeviceInfo().majorVersion() >= 2)
-    {
-        bsize_min.width = 1024;
-        bsize_min.height = 1024;
-    }
-
-    Size bsize(std::max(templ_size.width * scale, bsize_min.width),
-               std::max(templ_size.height * scale, bsize_min.height));
-
-    int blocks_per_row = (result_size.width + bsize.width - 1) / bsize.width;
-    int blocks_per_col = (result_size.height + bsize.height - 1) / bsize.height;
-    bsize.width = (result_size.width + blocks_per_row - 1) / blocks_per_row;
-    bsize.height = (result_size.height + blocks_per_col - 1) / blocks_per_col;
-
-    bsize.width = std::min(bsize.width, result_size.width);
-    bsize.height = std::min(bsize.height, result_size.height);
-    return bsize;
+    int width = (result_size.width + 2) / 3;
+    int height = (result_size.height + 2) / 3;
+    width = std::min(width, result_size.width);
+    height = std::min(height, result_size.height);
+    return Size(width, height);
 }
 
 

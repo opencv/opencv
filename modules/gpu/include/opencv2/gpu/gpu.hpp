@@ -762,6 +762,7 @@ namespace cv
             ConvolveBuf(Size image_size, Size templ_size) 
                 { create(image_size, templ_size); }
             void create(Size image_size, Size templ_size);
+            void create(Size image_size, Size templ_size, Size block_size);
 
         private:
             static Size estimateBlockSize(Size result_size, Size templ_size);

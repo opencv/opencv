@@ -3704,8 +3704,9 @@ TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
 
     cv::Mat dstGold;
     cv::matchTemplate(image, pattern, dstGold, CV_TM_CCOEFF_NORMED);
+    double minValGold, maxValGold;
     cv::Point minLocGold, maxLocGold;
-    cv::minMaxLoc(dstGold, NULL, NULL, &minLocGold, &maxLocGold);
+    cv::minMaxLoc(dstGold, &minValGold, &maxValGold, &minLocGold, &maxLocGold);
 
     cv::Mat dst;
     ASSERT_NO_THROW(
@@ -3727,8 +3728,57 @@ TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(std::make_pair(std::string("matchtemplate/source-0.png"), std::string("matchtemplate/target-0.png")),
-                                        std::make_pair(std::string("matchtemplate/source-1.png"), std::string("matchtemplate/target-1.png")))));
+                        testing::Values(std::make_pair(std::string("matchtemplate/source-0.png"), std::string("matchtemplate/target-0.png")))));
+
+
+struct MatchTemplate_CCOEF_NORMED_NoThrow : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::pair<std::string, std::string> > >
+{
+    cv::gpu::DeviceInfo devInfo;
+    std::string imageName;
+    std::string patternName;
+
+    cv::Mat image, pattern;
+
+    virtual void SetUp()
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        imageName = std::tr1::get<1>(GetParam()).first;
+        patternName = std::tr1::get<1>(GetParam()).second;
+
+        image = readImage(imageName);
+        ASSERT_FALSE(image.empty());
+
+        pattern = readImage(patternName);
+        ASSERT_FALSE(pattern.empty());
+    }
+};
+
+TEST_P(MatchTemplate_CCOEF_NORMED_NoThrow, NoThrow)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(imageName);
+    PRINT_PARAM(patternName);
+
+    cv::Mat dstGold;
+    cv::matchTemplate(image, pattern, dstGold, CV_TM_CCOEFF_NORMED);
+    double minValGold, maxValGold;
+    cv::Point minLocGold, maxLocGold;
+    cv::minMaxLoc(dstGold, &minValGold, &maxValGold, &minLocGold, &maxLocGold);
+
+    cv::Mat dst;
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+        cv::gpu::matchTemplate(cv::gpu::GpuMat(image), cv::gpu::GpuMat(pattern), dev_dst, CV_TM_CCOEFF_NORMED);
+        dev_dst.download(dst);
+    );
+
+}
+
+
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED_NoThrow, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(std::make_pair(std::string("matchtemplate/source-1.png"), std::string("matchtemplate/target-1.png")))));
+
 
 
 ////////////////////////////////////////////////////////////////////////////
