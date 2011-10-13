@@ -107,7 +107,7 @@ void cv::gpu::CannyBuf::release() { throw_nogpu(); }
 
 namespace cv { namespace gpu {  namespace imgproc
 {
-    template <typename T> void remap_gpu(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D& dst, 
+    template <typename T> void remap_gpu(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, 
                                          int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
 }}}
 
@@ -115,7 +115,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 {
     using namespace cv::gpu::imgproc;
 
-    typedef void (*caller_t)(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
+    typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
     static const caller_t callers[6][4] = 
     {
         {remap_gpu<uchar>, 0/*remap_gpu<uchar2>*/, remap_gpu<uchar3>, remap_gpu<uchar4>},
@@ -151,7 +151,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 
 namespace cv { namespace gpu {  namespace imgproc
 {
-    extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps);
+    extern "C" void meanShiftFiltering_gpu(const DevMem2Db& src, DevMem2Db dst, int sp, int sr, int maxIter, float eps);
 }}}
 
 void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria)
@@ -182,7 +182,7 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
 
 namespace cv { namespace gpu {  namespace imgproc
 {
-    extern "C" void meanShiftProc_gpu(const DevMem2D& src, DevMem2D dstr, DevMem2D dstsp, int sp, int sr, int maxIter, float eps);
+    extern "C" void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps);
 }}}
 
 void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria)
@@ -214,8 +214,8 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
 
 namespace cv { namespace gpu {  namespace imgproc
 {
-    void drawColorDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream);
-    void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream);
+    void drawColorDisp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream);
+    void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream);
 }}}
 
 namespace
@@ -245,7 +245,7 @@ void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, Stream& s
 
 namespace cv { namespace gpu {  namespace imgproc
 {
-    void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
+    void reprojectImageTo3D_gpu(const DevMem2Db& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
     void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
 }}}
 
@@ -275,7 +275,7 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q,
 
 namespace cv { namespace gpu {  namespace imgproc
 {
-    template <typename T> void resize_gpu(const DevMem2D& src, float fx, float fy, const DevMem2D& dst, int interpolation, cudaStream_t stream);
+    template <typename T> void resize_gpu(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
 }}}
 
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
@@ -342,7 +342,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     {
         using namespace cv::gpu::imgproc;
 
-        typedef void (*caller_t)(const DevMem2D& src, float fx, float fy, const DevMem2D& dst, int interpolation, cudaStream_t stream);
+        typedef void (*caller_t)(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
         static const caller_t callers[6][4] = 
         {
             {resize_gpu<uchar>, 0/*resize_gpu<uchar2>*/, resize_gpu<uchar3>, resize_gpu<uchar4>},
@@ -362,12 +362,12 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
 namespace cv { namespace gpu {  namespace imgproc
 {
-    template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const T* borderValue, cudaStream_t stream);
+    template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const T* borderValue, cudaStream_t stream);
 }}}
 
 namespace
 {
-    template <typename T, int cn> void copyMakeBorder_caller(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
+    template <typename T, int cn> void copyMakeBorder_caller(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
         Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
 
@@ -434,7 +434,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
     }
     else
     {
-        typedef void (*caller_t)(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream);
+        typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream);
         static const caller_t callers[6][4] = 
         {
             {   copyMakeBorder_caller<uchar, 1>  , 0/*copyMakeBorder_caller<uchar, 2>*/ ,    copyMakeBorder_caller<uchar, 3>  ,    copyMakeBorder_caller<uchar, 4>},
@@ -839,7 +839,7 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 
 namespace cv { namespace gpu { namespace imgproc
 {
-    void columnSum_32F(const DevMem2D src, const DevMem2D dst);
+    void columnSum_32F(const DevMem2Db src, const DevMem2Db dst);
 }}}
 
 void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
@@ -1179,7 +1179,7 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
 
 namespace cv { namespace gpu { namespace histograms
 {
-    void histogram256_gpu(DevMem2D src, int* hist, unsigned int* buf, cudaStream_t stream);
+    void histogram256_gpu(DevMem2Db src, int* hist, unsigned int* buf, cudaStream_t stream);
 
     const int PARTIAL_HISTOGRAM256_COUNT = 240;
     const int HISTOGRAM256_BIN_COUNT     = 256;
@@ -1219,7 +1219,7 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream&
 
 namespace cv { namespace gpu { namespace histograms
 {
-    void equalizeHist_gpu(DevMem2D src, DevMem2D dst, const int* lut, cudaStream_t stream);
+    void equalizeHist_gpu(DevMem2Db src, DevMem2Db dst, const int* lut, cudaStream_t stream);
 }}}
 
 void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& s)
@@ -1261,8 +1261,8 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
 namespace cv { namespace gpu { namespace imgproc {
 
     void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst);
-    void cornerHarris_caller(const int block_size, const float k, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst, int border_type);
-    void cornerMinEigenVal_caller(const int block_size, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst, int border_type);
+    void cornerHarris_caller(const int block_size, const float k, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, int border_type);
+    void cornerMinEigenVal_caller(const int block_size, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, int border_type);
 
 }}}
 
@@ -1379,10 +1379,10 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 
 namespace cv { namespace gpu { namespace imgproc 
 {
-    void mulSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+    void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
                       DevMem2D_<cufftComplex> c);
 
-    void mulSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+    void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
                            DevMem2D_<cufftComplex> c);
 }}}
 
@@ -1390,7 +1390,7 @@ namespace cv { namespace gpu { namespace imgproc
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
                            int flags, bool conjB) 
 {
-    typedef void (*Caller)(const PtrStep_<cufftComplex>, const PtrStep_<cufftComplex>, 
+    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, 
                            DevMem2D_<cufftComplex>);
     static Caller callers[] = { imgproc::mulSpectrums, 
                                 imgproc::mulSpectrums_CONJ };
@@ -1409,10 +1409,10 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c,
 
 namespace cv { namespace gpu { namespace imgproc 
 {
-    void mulAndScaleSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+    void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
                              float scale, DevMem2D_<cufftComplex> c);
 
-    void mulAndScaleSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+    void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
                                   float scale, DevMem2D_<cufftComplex> c);
 }}}
 
@@ -1420,7 +1420,7 @@ namespace cv { namespace gpu { namespace imgproc
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c,
                                   int flags, float scale, bool conjB) 
 {
-    typedef void (*Caller)(const PtrStep_<cufftComplex>, const PtrStep_<cufftComplex>,
+    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>,
                            float scale, DevMem2D_<cufftComplex>);
     static Caller callers[] = { imgproc::mulAndScaleSpectrums, 
                                 imgproc::mulAndScaleSpectrums_CONJ };
@@ -1663,14 +1663,14 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
 namespace cv { namespace gpu { namespace imgproc
 {
-    template <typename T, int cn> void pyrDown_gpu(const DevMem2D& src, const DevMem2D& dst, int borderType, cudaStream_t stream);
+    template <typename T, int cn> void pyrDown_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 }}}
 
 void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType, Stream& stream)
 {
     using namespace cv::gpu::imgproc;
 
-    typedef void (*func_t)(const DevMem2D& src, const DevMem2D& dst, int borderType, cudaStream_t stream);
+    typedef void (*func_t)(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 
     static const func_t funcs[6][4] = 
     {
@@ -1699,14 +1699,14 @@ void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType, Stream& st
 
 namespace cv { namespace gpu { namespace imgproc
 {
-    template <typename T, int cn> void pyrUp_gpu(const DevMem2D& src, const DevMem2D& dst, int borderType, cudaStream_t stream);
+    template <typename T, int cn> void pyrUp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 }}}
 
 void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, int borderType, Stream& stream)
 {
     using namespace cv::gpu::imgproc;
 
-    typedef void (*func_t)(const DevMem2D& src, const DevMem2D& dst, int borderType, cudaStream_t stream);
+    typedef void (*func_t)(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 
     static const func_t funcs[6][4] = 
     {
@@ -1777,7 +1777,7 @@ void cv::gpu::CannyBuf::release()
 
 namespace cv { namespace gpu { namespace canny
 {    
-    void calcSobelRowPass_gpu(PtrStep src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols);
+    void calcSobelRowPass_gpu(PtrStepb src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols);
 
     void calcMagnitude_gpu(PtrStepi dx_buf, PtrStepi dy_buf, PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols, bool L2Grad);
     void calcMagnitude_gpu(PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols, bool L2Grad);
@@ -1788,7 +1788,7 @@ namespace cv { namespace gpu { namespace canny
 
     void edgesHysteresisGlobal_gpu(PtrStepi map, ushort2* st1, ushort2* st2, int rows, int cols);
 
-    void getEdges_gpu(PtrStepi map, PtrStep dst, int rows, int cols);
+    void getEdges_gpu(PtrStepi map, PtrStepb dst, int rows, int cols);
 }}}
 
 namespace

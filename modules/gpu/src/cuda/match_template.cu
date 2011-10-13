@@ -81,7 +81,7 @@ __device__ __forceinline__ float4 sub(uchar4 a, uchar4 b) { return make_float4(a
 
 template <typename T, int cn>
 __global__ void matchTemplateNaiveKernel_CCORR(
-        int w, int h, const PtrStep image, const PtrStep templ, 
+        int w, int h, const PtrStepb image, const PtrStepb templ, 
         DevMem2Df result)
 {
     typedef typename TypeVec<T, cn>::vec_type Type;
@@ -107,7 +107,7 @@ __global__ void matchTemplateNaiveKernel_CCORR(
 }
 
 
-void matchTemplateNaive_CCORR_32F(const DevMem2D image, const DevMem2D templ,
+void matchTemplateNaive_CCORR_32F(const DevMem2Db image, const DevMem2Db templ,
                                   DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
@@ -138,7 +138,7 @@ void matchTemplateNaive_CCORR_32F(const DevMem2D image, const DevMem2D templ,
 }
 
 
-void matchTemplateNaive_CCORR_8U(const DevMem2D image, const DevMem2D templ,
+void matchTemplateNaive_CCORR_8U(const DevMem2Db image, const DevMem2Db templ,
                                  DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
@@ -171,7 +171,7 @@ void matchTemplateNaive_CCORR_8U(const DevMem2D image, const DevMem2D templ,
 
 template <typename T, int cn>
 __global__ void matchTemplateNaiveKernel_SQDIFF(
-        int w, int h, const PtrStep image, const PtrStep templ, 
+        int w, int h, const PtrStepb image, const PtrStepb templ, 
         DevMem2Df result)
 {
     typedef typename TypeVec<T, cn>::vec_type Type;
@@ -201,7 +201,7 @@ __global__ void matchTemplateNaiveKernel_SQDIFF(
 }
 
 
-void matchTemplateNaive_SQDIFF_32F(const DevMem2D image, const DevMem2D templ,
+void matchTemplateNaive_SQDIFF_32F(const DevMem2Db image, const DevMem2Db templ,
                                    DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
@@ -232,7 +232,7 @@ void matchTemplateNaive_SQDIFF_32F(const DevMem2D image, const DevMem2D templ,
 }
 
 
-void matchTemplateNaive_SQDIFF_8U(const DevMem2D image, const DevMem2D templ,
+void matchTemplateNaive_SQDIFF_8U(const DevMem2Db image, const DevMem2Db templ,
                                   DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
@@ -265,7 +265,7 @@ void matchTemplateNaive_SQDIFF_8U(const DevMem2D image, const DevMem2D templ,
 
 template <int cn>
 __global__ void matchTemplatePreparedKernel_SQDIFF_8U(
-        int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
+        int w, int h, const PtrStep<unsigned long long> image_sqsum, 
         unsigned int templ_sqsum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -338,7 +338,7 @@ __device__ float normAcc_SQDIFF(float num, float denum)
 
 template <int cn>
 __global__ void matchTemplatePreparedKernel_SQDIFF_NORMED_8U(
-        int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
+        int w, int h, const PtrStep<unsigned long long> image_sqsum, 
         unsigned int templ_sqsum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -389,7 +389,7 @@ void matchTemplatePrepared_SQDIFF_NORMED_8U(
 
 __global__ void matchTemplatePreparedKernel_CCOFF_8U(
         int w, int h, float templ_sum_scale, 
-        const PtrStep_<unsigned int> image_sum, DevMem2Df result)
+        const PtrStep<unsigned int> image_sum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -421,8 +421,8 @@ void matchTemplatePrepared_CCOFF_8U(
 
 __global__ void matchTemplatePreparedKernel_CCOFF_8UC2(
         int w, int h, float templ_sum_scale_r, float templ_sum_scale_g,
-        const PtrStep_<unsigned int> image_sum_r,
-        const PtrStep_<unsigned int> image_sum_g,
+        const PtrStep<unsigned int> image_sum_r,
+        const PtrStep<unsigned int> image_sum_g,
         DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -466,9 +466,9 @@ __global__ void matchTemplatePreparedKernel_CCOFF_8UC3(
         float templ_sum_scale_r,
         float templ_sum_scale_g,
         float templ_sum_scale_b,
-        const PtrStep_<unsigned int> image_sum_r,
-        const PtrStep_<unsigned int> image_sum_g,
-        const PtrStep_<unsigned int> image_sum_b,
+        const PtrStep<unsigned int> image_sum_r,
+        const PtrStep<unsigned int> image_sum_g,
+        const PtrStep<unsigned int> image_sum_b,
         DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -523,10 +523,10 @@ __global__ void matchTemplatePreparedKernel_CCOFF_8UC4(
         float templ_sum_scale_g,
         float templ_sum_scale_b,
         float templ_sum_scale_a,
-        const PtrStep_<unsigned int> image_sum_r,
-        const PtrStep_<unsigned int> image_sum_g,
-        const PtrStep_<unsigned int> image_sum_b,
-        const PtrStep_<unsigned int> image_sum_a,
+        const PtrStep<unsigned int> image_sum_r,
+        const PtrStep<unsigned int> image_sum_g,
+        const PtrStep<unsigned int> image_sum_b,
+        const PtrStep<unsigned int> image_sum_a,
         DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -586,8 +586,8 @@ void matchTemplatePrepared_CCOFF_8UC4(
 __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8U(
         int w, int h, float weight, 
         float templ_sum_scale, float templ_sqsum_scale,
-        const PtrStep_<unsigned int> image_sum, 
-        const PtrStep_<unsigned long long> image_sqsum,
+        const PtrStep<unsigned int> image_sum, 
+        const PtrStep<unsigned long long> image_sqsum,
         DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -633,8 +633,8 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC2(
         int w, int h, float weight, 
         float templ_sum_scale_r, float templ_sum_scale_g, 
         float templ_sqsum_scale,
-        const PtrStep_<unsigned int> image_sum_r, const PtrStep_<unsigned long long> image_sqsum_r,
-        const PtrStep_<unsigned int> image_sum_g, const PtrStep_<unsigned long long> image_sqsum_g,
+        const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
+        const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
         DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -697,9 +697,9 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC3(
         int w, int h, float weight, 
         float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b, 
         float templ_sqsum_scale,
-        const PtrStep_<unsigned int> image_sum_r, const PtrStep_<unsigned long long> image_sqsum_r,
-        const PtrStep_<unsigned int> image_sum_g, const PtrStep_<unsigned long long> image_sqsum_g,
-        const PtrStep_<unsigned int> image_sum_b, const PtrStep_<unsigned long long> image_sqsum_b,
+        const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
+        const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
+        const PtrStep<unsigned int> image_sum_b, const PtrStep<unsigned long long> image_sqsum_b,
         DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -775,10 +775,10 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC4(
         int w, int h, float weight, 
         float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b, 
         float templ_sum_scale_a, float templ_sqsum_scale,
-        const PtrStep_<unsigned int> image_sum_r, const PtrStep_<unsigned long long> image_sqsum_r,
-        const PtrStep_<unsigned int> image_sum_g, const PtrStep_<unsigned long long> image_sqsum_g,
-        const PtrStep_<unsigned int> image_sum_b, const PtrStep_<unsigned long long> image_sqsum_b,
-        const PtrStep_<unsigned int> image_sum_a, const PtrStep_<unsigned long long> image_sqsum_a,
+        const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
+        const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
+        const PtrStep<unsigned int> image_sum_b, const PtrStep<unsigned long long> image_sqsum_b,
+        const PtrStep<unsigned int> image_sum_a, const PtrStep<unsigned long long> image_sqsum_a,
         DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -863,7 +863,7 @@ void matchTemplatePrepared_CCOFF_NORMED_8UC4(
 
 template <int cn>
 __global__ void normalizeKernel_8U(
-        int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
+        int w, int h, const PtrStep<unsigned long long> image_sqsum, 
         unsigned int templ_sqsum, DevMem2Df result)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -906,7 +906,7 @@ void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum,
 
 
 template <int cn>
-__global__ void extractFirstChannel_32F(const PtrStep image, DevMem2Df result)
+__global__ void extractFirstChannel_32F(const PtrStepb image, DevMem2Df result)
 {
     typedef typename TypeVec<float, cn>::vec_type Typef;
 
@@ -921,7 +921,7 @@ __global__ void extractFirstChannel_32F(const PtrStep image, DevMem2Df result)
 }
 
 
-void extractFirstChannel_32F(const DevMem2D image, DevMem2Df result, int cn)
+void extractFirstChannel_32F(const DevMem2Db image, DevMem2Df result, int cn)
 {
     dim3 threads(32, 8);
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));

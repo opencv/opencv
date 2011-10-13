@@ -186,7 +186,7 @@ namespace bf_krnls
 namespace cv { namespace gpu { namespace bf 
 {
     template <typename T>     
-    void bilateral_filter_caller(const DevMem2D_<T>& disp, const DevMem2D& img, int channels, int iters, cudaStream_t stream)
+    void bilateral_filter_caller(const DevMem2D_<T>& disp, const DevMem2Db& img, int channels, int iters, cudaStream_t stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -221,12 +221,12 @@ namespace cv { namespace gpu { namespace bf
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    void bilateral_filter_gpu(const DevMem2D& disp, const DevMem2D& img, int channels, int iters, cudaStream_t stream)
+    void bilateral_filter_gpu(const DevMem2Db& disp, const DevMem2Db& img, int channels, int iters, cudaStream_t stream)
     {
         bilateral_filter_caller(disp, img, channels, iters, stream);
     }
 
-    void bilateral_filter_gpu(const DevMem2D_<short>& disp, const DevMem2D& img, int channels, int iters, cudaStream_t stream)
+    void bilateral_filter_gpu(const DevMem2D_<short>& disp, const DevMem2Db& img, int channels, int iters, cudaStream_t stream)
     {
         bilateral_filter_caller(disp, img, channels, iters, stream);
     }

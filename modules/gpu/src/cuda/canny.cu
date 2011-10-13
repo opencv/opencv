@@ -48,7 +48,7 @@ using namespace cv::gpu;
 
 namespace cv { namespace gpu { namespace canny
 {
-    __global__ void calcSobelRowPass(const PtrStep src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols)
+    __global__ void calcSobelRowPass(const PtrStepb src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols)
     {
         __shared__ int smem[16][18];
 
@@ -73,7 +73,7 @@ namespace cv { namespace gpu { namespace canny
         }
     }
 
-    void calcSobelRowPass_gpu(PtrStep src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols)
+    void calcSobelRowPass_gpu(PtrStepb src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols)
     {
         dim3 block(16, 16, 1);
         dim3 grid(divUp(cols, block.x), divUp(rows, block.y), 1);
@@ -468,7 +468,7 @@ namespace cv { namespace gpu { namespace canny
         }
     }
 
-    __global__ void getEdges(PtrStepi map, PtrStep dst, int rows, int cols)
+    __global__ void getEdges(PtrStepi map, PtrStepb dst, int rows, int cols)
     {
         const int j = blockIdx.x * 16 + threadIdx.x;
         const int i = blockIdx.y * 16 + threadIdx.y;
@@ -477,7 +477,7 @@ namespace cv { namespace gpu { namespace canny
             dst.ptr(i)[j] = (uchar)(-(map.ptr(i + 1)[j + 1] >> 1));
     }
 
-    void getEdges_gpu(PtrStepi map, PtrStep dst, int rows, int cols)
+    void getEdges_gpu(PtrStepi map, PtrStepb dst, int rows, int cols)
     {
         dim3 block(16, 16, 1);
         dim3 grid(divUp(cols, block.x), divUp(rows, block.y), 1);

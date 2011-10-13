@@ -145,7 +145,7 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps)
+    extern "C" void meanShiftFiltering_gpu(const DevMem2Db& src, DevMem2Db dst, int sp, int sr, int maxIter, float eps)
     {
         dim3 grid(1, 1, 1);
         dim3 threads(32, 8, 1);
@@ -161,7 +161,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaDeviceSynchronize() );
         cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
-    extern "C" void meanShiftProc_gpu(const DevMem2D& src, DevMem2D dstr, DevMem2D dstsp, int sp, int sr, int maxIter, float eps) 
+    extern "C" void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps) 
     {
         dim3 grid(1, 1, 1);
         dim3 threads(32, 8, 1);
@@ -281,7 +281,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void drawColorDisp_gpu(const DevMem2D& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream)
+    void drawColorDisp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream)
     {
         dim3 threads(16, 16, 1);
         dim3 grid(1, 1, 1);
@@ -295,7 +295,7 @@ namespace cv { namespace gpu { namespace imgproc
             cudaSafeCall( cudaDeviceSynchronize() ); 
     }
 
-    void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream)
+    void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream)
     {
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -360,7 +360,7 @@ namespace cv { namespace gpu { namespace imgproc
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
+    void reprojectImageTo3D_gpu(const DevMem2Db& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
     {
         reprojectImageTo3D_caller(disp, xyzw, q, stream);
     }
@@ -406,7 +406,7 @@ namespace cv { namespace gpu { namespace imgproc
     texture<float, 2> harrisDyTex;
 
     __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
-                                        PtrStep dst)
+                                        PtrStepb dst)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -440,7 +440,7 @@ namespace cv { namespace gpu { namespace imgproc
 
     template <typename BR, typename BC>
     __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
-                                        PtrStep dst, BR border_row, BC border_col)
+                                        PtrStepb dst, BR border_row, BC border_col)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -474,7 +474,7 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    void cornerHarris_caller(const int block_size, const float k, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst, 
+    void cornerHarris_caller(const int block_size, const float k, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, 
                              int border_type)
     {
         const int rows = Dx.rows;
@@ -518,7 +518,7 @@ namespace cv { namespace gpu { namespace imgproc
     texture<float, 2> minEigenValDyTex;
 
     __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, 
-                                             PtrStep dst)
+                                             PtrStepb dst)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -555,7 +555,7 @@ namespace cv { namespace gpu { namespace imgproc
 
     template <typename BR, typename BC>
     __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, 
-                                             PtrStep dst, BR border_row, BC border_col)
+                                             PtrStepb dst, BR border_row, BC border_col)
     {
         const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
         const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -591,7 +591,7 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    void cornerMinEigenVal_caller(const int block_size, const DevMem2D Dx, const DevMem2D Dy, DevMem2D dst,
+    void cornerMinEigenVal_caller(const int block_size, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst,
                                   int border_type)
     {
         const int rows = Dx.rows;
@@ -631,7 +631,7 @@ namespace cv { namespace gpu { namespace imgproc
 
 ////////////////////////////// Column Sum //////////////////////////////////////
 
-    __global__ void column_sumKernel_32F(int cols, int rows, const PtrStep src, const PtrStep dst)
+    __global__ void column_sumKernel_32F(int cols, int rows, const PtrStepb src, const PtrStepb dst)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -652,7 +652,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void columnSum_32F(const DevMem2D src, const DevMem2D dst)
+    void columnSum_32F(const DevMem2Db src, const DevMem2Db dst)
     {
         dim3 threads(256);
         dim3 grid(divUp(src.cols, threads.x));
@@ -667,7 +667,7 @@ namespace cv { namespace gpu { namespace imgproc
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums
 
-    __global__ void mulSpectrumsKernel(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+    __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
                                        DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;    
@@ -680,7 +680,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+    void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
                       DevMem2D_<cufftComplex> c)
     {
         dim3 threads(256);
@@ -697,7 +697,7 @@ namespace cv { namespace gpu { namespace imgproc
     // mulSpectrums_CONJ
 
     __global__ void mulSpectrumsKernel_CONJ(
-            const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+            const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
             DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;    
@@ -710,7 +710,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+    void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
                            DevMem2D_<cufftComplex> c)
     {
         dim3 threads(256);
@@ -727,7 +727,7 @@ namespace cv { namespace gpu { namespace imgproc
     // mulAndScaleSpectrums
 
     __global__ void mulAndScaleSpectrumsKernel(
-            const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b, 
+            const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
             float scale, DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -741,7 +741,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulAndScaleSpectrums(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+    void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
                               float scale, DevMem2D_<cufftComplex> c)
     {
         dim3 threads(256);
@@ -758,7 +758,7 @@ namespace cv { namespace gpu { namespace imgproc
     // mulAndScaleSpectrums_CONJ
 
     __global__ void mulAndScaleSpectrumsKernel_CONJ(
-            const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+            const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
             float scale, DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -772,7 +772,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulAndScaleSpectrums_CONJ(const PtrStep_<cufftComplex> a, const PtrStep_<cufftComplex> b,
+    void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
                                   float scale, DevMem2D_<cufftComplex> c)
     {
         dim3 threads(256);

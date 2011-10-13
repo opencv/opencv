@@ -55,11 +55,11 @@ namespace cv { namespace gpu { namespace device
 
         struct MaskReader
         {
-            explicit MaskReader(const PtrStep& mask_): mask(mask_) {}
+            explicit MaskReader(const PtrStepb& mask_): mask(mask_) {}
 
             __device__ __forceinline__ bool operator()(int y, int x) const { return mask.ptr(y)[x]; }
 
-            const PtrStep mask;
+            const PtrStepb mask;
         };
 
         struct NoMask 
@@ -219,7 +219,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        __global__ static void transformSmart(const DevMem2D_<T> src_, PtrStep_<D> dst_, const Mask mask, const UnOp op)
+        __global__ static void transformSmart(const DevMem2D_<T> src_, PtrStep<D> dst_, const Mask mask, const UnOp op)
         {
             typedef TransformFunctorTraits<UnOp> ft;
             typedef typename UnaryReadWriteTraits<T, D, ft::smart_shift>::read_type read_type;
@@ -255,7 +255,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __global__ void transformSimple(const DevMem2D_<T> src, PtrStep_<D> dst, const Mask mask, const UnOp op)
+        static __global__ void transformSimple(const DevMem2D_<T> src, PtrStep<D> dst, const Mask mask, const UnOp op)
         {
 		    const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		    const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -267,7 +267,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        __global__ static void transformSmart(const DevMem2D_<T1> src1_, const PtrStep_<T2> src2_, PtrStep_<D> dst_, 
+        __global__ static void transformSmart(const DevMem2D_<T1> src1_, const PtrStep<T2> src2_, PtrStep<D> dst_, 
             const Mask mask, const BinOp op)
         {
             typedef TransformFunctorTraits<BinOp> ft;
@@ -307,7 +307,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static __global__ void transformSimple(const DevMem2D_<T1> src1, const PtrStep_<T2> src2, PtrStep_<D> dst, 
+        static __global__ void transformSimple(const DevMem2D_<T1> src1, const PtrStep<T2> src2, PtrStep<D> dst, 
             const Mask mask, const BinOp op)
         {
 		    const int x = blockDim.x * blockIdx.x + threadIdx.x;

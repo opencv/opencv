@@ -55,11 +55,11 @@ void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, Stream& /*st
 
 namespace cv { namespace gpu { namespace split_merge 
 {    
-    extern "C" void merge_caller(const DevMem2D* src, DevMem2D& dst, 
+    extern "C" void merge_caller(const DevMem2Db* src, DevMem2Db& dst, 
                                  int total_channels, size_t elem_size, 
                                  const cudaStream_t& stream);
 
-    extern "C" void split_caller(const DevMem2D& src, DevMem2D* dst, 
+    extern "C" void split_caller(const DevMem2Db& src, DevMem2Db* dst, 
                                  int num_channels, size_t elem_size1, 
                                  const cudaStream_t& stream);
 
@@ -95,11 +95,11 @@ namespace cv { namespace gpu { namespace split_merge
         {
             dst.create(size, CV_MAKETYPE(depth, total_channels));
 
-            DevMem2D src_as_devmem[4];
+            DevMem2Db src_as_devmem[4];
             for(size_t i = 0; i < n; ++i)
                 src_as_devmem[i] = src[i];
 
-            DevMem2D dst_as_devmem(dst);
+            DevMem2Db dst_as_devmem(dst);
             split_merge::merge_caller(src_as_devmem, dst_as_devmem,
                                       total_channels, CV_ELEM_SIZE(depth),
                                       stream);
@@ -130,11 +130,11 @@ namespace cv { namespace gpu { namespace split_merge
 
         CV_Assert(num_channels <= 4);
 
-        DevMem2D dst_as_devmem[4];
+        DevMem2Db dst_as_devmem[4];
         for (int i = 0; i < num_channels; ++i)
             dst_as_devmem[i] = dst[i];
 
-        DevMem2D src_as_devmem(src);
+        DevMem2Db src_as_devmem(src);
         split_merge::split_caller(src_as_devmem, dst_as_devmem,
                                   num_channels, src.elemSize1(), 
                                   stream);

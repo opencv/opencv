@@ -70,19 +70,19 @@ namespace cv {  namespace gpu { namespace device
 
     struct SingleMask
     {
-        explicit __host__ __device__ __forceinline__ SingleMask(const PtrStep& mask_) : mask(mask_) {}
+        explicit __host__ __device__ __forceinline__ SingleMask(const PtrStepb& mask_) : mask(mask_) {}
         
         __device__ __forceinline__ bool operator()(int y, int x) const
         {            
             return mask.ptr(y)[x] != 0;
         }
 
-        const PtrStep mask;
+        const PtrStepb mask;
     };
 
     struct MaskCollection
     {
-        explicit __host__ __device__ __forceinline__ MaskCollection(PtrStep* maskCollection_) : maskCollection(maskCollection_) {}
+        explicit __host__ __device__ __forceinline__ MaskCollection(PtrStepb* maskCollection_) : maskCollection(maskCollection_) {}
 
         __device__ __forceinline__ void next()
         {
@@ -99,8 +99,8 @@ namespace cv {  namespace gpu { namespace device
             return curMask.data == 0 || (ForceGlob<uchar>::Load(curMask.ptr(y), x, val), (val != 0));
         }
 
-        const PtrStep* maskCollection;
-        PtrStep curMask;
+        const PtrStepb* maskCollection;
+        PtrStepb curMask;
     };
 
     struct WithOutMask

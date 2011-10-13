@@ -105,7 +105,7 @@ namespace cv { namespace gpu { namespace histograms
         if (x + 3 < cols) addByte(s_WarpHist, (data >> 24) & 0xFFU, tag);
     }
 
-    __global__ void histogram256(const PtrStep_<uint> d_Data, uint* d_PartialHistograms, uint dataCount, uint cols)
+    __global__ void histogram256(const PtrStep<uint> d_Data, uint* d_PartialHistograms, uint dataCount, uint cols)
     {
         //Per-warp subhistogram storage
         __shared__ uint s_Hist[HISTOGRAM256_THREADBLOCK_MEMORY];
@@ -171,7 +171,7 @@ namespace cv { namespace gpu { namespace histograms
             d_Histogram[blockIdx.x] = saturate_cast<int>(data[0]);
     }
 
-    void histogram256_gpu(DevMem2D src, int* hist, uint* buf, cudaStream_t stream)
+    void histogram256_gpu(DevMem2Db src, int* hist, uint* buf, cudaStream_t stream)
     {
         histogram256<<<PARTIAL_HISTOGRAM256_COUNT, HISTOGRAM256_THREADBLOCK_SIZE, 0, stream>>>(
             DevMem2D_<uint>(src),
@@ -191,7 +191,7 @@ namespace cv { namespace gpu { namespace histograms
 
     __constant__ int c_lut[256];
 
-    __global__ void equalizeHist(const DevMem2D src, PtrStep dst)
+    __global__ void equalizeHist(const DevMem2Db src, PtrStepb dst)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -204,7 +204,7 @@ namespace cv { namespace gpu { namespace histograms
         }
     }
 
-    void equalizeHist_gpu(DevMem2D src, DevMem2D dst, const int* lut, cudaStream_t stream)
+    void equalizeHist_gpu(DevMem2Db src, DevMem2Db dst, const int* lut, cudaStream_t stream)
     {
         dim3 block(16, 16);
         dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));

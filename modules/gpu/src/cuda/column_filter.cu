@@ -66,7 +66,7 @@ namespace filter_column
     }
 
     template <int KERNEL_SIZE, typename T, typename D, typename B>
-    __global__ void linearColumnFilter(const DevMem2D_<T> src, PtrStep_<D> dst, int anchor, const B b)
+    __global__ void linearColumnFilter(const DevMem2D_<T> src, PtrStep<D> dst, int anchor, const B b)
     {
         typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
 
@@ -133,7 +133,7 @@ namespace cv { namespace gpu { namespace filters
     }
 
     template <typename T, typename D>
-    void linearColumnFilter_gpu(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream)
+    void linearColumnFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream)
     {
         typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream);
         static const caller_t callers[5][17] = 
@@ -240,11 +240,11 @@ namespace cv { namespace gpu { namespace filters
         callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, stream);
     }
 
-    template void linearColumnFilter_gpu<float , uchar >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float4, uchar4>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    //template void linearColumnFilter_gpu<float , short >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    //template void linearColumnFilter_gpu<float2, short2>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float3, short3>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float , int   >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float , float >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    template void linearColumnFilter_gpu<float , uchar >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    template void linearColumnFilter_gpu<float4, uchar4>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    //template void linearColumnFilter_gpu<float , short >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    //template void linearColumnFilter_gpu<float2, short2>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    template void linearColumnFilter_gpu<float3, short3>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    template void linearColumnFilter_gpu<float , int   >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    template void linearColumnFilter_gpu<float , float >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
 }}}

@@ -48,8 +48,8 @@ namespace cv { namespace gpu
 {
 
     template <typename T>
-    __global__ void blendLinearKernel(int rows, int cols, int cn, const PtrStep_<T> img1, const PtrStep_<T> img2,
-                                      const PtrStepf weights1, const PtrStepf weights2, PtrStep_<T> result)
+    __global__ void blendLinearKernel(int rows, int cols, int cn, const PtrStep<T> img1, const PtrStep<T> img2,
+                                      const PtrStepf weights1, const PtrStepf weights2, PtrStep<T> result)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -63,12 +63,11 @@ namespace cv { namespace gpu
             T p2 = img2.ptr(y)[x];
             result.ptr(y)[x] = (p1 * w1 + p2 * w2) / (w1 + w2 + 1e-5f);
         }
-    }
-
+    }	
 
     template <typename T>
-    void blendLinearCaller(int rows, int cols, int cn, const PtrStep_<T> img1, const PtrStep_<T> img2, 
-                           const PtrStepf weights1, const PtrStepf weights2, PtrStep_<T> result, cudaStream_t stream)
+    void blendLinearCaller(int rows, int cols, int cn, const PtrStep<T>& img1, const PtrStep<T>& img2, 
+                           const PtrStepf& weights1, const PtrStepf& weights2, PtrStep<T> result, cudaStream_t stream)
     {
         dim3 threads(16, 16);
         dim3 grid(divUp(cols * cn, threads.x), divUp(rows, threads.y));
@@ -80,14 +79,14 @@ namespace cv { namespace gpu
             cudaSafeCall(cudaDeviceSynchronize());
     }
 
-    template void blendLinearCaller<uchar>(int, int, int, const PtrStep, const PtrStep, 
-                                           const PtrStepf, const PtrStepf, PtrStep, cudaStream_t stream);
-    template void blendLinearCaller<float>(int, int, int, const PtrStepf, const PtrStepf, 
-                                           const PtrStepf, const PtrStepf, PtrStepf, cudaStream_t stream);
+    template void blendLinearCaller<uchar>(int, int, int, const PtrStep<uchar>&, const PtrStep<uchar>&, 
+                                           const PtrStepf&, const PtrStepf&, PtrStep<uchar>, cudaStream_t stream);
+    template void blendLinearCaller<float>(int, int, int, const PtrStep<float>&, const PtrStep<float>&, 
+                                           const PtrStepf&, const PtrStepf&, PtrStep<float>, cudaStream_t stream);
 
 
-    __global__ void blendLinearKernel8UC4(int rows, int cols, const PtrStep img1, const PtrStep img2,
-                                          const PtrStepf weights1, const PtrStepf weights2, PtrStep result)
+    __global__ void blendLinearKernel8UC4(int rows, int cols, const PtrStepb img1, const PtrStepb img2,
+                                          const PtrStepf weights1, const PtrStepf weights2, PtrStepb result)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -107,8 +106,8 @@ namespace cv { namespace gpu
     }
 
 
-    void blendLinearCaller8UC4(int rows, int cols, const PtrStep img1, const PtrStep img2, 
-                               const PtrStepf weights1, const PtrStepf weights2, PtrStep result, cudaStream_t stream)
+    void blendLinearCaller8UC4(int rows, int cols, const PtrStepb& img1, const PtrStepb& img2, 
+                               const PtrStepf& weights1, const PtrStepf& weights2, PtrStepb result, cudaStream_t stream)
     {
         dim3 threads(16, 16);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));

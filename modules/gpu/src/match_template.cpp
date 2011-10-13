@@ -54,16 +54,16 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_
 namespace cv { namespace gpu { namespace imgproc 
 {  
     void matchTemplateNaive_CCORR_8U(
-            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
+            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
 
     void matchTemplateNaive_CCORR_32F(
-            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
+            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
 
     void matchTemplateNaive_SQDIFF_8U(
-            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
+            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
 
     void matchTemplateNaive_SQDIFF_32F(
-            const DevMem2D image, const DevMem2D templ, DevMem2Df result, int cn);
+            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
 
     void matchTemplatePrepared_SQDIFF_8U(
             int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
@@ -145,7 +145,7 @@ namespace cv { namespace gpu { namespace imgproc
     void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
                       unsigned int templ_sqsum, DevMem2Df result, int cn);
 
-    void extractFirstChannel_32F(const DevMem2D image, DevMem2Df result, int cn);
+    void extractFirstChannel_32F(const DevMem2Db image, DevMem2Df result, int cn);
 }}}
 
 

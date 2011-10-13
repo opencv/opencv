@@ -54,7 +54,7 @@ namespace cv { namespace gpu { namespace device
         detail::transform_caller(src, dst, op, WithOutMask(), stream);
     }
     template <typename T, typename D, typename UnOp>
-    void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const PtrStep& mask, const UnOp& op, cudaStream_t stream = 0)
+    void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const PtrStepb& mask, const UnOp& op, cudaStream_t stream = 0)
     {
         detail::transform_caller(src, dst, op, SingleMask(mask), stream);
     }
@@ -65,7 +65,7 @@ namespace cv { namespace gpu { namespace device
         detail::transform_caller(src1, src2, dst, op, WithOutMask(), stream);
     }
     template <typename T1, typename T2, typename D, typename BinOp>
-    void transform(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const PtrStep& mask, const BinOp& op, cudaStream_t stream = 0)
+    void transform(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const PtrStepb& mask, const BinOp& op, cudaStream_t stream = 0)
     {
         detail::transform_caller(src1, src2, dst, op, SingleMask(mask), stream);
     }

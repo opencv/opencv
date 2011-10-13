@@ -143,7 +143,7 @@ namespace
             uploadConstant("cv::gpu::surf::c_nOctaveLayers",     nOctaveLayers);
             uploadConstant("cv::gpu::surf::c_hessianThreshold",  static_cast<float>(hessianThreshold));
 
-            imgTex.bind("cv::gpu::surf::imgTex", (DevMem2D)img);
+            imgTex.bind("cv::gpu::surf::imgTex", (DevMem2Db)img);
 
             integralBuffered(img, sum, intBuffer);
             sumTex.bind("cv::gpu::surf::sumTex", (DevMem2D_<unsigned int>)sum);

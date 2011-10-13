@@ -60,7 +60,7 @@ void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, Gp
 namespace cv { namespace gpu { namespace csbp
 {
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
-        const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp);
+        const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& temp);
 
     template<class T>
     void init_data_cost(int rows, int cols, T* disp_selected_pyr, T* data_cost_selected, size_t msg_step,

@@ -84,71 +84,71 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat&, vector< vec
 
 namespace cv { namespace gpu { namespace bf_match
 {
-    template <typename T> void matchL1_gpu(const DevMem2D& query, const DevMem2D& train, const DevMem2D& mask, 
+    template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchL2_gpu(const DevMem2D& query, const DevMem2D& train, const DevMem2D& mask, 
+    template <typename T> void matchL2_gpu(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchHamming_gpu(const DevMem2D& query, const DevMem2D& train, const DevMem2D& mask, 
+    template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, 
         int cc, cudaStream_t stream);
 
-    template <typename T> void matchL1_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
+    template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchL2_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
+    template <typename T> void matchL2_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchHamming_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
+    template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
         int cc, cudaStream_t stream);
 }}}
 
 namespace cv { namespace gpu { namespace bf_knnmatch
 {
-    template <typename T> void matchL1_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, 
+    template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& train, int k, const DevMem2Db& mask, 
+        const DevMem2Db& trainIdx, const DevMem2Db& distance, const DevMem2Df& allDist, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchL2_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, 
+    template <typename T> void matchL2_gpu(const DevMem2Db& query, const DevMem2Db& train, int k, const DevMem2Db& mask, 
+        const DevMem2Db& trainIdx, const DevMem2Db& distance, const DevMem2Df& allDist, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchHamming_gpu(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, 
+    template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db& train, int k, const DevMem2Db& mask, 
+        const DevMem2Db& trainIdx, const DevMem2Db& distance, const DevMem2Df& allDist, 
         int cc, cudaStream_t stream);
 
-    template <typename T> void match2L1_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
-        const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+    template <typename T> void match2L1_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
+        const DevMem2Db& trainIdx, const DevMem2Db& imgIdx, const DevMem2Db& distance, 
         int cc, cudaStream_t stream);
-    template <typename T> void match2L2_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
-        const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+    template <typename T> void match2L2_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
+        const DevMem2Db& trainIdx, const DevMem2Db& imgIdx, const DevMem2Db& distance, 
         int cc, cudaStream_t stream);
-    template <typename T> void match2Hamming_gpu(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
-        const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+    template <typename T> void match2Hamming_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
+        const DevMem2Db& trainIdx, const DevMem2Db& imgIdx, const DevMem2Db& distance, 
         int cc, cudaStream_t stream);
 }}}
 
 namespace cv { namespace gpu { namespace bf_radius_match 
 {
-    template <typename T> void matchL1_gpu(const DevMem2D& query, const DevMem2D& train, float maxDistance, const DevMem2D& mask, 
+    template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& train, float maxDistance, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchL2_gpu(const DevMem2D& query, const DevMem2D& train, float maxDistance, const DevMem2D& mask, 
+    template <typename T> void matchL2_gpu(const DevMem2Db& query, const DevMem2Db& train, float maxDistance, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
         int cc, cudaStream_t stream);
-    template <typename T> void matchHamming_gpu(const DevMem2D& query, const DevMem2D& train, float maxDistance, const DevMem2D& mask, 
+    template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db& train, float maxDistance, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
         int cc, cudaStream_t stream);
 
-    template <typename T> void matchL1_gpu(const DevMem2D& query, const DevMem2D* trains, int n, float maxDistance, const DevMem2D* masks, 
+    template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db* trains, int n, float maxDistance, const DevMem2Db* masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
         int cc, cudaStream_t stream);
 
-    template <typename T> void matchL2_gpu(const DevMem2D& query, const DevMem2D* trains, int n, float maxDistance, const DevMem2D* masks, 
+    template <typename T> void matchL2_gpu(const DevMem2Db& query, const DevMem2Db* trains, int n, float maxDistance, const DevMem2Db* masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
         int cc, cudaStream_t stream);
 
-    template <typename T> void matchHamming_gpu(const DevMem2D& query, const DevMem2D* trains, int n, float maxDistance, const DevMem2D* masks, 
+    template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db* trains, int n, float maxDistance, const DevMem2Db* masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
         int cc, cudaStream_t stream);
 }}}
@@ -197,7 +197,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& query, const
 
     using namespace cv::gpu::bf_match;
 
-    typedef void (*caller_t)(const DevMem2D& query, const DevMem2D& train, const DevMem2D& mask, 
+    typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask, 
                              const DevMem2Di& trainIdx, const DevMem2Df& distance,
                              int cc, cudaStream_t stream);
 
@@ -294,9 +294,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollect
 
     if (masks.empty())
     {
-        Mat trainCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(DevMem2D)));
+        Mat trainCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(DevMem2Db)));
 
-        DevMem2D* trainCollectionCPU_ptr = trainCollectionCPU.ptr<DevMem2D>();
+        DevMem2Db* trainCollectionCPU_ptr = trainCollectionCPU.ptr<DevMem2Db>();
 
         for (size_t i = 0, size = trainDescCollection.size(); i < size; ++i, ++trainCollectionCPU_ptr)
             *trainCollectionCPU_ptr = trainDescCollection[i];
@@ -308,11 +308,11 @@ void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollect
     {
         CV_Assert(masks.size() == trainDescCollection.size());
 
-        Mat trainCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(DevMem2D)));
-        Mat maskCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(PtrStep)));
+        Mat trainCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(DevMem2Db)));
+        Mat maskCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(PtrStepb)));
 
-        DevMem2D* trainCollectionCPU_ptr = trainCollectionCPU.ptr<DevMem2D>();
-        PtrStep* maskCollectionCPU_ptr = maskCollectionCPU.ptr<PtrStep>();
+        DevMem2Db* trainCollectionCPU_ptr = trainCollectionCPU.ptr<DevMem2Db>();
+        PtrStepb* maskCollectionCPU_ptr = maskCollectionCPU.ptr<PtrStepb>();
 
         for (size_t i = 0, size = trainDescCollection.size(); i < size; ++i, ++trainCollectionCPU_ptr, ++maskCollectionCPU_ptr)
         {
@@ -339,7 +339,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& query, c
 
     using namespace cv::gpu::bf_match;
 
-    typedef void (*caller_t)(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
+    typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
                              const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
                              int cc, cudaStream_t stream);
 
@@ -450,8 +450,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchSingle(const GpuMat& query, co
 
     using namespace cv::gpu::bf_knnmatch;
 
-    typedef void (*caller_t)(const DevMem2D& query, const DevMem2D& train, int k, const DevMem2D& mask, 
-                             const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2Df& allDist, 
+    typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& train, int k, const DevMem2Db& mask, 
+                             const DevMem2Db& trainIdx, const DevMem2Db& distance, const DevMem2Df& allDist, 
                              int cc, cudaStream_t stream);
 
     static const caller_t callers[3][6] =
@@ -579,8 +579,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch2Collection(const GpuMat& quer
 
     using namespace cv::gpu::bf_knnmatch;
 
-    typedef void (*caller_t)(const DevMem2D& query, const DevMem2D& trains, const DevMem2D_<PtrStep>& masks, 
-                             const DevMem2D& trainIdx, const DevMem2D& imgIdx, const DevMem2D& distance, 
+    typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
+                             const DevMem2Db& trainIdx, const DevMem2Db& imgIdx, const DevMem2Db& distance, 
                              int cc, cudaStream_t stream);
 
     static const caller_t callers[3][6] =
@@ -760,7 +760,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchSingle(const GpuMat& query,
 
     using namespace cv::gpu::bf_radius_match;
 
-    typedef void (*caller_t)(const DevMem2D& query, const DevMem2D& train, float maxDistance, const DevMem2D& mask, 
+    typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& train, float maxDistance, const DevMem2Db& mask, 
                              const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
                              int cc, cudaStream_t stream);
 
@@ -891,7 +891,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchCollection(const GpuMat& qu
 
     using namespace cv::gpu::bf_radius_match;
 
-    typedef void (*caller_t)(const DevMem2D& query, const DevMem2D* trains, int n, float maxDistance, const DevMem2D* masks, 
+    typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db* trains, int n, float maxDistance, const DevMem2Db* masks, 
                              const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
                              int cc, cudaStream_t stream);
 
@@ -940,8 +940,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchCollection(const GpuMat& qu
     caller_t func = callers[distType][query.depth()];
     CV_Assert(func != 0);
 
-    vector<DevMem2D> trains_(trainDescCollection.begin(), trainDescCollection.end());
-    vector<DevMem2D> masks_(masks.begin(), masks.end());
+    vector<DevMem2Db> trains_(trainDescCollection.begin(), trainDescCollection.end());
+    vector<DevMem2Db> masks_(masks.begin(), masks.end());
 
     func(query, &trains_[0], static_cast<int>(trains_.size()), maxDistance, masks_.size() == 0 ? 0 : &masks_[0], 
         trainIdx, imgIdx, distance, nMatches, cc, StreamAccessor::getStream(stream));

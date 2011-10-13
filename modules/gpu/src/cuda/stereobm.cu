@@ -232,7 +232,7 @@ __device__ void InitColSSD(int x_tex, int y_tex, int im_pitch, unsigned char* im
 }
 
 template<int RADIUS>
-__global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t img_step, PtrStep disp, int maxdisp)
+__global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t img_step, PtrStepb disp, int maxdisp)
 {
     extern __shared__ unsigned int col_ssd_cache[];
     volatile unsigned int *col_ssd = col_ssd_cache + BLOCK_W + threadIdx.x;
@@ -313,7 +313,7 @@ __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t i
 }
 
 
-template<int RADIUS> void kernel_caller(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, cudaStream_t & stream)
+template<int RADIUS> void kernel_caller(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, cudaStream_t & stream)
 {
     dim3 grid(1,1,1);
     dim3 threads(BLOCK_W, 1, 1);
@@ -331,7 +331,7 @@ template<int RADIUS> void kernel_caller(const DevMem2D& left, const DevMem2D& ri
         cudaSafeCall( cudaDeviceSynchronize() );
 };
 
-typedef void (*kernel_caller_t)(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, cudaStream_t & stream);
+typedef void (*kernel_caller_t)(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, cudaStream_t & stream);
 
 const static kernel_caller_t callers[] =
 {
@@ -346,7 +346,7 @@ const static kernel_caller_t callers[] =
 };
 const int calles_num = sizeof(callers)/sizeof(callers[0]);
 
-extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t& stream)
+extern "C" void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t& stream)
 {
     int winsz2 = winsz >> 1;
 
@@ -375,7 +375,7 @@ extern "C" void stereoBM_GPU(const DevMem2D& left, const DevMem2D& right, const 
 
 texture<unsigned char, 2, cudaReadModeElementType> texForSobel;
 
-extern "C" __global__ void prefilter_kernel(DevMem2D output, int prefilterCap)
+extern "C" __global__ void prefilter_kernel(DevMem2Db output, int prefilterCap)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -392,7 +392,7 @@ extern "C" __global__ void prefilter_kernel(DevMem2D output, int prefilterCap)
     }
 }
 
-extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, int prefilterCap, cudaStream_t & stream)
+extern "C" void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap, cudaStream_t & stream)
 {
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
     cudaSafeCall( cudaBindTexture2D( 0, texForSobel, input.data, desc, input.cols, input.rows, input.step ) );
@@ -451,7 +451,7 @@ __device__ float CalcSums(float *cols, float *cols_cache, int winsz)
 
 #define RpT (2 * ROWSperTHREAD)  // got experimentally
 
-extern "C" __global__ void textureness_kernel(DevMem2D disp, int winsz, float threshold)
+extern "C" __global__ void textureness_kernel(DevMem2Db disp, int winsz, float threshold)
 {
     int winsz2 = winsz/2;
     int n_dirty_pixels = (winsz2) * 2;
@@ -510,7 +510,7 @@ extern "C" __global__ void textureness_kernel(DevMem2D disp, int winsz, float th
     }
 }
 
-extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float avgTexturenessThreshold, const DevMem2D& disp, cudaStream_t & stream)
+extern "C" void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream)
 {
     avgTexturenessThreshold *= winsz * winsz;
 

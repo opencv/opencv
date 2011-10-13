@@ -55,11 +55,11 @@ void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const Gpu
 namespace cv { namespace gpu 
 {
     template <typename T>
-    void blendLinearCaller(int rows, int cols, int cn, const PtrStep_<T> img1, const PtrStep_<T> img2, 
-                           const PtrStep_<float> weights1, const PtrStep_<float> weights2, PtrStep_<T> result, cudaStream_t stream);
+    void blendLinearCaller(int rows, int cols, int cn, const PtrStep<T>& img1, const PtrStep<T>& img2, 
+                           const PtrStepf& weights1, const PtrStepf& weights2, PtrStep<T> result, cudaStream_t stream);
 
-    void blendLinearCaller8UC4(int rows, int cols, const PtrStep img1, const PtrStep img2, 
-                               const PtrStepf weights1, const PtrStepf weights2, PtrStep result, cudaStream_t stream);
+    void blendLinearCaller8UC4(int rows, int cols, const PtrStepb& img1, const PtrStepb& img2, 
+                               const PtrStepf& weights1, const PtrStepf& weights2, PtrStepb result, cudaStream_t stream);
 }}
 
 void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 

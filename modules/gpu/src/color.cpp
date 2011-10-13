@@ -54,7 +54,7 @@ void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(
 namespace cv { namespace gpu {  namespace device  
 {
     #define OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name) \
-        void name(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+        void name(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
 
     #define OPENCV_GPU_DECLARE_CVTCOLOR_ALL(name) \
         OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u) \
@@ -203,7 +203,7 @@ namespace cv { namespace gpu {  namespace device
 
 namespace
 {
-    typedef void (*gpu_func_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+    typedef void (*gpu_func_t)(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
 
     void bgr_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {

@@ -89,6 +89,7 @@ namespace cv { namespace gpu
         // Contains just image size, data ptr and step.
         template <class T> operator DevMem2D_<T>() const;
         template <class T> operator PtrStep_<T>() const;
+		template <class T> operator PtrStep<T>() const;
 
         //! pefroms blocking upload data to GpuMat.
         void upload(const cv::Mat& m);
@@ -238,6 +239,7 @@ namespace cv { namespace gpu
 
     template <class T> inline GpuMat::operator DevMem2D_<T>() const { return DevMem2D_<T>(rows, cols, (T*)data, step); }
     template <class T> inline GpuMat::operator PtrStep_<T>() const { return PtrStep_<T>(static_cast< DevMem2D_<T> >(*this)); }
+	template <class T> inline GpuMat::operator PtrStep<T>() const { return PtrStep<T>((T*)data, step); }	
 
     inline GpuMat GpuMat::clone() const
     {

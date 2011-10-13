@@ -89,8 +89,8 @@ namespace cv { namespace gpu { namespace split_merge {
         //typedef double4 type3;
     };
 
-    typedef void (*MergeFunction)(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream);
-    typedef void (*SplitFunction)(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream);
+    typedef void (*MergeFunction)(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream);
+    typedef void (*SplitFunction)(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream);
 
     //------------------------------------------------------------
     // Merge    
@@ -224,7 +224,7 @@ namespace cv { namespace gpu { namespace split_merge {
 
 
     template <typename T>
-    static void mergeC2_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
+    static void mergeC2_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
@@ -240,7 +240,7 @@ namespace cv { namespace gpu { namespace split_merge {
 
 
     template <typename T>
-    static void mergeC3_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
+    static void mergeC3_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
@@ -257,7 +257,7 @@ namespace cv { namespace gpu { namespace split_merge {
 
 
     template <typename T>
-    static void mergeC4_(const DevMem2D* src, DevMem2D& dst, const cudaStream_t& stream)
+    static void mergeC4_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
@@ -274,7 +274,7 @@ namespace cv { namespace gpu { namespace split_merge {
     }
 
 
-    extern "C" void merge_caller(const DevMem2D* src, DevMem2D& dst,
+    extern "C" void merge_caller(const DevMem2Db* src, DevMem2Db& dst,
                                  int total_channels, size_t elem_size,
                                  const cudaStream_t& stream)
     {
@@ -433,7 +433,7 @@ namespace cv { namespace gpu { namespace split_merge {
     }
 
     template <typename T>
-    static void splitC2_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    static void splitC2_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
@@ -449,7 +449,7 @@ namespace cv { namespace gpu { namespace split_merge {
 
 
     template <typename T>
-    static void splitC3_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    static void splitC3_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
@@ -466,7 +466,7 @@ namespace cv { namespace gpu { namespace split_merge {
 
 
     template <typename T>
-    static void splitC4_(const DevMem2D& src, DevMem2D* dst, const cudaStream_t& stream)
+    static void splitC4_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
     {
         dim3 blockDim(32, 8);
         dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
@@ -483,7 +483,7 @@ namespace cv { namespace gpu { namespace split_merge {
     }
 
 
-    extern "C" void split_caller(const DevMem2D& src, DevMem2D* dst,
+    extern "C" void split_caller(const DevMem2Db& src, DevMem2Db* dst,
                                  int num_channels, size_t elem_size1,
                                  const cudaStream_t& stream)
     {

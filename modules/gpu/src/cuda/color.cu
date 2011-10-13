@@ -221,7 +221,7 @@ namespace cv { namespace gpu { namespace device
     };
 
     #define OPENCV_GPU_IMPLEMENT_CVTCOLOR(name, traits) \
-        void name(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream) \
+        void name(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream) \
         { \
             traits::functor_type functor = traits::create_functor(); \
             typedef typename traits::functor_type::argument_type src_t; \

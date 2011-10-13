@@ -76,7 +76,7 @@ namespace cv { namespace gpu { namespace csbp
 
 
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th,
-                        const DevMem2D& left, const DevMem2D& right, const DevMem2D& temp)
+                        const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& temp)
     {
         cudaSafeCall( cudaMemcpyToSymbol(cndisp, &ndisp, sizeof(int)) );
 

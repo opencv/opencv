@@ -66,7 +66,7 @@ namespace cv { namespace gpu { namespace imgproc
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
             B<T> brd(src.rows, src.cols, VecTraits<T>::make(borderValue));
-            BorderReader< PtrStep_<T>, B<T> > brdSrc(src, brd);
+            BorderReader< PtrStep<T>, B<T> > brdSrc(src, brd);
 
             copyMakeBorder<<<grid, block, 0, stream>>>(brdSrc, dst, top, left);
             cudaSafeCall( cudaGetLastError() );
@@ -76,7 +76,7 @@ namespace cv { namespace gpu { namespace imgproc
         }
     };
 
-    template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, 
+    template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, 
         const T* borderValue, cudaStream_t stream)
     {
         typedef typename TypeVec<T, cn>::vec_type vec_type;
@@ -95,33 +95,33 @@ namespace cv { namespace gpu { namespace imgproc
         callers[borderMode](DevMem2D_<vec_type>(src), DevMem2D_<vec_type>(dst), top, left, borderValue, stream);
     }
 
-    template void copyMakeBorder_gpu<uchar, 1>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<uchar, 2>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<uchar, 3>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<uchar, 4>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<uchar, 1>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<uchar, 2>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<uchar, 3>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<uchar, 4>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
     
-    //template void copyMakeBorder_gpu<schar, 1>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<schar, 2>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<schar, 3>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<schar, 4>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<schar, 1>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<schar, 2>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<schar, 3>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<schar, 4>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const schar* borderValue, cudaStream_t stream);
     
-    template void copyMakeBorder_gpu<ushort, 1>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<ushort, 2>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<ushort, 3>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<ushort, 4>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<ushort, 1>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<ushort, 2>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<ushort, 3>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<ushort, 4>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const ushort* borderValue, cudaStream_t stream);
     
-    template void copyMakeBorder_gpu<short, 1>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<short, 2>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<short, 3>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<short, 4>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<short, 1>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<short, 2>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<short, 3>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<short, 4>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const short* borderValue, cudaStream_t stream);
     
-    //template void copyMakeBorder_gpu<int, 1>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<int, 2>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<int, 3>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<int, 4>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<int, 1>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<int, 2>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<int, 3>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<int, 4>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const int* borderValue, cudaStream_t stream);
     
-    template void copyMakeBorder_gpu<float, 1>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
-    //template void copyMakeBorder_gpu<float, 2>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<float, 3>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
-    template void copyMakeBorder_gpu<float, 4>(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<float, 1>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
+    //template void copyMakeBorder_gpu<float, 2>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<float, 3>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void copyMakeBorder_gpu<float, 4>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
 }}}

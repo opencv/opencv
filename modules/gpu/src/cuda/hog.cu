@@ -187,7 +187,7 @@ __global__ void compute_hists_kernel_many_blocks(const int img_block_width, cons
 
 void compute_hists(int nbins, int block_stride_x, int block_stride_y, 
                    int height, int width, const DevMem2Df& grad, 
-                   const DevMem2D& qangle, float sigma, float* block_hists)                             
+                   const DevMem2Db& qangle, float sigma, float* block_hists)                             
 {
     const int nblocks = 1;
 
@@ -614,8 +614,8 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 }
 
 
-void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2D& img, 
-                            float angle_scale, DevMem2Df grad, DevMem2D qangle, bool correct_gamma)
+void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2Db& img, 
+                            float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
 {
     const int nthreads = 256;
 
@@ -686,8 +686,8 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
 }
 
 
-void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& img, 
-                            float angle_scale, DevMem2Df grad, DevMem2D qangle, bool correct_gamma)
+void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2Db& img, 
+                            float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
 {
     const int nthreads = 256;
 
@@ -734,7 +734,7 @@ __global__ void resize_for_hog_kernel(float sx, float sy, DevMem2D_<uchar4> dst,
 }
 
 template<class T, class TEX> 
-static void resize_for_hog(const DevMem2D& src, DevMem2D dst, TEX& tex)
+static void resize_for_hog(const DevMem2Db& src, DevMem2Db dst, TEX& tex)
 {
     tex.filterMode = cudaFilterModeLinear;
 
@@ -765,7 +765,7 @@ static void resize_for_hog(const DevMem2D& src, DevMem2D dst, TEX& tex)
     cudaSafeCall( cudaUnbindTexture(tex) );
 }
 
-void resize_8UC1(const DevMem2D& src, DevMem2D dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
-void resize_8UC4(const DevMem2D& src, DevMem2D dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
+void resize_8UC1(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
+void resize_8UC4(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
 
 }}}

@@ -59,8 +59,8 @@ namespace cv { namespace gpu { namespace bf
 {
     void load_constants(float* table_color, const DevMem2Df& table_space, int ndisp, int radius, short edge_disc, short max_disc);
 
-    void bilateral_filter_gpu(const DevMem2D& disp, const DevMem2D& img, int channels, int iters, cudaStream_t stream);
-    void bilateral_filter_gpu(const DevMem2D_<short>& disp, const DevMem2D& img, int channels, int iters, cudaStream_t stream);
+    void bilateral_filter_gpu(const DevMem2Db& disp, const DevMem2Db& img, int channels, int iters, cudaStream_t stream);
+    void bilateral_filter_gpu(const DevMem2D_<short>& disp, const DevMem2Db& img, int channels, int iters, cudaStream_t stream);
 }}}
 
 namespace
