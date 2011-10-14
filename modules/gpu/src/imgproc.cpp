@@ -1537,6 +1537,8 @@ void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size, Size block_s
 
     dft_size.width = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
     dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
+    if (dft_size.width < 512) dft_size.width = 512;
+    if (dft_size.height < 512) dft_size.height = 512;
     createContinuous(dft_size, CV_32F, image_block);
     createContinuous(dft_size, CV_32F, templ_block);
     createContinuous(dft_size, CV_32F, result_data);
