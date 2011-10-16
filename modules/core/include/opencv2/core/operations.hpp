@@ -790,7 +790,7 @@ template<typename _Tp> struct CV_EXPORTS Matx_FastInvOp<_Tp, 3>
 {
     bool operator()(const Matx<_Tp, 3, 3>& a, Matx<_Tp, 3, 3>& b, int) const
     {
-        _Tp d = determinant(a);
+        _Tp d = (_Tp)determinant(a);
         if( d == 0 )
             return false;
         d = 1/d;
@@ -820,7 +820,7 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method) const
     else
     {
         Mat A(*this, false), B(b, false);
-        ok = invert(A, B, method);
+        ok = (0.0 == invert(A, B, method));
     }
     return ok ? b : Matx<_Tp, n, m>::zeros();
 }
