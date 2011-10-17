@@ -76,6 +76,7 @@
     #include "nvidia/core/NCV.hpp"
     #include "nvidia/NPP_staging/NPP_staging.hpp"
     #include "nvidia/NCVHaarObjectDetection.hpp"
+    #include "nvidia/NCVBroxOpticalFlow.hpp"
 
 #define CUDART_MINIMUM_REQUIRED_VERSION 4000
 #define NPP_MINIMUM_REQUIRED_VERSION 4000

@@ -1485,6 +1485,65 @@ namespace cv
             GpuMat maxPosBuffer;
         };
 
+        ////////////////////////////////// Optical Flow //////////////////////////////////////////
+
+        class CV_EXPORTS BroxOpticalFlow
+        {
+        public:
+            BroxOpticalFlow(float alpha_, float gamma_, float scale_factor_, int inner_iterations_, int outer_iterations_, int solver_iterations_) :
+                alpha(alpha_), gamma(gamma_), scale_factor(scale_factor_), 
+                inner_iterations(inner_iterations_), outer_iterations(outer_iterations_), solver_iterations(solver_iterations_)
+            {
+            }
+
+            //! Compute optical flow
+            //! frame0 - source frame (supports only CV_32FC1 type)
+            //! frame1 - frame to track (with the same size and type as frame0)
+            //! u      - flow horizontal component (along x axis)
+            //! v      - flow vertical component (along y axis)
+            void operator ()(const GpuMat& frame0, const GpuMat& frame1, GpuMat& u, GpuMat& v, Stream& stream = Stream::Null());
+
+            //! flow smoothness
+	        float alpha;
+
+	        //! gradient constancy importance
+	        float gamma;
+
+	        //! pyramid scale factor
+	        float scale_factor;
+
+	        //! number of lagged non-linearity iterations (inner loop)
+	        int inner_iterations;
+
+	        //! number of warping iterations (number of pyramid levels)
+	        int outer_iterations;
+
+	        //! number of linear system solver iterations
+	        int solver_iterations;
+
+            GpuMat buf;
+        };
+
+        //! Interpolate frames (images) using provided optical flow (displacement field).
+        //! frame0   - frame 0 (32-bit floating point images, single channel)
+        //! frame1   - frame 1 (the same type and size)
+        //! fu       - forward horizontal displacement
+        //! fv       - forward vertical displacement
+        //! bu       - backward horizontal displacement
+        //! bv       - backward vertical displacement
+        //! pos      - new frame position
+        //! newFrame - new frame
+        //! buf      - temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 GpuMat;
+        //!            occlusion masks            0, occlusion masks            1,
+        //!            interpolated forward flow  0, interpolated forward flow  1,
+        //!            interpolated backward flow 0, interpolated backward flow 1
+        //!            
+        CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, 
+            const GpuMat& fu, const GpuMat& fv,
+            const GpuMat& bu, const GpuMat& bv, 
+            float pos, GpuMat& newFrame, GpuMat& buf,
+            Stream& stream = Stream::Null());
+
     }
 
     //! Speckle filtering - filters small connected components on diparity image.

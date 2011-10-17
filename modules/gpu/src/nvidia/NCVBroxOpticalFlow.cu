@@ -65,76 +65,6 @@
 #include "opencv2/gpu/device/utility.hpp"
 
 
-////////////////////////////////////////////
-template<typename _Tp> class shared_ptr
-{
-public:
-    shared_ptr()  : obj(0), refcount(0) {}
-    shared_ptr(_Tp* _obj);
-    ~shared_ptr() { release(); }
-    shared_ptr(const shared_ptr& ptr);
-    shared_ptr& operator = (const shared_ptr& ptr);
-    void addref() { if( refcount ) (*refcount)+=1; }
-    void release();
-    void delete_obj() { if( obj ) delete obj; }
-    _Tp* operator -> () { return obj; }
-    const _Tp* operator -> () const { return obj; }
-    operator _Tp* () { return obj; }
-    operator const _Tp*() const { return obj; }
-protected:
-    _Tp* obj; //< the object pointer.
-    int* refcount; //< the associated reference counter
-};
-
-template<typename _Tp> inline shared_ptr<_Tp>::shared_ptr(_Tp* _obj) : obj(_obj)
-{
-    if(obj)
-    {
-        refcount = new int;
-        *refcount = 1;
-    }
-    else
-        refcount = 0;
-}
-
-template<typename _Tp> inline void shared_ptr<_Tp>::release()
-{
-    if( refcount)
-    {
-        *refcount -= 1;
-        if (*refcount == 0)
-        {
-            delete_obj();
-            delete refcount;
-        }
-    }
-    refcount = 0;
-    obj = 0;
-}
-
-template<typename _Tp> inline shared_ptr<_Tp>::shared_ptr(const shared_ptr<_Tp>& ptr)
-{
-    obj = ptr.obj;
-    refcount = ptr.refcount;
-    addref();
-}
-
-template<typename _Tp> inline shared_ptr<_Tp>& shared_ptr<_Tp>::operator = (const shared_ptr<_Tp>& ptr)
-{
-    int* _refcount = ptr.refcount;
-    if( _refcount )
-        *_refcount += 1;
-        
-    release();
-    obj = ptr.obj;
-    refcount = _refcount;
-    return *this;
-}
-
-
-////////////////////////////////////////////
-//using std::tr1::shared_ptr;
-
 typedef NCVVectorAlloc<Ncv32f> FloatVector;
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -738,6 +668,42 @@ void InitTextures()
     initTexture1D(tex_numerator_v);
 }
 
+namespace
+{
+    struct ImagePyramid
+    {
+        std::vector<FloatVector*> img0;
+        std::vector<FloatVector*> img1;
+
+        std::vector<Ncv32u> w;
+        std::vector<Ncv32u> h;
+
+        explicit ImagePyramid(int outer_iterations)
+        {
+            img0.reserve(outer_iterations);
+            img1.reserve(outer_iterations);
+
+            w.reserve(outer_iterations);
+            h.reserve(outer_iterations);
+        }
+
+        ~ImagePyramid()
+        {
+            w.clear();
+            h.clear();
+
+            for (int i = img0.size() - 1; i >= 0; --i)
+            {
+                delete img1[i];
+                delete img0[i];
+            }
+
+            img0.clear();
+            img1.clear();
+        }
+    };
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 // MAIN FUNCTION
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -759,20 +725,18 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     const Ncv32u kSourceHeight = frame0.height();
 
     ncvAssertPrintReturn(frame1.width() == kSourceWidth && frame1.height() == kSourceHeight, "Frame dims do not match", NCV_INCONSISTENT_INPUT);
-    ncvAssertReturn(uOut.width() == kSourceWidth   && vOut.width() == kSourceWidth && 
+    ncvAssertReturn(uOut.width() == kSourceWidth && vOut.width() == kSourceWidth && 
         uOut.height() == kSourceHeight && vOut.height() == kSourceHeight, NCV_INCONSISTENT_INPUT);
 
     ncvAssertReturn(gpu_mem_allocator.isInitialized(), NCV_ALLOCATOR_NOT_INITIALIZED);
 
     bool kSkipProcessing = gpu_mem_allocator.isCounting();
 
-    cudaDeviceProp device_props;
     int cuda_device;
-
     ncvAssertCUDAReturn(cudaGetDevice(&cuda_device), NCV_CUDA_ERROR);
 
+    cudaDeviceProp device_props;
     ncvAssertCUDAReturn(cudaGetDeviceProperties(&device_props, cuda_device), NCV_CUDA_ERROR);
-
 
     Ncv32u alignmentValue = gpu_mem_allocator.alignment ();
 
@@ -817,8 +781,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
     // temporary storage
     SAFE_VECTOR_DECL(device_buffer, gpu_mem_allocator, 
-        alignUp(kSourceWidth, kStrideAlignmentFloat) 
-        * alignUp(kSourceHeight, kStrideAlignmentFloat));
+        alignUp(kSourceWidth, kStrideAlignmentFloat) * alignUp(kSourceHeight, kStrideAlignmentFloat));
 
     // image derivatives
     SAFE_VECTOR_DECL(Ix,  gpu_mem_allocator, kSizeInPixelsAligned);
@@ -831,35 +794,31 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
     // spatial derivative filter size
     const int kDFilterSize = 5;
-    const float derivativeFilterHost[kDFilterSize] = {1.0f, -8.0f, 0.0f, 8.0f, -1.0f};
     SAFE_VECTOR_DECL(derivativeFilter, gpu_mem_allocator, kDFilterSize);
 
-    ncvAssertCUDAReturn(
-        cudaMemcpy(derivativeFilter.ptr(), 
-                   derivativeFilterHost, 
-                   sizeof(float) * kDFilterSize, 
-                   cudaMemcpyHostToDevice),
-        NCV_CUDA_ERROR);
+    if (!kSkipProcessing)
+    {
+        const float derivativeFilterHost[kDFilterSize] = {1.0f, -8.0f, 0.0f, 8.0f, -1.0f};
 
-    InitTextures();
+        ncvAssertCUDAReturn(cudaMemcpy(derivativeFilter.ptr(), derivativeFilterHost, sizeof(float) * kDFilterSize, 
+            cudaMemcpyHostToDevice), NCV_CUDA_ERROR);
+
+        InitTextures();
+    }
 
     //prepare image pyramid
-    std::vector< shared_ptr<FloatVector> > img0_pyramid;
-    std::vector< shared_ptr<FloatVector> > img1_pyramid;
-
-    std::vector<Ncv32u> w_pyramid;
-    std::vector<Ncv32u> h_pyramid;
+    ImagePyramid pyr(desc.number_of_outer_iterations);
 
     cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<float>();
 
     float scale = 1.0f;
 
     //cuda arrays for frames
-    shared_ptr<FloatVector> I0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
-    ncvAssertReturn(I0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
+    std::auto_ptr<FloatVector> pI0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    ncvAssertReturn(pI0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-    shared_ptr<FloatVector> I1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
-    ncvAssertReturn(I1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
+    std::auto_ptr<FloatVector> pI1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    ncvAssertReturn(pI1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
     if (!kSkipProcessing)
     {
@@ -867,25 +826,29 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
         size_t dst_width_in_bytes = alignUp(kSourceWidth, kStrideAlignmentFloat) * sizeof(float);
         size_t src_width_in_bytes = kSourceWidth * sizeof(float);
         size_t src_pitch_in_bytes = frame0.pitch();
-        ncvAssertCUDAReturn( cudaMemcpy2DAsync(I0->ptr(), dst_width_in_bytes, frame0.ptr(), 
+
+        ncvAssertCUDAReturn( cudaMemcpy2DAsync(pI0->ptr(), dst_width_in_bytes, frame0.ptr(), 
             src_pitch_in_bytes, src_width_in_bytes, kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
 
-        ncvAssertCUDAReturn( cudaMemcpy2DAsync(I1->ptr(), dst_width_in_bytes, frame1.ptr(), 
+        ncvAssertCUDAReturn( cudaMemcpy2DAsync(pI1->ptr(), dst_width_in_bytes, frame1.ptr(), 
             src_pitch_in_bytes, src_width_in_bytes, kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
     }
 
-        //prepare pyramid
-    img0_pyramid.push_back(I0);
-    img1_pyramid.push_back(I1);
+    FloatVector* I0 = pI0.release();
+    FloatVector* I1 = pI1.release();
 
-    w_pyramid.push_back(kSourceWidth);
-    h_pyramid.push_back(kSourceHeight);
+        //prepare pyramid
+    pyr.img0.push_back(I0);
+    pyr.img1.push_back(I1);
+
+    pyr.w.push_back(kSourceWidth);
+    pyr.h.push_back(kSourceHeight);
 
     scale *= scale_factor;
 
     Ncv32u prev_level_width  = kSourceWidth;
     Ncv32u prev_level_height = kSourceHeight;
-    while((prev_level_width > 15) && (prev_level_height > 15) && (static_cast<Ncv32u>(img0_pyramid.size()) < desc.number_of_outer_iterations))
+    while((prev_level_width > 15) && (prev_level_height > 15) && (static_cast<Ncv32u>(pyr.img0.size()) < desc.number_of_outer_iterations))
     {
         //current resolution
         Ncv32u level_width  = static_cast<Ncv32u>(ceilf(kSourceWidth  * scale));
@@ -897,16 +860,16 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
         Ncv32u prev_level_pitch = alignUp(prev_level_width, kStrideAlignmentFloat) * sizeof(float);
 
-        shared_ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
+        std::auto_ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-        shared_ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
+        std::auto_ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
-
-        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
 
         if (!kSkipProcessing)
         {
+            ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
+
             NcvSize32u srcSize (prev_level_width, prev_level_height);
             NcvSize32u dstSize (level_width, level_height);
             NcvRect32u srcROI (0, 0, prev_level_width, prev_level_height);
@@ -921,20 +884,20 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                 level_frame1->ptr(), dstSize, level_width_aligned * sizeof (float), dstROI, scale_factor, scale_factor, nppStSupersample);
         }
 
-        //store pointers
-        img0_pyramid.push_back(level_frame0);
-        img1_pyramid.push_back(level_frame1);
+        I0 = level_frame0.release();
+        I1 = level_frame1.release();
 
-        w_pyramid.push_back(level_width);
-        h_pyramid.push_back(level_height);
+        //store pointers
+        pyr.img0.push_back(I0);
+        pyr.img1.push_back(I1);
+
+        pyr.w.push_back(level_width);
+        pyr.h.push_back(level_height);
 
         scale *= scale_factor;
 
         prev_level_width  = level_width;
         prev_level_height = level_height;
-
-        I0 = level_frame0;
-        I1 = level_frame1;
     }
 
     if (!kSkipProcessing)
@@ -944,62 +907,56 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
         ncvAssertCUDAReturn(cudaMemsetAsync(v.ptr(), 0, kSizeInPixelsAligned * sizeof(float), stream), NCV_CUDA_ERROR);
 
         //select images with lowest resolution
-        size_t pitch = alignUp(w_pyramid.back(), kStrideAlignmentFloat) * sizeof(float);
-        ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_I0, img0_pyramid.back()->ptr(), channel_desc, w_pyramid.back(), h_pyramid.back(), pitch), NCV_CUDA_ERROR);
-        ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_I1, img1_pyramid.back()->ptr(), channel_desc, w_pyramid.back(), h_pyramid.back(), pitch), NCV_CUDA_ERROR);
+        size_t pitch = alignUp(pyr.w.back(), kStrideAlignmentFloat) * sizeof(float);
+        ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_I0, pyr.img0.back()->ptr(), channel_desc, pyr.w.back(), pyr.h.back(), pitch), NCV_CUDA_ERROR);
+        ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_I1, pyr.img1.back()->ptr(), channel_desc, pyr.w.back(), pyr.h.back(), pitch), NCV_CUDA_ERROR);
         ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
-    }
 
-    FloatVector* ptrU = &u;
-    FloatVector* ptrV = &v;
-    FloatVector* ptrUNew = &u_new;
-    FloatVector* ptrVNew = &v_new;
+        FloatVector* ptrU = &u;
+        FloatVector* ptrV = &v;
+        FloatVector* ptrUNew = &u_new;
+        FloatVector* ptrVNew = &v_new;
 
-    std::vector< shared_ptr<FloatVector> >::const_reverse_iterator img0Iter = img0_pyramid.rbegin();
-    std::vector< shared_ptr<FloatVector> >::const_reverse_iterator img1Iter = img1_pyramid.rbegin();
-    //outer loop
-    //warping fixed point iteration
-    while(!w_pyramid.empty())
-    {
-        //current grid dimensions
-        const Ncv32u kLevelWidth  = w_pyramid.back();
-        const Ncv32u kLevelHeight = h_pyramid.back();
-        const Ncv32u kLevelStride = alignUp(kLevelWidth, kStrideAlignmentFloat);
+        std::vector<FloatVector*>::const_reverse_iterator img0Iter = pyr.img0.rbegin();
+        std::vector<FloatVector*>::const_reverse_iterator img1Iter = pyr.img1.rbegin();
 
-        //size of current image in bytes
-        const int kLevelSizeInBytes = kLevelStride * kLevelHeight * sizeof(float);
-
-        //number of points at current resolution
-        const int kLevelSizeInPixels = kLevelStride * kLevelHeight;
-
-        if (!kSkipProcessing)
+        //outer loop
+        //warping fixed point iteration
+        while(!pyr.w.empty())
         {
+            //current grid dimensions
+            const Ncv32u kLevelWidth  = pyr.w.back();
+            const Ncv32u kLevelHeight = pyr.h.back();
+            const Ncv32u kLevelStride = alignUp(kLevelWidth, kStrideAlignmentFloat);
+
+            //size of current image in bytes
+            const int kLevelSizeInBytes = kLevelStride * kLevelHeight * sizeof(float);
+
+            //number of points at current resolution
+            const int kLevelSizeInPixels = kLevelStride * kLevelHeight;
+
             //initial guess for du and dv
             ncvAssertCUDAReturn(cudaMemsetAsync(du.ptr(), 0, kLevelSizeInBytes, stream), NCV_CUDA_ERROR);
             ncvAssertCUDAReturn(cudaMemsetAsync(dv.ptr(), 0, kLevelSizeInBytes, stream), NCV_CUDA_ERROR);
-        }
 
-        //texture format descriptor
-        cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<float>();
+            //texture format descriptor
+            cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<float>();
 
-        I0 = *img0Iter;
-        I1 = *img1Iter;
+            I0 = *img0Iter;
+            I1 = *img1Iter;
 
-        ++img0Iter;
-        ++img1Iter;
+            ++img0Iter;
+            ++img1Iter;
 
-        if (!kSkipProcessing)
-        {
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_I0, I0->ptr(), channel_desc, kLevelWidth, kLevelHeight, kLevelStride*sizeof(float)), NCV_CUDA_ERROR);
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_I1, I1->ptr(), channel_desc, kLevelWidth, kLevelHeight, kLevelStride*sizeof(float)), NCV_CUDA_ERROR);
-        }
-        //compute derivatives
-        dim3 dBlocks(iDivUp(kLevelWidth, 32), iDivUp(kLevelHeight, 6));
-        dim3 dThreads(32, 6);
 
-        const int kPitchTex = kLevelStride * sizeof(float);
-        if (!kSkipProcessing)
-        {
+            //compute derivatives
+            dim3 dBlocks(iDivUp(kLevelWidth, 32), iDivUp(kLevelHeight, 6));
+            dim3 dThreads(32, 6);
+
+            const int kPitchTex = kLevelStride * sizeof(float);
+        
             NcvSize32u srcSize(kLevelWidth, kLevelHeight);
             Ncv32u nSrcStep = kLevelStride * sizeof(float);
             NcvRect32u oROI(0, 0, kLevelWidth, kLevelHeight);
@@ -1031,10 +988,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
             // Ixy
             nppiStFilterRowBorder_32f_C1R (Iy.ptr(), srcSize, nSrcStep, Ixy.ptr(), srcSize, nSrcStep, oROI,
                 nppStBorderMirror, derivativeFilter.ptr(), kDFilterSize, kDFilterSize/2, 1.0f/12.0f); 
-        }
-
-        if (!kSkipProcessing)
-        {
+      
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_Ix,  Ix.ptr(),  channel_desc, kLevelWidth, kLevelHeight, kPitchTex), NCV_CUDA_ERROR);
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_Ixx, Ixx.ptr(), channel_desc, kLevelWidth, kLevelHeight, kPitchTex), NCV_CUDA_ERROR);
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_Ix0, Ix0.ptr(), channel_desc, kLevelWidth, kLevelHeight, kPitchTex), NCV_CUDA_ERROR);
@@ -1049,23 +1003,19 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
             //    flow increments
             ncvAssertCUDAReturn(cudaBindTexture(0, tex_du, du.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
             ncvAssertCUDAReturn(cudaBindTexture(0, tex_dv, dv.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
-        }
 
+            dim3 psor_blocks(iDivUp(kLevelWidth, PSOR_TILE_WIDTH), iDivUp(kLevelHeight, PSOR_TILE_HEIGHT));
+            dim3 psor_threads(PSOR_TILE_WIDTH, PSOR_TILE_HEIGHT);
 
-        dim3 psor_blocks(iDivUp(kLevelWidth, PSOR_TILE_WIDTH), iDivUp(kLevelHeight, PSOR_TILE_HEIGHT));
-        dim3 psor_threads(PSOR_TILE_WIDTH, PSOR_TILE_HEIGHT);
+            dim3 sor_blocks(iDivUp(kLevelWidth, SOR_TILE_WIDTH), iDivUp(kLevelHeight, SOR_TILE_HEIGHT));
+            dim3 sor_threads(SOR_TILE_WIDTH, SOR_TILE_HEIGHT);
 
-        dim3 sor_blocks(iDivUp(kLevelWidth, SOR_TILE_WIDTH), iDivUp(kLevelHeight, SOR_TILE_HEIGHT));
-        dim3 sor_threads(SOR_TILE_WIDTH, SOR_TILE_HEIGHT);
-
-        // inner loop
-        // lagged nonlinearity fixed point iteration
-        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
-        for (Ncv32u current_inner_iteration = 0; current_inner_iteration < desc.number_of_inner_iterations; ++current_inner_iteration)
-        {
-            //compute coefficients
-            if (!kSkipProcessing)
+            // inner loop
+            // lagged nonlinearity fixed point iteration
+            ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
+            for (Ncv32u current_inner_iteration = 0; current_inner_iteration < desc.number_of_inner_iterations; ++current_inner_iteration)
             {
+                //compute coefficients
                 prepare_sor_stage_1_tex<<<psor_blocks, psor_threads, 0, stream>>>
                     (diffusivity_x.ptr(), 
                      diffusivity_y.ptr(), 
@@ -1101,13 +1051,12 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_inv_denominator_u, denom_u.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_inv_denominator_v, denom_v.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
-            }
-            //solve linear system
-            for (Ncv32u solver_iteration = 0; solver_iteration < desc.number_of_solver_iterations; ++solver_iteration)
-            {
-                float omega = 1.99f;
-                if (!kSkipProcessing)
+            
+                //solve linear system
+                for (Ncv32u solver_iteration = 0; solver_iteration < desc.number_of_solver_iterations; ++solver_iteration)
                 {
+                    float omega = 1.99f;
+                
                     ncvAssertCUDAReturn(cudaBindTexture(0, tex_du, du.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
                     ncvAssertCUDAReturn(cudaBindTexture(0, tex_dv, dv.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
 
@@ -1139,33 +1088,29 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                         kLevelWidth, 
                         kLevelHeight, 
                         kLevelStride);
-                }
 
-                ncvAssertCUDAReturn(cudaBindTexture(0, tex_du, du.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
-                ncvAssertCUDAReturn(cudaBindTexture(0, tex_dv, dv.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
-            }//end of solver loop
-        }// end of inner loop
+                    ncvAssertCUDAReturn(cudaBindTexture(0, tex_du, du.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
+                    ncvAssertCUDAReturn(cudaBindTexture(0, tex_dv, dv.ptr(), channel_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
+                }//end of solver loop
+            }// end of inner loop
 
-        //update u and v
-        if (!kSkipProcessing)
-        {
+            //update u and v
             add(ptrU->ptr(), du.ptr(), kLevelSizeInPixels, stream);
             add(ptrV->ptr(), dv.ptr(), kLevelSizeInPixels, stream);
-        }
-        //prolongate using texture
-        w_pyramid.pop_back();
-        h_pyramid.pop_back();
-        if (!w_pyramid.empty())
-        {
-            //compute new image size
-            Ncv32u nw = w_pyramid.back();
-            Ncv32u nh = h_pyramid.back();
-            Ncv32u ns = alignUp(nw, kStrideAlignmentFloat);
 
-            dim3 p_blocks(iDivUp(nw, 32), iDivUp(nh, 8));
-            dim3 p_threads(32, 8);
-            if (!kSkipProcessing)
+            //prolongate using texture
+            pyr.w.pop_back();
+            pyr.h.pop_back();
+            if (!pyr.w.empty())
             {
+                //compute new image size
+                Ncv32u nw = pyr.w.back();
+                Ncv32u nh = pyr.h.back();
+                Ncv32u ns = alignUp(nw, kStrideAlignmentFloat);
+
+                dim3 p_blocks(iDivUp(nw, 32), iDivUp(nh, 8));
+                dim3 p_threads(32, 8);
+            
                 NcvSize32u srcSize (kLevelWidth, kLevelHeight);
                 NcvSize32u dstSize (nw, nh);
                 NcvRect32u srcROI (0, 0, kLevelWidth, kLevelHeight);
@@ -1180,27 +1125,27 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                     ptrVNew->ptr(), dstSize, ns * sizeof (float), dstROI, 1.0f/scale_factor, 1.0f/scale_factor, nppStBicubic);
 					
 				ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
+
+                cv::gpu::device::swap<FloatVector*>(ptrU, ptrUNew);
+                cv::gpu::device::swap<FloatVector*>(ptrV, ptrVNew);
             }
-
-            cv::gpu::device::swap<FloatVector*>(ptrU, ptrUNew);
-            cv::gpu::device::swap<FloatVector*>(ptrV, ptrVNew);
+            scale /= scale_factor;
         }
-        scale /= scale_factor;
+
+        // end of warping iterations
+        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
+
+        ncvAssertCUDAReturn( cudaMemcpy2DAsync
+            (uOut.ptr(), uOut.pitch(), ptrU->ptr(), 
+            kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
+
+        ncvAssertCUDAReturn( cudaMemcpy2DAsync
+            (vOut.ptr(), vOut.pitch(), ptrV->ptr(), 
+            kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
+
+        ncvAssertCUDAReturn(cudaGetLastError(), NCV_CUDA_ERROR);
+        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
     }
-
-    // end of warping iterations
-    ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
-
-    ncvAssertCUDAReturn( cudaMemcpy2DAsync
-        (uOut.ptr(), uOut.pitch(), ptrU->ptr(), 
-        kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
-
-    ncvAssertCUDAReturn( cudaMemcpy2DAsync
-        (vOut.ptr(), vOut.pitch(), ptrV->ptr(), 
-        kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
-
-    ncvAssertCUDAReturn(cudaGetLastError(), NCV_CUDA_ERROR);
-    ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
 
     return NCV_SUCCESS;
 }
