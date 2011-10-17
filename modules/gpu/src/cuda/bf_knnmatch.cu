@@ -43,6 +43,7 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/vec_distance.hpp"
+#include "opencv2/gpu/device/datamov_utils.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -235,7 +236,15 @@ namespace cv { namespace gpu { namespace bf_knnmatch
             {
                 const int loadX = threadIdx.x + i * BLOCK_SIZE;
 
-                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = loadX < train.cols ? train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX] : 0;
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+
+                if (loadX < train.cols)
+                {
+                    T val;
+
+                    ForceGlob<T>::Load(train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1)), loadX, val);
+                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = val;
+                }
 
                 __syncthreads();
 
@@ -402,15 +411,18 @@ namespace cv { namespace gpu { namespace bf_knnmatch
             {
                 const int loadX = threadIdx.x + i * BLOCK_SIZE;
 
+                s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+
                 if (loadX < query.cols)
                 {
-                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = query.ptr(min(queryIdx, query.rows - 1))[loadX];
-                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX];
-                }
-                else
-                {                
-                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
-                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+                    T val;
+
+                    ForceGlob<T>::Load(query.ptr(min(queryIdx, query.rows - 1)), loadX, val);
+                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = val;
+
+                    ForceGlob<T>::Load(train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1)), loadX, val);
+                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = val;
                 }
 
                 __syncthreads();
@@ -573,15 +585,18 @@ namespace cv { namespace gpu { namespace bf_knnmatch
             {
                 const int loadX = threadIdx.x + i * BLOCK_SIZE;
 
+                s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
+                s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+
                 if (loadX < query.cols)
                 {
-                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = query.ptr(min(queryIdx, query.rows - 1))[loadX];
-                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1))[loadX];
-                }
-                else
-                {                
-                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = 0;
-                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = 0;
+                    T val;
+
+                    ForceGlob<T>::Load(query.ptr(min(queryIdx, query.rows - 1)), loadX, val);
+                    s_query[threadIdx.y * BLOCK_SIZE + threadIdx.x] = val;
+
+                    ForceGlob<T>::Load(train.ptr(min(t * BLOCK_SIZE + threadIdx.y, train.rows - 1)), loadX, val);
+                    s_train[threadIdx.x * BLOCK_SIZE + threadIdx.y] = val;
                 }
 
                 __syncthreads();
