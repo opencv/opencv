@@ -2,6 +2,18 @@ import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser
 
+def getSetName(tset, idx, columns, short = True):
+    if columns and len(columns) >= idx:
+        prefix = columns[idx]
+    else:
+        prefix = None
+    if short and prefix:
+        return prefix
+    name = tset[0].replace(".xml","").replace("_", "\n")
+    if prefix:
+        return prefix + "\n" + ("-"*int(len(prefix)*1.7)) + "\n" + name
+    return name
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml [<log_name2>.xml ...]"
@@ -12,7 +24,10 @@ if __name__ == "__main__":
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
     parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
     parser.add_option("-f", "--filter", dest="filter", help="regex to filter tests", metavar="REGEX", default=None)
+    parser.add_option("", "--module", dest="module", default=None, metavar="NAME", help="module prefix for test names")
+    parser.add_option("", "--columns", dest="columns", default=None, metavar="NAMES", help="comma-separated list of column aliases")
     parser.add_option("", "--no-relatives", action="store_false", dest="calc_relatives", default=True, help="do not output relative values")
+    parser.add_option("", "--with-cycles-reduction", action="store_true", dest="calc_cr", default=False, help="alos output cycle reduction percentages")
     parser.add_option("", "--show-all", action="store_true", dest="showall", default=False, help="also include empty and \"notrun\" lines")
     parser.add_option("", "--match", dest="match", default=None)
     parser.add_option("", "--match-replace", dest="match_replace", default="")
@@ -21,8 +36,11 @@ if __name__ == "__main__":
     options.generateHtml = detectHtmlOutputType(options.format)
     if options.metric not in metrix_table:
         options.metric = "gmean"
-    if options.metric.endswith("%"):
+    if options.metric.endswith("%") or options.metric.endswith("$"):
         options.calc_relatives = False
+        options.calc_cr = False
+    if options.columns:
+        options.columns = [s.strip() for s in options.columns.split(",")]
     
     # expand wildcards and filter duplicates
     files = []    
@@ -69,6 +87,8 @@ if __name__ == "__main__":
     for i in range(setsCount):
         for case in test_sets[i][1]:
             name = name_extractor(case)
+            if options.module:
+                name = options.module + "::" + name
             if name not in test_cases:
                 test_cases[name] = [None] * setsCount
             test_cases[name][i] = case
@@ -77,18 +97,26 @@ if __name__ == "__main__":
     getter = metrix_table[options.metric][1]
     if options.calc_relatives:
         getter_p = metrix_table[options.metric + "%"][1]
+    if options.calc_cr:
+        getter_cr = metrix_table[options.metric + "$"][1]
     tbl = table(metrix_table[options.metric][0])
     
     # header
     tbl.newColumn("name", "Name of Test", align = "left", cssclass = "col_name")
     i = 0
     for set in test_sets:
-        tbl.newColumn(str(i), set[0].replace(".xml","").replace("_", "\n"), align = "center")
+        tbl.newColumn(str(i), getSetName(set, i, options.columns, False), align = "center")
         i += 1
+    metric_sets = test_sets[1:]
+    if options.calc_cr:
+        i = 1
+        for set in metric_sets:
+            tbl.newColumn(str(i) + "$", getSetName(set, i, options.columns) + "\nvs\n" + getSetName(test_sets[0], 0, options.columns) + "\n(cycles reduction)", align = "center", cssclass = "col_cr")
+            i += 1
     if options.calc_relatives:
         i = 1
-        for set in test_sets[1:]:
-            tbl.newColumn(str(i) + "%", set[0].replace(".xml","").replace("_", "\n") + "\nvs\n" + test_sets[0][0].replace(".xml","").replace("_", "\n"), align = "center", cssclass = "col_rel")
+        for set in metric_sets:
+            tbl.newColumn(str(i) + "%", getSetName(set, i, options.columns) + "\nvs\n" + getSetName(test_sets[0], 0, options.columns) + "\n(x-factor)", align = "center", cssclass = "col_rel")
             i += 1
         
     # rows
@@ -106,6 +134,8 @@ if __name__ == "__main__":
                 tbl.newCell(str(i), "-")
                 if options.calc_relatives and i > 0:
                     tbl.newCell(str(i) + "%", "-")
+                if options.calc_cr and i > 0:
+                    tbl.newCell(str(i) + "$", "-")
             else:
                 status = case.get("status")
                 if status != "run":
@@ -114,33 +144,33 @@ if __name__ == "__main__":
                         needNewRow = True
                     if options.calc_relatives and i > 0:
                         tbl.newCell(str(i) + "%", "-", color = "red")
+                    if options.calc_cr and i > 0:
+                        tbl.newCell(str(i) + "$", "-", color = "red")
                 else:
                     val = getter(case, cases[0], options.units)
                     if options.calc_relatives and i > 0 and val:
                         valp = getter_p(case, cases[0], options.units)
                     else:
                         valp = None
+                    if options.calc_cr and i > 0 and val:
+                        valcr = getter_cr(case, cases[0], options.units)
+                    else:
+                        valcr = None
                     if not valp or i == 0:
                         color = None
                     elif valp > 1.05:
-                        color = "red"
-                    elif valp < 0.95:
                         color = "green"
+                    elif valp < 0.95:
+                        color = "red"
                     else:
                         color = None
                     if val:
                         needNewRow = True
-                        if options.metric.endswith("%"):
-                            tbl.newCell(str(i), "%.2f" % val, val, color = color)
-                        else:
-                            tbl.newCell(str(i), "%.3f %s" % (val, options.units), val, color = color)
-                    else:
-                        tbl.newCell(str(i), "-")
+                    tbl.newCell(str(i), formatValue(val, options.metric, options.units), val, color = color)
                     if options.calc_relatives and i > 0:
-                        if valp:
-                            tbl.newCell(str(i) + "%", "%.2f" % valp, valp, color = color, bold = color)
-                        else:
-                            tbl.newCell(str(i) + "%", "-")
+                        tbl.newCell(str(i) + "%", formatValue(valp, "%"), valp, color = color, bold = color)
+                    if options.calc_cr and i > 0:
+                        tbl.newCell(str(i) + "$", formatValue(valcr, "$"), valcr, color = color, bold = color)
     if not needNewRow:
         tbl.trimLastRow()
 

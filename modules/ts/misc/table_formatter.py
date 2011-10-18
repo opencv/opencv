@@ -461,11 +461,15 @@ $(function(){
       var cell
       var id = "t" + tblIdx + "r" + colIdx
       if (col.hasClass("col_name")){
-        cell = $("<th><input id='" + id + "' name='" + id + "' type='text' style='width:100%%' class='filter_col_name' title='Regular expression for name filtering'></input></th>")
+        cell = $("<th><input id='" + id + "' name='" + id + "' type='text' style='width:100%%' class='filter_col_name' title='Regular expression for name filtering (&quot;resize.*640x480&quot; - resize tests on VGA resolution)'></input></th>")
         hasAny = true
       }
       else if (col.hasClass("col_rel")){
-        cell = $("<th><input id='" + id + "' name='" + id + "' type='text' style='width:100%%' class='filter_col_rel' title='Filter all lines with speedup less than &lt;value&gt;'></input></th>")
+        cell = $("<th><input id='" + id + "' name='" + id + "' type='text' style='width:100%%' class='filter_col_rel' title='Filter out lines with a x-factor of acceleration less than Nx'></input></th>")
+        hasAny = true
+      }
+      else if (col.hasClass("col_cr")){
+        cell = $("<th><input id='" + id + "' name='" + id + "' type='text' style='width:100%%' class='filter_col_cr' title='Filter out lines with a percentage of acceleration less than N%%'></input></th>")
         hasAny = true
       }
       else
@@ -514,9 +518,27 @@ $(function(){
                 return pred(row)
 	      }
            } else if(flt.hasClass("filter_col_rel")) {
-              var percent = val.indexOf('.') < 0 ? parseInt(val)*0.01 : parseFloat(val)
+              var percent = parseFloat(val)
+              if (percent < 0) {
+                predicate = function(row) {
+                  var val = parseFloat($(row.get(colIdx)).text())
+                  if (!val || val >= 1 || val > 1+percent)
+                    return false
+                  return pred(row)
+	        }
+              } else {
+                predicate = function(row) {
+                  var val = parseFloat($(row.get(colIdx)).text())
+                  if (!val || val < percent)
+                    return false
+                  return pred(row)
+	        }
+              }
+           } else if(flt.hasClass("filter_col_cr")) {
+              var percent = parseFloat(val)
               predicate = function(row) {
-                if (abs(parseFloat($(row.get(colIdx)).text()) - 1) < percent)
+                var val = parseFloat($(row.get(colIdx)).text())
+                if (!val || val < percent)
                   return false
                 return pred(row)
 	      }
@@ -528,6 +550,10 @@ $(function(){
             if(!predicate($("td", tbl_row)))
                $(tbl_row).remove()
          })
+         if($("tbody tr", tbl).length == 0) {
+           $("<tr><td colspan='"+$("thead tr:first th", tbl).length+"'>No results mathing your search criteria</td></tr>")
+             .appendTo($("tbody", tbl))
+         }
       }
   })
 })
@@ -575,12 +601,23 @@ def getRelativeVal(test, test0, metric):
     if not test or not test0:
         return None
     val0 = test0.get(metric, "s")
+    if not val0:
+        return None
+    val =  test.get(metric, "s")
+    if not val or val == 0:
+        return None
+    return float(val0)/val
+
+def getCycleReduction(test, test0, metric):
+    if not test or not test0:
+        return None
+    val0 = test0.get(metric, "s")
     if not val0 or val0 == 0:
         return None
     val =  test.get(metric, "s")
     if not val:
         return None
-    return float(val)/val0
+    return (1.0-float(val)/val0)*100
 
         
 metrix_table = \
@@ -603,7 +640,23 @@ metrix_table = \
     "median%": ("Median (relative)", lambda test,test0,units: getRelativeVal(test, test0, "median")),
     "stddev%": ("Standard deviation (relative)", lambda test,test0,units: getRelativeVal(test, test0, "stddev")),
     "gstddev%": ("Standard deviation of Ln(time) (relative)", lambda test,test0,units: getRelativeVal(test, test0, "gstddev")),
+
+    "gmean$": ("Geometric mean (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "gmean")),
+    "mean$": ("Mean (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "mean")),
+    "min$": ("Min (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "min")),
+    "median$": ("Median (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "median")),
+    "stddev$": ("Standard deviation (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "stddev")),
+    "gstddev$": ("Standard deviation of Ln(time) (cycle reduction)", lambda test,test0,units: getCycleReduction(test, test0, "gstddev")),
 }
+
+def formatValue(val, metric, units = None):
+    if val is None:
+        return "-"
+    if metric.endswith("%"):
+        return "%.2f" % val
+    if metric.endswith("$"):
+        return "%.2f%%" % val
+    return "%.3f %s" % (val, units)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
