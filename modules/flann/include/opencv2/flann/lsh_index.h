@@ -56,7 +56,7 @@ namespace cvflann
 
 struct LshIndexParams : public IndexParams
 {
-    LshIndexParams(unsigned int table_number, unsigned int key_size, unsigned int multi_probe_level)
+    LshIndexParams(unsigned int table_number = 12, unsigned int key_size = 20, unsigned int multi_probe_level = 2)
     {
         (* this)["algorithm"] = FLANN_INDEX_LSH;
         // The number of hash tables to use
