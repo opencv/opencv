@@ -66,10 +66,7 @@ struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
     CascadeClassifierImpl(const string& filename) : lastAllocatedFrameSize(-1, -1)
     {
         ncvSetDebugOutputHandler(NCVDebugOutputHandler);
-        if (ncvStat != load(filename))
-        {
-            CV_Error(CV_GpuApiCallError, "Error in GPU cacade load");
-        }
+        ncvSafeCall( load(filename) );
     }
 
 
@@ -287,11 +284,7 @@ int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMa
     }
 
     unsigned int numDetections;
-    NCVStatus ncvStat = impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, ncvMinSize, numDetections);
-    if (ncvStat != NCV_SUCCESS)
-    {
-        CV_Error(CV_GpuApiCallError, "Error in face detectioln");
-    }
+    ncvSafeCall( impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, ncvMinSize, numDetections) );
 
     return numDetections;
 }

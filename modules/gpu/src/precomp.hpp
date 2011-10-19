@@ -39,15 +39,16 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
 #if _MSC_VER >= 1200
-#pragma warning( disable: 4251 4710 4711 4514 4996 )
+    #pragma warning( disable: 4251 4710 4711 4514 4996 )
 #endif
 
 #ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
+    #include "cvconfig.h"
 #endif
 
 #include <iostream>
@@ -65,33 +66,43 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/core/internal.hpp"
 
-#if defined(HAVE_CUDA)
+#define OPENCV_GPU_UNUSED(x) (void)x
+
+#ifdef HAVE_CUDA
+
+    #include "cuda_runtime_api.h"
+    #include "npp.h"
+    
+    #ifdef HAVE_CUFFT
+        #include "cufft.h"
+    #endif
+
+    #ifdef HAVE_CUBLAS
+        #include "cublas.h"
+    #endif
 
     #include "internal_shared.hpp"
-    #include "cuda_runtime_api.h"
-    #include "cufft.h"
     #include "opencv2/gpu/stream_accessor.hpp"
-    #include "npp.h"    
     
     #include "nvidia/core/NCV.hpp"
     #include "nvidia/NPP_staging/NPP_staging.hpp"
     #include "nvidia/NCVHaarObjectDetection.hpp"
     #include "nvidia/NCVBroxOpticalFlow.hpp"
 
-#define CUDART_MINIMUM_REQUIRED_VERSION 4000
-#define NPP_MINIMUM_REQUIRED_VERSION 4000
+    #define CUDART_MINIMUM_REQUIRED_VERSION 4000
+    #define NPP_MINIMUM_REQUIRED_VERSION 4000
 
-#if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-    #error "Insufficient Cuda Runtime library version, please update it."
-#endif
+    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
+        #error "Insufficient Cuda Runtime library version, please update it."
+    #endif
 
-#if (NPP_VERSION_MAJOR*1000+NPP_VERSION_MINOR*100+NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-    #error "Insufficient NPP version, please update it."
-#endif
+    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
+        #error "Insufficient NPP version, please update it."
+    #endif
 
-#if defined(CUDA_ARCH_BIN_OR_PTX_10)
-    #error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
-#endif
+    #if defined(CUDA_ARCH_BIN_OR_PTX_10)
+        #error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
+    #endif
 
     static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The called functionality is disabled for current build or platform"); }
 

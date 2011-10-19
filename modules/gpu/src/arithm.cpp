@@ -93,7 +93,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), static_cast<int>(src.step), 
+        ncvSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), static_cast<int>(src.step), 
             dst.ptr<Ncv32u>(), static_cast<int>(dst.step), sz) );
     }
     else // if (src.elemSize() == 8)
@@ -104,7 +104,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), static_cast<int>(src.step), 
+        ncvSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), static_cast<int>(src.step), 
             dst.ptr<Ncv64u>(), static_cast<int>(dst.step), sz) );		
     }
 

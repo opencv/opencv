@@ -59,10 +59,8 @@ namespace
                       NCVMatrix<Ncv32f>& u, NCVMatrix<Ncv32f>& v, const cudaDeviceProp& devProp)
     {
         NCVMemStackAllocator gpuCounter(static_cast<Ncv32u>(devProp.textureAlignment));
-        CV_Assert(gpuCounter.isInitialized());
 
-        NCVStatus ncvStat = NCVBroxOpticalFlow(desc, gpuCounter, frame0, frame1, u, v, 0);
-        CV_Assert(ncvStat == NCV_SUCCESS);
+        ncvSafeCall( NCVBroxOpticalFlow(desc, gpuCounter, frame0, frame1, u, v, 0) );
 
         return gpuCounter.maxSize();
     }
@@ -130,10 +128,8 @@ void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& f
     ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
 
     NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), buf.ptr());
-    CV_Assert(gpuAllocator.isInitialized());
     
-    NCVStatus ncvStat = NCVBroxOpticalFlow(desc, gpuAllocator, frame0Mat, frame1Mat, uMat, vMat, stream);
-    CV_Assert(ncvStat == NCV_SUCCESS);
+    ncvSafeCall( NCVBroxOpticalFlow(desc, gpuAllocator, frame0Mat, frame1Mat, uMat, vMat, stream) );
 }
 
 void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, const GpuMat& fu, const GpuMat& fv, const GpuMat& bu, const GpuMat& bv, 
@@ -189,7 +185,7 @@ void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, cons
     state.ppBuffers[4] = bui.ptr<Ncv32f>();
     state.ppBuffers[5] = bvi.ptr<Ncv32f>();
 
-    nppSafeCall( nppiStInterpolateFrames(&state) );
+    ncvSafeCall( nppiStInterpolateFrames(&state) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );

@@ -120,8 +120,7 @@ namespace cv { namespace gpu { namespace imgproc
         return make_short2((short)x0, (short)y0);
     }
 
-    extern "C" __global__ void meanshift_kernel( unsigned char* out, size_t out_step, int cols, int rows, 
-                                                 int sp, int sr, int maxIter, float eps )
+    __global__ void meanshift_kernel(unsigned char* out, size_t out_step, int cols, int rows, int sp, int sr, int maxIter, float eps )
     {
         int x0 = blockIdx.x * blockDim.x + threadIdx.x;
         int y0 = blockIdx.y * blockDim.y + threadIdx.y;
@@ -130,10 +129,10 @@ namespace cv { namespace gpu { namespace imgproc
             do_mean_shift(x0, y0, out, out_step, cols, rows, sp, sr, maxIter, eps);
     }
 
-    extern "C" __global__ void meanshiftproc_kernel( unsigned char* outr, size_t outrstep, 
-                                                 unsigned char* outsp, size_t outspstep, 
-                                                 int cols, int rows, 
-                                                 int sp, int sr, int maxIter, float eps )
+    __global__ void meanshiftproc_kernel(unsigned char* outr, size_t outrstep, 
+                                         unsigned char* outsp, size_t outspstep, 
+                                         int cols, int rows, 
+                                         int sp, int sr, int maxIter, float eps)
     {
         int x0 = blockIdx.x * blockDim.x + threadIdx.x;
         int y0 = blockIdx.y * blockDim.y + threadIdx.y;
@@ -145,7 +144,7 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    extern "C" void meanShiftFiltering_gpu(const DevMem2Db& src, DevMem2Db dst, int sp, int sr, int maxIter, float eps)
+    void meanShiftFiltering_gpu(const DevMem2Db& src, DevMem2Db dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream)
     {
         dim3 grid(1, 1, 1);
         dim3 threads(32, 8, 1);
@@ -155,13 +154,16 @@ namespace cv { namespace gpu { namespace imgproc
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
         cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
-        meanshift_kernel<<< grid, threads >>>( dst.data, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
+        meanshift_kernel<<< grid, threads, 0, stream >>>( dst.data, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
-        cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+        //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
-    extern "C" void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps) 
+
+    void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream) 
     {
         dim3 grid(1, 1, 1);
         dim3 threads(32, 8, 1);
@@ -171,11 +173,13 @@ namespace cv { namespace gpu { namespace imgproc
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
         cudaSafeCall( cudaBindTexture2D( 0, tex_meanshift, src.data, desc, src.cols, src.rows, src.step ) );
 
-        meanshiftproc_kernel<<< grid, threads >>>( dstr.data, dstr.step, dstsp.data, dstsp.step, dstr.cols, dstr.rows, sp, sr, maxIter, eps );
+        meanshiftproc_kernel<<< grid, threads, 0, stream >>>( dstr.data, dstr.step, dstsp.data, dstsp.step, dstr.cols, dstr.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
-        cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+        //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
 
 /////////////////////////////////// drawColorDisp ///////////////////////////////////////////////
@@ -389,15 +393,16 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst)
+    void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst, cudaStream_t stream)
     {
         dim3 threads(32, 8);
         dim3 grid(divUp(Dx.cols, threads.x), divUp(Dx.rows, threads.y));
 
-        extractCovData_kernel<<<grid, threads>>>(Dx.cols, Dx.rows, Dx, Dy, dst);
+        extractCovData_kernel<<<grid, threads, 0, stream>>>(Dx.cols, Dx.rows, Dx, Dy, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
@@ -475,7 +480,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
     void cornerHarris_caller(const int block_size, const float k, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, 
-                             int border_type)
+                             int border_type, cudaStream_t stream)
     {
         const int rows = Dx.rows;
         const int cols = Dx.cols;
@@ -492,7 +497,7 @@ namespace cv { namespace gpu { namespace imgproc
         switch (border_type) 
         {
         case BORDER_REFLECT101_GPU:
-            cornerHarris_kernel<<<grid, threads>>>(
+            cornerHarris_kernel<<<grid, threads, 0, stream>>>(
                     cols, rows, block_size, k, dst, BrdRowReflect101<void>(cols), BrdColReflect101<void>(rows));
             break;
         case BORDER_REPLICATE_GPU:
@@ -500,16 +505,18 @@ namespace cv { namespace gpu { namespace imgproc
             harrisDxTex.addressMode[1] = cudaAddressModeClamp;
             harrisDyTex.addressMode[0] = cudaAddressModeClamp;
             harrisDyTex.addressMode[1] = cudaAddressModeClamp;
-            cornerHarris_kernel<<<grid, threads>>>(cols, rows, block_size, k, dst);
+
+            cornerHarris_kernel<<<grid, threads, 0, stream>>>(cols, rows, block_size, k, dst);
             break;
         }
 
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
 
-        cudaSafeCall(cudaUnbindTexture(harrisDxTex));
-        cudaSafeCall(cudaUnbindTexture(harrisDyTex));
+        //cudaSafeCall(cudaUnbindTexture(harrisDxTex));
+        //cudaSafeCall(cudaUnbindTexture(harrisDyTex));
     }
 
 /////////////////////////////////////////// Corner Min Eigen Val /////////////////////////////////////////////////
@@ -592,7 +599,7 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
     void cornerMinEigenVal_caller(const int block_size, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst,
-                                  int border_type)
+                                  int border_type, cudaStream_t stream)
     {
         const int rows = Dx.rows;
         const int cols = Dx.cols;
@@ -609,7 +616,7 @@ namespace cv { namespace gpu { namespace imgproc
         switch (border_type)
         {
         case BORDER_REFLECT101_GPU:
-            cornerMinEigenVal_kernel<<<grid, threads>>>(
+            cornerMinEigenVal_kernel<<<grid, threads, 0, stream>>>(
                     cols, rows, block_size, dst, BrdRowReflect101<void>(cols), BrdColReflect101<void>(rows));
             break;
         case BORDER_REPLICATE_GPU:
@@ -617,16 +624,18 @@ namespace cv { namespace gpu { namespace imgproc
             minEigenValDxTex.addressMode[1] = cudaAddressModeClamp;
             minEigenValDyTex.addressMode[0] = cudaAddressModeClamp;
             minEigenValDyTex.addressMode[1] = cudaAddressModeClamp;
-            cornerMinEigenVal_kernel<<<grid, threads>>>(cols, rows, block_size, dst);
+
+            cornerMinEigenVal_kernel<<<grid, threads, 0, stream>>>(cols, rows, block_size, dst);
             break;
         }
 
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaDeviceSynchronize());
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
 
-        cudaSafeCall(cudaUnbindTexture(minEigenValDxTex));
-        cudaSafeCall(cudaUnbindTexture(minEigenValDyTex));
+        //cudaSafeCall(cudaUnbindTexture(minEigenValDxTex));
+        //cudaSafeCall(cudaUnbindTexture(minEigenValDyTex));
     }
 
 ////////////////////////////// Column Sum //////////////////////////////////////
@@ -667,8 +676,7 @@ namespace cv { namespace gpu { namespace imgproc
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums
 
-    __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
-                                       DevMem2D_<cufftComplex> c)
+    __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;    
         const int y = blockIdx.y * blockDim.y + threadIdx.y;    
@@ -680,25 +688,23 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
-                      DevMem2D_<cufftComplex> c)
+    void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream)
     {
         dim3 threads(256);
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
-        mulSpectrumsKernel<<<grid, threads>>>(a, b, c);
+        mulSpectrumsKernel<<<grid, threads, 0, stream>>>(a, b, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums_CONJ
 
-    __global__ void mulSpectrumsKernel_CONJ(
-            const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
-            DevMem2D_<cufftComplex> c)
+    __global__ void mulSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;    
         const int y = blockIdx.y * blockDim.y + threadIdx.y;    
@@ -710,25 +716,23 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
-                           DevMem2D_<cufftComplex> c)
+    void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream)
     {
         dim3 threads(256);
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
-        mulSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, c);
+        mulSpectrumsKernel_CONJ<<<grid, threads, 0, stream>>>(a, b, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
     //////////////////////////////////////////////////////////////////////////
     // mulAndScaleSpectrums
 
-    __global__ void mulAndScaleSpectrumsKernel(
-            const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, 
-            float scale, DevMem2D_<cufftComplex> c)
+    __global__ void mulAndScaleSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -741,25 +745,23 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
-                              float scale, DevMem2D_<cufftComplex> c)
+    void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream)
     {
         dim3 threads(256);
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
-        mulAndScaleSpectrumsKernel<<<grid, threads>>>(a, b, scale, c);
+        mulAndScaleSpectrumsKernel<<<grid, threads, 0, stream>>>(a, b, scale, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
     //////////////////////////////////////////////////////////////////////////
     // mulAndScaleSpectrums_CONJ
 
-    __global__ void mulAndScaleSpectrumsKernel_CONJ(
-            const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
-            float scale, DevMem2D_<cufftComplex> c)
+    __global__ void mulAndScaleSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -772,16 +774,16 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
-    void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b,
-                                  float scale, DevMem2D_<cufftComplex> c)
+    void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream)
     {
         dim3 threads(256);
         dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
 
-        mulAndScaleSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, scale, c);
+        mulAndScaleSpectrumsKernel_CONJ<<<grid, threads, 0, stream>>>(a, b, scale, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }    
 
     //////////////////////////////////////////////////////////////////////////
@@ -1015,17 +1017,18 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    void convolve_gpu(const DevMem2Df& src, const PtrStepf& dst, int kWidth, int kHeight, float* kernel)
+    void convolve_gpu(const DevMem2Df& src, const PtrStepf& dst, int kWidth, int kHeight, float* kernel, cudaStream_t stream)
     {
         cudaSafeCall(cudaMemcpyToSymbol(c_convolveKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
 
         const dim3 block(16, 16);
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-        convolve<<<grid, block>>>(src, dst, kWidth, kHeight);
+        convolve<<<grid, block, 0, stream>>>(src, dst, kWidth, kHeight);
         cudaSafeCall(cudaGetLastError());
 
-        cudaSafeCall(cudaDeviceSynchronize());
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 

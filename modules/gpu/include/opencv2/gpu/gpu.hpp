@@ -141,8 +141,8 @@ namespace cv
 
         //////////////////////////////// Error handling ////////////////////////
 
-        CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
-        CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);
+        //CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
+        //CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);
 
         //////////////////////////////// CudaMem ////////////////////////////////
         // CudaMem is limited cv::Mat with page locked memory allocation.
@@ -628,11 +628,11 @@ namespace cv
 
         //! Does mean shift filtering on GPU.
         CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
-            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null());
 
         //! Does mean shift procedure on GPU.
         CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr,
-            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null());
 
         //! Does mean shift segmentation with elimination of small regions.
         CV_EXPORTS void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize,
@@ -683,10 +683,12 @@ namespace cv
         //! rotate 8bit single or four channel image
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         //! supports CV_8UC1, CV_8UC4 types
-        CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
+        CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, 
+            int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value = Scalar(), Stream& stream = Stream::Null());
+        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, 
+            const Scalar& value = Scalar(), Stream& stream = Stream::Null());
 
         //! computes the integral image
         //! sum will have CV_32S type, but will contain unsigned int values
@@ -715,21 +717,26 @@ namespace cv
         CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
 
         //! computes Harris cornerness criteria at each image pixel
-        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
-        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, 
+            int borderType = BORDER_REFLECT101);
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, 
+            int borderType = BORDER_REFLECT101);
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, 
+            int borderType = BORDER_REFLECT101, Stream& stream = Stream::Null());
 
         //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
         CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
         CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
+        CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, 
+            int borderType=BORDER_REFLECT101, Stream& stream = Stream::Null());
 
         //! performs per-element multiplication of two full (not packed) Fourier spectrums
         //! supports 32FC2 matrixes only (interleaved format)
-        CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false);
+        CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false, Stream& stream = Stream::Null());
 
         //! performs per-element multiplication of two full (not packed) Fourier spectrums
         //! supports 32FC2 matrixes only (interleaved format)
-        CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, 
-                                             float scale, bool conjB=false);
+        CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null());
 
         //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
         //! Param dft_size is the size of DFT transform.
@@ -742,19 +749,14 @@ namespace cv
         //! in CUFFT's format. Result as full complex matrix for such kind of transform cannot be retrieved.
         //!
         //! For complex-to-real transform it is assumed that the source matrix is packed in CUFFT's format.
-        CV_EXPORTS void dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0);
+        CV_EXPORTS void dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0, Stream& stream = Stream::Null());
 
         //! computes convolution (or cross-correlation) of two images using discrete Fourier transform
         //! supports source images of 32FC1 type only
         //! result matrix will have 32FC1 type
-        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
-                                 bool ccorr=false);
-
         struct CV_EXPORTS ConvolveBuf;
-
-        //! buffered version
-        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
-                                 bool ccorr, ConvolveBuf& buf);
+        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr = false);
+        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null());
 
         struct CV_EXPORTS ConvolveBuf
         {
@@ -766,7 +768,7 @@ namespace cv
 
         private:
             static Size estimateBlockSize(Size result_size, Size templ_size);
-            friend void convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&);
+            friend void convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream& stream);
 
             Size result_size;
             Size block_size;
@@ -778,7 +780,7 @@ namespace cv
         };
 
         //! computes the proximity map for the raster template and the image where the template is searched for
-        CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
+        CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream& stream = Stream::Null());
 
         //! smoothes the source image and downsamples it
         CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());

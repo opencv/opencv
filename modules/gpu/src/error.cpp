@@ -42,30 +42,45 @@
 
 #include "precomp.hpp"
 
-
 using namespace cv;
 using namespace cv::gpu;
+using namespace std;
 
-
-#if !defined (HAVE_CUDA)
-
-#else /* !defined (HAVE_CUDA) */
-
+#ifdef HAVE_CUDA
 
 namespace 
 {
     #define error_entry(entry)  { entry, #entry }
 
+    struct ErrorEntry
+    {
+        int code;
+        string str;
+    }; 
+
+    struct ErrorEntryComparer
+    {
+        int code;
+        ErrorEntryComparer(int code_) : code(code_) {};
+        bool operator()(const ErrorEntry& e) const { return e.code == code; }
+    };
+
+    string getErrorString(int code, const ErrorEntry* errors, size_t n)
+    {
+        size_t idx = find_if(errors, errors + n, ErrorEntryComparer(code)) - errors;
+
+        const string& msg = (idx != n) ? errors[idx].str : string("Unknown error code");
+
+        ostringstream ostr;
+        ostr << msg << " [Code = " << code << "]";
+
+        return ostr.str();
+    }
+
     //////////////////////////////////////////////////////////////////////////
     // NPP errors
-
-    struct NppError
-    {
-        int error;
-        string str;
-    } 
     
-    npp_errors [] = 
+    const ErrorEntry npp_errors [] = 
     {
         error_entry( NPP_NOT_SUPPORTED_MODE_ERROR ),
         error_entry( NPP_ROUND_MODE_NOT_SUPPORTED_ERROR ),
@@ -74,6 +89,7 @@ namespace
 #if defined (_MSC_VER)
         error_entry( NPP_NOT_SUFFICIENT_COMPUTE_CAPABILITY ),
 #endif
+
         error_entry( NPP_BAD_ARG_ERROR ),
         error_entry( NPP_LUT_NUMBER_OF_LEVELS_ERROR ),
         error_entry( NPP_TEXTURE_BIND_ERROR ),
@@ -110,105 +126,115 @@ namespace
         error_entry( NPP_ODD_ROI_WARNING )
     };
 
-    const size_t error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
+    const size_t npp_error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
 
-    struct Searcher
+    //////////////////////////////////////////////////////////////////////////
+    // NCV errors
+    
+    const ErrorEntry ncv_errors [] = 
     {
-        int err;
-        Searcher(int err_) : err(err_) {};
-        bool operator()(const NppError& e) const { return e.error == err; }
+        error_entry( NCV_SUCCESS ),
+        error_entry( NCV_UNKNOWN_ERROR ),
+        error_entry( NCV_CUDA_ERROR ),
+        error_entry( NCV_NPP_ERROR ),
+        error_entry( NCV_FILE_ERROR ),
+        error_entry( NCV_NULL_PTR ),
+        error_entry( NCV_INCONSISTENT_INPUT ),
+        error_entry( NCV_TEXTURE_BIND_ERROR ),
+        error_entry( NCV_DIMENSIONS_INVALID ),
+        error_entry( NCV_INVALID_ROI ),
+        error_entry( NCV_INVALID_STEP ),
+        error_entry( NCV_INVALID_SCALE ),
+        error_entry( NCV_INVALID_SCALE ),
+        error_entry( NCV_ALLOCATOR_NOT_INITIALIZED ),
+        error_entry( NCV_ALLOCATOR_BAD_ALLOC ),
+        error_entry( NCV_ALLOCATOR_BAD_DEALLOC ),
+        error_entry( NCV_ALLOCATOR_INSUFFICIENT_CAPACITY ),
+        error_entry( NCV_ALLOCATOR_DEALLOC_ORDER ),
+        error_entry( NCV_ALLOCATOR_BAD_REUSE ),
+        error_entry( NCV_MEM_COPY_ERROR ),
+        error_entry( NCV_MEM_RESIDENCE_ERROR ),
+        error_entry( NCV_MEM_INSUFFICIENT_CAPACITY ),
+        error_entry( NCV_HAAR_INVALID_PIXEL_STEP ),
+        error_entry( NCV_HAAR_TOO_MANY_FEATURES_IN_CLASSIFIER ),
+        error_entry( NCV_HAAR_TOO_MANY_FEATURES_IN_CASCADE ),
+        error_entry( NCV_HAAR_TOO_LARGE_FEATURES ),
+        error_entry( NCV_HAAR_XML_LOADING_EXCEPTION ),
+        error_entry( NCV_NOIMPL_HAAR_TILTED_FEATURES ),
+        error_entry( NCV_WARNING_HAAR_DETECTIONS_VECTOR_OVERFLOW ),
+        error_entry( NPPST_SUCCESS ),
+        error_entry( NPPST_ERROR ),
+        error_entry( NPPST_CUDA_KERNEL_EXECUTION_ERROR ),
+        error_entry( NPPST_NULL_POINTER_ERROR ),
+        error_entry( NPPST_TEXTURE_BIND_ERROR ),
+        error_entry( NPPST_MEMCPY_ERROR ),
+        error_entry( NPPST_MEM_ALLOC_ERR ),
+        error_entry( NPPST_MEMFREE_ERR ),
+        error_entry( NPPST_INVALID_ROI ),
+        error_entry( NPPST_INVALID_STEP ),
+        error_entry( NPPST_INVALID_SCALE ),
+        error_entry( NPPST_MEM_INSUFFICIENT_BUFFER ),
+        error_entry( NPPST_MEM_RESIDENCE_ERROR ),
+        error_entry( NPPST_MEM_INTERNAL_ERROR )
     };
+
+    const size_t ncv_error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
 
     //////////////////////////////////////////////////////////////////////////
     // CUFFT errors
 
-    struct CufftError
+    const ErrorEntry cufft_errors[] = 
     {
-        int code;
-        string message;
-    };
-
-    const CufftError cufft_errors[] = 
-    {
-        error_entry(CUFFT_INVALID_PLAN),
-        error_entry(CUFFT_ALLOC_FAILED),
-        error_entry(CUFFT_INVALID_TYPE),
-        error_entry(CUFFT_INVALID_VALUE),
-        error_entry(CUFFT_INTERNAL_ERROR),
-        error_entry(CUFFT_EXEC_FAILED),
-        error_entry(CUFFT_SETUP_FAILED),
-        error_entry(CUFFT_INVALID_SIZE),
-        error_entry(CUFFT_UNALIGNED_DATA)
-    };
-
-    struct CufftErrorComparer
-    {
-        CufftErrorComparer(int code_): code(code_) {}
-        bool operator()(const CufftError& other) const 
-        { 
-            return other.code == code; 
-        }
-        int code;
+        error_entry( CUFFT_INVALID_PLAN ),
+        error_entry( CUFFT_ALLOC_FAILED ),
+        error_entry( CUFFT_INVALID_TYPE ),
+        error_entry( CUFFT_INVALID_VALUE ),
+        error_entry( CUFFT_INTERNAL_ERROR ),
+        error_entry( CUFFT_EXEC_FAILED ),
+        error_entry( CUFFT_SETUP_FAILED ),
+        error_entry( CUFFT_INVALID_SIZE ),
+        error_entry( CUFFT_UNALIGNED_DATA )
     };
 
     const int cufft_error_num = sizeof(cufft_errors) / sizeof(cufft_errors[0]);
-
 }
 
 namespace cv
 {
     namespace gpu
     {
-        const string getNppErrorString( int err )
-        {
-            size_t idx = std::find_if(npp_errors, npp_errors + error_num, Searcher(err)) - npp_errors;
-            const string& msg = (idx != error_num) ? npp_errors[idx].str : string("Unknown error code");
-
-            std::stringstream interpreter;
-            interpreter << msg <<" [Code = " << err << "]";
-
-            return interpreter.str();
-        }
-
-        void nppError( int err, const char *file, const int line, const char *func)
-        {                    
-            cv::error( cv::Exception(CV_GpuNppCallError, getNppErrorString(err), func, file, line) );                
-        }
-
-        const string getCufftErrorString(int err_code)
-        {
-            const CufftError* cufft_error = std::find_if(
-                    cufft_errors, cufft_errors + cufft_error_num, 
-                    CufftErrorComparer(err_code));
-
-            bool found = cufft_error != cufft_errors + cufft_error_num;
-
-            std::stringstream ss;
-            ss << (found ? cufft_error->message : "Unknown error code");
-            ss << " [Code = " << err_code << "]";
-
-            return ss.str();
-        }
-
-        void cufftError(int err, const char *file, const int line, const char *func)
-        {
-            cv::error(cv::Exception(CV_GpuCufftCallError, getCufftErrorString(err), func, file, line));
-        }
-
         void error(const char *error_string, const char *file, const int line, const char *func)
         {          
             int code = CV_GpuApiCallError;
 
-            if (std::uncaught_exception())
+            if (uncaught_exception())
             {
                 const char* errorStr = cvErrorStr(code);            
                 const char* function = func ? func : "unknown function";    
 
-                std::cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
-                std::cerr.flush();            
+                cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
+                cerr.flush();            
             }
             else    
                 cv::error( cv::Exception(code, error_string, func, file, line) );
+        }
+
+        void nppError(int code, const char *file, const int line, const char *func)
+        {
+            string msg = getErrorString(code, npp_errors, npp_error_num);
+            cv::gpu::error(msg.c_str(), file, line, func);
+        }
+
+        void ncvError(int code, const char *file, const int line, const char *func)
+        {
+            string msg = getErrorString(code, ncv_errors, ncv_error_num);
+            cv::gpu::error(msg.c_str(), file, line, func);
+        }
+
+        void cufftError(int code, const char *file, const int line, const char *func)
+        {
+            string msg = getErrorString(code, cufft_errors, cufft_error_num);
+            cv::gpu::error(msg.c_str(), file, line, func);
         }
     }
 }

@@ -120,12 +120,19 @@ set_target_properties(${the_target} PROPERTIES
 target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
 
 if (HAVE_CUDA)
-    target_link_libraries(${the_target} ${CUDA_LIBRARIES})    
-    CUDA_ADD_CUFFT_TO_TARGET(${the_target})
+    target_link_libraries(${the_target} ${CUDA_LIBRARIES})
 
     unset(CUDA_npp_LIBRARY CACHE)
     find_cuda_helper_libs(npp)
     target_link_libraries(${the_target} ${CUDA_npp_LIBRARY})
+
+    if(HAVE_CUFFT)
+        CUDA_ADD_CUFFT_TO_TARGET(${the_target})
+    endif()
+
+    if(HAVE_CUBLAS)
+        CUDA_ADD_CUBLAS_TO_TARGET(${the_target})
+    endif()
 endif()
 
 if(MSVC)

@@ -452,8 +452,12 @@ set(WITH_EIGEN ON CACHE BOOL "Include Eigen2/Eigen3 support")
 
 if( CMAKE_VERSION VERSION_GREATER "2.8")
     set(WITH_CUDA ON CACHE BOOL "Include NVidia Cuda Runtime support")
+    set(WITH_CUFFT ON CACHE BOOL "Include NVidia Cuda Fast Fourier Transform (FFT) library support")
+    set(WITH_CUBLAS OFF CACHE BOOL "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support")
 else()
     set(WITH_CUDA OFF CACHE BOOL "Include NVidia Cuda Runtime support")
+    set(WITH_CUFFT OFF CACHE BOOL "Include NVidia Cuda Fast Fourier Transform (FFT) library support")
+    set(WITH_CUBLAS OFF CACHE BOOL "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support")
 endif()
 
 set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
@@ -995,6 +999,15 @@ if(WITH_CUDA)
     
     if(CUDA_FOUND)
         set(HAVE_CUDA 1)
+
+        if(WITH_CUFFT)
+            set(HAVE_CUFFT 1)
+        endif()
+
+        if(WITH_CUBLAS)
+            set(HAVE_CUBLAS 1)
+        endif()
+
         message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
         set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0)" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")

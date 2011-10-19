@@ -172,6 +172,12 @@
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
 
+/* NVidia Cuda Fast Fourier Transform (FFT) API*/
+#cmakedefine HAVE_CUFFT
+
+/* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
+#cmakedefine HAVE_CUBLAS
+
 /* Compile for 'real' NVIDIA GPU architectures */
 #define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
 

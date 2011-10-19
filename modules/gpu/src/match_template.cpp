@@ -47,43 +47,32 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_nogpu(); }
+void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 
 #else
 
 namespace cv { namespace gpu { namespace imgproc 
 {  
-    void matchTemplateNaive_CCORR_8U(
-            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
+    void matchTemplateNaive_CCORR_8U(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
+    void matchTemplateNaive_CCORR_32F(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
 
-    void matchTemplateNaive_CCORR_32F(
-            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
+    void matchTemplateNaive_SQDIFF_8U(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
+    void matchTemplateNaive_SQDIFF_32F(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
 
-    void matchTemplateNaive_SQDIFF_8U(
-            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
+    void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, 
+        int cn, cudaStream_t stream);
 
-    void matchTemplateNaive_SQDIFF_32F(
-            const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn);
+    void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, 
+        int cn, cudaStream_t stream);
 
-    void matchTemplatePrepared_SQDIFF_8U(
-            int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-            unsigned int templ_sqsum, DevMem2Df result, int cn);
-
-    void matchTemplatePrepared_SQDIFF_NORMED_8U(
-            int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-            unsigned int templ_sqsum, DevMem2Df result, int cn);
-
-    void matchTemplatePrepared_CCOFF_8U(
-            int w, int h, const DevMem2D_<unsigned int> image_sum,
-            unsigned int templ_sum, DevMem2Df result);
-
+    void matchTemplatePrepared_CCOFF_8U(int w, int h, const DevMem2D_<unsigned int> image_sum, unsigned int templ_sum, DevMem2Df result, cudaStream_t stream);
     void matchTemplatePrepared_CCOFF_8UC2(
-            int w, int h, 
-            const DevMem2D_<unsigned int> image_sum_r, 
-            const DevMem2D_<unsigned int> image_sum_g,
-            unsigned int templ_sum_r, unsigned int templ_sum_g, 
-            DevMem2Df result);
-
+        int w, int h,
+        const DevMem2D_<unsigned int> image_sum_r, 
+        const DevMem2D_<unsigned int> image_sum_g, 
+        unsigned int templ_sum_r,
+        unsigned int templ_sum_g, 
+        DevMem2Df result, cudaStream_t stream);
     void matchTemplatePrepared_CCOFF_8UC3(
             int w, int h, 
             const DevMem2D_<unsigned int> image_sum_r, 
@@ -92,8 +81,7 @@ namespace cv { namespace gpu { namespace imgproc
             unsigned int templ_sum_r, 
             unsigned int templ_sum_g, 
             unsigned int templ_sum_b, 
-            DevMem2Df result);
-
+            DevMem2Df result, cudaStream_t stream);
     void matchTemplatePrepared_CCOFF_8UC4(
             int w, int h, 
             const DevMem2D_<unsigned int> image_sum_r, 
@@ -104,22 +92,21 @@ namespace cv { namespace gpu { namespace imgproc
             unsigned int templ_sum_g, 
             unsigned int templ_sum_b, 
             unsigned int templ_sum_a, 
-            DevMem2Df result);
+            DevMem2Df result, cudaStream_t stream);
+
 
     void matchTemplatePrepared_CCOFF_NORMED_8U(
             int w, int h, const DevMem2D_<unsigned int> image_sum, 
             const DevMem2D_<unsigned long long> image_sqsum,
             unsigned int templ_sum, unsigned int templ_sqsum,
-            DevMem2Df result);
-
+            DevMem2Df result, cudaStream_t stream);
     void matchTemplatePrepared_CCOFF_NORMED_8UC2(
             int w, int h, 
             const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
             const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
             unsigned int templ_sum_r, unsigned int templ_sqsum_r,
             unsigned int templ_sum_g, unsigned int templ_sqsum_g,
-            DevMem2Df result);
-
+            DevMem2Df result, cudaStream_t stream);
     void matchTemplatePrepared_CCOFF_NORMED_8UC3(
             int w, int h, 
             const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
@@ -128,8 +115,7 @@ namespace cv { namespace gpu { namespace imgproc
             unsigned int templ_sum_r, unsigned int templ_sqsum_r,
             unsigned int templ_sum_g, unsigned int templ_sqsum_g,
             unsigned int templ_sum_b, unsigned int templ_sqsum_b,
-            DevMem2Df result);
-
+            DevMem2Df result, cudaStream_t stream);
     void matchTemplatePrepared_CCOFF_NORMED_8UC4(
             int w, int h, 
             const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
@@ -140,12 +126,12 @@ namespace cv { namespace gpu { namespace imgproc
             unsigned int templ_sum_g, unsigned int templ_sqsum_g,
             unsigned int templ_sum_b, unsigned int templ_sqsum_b,
             unsigned int templ_sum_a, unsigned int templ_sqsum_a,
-            DevMem2Df result);
+            DevMem2Df result, cudaStream_t stream);
 
     void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-                      unsigned int templ_sqsum, DevMem2Df result, int cn);
+                      unsigned int templ_sqsum, DevMem2Df result, int cn, cudaStream_t stream);
 
-    void extractFirstChannel_32F(const DevMem2Db image, DevMem2Df result, int cn);
+    void extractFirstChannel_32F(const DevMem2Db image, DevMem2Df result, int cn, cudaStream_t stream);
 }}}
 
 
@@ -186,103 +172,111 @@ namespace
     }
 
     
-    void matchTemplate_CCORR_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_CCORR_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
         if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_32F))
         {
-            imgproc::matchTemplateNaive_CCORR_32F(image, templ, result, image.channels());
+            imgproc::matchTemplateNaive_CCORR_32F(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
             return;
         }
 
         GpuMat result_;
-        convolve(image.reshape(1), templ.reshape(1), result_, true);
-        imgproc::extractFirstChannel_32F(result_, result, image.channels());
+        ConvolveBuf buf;
+        convolve(image.reshape(1), templ.reshape(1), result_, true, buf, stream);
+        imgproc::extractFirstChannel_32F(result_, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
-    void matchTemplate_CCORR_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_CCORR_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
         if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_8U))
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            imgproc::matchTemplateNaive_CCORR_8U(image, templ, result, image.channels());
+            imgproc::matchTemplateNaive_CCORR_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
             return;
         }
 
         GpuMat imagef, templf;
-        image.convertTo(imagef, CV_32F);
-        templ.convertTo(templf, CV_32F);
-        matchTemplate_CCORR_32F(imagef, templf, result);
+        if (stream)
+        {
+            stream.enqueueConvert(image, imagef, CV_32F);
+            stream.enqueueConvert(templ, templf, CV_32F);
+        }
+        else
+        {
+            image.convertTo(imagef, CV_32F);
+            templ.convertTo(templf, CV_32F);
+        }
+        matchTemplate_CCORR_32F(imagef, templf, result, stream);
     }
 
 
-    void matchTemplate_CCORR_NORMED_8U(const GpuMat& image, const GpuMat& templ, 
-                                       GpuMat& result)
+    void matchTemplate_CCORR_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
-        matchTemplate_CCORR_8U(image, templ, result);
+        matchTemplate_CCORR_8U(image, templ, result, stream);
 
         GpuMat img_sqsum;
-        sqrIntegral(image.reshape(1), img_sqsum);
+        sqrIntegral(image.reshape(1), img_sqsum, stream);
 
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
         imgproc::normalize_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, 
-                              result, image.channels());
+                              result, image.channels(), StreamAccessor::getStream(stream));
     }
 
     
-    void matchTemplate_SQDIFF_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_SQDIFF_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplateNaive_SQDIFF_32F(image, templ, result, image.channels());
+        imgproc::matchTemplateNaive_SQDIFF_32F(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
-    void matchTemplate_SQDIFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_SQDIFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
         if (templ.size().area() < getTemplateThreshold(CV_TM_SQDIFF, CV_8U))
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            imgproc::matchTemplateNaive_SQDIFF_8U(image, templ, result, image.channels());
+            imgproc::matchTemplateNaive_SQDIFF_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
             return;
         }
 
         GpuMat img_sqsum;
-        sqrIntegral(image.reshape(1), img_sqsum);
+        sqrIntegral(image.reshape(1), img_sqsum, stream);
 
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
 
-        matchTemplate_CCORR_8U(image, templ, result);
+        matchTemplate_CCORR_8U(image, templ, result, stream);
         imgproc::matchTemplatePrepared_SQDIFF_8U(
-                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels());
+                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
-    void matchTemplate_SQDIFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_SQDIFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
         GpuMat img_sqsum;
-        sqrIntegral(image.reshape(1), img_sqsum);
+        sqrIntegral(image.reshape(1), img_sqsum, stream);
 
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
 
-        matchTemplate_CCORR_8U(image, templ, result);
+        matchTemplate_CCORR_8U(image, templ, result, stream);
         imgproc::matchTemplatePrepared_SQDIFF_NORMED_8U(
-                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels());
+                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
-    void matchTemplate_CCOFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_CCOFF_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
-        matchTemplate_CCORR_8U(image, templ, result);
+        matchTemplate_CCORR_8U(image, templ, result, stream);
 
         if (image.channels() == 1)
         {
             GpuMat image_sum;
-            integral(image, image_sum);
+            integral(image, image_sum, stream);
 
             unsigned int templ_sum = (unsigned int)sum(templ)[0];
             imgproc::matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, 
-                                                    image_sum, templ_sum, result);
+                                                    image_sum, templ_sum, result, StreamAccessor::getStream(stream));
         }
         else
         {
@@ -291,7 +285,7 @@ namespace
 
             split(image, images);
             for (int i = 0; i < image.channels(); ++i)
-                integral(images[i], image_sums[i]);
+                integral(images[i], image_sums[i], stream);
 
             Scalar templ_sum = sum(templ);
 
@@ -301,19 +295,19 @@ namespace
                 imgproc::matchTemplatePrepared_CCOFF_8UC2(
                         templ.cols, templ.rows, image_sums[0], image_sums[1],
                         (unsigned int)templ_sum[0], (unsigned int)templ_sum[1],
-                        result);
+                        result, StreamAccessor::getStream(stream));
                 break;
             case 3:
                 imgproc::matchTemplatePrepared_CCOFF_8UC3(
                         templ.cols, templ.rows, image_sums[0], image_sums[1], image_sums[2],
                         (unsigned int)templ_sum[0], (unsigned int)templ_sum[1], (unsigned int)templ_sum[2],
-                        result);
+                        result, StreamAccessor::getStream(stream));
                 break;
             case 4:
                 imgproc::matchTemplatePrepared_CCOFF_8UC4(
                         templ.cols, templ.rows, image_sums[0], image_sums[1], image_sums[2], image_sums[3],
                         (unsigned int)templ_sum[0], (unsigned int)templ_sum[1], (unsigned int)templ_sum[2],
-                        (unsigned int)templ_sum[3], result);
+                        (unsigned int)templ_sum[3], result, StreamAccessor::getStream(stream));
                 break;
             default:
                 CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
@@ -322,25 +316,34 @@ namespace
     }
 
 
-    void matchTemplate_CCOFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result)
+    void matchTemplate_CCOFF_NORMED_8U(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
         GpuMat imagef, templf;
-        image.convertTo(imagef, CV_32F);
-        templ.convertTo(templf, CV_32F);
-        matchTemplate_CCORR_32F(imagef, templf, result);
+        if (stream)
+        {
+            stream.enqueueConvert(image, imagef, CV_32F);
+            stream.enqueueConvert(templ, templf, CV_32F);
+        }
+        else
+        {
+            image.convertTo(imagef, CV_32F);
+            templ.convertTo(templf, CV_32F);
+        }
+
+        matchTemplate_CCORR_32F(imagef, templf, result, stream);
 
         if (image.channels() == 1)
         {
             GpuMat image_sum, image_sqsum;
-            integral(image, image_sum);
-            sqrIntegral(image, image_sqsum);
+            integral(image, image_sum, stream);
+            sqrIntegral(image, image_sqsum, stream);
 
             unsigned int templ_sum = (unsigned int)sum(templ)[0];
             unsigned int templ_sqsum = (unsigned int)sqrSum(templ)[0];
 
             imgproc::matchTemplatePrepared_CCOFF_NORMED_8U(
                     templ.cols, templ.rows, image_sum, image_sqsum, 
-                    templ_sum, templ_sqsum, result);
+                    templ_sum, templ_sqsum, result, StreamAccessor::getStream(stream));
         }
         else
         {
@@ -351,8 +354,8 @@ namespace
             split(image, images);
             for (int i = 0; i < image.channels(); ++i)
             {
-                integral(images[i], image_sums[i]);
-                sqrIntegral(images[i], image_sqsums[i]);
+                integral(images[i], image_sums[i], stream);
+                sqrIntegral(images[i], image_sqsums[i], stream);
             }
 
             Scalar templ_sum = sum(templ);
@@ -367,7 +370,7 @@ namespace
                         image_sums[1], image_sqsums[1],
                         (unsigned int)templ_sum[0], (unsigned int)templ_sqsum[0],
                         (unsigned int)templ_sum[1], (unsigned int)templ_sqsum[1],
-                        result);
+                        result, StreamAccessor::getStream(stream));
                 break;
             case 3:
                 imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC3(
@@ -378,7 +381,7 @@ namespace
                         (unsigned int)templ_sum[0], (unsigned int)templ_sqsum[0],
                         (unsigned int)templ_sum[1], (unsigned int)templ_sqsum[1],
                         (unsigned int)templ_sum[2], (unsigned int)templ_sqsum[2],
-                        result);
+                        result, StreamAccessor::getStream(stream));
                 break;
             case 4:
                 imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC4(
@@ -391,7 +394,7 @@ namespace
                         (unsigned int)templ_sum[1], (unsigned int)templ_sqsum[1],
                         (unsigned int)templ_sum[2], (unsigned int)templ_sqsum[2],
                         (unsigned int)templ_sum[3], (unsigned int)templ_sqsum[3],
-                        result);                
+                        result, StreamAccessor::getStream(stream));                
                 break;
             default:
                 CV_Error(CV_StsBadArg, "matchTemplate: unsupported number of channels");
@@ -401,12 +404,12 @@ namespace
 }
 
 
-void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
+void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream& stream)
 {
     CV_Assert(image.type() == templ.type());
     CV_Assert(image.cols >= templ.cols && image.rows >= templ.rows);
 
-    typedef void (*Caller)(const GpuMat&, const GpuMat&, GpuMat&);
+    typedef void (*Caller)(const GpuMat&, const GpuMat&, GpuMat&, Stream& stream);
 
     static const Caller callers8U[] = { ::matchTemplate_SQDIFF_8U, ::matchTemplate_SQDIFF_NORMED_8U, 
                                         ::matchTemplate_CCORR_8U, ::matchTemplate_CCORR_NORMED_8U, 
@@ -424,7 +427,7 @@ void cv::gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& re
 
     Caller caller = callers[method];
     CV_Assert(caller);
-    caller(image, templ, result);
+    caller(image, templ, result, stream);
 }
 
 #endif
