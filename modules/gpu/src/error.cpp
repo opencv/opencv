@@ -178,7 +178,7 @@ namespace
         error_entry( NPPST_MEM_INTERNAL_ERROR )
     };
 
-    const size_t ncv_error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
+    const size_t ncv_error_num = sizeof(ncv_errors) / sizeof(ncv_errors[0]);
 
     //////////////////////////////////////////////////////////////////////////
     // CUFFT errors
@@ -197,6 +197,23 @@ namespace
     };
 
     const int cufft_error_num = sizeof(cufft_errors) / sizeof(cufft_errors[0]);
+
+    //////////////////////////////////////////////////////////////////////////
+    // CUBLAS errors
+
+    const ErrorEntry cublas_errors[] = 
+    {
+        error_entry( CUBLAS_STATUS_SUCCESS ),
+        error_entry( CUBLAS_STATUS_NOT_INITIALIZED ),
+        error_entry( CUBLAS_STATUS_ALLOC_FAILED ),
+        error_entry( CUBLAS_STATUS_INVALID_VALUE ),
+        error_entry( CUBLAS_STATUS_ARCH_MISMATCH ),
+        error_entry( CUBLAS_STATUS_MAPPING_ERROR ),
+        error_entry( CUBLAS_STATUS_EXECUTION_FAILED ),
+        error_entry( CUBLAS_STATUS_INTERNAL_ERROR )
+    };
+
+    const int cublas_error_num = sizeof(cublas_errors) / sizeof(cublas_errors[0]);
 }
 
 namespace cv
@@ -234,6 +251,12 @@ namespace cv
         void cufftError(int code, const char *file, const int line, const char *func)
         {
             string msg = getErrorString(code, cufft_errors, cufft_error_num);
+            cv::gpu::error(msg.c_str(), file, line, func);
+        }
+
+        void cublasError(int code, const char *file, const int line, const char *func)
+        {
+            string msg = getErrorString(code, cublas_errors, cublas_error_num);
             cv::gpu::error(msg.c_str(), file, line, func);
         }
     }
