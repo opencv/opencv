@@ -1471,3 +1471,33 @@ TEST(reduce)
         GPU_OFF;
     }
 }
+
+
+TEST(gemm)
+{
+    Mat src1, src2, src3, dst;
+    gpu::GpuMat d_src1, d_src2, d_src3, d_dst;
+
+    for (int size = 512; size <= 2048; size *= 2)
+    {
+        SUBTEST << "size " << size << ", 32FC1";
+
+        gen(src1, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+        gen(src2, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+        gen(src3, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+        dst.create(src1.size(), src1.type());
+
+        CPU_ON;
+        gemm(src1, src2, 1.0, src3, 1.0, dst);
+        CPU_OFF;
+
+        d_src1 = src1;
+        d_src2 = src2;
+        d_src3 = src3;
+        d_dst.create(d_src1.size(), d_src1.type());
+
+        GPU_ON;
+        gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+        GPU_OFF;
+    }
+}

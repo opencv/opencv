@@ -747,3 +747,34 @@ PERF_TEST_P(DevInfo_Size_MatType_FlipCode, reduce, testing::Combine(testing::Val
 
     SANITY_CHECK(dst_host);
 }
+
+PERF_TEST_P(DevInfo_Size, gemm, testing::Combine(testing::ValuesIn(devices()), 
+            testing::Values(cv::Size(512, 512), cv::Size(1024, 1024), cv::Size(2048, 2048), cv::Size(4096, 4096))))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src1_host(size, CV_32FC1);
+    Mat src2_host(size, CV_32FC1);
+    Mat src3_host(size, CV_32FC1);
+
+    declare.in(src1_host, src2_host, src3_host, WARMUP_RNG);
+
+    GpuMat src1(src1_host);
+    GpuMat src2(src2_host);
+    GpuMat src3(src3_host);
+    GpuMat dst(size, CV_32FC1);
+
+    declare.time(5.0);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        gemm(src1, src2, 1.0, src3, 1.0, dst);
+    }
+
+    Mat dst_host = dst;
+
+    SANITY_CHECK(dst_host);
+}

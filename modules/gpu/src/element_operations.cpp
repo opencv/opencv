@@ -434,7 +434,7 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double 
         {0/*multiply_gpu<double, unsigned char>*/, 0/*multiply_gpu<double, signed char>*/, 0/*multiply_gpu<double, unsigned short>*/, 0/*multiply_gpu<double, short>*/, 0/*multiply_gpu<double, int>*/, 0/*multiply_gpu<double, float>*/, multiply_gpu<double, double>}
     };
 
-    CV_Assert(src.channels() == 1);
+    //CV_Assert(src.channels() == 1);
 
     if (dtype < 0)
         dtype = src.depth();
@@ -463,7 +463,7 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double 
     const func_t func = funcs[src.depth()][dst.depth()];
     CV_Assert(func != 0);
 
-    func(src, sc.val[0], dst, scale, stream);
+    func(src.reshape(1), sc.val[0], dst.reshape(1), scale, stream);
 }
 
 ////////////////////////////////////////////////////////////////////////

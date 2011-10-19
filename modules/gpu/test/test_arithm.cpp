@@ -1860,4 +1860,68 @@ INSTANTIATE_TEST_CASE_P(Arithm, Reduce, testing::Combine(
                         testing::Values(0, 1),
                         testing::Values((int)CV_REDUCE_SUM, (int)CV_REDUCE_AVG, (int)CV_REDUCE_MAX, (int)CV_REDUCE_MIN)));
 
+//////////////////////////////////////////////////////////////////////////////
+// gemm
+
+struct GEMM : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+    int flags;
+
+    int size;
+    cv::Mat src1;
+    cv::Mat src2;
+    cv::Mat src3;
+    double alpha;
+    double beta;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+        flags = std::tr1::get<2>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = rng.uniform(100, 500);
+
+        src1 = cvtest::randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
+        src2 = cvtest::randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
+        src3 = cvtest::randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
+        alpha = rng.uniform(-10.0, 10.0);
+        beta = rng.uniform(-10.0, 10.0);
+
+        cv::gemm(src1, src2, alpha, src3, beta, dst_gold, flags);
+    }
+};
+
+TEST_P(GEMM, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(flags);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::gemm(cv::gpu::GpuMat(src1), cv::gpu::GpuMat(src2), alpha, cv::gpu::GpuMat(src3), beta, dev_dst, flags);
+
+        dev_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-1);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, GEMM, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32FC1, CV_32FC2),
+                        testing::Values(0, (int)cv::GEMM_1_T, (int)cv::GEMM_2_T, (int)cv::GEMM_3_T)));
+
 #endif // HAVE_CUDA

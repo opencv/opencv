@@ -482,6 +482,10 @@ namespace cv
 
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
+        //! implements generalized matrix product algorithm GEMM from BLAS
+        CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha, 
+            const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
+
         //! transposes the matrix
         //! supports matrix with element size = 1, 4 and 8 bytes (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc)
         CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst, Stream& stream = Stream::Null());
