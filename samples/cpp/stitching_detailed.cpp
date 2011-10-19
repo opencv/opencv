@@ -74,8 +74,10 @@ void printUsage()
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
+        "  --features (surf|orb)\n"
+        "      Type of features used for images matching. The default is surf.\n"
         "  --match_conf <float>\n"
-        "      Confidence for feature matching step. The default is 0.65.\n"
+        "      Confidence for feature matching step. The default is 0.65 for surf and 0.3 for orb.\n"
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
@@ -123,6 +125,7 @@ double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
+string features = "surf";
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
 bool do_wave_correct = true;
@@ -186,6 +189,13 @@ int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--result")
         {
             result_name = argv[i + 1];
+            i++;
+        }
+        else if (string(argv[i]) == "--features")
+        {
+            features = argv[i + 1];
+            if (features == "orb")
+                match_conf = 0.3f;
             i++;
         }
         else if (string(argv[i]) == "--match_conf")
@@ -334,12 +344,24 @@ int main(int argc, char* argv[])
     int64 t = getTickCount();
 
     Ptr<FeaturesFinder> finder;
+    if (features == "surf")
+    {
 #ifndef ANDROID
-    if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
-        finder = new SurfFeaturesFinderGpu();
-    else
+        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+            finder = new SurfFeaturesFinderGpu();
+        else
 #endif
-        finder = new SurfFeaturesFinder();
+            finder = new SurfFeaturesFinder();
+    }
+    else if (features == "orb")
+    {
+        finder = new OrbFeaturesFinder();
+    }
+    else
+    {
+        cout << "Unknown 2D features type: '" << features << "'.\n";
+        return -1;
+    }
 
     Mat full_img, img;
     vector<ImageFeatures> features(num_images);

@@ -148,7 +148,20 @@ private:
 void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
-    FlannBasedMatcher matcher;
+
+    CV_Assert(features1.descriptors.type() == features2.descriptors.type());
+    CV_Assert(features2.descriptors.depth() == CV_8U || features2.descriptors.depth() == CV_32F);
+
+    Ptr<flann::IndexParams> indexParams = new flann::KDTreeIndexParams();
+    Ptr<flann::SearchParams> searchParams = new flann::SearchParams();
+
+    if (features2.descriptors.depth() == CV_8U)
+    {
+        indexParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+        searchParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+    }
+
+    FlannBasedMatcher matcher(indexParams, searchParams);
     vector< vector<DMatch> > pair_matches;
     MatchesSet matches;
 
@@ -166,6 +179,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
             matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
         }
     }
+    LOG("\n1->2 matches: " << matches_info.matches.size() << endl);
 
     // Find 2->1 matches
     pair_matches.clear();
@@ -180,6 +194,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
             if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
                 matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
     }
+    LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
 #ifndef ANDROID
@@ -304,11 +319,10 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
     }
 }
 
-
 void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     Mat gray_image;
-    CV_Assert(image.depth() == CV_8U);
+    CV_Assert(image.type() == CV_8UC3);
     cvtColor(image, gray_image, CV_BGR2GRAY);
     if (surf == 0)
     {
@@ -323,6 +337,19 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
+OrbFeaturesFinder::OrbFeaturesFinder(size_t n_features, const ORB::CommonParams & detector_params)
+{
+    orb = new ORB(n_features, detector_params);
+}
+
+void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+{
+    Mat gray_image;
+    CV_Assert(image.type() == CV_8UC3);
+    cvtColor(image, gray_image, CV_BGR2GRAY);
+
+    (*orb)(gray_image, Mat(), features.keypoints, features.descriptors);
+}
 
 #ifndef ANDROID
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,

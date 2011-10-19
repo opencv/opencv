@@ -6,11 +6,9 @@ using namespace std;
 using namespace cv;
 using namespace perf;
 
+typedef TestBaseWithParam<String> stitch;
 
-/*
-// Stitcher::Status Stitcher::stitch(InputArray imgs, OutputArray pano)
-*/
-PERF_TEST( stitch3, a123 )
+PERF_TEST_P( stitch, a123, testing::Values("surf", "orb"))
 {
     Mat pano;
     
@@ -20,12 +18,21 @@ PERF_TEST( stitch3, a123 )
     imgs.push_back( imread( getDataPath("stitching/a3.jpg") ) );
 
     Stitcher::Status status;
+    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
+            ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
+            : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
 
-    declare.time(30 * 20);
+    Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
+            ? new detail::BestOf2NearestMatcher(false, 0.3f)
+            : new detail::BestOf2NearestMatcher(false, 0.65f);
+
+    declare.time(30 * 20).iterations(50);
 
     while(next())
     {
         Stitcher stitcher = Stitcher::createDefault();
+        stitcher.setFeaturesFinder(featuresFinder);
+        stitcher.setFeaturesMatcher(featuresMatcher);
 
         startTimer();
         status = stitcher.stitch(imgs, pano);
@@ -33,7 +40,7 @@ PERF_TEST( stitch3, a123 )
     }
 }
 
-PERF_TEST( stitch2, b12 )
+PERF_TEST_P( stitch, b12, testing::Values("surf", "orb"))
 {
     Mat pano;
     
@@ -42,12 +49,21 @@ PERF_TEST( stitch2, b12 )
     imgs.push_back( imread( getDataPath("stitching/b2.jpg") ) );
 
     Stitcher::Status status;
+    Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
+            ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
+            : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
 
-    declare.time(30 * 20);
+    Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
+            ? new detail::BestOf2NearestMatcher(false, 0.3f)
+            : new detail::BestOf2NearestMatcher(false, 0.65f);
+
+    declare.time(30 * 20).iterations(50);
 
     while(next())
     {
         Stitcher stitcher = Stitcher::createDefault();
+        stitcher.setFeaturesFinder(featuresFinder);
+        stitcher.setFeaturesMatcher(featuresMatcher);
 
         startTimer();
         status = stitcher.stitch(imgs, pano);

@@ -89,6 +89,17 @@ private:
     Ptr<SURF> surf;
 };
 
+class CV_EXPORTS OrbFeaturesFinder : public FeaturesFinder
+{
+public:
+    OrbFeaturesFinder(size_t n_features = 1500, const ORB::CommonParams & detector_params = ORB::CommonParams(1.3, 5));
+
+private:
+    void find(const Mat &image, ImageFeatures &features);
+
+    Ptr<ORB> orb;
+};
+
 
 #ifndef ANDROID
 class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
