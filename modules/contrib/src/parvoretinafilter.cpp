@@ -216,11 +216,11 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing()
 	{
 		float pixelDifference = *(photoreceptorsOutput_PTR++) -*(horizontalCellsOutput_PTR++);
 		// test condition to allow write pixelDifference in ON or OFF buffer and 0 in the over
-		float isPositive=(float) (pixelDifference>0);
+		float isPositive=(float) (pixelDifference>0.0f);
 
 		// ON and OFF channels writing step
 		*(parvocellularOutputON_PTR++)=*(bipolarCellsON_PTR++) = isPositive*pixelDifference;
-		*(parvocellularOutputOFF_PTR++)=*(bipolarCellsOFF_PTR++)= (isPositive-1)*pixelDifference;
+		*(parvocellularOutputOFF_PTR++)=*(bipolarCellsOFF_PTR++)= (isPositive-1.0f)*pixelDifference;
 	}
 }
 }

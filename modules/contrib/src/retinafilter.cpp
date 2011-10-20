@@ -210,10 +210,10 @@ namespace cv
                 if (distanceToCenter<minDistance)
                 {
                     float a=*(hybridParvoMagnoCoefTablePTR++)=0.5f+0.5f*(float)cos(CV_PI*distanceToCenter/minDistance);
-                    *(hybridParvoMagnoCoefTablePTR++)=1-a;
+                    *(hybridParvoMagnoCoefTablePTR++)=1.f-a;
                 }else
                 {
-                    *(hybridParvoMagnoCoefTablePTR++)=0;
+                    *(hybridParvoMagnoCoefTablePTR++)=0.f;
                     *(hybridParvoMagnoCoefTablePTR++)=1.f;
                 }
             }
@@ -233,7 +233,7 @@ namespace cv
         //this->setV0CompressionParameter(0.6, maxInputValue, meanValue); // keeps log compression sensitivity parameter (usefull for the tone mapping function)
         _ParvoRetinaFilter.setOPLandParvoFiltersParameters(0,OPLtemporalresponse1, OPLspatialResponse1, OPLassymetryGain, OPLtemporalresponse2, OPLspatialResponse2);
         _ParvoRetinaFilter.setV0CompressionParameter(0.9f, maxInputValue, meanValue);
-        _MagnoRetinaFilter.setCoefficientsTable(LPfilterGain, LPfilterTemporalresponse, LPfilterSpatialResponse, MovingContoursExtractorCoefficient, 0, 2*LPfilterSpatialResponse);
+        _MagnoRetinaFilter.setCoefficientsTable(LPfilterGain, LPfilterTemporalresponse, LPfilterSpatialResponse, MovingContoursExtractorCoefficient, 0, 2.0f*LPfilterSpatialResponse);
         _MagnoRetinaFilter.setV0CompressionParameter(0.7f, maxInputValue, meanValue);
 
         // stability controls value init
