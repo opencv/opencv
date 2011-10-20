@@ -38,6 +38,7 @@ const cv::Size sz720p = cv::Size(1280, 720);
 const cv::Size sz1080p = cv::Size(1920, 1080);
 
 const cv::Size szODD = cv::Size(127, 61);
+const cv::Size sz2K = cv::Size(2048, 2048);
 
 #define SZ_ALL_VGA ::testing::Values(::perf::szQVGA, ::perf::szVGA, ::perf::szSVGA)
 #define SZ_ALL_GA  ::testing::Values(::perf::szQVGA, ::perf::szVGA, ::perf::szSVGA, ::perf::szXGA, ::perf::szSXGA)
