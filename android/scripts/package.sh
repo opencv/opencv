@@ -33,7 +33,7 @@ cmake -C "$ANDROID_DIR/CMakeCache.android.initial.cmake" -DARM_TARGET="armeabi-v
 make -j8 install/strip || exit 1
 
 cd "$PRG_DIR/opencv"
-rm -rf doc include src .classpath .project AndroidManifest.xml default.properties share/OpenCV/haarcascades share/OpenCV/lbpcascades share/OpenCV/*.cmake share/OpenCV/OpenCV.mk
+rm -rf doc include src .classpath .project AndroidManifest.xml default.properties project.properties share/OpenCV/haarcascades share/OpenCV/lbpcascades share/OpenCV/*.cmake share/OpenCV/OpenCV.mk
 
 
 # armeabi build
@@ -67,15 +67,26 @@ for dir in `ls -1`
 do
   if [ -f "$dir/default.properties" ]
   then
-    HAS_REFERENCE=`cat "$dir/default.properties" | grep -c android.library.reference.1`
+    HAS_REFERENCE=`cat "$dir/project.properties" | grep -c android.library.reference.1`
     if [ $HAS_REFERENCE = 1 ]
     then
-      echo -n > "$dir/default.properties"
+      echo -n > "$dir/project.properties"
       android update project --name "$dir" --target "android-8" --library "../../$OPENCV_NAME" --path "$dir"
       #echo 'android update project --name "$dir" --target "android-8" --library "../opencv$CV_VERSION" --path "$dir"'
     fi
   else
-    rm -rf "$dir"
+    if [ -f "$dir/default.properties" ]
+    then
+      HAS_REFERENCE=`cat "$dir/default.properties" | grep -c android.library.reference.1`
+      if [ $HAS_REFERENCE = 1 ]
+      then
+        echo -n > "$dir/default.properties"
+        android update project --name "$dir" --target "android-8" --library "../../$OPENCV_NAME" --path "$dir"
+        #echo 'android update project --name "$dir" --target "android-8" --library "../opencv$CV_VERSION" --path "$dir"'
+      fi
+    else
+      rm -rf "$dir"
+    fi
   fi
 done
 

@@ -214,7 +214,17 @@ if(ANDROID)
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/res"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/gen"
         DEPENDS ${lib_proj_files}
-        )
+        )	
+    if (ANT_EXECUTABLE AND ANDROID_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
+        add_custom_command(
+            TARGET ${target}
+            COMMAND ${ANDROID_EXECUTABLE} update lib-project --path "${CMAKE_BINARY_DIR}"
+            COMMAND ${ANT_EXECUTABLE} debug
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+            DEPENDS ${lib_target}
+            )
+    endif()
+
     add_dependencies(${lib_target} ${api_target})
     add_dependencies(${target} ${lib_target})
 
