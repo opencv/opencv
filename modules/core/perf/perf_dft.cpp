@@ -20,9 +20,9 @@ PERF_TEST_P(Size_MatType, dft, TEST_MATS_DFT)
     declare.time(60);
 
     TEST_CYCLE(100) 
-	{ 
-        dft(src, dst, 0.f);
-	}
+    {
+        dft(src, dst);
+    }
 
     SANITY_CHECK(dst);
 } 
