@@ -337,9 +337,10 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-OrbFeaturesFinder::OrbFeaturesFinder(size_t n_features, const ORB::CommonParams & detector_params)
+OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, size_t n_features, const ORB::CommonParams & detector_params)
 {
-    orb = new ORB(n_features, detector_params);
+    grid_size = _grid_size;
+    orb = new ORB(n_features * (99 + grid_size.area())/100/grid_size.area(), detector_params);
 }
 
 void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
@@ -348,7 +349,36 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     CV_Assert(image.type() == CV_8UC3);
     cvtColor(image, gray_image, CV_BGR2GRAY);
 
-    (*orb)(gray_image, Mat(), features.keypoints, features.descriptors);
+    if (grid_size.area() == 1)
+        (*orb)(gray_image, Mat(), features.keypoints, features.descriptors);
+    else
+    {
+        features.keypoints.clear();
+        features.descriptors.release();
+
+        std::vector<KeyPoint> points;
+        Mat descriptors;
+
+        for (int r = 0; r < grid_size.height; ++r)
+            for (int c = 0; c < grid_size.width; ++c)
+            {
+                int xl = c * gray_image.cols / grid_size.width;
+                int yl = r * gray_image.rows / grid_size.height;
+                int xr = (c+1) * gray_image.cols / grid_size.width;
+                int yr = (r+1) * gray_image.rows / grid_size.height;
+
+                (*orb)(gray_image(Range(yl, yr), Range(xl, xr)), Mat(), points, descriptors);
+
+                features.keypoints.reserve(features.keypoints.size() + points.size());
+                for (std::vector<KeyPoint>::iterator kp = points.begin(); kp != points.end(); ++kp)
+                {
+                    kp->pt.x += xl;
+                    kp->pt.y += yl;
+                    features.keypoints.push_back(*kp);
+                }
+                features.descriptors.push_back(descriptors);
+            }
+    }
 }
 
 #ifndef ANDROID

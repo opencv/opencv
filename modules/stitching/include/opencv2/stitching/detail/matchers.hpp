@@ -92,12 +92,13 @@ private:
 class CV_EXPORTS OrbFeaturesFinder : public FeaturesFinder
 {
 public:
-    OrbFeaturesFinder(size_t n_features = 1500, const ORB::CommonParams & detector_params = ORB::CommonParams(1.3, 5));
+    OrbFeaturesFinder(Size _grid_size = Size(4,4), size_t n_features = 1500, const ORB::CommonParams & detector_params = ORB::CommonParams(1.3, 5));
 
 private:
     void find(const Mat &image, ImageFeatures &features);
 
     Ptr<ORB> orb;
+    Size grid_size;
 };
 
 
