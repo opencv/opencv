@@ -75,13 +75,13 @@
 namespace cv
 {
     
-Retina::Retina(const std::string parametersSaveFile, const cv::Size inputSize)
+Retina::Retina(const cv::Size inputSize, const std::string parametersSaveFile)
 {
     _retinaFilter = 0;
     _init(parametersSaveFile, inputSize, true, RETINA_COLOR_BAYER, false);
 }
 
-Retina::Retina(const std::string parametersSaveFile, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+Retina::Retina(const cv::Size inputSize, const std::string parametersSaveFile, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
     _retinaFilter = 0;
     _init(parametersSaveFile, inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
@@ -303,9 +303,9 @@ void Retina::getMagno(std::valarray<float> &){_retinaFilter->getMovingContours()
 void Retina::getParvo(std::valarray<float> &){_retinaFilter->getContours();}
 
 // private method called by constructirs
-void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+void Retina::_init(const std::string parametersSaveFileName, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
-	_parametersSaveFileName = parametersSaveFile;
+	_parametersSaveFileName = parametersSaveFileName;
 
 	// basic error check
 	if (inputSize.height*inputSize.width <= 0)
@@ -320,22 +320,24 @@ void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSiz
            delete _retinaFilter;
 	_retinaFilter = new RetinaFilter(inputSize.height, inputSize.width, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 
-	// prepare the parameter XML tree
-	_parametersSaveFile.open(parametersSaveFile, cv::FileStorage::WRITE );
+	// prepare the default parameter XML file with default setup
+	if (_parametersSaveFileName.size()>0)
+	{
+		_parametersSaveFile.open(parametersSaveFileName, cv::FileStorage::WRITE );
 
-	_parametersSaveFile<<"InputSize"<<"{";
-	_parametersSaveFile<<"height"<<inputSize.height;
-	_parametersSaveFile<<"width"<<inputSize.width;
-	_parametersSaveFile<<"}";
+		_parametersSaveFile<<"InputSize"<<"{";
+		_parametersSaveFile<<"height"<<inputSize.height;
+		_parametersSaveFile<<"width"<<inputSize.width;
+		_parametersSaveFile<<"}";
 
-	// clear all retina buffers
-	// apply default setup
-	setupOPLandIPLParvoChannel();
-	setupIPLMagnoChannel();
+		// clear all retina buffers
+		// apply default setup
+		setupOPLandIPLParvoChannel();
+		setupIPLMagnoChannel();
 
-	// write current parameters to params file
-	_parametersSaveFile.release();
-
+		// write current parameters to params file
+		_parametersSaveFile.release();
+	}
 	// init retina
 	_retinaFilter->clearAllBuffers();
 

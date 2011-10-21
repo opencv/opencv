@@ -116,22 +116,22 @@ public:
 
 	/**
 	 * Main constructor with most commun use setup : create an instance of color ready retina model
-	 * @param parametersSaveFile : the filename of the xml file that records the used retina parametes setup
 	 * @param inputSize : the input frame size
+	 * @param parametersSaveFile : the filename of the xml file that records the default retina parameters setup, if empty, then, no default parameter file will be written
 	 */
-	Retina(const std::string parametersSaveFile, Size inputSize);
+	Retina(Size inputSize, const std::string parametersSaveFile="");
 
 	/**
 	 * Complete Retina filter constructor which allows all basic structural parameters definition
-	 * @param parametersSaveFile : the filename of the xml file that records the used retina parametes setup
          * @param inputSize : the input frame size
+	 * @param parametersSaveFile : the filename of the xml file that records the default retina parameters setup, if empty, then, no default parameter file will be written
 	 * @param colorMode : the chosen processing mode : with or without color processing
 	 * @param colorSamplingMethod: specifies which kind of color sampling will be used
 	 * @param useRetinaLogSampling: activate retina log sampling, if true, the 2 following parameters can be used
 	 * @param reductionFactor: only usefull if param useRetinaLogSampling=true, specifies the reduction factor of the output frame (as the center (fovea) is high resolution and corners can be underscaled, then a reduction of the output is allowed without precision leak
 	 * @param samplingStrenght: only usefull if param useRetinaLogSampling=true, specifies the strenght of the log scale that is applied
 	 */
-	Retina(const std::string parametersSaveFile, Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+	Retina(Size inputSize, const std::string parametersSaveFile, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
 	virtual ~Retina();
 
@@ -266,7 +266,7 @@ protected:
 	const bool _convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
 
 	//! private method called by constructors, gathers their parameters and use them in a unified way
-	void _init(const std::string parametersSaveFile, Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+	void _init(const std::string parametersSaveFileName, Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
 
 };
