@@ -7,7 +7,6 @@ using namespace cv;
 using namespace perf;
 
 CV_ENUM(InpaintingMethod, INPAINT_NS, INPAINT_TELEA)
-#define SZ_ALL_SMALL testing::Values( Size(128, 128), Size(64, 64), Size(32, 32), Size(24, 24) )
 typedef std::tr1::tuple<Size, InpaintingMethod> InpaintArea_InpaintingMethod_t;
 typedef perf::TestBaseWithParam<InpaintArea_InpaintingMethod_t> InpaintArea_InpaintingMethod;
 
