@@ -37,12 +37,19 @@ const cv::Size szqHD = cv::Size(960, 540);
 const cv::Size sz720p = cv::Size(1280, 720);
 const cv::Size sz1080p = cv::Size(1920, 1080);
 
-const cv::Size szODD = cv::Size(127, 61);
 const cv::Size sz2K = cv::Size(2048, 2048);
+
+const cv::Size szODD = cv::Size(127, 61);
+
+const cv::Size szSmall24 = cv::Size(24, 24);
+const cv::Size szSmall32 = cv::Size(32, 32);
+const cv::Size szSmall64 = cv::Size(64, 64);
+const cv::Size szSmall128 = cv::Size(128, 128);
 
 #define SZ_ALL_VGA ::testing::Values(::perf::szQVGA, ::perf::szVGA, ::perf::szSVGA)
 #define SZ_ALL_GA  ::testing::Values(::perf::szQVGA, ::perf::szVGA, ::perf::szSVGA, ::perf::szXGA, ::perf::szSXGA)
 #define SZ_ALL_HD  ::testing::Values(::perf::sznHD, ::perf::szqHD, ::perf::sz720p, ::perf::sz1080p)
+#define SZ_ALL_SMALL ::testing::Values(::perf::szSmall24, ::perf::szSmall32, ::perf::szSmall64, ::perf::szSmall128)
 #define SZ_ALL  ::testing::Values(::perf::szQVGA, ::perf::szVGA, ::perf::szSVGA, ::perf::szXGA, ::perf::szSXGA, ::perf::sznHD, ::perf::szqHD, ::perf::sz720p, ::perf::sz1080p)
 #define SZ_TYPICAL  ::testing::Values(::perf::szVGA, ::perf::szqHD, ::perf::sz720p, ::perf::szODD)
 
