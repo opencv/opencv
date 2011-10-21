@@ -64,9 +64,14 @@ public:
     // Creates stitcher with default parameters
     static Stitcher createDefault(bool try_use_gpu = false);
 
-    // Stitches the biggest found pano. Returns status code.
-    Status stitch(InputArray imgs, OutputArray pano);
-    Status stitch(InputArray imgs, const std::vector<std::vector<cv::Rect> > &rois, OutputArray pano);
+    Status estimateTransform(InputArray images);
+    Status estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois);
+
+    Status composePanorama(OutputArray pano);
+    Status composePanorama(InputArray images, OutputArray pano);
+
+    Status stitch(InputArray images, OutputArray pano);
+    Status stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
 
     double registrationResol() const { return registr_resol_; }
     void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
@@ -130,7 +135,6 @@ private:
 
     Status matchImages();
     void estimateCameraParams();
-    Status composePanorama(cv::Mat &pano);
 
     double registr_resol_;
     double seam_est_resol_;

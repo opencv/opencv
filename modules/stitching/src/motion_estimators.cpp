@@ -132,7 +132,7 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
     // Estimate focal length and set it for all cameras
     vector<double> focals;
     estimateFocal(features, pairwise_matches, focals);
-    cameras.resize(num_images);
+    cameras.assign(num_images, CameraParams());
     for (int i = 0; i < num_images; ++i)
         cameras[i].focal = focals[i];
 
@@ -612,7 +612,6 @@ void waveCorrect(vector<Mat> &rmats, WaveCorrectKind kind)
     {
         for (size_t i = 0; i < rmats.size(); ++i)
             conf -= rg1.dot(rmats[i].col(0));
-        cout << conf << endl;
         if (conf < 0)
         {
             rg0 *= -1;

@@ -80,11 +80,17 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray imgs, OutputArray pano)
+Stitcher::Status Stitcher::estimateTransform(InputArray images)
 {
-    int64 app_start_time = getTickCount();
+    return estimateTransform(images, vector<vector<Rect> >());
+}
 
-    imgs.getMatVector(imgs_);
+
+Stitcher::Status Stitcher::estimateTransform(InputArray images, const vector<vector<Rect> > &rois)
+{
+    images.getMatVector(imgs_);
+    rois_ = rois;
+
     Status status;
 
     if ((status = matchImages()) != OK)
@@ -92,159 +98,52 @@ Stitcher::Status Stitcher::stitch(InputArray imgs, OutputArray pano)
 
     estimateCameraParams();
 
-    if ((status = composePanorama(pano.getMatRef())) != OK)
-        return status;
-
-    LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return OK;
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray imgs, const vector<vector<Rect> > &rois, OutputArray pano)
-{    
-    rois_ = rois;
-    return stitch(imgs, pano);
-}
 
-
-Stitcher::Status Stitcher::matchImages()
+Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 {
-    if ((int)imgs_.size() < 2)
-    {
-        LOGLN("Need more images");
-        return ERR_NEED_MORE_IMGS;
-    }
-
-    work_scale_ = 1;
-    seam_work_aspect_ = 1;
-    seam_scale_ = 1;
-    bool is_work_scale_set = false;
-    bool is_seam_scale_set = false;
-    Mat full_img, img;
-    features_.resize(imgs_.size());
-    seam_est_imgs_.resize(imgs_.size());
-    full_img_sizes_.resize(imgs_.size());
-
-    LOGLN("Finding features...");
-    int64 t = getTickCount();
-
-    for (size_t i = 0; i < imgs_.size(); ++i)
-    {
-        full_img = imgs_[i];
-        full_img_sizes_[i] = full_img.size();
-
-        if (registr_resol_ < 0)
-        {
-            img = full_img;
-            work_scale_ = 1;
-            is_work_scale_set = true;
-        }
-        else
-        {
-            if (!is_work_scale_set)
-            {
-                work_scale_ = min(1.0, sqrt(registr_resol_ * 1e6 / full_img.size().area()));
-                is_work_scale_set = true;
-            }
-            resize(full_img, img, Size(), work_scale_, work_scale_);
-        }
-        if (!is_seam_scale_set)
-        {
-            seam_scale_ = min(1.0, sqrt(seam_est_resol_ * 1e6 / full_img.size().area()));
-            seam_work_aspect_ = seam_scale_ / work_scale_;
-            is_seam_scale_set = true;
-        }
-
-        if (rois_.empty())
-            (*features_finder_)(img, features_[i]);
-        else
-            (*features_finder_)(img, features_[i], rois_[i]);
-        features_[i].img_idx = i;
-        LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
-
-        resize(full_img, img, Size(), seam_scale_, seam_scale_);
-        seam_est_imgs_[i] = img.clone();
-    }
-
-    // Do it to save memory
-    features_finder_->collectGarbage();
-    full_img.release();
-    img.release();
-
-    LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
-    LOG("Pairwise matching");
-    t = getTickCount();
-    (*features_matcher_)(features_, pairwise_matches_, matching_mask_);
-    features_matcher_->collectGarbage();
-    LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
-    // Leave only images we are sure are from the same panorama
-    indices_ = detail::leaveBiggestComponent(features_, pairwise_matches_, (float)conf_thresh_);
-    vector<Mat> seam_est_imgs_subset;
-    vector<Mat> imgs_subset;
-    vector<Size> full_img_sizes_subset;
-    for (size_t i = 0; i < indices_.size(); ++i)
-    {
-        imgs_subset.push_back(imgs_[indices_[i]]);
-        seam_est_imgs_subset.push_back(seam_est_imgs_[indices_[i]]);
-        full_img_sizes_subset.push_back(full_img_sizes_[indices_[i]]);
-    }
-    seam_est_imgs_ = seam_est_imgs_subset;
-    imgs_ = imgs_subset;
-    full_img_sizes_ = full_img_sizes_subset;
-
-    if ((int)imgs_.size() < 2)
-    {
-        LOGLN("Need more images");
-        return ERR_NEED_MORE_IMGS;
-    }
-
-    return OK;
+    return composePanorama(vector<Mat>(), pano);
 }
 
 
-void Stitcher::estimateCameraParams()
-{
-    detail::HomographyBasedEstimator estimator;
-    estimator(features_, pairwise_matches_, cameras_);
-
-    for (size_t i = 0; i < cameras_.size(); ++i)
-    {
-        Mat R;
-        cameras_[i].R.convertTo(R, CV_32F);
-        cameras_[i].R = R;
-        LOGLN("Initial intrinsic parameters #" << indices_[i] + 1 << ":\n " << cameras_[i].K());
-    }
-
-    bundle_adjuster_->setConfThresh(conf_thresh_);
-    (*bundle_adjuster_)(features_, pairwise_matches_, cameras_);
-
-    // Find median focal length and use it as final image scale
-    vector<double> focals;
-    for (size_t i = 0; i < cameras_.size(); ++i)
-    {
-        LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
-        focals.push_back(cameras_[i].focal);
-    }
-    nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
-    warped_image_scale_ = static_cast<float>(focals[focals.size() / 2]);
-
-    if (do_wave_correct_)
-    {
-        vector<Mat> rmats;
-        for (size_t i = 0; i < cameras_.size(); ++i)
-            rmats.push_back(cameras_[i].R);
-        detail::waveCorrect(rmats, wave_correct_kind_);
-        for (size_t i = 0; i < cameras_.size(); ++i)
-            cameras_[i].R = rmats[i];
-    }
-}
-
-
-Stitcher::Status Stitcher::composePanorama(Mat &pano)
+Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
 {
     LOGLN("Warping images (auxiliary)... ");
+
+    vector<Mat> imgs;
+    images.getMatVector(imgs);
+    if (!imgs.empty())
+    {
+        CV_Assert(imgs.size() == imgs_.size());
+
+        Mat img;
+        seam_est_imgs_.resize(imgs.size());
+
+        for (size_t i = 0; i < imgs.size(); ++i)
+        {
+            imgs_[i] = imgs[i];
+            resize(imgs[i], img, Size(), seam_scale_, seam_scale_);
+            seam_est_imgs_[i] = img.clone();
+        }
+
+        vector<Mat> seam_est_imgs_subset;
+        vector<Mat> imgs_subset;
+
+        for (size_t i = 0; i < indices_.size(); ++i)
+        {
+            imgs_subset.push_back(imgs_[indices_[i]]);
+            seam_est_imgs_subset.push_back(seam_est_imgs_[indices_[i]]);
+        }
+
+        seam_est_imgs_ = seam_est_imgs_subset;
+        imgs_ = imgs_subset;
+    }
+
+    Mat &pano_ = pano.getMatRef();
+
     int64 t = getTickCount();
 
     vector<Point> corners(imgs_.size());
@@ -399,9 +298,162 @@ Stitcher::Status Stitcher::composePanorama(Mat &pano)
 
     // Preliminary result is in CV_16SC3 format, but all values are in [0,255] range,
     // so convert it to avoid user confusing
-    result.convertTo(pano, CV_8U);
+    result.convertTo(pano_, CV_8U);
 
     return OK;
+}
+
+
+Stitcher::Status Stitcher::stitch(InputArray images, OutputArray pano)
+{
+    Status status = estimateTransform(images);
+    if (status != OK)
+        return status;
+    return composePanorama(pano);
+}
+
+
+Stitcher::Status Stitcher::stitch(InputArray images, const vector<vector<Rect> > &rois, OutputArray pano)
+{
+    Status status = estimateTransform(images, rois);
+    if (status != OK)
+        return status;
+    return composePanorama(pano);
+}
+
+
+Stitcher::Status Stitcher::matchImages()
+{
+    if ((int)imgs_.size() < 2)
+    {
+        LOGLN("Need more images");
+        return ERR_NEED_MORE_IMGS;
+    }
+
+    work_scale_ = 1;
+    seam_work_aspect_ = 1;
+    seam_scale_ = 1;
+    bool is_work_scale_set = false;
+    bool is_seam_scale_set = false;
+    Mat full_img, img;
+    features_.resize(imgs_.size());
+    seam_est_imgs_.resize(imgs_.size());
+    full_img_sizes_.resize(imgs_.size());
+
+    LOGLN("Finding features...");
+    int64 t = getTickCount();
+
+    for (size_t i = 0; i < imgs_.size(); ++i)
+    {
+        full_img = imgs_[i];
+        full_img_sizes_[i] = full_img.size();
+
+        if (registr_resol_ < 0)
+        {
+            img = full_img;
+            work_scale_ = 1;
+            is_work_scale_set = true;
+        }
+        else
+        {
+            if (!is_work_scale_set)
+            {
+                work_scale_ = min(1.0, sqrt(registr_resol_ * 1e6 / full_img.size().area()));
+                is_work_scale_set = true;
+            }
+            resize(full_img, img, Size(), work_scale_, work_scale_);
+        }
+        if (!is_seam_scale_set)
+        {
+            seam_scale_ = min(1.0, sqrt(seam_est_resol_ * 1e6 / full_img.size().area()));
+            seam_work_aspect_ = seam_scale_ / work_scale_;
+            is_seam_scale_set = true;
+        }
+
+        if (rois_.empty())
+            (*features_finder_)(img, features_[i]);
+        else
+            (*features_finder_)(img, features_[i], rois_[i]);
+        features_[i].img_idx = i;
+        LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
+
+        resize(full_img, img, Size(), seam_scale_, seam_scale_);
+        seam_est_imgs_[i] = img.clone();
+    }
+
+    // Do it to save memory
+    features_finder_->collectGarbage();
+    full_img.release();
+    img.release();
+
+    LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
+    LOG("Pairwise matching");
+    t = getTickCount();
+    (*features_matcher_)(features_, pairwise_matches_, matching_mask_);
+    features_matcher_->collectGarbage();
+    LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
+    // Leave only images we are sure are from the same panorama
+    indices_ = detail::leaveBiggestComponent(features_, pairwise_matches_, (float)conf_thresh_);
+    vector<Mat> seam_est_imgs_subset;
+    vector<Mat> imgs_subset;
+    vector<Size> full_img_sizes_subset;
+    for (size_t i = 0; i < indices_.size(); ++i)
+    {
+        imgs_subset.push_back(imgs_[indices_[i]]);
+        seam_est_imgs_subset.push_back(seam_est_imgs_[indices_[i]]);
+        full_img_sizes_subset.push_back(full_img_sizes_[indices_[i]]);
+    }
+    seam_est_imgs_ = seam_est_imgs_subset;
+    imgs_ = imgs_subset;
+    full_img_sizes_ = full_img_sizes_subset;
+
+    if ((int)imgs_.size() < 2)
+    {
+        LOGLN("Need more images");
+        return ERR_NEED_MORE_IMGS;
+    }
+
+    return OK;
+}
+
+
+void Stitcher::estimateCameraParams()
+{
+    detail::HomographyBasedEstimator estimator;
+    estimator(features_, pairwise_matches_, cameras_);
+
+    for (size_t i = 0; i < cameras_.size(); ++i)
+    {
+        Mat R;
+        cameras_[i].R.convertTo(R, CV_32F);
+        cameras_[i].R = R;
+        LOGLN("Initial intrinsic parameters #" << indices_[i] + 1 << ":\n " << cameras_[i].K());
+    }
+
+    bundle_adjuster_->setConfThresh(conf_thresh_);
+    (*bundle_adjuster_)(features_, pairwise_matches_, cameras_);
+
+    // Find median focal length and use it as final image scale
+    vector<double> focals;
+    for (size_t i = 0; i < cameras_.size(); ++i)
+    {
+        LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
+        focals.push_back(cameras_[i].focal);
+    }
+    nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
+    warped_image_scale_ = static_cast<float>(focals[focals.size() / 2]);
+
+    if (do_wave_correct_)
+    {
+        vector<Mat> rmats;
+        for (size_t i = 0; i < cameras_.size(); ++i)
+            rmats.push_back(cameras_[i].R);
+        detail::waveCorrect(rmats, wave_correct_kind_);
+        for (size_t i = 0; i < cameras_.size(); ++i)
+            cameras_[i].R = rmats[i];
+    }
 }
 
 } // namespace cv
