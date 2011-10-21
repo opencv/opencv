@@ -530,11 +530,39 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB::operator()(const cv::Mat &image_in, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints_in_out,
+void ORB::operator()(const cv::Mat &_image_in, const cv::Mat &_mask, std::vector<cv::KeyPoint> & keypoints_in_out,
                      cv::Mat & descriptors, bool do_keypoints, bool do_descriptors)
 {
-  if (((!do_keypoints) && (!do_descriptors)) || (image_in.empty()))
+  if (((!do_keypoints) && (!do_descriptors)) || (_image_in.empty()))
     return;
+
+  //ROI handling
+  cv::Mat image_in(_image_in);
+  cv::Mat mask(_mask);
+  Point image_in_roi_offset(0,0);
+  if (image_in.isSubmatrix())
+  {
+      Size image_in_size;
+      image_in.locateROI(image_in_size, image_in_roi_offset);
+      image_in_roi_offset.x = image_in_roi_offset.x - std::max(0, image_in_roi_offset.x - params_.edge_threshold_);
+      image_in_roi_offset.y = image_in_roi_offset.y - std::max(0, image_in_roi_offset.y - params_.edge_threshold_);
+
+      image_in.adjustROI(params_.edge_threshold_, params_.edge_threshold_, params_.edge_threshold_, params_.edge_threshold_);
+      if (!do_keypoints && image_in_roi_offset != Point(0,0))
+      {
+          for (std::vector<cv::KeyPoint>::iterator kp = keypoints_in_out.begin(); kp != keypoints_in_out.end(); ++kp)
+          {
+              kp->pt.x += image_in_roi_offset.x;
+              kp->pt.y += image_in_roi_offset.y;
+          }
+      }
+
+      if (!mask.empty())
+          copyMakeBorder(_mask, mask,
+                         image_in_roi_offset.y, image_in.rows - image_in_roi_offset.y - mask.rows,
+                         image_in_roi_offset.x, image_in.cols - image_in_roi_offset.x - mask.cols,
+                         cv::BORDER_CONSTANT, Scalar::all(0));
+  }
 
   cv::Mat image;
   if (image_in.type() != CV_8UC1)
@@ -634,6 +662,16 @@ void ORB::operator()(const cv::Mat &image_in, const cv::Mat &mask, std::vector<c
       else
         descriptors.push_back(desc);
     }
+  }
+
+  //fix ROI offset
+  if (image_in_roi_offset != Point(0,0))
+  {
+      for (std::vector<cv::KeyPoint>::iterator kp = keypoints_in_out.begin(); kp != keypoints_in_out.end(); ++kp)
+      {
+          kp->pt.x -= image_in_roi_offset.x;
+          kp->pt.y -= image_in_roi_offset.y;
+      }
   }
 }
 

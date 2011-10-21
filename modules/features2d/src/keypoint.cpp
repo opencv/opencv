@@ -183,10 +183,13 @@ void KeyPointsFilter::runByImageBorder( vector<KeyPoint>& keypoints, Size imageS
 {
     if( borderSize > 0)
     {
-        keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
-                                   RoiPredicate(Rect(Point(borderSize, borderSize),
-                                                     Point(imageSize.width - borderSize, imageSize.height - borderSize)))),
-                         keypoints.end() );
+        if (imageSize.height <= borderSize * 2 || imageSize.width <= borderSize * 2)
+            keypoints.clear();
+        else
+            keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
+                                       RoiPredicate(Rect(Point(borderSize, borderSize),
+                                                         Point(imageSize.width - borderSize, imageSize.height - borderSize)))),
+                             keypoints.end() );
     }
 }
 
