@@ -138,7 +138,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  int colorSaturationFactor;
  void callback_saturateColors(int, void*)
  {
-	 retina->setColorSaturation(true, colorSaturationFactor/10.0f);
+	 retina->setColorSaturation(true, (float)colorSaturationFactor);
  }
 
  int main(int argc, char* argv[]) {
