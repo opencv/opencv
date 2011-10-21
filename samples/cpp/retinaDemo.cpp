@@ -107,9 +107,9 @@ int main(int argc, char* argv[]) {
 
 		// if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
 		if (useLogSampling)
-			myRetina = new cv::Retina("params.xml", inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+			myRetina = new cv::Retina(inputFrame.size(), "retinaDefaultParameters_saveFile.xml", true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
 		else// -> else allocate "classical" retina :
-			myRetina = new cv::Retina("params.xml", inputFrame.size());
+			myRetina = new cv::Retina(inputFrame.size(), "retinaDefaultParameters_saveFile.xml");
 
 		myRetina->clearBuffers();
 		// declare retina output buffers
