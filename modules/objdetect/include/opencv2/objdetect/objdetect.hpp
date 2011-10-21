@@ -478,9 +478,11 @@ public:
     };
     void setMaskGenerator(Ptr<MaskGenerator> maskGenerator);
     Ptr<MaskGenerator> getMaskGenerator();
+
+    void setFaceDetectionMaskGenerator();
+
 protected:
     Ptr<MaskGenerator> maskGenerator;
-    Ptr<MaskGenerator> getDefaultMaskGenerator();
 };
 
     

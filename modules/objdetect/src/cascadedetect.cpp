@@ -787,13 +787,11 @@ Ptr<FeatureEvaluator> FeatureEvaluator::create( int featureType )
 
 CascadeClassifier::CascadeClassifier()
 {
-    maskGenerator=getDefaultMaskGenerator();
 }
 
 CascadeClassifier::CascadeClassifier(const string& filename)
 { 
     load(filename); 
-    maskGenerator=getDefaultMaskGenerator();
 }
 
 CascadeClassifier::~CascadeClassifier()
@@ -872,12 +870,12 @@ Ptr<CascadeClassifier::MaskGenerator> CascadeClassifier::getMaskGenerator()
     return maskGenerator;
 }
 
-Ptr<CascadeClassifier::MaskGenerator> CascadeClassifier::getDefaultMaskGenerator()
+void CascadeClassifier::setFaceDetectionMaskGenerator()
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    return tegra::getCascadeClassifierMaskGenerator(*this);
+    setMaskGenerator(tegra::getCascadeClassifierMaskGenerator(*this));
 #else
-    return Ptr<CascadeClassifier::MaskGenerator>();
+    setMaskGenerator(Ptr<CascadeClassifier::MaskGenerator>());
 #endif
 }
 
