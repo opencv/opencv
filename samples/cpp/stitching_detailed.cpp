@@ -486,14 +486,20 @@ int main(int argc, char* argv[])
     (*adjuster)(features, pairwise_matches, cameras);
 
     // Find median focal length
+
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)
     {
         LOGLN("Camera #" << indices[i]+1 << ":\n" << cameras[i].K());
         focals.push_back(cameras[i].focal);
     }
-    nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
-    float warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
+
+    sort(focals.begin(), focals.end());
+    float warped_image_scale;
+    if (focals.size() % 2 == 1)
+        warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
+    else
+        warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
 
     if (do_wave_correct)
     {

@@ -120,9 +120,16 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
 
     if (static_cast<int>(all_focals.size()) >= num_images - 1)
     {
-        nth_element(all_focals.begin(), all_focals.begin() + all_focals.size()/2, all_focals.end());
+        double median;
+
+        sort(all_focals.begin(), all_focals.end());
+        if (all_focals.size() % 2 == 1)
+            median = all_focals[all_focals.size() / 2];
+        else
+            median = (all_focals[all_focals.size() / 2 - 1] + all_focals[all_focals.size() / 2]) * 0.5;
+
         for (int i = 0; i < num_images; ++i)
-            focals[i] = all_focals[all_focals.size()/2];
+            focals[i] = median;
     }
     else
     {

@@ -442,8 +442,13 @@ void Stitcher::estimateCameraParams()
         LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
         focals.push_back(cameras_[i].focal);
     }
-    nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
-    warped_image_scale_ = static_cast<float>(focals[focals.size() / 2]);
+
+    sort(focals.begin(), focals.end());
+    float warped_image_scale;
+    if (focals.size() % 2 == 1)
+        warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
+    else
+        warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
 
     if (do_wave_correct_)
     {
