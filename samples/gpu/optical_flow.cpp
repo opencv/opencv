@@ -25,15 +25,18 @@ int main(int argc, const char* argv[])
 
 #else
 
-#define PARAM_INPUT     "--input"
+#define PARAM_LEFT      "--left"
+#define PARAM_RIGHT     "--right"
 #define PARAM_SCALE     "--scale"
 #define PARAM_ALPHA     "--alpha"
 #define PARAM_GAMMA     "--gamma"
 #define PARAM_INNER     "--inner"
 #define PARAM_OUTER     "--outer"
 #define PARAM_SOLVER    "--solver"
-#define PARAM_TIME_STEP "--time-step"
+#define PARAM_TIME_STEP "--time_step"
 #define PARAM_HELP      "--help"
+
+bool help_showed = false;
 
 void printHelp()
 {
@@ -42,12 +45,14 @@ void printHelp()
     cout << "\t" << setw(15) << PARAM_ALPHA << " - set alpha\n";
     cout << "\t" << setw(15) << PARAM_GAMMA << " - set gamma\n";
     cout << "\t" << setw(15) << PARAM_INNER << " - set number of inner iterations\n";
-    cout << "\t" << setw(15) << PARAM_INPUT << " - specify input file names (2 image files)\n";
+    cout << "\t" << setw(15) << PARAM_LEFT << " - specify left image\n";
+    cout << "\t" << setw(15) << PARAM_RIGHT << " - specify right image\n";
     cout << "\t" << setw(15) << PARAM_OUTER << " - set number of outer iterations\n";
     cout << "\t" << setw(15) << PARAM_SCALE << " - set pyramid scale factor\n";
     cout << "\t" << setw(15) << PARAM_SOLVER << " - set number of basic solver iterations\n";
     cout << "\t" << setw(15) << PARAM_TIME_STEP << " - set frame interpolation time step\n";
     cout << "\t" << setw(15) << PARAM_HELP << " - display this help message\n";
+    help_showed = true;
 }
 
 int processCommandLine(int argc, const char* argv[], float& timeStep, string& frame0Name, string& frame1Name, BroxOpticalFlow& flow)
@@ -56,13 +61,17 @@ int processCommandLine(int argc, const char* argv[], float& timeStep, string& fr
 
     for (int iarg = 1; iarg < argc; ++iarg)
     {
-        if (strcmp(argv[iarg], PARAM_INPUT) == 0)
+        if (strcmp(argv[iarg], PARAM_LEFT) == 0)
         {
-            if (iarg + 2 < argc)
-            {
+            if (iarg + 1 < argc)
                 frame0Name = argv[++iarg];
+            else
+                return -1;
+        }
+        if (strcmp(argv[iarg], PARAM_RIGHT) == 0)
+        {
+            if (iarg + 1 < argc)
                 frame1Name = argv[++iarg];
-            }
             else
                 return -1;
         }
@@ -181,6 +190,8 @@ int main(int argc, const char* argv[])
                            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
     int result = processCommandLine(argc, argv, timeStep, frame0Name, frame1Name, d_flow);
+    if (help_showed)
+        return -1;
     if (argc == 1 || result)
     {
         printHelp();

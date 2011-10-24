@@ -19,7 +19,7 @@ using namespace cv::gpu;
 
 void help()
 {
-    cout << "Usage: ./cascadeclassifier <cascade_file> <image_or_video_or_cameraid>\n"
+    cout << "Usage: ./cascadeclassifier_gpu \n\t--cascade <cascade_file>\n\t(<image>|--video <video>|--camera <camera_id>)\n"
             "Using OpenCV version " << CV_VERSION << endl << endl;
 }
 
@@ -98,9 +98,10 @@ void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bF
 
 int main(int argc, const char *argv[])
 {	
-    if (argc != 3)
+    if (argc == 1)
     {
-        return help(), -1;
+        help();
+        return -1;
     }
 
     if (getCudaEnabledDeviceCount() == 0)
@@ -108,10 +109,42 @@ int main(int argc, const char *argv[])
         return cerr << "No GPU found or the library is compiled without GPU support" << endl, -1;
     }
 
-    VideoCapture capture;
+    string cascadeName;
+    string inputName;
+    bool isInputImage = false;
+    bool isInputVideo = false;
+    bool isInputCamera = false;
 
-    string cascadeName = argv[1];
-    string inputName = argv[2];
+    for (int i = 1; i < argc; ++i)
+    {
+        if (string(argv[i]) == "--cascade")
+            cascadeName = argv[++i];
+        else if (string(argv[i]) == "--video")
+        {
+            inputName = argv[++i];
+            isInputVideo = true;
+        }
+        else if (string(argv[i]) == "--camera")
+        {
+            inputName = argv[++i];
+            isInputCamera = true;
+        }
+        else if (string(argv[i]) == "--help")
+        {
+            help();
+            return -1;
+        }
+        else if (!isInputImage)
+        {
+            inputName = argv[i];
+            isInputImage = true;
+        }
+        else
+        {
+            cout << "Unknown key: " << argv[i] << endl;
+            return -1;
+        }
+    }
 
     CascadeClassifier_GPU cascade_gpu;
     if (!cascade_gpu.load(cascadeName))
@@ -125,22 +158,23 @@ int main(int argc, const char *argv[])
         return cerr << "ERROR: Could not load cascade classifier \"" << cascadeName << "\"" << endl, help(), -1;
     }
 
-    Mat image = imread(inputName);
+    VideoCapture capture;
+    Mat image;
 
-    if (image.empty())
+    if (isInputImage)
     {
-        if (!capture.open(inputName))
-        {
-            int camid = -1;
-            istringstream iss(inputName);
-            iss >> camid;
-
-            if (!capture.open(camid))
-            {
-                cout << "Can't open source" << endl;
-                return help(), -1;
-            }
-        }
+        image = imread(inputName);
+        CV_Assert(!image.empty());
+    }
+    else if (isInputVideo)
+    {
+        capture.open(inputName);
+        CV_Assert(capture.isOpened());
+    }
+    else
+    {
+        capture.open(atoi(inputName.c_str()));
+        CV_Assert(capture.isOpened());
     }
 
     namedWindow("result", 1);
@@ -160,7 +194,7 @@ int main(int argc, const char *argv[])
     int detections_num;
     for (;;)
     {
-        if (capture.isOpened())
+        if (isInputCamera || isInputVideo)
         {
             capture >> frame;
             if (frame.empty())

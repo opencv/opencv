@@ -30,7 +30,8 @@ int main( int argc, const char** argv )
 //using std::tr1::shared_ptr;
 using cv::Ptr;
 
-#define PARAM_INPUT "--input"
+#define PARAM_LEFT  "--left"
+#define PARAM_RIGHT "--right"
 #define PARAM_SCALE "--scale"
 #define PARAM_ALPHA "--alpha"
 #define PARAM_GAMMA "--gamma"
@@ -276,7 +277,8 @@ void PrintHelp ()
     std::cout << "\t" << std::setw(15) << PARAM_ALPHA << " - set alpha\n";
     std::cout << "\t" << std::setw(15) << PARAM_GAMMA << " - set gamma\n";
     std::cout << "\t" << std::setw(15) << PARAM_INNER << " - set number of inner iterations\n";
-    std::cout << "\t" << std::setw(15) << PARAM_INPUT << " - specify input file names (2 image files)\n";
+    std::cout << "\t" << std::setw(15) << PARAM_LEFT << " - specify left image\n";
+    std::cout << "\t" << std::setw(15) << PARAM_RIGHT << " - specify right image\n";
     std::cout << "\t" << std::setw(15) << PARAM_OUTER << " - set number of outer iterations\n";
     std::cout << "\t" << std::setw(15) << PARAM_SCALE << " - set pyramid scale factor\n";
     std::cout << "\t" << std::setw(15) << PARAM_SOLVER << " - set number of basic solver iterations\n";
@@ -293,11 +295,19 @@ int ProcessCommandLine(int argc, char **argv,
     timeStep = 0.25f;
     for (int iarg = 1; iarg < argc; ++iarg)
     {
-        if (strcmp(argv[iarg], PARAM_INPUT) == 0)
+        if (strcmp(argv[iarg], PARAM_LEFT) == 0)
         {
-            if (iarg + 2 < argc)
+            if (iarg + 1 < argc)
             {
                 frame0Name = argv[++iarg];
+            }
+            else
+                return -1;
+        }
+        if (strcmp(argv[iarg], PARAM_RIGHT) == 0)
+        {
+            if (iarg + 1 < argc)
+            {
                 frame1Name = argv[++iarg];
             }
             else

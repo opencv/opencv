@@ -47,11 +47,16 @@ GpuMat d_result[2];
 // CPU result
 Mat result;
 
+void printHelp()
+{
+    std::cout << "Usage: stereo_multi_gpu --left <image> --right <image>\n";
+}
+
 int main(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 5)
     {
-        std::cout << "Usage: stereo_multi_gpu <left_image> <right_image>\n";
+        printHelp();
         return -1;
     }
 
@@ -74,17 +79,24 @@ int main(int argc, char** argv)
     }
 
     // Load input data
-    Mat left = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    Mat right = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
-    if (left.empty())
+    Mat left, right;
+    for (int i = 1; i < argc; ++i)
     {
-        std::cout << "Cannot open '" << argv[1] << "'\n";
-        return -1;
-    }
-    if (right.empty())
-    {
-        std::cout << "Cannot open '" << argv[2] << "'\n";
-        return -1;
+        if (string(argv[i]) == "--left")
+        {
+            left = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            CV_Assert(!left.empty());
+        }
+        else if (string(argv[i]) == "--right")
+        {
+            right = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            CV_Assert(!right.empty());
+        }
+        else if (string(argv[i]) == "--help")
+        {
+            printHelp();
+            return -1;
+        }
     }
 
     // Split source images for processing on the GPU #0

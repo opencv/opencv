@@ -61,7 +61,7 @@ void ErodeDilate(int, void*)
 int main( int argc, char** argv )
 {
     char* filename = argc == 2 ? argv[1] : (char*)"baboon.jpg";
-    if( (src = imread(filename,1)).data == 0 )
+    if(string(argv[1]) == "--help" || (src = imread(filename,1)).data == 0)
         return help(), -1;
 
     help();

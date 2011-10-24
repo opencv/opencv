@@ -10,6 +10,8 @@
 using namespace std;
 using namespace cv;
 
+bool help_showed = false;
+
 class Args
 {
 public:
@@ -84,35 +86,39 @@ private:
 };
 
 
+void printHelp()
+{
+    cout << "Histogram of Oriented Gradients descriptor and detector sample.\n"
+         << "\nUsage: hog_gpu\n"
+         << "  (<image>|--video <vide>|--camera <camera_id>) # frames source\n"
+         << "  [--make_gray <true/false>] # convert image to gray one or not\n"
+         << "  [--resize_src <true/false>] # do resize of the source image or not\n"
+         << "  [--width <int>] # resized image width\n"
+         << "  [--height <int>] # resized image height\n"
+         << "  [--hit_threshold <double>] # classifying plane distance threshold (0.0 usually)\n"
+         << "  [--scale <double>] # HOG window scale factor\n"
+         << "  [--nlevels <int>] # max number of HOG window scales\n"
+         << "  [--win_width <int>] # width of the window (48 or 64)\n"
+         << "  [--win_stride_width <int>] # distance by OX axis between neighbour wins\n"
+         << "  [--win_stride_height <int>] # distance by OY axis between neighbour wins\n"
+         << "  [--gr_threshold <int>] # merging similar rects constant\n"
+         << "  [--gamma_correct <int>] # do gamma correction or not\n"
+         << "  [--write_video <bool>] # write video or not\n"
+         << "  [--dst_video <path>] # output video path\n"
+         << "  [--dst_video_fps <double>] # output video fps\n";
+    help_showed = true;
+}
+
 int main(int argc, char** argv)
 {
     try
     {
-        cout << "Histogram of Oriented Gradients descriptor and detector sample.\n";
         if (argc < 2)
-        {
-            cout << "\nUsage: hog_gpu\n"
-                << "  --src <path> # it's image file by default\n"
-                << "  [--src-is-video <true/false>] # says to interpretate src as video\n"
-                << "  [--src-is-camera <true/false>] # says to interpretate src as camera\n"
-                << "  [--make-gray <true/false>] # convert image to gray one or not\n"
-                << "  [--resize-src <true/false>] # do resize of the source image or not\n"
-                << "  [--width <int>] # resized image width\n"
-                << "  [--height <int>] # resized image height\n"
-                << "  [--hit-threshold <double>] # classifying plane distance threshold (0.0 usually)\n"
-                << "  [--scale <double>] # HOG window scale factor\n"
-                << "  [--nlevels <int>] # max number of HOG window scales\n"
-                << "  [--win-width <int>] # width of the window (48 or 64)\n"
-                << "  [--win-stride-width <int>] # distance by OX axis between neighbour wins\n"
-                << "  [--win-stride-height <int>] # distance by OY axis between neighbour wins\n"
-                << "  [--gr-threshold <int>] # merging similar rects constant\n"
-                << "  [--gamma-correct <int>] # do gamma correction or not\n"
-                << "  [--write-video <bool>] # write video or not\n"
-                << "  [--dst-video <path>] # output video path\n"
-                << "  [--dst-video-fps <double>] # output video fps\n";
-            return 1;
-        }
-        App app(Args::read(argc, argv));
+            printHelp();
+        Args args = Args::read(argc, argv);
+        if (help_showed)
+            return -1;
+        App app(args);
         app.run();
     }
     catch (const Exception& e) { return cout << "error: "  << e.what() << endl, 1; }
@@ -154,34 +160,32 @@ Args::Args()
 Args Args::read(int argc, char** argv)
 {
     Args args;
-    for (int i = 1; i < argc - 1; i += 2)
+    for (int i = 1; i < argc; i++)
     {
-        string key = argv[i];
-        string val = argv[i + 1];
-        if (key == "--src") args.src = val;
-        else if (key == "--src-is-video") args.src_is_video = (val == "true");        
-        else if (key == "--src-is-camera") args.src_is_camera = (val == "true");        
-        else if (key == "--camera-id") args.camera_id = atoi(val.c_str());
-        else if (key == "--make-gray") args.make_gray = (val == "true");
-        else if (key == "--resize-src") args.resize_src = (val == "true");
-        else if (key == "--width") args.width = atoi(val.c_str());
-        else if (key == "--height") args.height = atoi(val.c_str());
-        else if (key == "--hit-threshold") 
+        if (string(argv[i]) == "--make_gray") args.make_gray = (string(argv[++i]) == "true");
+        else if (string(argv[i]) == "--resize_src") args.resize_src = (string(argv[++i]) == "true");
+        else if (string(argv[i]) == "--width") args.width = atoi(argv[++i]);
+        else if (string(argv[i]) == "--height") args.height = atoi(argv[++i]);
+        else if (string(argv[i]) == "--hit_threshold") 
         { 
-            args.hit_threshold = atof(val.c_str()); 
+            args.hit_threshold = atof(argv[++i]); 
             args.hit_threshold_auto = false; 
         }
-        else if (key == "--scale") args.scale = atof(val.c_str());
-        else if (key == "--nlevels") args.nlevels = atoi(val.c_str());
-        else if (key == "--win-width") args.win_width = atoi(val.c_str());
-        else if (key == "--win-stride-width") args.win_stride_width = atoi(val.c_str());
-        else if (key == "--win-stride-height") args.win_stride_height = atoi(val.c_str());
-        else if (key == "--gr-threshold") args.gr_threshold = atoi(val.c_str());
-        else if (key == "--gamma-correct") args.gamma_corr = (val == "true");
-        else if (key == "--write-video") args.write_video = (val == "true");
-        else if (key == "--dst-video") args.dst_video = val;
-        else if (key == "--dst-video-fps") args.dst_video_fps= atof(val.c_str());
-        else throw runtime_error((string("unknown key: ") + key));
+        else if (string(argv[i]) == "--scale") args.scale = atof(argv[++i]);
+        else if (string(argv[i]) == "--nlevels") args.nlevels = atoi(argv[++i]);
+        else if (string(argv[i]) == "--win_width") args.win_width = atoi(argv[++i]);
+        else if (string(argv[i]) == "--win_stride_width") args.win_stride_width = atoi(argv[++i]);
+        else if (string(argv[i]) == "--win_stride_height") args.win_stride_height = atoi(argv[++i]);
+        else if (string(argv[i]) == "--gr_threshold") args.gr_threshold = atoi(argv[++i]);
+        else if (string(argv[i]) == "--gamma_correct") args.gamma_corr = (string(argv[++i]) == "true");
+        else if (string(argv[i]) == "--write_video") args.write_video = (string(argv[++i]) == "true");
+        else if (string(argv[i]) == "--dst_video") args.dst_video = argv[++i];
+        else if (string(argv[i]) == "--dst_video_fps") args.dst_video_fps = atof(argv[++i]);
+        else if (string(argv[i]) == "--help") printHelp();
+        else if (string(argv[i]) == "--video") { args.src = argv[++i]; args.src_is_video = true; }
+        else if (string(argv[i]) == "--camera") { args.camera_id = atoi(argv[++i]); args.src_is_camera = true; }
+        else if (args.src.empty()) args.src = argv[i];
+        else throw runtime_error((string("unknown key: ") + argv[i]));
     }
     return args;
 }
@@ -267,7 +271,11 @@ void App::run()
         {
             vc.open(args.camera_id);
             if (!vc.isOpened())
-                throw runtime_error(string("can't open video file: " + args.src));
+            {
+                stringstream msg;
+                msg << "can't open camera: " << args.camera_id;
+                throw runtime_error(msg.str());
+            }
             vc >> frame;
         }
         else

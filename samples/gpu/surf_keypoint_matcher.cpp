@@ -12,23 +12,35 @@ using namespace cv::gpu;
 void help()
 {
     cout << "\nThis program demonstrates using SURF_GPU features detector, descriptor extractor and BruteForceMatcher_GPU" << endl;
-    cout << "\nUsage:\n\tmatcher_simple_gpu <image1> <image2>" << endl;
+    cout << "\nUsage:\n\tmatcher_simple_gpu --left <image1> --right <image2>" << endl;
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
+    if (argc != 5)
     {
         help();
         return -1;
     }
 
-    GpuMat img1(imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE));
-    GpuMat img2(imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE));
-    if (img1.empty() || img2.empty())
+    GpuMat img1, img2;
+    for (int i = 1; i < argc; ++i)
     {
-        cout << "Can't read one of the images" << endl;
-        return -1;
+        if (string(argv[i]) == "--left")
+        {
+            img1 = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            CV_Assert(!img1.empty());
+        }
+        else if (string(argv[i]) == "--right")
+        {
+            img2 = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            CV_Assert(!img2.empty());
+        }
+        else if (string(argv[i]) == "--help")
+        {
+            help();
+            return -1;
+        }
     }
 
     SURF_GPU surf;

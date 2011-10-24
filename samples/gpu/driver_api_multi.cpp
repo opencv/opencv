@@ -54,8 +54,14 @@ inline void safeCall_(int code, const char* expr, const char* file, int line)
 // Each GPU is associated with its own context
 CUcontext contexts[2];
 
-int main()
+int main(int argc, char **argv)
 {
+    if (argc > 1)
+    {
+        cout << "CUDA driver API sample\n";
+        return -1;
+    }
+
     int num_devices = getCudaEnabledDeviceCount();
     if (num_devices < 2)
     {
