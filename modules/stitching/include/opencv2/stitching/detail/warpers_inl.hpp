@@ -262,8 +262,8 @@ void SphericalProjector::mapBackward(float u, float v, float &x, float &y)
     y = k_rinv[3] * x_ + k_rinv[4] * y_ + k_rinv[5] * z_;
     z = k_rinv[6] * x_ + k_rinv[7] * y_ + k_rinv[8] * z_;
 
-    x /= z;
-    y /= z;
+    if (z > 0) { x /= z; y /= z; }
+    else x = y = -1;
 }
 
 
@@ -294,8 +294,8 @@ void CylindricalProjector::mapBackward(float u, float v, float &x, float &y)
     y = k_rinv[3] * x_ + k_rinv[4] * y_ + k_rinv[5] * z_;
     z = k_rinv[6] * x_ + k_rinv[7] * y_ + k_rinv[8] * z_;
 
-    x /= z;
-    y /= z;
+    if (z > 0) { x /= z; y /= z; }
+    else x = y = -1;
 }
 
 } // namespace detail

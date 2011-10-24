@@ -839,8 +839,8 @@ namespace cv { namespace gpu { namespace imgproc
             y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5] * z_;
             z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8] * z_;
 
-            x /= z;
-            y /= z;
+            if (z > 0) { x /= z; y /= z; }
+            else x = y = -1;
         }
     };
 
@@ -865,8 +865,8 @@ namespace cv { namespace gpu { namespace imgproc
             y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5] * z_;
             z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8] * z_;
 
-            x /= z;
-            y /= z;
+            if (z > 0) { x /= z; y /= z; }
+            else x = y = -1;
         }
     };
 
