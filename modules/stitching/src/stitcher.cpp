@@ -70,10 +70,10 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     {
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
         stitcher.setWarper(new SphericalWarper());
-        stitcher.setSeamFinder(new detail::GraphCutSeamFinder());
+        stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
     }
 
-    stitcher.setExposureCompenstor(new detail::BlocksGainCompensator());
+    stitcher.setExposureCompensator(new detail::BlocksGainCompensator());
     stitcher.setBlender(new detail::MultiBandBlender(try_use_gpu));
 
     return stitcher;
@@ -444,11 +444,10 @@ void Stitcher::estimateCameraParams()
     }
 
     sort(focals.begin(), focals.end());
-    float warped_image_scale;
     if (focals.size() % 2 == 1)
-        warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
+        warped_image_scale_ = static_cast<float>(focals[focals.size() / 2]);
     else
-        warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
+        warped_image_scale_ = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
 
     if (do_wave_correct_)
     {
