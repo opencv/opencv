@@ -421,43 +421,42 @@ struct Hamming
     {
         ResultType result = 0;
 #if __GNUC__
-#if ANDROID && HAVE_NEON
-        static uint64_t features = android_getCpuFeatures();
-        if ((features& ANDROID_CPU_ARM_FEATURE_NEON)) {
+#if CV_NEON
+        if (CPU_HAS_NEON_FEATURE) {
+            uint32x4_t bits = vmovq_n_u32(0);
             for (size_t i = 0; i < size; i += 16) {
                 uint8x16_t A_vec = vld1q_u8 (a + i);
                 uint8x16_t B_vec = vld1q_u8 (b + i);
-                //uint8x16_t veorq_u8 (uint8x16_t, uint8x16_t)
                 uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
-
-                uint8x16_t bitsSet += vcntq_u8 (AxorB);
-                //uint16x8_t vpadalq_u8 (uint16x8_t, uint8x16_t)
+                uint8x16_t bitsSet = vcntq_u8 (AxorB);
                 uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
                 uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-
-                uint64x2_t bitSet2 = vpaddlq_u32 (bitSet4);
-                result += vgetq_lane_u64 (bitSet2,0);
-                result += vgetq_lane_u64 (bitSet2,1);
+                bits = vaddq_u32(bits, bitSet4);
             }
+            uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+            result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+            result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
         }
         else
 #endif
-        //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
-        typedef unsigned long long pop_t;
-        const size_t modulo = size % sizeof(pop_t);
-        const pop_t* a2 = reinterpret_cast<const pop_t*> (a);
-        const pop_t* b2 = reinterpret_cast<const pop_t*> (b);
-        const pop_t* a2_end = a2 + (size / sizeof(pop_t));
+        {
+            //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
+            typedef unsigned long long pop_t;
+            const size_t modulo = size % sizeof(pop_t);
+            const pop_t* a2 = reinterpret_cast<const pop_t*> (a);
+            const pop_t* b2 = reinterpret_cast<const pop_t*> (b);
+            const pop_t* a2_end = a2 + (size / sizeof(pop_t));
 
-        for (; a2 != a2_end; ++a2, ++b2) result += __builtin_popcountll((*a2) ^ (*b2));
+            for (; a2 != a2_end; ++a2, ++b2) result += __builtin_popcountll((*a2) ^ (*b2));
 
-        if (modulo) {
-            //in the case where size is not dividable by sizeof(size_t)
-            //need to mask off the bits at the end
-            pop_t a_final = 0, b_final = 0;
-            memcpy(&a_final, a2, modulo);
-            memcpy(&b_final, b2, modulo);
-            result += __builtin_popcountll(a_final ^ b_final);
+            if (modulo) {
+                //in the case where size is not dividable by sizeof(size_t)
+                //need to mask off the bits at the end
+                pop_t a_final = 0, b_final = 0;
+                memcpy(&a_final, a2, modulo);
+                memcpy(&b_final, b2, modulo);
+                result += __builtin_popcountll(a_final ^ b_final);
+            }
         }
 #else
         HammingLUT lut;

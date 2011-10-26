@@ -963,26 +963,22 @@ static const uchar popCountTable4[] =
 int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0, result = 0;
-#if defined __GNUC__ && CV_NEON
+#if CV_NEON
     if (CPU_HAS_NEON_FEATURE)
     {
-        result = 0;  
-        for( ; i <= n - 16; i += 16 )
-        {
+        uint32x4_t bits = vmovq_n_u32(0);
+        for (; i <= n - 16; i += 16) {
             uint8x16_t A_vec = vld1q_u8 (a + i);
             uint8x16_t B_vec = vld1q_u8 (b + i);
-            //uint8x16_t veorq_u8 (uint8x16_t, uint8x16_t)
             uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
-            
             uint8x16_t bitsSet = vcntq_u8 (AxorB);
-            //uint16x8_t vpadalq_u8 (uint16x8_t, uint8x16_t)
             uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
             uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-            
-            uint64x2_t bitSet2 = vpaddlq_u32 (bitSet4);
-            result += vgetq_lane_u64 (bitSet2,0);
-            result += vgetq_lane_u64 (bitSet2,1);
+            bits = vaddq_u32(bits, bitSet4);
         }
+        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
     else
 #endif

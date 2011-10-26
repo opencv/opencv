@@ -119,7 +119,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #define CV_SSE3 0
 #endif
 
-#if defined ANDROID && defined __ARM_NEON__
+#if defined ANDROID && defined __ARM_NEON__ && defined __GNUC__
 #include "arm_neon.h"
 #define CV_NEON 1
 
