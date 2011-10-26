@@ -141,8 +141,7 @@ namespace cv
 
         //////////////////////////////// Error handling ////////////////////////
 
-        //CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
-        //CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);
+        CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
         //////////////////////////////// CudaMem ////////////////////////////////
         // CudaMem is limited cv::Mat with page locked memory allocation.
