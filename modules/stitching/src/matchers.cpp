@@ -147,10 +147,15 @@ private:
 
 void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
-    matches_info.matches.clear();
-
     CV_Assert(features1.descriptors.type() == features2.descriptors.type());
     CV_Assert(features2.descriptors.depth() == CV_8U || features2.descriptors.depth() == CV_32F);
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::match2nearest(features1, features2, matches_info, match_conf_))
+        return;
+#endif
+
+    matches_info.matches.clear();
 
     Ptr<flann::IndexParams> indexParams = new flann::KDTreeIndexParams();
     Ptr<flann::SearchParams> searchParams = new flann::SearchParams();

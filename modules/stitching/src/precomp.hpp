@@ -54,6 +54,8 @@
 #include <functional>
 #include <sstream>
 #include <cmath>
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/internal.hpp"
 #include "opencv2/stitching/stitcher.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
@@ -64,14 +66,17 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/util.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #ifndef ANDROID
 # include "opencv2/gpu/gpu.hpp"
 #endif
-#include "gcgraph.hpp"
+
+#include "modules/imgproc/src/gcgraph.hpp"
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+# include "opencv2/stitching/stitching_tegra.hpp"
+#endif
 
 #endif
