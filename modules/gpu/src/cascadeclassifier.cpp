@@ -129,7 +129,7 @@ struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
 private:
 
 
-    static void NCVDebugOutputHandler(const char* msg) { CV_Error(CV_GpuApiCallError, msg); }
+    static void NCVDebugOutputHandler(const std::string &msg) { CV_Error(CV_GpuApiCallError, msg.c_str()); }
 
 
     NCVStatus load(const string& classifierFile)

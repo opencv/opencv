@@ -42,7 +42,7 @@
 #ifndef _ncv_hpp_
 #define _ncv_hpp_
 
-#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined CVAPI_EXPORTS //&& !defined(__CUDACC__) 
+#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined CVAPI_EXPORTS
     #define NCV_EXPORTS __declspec(dllexport)
 #else
     #define NCV_EXPORTS
@@ -53,6 +53,8 @@
 #endif
 
 #include <cuda_runtime.h>
+#include <sstream>
+#include <iostream>
 
 
 //==============================================================================
@@ -78,7 +80,7 @@ namespace NcvCTprep
 }
 
 
-#define NCV_CT_PREP_PASTE_AUX(a,b)      a##b                           ///< Concatenation indirection macro
+#define NCV_CT_PREP_PASTE_AUX(a,b)      a##b                         ///< Concatenation indirection macro
 #define NCV_CT_PREP_PASTE(a,b)          NCV_CT_PREP_PASTE_AUX(a, b)  ///< Concatenation macro
 
 
@@ -181,6 +183,25 @@ struct NcvSize32u
     Ncv32u height; ///< Rectangle height.
     __host__ __device__ NcvSize32u() : width(0), height(0) {};
     __host__ __device__ NcvSize32u(Ncv32u width, Ncv32u height) : width(width), height(height) {}
+    __host__ __device__ bool operator == (const NcvSize32u &another) const {return this->width == another.width && this->height == another.height;}
+};
+
+
+struct NcvPoint2D32s
+{
+    Ncv32s x; ///< Point X.
+    Ncv32s y; ///< Point Y.
+    __host__ __device__ NcvPoint2D32s() : x(0), y(0) {};
+    __host__ __device__ NcvPoint2D32s(Ncv32s x, Ncv32s y) : x(x), y(y) {}
+};
+
+
+struct NcvPoint2D32u
+{
+    Ncv32u x; ///< Point X.
+    Ncv32u y; ///< Point Y.
+    __host__ __device__ NcvPoint2D32u() : x(0), y(0) {};
+    __host__ __device__ NcvPoint2D32u(Ncv32u x, Ncv32u y) : x(x), y(y) {}
 };
 
 
@@ -199,6 +220,7 @@ NCV_CT_ASSERT(sizeof(NcvRect8u) == sizeof(Ncv32u));
 NCV_CT_ASSERT(sizeof(NcvRect32s) == 4 * sizeof(Ncv32s));
 NCV_CT_ASSERT(sizeof(NcvRect32u) == 4 * sizeof(Ncv32u));
 NCV_CT_ASSERT(sizeof(NcvSize32u) == 2 * sizeof(Ncv32u));
+NCV_CT_ASSERT(sizeof(NcvPoint2D32u) == 2 * sizeof(Ncv32u));
 
 
 //==============================================================================
@@ -219,49 +241,44 @@ const Ncv32u K_LOG2_WARP_SIZE = 5;
 //==============================================================================
 
 
-#define NCV_CT_PREP_STRINGIZE_AUX(x)    #x
-#define NCV_CT_PREP_STRINGIZE(x)        NCV_CT_PREP_STRINGIZE_AUX(x)
+NCV_EXPORTS void ncvDebugOutput(const std::string &msg);
 
 
-NCV_EXPORTS void ncvDebugOutput(const char *msg, ...);
-
-
-typedef void NCVDebugOutputHandler(const char* msg);
+typedef void NCVDebugOutputHandler(const std::string &msg);
 
 
 NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
 
 
 #define ncvAssertPrintCheck(pred, msg) \
-    ((pred) ? true : (ncvDebugOutput("\n%s\n", \
-    "NCV Assertion Failed: " msg ", file=" __FILE__ ", line=" NCV_CT_PREP_STRINGIZE(__LINE__) \
-    ), false))
-
-
-#define ncvAssertPrintReturn(pred, msg, err) \
-    if (ncvAssertPrintCheck(pred, msg)) ; else return err
-
-
-#define ncvAssertReturn(pred, err) \
     do \
     { \
         if (!(pred)) \
         { \
-            ncvDebugOutput("\n%s%d%s\n", "NCV Assertion Failed: retcode=", (int)err, ", file=" __FILE__ ", line=" NCV_CT_PREP_STRINGIZE(__LINE__)); \
-            return err; \
+            std::ostringstream oss; \
+            oss << "NCV Assertion Failed: " << msg << ", file=" << __FILE__ << ", line=" << __LINE__ << std::endl; \
+            ncvDebugOutput(oss.str()); \
         } \
     } while (0)
+
+
+#define ncvAssertPrintReturn(pred, msg, err) \
+    do \
+    { \
+        ncvAssertPrintCheck(pred, msg); \
+        if (!(pred)) return err; \
+    } while (0)
+
+
+#define ncvAssertReturn(pred, err) \
+    ncvAssertPrintReturn(pred, "retcode=" << (int)err, err)
 
 
 #define ncvAssertReturnNcvStat(ncvOp) \
     do \
     { \
         NCVStatus _ncvStat = ncvOp; \
-        if (NCV_SUCCESS != _ncvStat) \
-        { \
-            ncvDebugOutput("\n%s%d%s\n", "NCV Assertion Failed: NcvStat=", (int)_ncvStat, ", file=" __FILE__ ", line=" NCV_CT_PREP_STRINGIZE(__LINE__)); \
-            return _ncvStat; \
-        } \
+        ncvAssertPrintReturn(NCV_SUCCESS==_ncvStat, "NcvStat=" << (int)_ncvStat, _ncvStat); \
     } while (0)
 
 
@@ -270,18 +287,14 @@ NCV_EXPORTS void ncvSetDebugOutputHandler(NCVDebugOutputHandler* func);
     { \
         cudaError_t resCall = cudacall; \
         cudaError_t resGLE = cudaGetLastError(); \
-        if (cudaSuccess != resCall || cudaSuccess != resGLE) \
-        { \
-            ncvDebugOutput("\n%s%d%s\n", "NCV CUDA Assertion Failed: cudaError_t=", (int)(resCall | resGLE), ", file=" __FILE__ ", line=" NCV_CT_PREP_STRINGIZE(__LINE__)); \
-            return errCode; \
-        } \
+        ncvAssertPrintReturn(cudaSuccess==resCall && cudaSuccess==resGLE, "cudaError_t=" << (int)(resCall | resGLE), errCode); \
     } while (0)
 
 
 /**
 * Return-codes for status notification, errors and warnings
 */
-enum NCVStatus
+enum
 {
     //NCV statuses
     NCV_SUCCESS,
@@ -338,7 +351,12 @@ enum NCVStatus
     NPPST_MEM_INSUFFICIENT_BUFFER,            ///< Insufficient user-allocated buffer
     NPPST_MEM_RESIDENCE_ERROR,                ///< Memory residence error detected (check if pointers should be device or pinned)
     NPPST_MEM_INTERNAL_ERROR,                 ///< Internal memory management error
+
+    NCV_LAST_STATUS                           ///< Marker to continue error numeration in other files
 };
+
+
+typedef Ncv32u NCVStatus;
 
 
 #define NCV_SET_SKIP_COND(x) \
@@ -774,9 +792,20 @@ public:
         return ncvStat;
     }
 
+    T &at(Ncv32u x, Ncv32u y) const
+    {
+        if (x >= this->_width || y >= this->_height)
+        {
+            printf("Error addressing matrix at [%d, %d]\n", x, y);
+            return *this->_ptr;
+        }
+        return ((T *)((Ncv8u *)this->_ptr + y * this->_pitch))[x];
+    }
+
     T *ptr() const {return this->_ptr;}
     Ncv32u width() const {return this->_width;}
     Ncv32u height() const {return this->_height;}
+    NcvSize32u size() const {return NcvSize32u(this->_width, this->_height);}
     Ncv32u pitch() const {return this->_pitch;}
     NCVMemoryType memType() const {return this->_memtype;}
 
@@ -923,7 +952,7 @@ public:
         this->_width = roi.width;
         this->_height = roi.height;
         this->_pitch = mat.pitch();
-        this->_ptr = mat.ptr() + roi.y * mat.stride() + roi.x;
+        this->_ptr = &mat.at(roi.x, roi.y);
         this->_memtype = mat.memType();
 
         this->bReused = true;
@@ -961,5 +990,25 @@ NCV_EXPORTS NCVStatus ncvDrawRects_8u_device(Ncv8u *d_dst, Ncv32u dstStride, Ncv
 
 NCV_EXPORTS NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
                                               NcvRect32u *d_rects, Ncv32u numRects, Ncv32u color, cudaStream_t cuStream);
+
+
+#define CLAMP(x,a,b)        ( (x) > (b) ? (b) : ( (x) < (a) ? (a) : (x) ) )
+#define CLAMP_TOP(x, a)     (((x) > (a)) ? (a) : (x))
+#define CLAMP_BOTTOM(x, a)  (((x) < (a)) ? (a) : (x))
+#define CLAMP_0_255(x)      CLAMP(x,0,255)
+
+
+#define SUB_BEGIN(type, name)    struct { __inline type name
+#define SUB_END(name)            } name;
+#define SUB_CALL(name)           name.name
+
+#define SQR(x)              ((x)*(x))
+
+
+#define ncvSafeMatAlloc(name, type, alloc, width, height, err) \
+    NCVMatrixAlloc<type> name(alloc, width, height); \
+    ncvAssertReturn(name.isMemAllocated(), err);
+
+
 
 #endif // _ncv_hpp_

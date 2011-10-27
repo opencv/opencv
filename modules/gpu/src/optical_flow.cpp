@@ -68,10 +68,7 @@ namespace
 
 namespace
 {
-    void outputHandler(const char* msg) 
-    { 
-        CV_Error(CV_GpuApiCallError, msg); 
-    }
+    static void outputHandler(const std::string &msg) { CV_Error(CV_GpuApiCallError, msg.c_str()); }
 }
 
 void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& frame1, GpuMat& u, GpuMat& v, Stream& s) 
