@@ -366,7 +366,7 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
                         png_set_filter(png_ptr, PNG_FILTER_TYPE_BASE, PNG_FILTER_SUB);
                         png_set_compression_level(png_ptr, Z_BEST_SPEED);
                     }
-                    png_set_compression_strategy(png_ptr, Z_HUFFMAN_ONLY);
+                    png_set_compression_strategy(png_ptr, Z_FILTERED);
 
                     png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? 8 : 16,
                         channels == 1 ? PNG_COLOR_TYPE_GRAY :
