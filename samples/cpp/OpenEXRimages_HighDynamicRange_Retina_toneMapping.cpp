@@ -210,7 +210,10 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		  * -> if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
 		  */
 		 if (useLogSampling)
-			 retina = new cv::Retina(inputImage.size(), "retinaDefaultParameters_saveFile.xml", true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                {
+                     retina = new cv::Retina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                     retina->setup("retinaDefaultParameters_saveFile.xml");
+                 }
 		 else// -> else allocate "classical" retina :
 			 retina = new cv::Retina(inputImage.size(), "retinaDefaultParameters_saveFile.xml");
 
