@@ -114,31 +114,31 @@ class CV_EXPORTS Retina {
 
 public:
 
-	// parameters structure for better clarity
+	// parameters structure for better clarity, check explenations on the comments of methods : setupOPLandIPLParvoChannel and setupIPLMagnoChannel
         struct RetinaParameters{ 
 	    struct OPLandIplParvoParameters{ // Outer Plexiform Layer (OPL) and Inner Plexiform Layer Parvocellular (IplParvo) parameters 
                OPLandIplParvoParameters():colorMode(true),
                                  normaliseOutput(true),
-                                 photoreceptorsLocalAdaptationSensitivity(0.7),
-                                 photoreceptorsTemporalConstant(0.5),
-                                 photoreceptorsSpatialConstant(0.53),
-                                 horizontalCellsGain(0),
-                                 hcellsTemporalConstant(1),
-                                 hcellsSpatialConstant(7),
-                                 ganglionCellsSensitivity(0.7){};// default setup
+                                 photoreceptorsLocalAdaptationSensitivity(0.7f),
+                                 photoreceptorsTemporalConstant(0.5f),
+                                 photoreceptorsSpatialConstant(0.53f),
+                                 horizontalCellsGain(0.0f),
+                                 hcellsTemporalConstant(1.f),
+                                 hcellsSpatialConstant(7.f),
+                                 ganglionCellsSensitivity(0.7f){};// default setup
                bool colorMode, normaliseOutput;
                float photoreceptorsLocalAdaptationSensitivity, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, hcellsTemporalConstant, hcellsSpatialConstant, ganglionCellsSensitivity;
            };
            struct IplMagnoParameters{ // Inner Plexiform Layer Magnocellular channel (IplMagno)
                IplMagnoParameters():
                           normaliseOutput(true),
-                          parasolCells_beta(0),
-                          parasolCells_tau(0),
-                          parasolCells_k(7),
-                          amacrinCellsTemporalCutFrequency(1.2),
-                          V0CompressionParameter(0.95),
-                          localAdaptintegration_tau(0),
-                          localAdaptintegration_k(7){};// default setup
+                          parasolCells_beta(0.f),
+                          parasolCells_tau(0.f),
+                          parasolCells_k(7.f),
+                          amacrinCellsTemporalCutFrequency(1.2f),
+                          V0CompressionParameter(0.95f),
+                          localAdaptintegration_tau(0.f),
+                          localAdaptintegration_k(7.f){};// default setup
                bool normaliseOutput;
                float parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
            };
