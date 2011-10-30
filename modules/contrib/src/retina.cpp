@@ -75,18 +75,18 @@
 namespace cv
 {
     
-Retina::Retina(const cv::Size inputSize, const std::string parametersSaveFile)
+Retina::Retina(const cv::Size inputSize)
 {
     _retinaFilter = 0;
-    _init(parametersSaveFile, inputSize, true, RETINA_COLOR_BAYER, false);
+    _init(inputSize, true, RETINA_COLOR_BAYER, false);
 }
 
-Retina::Retina(const cv::Size inputSize, const std::string parametersSaveFile, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+Retina::Retina(const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
     _retinaFilter = 0;
-    _init(parametersSaveFile, inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
+    _init(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 };
-    
+
 Retina::~Retina()
 {
     if (_retinaFilter)
@@ -98,20 +98,15 @@ void Retina::setColorSaturation(const bool saturateColors, const float colorSatu
 	_retinaFilter->setColorSaturation(saturateColors, colorSaturationValue);
 }
 
+struct Retina::RetinaParameters Retina::getParameters(){return _retinaParameters;}
+
 void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetupOnFailure)
 {
 	// open specified parameters file
 	std::cout<<"Retina::setup: setting up retina from parameter file : "<<retinaParameterFile<<std::endl;
 
-	// very UGLY cases processing... to be updated...
-
 	try
 	{
-
-		// rewriting a new parameter file...
-		if (_parametersSaveFile.isOpened())
-			_parametersSaveFile.release();
-		_parametersSaveFile.open(_parametersSaveFileName, cv::FileStorage::WRITE);
 		// opening retinaParameterFile in read mode
 		cv::FileStorage fs(retinaParameterFile, cv::FileStorage::READ);
 		// read parameters file if it exists or apply default setup if asked for
@@ -121,37 +116,31 @@ void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetup
 			return;
 			// implicit else case : retinaParameterFile could be open (it exists at least)
 		}
-
-		// preparing parameter setup
-		bool colorMode, normaliseOutput;
-		float photoreceptorsLocalAdaptationSensitivity, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, hcellsTemporalConstant, hcellsSpatialConstant, ganglionCellsSensitivity;
-		// OPL and Parvo init first
+                // OPL and Parvo init first... update at the same time the parameters structure and the retina core
 		cv::FileNode rootFn = fs.root(), currFn=rootFn["OPLandIPLparvo"];
-		currFn["colorMode"]>>colorMode;
-		currFn["normaliseOutput"]>>normaliseOutput;
-		currFn["photoreceptorsLocalAdaptationSensitivity"]>>photoreceptorsLocalAdaptationSensitivity;
-		currFn["photoreceptorsTemporalConstant"]>>photoreceptorsTemporalConstant;
-		currFn["photoreceptorsSpatialConstant"]>>photoreceptorsSpatialConstant;
-		currFn["horizontalCellsGain"]>>horizontalCellsGain;
-		currFn["hcellsTemporalConstant"]>>hcellsTemporalConstant;
-		currFn["hcellsSpatialConstant"]>>hcellsSpatialConstant;
-		currFn["ganglionCellsSensitivity"]>>ganglionCellsSensitivity;
-		setupOPLandIPLParvoChannel(colorMode, normaliseOutput, photoreceptorsLocalAdaptationSensitivity, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, hcellsTemporalConstant, hcellsSpatialConstant, ganglionCellsSensitivity);
+		currFn["colorMode"]>>_retinaParameters.OPLandIplParvo.colorMode;
+		currFn["normaliseOutput"]>>_retinaParameters.OPLandIplParvo.normaliseOutput;
+		currFn["photoreceptorsLocalAdaptationSensitivity"]>>_retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity;
+		currFn["photoreceptorsTemporalConstant"]>>_retinaParameters.OPLandIplParvo.photoreceptorsTemporalConstant;
+		currFn["photoreceptorsSpatialConstant"]>>_retinaParameters.OPLandIplParvo.photoreceptorsSpatialConstant;
+		currFn["horizontalCellsGain"]>>_retinaParameters.OPLandIplParvo.horizontalCellsGain;
+		currFn["hcellsTemporalConstant"]>>_retinaParameters.OPLandIplParvo.hcellsTemporalConstant;
+		currFn["hcellsSpatialConstant"]>>_retinaParameters.OPLandIplParvo.hcellsSpatialConstant;
+		currFn["ganglionCellsSensitivity"]>>_retinaParameters.OPLandIplParvo.ganglionCellsSensitivity;
+		setupOPLandIPLParvoChannel(_retinaParameters.OPLandIplParvo.colorMode, _retinaParameters.OPLandIplParvo.normaliseOutput, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.photoreceptorsTemporalConstant, _retinaParameters.OPLandIplParvo.photoreceptorsSpatialConstant, _retinaParameters.OPLandIplParvo.horizontalCellsGain, _retinaParameters.OPLandIplParvo.hcellsTemporalConstant, _retinaParameters.OPLandIplParvo.hcellsSpatialConstant, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);
 
-		// init retina IPL magno setup
+		// init retina IPL magno setup... update at the same time the parameters structure and the retina core
 		currFn=rootFn["IPLmagno"];
-		currFn["normaliseOutput"]>>normaliseOutput;
-		float parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
-		currFn["parasolCells_beta"]>>parasolCells_beta;
-		currFn["parasolCells_tau"]>>parasolCells_tau;
-		currFn["parasolCells_k"]>>parasolCells_k;
-		currFn["amacrinCellsTemporalCutFrequency"]>>amacrinCellsTemporalCutFrequency;
-		currFn["V0CompressionParameter"]>>V0CompressionParameter;
-		currFn["localAdaptintegration_tau"]>>localAdaptintegration_tau;
-		currFn["localAdaptintegration_k"]>>localAdaptintegration_k;
+		currFn["normaliseOutput"]>>_retinaParameters.IplMagno.normaliseOutput;
+		currFn["parasolCells_beta"]>>_retinaParameters.IplMagno.parasolCells_beta;
+		currFn["parasolCells_tau"]>>_retinaParameters.IplMagno.parasolCells_tau;
+		currFn["parasolCells_k"]>>_retinaParameters.IplMagno.parasolCells_k;
+		currFn["amacrinCellsTemporalCutFrequency"]>>_retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency;
+		currFn["V0CompressionParameter"]>>_retinaParameters.IplMagno.V0CompressionParameter;
+		currFn["localAdaptintegration_tau"]>>_retinaParameters.IplMagno.localAdaptintegration_tau;
+		currFn["localAdaptintegration_k"]>>_retinaParameters.IplMagno.localAdaptintegration_k;
 
-		setupIPLMagnoChannel(normaliseOutput, parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency,
-				V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k);
+		setupIPLMagnoChannel(_retinaParameters.IplMagno.normaliseOutput, _retinaParameters.IplMagno.parasolCells_beta, _retinaParameters.IplMagno.parasolCells_tau, _retinaParameters.IplMagno.parasolCells_k, _retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency,_retinaParameters.IplMagno.V0CompressionParameter, _retinaParameters.IplMagno.localAdaptintegration_tau, _retinaParameters.IplMagno.localAdaptintegration_k);
 
 	}catch(Exception &e)
 	{
@@ -164,87 +153,109 @@ void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetup
 		std::cout<<"Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>"<<e.what()<<std::endl;
 		std::cout<<"=> keeping current parameters"<<std::endl;
 	}
-	_parametersSaveFile.release(); // close file after setup
+
 	// report current configuration
 	std::cout<<printSetup()<<std::endl;
+}
+
+void Retina::setup(cv::Retina::RetinaParameters newConfiguration)
+{
+    // simply copy structures
+    memcpy(&_retinaParameters, &newConfiguration, sizeof(cv::Retina::RetinaParameters));
+    // apply setup
+    setupOPLandIPLParvoChannel(_retinaParameters.OPLandIplParvo.colorMode, _retinaParameters.OPLandIplParvo.normaliseOutput, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.photoreceptorsTemporalConstant, _retinaParameters.OPLandIplParvo.photoreceptorsSpatialConstant, _retinaParameters.OPLandIplParvo.horizontalCellsGain, _retinaParameters.OPLandIplParvo.hcellsTemporalConstant, _retinaParameters.OPLandIplParvo.hcellsSpatialConstant, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);
+    setupIPLMagnoChannel(_retinaParameters.IplMagno.normaliseOutput, _retinaParameters.IplMagno.parasolCells_beta, _retinaParameters.IplMagno.parasolCells_tau, _retinaParameters.IplMagno.parasolCells_k, _retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency,_retinaParameters.IplMagno.V0CompressionParameter, _retinaParameters.IplMagno.localAdaptintegration_tau, _retinaParameters.IplMagno.localAdaptintegration_k);
+
+
 }
 
 const std::string Retina::printSetup()
 {
 	std::stringstream outmessage;
 
+	// displaying OPL and IPL parvo setup
+	outmessage<<"Current Retina instance setup :"
+			<<"\nOPLandIPLparvo"<<"{"
+			<< "\n==> colorMode : " << _retinaParameters.OPLandIplParvo.colorMode
+			<< "\n==> normalizeParvoOutput :" << _retinaParameters.OPLandIplParvo.normaliseOutput
+			<< "\n==> photoreceptorsLocalAdaptationSensitivity : " << _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity
+			<< "\n==> photoreceptorsTemporalConstant : " << _retinaParameters.OPLandIplParvo.photoreceptorsTemporalConstant
+			<< "\n==> photoreceptorsSpatialConstant : " << _retinaParameters.OPLandIplParvo.photoreceptorsSpatialConstant
+			<< "\n==> horizontalCellsGain : " << _retinaParameters.OPLandIplParvo.horizontalCellsGain
+			<< "\n==> hcellsTemporalConstant : " << _retinaParameters.OPLandIplParvo.hcellsTemporalConstant
+			<< "\n==> hcellsSpatialConstant : " << _retinaParameters.OPLandIplParvo.hcellsSpatialConstant
+			<< "\n==> parvoGanglionCellsSensitivity : " << _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity
+			<<"}\n";
 
-	try
-	{
-		cv::FileStorage parametersReader(_parametersSaveFileName, cv::FileStorage::READ);
-		if (!parametersReader.isOpened())
-		{
-			outmessage<<"Retina is not already settled up";
-		}
-		else
-		{
-			// accessing xml parameters nodes
-			cv::FileNode rootFn = parametersReader.root();
-			cv::FileNode currFn=rootFn["OPLandIPLparvo"];
-
-			// displaying OPL and IPL parvo setup
-			outmessage<<"Current Retina instance setup :"
-					<<"\nOPLandIPLparvo"<<"{"
-					<< "\n==> colorMode : " << currFn["colorMode"].operator int()
-					<< "\n==> normalizeParvoOutput :" << currFn["normaliseOutput"].operator int()
-					<< "\n==> photoreceptorsLocalAdaptationSensitivity : " << currFn["photoreceptorsLocalAdaptationSensitivity"].operator float()
-					<< "\n==> photoreceptorsTemporalConstant : " << currFn["photoreceptorsTemporalConstant"].operator float()
-					<< "\n==> photoreceptorsSpatialConstant : " << currFn["photoreceptorsSpatialConstant"].operator float()
-					<< "\n==> horizontalCellsGain : " << currFn["horizontalCellsGain"].operator float()
-					<< "\n==> hcellsTemporalConstant : " << currFn["hcellsTemporalConstant"].operator float()
-					<< "\n==> hcellsSpatialConstant : " << currFn["hcellsSpatialConstant"].operator float()
-					<< "\n==> parvoGanglionCellsSensitivity : " << currFn["ganglionCellsSensitivity"].operator float()
-					<<"}\n";
-
-			// displaying IPL magno setup
-			currFn=rootFn["IPLmagno"];
-			outmessage<<"Current Retina instance setup :"
-					<<"\nIPLmagno"<<"{"
-					<< "\n==> normaliseOutput : " << currFn["normaliseOutput"].operator int()
-					<< "\n==> parasolCells_beta : " << currFn["parasolCells_beta"].operator float()
-					<< "\n==> parasolCells_tau : " << currFn["parasolCells_tau"].operator float()
-					<< "\n==> parasolCells_k : " << currFn["parasolCells_k"].operator float()
-					<< "\n==> amacrinCellsTemporalCutFrequency : " << currFn["amacrinCellsTemporalCutFrequency"].operator float()
-					<< "\n==> V0CompressionParameter : " << currFn["V0CompressionParameter"].operator float()
-					<< "\n==> localAdaptintegration_tau : " << currFn["localAdaptintegration_tau"].operator float()
-					<< "\n==> localAdaptintegration_k : " << currFn["localAdaptintegration_k"].operator float()
-					<<"}";
-		}
-	}catch(cv::Exception &e)
-	{
-		outmessage<<"Error reading parameters configuration file : "<<e.what()<<std::endl;
-	}
+	// displaying IPL magno setup
+	outmessage<<"Current Retina instance setup :"
+			<<"\nIPLmagno"<<"{"
+			<< "\n==> normaliseOutput : " << _retinaParameters.IplMagno.normaliseOutput
+			<< "\n==> parasolCells_beta : " << _retinaParameters.IplMagno.parasolCells_beta
+			<< "\n==> parasolCells_tau : " << _retinaParameters.IplMagno.parasolCells_tau
+			<< "\n==> parasolCells_k : " << _retinaParameters.IplMagno.parasolCells_k
+			<< "\n==> amacrinCellsTemporalCutFrequency : " << _retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency
+			<< "\n==> V0CompressionParameter : " << _retinaParameters.IplMagno.V0CompressionParameter
+			<< "\n==> localAdaptintegration_tau : " << _retinaParameters.IplMagno.localAdaptintegration_tau
+			<< "\n==> localAdaptintegration_k : " << _retinaParameters.IplMagno.localAdaptintegration_k
+			<<"}";
 	return outmessage.str();
+}
+
+void Retina::write( std::string fs ) const
+{
+    FileStorage parametersSaveFile(fs, cv::FileStorage::WRITE );
+    write(parametersSaveFile);
+}
+
+void Retina::write( FileStorage& fs ) const
+{
+	if (!fs.isOpened())
+		return; // basic error case
+	fs<<"OPLandIPLparvo"<<"{";
+	fs << "colorMode" << _retinaParameters.OPLandIplParvo.colorMode;
+	fs << "normaliseOutput" << _retinaParameters.OPLandIplParvo.normaliseOutput;
+	fs << "photoreceptorsLocalAdaptationSensitivity" << _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity;
+	fs << "photoreceptorsTemporalConstant" << _retinaParameters.OPLandIplParvo.photoreceptorsTemporalConstant;
+	fs << "photoreceptorsSpatialConstant" << _retinaParameters.OPLandIplParvo.photoreceptorsSpatialConstant;
+	fs << "horizontalCellsGain" << _retinaParameters.OPLandIplParvo.horizontalCellsGain;
+	fs << "hcellsTemporalConstant" << _retinaParameters.OPLandIplParvo.hcellsTemporalConstant;
+	fs << "hcellsSpatialConstant" << _retinaParameters.OPLandIplParvo.hcellsSpatialConstant;
+	fs << "ganglionCellsSensitivity" << _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity;
+	fs << "}";
+	fs<<"IPLmagno"<<"{";
+	fs << "normaliseOutput" << _retinaParameters.IplMagno.normaliseOutput;
+	fs << "parasolCells_beta" << _retinaParameters.IplMagno.parasolCells_beta;
+	fs << "parasolCells_tau" << _retinaParameters.IplMagno.parasolCells_tau;
+	fs << "parasolCells_k" << _retinaParameters.IplMagno.parasolCells_k;
+	fs << "amacrinCellsTemporalCutFrequency" << _retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency;
+	fs << "V0CompressionParameter" << _retinaParameters.IplMagno.V0CompressionParameter;
+	fs << "localAdaptintegration_tau" << _retinaParameters.IplMagno.localAdaptintegration_tau;
+	fs << "localAdaptintegration_k" << _retinaParameters.IplMagno.localAdaptintegration_k;
+	fs<<"}";
 }
 
 void Retina::setupOPLandIPLParvoChannel(const bool colorMode, const bool normaliseOutput, const float photoreceptorsLocalAdaptationSensitivity, const float photoreceptorsTemporalConstant, const float photoreceptorsSpatialConstant, const float horizontalCellsGain, const float HcellsTemporalConstant, const float HcellsSpatialConstant, const float ganglionCellsSensitivity)
 {
-	// parameters setup (default setup)
+	// retina core parameters setup
 	_retinaFilter->setColorMode(colorMode);
 	_retinaFilter->setPhotoreceptorsLocalAdaptationSensitivity(photoreceptorsLocalAdaptationSensitivity);
 	_retinaFilter->setOPLandParvoParameters(0, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, HcellsTemporalConstant, HcellsSpatialConstant, ganglionCellsSensitivity);
 	_retinaFilter->setParvoGanglionCellsLocalAdaptationSensitivity(ganglionCellsSensitivity);
 	_retinaFilter->activateNormalizeParvoOutput_0_maxOutputValue(normaliseOutput);
+	
+        // update parameters struture
 
-	// save parameters in the xml parameters tree... if parameters file is already open
-	if (!_parametersSaveFile.isOpened())
-		return;
-	_parametersSaveFile<<"OPLandIPLparvo"<<"{";
-	_parametersSaveFile << "colorMode" << colorMode;
-	_parametersSaveFile << "normaliseOutput" << normaliseOutput;
-	_parametersSaveFile << "photoreceptorsLocalAdaptationSensitivity" << photoreceptorsLocalAdaptationSensitivity;
-	_parametersSaveFile << "photoreceptorsTemporalConstant" << photoreceptorsTemporalConstant;
-	_parametersSaveFile << "photoreceptorsSpatialConstant" << photoreceptorsSpatialConstant;
-	_parametersSaveFile << "horizontalCellsGain" << horizontalCellsGain;
-	_parametersSaveFile << "hcellsTemporalConstant" << HcellsTemporalConstant;
-	_parametersSaveFile << "hcellsSpatialConstant" << HcellsSpatialConstant;
-	_parametersSaveFile << "ganglionCellsSensitivity" << ganglionCellsSensitivity;
-	_parametersSaveFile << "}";
+	_retinaParameters.OPLandIplParvo.colorMode = colorMode;
+	_retinaParameters.OPLandIplParvo.normaliseOutput = normaliseOutput;
+	_retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity = photoreceptorsLocalAdaptationSensitivity;
+	_retinaParameters.OPLandIplParvo.photoreceptorsTemporalConstant = photoreceptorsTemporalConstant;
+	_retinaParameters.OPLandIplParvo.photoreceptorsSpatialConstant = photoreceptorsSpatialConstant;
+	_retinaParameters.OPLandIplParvo.horizontalCellsGain = horizontalCellsGain;
+	_retinaParameters.OPLandIplParvo.hcellsTemporalConstant = HcellsTemporalConstant;
+	_retinaParameters.OPLandIplParvo.hcellsSpatialConstant = HcellsSpatialConstant;
+	_retinaParameters.OPLandIplParvo.ganglionCellsSensitivity = ganglionCellsSensitivity;
+
 }
 
 void Retina::setupIPLMagnoChannel(const bool normaliseOutput, const float parasolCells_beta, const float parasolCells_tau, const float parasolCells_k, const float amacrinCellsTemporalCutFrequency, const float V0CompressionParameter, const float localAdaptintegration_tau, const float localAdaptintegration_k)
@@ -253,20 +264,15 @@ void Retina::setupIPLMagnoChannel(const bool normaliseOutput, const float paraso
 	_retinaFilter->setMagnoCoefficientsTable(parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k);
 	_retinaFilter->activateNormalizeMagnoOutput_0_maxOutputValue(normaliseOutput);
 
-	// save parameters in the xml parameters tree... if parameters file is already open
-	if (!_parametersSaveFile.isOpened())
-		return;
-	_parametersSaveFile<<"IPLmagno"<<"{";
-	_parametersSaveFile << "normaliseOutput" << normaliseOutput;
-	_parametersSaveFile << "parasolCells_beta" << parasolCells_beta;
-	_parametersSaveFile << "parasolCells_tau" << parasolCells_tau;
-	_parametersSaveFile << "parasolCells_k" << parasolCells_k;
-	_parametersSaveFile << "amacrinCellsTemporalCutFrequency" << amacrinCellsTemporalCutFrequency;
-	_parametersSaveFile << "V0CompressionParameter" << V0CompressionParameter;
-	_parametersSaveFile << "localAdaptintegration_tau" << localAdaptintegration_tau;
-	_parametersSaveFile << "localAdaptintegration_k" << localAdaptintegration_k;
-	_parametersSaveFile<<"}";
-
+        // update parameters struture
+	_retinaParameters.IplMagno.normaliseOutput = normaliseOutput;
+	_retinaParameters.IplMagno.parasolCells_beta = parasolCells_beta;
+	_retinaParameters.IplMagno.parasolCells_tau = parasolCells_tau;
+	_retinaParameters.IplMagno.parasolCells_k = parasolCells_k;
+	_retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency = amacrinCellsTemporalCutFrequency;
+	_retinaParameters.IplMagno.V0CompressionParameter = V0CompressionParameter;
+	_retinaParameters.IplMagno.localAdaptintegration_tau = localAdaptintegration_tau;
+	_retinaParameters.IplMagno.localAdaptintegration_k = localAdaptintegration_k;
 }
 
 void Retina::run(const cv::Mat &inputMatToConvert)
@@ -303,10 +309,8 @@ void Retina::getMagno(std::valarray<float> &){_retinaFilter->getMovingContours()
 void Retina::getParvo(std::valarray<float> &){_retinaFilter->getContours();}
 
 // private method called by constructirs
-void Retina::_init(const std::string parametersSaveFileName, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+void Retina::_init(const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
-	_parametersSaveFileName = parametersSaveFileName;
-
 	// basic error check
 	if (inputSize.height*inputSize.width <= 0)
 		throw cv::Exception(-1, "Bad retina size setup : size height and with must be superior to zero", "Retina::setup", "Retina.h", 0);
@@ -321,23 +325,8 @@ void Retina::_init(const std::string parametersSaveFileName, const cv::Size inpu
 	_retinaFilter = new RetinaFilter(inputSize.height, inputSize.width, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 
 	// prepare the default parameter XML file with default setup
-	if (_parametersSaveFileName.size()>0)
-	{
-		_parametersSaveFile.open(parametersSaveFileName, cv::FileStorage::WRITE );
+        setup(_retinaParameters);
 
-		_parametersSaveFile<<"InputSize"<<"{";
-		_parametersSaveFile<<"height"<<inputSize.height;
-		_parametersSaveFile<<"width"<<inputSize.width;
-		_parametersSaveFile<<"}";
-
-		// clear all retina buffers
-		// apply default setup
-		setupOPLandIPLParvoChannel();
-		setupIPLMagnoChannel();
-
-		// write current parameters to params file
-		_parametersSaveFile.release();
-	}
 	// init retina
 	_retinaFilter->clearAllBuffers();
 
@@ -433,7 +422,7 @@ void Retina::clearBuffers() {_retinaFilter->clearAllBuffers();}
 
 void Retina::activateMovingContoursProcessing(const bool activate){_retinaFilter->activateMovingContoursProcessing(activate);}
 
-void Retina::activateContoursProcessing(const bool activate){_retinaFilter->activateMovingContoursProcessing(activate);}
+void Retina::activateContoursProcessing(const bool activate){_retinaFilter->activateContoursProcessing(activate);}
 
 } // end of namespace cv
 
