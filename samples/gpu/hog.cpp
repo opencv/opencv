@@ -312,7 +312,7 @@ void App::run()
             hogWorkBegin();
             if (use_gpu)
             {
-                gpu_img = img;
+                gpu_img.upload(img);
                 gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride, 
                                          Size(0, 0), scale, gr_threshold);
             }

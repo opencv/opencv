@@ -162,8 +162,8 @@ void App::run()
     if (right_src.empty()) throw runtime_error("can't open file \"" + p.right + "\"");
     cvtColor(left_src, left, CV_BGR2GRAY);
     cvtColor(right_src, right, CV_BGR2GRAY);
-    d_left = left;
-    d_right = right;
+    d_left.upload(left);
+    d_right.upload(right);
 
     imshow("left", left);
     imshow("right", right);
@@ -193,8 +193,8 @@ void App::run()
                 cvtColor(left_src, left, CV_BGR2GRAY);
                 cvtColor(right_src, right, CV_BGR2GRAY);
                 cout << "image_channels: " << left.channels() << endl;
-                d_left = left;
-                d_right = right;
+                d_left.upload(left);
+                d_right.upload(right);
                 imshow("left", left);
                 imshow("right", right);
             }
@@ -262,8 +262,8 @@ void App::handleKey(char key)
             cvtColor(left_src, left, CV_BGR2GRAY);
             cvtColor(right_src, right, CV_BGR2GRAY);
         }
-        d_left = left;
-        d_right = right;
+        d_left.upload(left);
+        d_right.upload(right);
         cout << "image_channels: " << left.channels() << endl;
         imshow("left", left);
         imshow("right", right);

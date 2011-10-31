@@ -28,12 +28,12 @@ int main(int argc, char* argv[])
     {
         if (string(argv[i]) == "--left")
         {
-            img1 = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            img1.upload(imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE));
             CV_Assert(!img1.empty());
         }
         else if (string(argv[i]) == "--right")
         {
-            img2 = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            img2.upload(imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE));
             CV_Assert(!img2.empty());
         }
         else if (string(argv[i]) == "--help")
