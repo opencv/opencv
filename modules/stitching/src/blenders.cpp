@@ -387,7 +387,7 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
     pyr.resize(num_levels + 1);
 
     vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
-    gpu_pyr[0] = img;
+    gpu_pyr[0].upload(img);
     for (int i = 0; i < num_levels; ++i)
         gpu::pyrDown(gpu_pyr[i], gpu_pyr[i + 1]);
 
@@ -396,10 +396,10 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
     {
         gpu::pyrUp(gpu_pyr[i + 1], tmp);
         gpu::subtract(gpu_pyr[i], tmp, gpu_pyr[i]);
-        pyr[i] = gpu_pyr[i];
+        gpu_pyr[i].download(pyr[i]);
     }
 
-    pyr[num_levels] = gpu_pyr[num_levels];
+    gpu_pyr[num_levels].download(pyr[num_levels]);
 #endif
 }
 
@@ -425,7 +425,7 @@ void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
 
     vector<gpu::GpuMat> gpu_pyr(pyr.size());
     for (size_t i = 0; i < pyr.size(); ++i)
-        gpu_pyr[i] = pyr[i];
+        gpu_pyr[i].upload(pyr[i]);
 
     gpu::GpuMat tmp;
     for (size_t i = pyr.size() - 1; i > 0; --i)
@@ -434,7 +434,7 @@ void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
         gpu::add(tmp, gpu_pyr[i - 1], gpu_pyr[i - 1]);
     }
 
-    pyr[0] = gpu_pyr[0];
+    gpu_pyr[0].download(pyr[0]);
 #endif
 }
 

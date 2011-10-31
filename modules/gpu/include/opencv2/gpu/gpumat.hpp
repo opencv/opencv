@@ -48,21 +48,51 @@
 
 namespace cv { namespace gpu
 {
-    class Stream;
-    class CudaMem;
-
     //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
     class CV_EXPORTS GpuMat
     {
     public:
+        //! returns lightweight DevMem2D_ structure for passing to nvcc-compiled code.
+        // Contains just image size, data ptr and step.
+        template <class T> operator DevMem2D_<T>() const;
+        template <class T> operator PtrStep_<T>() const;
+		template <class T> operator PtrStep<T>() const;
+
+
+
+
+
+        //! builds GpuMat from Mat. Perfom blocking upload to device.
+        explicit GpuMat(const Mat& m);
+
+        //! pefroms blocking upload data to GpuMat.
+        void upload(const cv::Mat& m);
+
+        //! downloads data from device to host memory. Blocking calls.
+        void download(cv::Mat& m) const;
+        operator Mat() const
+        {
+            Mat m;
+            download(m);
+            return m;
+        }
+
+
+
+
+
+
         //! default constructor
         GpuMat();
+
         //! constructs GpuMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
         GpuMat(int rows, int cols, int type);
         GpuMat(Size size, int type);
+
         //! constucts GpuMatrix and fills it with the specified value _s.
         GpuMat(int rows, int cols, int type, const Scalar& s);
         GpuMat(Size size, int type, const Scalar& s);
+
         //! copy constructor
         GpuMat(const GpuMat& m);
 
@@ -74,35 +104,11 @@ namespace cv { namespace gpu
         GpuMat(const GpuMat& m, const Range& rowRange, const Range& colRange);
         GpuMat(const GpuMat& m, const Rect& roi);
 
-        //! builds GpuMat from Mat. Perfom blocking upload to device.
-        explicit GpuMat (const Mat& m);
-
         //! destructor - calls release()
         ~GpuMat();
 
         //! assignment operators
         GpuMat& operator = (const GpuMat& m);
-        //! assignment operator. Perfom blocking upload to device.
-        GpuMat& operator = (const Mat& m);
-
-        //! returns lightweight DevMem2D_ structure for passing to nvcc-compiled code.
-        // Contains just image size, data ptr and step.
-        template <class T> operator DevMem2D_<T>() const;
-        template <class T> operator PtrStep_<T>() const;
-		template <class T> operator PtrStep<T>() const;
-
-        //! pefroms blocking upload data to GpuMat.
-        void upload(const cv::Mat& m);
-
-        //! upload async
-        void upload(const CudaMem& m, Stream& stream);
-
-        //! downloads data from device to host memory. Blocking calls.
-        operator Mat() const;
-        void download(cv::Mat& m) const;
-
-        //! download async
-        void download(CudaMem& m, Stream& stream) const;
 
         //! returns a new GpuMatrix header for the specified row
         GpuMat row(int y) const;
@@ -119,13 +125,13 @@ namespace cv { namespace gpu
         GpuMat clone() const;
         //! copies the GpuMatrix content to "m".
         // It calls m.create(this->size(), this->type()).
-        void copyTo( GpuMat& m ) const;
+        void copyTo(GpuMat& m) const;
         //! copies those GpuMatrix elements to "m" that are marked with non-zero mask elements.
-        void copyTo( GpuMat& m, const GpuMat& mask ) const;
+        void copyTo(GpuMat& m, const GpuMat& mask) const;
         //! converts GpuMatrix to another datatype with optional scalng. See cvConvertScale.
-        void convertTo( GpuMat& m, int rtype, double alpha=1, double beta=0 ) const;
+        void convertTo(GpuMat& m, int rtype, double alpha = 1, double beta = 0) const;
 
-        void assignTo( GpuMat& m, int type=-1 ) const;
+        void assignTo(GpuMat& m, int type=-1) const;
 
         //! sets every GpuMatrix element to s
         GpuMat& operator = (const Scalar& s);
@@ -147,13 +153,13 @@ namespace cv { namespace gpu
         void swap(GpuMat& mat);
 
         //! locates GpuMatrix header within a parent GpuMatrix. See below
-        void locateROI( Size& wholeSize, Point& ofs ) const;
+        void locateROI(Size& wholeSize, Point& ofs) const;
         //! moves/resizes the current GpuMatrix ROI inside the parent GpuMatrix.
-        GpuMat& adjustROI( int dtop, int dbottom, int dleft, int dright );
+        GpuMat& adjustROI(int dtop, int dbottom, int dleft, int dright);
         //! extracts a rectangular sub-GpuMatrix
         // (this is a generalized form of row, rowRange etc.)
-        GpuMat operator()( Range rowRange, Range colRange ) const;
-        GpuMat operator()( const Rect& roi ) const;
+        GpuMat operator()(Range rowRange, Range colRange) const;
+        GpuMat operator()(const Rect& roi) const;
 
         //! returns true iff the GpuMatrix data is continuous
         // (i.e. when there are no gaps between successive rows).
@@ -186,9 +192,6 @@ namespace cv { namespace gpu
         template<typename _Tp> _Tp* ptr(int y = 0);
         template<typename _Tp> const _Tp* ptr(int y = 0) const;
 
-        //! matrix transposition
-        GpuMat t() const;
-
         /*! includes several bit-fields:
         - the magic signature
         - continuity flag
@@ -196,10 +199,13 @@ namespace cv { namespace gpu
         - number of channels
         */
         int flags;
+
         //! the number of rows and columns
         int rows, cols;
+
         //! a distance between successive rows in bytes; includes the gap if any
         size_t step;
+
         //! pointer to the data
         uchar* data;
 
@@ -224,22 +230,59 @@ namespace cv { namespace gpu
     CV_EXPORTS void ensureSizeIsEnough(Size size, int type, GpuMat& m);
 
     ////////////////////////////////////////////////////////////////////////
-    //////////////////////////////// GpuMat ////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////
 
-    inline GpuMat::GpuMat() : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) {}
+    template <class T> inline GpuMat::operator DevMem2D_<T>() const { return DevMem2D_<T>(rows, cols, (T*)data, step); }
+    template <class T> inline GpuMat::operator PtrStep_<T>() const { return PtrStep_<T>(static_cast< DevMem2D_<T> >(*this)); }
+	template <class T> inline GpuMat::operator PtrStep<T>() const { return PtrStep<T>((T*)data, step); }	
 
-    inline GpuMat::GpuMat(int rows_, int cols_, int type_) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+
+
+
+
+
+    inline GpuMat::GpuMat() 
+        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) 
+    {
+    }
+
+    inline GpuMat::GpuMat(int rows_, int cols_, int type_) 
+        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
     {
         if (rows_ > 0 && cols_ > 0)
             create(rows_, cols_, type_);
     }
 
-    inline GpuMat::~GpuMat() { release(); }
+    inline GpuMat::GpuMat(Size size_, int type_) 
+        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+    {
+        if (size_.height > 0 && size_.width > 0)
+            create(size_.height, size_.width, type_);
+    }
 
-    template <class T> inline GpuMat::operator DevMem2D_<T>() const { return DevMem2D_<T>(rows, cols, (T*)data, step); }
-    template <class T> inline GpuMat::operator PtrStep_<T>() const { return PtrStep_<T>(static_cast< DevMem2D_<T> >(*this)); }
-	template <class T> inline GpuMat::operator PtrStep<T>() const { return PtrStep<T>((T*)data, step); }	
+    inline GpuMat::GpuMat(int rows_, int cols_, int type_, const Scalar& s_) 
+        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+    {
+        if (rows_ > 0 && cols_ > 0)
+        {
+            create(rows_, cols_, type_);
+            setTo(s_);
+        }
+    }
+
+    inline GpuMat::GpuMat(Size size_, int type_, const Scalar& s_) 
+        : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+    {
+        if (size_.height > 0 && size_.width > 0)
+        {
+            create(size_.height, size_.width, type_);
+            setTo(s_);
+        }
+    }
+
+    inline GpuMat::~GpuMat() 
+    { 
+        release(); 
+    }
 
     inline GpuMat GpuMat::clone() const
     {
@@ -250,15 +293,21 @@ namespace cv { namespace gpu
 
     inline void GpuMat::assignTo(GpuMat& m, int type) const
     {
-        if( type < 0 )
+        if (type < 0)
             m = *this;
         else
             convertTo(m, type);
     }
 
-    inline size_t GpuMat::step1() const { return step/elemSize1(); }
+    inline size_t GpuMat::step1() const 
+    { 
+        return step / elemSize1(); 
+    }
 
-    inline bool GpuMat::empty() const { return data == 0; }
+    inline bool GpuMat::empty() const 
+    { 
+        return data == 0; 
+    }
 
     template<typename _Tp> inline _Tp* GpuMat::ptr(int y)
     {
@@ -270,7 +319,148 @@ namespace cv { namespace gpu
         return (const _Tp*)ptr(y);
     }
 
-    inline void swap(GpuMat& a, GpuMat& b) { a.swap(b); }
+    inline void swap(GpuMat& a, GpuMat& b) 
+    { 
+        a.swap(b); 
+    }
+
+    inline GpuMat GpuMat::row(int y) const 
+    { 
+        return GpuMat(*this, Range(y, y+1), Range::all()); 
+    }
+
+    inline GpuMat GpuMat::col(int x) const 
+    { 
+        return GpuMat(*this, Range::all(), Range(x, x+1)); 
+    }
+
+    inline GpuMat GpuMat::rowRange(int startrow, int endrow) const 
+    { 
+        return GpuMat(*this, Range(startrow, endrow), Range::all()); 
+    }
+
+    inline GpuMat GpuMat::rowRange(const Range& r) const 
+    { 
+        return GpuMat(*this, r, Range::all()); 
+    }
+
+    inline GpuMat GpuMat::colRange(int startcol, int endcol) const 
+    { 
+        return GpuMat(*this, Range::all(), Range(startcol, endcol)); 
+    }
+
+    inline GpuMat GpuMat::colRange(const Range& r) const 
+    { 
+        return GpuMat(*this, Range::all(), r); 
+    }
+
+    inline void GpuMat::create(Size size_, int type_) 
+    { 
+        create(size_.height, size_.width, type_); 
+    }
+
+    inline GpuMat GpuMat::operator()(Range rowRange, Range colRange) const 
+    { 
+        return GpuMat(*this, rowRange, colRange); 
+    }
+
+    inline GpuMat GpuMat::operator()(const Rect& roi) const 
+    { 
+        return GpuMat(*this, roi); 
+    }
+
+    inline bool GpuMat::isContinuous() const 
+    { 
+        return (flags & Mat::CONTINUOUS_FLAG) != 0; 
+    }
+
+    inline size_t GpuMat::elemSize() const 
+    { 
+        return CV_ELEM_SIZE(flags); 
+    }
+
+    inline size_t GpuMat::elemSize1() const 
+    { 
+        return CV_ELEM_SIZE1(flags); 
+    }
+
+    inline int GpuMat::type() const 
+    { 
+        return CV_MAT_TYPE(flags); 
+    }
+
+    inline int GpuMat::depth() const 
+    { 
+        return CV_MAT_DEPTH(flags); 
+    }
+
+    inline int GpuMat::channels() const 
+    { 
+        return CV_MAT_CN(flags); 
+    }
+
+    inline Size GpuMat::size() const 
+    { 
+        return Size(cols, rows); 
+    }
+
+    inline unsigned char* GpuMat::ptr(int y)
+    {
+        CV_DbgAssert((unsigned)y < (unsigned)rows);
+        return data + step * y;
+    }
+
+    inline const unsigned char* GpuMat::ptr(int y) const
+    {
+        CV_DbgAssert((unsigned)y < (unsigned)rows);
+        return data + step * y;
+    }
+
+    inline GpuMat& GpuMat::operator = (const Scalar& s)
+    {
+        setTo(s);
+        return *this;
+    }
+
+    inline GpuMat createContinuous(int rows, int cols, int type)
+    {
+        GpuMat m;
+        createContinuous(rows, cols, type, m);
+        return m;
+    }
+
+    inline void createContinuous(Size size, int type, GpuMat& m)
+    {
+        createContinuous(size.height, size.width, type, m);
+    }
+
+    inline GpuMat createContinuous(Size size, int type)
+    {
+        GpuMat m;
+        createContinuous(size, type, m);
+        return m;
+    }
+
+    inline void ensureSizeIsEnough(Size size, int type, GpuMat& m)
+    {
+        ensureSizeIsEnough(size.height, size.width, type, m);
+    }
+
+    inline void createContinuous(int rows, int cols, int type, GpuMat& m)
+    {
+        int area = rows * cols;
+        if (!m.isContinuous() || m.type() != type || m.size().area() != area)
+            m.create(1, area, type);
+        m = m.reshape(0, rows);
+    }
+
+    inline void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
+    {
+        if (m.type() == type && m.rows >= rows && m.cols >= cols)
+            m = m(Rect(0, 0, cols, rows));
+        else
+            m.create(rows, cols, type);
+    }
 }}
 
 #endif // __OPENCV_GPUMAT_HPP__

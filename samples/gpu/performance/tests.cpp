@@ -37,7 +37,7 @@ TEST(matchTemplate)
         matchTemplate(src, templ, dst, CV_TM_CCORR);
         CPU_OFF;
 
-        d_templ = templ;
+        d_templ.upload(templ);
         d_dst.create(d_src.rows - d_templ.rows + 1, d_src.cols - d_templ.cols + 1, CV_32F);
 
         GPU_ON;
@@ -65,7 +65,7 @@ TEST(minMaxLoc)
         minMaxLoc(src, &min_val, &max_val, &min_loc, &max_loc);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
 
         GPU_ON;
         gpu::minMaxLoc(d_src, &min_val, &max_val, &min_loc, &max_loc);
@@ -107,9 +107,9 @@ TEST(remap)
         remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
-        d_src = src;
-        d_xmap = xmap;
-        d_ymap = ymap;
+        d_src.upload(src);
+        d_xmap.upload(xmap);
+        d_ymap.upload(ymap);
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
@@ -142,9 +142,9 @@ TEST(remap)
         remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
-        d_src = src;
-        d_xmap = xmap;
-        d_ymap = ymap;
+        d_src.upload(src);
+        d_xmap.upload(xmap);
+        d_ymap.upload(ymap);
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
@@ -177,9 +177,9 @@ TEST(remap)
         remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
-        d_src = src;
-        d_xmap = xmap;
-        d_ymap = ymap;
+        d_src.upload(src);
+        d_xmap.upload(xmap);
+        d_ymap.upload(ymap);
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
@@ -212,9 +212,9 @@ TEST(remap)
         remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
-        d_src = src;
-        d_xmap = xmap;
-        d_ymap = ymap;
+        d_src.upload(src);
+        d_xmap.upload(xmap);
+        d_ymap.upload(ymap);
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
@@ -240,7 +240,7 @@ TEST(dft)
         dft(src, dst);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(d_src.size(), d_src.type());
 
         GPU_ON;
@@ -266,7 +266,7 @@ TEST(cornerHarris)
         cornerHarris(src, dst, 5, 7, 0.1, BORDER_REFLECT101);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(src.size(), src.type());
 
         GPU_ON;
@@ -286,7 +286,7 @@ TEST(integral)
     gen(src, size, size, CV_8U, 0, 256);
     sum.create(size + 1, size + 1, CV_32S);
 
-    d_src = src;
+    d_src.upload(src);
     d_sum.create(size + 1, size + 1, CV_32S);
 
     for (int i = 0; i < 5; ++i)
@@ -320,7 +320,7 @@ TEST(norm)
             norm(src, NORM_INF);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
 
         GPU_ON;
         for (int i = 0; i < 5; ++i)
@@ -350,7 +350,7 @@ TEST(meanShift)
 
         gen(src, size, size, CV_8UC4, Scalar::all(0), Scalar::all(256));
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(d_src.size(), d_src.type());
 
         GPU_ON;
@@ -483,8 +483,8 @@ TEST(magnitude)
         magnitude(x, y, mag);
         CPU_OFF;
 
-        d_x = x;
-        d_y = y;
+        d_x.upload(x);
+        d_y.upload(y);
         d_mag.create(size, size, CV_32F);
 
         GPU_ON;
@@ -511,8 +511,8 @@ TEST(add)
         add(src1, src2, dst);
         CPU_OFF;
 
-        d_src1 = src1;
-        d_src2 = src2;
+        d_src1.upload(src1);
+        d_src2.upload(src2);
         d_dst.create(size, size, CV_32F);
 
         GPU_ON;
@@ -538,7 +538,7 @@ TEST(log)
         log(src, dst);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size, size, CV_32F);
 
         GPU_ON;
@@ -564,7 +564,7 @@ TEST(exp)
         exp(src, dst);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size, size, CV_32F);
 
         GPU_ON;
@@ -591,8 +591,8 @@ TEST(mulSpectrums)
         mulSpectrums(src1, src2, dst, 0, true);
         CPU_OFF;
 
-        d_src1 = src1;
-        d_src2 = src2;
+        d_src1.upload(src1);
+        d_src2.upload(src2);
         d_dst.create(size, size, CV_32FC2);
 
         GPU_ON;
@@ -618,7 +618,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size * 2, size * 2, CV_8U);
 
         GPU_ON;
@@ -636,7 +636,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size / 2, size / 2, CV_8U);
 
         GPU_ON;
@@ -654,7 +654,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size * 2, size * 2, CV_8U);
 
         GPU_ON;
@@ -672,7 +672,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size / 2, size / 2, CV_8U);
 
         GPU_ON;
@@ -690,7 +690,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size * 2, size * 2, CV_8U);
 
         GPU_ON;
@@ -708,7 +708,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size / 2, size / 2, CV_8U);
 
         GPU_ON;
@@ -726,7 +726,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size * 2, size * 2, CV_8U);
 
         GPU_ON;
@@ -744,7 +744,7 @@ TEST(resize)
         resize(src, dst, dst.size());
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size / 2, size / 2, CV_8U);
 
         GPU_ON;
@@ -900,7 +900,7 @@ TEST(erode)
         erode(src, dst, ker);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(d_src.size(), d_src.type());
 
         GPU_ON;
@@ -925,7 +925,7 @@ TEST(threshold)
         threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size, size, CV_8U);
 
         GPU_ON;
@@ -944,7 +944,7 @@ TEST(threshold)
         threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size, size, CV_32F);
 
         GPU_ON;
@@ -969,7 +969,7 @@ TEST(pow)
         pow(src, -2.0, dst);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(size, size, CV_32F);
 
         GPU_ON;
@@ -1004,7 +1004,7 @@ TEST(projectPoints)
         projectPoints(src, rvec, tvec, camera_mat, Mat::zeros(1, 8, CV_32F), dst);
         CPU_OFF;
 
-        d_src = src;
+        d_src.upload(src);
         d_dst.create(1, size, CV_32FC2);
 
         GPU_ON;
@@ -1491,9 +1491,9 @@ TEST(gemm)
         gemm(src1, src2, 1.0, src3, 1.0, dst);
         CPU_OFF;
 
-        d_src1 = src1;
-        d_src2 = src2;
-        d_src3 = src3;
+        d_src1.upload(src1);
+        d_src2.upload(src2);
+        d_src3.upload(src3);
         d_dst.create(d_src1.size(), d_src1.type());
 
         GPU_ON;
