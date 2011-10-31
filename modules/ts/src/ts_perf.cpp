@@ -385,6 +385,7 @@ const char *command_line_keys =
     "{   |perf_max_outliers   |8        |percent of allowed outliers}"
     "{   |perf_min_samples    |10       |minimal required numer of samples}"
     "{   |perf_seed           |809564   |seed for random numbers generator}"
+    "{   |perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
     #if ANDROID
     "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
@@ -400,6 +401,7 @@ double       param_max_deviation;
 unsigned int param_min_samples;
 uint64       param_seed;
 double       param_time_limit;
+int          param_tbb_nthreads;
 #if ANDROID
 int          param_affinity_mask;
 
@@ -427,6 +429,8 @@ void TestBase::Init(int argc, const char* const argv[])
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
     param_seed = args.get<uint64>("perf_seed");
     param_time_limit = std::max(0., args.get<double>("perf_time_limit"));
+
+    param_tbb_nthreads  = args.get<int>("perf_tbb_nthreads");
 #if ANDROID
     param_affinity_mask = args.get<int>("perf_affinity_mask");
 #endif
@@ -769,6 +773,12 @@ void TestBase::reportMetrics(bool toJUnitXML)
 
 void TestBase::SetUp()
 {
+#ifdef HAVE_TBB
+    if (param_tbb_nthreads > 0) {
+        p_tbb_initializer.release();
+        p_tbb_initializer=new tbb::task_scheduler_init(param_tbb_nthreads);
+    }
+#endif
 #if ANDROID
     if (param_affinity_mask)
         setCurrentThreadAffinityMask(param_affinity_mask);
@@ -796,6 +806,9 @@ void TestBase::TearDown()
         if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
         reportMetrics(true);
     }
+#ifdef HAVE_TBB
+    p_tbb_initializer.release();
+#endif
 }
 
 std::string TestBase::getDataPath(const std::string& relativePath)
@@ -879,6 +892,17 @@ TestBase::_declareHelper& TestBase::_declareHelper::time(double timeLimitSecs)
     test->times.clear();
     test->currentIter = (unsigned int)-1;
     test->timeLimit = (int64)(timeLimitSecs * cv::getTickFrequency());
+    return *this;
+}
+
+TestBase::_declareHelper& TestBase::_declareHelper::tbb_threads(int n)
+{
+#ifdef HAVE_TBB
+    if (n > 0) {
+        test->p_tbb_initializer.release();
+        test->p_tbb_initializer=new tbb::task_scheduler_init(n);
+    }
+#endif
     return *this;
 }
 

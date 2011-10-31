@@ -4,6 +4,10 @@
 #include "opencv2/core/core.hpp"
 #include "ts_gtest.h"
 
+#ifdef HAVE_TBB
+#include "tbb/task_scheduler_init.h"
+#endif
+
 #if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
 #include <android/log.h>
 
@@ -283,6 +287,7 @@ private:
 
         _declareHelper& iterations(int n);
         _declareHelper& time(double timeLimitSecs);
+        _declareHelper& tbb_threads(int n);
     private:
         TestBase* test;
         _declareHelper(TestBase* t);
@@ -291,6 +296,10 @@ private:
         friend class TestBase;
     };
     friend class _declareHelper;
+
+#ifdef HAVE_TBB
+    cv::Ptr<tbb::task_scheduler_init> p_tbb_initializer;
+#endif
 
 public:
     _declareHelper declare;
