@@ -18,7 +18,7 @@ if __name__ == "__main__":
             files.append(os.path.abspath(arg))
 
     html = None
-    for f in files:
+    for f in sorted(files):
         try:
             fobj = open(f)
             if not fobj:
