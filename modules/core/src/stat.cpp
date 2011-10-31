@@ -193,12 +193,19 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 
 typedef int (*SumFunc)(const uchar*, const uchar* mask, uchar*, int, int);
 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+static SumFunc sumTab[] =
+{
+    (SumFunc)tegra::sum8u, (SumFunc)sum8s, (SumFunc)sum16u, (SumFunc)sum16s,
+    (SumFunc)sum32s, (SumFunc)tegra::sum32f, (SumFunc)sum64f, 0
+};
+#else
 static SumFunc sumTab[] =
 {
     (SumFunc)sum8u, (SumFunc)sum8s, (SumFunc)sum16u, (SumFunc)sum16s,
     (SumFunc)sum32s, (SumFunc)sum32f, (SumFunc)sum64f, 0
 };
-
+#endif
         
 template<typename T>
 static int countNonZero_(const T* src, int len )
