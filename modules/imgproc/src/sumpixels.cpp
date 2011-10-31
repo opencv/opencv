@@ -211,7 +211,19 @@ void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, QT* sqs
                         ST* tilted, size_t tiltedstep, Size size, int cn ) \
 { integral_(src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tiltedstep, size, cn); }
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+DEF_INTEGRAL_FUNC(8u32sOCV, uchar, int, double)
+
+void integral_8u32s(uchar* src, size_t srcstep, int* sum, size_t sumstep, double* sqsum, size_t sqsumstep,
+                        int* tilted, size_t tiltedstep, Size size, int cn )
+{
+    if (tegra::integral_8u32s(src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tiltedstep, size, cn))
+        return;
+    integral_8u32sOCV(src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tiltedstep, size, cn);
+}
+#else
 DEF_INTEGRAL_FUNC(8u32s, uchar, int, double)
+#endif
 DEF_INTEGRAL_FUNC(8u32f, uchar, float, double)
 DEF_INTEGRAL_FUNC(8u64f, uchar, double, double)
 DEF_INTEGRAL_FUNC(32f, float, float, double)

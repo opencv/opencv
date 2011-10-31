@@ -85,7 +85,7 @@ PERF_TEST_P( Size_MatType_OutMatDepth, integral3,
 
     declare.in(src, WARMUP_RNG).out(sum, sqsum, tilted);
     
-    TEST_CYCLE(100) { integral(src, sum, sqsum, sdepth);  }
+    TEST_CYCLE(100) { integral(src, sum, sqsum, tilted, sdepth);  }
     
     SANITY_CHECK(sum);
     SANITY_CHECK(sqsum);
