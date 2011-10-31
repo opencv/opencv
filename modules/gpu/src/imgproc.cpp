@@ -110,14 +110,15 @@ void cv::gpu::CannyBuf::release() { throw_nogpu(); }
 namespace cv { namespace gpu {  namespace imgproc
 {
     template <typename T> void remap_gpu(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, 
-                                         int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
+                                         int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 }}}
 
 void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode, const Scalar& borderValue, Stream& stream)
 {
     using namespace cv::gpu::imgproc;
 
-    typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
+    typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, 
+        int borderMode, const float* borderValue, cudaStream_t stream, int cc);
     static const caller_t callers[6][4] = 
     {
         {remap_gpu<uchar>, 0/*remap_gpu<uchar2>*/, remap_gpu<uchar3>, remap_gpu<uchar4>},
@@ -145,7 +146,10 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     Scalar_<float> borderValueFloat;
     borderValueFloat = borderValue;
 
-    func(src, xmap, ymap, dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream));
+    DeviceInfo info;
+    int cc = info.majorVersion() * 10 + info.minorVersion();
+
+    func(src, xmap, ymap, dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream), cc);
 }
 
 ////////////////////////////////////////////////////////////////////////
