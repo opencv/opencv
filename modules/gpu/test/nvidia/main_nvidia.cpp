@@ -283,7 +283,7 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
     }
 }
 
-static void devNullOutput(const char *msg)
+static void devNullOutput(const std::string& msg)
 {
 
 }
