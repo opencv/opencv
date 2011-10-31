@@ -66,10 +66,10 @@ namespace cv { namespace gpu
         explicit GpuMat(const Mat& m);
 
         //! pefroms blocking upload data to GpuMat.
-        void upload(const cv::Mat& m);
+        void upload(const Mat& m);
 
         //! downloads data from device to host memory. Blocking calls.
-        void download(cv::Mat& m) const;
+        void download(Mat& m) const;
         operator Mat() const
         {
             Mat m;
