@@ -287,7 +287,7 @@ private:
 
         _declareHelper& iterations(int n);
         _declareHelper& time(double timeLimitSecs);
-        _declareHelper& tbb_threads(int n);
+        _declareHelper& tbb_threads(int n = -1);
     private:
         TestBase* test;
         _declareHelper(TestBase* t);

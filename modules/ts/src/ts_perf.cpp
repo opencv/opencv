@@ -898,10 +898,9 @@ TestBase::_declareHelper& TestBase::_declareHelper::time(double timeLimitSecs)
 TestBase::_declareHelper& TestBase::_declareHelper::tbb_threads(int n)
 {
 #ifdef HAVE_TBB
-    if (n > 0) {
-        test->p_tbb_initializer.release();
+    test->p_tbb_initializer.release();
+    if (n > 0)
         test->p_tbb_initializer=new tbb::task_scheduler_init(n);
-    }
 #endif
     return *this;
 }
