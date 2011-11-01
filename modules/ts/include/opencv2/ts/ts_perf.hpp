@@ -101,6 +101,17 @@ public:\
     }\
     *os << "UNKNOWN";\
   }\
+  struct Container{\
+    typedef class_name value_type;\
+      Container(class_name* first, size_t len): _begin(first), _end(first+len){}\
+      const class_name* begin() const {return _begin;}\
+      const class_name* end() const {return _end;}\
+    private: class_name *_begin, *_end;\
+  };\
+  static Container all(){\
+    static class_name vals[] = {__VA_ARGS__};\
+    return Container(vals, sizeof(vals)/sizeof(vals[0]));\
+  }\
 private: int _val;\
 };\
 inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); }

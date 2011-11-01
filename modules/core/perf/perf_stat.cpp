@@ -386,7 +386,7 @@ PERF_TEST_P( Size_MatType_ROp, reduceR,
     testing::Combine( 
         testing::Values( TYPICAL_MAT_SIZES ), 
         testing::Values( TYPICAL_MAT_TYPES ),
-        testing::Values( CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN )
+        testing::ValuesIn(ROp::all())
     )
 )
 {
@@ -414,7 +414,7 @@ PERF_TEST_P( Size_MatType_ROp, reduceC,
     testing::Combine( 
         testing::Values( TYPICAL_MAT_SIZES ), 
         testing::Values( TYPICAL_MAT_TYPES ),
-        testing::Values( CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN )
+        testing::ValuesIn(ROp::all())
     )
 )
 {

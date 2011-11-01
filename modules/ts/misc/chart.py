@@ -40,7 +40,30 @@ def getValueParams(test):
         param = param[1:]
     if param.endswith(")"):
         param = param[:-1]
-    return [p.strip() for p in param.split(",")]
+    args = []
+    prev_pos = 0
+    start = 0
+    balance = 0
+    while True:
+        idx = param.find(",", prev_pos)
+        if idx < 0:
+            break
+        idxlb = param.find("(", prev_pos, idx)
+        while idxlb >= 0:
+            balance += 1
+            idxlb = param.find("(", idxlb+1, idx)
+        idxrb = param.find(")", prev_pos, idx)
+        while idxrb >= 0:
+            balance -= 1
+            idxrb = param.find(")", idxrb+1, idx)
+        assert(balance >= 0)
+        if balance == 0:
+            args.append(param[start:idx].strip())
+            start = idx + 1
+        prev_pos = idx + 1
+    args.append(param[start:].strip())
+    return args
+    #return [p.strip() for p in param.split(",")]
 
 def nextPermutation(indexes, lists, x, y):
     idx = len(indexes)-1

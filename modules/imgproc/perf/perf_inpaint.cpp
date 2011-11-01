@@ -19,7 +19,8 @@ CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
 PERF_TEST_P( InpaintArea_InpaintingMethod, inpaint,
              testing::Combine(
                  SZ_ALL_SMALL,
-                 testing::Values( (int)INPAINT_NS, (int)INPAINT_TELEA ))
+                 testing::ValuesIn(InpaintingMethod::all())
+             )
            )
 {
     Mat src = imread( getDataPath("gpu/hog/road.png") );
