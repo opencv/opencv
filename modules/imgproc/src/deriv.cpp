@@ -478,6 +478,16 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         ddepth = src.depth();
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (scale == 1.0 && delta == 0)
+    {
+        if (ksize == 3 && tegra::sobel3x3(src, dst, dx, dy, borderType))
+            return;
+        if (ksize == -1 && tegra::scharr(src, dst, dx, dy, borderType))
+            return;
+    }
+#endif
     
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     if(dx < 3 && dy < 3 && src.channels() == 1 && borderType == 1)
@@ -511,6 +521,12 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         ddepth = src.depth();
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (scale == 1.0 && delta == 0)
+        if (tegra::scharr(src, dst, dx, dy, borderType))
+            return;
+#endif
     
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     if(dx < 2 && dy < 2 && src.channels() == 1 && borderType == 1)
