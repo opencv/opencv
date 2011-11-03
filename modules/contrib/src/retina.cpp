@@ -280,7 +280,7 @@ void Retina::run(const cv::Mat &inputMatToConvert)
 	// first convert input image to the compatible format : std::valarray<float>
 	const bool colorMode = _convertCvMat2ValarrayBuffer(inputMatToConvert, _inputBuffer);
 	// process the retina
-	if (!_retinaFilter->runFilter(_inputBuffer, colorMode, false, colorMode, false))
+	if (!_retinaFilter->runFilter(_inputBuffer, colorMode, false, _retinaParameters.OPLandIplParvo.colorMode && colorMode, false))
 		throw cv::Exception(-1, "Retina cannot be applied, wrong input buffer size", "Retina::run", "Retina.h", 0);
 }
 
