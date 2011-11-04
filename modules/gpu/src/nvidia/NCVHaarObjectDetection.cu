@@ -59,6 +59,7 @@
 #include <cstdio>
 
 #include "NCV.hpp"
+#include "NCVAlg.hpp"
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVRuntimeTemplates.hpp"
 #include "NCVHaarObjectDetection.hpp"
@@ -83,11 +84,6 @@ inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
     s_Data[pos] = 0;
     pos += K_WARP_SIZE;
     s_Data[pos] = idata;
-
-    //for(Ncv32u offset = 1; offset < K_WARP_SIZE; offset <<= 1)
-    //{
-    //    s_Data[pos] += s_Data[pos - offset];
-    //}
 
     s_Data[pos] += s_Data[pos - 1];
     s_Data[pos] += s_Data[pos - 2];
@@ -231,60 +227,6 @@ __device__ Ncv32u getElemIImg(Ncv32u x, Ncv32u *d_IImg)
     {
         return d_IImg[x];
     }
-}
-
-
-__device__ Ncv32f reduceSpecialization(Ncv32f partialSum)
-{
-    __shared__ volatile Ncv32f reductor[NUM_THREADS_CLASSIFIERPARALLEL];
-    reductor[threadIdx.x] = partialSum;
-    __syncthreads();
-
-#if defined CPU_FP_COMPLIANCE
-    if (!threadIdx.x)
-    {
-        Ncv32f sum = 0.0f;
-        for (int i=0; i<NUM_THREADS_CLASSIFIERPARALLEL; i++)
-        {
-            sum += reductor[i];
-        }
-        reductor[0] = sum;
-    }
-#else
-
-#if NUM_THREADS_CLASSIFIERPARALLEL_LOG2 >= 8
-    if (threadIdx.x < 128)
-    {
-        reductor[threadIdx.x] += reductor[threadIdx.x + 128]; 
-    }
-    __syncthreads();
-#endif
-#if NUM_THREADS_CLASSIFIERPARALLEL_LOG2 >= 7
-    if (threadIdx.x < 64)
-    {
-        reductor[threadIdx.x] += reductor[threadIdx.x + 64]; 
-    }
-    __syncthreads();
-#endif
-
-    if (threadIdx.x < 32)
-    {
-#if NUM_THREADS_CLASSIFIERPARALLEL_LOG2 >= 6
-        reductor[threadIdx.x] += reductor[threadIdx.x + 32];
-#endif
-#if NUM_THREADS_CLASSIFIERPARALLEL_LOG2 >= 5
-        reductor[threadIdx.x] += reductor[threadIdx.x + 16];
-#endif
-        reductor[threadIdx.x] += reductor[threadIdx.x + 8];
-        reductor[threadIdx.x] += reductor[threadIdx.x + 4];
-        reductor[threadIdx.x] += reductor[threadIdx.x + 2];
-        reductor[threadIdx.x] += reductor[threadIdx.x + 1];
-    }
-#endif
-
-    __syncthreads();
-
-    return reductor[0];
 }
 
 
@@ -623,7 +565,14 @@ __global__ void applyHaarClassifierClassifierParallel(Ncv32u *d_IImg, Ncv32u IIm
             curRootNodeOffset += NUM_THREADS_CLASSIFIERPARALLEL;
         }
 
-        Ncv32f finalStageSum = reduceSpecialization(curStageSum);
+        struct functorAddValues
+        {
+            __device__ void reduce(Ncv32f &in1out, Ncv32f &in2)
+            {
+                in1out += in2;
+            }
+        };
+        Ncv32f finalStageSum = subReduce<Ncv32f, functorAddValues, NUM_THREADS_CLASSIFIERPARALLEL>(curStageSum);
 
         if (finalStageSum < stageThreshold)
         {
