@@ -540,7 +540,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
         avcodec_thread_init(enc, get_number_of_cpus());
 
-        #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 4, 0)
+        #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
             #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
         #endif
         
@@ -631,7 +631,7 @@ bool CvCapture_FFMPEG::grabFrame()
 		        continue;
     		}
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
 			avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet); 
 #else
 	#if LIBAVFORMAT_BUILD > 4628
@@ -881,7 +881,7 @@ struct CvVideoWriter_FFMPEG
 
 static const char * icvFFMPEGErrStr(int err)
 {
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
     switch(err) {
  		case AVERROR_BSF_NOT_FOUND:
  			return "Bitstream filter not found";
@@ -1333,7 +1333,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
 	/* auto detect the output format from the name and fourcc code. */
 
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
 	fmt = av_guess_format(NULL, filename, NULL);
 #else
 	fmt = guess_format(NULL, filename, NULL);
@@ -1361,7 +1361,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
 
     // alloc memory for context
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
 	oc = avformat_alloc_context();
 #else
 	oc = av_alloc_format_context();
