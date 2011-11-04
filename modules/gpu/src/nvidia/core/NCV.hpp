@@ -794,9 +794,10 @@ public:
 
     T &at(Ncv32u x, Ncv32u y) const
     {
-        if (x >= this->_width || y >= this->_height)
+        NcvBool bOutRange = (x >= this->_width || y >= this->_height);
+        ncvAssertPrintCheck(!bOutRange, "Error addressing matrix at [" << x << ", " << y << "]");
+        if (bOutRange)
         {
-            printf("Error addressing matrix at [%d, %d]\n", x, y);
             return *this->_ptr;
         }
         return ((T *)((Ncv8u *)this->_ptr + y * this->_pitch))[x];
