@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -46,6 +46,7 @@
 #include "NCVPyramid.hpp"
 #include "NCVPixelOperations.hpp"
 
+#ifdef _WIN32
 
 template<typename T, Ncv32u CN> struct __average4_CN {static T _average4_CN(const T &p00, const T &p01, const T &p10, const T &p11);};
 
@@ -395,3 +396,5 @@ template class NCVImagePyramid<uint4>;
 template class NCVImagePyramid<float1>;
 template class NCVImagePyramid<float3>;
 template class NCVImagePyramid<float4>;
+
+#endif //_WIN32

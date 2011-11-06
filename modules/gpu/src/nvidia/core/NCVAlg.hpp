@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -50,6 +50,36 @@ static T divUp(T a, T b)
 {
     return (a + b - 1) / b;
 }
+
+
+template<typename T>
+struct functorAddValues
+{
+    static __device__ __inline__ void reduce(T &in1out, T &in2)
+    {
+        in1out += in2;
+    }
+};
+
+
+template<typename T>
+struct functorMinValues
+{
+    static __device__ __inline__ void reduce(T &in1out, T &in2)
+    {
+        in1out = in1out > in2 ? in2 : in1out;
+    }
+};
+
+
+template<typename T>
+struct functorMaxValues
+{
+    static __device__ __inline__ void reduce(T &in1out, T &in2)
+    {
+        in1out = in1out > in2 ? in1out : in2;
+    }
+};
 
 
 template<typename Tdata, class Tfunc, Ncv32u nThreads>

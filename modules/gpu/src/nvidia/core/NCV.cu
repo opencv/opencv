@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -278,6 +278,7 @@ NCVMemStackAllocator::NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, 
 {
     NcvBool bProperAlignment = (alignment & (alignment-1)) == 0;
     ncvAssertPrintCheck(bProperAlignment, "NCVMemStackAllocator ctor:: _alignment not power of 2");
+    ncvAssertPrintCheck(memT != NCVMemoryTypeNone, "NCVMemStackAllocator ctor:: Incorrect allocator type");
 
     allocBegin = NULL;
 
@@ -295,6 +296,7 @@ NCVMemStackAllocator::NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, 
         case NCVMemoryTypeHostPageable:
             allocBegin = (Ncv8u *)malloc(capacity);
             break;
+        default:;
         }
     }
     else
@@ -335,6 +337,7 @@ NCVMemStackAllocator::~NCVMemStackAllocator()
             case NCVMemoryTypeHostPageable:
                 free(allocBegin);
                 break;
+            default:;
             }
         }
 
@@ -455,6 +458,7 @@ NCVStatus NCVMemNativeAllocator::alloc(NCVMemSegment &seg, size_t size)
     case NCVMemoryTypeHostPageable:
         seg.begin.ptr = (Ncv8u *)malloc(size);
         break;
+    default:;
     }
 
     this->currentSize += alignUp(size, this->_alignment);
@@ -487,6 +491,7 @@ NCVStatus NCVMemNativeAllocator::dealloc(NCVMemSegment &seg)
     case NCVMemoryTypeHostPageable:
         free(seg.begin.ptr);
         break;
+    default:;
     }
 
     seg.clear();
@@ -568,13 +573,13 @@ typedef struct _NcvTimeMoment NcvTimeMoment;
         return 1000.0 * 2 * ((t2->moment) - (t1->moment)) / (t1->freq + t2->freq);
     }
 
-#elif defined(__GNUC__) 
+#elif defined(__GNUC__)
 
     #include <sys/time.h>
 
     typedef struct _NcvTimeMoment
     {
-        struct timeval tv; 
+        struct timeval tv;
         struct timezone tz;
     } NcvTimeMoment;
 

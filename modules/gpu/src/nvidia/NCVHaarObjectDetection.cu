@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -198,7 +198,7 @@ __device__ HaarClassifierNode128 getClassifierNode(Ncv32u iNode, HaarClassifierN
 
 
 template <NcvBool tbCacheTextureCascade>
-__device__ void getFeature(Ncv32u iFeature, HaarFeature64 *d_Features, 
+__device__ void getFeature(Ncv32u iFeature, HaarFeature64 *d_Features,
                            Ncv32f *weight,
                            Ncv32u *rectX, Ncv32u *rectY, Ncv32u *rectWidth, Ncv32u *rectHeight)
 {
@@ -321,9 +321,9 @@ __global__ void applyHaarClassifierAnchorParallel(Ncv32u *d_IImg, Ncv32u IImgStr
                  d_inMask != d_outMask &&
                  d_inMask[maskOffset] == OBJDET_MASK_ELEMENT_INVALID_32U))
             {
-                if (tbDoAtomicCompaction) 
+                if (tbDoAtomicCompaction)
                 {
-                    bInactiveThread = true; 
+                    bInactiveThread = true;
                 }
                 else
                 {
@@ -565,14 +565,7 @@ __global__ void applyHaarClassifierClassifierParallel(Ncv32u *d_IImg, Ncv32u IIm
             curRootNodeOffset += NUM_THREADS_CLASSIFIERPARALLEL;
         }
 
-        struct functorAddValues
-        {
-            __device__ void reduce(Ncv32f &in1out, Ncv32f &in2)
-            {
-                in1out += in2;
-            }
-        };
-        Ncv32f finalStageSum = subReduce<Ncv32f, functorAddValues, NUM_THREADS_CLASSIFIERPARALLEL>(curStageSum);
+        Ncv32f finalStageSum = subReduce<Ncv32f, functorAddValues<Ncv32f>, NUM_THREADS_CLASSIFIERPARALLEL>(curStageSum);
 
         if (finalStageSum < stageThreshold)
         {
@@ -1125,7 +1118,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
     }
     if (curStop > compactEveryNstage && curStop - stageMiddleSwitch > compactEveryNstage / 2)
     {
-        pixParallelStageStops[pixParallelStageStops.size()-1] = 
+        pixParallelStageStops[pixParallelStageStops.size()-1] =
             (stageMiddleSwitch - (curStop - 2 * compactEveryNstage)) / 2;
     }
     pixParallelStageStops.push_back(stageMiddleSwitch);

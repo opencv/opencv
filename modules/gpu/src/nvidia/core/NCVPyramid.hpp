@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -47,6 +47,7 @@
 #include <vector>
 #include "NCV.hpp"
 
+#ifdef _WIN32
 
 template <class T>
 class NCV_EXPORTS NCVMatrixStack
@@ -93,5 +94,6 @@ private:
     Ncv32u nLayers;
 };
 
+#endif //_WIN32
 
 #endif //_ncvpyramid_hpp_
