@@ -45,6 +45,11 @@
 
 //#define DUMP
 
+#define OPTICAL_FLOW_DUMP_FILE            "opticalflow/opticalflow_gold.bin"
+#define OPTICAL_FLOW_DUMP_FILE_CC20       "opticalflow/opticalflow_gold_cc20.bin"
+#define INTERPOLATE_FRAMES_DUMP_FILE      "opticalflow/interpolate_frames_gold.bin"
+#define INTERPOLATE_FRAMES_DUMP_FILE_CC20 "opticalflow/interpolate_frames_gold_cc20.bin"
+
 struct BroxOpticalFlow : testing::TestWithParam< cv::gpu::DeviceInfo >
 {
     cv::gpu::DeviceInfo devInfo;
@@ -71,7 +76,13 @@ struct BroxOpticalFlow : testing::TestWithParam< cv::gpu::DeviceInfo >
 
 #ifndef DUMP
 
-        std::ifstream f((std::string(cvtest::TS::ptr()->get_data_path()) + "opticalflow/opticalflow_gold.bin").c_str(), std::ios_base::binary);
+        std::string fname(cvtest::TS::ptr()->get_data_path());
+        if (devInfo.majorVersion() >= 2)
+            fname += OPTICAL_FLOW_DUMP_FILE_CC20;
+        else
+            fname += OPTICAL_FLOW_DUMP_FILE;
+
+        std::ifstream f(fname.c_str(), std::ios_base::binary);
 
         int rows, cols;
 
@@ -118,7 +129,13 @@ TEST_P(BroxOpticalFlow, Regression)
 
 #else
 
-    std::ofstream f((std::string(cvtest::TS::ptr()->get_data_path()) + "opticalflow/opticalflow_gold.bin").c_str(), std::ios_base::binary);
+    std::string fname(cvtest::TS::ptr()->get_data_path());
+    if (devInfo.majorVersion() >= 2)
+        fname += OPTICAL_FLOW_DUMP_FILE_CC20;
+    else
+        fname += OPTICAL_FLOW_DUMP_FILE;
+
+    std::ofstream f(fname.c_str(), std::ios_base::binary);
 
     f.write((char*)&u.rows, sizeof(u.rows));
     f.write((char*)&u.cols, sizeof(u.cols));
@@ -133,11 +150,6 @@ TEST_P(BroxOpticalFlow, Regression)
 }
 
 INSTANTIATE_TEST_CASE_P(Video, BroxOpticalFlow, testing::ValuesIn(devices()));
-
-
-
-
-
 
 struct InterpolateFrames : testing::TestWithParam< cv::gpu::DeviceInfo >
 {
@@ -164,7 +176,13 @@ struct InterpolateFrames : testing::TestWithParam< cv::gpu::DeviceInfo >
 
 #ifndef DUMP
 
-        std::ifstream f((std::string(cvtest::TS::ptr()->get_data_path()) + "opticalflow/interpolate_frames_gold.bin").c_str(), std::ios_base::binary);
+        std::string fname(cvtest::TS::ptr()->get_data_path());
+        if (devInfo.majorVersion() >= 2)
+            fname += INTERPOLATE_FRAMES_DUMP_FILE_CC20;
+        else
+            fname += INTERPOLATE_FRAMES_DUMP_FILE;
+
+        std::ifstream f(fname.c_str(), std::ios_base::binary);
 
         int rows, cols;
 
@@ -211,7 +229,13 @@ TEST_P(InterpolateFrames, Regression)
 
 #else
 
-    std::ofstream f((std::string(cvtest::TS::ptr()->get_data_path()) + "opticalflow/interpolate_frames_gold.bin").c_str(), std::ios_base::binary);
+    std::string fname(cvtest::TS::ptr()->get_data_path());
+    if (devInfo.majorVersion() >= 2)
+        fname += INTERPOLATE_FRAMES_DUMP_FILE_CC20;
+    else
+        fname += INTERPOLATE_FRAMES_DUMP_FILE;
+
+    std::ofstream f(fname.c_str(), std::ios_base::binary);
 
     f.write((char*)&newFrame.rows, sizeof(newFrame.rows));
     f.write((char*)&newFrame.cols, sizeof(newFrame.cols));
