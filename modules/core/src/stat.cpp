@@ -193,19 +193,14 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 
 typedef int (*SumFunc)(const uchar*, const uchar* mask, uchar*, int, int);
 
-#ifdef HAVE_TEGRA_OPTIMIZATION  
 static SumFunc sumTab[] =
 {
-    (SumFunc)tegra::sum8u, (SumFunc)sum8s, (SumFunc)sum16u, (SumFunc)sum16s,
-    (SumFunc)sum32s, (SumFunc)tegra::sum32f, (SumFunc)sum64f, 0
+    (SumFunc)GET_OPTIMIZED(sum8u), (SumFunc)sum8s,
+    (SumFunc)sum16u, (SumFunc)sum16s,
+    (SumFunc)sum32s,
+    (SumFunc)GET_OPTIMIZED(sum32f), (SumFunc)sum64f,
+    0
 };
-#else
-static SumFunc sumTab[] =
-{
-    (SumFunc)sum8u, (SumFunc)sum8s, (SumFunc)sum16u, (SumFunc)sum16s,
-    (SumFunc)sum32s, (SumFunc)sum32f, (SumFunc)sum64f, 0
-};
-#endif
         
 template<typename T>
 static int countNonZero_(const T* src, int len )
@@ -709,21 +704,14 @@ static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, 
     
 typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, size_t*, int, size_t);
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
 static MinMaxIdxFunc minmaxTab[] =
 {
-    (MinMaxIdxFunc)tegra::minMaxIdx_8u, (MinMaxIdxFunc)tegra::minMaxIdx_8s, (MinMaxIdxFunc)tegra::minMaxIdx_16u,
-    (MinMaxIdxFunc)tegra::minMaxIdx_16s, (MinMaxIdxFunc)tegra::minMaxIdx_32s, (MinMaxIdxFunc)tegra::minMaxIdx_32f,
-    (MinMaxIdxFunc)tegra::minMaxIdx_64f, 0
+    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8s),
+    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16s),
+    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32s),
+    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32f), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_64f),
+    0
 };
-#else
-static MinMaxIdxFunc minmaxTab[] =
-{
-    (MinMaxIdxFunc)minMaxIdx_8u, (MinMaxIdxFunc)minMaxIdx_8s, (MinMaxIdxFunc)minMaxIdx_16u,
-    (MinMaxIdxFunc)minMaxIdx_16s, (MinMaxIdxFunc)minMaxIdx_32s, (MinMaxIdxFunc)minMaxIdx_32f,
-    (MinMaxIdxFunc)minMaxIdx_64f, 0
-};
-#endif
     
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {

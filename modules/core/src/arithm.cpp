@@ -1124,55 +1124,45 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static BinaryFunc maxTab[] =
 {
-    (BinaryFunc)max8u, (BinaryFunc)max8s, (BinaryFunc)max16u, (BinaryFunc)max16s,
-    (BinaryFunc)max32s, (BinaryFunc)max32f, (BinaryFunc)max64f, 0
+    (BinaryFunc)GET_OPTIMIZED(max8u), (BinaryFunc)GET_OPTIMIZED(max8s),
+    (BinaryFunc)GET_OPTIMIZED(max16u), (BinaryFunc)GET_OPTIMIZED(max16s),
+    (BinaryFunc)GET_OPTIMIZED(max32s),
+    (BinaryFunc)GET_OPTIMIZED(max32f), (BinaryFunc)max64f,
+    0
 };
 
 static BinaryFunc minTab[] =
 {
-    (BinaryFunc)min8u, (BinaryFunc)min8s, (BinaryFunc)min16u, (BinaryFunc)min16s,
-    (BinaryFunc)min32s, (BinaryFunc)min32f, (BinaryFunc)min64f, 0
+    (BinaryFunc)GET_OPTIMIZED(min8u), (BinaryFunc)GET_OPTIMIZED(min8s),
+    (BinaryFunc)GET_OPTIMIZED(min16u), (BinaryFunc)GET_OPTIMIZED(min16s),
+    (BinaryFunc)GET_OPTIMIZED(min32s),
+    (BinaryFunc)GET_OPTIMIZED(min32f), (BinaryFunc)min64f,
+    0
 };
 
 }
 
 void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = 
-#ifdef HAVE_TEGRA_OPTIMIZATION  
-		(BinaryFunc)tegra::
-#endif
-		and8u;
+    BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(and8u);
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = 
-#ifdef HAVE_TEGRA_OPTIMIZATION  
-		(BinaryFunc)tegra::
-#endif
-		or8u;
+    BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(or8u);
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = 
-#ifdef HAVE_TEGRA_OPTIMIZATION  
-		(BinaryFunc)tegra::
-#endif
-		xor8u;
+    BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(xor8u);
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = 
-#ifdef HAVE_TEGRA_OPTIMIZATION  
-		(BinaryFunc)tegra::
-#endif
-		not8u;
+    BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(not8u);
     binary_op(a, a, c, mask, &f, true);
 }
 
@@ -1453,38 +1443,31 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 }
 
-#ifdef HAVE_TEGRA_OPTIMIZATION  
 static BinaryFunc addTab[] =
 {
-    (BinaryFunc)tegra::add8u, (BinaryFunc)add8s, (BinaryFunc)add16u, (BinaryFunc)add16s,
-    (BinaryFunc)add32s, (BinaryFunc)add32f, (BinaryFunc)add64f, 0
+    (BinaryFunc)GET_OPTIMIZED(add8u), (BinaryFunc)GET_OPTIMIZED(add8s),
+    (BinaryFunc)GET_OPTIMIZED(add16u), (BinaryFunc)GET_OPTIMIZED(add16s),
+    (BinaryFunc)GET_OPTIMIZED(add32s),
+    (BinaryFunc)GET_OPTIMIZED(add32f), (BinaryFunc)add64f,
+    0
 };
 
 static BinaryFunc subTab[] =
 {
-    (BinaryFunc)tegra::sub8u, (BinaryFunc)sub8s, (BinaryFunc)sub16u, (BinaryFunc)sub16s,
-    (BinaryFunc)sub32s, (BinaryFunc)sub32f, (BinaryFunc)sub64f, 0
+    (BinaryFunc)GET_OPTIMIZED(sub8u), (BinaryFunc)GET_OPTIMIZED(sub8s),
+    (BinaryFunc)GET_OPTIMIZED(sub16u), (BinaryFunc)GET_OPTIMIZED(sub16s),
+    (BinaryFunc)GET_OPTIMIZED(sub32s),
+    (BinaryFunc)GET_OPTIMIZED(sub32f), (BinaryFunc)sub64f,
+    0
 };
-
-#else
-static BinaryFunc addTab[] =
-{
-    (BinaryFunc)add8u, (BinaryFunc)add8s, (BinaryFunc)add16u, (BinaryFunc)add16s,
-    (BinaryFunc)add32s, (BinaryFunc)add32f, (BinaryFunc)add64f, 0
-};
-
-static BinaryFunc subTab[] =
-{
-    (BinaryFunc)sub8u, (BinaryFunc)sub8s, (BinaryFunc)sub16u, (BinaryFunc)sub16s,
-    (BinaryFunc)sub32s, (BinaryFunc)sub32f, (BinaryFunc)sub64f, 0
-};
-#endif
 
 static BinaryFunc absdiffTab[] =
 {
-    (BinaryFunc)absdiff8u, (BinaryFunc)absdiff8s, (BinaryFunc)absdiff16u,
-    (BinaryFunc)absdiff16s, (BinaryFunc)absdiff32s, (BinaryFunc)absdiff32f,
-    (BinaryFunc)absdiff64f, 0
+    (BinaryFunc)GET_OPTIMIZED(absdiff8u), (BinaryFunc)GET_OPTIMIZED(absdiff8s),
+    (BinaryFunc)GET_OPTIMIZED(absdiff16u), (BinaryFunc)GET_OPTIMIZED(absdiff16s),
+    (BinaryFunc)GET_OPTIMIZED(absdiff32s),
+    (BinaryFunc)GET_OPTIMIZED(absdiff32f), (BinaryFunc)absdiff64f,
+    0
 };
 
 }
@@ -2094,9 +2077,11 @@ static void cmp64f(const double* src1, size_t step1, const double* src2, size_t 
 
 static BinaryFunc cmpTab[] =
 {
-    (BinaryFunc)cmp8u, (BinaryFunc)cmp8s, (BinaryFunc)cmp16u,
-    (BinaryFunc)cmp16s, (BinaryFunc)cmp32s, (BinaryFunc)cmp32f,
-    (BinaryFunc)cmp64f, 0
+    (BinaryFunc)GET_OPTIMIZED(cmp8u), (BinaryFunc)GET_OPTIMIZED(cmp8s),
+    (BinaryFunc)GET_OPTIMIZED(cmp16u), (BinaryFunc)GET_OPTIMIZED(cmp16s),
+    (BinaryFunc)GET_OPTIMIZED(cmp32s),
+    (BinaryFunc)GET_OPTIMIZED(cmp32f), (BinaryFunc)cmp64f,
+    0
 };
 
 

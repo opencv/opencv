@@ -67,6 +67,8 @@
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/core/core_tegra.hpp"
+#else
+#define GET_OPTIMIZED(func) (func)
 #endif
 
 namespace cv
