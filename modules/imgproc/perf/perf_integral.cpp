@@ -66,7 +66,7 @@ PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum,
 /*
 // void integral(InputArray image, OutputArray sum, OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
 */
-PERF_TEST_P( Size_MatType_OutMatDepth, integral3_sqsum_tilted,
+PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum_tilted,
     testing::Combine(
         testing::Values( TYPICAL_MAT_SIZES ), 
         testing::Values( CV_8UC1, CV_8UC4 ),
