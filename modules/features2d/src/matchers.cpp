@@ -340,10 +340,20 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
     {
         dm = new BruteForceMatcher<Hamming>();
     }
-    else if( !descriptorMatcherType.compare( "BruteForce-HammingLUT") )
+    else if( !descriptorMatcherType.compare("BruteForce-HammingLUT") )
     {
         dm = new BruteForceMatcher<Hamming>();
     }
+    else if( !descriptorMatcherType.compare("BruteForce-Hamming(2)") )
+    {
+        dm = new BruteForceMatcher<HammingMultilevel<2> >();
+    }
+    else if( !descriptorMatcherType.compare("BruteForce-Hamming(4)") )
+    {
+        dm = new BruteForceMatcher<HammingMultilevel<4> >();
+    }
+    else
+        CV_Error( CV_StsBadArg, "Unknown matcher name" );
 
     return dm;
 }

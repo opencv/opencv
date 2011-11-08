@@ -206,6 +206,22 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
     _dst.create( src.rows + top + bottom, src.cols + left + right, src.type() );
     Mat dst = _dst.getMat();
     
+    if( src.isSubmatrix() && (borderType & BORDER_ISOLATED) == 0 )
+    {
+        Size wholeSize;
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+        int dtop = std::min(ofs.y, top);
+        int dbottom = std::min(wholeSize.height - src.rows - ofs.y, bottom);
+        int dleft = std::min(ofs.x, left);
+        int dright = std::min(wholeSize.width - src.cols - ofs.x, right);
+        src.adjustROI(dtop, dbottom, dleft, dright);
+        top -= dtop;
+        left -= dleft;
+    }
+    
+    borderType &= ~BORDER_ISOLATED;
+    
     if( borderType != BORDER_CONSTANT )
         copyMakeBorder_8u( src.data, src.step, src.size(),
                            dst.data, dst.step, dst.size(),

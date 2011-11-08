@@ -445,6 +445,9 @@ CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
                                 int ksize, double k,
                                 int borderType=BORDER_DEFAULT );
 
+// low-level function for computing eigenvalues and eigenvectors of 2x2 matrices
+CV_EXPORTS void eigen2x2( const float* a, float* e, int n );
+    
 //! computes both eigenvalues and the eigenvectors of 2x2 derivative covariation matrix  at each pixel. The output is stored as 6-channel matrix.
 CV_EXPORTS_W void cornerEigenValsAndVecs( InputArray src, OutputArray dst,
                                           int blockSize, int ksize,
@@ -1015,6 +1018,10 @@ CV_EXPORTS_W void convexHull( InputArray points, OutputArray hull,
 
 //! returns true iff the contour is convex. Does not support contours with self-intersection
 CV_EXPORTS_W bool isContourConvex( InputArray contour );
+
+//! finds intersection of two convex polygons
+CV_EXPORTS_W float intersectConvexConvex( InputArray _p1, InputArray _p2,
+                                          OutputArray _p12, bool handleNested=true );
 
 //! fits ellipse to the set of 2D points
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );

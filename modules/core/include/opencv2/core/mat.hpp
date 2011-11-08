@@ -1112,6 +1112,9 @@ template<typename _Tp> inline _InputArray::_InputArray(const vector<vector<_Tp> 
 
 template<typename _Tp, int m, int n> inline _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
     : flags(MATX + DataType<_Tp>::type), obj((void*)&mtx), sz(n, m) {}
+    
+template<typename _Tp> inline _InputArray::_InputArray(const _Tp* vec, int n)
+    : flags(MATX + DataType<_Tp>::type), obj((void*)vec), sz(n, 1) {}
 
 inline _InputArray::_InputArray(const Scalar& s)
     : flags(MATX + CV_64F), obj((void*)&s), sz(1, 4) {} 
@@ -1119,6 +1122,7 @@ inline _InputArray::_InputArray(const Scalar& s)
 template<typename _Tp> inline _OutputArray::_OutputArray(vector<_Tp>& vec) : _InputArray(vec) {}
 template<typename _Tp> inline _OutputArray::_OutputArray(vector<vector<_Tp> >& vec) : _InputArray(vec) {}
 template<typename _Tp, int m, int n> inline _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(_Tp* vec, int n) : _InputArray(vec, n) {}
     
 //////////////////////////////////// Matrix Expressions /////////////////////////////////////////
 

@@ -449,43 +449,22 @@ void SurfFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ORB::CommonParams::read(const FileNode& fn)
-{
-  scale_factor_ = fn["scaleFactor"];
-  n_levels_ = int(fn["nLevels"]);
-  first_level_ = int(fn["firstLevel"]);
-  edge_threshold_ = fn["edgeThreshold"];
-  patch_size_ = fn["patchSize"];
-}
-
-void ORB::CommonParams::write(FileStorage& fs) const
-{
-  fs << "scaleFactor" << scale_factor_;
-  fs << "nLevels" << int(n_levels_);
-  fs << "firstLevel" << int(first_level_);
-  fs << "edgeThreshold" << int(edge_threshold_);
-  fs << "patchSize" << int(patch_size_);
-}
-
 /** Default constructor
  * @param n_features the number of desired features
  */
-OrbFeatureDetector::OrbFeatureDetector(size_t n_features, ORB::CommonParams params) :
-  params_(params)
+OrbFeatureDetector::OrbFeatureDetector(size_t n_features, ORB::CommonParams params)
 {
   orb_ = ORB(n_features, params);
 }
 
 void OrbFeatureDetector::read(const FileNode& fn)
 {
-  params_.read(fn);
-  n_features_ = int(fn["nFeatures"]);
+  orb_.read(fn);
 }
 
 void OrbFeatureDetector::write(FileStorage& fs) const
 {
-  params_.write(fs);
-  fs << "nFeatures" << int(n_features_);
+  orb_.write(fs);
 }
 
 void OrbFeatureDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask) const

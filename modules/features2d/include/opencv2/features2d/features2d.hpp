@@ -422,16 +422,15 @@ public:
 
   struct CV_EXPORTS CommonParams
   {
-    enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0};
+    enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0, HARRIS_SCORE=0, FAST_SCORE=1 };
 
     /** default constructor */
     CommonParams(float scale_factor = 1.2f, unsigned n_levels = DEFAULT_N_LEVELS, int edge_threshold = 31,
-                 unsigned first_level = DEFAULT_FIRST_LEVEL) :
+                 unsigned first_level = DEFAULT_FIRST_LEVEL, int WTA_K=2, int score_type=HARRIS_SCORE) :
       scale_factor_(scale_factor), n_levels_(n_levels), first_level_(first_level >= n_levels ? 0 : first_level),
-      edge_threshold_(edge_threshold)
+      edge_threshold_(edge_threshold), WTA_K_(WTA_K), score_type_(score_type)
     {
-      // No other patch size is supported right now
-      patch_size_ = 31;
+        patch_size_ = 31;
     }
     void read(const FileNode& fn);
     void write(FileStorage& fs) const;
@@ -444,12 +443,16 @@ public:
      * if 1, that means we will also look at the image scale_factor_ times bigger
      */
     unsigned first_level_;
-    /** How far from the boundary the points should be */
+    /** How far from the boundary the points should be. */
     int edge_threshold_;
+    
+    /** How many random points are used to produce each cell of the descriptor (2, 3, 4 ...) */
+    int WTA_K_;
+      
+    /** Type of the score to use (FAST, HARRIS, ...) */  
+    int score_type_; 
 
-    friend class ORB;
-  protected:
-    /** The size of the patch that will be used for orientation and comparisons */
+    /** The size of the patch that will be used for orientation and comparisons (only 31 is supported)*/
     int patch_size_;
   };
 
@@ -483,8 +486,12 @@ public:
   void
   operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors,
              bool useProvidedKeypoints = false);
-
+    
+  void read(const FileNode& fn);
+  void write(FileStorage& fs) const;
+    
 private:
+  
   /** The size of the patch used when comparing regions in the patterns */
   static const int kKernelWidth = 5;
 
@@ -539,28 +546,20 @@ private:
   /** Parameters tuning ORB */
   CommonParams params_;
 
-  /** size of the half patch used for orientation computation, see Rosin - 1999 - Measuring Corner Properties */
-  int half_patch_size_;
-
-  /** pre-computed offsets used for the Harris verification, one vector per scale */
-  std::vector<std::vector<int> > orientation_horizontal_offsets_;
-  std::vector<std::vector<int> > orientation_vertical_offsets_;
-
   /** The steps of the integral images for each scale */
-  std::vector<size_t> integral_image_steps_;
+  vector<size_t> integral_image_steps_;
 
   /** The number of desired features per scale */
-  std::vector<size_t> n_features_per_level_;
+  vector<size_t> n_features_per_level_;
 
   /** The overall number of desired features */
   size_t n_features_;
-
-  /** the end of a row in a circular patch */
-  std::vector<int> u_max_;
-
-  /** The patterns for each level (the patterns are the same, but not their offset */
-  class OrbPatterns;
-  std::vector<OrbPatterns*> patterns_;
+    
+  /** The circular region to compute a feature orientation */
+  vector<int> u_max_;
+  
+  /** Points to compute BRIEF descriptors from */
+  vector<Point> pattern;
 };
 
 /*!
@@ -1551,10 +1550,6 @@ protected:
 private:
   /** the ORB object we use for the computations */
   mutable ORB orb_;
-  /** The parameters used */
-  ORB::CommonParams params_;
-  /** the number of features that need to be retrieved */
-  unsigned n_features_;
 };
 
 class CV_EXPORTS SimpleBlobDetector : public cv::FeatureDetector
@@ -1953,8 +1948,6 @@ protected:
 private:
   /** the ORB object we use for the computations */
   mutable ORB orb_;
-  /** The parameters used */
-  ORB::CommonParams params_;
 };
 
 /*
@@ -2157,6 +2150,17 @@ struct CV_EXPORTS Hamming
 
 typedef Hamming HammingLUT;
 
+template<int cellsize> struct CV_EXPORTS HammingMultilevel
+{
+    typedef unsigned char ValueType;
+    typedef int ResultType;
+    
+    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
+    {
+        return normHamming(a, b, size, cellsize);
+    }
+};
+    
 /****************************************************************************************\
 *                                      DMatch                                            *
 \****************************************************************************************/

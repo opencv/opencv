@@ -370,7 +370,7 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
                 score > pprev[j-1] && score > pprev[j] && score > pprev[j+1] &&
                 score > curr[j-1] && score > curr[j] && score > curr[j+1]) )
             {
-                keypoints.push_back(KeyPoint((float)j, (float)(i-1), 6.f, -1, (float)score));
+                keypoints.push_back(KeyPoint((float)j, (float)(i-1), 7.f, -1, (float)score));
             }
         }
     }

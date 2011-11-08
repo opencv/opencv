@@ -161,11 +161,67 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
     }
 }
 
+    
+void eigen2x2( const float* cov, float* dst, int n )
+{
+    for( int j = 0; j < n; j++ )
+    {
+        double a = cov[j*3];
+        double b = cov[j*3+1];
+        double c = cov[j*3+2];
+        
+        double u = (a + c)*0.5;
+        double v = std::sqrt((a - c)*(a - c)*0.25 + b*b);
+        double l1 = u + v;
+        double l2 = u - v;
+        
+        double x = b;
+        double y = l1 - a;
+        double e = fabs(x);
+        
+        if( e + fabs(y) < 1e-4 )
+        {
+            y = b;
+            x = l1 - c;
+            e = fabs(x);
+            if( e + fabs(y) < 1e-4 )
+            {
+                e = 1./(e + fabs(y) + FLT_EPSILON);
+                x *= e, y *= e;
+            }
+        }
+        
+        double d = 1./std::sqrt(x*x + y*y + DBL_EPSILON);
+        dst[6*j] = (float)l1;
+        dst[6*j + 2] = (float)(x*d);
+        dst[6*j + 3] = (float)(y*d);
+        
+        x = b;
+        y = l2 - a;
+        e = fabs(x);
+        
+        if( e + fabs(y) < 1e-4 )
+        {
+            y = b;
+            x = l2 - c;
+            e = fabs(x);
+            if( e + fabs(y) < 1e-4 )
+            {
+                e = 1./(e + fabs(y) + FLT_EPSILON);
+                x *= e, y *= e;
+            }
+        }
+        
+        d = 1./std::sqrt(x*x + y*y + DBL_EPSILON);
+        dst[6*j + 1] = (float)l2;
+        dst[6*j + 4] = (float)(x*d);
+        dst[6*j + 5] = (float)(y*d);
+    }
+}
 
 static void
 calcEigenValsVecs( const Mat& _cov, Mat& _dst )
 {
-    int i, j;
     Size size = _cov.size();
     if( _cov.isContinuous() && _dst.isContinuous() )
     {
@@ -173,64 +229,12 @@ calcEigenValsVecs( const Mat& _cov, Mat& _dst )
         size.height = 1;
     }
 
-    for( i = 0; i < size.height; i++ )
+    for( int i = 0; i < size.height; i++ )
     {
         const float* cov = (const float*)(_cov.data + _cov.step*i);
         float* dst = (float*)(_dst.data + _dst.step*i);
 
-        for( j = 0; j < size.width; j++ )
-        {
-            double a = cov[j*3];
-            double b = cov[j*3+1];
-            double c = cov[j*3+2];
-
-            double u = (a + c)*0.5;
-            double v = std::sqrt((a - c)*(a - c)*0.25 + b*b);
-            double l1 = u + v;
-            double l2 = u - v;
-
-            double x = b;
-            double y = l1 - a;
-            double e = fabs(x);
-
-            if( e + fabs(y) < 1e-4 )
-            {
-                y = b;
-                x = l1 - c;
-                e = fabs(x);
-                if( e + fabs(y) < 1e-4 )
-                {
-                    e = 1./(e + fabs(y) + FLT_EPSILON);
-                    x *= e, y *= e;
-                }
-            }
-
-            double d = 1./std::sqrt(x*x + y*y + DBL_EPSILON);
-            dst[6*j] = (float)l1;
-            dst[6*j + 2] = (float)(x*d);
-            dst[6*j + 3] = (float)(y*d);
-
-            x = b;
-            y = l2 - a;
-            e = fabs(x);
-
-            if( e + fabs(y) < 1e-4 )
-            {
-                y = b;
-                x = l2 - c;
-                e = fabs(x);
-                if( e + fabs(y) < 1e-4 )
-                {
-                    e = 1./(e + fabs(y) + FLT_EPSILON);
-                    x *= e, y *= e;
-                }
-            }
-
-            d = 1./std::sqrt(x*x + y*y + DBL_EPSILON);
-            dst[6*j + 1] = (float)l2;
-            dst[6*j + 4] = (float)(x*d);
-            dst[6*j + 5] = (float)(y*d);
-        }
+        eigen2x2(cov, dst, size.width);
     }
 }
 

@@ -138,6 +138,7 @@ static void _prepareImgAndDrawKeypoints( const Mat& img1, const vector<KeyPoint>
     else
     {
         outImg.create( size, CV_MAKETYPE(img1.depth(), 3) );
+        outImg = Scalar::all(0);
         outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
         outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
 

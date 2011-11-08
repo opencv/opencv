@@ -63,7 +63,6 @@ void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints
         return;
     }
 
-
     KeyPointsFilter::runByImageBorder( keypoints, image.size(), 0 );
     KeyPointsFilter::runByKeypointSize( keypoints, std::numeric_limits<float>::epsilon() );
 
@@ -247,8 +246,7 @@ int SurfDescriptorExtractor::descriptorType() const
 
 
 /** Default constructor */
-OrbDescriptorExtractor::OrbDescriptorExtractor(ORB::CommonParams params) :
-  params_(params)
+OrbDescriptorExtractor::OrbDescriptorExtractor(ORB::CommonParams params)
 {
   orb_ = ORB(0, params);
 }
@@ -260,16 +258,15 @@ void OrbDescriptorExtractor::computeImpl(const cv::Mat& image, std::vector<cv::K
 }
 void OrbDescriptorExtractor::read(const cv::FileNode& fn)
 {
-  params_.read(fn);
-  orb_ = ORB(0, params_);
+  orb_.read(fn);
 }
 void OrbDescriptorExtractor::write(cv::FileStorage& fs) const
 {
-  params_.write(fs);
+  orb_.write(fs);
 }
 int OrbDescriptorExtractor::descriptorSize() const
 {
-  return ORB::kBytes;
+  return orb_.descriptorSize();
 }
 int OrbDescriptorExtractor::descriptorType() const
 {

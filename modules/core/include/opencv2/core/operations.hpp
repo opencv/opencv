@@ -1599,6 +1599,9 @@ template<typename _Tp> inline _Tp Point_<_Tp>::dot(const Point_& pt) const
 template<typename _Tp> inline double Point_<_Tp>::ddot(const Point_& pt) const
 { return (double)x*pt.x + (double)y*pt.y; }
 
+template<typename _Tp> inline double Point_<_Tp>::cross(const Point_& pt) const
+{ return (double)x*pt.y - (double)y*pt.x; }
+    
 template<typename _Tp> static inline Point_<_Tp>&
 operator += (Point_<_Tp>& a, const Point_<_Tp>& b)
 {

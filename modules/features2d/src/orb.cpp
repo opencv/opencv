@@ -1,501 +1,680 @@
 /*********************************************************************
- * Software License Agreement (BSD License)
- *
- *  Copyright (c) 2009, Willow Garage, Inc.
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions
- *  are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the following
- *     disclaimer in the documentation and/or other materials provided
- *     with the distribution.
- *   * Neither the name of the Willow Garage nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- *********************************************************************/
+* Software License Agreement (BSD License)
+*
+*  Copyright (c) 2009, Willow Garage, Inc.
+*  All rights reserved.
+*
+*  Redistribution and use in source and binary forms, with or without
+*  modification, are permitted provided that the following conditions
+*  are met:
+*
+*   * Redistributions of source code must retain the above copyright
+*     notice, this list of conditions and the following disclaimer.
+*   * Redistributions in binary form must reproduce the above
+*     copyright notice, this list of conditions and the following
+*     disclaimer in the documentation and/or other materials provided
+*     with the distribution.
+*   * Neither the name of the Willow Garage nor the names of its
+*     contributors may be used to endorse or promote products derived
+*     from this software without specific prior written permission.
+*
+*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+*  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+*  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+*  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+*  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+*  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+*  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+*  POSSIBILITY OF SUCH DAMAGE.
+*********************************************************************/
 
 /** Authors: Ethan Rublee, Vincent Rabaud, Gary Bradski */
 
 #include "precomp.hpp"
+#include <iterator>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-namespace
-{
-
-/** Function that computes the Harris response in a 9 x 9 patch at a given point in an image
- * @param patch the 9 x 9 patch
- * @param k the k in the Harris formula
- * @param dX_offsets pre-computed offset to get all the interesting dX values
- * @param dY_offsets pre-computed offset to get all the interesting dY values
- * @return
- */
-template<typename PatchType, typename SumType>
-  inline float harris(const cv::Mat& patch, float k, const std::vector<int> &dX_offsets,
-                      const std::vector<int> &dY_offsets)
-  {
-    float a = 0, b = 0, c = 0;
-
-    static cv::Mat_<SumType> dX(9, 7), dY(7, 9);
-    SumType * dX_data = reinterpret_cast<SumType*> (dX.data), *dY_data = reinterpret_cast<SumType*> (dY.data);
-    SumType * dX_data_end = dX_data + 9 * 7;
-    PatchType * patch_data = reinterpret_cast<PatchType*> (patch.data);
-    int two_row_offset = (int)(2 * patch.step1());
-    std::vector<int>::const_iterator dX_offset = dX_offsets.begin(), dY_offset = dY_offsets.begin();
-    // Compute the differences
-    for (; dX_data != dX_data_end; ++dX_data, ++dY_data, ++dX_offset, ++dY_offset)
-    {
-      *dX_data = (SumType)(*(patch_data + *dX_offset)) - (SumType)(*(patch_data + *dX_offset - 2));
-      *dY_data = (SumType)(*(patch_data + *dY_offset)) - (SumType)(*(patch_data + *dY_offset - two_row_offset));
-    }
-
-    // Compute the Scharr result
-    dX_data = reinterpret_cast<SumType*> (dX.data);
-    dY_data = reinterpret_cast<SumType*> (dY.data);
-    for (size_t v = 0; v <= 6; v++, dY_data += 2)
-    {
-      for (size_t u = 0; u <= 6; u++, ++dX_data, ++dY_data)
-      {
-        // 1, 2 for Sobel, 3 and 10 for Scharr
-        float Ix = (float)(1 * (*dX_data + *(dX_data + 14)) + 2 * (*(dX_data + 7)));
-        float Iy = (float)(1 * (*dY_data + *(dY_data + 2)) + 2 * (*(dY_data + 1)));
-
-        a += Ix * Ix;
-        b += Iy * Iy;
-        c += Ix * Iy;
-      }
-    }
-
-    return ((a * b - c * c) - (k * ((a + b) * (a + b))));
-  }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/** Class used to compute the cornerness of specific points in an image */
-struct HarrisResponse
-{
-  /** Constructor
-   * @param image the image on which the cornerness will be computed (only its step is used
-   * @param k the k in the Harris formula
-   */
-  explicit HarrisResponse(const cv::Mat& image, double k = 0.04);
-
-  /** Compute the cornerness for given keypoints
-   * @param kpts points at which the cornerness is computed and stored
-   */
-  void operator()(std::vector<cv::KeyPoint>& kpts) const;
-private:
-  /** The cached image to analyze */
-  cv::Mat image_;
-
-  /** The k factor in the Harris corner detection */
-  double k_;
-
-  /** The offset in X to compute the differences */
-  std::vector<int> dX_offsets_;
-
-  /** The offset in Y to compute the differences */
-  std::vector<int> dY_offsets_;
-};
-
-/** Constructor
- * @param image the image on which the cornerness will be computed (only its step is used
- * @param k the k in the Harris formula
- */
-HarrisResponse::HarrisResponse(const cv::Mat& image, double k) :
-  image_(image), k_(k)
-{
-  // Compute the offsets for the Harris corners once and for all
-  dX_offsets_.resize(7 * 9);
-  dY_offsets_.resize(7 * 9);
-  std::vector<int>::iterator dX_offsets = dX_offsets_.begin(), dY_offsets = dY_offsets_.begin();
-  int x, y, image_step = (int)image.step1();
-  for (y = 0; y <= 6 * image_step; y += image_step)
-  {
-    int dX_offset = y + 2, dY_offset = y + 2 * image_step;
-    for (x = 0; x <= 6; ++x)
-    {
-      *(dX_offsets++) = dX_offset++;
-      *(dY_offsets++) = dY_offset++;
-    }
-    for (size_t x = 7; x <= 8; ++x)
-      *(dY_offsets++) = dY_offset++;
-  }
-
-  for (y = 7 * image_step; y <= 8 * image_step; y += image_step)
-  {
-    int dX_offset = y + 2;
-    for (x = 0; x <= 6; ++x)
-      *(dX_offsets++) = dX_offset++;
-  }
-}
-
-/** Compute the cornerness for given keypoints
- * @param kpts points at which the cornerness is computed and stored
- */
-void HarrisResponse::operator()(std::vector<cv::KeyPoint>& kpts) const
-{
-  // Those parameters are used to match the OpenCV computation of Harris corners
-  float scale = (1 << 2) * 7.0f * 255.0f;
-  scale = 1.0f / scale;
-  float scale_sq_sq = scale * scale * scale * scale;
-
-  // define it to 1 if you want to compare to what OpenCV computes
-#define HARRIS_TEST 0
-#if HARRIS_TEST
-  cv::Mat_<float> dst;
-  cv::cornerHarris(image_, dst, 7, 3, k_);
-#endif
-  for (std::vector<cv::KeyPoint>::iterator kpt = kpts.begin(), kpt_end = kpts.end(); kpt != kpt_end; ++kpt)
-  {
-    cv::Mat patch = image_(cv::Rect(cvRound(kpt->pt.x) - 4, cvRound(kpt->pt.y) - 4, 9, 9));
-
-    // Compute the response
-    kpt->response = harris<uchar, int> (patch, (float)k_, dX_offsets_, dY_offsets_) * scale_sq_sq;
-
-#if HARRIS_TEST
-    cv::Mat_<float> Ix(9, 9), Iy(9, 9);
-
-    cv::Sobel(patch, Ix, CV_32F, 1, 0, 3, scale);
-    cv::Sobel(patch, Iy, CV_32F, 0, 1, 3, scale);
-    float a = 0, b = 0, c = 0;
-    for (unsigned int y = 1; y <= 7; ++y)
-    {
-      for (unsigned int x = 1; x <= 7; ++x)
-      {
-        a += Ix(y, x) * Ix(y, x);
-        b += Iy(y, x) * Iy(y, x);
-        c += Ix(y, x) * Iy(y, x);
-      }
-    }
-    //[ a c ]
-    //[ c b ]
-    float response = (float)((a * b - c * c) - k_ * ((a + b) * (a + b)));
-
-    std::cout << kpt->response << " " << response << " " << dst(kpt->pt.y,kpt->pt.x) << std::endl;
-#endif
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-inline bool keypointResponseGreater(const cv::KeyPoint& lhs, const cv::KeyPoint& rhs)
-{
-  return lhs.response > rhs.response;
-}
-
-struct KeypointResponseGreaterThanEqual
-{
-  KeypointResponseGreaterThanEqual(float value) :
-    value(value)
-  {
-  }
-  inline bool operator()(const cv::KeyPoint& kpt)
-  {
-    return kpt.response >= value;
-  }
-  float value;
-};
-
-/** Simple function that returns the area in the rectangle x1<=x<=x2, y1<=y<=y2 given an integral image
- * @param integral_image
- * @param x1
- * @param y1
- * @param x2
- * @param y2
- * @return
- */
-template<typename SumType>
-  inline SumType integral_rectangle(const SumType * val_ptr, std::vector<int>::const_iterator offset)
-  {
-    return *(val_ptr + *offset) - *(val_ptr + *(offset + 1)) - *(val_ptr + *(offset + 2)) + *(val_ptr + *(offset + 3));
-  }
-
-template<typename SumType>
-  void IC_Angle_Integral(const cv::Mat& integral_image, const int half_k, cv::KeyPoint& kpt,
-                         const std::vector<int> &horizontal_offsets, const std::vector<int> &vertical_offsets)
-  {
-    SumType m_01 = 0, m_10 = 0;
-
-    // Go line by line in the circular patch
-    std::vector<int>::const_iterator horizontal_iterator = horizontal_offsets.begin(), vertical_iterator =
-        vertical_offsets.begin();
-    const SumType* val_ptr = &(integral_image.at<SumType> (cvRound(kpt.pt.y), cvRound(kpt.pt.x)));
-    for (int uv = 1; uv <= half_k; ++uv)
-    {
-      // Do the horizontal lines
-      m_01 += uv * (-integral_rectangle(val_ptr, horizontal_iterator) + integral_rectangle(val_ptr,
-                                                                                           horizontal_iterator + 4));
-      horizontal_iterator += 8;
-
-      // Do the vertical lines
-      m_10 += uv * (-integral_rectangle(val_ptr, vertical_iterator)
-          + integral_rectangle(val_ptr, vertical_iterator + 4));
-      vertical_iterator += 8;
-    }
-
-    float x = (float)m_10;
-    float y = (float)m_01;
-    kpt.angle = cv::fastAtan2(y, x);
-  }
-
-template<typename PatchType, typename SumType>
-  void IC_Angle(const cv::Mat& image, const int half_k, cv::KeyPoint& kpt, const std::vector<int> & u_max)
-  {
-    SumType m_01 = 0, m_10 = 0/*, m_00 = 0*/;
-
-    const PatchType* val_center_ptr_plus = &(image.at<PatchType> (cvRound(kpt.pt.y), cvRound(kpt.pt.x))),
-                   *val_center_ptr_minus;
-
-    // Treat the center line differently, v=0
-
-    {
-      const PatchType* val = val_center_ptr_plus - half_k;
-      for (int u = -half_k; u <= half_k; ++u, ++val)
-        m_10 += u * (SumType)(*val);
-    }
-
-    // Go line by line in the circular patch
-    val_center_ptr_minus = val_center_ptr_plus - image.step1();
-    val_center_ptr_plus += image.step1();
-    for (int v = 1; v <= half_k; ++v, val_center_ptr_plus += image.step1(), val_center_ptr_minus -= image.step1())
-    {
-      // The beginning of the two lines
-      const PatchType* val_ptr_plus = val_center_ptr_plus - u_max[v];
-      const PatchType* val_ptr_minus = val_center_ptr_minus - u_max[v];
-
-      // Proceed over the two lines
-      SumType v_sum = 0;
-      for (int u = -u_max[v]; u <= u_max[v]; ++u, ++val_ptr_plus, ++val_ptr_minus)
-      {
-        SumType val_plus = *val_ptr_plus, val_minus = *val_ptr_minus;
-        v_sum += (val_plus - val_minus);
-        m_10 += u * (val_plus + val_minus);
-      }
-      m_01 += v * v_sum;
-    }
-
-    float x = (float)m_10;// / float(m_00);// / m_00;
-    float y = (float)m_01;// / float(m_00);// / m_00;
-    kpt.angle = cv::fastAtan2(y, x);
-  }
-
-inline int smoothedSum(const int *center, const int* int_diff)
-{
-  // Points in order 01
-  //                 32
-  return *(center + int_diff[2]) - *(center + int_diff[3]) - *(center + int_diff[1]) + *(center + int_diff[0]);
-}
-
-inline uchar smoothed_comparison(const int * center, const int* diff, int l, int m)
-{
-  static const uchar score[] = {1 << 0, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 7};
-  return (smoothedSum(center, diff + l) < smoothedSum(center, diff + l + 4)) ? score[m] : 0;
-}
-}
 
 namespace cv
 {
 
+const float HARRIS_K = 0.04f;
+const int DESCRIPTOR_SIZE = 32;
+
+/**
+ * Function that computes the Harris responses in a
+ * blockSize x blockSize patch at given points in an image
+ */
+static void
+HarrisResponses(const Mat& img, vector<KeyPoint>& pts, int blockSize, float harris_k)
+{
+    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+    
+    size_t ptidx, ptsize = pts.size();
+    
+    const uchar* ptr00 = img.ptr<uchar>();
+    size_t step = img.step/img.elemSize1();
+    int r = blockSize/2;
+    
+    float scale = (1 << 2) * blockSize * 255.0f;
+    scale = 1.0f / scale;
+    float scale_sq_sq = scale * scale * scale * scale;
+    
+    AutoBuffer<int> ofsbuf(blockSize*blockSize);
+    int* ofs = ofsbuf;
+    for( int i = 0; i < blockSize; i++ )
+        for( int j = 0; j < blockSize; j++ )
+            ofs[i*blockSize + j] = (int)(i*step + j);
+    
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+    {
+        int x0 = cvRound(pts[ptidx].pt.x - r);
+        int y0 = cvRound(pts[ptidx].pt.y - r);
+        
+        const uchar* ptr0 = ptr00 + y0*step + x0;
+        int a = 0, b = 0, c = 0;
+        
+        for( int k = 0; k < blockSize*blockSize; k++ )
+        {
+            const uchar* ptr = ptr0 + ofs[k];
+            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
+            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
+            a += Ix*Ix;
+            b += Iy*Iy;
+            c += Ix*Iy;
+        }
+        pts[ptidx].response = ((float)a * b - (float)c * c -
+                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class ORB::OrbPatterns
+struct KeypointResponseGreaterThanThreshold
 {
-public:
-  // We divide in 30 wedges
-  static const int kNumAngles = 30;
-
-  /** Constructor
-   * Add +1 to the step as this is the step of the integral image, not image
-   * @param sz
-   * @param normalized_step
-   * @return
-   */
-  OrbPatterns(int sz, unsigned int normalized_step_size) :
-    normalized_step_(normalized_step_size)
-  {
-    relative_patterns_.resize(kNumAngles);
-    for (int i = 0; i < kNumAngles; i++)
-      generateRelativePattern(i, sz, relative_patterns_[i]);
-  }
-
-  /** Generate the patterns and relative patterns
-   * @param sz
-   * @param normalized_step
-   * @return
-   */
-  static std::vector<cv::Mat> generateRotatedPatterns()
-  {
-    std::vector<cv::Mat> rotated_patterns(kNumAngles);
-    cv::Mat_<cv::Vec2i> pattern = cv::Mat(512, 1, CV_32SC2, bit_pattern_31_);
-    for (int i = 0; i < kNumAngles; i++)
+    KeypointResponseGreaterThanThreshold(float _value) :
+    value(_value)
     {
-      const cv::Mat rotation_matrix = getRotationMat(i);
-      transform(pattern, rotated_patterns[i], rotation_matrix);
-      // Make sure the pattern is now one channel, and 512*2
-      rotated_patterns[i] = rotated_patterns[i].reshape(1, 512);
     }
-    return rotated_patterns;
-  }
-
-  /** Compute the brief pattern for a given keypoint
-   * @param angle the orientation of the keypoint
-   * @param sum the integral image
-   * @param pt the keypoint
-   * @param descriptor the descriptor
-   */
-  void compute(const cv::KeyPoint& kpt, const cv::Mat& sum, unsigned char * desc) const
-  {
-    float angle = kpt.angle;
-
-    // Compute the pointer to the center of the feature
-    int img_y = (int)(kpt.pt.y + 0.5);
-    int img_x = (int)(kpt.pt.x + 0.5);
-    const int * center = reinterpret_cast<const int *> (sum.ptr(img_y)) + img_x;
-    // Compute the pointer to the absolute pattern row
-    const int * diff = relative_patterns_[angle2Wedge(angle)].ptr<int> (0);
-    for (int i = 0, j = 0; i < 32; ++i, j += 64)
+    inline bool operator()(const KeyPoint& kpt) const
     {
-      desc[i] = smoothed_comparison(center, diff, j, 7) | smoothed_comparison(center, diff, j + 8, 6)
-          | smoothed_comparison(center, diff, j + 16, 5) | smoothed_comparison(center, diff, j + 24, 4)
-          | smoothed_comparison(center, diff, j + 32, 3) | smoothed_comparison(center, diff, j + 40, 2)
-          | smoothed_comparison(center, diff, j + 48, 1) | smoothed_comparison(center, diff, j + 56, 0);
+        return kpt.response >= value;
     }
-  }
-
-private:
-  static inline int angle2Wedge(float angle)
-  {
-    static float scale = float(kNumAngles) / 360.0f;
-    return std::min(int(std::floor(angle * scale)), kNumAngles - 1);
-  }
-
-  void generateRelativePattern(int angle_idx, int /*sz*/, cv::Mat & relative_pattern)
-  {
-    // Create the relative pattern
-    relative_pattern.create(512, 4, CV_32SC1);
-    int * relative_pattern_data = reinterpret_cast<int*> (relative_pattern.data);
-    // Get the original rotated pattern
-    const int * pattern_data;
-    //switch (sz)
+    float value;
+};
+    
+struct KeypointResponseGreater
+{
+    inline bool operator()(const KeyPoint& kp1, const KeyPoint& kp2) const
     {
-      //default:
-      if( rotated_patterns_.empty() )
-          rotated_patterns_ = OrbPatterns::generateRotatedPatterns();
-      pattern_data = reinterpret_cast<int*> (rotated_patterns_[angle_idx].data);
-      //break;
+        return kp1.response > kp2.response;
     }
-
-    int half_kernel = ORB::kKernelWidth / 2;
-    for (int i = 0; i < 512; ++i)
-    {
-      int center = (int)(*(pattern_data + 2 * i) + normalized_step_ * (*(pattern_data + 2 * i + 1)));
-      int nstep = (int)normalized_step_;
-      // Points in order 01
-      //                 32
-      // +1 is added for certain coordinates for the integral image
-      *(relative_pattern_data++) = center - half_kernel - half_kernel * nstep;
-      *(relative_pattern_data++) = center + (half_kernel + 1) - half_kernel * nstep;
-      *(relative_pattern_data++) = center + (half_kernel + 1) + (half_kernel + 1) * nstep;
-      *(relative_pattern_data++) = center - half_kernel + (half_kernel + 1) * nstep;
-    }
-  }
-
-  static cv::Mat getRotationMat(int angle_idx)
-  {
-    float a = float(float(angle_idx) / kNumAngles * CV_PI * 2);
-    return (cv::Mat_<float>(2, 2) << cos(a), -sin(a), sin(a), cos(a));
-  }
-
-  /** Contains the relative patterns (rotated ones in relative coordinates)
-   */
-  std::vector<cv::Mat_<int> > relative_patterns_;
-
-  /** The step of the integral image
-   */
-  size_t normalized_step_;
-
-  /** Pattern loaded from the include files
-   */
-  static std::vector<cv::Mat> rotated_patterns_;
-  static int bit_pattern_31_[256 * 4]; //number of tests * 4 (x1,y1,x2,y2)
-
 };
 
-std::vector<cv::Mat> ORB::OrbPatterns::rotated_patterns_;
-
-//this is the definition for BIT_PATTERN
-#include "orb_pattern.hpp"
+static float IC_Angle(const Mat& image, const int half_k, Point2f pt,
+                      const vector<int> & u_max)
+{
+    int m_01 = 0, m_10 = 0;
+    
+    const uchar* center = &image.at<uchar> (cvRound(pt.y), cvRound(pt.x));
+    
+    // Treat the center line differently, v=0
+    for (int u = -half_k; u <= half_k; ++u)
+        m_10 += u * center[u];
+    
+    // Go line by line in the circular patch
+    int step = (int)image.step1();
+    for (int v = 1; v <= half_k; ++v)
+    {
+        // Proceed over the two lines
+        int v_sum = 0;
+        int d = u_max[v];
+        for (int u = -d; u <= d; ++u)
+        {
+            int val_plus = center[u + v*step], val_minus = center[u - v*step];
+            v_sum += (val_plus - val_minus);
+            m_10 += u * (val_plus + val_minus);
+        }
+        m_01 += v * v_sum;
+    }
+    
+    return fastAtan2((float)m_01, (float)m_10);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void computeOrbDescriptor(const KeyPoint& kpt,
+                                 const Mat& img, const Point* pattern,
+                                 uchar* desc, int dsize, int WTA_K)
+{
+    float angle = kpt.angle;
+    //angle = cvFloor(angle/12)*12.f;
+    angle *= (float)(CV_PI/180.f);
+    float a = (float)cos(angle), b = (float)sin(angle);
+    
+    const uchar* center = &img.at<uchar>(cvRound(kpt.pt.y), cvRound(kpt.pt.x));
+    int step = (int)img.step;
+    
+#if 1
+    #define GET_VALUE(idx) \
+        center[cvRound(pattern[idx].x*b + pattern[idx].y*a)*step + \
+               cvRound(pattern[idx].x*a - pattern[idx].y*b)]
+#else
+    float x, y;
+    int ix, iy;
+    #define GET_VALUE(idx) \
+        (x = pattern[idx].x*a - pattern[idx].y*b, \
+        y = pattern[idx].x*b + pattern[idx].y*a, \
+        ix = cvFloor(x), iy = cvFloor(y), \
+        x -= ix, y -= iy, \
+        cvRound(center[iy*step + ix]*(1-x)*(1-y) + center[(iy+1)*step + ix]*(1-x)*y + \
+                center[iy*step + ix+1]*x*(1-y) + center[(iy+1)*step + ix+1]*x*y))
+#endif
+    
+    if( WTA_K == 2 )
+    {
+        for (int i = 0; i < dsize; ++i, pattern += 16)
+        {
+            int t0, t1, val;
+            t0 = GET_VALUE(0); t1 = GET_VALUE(1);
+            val = t0 < t1;
+            t0 = GET_VALUE(2); t1 = GET_VALUE(3);
+            val |= (t0 < t1) << 1;
+            t0 = GET_VALUE(4); t1 = GET_VALUE(5);
+            val |= (t0 < t1) << 2;
+            t0 = GET_VALUE(6); t1 = GET_VALUE(7);
+            val |= (t0 < t1) << 3;
+            t0 = GET_VALUE(8); t1 = GET_VALUE(9);
+            val |= (t0 < t1) << 4;
+            t0 = GET_VALUE(10); t1 = GET_VALUE(11);
+            val |= (t0 < t1) << 5;
+            t0 = GET_VALUE(12); t1 = GET_VALUE(13);
+            val |= (t0 < t1) << 6;
+            t0 = GET_VALUE(14); t1 = GET_VALUE(15);
+            val |= (t0 < t1) << 7;
+            
+            desc[i] = (uchar)val;
+        }
+    }
+    else if( WTA_K == 3 )
+    {
+        for (int i = 0; i < dsize; ++i, pattern += 12)
+        {
+            int t0, t1, t2, val;
+            t0 = GET_VALUE(0); t1 = GET_VALUE(1); t2 = GET_VALUE(2);
+            val = t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0);
+            
+            t0 = GET_VALUE(3); t1 = GET_VALUE(4); t2 = GET_VALUE(5);
+            val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 2;
+            
+            t0 = GET_VALUE(6); t1 = GET_VALUE(7); t2 = GET_VALUE(8);
+            val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 4;
+            
+            t0 = GET_VALUE(9); t1 = GET_VALUE(10); t2 = GET_VALUE(11);
+            val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 6;
+            
+            desc[i] = (uchar)val;
+        }
+    }
+    else if( WTA_K == 4 )
+    {
+        for (int i = 0; i < dsize; ++i, pattern += 16)
+        {
+            int t0, t1, t2, t3, a, b, k, val;
+            t0 = GET_VALUE(0); t1 = GET_VALUE(1);
+            t2 = GET_VALUE(2); t3 = GET_VALUE(3);
+            a = 0, b = 2;
+            if( t1 > t0 ) t0 = t1, a = 1;
+            if( t3 > t2 ) t2 = t3, b = 3;
+            k = t0 > t2 ? a : b;
+            val = k;
+            
+            t0 = GET_VALUE(4); t1 = GET_VALUE(5);
+            t2 = GET_VALUE(6); t3 = GET_VALUE(7);
+            a = 0, b = 2;
+            if( t1 > t0 ) t0 = t1, a = 1;
+            if( t3 > t2 ) t2 = t3, b = 3;
+            k = t0 > t2 ? a : b;
+            val |= k << 2;
+            
+            t0 = GET_VALUE(8); t1 = GET_VALUE(9);
+            t2 = GET_VALUE(10); t3 = GET_VALUE(11);
+            a = 0, b = 2;
+            if( t1 > t0 ) t0 = t1, a = 1;
+            if( t3 > t2 ) t2 = t3, b = 3;
+            k = t0 > t2 ? a : b;
+            val |= k << 4;
+            
+            t0 = GET_VALUE(12); t1 = GET_VALUE(13);
+            t2 = GET_VALUE(14); t3 = GET_VALUE(15);
+            a = 0, b = 2;
+            if( t1 > t0 ) t0 = t1, a = 1;
+            if( t3 > t2 ) t2 = t3, b = 3;
+            k = t0 > t2 ? a : b;
+            val |= k << 6;
+            
+            desc[i] = (uchar)val;
+        }
+    }
+    else
+        CV_Error( CV_StsBadSize, "Wrong WTA_K. It can be only 2, 3 or 4." );
+    
+    #undef GET_VALUE
+}
+    
+    
+static void initializeOrbPattern( const Point* pattern0, vector<Point>& pattern, int ntuples, int tupleSize, int poolSize )
+{
+    RNG rng(0x12345678);
+    int i, k, k1;
+    pattern.resize(ntuples*tupleSize);
+    
+    for( i = 0; i < ntuples; i++ )
+    {
+        for( k = 0; k < tupleSize; k++ )
+        {
+            for(;;)
+            {
+                int idx = rng.uniform(0, poolSize);
+                Point pt = pattern0[idx];
+                for( k1 = 0; k1 < k; k1++ )
+                    if( pattern[tupleSize*i + k1] == pt )
+                        break;
+                if( k1 == k )
+                {
+                    pattern[tupleSize*i + k] = pt;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+static int bit_pattern_31_[256*4] =
+{
+    8,-3, 9,5/*mean (0), correlation (0)*/,
+    4,2, 7,-12/*mean (1.12461e-05), correlation (0.0437584)*/,
+    -11,9, -8,2/*mean (3.37382e-05), correlation (0.0617409)*/,
+    7,-12, 12,-13/*mean (5.62303e-05), correlation (0.0636977)*/,
+    2,-13, 2,12/*mean (0.000134953), correlation (0.085099)*/,
+    1,-7, 1,6/*mean (0.000528565), correlation (0.0857175)*/,
+    -2,-10, -2,-4/*mean (0.0188821), correlation (0.0985774)*/,
+    -13,-13, -11,-8/*mean (0.0363135), correlation (0.0899616)*/,
+    -13,-3, -12,-9/*mean (0.121806), correlation (0.099849)*/,
+    10,4, 11,9/*mean (0.122065), correlation (0.093285)*/,
+    -13,-8, -8,-9/*mean (0.162787), correlation (0.0942748)*/,
+    -11,7, -9,12/*mean (0.21561), correlation (0.0974438)*/,
+    7,7, 12,6/*mean (0.160583), correlation (0.130064)*/,
+    -4,-5, -3,0/*mean (0.228171), correlation (0.132998)*/,
+    -13,2, -12,-3/*mean (0.00997526), correlation (0.145926)*/,
+    -9,0, -7,5/*mean (0.198234), correlation (0.143636)*/,
+    12,-6, 12,-1/*mean (0.0676226), correlation (0.16689)*/,
+    -3,6, -2,12/*mean (0.166847), correlation (0.171682)*/,
+    -6,-13, -4,-8/*mean (0.101215), correlation (0.179716)*/,
+    11,-13, 12,-8/*mean (0.200641), correlation (0.192279)*/,
+    4,7, 5,1/*mean (0.205106), correlation (0.186848)*/,
+    5,-3, 10,-3/*mean (0.234908), correlation (0.192319)*/,
+    3,-7, 6,12/*mean (0.0709964), correlation (0.210872)*/,
+    -8,-7, -6,-2/*mean (0.0939834), correlation (0.212589)*/,
+    -2,11, -1,-10/*mean (0.127778), correlation (0.20866)*/,
+    -13,12, -8,10/*mean (0.14783), correlation (0.206356)*/,
+    -7,3, -5,-3/*mean (0.182141), correlation (0.198942)*/,
+    -4,2, -3,7/*mean (0.188237), correlation (0.21384)*/,
+    -10,-12, -6,11/*mean (0.14865), correlation (0.23571)*/,
+    5,-12, 6,-7/*mean (0.222312), correlation (0.23324)*/,
+    5,-6, 7,-1/*mean (0.229082), correlation (0.23389)*/,
+    1,0, 4,-5/*mean (0.241577), correlation (0.215286)*/,
+    9,11, 11,-13/*mean (0.00338507), correlation (0.251373)*/,
+    4,7, 4,12/*mean (0.131005), correlation (0.257622)*/,
+    2,-1, 4,4/*mean (0.152755), correlation (0.255205)*/,
+    -4,-12, -2,7/*mean (0.182771), correlation (0.244867)*/,
+    -8,-5, -7,-10/*mean (0.186898), correlation (0.23901)*/,
+    4,11, 9,12/*mean (0.226226), correlation (0.258255)*/,
+    0,-8, 1,-13/*mean (0.0897886), correlation (0.274827)*/,
+    -13,-2, -8,2/*mean (0.148774), correlation (0.28065)*/,
+    -3,-2, -2,3/*mean (0.153048), correlation (0.283063)*/,
+    -6,9, -4,-9/*mean (0.169523), correlation (0.278248)*/,
+    8,12, 10,7/*mean (0.225337), correlation (0.282851)*/,
+    0,9, 1,3/*mean (0.226687), correlation (0.278734)*/,
+    7,-5, 11,-10/*mean (0.00693882), correlation (0.305161)*/,
+    -13,-6, -11,0/*mean (0.0227283), correlation (0.300181)*/,
+    10,7, 12,1/*mean (0.125517), correlation (0.31089)*/,
+    -6,-3, -6,12/*mean (0.131748), correlation (0.312779)*/,
+    10,-9, 12,-4/*mean (0.144827), correlation (0.292797)*/,
+    -13,8, -8,-12/*mean (0.149202), correlation (0.308918)*/,
+    -13,0, -8,-4/*mean (0.160909), correlation (0.310013)*/,
+    3,3, 7,8/*mean (0.177755), correlation (0.309394)*/,
+    5,7, 10,-7/*mean (0.212337), correlation (0.310315)*/,
+    -1,7, 1,-12/*mean (0.214429), correlation (0.311933)*/,
+    3,-10, 5,6/*mean (0.235807), correlation (0.313104)*/,
+    2,-4, 3,-10/*mean (0.00494827), correlation (0.344948)*/,
+    -13,0, -13,5/*mean (0.0549145), correlation (0.344675)*/,
+    -13,-7, -12,12/*mean (0.103385), correlation (0.342715)*/,
+    -13,3, -11,8/*mean (0.134222), correlation (0.322922)*/,
+    -7,12, -4,7/*mean (0.153284), correlation (0.337061)*/,
+    6,-10, 12,8/*mean (0.154881), correlation (0.329257)*/,
+    -9,-1, -7,-6/*mean (0.200967), correlation (0.33312)*/,
+    -2,-5, 0,12/*mean (0.201518), correlation (0.340635)*/,
+    -12,5, -7,5/*mean (0.207805), correlation (0.335631)*/,
+    3,-10, 8,-13/*mean (0.224438), correlation (0.34504)*/,
+    -7,-7, -4,5/*mean (0.239361), correlation (0.338053)*/,
+    -3,-2, -1,-7/*mean (0.240744), correlation (0.344322)*/,
+    2,9, 5,-11/*mean (0.242949), correlation (0.34145)*/,
+    -11,-13, -5,-13/*mean (0.244028), correlation (0.336861)*/,
+    -1,6, 0,-1/*mean (0.247571), correlation (0.343684)*/,
+    5,-3, 5,2/*mean (0.000697256), correlation (0.357265)*/,
+    -4,-13, -4,12/*mean (0.00213675), correlation (0.373827)*/,
+    -9,-6, -9,6/*mean (0.0126856), correlation (0.373938)*/,
+    -12,-10, -8,-4/*mean (0.0152497), correlation (0.364237)*/,
+    10,2, 12,-3/*mean (0.0299933), correlation (0.345292)*/,
+    7,12, 12,12/*mean (0.0307242), correlation (0.366299)*/,
+    -7,-13, -6,5/*mean (0.0534975), correlation (0.368357)*/,
+    -4,9, -3,4/*mean (0.099865), correlation (0.372276)*/,
+    7,-1, 12,2/*mean (0.117083), correlation (0.364529)*/,
+    -7,6, -5,1/*mean (0.126125), correlation (0.369606)*/,
+    -13,11, -12,5/*mean (0.130364), correlation (0.358502)*/,
+    -3,7, -2,-6/*mean (0.131691), correlation (0.375531)*/,
+    7,-8, 12,-7/*mean (0.160166), correlation (0.379508)*/,
+    -13,-7, -11,-12/*mean (0.167848), correlation (0.353343)*/,
+    1,-3, 12,12/*mean (0.183378), correlation (0.371916)*/,
+    2,-6, 3,0/*mean (0.228711), correlation (0.371761)*/,
+    -4,3, -2,-13/*mean (0.247211), correlation (0.364063)*/,
+    -1,-13, 1,9/*mean (0.249325), correlation (0.378139)*/,
+    7,1, 8,-6/*mean (0.000652272), correlation (0.411682)*/,
+    1,-1, 3,12/*mean (0.00248538), correlation (0.392988)*/,
+    9,1, 12,6/*mean (0.0206815), correlation (0.386106)*/,
+    -1,-9, -1,3/*mean (0.0364485), correlation (0.410752)*/,
+    -13,-13, -10,5/*mean (0.0376068), correlation (0.398374)*/,
+    7,7, 10,12/*mean (0.0424202), correlation (0.405663)*/,
+    12,-5, 12,9/*mean (0.0942645), correlation (0.410422)*/,
+    6,3, 7,11/*mean (0.1074), correlation (0.413224)*/,
+    5,-13, 6,10/*mean (0.109256), correlation (0.408646)*/,
+    2,-12, 2,3/*mean (0.131691), correlation (0.416076)*/,
+    3,8, 4,-6/*mean (0.165081), correlation (0.417569)*/,
+    2,6, 12,-13/*mean (0.171874), correlation (0.408471)*/,
+    9,-12, 10,3/*mean (0.175146), correlation (0.41296)*/,
+    -8,4, -7,9/*mean (0.183682), correlation (0.402956)*/,
+    -11,12, -4,-6/*mean (0.184672), correlation (0.416125)*/,
+    1,12, 2,-8/*mean (0.191487), correlation (0.386696)*/,
+    6,-9, 7,-4/*mean (0.192668), correlation (0.394771)*/,
+    2,3, 3,-2/*mean (0.200157), correlation (0.408303)*/,
+    6,3, 11,0/*mean (0.204588), correlation (0.411762)*/,
+    3,-3, 8,-8/*mean (0.205904), correlation (0.416294)*/,
+    7,8, 9,3/*mean (0.213237), correlation (0.409306)*/,
+    -11,-5, -6,-4/*mean (0.243444), correlation (0.395069)*/,
+    -10,11, -5,10/*mean (0.247672), correlation (0.413392)*/,
+    -5,-8, -3,12/*mean (0.24774), correlation (0.411416)*/,
+    -10,5, -9,0/*mean (0.00213675), correlation (0.454003)*/,
+    8,-1, 12,-6/*mean (0.0293635), correlation (0.455368)*/,
+    4,-6, 6,-11/*mean (0.0404971), correlation (0.457393)*/,
+    -10,12, -8,7/*mean (0.0481107), correlation (0.448364)*/,
+    4,-2, 6,7/*mean (0.050641), correlation (0.455019)*/,
+    -2,0, -2,12/*mean (0.0525978), correlation (0.44338)*/,
+    -5,-8, -5,2/*mean (0.0629667), correlation (0.457096)*/,
+    7,-6, 10,12/*mean (0.0653846), correlation (0.445623)*/,
+    -9,-13, -8,-8/*mean (0.0858749), correlation (0.449789)*/,
+    -5,-13, -5,-2/*mean (0.122402), correlation (0.450201)*/,
+    8,-8, 9,-13/*mean (0.125416), correlation (0.453224)*/,
+    -9,-11, -9,0/*mean (0.130128), correlation (0.458724)*/,
+    1,-8, 1,-2/*mean (0.132467), correlation (0.440133)*/,
+    7,-4, 9,1/*mean (0.132692), correlation (0.454)*/,
+    -2,1, -1,-4/*mean (0.135695), correlation (0.455739)*/,
+    11,-6, 12,-11/*mean (0.142904), correlation (0.446114)*/,
+    -12,-9, -6,4/*mean (0.146165), correlation (0.451473)*/,
+    3,7, 7,12/*mean (0.147627), correlation (0.456643)*/,
+    5,5, 10,8/*mean (0.152901), correlation (0.455036)*/,
+    0,-4, 2,8/*mean (0.167083), correlation (0.459315)*/,
+    -9,12, -5,-13/*mean (0.173234), correlation (0.454706)*/,
+    0,7, 2,12/*mean (0.18312), correlation (0.433855)*/,
+    -1,2, 1,7/*mean (0.185504), correlation (0.443838)*/,
+    5,11, 7,-9/*mean (0.185706), correlation (0.451123)*/,
+    3,5, 6,-8/*mean (0.188968), correlation (0.455808)*/,
+    -13,-4, -8,9/*mean (0.191667), correlation (0.459128)*/,
+    -5,9, -3,-3/*mean (0.193196), correlation (0.458364)*/,
+    -4,-7, -3,-12/*mean (0.196536), correlation (0.455782)*/,
+    6,5, 8,0/*mean (0.1972), correlation (0.450481)*/,
+    -7,6, -6,12/*mean (0.199438), correlation (0.458156)*/,
+    -13,6, -5,-2/*mean (0.211224), correlation (0.449548)*/,
+    1,-10, 3,10/*mean (0.211718), correlation (0.440606)*/,
+    4,1, 8,-4/*mean (0.213034), correlation (0.443177)*/,
+    -2,-2, 2,-13/*mean (0.234334), correlation (0.455304)*/,
+    2,-12, 12,12/*mean (0.235684), correlation (0.443436)*/,
+    -2,-13, 0,-6/*mean (0.237674), correlation (0.452525)*/,
+    4,1, 9,3/*mean (0.23962), correlation (0.444824)*/,
+    -6,-10, -3,-5/*mean (0.248459), correlation (0.439621)*/,
+    -3,-13, -1,1/*mean (0.249505), correlation (0.456666)*/,
+    7,5, 12,-11/*mean (0.00119208), correlation (0.495466)*/,
+    4,-2, 5,-7/*mean (0.00372245), correlation (0.484214)*/,
+    -13,9, -9,-5/*mean (0.00741116), correlation (0.499854)*/,
+    7,1, 8,6/*mean (0.0208952), correlation (0.499773)*/,
+    7,-8, 7,6/*mean (0.0220085), correlation (0.501609)*/,
+    -7,-4, -7,1/*mean (0.0233806), correlation (0.496568)*/,
+    -8,11, -7,-8/*mean (0.0236505), correlation (0.489719)*/,
+    -13,6, -12,-8/*mean (0.0268781), correlation (0.503487)*/,
+    2,4, 3,9/*mean (0.0323324), correlation (0.501938)*/,
+    10,-5, 12,3/*mean (0.0399235), correlation (0.494029)*/,
+    -6,-5, -6,7/*mean (0.0420153), correlation (0.486579)*/,
+    8,-3, 9,-8/*mean (0.0548021), correlation (0.484237)*/,
+    2,-12, 2,8/*mean (0.0616622), correlation (0.496642)*/,
+    -11,-2, -10,3/*mean (0.0627755), correlation (0.498563)*/,
+    -12,-13, -7,-9/*mean (0.0829622), correlation (0.495491)*/,
+    -11,0, -10,-5/*mean (0.0843342), correlation (0.487146)*/,
+    5,-3, 11,8/*mean (0.0929937), correlation (0.502315)*/,
+    -2,-13, -1,12/*mean (0.113327), correlation (0.48941)*/,
+    -1,-8, 0,9/*mean (0.132119), correlation (0.467268)*/,
+    -13,-11, -12,-5/*mean (0.136269), correlation (0.498771)*/,
+    -10,-2, -10,11/*mean (0.142173), correlation (0.498714)*/,
+    -3,9, -2,-13/*mean (0.144141), correlation (0.491973)*/,
+    2,-3, 3,2/*mean (0.14892), correlation (0.500782)*/,
+    -9,-13, -4,0/*mean (0.150371), correlation (0.498211)*/,
+    -4,6, -3,-10/*mean (0.152159), correlation (0.495547)*/,
+    -4,12, -2,-7/*mean (0.156152), correlation (0.496925)*/,
+    -6,-11, -4,9/*mean (0.15749), correlation (0.499222)*/,
+    6,-3, 6,11/*mean (0.159211), correlation (0.503821)*/,
+    -13,11, -5,5/*mean (0.162427), correlation (0.501907)*/,
+    11,11, 12,6/*mean (0.16652), correlation (0.497632)*/,
+    7,-5, 12,-2/*mean (0.169141), correlation (0.484474)*/,
+    -1,12, 0,7/*mean (0.169456), correlation (0.495339)*/,
+    -4,-8, -3,-2/*mean (0.171457), correlation (0.487251)*/,
+    -7,1, -6,7/*mean (0.175), correlation (0.500024)*/,
+    -13,-12, -8,-13/*mean (0.175866), correlation (0.497523)*/,
+    -7,-2, -6,-8/*mean (0.178273), correlation (0.501854)*/,
+    -8,5, -6,-9/*mean (0.181107), correlation (0.494888)*/,
+    -5,-1, -4,5/*mean (0.190227), correlation (0.482557)*/,
+    -13,7, -8,10/*mean (0.196739), correlation (0.496503)*/,
+    1,5, 5,-13/*mean (0.19973), correlation (0.499759)*/,
+    1,0, 10,-13/*mean (0.204465), correlation (0.49873)*/,
+    9,12, 10,-1/*mean (0.209334), correlation (0.49063)*/,
+    5,-8, 10,-9/*mean (0.211134), correlation (0.503011)*/,
+    -1,11, 1,-13/*mean (0.212), correlation (0.499414)*/,
+    -9,-3, -6,2/*mean (0.212168), correlation (0.480739)*/,
+    -1,-10, 1,12/*mean (0.212731), correlation (0.502523)*/,
+    -13,1, -8,-10/*mean (0.21327), correlation (0.489786)*/,
+    8,-11, 10,-6/*mean (0.214159), correlation (0.488246)*/,
+    2,-13, 3,-6/*mean (0.216993), correlation (0.50287)*/,
+    7,-13, 12,-9/*mean (0.223639), correlation (0.470502)*/,
+    -10,-10, -5,-7/*mean (0.224089), correlation (0.500852)*/,
+    -10,-8, -8,-13/*mean (0.228666), correlation (0.502629)*/,
+    4,-6, 8,5/*mean (0.22906), correlation (0.498305)*/,
+    3,12, 8,-13/*mean (0.233378), correlation (0.503825)*/,
+    -4,2, -3,-3/*mean (0.234323), correlation (0.476692)*/,
+    5,-13, 10,-12/*mean (0.236392), correlation (0.475462)*/,
+    4,-13, 5,-1/*mean (0.236842), correlation (0.504132)*/,
+    -9,9, -4,3/*mean (0.236977), correlation (0.497739)*/,
+    0,3, 3,-9/*mean (0.24314), correlation (0.499398)*/,
+    -12,1, -6,1/*mean (0.243297), correlation (0.489447)*/,
+    3,2, 4,-8/*mean (0.00155196), correlation (0.553496)*/,
+    -10,-10, -10,9/*mean (0.00239541), correlation (0.54297)*/,
+    8,-13, 12,12/*mean (0.0034413), correlation (0.544361)*/,
+    -8,-12, -6,-5/*mean (0.003565), correlation (0.551225)*/,
+    2,2, 3,7/*mean (0.00835583), correlation (0.55285)*/,
+    10,6, 11,-8/*mean (0.00885065), correlation (0.540913)*/,
+    6,8, 8,-12/*mean (0.0101552), correlation (0.551085)*/,
+    -7,10, -6,5/*mean (0.0102227), correlation (0.533635)*/,
+    -3,-9, -3,9/*mean (0.0110211), correlation (0.543121)*/,
+    -1,-13, -1,5/*mean (0.0113473), correlation (0.550173)*/,
+    -3,-7, -3,4/*mean (0.0140913), correlation (0.554774)*/,
+    -8,-2, -8,3/*mean (0.017049), correlation (0.55461)*/,
+    4,2, 12,12/*mean (0.01778), correlation (0.546921)*/,
+    2,-5, 3,11/*mean (0.0224022), correlation (0.549667)*/,
+    6,-9, 11,-13/*mean (0.029161), correlation (0.546295)*/,
+    3,-1, 7,12/*mean (0.0303081), correlation (0.548599)*/,
+    11,-1, 12,4/*mean (0.0355151), correlation (0.523943)*/,
+    -3,0, -3,6/*mean (0.0417904), correlation (0.543395)*/,
+    4,-11, 4,12/*mean (0.0487292), correlation (0.542818)*/,
+    2,-4, 2,1/*mean (0.0575124), correlation (0.554888)*/,
+    -10,-6, -8,1/*mean (0.0594242), correlation (0.544026)*/,
+    -13,7, -11,1/*mean (0.0597391), correlation (0.550524)*/,
+    -13,12, -11,-13/*mean (0.0608974), correlation (0.55383)*/,
+    6,0, 11,-13/*mean (0.065126), correlation (0.552006)*/,
+    0,-1, 1,4/*mean (0.074224), correlation (0.546372)*/,
+    -13,3, -9,-2/*mean (0.0808592), correlation (0.554875)*/,
+    -9,8, -6,-3/*mean (0.0883378), correlation (0.551178)*/,
+    -13,-6, -8,-2/*mean (0.0901035), correlation (0.548446)*/,
+    5,-9, 8,10/*mean (0.0949843), correlation (0.554694)*/,
+    2,7, 3,-9/*mean (0.0994152), correlation (0.550979)*/,
+    -1,-6, -1,-1/*mean (0.10045), correlation (0.552714)*/,
+    9,5, 11,-2/*mean (0.100686), correlation (0.552594)*/,
+    11,-3, 12,-8/*mean (0.101091), correlation (0.532394)*/,
+    3,0, 3,5/*mean (0.101147), correlation (0.525576)*/,
+    -1,4, 0,10/*mean (0.105263), correlation (0.531498)*/,
+    3,-6, 4,5/*mean (0.110785), correlation (0.540491)*/,
+    -13,0, -10,5/*mean (0.112798), correlation (0.536582)*/,
+    5,8, 12,11/*mean (0.114181), correlation (0.555793)*/,
+    8,9, 9,-6/*mean (0.117431), correlation (0.553763)*/,
+    7,-4, 8,-12/*mean (0.118522), correlation (0.553452)*/,
+    -10,4, -10,9/*mean (0.12094), correlation (0.554785)*/,
+    7,3, 12,4/*mean (0.122582), correlation (0.555825)*/,
+    9,-7, 10,-2/*mean (0.124978), correlation (0.549846)*/,
+    7,0, 12,-2/*mean (0.127002), correlation (0.537452)*/,
+    -1,-6, 0,-11/*mean (0.127148), correlation (0.547401)*/
+};
+
+
+static void makeRandomPattern(int patchSize, Point* pattern, int npoints)
+{
+    RNG rng(0x34985739); // we always start with a fixed seed,
+                         // to make patterns the same on each run
+    for( int i = 0; i < npoints; i++ )
+    {
+        pattern[i].x = rng.uniform(-patchSize/2, patchSize/2+1);
+        pattern[i].y = rng.uniform(-patchSize/2, patchSize/2+1);
+    }
+}
+
+    
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ORB::CommonParams::read(const FileNode& fn)
+{
+    scale_factor_ = fn["scaleFactor"];
+    n_levels_ = int(fn["nLevels"]);
+    first_level_ = int(fn["firstLevel"]);
+    edge_threshold_ = fn["edgeThreshold"];
+    patch_size_ = fn["patchSize"];
+    WTA_K_ = fn["WTA_K"];
+    if( WTA_K_ == 0 ) WTA_K_ = 2;
+    score_type_ = fn["scoreType"];
+}
+
+void ORB::CommonParams::write(FileStorage& fs) const
+{
+    fs << "scaleFactor" << scale_factor_;
+    fs << "nLevels" << int(n_levels_);
+    fs << "firstLevel" << int(first_level_);
+    fs << "edgeThreshold" << int(edge_threshold_);
+    fs << "patchSize" << int(patch_size_);
+    fs << "WTA_K" << WTA_K_;
+    fs << "scoreType" << score_type_;
+}
+
+void ORB::read(const FileNode& fn)
+{
+    CommonParams params;
+    params.read(fn);
+    int n_features = int(fn["nFeatures"]);
+    *this = ORB(n_features, params);
+}
+
+void ORB::write(FileStorage& fs) const
+{
+    params_.write(fs);
+    fs << "nFeatures" << int(n_features_);
+}
+
+static inline float get_scale(const ORB::CommonParams& params, int level)
+{
+    return std::pow(params.scale_factor_, float(level) - float(params.first_level_));
+}
 
 /** Constructor
  * @param detector_params parameters to use
  */
 ORB::ORB(size_t n_features, const CommonParams & detector_params) :
-  params_(detector_params), n_features_(n_features)
+    params_(detector_params), n_features_(n_features)
 {
-  // fill the extractors and descriptors for the corresponding scales
-  float factor = (float)(1.0 / params_.scale_factor_ / params_.scale_factor_);
-  int n_desired_features_per_scale = cvRound(n_features / ((std::pow(factor, int(params_.n_levels_)) - 1)
-                                                 / (factor - 1)));
-  n_features_per_level_.resize(detector_params.n_levels_);
-  for (unsigned int level = 0; level < detector_params.n_levels_; level++)
-  {
-    n_features_per_level_[level] = n_desired_features_per_scale;
-    n_desired_features_per_scale = cvRound(n_desired_features_per_scale * factor);
-  }
-
-  // Make sure we forget about what is too close to the boundary
-  params_.edge_threshold_ = std::max(params_.edge_threshold_, params_.patch_size_ + kKernelWidth / 2 + 2);
-
-  // pre-compute the end of a row in a circular patch
-  half_patch_size_ = params_.patch_size_ / 2;
-  u_max_.resize(half_patch_size_ + 1);
-  for (int v = 0; v <= half_patch_size_ * sqrt(2.f) / 2 + 1; ++v)
-    u_max_[v] = cvRound(sqrt(float(half_patch_size_ * half_patch_size_ - v * v)));
-
-  // Make sure we are symmetric
-  for (int v = half_patch_size_, v_0 = 0; v >= half_patch_size_ * sqrt(2.f) / 2; --v)
-  {
-    while (u_max_[v_0] == u_max_[v_0 + 1])
-      ++v_0;
-    u_max_[v] = v_0;
-    ++v_0;
-  }
+    // fill the extractors and descriptors for the corresponding scales
+    float factor = (float)(1.0 / params_.scale_factor_);
+    int n_desired_features_per_scale = n_features_;//cvRound(n_features / ((std::pow(factor, int(params_.n_levels_)) - 1) / (factor - 1)));
+    n_features_per_level_.resize(params_.n_levels_);
+    for (unsigned int level = 0; level < params_.n_levels_; level++)
+    {
+        n_features_per_level_[level] = n_desired_features_per_scale;
+        n_desired_features_per_scale = cvRound(n_desired_features_per_scale * factor);
+    }
+    
+    // Make sure we forget about what is too close to the boundary
+    //params_.edge_threshold_ = std::max(params_.edge_threshold_, params_.patch_size_/2 + kKernelWidth / 2 + 2);
+    
+    // pre-compute the end of a row in a circular patch
+    int half_patch_size = params_.patch_size_ / 2;
+    u_max_.resize(half_patch_size + 1);
+    for (int v = 0; v <= half_patch_size * sqrt(2.f) / 2 + 1; ++v)
+        u_max_[v] = cvRound(sqrt(float(half_patch_size * half_patch_size - v * v)));
+    
+    // Make sure we are symmetric
+    for (int v = half_patch_size, v_0 = 0; v >= half_patch_size * sqrt(2.f) / 2; --v)
+    {
+        while (u_max_[v_0] == u_max_[v_0 + 1])
+            ++v_0;
+        u_max_[v] = v_0;
+        ++v_0;
+    }
+    
+    const int npoints = 512;
+    Point pattern_buf[npoints];
+    const Point* pattern0 = (const Point*)bit_pattern_31_;
+    if( params_.patch_size_ != 31 )
+    {
+        pattern0 = pattern_buf;
+        makeRandomPattern(params_.patch_size_, pattern_buf, npoints);
+    }
+    
+    CV_Assert( params_.WTA_K_ == 2 || params_.WTA_K_ == 3 || params_.WTA_K_ == 4 );
+    
+    if( params_.WTA_K_ == 2 )
+        std::copy(pattern0, pattern0 + npoints, back_inserter(pattern));
+    else
+    {
+        int ntuples = descriptorSize()*4;
+        initializeOrbPattern(pattern0, pattern, ntuples, params_.WTA_K_, npoints);
+    }
 }
+
 
 /** destructor to empty the patterns */
 ORB::~ORB()
 {
-  for (std::vector<OrbPatterns*>::const_iterator pattern = patterns_.begin(), pattern_end = patterns_.end(); pattern
-      != pattern_end; ++pattern)
-    if (*pattern)
-      delete *pattern;
 }
 
 /** returns the descriptor size in bytes */
 int ORB::descriptorSize() const
 {
-  return kBytes;
+    return kBytes;
 }
 
 /** Compute the ORB features and descriptors on an image
@@ -503,10 +682,10 @@ int ORB::descriptorSize() const
  * @param mask the mask to apply
  * @param keypoints the resulting keypoints
  */
-void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints)
+void ORB::operator()(const Mat &image, const Mat &mask, vector<KeyPoint> & keypoints)
 {
-  cv::Mat empty_descriptors;
-  this->operator ()(image, mask, keypoints, empty_descriptors, true, false);
+    Mat empty_descriptors;
+    this->operator ()(image, mask, keypoints, empty_descriptors, true, false);
 }
 
 /** Compute the ORB features and descriptors on an image
@@ -516,10 +695,10 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
  * @param descriptors the resulting descriptors
  * @param useProvidedKeypoints if true, the keypoints are used as an input
  */
-void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints,
-                     cv::Mat & descriptors, bool useProvidedKeypoints)
+void ORB::operator()(const Mat &image, const Mat &mask, vector<KeyPoint> & keypoints,
+                     Mat & descriptors, bool useProvidedKeypoints)
 {
-  this->operator ()(image, mask, keypoints, descriptors, !useProvidedKeypoints, true);
+    this->operator ()(image, mask, keypoints, descriptors, !useProvidedKeypoints, true);
 }
 
 /** Compute the ORB features and descriptors on an image
@@ -530,172 +709,179 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB::operator()(const cv::Mat &_image_in, const cv::Mat &_mask, std::vector<cv::KeyPoint> & keypoints_in_out,
-                     cv::Mat & descriptors, bool do_keypoints, bool do_descriptors)
+void ORB::operator()(const Mat &image_in, const Mat &mask, vector<KeyPoint> & keypoints_in_out,
+                     Mat& descriptors, bool do_keypoints, bool do_descriptors)
 {
-  if (((!do_keypoints) && (!do_descriptors)) || (_image_in.empty()))
-    return;
-
-  //ROI handling
-  cv::Mat image_in(_image_in);
-  cv::Mat mask(_mask);
-  Point image_in_roi_offset(0,0);
-  if (image_in.isSubmatrix())
-  {
-      Size image_in_size;
-      image_in.locateROI(image_in_size, image_in_roi_offset);
-      image_in_roi_offset.x = image_in_roi_offset.x - std::max(0, image_in_roi_offset.x - params_.edge_threshold_);
-      image_in_roi_offset.y = image_in_roi_offset.y - std::max(0, image_in_roi_offset.y - params_.edge_threshold_);
-
-      image_in.adjustROI(params_.edge_threshold_, params_.edge_threshold_, params_.edge_threshold_, params_.edge_threshold_);
-      if (!do_keypoints && image_in_roi_offset != Point(0,0))
-      {
-          for (std::vector<cv::KeyPoint>::iterator kp = keypoints_in_out.begin(); kp != keypoints_in_out.end(); ++kp)
-          {
-              kp->pt.x += image_in_roi_offset.x;
-              kp->pt.y += image_in_roi_offset.y;
-          }
-      }
-
-      if (!mask.empty())
-          copyMakeBorder(_mask, mask,
-                         image_in_roi_offset.y, image_in.rows - image_in_roi_offset.y - mask.rows,
-                         image_in_roi_offset.x, image_in.cols - image_in_roi_offset.x - mask.cols,
-                         cv::BORDER_CONSTANT, Scalar::all(0));
-  }
-
-  cv::Mat image;
-  if (image_in.type() != CV_8UC1)
-    cvtColor(image_in, image, CV_BGR2GRAY);
-  else
-    image = image_in;
-
-  if (do_descriptors)
-    descriptors.release();
-
-  // Pre-compute the scale pyramids
-  std::vector<cv::Mat> image_pyramid(params_.n_levels_), mask_pyramid(params_.n_levels_);
-  for (unsigned int level = 0; level < params_.n_levels_; ++level)
-  {
-    // Compute the resized image
-    if (level != params_.first_level_)
+    if (((!do_keypoints) && (!do_descriptors)) || (image_in.empty()))
+        return;
+    
+    //ROI handling
+    const int HARRIS_BLOCK_SIZE = 9;
+    int half_patch_size = params_.patch_size_ / 2;
+    int border = std::max(params_.edge_threshold_, std::max(half_patch_size, HARRIS_BLOCK_SIZE/2))+1;
+    
+    Mat image;
+    if (image_in.type() != CV_8UC1)
+        cvtColor(image_in, image, CV_BGR2GRAY);
+    else
+        image = image_in;
+    
+    int n_levels = (int)params_.n_levels_;  
+    
+    if( !do_keypoints )
     {
-      float scale = 1 / std::pow(params_.scale_factor_, float(level) - float(params_.first_level_));
-      cv::resize(image, image_pyramid[level], cv::Size(), scale, scale, cv::INTER_AREA);
-      if (!mask.empty())
-        cv::resize(mask, mask_pyramid[level], cv::Size(), scale, scale, cv::INTER_AREA);
+        // if we have pre-computed keypoints, they may use more levels than it is set in parameters
+        // !!!TODO!!! implement more correct method, independent from the used keypoint detector.
+        // Namely, the detector should provide correct size of each keypoint. Based on the keypoint size
+        // and the algorithm used (i.e. BRIEF, running on 31x31 patches) we should compute the approximate
+        // scale-factor that we need to apply. Then we should cluster all the computed scale-factors and
+        // for each cluster compute the corresponding image.
+        //
+        // In short, ultimately the descriptor should
+        // ignore octave parameter and deal only with the keypoint size.
+        n_levels = 0;
+        for( size_t i = 0; i < keypoints_in_out.size(); i++ )
+            n_levels = std::max(n_levels, std::max(keypoints_in_out[i].octave, 0));
+        n_levels++;
     }
+    
+    // Pre-compute the scale pyramids
+    vector<Mat> image_pyramid(n_levels), mask_pyramid(n_levels);
+    for (int level = 0; level < n_levels; ++level)
+    {
+        float scale = 1/get_scale(params_, level);
+        Size sz(cvRound(image.cols*scale), cvRound(image.rows*scale));
+        Size wholeSize(sz.width + border*2, sz.height + border*2);
+        Mat temp(wholeSize, image.type()), masktemp;
+        image_pyramid[level] = temp(Rect(border, border, sz.width, sz.height));
+        
+        if( !mask.empty() )
+        {
+            masktemp = Mat(wholeSize, mask.type());
+            mask_pyramid[level] = masktemp(Rect(border, border, sz.width, sz.height));
+        }
+        
+        // Compute the resized image
+        if (level != (int)params_.first_level_)
+        {
+            resize(image, image_pyramid[level], sz, scale, scale, INTER_AREA);
+            if (!mask.empty())
+                resize(mask, mask_pyramid[level], sz, scale, scale, INTER_AREA);
+            copyMakeBorder(image_pyramid[level], temp, border, border, border, border,
+                           BORDER_REFLECT_101+BORDER_ISOLATED);
+        }
+        else
+        {
+            copyMakeBorder(image, temp, border, border, border, border,
+                           BORDER_REFLECT_101);
+            image.copyTo(image_pyramid[level]);
+            if( !mask.empty() )
+                mask.copyTo(mask_pyramid[level]);
+        }
+        
+        if( !mask.empty() )
+            copyMakeBorder(mask_pyramid[level], masktemp, border, border, border, border,
+                           BORDER_CONSTANT+BORDER_ISOLATED);
+    }
+    
+    // Pre-compute the keypoints (we keep the best over all scales, so this has to be done beforehand
+    vector < vector<KeyPoint> > all_keypoints;
+    if (do_keypoints)
+        // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
+        computeKeyPoints(image_pyramid, mask_pyramid, all_keypoints);
     else
     {
-      image_pyramid[level] = image;
-      mask_pyramid[level] = mask;
+        // Remove keypoints very close to the border
+        KeyPointsFilter::runByImageBorder(keypoints_in_out, image.size(), params_.edge_threshold_);
+        
+        // Cluster the input keypoints depending on the level they were computed at
+        all_keypoints.resize(n_levels);
+        for (vector<KeyPoint>::iterator keypoint = keypoints_in_out.begin(),
+             keypoint_end = keypoints_in_out.end(); keypoint != keypoint_end; ++keypoint)
+        {
+            Point2f pt = keypoint->pt;
+            all_keypoints[keypoint->octave].push_back(*keypoint);
+        }
+        
+        // Make sure we rescale the coordinates
+        for (int level = 0; level < n_levels; ++level)
+        {
+            if (level == (int)params_.first_level_)
+                continue;
+            
+            vector<KeyPoint> & keypoints = all_keypoints[level];
+            float scale = 1/get_scale(params_, level);
+            for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+                 keypoint_end = keypoints.end(); keypoint != keypoint_end; ++keypoint)
+                keypoint->pt *= scale;
+        }
     }
-  }
-
-  // Pre-compute the keypoints (we keep the best over all scales, so this has to be done beforehand
-  std::vector < std::vector<cv::KeyPoint> > all_keypoints;
-  if (do_keypoints)
-    // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
-    computeKeyPoints(image_pyramid, mask_pyramid, all_keypoints);
-  else
-  {
-    // Remove keypoints very close to the border
-    cv::KeyPointsFilter::runByImageBorder(keypoints_in_out, image.size(), params_.edge_threshold_);
-
-    // Cluster the input keypoints depending on the level they were computed at
-    all_keypoints.resize(params_.n_levels_);
-    for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints_in_out.begin(), keypoint_end = keypoints_in_out.end(); keypoint
-        != keypoint_end; ++keypoint)
-      all_keypoints[keypoint->octave].push_back(*keypoint);
-
-    // Make sure we rescale the coordinates
-    for (unsigned int level = 0; level < params_.n_levels_; ++level)
-    {
-      if (level == params_.first_level_)
-        continue;
-
-      std::vector<cv::KeyPoint> & keypoints = all_keypoints[level];
-      float scale = 1.0f / std::pow(params_.scale_factor_, float(level) - float(params_.first_level_));
-      for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
-          != keypoint_end; ++keypoint)
-        keypoint->pt *= scale;
-    }
-  }
-
-  keypoints_in_out.clear();
-  for (unsigned int level = 0; level < params_.n_levels_; ++level)
-  {
-    // Compute the resized image
-    cv::Mat & working_mat = image_pyramid[level];
-
-    // Compute the integral image
-    cv::Mat integral_image;
-    if (do_descriptors)
-      // if we don't do the descriptors (and therefore, we only do the keypoints, it is faster to not compute the
-      // integral image
-      computeIntegralImage(working_mat, level, integral_image);
-
-    // Get the features and compute their orientation
-    std::vector<cv::KeyPoint> & keypoints = all_keypoints[level];
-    computeOrientation(working_mat, integral_image, level, keypoints);
-
-    // Compute the descriptors
-    cv::Mat desc;
-    if (do_descriptors)
-      computeDescriptors(working_mat, integral_image, level, keypoints, desc);
-
-    // Copy to the output data
-    if (level != params_.first_level_)
-    {
-      float scale = std::pow(params_.scale_factor_, float(level) - float(params_.first_level_));
-      for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
-          != keypoint_end; ++keypoint)
-        keypoint->pt *= scale;
-    }
-    // And add the keypoints to the output
-    keypoints_in_out.insert(keypoints_in_out.end(), keypoints.begin(), keypoints.end());
-
+    
     if (do_descriptors)
     {
-      if (descriptors.empty())
-        desc.copyTo(descriptors);
-      else
-        descriptors.push_back(desc);
+        int nkeypoints = 0;
+        for (int level = 0; level < n_levels; ++level)
+            nkeypoints += (int)all_keypoints[level].size();
+        if( nkeypoints == 0 )
+            descriptors.release();
+        else
+            descriptors.create(nkeypoints, descriptorSize(), CV_8U);
     }
-  }
-
-  //fix ROI offset
-  if (image_in_roi_offset != Point(0,0))
-  {
-      for (std::vector<cv::KeyPoint>::iterator kp = keypoints_in_out.begin(); kp != keypoints_in_out.end(); ++kp)
-      {
-          kp->pt.x -= image_in_roi_offset.x;
-          kp->pt.y -= image_in_roi_offset.y;
-      }
-  }
+    
+    keypoints_in_out.clear();
+    int offset = 0;
+    for (int level = 0; level < n_levels; ++level)
+    {
+        // Get the features and compute their orientation
+        vector<KeyPoint>& keypoints = all_keypoints[level];
+        int nkeypoints = (int)keypoints.size();
+        
+        // Compute the descriptors
+        if (do_descriptors)
+        {
+            Mat desc = descriptors.rowRange(offset, offset + nkeypoints);
+            offset += nkeypoints;
+            // preprocess the resized image
+            Mat& working_mat = image_pyramid[level];
+            boxFilter(working_mat, working_mat, working_mat.depth(), Size(5,5), Point(-1,-1), true, BORDER_REFLECT_101);
+            //GaussianBlur(working_mat, working_mat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
+            computeDescriptors(working_mat, Mat(), level, keypoints, desc);
+        }
+        
+        // Copy to the output data
+        if (level != (int)params_.first_level_)
+        {
+            float scale = get_scale(params_, level);
+            for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+                 keypoint_end = keypoints.end(); keypoint != keypoint_end; ++keypoint)
+                keypoint->pt *= scale;
+        }
+        // And add the keypoints to the output
+        keypoints_in_out.insert(keypoints_in_out.end(), keypoints.begin(), keypoints.end());
+    }
 }
 
 //takes keypoints and culls them by the response
-inline void cull(std::vector<cv::KeyPoint>& keypoints, size_t n_points)
+static void cull(vector<KeyPoint>& keypoints, size_t n_points)
 {
-  //this is only necessary if the keypoints size is greater than the number of desired points.
-  if (keypoints.size() > n_points)
-  {
-    if (n_points==0) {
-      keypoints.clear();
-      return;
-    }
-    //first use nth element to partition the keypoints into the best and worst.
-    std::nth_element(keypoints.begin(), keypoints.begin() + n_points, keypoints.end(), keypointResponseGreater);
-    //this is the boundary response, and in the case of FAST may be ambigous
-    float ambiguous_response = keypoints[n_points - 1].response;
-    //use std::partition to grab all of the keypoints with the boundary response.
-    std::vector<cv::KeyPoint>::const_iterator new_end =
+    //this is only necessary if the keypoints size is greater than the number of desired points.
+    if (keypoints.size() > n_points)
+    {
+        if (n_points==0) {
+            keypoints.clear();
+            return;
+        }
+        //first use nth element to partition the keypoints into the best and worst.
+        std::nth_element(keypoints.begin(), keypoints.begin() + n_points, keypoints.end(), KeypointResponseGreater());
+        //this is the boundary response, and in the case of FAST may be ambigous
+        float ambiguous_response = keypoints[n_points - 1].response;
+        //use std::partition to grab all of the keypoints with the boundary response.
+        vector<KeyPoint>::const_iterator new_end =
         std::partition(keypoints.begin() + n_points, keypoints.end(),
-                       KeypointResponseGreaterThanEqual(ambiguous_response));
-    //resize the keypoints, given this new end point. nth_element and partition reordered the points inplace
-    keypoints.resize(new_end - keypoints.begin());
-  }
+                       KeypointResponseGreaterThanThreshold(ambiguous_response));
+        //resize the keypoints, given this new end point. nth_element and partition reordered the points inplace
+        keypoints.resize(new_end - keypoints.begin());
+    }
 }
 
 /** Compute the ORB keypoints on an image
@@ -703,41 +889,49 @@ inline void cull(std::vector<cv::KeyPoint>& keypoints, size_t n_points)
  * @param mask_pyramid the masks to apply at every level
  * @param keypoints the resulting keypoints, clustered per level
  */
-void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std::vector<cv::Mat>& mask_pyramid,
-                           std::vector<std::vector<cv::KeyPoint> >& all_keypoints_out) const
+void ORB::computeKeyPoints(const vector<Mat>& image_pyramid,
+                           const vector<Mat>& mask_pyramid,
+                           vector<vector<KeyPoint> >& all_keypoints_out) const
 {
-  all_keypoints_out.resize(params_.n_levels_);
-
-  // half_patch_size_ for orientation, 4 for Harris
-  unsigned int edge_threshold = std::max(std::max(half_patch_size_, 4), params_.edge_threshold_);
-
-  for (unsigned int level = 0; level < params_.n_levels_; ++level)
-  {
-    all_keypoints_out[level].reserve(n_features_per_level_[level]);
-
-    std::vector<cv::KeyPoint> & keypoints = all_keypoints_out[level];
-
-    // Detect FAST features, 20 is a good threshold
-    cv::FastFeatureDetector fd(20, true);
-    fd.detect(image_pyramid[level], keypoints, mask_pyramid[level]);
-
-    // Remove keypoints very close to the border
-    cv::KeyPointsFilter::runByImageBorder(keypoints, image_pyramid[level].size(), edge_threshold);
-
-    // Keep more points than necessary as FAST does not give amazing corners
-    cull(keypoints, 2 * n_features_per_level_[level]);
-
-    // Compute the Harris cornerness (better scoring than FAST)
-    HarrisResponse h(image_pyramid[level]);
-    h(keypoints);
-    //cull to the final desired level, using the new Harris scores.
-    cull(keypoints, n_features_per_level_[level]);
-
-    // Set the level of the coordinates
-    for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
-        != keypoint_end; ++keypoint)
-      keypoint->octave = level;
-  }
+    all_keypoints_out.resize(params_.n_levels_);
+    
+    for (int level = 0; level < (int)params_.n_levels_; ++level)
+    {
+        all_keypoints_out[level].reserve(n_features_per_level_[level]);
+        
+        vector<KeyPoint> & keypoints = all_keypoints_out[level];
+        
+        // Detect FAST features, 20 is a good threshold
+        FastFeatureDetector fd(20, true);
+        fd.detect(image_pyramid[level], keypoints, mask_pyramid[level]);
+        
+        // Remove keypoints very close to the border
+        KeyPointsFilter::runByImageBorder(keypoints, image_pyramid[level].size(), params_.edge_threshold_);
+        
+        if( params_.score_type_ == CommonParams::HARRIS_SCORE )
+        {
+            // Keep more points than necessary as FAST does not give amazing corners
+            cull(keypoints, 2 * n_features_per_level_[level]);
+            
+            // Compute the Harris cornerness (better scoring than FAST)
+            HarrisResponses(image_pyramid[level], keypoints, 7, HARRIS_K);
+        }
+        
+        //cull to the final desired level, using the new Harris scores.
+        cull(keypoints, n_features_per_level_[level]);  
+        
+        float sf = get_scale(params_, level);
+        
+        // Set the level of the coordinates
+        for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+             keypoint_end = keypoints.end(); keypoint != keypoint_end; ++keypoint)
+        {
+            keypoint->octave = level;
+            keypoint->size = params_.patch_size_*sf;
+        }
+        
+        computeOrientation(image_pyramid[level], Mat(), level, keypoints);
+    }
 }
 
 /** Compute the ORB keypoint orientations
@@ -746,52 +940,17 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
  * @param scale the scale at which we compute the orientation
  * @param keypoints the resulting keypoints
  */
-void ORB::computeOrientation(const cv::Mat& image, const cv::Mat& integral_image, unsigned int scale,
-                             std::vector<cv::KeyPoint>& keypoints) const
+void ORB::computeOrientation(const Mat& image, const Mat&, unsigned int scale,
+                             vector<KeyPoint>& keypoints) const
 {
-  // Process each keypoint
-  for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
-      != keypoint_end; ++keypoint)
-  {
-    //get a patch at the keypoint
-    if (integral_image.empty())
+    int half_patch_size = params_.patch_size_/2;
+    
+    // Process each keypoint
+    for (vector<KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
+         != keypoint_end; ++keypoint)
     {
-      switch (image.depth())
-      {
-        case CV_8U:
-          IC_Angle<uchar, int> (image, half_patch_size_, *keypoint, u_max_);
-          break;
-        case CV_32S:
-          IC_Angle<int, int> (image, half_patch_size_, *keypoint, u_max_);
-          break;
-        case CV_32F:
-          IC_Angle<float, float> (image, half_patch_size_, *keypoint, u_max_);
-          break;
-        case CV_64F:
-          IC_Angle<double, double> (image, half_patch_size_, *keypoint, u_max_);
-          break;
-      }
+        keypoint->angle = IC_Angle(image, half_patch_size, keypoint->pt, u_max_);
     }
-    else
-    {
-      // use the integral image if you can
-      switch (integral_image.depth())
-      {
-        case CV_32S:
-          IC_Angle_Integral<int> (integral_image, half_patch_size_, *keypoint, orientation_horizontal_offsets_[scale],
-                                  orientation_vertical_offsets_[scale]);
-          break;
-        case CV_32F:
-          IC_Angle_Integral<float> (integral_image, half_patch_size_, *keypoint,
-                                    orientation_horizontal_offsets_[scale], orientation_vertical_offsets_[scale]);
-          break;
-        case CV_64F:
-          IC_Angle_Integral<double> (integral_image, half_patch_size_, *keypoint,
-                                     orientation_horizontal_offsets_[scale], orientation_vertical_offsets_[scale]);
-          break;
-      }
-    }
-  }
 }
 
 /** Compute the integral image and upadte the cached values
@@ -799,53 +958,8 @@ void ORB::computeOrientation(const cv::Mat& image, const cv::Mat& integral_image
  * @param level the scale at which we compute the orientation
  * @param descriptors the resulting descriptors
  */
-void ORB::computeIntegralImage(const cv::Mat & image, unsigned int level, cv::Mat &integral_image)
+void ORB::computeIntegralImage(const Mat&, unsigned int, Mat&)
 {
-  integral(image, integral_image, CV_32S);
-  integral_image_steps_.resize(params_.n_levels_, 0);
-
-  int integral_image_step = (int)integral_image.step1();
-  if ((int)integral_image_steps_[level] == integral_image_step)
-    return;
-
-  // If the integral image dimensions have changed, recompute everything
-
-  // Cache the step sizes
-  integral_image_steps_[level] = integral_image_step;
-
-  // Cache the offsets for the orientation
-  orientation_horizontal_offsets_.resize(params_.n_levels_);
-  orientation_vertical_offsets_.resize(params_.n_levels_);
-  orientation_horizontal_offsets_[level].resize(8 * half_patch_size_);
-  orientation_vertical_offsets_[level].resize(8 * half_patch_size_);
-  for (int v = 1, offset_index = 0; v <= half_patch_size_; ++v)
-  {
-    // Compute the offsets to use if using the integral image
-    for (int signed_v = -v; signed_v <= v; signed_v += 2 * v)
-    {
-      // the offsets are computed so that we can compute the integral image
-      // elem at 0 - eleme at 1 - elem at 2 + elem at 3
-      orientation_horizontal_offsets_[level][offset_index] = (signed_v + 1) * integral_image_step + u_max_[v] + 1;
-      orientation_vertical_offsets_[level][offset_index] = (u_max_[v] + 1) * integral_image_step + signed_v + 1;
-      ++offset_index;
-      orientation_horizontal_offsets_[level][offset_index] = signed_v * integral_image_step + u_max_[v] + 1;
-      orientation_vertical_offsets_[level][offset_index] = -u_max_[v] * integral_image_step + signed_v + 1;
-      ++offset_index;
-      orientation_horizontal_offsets_[level][offset_index] = (signed_v + 1) * integral_image_step - u_max_[v];
-      orientation_vertical_offsets_[level][offset_index] = (u_max_[v] + 1) * integral_image_step + signed_v;
-      ++offset_index;
-      orientation_horizontal_offsets_[level][offset_index] = signed_v * integral_image_step - u_max_[v];
-      orientation_vertical_offsets_[level][offset_index] = -u_max_[v] * integral_image_step + signed_v;
-      ++offset_index;
-    }
-  }
-
-  // Remove the previous version if dimensions are different
-  patterns_.resize(params_.n_levels_, 0);
-  if (patterns_[level])
-    delete patterns_[level];
-
-  patterns_[level] = new OrbPatterns(params_.patch_size_, integral_image_step);
 }
 
 /** Compute the ORB decriptors
@@ -855,23 +969,17 @@ void ORB::computeIntegralImage(const cv::Mat & image, unsigned int level, cv::Ma
  * @param keypoints the keypoints to use
  * @param descriptors the resulting descriptors
  */
-void ORB::computeDescriptors(const cv::Mat& image, const cv::Mat& integral_image, unsigned int level,
-                             std::vector<cv::KeyPoint>& keypoints, cv::Mat & descriptors) const
+void ORB::computeDescriptors(const Mat& image, const Mat& integral_image, unsigned int,
+                             vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
-  //convert to grayscale if more than one color
-  cv::Mat gray_image = image;
-  if (image.type() != CV_8UC1)
-    cv::cvtColor(image, gray_image, CV_BGR2GRAY);
-
-  // Get the patterns to apply
-  OrbPatterns* patterns = patterns_[level];
-
-  //create the descriptor mat, keypoints.size() rows, BYTES cols
-  descriptors = cv::Mat::zeros((int)keypoints.size(), kBytes, CV_8UC1);
-
-  for (size_t i = 0; i < keypoints.size(); i++)
-    // look up the test pattern
-    patterns->compute(keypoints[i], integral_image, descriptors.ptr((int)i));
+    //convert to grayscale if more than one color
+    CV_Assert(image.type() == CV_8UC1);
+    //create the descriptor mat, keypoints.size() rows, BYTES cols
+    int dsize = descriptorSize();
+    descriptors = Mat::zeros((int)keypoints.size(), dsize, CV_8UC1);
+    
+    for (size_t i = 0; i < keypoints.size(); i++)
+        computeOrbDescriptor(keypoints[i], image, &pattern[0], descriptors.ptr((int)i), dsize, params_.WTA_K_);
 }
 
 }

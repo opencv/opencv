@@ -729,6 +729,8 @@ public:
     _Tp dot(const Point_& pt) const;
     //! dot product computed in double-precision arithmetics
     double ddot(const Point_& pt) const;
+    //! cross-product
+    double cross(const Point_& pt) const;
     //! checks whether the point is inside the specified rectangle
     bool inside(const Rect_<_Tp>& r) const;
     
@@ -1274,6 +1276,7 @@ public:
     _InputArray();
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
+    template<typename _Tp> _InputArray(const _Tp* vec, int n);
     template<typename _Tp> _InputArray(const vector<_Tp>& vec);
     template<typename _Tp> _InputArray(const vector<vector<_Tp> >& vec);
     _InputArray(const vector<Mat>& vec);
@@ -1323,6 +1326,7 @@ public:
     template<typename _Tp> _OutputArray(vector<vector<_Tp> >& vec);
     _OutputArray(vector<Mat>& vec);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
+    template<typename _Tp> _OutputArray(_Tp* vec, int n);
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
     virtual bool needed() const;

@@ -46,6 +46,39 @@
 using namespace cv;
 using namespace std;
 
+template<typename _Tp> static int solveQuadratic(_Tp a, _Tp b, _Tp c, _Tp& x1, _Tp& x2)
+{
+    if( a == 0 )
+    {
+        if( b == 0 )
+        {
+            x1 = x2 = 0;
+            return c == 0;
+        }
+        x1 = x2 = -c/b;
+        return 1;
+    }
+    
+    _Tp d = b*b - 4*a*c;
+    if( d < 0 )
+    {
+        x1 = x2 = 0;
+        return 0;
+    }
+    if( d > 0 )
+    {
+        d = std::sqrt(d);
+        double s = 1/(2*a);
+        x1 = (-b - d)*s;
+        x2 = (-b + d)*s;
+        if( x1 > x2 )
+            std::swap(x1, x2);
+        return 2;
+    }
+    x1 = x2 = -b/(2*a);
+    return 1;
+}
+
 //for android ndk
 #undef _S
 static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
@@ -109,13 +142,13 @@ EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellip
     center = _center;
     ellipse = _ellipse;
 
-    Mat_<double> M = getSecondMomentsMatrix(_ellipse), eval;
-    eigen( M, eval );
-    assert( eval.rows == 2 && eval.cols == 1 );
-    axes.width = 1.f / (float)sqrt(eval(0,0));
-    axes.height = 1.f / (float)sqrt(eval(1,0));
-
-    double ac_b2 = ellipse[0]*ellipse[2] - ellipse[1]*ellipse[1];
+    double a = ellipse[0], b = ellipse[1], c = ellipse[2];
+    double ac_b2 = a*c - b*b;
+    double x1, x2;
+    solveQuadratic(1., -(a+c), ac_b2, x1, x2);
+    axes.width = (float)(1/sqrt(x1));
+    axes.height = (float)(1/sqrt(x2));
+    
     boundingBox.width = (float)sqrt(ellipse[2]/ac_b2);
     boundingBox.height = (float)sqrt(ellipse[0]/ac_b2);
 }

@@ -2050,7 +2050,9 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
                    int thickness, int lineType, int shift )
 {
     Mat img = _img.getMat();
-    int i, ncontours = (int)pts.total();
+    bool manyContours = pts.kind() == _InputArray::STD_VECTOR_VECTOR ||
+                        pts.kind() == _InputArray::STD_VECTOR_MAT;
+    int i, ncontours = manyContours ? (int)pts.total() : 1;
     if( ncontours == 0 )
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);
@@ -2060,7 +2062,9 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
     
     for( i = 0; i < ncontours; i++ )
     {
-        Mat p = pts.getMat(i);
+        Mat p = pts.getMat(manyContours ? i : -1);
+        if( p.total() == 0 )
+            continue;
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
         ptsptr[i] = (Point*)p.data;
         npts[i] = p.rows*p.cols*p.channels()/2;
