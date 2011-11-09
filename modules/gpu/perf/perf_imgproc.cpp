@@ -36,7 +36,7 @@ PERF_TEST_P(DevInfo_Size_MatType_Interpolation_BorderMode, remap, testing::Combi
         remap(src, dst, xmap, ymap, interpolation, borderMode);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -63,7 +63,7 @@ PERF_TEST_P(DevInfo, meanShiftFiltering, testing::ValuesIn(devices()))
         meanShiftFiltering(src, dst, 50, 50);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -91,8 +91,8 @@ PERF_TEST_P(DevInfo, meanShiftProc, testing::ValuesIn(devices()))
         meanShiftProc(src, dstr, dstsp, 50, 50);
     }
 
-    Mat dstr_host = dstr;
-    Mat dstsp_host = dstsp;
+    Mat dstr_host(dstr);
+    Mat dstsp_host(dstsp);
 
     SANITY_CHECK(dstr_host);
     SANITY_CHECK(dstsp_host);

@@ -55,13 +55,19 @@ void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&,
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace bf 
-{
-    void load_constants(float* table_color, const DevMem2Df& table_space, int ndisp, int radius, short edge_disc, short max_disc);
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-    void bilateral_filter_gpu(const DevMem2Db& disp, const DevMem2Db& img, int channels, int iters, cudaStream_t stream);
-    void bilateral_filter_gpu(const DevMem2D_<short>& disp, const DevMem2Db& img, int channels, int iters, cudaStream_t stream);
-}}}
+namespace bilateral_filter
+{
+    void load_constants(float* table_color, DevMem2Df table_space, int ndisp, int radius, short edge_disc, short max_disc);
+
+    void bilateral_filter_gpu(DevMem2Db disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
+    void bilateral_filter_gpu(DevMem2D_<short> disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
+}
+
+END_OPENCV_DEVICE_NAMESPACE
+
+using namespace OPENCV_DEVICE_NAMESPACE_ bilateral_filter;
 
 namespace
 {
@@ -105,7 +111,7 @@ namespace
         short edge_disc = max<short>(short(1), short(ndisp * edge_threshold + 0.5));
         short max_disc = short(ndisp * max_disc_threshold + 0.5);
 
-        bf::load_constants(table_color.ptr<float>(), table_space, ndisp, radius, edge_disc, max_disc);
+        load_constants(table_color.ptr<float>(), table_space, ndisp, radius, edge_disc, max_disc);
 
         if (&dst != &disp)
         {
@@ -115,7 +121,7 @@ namespace
                 disp.copyTo(dst);
         }
 
-        bf::bilateral_filter_gpu((DevMem2D_<T>)dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
+        bilateral_filter_gpu((DevMem2D_<T>)dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
     }
 
     typedef void (*bilateral_filter_operator_t)(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold, 

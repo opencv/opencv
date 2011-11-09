@@ -24,7 +24,7 @@ PERF_TEST_P(DevInfo_Size_MatType, transpose, testing::Combine(testing::ValuesIn(
         transpose(src, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -55,7 +55,7 @@ PERF_TEST_P(DevInfo_Size_MatType_FlipCode, flip, testing::Combine(testing::Value
         flip(src, dst, flipCode);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -85,7 +85,7 @@ PERF_TEST_P(DevInfo_Size_MatType, LUT, testing::Combine(testing::ValuesIn(device
         LUT(src, lut, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -115,8 +115,8 @@ PERF_TEST_P(DevInfo_Size, cartToPolar, testing::Combine(testing::ValuesIn(device
         cartToPolar(x, y, magnitude, angle);
     }
 
-    Mat magnitude_host = magnitude;
-    Mat angle_host = angle;
+    Mat magnitude_host(magnitude);
+    Mat angle_host(angle);
 
     SANITY_CHECK(magnitude_host);
     SANITY_CHECK(angle_host);
@@ -147,8 +147,8 @@ PERF_TEST_P(DevInfo_Size, polarToCart, testing::Combine(testing::ValuesIn(device
         polarToCart(magnitude, angle, x, y);
     }
 
-    Mat x_host = x;
-    Mat y_host = angle;
+    Mat x_host(x);
+    Mat y_host(y);
 
     SANITY_CHECK(x_host);
     SANITY_CHECK(y_host);
@@ -180,7 +180,7 @@ PERF_TEST_P(DevInfo_Size_MatType, addMat, testing::Combine(testing::ValuesIn(dev
         add(a, b, c);
     }
 
-    Mat c_host = c;
+    Mat c_host(c);
 
     SANITY_CHECK(c_host);
 }
@@ -210,7 +210,7 @@ PERF_TEST_P(DevInfo_Size_MatType, addScalar, testing::Combine(testing::ValuesIn(
         add(a, b, c);
     }
 
-    Mat c_host = c;
+    Mat c_host(c);
 
     SANITY_CHECK(c_host);
 }
@@ -241,7 +241,7 @@ PERF_TEST_P(DevInfo_Size_MatType, subtractMat, testing::Combine(testing::ValuesI
         subtract(a, b, c);
     }
 
-    Mat c_host = c;
+    Mat c_host(c);
 
     SANITY_CHECK(c_host);
 }
@@ -270,7 +270,7 @@ PERF_TEST_P(DevInfo_Size, multiplyMat, testing::Combine(testing::ValuesIn(device
         multiply(a, b, c);
     }
 
-    Mat c_host = c;
+    Mat c_host(c);
 
     SANITY_CHECK(c_host);
 }
@@ -300,7 +300,7 @@ PERF_TEST_P(DevInfo_Size_MatType, multiplyScalar, testing::Combine(testing::Valu
         multiply(a, b, c);
     }
 
-    Mat c_host = c;
+    Mat c_host(c);
 
     SANITY_CHECK(c_host);
 }
@@ -327,7 +327,7 @@ PERF_TEST_P(DevInfo_Size, exp, testing::Combine(testing::ValuesIn(devices()),
         exp(a, b);
     }
 
-    Mat b_host = b;
+    Mat b_host(b);
 
     SANITY_CHECK(b_host);
 }
@@ -356,7 +356,7 @@ PERF_TEST_P(DevInfo_Size_MatType, pow, testing::Combine(testing::ValuesIn(device
         pow(src, 2.0, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -389,7 +389,7 @@ PERF_TEST_P(DevInfo_Size_MatType_CmpOp, compare, testing::Combine(testing::Value
         compare(src1, src2, dst, cmpop);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -418,7 +418,7 @@ PERF_TEST_P(DevInfo_Size_MatType, bitwise_not, testing::Combine(testing::ValuesI
         bitwise_not(src, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -449,7 +449,7 @@ PERF_TEST_P(DevInfo_Size_MatType, bitwise_and, testing::Combine(testing::ValuesI
         bitwise_and(src1, src2, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -480,7 +480,7 @@ PERF_TEST_P(DevInfo_Size_MatType, min, testing::Combine(testing::ValuesIn(device
         min(src1, src2, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -712,7 +712,7 @@ PERF_TEST_P(DevInfo_Size_MatType, addWeighted, testing::Combine(testing::ValuesI
         addWeighted(src1, 0.5, src2, 0.5, 0.0, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -743,7 +743,7 @@ PERF_TEST_P(DevInfo_Size_MatType_FlipCode, reduce, testing::Combine(testing::Val
         reduce(src, dst, dim, CV_REDUCE_MIN);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -774,7 +774,7 @@ PERF_TEST_P(DevInfo_Size, gemm, testing::Combine(testing::ValuesIn(devices()),
         gemm(src1, src2, 1.0, src3, 1.0, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }

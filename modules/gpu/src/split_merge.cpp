@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+using namespace cv;
+using namespace cv::gpu;
 using namespace std;
 
 #if !defined (HAVE_CUDA)
@@ -53,24 +55,24 @@ void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, Stream& /*st
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace split_merge 
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace split_merge 
 {    
-    extern "C" void merge_caller(const DevMem2Db* src, DevMem2Db& dst, 
-                                 int total_channels, size_t elem_size, 
-                                 const cudaStream_t& stream);
+    void merge_caller(const DevMem2Db* src, DevMem2Db& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
+    void split_caller(const DevMem2Db& src, DevMem2Db* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
+}
 
-    extern "C" void split_caller(const DevMem2Db& src, DevMem2Db* dst, 
-                                 int num_channels, size_t elem_size1, 
-                                 const cudaStream_t& stream);
+END_OPENCV_DEVICE_NAMESPACE
 
+namespace
+{
     void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream) 
     {
+        using namespace OPENCV_DEVICE_NAMESPACE_ split_merge;
+
         CV_Assert(src);
         CV_Assert(n > 0);
-       
-        bool double_ok = TargetArchs::builtWith(NATIVE_DOUBLE) && 
-                         DeviceInfo().supports(NATIVE_DOUBLE);
-        CV_Assert(src[0].depth() != CV_64F || double_ok);
 
         int depth = src[0].depth();
         Size size = src[0].size();
@@ -100,20 +102,15 @@ namespace cv { namespace gpu { namespace split_merge
                 src_as_devmem[i] = src[i];
 
             DevMem2Db dst_as_devmem(dst);
-            split_merge::merge_caller(src_as_devmem, dst_as_devmem,
-                                      total_channels, CV_ELEM_SIZE(depth),
-                                      stream);
+            merge_caller(src_as_devmem, dst_as_devmem, total_channels, CV_ELEM_SIZE(depth), stream);
         }   
     }
 
-
     void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream) 
     {
-        CV_Assert(dst);
+        using namespace OPENCV_DEVICE_NAMESPACE_ split_merge;
 
-        bool double_ok = TargetArchs::builtWith(NATIVE_DOUBLE) && 
-                         DeviceInfo().supports(NATIVE_DOUBLE);
-        CV_Assert(src.depth() != CV_64F || double_ok);
+        CV_Assert(dst);
 
         int depth = src.depth();
         int num_channels = src.channels();
@@ -135,38 +132,31 @@ namespace cv { namespace gpu { namespace split_merge
             dst_as_devmem[i] = dst[i];
 
         DevMem2Db src_as_devmem(src);
-        split_merge::split_caller(src_as_devmem, dst_as_devmem,
-                                  num_channels, src.elemSize1(), 
-                                  stream);
+        split_caller(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), stream);
     }
-
-
-}}}
-
+}
 
 void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream) 
 { 
-    split_merge::merge(src, n, dst, StreamAccessor::getStream(stream));
+    ::merge(src, n, dst, StreamAccessor::getStream(stream));
 }
 
 
 void cv::gpu::merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream) 
 {
-    split_merge::merge(&src[0], src.size(), dst, StreamAccessor::getStream(stream));
+    ::merge(&src[0], src.size(), dst, StreamAccessor::getStream(stream));
 }
-
 
 void cv::gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream) 
 {
-    split_merge::split(src, dst, StreamAccessor::getStream(stream));
+    ::split(src, dst, StreamAccessor::getStream(stream));
 }
-
 
 void cv::gpu::split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream) 
 {
     dst.resize(src.channels());
     if(src.channels() > 0)
-        split_merge::split(src, &dst[0], StreamAccessor::getStream(stream));
+        ::split(src, &dst[0], StreamAccessor::getStream(stream));
 }
 
 #endif /* !defined (HAVE_CUDA) */

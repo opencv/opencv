@@ -28,7 +28,7 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, boxFilter, testing::Combine(testing
         filter->apply(src, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -63,7 +63,7 @@ PERF_TEST_P(DevInfo_Size_MatType_MorphOp_KernelSize, morphologyFilter, testing::
         filter->apply(src, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -96,7 +96,7 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, linearFilter, testing::Combine(test
         filter->apply(src, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -130,7 +130,7 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, separableLinearFilter, testing::Com
         filter->apply(src, dst, Rect(0, 0, src.cols, src.rows));
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }

@@ -40,22 +40,17 @@
 //
 //M*/
 
-//#include "internal_shared.hpp"
-#include "opencv2/gpu/devmem2d.hpp"
-#include "safe_call.hpp"
-static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
+#include "internal_shared.hpp"
 
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-using namespace cv::gpu;
+namespace stereobm {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////// Streeo BM ////////////////////////////////////////////////
+/////////////////////////////////////// Stereo BM ////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define ROWSperTHREAD 21     // the number of rows a thread will process
-
-namespace cv { namespace gpu  { namespace bm
-{
 
 #define BLOCK_W 128          // the thread block width (464)
 #define N_DISPARITIES 8
@@ -117,7 +112,7 @@ __device__ uint2 MinSSD(volatile unsigned int *col_ssd_cache, volatile unsigned 
     __syncthreads();
     ssd[7] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 7 * (BLOCK_W + 2 * RADIUS));
 
-    int mssd = min(min(min(ssd[0], ssd[1]), min(ssd[4], ssd[5])), min(min(ssd[2], ssd[3]), min(ssd[6], ssd[7])));
+    int mssd = ::min(::min(::min(ssd[0], ssd[1]), ::min(ssd[4], ssd[5])), ::min(::min(ssd[2], ssd[3]), ::min(ssd[6], ssd[7])));
 
     int bestIdx = 0;
     for (int i = 0; i < N_DISPARITIES; i++)
@@ -252,7 +247,7 @@ __global__ void stereoKernel(unsigned char *left, unsigned char *right, size_t i
         for(uint *ptr = minSSDImage; ptr != minSSDImage_end; ptr += minssd_step )
             *ptr = 0xFFFFFFFF;
     }*/
-    int end_row = min(ROWSperTHREAD, cheight - Y - RADIUS);
+    int end_row = ::min(ROWSperTHREAD, cheight - Y - RADIUS);
     int y_tex;
     int x_tex = X - RADIUS;
 
@@ -346,7 +341,7 @@ const static kernel_caller_t callers[] =
 };
 const int calles_num = sizeof(callers)/sizeof(callers[0]);
 
-extern "C" void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t& stream)
+void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t& stream)
 {
     int winsz2 = winsz >> 1;
 
@@ -375,7 +370,7 @@ extern "C" void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, cons
 
 texture<unsigned char, 2, cudaReadModeElementType> texForSobel;
 
-extern "C" __global__ void prefilter_kernel(DevMem2Db output, int prefilterCap)
+__global__ void prefilter_kernel(DevMem2Db output, int prefilterCap)
 {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -387,12 +382,12 @@ extern "C" __global__ void prefilter_kernel(DevMem2Db output, int prefilterCap)
                    (int)tex2D(texForSobel, x - 1, y + 1) * (-1) + (int)tex2D(texForSobel, x + 1, y + 1) * (1);
 
 
-        conv = min(min(max(-prefilterCap, conv), prefilterCap) + prefilterCap, 255);
+        conv = ::min(::min(::max(-prefilterCap, conv), prefilterCap) + prefilterCap, 255);
         output.ptr(y)[x] = conv & 0xFF;
     }
 }
 
-extern "C" void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap, cudaStream_t & stream)
+void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap, cudaStream_t & stream)
 {
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
     cudaSafeCall( cudaBindTexture2D( 0, texForSobel, input.data, desc, input.cols, input.rows, input.step ) );
@@ -451,7 +446,7 @@ __device__ float CalcSums(float *cols, float *cols_cache, int winsz)
 
 #define RpT (2 * ROWSperTHREAD)  // got experimentally
 
-extern "C" __global__ void textureness_kernel(DevMem2Db disp, int winsz, float threshold)
+__global__ void textureness_kernel(DevMem2Db disp, int winsz, float threshold)
 {
     int winsz2 = winsz/2;
     int n_dirty_pixels = (winsz2) * 2;
@@ -462,7 +457,7 @@ extern "C" __global__ void textureness_kernel(DevMem2Db disp, int winsz, float t
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int beg_row = blockIdx.y * RpT;
-    int end_row = min(beg_row + RpT, disp.rows);
+    int end_row = ::min(beg_row + RpT, disp.rows);
 
     if (x < disp.cols)
     {
@@ -510,7 +505,7 @@ extern "C" __global__ void textureness_kernel(DevMem2Db disp, int winsz, float t
     }
 }
 
-extern "C" void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream)
+void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream)
 {
     avgTexturenessThreshold *= winsz * winsz;
 
@@ -537,4 +532,6 @@ extern "C" void postfilter_textureness(const DevMem2Db& input, int winsz, float 
     cudaSafeCall( cudaUnbindTexture (texForTF) );
 }
 
-}}}
+} // namespace stereobm
+
+END_OPENCV_DEVICE_NAMESPACE

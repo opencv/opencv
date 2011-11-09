@@ -42,13 +42,15 @@
 
 #include "internal_shared.hpp"
 
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
 // Other values are not supported
 #define CELL_WIDTH 8
 #define CELL_HEIGHT 8
 #define CELLS_PER_BLOCK_X 2
 #define CELLS_PER_BLOCK_Y 2
 
-namespace cv { namespace gpu { namespace hog {
+namespace hog {
 
 __constant__ int cnbins;
 __constant__ int cblock_stride_x;
@@ -83,23 +85,23 @@ int power_2up(unsigned int n)
 void set_up_constants(int nbins, int block_stride_x, int block_stride_y, 
                       int nblocks_win_x, int nblocks_win_y)
 {
-    uploadConstant("cv::gpu::hog::cnbins", nbins);
-    uploadConstant("cv::gpu::hog::cblock_stride_x", block_stride_x);
-    uploadConstant("cv::gpu::hog::cblock_stride_y", block_stride_y);
-    uploadConstant("cv::gpu::hog::cnblocks_win_x", nblocks_win_x);
-    uploadConstant("cv::gpu::hog::cnblocks_win_y", nblocks_win_y);
+    cudaSafeCall( cudaMemcpyToSymbol(cnbins, &nbins, sizeof(nbins)) ); 
+    cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_x, &block_stride_x, sizeof(block_stride_x)) ); 
+    cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_y, &block_stride_y, sizeof(block_stride_y)) ); 
+    cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_x, &nblocks_win_x, sizeof(nblocks_win_x)) );  
+    cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_y, &nblocks_win_y, sizeof(nblocks_win_y)) ); 
 
-    int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
-    uploadConstant("cv::gpu::hog::cblock_hist_size", block_hist_size);
+    int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y; 
+    cudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size, &block_hist_size, sizeof(block_hist_size)) ); 
 
-    int block_hist_size_2up = power_2up(block_hist_size);    
-    uploadConstant("cv::gpu::hog::cblock_hist_size_2up", block_hist_size_2up);
+    int block_hist_size_2up = power_2up(block_hist_size);  
+    cudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size_2up, &block_hist_size_2up, sizeof(block_hist_size_2up)) );
 
     int descr_width = nblocks_win_x * block_hist_size;
-    uploadConstant("cv::gpu::hog::cdescr_width", descr_width);
+    cudaSafeCall( cudaMemcpyToSymbol(cdescr_width, &descr_width, sizeof(descr_width)) );
 
     int descr_size = descr_width * nblocks_win_y;
-    uploadConstant("cv::gpu::hog::cdescr_size", descr_size);
+    cudaSafeCall( cudaMemcpyToSymbol(cdescr_size, &descr_size, sizeof(descr_size)) );
 }
 
 
@@ -153,10 +155,10 @@ __global__ void compute_hists_kernel_many_blocks(const int img_block_width, cons
             int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
             int dist_center_x = dist_x - 4 * (1 - 2 * cell_x);
 
-            float gaussian = expf(-(dist_center_y * dist_center_y + 
-                                    dist_center_x * dist_center_x) * scale);
-            float interp_weight = (8.f - fabs(dist_y + 0.5f)) * 
-                                  (8.f - fabs(dist_x + 0.5f)) / 64.f;
+            float gaussian = ::expf(-(dist_center_y * dist_center_y + 
+                                      dist_center_x * dist_center_x) * scale);
+            float interp_weight = (8.f - ::fabs(dist_y + 0.5f)) * 
+                                  (8.f - ::fabs(dist_x + 0.5f)) / 64.f;
 
             hist[bin.x * 48 * nblocks] += gaussian * interp_weight * vote.x;
             hist[bin.y * 48 * nblocks] += gaussian * interp_weight * vote.y;
@@ -273,15 +275,15 @@ __global__ void normalize_hists_kernel_many_blocks(const int block_hist_size,
     __syncthreads();
     float sum = reduce_smem<nthreads>(squares);
     
-    float scale = 1.0f / (sqrtf(sum) + 0.1f * block_hist_size);        
-    elem = min(elem * scale, threshold);
+    float scale = 1.0f / (::sqrtf(sum) + 0.1f * block_hist_size);        
+    elem = ::min(elem * scale, threshold);
     
     __syncthreads();
     squares[threadIdx.x] = elem * elem;
 
     __syncthreads();
     sum = reduce_smem<nthreads>(squares);
-    scale = 1.0f / (sqrtf(sum) + 1e-3f);
+    scale = 1.0f / (::sqrtf(sum) + 1e-3f);
     
     if (threadIdx.x < block_hist_size)
         hist[0] = elem * scale;
@@ -533,7 +535,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
     if (threadIdx.x == 0)
     {
-        val = row[max(x - 1, 1)];
+        val = row[::max(x - 1, 1)];
         sh_row[0] = val.x;
         sh_row[(nthreads + 2)] = val.y;
         sh_row[2 * (nthreads + 2)] = val.z;
@@ -541,7 +543,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
     if (threadIdx.x == blockDim.x - 1)
     {
-        val = row[min(x + 1, width - 2)];
+        val = row[::min(x + 1, width - 2)];
         sh_row[blockDim.x + 1] = val.x;
         sh_row[blockDim.x + 1 + (nthreads + 2)] = val.y;
         sh_row[blockDim.x + 1 + 2 * (nthreads + 2)] = val.z;
@@ -561,7 +563,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
 
         float3 dx;
         if (correct_gamma)
-            dx = make_float3(sqrtf(b.x) - sqrtf(a.x), sqrtf(b.y) - sqrtf(a.y), sqrtf(b.z) - sqrtf(a.z));    
+            dx = make_float3(::sqrtf(b.x) - ::sqrtf(a.x), ::sqrtf(b.y) - ::sqrtf(a.y), ::sqrtf(b.z) - ::sqrtf(a.z));    
         else
             dx = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);    
 
@@ -576,7 +578,7 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
             b = make_float3(val.x, val.y, val.z);
 
             if (correct_gamma)
-                dy = make_float3(sqrtf(b.x) - sqrtf(a.x), sqrtf(b.y) - sqrtf(a.y), sqrtf(b.z) - sqrtf(a.z));
+                dy = make_float3(::sqrtf(b.x) - ::sqrtf(a.x), ::sqrtf(b.y) - ::sqrtf(a.y), ::sqrtf(b.z) - ::sqrtf(a.z));
             else
                 dy = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);
         }
@@ -601,10 +603,10 @@ __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrEl
             mag0 = mag1;
         }
 
-        mag0 = sqrtf(mag0);
+        mag0 = ::sqrtf(mag0);
 
-        float ang = (atan2f(best_dy, best_dx) + CV_PI_F) * angle_scale - 0.5f;
-        int hidx = (int)floorf(ang);
+        float ang = (::atan2f(best_dy, best_dx) + CV_PI_F) * angle_scale - 0.5f;
+        int hidx = (int)::floorf(ang);
         ang -= hidx;
         hidx = (hidx + cnbins) % cnbins;
 
@@ -648,10 +650,10 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
         sh_row[threadIdx.x + 1] = row[width - 2];
 
     if (threadIdx.x == 0)
-        sh_row[0] = row[max(x - 1, 1)];
+        sh_row[0] = row[::max(x - 1, 1)];
 
     if (threadIdx.x == blockDim.x - 1)
-        sh_row[blockDim.x + 1] = row[min(x + 1, width - 2)];
+        sh_row[blockDim.x + 1] = row[::min(x + 1, width - 2)];
 
     __syncthreads();
     if (x < width)
@@ -659,7 +661,7 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
         float dx;
 
         if (correct_gamma)
-            dx = sqrtf(sh_row[threadIdx.x + 2]) - sqrtf(sh_row[threadIdx.x]);
+            dx = ::sqrtf(sh_row[threadIdx.x + 2]) - ::sqrtf(sh_row[threadIdx.x]);
         else
             dx = sh_row[threadIdx.x + 2] - sh_row[threadIdx.x];
 
@@ -669,14 +671,14 @@ __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrEl
             float a = ((const unsigned char*)img.ptr(blockIdx.y + 1))[x];
             float b = ((const unsigned char*)img.ptr(blockIdx.y - 1))[x];
             if (correct_gamma)
-                dy = sqrtf(a) - sqrtf(b);
+                dy = ::sqrtf(a) - ::sqrtf(b);
             else
                 dy = a - b;
         }
-        float mag = sqrtf(dx * dx + dy * dy);
+        float mag = ::sqrtf(dx * dx + dy * dy);
 
-        float ang = (atan2f(dy, dx) + CV_PI_F) * angle_scale - 0.5f;
-        int hidx = (int)floorf(ang);
+        float ang = (::atan2f(dy, dx) + CV_PI_F) * angle_scale - 0.5f;
+        int hidx = (int)::floorf(ang);
         ang -= hidx;
         hidx = (hidx + cnbins) % cnbins;
 
@@ -768,4 +770,6 @@ static void resize_for_hog(const DevMem2Db& src, DevMem2Db dst, TEX& tex)
 void resize_8UC1(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
 void resize_8UC4(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
 
-}}}
+} // namespace hog 
+
+END_OPENCV_DEVICE_NAMESPACE

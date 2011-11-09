@@ -20,7 +20,7 @@ PERF_TEST_P(DevInfo, transformPoints, testing::ValuesIn(devices()))
         transformPoints(src, Mat::ones(1, 3, CV_32FC1), Mat::ones(1, 3, CV_32FC1), dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -45,7 +45,7 @@ PERF_TEST_P(DevInfo, projectPoints, testing::ValuesIn(devices()))
         projectPoints(src, Mat::ones(1, 3, CV_32FC1), Mat::ones(1, 3, CV_32FC1), Mat::ones(3, 3, CV_32FC1), Mat(), dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }

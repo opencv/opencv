@@ -40,79 +40,73 @@
 //
 //M*/
 
+#include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/transform.hpp"
-#include "internal_shared.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::device;
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace cv { namespace gpu { namespace mathfunc
+namespace matrix_reductions {
+
+// Performs reduction in shared memory
+template <int size, typename T>
+__device__ void sumInSmem(volatile T* data, const uint tid)
 {
+    T sum = data[tid];
 
-    // Performs reduction in shared memory
-    template <int size, typename T>
-    __device__ void sumInSmem(volatile T* data, const uint tid)
+    if (size >= 512) { if (tid < 256) { data[tid] = sum = sum + data[tid + 256]; } __syncthreads(); }
+    if (size >= 256) { if (tid < 128) { data[tid] = sum = sum + data[tid + 128]; } __syncthreads(); }
+    if (size >= 128) { if (tid < 64) { data[tid] = sum = sum + data[tid + 64]; } __syncthreads(); }
+
+    if (tid < 32)
     {
-        T sum = data[tid];
+        if (size >= 64) data[tid] = sum = sum + data[tid + 32];
+        if (size >= 32) data[tid] = sum = sum + data[tid + 16];
+        if (size >= 16) data[tid] = sum = sum + data[tid + 8];
+        if (size >= 8) data[tid] = sum = sum + data[tid + 4];
+        if (size >= 4) data[tid] = sum = sum + data[tid + 2];
+        if (size >= 2) data[tid] = sum = sum + data[tid + 1];
+    }
+}
 
-        if (size >= 512) { if (tid < 256) { data[tid] = sum = sum + data[tid + 256]; } __syncthreads(); }
-        if (size >= 256) { if (tid < 128) { data[tid] = sum = sum + data[tid + 128]; } __syncthreads(); }
-        if (size >= 128) { if (tid < 64) { data[tid] = sum = sum + data[tid + 64]; } __syncthreads(); }
+struct Mask8U
+{
+    explicit Mask8U(PtrStepb mask): mask(mask) {}
 
-        if (tid < 32)
-        {
-            if (size >= 64) data[tid] = sum = sum + data[tid + 32];
-            if (size >= 32) data[tid] = sum = sum + data[tid + 16];
-            if (size >= 16) data[tid] = sum = sum + data[tid + 8];
-            if (size >= 8) data[tid] = sum = sum + data[tid + 4];
-            if (size >= 4) data[tid] = sum = sum + data[tid + 2];
-            if (size >= 2) data[tid] = sum = sum + data[tid + 1];
-        }
+    __device__ __forceinline__ bool operator()(int y, int x) const 
+    { 
+        return mask.ptr(y)[x]; 
     }
 
+    PtrStepb mask;
+};
 
-    struct Mask8U
-    {
-        explicit Mask8U(PtrStepb mask): mask(mask) {}
-
-        __device__ __forceinline__ bool operator()(int y, int x) const 
-        { 
-            return mask.ptr(y)[x]; 
-        }
-
-        PtrStepb mask;
-    };
-
-
-    struct MaskTrue 
+struct MaskTrue 
+{ 
+    __device__ __forceinline__ bool operator()(int y, int x) const 
     { 
-        __device__ __forceinline__ bool operator()(int y, int x) const 
-        { 
-            return true; 
-        } 
-    };
+        return true; 
+    } 
+};
 
-    //////////////////////////////////////////////////////////////////////////////
-    // Min max
+//////////////////////////////////////////////////////////////////////////////
+// Min max
 
-    // To avoid shared bank conflicts we convert each value into value of 
-    // appropriate type (32 bits minimum)
-    template <typename T> struct MinMaxTypeTraits {};
-    template <> struct MinMaxTypeTraits<uchar> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<char> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<ushort> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<short> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<int> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
-    template <> struct MinMaxTypeTraits<double> { typedef double best_type; };
+// To avoid shared bank conflicts we convert each value into value of 
+// appropriate type (32 bits minimum)
+template <typename T> struct MinMaxTypeTraits {};
+template <> struct MinMaxTypeTraits<uchar> { typedef int best_type; };
+template <> struct MinMaxTypeTraits<char> { typedef int best_type; };
+template <> struct MinMaxTypeTraits<ushort> { typedef int best_type; };
+template <> struct MinMaxTypeTraits<short> { typedef int best_type; };
+template <> struct MinMaxTypeTraits<int> { typedef int best_type; };
+template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
+template <> struct MinMaxTypeTraits<double> { typedef double best_type; };
 
-
-    namespace minmax 
-    {
-
+namespace minmax 
+{
     __constant__ int ctwidth;
     __constant__ int ctheight;
 
@@ -126,8 +120,8 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
-        grid.x = min(grid.x, threads.x);
-        grid.y = min(grid.y, threads.y);
+        grid.x = std::min(grid.x, threads.x);
+        grid.y = std::min(grid.y, threads.y);
     }
 
 
@@ -155,8 +149,8 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     __device__ __forceinline__ void merge(uint tid, uint offset, volatile T* minval, volatile T* maxval)
     {
-        minval[tid] = min(minval[tid], minval[tid + offset]);
-        maxval[tid] = max(maxval[tid], maxval[tid + offset]);
+        minval[tid] = ::min(minval[tid], minval[tid + offset]);
+        maxval[tid] = ::max(maxval[tid], maxval[tid + offset]);
     }
 
 
@@ -192,8 +186,8 @@ namespace cv { namespace gpu { namespace mathfunc
 
         T mymin = numeric_limits<T>::max();
         T mymax = numeric_limits<T>::is_signed ? -numeric_limits<T>::max() : numeric_limits<T>::min();
-        uint y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
-        uint x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
+        uint y_end = ::min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
+        uint x_end = ::min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
         for (uint y = y0; y < y_end; y += blockDim.y)
         {
             const T* src_row = (const T*)src.ptr(y);
@@ -202,8 +196,8 @@ namespace cv { namespace gpu { namespace mathfunc
                 T val = src_row[x];
                 if (mask(y, x)) 
                 { 
-                    mymin = min(mymin, val); 
-                    mymax = max(mymax, val); 
+                    mymin = ::min(mymin, val); 
+                    mymax = ::max(mymax, val); 
                 }
             }
         }
@@ -220,7 +214,7 @@ namespace cv { namespace gpu { namespace mathfunc
             maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
         }
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+#if __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
 
 		if (tid == 0)
@@ -237,7 +231,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 		if (is_last)
 		{
-            uint idx = min(tid, gridDim.x * gridDim.y - 1);
+            uint idx = ::min(tid, gridDim.x * gridDim.y - 1);
 
             sminval[tid] = minval[idx];
             smaxval[tid] = maxval[idx];
@@ -332,7 +326,7 @@ namespace cv { namespace gpu { namespace mathfunc
         __shared__ best_type smaxval[nthreads];
         
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
-        uint idx = min(tid, size - 1);
+        uint idx = ::min(tid, size - 1);
 
         sminval[tid] = minval[idx];
         smaxval[tid] = maxval[idx];
@@ -410,14 +404,13 @@ namespace cv { namespace gpu { namespace mathfunc
     template void minMaxMultipassCaller<short>(const DevMem2Db, double*, double*, PtrStepb);
     template void minMaxMultipassCaller<int>(const DevMem2Db, double*, double*, PtrStepb);
     template void minMaxMultipassCaller<float>(const DevMem2Db, double*, double*, PtrStepb);
-
-    } // namespace minmax
+} // namespace minmax
 
 ///////////////////////////////////////////////////////////////////////////////
 // minMaxLoc
 
-    namespace minmaxloc {
-
+namespace minmaxloc 
+{
     __constant__ int ctwidth;
     __constant__ int ctheight;
 
@@ -431,8 +424,8 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
-        grid.x = min(grid.x, threads.x);
-        grid.y = min(grid.y, threads.y);
+        grid.x = std::min(grid.x, threads.x);
+        grid.y = std::min(grid.y, threads.y);
     }
 
 
@@ -513,12 +506,11 @@ namespace cv { namespace gpu { namespace mathfunc
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         T mymin = numeric_limits<T>::max();
-        T mymax = numeric_limits<T>::is_signed ? -numeric_limits<T>::max() : 
-                                                     numeric_limits<T>::min(); 
+        T mymax = numeric_limits<T>::is_signed ? -numeric_limits<T>::max() : numeric_limits<T>::min(); 
         uint myminloc = 0;
         uint mymaxloc = 0;
-        uint y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
-        uint x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
+        uint y_end = ::min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
+        uint x_end = ::min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
 
         for (uint y = y0; y < y_end; y += blockDim.y)
         {
@@ -542,7 +534,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+#if __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
 
 		if (tid == 0)
@@ -561,7 +553,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
 		if (is_last)
 		{
-            uint idx = min(tid, gridDim.x * gridDim.y - 1);
+            uint idx = ::min(tid, gridDim.x * gridDim.y - 1);
 
             sminval[tid] = minval[idx];
             smaxval[tid] = maxval[idx];
@@ -685,7 +677,7 @@ namespace cv { namespace gpu { namespace mathfunc
         __shared__ uint smaxloc[nthreads];
 
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
-        uint idx = min(tid, size - 1);
+        uint idx = ::min(tid, size - 1);
 
         sminval[tid] = minval[idx];
         smaxval[tid] = maxval[idx];
@@ -787,15 +779,13 @@ namespace cv { namespace gpu { namespace mathfunc
     template void minMaxLocMultipassCaller<short>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
     template void minMaxLocMultipassCaller<int>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
     template void minMaxLocMultipassCaller<float>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-
-    } // namespace minmaxloc
+} // namespace minmaxloc
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // countNonZero
 
-    namespace countnonzero 
-    {
-
+namespace countnonzero 
+{
     __constant__ int ctwidth;
     __constant__ int ctheight;
 
@@ -805,8 +795,8 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         threads = dim3(32, 8);
         grid = dim3(divUp(cols, threads.x * 8), divUp(rows, threads.y * 32));
-        grid.x = min(grid.x, threads.x);
-        grid.y = min(grid.y, threads.y);
+        grid.x = std::min(grid.x, threads.x);
+        grid.y = std::min(grid.y, threads.y);
     }
 
 
@@ -850,7 +840,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         sumInSmem<nthreads, uint>(scount, tid);
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+#if __CUDA_ARCH__ >= 110
 		__shared__ bool is_last;
 
 		if (tid == 0)
@@ -957,15 +947,14 @@ namespace cv { namespace gpu { namespace mathfunc
     template int countNonZeroMultipassCaller<int>(const DevMem2Db, PtrStepb);
     template int countNonZeroMultipassCaller<float>(const DevMem2Db, PtrStepb);
 
-    } // namespace countnonzero
+} // namespace countnonzero
 
 
-    //////////////////////////////////////////////////////////////////////////
-    // Sum
+//////////////////////////////////////////////////////////////////////////
+// Sum
 
-    namespace sums 
-    {
-
+namespace sum
+{
     template <typename T> struct SumType {};
     template <> struct SumType<uchar> { typedef uint R; };
     template <> struct SumType<char> { typedef int R; };
@@ -979,7 +968,7 @@ namespace cv { namespace gpu { namespace mathfunc
     struct IdentityOp { static __device__ __forceinline__ R call(R x) { return x; } };
 
     template <typename R> 
-    struct AbsOp { static __device__ __forceinline__ R call(R x) { return abs(x); } };
+    struct AbsOp { static __device__ __forceinline__ R call(R x) { return ::abs(x); } };
 
     template <>
     struct AbsOp<uint> { static __device__ __forceinline__ uint call(uint x) { return x; } };
@@ -999,8 +988,8 @@ namespace cv { namespace gpu { namespace mathfunc
         threads = dim3(threads_x, threads_y);
         grid = dim3(divUp(cols, threads.x * threads.y), 
                     divUp(rows, threads.y * threads.x));
-        grid.x = min(grid.x, threads.x);
-        grid.y = min(grid.y, threads.y);
+        grid.x = std::min(grid.x, threads.x);
+        grid.y = std::min(grid.y, threads.y);
     }
 
 
@@ -1044,7 +1033,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         sumInSmem<nthreads, R>(smem, tid);
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+#if __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
 
         if (tid == 0)
@@ -1125,7 +1114,7 @@ namespace cv { namespace gpu { namespace mathfunc
         sumInSmem<nthreads, R>(smem, tid);
         sumInSmem<nthreads, R>(smem + nthreads, tid);
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+#if __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
 
         if (tid == 0)
@@ -1232,7 +1221,7 @@ namespace cv { namespace gpu { namespace mathfunc
         sumInSmem<nthreads, R>(smem + nthreads, tid);
         sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+#if __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
 
         if (tid == 0)
@@ -1349,7 +1338,7 @@ namespace cv { namespace gpu { namespace mathfunc
         sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
         sumInSmem<nthreads, R>(smem + 3 * nthreads, tid);
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+#if __CUDA_ARCH__ >= 110
         __shared__ bool is_last;
 
         if (tid == 0)
@@ -1437,13 +1426,9 @@ namespace cv { namespace gpu { namespace mathfunc
         }
     }
 
-    } // namespace sum
-
-
     template <typename T>
     void sumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
     {
-        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1515,7 +1500,6 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
     {
-        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1565,7 +1549,6 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void absSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
     {
-        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1637,7 +1620,6 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void absSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
     {
-        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1687,7 +1669,6 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sqrSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
     {
-        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1759,7 +1740,6 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void sqrSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
     {
-        using namespace sums;
         typedef typename SumType<T>::R R;
 
         dim3 threads, grid;
@@ -1804,301 +1784,305 @@ namespace cv { namespace gpu { namespace mathfunc
     template void sqrSumCaller<short>(const DevMem2Db, PtrStepb, double*, int);
     template void sqrSumCaller<int>(const DevMem2Db, PtrStepb, double*, int);
     template void sqrSumCaller<float>(const DevMem2Db, PtrStepb, double*, int);
+} // namespace sum
 
-    //////////////////////////////////////////////////////////////////////////////
-    // reduce
+//////////////////////////////////////////////////////////////////////////////
+// reduce
 
-    template <typename S> struct SumReductor
+template <typename S> struct SumReductor
+{
+    __device__ __forceinline__ S startValue() const
     {
-        __device__ __forceinline__ S startValue() const
-        {
-            return 0;
-        }
-
-        __device__ __forceinline__ S operator ()(volatile S a, volatile S b) const
-        {
-            return a + b;
-        }
-
-        __device__ __forceinline__ S result(S r, double) const
-        {
-            return r;
-        }
-    };
-
-    template <typename S> struct AvgReductor
-    {
-        __device__ __forceinline__ S startValue() const
-        {
-            return 0;
-        }
-
-        __device__ __forceinline__ S operator ()(volatile S a, volatile S b) const
-        {
-            return a + b;
-        }
-
-        __device__ __forceinline__ double result(S r, double sz) const
-        {
-            return r / sz;
-        }
-    };
-
-    template <typename S> struct MinReductor
-    {
-        __device__ __forceinline__ S startValue() const
-        {
-            return numeric_limits<S>::max();
-        }
-
-        template <typename T> __device__ __forceinline__ T operator ()(volatile T a, volatile T b) const
-        {
-            return saturate_cast<T>(::min(a, b));
-        }
-        __device__ __forceinline__ float operator ()(volatile float a, volatile float b) const
-        {
-            return ::fmin(a, b);
-        }
-
-        __device__ __forceinline__ S result(S r, double) const
-        {
-            return r;
-        }
-    };
-
-    template <typename S> struct MaxReductor
-    {
-        __device__ __forceinline__ S startValue() const
-        {
-            return numeric_limits<S>::min();
-        }
-
-        template <typename T> __device__ __forceinline__ int operator ()(volatile T a, volatile T b) const
-        {
-            return ::max(a, b);
-        }
-        __device__ __forceinline__ float operator ()(volatile float a, volatile float b) const
-        {
-            return ::fmax(a, b);
-        }
-
-        __device__ __forceinline__ S result(S r, double) const
-        {
-            return r;
-        }
-    };
-
-    template <class Op, typename T, typename S, typename D> __global__ void reduceRows(const DevMem2D_<T> src, D* dst, const Op op)
-    {
-        __shared__ S smem[16 * 16];
-
-        const int x = blockIdx.x * 16 + threadIdx.x;
-
-        S myVal = op.startValue();
-
-        if (x < src.cols)
-        {
-            for (int y = threadIdx.y; y < src.rows; y += 16)
-                myVal = op(myVal, src.ptr(y)[x]);
-        }        
-
-        smem[threadIdx.x * 16 + threadIdx.y] = myVal;
-        __syncthreads();
-
-        if (threadIdx.x < 8)
-        {
-            volatile S* srow = smem + threadIdx.y * 16;
-            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 8]);
-            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 4]);
-            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 2]);
-            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 1]);
-        }
-        __syncthreads();
-
-        if (threadIdx.y == 0 && x < src.cols)
-            dst[x] = saturate_cast<D>(op.result(smem[threadIdx.x * 16], src.rows));
+        return 0;
     }
 
-    template <template <typename> class Op, typename T, typename S, typename D> void reduceRows_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)
+    __device__ __forceinline__ S operator ()(volatile S a, volatile S b) const
     {
-        const dim3 block(16, 16);
-        const dim3 grid(divUp(src.cols, block.x));
-
-        Op<S> op;
-        reduceRows<Op<S>, T, S, D><<<grid, block, 0, stream>>>(src, dst.data, op);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-
+        return a + b;
     }
 
-    template <typename T, typename S, typename D> void reduceRows_gpu(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream)
+    __device__ __forceinline__ S result(S r, double) const
     {
-        typedef void (*caller_t)(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream);
+        return r;
+    }
+};
 
-        static const caller_t callers[] = 
-        {
-            reduceRows_caller<SumReductor, T, S, D>, 
-            reduceRows_caller<AvgReductor, T, S, D>, 
-            reduceRows_caller<MaxReductor, T, S, D>, 
-            reduceRows_caller<MinReductor, T, S, D>
-        };
-
-        callers[reduceOp](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), stream);
+template <typename S> struct AvgReductor
+{
+    __device__ __forceinline__ S startValue() const
+    {
+        return 0;
     }
 
-    template void reduceRows_gpu<uchar, int, uchar>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceRows_gpu<uchar, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceRows_gpu<uchar, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);  
-
-    template void reduceRows_gpu<ushort, int, ushort>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceRows_gpu<ushort, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceRows_gpu<ushort, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream); 
-
-    template void reduceRows_gpu<short, int, short>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceRows_gpu<short, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceRows_gpu<short, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream); 
-
-    template void reduceRows_gpu<int, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceRows_gpu<int, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-
-    template void reduceRows_gpu<float, float, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-
-
-
-    template <int cn, class Op, typename T, typename S, typename D> __global__ void reduceCols(const DevMem2D_<T> src, D* dst, const Op op)
+    __device__ __forceinline__ S operator ()(volatile S a, volatile S b) const
     {
-        __shared__ S smem[256 * cn];
+        return a + b;
+    }
 
-        const int y = blockIdx.x;
+    __device__ __forceinline__ double result(S r, double sz) const
+    {
+        return r / sz;
+    }
+};
 
-        const T* src_row = src.ptr(y);
+template <typename S> struct MinReductor
+{
+    __device__ __forceinline__ S startValue() const
+    {
+        return numeric_limits<S>::max();
+    }
 
-        S myVal[cn];
+    template <typename T> __device__ __forceinline__ T operator ()(volatile T a, volatile T b) const
+    {
+        return saturate_cast<T>(::min(a, b));
+    }
+    __device__ __forceinline__ float operator ()(volatile float a, volatile float b) const
+    {
+        return ::fmin(a, b);
+    }
 
-        #pragma unroll
-        for (int c = 0; c < cn; ++c)
-            myVal[c] = op.startValue();
+    __device__ __forceinline__ S result(S r, double) const
+    {
+        return r;
+    }
+};
+
+template <typename S> struct MaxReductor
+{
+    __device__ __forceinline__ S startValue() const
+    {
+        return numeric_limits<S>::min();
+    }
+
+    template <typename T> __device__ __forceinline__ int operator ()(volatile T a, volatile T b) const
+    {
+        return ::max(a, b);
+    }
+    __device__ __forceinline__ float operator ()(volatile float a, volatile float b) const
+    {
+        return ::fmax(a, b);
+    }
+
+    __device__ __forceinline__ S result(S r, double) const
+    {
+        return r;
+    }
+};
+
+template <class Op, typename T, typename S, typename D> __global__ void reduceRows(const DevMem2D_<T> src, D* dst, const Op op)
+{
+    __shared__ S smem[16 * 16];
+
+    const int x = blockIdx.x * 16 + threadIdx.x;
+
+    S myVal = op.startValue();
+
+    if (x < src.cols)
+    {
+        for (int y = threadIdx.y; y < src.rows; y += 16)
+            myVal = op(myVal, src.ptr(y)[x]);
+    }        
+
+    smem[threadIdx.x * 16 + threadIdx.y] = myVal;
+    __syncthreads();
+
+    if (threadIdx.x < 8)
+    {
+        volatile S* srow = smem + threadIdx.y * 16;
+        srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 8]);
+        srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 4]);
+        srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 2]);
+        srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 1]);
+    }
+    __syncthreads();
+
+    if (threadIdx.y == 0 && x < src.cols)
+        dst[x] = saturate_cast<D>(op.result(smem[threadIdx.x * 16], src.rows));
+}
+
+template <template <typename> class Op, typename T, typename S, typename D> void reduceRows_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)
+{
+    const dim3 block(16, 16);
+    const dim3 grid(divUp(src.cols, block.x));
+
+    Op<S> op;
+    reduceRows<Op<S>, T, S, D><<<grid, block, 0, stream>>>(src, dst.data, op);
+    cudaSafeCall( cudaGetLastError() );
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
+
+}
+
+template <typename T, typename S, typename D> void reduceRows_gpu(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream)
+{
+    typedef void (*caller_t)(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream);
+
+    static const caller_t callers[] = 
+    {
+        reduceRows_caller<SumReductor, T, S, D>, 
+        reduceRows_caller<AvgReductor, T, S, D>, 
+        reduceRows_caller<MaxReductor, T, S, D>, 
+        reduceRows_caller<MinReductor, T, S, D>
+    };
+
+    callers[reduceOp](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), stream);
+}
+
+template void reduceRows_gpu<uchar, int, uchar>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceRows_gpu<uchar, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceRows_gpu<uchar, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);  
+
+template void reduceRows_gpu<ushort, int, ushort>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceRows_gpu<ushort, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceRows_gpu<ushort, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream); 
+
+template void reduceRows_gpu<short, int, short>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceRows_gpu<short, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceRows_gpu<short, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream); 
+
+template void reduceRows_gpu<int, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceRows_gpu<int, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+
+template void reduceRows_gpu<float, float, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+
+
+
+template <int cn, class Op, typename T, typename S, typename D> __global__ void reduceCols(const DevMem2D_<T> src, D* dst, const Op op)
+{
+    __shared__ S smem[256 * cn];
+
+    const int y = blockIdx.x;
+
+    const T* src_row = src.ptr(y);
+
+    S myVal[cn];
+
+    #pragma unroll
+    for (int c = 0; c < cn; ++c)
+        myVal[c] = op.startValue();
 
 #if __CUDA_ARCH__ >= 200
 
-        // For cc >= 2.0 prefer L1 cache
-        for (int x = threadIdx.x; x < src.cols; x += 256)
-        {
-            #pragma unroll
-            for (int c = 0; c < cn; ++c)
-                myVal[c] = op(myVal[c], src_row[x * cn + c]);
-        }
+    // For cc >= 2.0 prefer L1 cache
+    for (int x = threadIdx.x; x < src.cols; x += 256)
+    {
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            myVal[c] = op(myVal[c], src_row[x * cn + c]);
+    }
 
 #else // __CUDA_ARCH__ >= 200
 
-        // For older arch use shared memory for cache
-        for (int x = 0; x < src.cols; x += 256)
+    // For older arch use shared memory for cache
+    for (int x = 0; x < src.cols; x += 256)
+    {
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
         {
-            #pragma unroll
-            for (int c = 0; c < cn; ++c)
-            {
-                smem[c * 256 + threadIdx.x] = op.startValue();
-                const int load_x = x * cn + c * 256 + threadIdx.x;
-                if (load_x < src.cols * cn)
-                    smem[c * 256 + threadIdx.x] = src_row[load_x];
-            }
-            __syncthreads();
-
-            #pragma unroll
-            for (int c = 0; c < cn; ++c)
-                myVal[c] = op(myVal[c], smem[threadIdx.x * cn + c]);
-            __syncthreads();
+            smem[c * 256 + threadIdx.x] = op.startValue();
+            const int load_x = x * cn + c * 256 + threadIdx.x;
+            if (load_x < src.cols * cn)
+                smem[c * 256 + threadIdx.x] = src_row[load_x];
         }
-
-#endif // __CUDA_ARCH__ >= 200
+        __syncthreads();
 
         #pragma unroll
         for (int c = 0; c < cn; ++c)
-            smem[c * 256 + threadIdx.x] = myVal[c];
+            myVal[c] = op(myVal[c], smem[threadIdx.x * cn + c]);
         __syncthreads();
-
-        if (threadIdx.x < 128)
-        {
-            #pragma unroll
-            for (int c = 0; c < cn; ++c)
-                smem[c * 256 + threadIdx.x] = op(smem[c * 256 + threadIdx.x], smem[c * 256 + threadIdx.x + 128]);
-        }
-        __syncthreads();
-
-        if (threadIdx.x < 64)
-        {
-            #pragma unroll
-            for (int c = 0; c < cn; ++c)
-                smem[c * 256 + threadIdx.x] = op(smem[c * 256 + threadIdx.x], smem[c * 256 + threadIdx.x + 64]);
-        }
-        __syncthreads();
-
-        volatile S* sdata = smem;
-
-        if (threadIdx.x < 32)
-        {
-            #pragma unroll
-            for (int c = 0; c < cn; ++c)
-            {
-                sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 32]);
-                sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 16]);
-                sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 8]);
-                sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 4]);
-                sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 2]);
-                sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 1]);
-            }
-        }
-        __syncthreads();
-
-        if (threadIdx.x < cn)
-            dst[y * cn + threadIdx.x] = saturate_cast<D>(op.result(smem[threadIdx.x * 256], src.cols));
     }
 
-    template <int cn, template <typename> class Op, typename T, typename S, typename D> void reduceCols_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)
+#endif // __CUDA_ARCH__ >= 200
+
+    #pragma unroll
+    for (int c = 0; c < cn; ++c)
+        smem[c * 256 + threadIdx.x] = myVal[c];
+    __syncthreads();
+
+    if (threadIdx.x < 128)
     {
-        const dim3 block(256);
-        const dim3 grid(src.rows);
-
-        Op<S> op;
-        reduceCols<cn, Op<S>, T, S, D><<<grid, block, 0, stream>>>(src, dst.data, op);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            smem[c * 256 + threadIdx.x] = op(smem[c * 256 + threadIdx.x], smem[c * 256 + threadIdx.x + 128]);
     }
+    __syncthreads();
 
-    template <typename T, typename S, typename D> void reduceCols_gpu(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream)
+    if (threadIdx.x < 64)
     {
-        typedef void (*caller_t)(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream);
-
-        static const caller_t callers[4][4] = 
-        {
-            {reduceCols_caller<1, SumReductor, T, S, D>, reduceCols_caller<1, AvgReductor, T, S, D>, reduceCols_caller<1, MaxReductor, T, S, D>, reduceCols_caller<1, MinReductor, T, S, D>},
-            {reduceCols_caller<2, SumReductor, T, S, D>, reduceCols_caller<2, AvgReductor, T, S, D>, reduceCols_caller<2, MaxReductor, T, S, D>, reduceCols_caller<2, MinReductor, T, S, D>},
-            {reduceCols_caller<3, SumReductor, T, S, D>, reduceCols_caller<3, AvgReductor, T, S, D>, reduceCols_caller<3, MaxReductor, T, S, D>, reduceCols_caller<3, MinReductor, T, S, D>},
-            {reduceCols_caller<4, SumReductor, T, S, D>, reduceCols_caller<4, AvgReductor, T, S, D>, reduceCols_caller<4, MaxReductor, T, S, D>, reduceCols_caller<4, MinReductor, T, S, D>},
-        };
-
-        callers[cn - 1][reduceOp](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), stream);
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            smem[c * 256 + threadIdx.x] = op(smem[c * 256 + threadIdx.x], smem[c * 256 + threadIdx.x + 64]);
     }
+    __syncthreads();
 
-    template void reduceCols_gpu<uchar, int, uchar>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceCols_gpu<uchar, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-    template void reduceCols_gpu<uchar, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+    volatile S* sdata = smem;
 
-    template void reduceCols_gpu<ushort, int, ushort>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream); 
-    template void reduceCols_gpu<ushort, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);                  
-    template void reduceCols_gpu<ushort, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+    if (threadIdx.x < 32)
+    {
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+        {
+            sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 32]);
+            sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 16]);
+            sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 8]);
+            sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 4]);
+            sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 2]);
+            sdata[c * 256 + threadIdx.x] = op(sdata[c * 256 + threadIdx.x], sdata[c * 256 + threadIdx.x + 1]);
+        }
+    }
+    __syncthreads();
 
-    template void reduceCols_gpu<short, int, short>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);  
-    template void reduceCols_gpu<short, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);                  
-    template void reduceCols_gpu<short, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);  
+    if (threadIdx.x < cn)
+        dst[y * cn + threadIdx.x] = saturate_cast<D>(op.result(smem[threadIdx.x * 256], src.cols));
+}
 
-    template void reduceCols_gpu<int, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);                  
-    template void reduceCols_gpu<int, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template <int cn, template <typename> class Op, typename T, typename S, typename D> void reduceCols_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)
+{
+    const dim3 block(256);
+    const dim3 grid(src.rows);
 
-    template void reduceCols_gpu<float, float, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
- }}}
+    Op<S> op;
+    reduceCols<cn, Op<S>, T, S, D><<<grid, block, 0, stream>>>(src, dst.data, op);
+    cudaSafeCall( cudaGetLastError() );
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
+
+}
+
+template <typename T, typename S, typename D> void reduceCols_gpu(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream)
+{
+    typedef void (*caller_t)(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream);
+
+    static const caller_t callers[4][4] = 
+    {
+        {reduceCols_caller<1, SumReductor, T, S, D>, reduceCols_caller<1, AvgReductor, T, S, D>, reduceCols_caller<1, MaxReductor, T, S, D>, reduceCols_caller<1, MinReductor, T, S, D>},
+        {reduceCols_caller<2, SumReductor, T, S, D>, reduceCols_caller<2, AvgReductor, T, S, D>, reduceCols_caller<2, MaxReductor, T, S, D>, reduceCols_caller<2, MinReductor, T, S, D>},
+        {reduceCols_caller<3, SumReductor, T, S, D>, reduceCols_caller<3, AvgReductor, T, S, D>, reduceCols_caller<3, MaxReductor, T, S, D>, reduceCols_caller<3, MinReductor, T, S, D>},
+        {reduceCols_caller<4, SumReductor, T, S, D>, reduceCols_caller<4, AvgReductor, T, S, D>, reduceCols_caller<4, MaxReductor, T, S, D>, reduceCols_caller<4, MinReductor, T, S, D>},
+    };
+
+    callers[cn - 1][reduceOp](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), stream);
+}
+
+template void reduceCols_gpu<uchar, int, uchar>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceCols_gpu<uchar, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+template void reduceCols_gpu<uchar, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+
+template void reduceCols_gpu<ushort, int, ushort>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream); 
+template void reduceCols_gpu<ushort, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);                  
+template void reduceCols_gpu<ushort, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+
+template void reduceCols_gpu<short, int, short>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);  
+template void reduceCols_gpu<short, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);                  
+template void reduceCols_gpu<short, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);  
+
+template void reduceCols_gpu<int, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);                  
+template void reduceCols_gpu<int, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+
+template void reduceCols_gpu<float, float, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+
+} // namespace mattrix_reductions
+
+END_OPENCV_DEVICE_NAMESPACE

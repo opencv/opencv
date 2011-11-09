@@ -3897,7 +3897,7 @@ static void testC2C(const std::string& hint, int cols, int rows, int flags, bool
     EXPECT_TRUE(!inplace || d_b.ptr() == d_b_data.ptr());
     ASSERT_EQ(CV_32F, d_b.depth());
     ASSERT_EQ(2, d_b.channels());
-    EXPECT_MAT_NEAR(b_gold, d_b, rows * cols * 1e-4);
+    EXPECT_MAT_NEAR(b_gold, cv::Mat(d_b), rows * cols * 1e-4);
 }
 
 TEST_P(Dft, C2C)

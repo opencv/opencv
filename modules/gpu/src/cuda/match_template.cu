@@ -43,10 +43,9 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::device;
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace cv { namespace gpu { namespace imgproc {
+namespace match_template {
 
 __device__ __forceinline__ float sum(float v) { return v; }
 __device__ __forceinline__ float sum(float2 v) { return v.x + v.y; }
@@ -266,9 +265,9 @@ void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long
 
 __device__ float normAcc(float num, float denum)
 {
-    if (fabs(num) < denum)
+    if (::fabs(num) < denum)
         return num / denum;
-    if (fabs(num) < denum * 1.125f)
+    if (::fabs(num) < denum * 1.125f)
         return num > 0 ? 1 : -1;
     return 0;
 }
@@ -276,9 +275,9 @@ __device__ float normAcc(float num, float denum)
 
 __device__ float normAcc_SQDIFF(float num, float denum)
 {
-    if (fabs(num) < denum)
+    if (::fabs(num) < denum)
         return num / denum;
-    if (fabs(num) < denum * 1.125f)
+    if (::fabs(num) < denum * 1.125f)
         return num > 0 ? 1 : -1;
     return 1;
 }
@@ -906,4 +905,7 @@ void extractFirstChannel_32F(const DevMem2Db image, DevMem2Df result, int cn, cu
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
 }
-}}}
+
+} //namespace match_template
+
+END_OPENCV_DEVICE_NAMESPACE

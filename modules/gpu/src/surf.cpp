@@ -63,8 +63,17 @@ void cv::gpu::SURF_GPU::releaseMemory() { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace surf
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace surf
 {
+    void loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold);
+    void loadOctaveConstants(int octave, int layer_rows, int layer_cols);
+
+    void bindImgTex(DevMem2Db img);
+    void bindSumTex(DevMem2D_<uint> sum);
+    void bindMaskSumTex(DevMem2D_<uint> maskSum);
+
     void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols, int octave, int nOctaveLayers);
 
     void icvFindMaximaInLayer_gpu(const PtrStepf& det, const PtrStepf& trace, int4* maxPosBuffer, unsigned int* maxCounter,
@@ -78,9 +87,11 @@ namespace cv { namespace gpu { namespace surf
 
     void compute_descriptors_gpu(const DevMem2Df& descriptors, 
         const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures);
-}}}
+}
 
-using namespace cv::gpu::surf;
+END_OPENCV_DEVICE_NAMESPACE
+
+using namespace OPENCV_DEVICE_NAMESPACE_ surf;
 
 namespace
 {
@@ -136,24 +147,18 @@ namespace
             counters.create(1, nOctaves + 1, CV_32SC1);
             counters.setTo(Scalar::all(0));
 
-            uploadConstant("cv::gpu::surf::c_max_candidates",    maxCandidates);
-            uploadConstant("cv::gpu::surf::c_max_features",      maxFeatures);
-            uploadConstant("cv::gpu::surf::c_img_rows",          img_rows);
-            uploadConstant("cv::gpu::surf::c_img_cols",          img_cols);
-            uploadConstant("cv::gpu::surf::c_nOctaveLayers",     nOctaveLayers);
-            uploadConstant("cv::gpu::surf::c_hessianThreshold",  static_cast<float>(hessianThreshold));
+            loadGlobalConstants(maxCandidates, maxFeatures, img_rows, img_cols, nOctaveLayers, static_cast<float>(hessianThreshold));
 
-            imgTex.bind("cv::gpu::surf::imgTex", (DevMem2Db)img);
+            bindImgTex(img);
 
             integralBuffered(img, sum, intBuffer);
-            sumTex.bind("cv::gpu::surf::sumTex", (DevMem2D_<unsigned int>)sum);
+            bindSumTex(sum);
 
             if (use_mask)
             {
                 min(mask, 1.0, mask1);
                 integralBuffered(mask1, maskSum, intBuffer);
-
-                maskSumTex.bind("cv::gpu::surf::maskSumTex", (DevMem2D_<unsigned int>)maskSum);
+                bindMaskSumTex(maskSum);
             }
         }
 
@@ -171,9 +176,7 @@ namespace
                 const int layer_rows = img_rows >> octave;
                 const int layer_cols = img_cols >> octave;
 
-                uploadConstant("cv::gpu::surf::c_octave",     octave);
-                uploadConstant("cv::gpu::surf::c_layer_rows", layer_rows);
-                uploadConstant("cv::gpu::surf::c_layer_cols", layer_cols);
+                loadOctaveConstants(octave, layer_rows, layer_cols);
 
                 icvCalcLayerDetAndTrace_gpu(det, trace, img_rows, img_cols, octave, nOctaveLayers);
 
@@ -242,8 +245,6 @@ namespace
         int maxFeatures;
 
         GpuMat counters;
-
-        TextureBinder imgTex, sumTex, maskSumTex;
     };
 }
 
@@ -336,7 +337,7 @@ void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, vector<Key
     {
         CV_Assert(keypointsGPU.type() == CV_32FC1 && keypointsGPU.rows == SF_FEATURE_STRIDE);
         
-        Mat keypointsCPU = keypointsGPU;
+        Mat keypointsCPU(keypointsGPU);
         
         keypoints.resize(nFeatures);
 

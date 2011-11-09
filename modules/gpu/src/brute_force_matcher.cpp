@@ -82,7 +82,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat&, vector< vec
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace bf_match
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace bf_match
 {
     template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, 
@@ -103,9 +105,9 @@ namespace cv { namespace gpu { namespace bf_match
     template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
         int cc, cudaStream_t stream);
-}}}
+}
 
-namespace cv { namespace gpu { namespace bf_knnmatch
+namespace bf_knnmatch
 {
     template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& train, int k, const DevMem2Db& mask, 
         const DevMem2Db& trainIdx, const DevMem2Db& distance, const DevMem2Df& allDist, 
@@ -126,9 +128,9 @@ namespace cv { namespace gpu { namespace bf_knnmatch
     template <typename T> void match2Hamming_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
         const DevMem2Db& trainIdx, const DevMem2Db& imgIdx, const DevMem2Db& distance, 
         int cc, cudaStream_t stream);
-}}}
+}
 
-namespace cv { namespace gpu { namespace bf_radius_match 
+namespace bf_radius_match 
 {
     template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& train, float maxDistance, const DevMem2Db& mask, 
         const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
@@ -151,14 +153,16 @@ namespace cv { namespace gpu { namespace bf_radius_match
     template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db* trains, int n, float maxDistance, const DevMem2Db* masks, 
         const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
         int cc, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
+
+////////////////////////////////////////////////////////////////////
+// Train collection
 
 cv::gpu::BruteForceMatcher_GPU_base::BruteForceMatcher_GPU_base(DistType distType_) : distType(distType_)
 {
 }
-
-////////////////////////////////////////////////////////////////////
-// Train collection
 
 void cv::gpu::BruteForceMatcher_GPU_base::add(const vector<GpuMat>& descCollection)
 {
@@ -195,7 +199,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& query, const
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::gpu::bf_match;
+    using namespace OPENCV_DEVICE_NAMESPACE_ bf_match;
 
     typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask, 
                              const DevMem2Di& trainIdx, const DevMem2Df& distance,
@@ -242,8 +246,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, 
     if (trainIdx.empty() || distance.empty())
         return;
 
-    Mat trainIdxCPU = trainIdx;
-    Mat distanceCPU = distance;
+    Mat trainIdxCPU(trainIdx);
+    Mat distanceCPU(distance);
 
     matchConvert(trainIdxCPU, distanceCPU, matches);
 }
@@ -337,7 +341,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& query, c
     if (query.empty() || trainCollection.empty())
         return;
 
-    using namespace cv::gpu::bf_match;
+    using namespace OPENCV_DEVICE_NAMESPACE_ bf_match;
 
     typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
                              const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
@@ -384,9 +388,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, 
     if (trainIdx.empty() || imgIdx.empty() || distance.empty())
         return;
 
-    Mat trainIdxCPU = trainIdx;
-    Mat imgIdxCPU = imgIdx;
-    Mat distanceCPU = distance;
+    Mat trainIdxCPU(trainIdx);
+    Mat imgIdxCPU(imgIdx);
+    Mat distanceCPU(distance);
 
     matchConvert(trainIdxCPU, imgIdxCPU, distanceCPU, matches);
 }
@@ -448,7 +452,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchSingle(const GpuMat& query, co
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::gpu::bf_knnmatch;
+    using namespace OPENCV_DEVICE_NAMESPACE_ bf_knnmatch;
 
     typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& train, int k, const DevMem2Db& mask, 
                              const DevMem2Db& trainIdx, const DevMem2Db& distance, const DevMem2Df& allDist, 
@@ -511,8 +515,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchDownload(const GpuMat& trainId
     if (trainIdx.empty() || distance.empty())
         return;
 
-    Mat trainIdxCPU = trainIdx;
-    Mat distanceCPU = distance;
+    Mat trainIdxCPU(trainIdx);
+    Mat distanceCPU(distance);
 
     knnMatchConvert(trainIdxCPU, distanceCPU, matches, compactResult);
 }
@@ -577,7 +581,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch2Collection(const GpuMat& quer
     if (query.empty() || trainCollection.empty())
         return;
 
-    using namespace cv::gpu::bf_knnmatch;
+    using namespace OPENCV_DEVICE_NAMESPACE_ bf_knnmatch;
 
     typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, 
                              const DevMem2Db& trainIdx, const DevMem2Db& imgIdx, const DevMem2Db& distance, 
@@ -630,9 +634,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch2Download(const GpuMat& trainI
     if (trainIdx.empty() || imgIdx.empty() || distance.empty())
         return;
 
-    Mat trainIdxCPU = trainIdx;
-    Mat imgIdxCPU = imgIdx;
-    Mat distanceCPU = distance;
+    Mat trainIdxCPU(trainIdx);
+    Mat imgIdxCPU(imgIdx);
+    Mat distanceCPU(distance);
 
     knnMatch2Convert(trainIdxCPU, imgIdxCPU, distanceCPU, matches, compactResult);
 }
@@ -758,7 +762,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchSingle(const GpuMat& query,
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::gpu::bf_radius_match;
+    using namespace OPENCV_DEVICE_NAMESPACE_ bf_radius_match;
 
     typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db& train, float maxDistance, const DevMem2Db& mask, 
                              const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
@@ -819,9 +823,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trai
     if (trainIdx.empty() || distance.empty() || nMatches.empty())
         return;
 
-    Mat trainIdxCPU = trainIdx;
-    Mat distanceCPU = distance;
-    Mat nMatchesCPU = nMatches;
+    Mat trainIdxCPU(trainIdx);
+    Mat distanceCPU(distance);
+    Mat nMatchesCPU(nMatches);
 
     radiusMatchConvert(trainIdxCPU, distanceCPU, nMatchesCPU, matches, compactResult);
 }
@@ -889,7 +893,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchCollection(const GpuMat& qu
     if (query.empty() || empty())
         return;
 
-    using namespace cv::gpu::bf_radius_match;
+    using namespace OPENCV_DEVICE_NAMESPACE_ bf_radius_match;
 
     typedef void (*caller_t)(const DevMem2Db& query, const DevMem2Db* trains, int n, float maxDistance, const DevMem2Db* masks, 
                              const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, const DevMem2D_<unsigned int>& nMatches, 
@@ -953,10 +957,10 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trai
     if (trainIdx.empty() || imgIdx.empty() || distance.empty() || nMatches.empty())
         return;
 
-    Mat trainIdxCPU = trainIdx;
-    Mat imgIdxCPU = imgIdx;
-    Mat distanceCPU = distance;
-    Mat nMatchesCPU = nMatches;
+    Mat trainIdxCPU(trainIdx);
+    Mat imgIdxCPU(imgIdx);
+    Mat distanceCPU(distance);
+    Mat nMatchesCPU(nMatches);
 
     radiusMatchConvert(trainIdxCPU, imgIdxCPU, distanceCPU, nMatchesCPU, matches, compactResult);
 }

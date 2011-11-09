@@ -42,81 +42,77 @@
 
 #include "internal_shared.hpp"
 
-using namespace cv::gpu;
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace cv { namespace gpu 
+namespace blend {
+
+template <typename T>
+__global__ void blendLinearKernel(int rows, int cols, int cn, const PtrStep<T> img1, const PtrStep<T> img2,
+                                  const PtrStepf weights1, const PtrStepf weights2, PtrStep<T> result)
 {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    template <typename T>
-    __global__ void blendLinearKernel(int rows, int cols, int cn, const PtrStep<T> img1, const PtrStep<T> img2,
-                                      const PtrStepf weights1, const PtrStepf weights2, PtrStep<T> result)
+    if (y < rows && x < cols)
     {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (y < rows && x < cols)
-        {
-            int x_ = x / cn;
-            float w1 = weights1.ptr(y)[x_];
-            float w2 = weights2.ptr(y)[x_];
-            T p1 = img1.ptr(y)[x];
-            T p2 = img2.ptr(y)[x];
-            result.ptr(y)[x] = (p1 * w1 + p2 * w2) / (w1 + w2 + 1e-5f);
-        }
-    }	
-
-    template <typename T>
-    void blendLinearCaller(int rows, int cols, int cn, const PtrStep<T>& img1, const PtrStep<T>& img2, 
-                           const PtrStepf& weights1, const PtrStepf& weights2, PtrStep<T> result, cudaStream_t stream)
-    {
-        dim3 threads(16, 16);
-        dim3 grid(divUp(cols * cn, threads.x), divUp(rows, threads.y));
-        
-        blendLinearKernel<<<grid, threads, 0, stream>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+        int x_ = x / cn;
+        float w1 = weights1.ptr(y)[x_];
+        float w2 = weights2.ptr(y)[x_];
+        T p1 = img1.ptr(y)[x];
+        T p2 = img2.ptr(y)[x];
+        result.ptr(y)[x] = (p1 * w1 + p2 * w2) / (w1 + w2 + 1e-5f);
     }
+}	
 
-    template void blendLinearCaller<uchar>(int, int, int, const PtrStep<uchar>&, const PtrStep<uchar>&, 
-                                           const PtrStepf&, const PtrStepf&, PtrStep<uchar>, cudaStream_t stream);
-    template void blendLinearCaller<float>(int, int, int, const PtrStep<float>&, const PtrStep<float>&, 
-                                           const PtrStepf&, const PtrStepf&, PtrStep<float>, cudaStream_t stream);
+template <typename T>
+void blendLinearCaller(int rows, int cols, int cn, PtrStep<T> img1, PtrStep<T> img2, PtrStepf weights1, PtrStepf weights2, PtrStep<T> result, cudaStream_t stream)
+{
+    dim3 threads(16, 16);
+    dim3 grid(divUp(cols * cn, threads.x), divUp(rows, threads.y));
+    
+    blendLinearKernel<<<grid, threads, 0, stream>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
+    cudaSafeCall( cudaGetLastError() );
+
+    if (stream == 0)
+        cudaSafeCall(cudaDeviceSynchronize());
+}
+
+template void blendLinearCaller<uchar>(int, int, int, PtrStep<uchar>, PtrStep<uchar>, PtrStepf, PtrStepf, PtrStep<uchar>, cudaStream_t stream);
+template void blendLinearCaller<float>(int, int, int, PtrStep<float>, PtrStep<float>, PtrStepf, PtrStepf, PtrStep<float>, cudaStream_t stream);
 
 
-    __global__ void blendLinearKernel8UC4(int rows, int cols, const PtrStepb img1, const PtrStepb img2,
-                                          const PtrStepf weights1, const PtrStepf weights2, PtrStepb result)
+__global__ void blendLinearKernel8UC4(int rows, int cols, const PtrStepb img1, const PtrStepb img2,
+                                      const PtrStepf weights1, const PtrStepf weights2, PtrStepb result)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (y < rows && x < cols)
     {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (y < rows && x < cols)
-        {
-            float w1 = weights1.ptr(y)[x];
-            float w2 = weights2.ptr(y)[x];
-            float sum_inv = 1.f / (w1 + w2 + 1e-5f);
-            w1 *= sum_inv;
-            w2 *= sum_inv;
-            uchar4 p1 = ((const uchar4*)img1.ptr(y))[x];
-            uchar4 p2 = ((const uchar4*)img2.ptr(y))[x];
-            ((uchar4*)result.ptr(y))[x] = make_uchar4(p1.x * w1 + p2.x * w2, p1.y * w1 + p2.y * w2,
-                                                      p1.z * w1 + p2.z * w2, p1.w * w1 + p2.w * w2);
-        }
+        float w1 = weights1.ptr(y)[x];
+        float w2 = weights2.ptr(y)[x];
+        float sum_inv = 1.f / (w1 + w2 + 1e-5f);
+        w1 *= sum_inv;
+        w2 *= sum_inv;
+        uchar4 p1 = ((const uchar4*)img1.ptr(y))[x];
+        uchar4 p2 = ((const uchar4*)img2.ptr(y))[x];
+        ((uchar4*)result.ptr(y))[x] = make_uchar4(p1.x * w1 + p2.x * w2, p1.y * w1 + p2.y * w2,
+                                                  p1.z * w1 + p2.z * w2, p1.w * w1 + p2.w * w2);
     }
+}
 
+void blendLinearCaller8UC4(int rows, int cols, PtrStepb img1, PtrStepb img2, PtrStepf weights1, PtrStepf weights2, PtrStepb result, cudaStream_t stream)
+{
+    dim3 threads(16, 16);
+    dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+    
+    blendLinearKernel8UC4<<<grid, threads, 0, stream>>>(rows, cols, img1, img2, weights1, weights2, result);
+    cudaSafeCall( cudaGetLastError() );
 
-    void blendLinearCaller8UC4(int rows, int cols, const PtrStepb& img1, const PtrStepb& img2, 
-                               const PtrStepf& weights1, const PtrStepf& weights2, PtrStepb result, cudaStream_t stream)
-    {
-        dim3 threads(16, 16);
-        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
-        
-        blendLinearKernel8UC4<<<grid, threads, 0, stream>>>(rows, cols, img1, img2, weights1, weights2, result);
-        cudaSafeCall( cudaGetLastError() );
+    if (stream == 0)
+        cudaSafeCall(cudaDeviceSynchronize());
+}
 
-        if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
-    }
+} // namespace blend 
 
-}}
+END_OPENCV_DEVICE_NAMESPACE

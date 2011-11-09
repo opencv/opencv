@@ -25,7 +25,7 @@ PERF_TEST_P(DevInfo_Size_MatType, merge, testing::Combine(testing::ValuesIn(devi
         merge(src, dst);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -82,7 +82,7 @@ PERF_TEST_P(DevInfo_Size_MatType, setTo, testing::Combine(testing::ValuesIn(devi
         src.setTo(val);
     }
 
-    Mat src_host = src;
+    Mat src_host(src);
 
     SANITY_CHECK(src_host);
 }
@@ -115,7 +115,7 @@ PERF_TEST_P(DevInfo_Size_MatType, setToMasked, testing::Combine(testing::ValuesI
         src.setTo(val, mask);
     }
 
-    src_host = src;
+    src.download(src_host);
 
     SANITY_CHECK(src_host);
 }
@@ -148,7 +148,7 @@ PERF_TEST_P(DevInfo_Size_MatType, copyToMasked, testing::Combine(testing::Values
         src.copyTo(dst, mask);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }
@@ -182,7 +182,7 @@ PERF_TEST_P(DevInfo_Size_MatType_MatType, convertTo, testing::Combine(testing::V
         src.convertTo(dst, type2, a, b);
     }
 
-    Mat dst_host = dst;
+    Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
 }

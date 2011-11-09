@@ -206,7 +206,7 @@ void App::run()
         workEnd();
 
         // Show results
-        disp = d_disp;
+        d_disp.download(disp);
         putText(disp, text(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255));
         imshow("disparity", disp);
 

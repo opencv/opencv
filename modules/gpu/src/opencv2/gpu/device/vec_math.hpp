@@ -48,85 +48,85 @@
 #include "vec_traits.hpp"
 #include "functional.hpp"
 
-namespace cv {  namespace gpu { namespace device
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace detail
 {
-    namespace detail
+    template <int cn, typename VecD> struct SatCastHelper;
+    template <typename VecD> struct SatCastHelper<1, VecD>
     {
-        template <int cn, typename VecD> struct SatCastHelper;
-        template <typename VecD> struct SatCastHelper<1, VecD>
+        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
         {
-            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
-            {
-                typedef typename VecTraits<VecD>::elem_type D;
-                return VecTraits<VecD>::make(saturate_cast<D>(v.x));
-            }
-        };
-        template <typename VecD> struct SatCastHelper<2, VecD>
-        {
-            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
-            {
-                typedef typename VecTraits<VecD>::elem_type D;
-                return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y));
-            }
-        };
-        template <typename VecD> struct SatCastHelper<3, VecD>
-        {
-            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
-            {
-                typedef typename VecTraits<VecD>::elem_type D;
-                return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z));
-            }
-        };
-        template <typename VecD> struct SatCastHelper<4, VecD>
-        {
-            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
-            {
-                typedef typename VecTraits<VecD>::elem_type D;
-                return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z), saturate_cast<D>(v.w));
-            }
-        };
-
-        template <typename VecD, typename VecS> static __device__ __forceinline__ VecD saturate_cast_caller(const VecS& v)
-        {
-            return SatCastHelper<VecTraits<VecD>::cn, VecD>::cast(v);
+            typedef typename VecTraits<VecD>::elem_type D;
+            return VecTraits<VecD>::make(saturate_cast<D>(v.x));
         }
+    };
+    template <typename VecD> struct SatCastHelper<2, VecD>
+    {
+        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+        {
+            typedef typename VecTraits<VecD>::elem_type D;
+            return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y));
+        }
+    };
+    template <typename VecD> struct SatCastHelper<3, VecD>
+    {
+        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+        {
+            typedef typename VecTraits<VecD>::elem_type D;
+            return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z));
+        }
+    };
+    template <typename VecD> struct SatCastHelper<4, VecD>
+    {
+        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+        {
+            typedef typename VecTraits<VecD>::elem_type D;
+            return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z), saturate_cast<D>(v.w));
+        }
+    };
+
+    template <typename VecD, typename VecS> static __device__ __forceinline__ VecD saturate_cast_caller(const VecS& v)
+    {
+        return SatCastHelper<VecTraits<VecD>::cn, VecD>::cast(v);
     }
+}
 
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double1& v) {return detail::saturate_cast_caller<_Tp>(v);}
 
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double2& v) {return detail::saturate_cast_caller<_Tp>(v);}
 
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double3& v) {return detail::saturate_cast_caller<_Tp>(v);}
 
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double4& v) {return detail::saturate_cast_caller<_Tp>(v);}
 
 #define OPENCV_GPU_IMPLEMENT_VEC_UNOP(type, op, func) \
     __device__ __forceinline__ TypeVec<func<type>::result_type, 1>::vec_type op(const type ## 1 & a) \
@@ -150,49 +150,49 @@ namespace cv {  namespace gpu { namespace device
         return VecTraits<TypeVec<func<type>::result_type, 4>::vec_type>::make(f(a.x), f(a.y), f(a.z), f(a.w)); \
     }
 
-    namespace detail
-    {    
-        template <typename T1, typename T2> struct BinOpTraits
-        {
-            typedef int argument_type;
-        };
-        template <typename T> struct BinOpTraits<T, T>
-        {
-            typedef T argument_type;
-        };
-        template <typename T> struct BinOpTraits<T, double>
-        {
-            typedef double argument_type;
-        };
-        template <typename T> struct BinOpTraits<double, T>
-        {
-            typedef double argument_type;
-        };
-        template <> struct BinOpTraits<double, double>
-        {
-            typedef double argument_type;
-        };
-        template <typename T> struct BinOpTraits<T, float>
-        {
-            typedef float argument_type;
-        };
-        template <typename T> struct BinOpTraits<float, T>
-        {
-            typedef float argument_type;
-        };
-        template <> struct BinOpTraits<float, float>
-        {
-            typedef float argument_type;
-        };
-        template <> struct BinOpTraits<double, float>
-        {
-            typedef double argument_type;
-        };
-        template <> struct BinOpTraits<float, double>
-        {
-            typedef double argument_type;
-        };
-    }
+namespace detail
+{    
+    template <typename T1, typename T2> struct BinOpTraits
+    {
+        typedef int argument_type;
+    };
+    template <typename T> struct BinOpTraits<T, T>
+    {
+        typedef T argument_type;
+    };
+    template <typename T> struct BinOpTraits<T, double>
+    {
+        typedef double argument_type;
+    };
+    template <typename T> struct BinOpTraits<double, T>
+    {
+        typedef double argument_type;
+    };
+    template <> struct BinOpTraits<double, double>
+    {
+        typedef double argument_type;
+    };
+    template <typename T> struct BinOpTraits<T, float>
+    {
+        typedef float argument_type;
+    };
+    template <typename T> struct BinOpTraits<float, T>
+    {
+        typedef float argument_type;
+    };
+    template <> struct BinOpTraits<float, float>
+    {
+        typedef float argument_type;
+    };
+    template <> struct BinOpTraits<double, float>
+    {
+        typedef double argument_type;
+    };
+    template <> struct BinOpTraits<float, double>
+    {
+        typedef double argument_type;
+    };
+}
 
 #define OPENCV_GPU_IMPLEMENT_VEC_BINOP(type, op, func) \
     __device__ __forceinline__ TypeVec<func<type>::result_type, 1>::vec_type op(const type ## 1 & a, const type ## 1 & b) \
@@ -313,19 +313,20 @@ namespace cv {  namespace gpu { namespace device
     OPENCV_GPU_IMPLEMENT_VEC_BINOP(type, operator ^, bit_xor) \
     OPENCV_GPU_IMPLEMENT_VEC_UNOP (type, operator ~, bit_not)
 
-    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uchar)
-    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(char)
-    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(ushort)
-    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(short)
-    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(int)
-    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uint)
-    OPENCV_GPU_IMPLEMENT_VEC_OP(float)
-    OPENCV_GPU_IMPLEMENT_VEC_OP(double)
+OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uchar)
+OPENCV_GPU_IMPLEMENT_VEC_INT_OP(char)
+OPENCV_GPU_IMPLEMENT_VEC_INT_OP(ushort)
+OPENCV_GPU_IMPLEMENT_VEC_INT_OP(short)
+OPENCV_GPU_IMPLEMENT_VEC_INT_OP(int)
+OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uint)
+OPENCV_GPU_IMPLEMENT_VEC_OP(float)
+OPENCV_GPU_IMPLEMENT_VEC_OP(double)
 
 #undef OPENCV_GPU_IMPLEMENT_VEC_UNOP
 #undef OPENCV_GPU_IMPLEMENT_VEC_BINOP
 #undef OPENCV_GPU_IMPLEMENT_VEC_OP
 #undef OPENCV_GPU_IMPLEMENT_VEC_INT_OP
-}}}
+
+END_OPENCV_DEVICE_NAMESPACE
         
 #endif // __OPENCV_GPU_VECMATH_HPP__

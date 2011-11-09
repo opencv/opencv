@@ -44,6 +44,7 @@
 
 using namespace cv;
 using namespace cv::gpu;
+using namespace std;
 
 #if !defined (HAVE_CUDA)
 
@@ -51,8 +52,10 @@ void cv::gpu::matchTemplate(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&)
 
 #else
 
-namespace cv { namespace gpu { namespace imgproc 
-{  
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace match_template 
+{
     void matchTemplateNaive_CCORR_8U(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
     void matchTemplateNaive_CCORR_32F(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
 
@@ -132,8 +135,11 @@ namespace cv { namespace gpu { namespace imgproc
                       unsigned int templ_sqsum, DevMem2Df result, int cn, cudaStream_t stream);
 
     void extractFirstChannel_32F(const DevMem2Db image, DevMem2Df result, int cn, cudaStream_t stream);
-}}}
+}
 
+END_OPENCV_DEVICE_NAMESPACE
+
+using namespace OPENCV_DEVICE_NAMESPACE_ match_template;
 
 namespace 
 {
@@ -177,14 +183,14 @@ namespace
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
         if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_32F))
         {
-            imgproc::matchTemplateNaive_CCORR_32F(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
+            matchTemplateNaive_CCORR_32F(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
             return;
         }
 
         GpuMat result_;
         ConvolveBuf buf;
         convolve(image.reshape(1), templ.reshape(1), result_, true, buf, stream);
-        imgproc::extractFirstChannel_32F(result_, result, image.channels(), StreamAccessor::getStream(stream));
+        extractFirstChannel_32F(result_, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
@@ -193,7 +199,7 @@ namespace
         if (templ.size().area() < getTemplateThreshold(CV_TM_CCORR, CV_8U))
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            imgproc::matchTemplateNaive_CCORR_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
+            matchTemplateNaive_CCORR_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
             return;
         }
 
@@ -220,15 +226,14 @@ namespace
         sqrIntegral(image.reshape(1), img_sqsum, stream);
 
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
-        imgproc::normalize_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, 
-                              result, image.channels(), StreamAccessor::getStream(stream));
+        normalize_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
     
     void matchTemplate_SQDIFF_32F(const GpuMat& image, const GpuMat& templ, GpuMat& result, Stream& stream)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-        imgproc::matchTemplateNaive_SQDIFF_32F(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
+        matchTemplateNaive_SQDIFF_32F(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
@@ -237,7 +242,7 @@ namespace
         if (templ.size().area() < getTemplateThreshold(CV_TM_SQDIFF, CV_8U))
         {
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
-            imgproc::matchTemplateNaive_SQDIFF_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
+            matchTemplateNaive_SQDIFF_8U(image, templ, result, image.channels(), StreamAccessor::getStream(stream));
             return;
         }
 
@@ -247,8 +252,7 @@ namespace
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
 
         matchTemplate_CCORR_8U(image, templ, result, stream);
-        imgproc::matchTemplatePrepared_SQDIFF_8U(
-                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
+        matchTemplatePrepared_SQDIFF_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
@@ -260,8 +264,7 @@ namespace
         unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
 
         matchTemplate_CCORR_8U(image, templ, result, stream);
-        imgproc::matchTemplatePrepared_SQDIFF_NORMED_8U(
-                templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
+        matchTemplatePrepared_SQDIFF_NORMED_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
 
 
@@ -275,13 +278,12 @@ namespace
             integral(image, image_sum, stream);
 
             unsigned int templ_sum = (unsigned int)sum(templ)[0];
-            imgproc::matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, 
-                                                    image_sum, templ_sum, result, StreamAccessor::getStream(stream));
+            matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, image_sum, templ_sum, result, StreamAccessor::getStream(stream));
         }
         else
         {
-            std::vector<GpuMat> images;
-            std::vector<GpuMat> image_sums(image.channels());
+            vector<GpuMat> images;
+            vector<GpuMat> image_sums(image.channels());
 
             split(image, images);
             for (int i = 0; i < image.channels(); ++i)
@@ -292,19 +294,19 @@ namespace
             switch (image.channels())
             {
             case 2:
-                imgproc::matchTemplatePrepared_CCOFF_8UC2(
+                matchTemplatePrepared_CCOFF_8UC2(
                         templ.cols, templ.rows, image_sums[0], image_sums[1],
                         (unsigned int)templ_sum[0], (unsigned int)templ_sum[1],
                         result, StreamAccessor::getStream(stream));
                 break;
             case 3:
-                imgproc::matchTemplatePrepared_CCOFF_8UC3(
+                matchTemplatePrepared_CCOFF_8UC3(
                         templ.cols, templ.rows, image_sums[0], image_sums[1], image_sums[2],
                         (unsigned int)templ_sum[0], (unsigned int)templ_sum[1], (unsigned int)templ_sum[2],
                         result, StreamAccessor::getStream(stream));
                 break;
             case 4:
-                imgproc::matchTemplatePrepared_CCOFF_8UC4(
+                matchTemplatePrepared_CCOFF_8UC4(
                         templ.cols, templ.rows, image_sums[0], image_sums[1], image_sums[2], image_sums[3],
                         (unsigned int)templ_sum[0], (unsigned int)templ_sum[1], (unsigned int)templ_sum[2],
                         (unsigned int)templ_sum[3], result, StreamAccessor::getStream(stream));
@@ -341,15 +343,15 @@ namespace
             unsigned int templ_sum = (unsigned int)sum(templ)[0];
             unsigned int templ_sqsum = (unsigned int)sqrSum(templ)[0];
 
-            imgproc::matchTemplatePrepared_CCOFF_NORMED_8U(
+            matchTemplatePrepared_CCOFF_NORMED_8U(
                     templ.cols, templ.rows, image_sum, image_sqsum, 
                     templ_sum, templ_sqsum, result, StreamAccessor::getStream(stream));
         }
         else
         {
-            std::vector<GpuMat> images;
-            std::vector<GpuMat> image_sums(image.channels());
-            std::vector<GpuMat> image_sqsums(image.channels());
+            vector<GpuMat> images;
+            vector<GpuMat> image_sums(image.channels());
+            vector<GpuMat> image_sqsums(image.channels());
 
             split(image, images);
             for (int i = 0; i < image.channels(); ++i)
@@ -364,7 +366,7 @@ namespace
             switch (image.channels())
             {
             case 2:
-                imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC2(
+                matchTemplatePrepared_CCOFF_NORMED_8UC2(
                         templ.cols, templ.rows, 
                         image_sums[0], image_sqsums[0],
                         image_sums[1], image_sqsums[1],
@@ -373,7 +375,7 @@ namespace
                         result, StreamAccessor::getStream(stream));
                 break;
             case 3:
-                imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC3(
+                matchTemplatePrepared_CCOFF_NORMED_8UC3(
                         templ.cols, templ.rows, 
                         image_sums[0], image_sqsums[0],
                         image_sums[1], image_sqsums[1],
@@ -384,7 +386,7 @@ namespace
                         result, StreamAccessor::getStream(stream));
                 break;
             case 4:
-                imgproc::matchTemplatePrepared_CCOFF_NORMED_8UC4(
+                matchTemplatePrepared_CCOFF_NORMED_8UC4(
                         templ.cols, templ.rows, 
                         image_sums[0], image_sqsums[0],
                         image_sums[1], image_sqsums[1],

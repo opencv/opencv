@@ -46,7 +46,6 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-
 #if !defined (HAVE_CUDA)
 
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()  { throw_nogpu(); }

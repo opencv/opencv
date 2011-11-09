@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 
     // drawing the results
     Mat img_matches;
-    drawMatches(img1, keypoints1, img2, keypoints2, matches, img_matches);
+    drawMatches(Mat(img1), keypoints1, Mat(img2), keypoints2, matches, img_matches);
     
     namedWindow("matches", 0);
     imshow("matches", img_matches);

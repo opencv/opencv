@@ -45,6 +45,8 @@
 
 #include "internal_shared.hpp"
 
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
 #if defined(_WIN64) || defined(__LP64__)		
     // 64-bit register modifier for inlined asm
     #define OPENCV_GPU_ASM_PTR "l"
@@ -53,8 +55,6 @@
     #define OPENCV_GPU_ASM_PTR "r"
 #endif
 
-namespace cv { namespace gpu { namespace device
-{
     #if __CUDA_ARCH__ >= 200
 
         // for Fermi memory space is detected automatically
@@ -99,6 +99,7 @@ namespace cv { namespace gpu { namespace device
     #undef OPENCV_GPU_DEFINE_FORCE_GLOB_B
         
     #endif // __CUDA_ARCH__ >= 200
-}}}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 #endif // __OPENCV_GPU_DATAMOV_UTILS_HPP__

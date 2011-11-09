@@ -3,7 +3,8 @@ set(name "gpu")
 set(the_target "opencv_${name}")
 project(${the_target})
 
-set(DEPS "opencv_core" "opencv_imgproc" "opencv_objdetect" "opencv_features2d" "opencv_flann" "opencv_calib3d") #"opencv_features2d" "opencv_flann" "opencv_objdetect" - only headers needed 
+set(DEPS "opencv_core" "opencv_imgproc" "opencv_calib3d" "opencv_objdetect")
+set(DEPS_HEADER ${DEPS} "opencv_features2d" "opencv_flann")
 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -26,6 +27,13 @@ file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
 file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
+
+foreach(d ${DEPS_HEADER})
+	if(${d} MATCHES "opencv_")
+		string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
+		include_directories("${d_dir}/include")
+	endif()
+endforeach()
 
 if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
@@ -50,7 +58,6 @@ if (HAVE_CUDA)
     if (APPLE)
         set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-fno-finite-math-only;")
     endif()
-    
 
     string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
@@ -60,7 +67,7 @@ if (HAVE_CUDA)
         #string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
         #string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
         #string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408 /wd4251")
 
         string(REPLACE "/EHsc-" "/EHs" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
         string(REPLACE "/EHsc-" "/EHs" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
@@ -69,21 +76,18 @@ if (HAVE_CUDA)
         string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
         string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     endif()
-	
+
     if (BUILD_SHARED_LIBS)
-		set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-DCVAPI_EXPORTS")
-	endif()
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-DCVAPI_EXPORTS")
+    endif()
     
+    if(MSVC)
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/wd4251")
+    endif()
+
     CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
     #CUDA_BUILD_CLEAN_TARGET()
 endif()
-
-foreach(d ${DEPS})
-	if(${d} MATCHES "opencv_")
-		string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-		include_directories("${d_dir}/include")
-	endif()
-endforeach()
 
 add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
 

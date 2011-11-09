@@ -43,38 +43,40 @@
 #ifndef __OPENCV_GPU_TYPE_TRAITS_HPP__
 #define __OPENCV_GPU_TYPE_TRAITS_HPP__
 
+#include "internal_shared.hpp"
 #include "detail/type_traits_detail.hpp"
 
-namespace cv { namespace gpu { namespace device
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+template <typename T> struct IsSimpleParameter
 {
-    template <typename T> struct IsSimpleParameter
-    {
-        enum {value = detail::IsIntegral<T>::value || detail::IsFloat<T>::value || detail::PointerTraits<typename detail::ReferenceTraits<T>::type>::value};
-    };
+    enum {value = detail::IsIntegral<T>::value || detail::IsFloat<T>::value || detail::PointerTraits<typename detail::ReferenceTraits<T>::type>::value};
+};
 
-    template <typename T> struct TypeTraits
-    {
-        typedef typename detail::UnConst<T>::type                                       NonConstType;
-        typedef typename detail::UnVolatile<T>::type                                    NonVolatileType;
-        typedef typename detail::UnVolatile<typename detail::UnConst<T>::type>::type    UnqualifiedType;
-        typedef typename detail::PointerTraits<UnqualifiedType>::type                   PointeeType;
-        typedef typename detail::ReferenceTraits<T>::type                               ReferredType;
+template <typename T> struct TypeTraits
+{
+    typedef typename detail::UnConst<T>::type                                       NonConstType;
+    typedef typename detail::UnVolatile<T>::type                                    NonVolatileType;
+    typedef typename detail::UnVolatile<typename detail::UnConst<T>::type>::type    UnqualifiedType;
+    typedef typename detail::PointerTraits<UnqualifiedType>::type                   PointeeType;
+    typedef typename detail::ReferenceTraits<T>::type                               ReferredType;
 
-        enum { isConst          = detail::UnConst<T>::value };
-        enum { isVolatile       = detail::UnVolatile<T>::value };
+    enum { isConst          = detail::UnConst<T>::value };
+    enum { isVolatile       = detail::UnVolatile<T>::value };
 
-        enum { isReference      = detail::ReferenceTraits<UnqualifiedType>::value };
-        enum { isPointer        = detail::PointerTraits<typename detail::ReferenceTraits<UnqualifiedType>::type>::value };        
+    enum { isReference      = detail::ReferenceTraits<UnqualifiedType>::value };
+    enum { isPointer        = detail::PointerTraits<typename detail::ReferenceTraits<UnqualifiedType>::type>::value };        
 
-        enum { isUnsignedInt = detail::IsUnsignedIntegral<UnqualifiedType>::value };
-        enum { isSignedInt   = detail::IsSignedIntergral<UnqualifiedType>::value };
-        enum { isIntegral    = detail::IsIntegral<UnqualifiedType>::value };
-        enum { isFloat       = detail::IsFloat<UnqualifiedType>::value  };
-        enum { isArith       = isIntegral || isFloat };
-        enum { isVec         = detail::IsVec<UnqualifiedType>::value  };
-        
-        typedef typename detail::Select<IsSimpleParameter<UnqualifiedType>::value, T, typename detail::AddParameterType<T>::type>::type ParameterType;
-    };
-}}}
+    enum { isUnsignedInt = detail::IsUnsignedIntegral<UnqualifiedType>::value };
+    enum { isSignedInt   = detail::IsSignedIntergral<UnqualifiedType>::value };
+    enum { isIntegral    = detail::IsIntegral<UnqualifiedType>::value };
+    enum { isFloat       = detail::IsFloat<UnqualifiedType>::value  };
+    enum { isArith       = isIntegral || isFloat };
+    enum { isVec         = detail::IsVec<UnqualifiedType>::value  };
+    
+    typedef typename detail::Select<IsSimpleParameter<UnqualifiedType>::value, T, typename detail::AddParameterType<T>::type>::type ParameterType;
+};
+
+END_OPENCV_DEVICE_NAMESPACE
 
 #endif // __OPENCV_GPU_TYPE_TRAITS_HPP__

@@ -42,6 +42,10 @@
 
 #include "precomp.hpp"
 
+using namespace cv;
+using namespace cv::gpu;
+using namespace std;
+
 #if !defined(HAVE_CUDA)
 
 void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -52,13 +56,31 @@ void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat
 
 #else
 
-using namespace cv;
-using namespace cv::gpu;
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace cv { namespace gpu { namespace transform_points 
+namespace transform_points 
 {
     void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst, cudaStream_t stream);
-}}}
+}
+
+namespace project_points 
+{
+    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
+}
+
+namespace solve_pnp_ransac
+{
+    int maxNumIters();
+
+    void computeHypothesisScores(
+            const int num_hypotheses, const int num_points, const float* rot_matrices,
+            const float3* transl_vectors, const float3* object, const float2* image,
+            const float dist_threshold, int* hypothesis_scores);
+}
+
+END_OPENCV_DEVICE_NAMESPACE
+
+using namespace OPENCV_DEVICE_NAMESPACE;
 
 namespace
 {
@@ -79,14 +101,8 @@ namespace
 
 void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, GpuMat& dst, Stream& stream)
 {
-    ::transformPointsCaller(src, rvec, tvec, dst, StreamAccessor::getStream(stream));
+    transformPointsCaller(src, rvec, tvec, dst, StreamAccessor::getStream(stream));
 }
-
-namespace cv { namespace gpu { namespace project_points 
-{
-    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
-}}}
-
 
 namespace
 {
@@ -109,19 +125,8 @@ namespace
 
 void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, Stream& stream)
 {
-    ::projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, StreamAccessor::getStream(stream));
+    projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, StreamAccessor::getStream(stream));
 }
-
-
-namespace cv { namespace gpu { namespace solve_pnp_ransac
-{
-    int maxNumIters();
-
-    void computeHypothesisScores(
-            const int num_hypotheses, const int num_points, const float* rot_matrices,
-            const float3* transl_vectors, const float3* object, const float2* image,
-            const float dist_threshold, int* hypothesis_scores);
-}}}
 
 namespace
 {

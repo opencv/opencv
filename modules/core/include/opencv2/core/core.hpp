@@ -90,6 +90,10 @@ class Mat;
 class SparseMat;
 typedef Mat MatND;
 
+namespace gpu {
+    class GpuMat;
+}
+
 class CV_EXPORTS MatExpr;
 class CV_EXPORTS MatOp_Base;
 class CV_EXPORTS MatArg;
@@ -1627,6 +1631,10 @@ public:
     template<typename _Tp> explicit Mat(const Point3_<_Tp>& pt, bool copyData=true);
     //! builds matrix from comma initializer
     template<typename _Tp> explicit Mat(const MatCommaInitializer_<_Tp>& commaInitializer);
+
+    //! download data from GpuMat
+    explicit Mat(const gpu::GpuMat& m);
+
     //! destructor - calls release()
     ~Mat();
     //! assignment operators

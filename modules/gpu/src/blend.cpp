@@ -52,15 +52,19 @@ void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const Gpu
 
 #else
 
-namespace cv { namespace gpu 
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace blend
 {
     template <typename T>
-    void blendLinearCaller(int rows, int cols, int cn, const PtrStep<T>& img1, const PtrStep<T>& img2, 
-                           const PtrStepf& weights1, const PtrStepf& weights2, PtrStep<T> result, cudaStream_t stream);
+    void blendLinearCaller(int rows, int cols, int cn, PtrStep<T> img1, PtrStep<T> img2, PtrStepf weights1, PtrStepf weights2, PtrStep<T> result, cudaStream_t stream);
 
-    void blendLinearCaller8UC4(int rows, int cols, const PtrStepb& img1, const PtrStepb& img2, 
-                               const PtrStepf& weights1, const PtrStepf& weights2, PtrStepb result, cudaStream_t stream);
-}}
+    void blendLinearCaller8UC4(int rows, int cols, PtrStepb img1, PtrStepb img2, PtrStepf weights1, PtrStepf weights2, PtrStepb result, cudaStream_t stream);
+}
+
+END_OPENCV_DEVICE_NAMESPACE
+
+using namespace OPENCV_DEVICE_NAMESPACE_ blend;
 
 void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
                           GpuMat& result, Stream& stream)

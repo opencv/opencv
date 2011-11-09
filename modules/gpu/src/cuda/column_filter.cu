@@ -47,8 +47,7 @@
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::device;
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
 #define MAX_KERNEL_SIZE 16
 #define BLOCK_DIM_X 16
@@ -56,195 +55,195 @@ using namespace cv::gpu::device;
 #define RESULT_STEPS 8
 #define HALO_STEPS 1
 
-namespace filter_column
+namespace column_filter {
+
+__constant__ float c_kernel[MAX_KERNEL_SIZE];
+
+void loadKernel(const float kernel[], int ksize)
 {
-    __constant__ float c_kernel[MAX_KERNEL_SIZE];
+    cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float)) );
+}
 
-    void loadKernel(const float kernel[], int ksize)
+template <int KERNEL_SIZE, typename T, typename D, typename B>
+__global__ void linearColumnFilter(const DevMem2D_<T> src, PtrStep<D> dst, int anchor, const B b)
+{
+    typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
+
+    __shared__ T smem[BLOCK_DIM_X][(RESULT_STEPS + 2 * HALO_STEPS) * BLOCK_DIM_Y + 1];
+
+    //Offset to the upper halo edge
+    const int x = blockIdx.x * BLOCK_DIM_X + threadIdx.x;
+    const int y = (blockIdx.y * RESULT_STEPS - HALO_STEPS) * BLOCK_DIM_Y + threadIdx.y;
+
+    if (x < src.cols)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float)) );
-    }
+        const T* src_col = src.ptr() + x;
 
-    template <int KERNEL_SIZE, typename T, typename D, typename B>
-    __global__ void linearColumnFilter(const DevMem2D_<T> src, PtrStep<D> dst, int anchor, const B b)
-    {
-        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
+        //Main data
+        #pragma unroll
+        for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
+            smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y] = b.at_high(y + i * BLOCK_DIM_Y, src_col, src.step);
 
-        __shared__ T smem[BLOCK_DIM_X][(RESULT_STEPS + 2 * HALO_STEPS) * BLOCK_DIM_Y + 1];
+        //Upper halo
+        #pragma unroll
+        for(int i = 0; i < HALO_STEPS; ++i)
+            smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y] = b.at_low(y + i * BLOCK_DIM_Y, src_col, src.step);
 
-        //Offset to the upper halo edge
-        const int x = blockIdx.x * BLOCK_DIM_X + threadIdx.x;
-        const int y = (blockIdx.y * RESULT_STEPS - HALO_STEPS) * BLOCK_DIM_Y + threadIdx.y;
+        //Lower halo
+        #pragma unroll
+        for(int i = HALO_STEPS + RESULT_STEPS; i < HALO_STEPS + RESULT_STEPS + HALO_STEPS; ++i)
+            smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y]=  b.at_high(y + i * BLOCK_DIM_Y, src_col, src.step);
 
-        if (x < src.cols)
+        __syncthreads();
+
+        #pragma unroll
+        for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
         {
-            const T* src_col = src.ptr() + x;
-
-            //Main data
-            #pragma unroll
-            for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
-                smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y] = b.at_high(y + i * BLOCK_DIM_Y, src_col, src.step);
-
-            //Upper halo
-            #pragma unroll
-            for(int i = 0; i < HALO_STEPS; ++i)
-                smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y] = b.at_low(y + i * BLOCK_DIM_Y, src_col, src.step);
-
-            //Lower halo
-            #pragma unroll
-            for(int i = HALO_STEPS + RESULT_STEPS; i < HALO_STEPS + RESULT_STEPS + HALO_STEPS; ++i)
-                smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y]=  b.at_high(y + i * BLOCK_DIM_Y, src_col, src.step);
-
-            __syncthreads();
+            sum_t sum = VecTraits<sum_t>::all(0);
 
             #pragma unroll
-            for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
-            {
-                sum_t sum = VecTraits<sum_t>::all(0);
+            for(int j = 0; j < KERNEL_SIZE; ++j)
+                sum = sum + smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y + j - anchor] * c_kernel[j];
 
-                #pragma unroll
-                for(int j = 0; j < KERNEL_SIZE; ++j)
-                    sum = sum + smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y + j - anchor] * c_kernel[j];
+            int dstY = y + i * BLOCK_DIM_Y;
 
-                int dstY = y + i * BLOCK_DIM_Y;
-
-                if (dstY < src.rows)
-                    dst.ptr(dstY)[x] = saturate_cast<D>(sum);
-            }
+            if (dstY < src.rows)
+                dst.ptr(dstY)[x] = saturate_cast<D>(sum);
         }
     }
 }
 
-namespace cv { namespace gpu { namespace filters
+template <int ksize, typename T, typename D, template<typename> class B>
+void linearColumnFilter_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream)
+{        
+    const dim3 block(BLOCK_DIM_X, BLOCK_DIM_Y);
+    const dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, RESULT_STEPS * BLOCK_DIM_Y));
+
+    B<T> b(src.rows);
+
+    linearColumnFilter<ksize, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, b);
+    cudaSafeCall( cudaGetLastError() );
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
+}
+
+template <typename T, typename D>
+void linearColumnFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream)
 {
-    template <int ksize, typename T, typename D, template<typename> class B>
-    void linearColumnFilter_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream)
-    {        
-        const dim3 block(BLOCK_DIM_X, BLOCK_DIM_Y);
-        const dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, RESULT_STEPS * BLOCK_DIM_Y));
-
-        B<T> b(src.rows);
-
-        filter_column::linearColumnFilter<ksize, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, b);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-
-    template <typename T, typename D>
-    void linearColumnFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream)
+    typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream);
+    static const caller_t callers[5][17] = 
     {
-        typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream);
-        static const caller_t callers[5][17] = 
         {
-            {
-                0, 
-                linearColumnFilter_caller<1 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<2 , T, D, BrdColReflect101>,
-                linearColumnFilter_caller<3 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<4 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<5 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<6 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<7 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<8 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<9 , T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<10, T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<11, T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<12, T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<13, T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<14, T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<15, T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<16, T, D, BrdColReflect101> 
-            },
-            {
-                0, 
-                linearColumnFilter_caller<1 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<2 , T, D, BrdColReplicate>,
-                linearColumnFilter_caller<3 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<4 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<5 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<6 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<7 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<8 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<9 , T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<10, T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<11, T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<12, T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<13, T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<14, T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<15, T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<16, T, D, BrdColReplicate>
-            },
-            {
-                0, 
-                linearColumnFilter_caller<1 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<2 , T, D, BrdColConstant>,
-                linearColumnFilter_caller<3 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<4 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<5 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<6 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<7 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<8 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<9 , T, D, BrdColConstant>, 
-                linearColumnFilter_caller<10, T, D, BrdColConstant>, 
-                linearColumnFilter_caller<11, T, D, BrdColConstant>, 
-                linearColumnFilter_caller<12, T, D, BrdColConstant>, 
-                linearColumnFilter_caller<13, T, D, BrdColConstant>, 
-                linearColumnFilter_caller<14, T, D, BrdColConstant>, 
-                linearColumnFilter_caller<15, T, D, BrdColConstant>, 
-                linearColumnFilter_caller<16, T, D, BrdColConstant> 
-            },
-            {
-                0, 
-                linearColumnFilter_caller<1 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<2 , T, D, BrdColReflect>,
-                linearColumnFilter_caller<3 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<4 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<5 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<6 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<7 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<8 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<9 , T, D, BrdColReflect>, 
-                linearColumnFilter_caller<10, T, D, BrdColReflect>, 
-                linearColumnFilter_caller<11, T, D, BrdColReflect>, 
-                linearColumnFilter_caller<12, T, D, BrdColReflect>, 
-                linearColumnFilter_caller<13, T, D, BrdColReflect>, 
-                linearColumnFilter_caller<14, T, D, BrdColReflect>, 
-                linearColumnFilter_caller<15, T, D, BrdColReflect>, 
-                linearColumnFilter_caller<16, T, D, BrdColReflect>
-            },
-            {
-                0, 
-                linearColumnFilter_caller<1 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<2 , T, D, BrdColWrap>,
-                linearColumnFilter_caller<3 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<4 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<5 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<6 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<7 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<8 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<9 , T, D, BrdColWrap>, 
-                linearColumnFilter_caller<10, T, D, BrdColWrap>, 
-                linearColumnFilter_caller<11, T, D, BrdColWrap>, 
-                linearColumnFilter_caller<12, T, D, BrdColWrap>, 
-                linearColumnFilter_caller<13, T, D, BrdColWrap>, 
-                linearColumnFilter_caller<14, T, D, BrdColWrap>, 
-                linearColumnFilter_caller<15, T, D, BrdColWrap>, 
-                linearColumnFilter_caller<16, T, D, BrdColWrap>,
-            }
-        };
-        
-        filter_column::loadKernel(kernel, ksize);
+            0, 
+            linearColumnFilter_caller<1 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<2 , T, D, BrdColReflect101>,
+            linearColumnFilter_caller<3 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<4 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<5 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<6 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<7 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<8 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<9 , T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<10, T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<11, T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<12, T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<13, T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<14, T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<15, T, D, BrdColReflect101>, 
+            linearColumnFilter_caller<16, T, D, BrdColReflect101> 
+        },
+        {
+            0, 
+            linearColumnFilter_caller<1 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<2 , T, D, BrdColReplicate>,
+            linearColumnFilter_caller<3 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<4 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<5 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<6 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<7 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<8 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<9 , T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<10, T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<11, T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<12, T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<13, T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<14, T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<15, T, D, BrdColReplicate>, 
+            linearColumnFilter_caller<16, T, D, BrdColReplicate>
+        },
+        {
+            0, 
+            linearColumnFilter_caller<1 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<2 , T, D, BrdColConstant>,
+            linearColumnFilter_caller<3 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<4 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<5 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<6 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<7 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<8 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<9 , T, D, BrdColConstant>, 
+            linearColumnFilter_caller<10, T, D, BrdColConstant>, 
+            linearColumnFilter_caller<11, T, D, BrdColConstant>, 
+            linearColumnFilter_caller<12, T, D, BrdColConstant>, 
+            linearColumnFilter_caller<13, T, D, BrdColConstant>, 
+            linearColumnFilter_caller<14, T, D, BrdColConstant>, 
+            linearColumnFilter_caller<15, T, D, BrdColConstant>, 
+            linearColumnFilter_caller<16, T, D, BrdColConstant> 
+        },
+        {
+            0, 
+            linearColumnFilter_caller<1 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<2 , T, D, BrdColReflect>,
+            linearColumnFilter_caller<3 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<4 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<5 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<6 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<7 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<8 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<9 , T, D, BrdColReflect>, 
+            linearColumnFilter_caller<10, T, D, BrdColReflect>, 
+            linearColumnFilter_caller<11, T, D, BrdColReflect>, 
+            linearColumnFilter_caller<12, T, D, BrdColReflect>, 
+            linearColumnFilter_caller<13, T, D, BrdColReflect>, 
+            linearColumnFilter_caller<14, T, D, BrdColReflect>, 
+            linearColumnFilter_caller<15, T, D, BrdColReflect>, 
+            linearColumnFilter_caller<16, T, D, BrdColReflect>
+        },
+        {
+            0, 
+            linearColumnFilter_caller<1 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<2 , T, D, BrdColWrap>,
+            linearColumnFilter_caller<3 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<4 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<5 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<6 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<7 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<8 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<9 , T, D, BrdColWrap>, 
+            linearColumnFilter_caller<10, T, D, BrdColWrap>, 
+            linearColumnFilter_caller<11, T, D, BrdColWrap>, 
+            linearColumnFilter_caller<12, T, D, BrdColWrap>, 
+            linearColumnFilter_caller<13, T, D, BrdColWrap>, 
+            linearColumnFilter_caller<14, T, D, BrdColWrap>, 
+            linearColumnFilter_caller<15, T, D, BrdColWrap>, 
+            linearColumnFilter_caller<16, T, D, BrdColWrap>,
+        }
+    };
+    
+    loadKernel(kernel, ksize);
 
-        callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, stream);
-    }
+    callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, stream);
+}
 
-    template void linearColumnFilter_gpu<float , uchar >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float4, uchar4>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    //template void linearColumnFilter_gpu<float , short >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    //template void linearColumnFilter_gpu<float2, short2>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float3, short3>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float , int   >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-    template void linearColumnFilter_gpu<float , float >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-}}}
+template void linearColumnFilter_gpu<float , uchar >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+template void linearColumnFilter_gpu<float4, uchar4>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+//template void linearColumnFilter_gpu<float , short >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+//template void linearColumnFilter_gpu<float2, short2>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+template void linearColumnFilter_gpu<float3, short3>(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+template void linearColumnFilter_gpu<float , int   >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+template void linearColumnFilter_gpu<float , float >(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+
+} // namespace column_filter
+
+END_OPENCV_DEVICE_NAMESPACE

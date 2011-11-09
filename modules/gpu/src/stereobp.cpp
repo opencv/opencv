@@ -59,7 +59,9 @@ void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace bp
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace stereobp
 {
     void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump);
     template<typename T, typename D>
@@ -74,7 +76,11 @@ namespace cv { namespace gpu { namespace bp
     template <typename T>
     void output_gpu(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, 
         const DevMem2D_<short>& disp, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
+
+using namespace OPENCV_DEVICE_NAMESPACE_ stereobp;
 
 namespace
 {
@@ -83,7 +89,6 @@ namespace
     const float DEFAULT_MAX_DISC_TERM = 1.7f;
     const float DEFAULT_DISC_SINGLE_JUMP = 1.0f;
 }
-
 
 void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)
 {
@@ -136,8 +141,8 @@ namespace
             typedef void (*comp_data_t)(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream);
             static const comp_data_t comp_data_callers[2][5] = 
             {
-                {0, bp::comp_data_gpu<unsigned char, short>, 0, bp::comp_data_gpu<uchar3, short>, bp::comp_data_gpu<uchar4, short>},
-                {0, bp::comp_data_gpu<unsigned char, float>, 0, bp::comp_data_gpu<uchar3, float>, bp::comp_data_gpu<uchar4, float>}
+                {0, comp_data_gpu<unsigned char, short>, 0, comp_data_gpu<uchar3, short>, comp_data_gpu<uchar4, short>},
+                {0, comp_data_gpu<unsigned char, float>, 0, comp_data_gpu<uchar3, float>, comp_data_gpu<uchar4, float>}
             };
 
             CV_Assert(left.size() == right.size() && left.type() == right.type());
@@ -236,7 +241,7 @@ namespace
                 }
             }
 
-            bp::load_constants(rthis.ndisp, rthis.max_data_term, scale * rthis.data_weight, scale * rthis.max_disc_term, scale * rthis.disc_single_jump);
+            load_constants(rthis.ndisp, rthis.max_data_term, scale * rthis.data_weight, scale * rthis.max_disc_term, scale * rthis.disc_single_jump);
 
             datas.resize(rthis.levels);
 
@@ -249,8 +254,6 @@ namespace
 
         void calcBP(GpuMat& disp, Stream& stream)
         {
-            using namespace cv::gpu::bp;
-
             typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
             static const data_step_down_t data_step_down_callers[2] = 
             {
@@ -354,13 +357,13 @@ namespace
 
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
 {
-    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
+    StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
     impl(left, right, disp, stream);
 }
 
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp, Stream& stream)
 {
-    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
+    StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
     impl(data, disp, stream);
 }
 

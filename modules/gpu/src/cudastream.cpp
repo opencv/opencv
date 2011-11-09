@@ -71,16 +71,20 @@ cv::gpu::Stream::operator bool() const { throw_nogpu(); return false; }
 
 #include "opencv2/gpu/stream_accessor.hpp"
 
-namespace cv { namespace gpu { namespace device {            
-    void copy_to_with_mask(const DevMem2Db& src, DevMem2Db dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t & stream = 0);
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-    template <typename T>
-    void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream);
-    template <typename T>
-    void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
+void copy_to_with_mask(const DevMem2Db& src, DevMem2Db dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t & stream = 0);
 
-    void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
-}}}
+template <typename T>
+void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream);
+template <typename T>
+void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
+
+void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
+
+END_OPENCV_DEVICE_NAMESPACE
+
+using namespace OPENCV_DEVICE_NAMESPACE;
 
 struct Stream::Impl
 {
@@ -101,14 +105,14 @@ namespace
     void kernelSet(GpuMat& src, const Scalar& s, cudaStream_t stream)
     {
         Scalar_<T> sf = s;
-        device::set_to_gpu(src, sf.val, src.channels(), stream);
+        set_to_gpu(src, sf.val, src.channels(), stream);
     }
 
     template <typename T>
     void kernelSetMask(GpuMat& src, const Scalar& s, const GpuMat& mask, cudaStream_t stream)
     {
         Scalar_<T> sf = s;
-        device::set_to_gpu(src, sf.val, mask, src.channels(), stream);
+        set_to_gpu(src, sf.val, mask, src.channels(), stream);
     }
 }
 
@@ -255,7 +259,7 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, 
         psrc = &(temp = src);
 
     dst.create( src.size(), rtype );
-    device::convert_gpu(psrc->reshape(1), sdepth, dst.reshape(1), ddepth, alpha, beta, impl->stream);
+    convert_gpu(psrc->reshape(1), sdepth, dst.reshape(1), ddepth, alpha, beta, impl->stream);
 }
 
 cv::gpu::Stream::operator bool() const

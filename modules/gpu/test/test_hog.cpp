@@ -137,7 +137,7 @@ struct CV_GpuHogDetectTestRunner : cv::gpu::HOGDescriptor
 #ifdef DUMP
         dump(block_hists, locations);
 #else
-        compare(block_hists, locations);
+        compare(cv::Mat(block_hists), locations);
 #endif
 
         // Test detect on smaller image
@@ -148,7 +148,7 @@ struct CV_GpuHogDetectTestRunner : cv::gpu::HOGDescriptor
 #ifdef DUMP
         dump(block_hists, locations);
 #else
-        compare(block_hists, locations);
+        compare(cv::Mat(block_hists), locations);
 #endif
 
         // Test detect on greater image
@@ -158,7 +158,7 @@ struct CV_GpuHogDetectTestRunner : cv::gpu::HOGDescriptor
 #ifdef DUMP
         dump(block_hists, locations);
 #else
-        compare(block_hists, locations);
+        compare(cv::Mat(block_hists), locations);
 #endif
     }
 
@@ -254,31 +254,31 @@ struct CV_GpuHogGetDescriptorsTestRunner : cv::gpu::HOGDescriptor
         ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
-        compare_inner_parts(block_hists, descriptors.rowRange(1, 2));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(1, 2)));
 
         img_rgb = readImage("hog/negative1.png");
         ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
-        compare_inner_parts(block_hists, descriptors.rowRange(2, 3));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(2, 3)));
 
         img_rgb = readImage("hog/negative2.png");
         ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
-        compare_inner_parts(block_hists, descriptors.rowRange(3, 4));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(3, 4)));
 
         img_rgb = readImage("hog/positive3.png");
         ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
-        compare_inner_parts(block_hists, descriptors.rowRange(4, 5));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(4, 5)));
 
         img_rgb = readImage("hog/negative3.png");
         ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
-        compare_inner_parts(block_hists, descriptors.rowRange(5, 6));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
     }
 
     // Does not compare border value, as interpolation leads to delta

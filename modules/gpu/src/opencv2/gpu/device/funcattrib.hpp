@@ -44,35 +44,31 @@
 #ifndef __OPENCV_GPU_DEVICE_FUNCATTRIB_HPP_
 #define __OPENCV_GPU_DEVICE_FUNCATTRIB_HPP_
 
-#include<cstdio>
+#include <cstdio>
+#include "internal_shared.hpp"
 
-namespace cv
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+template<class Func> 
+void printFuncAttrib(Func& func)
 {
-    namespace gpu
-    {
-        namespace device
-        {
-            template<class Func> 
-            void printFuncAttrib(Func& func)
-            {
 
-                cudaFuncAttributes attrs;
-                cudaFuncGetAttributes(&attrs, func);  
+    cudaFuncAttributes attrs;
+    cudaFuncGetAttributes(&attrs, func);  
 
-                printf("=== Function stats ===\n");
-                printf("Name: \n");
-                printf("sharedSizeBytes    = %d\n", attrs.sharedSizeBytes);
-                printf("constSizeBytes     = %d\n", attrs.constSizeBytes);
-                printf("localSizeBytes     = %d\n", attrs.localSizeBytes);
-                printf("maxThreadsPerBlock = %d\n", attrs.maxThreadsPerBlock);
-                printf("numRegs            = %d\n", attrs.numRegs);
-                printf("ptxVersion         = %d\n", attrs.ptxVersion);
-                printf("binaryVersion      = %d\n", attrs.binaryVersion);
-                printf("\n");
-                fflush(stdout); 
-            }
-        }
-    }
+    printf("=== Function stats ===\n");
+    printf("Name: \n");
+    printf("sharedSizeBytes    = %d\n", attrs.sharedSizeBytes);
+    printf("constSizeBytes     = %d\n", attrs.constSizeBytes);
+    printf("localSizeBytes     = %d\n", attrs.localSizeBytes);
+    printf("maxThreadsPerBlock = %d\n", attrs.maxThreadsPerBlock);
+    printf("numRegs            = %d\n", attrs.numRegs);
+    printf("ptxVersion         = %d\n", attrs.ptxVersion);
+    printf("binaryVersion      = %d\n", attrs.binaryVersion);
+    printf("\n");
+    fflush(stdout); 
 }
+
+END_OPENCV_DEVICE_NAMESPACE
 
 #endif  /* __OPENCV_GPU_DEVICE_FUNCATTRIB_HPP_ */

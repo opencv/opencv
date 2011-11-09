@@ -107,15 +107,20 @@ void cv::gpu::CannyBuf::release() { throw_nogpu(); }
 ////////////////////////////////////////////////////////////////////////
 // remap
 
-namespace cv { namespace gpu {  namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace remap 
 {
-    template <typename T> void remap_gpu(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, 
-                                         int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-}}}
+    template <typename T> 
+    void remap_gpu(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, 
+                   int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode, const Scalar& borderValue, Stream& stream)
 {
-    using namespace cv::gpu::imgproc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ remap;
 
     typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, 
         int borderMode, const float* borderValue, cudaStream_t stream, int cc);
@@ -155,13 +160,19 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 ////////////////////////////////////////////////////////////////////////
 // meanShiftFiltering_GPU
 
-namespace cv { namespace gpu {  namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void meanShiftFiltering_gpu(const DevMem2Db& src, DevMem2Db dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
 
@@ -180,19 +191,25 @@ void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
         eps = 1.f;
     eps = (float)std::max(criteria.epsilon, 0.0);
 
-    imgproc::meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
+    meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
 // meanShiftProc_GPU
 
-namespace cv { namespace gpu {  namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     if( src.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
 
@@ -212,26 +229,32 @@ void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int 
         eps = 1.f;
     eps = (float)std::max(criteria.epsilon, 0.0);
 
-    imgproc::meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
+    meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
 // drawColorDisp
 
-namespace cv { namespace gpu {  namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void drawColorDisp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream);
     void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 namespace
 {
     template <typename T>
     void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
     {
+        using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
         dst.create(src.size(), CV_8UC4);
 
-        imgproc::drawColorDisp_gpu((DevMem2D_<T>)src, dst, ndisp, stream);
+        drawColorDisp_gpu((DevMem2D_<T>)src, dst, ndisp, stream);
     }
 
     typedef void (*drawColorDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream);
@@ -249,19 +272,26 @@ void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, Stream& s
 ////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 
-namespace cv { namespace gpu {  namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void reprojectImageTo3D_gpu(const DevMem2Db& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
     void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 namespace
 {
     template <typename T>
     void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream)
     {
+        using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
         xyzw.create(disp.rows, disp.cols, CV_32FC4);
-        imgproc::reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
+
+        reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
     }
 
     typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream);
@@ -279,10 +309,14 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q,
 ////////////////////////////////////////////////////////////////////////
 // resize
 
-namespace cv { namespace gpu {  namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace resize 
 {
     template <typename T> void resize_gpu(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
 {
@@ -346,7 +380,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     }
     else
     {
-        using namespace cv::gpu::imgproc;
+        using namespace OPENCV_DEVICE_NAMESPACE_ resize;
 
         typedef void (*caller_t)(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
         static const caller_t callers[6][4] = 
@@ -366,18 +400,24 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-namespace cv { namespace gpu {  namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace copy_make_border 
 {
     template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const T* borderValue, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 namespace
 {
     template <typename T, int cn> void copyMakeBorder_caller(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
+        using namespace OPENCV_DEVICE_NAMESPACE_ copy_make_border;
+
         Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
 
-        imgproc::copyMakeBorder_gpu<T, cn>(src, dst, top, left, borderType, val.val, stream);
+        copyMakeBorder_gpu<T, cn>(src, dst, top, left, borderType, val.val, stream);
     }
 }
 
@@ -626,16 +666,22 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpPlaneMaps
 
-namespace cv { namespace gpu { namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
                             const float k_rinv[9], const float r_kinv[9], const float t[3], float scale,
                             cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, const Mat &T, 
                                  float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
     CV_Assert((T.size() == Size(3,1) || T.size() == Size(1,3)) && T.type() == CV_32F && T.isContinuous());
@@ -647,23 +693,29 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, cons
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), 
-                                T.ptr<float>(), scale, StreamAccessor::getStream(stream));
+    buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), 
+                       T.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpCylyndricalMaps
 
-namespace cv { namespace gpu { namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void buildWarpCylindricalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
                                   const float k_rinv[9], const float r_kinv[9], float scale,
                                   cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                        GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
 
@@ -674,24 +726,29 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
-                                      scale, StreamAccessor::getStream(stream));
+    buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpSphericalMaps
 
-namespace cv { namespace gpu { namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
                                 const float k_rinv[9], const float r_kinv[9], float scale,
                                 cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                      GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
 
@@ -702,8 +759,7 @@ void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, 
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
-                                    scale, StreamAccessor::getStream(stream));
+    buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -843,17 +899,24 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
 //////////////////////////////////////////////////////////////////////////////
 // columnSum
 
-namespace cv { namespace gpu { namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc
 {
     void columnSum_32F(const DevMem2Db src, const DevMem2Db dst);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     CV_Assert(src.type() == CV_32F);
 
     dst.create(src.size(), CV_32F);
-    imgproc::columnSum_32F(src, dst);
+
+    columnSum_32F(src, dst);
 }
 
 void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
@@ -1140,7 +1203,6 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, S
     histRange(src, hist, levels, buf, stream);
 }
 
-
 void cv::gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, GpuMat& buf, Stream& stream)
 {
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1 || src.type() == CV_32FC1);
@@ -1183,13 +1245,19 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     hist_callers[src.depth()](src, hist, levels, buf, StreamAccessor::getStream(stream));
 }
 
-namespace cv { namespace gpu { namespace histograms
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace hist
 {
     void histogram256_gpu(DevMem2Db src, int* hist, unsigned int* buf, cudaStream_t stream);
 
     const int PARTIAL_HISTOGRAM256_COUNT = 240;
     const int HISTOGRAM256_BIN_COUNT     = 256;
-}}}
+
+    void equalizeHist_gpu(DevMem2Db src, DevMem2Db dst, const int* lut, cudaStream_t stream);
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream)
 {
@@ -1199,7 +1267,7 @@ void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream)
 
 void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream)
 {
-    using namespace cv::gpu::histograms;
+    using namespace OPENCV_DEVICE_NAMESPACE_ hist;
 
     CV_Assert(src.type() == CV_8UC1);
 
@@ -1223,14 +1291,9 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream&
     equalizeHist(src, dst, hist, buf, stream);
 }
 
-namespace cv { namespace gpu { namespace histograms
-{
-    void equalizeHist_gpu(DevMem2Db src, DevMem2Db dst, const int* lut, cudaStream_t stream);
-}}}
-
 void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& s)
 {
-    using namespace cv::gpu::histograms;
+    using namespace OPENCV_DEVICE_NAMESPACE_ hist;
 
     CV_Assert(src.type() == CV_8UC1);
 
@@ -1264,13 +1327,16 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
 ////////////////////////////////////////////////////////////////////////
 // cornerHarris & minEgenVal
 
-namespace cv { namespace gpu { namespace imgproc {
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
+namespace imgproc 
+{
     void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst, cudaStream_t stream);
     void cornerHarris_caller(const int block_size, const float k, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, int border_type, cudaStream_t stream);
     void cornerMinEigenVal_caller(const int block_size, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, int border_type, cudaStream_t stream);
+}
 
-}}}
+END_OPENCV_DEVICE_NAMESPACE
 
 namespace 
 {
@@ -1316,7 +1382,6 @@ namespace
 
 } // Anonymous namespace
 
-
 bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
 {
     switch (cpuBorderType)
@@ -1356,6 +1421,8 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& D
 
 void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, int borderType, Stream& stream)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     CV_Assert(borderType == cv::BORDER_REFLECT101 ||
               borderType == cv::BORDER_REPLICATE);
 
@@ -1364,7 +1431,7 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& D
 
     extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
     dst.create(src.size(), CV_32F);
-    imgproc::cornerHarris_caller(blockSize, (float)k, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
+    cornerHarris_caller(blockSize, (float)k, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType)
@@ -1381,6 +1448,8 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 
 void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
 {  
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     CV_Assert(borderType == cv::BORDER_REFLECT101 ||
               borderType == cv::BORDER_REPLICATE);
 
@@ -1389,24 +1458,30 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 
     extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);    
     dst.create(src.size(), CV_32F);
-    imgproc::cornerMinEigenVal_caller(blockSize, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
+    cornerMinEigenVal_caller(blockSize, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // mulSpectrums
 
-namespace cv { namespace gpu { namespace imgproc 
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream);
 
     void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream);
-}}}
+}
 
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream) 
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, DevMem2D_<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { imgproc::mulSpectrums, imgproc::mulSpectrums_CONJ };
+
+    static Caller callers[] = { mulSpectrums, mulSpectrums_CONJ };
 
     CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
     CV_Assert(a.size() == b.size());
@@ -1420,18 +1495,23 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
 //////////////////////////////////////////////////////////////////////////////
 // mulAndScaleSpectrums
 
-namespace cv { namespace gpu { namespace imgproc 
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc 
 {
     void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream);
 
     void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream);
-}}}
+}
 
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream) 
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, DevMem2D_<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { imgproc::mulAndScaleSpectrums, imgproc::mulAndScaleSpectrums_CONJ };
+    static Caller callers[] = { mulAndScaleSpectrums, mulAndScaleSpectrums_CONJ };
 
     CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);
     CV_Assert(a.size() == b.size());
@@ -1593,13 +1673,19 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     convolve(image, templ, result, ccorr, buf);
 }
 
-namespace cv { namespace gpu { namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace imgproc
 {
     void convolve_gpu(const DevMem2Df& src, const PtrStepf& dst, int kWidth, int kHeight, float* kernel, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
 {
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
+
 #ifndef HAVE_CUFFT
 
     CV_Assert(image.type() == CV_32F);
@@ -1622,7 +1708,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
             templ.copyTo(contKernel);
     }
 
-    imgproc::convolve_gpu(image, result, templ.cols, templ.rows, contKernel.ptr<float>(), StreamAccessor::getStream(stream));
+    convolve_gpu(image, result, templ.cols, templ.rows, contKernel.ptr<float>(), StreamAccessor::getStream(stream));
 
 #else
 
@@ -1650,7 +1736,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
                 templ.copyTo(contKernel);
         }
 
-        imgproc::convolve_gpu(image, result, templ.cols, templ.rows, contKernel.ptr<float>(), StreamAccessor::getStream(stream));
+        convolve_gpu(image, result, templ.cols, templ.rows, contKernel.ptr<float>(), StreamAccessor::getStream(stream));
     }
     else
     {
@@ -1725,14 +1811,18 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
 
-namespace cv { namespace gpu { namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace pyr_down 
 {
     template <typename T, int cn> void pyrDown_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType, Stream& stream)
 {
-    using namespace cv::gpu::imgproc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ pyr_down;
 
     typedef void (*func_t)(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 
@@ -1761,14 +1851,18 @@ void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType, Stream& st
 //////////////////////////////////////////////////////////////////////////////
 // pyrUp
 
-namespace cv { namespace gpu { namespace imgproc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace pyr_up 
 {
     template <typename T, int cn> void pyrUp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, int borderType, Stream& stream)
 {
-    using namespace cv::gpu::imgproc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ pyr_up;
 
     typedef void (*func_t)(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 
@@ -1839,8 +1933,10 @@ void cv::gpu::CannyBuf::release()
     trackBuf2.release();
 }
 
-namespace cv { namespace gpu { namespace canny
-{    
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace canny 
+{
     void calcSobelRowPass_gpu(PtrStepb src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols);
 
     void calcMagnitude_gpu(PtrStepi dx_buf, PtrStepi dy_buf, PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols, bool L2Grad);
@@ -1853,13 +1949,15 @@ namespace cv { namespace gpu { namespace canny
     void edgesHysteresisGlobal_gpu(PtrStepi map, ushort2* st1, ushort2* st2, int rows, int cols);
 
     void getEdges_gpu(PtrStepi map, PtrStepb dst, int rows, int cols);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 namespace
 {
     void CannyCaller(CannyBuf& buf, GpuMat& dst, float low_thresh, float high_thresh)
     {
-        using namespace cv::gpu::canny;
+        using namespace OPENCV_DEVICE_NAMESPACE_ canny;
 
         calcMap_gpu(buf.dx, buf.dy, buf.edgeBuf, buf.edgeBuf, dst.rows, dst.cols, low_thresh, high_thresh);
         
@@ -1879,7 +1977,7 @@ void cv::gpu::Canny(const GpuMat& src, GpuMat& dst, double low_thresh, double hi
 
 void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
-    using namespace cv::gpu::canny;
+    using namespace OPENCV_DEVICE_NAMESPACE_ canny;
 
     CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
     CV_Assert(src.type() == CV_8UC1);
@@ -1918,7 +2016,7 @@ void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& dst, double low_
 
 void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, bool L2gradient)
 {
-    using namespace cv::gpu::canny;
+    using namespace OPENCV_DEVICE_NAMESPACE_ canny;
 
     CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
     CV_Assert(dx.type() == CV_32SC1 && dy.type() == CV_32SC1 && dx.size() == dy.size());

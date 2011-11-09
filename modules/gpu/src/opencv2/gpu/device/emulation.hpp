@@ -43,27 +43,26 @@
 #ifndef OPENCV_GPU_EMULATION_HPP_
 #define OPENCV_GPU_EMULATION_HPP_
 
-#include "opencv2/gpu/device/warp_reduce.hpp"
+#include "internal_shared.hpp"
+#include "warp_reduce.hpp"
 
-namespace cv
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+struct Emulation
 {
-	namespace device
+	static __forceinline__ __device__ int Ballot(int predicate, volatile int* cta_buffer)
 	{
-		struct Emulation
-		{
-			static __forceinline__ __device__ int Ballot(int predicate, volatile int* cta_buffer)
-			{
 #if __CUDA_ARCH__ >= 200
-				(void)cta_buffer;
-				return __ballot(predicate);
+		(void)cta_buffer;
+		return __ballot(predicate);
 #else
-				int tid = threadIdx.x;				
-				cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
-				return warp_reduce(cta_buffer);
+		int tid = threadIdx.x;				
+		cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
+		return warp_reduce(cta_buffer);
 #endif
-			}
-		};
 	}
-}
+};
+
+END_OPENCV_DEVICE_NAMESPACE
 
 #endif /* OPENCV_GPU_EMULATION_HPP_ */

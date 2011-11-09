@@ -190,32 +190,35 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
 ////////////////////////////////////////////////////////////////////////
 // Sum
 
-namespace cv { namespace gpu { namespace mathfunc
+BEGIN_OPENCV_DEVICE_NAMESPACE
+
+namespace matrix_reductions 
 {
-    template <typename T>
-    void sumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
-
-    template <typename T>
-    void sumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
-
-    template <typename T>
-    void absSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
-
-    template <typename T>
-    void absSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
-
-    template <typename T>
-    void sqrSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
-
-    template <typename T>
-    void sqrSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
-
-    namespace sums
+    namespace sum
     {
+        template <typename T>
+        void sumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
+
+        template <typename T>
+        void sumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
+
+        template <typename T>
+        void absSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
+
+        template <typename T>
+        void absSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
+
+        template <typename T>
+        void sqrSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
+
+        template <typename T>
+        void sqrSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn);
+
         void getBufSizeRequired(int cols, int rows, int cn, int& bufcols, int& bufrows);
     }
-}}}
+}
 
+END_OPENCV_DEVICE_NAMESPACE
 
 Scalar cv::gpu::sum(const GpuMat& src) 
 {
@@ -226,23 +229,25 @@ Scalar cv::gpu::sum(const GpuMat& src)
 
 Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf) 
 {
-    using namespace mathfunc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ matrix_reductions::sum;
 
     typedef void (*Caller)(const DevMem2Db, PtrStepb, double*, int);
 
-    static Caller multipass_callers[7] = { 
-            sumMultipassCaller<unsigned char>, sumMultipassCaller<char>, 
-            sumMultipassCaller<unsigned short>, sumMultipassCaller<short>, 
-            sumMultipassCaller<int>, sumMultipassCaller<float>, 0 };
+    static Caller multipass_callers[7] = 
+    { 
+        sumMultipassCaller<unsigned char>, sumMultipassCaller<char>, 
+        sumMultipassCaller<unsigned short>, sumMultipassCaller<short>, 
+        sumMultipassCaller<int>, sumMultipassCaller<float>, 0 
+    };
 
     static Caller singlepass_callers[7] = { 
-            sumCaller<unsigned char>, sumCaller<char>, 
-            sumCaller<unsigned short>, sumCaller<short>, 
-            sumCaller<int>, sumCaller<float>, 0 };
+        sumCaller<unsigned char>, sumCaller<char>, 
+        sumCaller<unsigned short>, sumCaller<short>, 
+        sumCaller<int>, sumCaller<float>, 0 
+    };
 
     Size buf_size;
-    sums::getBufSizeRequired(src.cols, src.rows, src.channels(), 
-                             buf_size.width, buf_size.height); 
+    getBufSizeRequired(src.cols, src.rows, src.channels(), buf_size.width, buf_size.height); 
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
@@ -267,23 +272,26 @@ Scalar cv::gpu::absSum(const GpuMat& src)
 
 Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf) 
 {
-    using namespace mathfunc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ matrix_reductions::sum;
 
     typedef void (*Caller)(const DevMem2Db, PtrStepb, double*, int);
 
-    static Caller multipass_callers[7] = { 
-            absSumMultipassCaller<unsigned char>, absSumMultipassCaller<char>, 
-            absSumMultipassCaller<unsigned short>, absSumMultipassCaller<short>, 
-            absSumMultipassCaller<int>, absSumMultipassCaller<float>, 0 };
+    static Caller multipass_callers[7] = 
+    { 
+        absSumMultipassCaller<unsigned char>, absSumMultipassCaller<char>, 
+        absSumMultipassCaller<unsigned short>, absSumMultipassCaller<short>, 
+        absSumMultipassCaller<int>, absSumMultipassCaller<float>, 0 
+    };
 
-    static Caller singlepass_callers[7] = { 
-            absSumCaller<unsigned char>, absSumCaller<char>, 
-            absSumCaller<unsigned short>, absSumCaller<short>, 
-            absSumCaller<int>, absSumCaller<float>, 0 };
+    static Caller singlepass_callers[7] = 
+    {        
+        absSumCaller<unsigned char>, absSumCaller<char>, 
+        absSumCaller<unsigned short>, absSumCaller<short>, 
+        absSumCaller<int>, absSumCaller<float>, 0 
+    };
 
     Size buf_size;
-    sums::getBufSizeRequired(src.cols, src.rows, src.channels(), 
-                             buf_size.width, buf_size.height); 
+    getBufSizeRequired(src.cols, src.rows, src.channels(), buf_size.width, buf_size.height); 
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller* callers = multipass_callers;
@@ -308,27 +316,30 @@ Scalar cv::gpu::sqrSum(const GpuMat& src)
 
 Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf) 
 {
-    using namespace mathfunc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ matrix_reductions::sum;
 
     typedef void (*Caller)(const DevMem2Db, PtrStepb, double*, int);
 
-    static Caller multipass_callers[7] = { 
-            sqrSumMultipassCaller<unsigned char>, sqrSumMultipassCaller<char>, 
-            sqrSumMultipassCaller<unsigned short>, sqrSumMultipassCaller<short>, 
-            sqrSumMultipassCaller<int>, sqrSumMultipassCaller<float>, 0 };
+    static Caller multipass_callers[7] = 
+    { 
+        sqrSumMultipassCaller<unsigned char>, sqrSumMultipassCaller<char>, 
+        sqrSumMultipassCaller<unsigned short>, sqrSumMultipassCaller<short>, 
+        sqrSumMultipassCaller<int>, sqrSumMultipassCaller<float>, 0 
+    };
 
-    static Caller singlepass_callers[7] = { 
-            sqrSumCaller<unsigned char>, sqrSumCaller<char>, 
-            sqrSumCaller<unsigned short>, sqrSumCaller<short>, 
-            sqrSumCaller<int>, sqrSumCaller<float>, 0 };
+    static Caller singlepass_callers[7] = 
+    { 
+        sqrSumCaller<unsigned char>, sqrSumCaller<char>, 
+        sqrSumCaller<unsigned short>, sqrSumCaller<short>, 
+        sqrSumCaller<int>, sqrSumCaller<float>, 0 
+    };
 
     Caller* callers = multipass_callers;
     if (TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS))
         callers = singlepass_callers;
 
     Size buf_size;
-    sums::getBufSizeRequired(src.cols, src.rows, src.channels(), 
-                             buf_size.width, buf_size.height); 
+    getBufSizeRequired(src.cols, src.rows, src.channels(), buf_size.width, buf_size.height); 
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     Caller caller = callers[src.depth()];
@@ -339,29 +350,32 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
     return Scalar(result[0], result[1], result[2], result[3]);
 }
 
-
-
-
 ////////////////////////////////////////////////////////////////////////
 // Find min or max
 
-namespace cv { namespace gpu { namespace mathfunc { namespace minmax {
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-    void getBufSizeRequired(int cols, int rows, int elem_size, int& bufcols, int& bufrows);
-    
-    template <typename T> 
-    void minMaxCaller(const DevMem2Db src, double* minval, double* maxval, PtrStepb buf);
+namespace matrix_reductions 
+{
+    namespace minmax 
+    {
+        void getBufSizeRequired(int cols, int rows, int elem_size, int& bufcols, int& bufrows);
+        
+        template <typename T> 
+        void minMaxCaller(const DevMem2Db src, double* minval, double* maxval, PtrStepb buf);
 
-    template <typename T> 
-    void minMaxMaskCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
+        template <typename T> 
+        void minMaxMaskCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
 
-    template <typename T> 
-    void minMaxMultipassCaller(const DevMem2Db src, double* minval, double* maxval, PtrStepb buf);
+        template <typename T> 
+        void minMaxMultipassCaller(const DevMem2Db src, double* minval, double* maxval, PtrStepb buf);
 
-    template <typename T> 
-    void minMaxMaskMultipassCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
+        template <typename T> 
+        void minMaxMaskMultipassCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
+    }
+}
 
-}}}}
+END_OPENCV_DEVICE_NAMESPACE
 
 
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask)
@@ -373,38 +387,42 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
 
 void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf)
 {
-    using namespace mathfunc::minmax;
+    using namespace OPENCV_DEVICE_NAMESPACE_ matrix_reductions::minmax;
 
     typedef void (*Caller)(const DevMem2Db, double*, double*, PtrStepb);
     typedef void (*MaskedCaller)(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
 
-    static Caller multipass_callers[7] = { 
-            minMaxMultipassCaller<unsigned char>, minMaxMultipassCaller<char>, 
-            minMaxMultipassCaller<unsigned short>, minMaxMultipassCaller<short>, 
-            minMaxMultipassCaller<int>, minMaxMultipassCaller<float>, 0 };
+    static Caller multipass_callers[7] = 
+    { 
+        minMaxMultipassCaller<unsigned char>, minMaxMultipassCaller<char>, 
+        minMaxMultipassCaller<unsigned short>, minMaxMultipassCaller<short>, 
+        minMaxMultipassCaller<int>, minMaxMultipassCaller<float>, 0 
+    };
 
-    static Caller singlepass_callers[7] = { 
-            minMaxCaller<unsigned char>, minMaxCaller<char>, 
-            minMaxCaller<unsigned short>, minMaxCaller<short>, 
-            minMaxCaller<int>, minMaxCaller<float>, minMaxCaller<double> };
+    static Caller singlepass_callers[7] = 
+    { 
+        minMaxCaller<unsigned char>, minMaxCaller<char>, 
+        minMaxCaller<unsigned short>, minMaxCaller<short>, 
+        minMaxCaller<int>, minMaxCaller<float>, minMaxCaller<double> 
+    };
 
-    static MaskedCaller masked_multipass_callers[7] = { 
-            minMaxMaskMultipassCaller<unsigned char>, minMaxMaskMultipassCaller<char>, 
-            minMaxMaskMultipassCaller<unsigned short>, minMaxMaskMultipassCaller<short>,
-            minMaxMaskMultipassCaller<int>, minMaxMaskMultipassCaller<float>, 0 };
+    static MaskedCaller masked_multipass_callers[7] = 
+    { 
+        minMaxMaskMultipassCaller<unsigned char>, minMaxMaskMultipassCaller<char>, 
+        minMaxMaskMultipassCaller<unsigned short>, minMaxMaskMultipassCaller<short>,
+        minMaxMaskMultipassCaller<int>, minMaxMaskMultipassCaller<float>, 0
+    };
 
-    static MaskedCaller masked_singlepass_callers[7] = { 
-            minMaxMaskCaller<unsigned char>, minMaxMaskCaller<char>, 
-            minMaxMaskCaller<unsigned short>, minMaxMaskCaller<short>, 
-            minMaxMaskCaller<int>, minMaxMaskCaller<float>, 
-            minMaxMaskCaller<double> };
+    static MaskedCaller masked_singlepass_callers[7] =
+    { 
+        minMaxMaskCaller<unsigned char>, minMaxMaskCaller<char>, 
+        minMaxMaskCaller<unsigned short>, minMaxMaskCaller<short>, 
+        minMaxMaskCaller<int>, minMaxMaskCaller<float>, minMaxMaskCaller<double> 
+    };
 
     CV_Assert(src.channels() == 1);
 
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
-
-    CV_Assert(src.type() != CV_64F || (TargetArchs::builtWith(NATIVE_DOUBLE) && 
-                                       DeviceInfo().supports(NATIVE_DOUBLE)));
 
     double minVal_; if (!minVal) minVal = &minVal_;
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
@@ -439,28 +457,34 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
 ////////////////////////////////////////////////////////////////////////
 // Locate min and max
 
-namespace cv { namespace gpu { namespace mathfunc { namespace minmaxloc {
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-    void getBufSizeRequired(int cols, int rows, int elem_size, int& b1cols, 
-                               int& b1rows, int& b2cols, int& b2rows);
+namespace matrix_reductions 
+{
+    namespace minmaxloc 
+    {
+        void getBufSizeRequired(int cols, int rows, int elem_size, int& b1cols, 
+                                int& b1rows, int& b2cols, int& b2rows);
 
-    template <typename T> 
-    void minMaxLocCaller(const DevMem2Db src, double* minval, double* maxval, 
-                            int minloc[2], int maxloc[2], PtrStepb valBuf, PtrStepb locBuf);
+        template <typename T> 
+        void minMaxLocCaller(const DevMem2Db src, double* minval, double* maxval, 
+                             int minloc[2], int maxloc[2], PtrStepb valBuf, PtrStepb locBuf);
 
-    template <typename T> 
-    void minMaxLocMaskCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, 
+        template <typename T> 
+        void minMaxLocMaskCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, 
                                  int minloc[2], int maxloc[2], PtrStepb valBuf, PtrStepb locBuf);
 
-    template <typename T> 
-    void minMaxLocMultipassCaller(const DevMem2Db src, double* minval, double* maxval, 
-                                     int minloc[2], int maxloc[2], PtrStepb valBuf, PtrStepb locBuf);
+        template <typename T> 
+        void minMaxLocMultipassCaller(const DevMem2Db src, double* minval, double* maxval, 
+                                      int minloc[2], int maxloc[2], PtrStepb valBuf, PtrStepb locBuf);
 
-    template <typename T> 
-    void minMaxLocMaskMultipassCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, 
-                                           int minloc[2], int maxloc[2], PtrStepb valBuf, PtrStepb locBuf);
-}}}}
+        template <typename T> 
+        void minMaxLocMaskMultipassCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, 
+                                          int minloc[2], int maxloc[2], PtrStepb valBuf, PtrStepb locBuf);
+    }
+}
 
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask)
 {    
@@ -468,42 +492,45 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valBuf, locBuf);
 }
 
-
 void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
                         const GpuMat& mask, GpuMat& valBuf, GpuMat& locBuf)
 {
-    using namespace mathfunc::minmaxloc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ matrix_reductions::minmaxloc;
 
     typedef void (*Caller)(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
     typedef void (*MaskedCaller)(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
 
-    static Caller multipass_callers[7] = { 
-            minMaxLocMultipassCaller<unsigned char>, minMaxLocMultipassCaller<char>, 
-            minMaxLocMultipassCaller<unsigned short>, minMaxLocMultipassCaller<short>, 
-            minMaxLocMultipassCaller<int>, minMaxLocMultipassCaller<float>, 0 };
+    static Caller multipass_callers[7] = 
+    {
+        minMaxLocMultipassCaller<unsigned char>, minMaxLocMultipassCaller<char>, 
+        minMaxLocMultipassCaller<unsigned short>, minMaxLocMultipassCaller<short>, 
+        minMaxLocMultipassCaller<int>, minMaxLocMultipassCaller<float>, 0 
+    };
 
-    static Caller singlepass_callers[7] = { 
-            minMaxLocCaller<unsigned char>, minMaxLocCaller<char>, 
-            minMaxLocCaller<unsigned short>, minMaxLocCaller<short>, 
-            minMaxLocCaller<int>, minMaxLocCaller<float>, minMaxLocCaller<double> };
+    static Caller singlepass_callers[7] = 
+    {
+        minMaxLocCaller<unsigned char>, minMaxLocCaller<char>, 
+        minMaxLocCaller<unsigned short>, minMaxLocCaller<short>, 
+        minMaxLocCaller<int>, minMaxLocCaller<float>, minMaxLocCaller<double> 
+    };
 
-    static MaskedCaller masked_multipass_callers[7] = { 
-            minMaxLocMaskMultipassCaller<unsigned char>, minMaxLocMaskMultipassCaller<char>, 
-            minMaxLocMaskMultipassCaller<unsigned short>, minMaxLocMaskMultipassCaller<short>, 
-            minMaxLocMaskMultipassCaller<int>, minMaxLocMaskMultipassCaller<float>, 0 };
+    static MaskedCaller masked_multipass_callers[7] = 
+    {
+        minMaxLocMaskMultipassCaller<unsigned char>, minMaxLocMaskMultipassCaller<char>,
+        minMaxLocMaskMultipassCaller<unsigned short>, minMaxLocMaskMultipassCaller<short>, 
+        minMaxLocMaskMultipassCaller<int>, minMaxLocMaskMultipassCaller<float>, 0 
+    };
 
-    static MaskedCaller masked_singlepass_callers[7] = { 
-            minMaxLocMaskCaller<unsigned char>, minMaxLocMaskCaller<char>, 
-            minMaxLocMaskCaller<unsigned short>, minMaxLocMaskCaller<short>, 
-            minMaxLocMaskCaller<int>, minMaxLocMaskCaller<float>, 
-            minMaxLocMaskCaller<double> };
+    static MaskedCaller masked_singlepass_callers[7] = 
+    { 
+        minMaxLocMaskCaller<unsigned char>, minMaxLocMaskCaller<char>, 
+        minMaxLocMaskCaller<unsigned short>, minMaxLocMaskCaller<short>, 
+        minMaxLocMaskCaller<int>, minMaxLocMaskCaller<float>, minMaxLocMaskCaller<double> 
+    };
 
     CV_Assert(src.channels() == 1);
 
     CV_Assert(mask.empty() || (mask.type() == CV_8U && src.size() == mask.size()));
-
-    CV_Assert(src.type() != CV_64F || (TargetArchs::builtWith(NATIVE_DOUBLE) && 
-                                       DeviceInfo().supports(NATIVE_DOUBLE)));
 
     double minVal_; if (!minVal) minVal = &minVal_;
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
@@ -544,18 +571,23 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
 //////////////////////////////////////////////////////////////////////////////
 // Count non-zero elements
 
-namespace cv { namespace gpu { namespace mathfunc { namespace countnonzero {
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-    void getBufSizeRequired(int cols, int rows, int& bufcols, int& bufrows);
+namespace matrix_reductions 
+{
+    namespace countnonzero 
+    {
+        void getBufSizeRequired(int cols, int rows, int& bufcols, int& bufrows);
 
-    template <typename T> 
-    int countNonZeroCaller(const DevMem2Db src, PtrStepb buf);
+        template <typename T> 
+        int countNonZeroCaller(const DevMem2Db src, PtrStepb buf);
 
-    template <typename T> 
-    int countNonZeroMultipassCaller(const DevMem2Db src, PtrStepb buf);
+        template <typename T> 
+        int countNonZeroMultipassCaller(const DevMem2Db src, PtrStepb buf);
+    }
+}
 
-}}}}
-
+END_OPENCV_DEVICE_NAMESPACE
 
 int cv::gpu::countNonZero(const GpuMat& src)
 {
@@ -566,25 +598,24 @@ int cv::gpu::countNonZero(const GpuMat& src)
 
 int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
 {
-    using namespace mathfunc::countnonzero;
+    using namespace OPENCV_DEVICE_NAMESPACE_ matrix_reductions::countnonzero;
 
     typedef int (*Caller)(const DevMem2Db src, PtrStepb buf);
 
-    static Caller multipass_callers[7] = { 
-            countNonZeroMultipassCaller<unsigned char>, countNonZeroMultipassCaller<char>,
-            countNonZeroMultipassCaller<unsigned short>, countNonZeroMultipassCaller<short>,
-            countNonZeroMultipassCaller<int>, countNonZeroMultipassCaller<float>, 0 };
+    static Caller multipass_callers[7] = 
+    {
+        countNonZeroMultipassCaller<unsigned char>, countNonZeroMultipassCaller<char>,
+        countNonZeroMultipassCaller<unsigned short>, countNonZeroMultipassCaller<short>,
+        countNonZeroMultipassCaller<int>, countNonZeroMultipassCaller<float>, 0 
+    };
 
-    static Caller singlepass_callers[7] = { 
-            countNonZeroCaller<unsigned char>, countNonZeroCaller<char>,
-            countNonZeroCaller<unsigned short>, countNonZeroCaller<short>,
-            countNonZeroCaller<int>, countNonZeroCaller<float>, 
-            countNonZeroCaller<double> };
+    static Caller singlepass_callers[7] = 
+    {
+        countNonZeroCaller<unsigned char>, countNonZeroCaller<char>,
+        countNonZeroCaller<unsigned short>, countNonZeroCaller<short>,
+        countNonZeroCaller<int>, countNonZeroCaller<float>, countNonZeroCaller<double> };
 
     CV_Assert(src.channels() == 1);
-
-    CV_Assert(src.type() != CV_64F || (TargetArchs::builtWith(NATIVE_DOUBLE) && 
-                                       DeviceInfo().supports(NATIVE_DOUBLE)));
 
     Size buf_size;
     getBufSizeRequired(src.cols, src.rows, buf_size.width, buf_size.height);
@@ -601,15 +632,20 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
 
 //////////////////////////////////////////////////////////////////////////////
 // reduce
+BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace cv { namespace gpu { namespace mathfunc {
+namespace matrix_reductions 
+{
     template <typename T, typename S, typename D> void reduceRows_gpu(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
     template <typename T, typename S, typename D> void reduceCols_gpu(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-}}}
+}
+
+END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int dtype, Stream& stream)
 {
-    using namespace cv::gpu::mathfunc;
+    using namespace OPENCV_DEVICE_NAMESPACE_ matrix_reductions;
+
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4 && dtype <= CV_32F);
     CV_Assert(dim == 0 || dim == 1);
     CV_Assert(reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG || reduceOp == CV_REDUCE_MAX || reduceOp == CV_REDUCE_MIN);

@@ -549,8 +549,8 @@ TEST_P(MorphEx, Accuracy)
         cv::gpu::GpuMat dev_dst_rgba;
         cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::morphologyEx(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, morphOps[morphOpsIdx], cv::gpu::GpuMat(kernel));
-        cv::gpu::morphologyEx(cv::gpu::GpuMat(img_gray), dev_dst_gray, morphOps[morphOpsIdx], cv::gpu::GpuMat(kernel));
+        cv::gpu::morphologyEx(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, morphOps[morphOpsIdx], kernel);
+        cv::gpu::morphologyEx(cv::gpu::GpuMat(img_gray), dev_dst_gray, morphOps[morphOpsIdx], kernel);
 
         dev_dst_rgba.download(dst_rgba);
         dev_dst_gray.download(dst_gray);
