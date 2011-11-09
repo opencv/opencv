@@ -71,8 +71,8 @@ namespace surf
     void loadOctaveConstants(int octave, int layer_rows, int layer_cols);
 
     void bindImgTex(DevMem2Db img);
-    void bindSumTex(DevMem2D_<uint> sum);
-    void bindMaskSumTex(DevMem2D_<uint> maskSum);
+    void bindSumTex(DevMem2D_<unsigned int> sum);
+    void bindMaskSumTex(DevMem2D_<unsigned int> maskSum);
 
     void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols, int octave, int nOctaveLayers);
 

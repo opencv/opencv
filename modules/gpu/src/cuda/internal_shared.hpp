@@ -66,6 +66,8 @@
 #define OPENCV_DEVICE_NAMESPACE       ::cv::gpu::device
 #define OPENCV_DEVICE_NAMESPACE_      ::cv::gpu::device:: 
 
+#ifdef __CUDACC__
+
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
 typedef unsigned char uchar;
@@ -80,6 +82,8 @@ template<class T> static inline void bindTexture(const textureReference* tex, co
 }
 
 END_OPENCV_DEVICE_NAMESPACE
+
+#endif
 
 namespace cv { namespace gpu 
 {

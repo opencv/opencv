@@ -59,7 +59,7 @@ BEGIN_OPENCV_DEVICE_NAMESPACE
 
 namespace stereobm
 {
-    void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int ndisp, int winsz, const DevMem2D_<uint>& minSSD_buf, cudaStream_t & stream);
+    void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int ndisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t & stream);
     void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap /*= 31*/, cudaStream_t & stream);
     void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream);
 }
