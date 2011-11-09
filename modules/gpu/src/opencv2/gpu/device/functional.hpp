@@ -272,61 +272,61 @@ OPENCV_GPU_IMPLEMENT_MINMAX(minimum, double, ::fmin)
 
     // Math functions
 
-#define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(func) \
-    template <typename T> struct func ## _func : unary_function<T, float> \
+#define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(name, func) \
+    template <typename T> struct name ## _func : unary_function<T, float> \
     { \
         __device__ __forceinline__ float operator ()(typename TypeTraits<T>::ParameterType v) const \
         { \
-            return :: ## func ## f(v); \
+            return func ## f(v); \
         } \
     }; \
-    template <> struct func ## _func<double> : unary_function<double, double> \
+    template <> struct name ## _func<double> : unary_function<double, double> \
     { \
         __device__ __forceinline__ double operator ()(double v) const \
         { \
-            return :: ## func(v); \
+            return func(v); \
         } \
     };
-#define OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(func) \
-    template <typename T> struct func ## _func : binary_function<T, T, float> \
+#define OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(name, func) \
+    template <typename T> struct name ## _func : binary_function<T, T, float> \
     { \
         __device__ __forceinline__ float operator ()(typename TypeTraits<T>::ParameterType v1, typename TypeTraits<T>::ParameterType v2) const \
         { \
-            return :: ## func ## f(v1, v2); \
+            return func ## f(v1, v2); \
         } \
     }; \
-    template <> struct func ## _func<double> : binary_function<double, double, double> \
+    template <> struct name ## _func<double> : binary_function<double, double, double> \
     { \
         __device__ __forceinline__ double operator ()(double v1, double v2) const \
         { \
-            return :: ## func(v1, v2); \
+            return func(v1, v2); \
         } \
     };
 
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(fabs)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sqrt)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp2)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp10)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log2)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log10)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sin)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(cos)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(tan)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(asin)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(acos)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(atan)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sinh)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(cosh)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(tanh)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(asinh)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(acosh)
-OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(atanh)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(fabs, ::fabs)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sqrt, ::sqrt)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp, ::exp)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp2, ::exp2)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp10, ::exp10)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log, ::log)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log2, ::log2)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log10, ::log10)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sin, ::sin)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(cos, ::cos)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(tan, ::tan)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(asin, ::asin)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(acos, ::acos)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(atan, ::atan)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sinh, ::sinh)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(cosh, ::cosh)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(tanh, ::tanh)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(asinh, ::asinh)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(acosh, ::acosh)
+OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(atanh, ::atanh)
 
-OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(hypot)
-OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(atan2)
-OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(pow)
+OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(hypot, ::hypot)
+OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(atan2, ::atan2)
+OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(pow, ::pow)
 
 #undef OPENCV_GPU_IMPLEMENT_UN_FUNCTOR
 #undef OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR

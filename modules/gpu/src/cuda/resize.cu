@@ -49,7 +49,7 @@
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace resize {
+namespace imgproc {
     
 template <typename Ptr2D, typename T> __global__ void resize(const Ptr2D src, float fx, float fy, DevMem2D_<T> dst)
 {
@@ -260,6 +260,6 @@ template void resize_gpu<float >(const DevMem2Db& src, float fx, float fy, const
 template void resize_gpu<float3>(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
 template void resize_gpu<float4>(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
 
-} // namespace resize
+} // namespace imgproc
 
 END_OPENCV_DEVICE_NAMESPACE

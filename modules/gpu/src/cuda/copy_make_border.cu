@@ -45,7 +45,7 @@
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace copy_make_border {
+namespace imgproc {
 
 template <typename Ptr2D, typename T> __global__ void copyMakeBorder(const Ptr2D src, DevMem2D_<T> dst, int top, int left)
 {
@@ -124,6 +124,6 @@ template void copyMakeBorder_gpu<float, 1>(const DevMem2Db& src, const DevMem2Db
 template void copyMakeBorder_gpu<float, 3>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
 template void copyMakeBorder_gpu<float, 4>(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const float* borderValue, cudaStream_t stream);
 
-} // namespace copy_make_border
+} // namespace imgproc
 
 END_OPENCV_DEVICE_NAMESPACE

@@ -49,7 +49,7 @@
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace remap {
+namespace imgproc {
     
 template <typename Ptr2D, typename T> __global__ void remap(const Ptr2D src, const PtrStepf mapx, const PtrStepf mapy, DevMem2D_<T> dst)
 {
@@ -249,6 +249,6 @@ template void remap_gpu<float >(const DevMem2Db& src, const DevMem2Df& xmap, con
 template void remap_gpu<float3>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 template void remap_gpu<float4>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 
-} // namespace remap
+} // namespace imgproc
 
 END_OPENCV_DEVICE_NAMESPACE

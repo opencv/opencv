@@ -109,7 +109,7 @@ void cv::gpu::CannyBuf::release() { throw_nogpu(); }
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace remap 
+namespace imgproc 
 {
     template <typename T> 
     void remap_gpu(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, 
@@ -120,7 +120,7 @@ END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode, const Scalar& borderValue, Stream& stream)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE_ remap;
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
 
     typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, 
         int borderMode, const float* borderValue, cudaStream_t stream, int cc);
@@ -311,7 +311,7 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q,
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace resize 
+namespace imgproc 
 {
     template <typename T> void resize_gpu(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
 }
@@ -380,7 +380,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     }
     else
     {
-        using namespace OPENCV_DEVICE_NAMESPACE_ resize;
+        using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
 
         typedef void (*caller_t)(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
         static const caller_t callers[6][4] = 
@@ -402,7 +402,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace copy_make_border 
+namespace imgproc 
 {
     template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const T* borderValue, cudaStream_t stream);
 }
@@ -413,7 +413,7 @@ namespace
 {
     template <typename T, int cn> void copyMakeBorder_caller(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
-        using namespace OPENCV_DEVICE_NAMESPACE_ copy_make_border;
+        using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
 
         Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
 
@@ -1813,7 +1813,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace pyr_down 
+namespace imgproc 
 {
     template <typename T, int cn> void pyrDown_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 }
@@ -1822,7 +1822,7 @@ END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType, Stream& stream)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE_ pyr_down;
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
 
     typedef void (*func_t)(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 
@@ -1853,7 +1853,7 @@ void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType, Stream& st
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace pyr_up 
+namespace imgproc 
 {
     template <typename T, int cn> void pyrUp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 }
@@ -1862,7 +1862,7 @@ END_OPENCV_DEVICE_NAMESPACE
 
 void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, int borderType, Stream& stream)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE_ pyr_up;
+    using namespace OPENCV_DEVICE_NAMESPACE_ imgproc;
 
     typedef void (*func_t)(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 

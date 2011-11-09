@@ -48,7 +48,7 @@
 
 BEGIN_OPENCV_DEVICE_NAMESPACE
 
-namespace pyr_down {
+namespace imgproc {
 
 template <typename T, typename B> __global__ void pyrDown(const PtrStep<T> src, PtrStep<T> dst, const B b, int dst_cols)
 {
@@ -182,6 +182,6 @@ template void pyrDown_gpu<float, 2>(const DevMem2Db& src, const DevMem2Db& dst, 
 template void pyrDown_gpu<float, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 template void pyrDown_gpu<float, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 
-} // namespace pyr_down
+} // namespace imgproc
 
 END_OPENCV_DEVICE_NAMESPACE
