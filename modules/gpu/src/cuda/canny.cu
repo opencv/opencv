@@ -456,7 +456,7 @@ void edgesHysteresisGlobal_gpu(PtrStepi map, ushort2* st1, ushort2* st2, int row
         cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
 
         dim3 block(128, 1, 1);
-        dim3 grid(min(count, 65535u), divUp(count, 65535), 1);
+        dim3 grid(std::min(count, 65535u), divUp(count, 65535), 1);
         edgesHysteresisGlobal<<<grid, block>>>(map, st1, st2, rows, cols, count);
         cudaSafeCall( cudaGetLastError() );
 
