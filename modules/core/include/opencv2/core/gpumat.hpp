@@ -173,6 +173,7 @@ namespace cv { namespace gpu
 
         template <typename _Tp> operator DevMem2D_<_Tp>() const;
         template <typename _Tp> operator PtrStep_<_Tp>() const;
+        template <typename _Tp> operator PtrStep<_Tp>() const;
 
         /*! includes several bit-fields:
         - the magic signature
@@ -425,6 +426,11 @@ namespace cv { namespace gpu
     template <class T> inline GpuMat::operator PtrStep_<T>() const 
     { 
         return PtrStep_<T>(static_cast< DevMem2D_<T> >(*this)); 
+    }
+
+    template <class T> inline GpuMat::operator PtrStep<T>() const 
+    { 
+        return PtrStep<T>((T*)data, step); 
     }
 
     inline GpuMat createContinuous(int rows, int cols, int type)
