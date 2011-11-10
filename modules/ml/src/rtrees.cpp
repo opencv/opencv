@@ -813,11 +813,16 @@ void CvRTrees::read( CvFileStorage* fs, CvFileNode* fnode )
     active_var_mask = cvCreateMat( 1, var_count, CV_8UC1 );
     {
         // initialize active variables mask
-        CvMat submask1, submask2;
-        cvGetCols( active_var_mask, &submask1, 0, nactive_vars );
-        cvGetCols( active_var_mask, &submask2, nactive_vars, var_count );
+        CvMat submask1;
+		cvGetCols( active_var_mask, &submask1, 0, nactive_vars );
         cvSet( &submask1, cvScalar(1) );
-        cvZero( &submask2 );
+
+		if( nactive_vars < var_count )
+		{
+			CvMat submask2;
+			cvGetCols( active_var_mask, &submask2, nactive_vars, var_count );
+			cvZero( &submask2 );
+		}
     }
 }
 
