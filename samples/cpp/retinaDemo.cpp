@@ -109,10 +109,12 @@ int main(int argc, char* argv[]) {
 		if (useLogSampling)
                 {
                         myRetina = new cv::Retina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
-                        myRetina->setup("retinaDefaultParameters_saveFile.xml");
                 }
 		else// -> else allocate "classical" retina :
-			myRetina = new cv::Retina(inputFrame.size(), "retinaDefaultParameters_saveFile.xml");
+			myRetina = new cv::Retina(inputFrame.size());
+		
+		// save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
+		myRetina->write("RetinaDefaultParameters.xml");
 
 		myRetina->clearBuffers();
 		// declare retina output buffers

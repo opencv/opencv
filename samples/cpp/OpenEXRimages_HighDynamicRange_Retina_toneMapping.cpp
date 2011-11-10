@@ -212,10 +212,12 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		 if (useLogSampling)
                 {
                      retina = new cv::Retina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
-                     retina->setup("retinaDefaultParameters_saveFile.xml");
                  }
 		 else// -> else allocate "classical" retina :
-			 retina = new cv::Retina(inputImage.size(), "retinaDefaultParameters_saveFile.xml");
+		     retina = new cv::Retina(inputImage.size());
+		
+		// save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
+		retina->write("RetinaDefaultParameters.xml");
 
                  // desactivate Magnocellular pathway processing (motion information extraction) since it is not usefull here
                  retina->activateMovingContoursProcessing(false);
