@@ -1,5 +1,5 @@
 from optparse import OptionParser
-import glob, sys, os
+import glob, sys, os, re
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -29,7 +29,7 @@ if __name__ == "__main__":
                 continue
             idx1 = text.find("<tbody>") + len("<tbody>")
             idx2 = html.rfind("</tbody>")
-            html = html[:idx2] + text[idx1:]
+            html = html[:idx2] + re.sub(r"[ \t\n\r]+", " ", text[idx1:])
         except:
             pass
 

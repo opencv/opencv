@@ -45,6 +45,11 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
                       double low_thresh, double high_thresh,
                       int aperture_size )
 {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::canny(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr), low_thresh, high_thresh,
+                     aperture_size & ~CV_CANNY_L2_GRADIENT, (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT))
+        return;
+#endif
     cv::Ptr<CvMat> dx, dy;
     cv::AutoBuffer<char> buffer;
     std::vector<uchar*> stack;

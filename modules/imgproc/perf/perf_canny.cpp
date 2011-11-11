@@ -11,10 +11,10 @@ typedef perf::TestBaseWithParam<Img_Aperture_L2_thresholds_t> Img_Aperture_L2_th
 
 PERF_TEST_P( Img_Aperture_L2_thresholds, canny,
              testing::Combine(
-                 testing::Values( "cv/shared/lena.jpg", "stitching/b1.jpg" ),
+                 testing::Values( "cv/shared/lena.jpg", "stitching/b1.jpg", "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png" ),
                  testing::Values( 3, 5 ),
                  testing::Bool(),
-                 testing::Values( make_tuple(50.0, 100.0), make_tuple(0.0, 50.0) )
+                 testing::Values( make_tuple(50.0, 100.0), make_tuple(0.0, 50.0), make_tuple(100.0, 120.0) )
              )
            )
 {
