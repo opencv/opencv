@@ -1182,19 +1182,19 @@ static NormFunc normTab[3][8] =
 static NormDiffFunc normDiffTab[3][8] =
 {
     {
-        (NormDiffFunc)normDiffInf_8u, (NormDiffFunc)normDiffInf_8s,
+        (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
         (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
         (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)normDiffInf_32f,
         (NormDiffFunc)normDiffInf_64f, 0
     },
     {
-        (NormDiffFunc)normDiffL1_8u, (NormDiffFunc)normDiffL1_8s,
+        (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
         (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
         (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)normDiffL1_32f,
         (NormDiffFunc)normDiffL1_64f, 0
     },
     {
-        (NormDiffFunc)normDiffL2_8u, (NormDiffFunc)normDiffL2_8s,
+        (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u), (NormDiffFunc)normDiffL2_8s,
         (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
         (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)normDiffL2_32f,
         (NormDiffFunc)normDiffL2_64f, 0
