@@ -45,6 +45,15 @@
 #include "NCV.hpp"
 
 
+template <class T>
+static void swap(T &p1, T &p2)
+{
+    T tmp = p1;
+    p1 = p2;
+    p2 = tmp;
+}
+
+
 template<typename T>
 static T divUp(T a, T b)
 {
