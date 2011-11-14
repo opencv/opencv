@@ -43,7 +43,6 @@
 #ifndef OPENCV_GPU_EMULATION_HPP_
 #define OPENCV_GPU_EMULATION_HPP_
 
-#include "internal_shared.hpp"
 #include "warp_reduce.hpp"
 
 namespace cv { namespace gpu { namespace device 

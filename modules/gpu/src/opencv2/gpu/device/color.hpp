@@ -43,7 +43,6 @@
 #ifndef __OPENCV_GPU_COLOR_HPP__
 #define __OPENCV_GPU_COLOR_HPP__
 
-#include "internal_shared.hpp"
 #include "detail/color_detail.hpp"
 
 namespace cv { namespace gpu { namespace device 

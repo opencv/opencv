@@ -71,19 +71,13 @@ cv::gpu::Stream::operator bool() const { throw_nogpu(); return false; }
 
 #include "opencv2/gpu/stream_accessor.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu
 {
-    void copy_to_with_mask(const DevMem2Db& src, DevMem2Db dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t & stream = 0);
-
-    template <typename T>
-    void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream);
-    template <typename T>
-    void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-
-    void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
-}}}
-
-using namespace ::cv::gpu::device;
+    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream);
+    void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream);
+    void setTo(GpuMat& src, Scalar s, cudaStream_t stream);
+    void setTo(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream);
+}}
 
 struct Stream::Impl
 {
@@ -99,20 +93,6 @@ namespace
         size_t bwidth = src.cols * src.elemSize();
         cudaSafeCall( cudaMemcpy2DAsync(dst.data, dst.step, src.data, src.step, bwidth, src.rows, k, s) );
     };
-
-    template <typename T>
-    void kernelSet(GpuMat& src, const Scalar& s, cudaStream_t stream)
-    {
-        Scalar_<T> sf = s;
-        set_to_gpu(src, sf.val, src.channels(), stream);
-    }
-
-    template <typename T>
-    void kernelSetMask(GpuMat& src, const Scalar& s, const GpuMat& mask, cudaStream_t stream)
-    {
-        Scalar_<T> sf = s;
-        set_to_gpu(src, sf.val, mask, src.channels(), stream);
-    }
 }
 
 CV_EXPORTS cudaStream_t cv::gpu::StreamAccessor::getStream(const Stream& stream) { return stream.impl ? stream.impl->stream : 0; };
@@ -208,13 +188,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar s)
         }
     }
 
-    typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, cudaStream_t stream);
-    static const set_caller_t set_callers[] =
-    {
-        kernelSet<uchar>, kernelSet<schar>, kernelSet<ushort>, kernelSet<short>,
-        kernelSet<int>, kernelSet<float>, kernelSet<double>
-    };
-    set_callers[src.depth()](src, s, impl->stream);
+    setTo(src, s, impl->stream);
 }
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
@@ -224,13 +198,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
 
     CV_Assert(mask.type() == CV_8UC1);
 
-    typedef void (*set_caller_t)(GpuMat& src, const Scalar& s, const GpuMat& mask, cudaStream_t stream);
-    static const set_caller_t set_callers[] =
-    {
-        kernelSetMask<uchar>, kernelSetMask<schar>, kernelSetMask<ushort>, kernelSetMask<short>,
-        kernelSetMask<int>, kernelSetMask<float>, kernelSetMask<double>
-    };
-    set_callers[src.depth()](src, val, mask, impl->stream);
+    setTo(src, val, mask, impl->stream);
 }
 
 void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
@@ -258,7 +226,7 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, 
         psrc = &(temp = src);
 
     dst.create( src.size(), rtype );
-    convert_gpu(psrc->reshape(1), sdepth, dst.reshape(1), ddepth, alpha, beta, impl->stream);
+    convertTo(src, dst, alpha, beta, impl->stream);
 }
 
 cv::gpu::Stream::operator bool() const

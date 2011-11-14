@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
@@ -75,7 +74,7 @@ namespace cv { namespace gpu { namespace device
     }
 
     template<typename T>
-    void copy_to_with_mask_run(const DevMem2Db& mat_src, const DevMem2Db& mat_dst, const DevMem2Db& mask, int channels, const cudaStream_t & stream)
+    void copy_to_with_mask_run(DevMem2Db mat_src, DevMem2Db mat_dst, DevMem2Db mask, int channels, cudaStream_t stream)
     {
         dim3 threadsPerBlock(16,16, 1);
         dim3 numBlocks ( divUp(mat_src.cols * channels , threadsPerBlock.x) , divUp(mat_src.rows , threadsPerBlock.y), 1);
@@ -88,9 +87,9 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
-    void copy_to_with_mask(const DevMem2Db& mat_src, DevMem2Db mat_dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t & stream)
+    void copy_to_with_mask(DevMem2Db mat_src, DevMem2Db mat_dst, int depth, DevMem2Db mask, int channels, cudaStream_t stream)
     {
-        typedef void (*CopyToFunc)(const DevMem2Db& mat_src, const DevMem2Db& mat_dst, const DevMem2Db& mask, int channels, const cudaStream_t & stream);
+        typedef void (*CopyToFunc)(DevMem2Db mat_src, DevMem2Db mat_dst, DevMem2Db mask, int channels, cudaStream_t stream);
 
         static CopyToFunc tab[8] =
         {
@@ -106,7 +105,8 @@ namespace cv { namespace gpu { namespace device
 
         CopyToFunc func = tab[depth];
 
-        if (func == 0) cv::gpu::error("Unsupported copyTo operation", __FILE__, __LINE__);
+        if (func == 0) 
+            cv::gpu::error("Unsupported copyTo operation", __FILE__, __LINE__);
 
         func(mat_src, mat_dst, mask, channels, stream);
     }
@@ -188,7 +188,7 @@ namespace cv { namespace gpu { namespace device
             }
     }
     template <typename T>
-    void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream)
+    void set_to_gpu(DevMem2Db mat, const T* scalar, DevMem2Db mask, int channels, cudaStream_t stream)
     {
         writeScalar(scalar);
 
@@ -202,16 +202,16 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
-    template void set_to_gpu<uchar >(const DevMem2Db& mat, const uchar* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<schar >(const DevMem2Db& mat, const schar* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<ushort>(const DevMem2Db& mat, const ushort* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<short >(const DevMem2Db& mat, const short* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<int   >(const DevMem2Db& mat, const int* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<float >(const DevMem2Db& mat, const float* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<double>(const DevMem2Db& mat, const double* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<uchar >(DevMem2Db mat, const uchar*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<schar >(DevMem2Db mat, const schar*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<ushort>(DevMem2Db mat, const ushort* scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<short >(DevMem2Db mat, const short*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<int   >(DevMem2Db mat, const int*    scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<float >(DevMem2Db mat, const float*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<double>(DevMem2Db mat, const double* scalar, DevMem2Db mask, int channels, cudaStream_t stream);
 
     template <typename T>
-    void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream)
+    void set_to_gpu(DevMem2Db mat, const T* scalar, int channels, cudaStream_t stream)
     {
         writeScalar(scalar);
 
@@ -225,13 +225,13 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
-    template void set_to_gpu<uchar >(const DevMem2Db& mat, const uchar* scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<schar >(const DevMem2Db& mat, const schar* scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<ushort>(const DevMem2Db& mat, const ushort* scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<short >(const DevMem2Db& mat, const short* scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<int   >(const DevMem2Db& mat, const int* scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<float >(const DevMem2Db& mat, const float* scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<double>(const DevMem2Db& mat, const double* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<uchar >(DevMem2Db mat, const uchar*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<schar >(DevMem2Db mat, const schar*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<ushort>(DevMem2Db mat, const ushort* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<short >(DevMem2Db mat, const short*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<int   >(DevMem2Db mat, const int*    scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<float >(DevMem2Db mat, const float*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<double>(DevMem2Db mat, const double* scalar, int channels, cudaStream_t stream);
 
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////////////// ConvertTo ////////////////////////////////
@@ -298,7 +298,7 @@ namespace cv { namespace gpu { namespace device
     };
         
     template<typename T, typename D>
-    void cvt_(const DevMem2Db& src, const DevMem2Db& dst, double alpha, double beta, cudaStream_t stream)
+    void cvt_(DevMem2Db src, DevMem2Db dst, double alpha, double beta, cudaStream_t stream)
     {
         cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
         cudaSafeCall( cudaSetDoubleForDevice(&beta) );
@@ -306,11 +306,9 @@ namespace cv { namespace gpu { namespace device
         ::cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<D>)dst, op, stream);
     }
 
-    void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, 
-        cudaStream_t stream = 0)
+    void convert_gpu(DevMem2Db src, int sdepth, DevMem2Db dst, int ddepth, double alpha, double beta, cudaStream_t stream)
     {
-        typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Db& dst, double alpha, double beta, 
-            cudaStream_t stream);
+        typedef void (*caller_t)(DevMem2Db src, DevMem2Db dst, double alpha, double beta, cudaStream_t stream);
 
         static const caller_t tab[8][8] =
         {

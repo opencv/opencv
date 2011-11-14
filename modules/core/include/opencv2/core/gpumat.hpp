@@ -212,27 +212,9 @@ namespace cv { namespace gpu
     CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
     CV_EXPORTS void ensureSizeIsEnough(Size size, int type, GpuMat& m);
 
-    class CV_EXPORTS GpuFuncTable
-    {
-    public:
-        virtual ~GpuFuncTable() {}
+    //////////////////////////////// Error handling ////////////////////////
 
-        virtual void copy(const Mat& src, GpuMat& dst) const = 0;
-        virtual void copy(const GpuMat& src, Mat& dst) const = 0;
-        virtual void copy(const GpuMat& src, GpuMat& dst) const = 0;
-
-        virtual void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const = 0;
-
-        virtual void convert(const GpuMat& src, GpuMat& dst) const = 0;
-        virtual void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const = 0;
-
-        virtual void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const = 0;
-
-        virtual void mallocPitch(void** devPtr, size_t* step, size_t width, size_t height) const = 0;
-        virtual void free(void* devPtr) const = 0;
-    };
-
-    CV_EXPORTS void setGpuFuncTable(const GpuFuncTable* funcTbl);
+    CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
     ////////////////////////////////////////////////////////////////////////
 

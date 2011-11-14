@@ -45,7 +45,6 @@
 #define __OPENCV_GPU_DEVICE_FUNCATTRIB_HPP_
 
 #include <cstdio>
-#include "internal_shared.hpp"
 
 namespace cv { namespace gpu { namespace device 
 {

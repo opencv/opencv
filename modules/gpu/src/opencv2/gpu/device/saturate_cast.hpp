@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_SATURATE_CAST_HPP__
 #define __OPENCV_GPU_SATURATE_CAST_HPP__
 
-#include "internal_shared.hpp"
+#include "common.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

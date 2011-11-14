@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_TRANSFORM_DETAIL_HPP__
 #define __OPENCV_GPU_TRANSFORM_DETAIL_HPP__
 
-#include "internal_shared.hpp"
+#include "../common.hpp"
 #include "../vec_traits.hpp"
 #include "../functional.hpp"
 

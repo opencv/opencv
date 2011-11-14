@@ -43,7 +43,6 @@
 #ifndef __OPENCV_GPU_TYPE_TRAITS_HPP__
 #define __OPENCV_GPU_TYPE_TRAITS_HPP__
 
-#include "internal_shared.hpp"
 #include "detail/type_traits_detail.hpp"
 
 namespace cv { namespace gpu { namespace device 

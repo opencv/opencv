@@ -43,8 +43,6 @@
 #ifndef __OPENCV_GPU_DEVICE_WARP_HPP__
 #define __OPENCV_GPU_DEVICE_WARP_HPP__
 
-#include "internal_shared.hpp"
-
 namespace cv { namespace gpu { namespace device 
 {
     struct Warp

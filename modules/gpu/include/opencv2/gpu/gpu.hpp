@@ -139,10 +139,6 @@ private:
     int minorVersion_;
 };
 
-//////////////////////////////// Error handling ////////////////////////
-
-CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
-
 //////////////////////////////// CudaMem ////////////////////////////////
 // CudaMem is limited cv::Mat with page locked memory allocation.
 // Page locked memory is only needed for async and faster coping to GPU.

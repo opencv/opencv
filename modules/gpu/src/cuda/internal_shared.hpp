@@ -49,36 +49,6 @@
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
 
-#ifndef CV_PI
-#define CV_PI   3.1415926535897932384626433832795
-#endif
-
-#ifndef CV_PI_F
-  #ifndef CV_PI
-    #define CV_PI_F 3.14159265f
-  #else
-    #define CV_PI_F ((float)CV_PI)
-  #endif
-#endif
-
-#ifdef __CUDACC__
-
-namespace cv { namespace gpu { namespace device 
-{
-    typedef unsigned char uchar;
-    typedef unsigned short ushort;
-    typedef signed char schar;
-    typedef unsigned int uint;
-
-    template<class T> static inline void bindTexture(const textureReference* tex, const DevMem2D_<T>& img)
-    {
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
-        cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
-    }
-}}}
-
-#endif
-
 namespace cv { namespace gpu 
 {
     enum 
@@ -93,8 +63,6 @@ namespace cv { namespace gpu
     // Converts CPU border extrapolation mode into GPU internal analogue.
     // Returns true if the GPU analogue exists, false otherwise.
     bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
-
-    static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
 
     class NppStreamHandler
     {

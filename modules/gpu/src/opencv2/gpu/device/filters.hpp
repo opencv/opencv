@@ -43,7 +43,6 @@
 #ifndef __OPENCV_GPU_FILTERS_HPP__
 #define __OPENCV_GPU_FILTERS_HPP__
 
-#include "internal_shared.hpp"
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
 #include "vec_math.hpp"

@@ -43,7 +43,6 @@
 #ifndef __OPENCV_GPU_VEC_DISTANCE_HPP__
 #define __OPENCV_GPU_VEC_DISTANCE_HPP__
 
-#include "internal_shared.hpp"
 #include "utility.hpp"
 #include "functional.hpp"
 #include "detail/vec_distance_detail.hpp"

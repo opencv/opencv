@@ -44,8 +44,6 @@
 #ifndef OPENCV_GPU_WARP_REDUCE_HPP__
 #define OPENCV_GPU_WARP_REDUCE_HPP__
 
-#include "internal_shared.hpp"
-
 namespace cv { namespace gpu { namespace device 
 {		
     template <class T> 

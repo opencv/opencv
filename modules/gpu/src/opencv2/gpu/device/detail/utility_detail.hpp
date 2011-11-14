@@ -43,8 +43,6 @@
 #ifndef __OPENCV_GPU_UTILITY_DETAIL_HPP__
 #define __OPENCV_GPU_UTILITY_DETAIL_HPP__
 
-#include "internal_shared.hpp"
-
 namespace cv { namespace gpu { namespace device 
 {
     namespace utility_detail

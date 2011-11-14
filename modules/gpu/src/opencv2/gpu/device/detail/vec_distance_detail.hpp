@@ -43,7 +43,6 @@
 #ifndef __OPENCV_GPU_VEC_DISTANCE_DETAIL_HPP__
 #define __OPENCV_GPU_VEC_DISTANCE_DETAIL_HPP__
 
-#include "internal_shared.hpp"
 #include "../datamov_utils.hpp"
 
 namespace cv { namespace gpu { namespace device 

@@ -43,7 +43,6 @@
 #ifndef __OPENCV_GPU_UTILITY_HPP__
 #define __OPENCV_GPU_UTILITY_HPP__
 
-#include "internal_shared.hpp"
 #include "saturate_cast.hpp"
 #include "datamov_utils.hpp"
 #include "detail/utility_detail.hpp"

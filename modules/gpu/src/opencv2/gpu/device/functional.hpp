@@ -44,7 +44,6 @@
 #define __OPENCV_GPU_FUNCTIONAL_HPP__
 
 #include <thrust/functional.h>
-#include "internal_shared.hpp"
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
 #include "type_traits.hpp"

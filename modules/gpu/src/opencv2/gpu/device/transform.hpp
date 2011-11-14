@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_TRANSFORM_HPP__
 #define __OPENCV_GPU_TRANSFORM_HPP__
 
-#include "internal_shared.hpp"
+#include "common.hpp"
 #include "utility.hpp"
 #include "detail/transform_detail.hpp"
 

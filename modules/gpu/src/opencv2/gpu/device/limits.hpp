@@ -44,7 +44,7 @@
 #define __OPENCV_GPU_LIMITS_GPU_HPP__
 
 #include <limits>
-#include "internal_shared.hpp"
+#include "common.hpp"
 
 namespace cv { namespace gpu { namespace device 
 {
