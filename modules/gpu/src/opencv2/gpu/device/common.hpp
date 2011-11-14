@@ -58,6 +58,25 @@
     #endif
 #endif
 
+#if defined(__GNUC__)
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+#endif
+
+namespace cv { namespace gpu 
+{
+    void error(const char *error_string, const char *file, const int line, const char *func = "");
+}}
+
+static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+{
+    if (cudaSuccess != err)
+        cv::gpu::error(cudaGetErrorString(err), file, line, func);
+}
+
+#ifdef __CUDACC__
+
 namespace cv { namespace gpu 
 {     
     __host__ __device__ __forceinline__ int divUp(int total, int grain) 
@@ -80,21 +99,6 @@ namespace cv { namespace gpu
     }
 }}
 
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-#endif
-
-namespace cv { namespace gpu 
-{
-    void error(const char *error_string, const char *file, const int line, const char *func = "");
-}}
-
-static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-{
-    if (cudaSuccess != err)
-        cv::gpu::error(cudaGetErrorString(err), file, line, func);
-}
+#endif // __CUDACC__
 
 #endif // __OPENCV_GPU_COMMON_HPP__
