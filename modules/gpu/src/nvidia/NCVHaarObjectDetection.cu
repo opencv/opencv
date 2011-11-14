@@ -924,15 +924,6 @@ Ncv32u getStageNumWithNotLessThanNclassifiers(Ncv32u N, HaarClassifierCascadeDes
 }
 
 
-template <class T>
-void swap(T &p1, T &p2)
-{
-    T tmp = p1;
-    p1 = p2;
-    p2 = tmp;
-}
-
-
 NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImage,
                                                NCVMatrix<Ncv32f> &d_weights,
                                                NCVMatrixAlloc<Ncv32u> &d_pixelMask,
