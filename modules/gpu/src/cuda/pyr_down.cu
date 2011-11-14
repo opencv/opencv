@@ -46,142 +46,140 @@
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace imgproc {
-
-template <typename T, typename B> __global__ void pyrDown(const PtrStep<T> src, PtrStep<T> dst, const B b, int dst_cols)
+namespace cv { namespace gpu { namespace device 
 {
-    typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type value_type;
-
-    const int x = blockIdx.x * blockDim.x + threadIdx.x;
-    const int y = blockIdx.y;
-
-    __shared__ value_type smem[256 + 4];
-
-    value_type sum;
-    
-    const int src_y = 2*y;
-
-    sum = VecTraits<value_type>::all(0);
-    
-    sum = sum + 0.0625f * b.at(src_y - 2, x, src.data, src.step);
-    sum = sum + 0.25f   * b.at(src_y - 1, x, src.data, src.step);
-    sum = sum + 0.375f  * b.at(src_y    , x, src.data, src.step);
-    sum = sum + 0.25f   * b.at(src_y + 1, x, src.data, src.step);
-    sum = sum + 0.0625f * b.at(src_y + 2, x, src.data, src.step);
-
-    smem[2 + threadIdx.x] = sum;
-
-    if (threadIdx.x < 2)
+    namespace imgproc 
     {
-        const int left_x = x - 2 + threadIdx.x;
+        template <typename T, typename B> __global__ void pyrDown(const PtrStep<T> src, PtrStep<T> dst, const B b, int dst_cols)
+        {
+            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type value_type;
 
-        sum = VecTraits<value_type>::all(0);
-    
-        sum = sum + 0.0625f * b.at(src_y - 2, left_x, src.data, src.step);
-        sum = sum + 0.25f   * b.at(src_y - 1, left_x, src.data, src.step);
-        sum = sum + 0.375f  * b.at(src_y    , left_x, src.data, src.step);
-        sum = sum + 0.25f   * b.at(src_y + 1, left_x, src.data, src.step);
-        sum = sum + 0.0625f * b.at(src_y + 2, left_x, src.data, src.step);
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y;
 
-        smem[threadIdx.x] = sum;
-    }
+            __shared__ value_type smem[256 + 4];
 
-    if (threadIdx.x > 253)
-    {
-        const int right_x = x + threadIdx.x + 2;
+            value_type sum;
+            
+            const int src_y = 2*y;
 
-        sum = VecTraits<value_type>::all(0);
-    
-        sum = sum + 0.0625f * b.at(src_y - 2, right_x, src.data, src.step);
-        sum = sum + 0.25f   * b.at(src_y - 1, right_x, src.data, src.step);
-        sum = sum + 0.375f  * b.at(src_y    , right_x, src.data, src.step);
-        sum = sum + 0.25f   * b.at(src_y + 1, right_x, src.data, src.step);
-        sum = sum + 0.0625f * b.at(src_y + 2, right_x, src.data, src.step);
+            sum = VecTraits<value_type>::all(0);
+            
+            sum = sum + 0.0625f * b.at(src_y - 2, x, src.data, src.step);
+            sum = sum + 0.25f   * b.at(src_y - 1, x, src.data, src.step);
+            sum = sum + 0.375f  * b.at(src_y    , x, src.data, src.step);
+            sum = sum + 0.25f   * b.at(src_y + 1, x, src.data, src.step);
+            sum = sum + 0.0625f * b.at(src_y + 2, x, src.data, src.step);
 
-        smem[4 + threadIdx.x] = sum;
-    }
+            smem[2 + threadIdx.x] = sum;
 
-    __syncthreads();
+            if (threadIdx.x < 2)
+            {
+                const int left_x = x - 2 + threadIdx.x;
 
-    if (threadIdx.x < 128)
-    {
-        const int tid2 = threadIdx.x * 2;
+                sum = VecTraits<value_type>::all(0);
+            
+                sum = sum + 0.0625f * b.at(src_y - 2, left_x, src.data, src.step);
+                sum = sum + 0.25f   * b.at(src_y - 1, left_x, src.data, src.step);
+                sum = sum + 0.375f  * b.at(src_y    , left_x, src.data, src.step);
+                sum = sum + 0.25f   * b.at(src_y + 1, left_x, src.data, src.step);
+                sum = sum + 0.0625f * b.at(src_y + 2, left_x, src.data, src.step);
 
-        sum = VecTraits<value_type>::all(0);
+                smem[threadIdx.x] = sum;
+            }
 
-        sum = sum + 0.0625f * smem[2 + tid2 - 2];
-        sum = sum + 0.25f   * smem[2 + tid2 - 1];
-        sum = sum + 0.375f  * smem[2 + tid2    ];
-        sum = sum + 0.25f   * smem[2 + tid2 + 1];
-        sum = sum + 0.0625f * smem[2 + tid2 + 2];
+            if (threadIdx.x > 253)
+            {
+                const int right_x = x + threadIdx.x + 2;
 
-        const int dst_x = (blockIdx.x * blockDim.x + tid2) / 2;
+                sum = VecTraits<value_type>::all(0);
+            
+                sum = sum + 0.0625f * b.at(src_y - 2, right_x, src.data, src.step);
+                sum = sum + 0.25f   * b.at(src_y - 1, right_x, src.data, src.step);
+                sum = sum + 0.375f  * b.at(src_y    , right_x, src.data, src.step);
+                sum = sum + 0.25f   * b.at(src_y + 1, right_x, src.data, src.step);
+                sum = sum + 0.0625f * b.at(src_y + 2, right_x, src.data, src.step);
 
-        if (dst_x < dst_cols)
-            dst.ptr(y)[dst_x] = saturate_cast<T>(sum);
-    }
-}
+                smem[4 + threadIdx.x] = sum;
+            }
 
-template <typename T, template <typename> class B> void pyrDown_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, cudaStream_t stream)
-{
-    const dim3 block(256);
-    const dim3 grid(divUp(src.cols, block.x), dst.rows);
+            __syncthreads();
 
-    B<T> b(src.rows, src.cols);
+            if (threadIdx.x < 128)
+            {
+                const int tid2 = threadIdx.x * 2;
 
-    pyrDown<T><<<grid, block, 0, stream>>>(src, dst, b, dst.cols);
-    cudaSafeCall( cudaGetLastError() );
+                sum = VecTraits<value_type>::all(0);
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
+                sum = sum + 0.0625f * smem[2 + tid2 - 2];
+                sum = sum + 0.25f   * smem[2 + tid2 - 1];
+                sum = sum + 0.375f  * smem[2 + tid2    ];
+                sum = sum + 0.25f   * smem[2 + tid2 + 1];
+                sum = sum + 0.0625f * smem[2 + tid2 + 2];
 
-template <typename T, int cn> void pyrDown_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream)
-{
-    typedef typename TypeVec<T, cn>::vec_type type;
+                const int dst_x = (blockIdx.x * blockDim.x + tid2) / 2;
 
-    typedef void (*caller_t)(const DevMem2D_<type>& src, const DevMem2D_<type>& dst, cudaStream_t stream);
+                if (dst_x < dst_cols)
+                    dst.ptr(y)[dst_x] = saturate_cast<T>(sum);
+            }
+        }
 
-    static const caller_t callers[] = 
-    {
-        pyrDown_caller<type, BrdReflect101>, pyrDown_caller<type, BrdReplicate>, pyrDown_caller<type, BrdConstant>, pyrDown_caller<type, BrdReflect>, pyrDown_caller<type, BrdWrap>
-    };
+        template <typename T, template <typename> class B> void pyrDown_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, cudaStream_t stream)
+        {
+            const dim3 block(256);
+            const dim3 grid(divUp(src.cols, block.x), dst.rows);
 
-    callers[borderType](static_cast< DevMem2D_<type> >(src), static_cast< DevMem2D_<type> >(dst), stream);
-}
+            B<T> b(src.rows, src.cols);
 
-template void pyrDown_gpu<uchar, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<uchar, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<uchar, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<uchar, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+            pyrDown<T><<<grid, block, 0, stream>>>(src, dst, b, dst.cols);
+            cudaSafeCall( cudaGetLastError() );
 
-template void pyrDown_gpu<schar, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<schar, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<schar, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<schar, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
 
-template void pyrDown_gpu<ushort, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<ushort, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<ushort, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<ushort, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template <typename T, int cn> void pyrDown_gpu(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream)
+        {
+            typedef typename TypeVec<T, cn>::vec_type type;
 
-template void pyrDown_gpu<short, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<short, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<short, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<short, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+            typedef void (*caller_t)(const DevMem2D_<type>& src, const DevMem2D_<type>& dst, cudaStream_t stream);
 
-template void pyrDown_gpu<int, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<int, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<int, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<int, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+            static const caller_t callers[] = 
+            {
+                pyrDown_caller<type, BrdReflect101>, pyrDown_caller<type, BrdReplicate>, pyrDown_caller<type, BrdConstant>, pyrDown_caller<type, BrdReflect>, pyrDown_caller<type, BrdWrap>
+            };
 
-template void pyrDown_gpu<float, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<float, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<float, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
-template void pyrDown_gpu<float, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+            callers[borderType](static_cast< DevMem2D_<type> >(src), static_cast< DevMem2D_<type> >(dst), stream);
+        }
 
-} // namespace imgproc
+        template void pyrDown_gpu<uchar, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<uchar, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<uchar, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<uchar, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
 
-END_OPENCV_DEVICE_NAMESPACE
+        template void pyrDown_gpu<schar, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<schar, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<schar, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<schar, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+
+        template void pyrDown_gpu<ushort, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<ushort, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<ushort, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<ushort, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+
+        template void pyrDown_gpu<short, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<short, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<short, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<short, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+
+        template void pyrDown_gpu<int, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<int, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<int, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<int, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+
+        template void pyrDown_gpu<float, 1>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<float, 2>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<float, 3>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+        template void pyrDown_gpu<float, 4>(const DevMem2Db& src, const DevMem2Db& dst, int borderType, cudaStream_t stream);
+    } // namespace imgproc
+}}} // namespace cv { namespace gpu { namespace device

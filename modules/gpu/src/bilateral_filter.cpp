@@ -55,19 +55,18 @@ void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&,
 
 #else /* !defined (HAVE_CUDA) */
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace bilateral_filter
+namespace cv { namespace gpu { namespace device 
 {
-    void load_constants(float* table_color, DevMem2Df table_space, int ndisp, int radius, short edge_disc, short max_disc);
+    namespace bilateral_filter
+    {
+        void load_constants(float* table_color, DevMem2Df table_space, int ndisp, int radius, short edge_disc, short max_disc);
 
-    void bilateral_filter_gpu(DevMem2Db disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
-    void bilateral_filter_gpu(DevMem2D_<short> disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
-}
+        void bilateral_filter_gpu(DevMem2Db disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
+        void bilateral_filter_gpu(DevMem2D_<short> disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
+    }
+}}}
 
-END_OPENCV_DEVICE_NAMESPACE
-
-using namespace OPENCV_DEVICE_NAMESPACE_ bilateral_filter;
+using namespace ::cv::gpu::device::bilateral_filter;
 
 namespace
 {

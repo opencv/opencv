@@ -123,19 +123,18 @@ namespace
 ////////////////////////////////////////////////////////////////////////
 // add
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template <typename T, typename D> 
+    void add_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
 
-template <typename T, typename D> 
-void add_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
-
-template <typename T, typename D> 
-void add_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T, typename D> 
+    void add_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
+}}}
 
 void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
 
@@ -174,7 +173,7 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
 
 void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, const GpuMat& mask, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
 
@@ -236,19 +235,18 @@ void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, const GpuMat
 ////////////////////////////////////////////////////////////////////////
 // subtract
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template <typename T, typename D> 
+    void subtract_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
 
-template <typename T, typename D> 
-void subtract_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
-
-template <typename T, typename D> 
-void subtract_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T, typename D> 
+    void subtract_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
+}}}
 
 void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
 
@@ -287,7 +285,7 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cons
 
 void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst, const GpuMat& mask, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
 
@@ -349,22 +347,21 @@ void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst, const G
 ////////////////////////////////////////////////////////////////////////
 // multiply
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream);
+    void multiply_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
 
-void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream);
-void multiply_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
+    template <typename T, typename D> 
+    void multiply_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
 
-template <typename T, typename D> 
-void multiply_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
-
-template <typename T, typename D> 
-void multiply_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T, typename D> 
+    void multiply_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
+}}}
 
 void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
 
@@ -422,7 +419,7 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, doub
 
 void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double scale, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
 
@@ -472,25 +469,24 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, double 
 ////////////////////////////////////////////////////////////////////////
 // divide
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    void divide_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream);
+    void divide_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
 
-void divide_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream);
-void divide_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
+    template <typename T, typename D> 
+    void divide_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
 
-template <typename T, typename D> 
-void divide_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
+    template <typename T, typename D> 
+    void divide_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
 
-template <typename T, typename D> 
-void divide_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
-
-template <typename T, typename D> 
-void divide_gpu(double scalar, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T, typename D> 
+    void divide_gpu(double scalar, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+}}}
 
 void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
 
@@ -548,7 +544,7 @@ void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double
 
 void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst, double scale, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
 
@@ -597,7 +593,7 @@ void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst, double sc
 
 void cv::gpu::divide(double scale, const GpuMat& src, GpuMat& dst, int dtype, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(double scalar, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
 
@@ -630,19 +626,18 @@ void cv::gpu::divide(double scale, const GpuMat& src, GpuMat& dst, int dtype, St
 //////////////////////////////////////////////////////////////////////////////
 // absdiff
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template <typename T>
+    void absdiff_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
 
-template <typename T>
-void absdiff_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-
-template <typename T> 
-void absdiff_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T> 
+    void absdiff_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, cudaStream_t stream);
+}}}
 
 void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
 
@@ -714,7 +709,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
 
 void cv::gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& s)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, double val, const DevMem2Db& dst, cudaStream_t stream);
 
@@ -758,18 +753,17 @@ void cv::gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Strea
 //////////////////////////////////////////////////////////////////////////////
 // Comparison of two matrixes
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-template <typename T> void compare_eq(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-template <typename T> void compare_ne(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-template <typename T> void compare_lt(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-template <typename T> void compare_le(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template <typename T> void compare_eq(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template <typename T> void compare_ne(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template <typename T> void compare_lt(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template <typename T> void compare_le(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+}}}
 
 void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int cmpop, Stream& stream)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     typedef void (*func_t)(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
 
@@ -835,14 +829,13 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
 //////////////////////////////////////////////////////////////////////////////
 // Unary bitwise logical operations
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    void bitwiseNotCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src, PtrStepb dst, cudaStream_t stream);
 
-void bitwiseNotCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src, PtrStepb dst, cudaStream_t stream);
-
-template <typename T>
-void bitwiseMaskNotCaller(int rows, int cols, int cn, const PtrStepb src, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T>
+    void bitwiseMaskNotCaller(int rows, int cols, int cn, const PtrStepb src, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
+}}}
 
 namespace
 {
@@ -850,13 +843,13 @@ namespace
     {
         dst.create(src.size(), src.type());
 
-        OPENCV_DEVICE_NAMESPACE_ bitwiseNotCaller(src.rows, src.cols, src.elemSize1(), dst.channels(), src, dst, stream);
+        ::cv::gpu::device::bitwiseNotCaller(src.rows, src.cols, src.elemSize1(), dst.channels(), src, dst, stream);
     }
 
 
     void bitwiseNotCaller(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
-        using namespace OPENCV_DEVICE_NAMESPACE;
+        using namespace ::cv::gpu::device;
 
         typedef void (*Caller)(int, int, int, const PtrStepb, const PtrStepb, PtrStepb, cudaStream_t);
 
@@ -893,24 +886,23 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
 //////////////////////////////////////////////////////////////////////////////
 // Binary bitwise logical operations
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    void bitwiseOrCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, const PtrStepb src2, PtrStepb dst, cudaStream_t stream);
 
-void bitwiseOrCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, const PtrStepb src2, PtrStepb dst, cudaStream_t stream);
+    template <typename T>
+    void bitwiseMaskOrCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
 
-template <typename T>
-void bitwiseMaskOrCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
+    void bitwiseAndCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, const PtrStepb src2, PtrStepb dst, cudaStream_t stream);
 
-void bitwiseAndCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, const PtrStepb src2, PtrStepb dst, cudaStream_t stream);
+    template <typename T>
+    void bitwiseMaskAndCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
 
-template <typename T>
-void bitwiseMaskAndCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
+    void bitwiseXorCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, const PtrStepb src2, PtrStepb dst, cudaStream_t stream);
 
-void bitwiseXorCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, const PtrStepb src2, PtrStepb dst, cudaStream_t stream);
-
-template <typename T>
-void bitwiseMaskXorCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T>
+    void bitwiseMaskXorCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, const PtrStepb mask, PtrStepb dst, cudaStream_t stream);
+}}}
 
 namespace
 {
@@ -919,12 +911,12 @@ namespace
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
 
-        OPENCV_DEVICE_NAMESPACE_ bitwiseOrCaller(dst.rows, dst.cols, dst.elemSize1(), dst.channels(), src1, src2, dst, stream);
+        ::cv::gpu::device::bitwiseOrCaller(dst.rows, dst.cols, dst.elemSize1(), dst.channels(), src1, src2, dst, stream);
     }
 
     void bitwiseOrCaller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
-        using namespace OPENCV_DEVICE_NAMESPACE;
+        using namespace ::cv::gpu::device;
 
         typedef void (*Caller)(int, int, int, const PtrStepb, const PtrStepb, const PtrStepb, PtrStepb, cudaStream_t);
 
@@ -952,13 +944,13 @@ namespace
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
 
-        OPENCV_DEVICE_NAMESPACE_ bitwiseAndCaller(dst.rows, dst.cols, dst.elemSize1(), dst.channels(), src1, src2, dst, stream);
+        ::cv::gpu::device::bitwiseAndCaller(dst.rows, dst.cols, dst.elemSize1(), dst.channels(), src1, src2, dst, stream);
     }
 
 
     void bitwiseAndCaller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
-        using namespace OPENCV_DEVICE_NAMESPACE;
+        using namespace ::cv::gpu::device;
 
         typedef void (*Caller)(int, int, int, const PtrStepb, const PtrStepb, const PtrStepb, PtrStepb, cudaStream_t);
 
@@ -986,13 +978,13 @@ namespace
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
 
-        OPENCV_DEVICE_NAMESPACE_ bitwiseXorCaller(dst.rows, dst.cols, dst.elemSize1(), dst.channels(), src1, src2, dst, stream);
+        ::cv::gpu::device::bitwiseXorCaller(dst.rows, dst.cols, dst.elemSize1(), dst.channels(), src1, src2, dst, stream);
     }
 
 
     void bitwiseXorCaller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, cudaStream_t stream)
     {
-        using namespace OPENCV_DEVICE_NAMESPACE;
+        using namespace ::cv::gpu::device;
 
         typedef void (*Caller)(int, int, int, const PtrStepb, const PtrStepb, const PtrStepb, PtrStepb, cudaStream_t);
 
@@ -1046,21 +1038,20 @@ void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 //////////////////////////////////////////////////////////////////////////////
 // Minimum and maximum operations
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template <typename T>
+    void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream);
 
-template <typename T>
-void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream);
+    template <typename T>
+    void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream);
 
-template <typename T>
-void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream);
+    template <typename T>
+    void min_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream);
 
-template <typename T>
-void min_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream);
-
-template <typename T>
-void max_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+    template <typename T>
+    void max_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream);
+}}}
 
 namespace
 {
@@ -1069,14 +1060,14 @@ namespace
     {
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
-        OPENCV_DEVICE_NAMESPACE_ min_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
+        ::cv::gpu::device::min_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
     }
 
     template <typename T>
     void min_caller(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream)
     {
         dst.create(src1.size(), src1.type());
-        OPENCV_DEVICE_NAMESPACE_ min_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
+        ::cv::gpu::device::min_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
     }
     
     template <typename T>
@@ -1084,14 +1075,14 @@ namespace
     {
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
-        OPENCV_DEVICE_NAMESPACE_ max_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
+        ::cv::gpu::device::max_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
     }
 
     template <typename T>
     void max_caller(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream)
     {
         dst.create(src1.size(), src1.type());
-        OPENCV_DEVICE_NAMESPACE_ max_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
+        ::cv::gpu::device::max_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
     }
 }
 
@@ -1155,18 +1146,17 @@ void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // threshold
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-template <typename T>
-void threshold_gpu(const DevMem2Db& src, const DevMem2Db& dst, T thresh, T maxVal, int type, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template <typename T>
+    void threshold_gpu(const DevMem2Db& src, const DevMem2Db& dst, T thresh, T maxVal, int type, cudaStream_t stream);
+}}}
 
 namespace
 {
     template <typename T> void threshold_caller(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, cudaStream_t stream)
     {
-        OPENCV_DEVICE_NAMESPACE_ threshold_gpu<T>(src, dst, saturate_cast<T>(thresh), saturate_cast<T>(maxVal), type, stream);
+        ::cv::gpu::device::threshold_gpu<T>(src, dst, saturate_cast<T>(thresh), saturate_cast<T>(maxVal), type, stream);
     }
 }
 
@@ -1223,16 +1213,15 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
 ////////////////////////////////////////////////////////////////////////
 // pow
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-template<typename T>
-void pow_caller(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template<typename T>
+    void pow_caller(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
+}}}
 
 void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     CV_Assert(src.depth() != CV_64F);
     dst.create(src.size(), src.type());
@@ -1252,16 +1241,15 @@ void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // addWeighted
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-template <typename T1, typename T2, typename D>
-void addWeighted_gpu(const DevMem2Db& src1, double alpha, const DevMem2Db& src2, double beta, double gamma, const DevMem2Db& dst, cudaStream_t stream);
-
-END_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    template <typename T1, typename T2, typename D>
+    void addWeighted_gpu(const DevMem2Db& src1, double alpha, const DevMem2Db& src2, double beta, double gamma, const DevMem2Db& dst, cudaStream_t stream);
+}}}
 
 void cv::gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int dtype, Stream& stream)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE;
+    using namespace ::cv::gpu::device;
 
     CV_Assert(src1.size() == src2.size());
     CV_Assert(src1.type() == src2.type() || (dtype >= 0 && src1.channels() == src2.channels()));

@@ -50,7 +50,7 @@
 #include "safe_call.hpp"
 
 #ifndef CV_PI
-#define CV_PI   3.1415926535897932384626433832795f
+#define CV_PI   3.1415926535897932384626433832795
 #endif
 
 #ifndef CV_PI_F
@@ -61,27 +61,21 @@
   #endif
 #endif
 
-#define BEGIN_OPENCV_DEVICE_NAMESPACE namespace cv { namespace gpu { namespace device { 
-#define END_OPENCV_DEVICE_NAMESPACE   }}}
-#define OPENCV_DEVICE_NAMESPACE       ::cv::gpu::device
-#define OPENCV_DEVICE_NAMESPACE_      ::cv::gpu::device:: 
-
 #ifdef __CUDACC__
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef signed char schar;
-typedef unsigned int uint;
-
-template<class T> static inline void bindTexture(const textureReference* tex, const DevMem2D_<T>& img)
+namespace cv { namespace gpu { namespace device 
 {
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
-    cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
-}
+    typedef unsigned char uchar;
+    typedef unsigned short ushort;
+    typedef signed char schar;
+    typedef unsigned int uint;
 
-END_OPENCV_DEVICE_NAMESPACE
+    template<class T> static inline void bindTexture(const textureReference* tex, const DevMem2D_<T>& img)
+    {
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
+        cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
+    }
+}}}
 
 #endif
 
@@ -101,87 +95,6 @@ namespace cv { namespace gpu
     bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
 
     static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
-
-    /*template<class T> static inline void uploadConstant(const char* name, const T& value) 
-    { 
-        cudaSafeCall( cudaMemcpyToSymbol(name, &value, sizeof(T)) ); 
-    }
-
-    template<class T> static inline void uploadConstant(const char* name, const T& value, cudaStream_t stream) 
-    {
-        cudaSafeCall( cudaMemcpyToSymbolAsync(name, &value, sizeof(T), 0, cudaMemcpyHostToDevice, stream) ); 
-    }   */     
-
-    //template<class T> static inline void bindTexture(const char* name, const DevMem2D_<T>& img)
-    //{            
-    //    //!!!! const_cast is disabled!
-    //    //!!!! Please use constructor of 'class texture'  instead.
-    //
-    //    //textureReference* tex; 
-    //    //cudaSafeCall( cudaGetTextureReference((const textureReference**)&tex, name) ); 
-    //    //tex->normalized = normalized;
-    //    //tex->filterMode = filterMode;
-    //    //tex->addressMode[0] = addrMode;
-    //    //tex->addressMode[1] = addrMode;
-    //    
-    //    const textureReference* tex; 
-    //    cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
-    //
-    //    cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
-    //    cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
-    //}
-
-    //static inline void unbindTexture(const char *name)
-    //{
-    //    const textureReference* tex; 
-    //    cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
-    //    cudaSafeCall( cudaUnbindTexture(tex) );
-    //}
-
-    
-
-    //class TextureBinder
-    //{
-    //public:
-    //    TextureBinder() : tex_(0) {}
-    //    template <typename T> TextureBinder(const textureReference* tex, const DevMem2D_<T>& img) : tex_(0)
-    //    {
-    //        bind(tex, img);
-    //    }
-    //    template <typename T> TextureBinder(const char* tex_name, const DevMem2D_<T>& img) : tex_(0)
-    //    {
-    //        bind(tex_name, img);
-    //    }
-    //    ~TextureBinder() { unbind(); }
-    //
-    //    template <typename T> void bind(const textureReference* tex, const DevMem2D_<T>& img)
-    //    {
-    //        unbind();
-    //
-    //        cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
-    //        cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
-    //
-    //        tex_ = tex;
-    //    }
-    //    template <typename T> void bind(const char* tex_name, const DevMem2D_<T>& img)
-    //    {
-    //        const textureReference* tex; 
-    //        cudaSafeCall( cudaGetTextureReference(&tex, tex_name) ); 
-    //        bind(tex, img);
-    //    }
-    //
-    //    void unbind()
-    //    {
-    //        if (tex_)
-    //        {
-    //            cudaUnbindTexture(tex_);
-    //            tex_ = 0;
-    //        }
-    //    }
-    //
-    //private:
-    //    const textureReference* tex_;
-    //};
 
     class NppStreamHandler
     {

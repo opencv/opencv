@@ -49,24 +49,21 @@
     #define __OPENCV_GPU_HOST_DEVICE__
 #endif  
 
-namespace cv
-{
-    namespace gpu
+namespace cv { namespace gpu 
+{ 
+    namespace device
     {
-        namespace device
-        {
-            template<bool expr> struct Static {};
-            
-            template<> struct Static<true> 
-            { 
-                __OPENCV_GPU_HOST_DEVICE__ static void check() {}; 
-            };
-        }    
+        template<bool expr> struct Static {};
+        
+        template<> struct Static<true> 
+        { 
+            __OPENCV_GPU_HOST_DEVICE__ static void check() {}; 
+        };
+    }    
 
-        using cv::gpu::device::Static;
-    }
-}
+    using ::cv::gpu::device::Static;
+}}
 
-#undef __PCL_GPU_HOST_DEVICE__
+#undef __OPENCV_GPU_HOST_DEVICE__
 
 #endif /* __OPENCV_GPU_GPU_DEVICE_STATIC_CHECK_HPP__ */ 

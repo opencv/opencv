@@ -63,35 +63,34 @@ void cv::gpu::SURF_GPU::releaseMemory() { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace surf
+namespace cv { namespace gpu { namespace device 
 {
-    void loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold);
-    void loadOctaveConstants(int octave, int layer_rows, int layer_cols);
+    namespace surf
+    {
+        void loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold);
+        void loadOctaveConstants(int octave, int layer_rows, int layer_cols);
 
-    void bindImgTex(DevMem2Db img);
-    void bindSumTex(DevMem2D_<unsigned int> sum);
-    void bindMaskSumTex(DevMem2D_<unsigned int> maskSum);
+        void bindImgTex(DevMem2Db img);
+        void bindSumTex(DevMem2D_<unsigned int> sum);
+        void bindMaskSumTex(DevMem2D_<unsigned int> maskSum);
 
-    void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols, int octave, int nOctaveLayers);
+        void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols, int octave, int nOctaveLayers);
 
-    void icvFindMaximaInLayer_gpu(const PtrStepf& det, const PtrStepf& trace, int4* maxPosBuffer, unsigned int* maxCounter,
-        int img_rows, int img_cols, int octave, bool use_mask, int nLayers);
+        void icvFindMaximaInLayer_gpu(const PtrStepf& det, const PtrStepf& trace, int4* maxPosBuffer, unsigned int* maxCounter,
+            int img_rows, int img_cols, int octave, bool use_mask, int nLayers);
 
-    void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter, 
-        float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian, 
-        unsigned int* featureCounter);
+        void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter, 
+            float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian, 
+            unsigned int* featureCounter);
 
-    void icvCalcOrientation_gpu(const float* featureX, const float* featureY, const float* featureSize, float* featureDir, int nFeatures);
+        void icvCalcOrientation_gpu(const float* featureX, const float* featureY, const float* featureSize, float* featureDir, int nFeatures);
 
-    void compute_descriptors_gpu(const DevMem2Df& descriptors, 
-        const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures);
-}
+        void compute_descriptors_gpu(const DevMem2Df& descriptors, 
+            const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures);
+    }
+}}}
 
-END_OPENCV_DEVICE_NAMESPACE
-
-using namespace OPENCV_DEVICE_NAMESPACE_ surf;
+using namespace ::cv::gpu::device::surf;
 
 namespace
 {

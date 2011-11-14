@@ -44,181 +44,181 @@
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/color.hpp"
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_rgba_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_rgba_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_x = 8 };
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_bgr555_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(rgba_to_bgr555_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_bgr565_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(rgba_to_bgr565_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_bgr555_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(rgba_to_bgr555_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_bgr565_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(rgba_to_bgr565_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgr555_to_bgra_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgr555_to_rgba_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgr565_to_bgra_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgr565_to_rgba_traits::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgr555_to_bgra_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgr555_to_rgba_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgr565_to_bgra_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgr565_to_rgba_traits::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(gray_to_bgra_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(gray_to_bgra_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(gray_to_bgr555_traits::functor_type)
+    {
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(gray_to_bgr565_traits::functor_type)
+    {
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(gray_to_bgr555_traits::functor_type)
-{
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(gray_to_bgr565_traits::functor_type)
-{
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_yuv4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(rgba_to_yuv4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_yuv4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(rgba_to_yuv4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(yuv4_to_bgra_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(yuv4_to_rgba_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(yuv4_to_bgra_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(yuv4_to_rgba_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_YCrCb4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(rgba_to_YCrCb4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_YCrCb4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(rgba_to_YCrCb4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(YCrCb4_to_bgra_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(YCrCb4_to_rgba_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };    
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(YCrCb4_to_bgra_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(YCrCb4_to_rgba_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};    
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_xyz4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(rgba_to_xyz4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_xyz4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(rgba_to_xyz4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(xyz4_to_bgra_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(xyz4_to_rgba_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(xyz4_to_bgra_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(xyz4_to_rgba_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_hsv4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(rgba_to_hsv4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_hsv4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(rgba_to_hsv4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(hsv4_to_bgra_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(hsv4_to_rgba_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(hsv4_to_bgra_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(hsv4_to_rgba_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_hls4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(rgba_to_hls4_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(bgra_to_hls4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(rgba_to_hls4_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(hls4_to_bgra_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
-DEFINE_TRANSFORM_FUNCTOR_TRAITS(hls4_to_rgba_traits<uchar>::functor_type)
-{
-    enum { smart_block_dim_y = 8 };
-    enum { smart_shift = 4 };
-};
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(hls4_to_bgra_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(hls4_to_rgba_traits<uchar>::functor_type)
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR(name, traits) \
     void name(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream) \
@@ -226,7 +226,7 @@ DEFINE_TRANSFORM_FUNCTOR_TRAITS(hls4_to_rgba_traits<uchar>::functor_type)
         traits::functor_type functor = traits::create_functor(); \
         typedef typename traits::functor_type::argument_type src_t; \
         typedef typename traits::functor_type::result_type   dst_t; \
-        OPENCV_DEVICE_NAMESPACE_ transform((DevMem2D_<src_t>)src, (DevMem2D_<dst_t>)dst, functor, stream); \
+        ::cv::gpu::device::transform((DevMem2D_<src_t>)src, (DevMem2D_<dst_t>)dst, functor, stream); \
     }
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(name) \
@@ -243,138 +243,137 @@ DEFINE_TRANSFORM_FUNCTOR_TRAITS(hls4_to_rgba_traits<uchar>::functor_type)
     OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _full_8u, name ## _full_traits<uchar>) \
     OPENCV_GPU_IMPLEMENT_CVTCOLOR(name ## _full_32f, name ## _full_traits<float>)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_bgra)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_rgba)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr_to_bgr555)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr_to_bgr565)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgb_to_bgr555)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgb_to_bgr565)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgra_to_bgr555)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgra_to_bgr565)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgba_to_bgr555)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgba_to_bgr565)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr_to_bgr555)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr_to_bgr565)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgb_to_bgr555)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgb_to_bgr565)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgra_to_bgr555)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgra_to_bgr565)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgba_to_bgr555)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(rgba_to_bgr565)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_bgra)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_bgra)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(gray_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(gray_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(gray_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(gray_to_bgra)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(gray_to_bgr555)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(gray_to_bgr565)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(gray_to_bgr555)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(gray_to_bgr565)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_gray)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_gray)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr555_to_gray)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(bgr565_to_gray)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_gray)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_gray)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_gray)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_gray)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_gray)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_gray)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_gray)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_gray)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_yuv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_yuv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_yuv4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_yuv4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_yuv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_yuv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_yuv4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_yuv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_yuv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_yuv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_yuv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_yuv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_yuv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_yuv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_yuv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_yuv4)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_bgra)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(yuv4_to_bgra)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_YCrCb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_YCrCb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_YCrCb4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_YCrCb4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_YCrCb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_YCrCb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_YCrCb4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_YCrCb4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_YCrCb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_YCrCb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_YCrCb4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_YCrCb4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_YCrCb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_YCrCb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_YCrCb4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_YCrCb4)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_bgra)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(YCrCb4_to_bgra)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_xyz)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_xyz)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_xyz4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_xyz4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_xyz)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_xyz)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_xyz4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_xyz4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_xyz)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_xyz)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgb_to_xyz4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(rgba_to_xyz4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_xyz)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_xyz)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgr_to_xyz4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(bgra_to_xyz4)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_bgra)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL(xyz4_to_bgra)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hsv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hsv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hsv4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hsv4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hsv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hsv)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hsv4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hsv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hsv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hsv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hsv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hsv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hsv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hsv)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hsv4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hsv4)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_bgra)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hsv4_to_bgra)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hls)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hls)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hls4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hls4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hls)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hls)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hls4)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hls4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hls)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hls)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgb_to_hls4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(rgba_to_hls4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hls)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hls)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgr_to_hls4)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(bgra_to_hls4)
 
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_rgb)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_rgba)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_bgra)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_bgr)
-OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_rgb)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_rgba)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls_to_bgra)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_bgr)
+    OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F(hls4_to_bgra)
 
-#undef OPENCV_GPU_IMPLEMENT_CVTCOLOR
-#undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE
-#undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL
-#undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F
-
-END_OPENCV_DEVICE_NAMESPACE
+    #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR
+    #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE
+    #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL
+    #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F
+}}} // namespace cv { namespace gpu { namespace device

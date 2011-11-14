@@ -71,20 +71,19 @@ cv::gpu::Stream::operator bool() const { throw_nogpu(); return false; }
 
 #include "opencv2/gpu/stream_accessor.hpp"
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    void copy_to_with_mask(const DevMem2Db& src, DevMem2Db dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t & stream = 0);
 
-void copy_to_with_mask(const DevMem2Db& src, DevMem2Db dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t & stream = 0);
+    template <typename T>
+    void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream);
+    template <typename T>
+    void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
 
-template <typename T>
-void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream);
-template <typename T>
-void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
+    void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
+}}}
 
-void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
-
-END_OPENCV_DEVICE_NAMESPACE
-
-using namespace OPENCV_DEVICE_NAMESPACE;
+using namespace ::cv::gpu::device;
 
 struct Stream::Impl
 {

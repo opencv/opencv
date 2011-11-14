@@ -735,21 +735,20 @@ void cv::gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& ke
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Separable Linear Filter
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace row_filter
+namespace cv { namespace gpu { namespace device 
 {
-    template <typename T, typename D>
-    void linearRowFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-}
+    namespace row_filter
+    {
+        template <typename T, typename D>
+        void linearRowFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    }
 
-namespace column_filter
-{
-    template <typename T, typename D>
-    void linearColumnFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-}
-
-END_OPENCV_DEVICE_NAMESPACE
+    namespace column_filter
+    {
+        template <typename T, typename D>
+        void linearColumnFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    }
+}}}
 
 namespace
 {
@@ -803,7 +802,7 @@ namespace
 
 Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, int anchor, int borderType)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE_ row_filter;
+    using namespace ::cv::gpu::device::row_filter;
 
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R};
     
@@ -918,7 +917,7 @@ namespace
 
 Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, int anchor, int borderType)
 {
-    using namespace OPENCV_DEVICE_NAMESPACE_ column_filter;
+    using namespace ::cv::gpu::device::column_filter;
 
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R};
     

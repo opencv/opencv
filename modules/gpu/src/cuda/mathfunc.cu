@@ -42,174 +42,172 @@
 
 #include "internal_shared.hpp"
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace mathfunc {
-
-//////////////////////////////////////////////////////////////////////////////////////
-// Cart <-> Polar
-
-struct Nothing
+namespace cv { namespace gpu { namespace device 
 {
-    static __device__ __forceinline__ void calc(int, int, float, float, float*, size_t, float)
+    namespace mathfunc 
     {
-    }
-};
-struct Magnitude
-{
-    static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
-    {
-        dst[y * dst_step + x] = ::sqrtf(x_data * x_data + y_data * y_data);
-    }
-};
-struct MagnitudeSqr
-{
-    static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
-    {
-        dst[y * dst_step + x] = x_data * x_data + y_data * y_data;
-    }
-};
-struct Atan2
-{
-    static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float scale)
-    {
-        float angle = ::atan2f(y_data, x_data);
-        angle += (angle < 0) * 2.0 * CV_PI;
-        dst[y * dst_step + x] = scale * angle;
-    }
-};
-template <typename Mag, typename Angle>
-__global__ void cartToPolar(const float* xptr, size_t x_step, const float* yptr, size_t y_step, 
-                            float* mag, size_t mag_step, float* angle, size_t angle_step, float scale, int width, int height)
-{
-	const int x = blockDim.x * blockIdx.x + threadIdx.x;
-	const int y = blockDim.y * blockIdx.y + threadIdx.y;
+        //////////////////////////////////////////////////////////////////////////////////////
+        // Cart <-> Polar
 
-    if (x < width && y < height)
-    {
-        float x_data = xptr[y * x_step + x];
-        float y_data = yptr[y * y_step + x];
-
-        Mag::calc(x, y, x_data, y_data, mag, mag_step, scale);
-        Angle::calc(x, y, x_data, y_data, angle, angle_step, scale);
-    }
-}
-
-struct NonEmptyMag
-{
-    static __device__ __forceinline__ float get(const float* mag, size_t mag_step, int x, int y)
-    {
-        return mag[y * mag_step + x];
-    }
-};
-struct EmptyMag
-{
-    static __device__ __forceinline__ float get(const float*, size_t, int, int)
-    {
-        return 1.0f;
-    }
-};
-template <typename Mag>
-__global__ void polarToCart(const float* mag, size_t mag_step, const float* angle, size_t angle_step, float scale,
-    float* xptr, size_t x_step, float* yptr, size_t y_step, int width, int height)
-{
-	const int x = blockDim.x * blockIdx.x + threadIdx.x;
-	const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-    if (x < width && y < height)
-    {
-        float mag_data = Mag::get(mag, mag_step, x, y);
-        float angle_data = angle[y * angle_step + x];
-        float sin_a, cos_a;
-
-        ::sincosf(scale * angle_data, &sin_a, &cos_a);
-
-        xptr[y * x_step + x] = mag_data * cos_a;
-        yptr[y * y_step + x] = mag_data * sin_a;
-    }
-}
-
-template <typename Mag, typename Angle>
-void cartToPolar_caller(DevMem2Df x, DevMem2Df y, DevMem2Df mag, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream)
-{
-    dim3 threads(32, 8, 1);
-    dim3 grid(1, 1, 1);
-
-    grid.x = divUp(x.cols, threads.x);
-    grid.y = divUp(x.rows, threads.y);
-    
-    const float scale = angleInDegrees ? (float)(180.0f / CV_PI) : 1.f;
-
-    cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
-        x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), 
-        mag.data, mag.step/mag.elemSize(), angle.data, angle.step/angle.elemSize(), scale, x.cols, x.rows);
-    cudaSafeCall( cudaGetLastError() );
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
-
-void cartToPolar_gpu(DevMem2Df x, DevMem2Df y, DevMem2Df mag, bool magSqr, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream)
-{
-    typedef void (*caller_t)(DevMem2Df x, DevMem2Df y, DevMem2Df mag, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream);
-    static const caller_t callers[2][2][2] = 
-    {
+        struct Nothing
         {
+            static __device__ __forceinline__ void calc(int, int, float, float, float*, size_t, float)
             {
-                cartToPolar_caller<Magnitude, Atan2>,
-                cartToPolar_caller<Magnitude, Nothing>
-            },
-            {
-                cartToPolar_caller<MagnitudeSqr, Atan2>,
-                cartToPolar_caller<MagnitudeSqr, Nothing>,
             }
-        },
+        };
+        struct Magnitude
         {
+            static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
             {
-                cartToPolar_caller<Nothing, Atan2>,
-                cartToPolar_caller<Nothing, Nothing>
-            },
+                dst[y * dst_step + x] = ::sqrtf(x_data * x_data + y_data * y_data);
+            }
+        };
+        struct MagnitudeSqr
+        {
+            static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
             {
-                cartToPolar_caller<Nothing, Atan2>,
-                cartToPolar_caller<Nothing, Nothing>,
+                dst[y * dst_step + x] = x_data * x_data + y_data * y_data;
+            }
+        };
+        struct Atan2
+        {
+            static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float scale)
+            {
+                float angle = ::atan2f(y_data, x_data);
+                angle += (angle < 0) * 2.0 * CV_PI;
+                dst[y * dst_step + x] = scale * angle;
+            }
+        };
+        template <typename Mag, typename Angle>
+        __global__ void cartToPolar(const float* xptr, size_t x_step, const float* yptr, size_t y_step, 
+                                    float* mag, size_t mag_step, float* angle, size_t angle_step, float scale, int width, int height)
+        {
+	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+	        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+            if (x < width && y < height)
+            {
+                float x_data = xptr[y * x_step + x];
+                float y_data = yptr[y * y_step + x];
+
+                Mag::calc(x, y, x_data, y_data, mag, mag_step, scale);
+                Angle::calc(x, y, x_data, y_data, angle, angle_step, scale);
             }
         }
-    };
 
-    callers[mag.data == 0][magSqr][angle.data == 0](x, y, mag, angle, angleInDegrees, stream);
-}
+        struct NonEmptyMag
+        {
+            static __device__ __forceinline__ float get(const float* mag, size_t mag_step, int x, int y)
+            {
+                return mag[y * mag_step + x];
+            }
+        };
+        struct EmptyMag
+        {
+            static __device__ __forceinline__ float get(const float*, size_t, int, int)
+            {
+                return 1.0f;
+            }
+        };
+        template <typename Mag>
+        __global__ void polarToCart(const float* mag, size_t mag_step, const float* angle, size_t angle_step, float scale,
+            float* xptr, size_t x_step, float* yptr, size_t y_step, int width, int height)
+        {
+	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
+	        const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-template <typename Mag>
-void polarToCart_caller(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream)
-{
-    dim3 threads(32, 8, 1);
-    dim3 grid(1, 1, 1);
+            if (x < width && y < height)
+            {
+                float mag_data = Mag::get(mag, mag_step, x, y);
+                float angle_data = angle[y * angle_step + x];
+                float sin_a, cos_a;
 
-    grid.x = divUp(mag.cols, threads.x);
-    grid.y = divUp(mag.rows, threads.y);
-    
-    const float scale = angleInDegrees ? (float)(CV_PI / 180.0f) : 1.0f;
+                ::sincosf(scale * angle_data, &sin_a, &cos_a);
 
-    polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.data, mag.step/mag.elemSize(), 
-        angle.data, angle.step/angle.elemSize(), scale, x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), mag.cols, mag.rows);
-    cudaSafeCall( cudaGetLastError() );
+                xptr[y * x_step + x] = mag_data * cos_a;
+                yptr[y * y_step + x] = mag_data * sin_a;
+            }
+        }
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
+        template <typename Mag, typename Angle>
+        void cartToPolar_caller(DevMem2Df x, DevMem2Df y, DevMem2Df mag, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream)
+        {
+            dim3 threads(32, 8, 1);
+            dim3 grid(1, 1, 1);
 
-void polarToCart_gpu(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream)
-{
-    typedef void (*caller_t)(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream);
-    static const caller_t callers[2] = 
-    {
-        polarToCart_caller<NonEmptyMag>,
-        polarToCart_caller<EmptyMag>
-    };
+            grid.x = divUp(x.cols, threads.x);
+            grid.y = divUp(x.rows, threads.y);
+            
+            const float scale = angleInDegrees ? (float)(180.0f / CV_PI) : 1.f;
 
-    callers[mag.data == 0](mag, angle, x, y, angleInDegrees, stream);
-}
+            cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
+                x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), 
+                mag.data, mag.step/mag.elemSize(), angle.data, angle.step/angle.elemSize(), scale, x.cols, x.rows);
+            cudaSafeCall( cudaGetLastError() );
 
-} // namespace mathfunc
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
 
-END_OPENCV_DEVICE_NAMESPACE
+        void cartToPolar_gpu(DevMem2Df x, DevMem2Df y, DevMem2Df mag, bool magSqr, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream)
+        {
+            typedef void (*caller_t)(DevMem2Df x, DevMem2Df y, DevMem2Df mag, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream);
+            static const caller_t callers[2][2][2] = 
+            {
+                {
+                    {
+                        cartToPolar_caller<Magnitude, Atan2>,
+                        cartToPolar_caller<Magnitude, Nothing>
+                    },
+                    {
+                        cartToPolar_caller<MagnitudeSqr, Atan2>,
+                        cartToPolar_caller<MagnitudeSqr, Nothing>,
+                    }
+                },
+                {
+                    {
+                        cartToPolar_caller<Nothing, Atan2>,
+                        cartToPolar_caller<Nothing, Nothing>
+                    },
+                    {
+                        cartToPolar_caller<Nothing, Atan2>,
+                        cartToPolar_caller<Nothing, Nothing>,
+                    }
+                }
+            };
+
+            callers[mag.data == 0][magSqr][angle.data == 0](x, y, mag, angle, angleInDegrees, stream);
+        }
+
+        template <typename Mag>
+        void polarToCart_caller(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream)
+        {
+            dim3 threads(32, 8, 1);
+            dim3 grid(1, 1, 1);
+
+            grid.x = divUp(mag.cols, threads.x);
+            grid.y = divUp(mag.rows, threads.y);
+            
+            const float scale = angleInDegrees ? (float)(CV_PI / 180.0f) : 1.0f;
+
+            polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.data, mag.step/mag.elemSize(), 
+                angle.data, angle.step/angle.elemSize(), scale, x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), mag.cols, mag.rows);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        void polarToCart_gpu(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream)
+        {
+            typedef void (*caller_t)(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream);
+            static const caller_t callers[2] = 
+            {
+                polarToCart_caller<NonEmptyMag>,
+                polarToCart_caller<EmptyMag>
+            };
+
+            callers[mag.data == 0](mag, angle, x, y, angleInDegrees, stream);
+        }
+    } // namespace mathfunc
+}}} // namespace cv { namespace gpu { namespace device

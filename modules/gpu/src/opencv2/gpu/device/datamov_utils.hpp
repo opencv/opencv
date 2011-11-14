@@ -45,16 +45,8 @@
 
 #include "internal_shared.hpp"
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-#if defined(_WIN64) || defined(__LP64__)		
-    // 64-bit register modifier for inlined asm
-    #define OPENCV_GPU_ASM_PTR "l"
-#else	
-    // 32-bit register modifier for inlined asm
-    #define OPENCV_GPU_ASM_PTR "r"
-#endif
-
+namespace cv { namespace gpu { namespace device 
+{
     #if __CUDA_ARCH__ >= 200
 
         // for Fermi memory space is detected automatically
@@ -64,6 +56,14 @@ BEGIN_OPENCV_DEVICE_NAMESPACE
         };
             
     #else // __CUDA_ARCH__ >= 200        
+
+        #if defined(_WIN64) || defined(__LP64__)		
+            // 64-bit register modifier for inlined asm
+            #define OPENCV_GPU_ASM_PTR "l"
+        #else	
+            // 32-bit register modifier for inlined asm
+            #define OPENCV_GPU_ASM_PTR "r"
+        #endif
 
         template<class T> struct ForceGlob;
 
@@ -85,21 +85,21 @@ BEGIN_OPENCV_DEVICE_NAMESPACE
                 } \
             };
         
-        OPENCV_GPU_DEFINE_FORCE_GLOB_B(uchar,  u8)
-        OPENCV_GPU_DEFINE_FORCE_GLOB_B(schar,  s8)
-        OPENCV_GPU_DEFINE_FORCE_GLOB_B(char,   b8)
-        OPENCV_GPU_DEFINE_FORCE_GLOB  (ushort, u16, h)
-        OPENCV_GPU_DEFINE_FORCE_GLOB  (short,  s16, h)
-        OPENCV_GPU_DEFINE_FORCE_GLOB  (uint,   u32, r)
-        OPENCV_GPU_DEFINE_FORCE_GLOB  (int,    s32, r)	
-        OPENCV_GPU_DEFINE_FORCE_GLOB  (float,  f32, f)	
-        OPENCV_GPU_DEFINE_FORCE_GLOB  (double, f64, d)	            
+            OPENCV_GPU_DEFINE_FORCE_GLOB_B(uchar,  u8)
+            OPENCV_GPU_DEFINE_FORCE_GLOB_B(schar,  s8)
+            OPENCV_GPU_DEFINE_FORCE_GLOB_B(char,   b8)
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (ushort, u16, h)
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (short,  s16, h)
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (uint,   u32, r)
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (int,    s32, r)	
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (float,  f32, f)	
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (double, f64, d)	            
 
-    #undef OPENCV_GPU_DEFINE_FORCE_GLOB
-    #undef OPENCV_GPU_DEFINE_FORCE_GLOB_B
+        #undef OPENCV_GPU_DEFINE_FORCE_GLOB
+        #undef OPENCV_GPU_DEFINE_FORCE_GLOB_B
+        #undef OPENCV_GPU_ASM_PTR
         
     #endif // __CUDA_ARCH__ >= 200
-
-END_OPENCV_DEVICE_NAMESPACE
+}}} // namespace cv { namespace gpu { namespace device
 
 #endif // __OPENCV_GPU_DATAMOV_UTILS_HPP__

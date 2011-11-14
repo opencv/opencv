@@ -56,31 +56,30 @@ void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat
 
 #else
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace transform_points 
+namespace cv { namespace gpu { namespace device 
 {
-    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst, cudaStream_t stream);
-}
+    namespace transform_points 
+    {
+        void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst, cudaStream_t stream);
+    }
 
-namespace project_points 
-{
-    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
-}
+    namespace project_points 
+    {
+        void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
+    }
 
-namespace solve_pnp_ransac
-{
-    int maxNumIters();
+    namespace solve_pnp_ransac
+    {
+        int maxNumIters();
 
-    void computeHypothesisScores(
-            const int num_hypotheses, const int num_points, const float* rot_matrices,
-            const float3* transl_vectors, const float3* object, const float2* image,
-            const float dist_threshold, int* hypothesis_scores);
-}
+        void computeHypothesisScores(
+                const int num_hypotheses, const int num_points, const float* rot_matrices,
+                const float3* transl_vectors, const float3* object, const float2* image,
+                const float dist_threshold, int* hypothesis_scores);
+    }
+}}}
 
-END_OPENCV_DEVICE_NAMESPACE
-
-using namespace OPENCV_DEVICE_NAMESPACE;
+using namespace ::cv::gpu::device;
 
 namespace
 {

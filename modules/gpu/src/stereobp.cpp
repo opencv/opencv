@@ -59,28 +59,27 @@ void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream
 
 #else /* !defined (HAVE_CUDA) */
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace stereobp
+namespace cv { namespace gpu { namespace device 
 {
-    void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump);
-    template<typename T, typename D>
-    void comp_data_gpu(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream);
-    template<typename T>
-    void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
-    template <typename T>
-    void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Db* mus, DevMem2Db* mds, DevMem2Db* mls, DevMem2Db* mrs, cudaStream_t stream);
-    template <typename T>
-    void calc_all_iterations_gpu(int cols, int rows, int iters, const DevMem2Db& u, const DevMem2Db& d, 
-        const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, cudaStream_t stream);
-    template <typename T>
-    void output_gpu(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, 
-        const DevMem2D_<short>& disp, cudaStream_t stream);
-}
+    namespace stereobp
+    {
+        void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump);
+        template<typename T, typename D>
+        void comp_data_gpu(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream);
+        template<typename T>
+        void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
+        template <typename T>
+        void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Db* mus, DevMem2Db* mds, DevMem2Db* mls, DevMem2Db* mrs, cudaStream_t stream);
+        template <typename T>
+        void calc_all_iterations_gpu(int cols, int rows, int iters, const DevMem2Db& u, const DevMem2Db& d, 
+            const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, cudaStream_t stream);
+        template <typename T>
+        void output_gpu(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, 
+            const DevMem2D_<short>& disp, cudaStream_t stream);
+    }
+}}}
 
-END_OPENCV_DEVICE_NAMESPACE
-
-using namespace OPENCV_DEVICE_NAMESPACE_ stereobp;
+using namespace ::cv::gpu::device::stereobp;
 
 namespace
 {

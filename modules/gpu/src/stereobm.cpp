@@ -55,16 +55,15 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, 
 
 #else /* !defined (HAVE_CUDA) */
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace stereobm
+namespace cv { namespace gpu { namespace device 
 {
-    void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int ndisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t & stream);
-    void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap /*= 31*/, cudaStream_t & stream);
-    void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream);
-}
-
-END_OPENCV_DEVICE_NAMESPACE
+    namespace stereobm
+    {
+        void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int ndisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t & stream);
+        void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap /*= 31*/, cudaStream_t & stream);
+        void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream);
+    }
+}}}
 
 const float defaultAvgTexThreshold = 3;
 
@@ -99,7 +98,7 @@ namespace
 {
     void stereo_bm_gpu_operator( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  riBuf,  int preset, int ndisp, int winSize, float avergeTexThreshold, const GpuMat& left, const GpuMat& right, GpuMat& disparity, cudaStream_t stream)
     {
-        using namespace OPENCV_DEVICE_NAMESPACE_ stereobm;
+        using namespace ::cv::gpu::device::stereobm;
 
         CV_DbgAssert(left.rows == right.rows && left.cols == right.cols);
         CV_DbgAssert(left.type() == CV_8UC1);

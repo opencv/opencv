@@ -225,7 +225,7 @@ TEST_P(InterpolateFrames, Regression)
 
 #ifndef DUMP
 
-    EXPECT_MAT_NEAR(newFrame_gold, newFrame, 1e-4);
+    EXPECT_MAT_NEAR(newFrame_gold, newFrame, 1e-3);
 
 #else
 

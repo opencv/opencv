@@ -274,18 +274,17 @@ void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory)
 ////////////////////////////////////////////////////////////////////
 // GpuFuncTable
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    void copy_to_with_mask(const DevMem2Db& src, DevMem2Db dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t& stream = 0);
 
-void copy_to_with_mask(const DevMem2Db& src, DevMem2Db dst, int depth, const DevMem2Db& mask, int channels, const cudaStream_t& stream = 0);
+    template <typename T>
+    void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream);
+    template <typename T>
+    void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
 
-template <typename T>
-void set_to_gpu(const DevMem2Db& mat, const T* scalar, int channels, cudaStream_t stream);
-template <typename T>
-void set_to_gpu(const DevMem2Db& mat, const T* scalar, const DevMem2Db& mask, int channels, cudaStream_t stream);
-
-void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
-
-END_OPENCV_DEVICE_NAMESPACE
+    void convert_gpu(const DevMem2Db& src, int sdepth, const DevMem2Db& dst, int ddepth, double alpha, double beta, cudaStream_t stream = 0);
+}}}
 
 namespace
 {
@@ -345,7 +344,7 @@ namespace
 
     void convertToKernelCaller(const GpuMat& src, GpuMat& dst)
     {
-        OPENCV_DEVICE_NAMESPACE_ convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0);
+        ::cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -403,7 +402,7 @@ namespace
     void kernelSet(GpuMat& src, Scalar s)
     {
         Scalar_<T> sf = s;
-        OPENCV_DEVICE_NAMESPACE_ set_to_gpu(src, sf.val, src.channels(), 0);
+        ::cv::gpu::device::set_to_gpu(src, sf.val, src.channels(), 0);
     }
 
     template<int SDEPTH, int SCN> struct NppSetMaskFunc
@@ -458,7 +457,7 @@ namespace
     void kernelSetMask(GpuMat& src, Scalar s, const GpuMat& mask)
     {
         Scalar_<T> sf = s;
-        OPENCV_DEVICE_NAMESPACE_ set_to_gpu(src, sf.val, mask, src.channels(), 0);
+        ::cv::gpu::device::set_to_gpu(src, sf.val, mask, src.channels(), 0);
     }
 
     class CudaFuncTable : public GpuFuncTable
@@ -479,7 +478,7 @@ namespace
 
         void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const 
         { 
-            OPENCV_DEVICE_NAMESPACE_ copy_to_with_mask(src, dst, src.depth(), mask, src.channels());
+            ::cv::gpu::device::copy_to_with_mask(src, dst, src.depth(), mask, src.channels());
         }
 
         void convert(const GpuMat& src, GpuMat& dst) const 
@@ -560,7 +559,7 @@ namespace
 
         void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const 
         { 
-            device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta);
+            ::cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta);
         }
 
         void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const

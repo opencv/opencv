@@ -55,21 +55,20 @@ void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, Stream& /*st
 
 #else /* !defined (HAVE_CUDA) */
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace split_merge 
-{    
-    void merge_caller(const DevMem2Db* src, DevMem2Db& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
-    void split_caller(const DevMem2Db& src, DevMem2Db* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
-}
-
-END_OPENCV_DEVICE_NAMESPACE
+namespace cv { namespace gpu { namespace device 
+{
+    namespace split_merge 
+    {    
+        void merge_caller(const DevMem2Db* src, DevMem2Db& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
+        void split_caller(const DevMem2Db& src, DevMem2Db* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
+    }
+}}}
 
 namespace
 {
     void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream) 
     {
-        using namespace OPENCV_DEVICE_NAMESPACE_ split_merge;
+        using namespace ::cv::gpu::device::split_merge;
 
         CV_Assert(src);
         CV_Assert(n > 0);
@@ -108,7 +107,7 @@ namespace
 
     void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream) 
     {
-        using namespace OPENCV_DEVICE_NAMESPACE_ split_merge;
+        using namespace ::cv::gpu::device::split_merge;
 
         CV_Assert(dst);
 

@@ -48,85 +48,85 @@
 #include "vec_traits.hpp"
 #include "functional.hpp"
 
-BEGIN_OPENCV_DEVICE_NAMESPACE
-
-namespace detail
+namespace cv { namespace gpu { namespace device 
 {
-    template <int cn, typename VecD> struct SatCastHelper;
-    template <typename VecD> struct SatCastHelper<1, VecD>
+    namespace vec_math_detail
     {
-        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+        template <int cn, typename VecD> struct SatCastHelper;
+        template <typename VecD> struct SatCastHelper<1, VecD>
         {
-            typedef typename VecTraits<VecD>::elem_type D;
-            return VecTraits<VecD>::make(saturate_cast<D>(v.x));
-        }
-    };
-    template <typename VecD> struct SatCastHelper<2, VecD>
-    {
-        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+            {
+                typedef typename VecTraits<VecD>::elem_type D;
+                return VecTraits<VecD>::make(saturate_cast<D>(v.x));
+            }
+        };
+        template <typename VecD> struct SatCastHelper<2, VecD>
         {
-            typedef typename VecTraits<VecD>::elem_type D;
-            return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y));
-        }
-    };
-    template <typename VecD> struct SatCastHelper<3, VecD>
-    {
-        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+            {
+                typedef typename VecTraits<VecD>::elem_type D;
+                return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y));
+            }
+        };
+        template <typename VecD> struct SatCastHelper<3, VecD>
         {
-            typedef typename VecTraits<VecD>::elem_type D;
-            return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z));
-        }
-    };
-    template <typename VecD> struct SatCastHelper<4, VecD>
-    {
-        template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+            {
+                typedef typename VecTraits<VecD>::elem_type D;
+                return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z));
+            }
+        };
+        template <typename VecD> struct SatCastHelper<4, VecD>
         {
-            typedef typename VecTraits<VecD>::elem_type D;
-            return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z), saturate_cast<D>(v.w));
-        }
-    };
+            template <typename VecS> static __device__ __forceinline__ VecD cast(const VecS& v)
+            {
+                typedef typename VecTraits<VecD>::elem_type D;
+                return VecTraits<VecD>::make(saturate_cast<D>(v.x), saturate_cast<D>(v.y), saturate_cast<D>(v.z), saturate_cast<D>(v.w));
+            }
+        };
 
-    template <typename VecD, typename VecS> static __device__ __forceinline__ VecD saturate_cast_caller(const VecS& v)
-    {
-        return SatCastHelper<VecTraits<VecD>::cn, VecD>::cast(v);
+        template <typename VecD, typename VecS> static __device__ __forceinline__ VecD saturate_cast_caller(const VecS& v)
+        {
+            return SatCastHelper<VecTraits<VecD>::cn, VecD>::cast(v);
+        }
     }
-}
 
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float1& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double1& v) {return detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double1& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
 
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float2& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double2& v) {return detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double2& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
 
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float3& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double3& v) {return detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double3& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
 
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float4& v) {return detail::saturate_cast_caller<_Tp>(v);}
-template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double4& v) {return detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uchar4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const char4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const ushort4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const short4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const uint4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const int4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const float4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
+    template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const double4& v) {return vec_math_detail::saturate_cast_caller<_Tp>(v);}
 
 #define OPENCV_GPU_IMPLEMENT_VEC_UNOP(type, op, func) \
     __device__ __forceinline__ TypeVec<func<type>::result_type, 1>::vec_type op(const type ## 1 & a) \
@@ -150,49 +150,49 @@ template<typename _Tp> static __device__ __forceinline__ _Tp saturate_cast(const
         return VecTraits<TypeVec<func<type>::result_type, 4>::vec_type>::make(f(a.x), f(a.y), f(a.z), f(a.w)); \
     }
 
-namespace detail
-{    
-    template <typename T1, typename T2> struct BinOpTraits
-    {
-        typedef int argument_type;
-    };
-    template <typename T> struct BinOpTraits<T, T>
-    {
-        typedef T argument_type;
-    };
-    template <typename T> struct BinOpTraits<T, double>
-    {
-        typedef double argument_type;
-    };
-    template <typename T> struct BinOpTraits<double, T>
-    {
-        typedef double argument_type;
-    };
-    template <> struct BinOpTraits<double, double>
-    {
-        typedef double argument_type;
-    };
-    template <typename T> struct BinOpTraits<T, float>
-    {
-        typedef float argument_type;
-    };
-    template <typename T> struct BinOpTraits<float, T>
-    {
-        typedef float argument_type;
-    };
-    template <> struct BinOpTraits<float, float>
-    {
-        typedef float argument_type;
-    };
-    template <> struct BinOpTraits<double, float>
-    {
-        typedef double argument_type;
-    };
-    template <> struct BinOpTraits<float, double>
-    {
-        typedef double argument_type;
-    };
-}
+    namespace vec_math_detail
+    {    
+        template <typename T1, typename T2> struct BinOpTraits
+        {
+            typedef int argument_type;
+        };
+        template <typename T> struct BinOpTraits<T, T>
+        {
+            typedef T argument_type;
+        };
+        template <typename T> struct BinOpTraits<T, double>
+        {
+            typedef double argument_type;
+        };
+        template <typename T> struct BinOpTraits<double, T>
+        {
+            typedef double argument_type;
+        };
+        template <> struct BinOpTraits<double, double>
+        {
+            typedef double argument_type;
+        };
+        template <typename T> struct BinOpTraits<T, float>
+        {
+            typedef float argument_type;
+        };
+        template <typename T> struct BinOpTraits<float, T>
+        {
+            typedef float argument_type;
+        };
+        template <> struct BinOpTraits<float, float>
+        {
+            typedef float argument_type;
+        };
+        template <> struct BinOpTraits<double, float>
+        {
+            typedef double argument_type;
+        };
+        template <> struct BinOpTraits<float, double>
+        {
+            typedef double argument_type;
+        };
+    }
 
 #define OPENCV_GPU_IMPLEMENT_VEC_BINOP(type, op, func) \
     __device__ __forceinline__ TypeVec<func<type>::result_type, 1>::vec_type op(const type ## 1 & a, const type ## 1 & b) \
@@ -201,16 +201,16 @@ namespace detail
         return VecTraits<TypeVec<func<type>::result_type, 1>::vec_type>::make(f(a.x, b.x)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(const type ## 1 & v, T s) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(const type ## 1 & v, T s) \
     { \
-        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(v.x, s)); \
+        func<typename vec_math_detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(v.x, s)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(T s, const type ## 1 & v) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(T s, const type ## 1 & v) \
     { \
-        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(s, v.x)); \
+        func<typename vec_math_detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(s, v.x)); \
     } \
     __device__ __forceinline__ TypeVec<func<type>::result_type, 2>::vec_type op(const type ## 2 & a, const type ## 2 & b) \
     { \
@@ -218,16 +218,16 @@ namespace detail
         return VecTraits<TypeVec<func<type>::result_type, 2>::vec_type>::make(f(a.x, b.x), f(a.y, b.y)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(const type ## 2 & v, T s) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(const type ## 2 & v, T s) \
     { \
-        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(v.x, s), f(v.y, s)); \
+        func<typename vec_math_detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(v.x, s), f(v.y, s)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(T s, const type ## 2 & v) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(T s, const type ## 2 & v) \
     { \
-        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(s, v.x), f(s, v.y)); \
+        func<typename vec_math_detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(s, v.x), f(s, v.y)); \
     } \
     __device__ __forceinline__ TypeVec<func<type>::result_type, 3>::vec_type op(const type ## 3 & a, const type ## 3 & b) \
     { \
@@ -235,16 +235,16 @@ namespace detail
         return VecTraits<TypeVec<func<type>::result_type, 3>::vec_type>::make(f(a.x, b.x), f(a.y, b.y), f(a.z, b.z)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(const type ## 3 & v, T s) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(const type ## 3 & v, T s) \
     { \
-        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s)); \
+        func<typename vec_math_detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(T s, const type ## 3 & v) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(T s, const type ## 3 & v) \
     { \
-        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z)); \
+        func<typename vec_math_detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z)); \
     } \
     __device__ __forceinline__ TypeVec<func<type>::result_type, 4>::vec_type op(const type ## 4 & a, const type ## 4 & b) \
     { \
@@ -252,16 +252,16 @@ namespace detail
         return VecTraits<TypeVec<func<type>::result_type, 4>::vec_type>::make(f(a.x, b.x), f(a.y, b.y), f(a.z, b.z), f(a.w, b.w)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(const type ## 4 & v, T s) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(const type ## 4 & v, T s) \
     { \
-        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s), f(v.w, s)); \
+        func<typename vec_math_detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s), f(v.w, s)); \
     } \
     template <typename T> \
-    __device__ __forceinline__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(T s, const type ## 4 & v) \
+    __device__ __forceinline__ typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(T s, const type ## 4 & v) \
     { \
-        func<typename detail::BinOpTraits<T, type>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z), f(s, v.w)); \
+        func<typename vec_math_detail::BinOpTraits<T, type>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename vec_math_detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z), f(s, v.w)); \
     }
 
 #define OPENCV_GPU_IMPLEMENT_VEC_OP(type) \
@@ -313,20 +313,19 @@ namespace detail
     OPENCV_GPU_IMPLEMENT_VEC_BINOP(type, operator ^, bit_xor) \
     OPENCV_GPU_IMPLEMENT_VEC_UNOP (type, operator ~, bit_not)
 
-OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uchar)
-OPENCV_GPU_IMPLEMENT_VEC_INT_OP(char)
-OPENCV_GPU_IMPLEMENT_VEC_INT_OP(ushort)
-OPENCV_GPU_IMPLEMENT_VEC_INT_OP(short)
-OPENCV_GPU_IMPLEMENT_VEC_INT_OP(int)
-OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uint)
-OPENCV_GPU_IMPLEMENT_VEC_OP(float)
-OPENCV_GPU_IMPLEMENT_VEC_OP(double)
+    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uchar)
+    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(char)
+    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(ushort)
+    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(short)
+    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(int)
+    OPENCV_GPU_IMPLEMENT_VEC_INT_OP(uint)
+    OPENCV_GPU_IMPLEMENT_VEC_OP(float)
+    OPENCV_GPU_IMPLEMENT_VEC_OP(double)
 
-#undef OPENCV_GPU_IMPLEMENT_VEC_UNOP
-#undef OPENCV_GPU_IMPLEMENT_VEC_BINOP
-#undef OPENCV_GPU_IMPLEMENT_VEC_OP
-#undef OPENCV_GPU_IMPLEMENT_VEC_INT_OP
-
-END_OPENCV_DEVICE_NAMESPACE
+    #undef OPENCV_GPU_IMPLEMENT_VEC_UNOP
+    #undef OPENCV_GPU_IMPLEMENT_VEC_BINOP
+    #undef OPENCV_GPU_IMPLEMENT_VEC_OP
+    #undef OPENCV_GPU_IMPLEMENT_VEC_INT_OP
+}}} // namespace cv { namespace gpu { namespace device
         
 #endif // __OPENCV_GPU_VECMATH_HPP__
