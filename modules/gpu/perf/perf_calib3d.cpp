@@ -13,9 +13,7 @@ PERF_TEST_P(DevInfo, transformPoints, testing::ValuesIn(devices()))
     GpuMat src(src_host);
     GpuMat dst;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         transformPoints(src, Mat::ones(1, 3, CV_32FC1), Mat::ones(1, 3, CV_32FC1), dst);
     }
@@ -38,9 +36,7 @@ PERF_TEST_P(DevInfo, projectPoints, testing::ValuesIn(devices()))
     GpuMat src(src_host);
     GpuMat dst;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         projectPoints(src, Mat::ones(1, 3, CV_32FC1), Mat::ones(1, 3, CV_32FC1), Mat::ones(3, 3, CV_32FC1), Mat(), dst);
     }
@@ -65,7 +61,7 @@ PERF_TEST_P(DevInfo, solvePnPRansac, testing::ValuesIn(devices()))
 
     declare.time(3.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         solvePnPRansac(object, image, Mat::ones(3, 3, CV_32FC1), Mat(1, 8, CV_32F, Scalar::all(0)), rvec, tvec);
     }
@@ -93,9 +89,9 @@ PERF_TEST_P(DevInfo, StereoBM, testing::ValuesIn(devices()))
 
     StereoBM_GPU bm(0, 256);
 
-    declare.time(0.5).iterations(100);
+    declare.time(5.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         bm(img_l, img_r, dst);
     }
@@ -126,7 +122,7 @@ PERF_TEST_P(DevInfo, StereoBeliefPropagation, testing::ValuesIn(devices()))
 
     declare.time(10.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         bp(img_l, img_r, dst);
     }
@@ -157,7 +153,7 @@ PERF_TEST_P(DevInfo, StereoConstantSpaceBP, testing::ValuesIn(devices()))
 
     declare.time(10.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         bp(img_l, img_r, dst);
     }
@@ -186,9 +182,7 @@ PERF_TEST_P(DevInfo, DisparityBilateralFilter, testing::ValuesIn(devices()))
 
     DisparityBilateralFilter f(128);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         f(disp, img, dst);
     }

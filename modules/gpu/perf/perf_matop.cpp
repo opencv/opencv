@@ -18,9 +18,7 @@ PERF_TEST_P(DevInfo_Size_MatType, merge, testing::Combine(testing::ValuesIn(devi
 
     GpuMat dst(size, CV_MAKETYPE(type, num_channels));
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         merge(src, dst);
     }
@@ -48,9 +46,7 @@ PERF_TEST_P(DevInfo_Size_MatType, split, testing::Combine(testing::ValuesIn(devi
     for (int i = 0; i < num_channels; ++i)
         dst[i] = GpuMat(size, type); 
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         split(src, dst);
     }
@@ -75,9 +71,7 @@ PERF_TEST_P(DevInfo_Size_MatType, setTo, testing::Combine(testing::ValuesIn(devi
     GpuMat src(size, type);
     Scalar val(1, 2, 3, 4);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         src.setTo(val);
     }
@@ -108,9 +102,7 @@ PERF_TEST_P(DevInfo_Size_MatType, setToMasked, testing::Combine(testing::ValuesI
     randu(mask_host, 0.0, 2.0);
     GpuMat mask(mask_host);
     
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         src.setTo(val, mask);
     }
@@ -141,9 +133,7 @@ PERF_TEST_P(DevInfo_Size_MatType, copyToMasked, testing::Combine(testing::Values
     randu(mask_host, 0.0, 2.0);
     GpuMat mask(mask_host);
     
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         src.copyTo(dst, mask);
     }
@@ -175,9 +165,7 @@ PERF_TEST_P(DevInfo_Size_MatType_MatType, convertTo, testing::Combine(testing::V
     double a = 0.5;
     double b = 1.0;
     
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE() 
+    TEST_CYCLE(100)
     {
         src.convertTo(dst, type2, a, b);
     }

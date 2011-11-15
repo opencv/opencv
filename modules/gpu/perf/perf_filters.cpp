@@ -21,9 +21,7 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, boxFilter, testing::Combine(testing
 
     Ptr<FilterEngine_GPU> filter = createBoxFilter_GPU(type, type, Size(ksize, ksize));
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         filter->apply(src, dst);
     }
@@ -56,9 +54,7 @@ PERF_TEST_P(DevInfo_Size_MatType_MorphOp_KernelSize, morphologyFilter, testing::
 
     Ptr<FilterEngine_GPU> filter = createMorphologyFilter_GPU(op, type, Mat::ones(ksize, ksize, CV_8U));
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         filter->apply(src, dst);
     }
@@ -89,9 +85,9 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, linearFilter, testing::Combine(test
 
     Ptr<FilterEngine_GPU> filter = createLinearFilter_GPU(type, type, Mat::ones(ksize, ksize, CV_8U));
 
-    declare.time(1.0).iterations(100);
+    declare.time(1.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         filter->apply(src, dst);
     }
@@ -123,9 +119,9 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, separableLinearFilter, testing::Com
     Mat kernel = getGaussianKernel(ksize, 0.5, CV_32F);
     Ptr<FilterEngine_GPU> filter = createSeparableLinearFilter_GPU(type, type, kernel, kernel, Point(-1,-1));
 
-    declare.time(1.0).iterations(100);
+    declare.time(1.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         filter->apply(src, dst, Rect(0, 0, src.cols, src.rows));
     }

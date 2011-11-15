@@ -17,9 +17,7 @@ PERF_TEST_P(DevInfo_Size_MatType, transpose, testing::Combine(testing::ValuesIn(
     GpuMat src(src_host);
     GpuMat dst(size.width, size.height, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         transpose(src, dst);
     }
@@ -48,9 +46,7 @@ PERF_TEST_P(DevInfo_Size_MatType_FlipCode, flip, testing::Combine(testing::Value
     GpuMat src(src_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         flip(src, dst, flipCode);
     }
@@ -78,9 +74,7 @@ PERF_TEST_P(DevInfo_Size_MatType, LUT, testing::Combine(testing::ValuesIn(device
     GpuMat src(src_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         LUT(src, lut, dst);
     }
@@ -108,9 +102,7 @@ PERF_TEST_P(DevInfo_Size, cartToPolar, testing::Combine(testing::ValuesIn(device
     GpuMat magnitude(size, CV_32FC1);
     GpuMat angle(size, CV_32FC1);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         cartToPolar(x, y, magnitude, angle);
     }
@@ -140,9 +132,7 @@ PERF_TEST_P(DevInfo_Size, polarToCart, testing::Combine(testing::ValuesIn(device
     GpuMat x(size, CV_32FC1);
     GpuMat y(size, CV_32FC1);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         polarToCart(magnitude, angle, x, y);
     }
@@ -173,9 +163,7 @@ PERF_TEST_P(DevInfo_Size_MatType, addMat, testing::Combine(testing::ValuesIn(dev
     GpuMat b(b_host);
     GpuMat c(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         add(a, b, c);
     }
@@ -203,9 +191,7 @@ PERF_TEST_P(DevInfo_Size_MatType, addScalar, testing::Combine(testing::ValuesIn(
     Scalar b(1,2,3,4);
     GpuMat c(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         add(a, b, c);
     }
@@ -234,9 +220,7 @@ PERF_TEST_P(DevInfo_Size_MatType, subtractMat, testing::Combine(testing::ValuesI
     GpuMat b(b_host);
     GpuMat c(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         subtract(a, b, c);
     }
@@ -254,7 +238,7 @@ PERF_TEST_P(DevInfo_Size, multiplyMat, testing::Combine(testing::ValuesIn(device
 
     setDevice(devInfo.deviceID());
 
-    Mat a_host(size, CV_8UC1);
+    Mat a_host(size, CV_8UC4);
     Mat b_host(size, CV_32FC1);
 
     declare.in(a_host, b_host, WARMUP_RNG);
@@ -263,9 +247,7 @@ PERF_TEST_P(DevInfo_Size, multiplyMat, testing::Combine(testing::ValuesIn(device
     GpuMat b(b_host);
     GpuMat c;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         multiply(a, b, c);
     }
@@ -293,9 +275,7 @@ PERF_TEST_P(DevInfo_Size_MatType, multiplyScalar, testing::Combine(testing::Valu
     Scalar b(1,2,3,4);
     GpuMat c(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         multiply(a, b, c);
     }
@@ -320,9 +300,7 @@ PERF_TEST_P(DevInfo_Size, exp, testing::Combine(testing::ValuesIn(devices()),
     GpuMat a(a_host);
     GpuMat b(size, CV_32FC1);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         exp(a, b);
     }
@@ -349,9 +327,7 @@ PERF_TEST_P(DevInfo_Size_MatType, pow, testing::Combine(testing::ValuesIn(device
     GpuMat src(src_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         pow(src, 2.0, dst);
     }
@@ -382,9 +358,7 @@ PERF_TEST_P(DevInfo_Size_MatType_CmpOp, compare, testing::Combine(testing::Value
     GpuMat src2(src2_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         compare(src1, src2, dst, cmpop);
     }
@@ -411,9 +385,7 @@ PERF_TEST_P(DevInfo_Size_MatType, bitwise_not, testing::Combine(testing::ValuesI
     GpuMat src(src_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         bitwise_not(src, dst);
     }
@@ -442,9 +414,7 @@ PERF_TEST_P(DevInfo_Size_MatType, bitwise_and, testing::Combine(testing::ValuesI
     GpuMat src2(src2_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         bitwise_and(src1, src2, dst);
     }
@@ -473,9 +443,7 @@ PERF_TEST_P(DevInfo_Size_MatType, min, testing::Combine(testing::ValuesIn(device
     GpuMat src2(src2_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         min(src1, src2, dst);
     }
@@ -501,9 +469,7 @@ PERF_TEST_P(DevInfo_Size, meanStdDev, testing::Combine(testing::ValuesIn(devices
     Scalar mean;
     Scalar stddev;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         meanStdDev(src, mean, stddev);
     }
@@ -532,9 +498,7 @@ PERF_TEST_P(DevInfo_Size_MatType_NormType, norm, testing::Combine(testing::Value
     double dst;
     GpuMat buf;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         dst = norm(src, normType, buf);
     }
@@ -561,9 +525,7 @@ PERF_TEST_P(DevInfo_Size_NormType, normDiff, testing::Combine(testing::ValuesIn(
     GpuMat src2(src2_host);
     double dst;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         dst = norm(src1, src2, normType);
     }
@@ -589,9 +551,7 @@ PERF_TEST_P(DevInfo_Size_MatType, sum, testing::Combine(testing::ValuesIn(device
     Scalar dst;
     GpuMat buf;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         dst = sum(src, buf);
     }
@@ -617,9 +577,7 @@ PERF_TEST_P(DevInfo_Size_MatType, minMax, testing::Combine(testing::ValuesIn(dev
     double minVal, maxVal;
     GpuMat buf;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         minMax(src, &minVal, &maxVal, GpuMat(), buf);
     }
@@ -647,9 +605,7 @@ PERF_TEST_P(DevInfo_Size_MatType, minMaxLoc, testing::Combine(testing::ValuesIn(
     Point minLoc, maxLoc;
     GpuMat valbuf, locbuf;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat(), valbuf, locbuf);
     }
@@ -676,9 +632,7 @@ PERF_TEST_P(DevInfo_Size_MatType, countNonZero, testing::Combine(testing::Values
     int dst=0;
     GpuMat buf;
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         dst = countNonZero(src, buf);
     }
@@ -705,9 +659,7 @@ PERF_TEST_P(DevInfo_Size_MatType, addWeighted, testing::Combine(testing::ValuesI
     GpuMat src2(src2_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         addWeighted(src1, 0.5, src2, 0.5, 0.0, dst);
     }
@@ -736,9 +688,7 @@ PERF_TEST_P(DevInfo_Size_MatType_FlipCode, reduce, testing::Combine(testing::Val
     GpuMat src(src_host);
     GpuMat dst(size, type);
 
-    declare.time(0.5).iterations(100);
-
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         reduce(src, dst, dim, CV_REDUCE_MIN);
     }
@@ -769,7 +719,7 @@ PERF_TEST_P(DevInfo_Size, gemm, testing::Combine(testing::ValuesIn(devices()),
 
     declare.time(5.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         gemm(src1, src2, 1.0, src3, 1.0, dst);
     }

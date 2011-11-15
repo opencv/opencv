@@ -21,7 +21,7 @@ PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_match, testing::Combine(testing:
 
     declare.time(3.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         matcher.matchSingle(query, train, trainIdx, distance);
     }
@@ -56,7 +56,7 @@ PERF_TEST_P(DevInfo_K_DescSize, BruteForceMatcher_knnMatch, testing::Combine(tes
 
     declare.time(3.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         matcher.knnMatchSingle(query, train, trainIdx, distance, allDist, k);
     }
@@ -87,7 +87,7 @@ PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_radiusMatch, testing::Combine(te
 
     declare.time(3.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         matcher.radiusMatchSingle(query, train, trainIdx, distance, nMatches, 2.0);
     }
@@ -118,7 +118,7 @@ PERF_TEST_P(DevInfo, SURF, testing::ValuesIn(devices()))
 
     declare.time(2.0);
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         surf(img, GpuMat(), keypoints, descriptors);
     }

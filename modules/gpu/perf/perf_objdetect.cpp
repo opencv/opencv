@@ -11,12 +11,10 @@ PERF_TEST_P(DevInfo, HOGDescriptor, testing::ValuesIn(devices()))
     GpuMat img(img_host);
     vector<Rect> found_locations;
 
-    declare.time(0.5).iterations(100);
-
     gpu::HOGDescriptor hog;
     hog.setSVMDetector(gpu::HOGDescriptor::getDefaultPeopleDetector());
 
-    SIMPLE_TEST_CYCLE()
+    TEST_CYCLE(100)
     {
         hog.detectMultiScale(img, found_locations);
     }
