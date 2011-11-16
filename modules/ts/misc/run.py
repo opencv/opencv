@@ -16,8 +16,8 @@ parse_patterns = (
   {'name': "cxx_flags",          'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS:STRING=(.*)$")},
   {'name': "cxx_flags_debug",    'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS_DEBUG:STRING=(.*)$")},
   {'name': "cxx_flags_release",  'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS_RELEASE:STRING=(.*)$")},
-  {'name': "ndk_path",           'default': None,       'pattern': re.compile("^ANDROID_NDK(?:_TOOLCHAIN_ROOT)?:PATH=(.*)$")},
-  {'name': "arm_target",         'default': None,       'pattern': re.compile("^ARM_TARGET:INTERNAL=(.*)$")},
+  {'name': "ndk_path",           'default': None,       'pattern': re.compile("^(?:ANDROID_NDK|ANDROID_STANDALONE_TOOLCHAIN)?:PATH=(.*)$")},
+  {'name': "android_abi",        'default': None,       'pattern': re.compile("^ANDROID_ABI:STRING=(.*)$")},
   {'name': "android_executable", 'default': None,       'pattern': re.compile("^ANDROID_EXECUTABLE:FILEPATH=(.*android.*)$")},
   {'name': "is_x64",             'default': "OFF",      'pattern': re.compile("^CUDA_64_BIT_DEVICE_CODE:BOOL=(ON)$")},#ugly(
   {'name': "cmake_generator",    'default': None,       'pattern': re.compile("^CMAKE_GENERATOR:INTERNAL=(.+)$")},
@@ -181,7 +181,7 @@ class RunInfo(object):
             self.adb = None
 
         # detect target platform    
-        if self.android_executable or self.arm_target or self.ndk_path:
+        if self.android_executable or self.android_abi or self.ndk_path:
             self.targetos = "android"
         else:
             self.targetos = hostos
@@ -405,7 +405,7 @@ class RunInfo(object):
             if connected_devices > 1:
                 self.error = "Too many (%s) devices are connected. Single device is required. (for %s)" % (connected_devices, self.path)
                 return False
-            if "armeabi-v7a" in self.arm_target:
+            if "armeabi-v7a" in self.android_abi:
                 adb_res = self.runAdb("shell", "cat /proc/cpuinfo")
                 if not adb_res:
                     self.error = "Could not get info about Android platform: %s (for %s)" % (self.error, self.path)
@@ -413,8 +413,8 @@ class RunInfo(object):
                 if "ARMv7" not in adb_res:
                     self.error = "Android device does not support ARMv7 commands, but tests are built for armeabi-v7a (for %s)" % self.path
                     return False
-                if "NEON" in self.arm_target and "neon" not in adb_res:
-                    self.error = "Android device has no NEON, but tests are built for %s (for %s)" % (self.arm_target, self.path)
+                if "NEON" in self.android_abi and "neon" not in adb_res:
+                    self.error = "Android device has no NEON, but tests are built for %s (for %s)" % (self.android_abi, self.path)
                     return False
                 hw = re.search(r"^Hardware[ \t]*:[ \t]*(.*?)$", adb_res, re.MULTILINE)
                 if hw:

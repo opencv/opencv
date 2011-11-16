@@ -106,13 +106,13 @@ macro(add_android_project _target _path)
 
             set_target_properties(${JNI_LIB_NAME} PROPERTIES
                 OUTPUT_NAME "${JNI_LIB_NAME}"
-                LIBRARY_OUTPUT_DIRECTORY "${build_path}/libs/${ARMEABI_NDK_NAME}"
+                LIBRARY_OUTPUT_DIRECTORY "${build_path}/libs/${ANDROID_NDK_ABI_NAME}"
             )
 
             ADD_CUSTOM_COMMAND(
                 TARGET ${JNI_LIB_NAME}
                 POST_BUILD
-                COMMAND ${CMAKE_STRIP} "${build_path}/libs/${ARMEABI_NDK_NAME}/*.so"
+                COMMAND ${CMAKE_STRIP} "${build_path}/libs/${ANDROID_NDK_ABI_NAME}/*.so"
                 )
         else()
             SET(JNI_LIB_NAME)

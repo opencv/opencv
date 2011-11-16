@@ -12,7 +12,7 @@
 
 #ifdef ANDROID
 # include <android/api-level.h>
-# define GTEST_HAS_CLONE (__ANDROID_API__ > 7)
+# define GTEST_HAS_CLONE (__ANDROID_API__ > 7 && __arm__)
 # define GTEST_HAS_POSIX_RE (__ANDROID_API__ > 7)
 # define GTEST_HAS_STD_WSTRING _GLIBCXX_USE_WCHAR_T
 #endif
