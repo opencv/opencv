@@ -135,6 +135,7 @@ if(NOT "${OpenCV_SOURCE_PATH}" STREQUAL  "")
         # We only need the "core",... part here: "opencv_core" -> "core"
         STRING(REGEX REPLACE "opencv_(.*)" "\\1" __MODNAME ${__CVLIB})
         INCLUDE_DIRECTORIES("${OpenCV_SOURCE_PATH}/modules/${__MODNAME}/include")
+        LIST(APPEND OpenCV_INCLUDE_DIRS "${OpenCV_SOURCE_PATH}/modules/${__MODNAME}/include")
     endforeach()
 endif()
 
