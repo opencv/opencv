@@ -1223,15 +1223,23 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testHoughLinesMatMatDoubleDoubleInt() {
         int sz = 512;
-        Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(128));
-        Mat lines = new Mat();
+        Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(0));
         Point point1 = new Point(50, 50);
         Point point2 = new Point(img.cols() / 2, img.rows() / 2);
-        Core.line(img, point1, point2, colorBlack, 2);
+        Core.line(img, point1, point2, colorWhite, 1);
+        Mat lines = new Mat();
 
-        Imgproc.HoughLines(img, lines, 1, 5, 1);
+        Imgproc.HoughLines(img, lines, 1, 3.1415926/180, 100);
 
-        assertEquals(2, lines.cols());
+        assertEquals(1, lines.cols());
+        
+        /*
+        Log.d("HoughLines", "lines=" + lines);
+        int num = (int)lines.total();
+        int buff[] = new int[num*4]; //[ (x1, y1, x2, y2), (...), ...]
+        lines.get(0, 0, buff);
+        Log.d("HoughLines", "lines=" + Arrays.toString(buff));
+        */
     }
 
     public void testHoughLinesMatMatDoubleDoubleIntDouble() {
@@ -1243,7 +1251,27 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testHoughLinesPMatMatDoubleDoubleInt() {
-        fail("Not yet implemented");
+        int sz = 512;
+        Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(0));
+        Point point1 = new Point(0, 0);
+        Point point2 = new Point(sz, sz);
+        Point point3 = new Point(sz, 0);
+        Point point4 = new Point(2*sz/3, sz/3);
+        Core.line(img, point1, point2, Scalar.all(255), 1);
+        Core.line(img, point3, point4, Scalar.all(255), 1);
+        Mat lines = new Mat();
+
+        Imgproc.HoughLinesP(img, lines, 1, 3.1415926/180, 100);
+
+        assertEquals(2, lines.cols());
+        
+        /*
+        Log.d("HoughLinesP", "lines=" + lines);
+        int num = (int)lines.cols();
+        int buff[] = new int[num*4]; // CV_32SC4 as [ (x1, y1, x2, y2), (...), ...]
+        lines.get(0, 0, buff);
+        Log.d("HoughLinesP", "lines=" + Arrays.toString(buff));
+        */
     }
 
     public void testHoughLinesPMatMatDoubleDoubleIntDouble() {
