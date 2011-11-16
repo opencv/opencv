@@ -1016,6 +1016,8 @@ bool CvCascadeBoost::train( const CvFeatureEvaluator* _featureEvaluator,
         cvSeqPush( weak, &tree );
         update_weights( tree );
         trim_weights();
+        if( cvCountNonZero(subsample_mask) == 0 )
+            break;
     }
     while( !isErrDesired() && (weak->total < params.weak_count) );
 
