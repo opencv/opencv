@@ -203,7 +203,7 @@ macro( __DETECT_NATIVE_API_LEVEL _var _path )
  SET( __ndkApiLevelRegex "^[\t ]*#define[\t ]+__ANDROID_API__[\t ]+([0-9]+)[\t ]*$" )
  FILE( STRINGS ${_path} __apiFileContent REGEX "${__ndkApiLevelRegex}" )
  if( NOT __apiFileContent )
-  message( FATAL_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
+  message( SEND_ERROR "Could not get Android native API level. Probably you have specified invalid level value, or your copy of NDK/toolchain is broken." )
  endif()
  string( REGEX REPLACE "${__ndkApiLevelRegex}" "\\1" ${_var} "${__apiFileContent}" )
  unset( __apiFileContent )
@@ -214,7 +214,7 @@ macro( __DETECT_TOOLCHAIN_MACHINE_NAME _var _root )
  file( GLOB __gccExePath "${_root}/bin/*-gcc${TOOL_OS_SUFFIX}" )
  list( LENGTH __gccExePath __gccExePathsCount )
  if( NOT __gccExePathsCount EQUAL 1 )
-  message( SEND_ERROR "Could not uniquely determine machine name for compiler from ${_root}." )
+  message( WARNING "Could not uniquely determine machine name for compiler from ${_root}." )
   set( ${_var} "" )
  else()
   get_filename_component( __gccExeName "${__gccExePath}" NAME_WE )
@@ -448,7 +448,7 @@ if( ANDROID_TOOLCHAIN_NAME )
  endif()
  list( GET __availableToolchainArchs ${__toolchainIdx} __toolchainArch )
  if( NOT __toolchainArch STREQUAL ANDROID_ARCH_NAME )
-  message( FATAL_ERROR "Previously selected toolchain \"${ANDROID_TOOLCHAIN_NAME}\" is not able to compile binaries for the \"${ANDROID_ARCH_NAME}\" platform." )
+  message( SEND_ERROR "Previously selected toolchain \"${ANDROID_TOOLCHAIN_NAME}\" is not able to compile binaries for the \"${ANDROID_ARCH_NAME}\" platform." )
  endif()
 else()
  set( __toolchainIdx -1 )
@@ -491,13 +491,13 @@ string( REGEX MATCH "[0-9]+" ANDROID_NATIVE_API_LEVEL "${ANDROID_NATIVE_API_LEVE
 #validate
 list( FIND ANDROID_SUPPORTED_NATIVE_API_LEVELS "${ANDROID_NATIVE_API_LEVEL}" __levelIdx )
 if( __levelIdx EQUAL -1 )
- message( FATAL_ERROR "Specified Android native API level (${ANDROID_NATIVE_API_LEVEL}) is not supported by your NDK/toolchain." )
+ message( SEND_ERROR "Specified Android native API level (${ANDROID_NATIVE_API_LEVEL}) is not supported by your NDK/toolchain." )
 endif()
 unset( __levelIdx )
 if( BUILD_WITH_ANDROID_NDK )
  __DETECT_NATIVE_API_LEVEL( __realApiLevel "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}/usr/include/android/api-level.h" )
  if( NOT __realApiLevel EQUAL ANDROID_NATIVE_API_LEVEL )
-  message( FATAL_ERROR "Specified Android API level (${ANDROID_NATIVE_API_LEVEL}) does not match to the level found (${__realApiLevel}). Probably your copy of NDK is broken." )
+  message( SEND_ERROR "Specified Android API level (${ANDROID_NATIVE_API_LEVEL}) does not match to the level found (${__realApiLevel}). Probably your copy of NDK is broken." )
  endif()
  unset( __realApiLevel )
 endif()
@@ -532,6 +532,10 @@ set( CMAKE_OBJCOPY      "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHI
 set( CMAKE_OBJDUMP      "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-objdump${TOOL_OS_SUFFIX}" CACHE PATH "objdump" )
 set( CMAKE_RANLIB       "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-ranlib${TOOL_OS_SUFFIX}"  CACHE PATH "ranlib" )
 
+#export directories
+set( ANDROID_SYSTEM_INCLUDE_DIRS "" )
+set( ANDROID_SYSTEM_LIB_DIRS "" )
+
 #setup output directories
 set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_SOURCE_DIR} CACHE PATH "root for library output, set this to change where android libs are installed to" )
 set( CMAKE_INSTALL_PREFIX "${ANDROID_TOOLCHAIN_ROOT}/user" CACHE STRING "path for installing" )
@@ -548,23 +552,23 @@ endif()
 set( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS ON CACHE INTERNAL "" FORCE )
 
 #includes
-include_directories( SYSTEM "${ANDROID_SYSROOT}/usr/include" )
+list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${ANDROID_SYSROOT}/usr/include" )
 if( __stlIncludePath AND EXISTS "${__stlIncludePath}" )
- include_directories( SYSTEM "${__stlIncludePath}" )
+ list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${__stlIncludePath}" )
 endif()
 
 #STL bits includes
 if( __stlLibPath AND EXISTS "${__stlLibPath}/include" )
- include_directories( SYSTEM "${__stlLibPath}/include" )
+ list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${__stlLibPath}/include" )
 endif()
 if( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}/thumb/bits" )
- include_directories( SYSTEM "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}/thumb" )
+ list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}/thumb" )
 elseif( EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}/bits" )
- include_directories( SYSTEM "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}" )
+ list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}" )
 elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/thumb/bits" )
- include_directories( SYSTEM "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/thumb" )
+ list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/thumb" )
 elseif( EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/bits" )
- include_directories( SYSTEM "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}" )
+ list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}/${ANDROID_TOOLCHAIN_MACHINE_NAME}" )
 endif()
 
 #flags and definitions
@@ -637,7 +641,9 @@ elseif( X86 )
 endif()
 
 #linker flags
-set( LINKER_FLAGS "-L\"${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}\" -L\"${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}\"" )
+list( APPEND ANDROID_SYSTEM_LIB_DIRS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" "${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}" )
+#set( LINKER_FLAGS "-L\"${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}\" -L\"${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}\"" )
+set( LINKER_FLAGS "" )
 #STL
 if( NOT EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
  if( EXISTS "${__stlLibPath}/libgnustl_static.a" )
@@ -674,6 +680,7 @@ if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" 
  set( LINKER_FLAGS "${LINKER_FLAGS} -lsupc++" )
 endif()
 
+
 #cleanup for STL search
 unset( __stlIncludePath )
 unset( __stlLibPath )
@@ -701,6 +708,9 @@ set( CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING "c Debug flags"
 set( CMAKE_SHARED_LINKER_FLAGS "${LINKER_FLAGS}" CACHE STRING "linker flags" )
 set( CMAKE_MODULE_LINKER_FLAGS "${LINKER_FLAGS}" CACHE STRING "linker flags" )
 set( CMAKE_EXE_LINKER_FLAGS "-Wl,--gc-sections -Wl,-z,nocopyreloc ${LINKER_FLAGS}" CACHE STRING "linker flags" )
+
+include_directories( SYSTEM ${ANDROID_SYSTEM_INCLUDE_DIRS} )
+link_directories( ${ANDROID_SYSTEM_LIB_DIRS} )
 
 #finish flags
 set( CMAKE_CXX_FLAGS "${ANDROID_CXX_FLAGS} ${CMAKE_CXX_FLAGS}" )
@@ -803,7 +813,9 @@ endif()
 #   ANDROID_NDK_HOST_SYSTEM_NAME : "windows", "linux-x86" or "darwin-x86" depending on host platform
 #   ANDROID_NDK_ABI_NAME : "armeabi", "armeabi-v7a" or "x86" depending on ANDROID_ABI
 #   ANDROID_ARCH_NAME : "arm" or "x86" depending on ANDROID_ABI
-#   TOOL_OS_SUFFIX: "" or ".exe" depending on host platform
+#   TOOL_OS_SUFFIX : "" or ".exe" depending on host platform
+#   ANDROID_SYSTEM_INCLUDE_DIRS
+#   ANDROID_SYSTEM_LIB_DIRS
 # Obsolete:
 #   ARMEABI_NDK_NAME : superseded by ANDROID_NDK_ABI_NAME
 #
