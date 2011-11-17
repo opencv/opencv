@@ -51,6 +51,359 @@ static inline cv::Rect scale_rect(const cv::Rect& r, float scale)
     return cv::Rect(x, y, cvRound(width), cvRound(height));
 };
 
+void* workcycleObjectDetectorFunction(void* p);
+class DetectionBasedTracker::SeparateDetectionWork
+{
+    public:
+        SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, const std::string& cascadeFilename);
+        virtual ~SeparateDetectionWork();
+        bool communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions);
+        bool run();
+        void stop();
+        void resetTracking();
+        inline bool isWorking()
+        {
+            return (stateThread==STATE_THREAD_WORKING);
+        }
+        inline void lock()
+        {
+            pthread_mutex_lock(&mutex);
+        }
+        inline void unlock()
+        {
+            pthread_mutex_unlock(&mutex);
+        }
+
+    protected:
+
+        DetectionBasedTracker& detectionBasedTracker;
+        cv::CascadeClassifier cascadeInThread;
+
+        pthread_t second_workthread;
+        pthread_mutex_t mutex;
+        pthread_cond_t objectDetectorRun;
+        pthread_cond_t objectDetectorThreadStartStop;
+
+        std::vector<cv::Rect> resultDetect;
+        volatile bool isObjectDetectingReady;
+        volatile bool shouldObjectDetectingResultsBeForgot;
+
+        enum StateSeparatedThread {
+            STATE_THREAD_STOPPED=0,
+            STATE_THREAD_WORKING,
+            STATE_THREAD_STOPPING
+        };
+        volatile StateSeparatedThread stateThread;
+
+        enum StateSeparatedObjectDetector{
+            OBJECT_DETECTOR_NOT_STARTED,
+            OBJECT_DETECTOR_WAITING_IMAGE,
+            OBJECT_DETECTOR_HANDLING_IMAGE
+        };
+        volatile StateSeparatedObjectDetector stateSeparatedObjectDetector;
+
+
+        cv::Mat imageSeparateDetecting;
+
+        void workcycleObjectDetector();
+        friend void* workcycleObjectDetectorFunction(void* p);
+
+        long long  timeWhenDetectingThreadStartedWork;
+};
+
+DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, const std::string& cascadeFilename)
+    :detectionBasedTracker(_detectionBasedTracker),
+    cascadeInThread(cascadeFilename),
+    isObjectDetectingReady(false),
+    shouldObjectDetectingResultsBeForgot(false),
+    stateThread(STATE_THREAD_STOPPED),
+    stateSeparatedObjectDetector(OBJECT_DETECTOR_NOT_STARTED),
+    timeWhenDetectingThreadStartedWork(-1)
+{
+    int res=0;
+    res=pthread_mutex_init(&mutex, NULL);//TODO: should be attributes?
+    if (res) {
+        LOGE("ERROR in DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork in pthread_mutex_init(&mutex, NULL) is %d", res);
+        throw(std::exception());
+    }
+    res=pthread_cond_init (&objectDetectorRun, NULL);
+    if (res) {
+        LOGE("ERROR in DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork in pthread_cond_init(&objectDetectorRun,, NULL) is %d", res);
+        pthread_mutex_destroy(&mutex);
+        throw(std::exception());
+    }
+    res=pthread_cond_init (&objectDetectorThreadStartStop, NULL);
+    if (res) {
+        LOGE("ERROR in DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork in pthread_cond_init(&objectDetectorThreadStartStop,, NULL) is %d", res);
+        pthread_cond_destroy(&objectDetectorRun);
+        pthread_mutex_destroy(&mutex);
+        throw(std::exception());
+    }
+}
+
+DetectionBasedTracker::SeparateDetectionWork::~SeparateDetectionWork()
+{
+    if(stateThread!=STATE_THREAD_STOPPED) {
+        LOGE("\n\n\nATTENTION!!! dangerous algorithm error: destructor DetectionBasedTracker::DetectionBasedTracker::~SeparateDetectionWork is called before stopping the workthread");
+    }
+
+    pthread_cond_destroy(&objectDetectorThreadStartStop);
+    pthread_cond_destroy(&objectDetectorRun);
+    pthread_mutex_destroy(&mutex);
+}
+bool DetectionBasedTracker::SeparateDetectionWork::run()
+{
+    LOGD("DetectionBasedTracker::SeparateDetectionWork::run() --- start");
+    pthread_mutex_lock(&mutex);
+    if (stateThread != STATE_THREAD_STOPPED) {
+        LOGE("DetectionBasedTracker::SeparateDetectionWork::run is called while the previous run is not stopped");
+        pthread_mutex_unlock(&mutex);
+        return false;
+    }
+    stateThread=STATE_THREAD_WORKING;
+    pthread_create(&second_workthread, NULL, workcycleObjectDetectorFunction, (void*)this); //TODO: add attributes?
+    pthread_cond_wait(&objectDetectorThreadStartStop, &mutex);
+    pthread_mutex_unlock(&mutex);
+    LOGD("DetectionBasedTracker::SeparateDetectionWork::run --- end");
+    return true;
+}
+
+#ifdef __GNUC__
+#define CATCH_ALL_AND_LOG(_block)                                                       \
+do {                                                                               \
+    try {                                                                                   \
+        _block;                                                                             \
+        break;                                                                              \
+    }                                                                                       \
+    catch(cv::Exception& e) {                                                               \
+        LOGE("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", __func__, e.what());      \
+    } catch(std::exception& e) {                                                            \
+        LOGE("\n %s: ERROR: Exception caught: \n'%s'\n\n", __func__, e.what());             \
+    } catch(...) {                                                                          \
+        LOGE("\n %s: ERROR: UNKNOWN Exception caught\n\n", __func__);                       \
+    }                                                                                       \
+} while(0)
+#else
+#define CATCH_ALL_AND_LOG(_block)                                                       \
+do {                                                                               \
+    try {                                                                                   \
+        _block;                                                                             \
+        break;                                                                              \
+    }                                                                                       \
+    catch(cv::Exception& e) {                                                               \
+        LOGE("\n ERROR: OpenCV Exception caught: \n'%s'\n\n", e.what());                    \
+    } catch(std::exception& e) {                                                            \
+        LOGE("\n ERROR: Exception caught: \n'%s'\n\n", e.what());                           \
+    } catch(...) {                                                                          \
+        LOGE("\n ERROR: UNKNOWN Exception caught\n\n");                                     \
+    }                                                                                       \
+} while(0) 
+#endif
+
+void* workcycleObjectDetectorFunction(void* p)
+{
+    CATCH_ALL_AND_LOG({ ((DetectionBasedTracker::SeparateDetectionWork*)p)->workcycleObjectDetector(); });
+    return NULL;
+}
+
+void DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
+{
+    static double freq = getTickFrequency();
+    LOGD0("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- start");
+    vector<Rect> objects;
+
+    pthread_mutex_lock(&mutex); 
+    {
+        pthread_cond_signal(&objectDetectorThreadStartStop);
+
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- before waiting");
+        stateSeparatedObjectDetector=OBJECT_DETECTOR_WAITING_IMAGE;
+        pthread_cond_wait(&objectDetectorRun, &mutex);
+        stateSeparatedObjectDetector=OBJECT_DETECTOR_HANDLING_IMAGE;
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- after waiting");
+    }
+    pthread_mutex_unlock(&mutex);
+
+    bool isFirstStep=true;
+
+    isObjectDetectingReady=false;
+
+    while(stateThread == STATE_THREAD_WORKING)
+    {
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- next step");
+
+        if (! isFirstStep) {
+            LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- before waiting");
+            pthread_mutex_lock(&mutex);
+            stateSeparatedObjectDetector=OBJECT_DETECTOR_WAITING_IMAGE;
+            pthread_cond_wait(&objectDetectorRun, &mutex);
+            stateSeparatedObjectDetector=OBJECT_DETECTOR_HANDLING_IMAGE;
+            pthread_mutex_unlock(&mutex);
+            LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- after waiting");
+        } else {
+            isFirstStep=false;
+        }
+
+        if (stateThread != STATE_THREAD_WORKING) {
+            LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- go out from the workcycle just after waiting");
+            break;
+        }
+
+
+        if (imageSeparateDetecting.empty()) {
+            LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- imageSeparateDetecting is empty, continue");
+            continue;
+        }
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- start handling imageSeparateDetecting, img.size=%dx%d, img.data=0x%p", 
+                imageSeparateDetecting.size().width, imageSeparateDetecting.size().height, (void*)imageSeparateDetecting.data);
+
+
+        int64 t1_detect=getTickCount();
+
+        int minObjectSize=detectionBasedTracker.parameters.minObjectSize;
+        Size min_objectSize=Size(minObjectSize, minObjectSize);
+
+        int maxObjectSize=detectionBasedTracker.parameters.maxObjectSize;
+        Size max_objectSize(maxObjectSize, maxObjectSize);
+
+
+        cascadeInThread.detectMultiScale( imageSeparateDetecting, objects,
+                detectionBasedTracker.parameters.scaleFactor, detectionBasedTracker.parameters.minNeighbors, 0
+                |CV_HAAR_SCALE_IMAGE
+                ,
+                min_objectSize,
+                max_objectSize
+                );
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- end handling imageSeparateDetecting");
+
+        if (stateThread != STATE_THREAD_WORKING) {
+            LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- go out from the workcycle just after detecting");
+            break;
+        }
+
+        int64 t2_detect=getTickCount();
+        int64 dt_detect=t2_detect-t1_detect;
+        double dt_detect_ms=((double)dt_detect)/freq * 1000.0;
+
+        LOGI("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- objects num==%d, t_ms=%.4f", (int)objects.size(), dt_detect_ms);
+
+        pthread_mutex_lock(&mutex);
+        if (!shouldObjectDetectingResultsBeForgot) {
+            resultDetect=objects;
+            isObjectDetectingReady=true;
+        } else { //shouldObjectDetectingResultsBeForgot==true
+            resultDetect.clear();
+            isObjectDetectingReady=false;
+            shouldObjectDetectingResultsBeForgot=false;
+        }
+        pthread_mutex_unlock(&mutex);
+
+        objects.clear();
+    }// while(stateThread == STATE_THREAD_WORKING)
+
+
+    pthread_mutex_lock(&mutex);
+
+    if (stateThread == STATE_THREAD_STOPPING) {
+        stateThread=STATE_THREAD_STOPPED;
+    }
+    stateSeparatedObjectDetector=OBJECT_DETECTOR_NOT_STARTED;
+    isObjectDetectingReady=false;
+    shouldObjectDetectingResultsBeForgot=false;
+
+    pthread_cond_signal(&objectDetectorThreadStartStop);
+
+    pthread_mutex_unlock(&mutex);
+
+    LOGI("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector: Returning");
+}
+
+void DetectionBasedTracker::SeparateDetectionWork::stop()
+{
+    //FIXME: TODO: should add quickStop functionality
+    pthread_mutex_lock(&mutex);
+    if (stateThread != STATE_THREAD_WORKING) {
+        pthread_mutex_unlock(&mutex);
+        LOGE("SimpleHighguiDemoCore::stop is called but the SimpleHighguiDemoCore pthread is not active");
+        return;
+    }
+    stateThread=STATE_THREAD_STOPPING;
+    LOGD("DetectionBasedTracker::SeparateDetectionWork::stop: before going to sleep to wait for the signal from the workthread");
+    pthread_cond_signal(&objectDetectorRun);
+    pthread_cond_wait(&objectDetectorThreadStartStop, &mutex);
+    LOGD("DetectionBasedTracker::SeparateDetectionWork::stop: after receiving the signal from the workthread, stateThread=%d", (int)stateThread);
+    pthread_mutex_unlock(&mutex);
+}
+
+void DetectionBasedTracker::SeparateDetectionWork::resetTracking()
+{
+    LOGD("DetectionBasedTracker::SeparateDetectionWork::resetTracking");
+    pthread_mutex_lock(&mutex);
+
+    if ((stateThread == STATE_THREAD_WORKING) && (stateSeparatedObjectDetector == OBJECT_DETECTOR_HANDLING_IMAGE)) {
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::resetTracking: since workthread is detecting objects at the moment, we should make cascadeInThread stop detecting and forget the detecting results");
+        shouldObjectDetectingResultsBeForgot=true;
+        //cascadeInThread.setStopFlag();//FIXME: TODO: this feature also should be contributed to OpenCV
+    } else {
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::resetTracking: since workthread is NOT detecting objects at the moment, we should NOT make any additional actions");
+    }
+
+    resultDetect.clear();
+    isObjectDetectingReady=false;
+
+
+    pthread_mutex_unlock(&mutex);
+    
+}
+
+bool DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions)
+{
+    static double freq = getTickFrequency();
+
+    bool shouldCommunicateWithDetectingThread=(stateSeparatedObjectDetector==OBJECT_DETECTOR_WAITING_IMAGE);
+    LOGD("DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread: shouldCommunicateWithDetectingThread=%d", (shouldCommunicateWithDetectingThread?1:0));
+
+    if (!shouldCommunicateWithDetectingThread) {
+        return false;
+    }
+
+    bool shouldHandleResult=false;
+    pthread_mutex_lock(&mutex);
+
+    if (isObjectDetectingReady) {
+        shouldHandleResult=true;
+        rectsWhereRegions=resultDetect;
+        isObjectDetectingReady=false;
+
+        double lastBigDetectionDuration=1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq);
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread: lastBigDetectionDuration=%f ms", (double)lastBigDetectionDuration);
+    }
+
+    bool shouldSendNewDataToWorkThread=true;
+    if (timeWhenDetectingThreadStartedWork > 0) {
+        double time_from_previous_launch_in_ms=1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq); //the same formula as for lastBigDetectionDuration
+        shouldSendNewDataToWorkThread = (time_from_previous_launch_in_ms >= detectionBasedTracker.parameters.minDetectionPeriod);
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread: shouldSendNewDataToWorkThread was 1, now it is %d, since time_from_previous_launch_in_ms=%.2f, minDetectionPeriod=%d", 
+                (shouldSendNewDataToWorkThread?1:0), time_from_previous_launch_in_ms, detectionBasedTracker.parameters.minDetectionPeriod);
+    }
+
+    if (shouldSendNewDataToWorkThread) {
+
+        imageSeparateDetecting.create(imageGray.size(), CV_8UC1);
+
+        imageGray.copyTo(imageSeparateDetecting);//may change imageSeparateDetecting ptr. But should not.
+
+
+        timeWhenDetectingThreadStartedWork = getTickCount() ;
+
+        pthread_cond_signal(&objectDetectorRun);
+    }
+
+    pthread_mutex_unlock(&mutex);
+
+    return shouldHandleResult;
+}
+
 DetectionBasedTracker::Parameters::Parameters()
 {
     minObjectSize=96;
@@ -76,14 +429,10 @@ DetectionBasedTracker::InnerParameters::InnerParameters()
 
 }
 DetectionBasedTracker::DetectionBasedTracker(const std::string& cascadeFilename, const Parameters& params)
-    :innerParameters(),
+    :separateDetectionWork(),
+    innerParameters(),
     numTrackedSteps(0),
-    cascadeInThread(cascadeFilename),
-    cascadeForTracking(cascadeFilename),
-    isObjectDetectingReady(false),
-    shouldObjectDetectingResultsBeForgot(false),
-    stateThread(STATE_THREAD_STOPPED),
-    stateSeparatedObjectDetector(OBJECT_DETECTOR_NOT_STARTED)
+    cascadeForTracking(cascadeFilename)
 {
     CV_Assert( (params.minObjectSize > 0)
             && (params.maxObjectSize >= 0)
@@ -92,52 +441,27 @@ DetectionBasedTracker::DetectionBasedTracker(const std::string& cascadeFilename,
 
     parameters=params;
 
+    separateDetectionWork=new SeparateDetectionWork(*this, cascadeFilename);
+
     weightsPositionsSmoothing.push_back(1);
     weightsSizesSmoothing.push_back(0.5);
     weightsSizesSmoothing.push_back(0.3);
     weightsSizesSmoothing.push_back(0.2);
 
-    int res=0;
-    res=pthread_mutex_init(&mutex, NULL);//TODO: should be attributes?
-    if (res) {
-        LOGE("ERROR in DetectionBasedTracker::DetectionBasedTracker in pthread_mutex_init(&mutex, NULL) is %d", res);
-        throw(std::exception());
-    }
-    res=pthread_cond_init (&objectDetectorRun, NULL);
-    if (res) {
-        LOGE("ERROR in DetectionBasedTracker::DetectionBasedTracker in pthread_cond_init(&objectDetectorRun,, NULL) is %d", res);
-        pthread_mutex_destroy(&mutex);
-        throw(std::exception());
-    }
-    res=pthread_cond_init (&objectDetectorThreadStartStop, NULL);
-    if (res) {
-        LOGE("ERROR in DetectionBasedTracker::DetectionBasedTracker in pthread_cond_init(&objectDetectorThreadStartStop,, NULL) is %d", res);
-        pthread_cond_destroy(&objectDetectorRun);
-        pthread_mutex_destroy(&mutex);
-        throw(std::exception());
-    }
 }
 DetectionBasedTracker::~DetectionBasedTracker()
 {
-    if(stateThread!=STATE_THREAD_STOPPED) {
-        LOGE("\n\n\nATTENTION!!! dangerous algorithm error: destructor DetectionBasedTracker::~DetectionBasedTracker is called before stopping the workthread");
-    }
-
-    pthread_cond_destroy(&objectDetectorThreadStartStop);
-    pthread_cond_destroy(&objectDetectorRun);
-    pthread_mutex_destroy(&mutex);
 }
 
 
 
 void DetectionBasedTracker::process(const Mat& imageGray)
 {
-    static long long  timeWhenDetectingThreadStartedWork=-1;
 
     CV_Assert(imageGray.type()==CV_8UC1);
 
-    if (stateThread == STATE_THREAD_STOPPED) {
-        run();
+    if (!separateDetectionWork->isWorking()) {
+        separateDetectionWork->run();
     }
 
     static double freq = getTickFrequency();
@@ -158,53 +482,10 @@ void DetectionBasedTracker::process(const Mat& imageGray)
     Size objectSize=Size(D,D);
 
 
-    bool shouldHandleResult=false;
-
     vector<Rect> rectsWhereRegions;
+    bool shouldHandleResult=separateDetectionWork->communicateWithDetectingThread(imageGray, rectsWhereRegions);
 
 
-    bool shouldCommunicateWithDetectingThread=(stateSeparatedObjectDetector==OBJECT_DETECTOR_WAITING_IMAGE);
-    LOGD("DetectionBasedTracker::process: shouldCommunicateWithDetectingThread=%d", (shouldCommunicateWithDetectingThread?1:0));
-
-    if (shouldCommunicateWithDetectingThread) {
-        pthread_mutex_lock(&mutex);
-
-        if (isObjectDetectingReady) {
-            shouldHandleResult=true;
-            rectsWhereRegions=resultDetect;
-            isObjectDetectingReady=false;
-
-            double lastBigDetectionDuration=1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq);
-            LOGD("DetectionBasedTracker::process: lastBigDetectionDuration=%f ms", (double)lastBigDetectionDuration);
-        }
-
-        bool shouldSendNewDataToWorkThread=true;
-        if (timeWhenDetectingThreadStartedWork > 0) {
-            double time_from_previous_launch_in_ms=1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq); //the same formula as for lastBigDetectionDuration
-            shouldSendNewDataToWorkThread = (time_from_previous_launch_in_ms >= parameters.minDetectionPeriod);
-            LOGD("DetectionBasedTracker::process: shouldSendNewDataToWorkThread was 1, now it is %d, since time_from_previous_launch_in_ms=%.2f, minDetectionPeriod=%d", 
-                    (shouldSendNewDataToWorkThread?1:0), time_from_previous_launch_in_ms, parameters.minDetectionPeriod);
-        }
-
-        if (shouldSendNewDataToWorkThread) {
-            
-            imageSeparateDetecting.create(imageGray.size(), CV_8UC1);
-            {
-                uchar* databefore=imageSeparateDetecting.data; //for debugging only
-
-                imageGray.copyTo(imageSeparateDetecting);//may change imageSeparateDetecting ptr. But should not.
-
-                uchar* dataafter=imageSeparateDetecting.data; //for debugging only
-                CV_Assert(databefore == dataafter); // for debugging only
-            }
-
-            timeWhenDetectingThreadStartedWork = getTickCount() ;
-
-            pthread_cond_signal(&objectDetectorRun);
-        }
-
-        pthread_mutex_unlock(&mutex);
-    }
 
     if (shouldHandleResult) {
         LOGD("DetectionBasedTracker::process: get _rectsWhereRegions were got from resultDetect");
@@ -277,209 +558,22 @@ void DetectionBasedTracker::getObjects(std::vector<Object>& result) const
     }
 }
 
-#ifdef __GNUC__
-#define CATCH_ALL_AND_REPEATE(_block)                                                       \
-while(true) {                                                                               \
-    try {                                                                                   \
-        _block;                                                                             \
-        break;                                                                              \
-    }                                                                                       \
-    catch(cv::Exception& e) {                                                               \
-        LOGE("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", __func__, e.what());      \
-    } catch(std::exception& e) {                                                            \
-        LOGE("\n %s: ERROR: Exception caught: \n'%s'\n\n", __func__, e.what());             \
-    } catch(...) {                                                                          \
-        LOGE("\n %s: ERROR: UNKNOWN Exception caught\n\n", __func__);                       \
-    }                                                                                       \
-}
-#else
-#define CATCH_ALL_AND_REPEATE(_block)                                                       \
-while(true) {                                                                               \
-    try {                                                                                   \
-        _block;                                                                             \
-        break;                                                                              \
-    }                                                                                       \
-    catch(cv::Exception& e) {                                                               \
-        LOGE("\n ERROR: OpenCV Exception caught: \n'%s'\n\n", e.what());                    \
-    } catch(std::exception& e) {                                                            \
-        LOGE("\n ERROR: Exception caught: \n'%s'\n\n", e.what());                           \
-    } catch(...) {                                                                          \
-        LOGE("\n ERROR: UNKNOWN Exception caught\n\n");                                     \
-    }                                                                                       \
-}
-#endif
 
-void* workcycleObjectDetectorFunction(void* p)
-{
-    CATCH_ALL_AND_REPEATE({ ((DetectionBasedTracker*)p)->workcycleObjectDetector(); });
-    return NULL;
-}
 
 bool DetectionBasedTracker::run()
 {
-    LOGD("DetectionBasedTracker::run() --- start");
-    pthread_mutex_lock(&mutex);
-    if (stateThread != STATE_THREAD_STOPPED) {
-        LOGE("DetectionBasedTracker::run is called while the previous run is not stopped");
-        pthread_mutex_unlock(&mutex);
-        return false;
-    }
-    stateThread=STATE_THREAD_WORKING;
-    pthread_create(&second_workthread, NULL, workcycleObjectDetectorFunction, (void*)this); //TODO: add attributes?
-    pthread_cond_wait(&objectDetectorThreadStartStop, &mutex);
-    pthread_mutex_unlock(&mutex);
-    LOGD("DetectionBasedTracker::run() --- end");
-    return true;
+    return separateDetectionWork->run();
 }
 
-void DetectionBasedTracker::workcycleObjectDetector()
-{
-    static double freq = getTickFrequency();
-    LOGD0("DetectionBasedTracker::workcycleObjectDetector() --- start");
-    vector<Rect> objects;
-
-    pthread_mutex_lock(&mutex); 
-    {
-        pthread_cond_signal(&objectDetectorThreadStartStop);
-
-        LOGD("DetectionBasedTracker::workcycleObjectDetector() --- before waiting");
-        stateSeparatedObjectDetector=OBJECT_DETECTOR_WAITING_IMAGE;
-        pthread_cond_wait(&objectDetectorRun, &mutex);
-        stateSeparatedObjectDetector=OBJECT_DETECTOR_HANDLING_IMAGE;
-        LOGD("DetectionBasedTracker::workcycleObjectDetector() --- after waiting");
-    }
-    pthread_mutex_unlock(&mutex);
-
-    bool isFirstStep=true;
-
-    isObjectDetectingReady=false;
-
-    while(stateThread == STATE_THREAD_WORKING)
-    {
-        LOGD("DetectionBasedTracker::workcycleObjectDetector() --- next step");
-
-        if (! isFirstStep) {
-            LOGD("DetectionBasedTracker::workcycleObjectDetector() --- before waiting");
-            pthread_mutex_lock(&mutex);
-            stateSeparatedObjectDetector=OBJECT_DETECTOR_WAITING_IMAGE;
-            pthread_cond_wait(&objectDetectorRun, &mutex);
-            stateSeparatedObjectDetector=OBJECT_DETECTOR_HANDLING_IMAGE;
-            pthread_mutex_unlock(&mutex);
-            LOGD("DetectionBasedTracker::workcycleObjectDetector() --- after waiting");
-        } else {
-            isFirstStep=false;
-        }
-
-        if (stateThread != STATE_THREAD_WORKING) {
-            LOGD("DetectionBasedTracker::workcycleObjectDetector() --- go out from the workcycle just after waiting");
-            break;
-        }
-
-
-        if (imageSeparateDetecting.empty()) {
-            LOGD("DetectionBasedTracker::workcycleObjectDetector() --- imageSeparateDetecting is empty, continue");
-            continue;
-        }
-        LOGD("DetectionBasedTracker::workcycleObjectDetector() --- start handling imageSeparateDetecting, img.size=%dx%d, img.data=0x%p", 
-                imageSeparateDetecting.size().width, imageSeparateDetecting.size().height, (void*)imageSeparateDetecting.data);
-
-
-        int64 t1_detect=getTickCount();
-
-        int minObjectSize=parameters.minObjectSize;
-        Size min_objectSize=Size(minObjectSize, minObjectSize);
-
-        int maxObjectSize=parameters.maxObjectSize;
-        Size max_objectSize(maxObjectSize, maxObjectSize);
-
-
-        cascadeInThread.detectMultiScale( imageSeparateDetecting, objects,
-                parameters.scaleFactor, parameters.minNeighbors, 0
-                |CV_HAAR_SCALE_IMAGE
-                ,
-                min_objectSize,
-                max_objectSize
-                );
-        LOGD("DetectionBasedTracker::workcycleObjectDetector() --- end handling imageSeparateDetecting");
-
-        if (stateThread != STATE_THREAD_WORKING) {
-            LOGD("DetectionBasedTracker::workcycleObjectDetector() --- go out from the workcycle just after detecting");
-            break;
-        }
-
-        int64 t2_detect=getTickCount();
-        int64 dt_detect=t2_detect-t1_detect;
-        double dt_detect_ms=((double)dt_detect)/freq * 1000.0;
-
-        LOGI("DetectionBasedTracker::workcycleObjectDetector() --- objects num==%d, t_ms=%.4f", (int)objects.size(), dt_detect_ms);
-
-        pthread_mutex_lock(&mutex);
-        if (!shouldObjectDetectingResultsBeForgot) {
-            resultDetect=objects;
-            isObjectDetectingReady=true;
-        } else { //shouldObjectDetectingResultsBeForgot==true
-            resultDetect.clear();
-            isObjectDetectingReady=false;
-            shouldObjectDetectingResultsBeForgot=false;
-        }
-        pthread_mutex_unlock(&mutex);
-
-        objects.clear();
-    }// while(stateThread == STATE_THREAD_WORKING)
-
-
-    pthread_mutex_lock(&mutex);
-
-    if (stateThread == STATE_THREAD_STOPPING) {
-        stateThread=STATE_THREAD_STOPPED;
-    }
-    stateSeparatedObjectDetector=OBJECT_DETECTOR_NOT_STARTED;
-    isObjectDetectingReady=false;
-    shouldObjectDetectingResultsBeForgot=false;
-
-    pthread_cond_signal(&objectDetectorThreadStartStop);
-
-    pthread_mutex_unlock(&mutex);
-
-    LOGI("DetectionBasedTracker::workcycleObjectDetector: Returning");
-}
 void DetectionBasedTracker::stop()
 {
-    //FIXME: TODO: should add quickStop functionality
-    pthread_mutex_lock(&mutex);
-    if (stateThread != STATE_THREAD_WORKING) {
-        pthread_mutex_unlock(&mutex);
-        LOGE("SimpleHighguiDemoCore::stop is called but the SimpleHighguiDemoCore pthread is not active");
-        return;
-    }
-    stateThread=STATE_THREAD_STOPPING;
-    LOGD("DetectionBasedTracker::stop: before going to sleep to wait for the signal from the workthread");
-    pthread_cond_signal(&objectDetectorRun);
-    pthread_cond_wait(&objectDetectorThreadStartStop, &mutex);
-    LOGD("DetectionBasedTracker::stop: after receiving the signal from the workthread, stateThread=%d", (int)stateThread);
-    pthread_mutex_unlock(&mutex);
+    separateDetectionWork->stop();
 }
 
 void DetectionBasedTracker::resetTracking()
 {
-    LOGD("DetectionBasedTracker::resetTracking");
-    pthread_mutex_lock(&mutex);
-
-    if ((stateThread == STATE_THREAD_WORKING) && (stateSeparatedObjectDetector == OBJECT_DETECTOR_HANDLING_IMAGE)) {
-        LOGD("DetectionBasedTracker::resetTracking: since workthread is detecting objects at the moment, we should make cascadeInThread stop detecting and forget the detecting results");
-        shouldObjectDetectingResultsBeForgot=true;
-        //cascadeInThread.setStopFlag();//FIXME: TODO: this feature also should be contributed to OpenCV
-    } else {
-        LOGD("DetectionBasedTracker::resetTracking: since workthread is NOT detecting objects at the moment, we should NOT make any additional actions");
-    }
-
-    resultDetect.clear();
+    separateDetectionWork->resetTracking();
     trackedObjects.clear();
-    isObjectDetectingReady=false;
-
-
-    pthread_mutex_unlock(&mutex);
-    
 }
 
 void DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detectedObjects)
@@ -730,12 +824,9 @@ bool DetectionBasedTracker::setParameters(const Parameters& params)
         return false;
     }
 
-    pthread_mutex_lock(&mutex);
-
-
+    separateDetectionWork->lock();
     parameters=params;
-
-    pthread_mutex_unlock(&mutex);
+    separateDetectionWork->unlock();
     return true;
 }
 

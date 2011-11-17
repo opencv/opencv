@@ -40,6 +40,10 @@ class DetectionBasedTracker
         virtual void getObjects(std::vector<Object>& result) const;
 
     protected:
+        class SeparateDetectionWork;
+        cv::Ptr<SeparateDetectionWork> separateDetectionWork;
+        friend void* workcycleObjectDetectorFunction(void* p);
+
 
         struct InnerParameters
         {
@@ -54,6 +58,9 @@ class DetectionBasedTracker
 
             InnerParameters();
         };
+        Parameters parameters;
+        InnerParameters innerParameters;
+
         struct TrackedObject
         {
             typedef std::vector<cv::Rect> PositionsVector;
@@ -77,50 +84,17 @@ class DetectionBasedTracker
             }
         };
 
-        Parameters parameters;
-        InnerParameters innerParameters;
-
         int numTrackedSteps;
         std::vector<TrackedObject> trackedObjects;
 
         std::vector<float> weightsPositionsSmoothing;
         std::vector<float> weightsSizesSmoothing;
 
-        cv::CascadeClassifier cascadeInThread;
         cv::CascadeClassifier cascadeForTracking;
 
-        cv::Mat imageSeparateDetecting;
-
-        void workcycleObjectDetector();
-        friend void* workcycleObjectDetectorFunction(void* p);
-
-        pthread_t second_workthread;
-        pthread_mutex_t mutex;
-        pthread_cond_t objectDetectorRun;
-        pthread_cond_t objectDetectorThreadStartStop;
-
-        std::vector<cv::Rect> resultDetect;
-        volatile bool isObjectDetectingReady;
-        volatile bool shouldObjectDetectingResultsBeForgot;
-
-        enum StateSeparatedThread {
-            STATE_THREAD_STOPPED=0,
-            STATE_THREAD_WORKING,
-            STATE_THREAD_STOPPING
-        };
-        volatile StateSeparatedThread stateThread;
-
-        enum StateSeparatedObjectDetector{
-            OBJECT_DETECTOR_NOT_STARTED,
-            OBJECT_DETECTOR_WAITING_IMAGE,
-            OBJECT_DETECTOR_HANDLING_IMAGE
-        };
-        volatile StateSeparatedObjectDetector stateSeparatedObjectDetector;
 
         void updateTrackedObjects(const std::vector<cv::Rect>& detectedObjects);
-
         cv::Rect calcTrackedObjectPositionToShow(int i) const;
-
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
 
