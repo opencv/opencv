@@ -18,7 +18,7 @@
 #     For example this one: http://gnuwin32.sourceforge.net/packages/make.htm
 #
 #   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r7
-#   $ cmake.exe -G"MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=<path to this file>\android.toolchain.cmake -DCMAKE_BUILD_TOOL="%ANDROID_NDK%\prebuilt\windows\bin\make.exe" ..
+#   $ cmake.exe -G"MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=<path to this file>\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM="%ANDROID_NDK%\prebuilt\windows\bin\make.exe" ..
 #   $ "%ANDROID_NDK%\prebuilt\windows\bin\make.exe"
 #
 #

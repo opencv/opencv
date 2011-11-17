@@ -53,10 +53,10 @@ ECHO ANDROID_ABI=%ANDROID_ABI%
 ECHO.
 IF NOT %BUILD_OPENCV%==1 GOTO other-cmake
 :opencv-cmake
-("%CMAKE_EXE%" -G"MinGW Makefiles" -DANDROID_ABI="%ANDROID_ABI%" -C "%SOURCE_DIR%\CMakeCache.android.initial.cmake" -DCMAKE_TOOLCHAIN_FILE="%SOURCE_DIR%"\android.toolchain.cmake -DCMAKE_BUILD_TOOL="%MAKE_EXE%" %* "%SOURCE_DIR%\..") && GOTO cmakefin
+("%CMAKE_EXE%" -G"MinGW Makefiles" -DANDROID_ABI="%ANDROID_ABI%" -C "%SOURCE_DIR%\CMakeCache.android.initial.cmake" -DCMAKE_TOOLCHAIN_FILE="%SOURCE_DIR%"\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM="%MAKE_EXE%" %* "%SOURCE_DIR%\..") && GOTO cmakefin
 ECHO. & ECHO cmake failed &	GOTO end
 :other-cmake
-("%CMAKE_EXE%" -G"MinGW Makefiles" -DANDROID_ABI="%ANDROID_ABI%" -DOpenCV_DIR="%OPENCV_BUILD_DIR%" -DCMAKE_TOOLCHAIN_FILE="%OPENCV_BUILD_DIR%\..\android.toolchain.cmake" -DCMAKE_BUILD_TOOL="%MAKE_EXE%" %* "%SOURCE_DIR%") && GOTO cmakefin
+("%CMAKE_EXE%" -G"MinGW Makefiles" -DANDROID_ABI="%ANDROID_ABI%" -DOpenCV_DIR="%OPENCV_BUILD_DIR%" -DCMAKE_TOOLCHAIN_FILE="%OPENCV_BUILD_DIR%\..\android.toolchain.cmake" -DCMAKE_MAKE_PROGRAM="%MAKE_EXE%" %* "%SOURCE_DIR%") && GOTO cmakefin
 ECHO. & ECHO cmake failed &	GOTO end
 :cmakefin
 
