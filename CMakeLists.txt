@@ -1679,9 +1679,18 @@ else()
 endif()
 
 if(ANDROID)
+    status("")
+    status("  Android: ")
     status("    Android ABI:" ${ANDROID_ABI})
     status("    Native API level:" android-${ANDROID_NATIVE_API_LEVEL})
     status("    SDK target:" "${ANDROID_SDK_TARGET}")
+    if(BUILD_WITH_ANDROID_NDK)
+        status("    Android NDK:" "${ANDROID_NDK} (toolchain: ${ANDROID_TOOLCHAIN_NAME})")
+    elseif(BUILD_WITH_STANDALONE_TOOLCHAIN)
+        status("    Android toolchain:" "${ANDROID_STANDALONE_TOOLCHAIN}")
+    endif()
+    status("    android tool:"    ANDROID_EXECUTABLE       THEN "${ANDROID_EXECUTABLE} (${ANDROID_TOOLS_Pkg_Desc})" ELSE NO)
+    status("    ant:"             ANT_EXECUTABLE           THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})" ELSE NO)
 endif()
 
 #YV
@@ -1778,21 +1787,17 @@ endif()
 status("    Use Cuda:"  HAVE_CUDA  THEN YES ELSE NO)
 status("    Use Eigen:" HAVE_EIGEN THEN YES ELSE NO)
 
+status("")
+status("  Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_MAJOR_MINOR})" ELSE NO)
 # interfaces to other languages
 status("")
 status("  Interfaces:")
 status("    Python:"              BUILD_NEW_PYTHON_SUPPORT THEN YES ELSE NO)
-status("    Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_MAJOR_MINOR})" ELSE NO)
-status("    Python numpy:"        PYTHON_USE_NUMPY         THEN YES ELSE "NO (Python wrappers will not be generated)")
+status("    Python numpy:"        PYTHON_USE_NUMPY AND BUILD_NEW_PYTHON_SUPPORT THEN YES ELSE "NO (Python wrappers will not be generated)")
 if(ANDROID AND ANDROID_NATIVE_API_LEVEL LESS 8)
     status("    Java:" "NO (Java API requires Android API level 8 or higher)")
 else()
     status("    Java:" BUILD_JAVA_SUPPORT THEN YES ELSE NO)
-endif()
-
-if(ANDROID)
-    status("    android tool:"    ANDROID_EXECUTABLE       THEN "${ANDROID_EXECUTABLE} (${ANDROID_TOOLS_Pkg_Desc})" ELSE NO)
-    status("    ant:"             ANT_EXECUTABLE           THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})" ELSE NO)
 endif()
 
 # documentation
