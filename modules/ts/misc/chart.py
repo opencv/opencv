@@ -142,10 +142,13 @@ if __name__ == "__main__":
         arglists.append({})
         
     names = set()
+    names1 = set()
     for pair in tests:
         sn = pair[0].shortName()
         if len(pair[1]) > 1:
             names.add(sn)
+        else:
+            names1.add(sn)
         if sn == sname:
             if len(pair[1]) != argsnum:
                 print >> sys.stderr, "Error - unable to create chart tables for functions having different argument numbers"
@@ -153,12 +156,17 @@ if __name__ == "__main__":
             for i in range(argsnum):
                 arglists[i][pair[1][i]] = 1
     
-    if len(names) != 1:
+    if names1 or len(names) != 1:
         print >> sys.stderr, "Error - unable to create tables for functions from different test suits:"
         i = 1
         for name in sorted(names):
             print >> sys.stderr, "%4s:   %s" % (i, name)
             i += 1
+        if names1:
+            print >> sys.stderr, "Other suits in this log (can not be choosen):"
+            for name in sorted(names1):
+                print >> sys.stderr, "%4s:   %s" % (i, name)
+                i += 1
         sys.exit(1)
     
     if argsnum < 2:

@@ -1,106 +1,131 @@
-# ----------------------------------------------------------------------------
-#  Android CMake toolchain file, for use with the ndk r5,r6,r7
+# ------------------------------------------------------------------------------
+#  Android CMake toolchain file, for use with the Android NDK r5-r7
+#  Requires cmake 2.6.3 or newer (2.8.3 or newer is recommended).
 #  See home page: http://code.google.com/p/android-cmake/
 #
 #  Usage Linux:
-#   $ export ANDROID_NDK=/<absolute path to NDK>
-#   $ cmake -DCMAKE_TOOLCHAIN_FILE=<path to this file>/android.toolchain.cmake ..
-#   $ make
+#   $ export ANDROID_NDK=/absolute/path/to/the/android-ndk
+#   $ mkdir build && cd build
+#   $ cmake -DCMAKE_TOOLCHAIN_FILE=path/to/the/android.toolchain.cmake ..
+#   $ make -j8
 #
 #  Usage Linux (using standalone toolchain):
-#   $ export ANDROID_STANDALONE_TOOLCHAIN=/<absolute path to standalone toolchain>
-#   $ cmake -DCMAKE_TOOLCHAIN_FILE=<path to this file>/android.toolchain.cmake ..
-#   $ make
+#   $ export ANDROID_STANDALONE_TOOLCHAIN=/absolute/path/to/android-toolchain
+#   $ mkdir build && cd build
+#   $ cmake -DCMAKE_TOOLCHAIN_FILE=path/to/the/android.toolchain.cmake ..
+#   $ make -j8
 #
 #  Usage Windows:
 #     You need native port of make to build your project.
-#     NDK r7 already has make.exe on board. For older versions you need to intall it seperately.
-#     For example this one: http://gnuwin32.sourceforge.net/packages/make.htm
+#     Android NDK r7 already has make.exe on board.
+#     For older NDK you have to install it separately.
+#     For example, this one: http://gnuwin32.sourceforge.net/packages/make.htm
 #
-#   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r7
-#   $ cmake.exe -G"MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=<path to this file>\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM="%ANDROID_NDK%\prebuilt\windows\bin\make.exe" ..
+#   $ SET ANDROID_NDK=C:\absolute\path\to\the\android-ndk
+#   $ mkdir build && cd build
+#   $ cmake.exe -G"MinGW Makefiles"
+#       -DCMAKE_TOOLCHAIN_FILE=path\to\the\android.toolchain.cmake
+#       -DCMAKE_MAKE_PROGRAM="%ANDROID_NDK%\prebuilt\windows\bin\make.exe" ..
 #   $ "%ANDROID_NDK%\prebuilt\windows\bin\make.exe"
 #
 #
-#  Toolchain options (can be set as cmake parameters: -D<option_name>=<value>):
-#    ANDROID_NDK=/opt/android-ndk-r7 - path to NDK root.
+#  Options (can be set as cmake parameters: -D<option_name>=<value>):
+#    ANDROID_NDK=/opt/android-ndk - path to the NDK root.
 #      Can be set as environment variable. Can be set only at first cmake run.
 #
-#    ANDROID_STANDALONE_TOOLCHAIN=/opt/android-toolchain - path to standalone toolchain.
-#      Option is not used if full NDK is found. Can be set as environment variable.
-#      Can be set only at first cmake run.
+#    ANDROID_STANDALONE_TOOLCHAIN=/opt/android-toolchain - path to the 
+#      standalone toolchain. This option is not used if full NDK is found
+#      (ignored if ANDROID_NDK is set).
+#      Can be set as environment variable. Can be set only at first cmake run.
 #
-#    ANDROID_ABI=armeabi-v7a - type of floating point support.
-#      Other possible values are: "armeabi", "armeabi-v7a with NEON", "armeabi-v7a with VFPV3", "armeabi-v6 with VFP", "x86"
+#    ANDROID_ABI=armeabi-v7a -  specifies the target Application Binary
+#      Interface (ABI). This option nearly matches to the APP_ABI variable 
+#      used by ndk-build tool from Android NDK.
+#      Possible values are:
+#        "armeabi" - matches to the NDK ABI with the same name.
+#           See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
+#        "armeabi-v7a" - matches to the NDK ABI with the same name.
+#           See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
+#        "armeabi-v7a with NEON" - same as armeabi-v7a, but
+#            sets NEON as floating-point unit
+#        "armeabi-v7a with VFPV3" - same as armeabi-v7a, but
+#            sets VFPV3 as floating-point unit (has 32 registers instead of 16).
+#        "armeabi-v6 with VFP" - tuned for ARMv6 processors having VFP.
+#        "x86" - matches to the NDK ABI with the same name.
+#           See ${ANDROID_NDK}/docs/CPU-ARCH-ABIS.html for the documentation.
 #
-#    ANDROID_NATIVE_API_LEVEL=android-8 - level of android API to use.
-#      Option is read-only when build uses stanalone toolchain.
+#    ANDROID_NATIVE_API_LEVEL=android-8 - level of Android API compile for.
+#      Option is read-only when standalone toolchain used.
 #
-#    ANDROID_FORCE_ARM_BUILD=OFF - set true to generate 32-bit ARM instructions instead of Thumb-1.
-#      Is not available for "x86" (missing) and "armeabi-v6 with VFP" (forced) ABIs.
+#    ANDROID_FORCE_ARM_BUILD=OFF - set true to generate 32-bit ARM instructions
+#      instead of Thumb-1. Is not available for "x86" (inapplicable) and
+#      "armeabi-v6 with VFP" (forced) ABIs.
 #
-#    ANDROID_NO_UNDEFINED=ON - set true to show all undefined symbols as linker errors even if they are not used.
+#    ANDROID_NO_UNDEFINED=ON - set true to show all undefined symbols as linker
+#      errors even if they are not used.
 #
-#    LIBRARY_OUTPUT_PATH_ROOT=${CMAKE_SOURCE_DIR} - where to output binary files. See details below.
+#    LIBRARY_OUTPUT_PATH_ROOT=${CMAKE_SOURCE_DIR} - where to output binary
+#      files. See additional details below.
 #
-#    ANDROID_SET_OBSOLETE_VARIABLES=ON - it set, then toolchain define some obsolete variables which
-#      was set by previous versions of this file for backward compatibility.
-#
-#  android-cmake toolcahain will search for NDK/toolchain in the following order:
-#    ANDROID_NDK - cmake parameter
-#    ANDROID_NDK - environment variable
-#    ANDROID_STANDALONE_TOOLCHAIN - cmake parameter
-#    ANDROID_STANDALONE_TOOLCHAIN - environment variable
-#    ANDROID_NDK - default location
-#    ANDROID_STANDALONE_TOOLCHAIN - default location
+#    ANDROID_SET_OBSOLETE_VARIABLES=ON - it set, then toolchain defines some
+#      obsolete variables which were set by previous versions of this file for
+#      backward compatibility.
 #
 #
 #  What?:
-#     Make sure to do the following in your scripts:
-#       SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${my_cxx_flags}" )
-#       SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${my_cxx_flags}" )
-#       The flags will be prepopulated with critical flags, so don't loose them.
+#    android-cmake toolchain searches for NDK/toolchain in the following order:
+#      ANDROID_NDK - cmake parameter
+#      ANDROID_NDK - environment variable
+#      ANDROID_STANDALONE_TOOLCHAIN - cmake parameter
+#      ANDROID_STANDALONE_TOOLCHAIN - environment variable
+#      ANDROID_NDK - default locations
+#      ANDROID_STANDALONE_TOOLCHAIN - default locations
+#
+#    Make sure to do the following in your scripts:
+#      SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${my_cxx_flags}" )
+#      SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${my_cxx_flags}" )
+#      The flags will be prepopulated with critical flags, so don't loose them.
+#      Also be aware that toolchain also sets configuration-specific compiler
+#      flags and linker flags.
 #    
-#     ANDROID and BUILD_ANDROID will be set to true, you may test these 
-#     variables to make necessary changes.
+#    ANDROID and BUILD_ANDROID will be set to true, you may test any of these 
+#    variables to make necessary Android-specific configuration changes.
 #    
-#     Also ARMEABI or ARMEABI_V7A or X86 will be set true, mutually exclusive. V7A is
-#     for floating point. NEON option will be set true if fpu is set to neon.
+#    Also ARMEABI or ARMEABI_V7A or X86 will be set true, mutually exclusive.
+#    NEON option will be set true if VFP is set to NEON.
 #
-#     LIBRARY_OUTPUT_PATH_ROOT should be set in cache to determine where android
-#     libraries will be installed.
-#        default is ${CMAKE_SOURCE_DIR} , and the android libs will always be
-#        under ${LIBRARY_OUTPUT_PATH_ROOT}/libs/armeabi* depending on target.
-#        this will be convenient for android linking
+#    LIBRARY_OUTPUT_PATH_ROOT should be set in cache to determine where Android
+#    libraries will be installed.
+#    Default is ${CMAKE_SOURCE_DIR}, and the android libs will always be
+#    under the ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ANDROID_NDK_ABI_NAME}
+#    (depending on the target ABI). This is convenient for Android packaging.
 #
-#     Base system is Linux, but you may need to change things 
-#     for android compatibility.
-#   
-#
+#  Change Log:
 #   - initial version December 2010 Ethan Rublee ethan.ruble@gmail.com
 #   - modified April 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [+] added possibility to build with NDK (without standalone toolchain)
-#     [+] support croos compilation on Windows (native, no cygwin support)
+#     [+] support cross-compilation on Windows (native, no cygwin support)
 #     [+] added compiler option to force "char" type to be signed
 #     [+] added toolchain option to compile to 32-bit ARM instructions
 #     [+] added toolchain option to disable SWIG search
 #     [+] added platform "armeabi-v7a with VFPV3"
 #     [~] ARM_TARGETS renamed to ARM_TARGET
-#   - modified April 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [+] EXECUTABLE_OUTPUT_PATH is set by toolchain (required on Windows)
 #     [~] Fixed bug with ANDROID_API_LEVEL variable
 #     [~] turn off SWIG search if it is not found first time
 #   - modified May 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [~] ANDROID_LEVEL is renamed to ANDROID_API_LEVEL
 #     [+] ANDROID_API_LEVEL is detected by toolchain if not specified
-#     [~] added guard to prevent changing of output directories on first cmake pass
+#     [~] added guard to prevent changing of output directories on the first
+#         cmake pass
 #     [~] toolchain exits with error if ARM_TARGET is not recognized
 #   - modified June 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [~] default NDK path is updated for version r5c 
 #     [+] variable CMAKE_SYSTEM_PROCESSOR is set based on ARM_TARGET
 #     [~] toolchain install directory is added to linker paths
 #     [-] removed SWIG-related stuff from toolchain
-#     [+] added macro find_host_package, find_host_program to search packages/programs on host system
+#     [+] added macro find_host_package, find_host_program to search
+#         packages/programs on the host system
 #     [~] fixed path to STL library
 #   - modified July 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [~] fixed options caching
@@ -109,16 +134,18 @@
 #   - modified September 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [~] updated for NDK r6b
 #   - modified November 2011 Andrey Kamaev andrey.kamaev@itseez.com
-#     [~] rewritten for NDK r7
+#     [*] rewritten for NDK r7
 #     [+] x86 toolchain support (experimental)
 #     [~] improved compiler and linker flags management
 #     [+] support different build flags for Release and Debug configurations
-#     [~] by default compiler flags the same as used by ndk-build (but only where reasonable)
-#     [~] ANDROID_NDK_TOOLCHAIN_ROOT is splitted to ANDROID_STANDALONE_TOOLCHAIN and ANDROID_TOOLCHAIN_ROOT
-#     [~] ARM_TARGET is remaned to ANDROID_ABI
+#     [~] by default compiler flags the same as used by ndk-build (but only
+#         where reasonable)
+#     [~] ANDROID_NDK_TOOLCHAIN_ROOT is splitted to ANDROID_STANDALONE_TOOLCHAIN
+#         and ANDROID_TOOLCHAIN_ROOT
+#     [~] ARM_TARGET is renamed to ANDROID_ABI
 #     [~] ARMEABI_NDK_NAME is renamed to ANDROID_NDK_ABI_NAME
 #     [~] ANDROID_API_LEVEL is renamed to ANDROID_NATIVE_API_LEVEL
-# ----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # this one is important
 set( CMAKE_SYSTEM_NAME Linux )
@@ -223,6 +250,14 @@ macro( __DETECT_TOOLCHAIN_MACHINE_NAME _var _root )
  unset( __gccExePath )
  unset( __gccExePathsCount )
  unset( __gccExeName )
+endmacro()
+
+macro( __COPY_IF_DIFFERENT _source _destination )
+ execute_process( COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_source}" "${_destination}" RESULT_VARIABLE __fileCopyProcess )
+ if( NOT __fileCopyProcess EQUAL 0 )
+  message( SEND_ERROR "Failed copying of ${_source} to the ${_destination}" )
+ endif()
+ unset( __fileCopyProcess )
 endmacro()
 
 #detect current host platform
@@ -645,41 +680,35 @@ list( APPEND ANDROID_SYSTEM_LIB_DIRS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_N
 #set( LINKER_FLAGS "-L\"${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}\" -L\"${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}\"" )
 set( LINKER_FLAGS "" )
 #STL
-if( NOT EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
- if( EXISTS "${__stlLibPath}/libgnustl_static.a" )
-  file( COPY "${__stlLibPath}/libgnustl_static.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
-  file( RENAME "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libgnustl_static.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
- elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" )
-  file( COPY "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" )
-  file( COPY "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/thumb/libstdc++.a" )
-  file( COPY "${__stlLibPath}/thumb/libstdc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- elseif( EXISTS "${__stlLibPath}/libstdc++.a" )
-  file( COPY "${__stlLibPath}/libstdc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- endif()
+if( EXISTS "${__stlLibPath}/libgnustl_static.a" )
+ __COPY_IF_DIFFERENT( "${__stlLibPath}/libgnustl_static.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" )
+ __COPY_IF_DIFFERENT( "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" )
+ __COPY_IF_DIFFERENT( "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/thumb/libstdc++.a" )
+ __COPY_IF_DIFFERENT( "${__stlLibPath}/thumb/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+elseif( EXISTS "${__stlLibPath}/libstdc++.a" )
+ __COPY_IF_DIFFERENT( "${__stlLibPath}/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
 endif()
 if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
  set( LINKER_FLAGS "${LINKER_FLAGS} -lstdc++" )
 endif()
-
-if( NOT EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
- if( EXISTS "${__stlLibPath}/libsupc++.a" )
-  file( COPY "${__stlLibPath}/libsupc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" )
-  file( COPY "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" )
-  file( COPY "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" )
-  file( COPY "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- elseif( EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" )
-  file( COPY "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" DESTINATION "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" )
- endif()
+#gcc exception & rtti support
+if( EXISTS "${__stlLibPath}/libsupc++.a" )
+ __COPY_IF_DIFFERENT( "${__stlLibPath}/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" )
+ __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" )
+ __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" )
+ __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+elseif( EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" )
+ __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
 endif()
 if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
  set( LINKER_FLAGS "${LINKER_FLAGS} -lsupc++" )
 endif()
-
 
 #cleanup for STL search
 unset( __stlIncludePath )
@@ -782,7 +811,7 @@ if( ANDROID_SET_OBSOLETE_VARIABLES )
  set( ARMEABI_NDK_NAME "${ANDROID_NDK_ABI_NAME}" )
 endif()
 
-# Variables controlling behavior of cmake toolchain:
+# Variables controlling behavior or set by cmake toolchain:
 #   ANDROID_ABI : "armeabi-v7a" (default), "armeabi", "armeabi-v7a with NEON", "armeabi-v7a with VFPV3", "armeabi-v6 with VFP", "x86"
 #   ANDROID_FORCE_ARM_BUILD : ON/OFF
 #   ANDROID_NATIVE_API_LEVEL : 3,4,5,8,9,14 (depends on NDK version)
@@ -805,7 +834,7 @@ endif()
 #   ARMEABI_V6 : TRUE for arm v6
 #   ARMEABI_V7A : TRUE for arm v7a
 #   NEON : TRUE if NEON unit is enabled
-#   VFPV3 : TRUE if VFP versiuon 3 is enabled
+#   VFPV3 : TRUE if VFP version 3 is enabled
 #   X86 : TRUE if configured for x86
 #   BUILD_ANDROID : always TRUE
 #   BUILD_WITH_ANDROID_NDK : TRUE if NDK is used
