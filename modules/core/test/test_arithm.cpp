@@ -1246,7 +1246,11 @@ struct NormOp : public BaseElemWiseOp
     }
     double getMaxErr(int)
     {
-        return 1e-6;
+#ifdef HAVE_TEGRA_OPTIMIZATION
+		return 2e-6;
+#else
+		return 1e-6;
+#endif
     }
     int normType;
 };        
@@ -1341,11 +1345,11 @@ TEST_P(ElemWiseTest, accuracy)
         
         double maxErr = op->getMaxErr(depth);
         vector<int> pos;
-        ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " << cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
+		ASSERT_PRED_FORMAT2(cvtest::MatComparator(maxErr, op->context), dst0, dst) << "\nsrc[0] ~ " << cvtest::MatInfo(!src.empty() ? src[0] : Mat()) << "\ntestCase #" << testIdx << "\n";
     }
 }
 
-
+ 
 INSTANTIATE_TEST_CASE_P(Core_Copy, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::CopyOp)));
 INSTANTIATE_TEST_CASE_P(Core_Set, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::SetOp)));
 INSTANTIATE_TEST_CASE_P(Core_SetZero, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::SetZeroOp)));
