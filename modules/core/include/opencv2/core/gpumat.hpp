@@ -268,20 +268,25 @@ namespace cv { namespace gpu
         GpuMat mapDevice();
         void unmapDevice();
 
-        int rows() const;
-        int cols() const;
-        Size size() const;
-        bool empty() const;
+        inline int rows() const { return rows_; }
+        inline int cols() const { return cols_; }
+        inline Size size() const { return Size(cols_, rows_); }
+        inline bool empty() const { return rows_ == 0 || cols_ == 0; }
 
-        int type() const;
-        int depth() const;
-        int channels() const;
-        int elemSize() const;
-        int elemSize1() const;
+        inline int type() const { return type_; }
+        inline int depth() const { return CV_MAT_DEPTH(type_); }
+        inline int channels() const { return CV_MAT_CN(type_); }
+        inline int elemSize() const { return CV_ELEM_SIZE(type_); }
+        inline int elemSize1() const { return CV_ELEM_SIZE1(type_); }
 
-        Usage usage() const;
+        inline Usage usage() const { return usage_; }
 
     private:
+        int rows_;
+        int cols_;
+        int type_;
+        Usage usage_;
+
         class Impl;
         Ptr<Impl> impl_;
     };
@@ -314,18 +319,22 @@ namespace cv { namespace gpu
         void bind() const;
         void unbind() const;
 
-        int rows() const;
-        int cols() const;
-        Size size() const;
-        bool empty() const;
+        inline int rows() const { return rows_; }
+        inline int cols() const { return cols_; }
+        inline Size size() const { return Size(cols_, rows_); }
+        inline bool empty() const { return rows_ == 0 || cols_ == 0; }
 
-        int type() const;
-        int depth() const;
-        int channels() const;
-        int elemSize() const;
-        int elemSize1() const;
+        inline int type() const { return type_; }
+        inline int depth() const { return CV_MAT_DEPTH(type_); }
+        inline int channels() const { return CV_MAT_CN(type_); }
+        inline int elemSize() const { return CV_ELEM_SIZE(type_); }
+        inline int elemSize1() const { return CV_ELEM_SIZE1(type_); }
 
     private:
+        int rows_;
+        int cols_;
+        int type_;
+
         class Impl;
         Ptr<Impl> impl_;
     };

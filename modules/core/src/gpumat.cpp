@@ -1043,76 +1043,86 @@ namespace
     class CudaGlInterop
     {
     public:
-        CudaGlInterop() : resource_(0) 
-        {
-        }
+        CudaGlInterop();
+        ~CudaGlInterop();
 
-        ~CudaGlInterop() 
-        { 
-            if (resource_)
-            {
-                cudaGraphicsUnregisterResource(resource_);
-                resource_ = 0;
-            } 
-        }
+        void registerBuffer(unsigned int buffer);
 
-        void registerBuffer(unsigned int buffer)
-        {
-            if (!g_isCudaGlDeviceInitialized)
-                cvError(CV_GpuApiCallError, "registerBuffer", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
+        void copyFrom(const GpuMat& mat, cudaStream_t stream = 0);
 
-            cudaGraphicsResource_t resource;
-            cudaSafeCall( cudaGraphicsGLRegisterBuffer(&resource, buffer, cudaGraphicsMapFlagsNone) );
-
-            resource_ = resource;
-        }
-
-        void copyFrom(const GpuMat& mat, cudaStream_t stream = 0)
-        {
-            CV_Assert(resource_ != 0);
-
-            cudaSafeCall( cudaGraphicsMapResources(1, &resource_, stream) );
-
-            void* dst_ptr;
-            size_t num_bytes;
-            cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&dst_ptr, &num_bytes, resource_) );
-            
-            const void* src_ptr = mat.ptr();
-            size_t widthBytes = mat.cols * mat.elemSize();
-
-            CV_Assert(widthBytes * mat.rows <= num_bytes);
-
-            if (stream == 0)
-                cudaSafeCall( cudaMemcpy2D(dst_ptr, widthBytes, src_ptr, mat.step, widthBytes, mat.rows, cudaMemcpyDeviceToDevice) );
-            else
-                cudaSafeCall( cudaMemcpy2DAsync(dst_ptr, widthBytes, src_ptr, mat.step, widthBytes, mat.rows, cudaMemcpyDeviceToDevice, stream) );
-
-            cudaGraphicsUnmapResources(1, &resource_, stream);
-        }
-
-        GpuMat map(int rows, int cols, int type, cudaStream_t stream = 0)
-        {
-            CV_Assert(resource_ != 0);
-
-            cudaSafeCall( cudaGraphicsMapResources(1, &resource_, stream) );
-
-            void* ptr;
-            size_t num_bytes;
-            cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&ptr, &num_bytes, resource_) );
-
-            CV_Assert( static_cast<size_t>(cols) * CV_ELEM_SIZE(type) * rows <= num_bytes );
-
-            return GpuMat(rows, cols, type, ptr);
-        }
-
-        void unmap(cudaStream_t stream = 0)
-        {
-            cudaGraphicsUnmapResources(1, &resource_, stream);
-        }
+        GpuMat map(int rows, int cols, int type, cudaStream_t stream = 0);
+        void unmap(cudaStream_t stream = 0);
 
     private:
         cudaGraphicsResource_t resource_;
     };
+
+    inline CudaGlInterop::CudaGlInterop() : resource_(0) 
+    {
+    }
+
+    CudaGlInterop::~CudaGlInterop() 
+    { 
+        if (resource_)
+        {
+            cudaGraphicsUnregisterResource(resource_);
+            resource_ = 0;
+        } 
+    }
+
+    void CudaGlInterop::registerBuffer(unsigned int buffer)
+    {
+        if (!g_isCudaGlDeviceInitialized)
+            cvError(CV_GpuApiCallError, "registerBuffer", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
+
+        cudaGraphicsResource_t resource;
+        cudaSafeCall( cudaGraphicsGLRegisterBuffer(&resource, buffer, cudaGraphicsMapFlagsNone) );
+
+        resource_ = resource;
+    }
+
+    void CudaGlInterop::copyFrom(const GpuMat& mat, cudaStream_t stream)
+    {
+        CV_Assert(resource_ != 0);
+
+        cudaSafeCall( cudaGraphicsMapResources(1, &resource_, stream) );
+
+        void* dst_ptr;
+        size_t num_bytes;
+        cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&dst_ptr, &num_bytes, resource_) );
+        
+        const void* src_ptr = mat.ptr();
+        size_t widthBytes = mat.cols * mat.elemSize();
+
+        CV_Assert(widthBytes * mat.rows <= num_bytes);
+
+        if (stream == 0)
+            cudaSafeCall( cudaMemcpy2D(dst_ptr, widthBytes, src_ptr, mat.step, widthBytes, mat.rows, cudaMemcpyDeviceToDevice) );
+        else
+            cudaSafeCall( cudaMemcpy2DAsync(dst_ptr, widthBytes, src_ptr, mat.step, widthBytes, mat.rows, cudaMemcpyDeviceToDevice, stream) );
+
+        cudaGraphicsUnmapResources(1, &resource_, stream);
+    }
+
+    GpuMat CudaGlInterop::map(int rows, int cols, int type, cudaStream_t stream)
+    {
+        CV_Assert(resource_ != 0);
+
+        cudaSafeCall( cudaGraphicsMapResources(1, &resource_, stream) );
+
+        void* ptr;
+        size_t num_bytes;
+        cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&ptr, &num_bytes, resource_) );
+
+        CV_Assert( static_cast<size_t>(cols) * CV_ELEM_SIZE(type) * rows <= num_bytes );
+
+        return GpuMat(rows, cols, type, ptr);
+    }
+
+    inline void CudaGlInterop::unmap(cudaStream_t stream)
+    {
+        cudaGraphicsUnmapResources(1, &resource_, stream);
+    }
 }
 #endif // HAVE_CUDA && HAVE_OPENGL
 
@@ -1130,45 +1140,29 @@ class cv::gpu::GlBuffer::Impl
 class cv::gpu::GlBuffer::Impl
 {
 public:
-    explicit Impl(unsigned int target) : rows_(0), cols_(0), type_(0), target_(target), buffer_(0) 
-    {
-    }
-
+    Impl();
     Impl(int rows, int cols, int type, unsigned int target);
-
     Impl(const Mat& m, unsigned int target);
-
     ~Impl();
 
-    void copyFrom(const Mat& m);
+    void copyFrom(const Mat& m, unsigned int target);
 
 #ifdef HAVE_CUDA
     void copyFrom(const GpuMat& mat, cudaStream_t stream = 0);
 #endif
 
-    void bind() const;
-    void unbind() const;
+    void bind(unsigned int target) const;
+    void unbind(unsigned int target) const;
 
-    Mat mapHost();
-    void unmapHost();
+    Mat mapHost(int rows, int cols, int type, unsigned int target);
+    void unmapHost(unsigned int target);
 
 #ifdef HAVE_CUDA
-    GpuMat mapDevice(cudaStream_t stream = 0);
+    GpuMat mapDevice(int rows, int cols, int type, cudaStream_t stream = 0);
     void unmapDevice(cudaStream_t stream = 0);
 #endif
 
-    int rows() const { return rows_; }
-    int cols() const { return cols_; }
-    int type() const { return type_; }    
-    int target() const { return target_; }
-
 private:
-    int rows_;
-    int cols_;
-    int type_;
-
-    unsigned int target_;
-
     unsigned int buffer_;
 
 #ifdef HAVE_CUDA
@@ -1176,40 +1170,38 @@ private:
 #endif
 };
 
-cv::gpu::GlBuffer::Impl::Impl(int rows, int cols, int type, unsigned int target) : rows_(0), cols_(0), type_(0), target_(target), buffer_(0) 
+inline cv::gpu::GlBuffer::Impl::Impl() : buffer_(0) 
+{
+}
+
+cv::gpu::GlBuffer::Impl::Impl(int rows, int cols, int type, unsigned int target) : buffer_(0) 
 { 
     if (!glFuncTab()->isGlContextInitialized())
         throw_nogl();
 
     CV_DbgAssert(rows > 0 && cols > 0);
     CV_DbgAssert(CV_MAT_DEPTH(type) >= 0 && CV_MAT_DEPTH(type) <= CV_64F);
-
-    unsigned int buffer;    
-    glFuncTab()->genBuffers(1, &buffer);
+    
+    glFuncTab()->genBuffers(1, &buffer_);
     CV_CheckGlError();
 
     size_t size = rows * cols * CV_ELEM_SIZE(type);
 
-    glFuncTab()->bindBuffer(target_, buffer);
+    glFuncTab()->bindBuffer(target, buffer_);
     CV_CheckGlError();
 
-    glFuncTab()->bufferData(target_, size, 0, GL_DYNAMIC_DRAW);
+    glFuncTab()->bufferData(target, size, 0, GL_DYNAMIC_DRAW);
     CV_CheckGlError();
 
-    glFuncTab()->bindBuffer(target_, 0);
+    glFuncTab()->bindBuffer(target, 0);
     
 #ifdef HAVE_CUDA
     if (g_isCudaGlDeviceInitialized)
-        cudaGlInterop_.registerBuffer(buffer);
+        cudaGlInterop_.registerBuffer(buffer_);
 #endif
-
-    rows_ = rows;
-    cols_ = cols;
-    type_ = type;
-    buffer_ = buffer;
 }
 
-cv::gpu::GlBuffer::Impl::Impl(const Mat& m, unsigned int target) : rows_(0), cols_(0), type_(0), target_(target), buffer_(0) 
+cv::gpu::GlBuffer::Impl::Impl(const Mat& m, unsigned int target) : buffer_(0) 
 { 
     if (!glFuncTab()->isGlContextInitialized())
         throw_nogl();
@@ -1217,30 +1209,24 @@ cv::gpu::GlBuffer::Impl::Impl(const Mat& m, unsigned int target) : rows_(0), col
     CV_DbgAssert(m.rows > 0 && m.cols > 0);
     CV_DbgAssert(m.depth() >= 0 && m.depth() <= CV_64F);
     CV_Assert(m.isContinuous());
-
-    unsigned int buffer;  
-    glFuncTab()->genBuffers(1, &buffer);
+ 
+    glFuncTab()->genBuffers(1, &buffer_);
     CV_CheckGlError();
 
     size_t size = m.rows * m.cols * m.elemSize();
 
-    glFuncTab()->bindBuffer(target_, buffer);
+    glFuncTab()->bindBuffer(target, buffer_);
     CV_CheckGlError();
 
-    glFuncTab()->bufferData(target_, size, m.data, GL_DYNAMIC_DRAW);
+    glFuncTab()->bufferData(target, size, m.data, GL_DYNAMIC_DRAW);
     CV_CheckGlError();
 
-    glFuncTab()->bindBuffer(target_, 0);
+    glFuncTab()->bindBuffer(target, 0);
     
 #ifdef HAVE_CUDA
     if (g_isCudaGlDeviceInitialized)
-        cudaGlInterop_.registerBuffer(buffer);
+        cudaGlInterop_.registerBuffer(buffer_);
 #endif
-
-    rows_ = m.rows;
-    cols_ = m.cols;
-    type_ = m.type();
-    buffer_ = buffer;
 }
 
 cv::gpu::GlBuffer::Impl::~Impl() 
@@ -1261,21 +1247,20 @@ cv::gpu::GlBuffer::Impl::~Impl()
     }
 }
 
-void cv::gpu::GlBuffer::Impl::copyFrom(const Mat& m)
+void cv::gpu::GlBuffer::Impl::copyFrom(const Mat& m, unsigned int target)
 {
     CV_Assert(buffer_ != 0);
 
-    CV_DbgAssert(rows_ == m.rows && cols_ == m.cols && type_ == m.type());
     CV_Assert(m.isContinuous());
 
-    bind();
+    bind(target);
 
     size_t size = m.rows * m.cols * m.elemSize();
 
-    glFuncTab()->bufferSubData(target_, 0, size, m.data);
+    glFuncTab()->bufferSubData(target, 0, size, m.data);
     CV_CheckGlError();
 
-    unbind();
+    unbind(target);
 }
 
 #ifdef HAVE_CUDA
@@ -1287,52 +1272,50 @@ void cv::gpu::GlBuffer::Impl::copyFrom(const GpuMat& mat, cudaStream_t stream)
 
     CV_Assert(buffer_ != 0);
 
-    CV_DbgAssert(rows_ == mat.rows && cols_ == mat.cols && type_ == mat.type());
-
     cudaGlInterop_.copyFrom(mat, stream);
 }
 
 #endif // HAVE_CUDA
 
-void cv::gpu::GlBuffer::Impl::bind() const 
+inline void cv::gpu::GlBuffer::Impl::bind(unsigned int target) const 
 {
     CV_Assert(buffer_ != 0);
 
-    glFuncTab()->bindBuffer(target_, buffer_); 
+    glFuncTab()->bindBuffer(target, buffer_); 
     CV_CheckGlError();
 }
 
-void cv::gpu::GlBuffer::Impl::unbind() const
+inline void cv::gpu::GlBuffer::Impl::unbind(unsigned int target) const
 { 
-    glFuncTab()->bindBuffer(target_, 0);
+    glFuncTab()->bindBuffer(target, 0);
 }
 
-Mat cv::gpu::GlBuffer::Impl::mapHost()
+inline Mat cv::gpu::GlBuffer::Impl::mapHost(int rows, int cols, int type, unsigned int target)
 {
-    void* ptr = glFuncTab()->mapBuffer(target_, GL_READ_WRITE);
+    void* ptr = glFuncTab()->mapBuffer(target, GL_READ_WRITE);
     CV_CheckGlError();
 
-    return Mat(rows_, cols_, type_, ptr);
+    return Mat(rows, cols, type, ptr);
 }
 
-void cv::gpu::GlBuffer::Impl::unmapHost()
+inline void cv::gpu::GlBuffer::Impl::unmapHost(unsigned int target)
 {
-    glFuncTab()->unmapBuffer(target_);
+    glFuncTab()->unmapBuffer(target);
 }
 
 #ifdef HAVE_CUDA
 
-GpuMat cv::gpu::GlBuffer::Impl::mapDevice(cudaStream_t stream)
+inline GpuMat cv::gpu::GlBuffer::Impl::mapDevice(int rows, int cols, int type, cudaStream_t stream)
 {
     if (!g_isCudaGlDeviceInitialized)
         cvError(CV_GpuApiCallError, "copyFrom", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
 
     CV_Assert(buffer_ != 0);
 
-    return cudaGlInterop_.map(rows_, cols_, type_, stream);
+    return cudaGlInterop_.map(rows, cols, type, stream);
 }
 
-void cv::gpu::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
+inline void cv::gpu::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
 {
     if (!g_isCudaGlDeviceInitialized)
         cvError(CV_GpuApiCallError, "copyFrom", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
@@ -1344,43 +1327,52 @@ void cv::gpu::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
 
 #endif // HAVE_OPENGL
 
-cv::gpu::GlBuffer::GlBuffer(Usage usage)
+cv::gpu::GlBuffer::GlBuffer(Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    impl_ = new Impl(usage);
+    impl_ = new Impl;
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(int rows, int cols, int type, Usage usage)
+cv::gpu::GlBuffer::GlBuffer(int rows, int cols, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(rows, cols, type, usage);
+    rows_ = rows;
+    cols_ = cols;
+    type_ = type;
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(Size size, int type, Usage usage)
+cv::gpu::GlBuffer::GlBuffer(Size size, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(size.height, size.width, type, usage);
+    rows_ = size.height;
+    cols_ = size.width;
+    type_ = type;
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(const Mat& mat, Usage usage)
+cv::gpu::GlBuffer::GlBuffer(const Mat& mat, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(mat, usage);
+    rows_ = mat.rows;
+    cols_ = mat.cols;
+    type_ = mat.type();
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage)
+cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1390,6 +1382,9 @@ cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage)
     #else
         impl_ = new Impl(d_mat.rows, d_mat.cols, d_mat.type(), usage);
         impl_->copyFrom(d_mat);
+        rows_ = d_mat.rows;
+        cols_ = d_mat.cols;
+        type_ = d_mat.type();
     #endif
 #endif
 }
@@ -1398,13 +1393,19 @@ cv::gpu::GlBuffer::~GlBuffer()
 {
 }
 
-void cv::gpu::GlBuffer::create(int rows_, int cols_, int type_, Usage usage_)
+void cv::gpu::GlBuffer::create(int rows, int cols, int type, Usage usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    if (rows_ != rows() || cols_ != cols() || type_ != type() || usage_ != usage())
-        impl_ = new Impl(rows_, cols_, type_, usage_);
+    if (rows_ != rows || cols_ != cols || type_ != type || usage_ != usage)
+    {
+        impl_ = new Impl(rows, cols, type, usage);
+        rows_ = rows;
+        cols_ = cols;
+        type_ = type;
+        usage_ = usage;
+    }
 #endif
 }
 
@@ -1413,7 +1414,7 @@ void cv::gpu::GlBuffer::release()
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    impl_ = new Impl(usage());
+    impl_ = new Impl;
 #endif
 }
 
@@ -1423,7 +1424,7 @@ void cv::gpu::GlBuffer::copyFrom(const Mat& mat)
     throw_nogl();
 #else
     create(mat.rows, mat.cols, mat.type());
-    impl_->copyFrom(mat);
+    impl_->copyFrom(mat, usage_);
 #endif
 }
 
@@ -1446,7 +1447,7 @@ void cv::gpu::GlBuffer::bind() const
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    impl_->bind();
+    impl_->bind(usage_);
 #endif
 }
 
@@ -1455,7 +1456,7 @@ void cv::gpu::GlBuffer::unbind() const
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    impl_->unbind();
+    impl_->unbind(usage_);
 #endif
 }
 
@@ -1465,7 +1466,7 @@ Mat cv::gpu::GlBuffer::mapHost()
     throw_nogl();
     return Mat();
 #else
-    return impl_->mapHost();
+    return impl_->mapHost(rows_, cols_, type_, usage_);
 #endif
 }
 
@@ -1474,7 +1475,7 @@ void cv::gpu::GlBuffer::unmapHost()
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    impl_->unmapHost();
+    impl_->unmapHost(usage_);
 #endif
 }
 
@@ -1488,7 +1489,7 @@ GpuMat cv::gpu::GlBuffer::mapDevice()
         throw_nogpu();
         return GpuMat();
     #else
-        return impl_->mapDevice();
+        return impl_->mapDevice(rows_, cols_, type_);
     #endif
 #endif
 }
@@ -1503,72 +1504,6 @@ void cv::gpu::GlBuffer::unmapDevice()
     #else
         impl_->unmapDevice();
     #endif
-#endif
-}
-
-int cv::gpu::GlBuffer::rows() const
-{
-#ifndef HAVE_OPENGL
-    return 0;
-#else
-    return impl_->rows();
-#endif
-}
-
-int cv::gpu::GlBuffer::cols() const
-{
-#ifndef HAVE_OPENGL
-    return 0;
-#else
-    return impl_->cols();
-#endif
-}
-
-Size cv::gpu::GlBuffer::size() const
-{
-    return Size(cols(), rows());
-}
-
-bool cv::gpu::GlBuffer::empty() const
-{
-    return rows() == 0 || cols() == 0;
-}
-
-int cv::gpu::GlBuffer::type() const
-{
-#ifndef HAVE_OPENGL
-    return 0;
-#else
-    return impl_->type();
-#endif
-}
-
-int cv::gpu::GlBuffer::depth() const 
-{ 
-    return CV_MAT_DEPTH(type()); 
-}
-
-int cv::gpu::GlBuffer::channels() const 
-{ 
-    return CV_MAT_CN(type()); 
-}
-
-int cv::gpu::GlBuffer::elemSize() const 
-{ 
-    return CV_ELEM_SIZE(type()); 
-}
-
-int cv::gpu::GlBuffer::elemSize1() const 
-{ 
-    return CV_ELEM_SIZE1(type()); 
-}
-
-GlBuffer::Usage cv::gpu::GlBuffer::usage() const
-{
-#ifndef HAVE_OPENGL
-    return ARRAY_BUFFER;
-#else
-    return static_cast<Usage>(impl_->target());
 #endif
 }
 
@@ -1601,22 +1536,15 @@ public:
     void bind() const;
     void unbind() const;
 
-    int rows() const { return rows_; }
-    int cols() const { return cols_; }
-    int type() const { return type_; }
-
-private:    
-    int rows_;
-    int cols_;
-    int type_;
-    unsigned int tex_;
+private:
+    GLuint tex_;
 };
 
-cv::gpu::GlTexture::Impl::Impl() : rows_(0), cols_(0), type_(0), tex_(0)
+inline cv::gpu::GlTexture::Impl::Impl() : tex_(0)
 {
 }
 
-cv::gpu::GlTexture::Impl::Impl(int rows, int cols, int type) : rows_(0), cols_(0), type_(0), tex_(0)
+cv::gpu::GlTexture::Impl::Impl(int rows, int cols, int type) : tex_(0)
 {
     if (!glFuncTab()->isGlContextInitialized())
         throw_nogl();
@@ -1628,11 +1556,10 @@ cv::gpu::GlTexture::Impl::Impl(int rows, int cols, int type) : rows_(0), cols_(0
     CV_Assert(cn == 1 || cn == 3 || cn == 4);
     CV_Assert(depth >= 0 && depth <= CV_32F);
 
-    GLuint tex;
-    glGenTextures(1, &tex);
+    glGenTextures(1, &tex_);
     CV_CheckGlError();
 
-    glBindTexture(GL_TEXTURE_2D, tex);
+    glBindTexture(GL_TEXTURE_2D, tex_);
     CV_CheckGlError();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1648,14 +1575,9 @@ cv::gpu::GlTexture::Impl::Impl(int rows, int cols, int type) : rows_(0), cols_(0
 
     glTexImage2D(GL_TEXTURE_2D, 0, cn, cols, rows, 0, format, gl_types[depth], 0);
     CV_CheckGlError();
-
-    rows_ = rows;
-    cols_ = cols;
-    type_ = type;
-    tex_ = tex;
 }
 
-cv::gpu::GlTexture::Impl::Impl(const Mat& mat, bool bgra) : rows_(0), cols_(0), type_(0), tex_(0)
+cv::gpu::GlTexture::Impl::Impl(const Mat& mat, bool bgra) : tex_(0)
 {
     if (!glFuncTab()->isGlContextInitialized())
         throw_nogl();
@@ -1668,11 +1590,10 @@ cv::gpu::GlTexture::Impl::Impl(const Mat& mat, bool bgra) : rows_(0), cols_(0), 
     CV_Assert(depth >= 0 && depth <= CV_32F);
     CV_Assert(mat.isContinuous());
 
-    GLuint tex;
-    glGenTextures(1, &tex);
+    glGenTextures(1, &tex_);
     CV_CheckGlError();
 
-    glBindTexture(GL_TEXTURE_2D, tex);
+    glBindTexture(GL_TEXTURE_2D, tex_);
     CV_CheckGlError();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1688,14 +1609,9 @@ cv::gpu::GlTexture::Impl::Impl(const Mat& mat, bool bgra) : rows_(0), cols_(0), 
 
     glTexImage2D(GL_TEXTURE_2D, 0, cn, mat.cols, mat.rows, 0, format, gl_types[depth], mat.data);
     CV_CheckGlError();
-
-    rows_ = mat.rows;
-    cols_ = mat.cols;
-    type_ = mat.type();
-    tex_ = tex;
 }
 
-cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : rows_(0), cols_(0), type_(0), tex_(0)
+cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : tex_(0)
 {
     if (!glFuncTab()->isGlContextInitialized())
         throw_nogl();
@@ -1708,11 +1624,10 @@ cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : rows_(0), cols_
     CV_Assert(depth >= 0 && depth <= CV_32F);
     CV_Assert(buf.usage() == GlBuffer::TEXTURE_BUFFER);
 
-    GLuint tex;
-    glGenTextures(1, &tex);
+    glGenTextures(1, &tex_);
     CV_CheckGlError();
 
-    glBindTexture(GL_TEXTURE_2D, tex);
+    glBindTexture(GL_TEXTURE_2D, tex_);
     CV_CheckGlError();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -1732,14 +1647,9 @@ cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : rows_(0), cols_
     CV_CheckGlError();
 
     buf.unbind();
-
-    rows_ = buf.rows();
-    cols_ = buf.cols();
-    type_ = buf.type();
-    tex_ = tex;
 }
 
-cv::gpu::GlTexture::Impl::~Impl()
+inline cv::gpu::GlTexture::Impl::~Impl()
 {
     if (tex_)
         glDeleteTextures(1, &tex_);
@@ -1748,7 +1658,6 @@ cv::gpu::GlTexture::Impl::~Impl()
 void cv::gpu::GlTexture::Impl::copyFrom(const Mat& mat, bool bgra)
 {
     CV_Assert(tex_ != 0);
-    CV_DbgAssert(mat.cols == cols_ && mat.rows == rows_ && mat.type() == type_);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     CV_CheckGlError();
@@ -1756,14 +1665,13 @@ void cv::gpu::GlTexture::Impl::copyFrom(const Mat& mat, bool bgra)
     int cn = mat.channels();
     GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cols_, rows_, format, gl_types[mat.depth()], mat.data);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mat.cols, mat.rows, format, gl_types[mat.depth()], mat.data);
     CV_CheckGlError();
 }
 
 void cv::gpu::GlTexture::Impl::copyFrom(const GlBuffer& buf, bool bgra)
 {
     CV_Assert(tex_ != 0);
-    CV_DbgAssert(buf.cols() == cols_ && buf.rows() == rows_ && buf.type() == type_);
     CV_Assert(buf.usage() == GlBuffer::TEXTURE_BUFFER);
 
     buf.bind();
@@ -1774,13 +1682,13 @@ void cv::gpu::GlTexture::Impl::copyFrom(const GlBuffer& buf, bool bgra)
     int cn = buf.channels();
     GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cols_, rows_, format, gl_types[buf.depth()], 0);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buf.cols(), buf.rows(), format, gl_types[buf.depth()], 0);
     CV_CheckGlError();
 
     buf.unbind();
 }
 
-void cv::gpu::GlTexture::Impl::bind() const
+inline void cv::gpu::GlTexture::Impl::bind() const
 {
     CV_Assert(tex_ != 0);
 
@@ -1791,7 +1699,7 @@ void cv::gpu::GlTexture::Impl::bind() const
     CV_CheckGlError();
 }
 
-void cv::gpu::GlTexture::Impl::unbind() const
+inline void cv::gpu::GlTexture::Impl::unbind() const
 {
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -1800,7 +1708,7 @@ void cv::gpu::GlTexture::Impl::unbind() const
 
 #endif // HAVE_OPENGL
 
-cv::gpu::GlTexture::GlTexture()
+cv::gpu::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1809,39 +1717,51 @@ cv::gpu::GlTexture::GlTexture()
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(int rows, int cols, int type)
+cv::gpu::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(rows, cols, type);
+    rows_ = rows;
+    cols_ = cols;
+    type_ = type;
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(Size size, int type)
+cv::gpu::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(size.height, size.width, type);
+    rows_ = size.height;
+    cols_ = size.width;
+    type_ = type;
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(const Mat& mat, bool bgra)
+cv::gpu::GlTexture::GlTexture(const Mat& mat, bool bgra) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(mat, bgra);
+    rows_ = mat.rows;
+    cols_ = mat.cols;
+    type_ = mat.type();
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(const GlBuffer& buf, bool bgra)
+cv::gpu::GlTexture::GlTexture(const GlBuffer& buf, bool bgra) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(buf, bgra);
+    rows_ = buf.rows();
+    cols_ = buf.cols();
+    type_ = buf.type();
 #endif
 }
 
@@ -1849,13 +1769,18 @@ cv::gpu::GlTexture::~GlTexture()
 {
 }
 
-void cv::gpu::GlTexture::create(int rows_, int cols_, int type_)
+void cv::gpu::GlTexture::create(int rows, int cols, int type)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    if (rows_ != rows() || cols_ != cols() || type_ != type())
-        impl_ = new Impl(rows_, cols_, type_);
+    if (rows_ != rows || cols_ != cols || type_ != type)
+    {
+        impl_ = new Impl(rows, cols, type);
+        rows_ = rows;
+        cols_ = cols;
+        type_ = type;
+    }
 #endif
 }
 
@@ -1904,63 +1829,6 @@ void cv::gpu::GlTexture::unbind() const
 #else
     impl_->unbind();
 #endif
-}
-
-int cv::gpu::GlTexture::rows() const
-{
-#ifndef HAVE_OPENGL
-    return 0;
-#else
-    return impl_->rows();
-#endif
-}
-
-int cv::gpu::GlTexture::cols() const
-{
-#ifndef HAVE_OPENGL
-    return 0;
-#else
-    return impl_->cols();
-#endif
-}
-
-Size cv::gpu::GlTexture::size() const
-{
-    return Size(cols(), rows());
-}
-
-bool cv::gpu::GlTexture::empty() const
-{
-    return rows() == 0 || cols() == 0;
-}
-
-int cv::gpu::GlTexture::type() const
-{
-#ifndef HAVE_OPENGL
-    return 0;
-#else
-    return impl_->type();
-#endif
-}
-
-int cv::gpu::GlTexture::depth() const 
-{ 
-    return CV_MAT_DEPTH(type()); 
-}
-
-int cv::gpu::GlTexture::channels() const 
-{ 
-    return CV_MAT_CN(type()); 
-}
-
-int cv::gpu::GlTexture::elemSize() const 
-{ 
-    return CV_ELEM_SIZE(type()); 
-}
-
-int cv::gpu::GlTexture::elemSize1() const 
-{ 
-    return CV_ELEM_SIZE1(type()); 
 }
 
 ////////////////////////////////////////////////////////////////////////
