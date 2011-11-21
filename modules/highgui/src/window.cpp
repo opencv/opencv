@@ -669,11 +669,6 @@ CV_IMPL void cvDisplayStatusBar(const char* name, const char* arg2, int arg3)
     CV_NO_GUI_ERROR("cvDisplayStatusBar");
 }  
 
-CV_IMPL void cvCreateOpenGLCallback(const char*, void (*)(void*), void*, double, double, double)
-{
-    CV_NO_GUI_ERROR("createOpenGLCallback");
-}  
-
 CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
     CV_NO_GUI_ERROR("cvNamedWindow");
