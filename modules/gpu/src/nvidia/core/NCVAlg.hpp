@@ -64,7 +64,12 @@ static T divUp(T a, T b)
 template<typename T>
 struct functorAddValues
 {
-    static __device__ __inline__ void reduce(T &in1out, T &in2)
+    static __device__ __inline__ void assign(volatile T *dst, volatile T *src)
+    {
+        //Works only for integral types. If you see compiler error here, then you have to specify how to copy your object as a set of integral fields.
+        *dst = *src;
+    }
+    static __device__ __inline__ void reduce(volatile T &in1out, const volatile T &in2)
     {
         in1out += in2;
     }
@@ -74,7 +79,12 @@ struct functorAddValues
 template<typename T>
 struct functorMinValues
 {
-    static __device__ __inline__ void reduce(T &in1out, T &in2)
+    static __device__ __inline__ void assign(volatile T *dst, volatile T *src)
+    {
+        //Works only for integral types. If you see compiler error here, then you have to specify how to copy your object as a set of integral fields.
+        *dst = *src;
+    }
+    static __device__ __inline__ void reduce(volatile T &in1out, const volatile T &in2)
     {
         in1out = in1out > in2 ? in2 : in1out;
     }
@@ -84,7 +94,12 @@ struct functorMinValues
 template<typename T>
 struct functorMaxValues
 {
-    static __device__ __inline__ void reduce(T &in1out, T &in2)
+    static __device__ __inline__ void assign(volatile T *dst, volatile T *src)
+    {
+        //Works only for integral types. If you see compiler error here, then you have to specify how to copy your object as a set of integral fields.
+        *dst = *src;
+    }
+    static __device__ __inline__ void reduce(volatile T &in1out, const volatile T &in2)
     {
         in1out = in1out > in2 ? in1out : in2;
     }
@@ -96,8 +111,9 @@ static __device__ Tdata subReduce(Tdata threadElem)
 {
     Tfunc functor;
 
-    __shared__ Tdata reduceArr[nThreads];
-    reduceArr[threadIdx.x] = threadElem;
+    __shared__ Tdata _reduceArr[nThreads];
+    volatile Tdata *reduceArr = _reduceArr;
+    functor.assign(reduceArr + threadIdx.x, &threadElem);
     __syncthreads();
 
     if (nThreads >= 256 && threadIdx.x < 128)
@@ -118,18 +134,20 @@ static __device__ Tdata subReduce(Tdata threadElem)
         {
             functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 32]);
         }
-        if (nThreads >= 32)
+        if (nThreads >= 32 && threadIdx.x < 16)
         {
             functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 16]);
+            functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 8]);
+            functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 4]);
+            functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 2]);
+            functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 1]);
         }
-        functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 8]);
-        functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 4]);
-        functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 2]);
-        functor.reduce(reduceArr[threadIdx.x], reduceArr[threadIdx.x + 1]);
     }
 
     __syncthreads();
-    return reduceArr[0];
+    Tdata reduceRes;
+    functor.assign(&reduceRes, reduceArr);
+    return reduceRes;
 }
 
 
