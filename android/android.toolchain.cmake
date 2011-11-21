@@ -136,6 +136,7 @@
 #   - modified November 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [*] rewritten for NDK r7
 #     [+] x86 toolchain support (experimental)
+#     [+] added "armeabi-v6 with VFP" ABI for ARMv6 processors.
 #     [~] improved compiler and linker flags management
 #     [+] support different build flags for Release and Debug configurations
 #     [~] by default compiler flags the same as used by ndk-build (but only
