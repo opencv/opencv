@@ -411,7 +411,7 @@ struct LKTrackerInvoker
                 b1 += bbuf[0] + bbuf[2];
                 b2 += bbuf[1] + bbuf[3];
 #endif
-                
+
                 b1 *= FLT_SCALE;
                 b2 *= FLT_SCALE;
                 
@@ -575,7 +575,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
             else
                 pyrDown(pyr[level-1], pyr[level], pyr[level].size());
             copyMakeBorder(pyr[level], temp, winSize.height, winSize.height,
-                           winSize.width, winSize.width, BORDER_REFLECT_101);
+                           winSize.width, winSize.width, BORDER_REFLECT_101|BORDER_ISOLATED);
             sz = Size((sz.width+1)/2, (sz.height+1)/2);
             if( sz.width <= winSize.width || sz.height <= winSize.height )
             {
@@ -607,8 +607,6 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         Mat derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
         calcSharrDeriv(prevPyr[level], derivI);
         copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT);
-        
-        Mat I = prevPyr[level], J = nextPyr[level];
         
         parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level], derivI,
                                                                 nextPyr[level], prevPts, nextPts,
