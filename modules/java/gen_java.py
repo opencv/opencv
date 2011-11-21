@@ -91,6 +91,8 @@ const_ignore_list = (
     "CV_TM_.+",
     "CV_FLOODFILL_.+",
     "CV_ADAPTIVE_THRESH_.+",
+    "WINDOW_.+",
+    "WND_PROP_.+",
 )
 
 const_private_list = (
@@ -553,6 +555,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvDTreeParams_n_1newObj
 //javadoc:CvEMParams::CvEMParams()
 public CvEMParams() {
     nativeObj = n_newObj();
+
 }
             """,
             'jn_code' : 'private static native long n_newObj();',
