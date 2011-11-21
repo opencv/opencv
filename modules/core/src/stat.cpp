@@ -1175,7 +1175,7 @@ static NormFunc normTab[3][8] =
     },
     {
         (NormFunc)GET_OPTIMIZED(normL2_8u), (NormFunc)normL2_8s, (NormFunc)normL2_16u, (NormFunc)normL2_16s,
-        (NormFunc)normL2_32s, (NormFunc)normL2_32f, (NormFunc)normL2_64f, 0
+        (NormFunc)normL2_32s, (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
     }
 };
 
@@ -1184,19 +1184,19 @@ static NormDiffFunc normDiffTab[3][8] =
     {
         (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
         (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
-        (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)normDiffInf_32f,
+        (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
         (NormDiffFunc)normDiffInf_64f, 0
     },
     {
         (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
         (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
-        (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)normDiffL1_32f,
+        (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
         (NormDiffFunc)normDiffL1_64f, 0
     },
     {
         (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u), (NormDiffFunc)normDiffL2_8s,
         (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
-        (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)normDiffL2_32f,
+        (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
         (NormDiffFunc)normDiffL2_64f, 0
     }
 };
@@ -1221,19 +1221,20 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             if( normType == NORM_L2 )
             {
                 double result = 0;
-                normL2_32f(data, 0, &result, (int)len, 1);
+				GET_OPTIMIZED(normL2_32f)(data, 0, &result, (int)len, 1);
                 return std::sqrt(result);
             }
             if( normType == NORM_L1 )
             {
                 double result = 0;
-                normL1_32f(data, 0, &result, (int)len, 1);
+				GET_OPTIMIZED(normL1_32f)(data, 0, &result, (int)len, 1);
                 return result;
             }
             {
                 float result = 0;
-                normInf_32f(data, 0, &result, (int)len, 1);
+ 				GET_OPTIMIZED(normInf_32f)(data, 0, &result, (int)len, 1);
                 return result;
+
             }
         }
     }
@@ -1274,8 +1275,8 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         for( j = 0; j < total; j += blockSize )
         {
             int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], ptrs[1], (uchar*)ibuf, bsz, cn );
-            count += bsz;
+			func( ptrs[0], ptrs[1], (uchar*)ibuf, bsz, cn );
+			count += bsz;
             if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
                 result.d += isum;
@@ -1328,18 +1329,18 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             if( normType == NORM_L2 )
             {
                 double result = 0;
-                normDiffL2_32f(data1, data2, 0, &result, (int)len, 1);
+				GET_OPTIMIZED(normDiffL2_32f)(data1, data2, 0, &result, (int)len, 1);
                 return std::sqrt(result);
             }
             if( normType == NORM_L1 )
             {
                 double result = 0;
-                normDiffL1_32f(data1, data2, 0, &result, (int)len, 1);
+				GET_OPTIMIZED(normDiffL1_32f)(data1, data2, 0, &result, (int)len, 1);
                 return result;
             }
             {
                 float result = 0;
-                normDiffInf_32f(data1, data2, 0, &result, (int)len, 1);
+				GET_OPTIMIZED(normDiffInf_32f)(data1, data2, 0, &result, (int)len, 1);
                 return result;
             }
         }
