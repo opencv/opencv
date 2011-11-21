@@ -106,7 +106,7 @@ namespace cv { namespace gpu { namespace device
         CopyToFunc func = tab[depth];
 
         if (func == 0) 
-            cv::gpu::error("Unsupported copyTo operation", __FILE__, __LINE__);
+            cv::gpu::error("Unsupported copyTo operation", __FILE__, __LINE__, "copy_to_with_mask");
 
         func(mat_src, mat_dst, mask, channels, stream);
     }
@@ -246,7 +246,7 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(alpha * src + beta);
         }
 
-        const double alpha, beta;
+        double alpha, beta;
     };
 
     namespace detail
@@ -338,7 +338,7 @@ namespace cv { namespace gpu { namespace device
 
         caller_t func = tab[sdepth][ddepth];
         if (!func)
-            cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__);
+            cv::gpu::error("Unsupported convert operation", __FILE__, __LINE__, "convert_gpu");
 
         func(src, dst, alpha, beta, stream);
     }

@@ -630,7 +630,9 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_StsBadMemBlock :         return "Memory block has been corrupted";
     case CV_StsAssert :              return "Assertion failed";
     case CV_GpuNotSupported :        return "No GPU support";
-    case CV_GpuApiCallError :        return "Gpu Api call";
+    case CV_GpuApiCallError :        return "Gpu API call";
+    case CV_OpenGlNotSupported :     return "No OpenGL support";
+    case CV_OpenGlApiCallError :     return "OpenGL API call";
     };
 
     sprintf(buf, "Unknown %s code %d", status >= 0 ? "status":"error", status);

@@ -43,6 +43,8 @@
 #ifndef __OPENCV_CORE_DevMem2D_HPP__
 #define __OPENCV_CORE_DevMem2D_HPP__
 
+#ifdef __cplusplus
+
 #ifdef __CUDACC__ 
     #define __CV_GPU_HOST_DEVICE__ __host__ __device__ __forceinline__ 
 #else
@@ -153,5 +155,7 @@ namespace cv
         typedef PtrElemStep_<int> PtrElemStepi;		
     }    
 }
+
+#endif // __cplusplus
 
 #endif /* __OPENCV_GPU_DevMem2D_HPP__ */

@@ -336,7 +336,7 @@ namespace cv { namespace gpu { namespace device
             case 1: init_data_cost<T, 1><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 3: init_data_cost<T, 3><<<grid, threads, 0, stream>>>(h, w, level); break;
             case 4: init_data_cost<T, 4><<<grid, threads, 0, stream>>>(h, w, level); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
+            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_caller_");
             }
         }
 
@@ -355,7 +355,7 @@ namespace cv { namespace gpu { namespace device
             case 1: init_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 3: init_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
             case 4: init_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(level, rows, cols, h); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
+            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "init_data_cost_reduce_caller_");
             }
         }
 
@@ -533,7 +533,7 @@ namespace cv { namespace gpu { namespace device
             case 1: compute_data_cost<T, 1><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 3: compute_data_cost<T, 3><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
             case 4: compute_data_cost<T, 4><<<grid, threads, 0, stream>>>(disp_selected_pyr, data_cost, h, w, level, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
+            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_caller_");
             }
         }
 
@@ -553,7 +553,7 @@ namespace cv { namespace gpu { namespace device
             case 1: compute_data_cost_reduce<T, winsz, 1><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 3: compute_data_cost_reduce<T, winsz, 3><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
             case 4: compute_data_cost_reduce<T, winsz, 4><<<grid, threads, smem_size, stream>>>(disp_selected_pyr, data_cost, level, rows, cols, h, nr_plane); break;
-            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
+            default: cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "compute_data_cost_reduce_caller_");
             }
         }
 

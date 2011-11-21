@@ -76,9 +76,6 @@ CVAPI(void) cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont *a
 CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delayms);
 CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms);
 
-typedef void (CV_CDECL *CvOpenGLCallback)(void* userdata);
-CVAPI(void) cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1));
-
 CVAPI(void) cvSaveWindowParameters(const char* name);
 CVAPI(void) cvLoadWindowParameters(const char* name);
 CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
@@ -99,18 +96,20 @@ CVAPI(int) cvStartWindowThread();
 enum
 {
     //These 3 flags are used by cvSet/GetWindowProperty
-    CV_WND_PROP_FULLSCREEN = 0,//to change/get window's fullscreen property
-    CV_WND_PROP_AUTOSIZE   = 1,//to change/get window's autosize property
-    CV_WND_PROP_ASPECTRATIO= 2,//to change/get window's aspectratio property
-    //
+    CV_WND_PROP_FULLSCREEN = 0, //to change/get window's fullscreen property
+    CV_WND_PROP_AUTOSIZE   = 1, //to change/get window's autosize property
+    CV_WND_PROP_ASPECTRATIO= 2, //to change/get window's aspectratio property
+    CV_WND_PROP_OPENGL     = 3, //to change/get window's opengl support
+    
     //These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
-    CV_WINDOW_NORMAL       = 0x00000000,//the user can resize the window (no constraint)  / also use to switch a fullscreen window to a normal size
-    CV_WINDOW_AUTOSIZE     = 0x00000001,//the user cannot resize the window, the size is constrainted by the image displayed
-    //
+    CV_WINDOW_NORMAL       = 0x00000000, //the user can resize the window (no constraint)  / also use to switch a fullscreen window to a normal size
+    CV_WINDOW_AUTOSIZE     = 0x00000001, //the user cannot resize the window, the size is constrainted by the image displayed
+    CV_WINDOW_OPENGL       = 0x00001000, //window with opengl support
+    
     //Those flags are only for Qt
-    CV_GUI_EXPANDED         = 0x00000000,//status bar and tool bar
-    CV_GUI_NORMAL           = 0x00000010,//old fashious way
-    //
+    CV_GUI_EXPANDED         = 0x00000000, //status bar and tool bar
+    CV_GUI_NORMAL           = 0x00000010, //old fashious way
+    
     //These 3 flags are used by cvNamedWindow and cvSet/GetWindowProperty
     CV_WINDOW_FULLSCREEN   = 1,//change the window to fullscreen
     CV_WINDOW_FREERATIO    = 0x00000100,//the image expends as much as it can (no ratio constraint)
@@ -249,6 +248,14 @@ CVAPI(void) cvConvertImage( const CvArr* src, CvArr* dst, int flags CV_DEFAULT(0
 
 /* wait for key event infinitely (delay<=0) or for "delay" milliseconds */
 CVAPI(int) cvWaitKey(int delay CV_DEFAULT(0));
+
+// OpenGL support
+
+typedef void (CV_CDECL *CvOpenGLCallback)(void* userdata);
+CVAPI(void) cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1));
+
+CVAPI(void) cvSetOpenGlContext(const char* window_name);
+CVAPI(void) cvUpdateWindow(const char* window_name);
 
 /****************************************************************************************\
 *                         Working with Video Files and Cameras                           *

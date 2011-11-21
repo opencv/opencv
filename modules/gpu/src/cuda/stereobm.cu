@@ -346,7 +346,7 @@ namespace cv { namespace gpu { namespace device
             int winsz2 = winsz >> 1;
 
             if (winsz2 == 0 || winsz2 >= calles_num)
-                cv::gpu::error("Unsupported window size", __FILE__, __LINE__);
+                cv::gpu::error("Unsupported window size", __FILE__, __LINE__, "stereoBM_GPU");
 
             //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferL1) );
             //cudaSafeCall( cudaFuncSetCacheConfig(&stereoKernel, cudaFuncCachePreferShared) );

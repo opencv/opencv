@@ -462,6 +462,9 @@ endif()
 
 set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
 set(WITH_XIMEA OFF CACHE BOOL "Include XIMEA cameras support")
+set(WITH_OPENGL OFF CACHE BOOL "Include OpenGL support")
+
+set(HAVE_OPENGL 0)
 
 # ===================================================
 # Macros that checks if module have been installed.
@@ -872,7 +875,6 @@ endif()
 ############################### QT ################################
 
 set(WITH_QT OFF CACHE BOOL "Build with Qt Backend support")
-set(WITH_QT_OPENGL OFF CACHE BOOL "Add OpenGL extension to Qt")
 
 set(HAVE_QT 0)
 set(HAVE_QT_OPENGL 0)
@@ -885,8 +887,9 @@ if (WITH_QT)
         find_package (OpenGL QUIET)
 
         #if (NOT WIN32)
-        if (WITH_QT_OPENGL)
+        if (WITH_OPENGL)
             if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
+                #set(HAVE_OPENGL 1)
                 set(HAVE_QT_OPENGL 1)
                 add_definitions(-DHAVE_QT_OPENGL)
                 #link_directories("${OPENGL_LIBRARIES}")
@@ -1120,6 +1123,16 @@ if(WIN32)
         else()
             set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32 winmm)
         endif()  
+    endif()
+
+    if (WITH_OPENGL)
+        find_package(OpenGL QUIET)
+        
+        if (OPENGL_FOUND)
+            set(HAVE_OPENGL 1)
+            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
+            include_directories(${OPENGL_INCLUDE_DIR})
+        endif()
     endif()
 endif()
 
@@ -1716,6 +1729,8 @@ else()
         endif()
     endif()
 endif()
+
+status("    OpenGL support:" HAVE_OPENGL THEN YES ELSE NO)
 
 # media
 status("")

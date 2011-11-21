@@ -195,3 +195,6 @@
 
 /* XIMEA camera support */
 #cmakedefine HAVE_XIMEA
+
+/* OpenGL support*/
+#cmakedefine HAVE_OPENGL

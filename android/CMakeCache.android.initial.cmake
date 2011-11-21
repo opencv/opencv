@@ -55,8 +55,8 @@ set(WITH_PVAPI OFF CACHE BOOL "" )
 #Build with Qt Backend support
 set(WITH_QT OFF CACHE BOOL "" )
 
-#Add OpenGL extension to Qt
-set(WITH_QT_OPENGL OFF CACHE BOOL "" )
+#Add OpenGL support
+set(WITH_OPENGL OFF CACHE BOOL "" )
 
 #Include Intel TBB support
 set(WITH_TBB OFF CACHE BOOL "" )

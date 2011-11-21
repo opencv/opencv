@@ -43,11 +43,16 @@
 #ifndef __OPENCV_GPUMAT_HPP__
 #define __OPENCV_GPUMAT_HPP__
 
+#ifdef __cplusplus
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/devmem2d.hpp"
 
 namespace cv { namespace gpu
 {
+    ////////////////////////////////////////////////////////////////////////
+    // GpuMat
+
     //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
     class CV_EXPORTS GpuMat
     {
@@ -212,10 +217,158 @@ namespace cv { namespace gpu
     CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
     CV_EXPORTS void ensureSizeIsEnough(Size size, int type, GpuMat& m);
 
-    //////////////////////////////// Error handling ////////////////////////
+    ////////////////////////////////////////////////////////////////////////
+    // OpenGL
 
-    CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
+    //! set a CUDA device to use OpenGL interoperability
+    CV_EXPORTS void setGlDevice(int device = 0);
 
+    //! Smart pointer for OpenGL buffer memory with reference counting.
+    class CV_EXPORTS GlBuffer
+    {
+    public:
+        enum Usage
+        {
+            ARRAY_BUFFER = 0x8892,  // buffer will use for OpenGL arrays (vertices, colors, normals, etc)
+            TEXTURE_BUFFER = 0x88EC // buffer will ise for OpenGL textures
+        };
+
+        //! create empty buffer
+        explicit GlBuffer(Usage usage);
+
+        //! create buffer
+        GlBuffer(int rows, int cols, int type, Usage usage);
+        GlBuffer(Size size, int type, Usage usage);
+
+        //! copy from host/device memory
+        GlBuffer(const Mat& mat, Usage usage);
+        GlBuffer(const GpuMat& d_mat, Usage usage);
+
+        ~GlBuffer();
+
+        void create(int rows, int cols, int type, Usage usage);
+        inline void create(Size size, int type, Usage usage) { create(size.height, size.width, type, usage); }
+        inline void create(int rows, int cols, int type) { create(rows, cols, type, usage()); }
+        inline void create(Size size, int type) { create(size.height, size.width, type, usage()); }
+
+        void release();
+
+        //! copy from host/device memory
+        void copyFrom(const Mat& mat);
+        void copyFrom(const GpuMat& d_mat);
+
+        void bind() const;
+        void unbind() const;
+
+        //! map to host memory
+        Mat mapHost();
+        void unmapHost();
+
+        //! map to device memory
+        GpuMat mapDevice();
+        void unmapDevice();
+
+        int rows() const;
+        int cols() const;
+        Size size() const;
+        bool empty() const;
+
+        int type() const;
+        int depth() const;
+        int channels() const;
+        int elemSize() const;
+        int elemSize1() const;
+
+        Usage usage() const;
+
+    private:
+        class Impl;
+        Ptr<Impl> impl_;
+    };
+
+    //! Smart pointer for OpenGL 2d texture memory with reference counting.
+    class CV_EXPORTS GlTexture
+    {
+    public:
+        //! create empty texture
+        GlTexture();
+
+        //! create texture
+        GlTexture(int rows, int cols, int type);
+        GlTexture(Size size, int type);
+
+        //! copy from host/device memory
+        explicit GlTexture(const Mat& mat, bool bgra = true);
+        explicit GlTexture(const GlBuffer& buf, bool bgra = true);
+
+        ~GlTexture();
+
+        void create(int rows, int cols, int type);
+        inline void create(Size size, int type) { create(size.height, size.width, type); }
+        void release();
+
+        //! copy from host/device memory
+        void copyFrom(const Mat& mat, bool bgra = true);
+        void copyFrom(const GlBuffer& buf, bool bgra = true);
+
+        void bind() const;
+        void unbind() const;
+
+        int rows() const;
+        int cols() const;
+        Size size() const;
+        bool empty() const;
+
+        int type() const;
+        int depth() const;
+        int channels() const;
+        int elemSize() const;
+        int elemSize1() const;
+
+    private:
+        class Impl;
+        Ptr<Impl> impl_;
+    };
+
+    //! render functions
+    CV_EXPORTS void render(const GlTexture& tex);
+
+    //! OpenGL extension table
+    class CV_EXPORTS GlFuncTab
+    {
+    public:
+        virtual ~GlFuncTab() {}
+
+        virtual void genBuffers(int n, unsigned int* buffers) const = 0;        
+        virtual void deleteBuffers(int n, const unsigned int* buffers) const = 0;
+
+        virtual void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const = 0;
+        virtual void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const = 0;
+
+        virtual void bindBuffer(unsigned int target, unsigned int buffer) const = 0;
+
+        virtual void* mapBuffer(unsigned int target, unsigned int access) const = 0;
+        virtual void unmapBuffer(unsigned int target) const = 0;
+
+        virtual bool isGlContextInitialized() const = 0;
+    };
+
+    CV_EXPORTS void setGlFuncTab(const GlFuncTab* tab);
+
+    ////////////////////////////////////////////////////////////////////////
+    // Error handling
+
+    CV_EXPORTS void error(const char* error_string, const char* file, const int line, const char* func = "");
+    CV_EXPORTS bool checkGlError(const char* file, const int line, const char* func = "");
+
+    #if defined(__GNUC__)
+        #define CV_CheckGlError() CV_DbgAssert( (cv::gpu::checkGlError(__FILE__, __LINE__, __func__)) )
+    #else
+        #define CV_CheckGlError() CV_DbgAssert( (cv::gpu::checkGlError(__FILE__, __LINE__)) )
+    #endif
+
+    ////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
 
     inline GpuMat::GpuMat() 
@@ -455,5 +608,7 @@ namespace cv { namespace gpu
             m.create(rows, cols, type);
     }
 }}
+
+#endif // __cplusplus
 
 #endif // __OPENCV_GPUMAT_HPP__

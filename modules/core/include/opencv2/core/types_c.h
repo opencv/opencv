@@ -250,7 +250,9 @@ enum {
  CV_StsBadMemBlock=            -214, /* an allocated block has been corrupted */
  CV_StsAssert=                 -215, /* assertion failed */    
  CV_GpuNotSupported=           -216,  
- CV_GpuApiCallError=           -217
+ CV_GpuApiCallError=           -217,
+ CV_OpenGlNotSupported=        -218,
+ CV_OpenGlApiCallError=        -219
 };
 
 /****************************************************************************************\

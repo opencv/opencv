@@ -176,14 +176,18 @@ CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);
 CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color );
 
-//Yannick Verdie 2010                                 
+//Yannick Verdie 2010  
+void cvSetModeWindow_W32(const char* name, double prop_value);
+void cvSetModeWindow_GTK(const char* name, double prop_value);
+void cvSetModeWindow_CARBON(const char* name, double prop_value);
+
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);
 double cvGetModeWindow_CARBON(const char* name);
 
-void cvSetModeWindow_W32(const char* name, double prop_value);
-void cvSetModeWindow_GTK(const char* name, double prop_value);
-void cvSetModeWindow_CARBON(const char* name, double prop_value);
+double cvGetPropWindowAutoSize_W32(const char* name);
+double cvGetRatioWindow_W32(const char* name);
+double cvGetOpenGlProp_W32(const char* name);
 
 //for QT
 #if defined (HAVE_QT)
@@ -194,6 +198,11 @@ void cvSetPropWindow_QT(const char* name,double prop_value);
 double cvGetRatioWindow_QT(const char* name);
 void cvSetRatioWindow_QT(const char* name,double prop_value);
 #endif
+
+// OpenGL
+typedef void (CV_CDECL *CvOpenGlCleanCallback)(void* userdata);
+void icvSetOpenGlCleanCallback(const char* window_name, CvOpenGlCleanCallback callback, void* userdata);
+
 
 /*namespace cv
 {

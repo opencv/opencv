@@ -44,16 +44,26 @@
 #include "opencv2/core/gpumat.hpp"
 
 #include <iostream>
-#include <sstream>
 
 #ifdef HAVE_CUDA
     #include <cuda_runtime.h>
     #include <npp.h>
 #endif
 
+#ifdef HAVE_OPENGL
+    #include <GL/gl.h>
+
+    #ifdef HAVE_CUDA
+        #include <cuda_gl_interop.h>
+    #endif
+#endif
+
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
+
+////////////////////////////////////////////////////////////////////////
+// GpuMat
 
 cv::gpu::GpuMat::GpuMat(const GpuMat& m) 
     : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend)
@@ -932,6 +942,1074 @@ void cv::gpu::GpuMat::release()
     refcount = 0;
 }
 
+////////////////////////////////////////////////////////////////////////
+// OpenGL
+
+namespace
+{
+    void throw_nogl() 
+    {
+    #ifndef HAVE_OPENGL
+        CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    #else
+        CV_Error(CV_OpenGlNotSupported, "OpenGL context doesn't exist"); 
+    #endif
+    }
+
+    class EmptyGlFuncTab : public GlFuncTab
+    {
+    public:
+        void genBuffers(int, unsigned int*) const { throw_nogl(); }
+        void deleteBuffers(int, const unsigned int*) const { throw_nogl(); }
+
+        void bufferData(unsigned int, ptrdiff_t, const void*, unsigned int) const { throw_nogl(); }
+        void bufferSubData(unsigned int, ptrdiff_t, ptrdiff_t, const void*) const { throw_nogl(); }
+
+        void bindBuffer(unsigned int, unsigned int) const { throw_nogl(); }
+
+        void* mapBuffer(unsigned int, unsigned int) const { throw_nogl(); return 0; }
+        void unmapBuffer(unsigned int) const { throw_nogl(); }
+
+        bool isGlContextInitialized() const { return false; }
+    };
+
+    const GlFuncTab* g_glFuncTab = 0;
+
+    const GlFuncTab* glFuncTab()
+    {
+        static EmptyGlFuncTab empty;
+        return g_glFuncTab ? g_glFuncTab : &empty;
+    }
+}
+
+void cv::gpu::setGlFuncTab(const GlFuncTab* tab)
+{
+    g_glFuncTab = tab;
+}
+
+#ifdef HAVE_OPENGL
+    #ifndef GL_DYNAMIC_DRAW
+        #define GL_DYNAMIC_DRAW 0x88E8
+    #endif
+
+    #ifndef GL_READ_WRITE
+        #define GL_READ_WRITE 0x88BA
+    #endif
+
+    #ifndef GL_BGR
+        #define GL_BGR 0x80E0
+    #endif
+
+    #ifndef GL_BGRA
+        #define GL_BGRA 0x80E1
+    #endif
+
+    namespace
+    {    
+        const GLenum gl_types[] = {GL_UNSIGNED_BYTE, GL_BYTE, GL_UNSIGNED_SHORT, GL_SHORT, GL_INT, GL_FLOAT, GL_DOUBLE};
+
+    #ifdef HAVE_CUDA
+        bool g_isCudaGlDeviceInitialized = false;
+    #endif
+    }
+#endif // HAVE_OPENGL
+
+
+
+void cv::gpu::setGlDevice(int device)
+{
+#ifndef HAVE_CUDA
+    throw_nogpu();
+#else
+    #ifndef HAVE_OPENGL
+        throw_nogl();
+    #else
+        if (!glFuncTab()->isGlContextInitialized())
+            throw_nogl();
+
+        cudaSafeCall( cudaGLSetGLDevice(device) ); 
+
+        g_isCudaGlDeviceInitialized = true;
+    #endif
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
+// CudaGlInterop
+
+#if defined HAVE_CUDA && defined HAVE_OPENGL
+namespace
+{
+    class CudaGlInterop
+    {
+    public:
+        CudaGlInterop() : resource_(0) 
+        {
+        }
+
+        ~CudaGlInterop() 
+        { 
+            if (resource_)
+            {
+                cudaGraphicsUnregisterResource(resource_);
+                resource_ = 0;
+            } 
+        }
+
+        void registerBuffer(unsigned int buffer)
+        {
+            if (!g_isCudaGlDeviceInitialized)
+                cvError(CV_GpuApiCallError, "registerBuffer", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
+
+            cudaGraphicsResource_t resource;
+            cudaSafeCall( cudaGraphicsGLRegisterBuffer(&resource, buffer, cudaGraphicsMapFlagsNone) );
+
+            resource_ = resource;
+        }
+
+        void copyFrom(const GpuMat& mat, cudaStream_t stream = 0)
+        {
+            CV_Assert(resource_ != 0);
+
+            cudaSafeCall( cudaGraphicsMapResources(1, &resource_, stream) );
+
+            void* dst_ptr;
+            size_t num_bytes;
+            cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&dst_ptr, &num_bytes, resource_) );
+            
+            const void* src_ptr = mat.ptr();
+            size_t widthBytes = mat.cols * mat.elemSize();
+
+            CV_Assert(widthBytes * mat.rows <= num_bytes);
+
+            if (stream == 0)
+                cudaSafeCall( cudaMemcpy2D(dst_ptr, widthBytes, src_ptr, mat.step, widthBytes, mat.rows, cudaMemcpyDeviceToDevice) );
+            else
+                cudaSafeCall( cudaMemcpy2DAsync(dst_ptr, widthBytes, src_ptr, mat.step, widthBytes, mat.rows, cudaMemcpyDeviceToDevice, stream) );
+
+            cudaGraphicsUnmapResources(1, &resource_, stream);
+        }
+
+        GpuMat map(int rows, int cols, int type, cudaStream_t stream = 0)
+        {
+            CV_Assert(resource_ != 0);
+
+            cudaSafeCall( cudaGraphicsMapResources(1, &resource_, stream) );
+
+            void* ptr;
+            size_t num_bytes;
+            cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&ptr, &num_bytes, resource_) );
+
+            CV_Assert( static_cast<size_t>(cols) * CV_ELEM_SIZE(type) * rows <= num_bytes );
+
+            return GpuMat(rows, cols, type, ptr);
+        }
+
+        void unmap(cudaStream_t stream = 0)
+        {
+            cudaGraphicsUnmapResources(1, &resource_, stream);
+        }
+
+    private:
+        cudaGraphicsResource_t resource_;
+    };
+}
+#endif // HAVE_CUDA && HAVE_OPENGL
+
+////////////////////////////////////////////////////////////////////////
+// GlBuffer
+
+#ifndef HAVE_OPENGL
+
+class cv::gpu::GlBuffer::Impl
+{
+};
+
+#else
+
+class cv::gpu::GlBuffer::Impl
+{
+public:
+    explicit Impl(unsigned int target) : rows_(0), cols_(0), type_(0), target_(target), buffer_(0) 
+    {
+    }
+
+    Impl(int rows, int cols, int type, unsigned int target);
+
+    Impl(const Mat& m, unsigned int target);
+
+    ~Impl();
+
+    void copyFrom(const Mat& m);
+
+#ifdef HAVE_CUDA
+    void copyFrom(const GpuMat& mat, cudaStream_t stream = 0);
+#endif
+
+    void bind() const;
+    void unbind() const;
+
+    Mat mapHost();
+    void unmapHost();
+
+#ifdef HAVE_CUDA
+    GpuMat mapDevice(cudaStream_t stream = 0);
+    void unmapDevice(cudaStream_t stream = 0);
+#endif
+
+    int rows() const { return rows_; }
+    int cols() const { return cols_; }
+    int type() const { return type_; }    
+    int target() const { return target_; }
+
+private:
+    int rows_;
+    int cols_;
+    int type_;
+
+    unsigned int target_;
+
+    unsigned int buffer_;
+
+#ifdef HAVE_CUDA
+    CudaGlInterop cudaGlInterop_;
+#endif
+};
+
+cv::gpu::GlBuffer::Impl::Impl(int rows, int cols, int type, unsigned int target) : rows_(0), cols_(0), type_(0), target_(target), buffer_(0) 
+{ 
+    if (!glFuncTab()->isGlContextInitialized())
+        throw_nogl();
+
+    CV_DbgAssert(rows > 0 && cols > 0);
+    CV_DbgAssert(CV_MAT_DEPTH(type) >= 0 && CV_MAT_DEPTH(type) <= CV_64F);
+
+    unsigned int buffer;    
+    glFuncTab()->genBuffers(1, &buffer);
+    CV_CheckGlError();
+
+    size_t size = rows * cols * CV_ELEM_SIZE(type);
+
+    glFuncTab()->bindBuffer(target_, buffer);
+    CV_CheckGlError();
+
+    glFuncTab()->bufferData(target_, size, 0, GL_DYNAMIC_DRAW);
+    CV_CheckGlError();
+
+    glFuncTab()->bindBuffer(target_, 0);
+    
+#ifdef HAVE_CUDA
+    if (g_isCudaGlDeviceInitialized)
+        cudaGlInterop_.registerBuffer(buffer);
+#endif
+
+    rows_ = rows;
+    cols_ = cols;
+    type_ = type;
+    buffer_ = buffer;
+}
+
+cv::gpu::GlBuffer::Impl::Impl(const Mat& m, unsigned int target) : rows_(0), cols_(0), type_(0), target_(target), buffer_(0) 
+{ 
+    if (!glFuncTab()->isGlContextInitialized())
+        throw_nogl();
+
+    CV_DbgAssert(m.rows > 0 && m.cols > 0);
+    CV_DbgAssert(m.depth() >= 0 && m.depth() <= CV_64F);
+    CV_Assert(m.isContinuous());
+
+    unsigned int buffer;  
+    glFuncTab()->genBuffers(1, &buffer);
+    CV_CheckGlError();
+
+    size_t size = m.rows * m.cols * m.elemSize();
+
+    glFuncTab()->bindBuffer(target_, buffer);
+    CV_CheckGlError();
+
+    glFuncTab()->bufferData(target_, size, m.data, GL_DYNAMIC_DRAW);
+    CV_CheckGlError();
+
+    glFuncTab()->bindBuffer(target_, 0);
+    
+#ifdef HAVE_CUDA
+    if (g_isCudaGlDeviceInitialized)
+        cudaGlInterop_.registerBuffer(buffer);
+#endif
+
+    rows_ = m.rows;
+    cols_ = m.cols;
+    type_ = m.type();
+    buffer_ = buffer;
+}
+
+cv::gpu::GlBuffer::Impl::~Impl() 
+{ 
+    try
+    {
+        if (buffer_)
+            glFuncTab()->deleteBuffers(1, &buffer_);
+    }
+#ifdef _DEBUG
+    catch(const exception& e)
+    {
+        cerr << e.what() << endl;
+    }
+#endif
+    catch(...)
+    {
+    }
+}
+
+void cv::gpu::GlBuffer::Impl::copyFrom(const Mat& m)
+{
+    CV_Assert(buffer_ != 0);
+
+    CV_DbgAssert(rows_ == m.rows && cols_ == m.cols && type_ == m.type());
+    CV_Assert(m.isContinuous());
+
+    bind();
+
+    size_t size = m.rows * m.cols * m.elemSize();
+
+    glFuncTab()->bufferSubData(target_, 0, size, m.data);
+    CV_CheckGlError();
+
+    unbind();
+}
+
+#ifdef HAVE_CUDA
+
+void cv::gpu::GlBuffer::Impl::copyFrom(const GpuMat& mat, cudaStream_t stream) 
+{
+    if (!g_isCudaGlDeviceInitialized)
+        cvError(CV_GpuApiCallError, "copyFrom", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
+
+    CV_Assert(buffer_ != 0);
+
+    CV_DbgAssert(rows_ == mat.rows && cols_ == mat.cols && type_ == mat.type());
+
+    cudaGlInterop_.copyFrom(mat, stream);
+}
+
+#endif // HAVE_CUDA
+
+void cv::gpu::GlBuffer::Impl::bind() const 
+{
+    CV_Assert(buffer_ != 0);
+
+    glFuncTab()->bindBuffer(target_, buffer_); 
+    CV_CheckGlError();
+}
+
+void cv::gpu::GlBuffer::Impl::unbind() const
+{ 
+    glFuncTab()->bindBuffer(target_, 0);
+}
+
+Mat cv::gpu::GlBuffer::Impl::mapHost()
+{
+    void* ptr = glFuncTab()->mapBuffer(target_, GL_READ_WRITE);
+    CV_CheckGlError();
+
+    return Mat(rows_, cols_, type_, ptr);
+}
+
+void cv::gpu::GlBuffer::Impl::unmapHost()
+{
+    glFuncTab()->unmapBuffer(target_);
+}
+
+#ifdef HAVE_CUDA
+
+GpuMat cv::gpu::GlBuffer::Impl::mapDevice(cudaStream_t stream)
+{
+    if (!g_isCudaGlDeviceInitialized)
+        cvError(CV_GpuApiCallError, "copyFrom", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
+
+    CV_Assert(buffer_ != 0);
+
+    return cudaGlInterop_.map(rows_, cols_, type_, stream);
+}
+
+void cv::gpu::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
+{
+    if (!g_isCudaGlDeviceInitialized)
+        cvError(CV_GpuApiCallError, "copyFrom", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
+
+    cudaGlInterop_.unmap(stream);
+}
+
+#endif // HAVE_CUDA
+
+#endif // HAVE_OPENGL
+
+cv::gpu::GlBuffer::GlBuffer(Usage usage)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(usage);
+#endif
+}
+
+cv::gpu::GlBuffer::GlBuffer(int rows, int cols, int type, Usage usage)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(rows, cols, type, usage);
+#endif
+}
+
+cv::gpu::GlBuffer::GlBuffer(Size size, int type, Usage usage)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(size.height, size.width, type, usage);
+#endif
+}
+
+cv::gpu::GlBuffer::GlBuffer(const Mat& mat, Usage usage)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(mat, usage);
+#endif
+}
+
+cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    #ifndef HAVE_CUDA
+        throw_nogpu();
+    #else
+        impl_ = new Impl(d_mat.rows, d_mat.cols, d_mat.type(), usage);
+        impl_->copyFrom(d_mat);
+    #endif
+#endif
+}
+
+cv::gpu::GlBuffer::~GlBuffer()
+{
+}
+
+void cv::gpu::GlBuffer::create(int rows_, int cols_, int type_, Usage usage_)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    if (rows_ != rows() || cols_ != cols() || type_ != type() || usage_ != usage())
+        impl_ = new Impl(rows_, cols_, type_, usage_);
+#endif
+}
+
+void cv::gpu::GlBuffer::release()
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(usage());
+#endif
+}
+
+void cv::gpu::GlBuffer::copyFrom(const Mat& mat)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    create(mat.rows, mat.cols, mat.type());
+    impl_->copyFrom(mat);
+#endif
+}
+
+void cv::gpu::GlBuffer::copyFrom(const GpuMat& d_mat)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    #ifndef HAVE_CUDA
+        throw_nogpu();
+    #else
+        create(d_mat.rows, d_mat.cols, d_mat.type());
+        impl_->copyFrom(d_mat);
+    #endif
+#endif
+}
+
+void cv::gpu::GlBuffer::bind() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_->bind();
+#endif
+}
+
+void cv::gpu::GlBuffer::unbind() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_->unbind();
+#endif
+}
+
+Mat cv::gpu::GlBuffer::mapHost()
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+    return Mat();
+#else
+    return impl_->mapHost();
+#endif
+}
+
+void cv::gpu::GlBuffer::unmapHost()
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_->unmapHost();
+#endif
+}
+
+GpuMat cv::gpu::GlBuffer::mapDevice()
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+    return GpuMat();
+#else
+    #ifndef HAVE_CUDA
+        throw_nogpu();
+        return GpuMat();
+    #else
+        return impl_->mapDevice();
+    #endif
+#endif
+}
+
+void cv::gpu::GlBuffer::unmapDevice()
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    #ifndef HAVE_CUDA
+        throw_nogpu();
+    #else
+        impl_->unmapDevice();
+    #endif
+#endif
+}
+
+int cv::gpu::GlBuffer::rows() const
+{
+#ifndef HAVE_OPENGL
+    return 0;
+#else
+    return impl_->rows();
+#endif
+}
+
+int cv::gpu::GlBuffer::cols() const
+{
+#ifndef HAVE_OPENGL
+    return 0;
+#else
+    return impl_->cols();
+#endif
+}
+
+Size cv::gpu::GlBuffer::size() const
+{
+    return Size(cols(), rows());
+}
+
+bool cv::gpu::GlBuffer::empty() const
+{
+    return rows() == 0 || cols() == 0;
+}
+
+int cv::gpu::GlBuffer::type() const
+{
+#ifndef HAVE_OPENGL
+    return 0;
+#else
+    return impl_->type();
+#endif
+}
+
+int cv::gpu::GlBuffer::depth() const 
+{ 
+    return CV_MAT_DEPTH(type()); 
+}
+
+int cv::gpu::GlBuffer::channels() const 
+{ 
+    return CV_MAT_CN(type()); 
+}
+
+int cv::gpu::GlBuffer::elemSize() const 
+{ 
+    return CV_ELEM_SIZE(type()); 
+}
+
+int cv::gpu::GlBuffer::elemSize1() const 
+{ 
+    return CV_ELEM_SIZE1(type()); 
+}
+
+GlBuffer::Usage cv::gpu::GlBuffer::usage() const
+{
+#ifndef HAVE_OPENGL
+    return ARRAY_BUFFER;
+#else
+    return static_cast<Usage>(impl_->target());
+#endif
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// GlTexture
+
+#ifndef HAVE_OPENGL
+
+class cv::gpu::GlTexture::Impl
+{
+};
+
+#else
+
+class cv::gpu::GlTexture::Impl
+{
+public:
+    Impl();
+
+    Impl(int rows, int cols, int type);
+
+    Impl(const Mat& mat, bool bgra);
+    Impl(const GlBuffer& buf, bool bgra);
+
+    ~Impl();
+
+    void copyFrom(const Mat& mat, bool bgra);
+    void copyFrom(const GlBuffer& buf, bool bgra);
+
+    void bind() const;
+    void unbind() const;
+
+    int rows() const { return rows_; }
+    int cols() const { return cols_; }
+    int type() const { return type_; }
+
+private:    
+    int rows_;
+    int cols_;
+    int type_;
+    unsigned int tex_;
+};
+
+cv::gpu::GlTexture::Impl::Impl() : rows_(0), cols_(0), type_(0), tex_(0)
+{
+}
+
+cv::gpu::GlTexture::Impl::Impl(int rows, int cols, int type) : rows_(0), cols_(0), type_(0), tex_(0)
+{
+    if (!glFuncTab()->isGlContextInitialized())
+        throw_nogl();
+
+    int depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+
+    CV_DbgAssert(rows > 0 && cols > 0);
+    CV_Assert(cn == 1 || cn == 3 || cn == 4);
+    CV_Assert(depth >= 0 && depth <= CV_32F);
+
+    GLuint tex;
+    glGenTextures(1, &tex);
+    CV_CheckGlError();
+
+    glBindTexture(GL_TEXTURE_2D, tex);
+    CV_CheckGlError();
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+    CV_CheckGlError();
+
+    GLenum format = cn == 1 ? GL_LUMINANCE : cn == 3 ? GL_BGR : GL_BGRA;
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    CV_CheckGlError();
+
+    glTexImage2D(GL_TEXTURE_2D, 0, cn, cols, rows, 0, format, gl_types[depth], 0);
+    CV_CheckGlError();
+
+    rows_ = rows;
+    cols_ = cols;
+    type_ = type;
+    tex_ = tex;
+}
+
+cv::gpu::GlTexture::Impl::Impl(const Mat& mat, bool bgra) : rows_(0), cols_(0), type_(0), tex_(0)
+{
+    if (!glFuncTab()->isGlContextInitialized())
+        throw_nogl();
+
+    int depth = mat.depth();
+    int cn = mat.channels();
+
+    CV_DbgAssert(mat.rows > 0 && mat.cols > 0);
+    CV_Assert(cn == 1 || cn == 3 || cn == 4);
+    CV_Assert(depth >= 0 && depth <= CV_32F);
+    CV_Assert(mat.isContinuous());
+
+    GLuint tex;
+    glGenTextures(1, &tex);
+    CV_CheckGlError();
+
+    glBindTexture(GL_TEXTURE_2D, tex);
+    CV_CheckGlError();
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+    CV_CheckGlError();
+
+    GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    CV_CheckGlError();
+
+    glTexImage2D(GL_TEXTURE_2D, 0, cn, mat.cols, mat.rows, 0, format, gl_types[depth], mat.data);
+    CV_CheckGlError();
+
+    rows_ = mat.rows;
+    cols_ = mat.cols;
+    type_ = mat.type();
+    tex_ = tex;
+}
+
+cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : rows_(0), cols_(0), type_(0), tex_(0)
+{
+    if (!glFuncTab()->isGlContextInitialized())
+        throw_nogl();
+
+    int depth = buf.depth();
+    int cn = buf.channels();
+
+    CV_DbgAssert(buf.rows() > 0 && buf.cols() > 0);
+    CV_Assert(cn == 1 || cn == 3 || cn == 4);
+    CV_Assert(depth >= 0 && depth <= CV_32F);
+    CV_Assert(buf.usage() == GlBuffer::TEXTURE_BUFFER);
+
+    GLuint tex;
+    glGenTextures(1, &tex);
+    CV_CheckGlError();
+
+    glBindTexture(GL_TEXTURE_2D, tex);
+    CV_CheckGlError();
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+    CV_CheckGlError();
+
+    GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
+
+    buf.bind();
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    CV_CheckGlError();
+
+    glTexImage2D(GL_TEXTURE_2D, 0, cn, buf.cols(), buf.rows(), 0, format, gl_types[depth], 0);
+    CV_CheckGlError();
+
+    buf.unbind();
+
+    rows_ = buf.rows();
+    cols_ = buf.cols();
+    type_ = buf.type();
+    tex_ = tex;
+}
+
+cv::gpu::GlTexture::Impl::~Impl()
+{
+    if (tex_)
+        glDeleteTextures(1, &tex_);
+}
+
+void cv::gpu::GlTexture::Impl::copyFrom(const Mat& mat, bool bgra)
+{
+    CV_Assert(tex_ != 0);
+    CV_DbgAssert(mat.cols == cols_ && mat.rows == rows_ && mat.type() == type_);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    CV_CheckGlError();
+
+    int cn = mat.channels();
+    GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
+
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cols_, rows_, format, gl_types[mat.depth()], mat.data);
+    CV_CheckGlError();
+}
+
+void cv::gpu::GlTexture::Impl::copyFrom(const GlBuffer& buf, bool bgra)
+{
+    CV_Assert(tex_ != 0);
+    CV_DbgAssert(buf.cols() == cols_ && buf.rows() == rows_ && buf.type() == type_);
+    CV_Assert(buf.usage() == GlBuffer::TEXTURE_BUFFER);
+
+    buf.bind();
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    CV_CheckGlError();
+
+    int cn = buf.channels();
+    GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
+
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cols_, rows_, format, gl_types[buf.depth()], 0);
+    CV_CheckGlError();
+
+    buf.unbind();
+}
+
+void cv::gpu::GlTexture::Impl::bind() const
+{
+    CV_Assert(tex_ != 0);
+
+    glEnable(GL_TEXTURE_2D);
+    CV_CheckGlError();
+
+    glBindTexture(GL_TEXTURE_2D, tex_);
+    CV_CheckGlError();
+}
+
+void cv::gpu::GlTexture::Impl::unbind() const
+{
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glDisable(GL_TEXTURE_2D);
+}
+
+#endif // HAVE_OPENGL
+
+cv::gpu::GlTexture::GlTexture()
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl;
+#endif
+}
+
+cv::gpu::GlTexture::GlTexture(int rows, int cols, int type)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(rows, cols, type);
+#endif
+}
+
+cv::gpu::GlTexture::GlTexture(Size size, int type)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(size.height, size.width, type);
+#endif
+}
+
+cv::gpu::GlTexture::GlTexture(const Mat& mat, bool bgra)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(mat, bgra);
+#endif
+}
+
+cv::gpu::GlTexture::GlTexture(const GlBuffer& buf, bool bgra)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl(buf, bgra);
+#endif
+}
+
+cv::gpu::GlTexture::~GlTexture()
+{
+}
+
+void cv::gpu::GlTexture::create(int rows_, int cols_, int type_)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    if (rows_ != rows() || cols_ != cols() || type_ != type())
+        impl_ = new Impl(rows_, cols_, type_);
+#endif
+}
+
+void cv::gpu::GlTexture::release()
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_ = new Impl;
+#endif
+}
+
+void cv::gpu::GlTexture::copyFrom(const Mat& mat, bool bgra)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    create(mat.rows, mat.cols, mat.type());
+    impl_->copyFrom(mat, bgra);
+#endif
+}
+
+void cv::gpu::GlTexture::copyFrom(const GlBuffer& buf, bool bgra)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    create(buf.rows(), buf.cols(), buf.type());
+    impl_->copyFrom(buf, bgra);
+#endif
+}
+
+void cv::gpu::GlTexture::bind() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_->bind();
+#endif
+}
+
+void cv::gpu::GlTexture::unbind() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    impl_->unbind();
+#endif
+}
+
+int cv::gpu::GlTexture::rows() const
+{
+#ifndef HAVE_OPENGL
+    return 0;
+#else
+    return impl_->rows();
+#endif
+}
+
+int cv::gpu::GlTexture::cols() const
+{
+#ifndef HAVE_OPENGL
+    return 0;
+#else
+    return impl_->cols();
+#endif
+}
+
+Size cv::gpu::GlTexture::size() const
+{
+    return Size(cols(), rows());
+}
+
+bool cv::gpu::GlTexture::empty() const
+{
+    return rows() == 0 || cols() == 0;
+}
+
+int cv::gpu::GlTexture::type() const
+{
+#ifndef HAVE_OPENGL
+    return 0;
+#else
+    return impl_->type();
+#endif
+}
+
+int cv::gpu::GlTexture::depth() const 
+{ 
+    return CV_MAT_DEPTH(type()); 
+}
+
+int cv::gpu::GlTexture::channels() const 
+{ 
+    return CV_MAT_CN(type()); 
+}
+
+int cv::gpu::GlTexture::elemSize() const 
+{ 
+    return CV_ELEM_SIZE(type()); 
+}
+
+int cv::gpu::GlTexture::elemSize1() const 
+{ 
+    return CV_ELEM_SIZE1(type()); 
+}
+
+////////////////////////////////////////////////////////////////////////
+// Rendering
+
+void cv::gpu::render(const GlTexture& tex)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    if (!tex.empty())
+    {
+        tex.bind();
+
+        glDisable(GL_DEPTH_TEST);
+
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0, 1, 1, 0, -1, 1);
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+        glBegin(GL_QUADS);
+            glVertex2d(0.0, 0.0);
+            glTexCoord2d(1.0, 0.0);	 
+
+            glVertex2d(1.0, 0.0);
+            glTexCoord2d(1.0, 1.0);
+
+            glVertex2d(1.0, 1.0);
+            glTexCoord2d(0.0, 1.0);	 
+
+            glVertex2d(0.0, 1.0);
+            glTexCoord2d(0.0, 0.0);	
+        glEnd();
+
+        CV_CheckGlError();
+
+        tex.unbind();
+    }
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
+// Error handling
+
 void cv::gpu::error(const char *error_string, const char *file, const int line, const char *func)
 {
     int code = CV_GpuApiCallError;
@@ -946,4 +2024,48 @@ void cv::gpu::error(const char *error_string, const char *file, const int line, 
     }
     else    
         cv::error( cv::Exception(code, error_string, func, file, line) );
+}
+
+bool cv::gpu::checkGlError(const char* file, const int line, const char* func)
+{
+#ifndef HAVE_OPENGL
+    return true;
+#else
+    GLenum err = glGetError();
+
+    if (err != GL_NO_ERROR)
+    {
+        const char* msg;
+
+        switch (err)
+        {
+        case GL_INVALID_ENUM:
+            msg = "An unacceptable value is specified for an enumerated argument";
+            break;
+        case GL_INVALID_VALUE:
+            msg = "A numeric argument is out of range";
+            break;
+        case GL_INVALID_OPERATION:
+            msg = "The specified operation is not allowed in the current state";
+            break;
+        case GL_STACK_OVERFLOW:
+            msg = "This command would cause a stack overflow";
+            break;
+        case GL_STACK_UNDERFLOW:
+            msg = "This command would cause a stack underflow";
+            break;
+        case GL_OUT_OF_MEMORY:
+            msg = "There is not enough memory left to execute the command";
+            break;
+        default:
+            msg = "Unknown error";
+        };
+
+        cvError(CV_OpenGlApiCallError, func, msg, file, line);
+
+        return false;
+    }
+
+    return true;
+#endif
 }

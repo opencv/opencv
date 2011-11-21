@@ -206,7 +206,7 @@ namespace cv { namespace gpu { namespace device
                 }
                 break;
             default:
-                cv::gpu::error("Unsupported channels count", __FILE__, __LINE__);
+                cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "bilateral_filter_caller");
             }
 
             if (stream != 0)

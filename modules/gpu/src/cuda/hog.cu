@@ -314,7 +314,7 @@ namespace cv { namespace gpu { namespace device
             else if (nthreads == 512)
                 normalize_hists_kernel_many_blocks<512, nblocks><<<grid, threads>>>(block_hist_size, img_block_width, block_hists, threshold);
             else
-                cv::gpu::error("normalize_hists: histogram's size is too big, try to decrease number of bins", __FILE__, __LINE__);
+                cv::gpu::error("normalize_hists: histogram's size is too big, try to decrease number of bins", __FILE__, __LINE__, "normalize_hists");
 
             cudaSafeCall( cudaGetLastError() );
 

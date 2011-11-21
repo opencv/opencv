@@ -291,7 +291,7 @@ namespace cv { namespace gpu { namespace device
             MergeFunction merge_func = merge_func_tbl[merge_func_id];
 
             if (merge_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__);
+                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "merge_caller");
 
             merge_func(src, dst, stream);
         }
@@ -498,7 +498,7 @@ namespace cv { namespace gpu { namespace device
             SplitFunction split_func = split_func_tbl[split_func_id];
 
             if (split_func == 0)
-                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__);
+                cv::gpu::error("Unsupported channel count or data type", __FILE__, __LINE__, "split_caller");
 
             split_func(src, dst, stream);
         }

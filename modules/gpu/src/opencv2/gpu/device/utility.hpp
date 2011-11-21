@@ -76,7 +76,7 @@ namespace cv { namespace gpu { namespace device
             return mask.ptr(y)[x] != 0;
         }
 
-        const PtrStepb mask;
+        PtrStepb mask;
     };
 
     struct MaskCollection

@@ -44,6 +44,7 @@
 #define __OPENCV_HIGHGUI_HPP__
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/core/gpumat.hpp"
 #include "opencv2/highgui/highgui_c.h"
 
 #ifdef __cplusplus
@@ -54,54 +55,34 @@ struct CvVideoWriter;
 namespace cv
 {
 
-enum { WINDOW_AUTOSIZE=1 };
+enum { 
+    // Flags for namedWindow
+    WINDOW_NORMAL   = CV_WINDOW_NORMAL,   // the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
+    WINDOW_AUTOSIZE = CV_WINDOW_AUTOSIZE, // the user cannot resize the window, the size is constrainted by the image displayed
+    WINDOW_OPENGL   = CV_WINDOW_OPENGL,   // window with opengl support
 
-CV_EXPORTS_W void namedWindow( const string& winname, int flags=WINDOW_AUTOSIZE );
-CV_EXPORTS_W void destroyWindow( const string& winname );
+    // Flags for set / getWindowProperty
+    WND_PROP_FULLSCREEN   = CV_WND_PROP_FULLSCREEN,  // fullscreen property
+    WND_PROP_AUTOSIZE     = CV_WND_PROP_AUTOSIZE,    // autosize property
+    WND_PROP_ASPECT_RATIO = CV_WND_PROP_ASPECTRATIO, // window's aspect ration
+    WND_PROP_OPENGL       = CV_WND_PROP_OPENGL       // opengl support
+};
+
+CV_EXPORTS_W void namedWindow(const string& winname, int flags = WINDOW_AUTOSIZE);
+CV_EXPORTS_W void destroyWindow(const string& winname);
 CV_EXPORTS_W void destroyAllWindows();
+
 CV_EXPORTS_W int startWindowThread();
-CV_EXPORTS_W void resizeWindow( const string& name, int width, int height );
-CV_EXPORTS_W void moveWindow( const string& name, int x, int y );
+
+CV_EXPORTS_W int waitKey(int delay = 0);
+
+CV_EXPORTS_W void imshow(const string& winname, InputArray mat);
+
+CV_EXPORTS_W void resizeWindow(const string& winname, int width, int height);
+CV_EXPORTS_W void moveWindow(const string& winname, int x, int y);
 
 CV_EXPORTS_W void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV
 CV_EXPORTS_W double getWindowProperty(const string& winname, int prop_id);//YV
-
-
-//Only for Qt
-//------------------------
-CV_EXPORTS CvFont fontQt(const string& nameFont, int pointSize=-1,
-                         Scalar color=Scalar::all(0), int weight=CV_FONT_NORMAL,
-                         int style=CV_STYLE_NORMAL, int spacing=0);
-CV_EXPORTS void addText( const Mat& img, const string& text, Point org, CvFont font);
-
-CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
-CV_EXPORTS void displayStatusBar(const string& winname, const string& text, int delayms);
-
-typedef void (CV_CDECL *OpenGLCallback)(void* userdata);
-CV_EXPORTS void createOpenGLCallback(const string& winname, CvOpenGLCallback callbackOpenGL, void* userdata=0);
-
-CV_EXPORTS void saveWindowParameters(const string& windowName);
-CV_EXPORTS void loadWindowParameters(const string& windowName);
-CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
-CV_EXPORTS  void stopLoop();
-
-typedef void (CV_CDECL *ButtonCallback)(int state, void* userdata);
-CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
-                             void* userdata=NULL, int type=CV_PUSH_BUTTON,
-                             bool initial_button_state=0);
-//-------------------------
-
-CV_EXPORTS_W void imshow( const string& winname, InputArray mat );
-
-typedef void (CV_CDECL *TrackbarCallback)(int pos, void* userdata);
-
-CV_EXPORTS int createTrackbar( const string& trackbarname, const string& winname,
-                               int* value, int count,
-                               TrackbarCallback onChange=0,
-                               void* userdata=0);
-
-CV_EXPORTS_W int getTrackbarPos( const string& trackbarname, const string& winname );
-CV_EXPORTS_W void setTrackbarPos( const string& trackbarname, const string& winname, int pos );
 
 enum
 {
@@ -127,10 +108,65 @@ enum
     EVENT_FLAG_ALTKEY    =32
 };
         
-typedef void (*MouseCallback )(int event, int x, int y, int flags, void* param);
+typedef void (*MouseCallback)(int event, int x, int y, int flags, void* userdata);
 
 //! assigns callback for mouse events
-CV_EXPORTS void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param=0);
+CV_EXPORTS void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0);
+
+
+typedef void (CV_CDECL *TrackbarCallback)(int pos, void* userdata);
+
+CV_EXPORTS int createTrackbar(const string& trackbarname, const string& winname,
+                              int* value, int count,
+                              TrackbarCallback onChange = 0,
+                              void* userdata = 0);
+
+CV_EXPORTS_W int getTrackbarPos(const string& trackbarname, const string& winname);
+CV_EXPORTS_W void setTrackbarPos(const string& trackbarname, const string& winname, int pos);
+
+// OpenGL support
+
+typedef void (CV_CDECL *OpenGLCallback)(void* userdata);
+CV_EXPORTS void createOpenGLCallback(const string& winname, OpenGLCallback onOpenGlDraw, void* userdata = 0);
+
+typedef void (CV_CDECL *OpenGlDrawCallback)(void* userdata);
+static inline void setOpenGlDrawCallback(const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0)
+{
+    createOpenGLCallback(winname, onOpenGlDraw, userdata);
+}
+
+CV_EXPORTS void setOpenGlContext(const string& winname);
+
+CV_EXPORTS void updateWindow(const string& winname);
+
+CV_EXPORTS void imshow(const string& winname, const gpu::GpuMat& d_mat);
+
+CV_EXPORTS void imshow(const string& winname, const gpu::GlBuffer& buf);
+
+CV_EXPORTS void imshow(const string& winname, const gpu::GlTexture& tex);
+
+
+//Only for Qt
+
+CV_EXPORTS CvFont fontQt(const string& nameFont, int pointSize=-1,
+                         Scalar color=Scalar::all(0), int weight=CV_FONT_NORMAL,
+                         int style=CV_STYLE_NORMAL, int spacing=0);
+CV_EXPORTS void addText( const Mat& img, const string& text, Point org, CvFont font);
+
+CV_EXPORTS void displayOverlay(const string& winname, const string& text, int delayms);
+CV_EXPORTS void displayStatusBar(const string& winname, const string& text, int delayms);
+
+CV_EXPORTS void saveWindowParameters(const string& windowName);
+CV_EXPORTS void loadWindowParameters(const string& windowName);
+CV_EXPORTS  int startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
+CV_EXPORTS  void stopLoop();
+
+typedef void (CV_CDECL *ButtonCallback)(int state, void* userdata);
+CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
+                             void* userdata=NULL, int type=CV_PUSH_BUTTON,
+                             bool initial_button_state=0);
+
+//-------------------------
 
 enum
 {
@@ -166,8 +202,6 @@ CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 CV_EXPORTS_W bool imencode( const string& ext, InputArray img,
                             CV_OUT vector<uchar>& buf,
                             const vector<int>& params=vector<int>());
-
-CV_EXPORTS_W int waitKey(int delay=0);
 
 #ifndef CV_NO_VIDEO_CAPTURE_CPP_API
 

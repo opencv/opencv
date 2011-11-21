@@ -66,7 +66,7 @@
 
 namespace cv { namespace gpu 
 {
-    void error(const char *error_string, const char *file, const int line, const char *func = "");
+    void error(const char *error_string, const char *file, const int line, const char *func);
 }}
 
 static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
