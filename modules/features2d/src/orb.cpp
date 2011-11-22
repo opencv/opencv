@@ -618,14 +618,19 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
     params_(detector_params), n_features_(n_features)
 {
     // fill the extractors and descriptors for the corresponding scales
+    int n_levels = (int)params_.n_levels_;
     float factor = (float)(1.0 / params_.scale_factor_);
-    int n_desired_features_per_scale = n_features_;//cvRound(n_features / ((std::pow(factor, int(params_.n_levels_)) - 1) / (factor - 1)));
-    n_features_per_level_.resize(params_.n_levels_);
-    for (unsigned int level = 0; level < params_.n_levels_; level++)
+    float n_desired_features_per_scale = n_features_*(1 - factor)/(1 - (float)pow((double)factor, (double)n_levels));
+    
+    n_features_per_level_.resize(n_levels);
+    int sum_n_features = 0;
+    for( int level = 0; level < n_levels-1; level++ )
     {
-        n_features_per_level_[level] = n_desired_features_per_scale;
-        n_desired_features_per_scale = cvRound(n_desired_features_per_scale * factor);
+        n_features_per_level_[level] = cvRound(n_desired_features_per_scale);
+        sum_n_features += n_features_per_level_[level];
+        n_desired_features_per_scale *= factor;
     }
+    n_features_per_level_[n_levels-1] = n_features - sum_n_features;
     
     // Make sure we forget about what is too close to the boundary
     //params_.edge_threshold_ = std::max(params_.edge_threshold_, params_.patch_size_/2 + kKernelWidth / 2 + 2);
@@ -701,6 +706,30 @@ void ORB::operator()(const Mat &image, const Mat &mask, vector<KeyPoint> & keypo
     this->operator ()(image, mask, keypoints, descriptors, !useProvidedKeypoints, true);
 }
 
+//takes keypoints and culls them by the response
+static void cull(vector<KeyPoint>& keypoints, size_t n_points)
+{
+    //this is only necessary if the keypoints size is greater than the number of desired points.
+    if (keypoints.size() > n_points)
+    {
+        if (n_points==0) {
+            keypoints.clear();
+            return;
+        }
+        //first use nth element to partition the keypoints into the best and worst.
+        std::nth_element(keypoints.begin(), keypoints.begin() + n_points, keypoints.end(), KeypointResponseGreater());
+        //this is the boundary response, and in the case of FAST may be ambigous
+        float ambiguous_response = keypoints[n_points - 1].response;
+        //use std::partition to grab all of the keypoints with the boundary response.
+        vector<KeyPoint>::const_iterator new_end =
+        std::partition(keypoints.begin() + n_points, keypoints.end(),
+                       KeypointResponseGreaterThanThreshold(ambiguous_response));
+        //resize the keypoints, given this new end point. nth_element and partition reordered the points inplace
+        keypoints.resize(new_end - keypoints.begin());
+    }
+}
+    
+    
 /** Compute the ORB features and descriptors on an image
  * @param img the image to compute the features and descriptors on
  * @param mask the mask to apply
@@ -764,11 +793,23 @@ void ORB::operator()(const Mat &image_in, const Mat &mask, vector<KeyPoint> & ke
         // Compute the resized image
         if (level != (int)params_.first_level_)
         {
-            resize(image, image_pyramid[level], sz, scale, scale, INTER_AREA);
-            if (!mask.empty())
-                resize(mask, mask_pyramid[level], sz, scale, scale, INTER_AREA);
-            copyMakeBorder(image_pyramid[level], temp, border, border, border, border,
-                           BORDER_REFLECT_101+BORDER_ISOLATED);
+            if( level < (int)params_.first_level_ )
+            {
+                resize(image, image_pyramid[level], sz, scale, scale, INTER_LINEAR);
+                if (!mask.empty())
+                    resize(mask, mask_pyramid[level], sz, scale, scale, INTER_LINEAR);
+                copyMakeBorder(image_pyramid[level], temp, border, border, border, border,
+                               BORDER_REFLECT_101+BORDER_ISOLATED);
+            }
+            else
+            {
+                float sf = params_.scale_factor_;
+                resize(image_pyramid[level-1], image_pyramid[level], sz, 1./sf, 1./sf, INTER_LINEAR);
+                if (!mask.empty())
+                    resize(mask_pyramid[level-1], mask_pyramid[level], sz, 1./sf, 1./sf, INTER_LINEAR);
+                copyMakeBorder(image_pyramid[level], temp, border, border, border, border,
+                               BORDER_REFLECT_101+BORDER_ISOLATED);
+            }
         }
         else
         {
@@ -787,8 +828,26 @@ void ORB::operator()(const Mat &image_in, const Mat &mask, vector<KeyPoint> & ke
     // Pre-compute the keypoints (we keep the best over all scales, so this has to be done beforehand
     vector < vector<KeyPoint> > all_keypoints;
     if (do_keypoints)
+    {
         // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
         computeKeyPoints(image_pyramid, mask_pyramid, all_keypoints);
+        
+        // make sure we have the right number of keypoints keypoints
+        /*vector<KeyPoint> temp;
+        
+        for (int level = 0; level < n_levels; ++level)
+        {
+            vector<KeyPoint>& keypoints = all_keypoints[level];
+            temp.insert(temp.end(), keypoints.begin(), keypoints.end());
+            keypoints.clear();
+        }
+        
+        cull(temp, n_features_);
+        
+        for (vector<KeyPoint>::iterator keypoint = temp.begin(),
+             keypoint_end = temp.end(); keypoint != keypoint_end; ++keypoint)
+            all_keypoints[keypoint->octave].push_back(*keypoint);*/
+    }
     else
     {
         // Remove keypoints very close to the border
@@ -798,10 +857,7 @@ void ORB::operator()(const Mat &image_in, const Mat &mask, vector<KeyPoint> & ke
         all_keypoints.resize(n_levels);
         for (vector<KeyPoint>::iterator keypoint = keypoints_in_out.begin(),
              keypoint_end = keypoints_in_out.end(); keypoint != keypoint_end; ++keypoint)
-        {
-            Point2f pt = keypoint->pt;
             all_keypoints[keypoint->octave].push_back(*keypoint);
-        }
         
         // Make sure we rescale the coordinates
         for (int level = 0; level < n_levels; ++level)
@@ -843,8 +899,8 @@ void ORB::operator()(const Mat &image_in, const Mat &mask, vector<KeyPoint> & ke
             offset += nkeypoints;
             // preprocess the resized image
             Mat& working_mat = image_pyramid[level];
-            boxFilter(working_mat, working_mat, working_mat.depth(), Size(5,5), Point(-1,-1), true, BORDER_REFLECT_101);
-            //GaussianBlur(working_mat, working_mat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
+            //boxFilter(working_mat, working_mat, working_mat.depth(), Size(5,5), Point(-1,-1), true, BORDER_REFLECT_101);
+            GaussianBlur(working_mat, working_mat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
             computeDescriptors(working_mat, Mat(), level, keypoints, desc);
         }
         
@@ -861,29 +917,6 @@ void ORB::operator()(const Mat &image_in, const Mat &mask, vector<KeyPoint> & ke
     }
 }
 
-//takes keypoints and culls them by the response
-static void cull(vector<KeyPoint>& keypoints, size_t n_points)
-{
-    //this is only necessary if the keypoints size is greater than the number of desired points.
-    if (keypoints.size() > n_points)
-    {
-        if (n_points==0) {
-            keypoints.clear();
-            return;
-        }
-        //first use nth element to partition the keypoints into the best and worst.
-        std::nth_element(keypoints.begin(), keypoints.begin() + n_points, keypoints.end(), KeypointResponseGreater());
-        //this is the boundary response, and in the case of FAST may be ambigous
-        float ambiguous_response = keypoints[n_points - 1].response;
-        //use std::partition to grab all of the keypoints with the boundary response.
-        vector<KeyPoint>::const_iterator new_end =
-        std::partition(keypoints.begin() + n_points, keypoints.end(),
-                       KeypointResponseGreaterThanThreshold(ambiguous_response));
-        //resize the keypoints, given this new end point. nth_element and partition reordered the points inplace
-        keypoints.resize(new_end - keypoints.begin());
-    }
-}
-
 /** Compute the ORB keypoints on an image
  * @param image_pyramid the image pyramid to compute the features and descriptors on
  * @param mask_pyramid the masks to apply at every level
@@ -897,7 +930,8 @@ void ORB::computeKeyPoints(const vector<Mat>& image_pyramid,
     
     for (int level = 0; level < (int)params_.n_levels_; ++level)
     {
-        all_keypoints_out[level].reserve(n_features_per_level_[level]);
+        int n_features = n_features_per_level_[level];
+        all_keypoints_out[level].reserve(n_features*2);
         
         vector<KeyPoint> & keypoints = all_keypoints_out[level];
         
@@ -911,14 +945,14 @@ void ORB::computeKeyPoints(const vector<Mat>& image_pyramid,
         if( params_.score_type_ == CommonParams::HARRIS_SCORE )
         {
             // Keep more points than necessary as FAST does not give amazing corners
-            cull(keypoints, 2 * n_features_per_level_[level]);
+            cull(keypoints, 2 * n_features);
             
             // Compute the Harris cornerness (better scoring than FAST)
             HarrisResponses(image_pyramid[level], keypoints, 7, HARRIS_K);
         }
         
-        //cull to the final desired level, using the new Harris scores.
-        cull(keypoints, n_features_per_level_[level]);  
+        //cull to the final desired level, using the new Harris scores or the original FAST scores.
+        cull(keypoints, n_features);  
         
         float sf = get_scale(params_, level);
         
@@ -946,8 +980,8 @@ void ORB::computeOrientation(const Mat& image, const Mat&, unsigned int scale,
     int half_patch_size = params_.patch_size_/2;
     
     // Process each keypoint
-    for (vector<KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
-         != keypoint_end; ++keypoint)
+    for (vector<KeyPoint>::iterator keypoint = keypoints.begin(),
+         keypoint_end = keypoints.end(); keypoint != keypoint_end; ++keypoint)
     {
         keypoint->angle = IC_Angle(image, half_patch_size, keypoint->pt, u_max_);
     }
