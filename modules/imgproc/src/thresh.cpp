@@ -272,13 +272,13 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 
 
 static void
-thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
+thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
 {
     int i, j;
     Size roi = _src.size();
     roi.width *= _src.channels();
-    const float* src = (const float*)_src.data;
-    float* dst = (float*)_dst.data;
+    const short* src = (const short*)_src.data;
+    short* dst = (short*)_dst.data;
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
     
@@ -301,18 +301,18 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         #if CV_SSE2
             if( useSIMD )
             {
-                __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
-                for( ; j <= roi.width - 8; j += 8 )
+                __m128i thresh8 = _mm_set1_epi16(thresh), maxval8 = _mm_set1_epi16(maxval);
+                for( ; j <= roi.width - 16; j += 16 )
                 {
-                    __m128 v0, v1;
-                    v0 = _mm_loadu_ps( src + j );
-                    v1 = _mm_loadu_ps( src + j + 4 );
-                    v0 = _mm_cmpgt_ps( v0, thresh4 );
-                    v1 = _mm_cmpgt_ps( v1, thresh4 );
-                    v0 = _mm_and_ps( v0, maxval4 );
-                    v1 = _mm_and_ps( v1, maxval4 );
-                    _mm_storeu_ps( dst + j, v0 );
-                    _mm_storeu_ps( dst + j + 4, v1 );
+                    __m128i v0, v1;
+                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
+                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
+                    v0 = _mm_cmpgt_epi16( v0, thresh8 );
+                    v1 = _mm_cmpgt_epi16( v1, thresh8 );
+                    v0 = _mm_and_si128( v0, maxval8 );
+                    v1 = _mm_and_si128( v1, maxval8 );
+                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
+                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
                 }
             }
         #endif
@@ -329,18 +329,18 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         #if CV_SSE2
             if( useSIMD )
             {
-                __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
-                for( ; j <= roi.width - 8; j += 8 )
+                __m128i thresh8 = _mm_set1_epi16(thresh), maxval8 = _mm_set1_epi16(maxval);
+                for( ; j <= roi.width - 16; j += 16 )
                 {
-                    __m128 v0, v1;
-                    v0 = _mm_loadu_ps( src + j );
-                    v1 = _mm_loadu_ps( src + j + 4 );
-                    v0 = _mm_cmple_ps( v0, thresh4 );
-                    v1 = _mm_cmple_ps( v1, thresh4 );
-                    v0 = _mm_and_ps( v0, maxval4 );
-                    v1 = _mm_and_ps( v1, maxval4 );
-                    _mm_storeu_ps( dst + j, v0 );
-                    _mm_storeu_ps( dst + j + 4, v1 );
+                    __m128i v0, v1;
+                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
+                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
+                    v0 = _mm_cmpgt_epi16( v0, thresh8 );
+                    v1 = _mm_cmpgt_epi16( v1, thresh8 );
+                    v0 = _mm_andnot_si128( v0, maxval8 );
+                    v1 = _mm_andnot_si128( v1, maxval8 );
+                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
+                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
                 }
             }
         #endif            
@@ -357,16 +357,16 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         #if CV_SSE2
             if( useSIMD )
             {
-                __m128 thresh4 = _mm_set1_ps(thresh);
-                for( ; j <= roi.width - 8; j += 8 )
+                __m128i thresh8 = _mm_set1_epi16(thresh);
+                for( ; j <= roi.width - 16; j += 16 )
                 {
-                    __m128 v0, v1;
-                    v0 = _mm_loadu_ps( src + j );
-                    v1 = _mm_loadu_ps( src + j + 4 );
-                    v0 = _mm_min_ps( v0, thresh4 );
-                    v1 = _mm_min_ps( v1, thresh4 );
-                    _mm_storeu_ps( dst + j, v0 );
-                    _mm_storeu_ps( dst + j + 4, v1 );
+                    __m128i v0, v1;
+                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
+                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
+                    v0 = _mm_min_epi16( v0, thresh8 );
+                    v1 = _mm_min_epi16( v1, thresh8 );
+                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
+                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
                 }
             }
         #endif            
@@ -383,23 +383,23 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         #if CV_SSE2
             if( useSIMD )
             {
-                __m128 thresh4 = _mm_set1_ps(thresh);
-                for( ; j <= roi.width - 8; j += 8 )
+                __m128i thresh8 = _mm_set1_epi16(thresh);
+                for( ; j <= roi.width - 16; j += 16 )
                 {
-                    __m128 v0, v1;
-                    v0 = _mm_loadu_ps( src + j );
-                    v1 = _mm_loadu_ps( src + j + 4 );
-                    v0 = _mm_and_ps(v0, _mm_cmpgt_ps(v0, thresh4));
-                    v1 = _mm_and_ps(v1, _mm_cmpgt_ps(v1, thresh4));
-                    _mm_storeu_ps( dst + j, v0 );
-                    _mm_storeu_ps( dst + j + 4, v1 );
+                    __m128i v0, v1;
+                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
+                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
+                    v0 = _mm_and_si128(v0, _mm_cmpgt_epi16(v0, thresh8));
+                    v1 = _mm_and_si128(v1, _mm_cmpgt_epi16(v1, thresh8));
+                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
+                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
                 }
             }
         #endif
             
             for( ; j < roi.width; j++ )
             {
-                float v = src[j];
+                short v = src[j];
                 dst[j] = v > thresh ? v : 0;
             }
         }
@@ -412,22 +412,22 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         #if CV_SSE2
             if( useSIMD )
             {
-                __m128 thresh4 = _mm_set1_ps(thresh);
-                for( ; j <= roi.width - 8; j += 8 )
+                __m128i thresh8 = _mm_set1_epi16(thresh);
+                for( ; j <= roi.width - 16; j += 16 )
                 {
-                    __m128 v0, v1;
-                    v0 = _mm_loadu_ps( src + j );
-                    v1 = _mm_loadu_ps( src + j + 4 );
-                    v0 = _mm_and_ps(v0, _mm_cmple_ps(v0, thresh4));
-                    v1 = _mm_and_ps(v1, _mm_cmple_ps(v1, thresh4));
-                    _mm_storeu_ps( dst + j, v0 );
-                    _mm_storeu_ps( dst + j + 4, v1 );
+                    __m128i v0, v1;
+                    v0 = _mm_loadu_si128( (const __m128i*)(src + j) );
+                    v1 = _mm_loadu_si128( (const __m128i*)(src + j + 8) );
+                    v0 = _mm_andnot_si128(_mm_cmpgt_epi16(v0, thresh8), v0);
+                    v1 = _mm_andnot_si128(_mm_cmpgt_epi16(v1, thresh8), v1);
+                    _mm_storeu_si128((__m128i*)(dst + j), v0 );
+                    _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
                 }
             }
         #endif
             for( ; j < roi.width; j++ )
             {
-                float v = src[j];
+                short v = src[j];
                 dst[j] = v <= thresh ? v : 0;
             }
         }
@@ -437,6 +437,173 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     }
 }
 
+    
+static void
+thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
+{
+    int i, j;
+    Size roi = _src.size();
+    roi.width *= _src.channels();
+    const float* src = (const float*)_src.data;
+    float* dst = (float*)_dst.data;
+    size_t src_step = _src.step/sizeof(src[0]);
+    size_t dst_step = _dst.step/sizeof(dst[0]);
+    
+#if CV_SSE2
+    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
+#endif
+    
+    if( _src.isContinuous() && _dst.isContinuous() )
+    {
+        roi.width *= roi.height;
+        roi.height = 1;
+    }
+    
+    switch( type )
+    {
+        case THRESH_BINARY:
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                j = 0;
+#if CV_SSE2
+                if( useSIMD )
+                {
+                    __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
+                    for( ; j <= roi.width - 8; j += 8 )
+                    {
+                        __m128 v0, v1;
+                        v0 = _mm_loadu_ps( src + j );
+                        v1 = _mm_loadu_ps( src + j + 4 );
+                        v0 = _mm_cmpgt_ps( v0, thresh4 );
+                        v1 = _mm_cmpgt_ps( v1, thresh4 );
+                        v0 = _mm_and_ps( v0, maxval4 );
+                        v1 = _mm_and_ps( v1, maxval4 );
+                        _mm_storeu_ps( dst + j, v0 );
+                        _mm_storeu_ps( dst + j + 4, v1 );
+                    }
+                }
+#endif
+                
+                for( ; j < roi.width; j++ )
+                    dst[j] = src[j] > thresh ? maxval : 0;
+            }
+            break;
+            
+        case THRESH_BINARY_INV:
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                j = 0;
+#if CV_SSE2
+                if( useSIMD )
+                {
+                    __m128 thresh4 = _mm_set1_ps(thresh), maxval4 = _mm_set1_ps(maxval);
+                    for( ; j <= roi.width - 8; j += 8 )
+                    {
+                        __m128 v0, v1;
+                        v0 = _mm_loadu_ps( src + j );
+                        v1 = _mm_loadu_ps( src + j + 4 );
+                        v0 = _mm_cmple_ps( v0, thresh4 );
+                        v1 = _mm_cmple_ps( v1, thresh4 );
+                        v0 = _mm_and_ps( v0, maxval4 );
+                        v1 = _mm_and_ps( v1, maxval4 );
+                        _mm_storeu_ps( dst + j, v0 );
+                        _mm_storeu_ps( dst + j + 4, v1 );
+                    }
+                }
+#endif            
+                
+                for( ; j < roi.width; j++ )
+                    dst[j] = src[j] <= thresh ? maxval : 0;
+            }
+            break;
+            
+        case THRESH_TRUNC:
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                j = 0;
+#if CV_SSE2
+                if( useSIMD )
+                {
+                    __m128 thresh4 = _mm_set1_ps(thresh);
+                    for( ; j <= roi.width - 8; j += 8 )
+                    {
+                        __m128 v0, v1;
+                        v0 = _mm_loadu_ps( src + j );
+                        v1 = _mm_loadu_ps( src + j + 4 );
+                        v0 = _mm_min_ps( v0, thresh4 );
+                        v1 = _mm_min_ps( v1, thresh4 );
+                        _mm_storeu_ps( dst + j, v0 );
+                        _mm_storeu_ps( dst + j + 4, v1 );
+                    }
+                }
+#endif            
+                
+                for( ; j < roi.width; j++ )
+                    dst[j] = std::min(src[j], thresh);
+            }
+            break;
+            
+        case THRESH_TOZERO:
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                j = 0;
+#if CV_SSE2
+                if( useSIMD )
+                {
+                    __m128 thresh4 = _mm_set1_ps(thresh);
+                    for( ; j <= roi.width - 8; j += 8 )
+                    {
+                        __m128 v0, v1;
+                        v0 = _mm_loadu_ps( src + j );
+                        v1 = _mm_loadu_ps( src + j + 4 );
+                        v0 = _mm_and_ps(v0, _mm_cmpgt_ps(v0, thresh4));
+                        v1 = _mm_and_ps(v1, _mm_cmpgt_ps(v1, thresh4));
+                        _mm_storeu_ps( dst + j, v0 );
+                        _mm_storeu_ps( dst + j + 4, v1 );
+                    }
+                }
+#endif
+                
+                for( ; j < roi.width; j++ )
+                {
+                    float v = src[j];
+                    dst[j] = v > thresh ? v : 0;
+                }
+            }
+            break;
+            
+        case THRESH_TOZERO_INV:
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            {
+                j = 0;
+#if CV_SSE2
+                if( useSIMD )
+                {
+                    __m128 thresh4 = _mm_set1_ps(thresh);
+                    for( ; j <= roi.width - 8; j += 8 )
+                    {
+                        __m128 v0, v1;
+                        v0 = _mm_loadu_ps( src + j );
+                        v1 = _mm_loadu_ps( src + j + 4 );
+                        v0 = _mm_and_ps(v0, _mm_cmple_ps(v0, thresh4));
+                        v1 = _mm_and_ps(v1, _mm_cmple_ps(v1, thresh4));
+                        _mm_storeu_ps( dst + j, v0 );
+                        _mm_storeu_ps( dst + j + 4, v1 );
+                    }
+                }
+#endif
+                for( ; j < roi.width; j++ )
+                {
+                    float v = src[j];
+                    dst[j] = v <= thresh ? v : 0;
+                }
+            }
+            break;
+        default:
+            return CV_Error( CV_StsBadArg, "" );
+    }
+}
+    
 
 static double
 getThreshVal_Otsu_8u( const Mat& _src )
@@ -530,7 +697,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
             {
                 int v = type == THRESH_BINARY ? (ithresh >= 255 ? 0 : imaxval) :
                         type == THRESH_BINARY_INV ? (ithresh >= 255 ? imaxval : 0) :
-                        type == THRESH_TRUNC ? imaxval : 0;
+                        /*type == THRESH_TRUNC ? imaxval :*/ 0;
                 dst.setTo(v);
             }
             else
@@ -538,6 +705,32 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         }
         else
             thresh_8u( src, dst, (uchar)ithresh, (uchar)imaxval, type );
+    }
+    else if( src.depth() == CV_16S )
+    {
+        int ithresh = cvFloor(thresh);
+        thresh = ithresh;
+        int imaxval = cvRound(maxval);
+        if( type == THRESH_TRUNC )
+            imaxval = ithresh;
+        imaxval = saturate_cast<short>(imaxval);
+        
+        if( ithresh < SHRT_MIN || ithresh >= SHRT_MAX )
+        {
+            if( type == THRESH_BINARY || type == THRESH_BINARY_INV ||
+               ((type == THRESH_TRUNC || type == THRESH_TOZERO_INV) && ithresh < SHRT_MIN) ||
+               (type == THRESH_TOZERO && ithresh >= SHRT_MAX) )
+            {
+                int v = type == THRESH_BINARY ? (ithresh >= SHRT_MAX ? 0 : imaxval) :
+                type == THRESH_BINARY_INV ? (ithresh >= SHRT_MAX ? imaxval : 0) :
+                /*type == THRESH_TRUNC ? imaxval :*/ 0;
+                dst.setTo(v);
+            }
+            else
+                src.copyTo(dst);
+        }
+        else
+            thresh_16s( src, dst, (short)ithresh, (short)imaxval, type );
     }
     else if( src.depth() == CV_32F )
         thresh_32f( src, dst, (float)thresh, (float)maxval, type );
