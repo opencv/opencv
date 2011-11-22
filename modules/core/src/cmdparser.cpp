@@ -1,4 +1,4 @@
-﻿#include "precomp.hpp"
+#include "precomp.hpp"
 
 #include <iostream>
 #include <iomanip>
