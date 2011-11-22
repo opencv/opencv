@@ -2,6 +2,9 @@ import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser
 
+convert = lambda text: int(text) if text.isdigit() else text 
+alphanum_keyselector = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
+
 def getSetName(tset, idx, columns, short = True):
     if columns and len(columns) >= idx:
         prefix = columns[idx]
@@ -121,7 +124,7 @@ if __name__ == "__main__":
         
     # rows
     needNewRow = True
-    for name in sorted(test_cases.iterkeys()):
+    for name in sorted(test_cases.iterkeys(), key=alphanum_keyselector):
         cases = test_cases[name]
         if needNewRow:
             tbl.newRow()

@@ -32,6 +32,9 @@ def keyselector(a):
         return ((channels-1) & 511) + (depth << 9)
     return a
 
+convert = lambda text: int(text) if text.isdigit() else text 
+alphanum_keyselector = lambda key: [ convert(c) for c in re.split('([0-9]+)', keyselector(key)) ]
+
 def getValueParams(test):
     param = test.get("value_param")
     if not param:
@@ -174,7 +177,7 @@ if __name__ == "__main__":
         exit(1)
             
     for i in range(argsnum):
-        arglists[i] = sorted([str(key) for key in arglists[i].iterkeys()], key=keyselector)
+        arglists[i] = sorted([str(key) for key in arglists[i].iterkeys()], key=alphanum_keyselector)
                 
     if options.generateHtml and options.format != "moinwiki":
         htmlPrintHeader(sys.stdout, "Report %s for %s" % (args[0], sname))
