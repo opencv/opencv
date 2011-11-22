@@ -606,7 +606,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
             imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
         Mat derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
         calcSharrDeriv(prevPyr[level], derivI);
-        copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT);
+        copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);
         
         parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level], derivI,
                                                                 nextPyr[level], prevPts, nextPts,
