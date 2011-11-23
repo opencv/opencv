@@ -149,7 +149,7 @@ CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camer
 CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GpuMat& points, 
                                const gpu::GpuMat& colors = gpu::GpuMat());
 CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, InputArray points, 
-                               InputArray colors = InputArray());
+                               InputArray colors = noArray());
 
 //Only for Qt
 
