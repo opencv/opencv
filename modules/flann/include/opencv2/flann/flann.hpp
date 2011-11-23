@@ -374,7 +374,7 @@ int Index_<T>::radiusSearch(const Mat& query, Mat& indices, Mat& dists, Distance
 
 
 template <typename Distance>
-int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::IndexParams& params,
+int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::KMeansIndexParams& params,
                            Distance d = Distance())
 {
     typedef typename Distance::ElementType ElementType;
@@ -393,7 +393,7 @@ int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::I
 
 
 template <typename ELEM_TYPE, typename DIST_TYPE>
-FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::IndexParams& params)
+FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, const ::cvflann::KMeansIndexParams& params)
 {
     printf("[WARNING] cv::flann::hierarchicalClustering<ELEM_TYPE,DIST_TYPE> is deprecated, use "
         "cv::flann::hierarchicalClustering<Distance> instead\n");
