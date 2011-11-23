@@ -174,6 +174,16 @@ public:
 	 */
 	void setup(std::string retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
 
+	
+	/**
+	 * try to open an XML retina parameters file to adjust current retina instance setup
+	 * => if the xml file does not exist, then default setup is applied
+	 * => warning, Exceptions are thrown if read XML file is not valid
+	 * @param fs : the open Filestorage which contains retina parameters
+         * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
+	 */
+        void setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
+
 	/**
 	 * try to open an XML retina parameters file to adjust current retina instance setup
 	 * => if the xml file does not exist, then default setup is applied

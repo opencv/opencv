@@ -100,15 +100,34 @@ void Retina::setColorSaturation(const bool saturateColors, const float colorSatu
 
 struct Retina::RetinaParameters Retina::getParameters(){return _retinaParameters;}
 
+
 void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetupOnFailure)
 {
-	// open specified parameters file
-	std::cout<<"Retina::setup: setting up retina from parameter file : "<<retinaParameterFile<<std::endl;
+    try
+    {
+        // opening retinaParameterFile in read mode
+        cv::FileStorage fs(retinaParameterFile, cv::FileStorage::READ);
+        setup(fs, applyDefaultSetupOnFailure);
+    }catch(Exception &e)
+    {
+ 	std::cout<<"Retina::setup: wrong/unappropriate xml parameter file : error report :`n=>"<<e.what()<<std::endl;
+	if (applyDefaultSetupOnFailure)
+	{
+            std::cout<<"Retina::setup: resetting retina with default parameters"<<std::endl;
+	    setupOPLandIPLParvoChannel();
+	    setupIPLMagnoChannel();
+	}
+        else
+        {
+	    std::cout<<"=> keeping current parameters"<<std::endl;
+        }
+    }
+}
 
+void Retina::setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure)
+{
 	try
 	{
-		// opening retinaParameterFile in read mode
-		cv::FileStorage fs(retinaParameterFile, cv::FileStorage::READ);
 		// read parameters file if it exists or apply default setup if asked for
 		if (!fs.isOpened())
 		{
