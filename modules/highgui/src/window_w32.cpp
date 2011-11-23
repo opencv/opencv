@@ -405,12 +405,12 @@ double cvGetModeWindow_W32(const char* name)//YV
 
     CvWindow* window;
 
-    if(!name)
+    if (!name)
         CV_ERROR( CV_StsNullPtr, "NULL name string" );
 
     window = icvFindWindowByName( name );
-    if( !window )
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+    if (!window)
+        EXIT; // keep silence here
         
     result = window->status;
         
@@ -503,7 +503,7 @@ double cvGetPropWindowAutoSize_W32(const char* name)
 
     window = icvFindWindowByName( name );
     if (!window)
-        EXIT;
+        EXIT; // keep silence here
 
     result = window->flags & CV_WINDOW_AUTOSIZE;
 
@@ -527,7 +527,7 @@ double cvGetRatioWindow_W32(const char* name)
 
     window = icvFindWindowByName( name );
     if (!window)
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        EXIT; // keep silence here
         
     result = static_cast<double>(window->width) / window->height;
         
@@ -552,7 +552,7 @@ double cvGetOpenGlProp_W32(const char* name)
 
     window = icvFindWindowByName( name );
     if (!window)
-        __CV_EXIT__;
+        EXIT; // keep silence here
         
     result = window->useGl;
         
@@ -808,7 +808,7 @@ namespace
             0,                             // Shift Bit Ignored
             0,                             // No Accumulation Buffer
             0, 0, 0, 0,                    // Accumulation Bits Ignored
-            16,                            // 16Bit Z-Buffer (Depth Buffer)  
+            32,                            // 32 Bit Z-Buffer (Depth Buffer)  
             0,                             // No Stencil Buffer
             0,                             // No Auxiliary Buffer
             PFD_MAIN_PLANE,                // Main Drawing Layer
@@ -844,6 +844,8 @@ namespace
         CV_FUNCNAME( "releaseGlContext" );
 
         __BEGIN__;
+
+        delete window->glFuncTab;
 
         if (window->hGLRC)
         {
@@ -1177,9 +1179,6 @@ static void icvRemoveWindow( CvWindow* window )
 #ifdef HAVE_OPENGL
     if (window->useGl)
     {
-        delete window->glFuncTab;
-         cv::gpu::setGlFuncTab(0);
-
         wglMakeCurrent(window->dc, window->hGLRC);
 
         if (window->glCleanCallback)

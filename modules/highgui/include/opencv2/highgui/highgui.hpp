@@ -139,12 +139,17 @@ CV_EXPORTS void setOpenGlContext(const string& winname);
 
 CV_EXPORTS void updateWindow(const string& winname);
 
+CV_EXPORTS void imshow(const string& winname, const gpu::GlTexture& tex);
+CV_EXPORTS void imshow(const string& winname, const gpu::GlBuffer& buf);
 CV_EXPORTS void imshow(const string& winname, const gpu::GpuMat& d_mat);
 
-CV_EXPORTS void imshow(const string& winname, const gpu::GlBuffer& buf);
-
-CV_EXPORTS void imshow(const string& winname, const gpu::GlTexture& tex);
-
+CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GlArrays& arr);
+CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GlBuffer& points, 
+                               const gpu::GlBuffer& colors = gpu::GlBuffer(gpu::GlBuffer::ARRAY_BUFFER));
+CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GpuMat& points, 
+                               const gpu::GpuMat& colors = gpu::GpuMat());
+CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, InputArray points, 
+                               InputArray colors = InputArray());
 
 //Only for Qt
 

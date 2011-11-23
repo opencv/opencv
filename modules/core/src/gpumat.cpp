@@ -52,6 +52,7 @@
 
 #ifdef HAVE_OPENGL
     #include <GL/gl.h>
+    #include <Gl/glu.h>
 
     #ifdef HAVE_CUDA
         #include <cuda_gl_interop.h>
@@ -982,6 +983,12 @@ namespace
     }
 }
 
+cv::gpu::GlFuncTab::~GlFuncTab()
+{
+    if (g_glFuncTab == this)
+        g_glFuncTab = 0;
+}
+
 void cv::gpu::setGlFuncTab(const GlFuncTab* tab)
 {
     g_glFuncTab = tab;
@@ -1327,7 +1334,7 @@ inline void cv::gpu::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
 
 #endif // HAVE_OPENGL
 
-cv::gpu::GlBuffer::GlBuffer(Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::gpu::GlBuffer::GlBuffer(Usage usage) : rows(0), cols(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1336,43 +1343,44 @@ cv::gpu::GlBuffer::GlBuffer(Usage usage) : rows_(0), cols_(0), type_(0), usage_(
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(int rows, int cols, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::gpu::GlBuffer::GlBuffer(int rows_, int cols_, int type, Usage usage) : rows(0), cols(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    impl_ = new Impl(rows, cols, type, usage);
-    rows_ = rows;
-    cols_ = cols;
+    impl_ = new Impl(rows_, cols_, type, usage);
+    rows = rows_;
+    cols = cols_;
     type_ = type;
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(Size size, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::gpu::GlBuffer::GlBuffer(Size size, int type, Usage usage) : rows(0), cols(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(size.height, size.width, type, usage);
-    rows_ = size.height;
-    cols_ = size.width;
+    rows = size.height;
+    cols = size.width;
     type_ = type;
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(const Mat& mat, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::gpu::GlBuffer::GlBuffer(InputArray mat_, Usage usage) : rows(0), cols(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
+    Mat mat = mat_.getMat();
     impl_ = new Impl(mat, usage);
-    rows_ = mat.rows;
-    cols_ = mat.cols;
+    rows = mat.rows;
+    cols = mat.cols;
     type_ = mat.type();
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage) : rows(0), cols(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1382,27 +1390,42 @@ cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage) : rows_(0), cols_(
     #else
         impl_ = new Impl(d_mat.rows, d_mat.cols, d_mat.type(), usage);
         impl_->copyFrom(d_mat);
-        rows_ = d_mat.rows;
-        cols_ = d_mat.cols;
+        rows = d_mat.rows;
+        cols = d_mat.cols;
         type_ = d_mat.type();
     #endif
 #endif
+}
+
+cv::gpu::GlBuffer::GlBuffer(const GlBuffer& other) 
+    : rows(other.rows), cols(other.cols), type_(other.type_), usage_(other.usage_), impl_(other.impl_)
+{
 }
 
 cv::gpu::GlBuffer::~GlBuffer()
 {
 }
 
-void cv::gpu::GlBuffer::create(int rows, int cols, int type, Usage usage)
+GlBuffer& cv::gpu::GlBuffer::operator =(const GlBuffer& other)
+{
+    rows = other.rows;
+    cols = other.cols;
+    type_ = other.type_;
+    usage_ = other.usage_;
+    impl_ = other.impl_;
+    return *this;
+}
+
+void cv::gpu::GlBuffer::create(int rows_, int cols_, int type, Usage usage)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     if (rows_ != rows || cols_ != cols || type_ != type || usage_ != usage)
     {
-        impl_ = new Impl(rows, cols, type, usage);
-        rows_ = rows;
-        cols_ = cols;
+        impl_ = new Impl(rows_, cols_, type, usage);
+        rows = rows_;
+        cols = cols_;
         type_ = type;
         usage_ = usage;
     }
@@ -1418,11 +1441,12 @@ void cv::gpu::GlBuffer::release()
 #endif
 }
 
-void cv::gpu::GlBuffer::copyFrom(const Mat& mat)
+void cv::gpu::GlBuffer::copyFrom(InputArray mat_)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
+    Mat mat = mat_.getMat();
     create(mat.rows, mat.cols, mat.type());
     impl_->copyFrom(mat, usage_);
 #endif
@@ -1466,7 +1490,7 @@ Mat cv::gpu::GlBuffer::mapHost()
     throw_nogl();
     return Mat();
 #else
-    return impl_->mapHost(rows_, cols_, type_, usage_);
+    return impl_->mapHost(rows, cols, type_, usage_);
 #endif
 }
 
@@ -1489,7 +1513,7 @@ GpuMat cv::gpu::GlBuffer::mapDevice()
         throw_nogpu();
         return GpuMat();
     #else
-        return impl_->mapDevice(rows_, cols_, type_);
+        return impl_->mapDevice(rows, cols, type_);
     #endif
 #endif
 }
@@ -1643,7 +1667,7 @@ cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : tex_(0)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     CV_CheckGlError();
 
-    glTexImage2D(GL_TEXTURE_2D, 0, cn, buf.cols(), buf.rows(), 0, format, gl_types[depth], 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, cn, buf.cols, buf.rows, 0, format, gl_types[depth], 0);
     CV_CheckGlError();
 
     buf.unbind();
@@ -1682,7 +1706,7 @@ void cv::gpu::GlTexture::Impl::copyFrom(const GlBuffer& buf, bool bgra)
     int cn = buf.channels();
     GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buf.cols(), buf.rows(), format, gl_types[buf.depth()], 0);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buf.cols, buf.rows, format, gl_types[buf.depth()], 0);
     CV_CheckGlError();
 
     buf.unbind();
@@ -1708,7 +1732,7 @@ inline void cv::gpu::GlTexture::Impl::unbind() const
 
 #endif // HAVE_OPENGL
 
-cv::gpu::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0)
+cv::gpu::GlTexture::GlTexture() : rows(0), cols(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1717,68 +1741,83 @@ cv::gpu::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0)
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), type_(0)
+cv::gpu::GlTexture::GlTexture(int rows_, int cols_, int type) : rows(0), cols(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    impl_ = new Impl(rows, cols, type);
-    rows_ = rows;
-    cols_ = cols;
+    impl_ = new Impl(rows_, cols_, type);
+    rows = rows_;
+    cols = cols_;
     type_ = type;
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0)
+cv::gpu::GlTexture::GlTexture(Size size, int type) : rows(0), cols(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(size.height, size.width, type);
-    rows_ = size.height;
-    cols_ = size.width;
+    rows = size.height;
+    cols = size.width;
     type_ = type;
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(const Mat& mat, bool bgra) : rows_(0), cols_(0), type_(0)
+cv::gpu::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows(0), cols(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
+    Mat mat = mat_.getMat();
     impl_ = new Impl(mat, bgra);
-    rows_ = mat.rows;
-    cols_ = mat.cols;
+    rows = mat.rows;
+    cols = mat.cols;
     type_ = mat.type();
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(const GlBuffer& buf, bool bgra) : rows_(0), cols_(0), type_(0)
+cv::gpu::GlTexture::GlTexture(const GlBuffer& buf, bool bgra) : rows(0), cols(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     impl_ = new Impl(buf, bgra);
-    rows_ = buf.rows();
-    cols_ = buf.cols();
+    rows = buf.rows;
+    cols = buf.cols;
     type_ = buf.type();
 #endif
+}
+
+cv::gpu::GlTexture::GlTexture(const GlTexture& other) 
+    : rows(other.rows), cols(other.cols), type_(other.type_), impl_(other.impl_)
+{
 }
 
 cv::gpu::GlTexture::~GlTexture()
 {
 }
 
-void cv::gpu::GlTexture::create(int rows, int cols, int type)
+GlTexture& cv::gpu::GlTexture::operator =(const GlTexture& other)
+{
+    rows = other.rows;
+    cols = other.cols;
+    type_ = other.type_;
+    impl_ = other.impl_;
+    return *this;
+}
+
+void cv::gpu::GlTexture::create(int rows_, int cols_, int type)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
     if (rows_ != rows || cols_ != cols || type_ != type)
     {
-        impl_ = new Impl(rows, cols, type);
-        rows_ = rows;
-        cols_ = cols;
+        impl_ = new Impl(rows_, cols_, type);
+        rows = rows_;
+        cols = cols_;
         type_ = type;
     }
 #endif
@@ -1793,11 +1832,12 @@ void cv::gpu::GlTexture::release()
 #endif
 }
 
-void cv::gpu::GlTexture::copyFrom(const Mat& mat, bool bgra)
+void cv::gpu::GlTexture::copyFrom(InputArray mat_, bool bgra)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
+    Mat mat = mat_.getMat();
     create(mat.rows, mat.cols, mat.type());
     impl_->copyFrom(mat, bgra);
 #endif
@@ -1808,7 +1848,7 @@ void cv::gpu::GlTexture::copyFrom(const GlBuffer& buf, bool bgra)
 #ifndef HAVE_OPENGL
     throw_nogl();
 #else
-    create(buf.rows(), buf.cols(), buf.type());
+    create(buf.rows, buf.cols, buf.type());
     impl_->copyFrom(buf, bgra);
 #endif
 }
@@ -1832,9 +1872,246 @@ void cv::gpu::GlTexture::unbind() const
 }
 
 ////////////////////////////////////////////////////////////////////////
+// GlArrays
+
+void cv::gpu::GlArrays::setVertexArray(const GlBuffer& vertex) 
+{ 
+    CV_Assert(vertex.usage() == GlBuffer::ARRAY_BUFFER);
+
+    int cn = vertex.channels();
+    int depth = vertex.depth();
+
+    CV_Assert(cn == 2 || cn == 3 || cn == 4);
+    CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    vertex_ = vertex; 
+}
+
+void cv::gpu::GlArrays::setVertexArray(const GpuMat& vertex) 
+{ 
+    int cn = vertex.channels();
+    int depth = vertex.depth();
+
+    CV_Assert(cn == 2 || cn == 3 || cn == 4);
+    CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    vertex_.copyFrom(vertex); 
+}
+
+void cv::gpu::GlArrays::setVertexArray(InputArray vertex) 
+{ 
+    int cn = vertex.channels();
+    int depth = vertex.depth();
+
+    CV_Assert(cn == 2 || cn == 3 || cn == 4);
+    CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    vertex_.copyFrom(vertex); 
+}
+
+void cv::gpu::GlArrays::setColorArray(const GlBuffer& color, bool bgra) 
+{ 
+    CV_Assert(color.usage() == GlBuffer::ARRAY_BUFFER);
+
+    int cn = color.channels();
+
+    CV_Assert((cn == 3 && !bgra) || cn == 4);
+
+    color_ = color; 
+    bgra_ = bgra; 
+}
+
+void cv::gpu::GlArrays::setColorArray(const GpuMat& color, bool bgra) 
+{ 
+    int cn = color.channels();
+
+    CV_Assert((cn == 3 && !bgra) || cn == 4);
+
+    color_.copyFrom(color); 
+    bgra_ = bgra; 
+}
+
+void cv::gpu::GlArrays::setColorArray(InputArray color, bool bgra) 
+{ 
+    int cn = color.channels();
+
+    CV_Assert((cn == 3 && !bgra) || cn == 4);
+
+    color_.copyFrom(color); 
+    bgra_ = bgra; 
+}
+
+void cv::gpu::GlArrays::setNormalArray(const GlBuffer& normal) 
+{ 
+    CV_Assert(normal.usage() == GlBuffer::ARRAY_BUFFER);
+
+    int cn = normal.channels();
+    int depth = normal.depth();
+
+    CV_Assert(cn == 3);
+    CV_Assert(depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    normal_ = normal; 
+}
+
+void cv::gpu::GlArrays::setNormalArray(const GpuMat& normal) 
+{ 
+    int cn = normal.channels();
+    int depth = normal.depth();
+
+    CV_Assert(cn == 3);
+    CV_Assert(depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    normal_.copyFrom(normal); 
+}
+
+void cv::gpu::GlArrays::setNormalArray(InputArray normal) 
+{ 
+    int cn = normal.channels();
+    int depth = normal.depth();
+
+    CV_Assert(cn == 3);
+    CV_Assert(depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    normal_.copyFrom(normal); 
+}
+
+void cv::gpu::GlArrays::setTexCoordArray(const GlBuffer& texCoord) 
+{ 
+    CV_Assert(texCoord.usage() == GlBuffer::ARRAY_BUFFER);
+
+    int cn = texCoord.channels();
+    int depth = texCoord.depth();
+
+    CV_Assert(cn >= 1 && cn <= 4);
+    CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    texCoord_ = texCoord; 
+}
+
+void cv::gpu::GlArrays::setTexCoordArray(const GpuMat& texCoord) 
+{ 
+    int cn = texCoord.channels();
+    int depth = texCoord.depth();
+
+    CV_Assert(cn >= 1 && cn <= 4);
+    CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    texCoord_.copyFrom(texCoord); 
+}
+
+void cv::gpu::GlArrays::setTexCoordArray(InputArray texCoord) 
+{ 
+    int cn = texCoord.channels();
+    int depth = texCoord.depth();
+
+    CV_Assert(cn >= 1 && cn <= 4);
+    CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
+
+    texCoord_.copyFrom(texCoord); 
+}
+
+void cv::gpu::GlArrays::bind() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    CV_DbgAssert(texCoord_.empty() || texCoord_.size().area() == vertex_.size().area());
+    CV_DbgAssert(normal_.empty() || normal_.size().area() == vertex_.size().area());
+    CV_DbgAssert(color_.empty() || color_.size().area() == vertex_.size().area());
+
+    if (!texCoord_.empty())
+    {
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        CV_CheckGlError();
+
+        texCoord_.bind();
+
+        glTexCoordPointer(texCoord_.channels(), gl_types[texCoord_.depth()], 0, 0);
+        CV_CheckGlError();
+
+        texCoord_.unbind();
+    }
+
+    if (!normal_.empty())
+    {
+        glEnableClientState(GL_NORMAL_ARRAY);
+        CV_CheckGlError();
+
+        normal_.bind();
+
+        glNormalPointer(gl_types[normal_.depth()], 0, 0);
+        CV_CheckGlError();
+
+        normal_.unbind();
+    }
+
+    if (!color_.empty())
+    {
+        glEnableClientState(GL_COLOR_ARRAY);
+        CV_CheckGlError();
+
+        color_.bind();
+
+        int cn = color_.channels();
+        int format = cn == 3 ? cn : (bgra_ ? GL_BGRA : 4); 
+
+        glColorPointer(format, gl_types[color_.depth()], 0, 0);
+        CV_CheckGlError();
+
+        color_.unbind();
+    }
+
+    if (!vertex_.empty())
+    {
+        glEnableClientState(GL_VERTEX_ARRAY);
+        CV_CheckGlError();
+
+        vertex_.bind();
+
+        glVertexPointer(vertex_.channels(), gl_types[vertex_.depth()], 0, 0);
+        CV_CheckGlError();
+
+        vertex_.unbind();
+    }
+#endif
+}
+
+void cv::gpu::GlArrays::unbind() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    if (!texCoord_.empty())
+    {
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        CV_CheckGlError();
+    }
+
+    if (!normal_.empty())
+    {
+        glDisableClientState(GL_NORMAL_ARRAY);
+        CV_CheckGlError();
+    }
+
+    if (!color_.empty())
+    {
+        glDisableClientState(GL_COLOR_ARRAY);
+        CV_CheckGlError();
+    }
+
+    if (!vertex_.empty())
+    {
+        glDisableClientState(GL_VERTEX_ARRAY);
+        CV_CheckGlError();
+    }
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void cv::gpu::render(const GlTexture& tex)
+void cv::gpu::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRect)
 {
 #ifndef HAVE_OPENGL
     throw_nogl();
@@ -1843,35 +2120,162 @@ void cv::gpu::render(const GlTexture& tex)
     {
         tex.bind();
 
-        glDisable(GL_DEPTH_TEST);
-
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(0, 1, 1, 0, -1, 1);
-
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
         glBegin(GL_QUADS);
-            glVertex2d(0.0, 0.0);
-            glTexCoord2d(1.0, 0.0);	 
-
-            glVertex2d(1.0, 0.0);
-            glTexCoord2d(1.0, 1.0);
-
-            glVertex2d(1.0, 1.0);
-            glTexCoord2d(0.0, 1.0);	 
-
-            glVertex2d(0.0, 1.0);
-            glTexCoord2d(0.0, 0.0);	
+            glTexCoord2d(texRect.x, texRect.y);
+            glVertex2d(wndRect.x, wndRect.y);
+            
+            glTexCoord2d(texRect.x, texRect.y + texRect.height);
+            glVertex2d(wndRect.x, (wndRect.y + wndRect.height));
+            
+            glTexCoord2d(texRect.x + texRect.width, texRect.y + texRect.height);
+            glVertex2d(wndRect.x + wndRect.width, (wndRect.y + wndRect.height));
+            
+            glTexCoord2d(texRect.x + texRect.width, texRect.y);
+            glVertex2d(wndRect.x + wndRect.width, wndRect.y);
         glEnd();
 
         CV_CheckGlError();
 
         tex.unbind();
     }
+#endif
+}
+
+void cv::gpu::render(const GlArrays& arr, int mode)
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    arr.bind();
+
+    glDrawArrays(mode, 0, arr.size().area());
+
+    arr.unbind();
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////
+// GlCamera
+
+cv::gpu::GlCamera::GlCamera() : 
+    eye_(0.0, 0.0, -5.0), center_(0.0, 0.0, 0.0), up_(0.0, 1.0, 0.0),
+    pos_(0.0, 0.0, -5.0), yaw_(0.0), pitch_(0.0), roll_(0.0),
+    useLookAtParams_(false),
+
+    scale_(1.0, 1.0, 1.0),
+
+    projectionMatrix_(),
+    fov_(45.0), aspect_(0.0),
+    left_(0.0), right_(1.0), bottom_(1.0), top_(0.0),
+    zNear_(-1.0), zFar_(1.0),
+    perspectiveProjection_(false)
+{
+}
+
+void cv::gpu::GlCamera::lookAt(Point3d eye, Point3d center, Point3d up)
+{
+    eye_ = eye;
+    center_ = center;
+    up_ = up;
+    useLookAtParams_ = true;
+}
+
+void cv::gpu::GlCamera::setCameraPos(Point3d pos, double yaw, double pitch, double roll)
+{
+    pos_ = pos;
+    yaw_ = yaw;
+    pitch_ = pitch;
+    roll_ = roll;
+    useLookAtParams_ = false;
+}
+
+void cv::gpu::GlCamera::setScale(Point3d scale)
+{
+    scale_ = scale;
+}
+
+void cv::gpu::GlCamera::setProjectionMatrix(const Mat& projectionMatrix, bool transpose)
+{
+    CV_Assert(projectionMatrix.type() == CV_32F || projectionMatrix.type() == CV_64F);
+    CV_Assert(projectionMatrix.cols == 4 && projectionMatrix.rows == 4);
+
+    projectionMatrix_ = transpose ? projectionMatrix.t() : projectionMatrix;
+}
+
+void cv::gpu::GlCamera::setPerspectiveProjection(double fov, double aspect, double zNear, double zFar)
+{
+    fov_ = fov;
+    aspect_ = aspect;
+    zNear_ = zNear;
+    zFar_ = zFar;
+
+    projectionMatrix_.release();
+    perspectiveProjection_ = true;
+}
+
+void cv::gpu::GlCamera::setOrthoProjection(double left, double right, double bottom, double top, double zNear, double zFar)
+{
+    left_ = left;
+    right_ = right;
+    bottom_ = bottom;
+    top_ = top;
+    zNear_ = zNear;
+    zFar_ = zFar;
+
+    projectionMatrix_.release();
+    perspectiveProjection_ = false;
+}
+
+void cv::gpu::GlCamera::setupProjectionMatrix() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    if (projectionMatrix_.empty())
+    {
+        if (perspectiveProjection_)
+            gluPerspective(fov_, aspect_, zNear_, zFar_);
+        else
+            glOrtho(left_, right_, bottom_, top_, zNear_, zFar_);
+    }
+    else
+    {
+        if (projectionMatrix_.type() == CV_32F)
+            glLoadMatrixf(projectionMatrix_.ptr<float>());
+        else
+            glLoadMatrixd(projectionMatrix_.ptr<double>());
+    }
+
+    CV_CheckGlError();
+#endif
+}
+
+void cv::gpu::GlCamera::setupModelViewMatrix() const
+{
+#ifndef HAVE_OPENGL
+    throw_nogl();
+#else
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    if (useLookAtParams_)
+        gluLookAt(eye_.x, eye_.y, eye_.z, center_.x, center_.y, center_.z, up_.x, up_.y, up_.z);
+    else
+    {
+        glRotated(-yaw_, 0.0, 1.0, 0.0);
+        glRotated(-pitch_, 1.0, 0.0, 0.0);
+        glRotated(-roll_, 0.0, 0.0, 1.0);
+        glTranslated(-pos_.x, -pos_.y, -pos_.z);
+    }
+
+    glScaled(scale_.x, scale_.y, scale_.z);
+
+    CV_CheckGlError();
 #endif
 }
 
