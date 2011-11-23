@@ -52,7 +52,7 @@
 
 #ifdef HAVE_OPENGL
     #include <GL/gl.h>
-    #include <Gl/glu.h>
+    #include <GL/glu.h>
 
     #ifdef HAVE_CUDA
         #include <cuda_gl_interop.h>
@@ -66,15 +66,15 @@ using namespace cv::gpu;
 ////////////////////////////////////////////////////////////////////////
 // GpuMat
 
-cv::gpu::GpuMat::GpuMat(const GpuMat& m) 
+cv::gpu::GpuMat::GpuMat(const GpuMat& m)
     : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend)
 {
     if (refcount)
         CV_XADD(refcount, 1);
 }
 
-cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) : 
-    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(rows_), cols(cols_), 
+cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
+    flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
 {
@@ -87,7 +87,7 @@ cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t ste
     }
     else
     {
-        if (rows == 1) 
+        if (rows == 1)
             step = minstep;
 
         CV_DbgAssert(step >= minstep);
@@ -97,7 +97,7 @@ cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t ste
     dataend += step * (rows - 1) + minstep;
 }
 
-cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) : 
+cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
@@ -111,7 +111,7 @@ cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     }
     else
     {
-        if (rows == 1) 
+        if (rows == 1)
             step = minstep;
 
         CV_DbgAssert(step >= minstep);
@@ -158,7 +158,7 @@ cv::gpu::GpuMat::GpuMat(const GpuMat& m, Range rowRange, Range colRange)
         rows = cols = 0;
 }
 
-cv::gpu::GpuMat::GpuMat(const GpuMat& m, Rect roi) : 
+cv::gpu::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
     flags(m.flags), rows(roi.height), cols(roi.width),
     step(m.step), data(m.data + roi.y*step), refcount(m.refcount),
     datastart(m.datastart), dataend(m.dataend)
@@ -175,10 +175,10 @@ cv::gpu::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
         rows = cols = 0;
 }
 
-cv::gpu::GpuMat::GpuMat(const Mat& m) : 
-    flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) 
-{ 
-    upload(m); 
+cv::gpu::GpuMat::GpuMat(const Mat& m) :
+    flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+{
+    upload(m);
 }
 
 GpuMat& cv::gpu::GpuMat::operator = (const GpuMat& m)
@@ -195,9 +195,9 @@ GpuMat& cv::gpu::GpuMat::operator = (const GpuMat& m)
 void cv::gpu::GpuMat::swap(GpuMat& b)
 {
     std::swap(flags, b.flags);
-    std::swap(rows, b.rows); 
+    std::swap(rows, b.rows);
     std::swap(cols, b.cols);
-    std::swap(step, b.step); 
+    std::swap(step, b.step);
     std::swap(data, b.data);
     std::swap(datastart, b.datastart);
     std::swap(dataend, b.dataend);
@@ -230,20 +230,20 @@ void cv::gpu::GpuMat::locateROI(Size& wholeSize, Point& ofs) const
 
 GpuMat& cv::gpu::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright)
 {
-    Size wholeSize; 
+    Size wholeSize;
     Point ofs;
     locateROI(wholeSize, ofs);
 
     size_t esz = elemSize();
 
-    int row1 = std::max(ofs.y - dtop, 0); 
+    int row1 = std::max(ofs.y - dtop, 0);
     int row2 = std::min(ofs.y + rows + dbottom, wholeSize.height);
 
     int col1 = std::max(ofs.x - dleft, 0);
     int col2 = std::min(ofs.x + cols + dright, wholeSize.width);
 
     data += (row1 - ofs.y) * step + (col1 - ofs.x) * esz;
-    rows = row2 - row1; 
+    rows = row2 - row1;
     cols = col2 - col1;
 
     if (esz * cols == step || rows == 1)
@@ -329,9 +329,9 @@ namespace
 
 namespace
 {
-    void throw_nogpu() 
-    { 
-        CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); 
+    void throw_nogpu()
+    {
+        CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support");
     }
 
     class EmptyFuncTable : public GpuFuncTable
@@ -361,7 +361,7 @@ namespace
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     void copy_to_with_mask(DevMem2Db src, DevMem2Db dst, int depth, DevMem2Db mask, int channels, cudaStream_t stream);
 
@@ -418,15 +418,15 @@ namespace
 
 namespace cv { namespace gpu
 {
-    CV_EXPORTS void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0) 
-    { 
+    CV_EXPORTS void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
+    {
         ::cv::gpu::device::copy_to_with_mask(src, dst, src.depth(), mask, src.channels(), stream);
     }
 
     CV_EXPORTS void convertTo(const GpuMat& src, GpuMat& dst)
     {
         ::cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
-    }  
+    }
 
     CV_EXPORTS void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
     {
@@ -437,7 +437,7 @@ namespace cv { namespace gpu
     {
         typedef void (*caller_t)(GpuMat& src, Scalar s, cudaStream_t stream);
 
-        static const caller_t callers[] = 
+        static const caller_t callers[] =
         {
             kernelSetCaller<uchar>, kernelSetCaller<schar>, kernelSetCaller<ushort>, kernelSetCaller<short>, kernelSetCaller<int>,
             kernelSetCaller<float>, kernelSetCaller<double>
@@ -450,7 +450,7 @@ namespace cv { namespace gpu
     {
         typedef void (*caller_t)(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream);
 
-        static const caller_t callers[] = 
+        static const caller_t callers[] =
         {
             kernelSetCaller<uchar>, kernelSetCaller<schar>, kernelSetCaller<ushort>, kernelSetCaller<short>, kernelSetCaller<int>,
             kernelSetCaller<float>, kernelSetCaller<double>
@@ -524,11 +524,11 @@ namespace
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
-    };    
+    };
 
     //////////////////////////////////////////////////////////////////////////
     // Set
-    
+
     template<int SDEPTH, int SCN> struct NppSetFunc
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
@@ -575,7 +575,7 @@ namespace
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
-    };    
+    };
 
     template<int SDEPTH, int SCN> struct NppSetMaskFunc
     {
@@ -623,35 +623,35 @@ namespace
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
-    };    
+    };
 
     class CudaFuncTable : public GpuFuncTable
     {
     public:
-        void copy(const Mat& src, GpuMat& dst) const 
-        { 
+        void copy(const Mat& src, GpuMat& dst) const
+        {
             cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyHostToDevice) );
         }
         void copy(const GpuMat& src, Mat& dst) const
-        { 
+        {
             cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToHost) );
         }
         void copy(const GpuMat& src, GpuMat& dst) const
-        { 
+        {
             cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyDeviceToDevice) );
         }
 
-        void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const 
-        { 
+        void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const
+        {
             ::cv::gpu::copyWithMask(src, dst, mask);
         }
 
-        void convert(const GpuMat& src, GpuMat& dst) const 
-        { 
+        void convert(const GpuMat& src, GpuMat& dst) const
+        {
             typedef void (*caller_t)(const GpuMat& src, GpuMat& dst);
             static const caller_t callers[7][7][7] =
             {
-                {                
+                {
                     /*  8U ->  8U */ {0, 0, 0, 0},
                     /*  8U ->  8S */ {::cv::gpu::convertTo, ::cv::gpu::convertTo, ::cv::gpu::convertTo, ::cv::gpu::convertTo},
                     /*  8U -> 16U */ {NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C4R>::cvt},
@@ -722,8 +722,8 @@ namespace
             func(src, dst);
         }
 
-        void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const 
-        { 
+        void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const
+        {
             ::cv::gpu::convertTo(src, dst, alpha, beta);
         }
 
@@ -796,7 +796,7 @@ namespace
             cudaFree(devPtr);
         }
     };
-    
+
     const GpuFuncTable* gpuFuncTable()
     {
         static CudaFuncTable funcTable;
@@ -883,7 +883,7 @@ GpuMat& cv::gpu::GpuMat::setTo(Scalar s, const GpuMat& mask)
     CV_Assert(mask.empty() || mask.type() == CV_8UC1);
     CV_DbgAssert(!empty());
 
-    gpuFuncTable()->setTo(*this, s, mask);    
+    gpuFuncTable()->setTo(*this, s, mask);
 
     return *this;
 }
@@ -948,12 +948,12 @@ void cv::gpu::GpuMat::release()
 
 namespace
 {
-    void throw_nogl() 
+    void throw_nogl()
     {
     #ifndef HAVE_OPENGL
-        CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+        CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
     #else
-        CV_Error(CV_OpenGlNotSupported, "OpenGL context doesn't exist"); 
+        CV_Error(CV_OpenGlNotSupported, "OpenGL context doesn't exist");
     #endif
     }
 
@@ -1012,7 +1012,7 @@ void cv::gpu::setGlFuncTab(const GlFuncTab* tab)
     #endif
 
     namespace
-    {    
+    {
         const GLenum gl_types[] = {GL_UNSIGNED_BYTE, GL_BYTE, GL_UNSIGNED_SHORT, GL_SHORT, GL_INT, GL_FLOAT, GL_DOUBLE};
 
     #ifdef HAVE_CUDA
@@ -1034,7 +1034,7 @@ void cv::gpu::setGlDevice(int device)
         if (!glFuncTab()->isGlContextInitialized())
             throw_nogl();
 
-        cudaSafeCall( cudaGLSetGLDevice(device) ); 
+        cudaSafeCall( cudaGLSetGLDevice(device) );
 
         g_isCudaGlDeviceInitialized = true;
     #endif
@@ -1064,17 +1064,17 @@ namespace
         cudaGraphicsResource_t resource_;
     };
 
-    inline CudaGlInterop::CudaGlInterop() : resource_(0) 
+    inline CudaGlInterop::CudaGlInterop() : resource_(0)
     {
     }
 
-    CudaGlInterop::~CudaGlInterop() 
-    { 
+    CudaGlInterop::~CudaGlInterop()
+    {
         if (resource_)
         {
             cudaGraphicsUnregisterResource(resource_);
             resource_ = 0;
-        } 
+        }
     }
 
     void CudaGlInterop::registerBuffer(unsigned int buffer)
@@ -1097,7 +1097,7 @@ namespace
         void* dst_ptr;
         size_t num_bytes;
         cudaSafeCall( cudaGraphicsResourceGetMappedPointer(&dst_ptr, &num_bytes, resource_) );
-        
+
         const void* src_ptr = mat.ptr();
         size_t widthBytes = mat.cols * mat.elemSize();
 
@@ -1177,20 +1177,21 @@ private:
 #endif
 };
 
-inline cv::gpu::GlBuffer::Impl::Impl() : buffer_(0) 
+inline cv::gpu::GlBuffer::Impl::Impl() : buffer_(0)
 {
 }
 
-cv::gpu::GlBuffer::Impl::Impl(int rows, int cols, int type, unsigned int target) : buffer_(0) 
-{ 
+cv::gpu::GlBuffer::Impl::Impl(int rows, int cols, int type, unsigned int target) : buffer_(0)
+{
     if (!glFuncTab()->isGlContextInitialized())
         throw_nogl();
 
     CV_DbgAssert(rows > 0 && cols > 0);
     CV_DbgAssert(CV_MAT_DEPTH(type) >= 0 && CV_MAT_DEPTH(type) <= CV_64F);
-    
+
     glFuncTab()->genBuffers(1, &buffer_);
     CV_CheckGlError();
+    CV_Assert(buffer_ != 0);
 
     size_t size = rows * cols * CV_ELEM_SIZE(type);
 
@@ -1201,24 +1202,25 @@ cv::gpu::GlBuffer::Impl::Impl(int rows, int cols, int type, unsigned int target)
     CV_CheckGlError();
 
     glFuncTab()->bindBuffer(target, 0);
-    
+
 #ifdef HAVE_CUDA
     if (g_isCudaGlDeviceInitialized)
         cudaGlInterop_.registerBuffer(buffer_);
 #endif
 }
 
-cv::gpu::GlBuffer::Impl::Impl(const Mat& m, unsigned int target) : buffer_(0) 
-{ 
+cv::gpu::GlBuffer::Impl::Impl(const Mat& m, unsigned int target) : buffer_(0)
+{
     if (!glFuncTab()->isGlContextInitialized())
         throw_nogl();
 
     CV_DbgAssert(m.rows > 0 && m.cols > 0);
     CV_DbgAssert(m.depth() >= 0 && m.depth() <= CV_64F);
     CV_Assert(m.isContinuous());
- 
+
     glFuncTab()->genBuffers(1, &buffer_);
     CV_CheckGlError();
+    CV_Assert(buffer_ != 0);
 
     size_t size = m.rows * m.cols * m.elemSize();
 
@@ -1229,15 +1231,15 @@ cv::gpu::GlBuffer::Impl::Impl(const Mat& m, unsigned int target) : buffer_(0)
     CV_CheckGlError();
 
     glFuncTab()->bindBuffer(target, 0);
-    
+
 #ifdef HAVE_CUDA
     if (g_isCudaGlDeviceInitialized)
         cudaGlInterop_.registerBuffer(buffer_);
 #endif
 }
 
-cv::gpu::GlBuffer::Impl::~Impl() 
-{ 
+cv::gpu::GlBuffer::Impl::~Impl()
+{
     try
     {
         if (buffer_)
@@ -1272,7 +1274,7 @@ void cv::gpu::GlBuffer::Impl::copyFrom(const Mat& m, unsigned int target)
 
 #ifdef HAVE_CUDA
 
-void cv::gpu::GlBuffer::Impl::copyFrom(const GpuMat& mat, cudaStream_t stream) 
+void cv::gpu::GlBuffer::Impl::copyFrom(const GpuMat& mat, cudaStream_t stream)
 {
     if (!g_isCudaGlDeviceInitialized)
         cvError(CV_GpuApiCallError, "copyFrom", "cuda GL device wasn't initialized, call setGlDevice", __FILE__, __LINE__);
@@ -1284,16 +1286,16 @@ void cv::gpu::GlBuffer::Impl::copyFrom(const GpuMat& mat, cudaStream_t stream)
 
 #endif // HAVE_CUDA
 
-inline void cv::gpu::GlBuffer::Impl::bind(unsigned int target) const 
+inline void cv::gpu::GlBuffer::Impl::bind(unsigned int target) const
 {
     CV_Assert(buffer_ != 0);
 
-    glFuncTab()->bindBuffer(target, buffer_); 
+    glFuncTab()->bindBuffer(target, buffer_);
     CV_CheckGlError();
 }
 
 inline void cv::gpu::GlBuffer::Impl::unbind(unsigned int target) const
-{ 
+{
     glFuncTab()->bindBuffer(target, 0);
 }
 
@@ -1397,7 +1399,7 @@ cv::gpu::GlBuffer::GlBuffer(const GpuMat& d_mat, Usage usage) : rows(0), cols(0)
 #endif
 }
 
-cv::gpu::GlBuffer::GlBuffer(const GlBuffer& other) 
+cv::gpu::GlBuffer::GlBuffer(const GlBuffer& other)
     : rows(other.rows), cols(other.cols), type_(other.type_), usage_(other.usage_), impl_(other.impl_)
 {
 }
@@ -1582,6 +1584,7 @@ cv::gpu::GlTexture::Impl::Impl(int rows, int cols, int type) : tex_(0)
 
     glGenTextures(1, &tex_);
     CV_CheckGlError();
+    CV_Assert(tex_ != 0);
 
     glBindTexture(GL_TEXTURE_2D, tex_);
     CV_CheckGlError();
@@ -1589,7 +1592,7 @@ cv::gpu::GlTexture::Impl::Impl(int rows, int cols, int type) : tex_(0)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     CV_CheckGlError();
 
     GLenum format = cn == 1 ? GL_LUMINANCE : cn == 3 ? GL_BGR : GL_BGRA;
@@ -1616,6 +1619,7 @@ cv::gpu::GlTexture::Impl::Impl(const Mat& mat, bool bgra) : tex_(0)
 
     glGenTextures(1, &tex_);
     CV_CheckGlError();
+    CV_Assert(tex_ != 0);
 
     glBindTexture(GL_TEXTURE_2D, tex_);
     CV_CheckGlError();
@@ -1623,7 +1627,7 @@ cv::gpu::GlTexture::Impl::Impl(const Mat& mat, bool bgra) : tex_(0)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     CV_CheckGlError();
 
     GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
@@ -1643,13 +1647,14 @@ cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : tex_(0)
     int depth = buf.depth();
     int cn = buf.channels();
 
-    CV_DbgAssert(buf.rows() > 0 && buf.cols() > 0);
+    CV_DbgAssert(buf.rows > 0 && buf.cols > 0);
     CV_Assert(cn == 1 || cn == 3 || cn == 4);
     CV_Assert(depth >= 0 && depth <= CV_32F);
     CV_Assert(buf.usage() == GlBuffer::TEXTURE_BUFFER);
 
     glGenTextures(1, &tex_);
     CV_CheckGlError();
+    CV_Assert(tex_ != 0);
 
     glBindTexture(GL_TEXTURE_2D, tex_);
     CV_CheckGlError();
@@ -1657,7 +1662,7 @@ cv::gpu::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : tex_(0)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     CV_CheckGlError();
 
     GLenum format = cn == 1 ? GL_LUMINANCE : (cn == 3 ? (bgra ? GL_BGR : GL_RGB) : (bgra ? GL_BGRA : GL_RGBA));
@@ -1790,7 +1795,7 @@ cv::gpu::GlTexture::GlTexture(const GlBuffer& buf, bool bgra) : rows(0), cols(0)
 #endif
 }
 
-cv::gpu::GlTexture::GlTexture(const GlTexture& other) 
+cv::gpu::GlTexture::GlTexture(const GlTexture& other)
     : rows(other.rows), cols(other.cols), type_(other.type_), impl_(other.impl_)
 {
 }
@@ -1874,8 +1879,8 @@ void cv::gpu::GlTexture::unbind() const
 ////////////////////////////////////////////////////////////////////////
 // GlArrays
 
-void cv::gpu::GlArrays::setVertexArray(const GlBuffer& vertex) 
-{ 
+void cv::gpu::GlArrays::setVertexArray(const GlBuffer& vertex)
+{
     CV_Assert(vertex.usage() == GlBuffer::ARRAY_BUFFER);
 
     int cn = vertex.channels();
@@ -1884,65 +1889,65 @@ void cv::gpu::GlArrays::setVertexArray(const GlBuffer& vertex)
     CV_Assert(cn == 2 || cn == 3 || cn == 4);
     CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    vertex_ = vertex; 
+    vertex_ = vertex;
 }
 
-void cv::gpu::GlArrays::setVertexArray(const GpuMat& vertex) 
-{ 
+void cv::gpu::GlArrays::setVertexArray(const GpuMat& vertex)
+{
     int cn = vertex.channels();
     int depth = vertex.depth();
 
     CV_Assert(cn == 2 || cn == 3 || cn == 4);
     CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    vertex_.copyFrom(vertex); 
+    vertex_.copyFrom(vertex);
 }
 
-void cv::gpu::GlArrays::setVertexArray(InputArray vertex) 
-{ 
+void cv::gpu::GlArrays::setVertexArray(InputArray vertex)
+{
     int cn = vertex.channels();
     int depth = vertex.depth();
 
     CV_Assert(cn == 2 || cn == 3 || cn == 4);
     CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    vertex_.copyFrom(vertex); 
+    vertex_.copyFrom(vertex);
 }
 
-void cv::gpu::GlArrays::setColorArray(const GlBuffer& color, bool bgra) 
-{ 
+void cv::gpu::GlArrays::setColorArray(const GlBuffer& color, bool bgra)
+{
     CV_Assert(color.usage() == GlBuffer::ARRAY_BUFFER);
 
     int cn = color.channels();
 
     CV_Assert((cn == 3 && !bgra) || cn == 4);
 
-    color_ = color; 
-    bgra_ = bgra; 
+    color_ = color;
+    bgra_ = bgra;
 }
 
-void cv::gpu::GlArrays::setColorArray(const GpuMat& color, bool bgra) 
-{ 
+void cv::gpu::GlArrays::setColorArray(const GpuMat& color, bool bgra)
+{
     int cn = color.channels();
 
     CV_Assert((cn == 3 && !bgra) || cn == 4);
 
-    color_.copyFrom(color); 
-    bgra_ = bgra; 
+    color_.copyFrom(color);
+    bgra_ = bgra;
 }
 
-void cv::gpu::GlArrays::setColorArray(InputArray color, bool bgra) 
-{ 
+void cv::gpu::GlArrays::setColorArray(InputArray color, bool bgra)
+{
     int cn = color.channels();
 
     CV_Assert((cn == 3 && !bgra) || cn == 4);
 
-    color_.copyFrom(color); 
-    bgra_ = bgra; 
+    color_.copyFrom(color);
+    bgra_ = bgra;
 }
 
-void cv::gpu::GlArrays::setNormalArray(const GlBuffer& normal) 
-{ 
+void cv::gpu::GlArrays::setNormalArray(const GlBuffer& normal)
+{
     CV_Assert(normal.usage() == GlBuffer::ARRAY_BUFFER);
 
     int cn = normal.channels();
@@ -1951,33 +1956,33 @@ void cv::gpu::GlArrays::setNormalArray(const GlBuffer& normal)
     CV_Assert(cn == 3);
     CV_Assert(depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    normal_ = normal; 
+    normal_ = normal;
 }
 
-void cv::gpu::GlArrays::setNormalArray(const GpuMat& normal) 
-{ 
+void cv::gpu::GlArrays::setNormalArray(const GpuMat& normal)
+{
     int cn = normal.channels();
     int depth = normal.depth();
 
     CV_Assert(cn == 3);
     CV_Assert(depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    normal_.copyFrom(normal); 
+    normal_.copyFrom(normal);
 }
 
-void cv::gpu::GlArrays::setNormalArray(InputArray normal) 
-{ 
+void cv::gpu::GlArrays::setNormalArray(InputArray normal)
+{
     int cn = normal.channels();
     int depth = normal.depth();
 
     CV_Assert(cn == 3);
     CV_Assert(depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    normal_.copyFrom(normal); 
+    normal_.copyFrom(normal);
 }
 
-void cv::gpu::GlArrays::setTexCoordArray(const GlBuffer& texCoord) 
-{ 
+void cv::gpu::GlArrays::setTexCoordArray(const GlBuffer& texCoord)
+{
     CV_Assert(texCoord.usage() == GlBuffer::ARRAY_BUFFER);
 
     int cn = texCoord.channels();
@@ -1986,29 +1991,29 @@ void cv::gpu::GlArrays::setTexCoordArray(const GlBuffer& texCoord)
     CV_Assert(cn >= 1 && cn <= 4);
     CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    texCoord_ = texCoord; 
+    texCoord_ = texCoord;
 }
 
-void cv::gpu::GlArrays::setTexCoordArray(const GpuMat& texCoord) 
-{ 
+void cv::gpu::GlArrays::setTexCoordArray(const GpuMat& texCoord)
+{
     int cn = texCoord.channels();
     int depth = texCoord.depth();
 
     CV_Assert(cn >= 1 && cn <= 4);
     CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    texCoord_.copyFrom(texCoord); 
+    texCoord_.copyFrom(texCoord);
 }
 
-void cv::gpu::GlArrays::setTexCoordArray(InputArray texCoord) 
-{ 
+void cv::gpu::GlArrays::setTexCoordArray(InputArray texCoord)
+{
     int cn = texCoord.channels();
     int depth = texCoord.depth();
 
     CV_Assert(cn >= 1 && cn <= 4);
     CV_Assert(depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F);
 
-    texCoord_.copyFrom(texCoord); 
+    texCoord_.copyFrom(texCoord);
 }
 
 void cv::gpu::GlArrays::bind() const
@@ -2054,7 +2059,7 @@ void cv::gpu::GlArrays::bind() const
         color_.bind();
 
         int cn = color_.channels();
-        int format = cn == 3 ? cn : (bgra_ ? GL_BGRA : 4); 
+        int format = cn == 3 ? cn : (bgra_ ? GL_BGRA : 4);
 
         glColorPointer(format, gl_types[color_.depth()], 0, 0);
         CV_CheckGlError();
@@ -2125,13 +2130,13 @@ void cv::gpu::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> 
         glBegin(GL_QUADS);
             glTexCoord2d(texRect.x, texRect.y);
             glVertex2d(wndRect.x, wndRect.y);
-            
+
             glTexCoord2d(texRect.x, texRect.y + texRect.height);
             glVertex2d(wndRect.x, (wndRect.y + wndRect.height));
-            
+
             glTexCoord2d(texRect.x + texRect.width, texRect.y + texRect.height);
             glVertex2d(wndRect.x + wndRect.width, (wndRect.y + wndRect.height));
-            
+
             glTexCoord2d(texRect.x + texRect.width, texRect.y);
             glVertex2d(wndRect.x + wndRect.width, wndRect.y);
         glEnd();
@@ -2159,7 +2164,7 @@ void cv::gpu::render(const GlArrays& arr, int mode)
 ////////////////////////////////////////////////////////////////////////
 // GlCamera
 
-cv::gpu::GlCamera::GlCamera() : 
+cv::gpu::GlCamera::GlCamera() :
     eye_(0.0, 0.0, -5.0), center_(0.0, 0.0, 0.0), up_(0.0, 1.0, 0.0),
     pos_(0.0, 0.0, -5.0), yaw_(0.0), pitch_(0.0), roll_(0.0),
     useLookAtParams_(false),
@@ -2288,13 +2293,13 @@ void cv::gpu::error(const char *error_string, const char *file, const int line, 
 
     if (uncaught_exception())
     {
-        const char* errorStr = cvErrorStr(code);            
-        const char* function = func ? func : "unknown function";    
+        const char* errorStr = cvErrorStr(code);
+        const char* function = func ? func : "unknown function";
 
         cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
-        cerr.flush();            
+        cerr.flush();
     }
-    else    
+    else
         cv::error( cv::Exception(code, error_string, func, file, line) );
 }
 
