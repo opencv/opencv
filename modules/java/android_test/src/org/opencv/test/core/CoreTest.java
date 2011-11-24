@@ -19,6 +19,10 @@ import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
 public class CoreTest extends OpenCVTestCase {
+	
+    public void testRNG() {
+    	fail("kiryaaa");
+    }
 
     public void testAbsdiff() {
         Core.absdiff(gray128, gray255, dst);

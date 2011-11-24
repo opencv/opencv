@@ -310,6 +310,8 @@ private:
 
 #ifdef HAVE_TBB
     cv::Ptr<tbb::task_scheduler_init> p_tbb_initializer;
+#else
+    cv::Ptr<int> fixme;
 #endif
 
 public:

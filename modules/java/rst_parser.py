@@ -565,7 +565,50 @@ class RstParser(object):
         for lang in sorted(stat.items()):
             print "  %7s functions documented: %s" % lang
         print
+        
+    def printApiSummary(self):
+        print '\n\n\nAPI SUMMARY\n\n'
+        
+        # statistic by language
+        stat = {}
+        classes = 0
+        structs = 0
+        sortedFuncs = []
+        sortedClasses = []
+        
+#        for name, d in self.definitions.items():
+#           if d.get("isclass", False):
+#               print d.get("name")
+#           elif d.get("isstruct", False):
+#               print d.get("name")
+#           else:
+#               for decl in d.get("decls",[]):
+#                   if decl[0] == 'C++': # and (decl[1].find('::') == -1)
+#                       idx = decl[1].find(' ')
+#                       funcName = decl[1][idx:]
+#                       sortedFuncs.append(funcName)
+        
+        for name, d in self.definitions.items():
+           if d.get("isclass", False):
+               #classes += 1
+               sortedClasses.append("class " + d.get("name"))
+               
+        for name, d in self.definitions.items():
+           if (not d.get("isclass", False)) and (not d.get("isstruct", False)) :
+               funcName = d.get("name")
+               if funcName.find('::') == -1:
+                   sortedFuncs.append(funcName)
 
+        sortedClasses.sort()
+        for c in sortedClasses:
+            print c
+            
+        print '\n'
+            
+        sortedFuncs.sort()
+        for func in sortedFuncs:
+            print func
+                       
 def mathReplace2(match):
     m = mathReplace(match)
     #print "%s   ===>   %s" % (match.group(0), m)
@@ -662,7 +705,7 @@ if __name__ == "__main__":
     sys.path.append(hdr_parser_path)
     import hdr_parser
 
-    module = sys.argv[1]
+    module = 'objdetect' #sys.argv[1]
 
     if module != "all" and not os.path.isdir(os.path.join(rst_parser_dir, "../" + module)):
         print "Module \"" + module + "\" could not be found."
@@ -678,3 +721,5 @@ if __name__ == "__main__":
 
     # summary
     parser.printSummary()
+    # OpenCV API summary
+    parser.printApiSummary()
