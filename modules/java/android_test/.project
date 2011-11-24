@@ -32,9 +32,9 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>OpenCV-2.3.1_src</name>
+			<name>OpenCV_src</name>
 			<type>2</type>
-			<locationURI>_android_OpenCV_2_3_1_df28900a/src</locationURI>
+			<locationURI>_android_OpenCV_8d28b05d/src</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

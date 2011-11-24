@@ -8,23 +8,6 @@
 using namespace std;
 using namespace cv;
 
-int main( int argc, const char** argv )
-{
-    vector<Point2f> points;
-    points.push_back(Point2f(0.0, 0.0));
-    points.push_back(Point2f(-1.0, 1.0));
-    points.push_back(Point2f(1.0, 1.0));
-    points.push_back(Point2f(1.0, -1.0));
-    points.push_back(Point2f(-1.0, -1.0));
-
-    RotatedRect rrect;
-    rrect = fitEllipse(points);
-
-    cout << rrect.center << endl;
-    cout << rrect.size.width << endl;
-    cout << rrect.size.height << endl;
-}
-
 void help()
 {
     cout << "\nThis program demonstrates the cascade recognizer. Now you can use Haar or LBP features.\n"
@@ -47,7 +30,7 @@ void detectAndDraw( Mat& img,
 String cascadeName = "../../data/haarcascades/haarcascade_frontalface_alt.xml";
 String nestedCascadeName = "../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
 
-int main1( int argc, const char** argv )
+int main( int argc, const char** argv )
 {
     CvCapture* capture = 0;
     Mat frame, frameCopy, image;
