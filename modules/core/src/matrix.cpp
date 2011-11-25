@@ -203,6 +203,9 @@ void Mat::create(int d, const int* _sizes, int _type)
     
     if( total() > 0 )
     {
+#ifdef HAVE_TGPU
+        if( !allocator ) allocator = tegra::getAllocator(d, _sizes, _type);
+#endif
         if( !allocator )
         {
             size_t total = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));

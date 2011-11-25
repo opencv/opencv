@@ -210,7 +210,9 @@ macro(define_opencv_module name)
     endif()
 
     # Dependencies of this target:
-    add_dependencies(${the_target} ${ARGN})
+    if(ARGN)
+        add_dependencies(${the_target} ${ARGN})
+    endif()
 
     install(TARGETS ${the_target}
         RUNTIME DESTINATION bin COMPONENT main
