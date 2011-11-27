@@ -1038,7 +1038,7 @@ CV_PyramidBaseTest::CV_PyramidBaseTest( bool _downsample ) : CV_FilterBaseTest(t
 double CV_PyramidBaseTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     int depth = test_mat[INPUT][0].depth();
-    return depth <= CV_8S ? 1 : 1e-5;
+    return depth < CV_32F ? 1 : 1e-5;
 }
 
 
@@ -1046,12 +1046,15 @@ void CV_PyramidBaseTest::get_test_array_types_and_sizes( int test_case_idx,
                                                          vector<vector<Size> >& sizes,
                                                          vector<vector<int> >& types )
 {
+    const int channels[] = {1, 3, 4};
+    const int depthes[] = {CV_8U, CV_16S, CV_16U, CV_32F};
+
     RNG& rng = ts->get_rng();
     CvSize sz;
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    int depth = cvtest::randInt(rng) % 2 ? CV_32F : CV_8U;
-    int cn = cvtest::randInt(rng) & 1 ? 3 : 1;
+    int depth = depthes[cvtest::randInt(rng) % (sizeof(depthes)/sizeof(depthes[0]))];
+    int cn = channels[cvtest::randInt(rng) % (sizeof(channels)/sizeof(channels[0]))];
 
     aperture_size = cvSize(5,5);
     anchor = cvPoint(aperture_size.width/2, aperture_size.height/2);
@@ -1182,9 +1185,6 @@ void CV_PyramidUpTest::prepare_to_validation( int /*test_case_idx*/ )
     cvtest::filter2D(temp, dst, dst.depth(),
                      kernel, Point(kernel.cols/2, kernel.rows/2),
                      0, BORDER_REFLECT_101);
-    // TODO: fix the problem with 2 bottom rows.
-    memset(dst.ptr(dst.rows-2), 0, dst.step*2);
-    memset(test_mat[OUTPUT][0].ptr(dst.rows-2), 0, test_mat[OUTPUT][0].step*2);
 }
 
 
@@ -1770,7 +1770,7 @@ TEST(Imgproc_Blur, accuracy) { CV_BlurTest test; test.safe_run(); }
 TEST(Imgproc_GaussianBlur, accuracy) { CV_GaussianBlurTest test; test.safe_run(); }
 TEST(Imgproc_MedianBlur, accuracy) { CV_MedianBlurTest test; test.safe_run(); }
 TEST(Imgproc_PyramidDown, accuracy) { CV_PyramidDownTest test; test.safe_run(); }
-//TEST(Imgproc_PyramidUp, accuracy) { CV_PyramidUpTest test; test.safe_run(); }
+TEST(Imgproc_PyramidUp, accuracy) { CV_PyramidUpTest test; test.safe_run(); }
 TEST(Imgproc_MinEigenVal, accuracy) { CV_MinEigenValTest test; test.safe_run(); }
 TEST(Imgproc_EigenValsVecs, accuracy) { CV_EigenValVecTest test; test.safe_run(); }
 TEST(Imgproc_PreCornerDetect, accuracy) { CV_PreCornerDetectTest test; test.safe_run(); }

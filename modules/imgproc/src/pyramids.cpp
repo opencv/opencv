@@ -349,7 +349,7 @@ pyrUp_( const Mat& _src, Mat& _dst )
         for( ; sy <= y + 1; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PU_SZ)*bufstep;
-            int _sy = borderInterpolate(sy, ssize.height, BORDER_REFLECT_101);
+            int _sy = borderInterpolate(sy*2, dsize.height, BORDER_REFLECT_101)/2;
             const T* src = (const T*)(_src.data + _src.step*_sy);
 
             if( ssize.width == cn )
