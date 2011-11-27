@@ -126,8 +126,9 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     break;
 
     case CV_WND_PROP_OPENGL:
-
-        #if defined WIN32 || defined _WIN32 
+        
+        #if defined (HAVE_QT)
+        #elif defined WIN32 || defined _WIN32 
             return cvGetOpenGlProp_W32(name);
         #else
             return -1;
@@ -137,6 +138,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     default:
         return -1;
     }
+    return -1;
 }
 
 void cv::namedWindow( const string& winname, int flags )
@@ -591,10 +593,12 @@ void cv::pointCloudShow(const string& winname, const gpu::GlCamera& camera, Inpu
 
 #ifndef HAVE_OPENGL
 
+#ifndef HAVE_QT
 CV_IMPL void cvCreateOpenGLCallback(const char*, CvOpenGLCallback, void*, double, double, double)
 {
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
 }
+#endif
 
 CV_IMPL void cvSetOpenGlContext(const char*)
 {

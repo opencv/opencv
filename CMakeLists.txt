@@ -1125,7 +1125,7 @@ if(WIN32)
         endif()  
     endif()
 
-    if (WITH_OPENGL)
+    if (WITH_OPENGL AND NOT HAVE_QT_OPENGL)
         find_package(OpenGL QUIET)
         
         if (OPENGL_FOUND)
