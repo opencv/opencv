@@ -437,6 +437,12 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz )
     Size dsz = _dsz == Size() ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::pyrUp(src, dst))
+        return;
+#endif
+
     int depth = src.depth();
     PyrFunc func = 0;
     if( depth == CV_8U )
