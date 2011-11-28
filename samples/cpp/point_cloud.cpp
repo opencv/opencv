@@ -1,11 +1,13 @@
 #include <cstring>
 #include <cmath>
 #include <iostream>
+#include <sstream>
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/contrib/contrib.hpp"
 
 using namespace std;
 using namespace cv;
@@ -187,13 +189,15 @@ int main(int argc, const char* argv[])
 
     reprojectImageTo3D(disp, points, Q);
 
-    namedWindow("OpenGL Sample", WINDOW_OPENGL);
+    const string windowName = "OpenGL Sample";
+
+    namedWindow(windowName, WINDOW_OPENGL);
 
     int fov = 0;
-    createTrackbar("Fov", "OpenGL Sample", &fov, 100);
+    createTrackbar("Fov", windowName, &fov, 100);
 
     int mouse[2] = {0, 0};
-    setMouseCallback("OpenGL Sample", mouseCallback, mouse);
+    setMouseCallback(windowName, mouseCallback, mouse);
 
     GlArrays pointCloud;
 
@@ -211,8 +215,14 @@ int main(int argc, const char* argv[])
     const Point3d leftVec(-1.0, 0.0, 0.0);
     Point3d pos;
 
+    TickMeter tm;
+    const int step = 20;
+    int frame = 0;
+
     while (true)
     {
+        tm.start();
+
         int key = waitKey(1);
         if (key >= 0)
             key = key & 0xff;
@@ -220,7 +230,7 @@ int main(int argc, const char* argv[])
         if (key == 27)
             break;
 
-        double aspect = getWindowProperty("OpenGL Sample", WND_PROP_ASPECT_RATIO);
+        double aspect = getWindowProperty(windowName, WND_PROP_ASPECT_RATIO);
 
         const double posStep = 0.1;
         
@@ -256,7 +266,21 @@ int main(int argc, const char* argv[])
 
         camera.setCameraPos(pos, yaw, pitch, 0.0);
 
-        pointCloudShow("OpenGL Sample", camera, pointCloud);
+        pointCloudShow(windowName, camera, pointCloud);
+
+        tm.stop();
+
+        if (frame++ >= step)
+        {
+            ostringstream fps;
+            fps << "FPS: " << step / tm.getTimeSec();
+            
+            clearTextOpenGl(windowName);
+            addTextOpenGl(windowName, fps.str(), Point(0, 0), Scalar::all(255), "Courier New", 16);
+
+            frame = 0;
+            tm.reset();
+        }
     }
 
     return 0;

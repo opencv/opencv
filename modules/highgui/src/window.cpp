@@ -597,6 +597,35 @@ void cv::pointCloudShow(const string& winname, const gpu::GlCamera& camera, Inpu
 #endif
 }
 
+// OpenGL text
+
+void cv::addTextOpenGl(const string& winname, const string& text, Point org, Scalar color, const string& fontName, int fontHeight, int fontWeight, int fontStyle)
+{
+    cvAddTextOpenGl(winname.c_str(), text.c_str(), org, color, fontName.c_str(), fontHeight, fontWeight, fontStyle);
+}
+
+void cv::clearTextOpenGl(const string& winname)
+{
+    cvClearTextOpenGl(winname.c_str());
+}
+
+#if (!defined WIN32 && !defined _WIN32) || defined HAVE_QT
+
+CV_IMPL void cvAddTextOpenGl(const char*, const char*, CvPoint, CvScalar, const char*, int, int, int)
+{
+    CV_Error(CV_OpenGlNotSupported, "This function works only under WIN32");
+}
+
+CV_IMPL void cvClearTextOpenGl(const char*)
+{
+    CV_Error(CV_OpenGlNotSupported, "This function works only under WIN32");
+}
+
+#endif //  (!defined WIN32 && !defined _WIN32) || defined HAVE_QT
+
+
+// Without OpenGL
+
 #ifndef HAVE_OPENGL
 
 #ifndef HAVE_QT
@@ -612,6 +641,16 @@ CV_IMPL void cvSetOpenGlContext(const char*)
 }
 
 CV_IMPL void cvUpdateWindow(const char*)
+{
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+}
+
+CV_IMPL void cvAddTextOpenGl(const char*, const char*, CvPoint, CvScalar, const char*, int, int, int)
+{
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+}
+
+CV_IMPL void cvClearTextOpenGl(const char*)
 {
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }

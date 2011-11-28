@@ -151,6 +151,11 @@ CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camer
 CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, InputArray points, 
                                InputArray colors = noArray());
 
+CV_EXPORTS void addTextOpenGl(const string& winname, const string& text, Point org, Scalar color = Scalar::all(255), 
+                              const string& fontName = "Courier New", int fontHeight = 12, 
+                              int fontWeight = CV_FONT_NORMAL, int fontStyle = CV_STYLE_NORMAL);
+CV_EXPORTS void clearTextOpenGl(const string& winname);
+
 //Only for Qt
 
 CV_EXPORTS CvFont fontQt(const string& nameFont, int pointSize=-1,

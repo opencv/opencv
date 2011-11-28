@@ -56,6 +56,9 @@
 
 #ifdef HAVE_OPENGL
 #include <memory>
+#include <algorithm>
+#include <vector>
+#include <functional>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include <GL\gl.h>
@@ -134,6 +137,217 @@ typedef struct CvTrackbar
 }
 CvTrackbar;
 
+// OpenGL support
+
+#ifdef HAVE_OPENGL
+
+namespace
+{
+    class OpenGlFont
+    {
+    public:
+        OpenGlFont(HDC hDC, const std::string& fontName, int fontHeight, int fontWeight, int fontStyle);
+        ~OpenGlFont();
+
+        void draw(const char* str, int len, CvPoint org, CvScalar color, int width, int height) const;
+
+        inline const std::string& fontName() const { return fontName_; }
+        inline int fontHeight() const { return fontHeight_; }
+        inline int fontWeight() const { return fontWeight_; }
+        inline int fontStyle() const { return fontStyle_; }
+
+    private:
+        std::string fontName_;
+        int fontHeight_;
+        int fontWeight_;
+        int fontStyle_;
+
+        GLuint base_;
+
+        OpenGlFont(const OpenGlFont&);
+        OpenGlFont& operator =(const OpenGlFont&);
+    };
+
+    int getFontWidthW32(int fontWeight)
+    {
+        int weight = 0;
+
+        switch(fontWeight)
+        {
+        case CV_FONT_LIGHT: 
+            weight = 200;
+            break;
+        case CV_FONT_NORMAL: 
+            weight = FW_NORMAL;
+            break;
+        case CV_FONT_DEMIBOLD: 
+            weight = 550;
+            break;
+        case CV_FONT_BOLD: 
+            weight = FW_BOLD;
+            break;
+        case CV_FONT_BLACK: 
+            weight = FW_BLACK;
+            break;
+        default:
+            cvError(CV_StsBadArg, "getFontWidthW32", "Unsopported fonr width", __FILE__, __LINE__);
+        };
+
+        return weight;
+    }
+
+    OpenGlFont::OpenGlFont(HDC hDC, const std::string& fontName, int fontHeight, int fontWeight, int fontStyle)
+        : fontName_(), fontHeight_(0), fontWeight_(0), fontStyle_(0), base_(0)
+    {
+        base_ = glGenLists(96);
+
+        HFONT font = CreateFont
+        (
+            -fontHeight,                                   // height
+            0,                                             // cell width
+            0,                                             // Angle of Escapement
+            0,                                             // Orientation Angle
+            getFontWidthW32(fontWeight),                   // font weight
+            fontStyle & CV_STYLE_ITALIC ? TRUE : FALSE,    // Italic
+            fontStyle & CV_STYLE_UNDERLINE ? TRUE : FALSE, // Underline
+            FALSE,                                         // StrikeOut  
+            ANSI_CHARSET,                                  // CharSet  
+            OUT_TT_PRECIS,                                 // OutPrecision
+            CLIP_DEFAULT_PRECIS,                           // ClipPrecision
+            ANTIALIASED_QUALITY,                           // Quality
+            FF_DONTCARE | DEFAULT_PITCH,                   // PitchAndFamily
+            fontName.c_str()                               // FaceName
+        );
+
+        SelectObject(hDC, font);
+
+        if (!wglUseFontBitmaps(hDC, 32, 96, base_))
+            cvError(CV_OpenGlApiCallError, "OpenGlText::set", "Can't create font", __FILE__, __LINE__);
+
+        fontName_ = fontName;
+        fontHeight_ = fontHeight;
+        fontWeight_ = fontWeight;
+        fontStyle_ = fontStyle;
+    }
+
+    OpenGlFont::~OpenGlFont()
+    {    
+        if (base_)
+            glDeleteLists(base_, 96);
+    }
+
+    void OpenGlFont::draw(const char* str, int len, CvPoint org, CvScalar color, int width, int height) const
+    {
+        if (base_)
+        {
+            glPushAttrib(GL_LIST_BIT);
+            glListBase(base_ - 32);
+
+            glColor4dv(color.val);
+            glRasterPos2f(static_cast<float>(org.x) / width, static_cast<float>((org.y + fontHeight_)) / height);
+            glCallLists(len, GL_UNSIGNED_BYTE, str);
+
+            glPopAttrib();
+
+            CV_CheckGlError();
+        }
+    }
+
+    class OpenGlText
+    {
+    public:
+        OpenGlText(HDC hDC);
+
+        void add(const std::string& text, CvPoint org, CvScalar color, const std::string& fontName, int fontHeight, int fontWeight, int fontStyle);
+        inline void clear() { text_.clear(); }
+
+        void draw(int width, int height) const;
+
+    private:
+        struct Text
+        {
+            std::string str;
+
+            CvPoint org;
+            CvScalar color;
+
+            cv::Ptr<OpenGlFont> font;
+        };
+
+        HDC hDC_;
+
+        std::vector< cv::Ptr<OpenGlFont> > fonts_;
+
+        std::vector<Text> text_;
+    };
+
+    OpenGlText::OpenGlText(HDC hDC) : hDC_(hDC)
+    {
+        fonts_.reserve(5);
+        text_.reserve(5);
+    }
+
+    class FontCompare : public std::unary_function<cv::Ptr<OpenGlFont>, bool>
+    {
+    public:
+        inline FontCompare(const std::string& fontName, int fontHeight, int fontWeight, int fontStyle) 
+            : fontName_(fontName), fontHeight_(fontHeight), fontWeight_(fontWeight), fontStyle_(fontStyle)
+        {
+        }
+
+        bool operator ()(const cv::Ptr<OpenGlFont>& font)
+        {
+            return font->fontName() == fontName_ && font->fontHeight() == fontHeight_ && font->fontWeight() == fontWeight_ && font->fontStyle() == fontStyle_;
+        }
+
+    private:
+        std::string fontName_;
+        int fontHeight_;
+        int fontWeight_;
+        int fontStyle_;
+    };
+
+    void OpenGlText::add(const std::string& str, CvPoint org, CvScalar color, const std::string& fontName, int fontHeight, int fontWeight, int fontStyle)
+    {
+        std::vector< cv::Ptr<OpenGlFont> >::iterator fontIt = 
+            std::find_if(fonts_.begin(), fonts_.end(), FontCompare(fontName, fontHeight, fontWeight, fontStyle));
+
+        if (fontIt == fonts_.end())
+        {
+            fonts_.push_back(new OpenGlFont(hDC_, fontName, fontHeight, fontWeight, fontStyle));
+            fontIt = fonts_.end() - 1;
+        }
+
+        Text text;
+        text.str = str;
+        text.org = org;
+        text.color = color;
+        text.font = *fontIt;
+
+        text_.push_back(text);
+    }
+
+    void OpenGlText::draw(int width, int height) const
+    {        
+        glDisable(GL_DEPTH_TEST);
+
+        static cv::gpu::GlCamera glCamera;
+        glCamera.setupProjectionMatrix();
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+
+        for (size_t i = 0, size = text_.size(); i < size; ++i)
+        {
+            const Text& text = text_[i];
+            text.font->draw(text.str.c_str(), text.str.length(), text.org, text.color, width, height);
+        }
+    }
+}
+
+#endif // HAVE_OPENGL
+
+
 typedef struct CvWindow
 {
     int signature;
@@ -178,10 +392,11 @@ typedef struct CvWindow
     void* glCleanData;
 
     cv::gpu::GlFuncTab* glFuncTab;
+
+    OpenGlText* glText;
 #endif
 }
 CvWindow;
-
 
 #define HG_BUDDY_WIDTH  130
 
@@ -743,6 +958,8 @@ namespace
 
     void initGl(CvWindow* window)
     {
+        glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
         std::auto_ptr<GlFuncTab_W32> glFuncTab(new GlFuncTab_W32);
 
         // Load extensions
@@ -872,6 +1089,11 @@ namespace
 
         CV_CheckGlError();
 
+        if (window->glText)
+            window->glText->draw(window->width, window->height);
+
+        CV_CheckGlError();
+
         if (!SwapBuffers(window->dc))
             CV_ERROR( CV_OpenGlApiCallError, "Can't swap OpenGL buffers" );
 
@@ -919,57 +1141,6 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     if (window != 0)
     {
         result = 1;
-
-        #ifdef HAVE_OPENGL
-            if (window->useGl && !(flags & CV_WINDOW_OPENGL))
-            {
-                wglMakeCurrent(window->dc, window->hGLRC);
-
-                if (window->glCleanCallback)
-                {
-                    window->glCleanCallback(window->glCleanData);
-                    window->glCleanCallback = 0;
-                    window->glCleanData = 0;
-                }
-
-                releaseGlContext(window);
-
-                window->dc = CreateCompatibleDC(0);
-                window->hGLRC = 0;
-                window->useGl = false;
-            }
-            else if (!window->useGl && (flags & CV_WINDOW_OPENGL))
-            {
-                if (window->dc && window->image)
-                    DeleteObject(SelectObject(window->dc, window->image));
-
-                if (window->dc)
-                    DeleteDC(window->dc);
-
-                bool useGl = false;
-                HDC hGLDC = 0;
-                HGLRC hGLRC = 0;
-
-                createGlContext(window->hwnd, hGLDC, hGLRC, useGl);
-
-                if (!useGl)
-                {
-                    window->dc = CreateCompatibleDC(0);
-                    window->hGLRC = 0;
-                    window->useGl = false;
-
-                    result = 0;
-                }
-                else
-                {
-                    window->dc = hGLDC;
-                    window->hGLRC = hGLRC;
-                    window->useGl = true;
-                    initGl(window);
-                }
-            }
-        #endif // HAVE_OPENGL
-
         EXIT;
     }
 
@@ -1038,6 +1209,8 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     window->glCleanCallback = 0;
     window->glCleanData = 0;
+
+    window->glText = 0;
 #endif
 
     window->last_key = 0;
@@ -1089,6 +1262,67 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
         CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
 
     cv::gpu::setGlFuncTab(window->glFuncTab);
+
+    __END__;
+}
+
+CV_IMPL void cvAddTextOpenGl(const char* name, const char* text, CvPoint org, CvScalar color, const char* fontName, int fontHeight, int fontWeight, int fontStyle)
+{
+    CV_FUNCNAME( "cvSetOpenGlContext" );
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if(!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    window = icvFindWindowByName( name );
+    if (!window)
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+
+    if (!window->useGl)
+        CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+
+    if (!window->glText)
+        window->glText = new OpenGlText(window->dc);
+
+    window->glText->add(text, org, color, fontName, fontHeight, fontWeight, fontStyle);
+
+    InvalidateRect(window->hwnd, 0, 0);
+
+    __END__;
+}
+
+CV_IMPL void cvClearTextOpenGl(const char* name)
+{
+    CV_FUNCNAME( "cvSetOpenGlContext" );
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if(!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    window = icvFindWindowByName( name );
+    if (!window)
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+
+    if (!window->useGl)
+        CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+
+    if (window->glText)
+    {
+        window->glText->clear();
+        InvalidateRect(window->hwnd, 0, 0);
+    }
 
     __END__;
 }
@@ -1172,6 +1406,9 @@ static void icvRemoveWindow( CvWindow* window )
     if (window->useGl)
     {
         wglMakeCurrent(window->dc, window->hGLRC);
+        
+        if (window->glText)
+            delete window->glText;
 
         if (window->glCleanCallback)
         {
