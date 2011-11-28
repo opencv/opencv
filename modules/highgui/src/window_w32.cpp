@@ -190,7 +190,7 @@ namespace
             weight = FW_BLACK;
             break;
         default:
-            cvError(CV_StsBadArg, "getFontWidthW32", "Unsopported fonr width", __FILE__, __LINE__);
+            cvError(CV_StsBadArg, "getFontWidthW32", "Unsopported font width", __FILE__, __LINE__);
         };
 
         return weight;
@@ -222,7 +222,7 @@ namespace
         SelectObject(hDC, font);
 
         if (!wglUseFontBitmaps(hDC, 32, 96, base_))
-            cvError(CV_OpenGlApiCallError, "OpenGlText::set", "Can't create font", __FILE__, __LINE__);
+            cvError(CV_OpenGlApiCallError, "OpenGlFont", "Can't create font", __FILE__, __LINE__);
 
         fontName_ = fontName;
         fontHeight_ = fontHeight;
