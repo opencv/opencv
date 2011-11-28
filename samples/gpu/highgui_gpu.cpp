@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
         GpuMat d_img;
         if (haveCuda)
             d_img.upload(img);
-
+            
         cout << "=== First call\n\n";
 
         {

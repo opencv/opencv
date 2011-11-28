@@ -76,7 +76,7 @@ int main(int argc, const char* argv[])
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))    
+    if (cmd.get<bool>("help"))
     {
         cout << "Avaible options:" << endl;
         cmd.printParams();
@@ -119,13 +119,13 @@ int main(int argc, const char* argv[])
     {
         cout << "Can't load image " << right << endl;
         return -1;
-    }    
-    
+    }
+
     Mat Q = Mat::eye(4, 4, CV_32F);
     if (!intrinsic.empty() && !extrinsic.empty())
     {
         FileStorage fs;
-    
+
         // reading intrinsic parameters
         fs.open(intrinsic, CV_STORAGE_READ);
         if (!fs.isOpened())
@@ -133,13 +133,13 @@ int main(int argc, const char* argv[])
             cout << "Failed to open file " << intrinsic << endl;
             return -1;
         }
-        
+
         Mat M1, D1, M2, D2;
         fs["M1"] >> M1;
         fs["D1"] >> D1;
         fs["M2"] >> M2;
         fs["D2"] >> D2;
-        
+
         // reading extrinsic parameters
         fs.open(extrinsic, CV_STORAGE_READ);
         if (!fs.isOpened())
@@ -147,7 +147,7 @@ int main(int argc, const char* argv[])
             cout << "Failed to open file " << extrinsic << endl;
             return -1;
         }
-        
+
         Mat R, T, R1, P1, R2, P2;
         fs["R"] >> R;
         fs["T"] >> T;
@@ -156,15 +156,15 @@ int main(int argc, const char* argv[])
 
         Rect roi1, roi2;
         stereoRectify(M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2);
-        
+
         Mat map11, map12, map21, map22;
         initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
         initUndistortRectifyMap(M2, D2, R2, P2, img_size, CV_16SC2, map21, map22);
-        
+
         Mat img1r, img2r;
         remap(imgLeftColor, img1r, map11, map12, INTER_LINEAR);
         remap(imgRightColor, img2r, map21, map22, INTER_LINEAR);
-        
+
         imgLeftColor = img1r(roi1);
         imgRightColor = img2r(roi2);
     }
@@ -194,7 +194,7 @@ int main(int argc, const char* argv[])
 
     int mouse[2] = {0, 0};
     setMouseCallback("OpenGL Sample", mouseCallback, mouse);
-    
+
     GlArrays pointCloud;
 
     pointCloud.setVertexArray(points);
@@ -202,7 +202,7 @@ int main(int argc, const char* argv[])
 
     GlCamera camera;
     camera.setScale(Point3d(scale, scale, scale));
-    
+
     double yaw = 0.0;
     double pitch = 0.0;
 
@@ -214,17 +214,25 @@ int main(int argc, const char* argv[])
     while (true)
     {
         int key = waitKey(1);
+        if (key >= 0)
+            key = key & 0xff;
 
         if (key == 27)
-            break;        
-        
+            break;
+
         double aspect = getWindowProperty("OpenGL Sample", WND_PROP_ASPECT_RATIO);
 
         const double posStep = 0.1;
+        
+        #ifdef _WIN32
         const double mouseStep = 0.001;
+        #else
+        const double mouseStep = 0.000001;
+        #endif
+        
         const int mouseClamp = 300;
 
-        camera.setPerspectiveProjection(30.0 + fov / 100.0 * 40.0, aspect, 0.1, 1000.0); 
+        camera.setPerspectiveProjection(30.0 + fov / 100.0 * 40.0, aspect, 0.1, 1000.0);
 
         int mouse_dx = clamp(mouse[0], -mouseClamp, mouseClamp);
         int mouse_dy = clamp(mouse[1], -mouseClamp, mouseClamp);

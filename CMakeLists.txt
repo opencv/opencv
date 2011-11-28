@@ -37,9 +37,9 @@ endif(NOT CMAKE_TOOLCHAIN_FILE)
 # Top level OpenCV project
 # --------------------------------------------------------------
 if(NOT IOS)
-	cmake_minimum_required(VERSION 2.6.3)
+    cmake_minimum_required(VERSION 2.6.3)
 else()
-	cmake_minimum_required(VERSION 2.8)
+    cmake_minimum_required(VERSION 2.8)
 endif()
 project(OpenCV)
 
@@ -77,9 +77,9 @@ endif()
 # Default: dynamic libraries
 # ----------------------------------------------------------------------------
 if(NOT IOS)
-	set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 else()
-	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 endif()
 # ----------------------------------------------------------------------------
 # Include debug info into debug libs?
@@ -164,7 +164,7 @@ endif()
 if(WIN32 AND NOT BUILD_SHARED_LIBS)
   option (BUILD_WITH_STATIC_CRT "Enables use of staticaly linked CRT" ON)
 endif()
-  
+
 if(MSVC)
     if(BUILD_WITH_STATIC_CRT)
         foreach(flag_var
@@ -179,7 +179,7 @@ if(MSVC)
               string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
            endif()
         endforeach(flag_var)
-        
+
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib")
         set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:libcmt.lib")
         set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:libcmtd.lib")
@@ -266,11 +266,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
                   OUTPUT_VARIABLE CMAKE_OPENCV_GCC_VERSION_FULL
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-    
+
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
                   ERROR_VARIABLE CMAKE_OPENCV_GCC_INFO_FULL
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)           
-        
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
     # Typical output in CMAKE_OPENCV_GCC_VERSION_FULL: "c+//0 (whatever) 4.2.3 (...)"
     # Look for the version number
     string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
@@ -335,9 +335,9 @@ endif()
 # Build tests:
 # ===================================================
 if(NOT IOS)
-	set(BUILD_TESTS ON CACHE BOOL "Build tests")
+    set(BUILD_TESTS ON CACHE BOOL "Build tests")
 else()
-	set(BUILD_TESTS OFF CACHE BOOL "Build tests")
+    set(BUILD_TESTS OFF CACHE BOOL "Build tests")
 endif()
 set(BUILD_PERF_TESTS ON CACHE BOOL "Build performance tests")
 
@@ -442,7 +442,7 @@ if(APPLE)
 endif()
 
 if(IOS)
-	set(WITH_AVFOUNDATION ON CACHE BOOL "Use AVFoundation for Video I/O")
+    set(WITH_AVFOUNDATION ON CACHE BOOL "Use AVFoundation for Video I/O")
 endif()
 
 set(WITH_TBB OFF CACHE BOOL "Include Intel TBB support")
@@ -507,6 +507,17 @@ if(UNIX)
       if(WITH_GTK)
         CHECK_MODULE(gtk+-2.0 HAVE_GTK)
         CHECK_MODULE(gthread-2.0 HAVE_GTHREAD)
+        if(WITH_OPENGL)
+            CHECK_MODULE(gtkglext-1.0 HAVE_GTKGLEXT)
+            if(HAVE_GTKGLEXT)
+                find_package(OpenGL QUIET)
+                if(OPENGL_FOUND)
+                    set(HAVE_OPENGL 1)
+                    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
+                    include_directories(${OPENGL_INCLUDE_DIR})
+                endif()
+            endif()
+        endif()
       else()
         set(HAVE_GTK FALSE)
         set(HAVE_GTHREAD FALSE)
@@ -575,7 +586,7 @@ if(UNIX)
       set(HAVE_DC1394 FALSE)
     endif()
 
-	if(NOT APPLE)
+    if(NOT APPLE)
         CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
         CHECK_FUNCTION_EXISTS(alloca HAVE_ALLOCA)
         CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
@@ -608,8 +619,8 @@ if(UNIX)
     endif()
 endif()
 if (UNIX OR WIN32)
-	if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
-		message(STATUS "NOT OPENCV_BUILD_3RDPARTY_LIBS **************************************************")
+    if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
+        message(STATUS "NOT OPENCV_BUILD_3RDPARTY_LIBS **************************************************")
         include(FindZLIB)
         if(WITH_PNG)
             include(FindPNG)
@@ -631,9 +642,9 @@ if (UNIX OR WIN32)
             set(JASPER_FOUND FALSE)
         endif()
         if(WITH_JPEG)
-		    include(FindJPEG)
+            include(FindJPEG)
         else()
-		    set(JPEG_FOUND FALSE)
+            set(JPEG_FOUND FALSE)
         endif()
     endif()
 endif()
@@ -758,7 +769,7 @@ if (BUILD_JAVA_SUPPORT)
 
     if(ANDROID)
         file(TO_CMAKE_PATH "$ENV{ANDROID_SDK}" ANDROID_SDK_ENV_PATH)
-        
+
         #find android SDK
         find_host_program(ANDROID_EXECUTABLE
             NAMES android.bat android
@@ -912,13 +923,13 @@ if (WITH_TBB)
                 include_directories(${TBB_INCLUDE_DIRS})
             endif()
             link_directories(${TBB_LIBRARY_DIRS})
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${TBB_LIBRARIES})        
+            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${TBB_LIBRARIES})
         endif()
-    endif()    
-    
+    endif()
+
     if (NOT HAVE_TBB)
         set(TBB_DEFAULT_INCLUDE_DIRS "/opt/intel/tbb" "/usr/local/include" "/usr/include" "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB" "C:/Program Files (x86)/TBB" "${CMAKE_INSTALL_PREFIX}/include")
-        
+
         find_path(TBB_INCLUDE_DIR "tbb/tbb.h" PATHS ${TBB_DEFAULT_INCLUDE_DIRS} DOC "The path to TBB headers")
         if (TBB_INCLUDE_DIR)
             if (UNIX)
@@ -938,8 +949,8 @@ if (WITH_TBB)
                     link_directories("${TBB_LIB_DIR}")
                     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
                 else()
-                    get_filename_component(_TBB_LIB_PATH "${TBB_INCLUDE_DIR}/../lib" ABSOLUTE)                          
-                   
+                    get_filename_component(_TBB_LIB_PATH "${TBB_INCLUDE_DIR}/../lib" ABSOLUTE)
+
                     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*|x86_64* OR MSVC64)
                         set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/intel64")
                     elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86*|i386*|i686*)
@@ -949,7 +960,7 @@ if (WITH_TBB)
                     if (MSVC80)
                        set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc8")
                     elseif(MSVC90)
-                       set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc9")                    
+                       set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc9")
                     elseif(MSVC10)
                         set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc10")
                     endif()
@@ -975,7 +986,7 @@ if (NOT HAVE_TBB AND WITH_THREADING_FRAMEWORK)
     if(THREADING_FRAMEWORK_HEADER AND THREADING_FRAMEWORK_SOURCE)
         set(HAVE_THREADING_FRAMEWORK 1)
     endif()
-    if (TEGRA_DIR) 
+    if (TEGRA_DIR)
         set(HAVE_THREADING_FRAMEWORK 1)
     endif()
 endif()
@@ -999,7 +1010,7 @@ endif()
 
 if(WITH_CUDA)
     find_package(CUDA 4.0)
-    
+
     if(CUDA_FOUND)
         set(HAVE_CUDA 1)
 
@@ -1015,25 +1026,25 @@ if(WITH_CUDA)
 
         set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0)" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
         set(CUDA_ARCH_PTX "2.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
-        
+
         string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
         string(REGEX REPLACE "\\." "" ARCH_PTX_NO_POINTS "${CUDA_ARCH_PTX}")
-        
+
         # Ckeck if user specified 1.0 compute capability: we don't support it
         string(REGEX MATCH "1.0" HAS_ARCH_10 "${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}")
         set(CUDA_ARCH_BIN_OR_PTX_10 0)
         if(NOT ${HAS_ARCH_10} STREQUAL "")
             set(CUDA_ARCH_BIN_OR_PTX_10 1)
         endif()
-        
+
         # NVCC flags to be set
-        set(NVCC_FLAGS_EXTRA "")      
-        
+        set(NVCC_FLAGS_EXTRA "")
+
         # These vars will be passed into the templates
-        set(OPENCV_CUDA_ARCH_BIN "") 
-        set(OPENCV_CUDA_ARCH_PTX "") 
-        set(OPENCV_CUDA_ARCH_FEATURES "")        
-        
+        set(OPENCV_CUDA_ARCH_BIN "")
+        set(OPENCV_CUDA_ARCH_PTX "")
+        set(OPENCV_CUDA_ARCH_FEATURES "")
+
         # Tell NVCC to add binaries for the specified GPUs
         string(REGEX MATCHALL "[0-9()]+" ARCH_LIST "${ARCH_BIN_NO_POINTS}")
         foreach(ARCH IN LISTS ARCH_LIST)
@@ -1043,13 +1054,13 @@ if(WITH_CUDA)
                 set(OPENCV_CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN} ${CMAKE_MATCH_1}")
                 set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${CMAKE_MATCH_2}")
             else()
-                # User didn't explicitly specify PTX for the concrete BIN, we assume PTX=BIN                
+                # User didn't explicitly specify PTX for the concrete BIN, we assume PTX=BIN
                 set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH},code=sm_${ARCH})
                 set(OPENCV_CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN} ${ARCH}")
                 set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
             endif()
         endforeach()
-        
+
         # Tell NVCC to add PTX intermediate code for the specified architectures
         string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_PTX_NO_POINTS}")
         foreach(ARCH IN LISTS ARCH_LIST)
@@ -1057,16 +1068,16 @@ if(WITH_CUDA)
             set(OPENCV_CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX} ${ARCH}")
             set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
         endforeach()
-        
+
         # These vars will be processed in other scripts
-        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})        
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
         set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
-        
+
         message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
     else()
         unset(CUDA_ARCH_BIN CACHE)
-        unset(CUDA_ARCH_PTX CACHE)  
-    endif() 
+        unset(CUDA_ARCH_PTX CACHE)
+    endif()
 endif()
 
 
@@ -1080,7 +1091,7 @@ endif()
 
 ############################### XIMEA ################################
 set(HAVE_XIMEA FALSE)
- 
+
 if(WITH_XIMEA)
     include(OpenCVFindXimea.cmake)
 endif()
@@ -1112,7 +1123,7 @@ if(WIN32)
     if(WITH_VIDEOINPUT)
         set(HAVE_VIDEOINPUT 1)
     endif()
-    
+
     if (MSVC)
         set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
     endif()
@@ -1122,13 +1133,13 @@ if(WIN32)
             set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} msvfw32 avifil32 avicap32 winmm)
         else()
             set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32 winmm)
-        endif()  
+        endif()
     endif()
 
-    if (WITH_OPENGL AND NOT HAVE_QT_OPENGL)
+    if(WITH_OPENGL AND NOT HAVE_QT_OPENGL)
         find_package(OpenGL QUIET)
-        
-        if (OPENGL_FOUND)
+
+        if(OPENGL_FOUND)
             set(HAVE_OPENGL 1)
             set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
             include_directories(${OPENGL_INCLUDE_DIR})
@@ -1140,7 +1151,7 @@ endif()
 if(ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7)
     option(WITH_ANDROID_CAMERA "Build with native Android camera support" TRUE)
 
-    SET (ANDROID_SOURCE_TREE "ANDROID_SOURCE_TREE-NOTFOUND" CACHE PATH 
+    SET (ANDROID_SOURCE_TREE "ANDROID_SOURCE_TREE-NOTFOUND" CACHE PATH
 "Path to Android source tree.
 Set this variable to path to your Android sources to compile
 libnative_camera_rx.x.x.so for your Android")
@@ -1264,14 +1275,14 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         if(ENABLE_SSE3)
             set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -msse3")
         endif()
-        
+
         if(${CMAKE_OPENCV_GCC_VERSION_NUM} GREATER 402)
             set(HAVE_GCC43_OR_NEWER 1)
         endif()
         if(${CMAKE_OPENCV_GCC_VERSION_NUM} GREATER 401)
             set(HAVE_GCC42_OR_NEWER 1)
         endif()
-        
+
         if(HAVE_GCC42_OR_NEWER OR APPLE)
             if(ENABLE_SSSE3)
                 set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -mssse3")
@@ -1456,8 +1467,8 @@ if(WIN32)
     exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/win-install/\"" OUTPUT_VARIABLE RET_VAL)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
-    # Install the OpenCVConfig.cmake file which has the right paths pointing to the install directory 
-    install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/") 
+    # Install the OpenCVConfig.cmake file which has the right paths pointing to the install directory
+    install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/")
 endif()
 
 # --------------------------------------------------------------------------------------------
@@ -1600,13 +1611,13 @@ endif()
 #-----------------------------------
 if(BUILD_PERF_TESTS AND PYTHON_EXECUTABLE)
     if(CMAKE_VERSION VERSION_GREATER "2.8.2")
-        add_custom_target(perf 
+        add_custom_target(perf
             ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py" --configuration $<CONFIGURATION> "${CMAKE_BINARY_DIR}"
             WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
             DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py"
         )
     else()
-        add_custom_target(perf 
+        add_custom_target(perf
             ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py" "${CMAKE_BINARY_DIR}"
             WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
             DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py"
@@ -1634,7 +1645,7 @@ macro(status text)
     SET(status_cond)
     SET(status_then)
     SET(status_else)
-    
+
     SET(status_current_name "cond")
     foreach(arg ${ARGN})
        if(arg STREQUAL "THEN")
@@ -1725,7 +1736,8 @@ else()
             endif()
         else()
             status("    GTK+ 2.x:" HAVE_GTK     THEN YES ELSE NO)
-            status("    GThread:"  HAVE_GTHREAD THEN YES ELSE NO)
+            status("    GThread :" HAVE_GTHREAD THEN YES ELSE NO)
+            status("    GtkGlExt:" HAVE_GTKGLEXT THEN YES ELSE NO)
         endif()
     endif()
 endif()
@@ -1773,11 +1785,11 @@ if(UNIX AND NOT APPLE)
         endif()
     endif()
 elseif(APPLE)
-	if(NOT IOS)
-		status("  Video I/O:"        WITH_QUICKTIME      THEN QuickTime ELSE QTKit)
-	else()
-		status("  Video I/O: AVFoundation")
-	endif()		
+    if(NOT IOS)
+        status("  Video I/O:"        WITH_QUICKTIME      THEN QuickTime ELSE QTKit)
+    else()
+        status("  Video I/O: AVFoundation")
+    endif()
 elseif(WIN32)
     status("  Video I/O:"        HAVE_VIDEOINPUT     THEN DirectShow ELSE NO)
 endif()

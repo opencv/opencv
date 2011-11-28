@@ -49,13 +49,13 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     {
     //change between fullscreen or not.
     case CV_WND_PROP_FULLSCREEN:
-    
+
         if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
             break;
-    
+
         #if defined (HAVE_QT)
             cvSetModeWindow_QT(name,prop_value);
-        #elif defined WIN32 || defined _WIN32 
+        #elif defined WIN32 || defined _WIN32
             cvSetModeWindow_W32(name,prop_value);
         #elif defined (HAVE_GTK)
             cvSetModeWindow_GTK(name,prop_value);
@@ -63,19 +63,19 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_CARBON(name,prop_value);
         #endif
     break;
-    
+
     case CV_WND_PROP_AUTOSIZE:
         #if defined (HAVE_QT)
             cvSetPropWindow_QT(name,prop_value);
         #endif
     break;
-    
+
     case CV_WND_PROP_ASPECTRATIO:
         #if defined (HAVE_QT)
             cvSetRatioWindow_QT(name,prop_value);
         #endif
     break;
-        
+
     default:;
     }
 }
@@ -83,16 +83,16 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 /* return -1 if error */
 CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 {
-    if (!name) 
+    if (!name)
         return -1;
 
     switch(prop_id)
     {
-    case CV_WND_PROP_FULLSCREEN:    
-        
+    case CV_WND_PROP_FULLSCREEN:
+
         #if defined (HAVE_QT)
             return cvGetModeWindow_QT(name);
-        #elif defined WIN32 || defined _WIN32 
+        #elif defined WIN32 || defined _WIN32
             return cvGetModeWindow_W32(name);
         #elif defined (HAVE_GTK)
             return cvGetModeWindow_GTK(name);
@@ -102,39 +102,45 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return -1;
         #endif
     break;
-    
+
     case CV_WND_PROP_AUTOSIZE:
-                
+
         #if defined (HAVE_QT)
             return cvGetPropWindow_QT(name);
-        #elif defined WIN32 || defined _WIN32 
+        #elif defined WIN32 || defined _WIN32
             return cvGetPropWindowAutoSize_W32(name);
+        #elif defined (HAVE_GTK)
+            return cvGetPropWindowAutoSize_GTK(name);
         #else
             return -1;
-        #endif  
+        #endif
     break;
-        
+
     case CV_WND_PROP_ASPECTRATIO:
 
         #if defined (HAVE_QT)
             return cvGetRatioWindow_QT(name);
-        #elif defined WIN32 || defined _WIN32 
+        #elif defined WIN32 || defined _WIN32
             return cvGetRatioWindow_W32(name);
+        #elif defined (HAVE_GTK)
+            return cvGetRatioWindow_GTK(name);
         #else
             return -1;
-        #endif  
+        #endif
     break;
 
     case CV_WND_PROP_OPENGL:
-        
+
         #if defined (HAVE_QT)
-        #elif defined WIN32 || defined _WIN32 
+        #elif defined WIN32 || defined _WIN32
             return cvGetOpenGlProp_W32(name);
+        #elif defined (HAVE_GTK)
+            return cvGetOpenGlProp_GTK(name);
         #else
             return -1;
-        #endif 
+        #endif
     break;
-    
+
     default:
         return -1;
     }
@@ -198,12 +204,12 @@ int cv::getTrackbarPos( const string& trackbarName, const string& winName )
 {
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
 }
-    
+
 void cv::setMouseCallback( const string& windowName, MouseCallback onMouse, void* param)
 {
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
 }
-    
+
 int cv::startWindowThread()
 {
     return cvStartWindowThread();
@@ -363,13 +369,13 @@ namespace
             addGlObj(glObj);
 
             icvSetOpenGlCleanCallback(winname.c_str(), glCleanCallback, glObj);
-        }        
+        }
 
         setOpenGlDrawCallback(winname, glDrawTextureCallback, glObj);
 
         updateWindow(winname);
     }
-} 
+}
 
 #endif // HAVE_OPENGL
 
@@ -397,7 +403,7 @@ void cv::imshow( const string& winname, InputArray _img )
 void cv::imshow(const string& winname, const gpu::GlBuffer& buf)
 {
 #ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     imshowImpl(winname, buf);
 #endif
@@ -406,7 +412,7 @@ void cv::imshow(const string& winname, const gpu::GlBuffer& buf)
 void cv::imshow(const string& winname, const gpu::GpuMat& d_mat)
 {
 #ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     setOpenGlContext(winname);
     gpu::GlBuffer buf(d_mat, gpu::GlBuffer::TEXTURE_BUFFER);
@@ -417,7 +423,7 @@ void cv::imshow(const string& winname, const gpu::GpuMat& d_mat)
 void cv::imshow(const string& winname, const gpu::GlTexture& tex)
 {
 #ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     namedWindow(winname, WINDOW_OPENGL | WINDOW_AUTOSIZE);
 
@@ -462,9 +468,9 @@ void cv::imshow(const string& winname, const gpu::GlTexture& tex)
 }
 
 void cv::pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GlArrays& arr)
-{    
+{
 #ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     namedWindow(winname, WINDOW_OPENGL);
 
@@ -565,27 +571,27 @@ namespace
 #endif // HAVE_OPENGL
 
 void cv::pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GlBuffer& points, const gpu::GlBuffer& colors)
-{    
+{
 #ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     pointCloudShowImpl(winname, camera, points, colors);
 #endif
 }
 
 void cv::pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GpuMat& points, const gpu::GpuMat& colors)
-{    
+{
 #ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     pointCloudShowImpl(winname, camera, points, colors);
 #endif
 }
 
 void cv::pointCloudShow(const string& winname, const gpu::GlCamera& camera, InputArray points, InputArray colors)
-{    
+{
 #ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     pointCloudShowImpl(winname, camera, points, colors);
 #endif
@@ -596,23 +602,23 @@ void cv::pointCloudShow(const string& winname, const gpu::GlCamera& camera, Inpu
 #ifndef HAVE_QT
 CV_IMPL void cvCreateOpenGLCallback(const char*, CvOpenGLCallback, void*, double, double, double)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 #endif
 
 CV_IMPL void cvSetOpenGlContext(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 CV_IMPL void cvUpdateWindow(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 void icvSetOpenGlCleanCallback(const char*, CvOpenGlCleanCallback, void*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); 
+    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 #endif // !HAVE_OPENGL
@@ -676,7 +682,7 @@ int cv::createButton(const string& button_name, ButtonCallback on_change, void* 
 #else
 
 // No windowing system present at compile time ;-(
-// 
+//
 // We will build place holders that don't break the API but give an error
 // at runtime. This way people can choose to replace an installed HighGUI
 // version with a more capable one without a need to recompile dependent
@@ -695,7 +701,7 @@ CV_IMPL int cvNamedWindow( const char*, int )
 {
     CV_NO_GUI_ERROR("cvNamedWindow");
     return -1;
-}     
+}
 
 CV_IMPL void cvDestroyWindow( const char* )
 {
@@ -763,7 +769,7 @@ CV_IMPL void* cvGetWindowHandle( const char* )
     CV_NO_GUI_ERROR( "cvGetWindowHandle" );
     return 0;
 }
-    
+
 CV_IMPL const char* cvGetWindowName( void* )
 {
     CV_NO_GUI_ERROR( "cvGetWindowName" );
@@ -799,39 +805,39 @@ CV_IMPL void cvAddText( const CvArr*, const char*, CvPoint org, CvFont* font)
 CV_IMPL void cvDisplayStatusBar(const char* name, const char* arg2, int arg3)
 {
     CV_NO_GUI_ERROR("cvDisplayStatusBar");
-}  
+}
 
 CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
     CV_NO_GUI_ERROR("cvNamedWindow");
-}  
+}
 
 CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
 {
     CV_NO_GUI_ERROR("cvStartLoop");
     return -1;
-}  
+}
 
 CV_IMPL void cvStopLoop()
 {
     CV_NO_GUI_ERROR("cvStopLoop");
-}  
+}
 
 CV_IMPL void cvSaveWindowParameters(const char* name)
 {
     CV_NO_GUI_ERROR("cvSaveWindowParameters");
-}  
+}
 
 CV_IMPL void cvLoadWindowParameterss(const char* name)
 {
     CV_NO_GUI_ERROR("cvLoadWindowParameters");
-}  
+}
 
 CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
 {
     CV_NO_GUI_ERROR("cvCreateButton");
     return -1;
-}  
+}
 
 
 #endif

@@ -98,7 +98,7 @@ struct CvCapture
     virtual bool setProperty(int, double) { return 0; }
     virtual bool grabFrame() { return true; }
     virtual IplImage* retrieveFrame(int) { return 0; }
-	virtual int getCaptureDomain() { return CV_CAP_ANY; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() { return CV_CAP_ANY; } // Return the type of the capture object: CV_CAP_VFW, etc...
 };
 
 /*************************** CvVideoWriter structure ****************************/
@@ -176,7 +176,7 @@ CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);
 CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color );
 
-//Yannick Verdie 2010  
+//Yannick Verdie 2010
 void cvSetModeWindow_W32(const char* name, double prop_value);
 void cvSetModeWindow_GTK(const char* name, double prop_value);
 void cvSetModeWindow_CARBON(const char* name, double prop_value);
@@ -186,8 +186,13 @@ double cvGetModeWindow_GTK(const char* name);
 double cvGetModeWindow_CARBON(const char* name);
 
 double cvGetPropWindowAutoSize_W32(const char* name);
+double cvGetPropWindowAutoSize_GTK(const char* name);
+
 double cvGetRatioWindow_W32(const char* name);
+double cvGetRatioWindow_GTK(const char* name);
+
 double cvGetOpenGlProp_W32(const char* name);
+double cvGetOpenGlProp_GTK(const char* name);
 
 //for QT
 #if defined (HAVE_QT)
