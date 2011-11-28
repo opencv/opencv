@@ -609,21 +609,6 @@ void cv::clearTextOpenGl(const string& winname)
     cvClearTextOpenGl(winname.c_str());
 }
 
-#if (!defined WIN32 && !defined _WIN32) || defined HAVE_QT
-
-CV_IMPL void cvAddTextOpenGl(const char*, const char*, CvPoint, CvScalar, const char*, int, int, int)
-{
-    CV_Error(CV_OpenGlNotSupported, "This function works only under WIN32");
-}
-
-CV_IMPL void cvClearTextOpenGl(const char*)
-{
-    CV_Error(CV_OpenGlNotSupported, "This function works only under WIN32");
-}
-
-#endif //  (!defined WIN32 && !defined _WIN32) || defined HAVE_QT
-
-
 // Without OpenGL
 
 #ifndef HAVE_OPENGL

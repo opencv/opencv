@@ -1268,7 +1268,7 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
 
 CV_IMPL void cvAddTextOpenGl(const char* name, const char* text, CvPoint org, CvScalar color, const char* fontName, int fontHeight, int fontWeight, int fontStyle)
 {
-    CV_FUNCNAME( "cvSetOpenGlContext" );
+    CV_FUNCNAME( "cvAddTextOpenGl" );
 
     __BEGIN__;
 
@@ -1299,7 +1299,7 @@ CV_IMPL void cvAddTextOpenGl(const char* name, const char* text, CvPoint org, Cv
 
 CV_IMPL void cvClearTextOpenGl(const char* name)
 {
-    CV_FUNCNAME( "cvSetOpenGlContext" );
+    CV_FUNCNAME( "cvClearTextOpenGl" );
 
     __BEGIN__;
 

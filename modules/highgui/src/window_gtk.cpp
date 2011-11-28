@@ -1142,6 +1142,75 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
     __END__;
 }
 
+CV_IMPL void cvAddTextOpenGl(const char* name, const char* text, CvPoint org, CvScalar color, const char* fontName, int fontHeight, int fontWeight, int fontStyle)
+{
+    CV_FUNCNAME( "cvAddTextOpenGl" );
+    
+    __BEGIN__;
+    CV_ERROR( CV_OpenGlNotSupported, "Not Implemented" );
+    __END__;
+    
+    /*__BEGIN__;
+
+    CvWindow* window;
+
+    if(!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    window = icvFindWindowByName( name );
+    if (!window)
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+
+    if (!window->useGl)
+        CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+
+    if (!window->glText)
+        window->glText = new OpenGlText(window->dc);
+
+    window->glText->add(text, org, color, fontName, fontHeight, fontWeight, fontStyle);
+
+    InvalidateRect(window->hwnd, 0, 0);
+
+    __END__;*/
+}
+
+CV_IMPL void cvClearTextOpenGl(const char* name)
+{
+    CV_FUNCNAME( "cvClearTextOpenGl" );
+    
+    __BEGIN__;
+    CV_ERROR( CV_OpenGlNotSupported, "Not Implemented" );
+    __END__;
+    
+    /*__BEGIN__;
+
+    CvWindow* window;
+
+    if(!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    window = icvFindWindowByName( name );
+    if (!window)
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+
+    if (!window->useGl)
+        CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
+
+    if (window->glText)
+    {
+        window->glText->clear();
+        InvalidateRect(window->hwnd, 0, 0);
+    }
+
+    __END__;*/
+}
+
 CV_IMPL void cvUpdateWindow(const char* name)
 {
     CV_FUNCNAME( "cvUpdateWindow" );
