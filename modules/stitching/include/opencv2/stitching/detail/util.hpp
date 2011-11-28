@@ -44,14 +44,27 @@
 #define __OPENCV_STITCHING_UTIL_HPP__
 
 #include <list>
+#include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 
 #define ENABLE_LOG 1
 
 // TODO remove LOG macros, add logging class
 #if ENABLE_LOG
+#if ANDROID
   #include <iostream>
-  #define LOG(msg) { std::cout << msg; std::cout.flush(); }
+  #include <sstream>
+  #include <android/log.h>
+  #define LOG(msg) \
+    do { \
+        std::stringstream _os; \
+        _os << msg; \
+       __android_log_print(ANDROID_LOG_DEBUG, "STITCHING", "%s", _os.str().c_str()); \
+    } while(0);
+#else
+  #include <iostream>
+  #define LOG(msg) do { std::cout << msg; std::cout.flush(); } while(0);
+#endif
 #else
   #define LOG(msg)
 #endif
