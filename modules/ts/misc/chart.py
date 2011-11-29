@@ -33,7 +33,7 @@ def keyselector(a):
     return a
 
 convert = lambda text: int(text) if text.isdigit() else text 
-alphanum_keyselector = lambda key: [ convert(c) for c in re.split('([0-9]+)', keyselector(key)) ]
+alphanum_keyselector = lambda key: [ convert(c) for c in re.split('([0-9]+)', str(keyselector(key))) ]
 
 def getValueParams(test):
     param = test.get("value_param")
