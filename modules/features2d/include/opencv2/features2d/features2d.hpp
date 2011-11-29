@@ -1516,10 +1516,10 @@ protected:
     SIFT sift;
 };
 
-class CV_EXPORTS SurfFeatureDetector : public FeatureDetector
+class CV_EXPORTS_W SurfFeatureDetector : public FeatureDetector
 {
 public:
-    SurfFeatureDetector( double hessianThreshold=400., int octaves=3, int octaveLayers=4, bool upright=false );
+    CV_WRAP SurfFeatureDetector( double hessianThreshold=400., int octaves=3, int octaveLayers=4, bool upright=false );
     virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;
 
@@ -1901,10 +1901,10 @@ protected:
 /*
  * SurfDescriptorExtractor
  */
-class CV_EXPORTS SurfDescriptorExtractor : public DescriptorExtractor
+class CV_EXPORTS_W SurfDescriptorExtractor : public DescriptorExtractor
 {
 public:
-    SurfDescriptorExtractor( int nOctaves=4, int nOctaveLayers=2, bool extended=false, bool upright=false );
+    CV_WRAP SurfDescriptorExtractor( int nOctaves=4, int nOctaveLayers=2, bool extended=false, bool upright=false );
 
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage &fs ) const;
