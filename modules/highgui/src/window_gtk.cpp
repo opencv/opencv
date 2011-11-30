@@ -399,216 +399,6 @@ typedef struct CvTrackbar
 CvTrackbar;
 
 
-
-
-// OpenGL support
-
-#ifdef HAVE_OPENGL
-
-namespace
-{
-    class OpenGlFont
-    {
-    public:
-        OpenGlFont(const std::string& fontName, int fontHeight, int fontWeight, int fontStyle);
-        ~OpenGlFont();
-
-        void draw(const char* str, int len, CvPoint org, CvScalar color, int width, int height) const;
-
-        inline const std::string& fontName() const { return fontName_; }
-        inline int fontHeight() const { return fontHeight_; }
-        inline int fontWeight() const { return fontWeight_; }
-        inline int fontStyle() const { return fontStyle_; }
-
-    private:
-        std::string fontName_;
-        int fontHeight_;
-        int fontWeight_;
-        int fontStyle_;
-
-        GLuint base_;
-
-        OpenGlFont(const OpenGlFont&);
-        OpenGlFont& operator =(const OpenGlFont&);
-    };
-
-    PangoWeight getFontWidthPango(int fontWeight)
-    {
-        PangoWeight weight;
-
-        switch(fontWeight)
-        {
-        case CV_FONT_LIGHT: 
-            weight = PANGO_WEIGHT_LIGHT;
-            break;
-        case CV_FONT_NORMAL: 
-            weight = PANGO_WEIGHT_NORMAL;
-            break;
-        case CV_FONT_DEMIBOLD: 
-            weight = PANGO_WEIGHT_SEMIBOLD;
-            break;
-        case CV_FONT_BOLD: 
-            weight = PANGO_WEIGHT_BOLD;
-            break;
-        case CV_FONT_BLACK: 
-            weight = PANGO_WEIGHT_ULTRABOLD;
-            break;
-        default:
-            cvError(CV_StsBadArg, "getFontWidthPango", "Unsopported font width", __FILE__, __LINE__);
-        };
-
-        return weight;
-    }
-
-    OpenGlFont::OpenGlFont(const std::string& fontName, int fontHeight, int fontWeight, int fontStyle)
-        : fontName_(), fontHeight_(0), fontWeight_(0), fontStyle_(0), base_(0)
-    {
-        base_ = glGenLists(96);
-        
-        PangoFontDescription* fontDecr = pango_font_description_new();
-        
-        pango_font_description_set_size(fontDecr, fontHeight);
-        
-        pango_font_description_set_family_static(fontDecr, fontName.c_str());
-        
-        pango_font_description_set_weight(fontDecr, getFontWidthPango(fontWeight));
-        
-        PangoStyle pangoStyle = fontStyle & CV_STYLE_ITALIC ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL;
-        pango_font_description_set_style(fontDecr, pangoStyle);
-                
-        PangoFont* pangoFont = gdk_gl_font_use_pango_font(fontDecr, 32, 96, base_);
-        
-        if (!pangoFont)
-            cvError(CV_OpenGlApiCallError, "OpenGlFont", "Can't create font", __FILE__, __LINE__);
-        
-        pango_font_description_free(fontDecr);
-
-        fontName_ = fontName;
-        fontHeight_ = fontHeight;
-        fontWeight_ = fontWeight;
-        fontStyle_ = fontStyle;
-    }
-
-    OpenGlFont::~OpenGlFont()
-    {    
-        if (base_)
-            glDeleteLists(base_, 96);
-    }
-
-    void OpenGlFont::draw(const char* str, int len, CvPoint org, CvScalar color, int width, int height) const
-    {
-        if (base_)
-        {
-            glPushAttrib(GL_LIST_BIT);
-            glListBase(base_ - 32);
-
-            glColor4dv(color.val);
-            glRasterPos2f(static_cast<float>(org.x) / width, static_cast<float>((org.y + fontHeight_)) / height);
-            glCallLists(len, GL_UNSIGNED_BYTE, str);
-
-            glPopAttrib();
-
-            CV_CheckGlError();
-        }
-    }
-
-    class OpenGlText
-    {
-    public:
-        OpenGlText();
-
-        void add(const std::string& text, CvPoint org, CvScalar color, const std::string& fontName, int fontHeight, int fontWeight, int fontStyle);
-        inline void clear() { text_.clear(); }
-
-        void draw(int width, int height) const;
-
-    private:
-        struct Text
-        {
-            std::string str;
-
-            CvPoint org;
-            CvScalar color;
-
-            cv::Ptr<OpenGlFont> font;
-        };
-
-        std::vector< cv::Ptr<OpenGlFont> > fonts_;
-
-        std::vector<Text> text_;
-    };
-
-    OpenGlText::OpenGlText()
-    {
-        fonts_.reserve(5);
-        text_.reserve(5);
-    }
-
-    class FontCompare : public std::unary_function<cv::Ptr<OpenGlFont>, bool>
-    {
-    public:
-        inline FontCompare(const std::string& fontName, int fontHeight, int fontWeight, int fontStyle) 
-            : fontName_(fontName), fontHeight_(fontHeight), fontWeight_(fontWeight), fontStyle_(fontStyle)
-        {
-        }
-
-        bool operator ()(const cv::Ptr<OpenGlFont>& font)
-        {
-            return font->fontName() == fontName_ && font->fontHeight() == fontHeight_ && font->fontWeight() == fontWeight_ && font->fontStyle() == fontStyle_;
-        }
-
-    private:
-        std::string fontName_;
-        int fontHeight_;
-        int fontWeight_;
-        int fontStyle_;
-    };
-
-    void OpenGlText::add(const std::string& str, CvPoint org, CvScalar color, const std::string& fontName, int fontHeight, int fontWeight, int fontStyle)
-    {
-        std::vector< cv::Ptr<OpenGlFont> >::iterator fontIt = 
-            std::find_if(fonts_.begin(), fonts_.end(), FontCompare(fontName, fontHeight, fontWeight, fontStyle));
-
-        if (fontIt == fonts_.end())
-        {
-            fonts_.push_back(new OpenGlFont(fontName, fontHeight, fontWeight, fontStyle));
-            fontIt = fonts_.end() - 1;
-        }
-
-        Text text;
-        text.str = str;
-        text.org = org;
-        text.color = color;
-        text.font = *fontIt;
-
-        text_.push_back(text);
-    }
-
-    void OpenGlText::draw(int width, int height) const
-    {        
-        glDisable(GL_DEPTH_TEST);
-
-        static cv::gpu::GlCamera glCamera;
-        glCamera.setupProjectionMatrix();
-
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
-        for (size_t i = 0, size = text_.size(); i < size; ++i)
-        {
-            const Text& text = text_[i];
-            text.font->draw(text.str.c_str(), text.str.length(), text.org, text.color, width, height);
-        }
-    }
-}
-
-#endif // HAVE_OPENGL
-
-
-
-
-
-
 typedef struct CvWindow
 {
     int signature;
@@ -642,8 +432,6 @@ typedef struct CvWindow
 
     CvOpenGlCleanCallback glCleanCallback;
     void* glCleanData;
-    
-    OpenGlText* glText;
 #endif
 }
 CvWindow;
@@ -913,9 +701,26 @@ double cvGetOpenGlProp_GTK(const char* name)
 
 namespace
 {
-    class GlFuncTab_GTK : public cv::gpu::GlFuncTab
+    class GlFuncTab_GTK : public CvOpenGlFuncTab
     {
     public:
+        GlFuncTab_GTK();
+
+        void genBuffers(int n, unsigned int* buffers) const;
+        void deleteBuffers(int n, const unsigned int* buffers) const;
+
+        void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const;
+        void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const;
+
+        void bindBuffer(unsigned int target, unsigned int buffer) const;
+
+        void* mapBuffer(unsigned int target, unsigned int access) const;
+        void unmapBuffer(unsigned int target) const;
+
+        void generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const;
+
+        bool isGlContextInitialized() const;
+        
         PFNGLGENBUFFERSPROC    glGenBuffersExt;
         PFNGLDELETEBUFFERSPROC glDeleteBuffersExt;
 
@@ -928,137 +733,166 @@ namespace
         PFNGLUNMAPBUFFERPROC   glUnmapBufferExt;
 
         bool initialized;
-
-        GlFuncTab_GTK()
-        {
-            glGenBuffersExt    = 0;
-            glDeleteBuffersExt = 0;
-
-            glBufferDataExt    = 0;
-            glBufferSubDataExt = 0;
-
-            glBindBufferExt    = 0;
-
-            glMapBufferExt     = 0;
-            glUnmapBufferExt   = 0;
-
-            initialized = false;
-        }
-
-        void genBuffers(int n, unsigned int* buffers) const
-        {
-            CV_FUNCNAME( "genBuffers" );
-
-            __BEGIN__;
-
-            if (!glGenBuffersExt)
-                CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-            glGenBuffersExt(n, buffers);
-            CV_CheckGlError();
-
-            __END__;
-        }
-
-        void deleteBuffers(int n, const unsigned int* buffers) const
-        {
-            CV_FUNCNAME( "deleteBuffers" );
-
-            __BEGIN__;
-
-            if (!glDeleteBuffersExt)
-                CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-            glDeleteBuffersExt(n, buffers);
-            CV_CheckGlError();
-
-            __END__;
-        }
-
-        void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const
-        {
-            CV_FUNCNAME( "bufferData" );
-
-            __BEGIN__;
-
-            if (!glBufferDataExt)
-                CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-            glBufferDataExt(target, size, data, usage);
-            CV_CheckGlError();
-
-            __END__;
-        }
-
-        void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const
-        {
-            CV_FUNCNAME( "bufferSubData" );
-
-            __BEGIN__;
-
-            if (!glBufferSubDataExt)
-                CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-            glBufferSubDataExt(target, offset, size, data);
-            CV_CheckGlError();
-
-            __END__;
-        }
-
-        void bindBuffer(unsigned int target, unsigned int buffer) const
-        {
-            CV_FUNCNAME( "bindBuffer" );
-
-            __BEGIN__;
-
-            if (!glBindBufferExt)
-                CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-            glBindBufferExt(target, buffer);
-            CV_CheckGlError();
-
-            __END__;
-        }
-
-        void* mapBuffer(unsigned int target, unsigned int access) const
-        {
-            CV_FUNCNAME( "mapBuffer" );
-
-            void* res = 0;
-
-            __BEGIN__;
-
-            if (!glMapBufferExt)
-                CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-            res = glMapBufferExt(target, access);
-            CV_CheckGlError();
-
-            __END__;
-
-            return res;
-        }
-
-        void unmapBuffer(unsigned int target) const
-        {
-            CV_FUNCNAME( "unmapBuffer" );
-
-            __BEGIN__;
-
-            if (!glUnmapBufferExt)
-                CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-            glUnmapBufferExt(target);
-            CV_CheckGlError();
-
-            __END__;
-        }
-
-        bool isGlContextInitialized() const
-        {
-            return initialized;
-        }
     };
+
+    GlFuncTab_GTK::GlFuncTab_GTK()
+    {
+        glGenBuffersExt    = 0;
+        glDeleteBuffersExt = 0;
+
+        glBufferDataExt    = 0;
+        glBufferSubDataExt = 0;
+
+        glBindBufferExt    = 0;
+
+        glMapBufferExt     = 0;
+        glUnmapBufferExt   = 0;
+
+        initialized = false;
+    }
+
+    void GlFuncTab_GTK::genBuffers(int n, unsigned int* buffers) const
+    {
+        CV_FUNCNAME( "GlFuncTab_GTK::genBuffers" );
+
+        __BEGIN__;
+
+        if (!glGenBuffersExt)
+            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
+
+        glGenBuffersExt(n, buffers);
+        CV_CheckGlError();
+
+        __END__;
+    }
+
+    void GlFuncTab_GTK::deleteBuffers(int n, const unsigned int* buffers) const
+    {
+        CV_FUNCNAME( "GlFuncTab_GTK::deleteBuffers" );
+
+        __BEGIN__;
+
+        if (!glDeleteBuffersExt)
+            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
+
+        glDeleteBuffersExt(n, buffers);
+        CV_CheckGlError();
+
+        __END__;
+    }
+
+    void GlFuncTab_GTK::bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const
+    {
+        CV_FUNCNAME( "GlFuncTab_GTK::bufferData" );
+
+        __BEGIN__;
+
+        if (!glBufferDataExt)
+            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
+
+        glBufferDataExt(target, size, data, usage);
+        CV_CheckGlError();
+
+        __END__;
+    }
+
+    void GlFuncTab_GTK::bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const
+    {
+        CV_FUNCNAME( "GlFuncTab_GTK::bufferSubData" );
+
+        __BEGIN__;
+
+        if (!glBufferSubDataExt)
+            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
+
+        glBufferSubDataExt(target, offset, size, data);
+        CV_CheckGlError();
+
+        __END__;
+    }
+
+    void GlFuncTab_GTK::bindBuffer(unsigned int target, unsigned int buffer) const
+    {
+        CV_FUNCNAME( "GlFuncTab_GTK::bindBuffer" );
+
+        __BEGIN__;
+
+        if (!glBindBufferExt)
+            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
+
+        glBindBufferExt(target, buffer);
+        CV_CheckGlError();
+
+        __END__;
+    }
+
+    void* GlFuncTab_GTK::mapBuffer(unsigned int target, unsigned int access) const
+    {
+        CV_FUNCNAME( "GlFuncTab_GTK::mapBuffer" );
+
+        void* res = 0;
+
+        __BEGIN__;
+
+        if (!glMapBufferExt)
+            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
+
+        res = glMapBufferExt(target, access);
+        CV_CheckGlError();
+
+        __END__;
+
+        return res;
+    }
+
+    void GlFuncTab_GTK::unmapBuffer(unsigned int target) const
+    {
+        CV_FUNCNAME( "GlFuncTab_GTK::unmapBuffer" );
+
+        __BEGIN__;
+
+        if (!glUnmapBufferExt)
+            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
+
+        glUnmapBufferExt(target);
+        CV_CheckGlError();
+
+        __END__;
+    }
+
+    void GlFuncTab_GTK::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const
+    {
+        PangoFontDescription* fontDecr;
+        PangoFont* pangoFont;
+
+        CV_FUNCNAME( "GlFuncTab_GTK::generateBitmapFont" );
+
+        __BEGIN__;        
+        
+        fontDecr = pango_font_description_new();
+        
+        pango_font_description_set_size(fontDecr, height);
+        
+        pango_font_description_set_family_static(fontDecr, family.c_str());
+        
+        pango_font_description_set_weight(fontDecr, static_cast<PangoWeight>(weight));
+        
+        pango_font_description_set_style(fontDecr, italic ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL);
+                
+        pangoFont = gdk_gl_font_use_pango_font(fontDecr, start, count, base);
+        
+        pango_font_description_free(fontDecr);
+        
+        if (!pangoFont)
+            CV_ERROR(CV_OpenGlApiCallError, "Can't create font");
+
+        __END__;
+    }
+
+    bool GlFuncTab_GTK::isGlContextInitialized() const
+    {
+        return initialized;
+    }
 
     void initGl()
     {
@@ -1093,7 +927,7 @@ namespace
 
             glFuncTab.initialized = true;
 
-            cv::gpu::setGlFuncTab(&glFuncTab);
+            icvSetOpenGlFuncTab(&glFuncTab);
 
             first = false;
         }
@@ -1156,9 +990,6 @@ namespace
             window->glDrawCallback(window->glDrawData);
 
         CV_CheckGlError();
-
-        if (window->glText)
-            window->glText->draw(window->widget->allocation.width, window->widget->allocation.height);
 
         if (gdk_gl_drawable_is_double_buffered (gldrawable))
             gdk_gl_drawable_swap_buffers(gldrawable);
@@ -1280,8 +1111,6 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     window->glCleanCallback = 0;
     window->glCleanData = 0;
-
-    window->glText = 0;
 #endif
 
     //
@@ -1362,87 +1191,6 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
 
     if (!gdk_gl_drawable_make_current(gldrawable, glcontext))
         CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
-
-    __END__;
-}
-
-CV_IMPL void cvAddTextOpenGl(const char* name, const char* text, CvPoint org, CvScalar color, const char* fontName, int fontHeight, int fontWeight, int fontStyle)
-{
-    CvWindow* window;
-    GdkGLContext* glcontext;
-    GdkGLDrawable* gldrawable;
-    
-    CV_FUNCNAME( "cvAddTextOpenGl" );
-    
-    /*__BEGIN__;
-    CV_ERROR( CV_OpenGlNotSupported, "Not Implemented" );
-    __END__;*/
-    
-    __BEGIN__;
-
-    if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
-
-    window = icvFindWindowByName( name );
-    if (!window)
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
-
-    if (!window->useGl)
-        CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
-
-    glcontext = gtk_widget_get_gl_context(window->widget);
-    gldrawable = gtk_widget_get_gl_drawable(window->widget);
-
-    if (!gdk_gl_drawable_make_current(gldrawable, glcontext))
-        CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
-
-    if (!window->glText)
-        window->glText = new OpenGlText;
-
-    window->glText->add(text, org, color, fontName, fontHeight, fontWeight, fontStyle);
-
-    gtk_widget_queue_draw( GTK_WIDGET(window->widget) );
-
-    __END__;
-}
-
-CV_IMPL void cvClearTextOpenGl(const char* name)
-{
-    CvWindow* window;
-    GdkGLContext* glcontext;
-    GdkGLDrawable* gldrawable;
-    
-    CV_FUNCNAME( "cvClearTextOpenGl" );
-    
-    /*__BEGIN__;
-    CV_ERROR( CV_OpenGlNotSupported, "Not Implemented" );
-    __END__;*/
-    
-    __BEGIN__;
-
-    CvWindow* window;
-
-    if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
-
-    window = icvFindWindowByName( name );
-    if (!window)
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
-
-    if (!window->useGl)
-        CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
-
-    glcontext = gtk_widget_get_gl_context(window->widget);
-    gldrawable = gtk_widget_get_gl_drawable(window->widget);
-
-    if (!gdk_gl_drawable_make_current(gldrawable, glcontext))
-        CV_ERROR( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
-
-    if (window->glText)
-    {
-        window->glText->clear();
-        gtk_widget_queue_draw( GTK_WIDGET(window->widget) );
-    }
 
     __END__;
 }
@@ -1542,9 +1290,6 @@ static void icvDeleteWindow( CvWindow* window )
         GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable(window->widget);
 
         gdk_gl_drawable_make_current(gldrawable, glcontext);
-        
-        if (window->glText)
-            delete window->glText;
 
         if (window->glCleanCallback)
         {
