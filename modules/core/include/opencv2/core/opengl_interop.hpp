@@ -90,11 +90,10 @@ namespace cv
         gpu::GpuMat mapDevice();
         void unmapDevice();
         
-        int rows;
-        int cols;
-
-        inline Size size() const { return Size(cols, rows); }
-        inline bool empty() const { return rows == 0 || cols == 0; }
+        inline int rows() const { return rows_; }
+        inline int cols() const { return cols_; }
+        inline Size size() const { return Size(cols_, rows_); }
+        inline bool empty() const { return rows_ == 0 || cols_ == 0; }
 
         inline int type() const { return type_; }
         inline int depth() const { return CV_MAT_DEPTH(type_); }
@@ -105,6 +104,8 @@ namespace cv
         inline Usage usage() const { return usage_; }
 
     private:
+        int rows_;
+        int cols_;
         int type_;
         Usage usage_;
 
@@ -138,11 +139,10 @@ namespace cv
         void bind() const;
         void unbind() const;
 
-        int rows;
-        int cols;
-
-        inline Size size() const { return Size(cols, rows); }
-        inline bool empty() const { return rows == 0 || cols == 0; }
+        inline int rows() const { return rows_; }
+        inline int cols() const { return cols_; }
+        inline Size size() const { return Size(cols_, rows_); }
+        inline bool empty() const { return rows_ == 0 || cols_ == 0; }
 
         inline int type() const { return type_; }
         inline int depth() const { return CV_MAT_DEPTH(type_); }
@@ -151,6 +151,8 @@ namespace cv
         inline int elemSize1() const { return CV_ELEM_SIZE1(type_); }
 
     private:
+        int rows_;
+        int cols_;
         int type_;
 
         class Impl;
@@ -183,8 +185,8 @@ namespace cv
         void bind() const;
         void unbind() const;
 
-        inline int rows() const { return vertex_.rows; }
-        inline int cols() const { return vertex_.cols; }
+        inline int rows() const { return vertex_.rows(); }
+        inline int cols() const { return vertex_.cols(); }
         inline Size size() const { return vertex_.size(); }
         inline bool empty() const { return vertex_.empty(); }
 
