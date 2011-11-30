@@ -433,7 +433,7 @@ class RunInfo(object):
         if len(userlog) == 0:
             args.append("--gtest_output=xml:" + logfile)
         else:
-            logfile = userlog[userlog[0].find(":")+1:]
+            logfile = userlog[0][userlog[0].find(":")+1:]
         
         if self.targetos == "android":
             try:
