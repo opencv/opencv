@@ -90,6 +90,11 @@ class Mat;
 class SparseMat;
 typedef Mat MatND;
 
+class GlBuffer;
+class GlTexture;
+class GlArrays;
+class GlCamera;
+
 namespace gpu {
     class GpuMat;
 }
@@ -1273,10 +1278,19 @@ protected:
 class CV_EXPORTS _InputArray
 {
 public:
-    enum { KIND_SHIFT=16, NONE=0<<KIND_SHIFT, MAT=1<<KIND_SHIFT,
-        MATX=2<<KIND_SHIFT, STD_VECTOR=3<<KIND_SHIFT,
-        STD_VECTOR_VECTOR=4<<KIND_SHIFT,
-        STD_VECTOR_MAT=5<<KIND_SHIFT, EXPR=6<<KIND_SHIFT };
+    enum { 
+        KIND_SHIFT = 16, 
+        NONE              = 0 << KIND_SHIFT, 
+        MAT               = 1 << KIND_SHIFT,
+        MATX              = 2 << KIND_SHIFT, 
+        STD_VECTOR        = 3 << KIND_SHIFT,
+        STD_VECTOR_VECTOR = 4 << KIND_SHIFT,
+        STD_VECTOR_MAT    = 5 << KIND_SHIFT, 
+        EXPR              = 6 << KIND_SHIFT, 
+        OPENGL_BUFFER     = 7 << KIND_SHIFT, 
+        OPENGL_TEXTURE    = 8 << KIND_SHIFT, 
+        GPU_MAT           = 9 << KIND_SHIFT
+    };
     _InputArray();
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
@@ -1287,8 +1301,16 @@ public:
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const Scalar& s);
     _InputArray(const double& val);
+    _InputArray(const GlBuffer& buf);
+    _InputArray(const GlTexture& tex);
+    _InputArray(const gpu::GpuMat& d_mat);
+
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(vector<Mat>& mv) const;
+    virtual GlBuffer getGlBuffer() const;
+    virtual GlTexture getGlTexture() const;
+    virtual gpu::GpuMat getGpuMat() const;
+
     virtual int kind() const;
     virtual Size size(int i=-1) const;
     virtual size_t total(int i=-1) const;

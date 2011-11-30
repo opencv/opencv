@@ -3,6 +3,7 @@
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/opengl_interop.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
@@ -43,11 +44,17 @@ int main(int argc, char* argv[])
     {
         bool haveCuda = getCudaEnabledDeviceCount() > 0;
 
-        namedWindow("OpenGL Mat", WINDOW_OPENGL | WINDOW_AUTOSIZE);
-        namedWindow("OpenGL GlBuffer", WINDOW_OPENGL | WINDOW_AUTOSIZE);
-        namedWindow("OpenGL GlTexture", WINDOW_OPENGL | WINDOW_AUTOSIZE);
+        const string openGlMatWnd = "OpenGL Mat";
+        const string openGlBufferWnd = "OpenGL GlBuffer";
+        const string openGlTextureWnd = "OpenGL GlTexture";
+        const string openGlGpuMatWnd = "OpenGL GpuMat";
+        const string matWnd = "Mat";
+
+        namedWindow(openGlMatWnd, WINDOW_OPENGL | WINDOW_AUTOSIZE);
+        namedWindow(openGlBufferWnd, WINDOW_OPENGL | WINDOW_AUTOSIZE);
+        namedWindow(openGlTextureWnd, WINDOW_OPENGL | WINDOW_AUTOSIZE);
         if (haveCuda)
-            namedWindow("OpenGL GpuMat", WINDOW_OPENGL | WINDOW_AUTOSIZE);
+            namedWindow(openGlGpuMatWnd, WINDOW_OPENGL | WINDOW_AUTOSIZE);
         namedWindow("Mat", WINDOW_AUTOSIZE);
 
         Mat img = imread(argv[1]);
@@ -55,10 +62,10 @@ int main(int argc, char* argv[])
         if (haveCuda)
             setGlDevice();
 
-        setOpenGlContext("OpenGL GlBuffer");
+        setOpenGlContext(openGlBufferWnd);
         GlBuffer buf(img, GlBuffer::TEXTURE_BUFFER);
 
-        setOpenGlContext("OpenGL GlTexture");
+        setOpenGlContext(openGlTextureWnd);
         GlTexture tex(img);
         
         GpuMat d_img;
@@ -69,48 +76,50 @@ int main(int argc, char* argv[])
 
         {
             Timer t("OpenGL Mat      ");
-            imshow("OpenGL Mat", img);
+            imshow(openGlMatWnd, img);
         }
         {
             Timer t("OpenGL GlBuffer ");
-            imshow("OpenGL GlBuffer", buf);
+            imshow(openGlBufferWnd, buf);
         }
         {
             Timer t("OpenGL GlTexture");
-            imshow("OpenGL GlTexture", tex);
+            imshow(openGlTextureWnd, tex);
         }
         if (haveCuda)
         {
             Timer t("OpenGL GpuMat   ");
-            imshow("OpenGL GpuMat", d_img);
+            imshow(openGlGpuMatWnd, d_img);
         }
         {
             Timer t("Mat             ");
-            imshow("Mat", img);
+            imshow(matWnd, img);
         }
+
+        waitKey();
 
         cout << "\n=== Second call\n\n";   
 
         {
             Timer t("OpenGL Mat      ");
-            imshow("OpenGL Mat", img);
+            imshow(openGlMatWnd, img);
         }
         {
             Timer t("OpenGL GlBuffer ");
-            imshow("OpenGL GlBuffer", buf);
+            imshow(openGlBufferWnd, buf);
         }
         {
             Timer t("OpenGL GlTexture");
-            imshow("OpenGL GlTexture", tex);
+            imshow(openGlTextureWnd, tex);
         }
         if (haveCuda)
         {
             Timer t("OpenGL GpuMat   ");
-            imshow("OpenGL GpuMat", d_img);
+            imshow(openGlGpuMatWnd, d_img);
         }
         {
             Timer t("Mat             ");
-            imshow("Mat", img);
+            imshow(matWnd, img);
         }
 
         cout << "\n";

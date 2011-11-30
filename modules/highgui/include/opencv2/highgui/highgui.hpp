@@ -44,7 +44,6 @@
 #define __OPENCV_HIGHGUI_HPP__
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/core/gpumat.hpp"
 #include "opencv2/highgui/highgui_c.h"
 
 #ifdef __cplusplus
@@ -129,7 +128,7 @@ CV_EXPORTS_W void setTrackbarPos(const string& trackbarname, const string& winna
 typedef void (CV_CDECL *OpenGLCallback)(void* userdata);
 CV_EXPORTS void createOpenGLCallback(const string& winname, OpenGLCallback onOpenGlDraw, void* userdata = 0);
 
-typedef void (CV_CDECL *OpenGlDrawCallback)(void* userdata);
+typedef void (*OpenGlDrawCallback)(void* userdata);
 static inline void setOpenGlDrawCallback(const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0)
 {
     createOpenGLCallback(winname, onOpenGlDraw, userdata);
@@ -139,22 +138,8 @@ CV_EXPORTS void setOpenGlContext(const string& winname);
 
 CV_EXPORTS void updateWindow(const string& winname);
 
-CV_EXPORTS void imshow(const string& winname, const gpu::GlTexture& tex);
-CV_EXPORTS void imshow(const string& winname, const gpu::GlBuffer& buf);
-CV_EXPORTS void imshow(const string& winname, const gpu::GpuMat& d_mat);
-
-CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GlArrays& arr);
-CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GlBuffer& points, 
-                               const gpu::GlBuffer& colors = gpu::GlBuffer(gpu::GlBuffer::ARRAY_BUFFER));
-CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, const gpu::GpuMat& points, 
-                               const gpu::GpuMat& colors = gpu::GpuMat());
-CV_EXPORTS void pointCloudShow(const string& winname, const gpu::GlCamera& camera, InputArray points, 
-                               InputArray colors = noArray());
-
-CV_EXPORTS void addTextOpenGl(const string& winname, const string& text, Point org, Scalar color = Scalar::all(255), 
-                              const string& fontName = "Courier New", int fontHeight = 12, 
-                              int fontWeight = CV_FONT_NORMAL, int fontStyle = CV_STYLE_NORMAL);
-CV_EXPORTS void clearTextOpenGl(const string& winname);
+CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, const GlArrays& arr);
+CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, InputArray points, InputArray colors = noArray());
 
 //Only for Qt
 

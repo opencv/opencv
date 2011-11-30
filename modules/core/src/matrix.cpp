@@ -41,6 +41,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/opengl_interop.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
@@ -873,6 +875,9 @@ _InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
 _InputArray::_InputArray(const vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
 _InputArray::_InputArray(const double& val) : flags(MATX+CV_64F), obj((void*)&val), sz(Size(1,1)) {}
 _InputArray::_InputArray(const MatExpr& expr) : flags(EXPR), obj((void*)&expr) {}
+_InputArray::_InputArray(const GlBuffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
+_InputArray::_InputArray(const GlTexture& tex) : flags(OPENGL_TEXTURE), obj((void*)&tex) {}
+_InputArray::_InputArray(const gpu::GpuMat& d_mat) : flags(GPU_MAT), obj((void*)&d_mat) {}
  
 Mat _InputArray::getMat(int i) const
 {
@@ -1011,6 +1016,42 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
         return;
     }
 }
+
+GlBuffer _InputArray::getGlBuffer() const
+{
+    int k = kind();
+
+    CV_Assert(k == OPENGL_BUFFER);
+    //if( k == OPENGL_BUFFER )
+    {
+        const GlBuffer* buf = (const GlBuffer*)obj;
+        return *buf;
+    }
+}
+
+GlTexture _InputArray::getGlTexture() const
+{
+    int k = kind();
+
+    CV_Assert(k == OPENGL_TEXTURE);
+    //if( k == OPENGL_TEXTURE )
+    {
+        const GlTexture* tex = (const GlTexture*)obj;
+        return *tex;
+    }
+}
+
+gpu::GpuMat _InputArray::getGpuMat() const
+{
+    int k = kind();
+
+    CV_Assert(k == GPU_MAT);
+    //if( k == GPU_MAT )
+    {
+        const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
+        return *d_mat;
+    }
+}
     
 int _InputArray::kind() const
 {
@@ -1063,8 +1104,7 @@ Size _InputArray::size(int i) const
         return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
     }
     
-    CV_Assert( k == STD_VECTOR_MAT );
-    //if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT )
     {
         const vector<Mat>& vv = *(const vector<Mat>*)obj;
         if( i < 0 )
@@ -1072,6 +1112,28 @@ Size _InputArray::size(int i) const
         CV_Assert( i < (int)vv.size() );
         
         return vv[i].size();
+    }
+
+    if( k == OPENGL_BUFFER )
+    {
+        CV_Assert( i < 0 );
+        const GlBuffer* buf = (const GlBuffer*)obj;
+        return buf->size();
+    }
+
+    if( k == OPENGL_TEXTURE )
+    {
+        CV_Assert( i < 0 );
+        const GlTexture* tex = (const GlTexture*)obj;
+        return tex->size();
+    }
+
+    CV_Assert( k == GPU_MAT );
+    //if( k == GPU_MAT )
+    {
+        CV_Assert( i < 0 );
+        const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
+        return d_mat->size();
     }
 }
 
@@ -1096,14 +1158,23 @@ int _InputArray::type(int i) const
     if( k == NONE )
         return -1;
     
-    CV_Assert( k == STD_VECTOR_MAT );
-    //if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT )
     {
         const vector<Mat>& vv = *(const vector<Mat>*)obj;
         CV_Assert( i < (int)vv.size() );
         
         return vv[i >= 0 ? i : 0].type();
     }
+    
+    if( k == OPENGL_BUFFER )
+        return ((const GlBuffer*)obj)->type();
+    
+    if( k == OPENGL_TEXTURE )
+        return ((const GlTexture*)obj)->type();
+    
+    CV_Assert( k == GPU_MAT );
+    //if( k == GPU_MAT )
+        return ((const gpu::GpuMat*)obj)->type();
 }
     
 int _InputArray::depth(int i) const
@@ -1144,12 +1215,21 @@ bool _InputArray::empty() const
         return vv.empty();
     }
     
-    CV_Assert( k == STD_VECTOR_MAT );
-    //if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT )
     {
         const vector<Mat>& vv = *(const vector<Mat>*)obj;
         return vv.empty();
     }
+    
+    if( k == OPENGL_BUFFER )
+        return ((const GlBuffer*)obj)->empty();
+    
+    if( k == OPENGL_TEXTURE )
+        return ((const GlTexture*)obj)->empty();
+    
+    CV_Assert( k == GPU_MAT );
+    //if( k == GPU_MAT )
+        return ((const gpu::GpuMat*)obj)->empty();
 }
     
     
