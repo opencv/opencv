@@ -94,6 +94,7 @@ SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_stitching opencv_g
 # remove modules unavailable on current platform:
 if(ANDROID)
     LIST(REMOVE_ITEM OpenCV_LIB_COMPONENTS opencv_gpu)
+    SET(OpenCV_LIB_COMPONENTS ${OpenCV_LIB_COMPONENTS} @OpenCV_LIB_ANDROID@)
 endif()
 if(NOT ANDROID OR OpenCV_SHARED OR NOT OpenCV_HAVE_ANDROID_CAMERA)
     LIST(REMOVE_ITEM OpenCV_LIB_COMPONENTS opencv_androidcamera)
