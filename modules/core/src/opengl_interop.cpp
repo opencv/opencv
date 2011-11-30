@@ -800,7 +800,7 @@ cv::GlTexture::Impl::Impl(const GlBuffer& buf, bool bgra) : tex_(0)
     int depth = buf.depth();
     int cn = buf.channels();
 
-    CV_DbgAssert(buf.rows > 0 && buf.cols > 0);
+    CV_DbgAssert(buf.rows() > 0 && buf.cols() > 0);
     CV_Assert(cn == 1 || cn == 3 || cn == 4);
     CV_Assert(depth >= 0 && depth <= CV_32F);
     CV_Assert(buf.usage() == GlBuffer::TEXTURE_BUFFER);
