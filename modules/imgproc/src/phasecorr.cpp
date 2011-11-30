@@ -53,6 +53,7 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
         _dst.create( src.rows, src.cols, CV_64FC1 );
 
     Mat dst = _dst.getMat();
+    dst.setTo(0);//Mat elements are not equal to zero by default!
 
     bool is_1d = (rows == 1 || (cols == 1 && src.isContinuous() && dst.isContinuous()));
 
@@ -547,10 +548,11 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
 
     int rows = dst.rows;
     int cols = dst.cols;
+    int step = dst.step/dst.elemSize1();
 
     if(dst.depth() == CV_32F)
     {
-        float* dstData = (float*)dst.data;
+        float* dstData = dst.ptr<float>();
 
         for(int i = 0; i < rows; i++)
         {
@@ -558,16 +560,13 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
             for(int j = 0; j < cols; j++)
             {
                 double wc = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[i*cols + j] = (float)(wr * wc);
+                dstData[i*step + j] = (float)(wr * wc);
             }
         }
-
-        // perform batch sqrt for SSE performance gains
-        cv::sqrt(dst, dst);
     }
     else
     {
-        double* dstData = (double*)dst.data;
+        double* dstData = dst.ptr<double>();
 
         for(int i = 0; i < rows; i++)
         {
@@ -575,11 +574,11 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
             for(int j = 0; j < cols; j++)
             {
                 double wc = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[i*cols + j] = wr * wc;
+                dstData[i*step + j] = wr * wc;
             }
         }
-
-        // perform batch sqrt for SSE performance gains
-        cv::sqrt(dst, dst);
     }
+
+    // perform batch sqrt for SSE performance gains
+    cv::sqrt(dst, dst);
 }
