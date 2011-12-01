@@ -218,7 +218,7 @@ if(ANDROID)
     if (ANT_EXECUTABLE AND ANDROID_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
         add_custom_command(
             TARGET ${target}
-            COMMAND ${ANDROID_EXECUTABLE} update lib-project --path "${CMAKE_BINARY_DIR}"
+            COMMAND ${ANDROID_EXECUTABLE} update lib-project --target "${ANDROID_SDK_TARGET}" --path "${CMAKE_BINARY_DIR}"
             COMMAND ${ANT_EXECUTABLE} debug
             WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
             DEPENDS ${lib_target}
