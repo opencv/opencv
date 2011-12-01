@@ -1976,8 +1976,13 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if( op == CV_REDUCE_SUM )
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+			if(sdepth == CV_8U && ddepth == CV_32S) {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+				func = tegra::getTegraOptimized_reduceR8uAdd(tegra::reduceR8uAdd);
+#else
                 func = reduceR_<uchar,int,OpAdd<int> >;
+#endif
+			}
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceR_<uchar,float,OpAdd<int> >;
             else if(sdepth == CV_8U && ddepth == CV_64F)
@@ -1988,38 +1993,63 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceR_<ushort,double,OpAdd<double> >;
             else if(sdepth == CV_16S && ddepth == CV_32F)
                 func = reduceR_<short,float,OpAdd<float> >;
-            else if(sdepth == CV_16S && ddepth == CV_64F)
-                func = reduceR_<short,double,OpAdd<double> >;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
+			else if(sdepth == CV_16S && ddepth == CV_64F) 
+				func = reduceR_<short,double,OpAdd<double> >;
+			else if(sdepth == CV_32F && ddepth == CV_32F) {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+				func = tegra::getTegraOptimized_reduceR32fAdd(tegra::reduceR32fAdd);
+#else
                 func = reduceR_<float,float,OpAdd<float> >;
-            else if(sdepth == CV_32F && ddepth == CV_64F)
+#endif
+			}
+			else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceR_<float,double,OpAdd<double> >;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceR_<double,double,OpAdd<double> >;
         }
         else if(op == CV_REDUCE_MAX)
         {
-            if(sdepth == CV_8U && ddepth == CV_8U)
+			if(sdepth == CV_8U && ddepth == CV_8U) {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+				func = tegra::getTegraOptimized_reduceR8uMax(tegra::reduceR8uMax);
+#else
                 func = reduceR_<uchar, uchar, OpMax<uchar> >;
+#endif
+			}
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceR_<ushort, ushort, OpMax<ushort> >;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceR_<short, short, OpMax<short> >;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
+			else if(sdepth == CV_32F && ddepth == CV_32F) {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+				func = tegra::getTegraOptimized_reduceR32fMax(tegra::reduceR32fMax);
+#else
                 func = reduceR_<float, float, OpMax<float> >;
+#endif
+			}
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceR_<double, double, OpMax<double> >;
         }
         else if(op == CV_REDUCE_MIN)
         {
-            if(sdepth == CV_8U && ddepth == CV_8U)
+			if(sdepth == CV_8U && ddepth == CV_8U) {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+				func = tegra::getTegraOptimized_reduceR8uMin(tegra::reduceR8uMin);
+#else
                 func = reduceR_<uchar, uchar, OpMin<uchar> >;
+#endif
+			}
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceR_<ushort, ushort, OpMin<ushort> >;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceR_<short, short, OpMin<short> >;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
+			else if(sdepth == CV_32F && ddepth == CV_32F) {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+				func = tegra::getTegraOptimized_reduceR32fMin(tegra::reduceR32fMin);
+#else
                 func = reduceR_<float, float, OpMin<float> >;
+#endif
+			}
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceR_<double, double, OpMin<double> >;
         }
@@ -2028,7 +2058,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if(op == CV_REDUCE_SUM)
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+			if(sdepth == CV_8U && ddepth == CV_32S) 
                 func = reduceC_<uchar,int,OpAdd<int> >;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceC_<uchar,float,OpAdd<int> >;
@@ -2042,7 +2072,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceC_<short,float,OpAdd<float> >;
             else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceC_<short,double,OpAdd<double> >;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
+			else if(sdepth == CV_32F && ddepth == CV_32F) 
                 func = reduceC_<float,float,OpAdd<float> >;
             else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceC_<float,double,OpAdd<double> >;
@@ -2051,26 +2081,26 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         }
         else if(op == CV_REDUCE_MAX)
         {
-            if(sdepth == CV_8U && ddepth == CV_8U)
+			if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceC_<uchar, uchar, OpMax<uchar> >;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceC_<ushort, ushort, OpMax<ushort> >;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceC_<short, short, OpMax<short> >;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
+			else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceC_<float, float, OpMax<float> >;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceC_<double, double, OpMax<double> >;
         }
         else if(op == CV_REDUCE_MIN)
         {
-            if(sdepth == CV_8U && ddepth == CV_8U)
+			if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceC_<uchar, uchar, OpMin<uchar> >;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceC_<ushort, ushort, OpMin<ushort> >;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceC_<short, short, OpMin<short> >;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
+			else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceC_<float, float, OpMin<float> >;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceC_<double, double, OpMin<double> >;
