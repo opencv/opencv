@@ -188,7 +188,7 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
 
     CvLevMarq solver(num_images_ * num_params_per_cam_, 
                      total_num_matches_ * num_errs_per_measurement_,
-                     cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
+                     term_criteria_);
 
     Mat err, jac;
     CvMat matParams = cam_params_;

@@ -93,6 +93,9 @@ public:
     double confThresh() const { return conf_thresh_; }
     void setConfThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
 
+    CvTermCriteria termCriteria() { return term_criteria_; }
+    void setTermCriteria(const CvTermCriteria& term_criteria) { term_criteria_ = term_criteria; }
+
 protected:
     BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement) 
         : num_params_per_cam_(num_params_per_cam), 
@@ -100,6 +103,7 @@ protected:
     {    
         setRefinementMask(Mat::ones(3, 3, CV_8U));
         setConfThresh(1.); 
+        setTermCriteria(cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
     }
 
     // Runs bundle adjustment
@@ -126,6 +130,9 @@ protected:
 
     // Threshold to filter out poorly matched image pairs
     double conf_thresh_;
+
+    //Levenberg–Marquardt algorithm termination criteria
+    CvTermCriteria term_criteria_;
 
     // Camera parameters matrix (CV_64F)
     Mat cam_params_;
