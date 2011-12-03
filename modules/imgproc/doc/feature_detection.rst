@@ -227,6 +227,10 @@ Determines strong corners on an image.
 .. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04)-> corners
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
+    
+    :param eigImage: The parameter is ignored.
+    
+    :param tempImage: The parameter is ignored.
 
     :param corners: Output vector of detected corners.
 
