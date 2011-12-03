@@ -137,7 +137,6 @@ void CvEM::read( CvFileStorage* fs, CvFileNode* node )
     clear();
 
     size_t data_size;
-    CvEMParams _params;
     CvSeqReader reader;
     CvFileNode* em_node = 0;
     CvFileNode* tmp_node = 0;
@@ -157,7 +156,7 @@ void CvEM::read( CvFileStorage* fs, CvFileNode* node )
     CV_CALL( inv_eigen_values = (CvMat*)cvReadByName( fs, em_node, "inv_eigen_values" ));
 
     // Size of all the following data
-    data_size = _params.nclusters*2*sizeof(CvMat*);
+    data_size = params.nclusters*2*sizeof(CvMat*);
 
     CV_CALL( tmp_covs = (CvMat**)cvAlloc( data_size ));
     memset( tmp_covs, 0, data_size );
