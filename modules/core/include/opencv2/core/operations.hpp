@@ -820,7 +820,7 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method) const
     else
     {
         Mat A(*this, false), B(b, false);
-        ok = (0.0 == invert(A, B, method));
+        ok = (invert(A, B, method) != 0);
     }
     return ok ? b : Matx<_Tp, n, m>::zeros();
 }
