@@ -1352,13 +1352,13 @@ The function checks the range as follows:
 
    .. math::
 
-      \texttt{dst} (I)= \texttt{lowerb} (I)_0  \leq \texttt{src} (I)_0 <  \texttt{upperb} (I)_0
+      \texttt{dst} (I)= \texttt{lowerb} (I)_0  \leq \texttt{src} (I)_0 \leq  \texttt{upperb} (I)_0
 
  * For two-channel arrays:
 
    .. math::
 
-      \texttt{dst} (I)= \texttt{lowerb} (I)_0  \leq \texttt{src} (I)_0 <  \texttt{upperb} (I)_0  \land \texttt{lowerb} (I)_1  \leq \texttt{src} (I)_1 <  \texttt{upperb} (I)_1
+      \texttt{dst} (I)= \texttt{lowerb} (I)_0  \leq \texttt{src} (I)_0 \leq  \texttt{upperb} (I)_0  \land \texttt{lowerb} (I)_1  \leq \texttt{src} (I)_1 \leq  \texttt{upperb} (I)_1
 
  * and so forth.
 
