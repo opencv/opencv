@@ -533,10 +533,12 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
 #endif
 
 template<typename _Tp> void
-JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int n, int n1)
+JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int n, int n1)
 {
     VBLAS<_Tp> vblas;
-    _Tp eps = std::numeric_limits<_Tp>::epsilon()*10;
+    AutoBuffer<double> Wbuf(n);
+    double* W = Wbuf;
+    _Tp eps = DBL_EPSILON*10;
     int i, j, k, iter, max_iter = std::max(m, 30);
     _Tp c, s;
     double sd;
@@ -548,7 +550,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
         for( k = 0, s = 0; k < m; k++ )
         {
             _Tp t = At[i*astep + k];
-            s += t*t;
+            s += (double)t*t;
         }
         W[i] = s;
         
@@ -567,12 +569,11 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
         for( i = 0; i < n-1; i++ )
             for( j = i+1; j < n; j++ )
             {
-                _Tp *Ai = At + i*astep, *Aj = At + j*astep, a = W[i], p = 0, b = W[j];
+                _Tp *Ai = At + i*astep, *Aj = At + j*astep;
+                double a = W[i], p = 0, b = W[j];
                 
-                k = vblas.dot(Ai, Aj, m, &p);
-                
-                for( ; k < m; k++ )
-                    p += Ai[k]*Aj[k];
+                for( k = 0; k < m; k++ )
+                    p += (double)Ai[k]*Aj[k];
                 
                 if( std::abs(p) <= eps*std::sqrt((double)a*b) )
                     continue;           
@@ -581,7 +582,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
                 double beta = a - b, gamma = hypot((double)p, beta), delta;
                 if( beta < 0 )
                 {
-                    delta = (_Tp)((gamma - beta)*0.5);
+                    delta = (gamma - beta)*0.5;
                     s = (_Tp)std::sqrt(delta/gamma);
                     c = (_Tp)(p/(gamma*s*2));
                 }
@@ -589,13 +590,13 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
                 {
                     c = (_Tp)std::sqrt((gamma + beta)/(gamma*2));
                     s = (_Tp)(p/(gamma*c*2));
-                    delta = (_Tp)(p*p*0.5/(gamma + beta));
+                    delta = p*p*0.5/(gamma + beta);
                 }
                 
                 if( iter % 2 )
                 {
-                    W[i] = (_Tp)(W[i] + delta);
-                    W[j] = (_Tp)(W[j] - delta);
+                    W[i] += delta;
+                    W[j] -= delta;
                     
                     k = vblas.givens(Ai, Aj, m, c, s);
                     
@@ -609,14 +610,13 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
                 else
                 {
                     a = b = 0;
-                    k = vblas.givensx(Ai, Aj, m, c, s, &a, &b);
-                    for( ; k < m; k++ )
+                    for( k = 0; k < m; k++ )
                     {
                         _Tp t0 = c*Ai[k] + s*Aj[k];
                         _Tp t1 = -s*Ai[k] + c*Aj[k];
                         Ai[k] = t0; Aj[k] = t1;
                         
-                        a += t0*t0; b += t1*t1;
+                        a += (double)t0*t0; b += (double)t1*t1;
                     }
                     W[i] = a; W[j] = b;
                 }
@@ -647,7 +647,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
             _Tp t = At[i*astep + k];
             sd += (double)t*t;
         }
-        W[i] = s = (_Tp)std::sqrt(sd);
+        W[i] = std::sqrt(sd);
     }
     
     for( i = 0; i < n-1; i++ )
@@ -677,9 +677,9 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
     RNG rng(0x12345678);
     for( i = 0; i < n1; i++ )
     {
-        s = i < n ? W[i] : 0;
+        sd = i < n ? W[i] : 0;
         
-        while( s == 0 )
+        while( sd == 0 )
         {
             // if we got a zero singular value, then in order to get the corresponding left singular vector
             // we generate a random vector, project it to the previously computed left singular vectors,
@@ -715,13 +715,16 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
                 _Tp t = At[i*astep + k];
                 sd += (double)t*t;
             }
-            s = (_Tp)std::sqrt(sd);
+            sd = std::sqrt(sd);
         }
         
-        s = 1/s;
+        s = (_Tp)(1/sd);
         for( k = 0; k < m; k++ )
             At[i*astep + k] *= s;
     }
+    
+    for( i = 0; i < n; i++ )
+        _W[i] = (_Tp)W[i];
 }
 
     
@@ -837,7 +840,7 @@ SVBkSb( int m, int n, const float* w, size_t wstep,
                 v, (int)(vstep/sizeof(v[0])), vT,
                 b, (int)(bstep/sizeof(b[0])), nb,
                 x, (int)(xstep/sizeof(x[0])),
-                (double*)alignPtr(buffer, sizeof(double)), FLT_EPSILON*10 );
+                (double*)alignPtr(buffer, sizeof(double)), (float)(DBL_EPSILON*2) );
 }
 
 static void
