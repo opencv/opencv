@@ -193,20 +193,18 @@ bool checkHardwareSupport(int feature)
     return currentFeatures->have[feature];
 }
 
-#ifdef HAVE_IPP
-volatile bool useOptimizedFlag = true;
 
+volatile bool useOptimizedFlag = true;
+#ifdef HAVE_IPP
 struct IPPInitializer
 {
     IPPInitializer(void) { ippStaticInit(); }
 };
 
 IPPInitializer ippInitializer;
-#else
-volatile bool useOptimizedFlag = true;
 #endif
 
-volatile bool USE_SSE2 = false;
+volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
 
 void setUseOptimized( bool flag )
 {

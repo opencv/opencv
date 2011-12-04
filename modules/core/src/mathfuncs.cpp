@@ -49,22 +49,38 @@ namespace cv
 static const int MAX_BLOCK_SIZE = 1024;
 typedef void (*MathFunc)(const void* src, void* dst, int len);
 
+static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
+static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
+static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
+static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
+    
 float fastAtan2( float y, float x )
 {
-	double a, x2 = (double)x*x, y2 = (double)y*y;
-	if( y2 <= x2 )
-	{
-        a = (180./CV_PI)*x*y*(x2 + 0.43157974*y2)/(x2*x2 + y2*(0.76443945*x2 + 0.05831938*y2) + DBL_EPSILON);
-		return (float)(x < 0 ? a + 180 : y >= 0 ? a : 360+a);
-	}
-	a = (180./CV_PI)*x*y*(y2 + 0.43157974*x2)/(y2*y2 + x2*(0.76443945*y2 + 0.05831938*x2) + DBL_EPSILON);
-	return (float)(y >= 0 ? 90 - a : 270 - a);
+    float ax = std::abs(x), ay = std::abs(y);
+    float a, c, c2;
+    if( ax >= ay )
+    {
+        c = ay/(ax + (float)DBL_EPSILON);
+        c2 = c*c;
+        a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+    }
+    else
+    {
+        c = ax/(ay + (float)DBL_EPSILON);
+        c2 = c*c;
+        a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+    }
+    if( x < 0 )
+        a = 180.f - a;
+    if( y < 0 )
+        a = 360.f - a;
+    return a;
 }
 
 static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees=true )
 {
     int i = 0;
-    float scale = angleInDegrees ? (float)(180/CV_PI) : 1.f;
+    float scale = angleInDegrees ? 1 : (float)(CV_PI/180);
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::FastAtan2_32f(Y, X, angle, len, scale))
@@ -72,54 +88,66 @@ static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len,
 #endif
 
 #if CV_SSE2
-        if( USE_SSE2 )
+    if( USE_SSE2 )
+    {
+        Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
+        __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
+        __m128 _90 = _mm_set1_ps(90.f), _180 = _mm_set1_ps(180.f), _360 = _mm_set1_ps(360.f);
+        __m128 z = _mm_setzero_ps(), scale4 = _mm_set1_ps(scale);
+        __m128 p1 = _mm_set1_ps(atan2_p1), p3 = _mm_set1_ps(atan2_p3);
+        __m128 p5 = _mm_set1_ps(atan2_p5), p7 = _mm_set1_ps(atan2_p7);
+
+        for( ; i <= len - 4; i += 4 )
         {
-            Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
-            __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
-            __m128 _90 = _mm_set1_ps((float)(CV_PI*0.5)), _180 = _mm_set1_ps((float)CV_PI), _360 = _mm_set1_ps((float)(CV_PI*2));
-            __m128 zero = _mm_setzero_ps(), scale4 = _mm_set1_ps(scale);
-            __m128 p0 = _mm_set1_ps(0.43157974f), q0 = _mm_set1_ps(0.76443945f), q1 = _mm_set1_ps(0.05831938f);
-
-            for( ; i <= len - 4; i += 4 )
-            {
-                __m128 x4 = _mm_loadu_ps(X + i), y4 = _mm_loadu_ps(Y + i);
-                __m128 xq4 = _mm_mul_ps(x4, x4), yq4 = _mm_mul_ps(y4, y4);
-                __m128 xly = _mm_cmplt_ps(xq4, yq4);
-                __m128 t = _mm_min_ps(xq4, yq4);
-                xq4 = _mm_max_ps(xq4, yq4); yq4 = t;
-                __m128 z4 = _mm_div_ps(_mm_mul_ps(_mm_mul_ps(x4, y4), _mm_add_ps(xq4, _mm_mul_ps(yq4, p0))),
-                                       _mm_add_ps(eps, _mm_add_ps(_mm_mul_ps(xq4, xq4),
-                                                                  _mm_mul_ps(yq4, _mm_add_ps(_mm_mul_ps(xq4, q0),
-                                                                                             _mm_mul_ps(yq4, q1))))));
-
-                // a4 <- x < y ? 90 : 0;
-                __m128 a4 = _mm_and_ps(xly, _90);
-                // a4 <- (y < 0 ? 360 - a4 : a4) == ((x < y ? y < 0 ? 270 : 90) : (y < 0 ? 360 : 0))
-                __m128 mask = _mm_cmplt_ps(y4, zero);
-                a4 = _mm_or_ps(_mm_and_ps(_mm_sub_ps(_360, a4), mask), _mm_andnot_ps(mask, a4));
-                // a4 <- (x < 0 && !(x < y) ? 180 : a4)
-                mask = _mm_andnot_ps(xly, _mm_cmplt_ps(x4, zero));
-                a4 = _mm_or_ps(_mm_and_ps(_180, mask), _mm_andnot_ps(mask, a4));
-
-                // a4 <- (x < y ? a4 - z4 : a4 + z4)
-                a4 = _mm_mul_ps(_mm_add_ps(_mm_xor_ps(z4, _mm_andnot_ps(absmask, xly)), a4), scale4);
-                _mm_storeu_ps(angle + i, a4);
-            }
+            __m128 x = _mm_loadu_ps(X + i), y = _mm_loadu_ps(Y + i);
+            __m128 ax = _mm_and_ps(x, absmask), ay = _mm_and_ps(y, absmask);
+            __m128 mask = _mm_cmplt_ps(ax, ay);
+            __m128 tmin = _mm_min_ps(ax, ay), tmax = _mm_max_ps(ax, ay);
+            __m128 c = _mm_div_ps(tmin, _mm_add_ps(tmax, eps));
+            __m128 c2 = _mm_mul_ps(c, c);
+            __m128 a = _mm_mul_ps(c2, p7);
+            a = _mm_mul_ps(_mm_add_ps(a, p5), c2);
+            a = _mm_mul_ps(_mm_add_ps(a, p3), c2);
+            a = _mm_mul_ps(_mm_add_ps(a, p1), c);
+            
+            __m128 b = _mm_sub_ps(_90, a);
+            a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
+            
+            b = _mm_sub_ps(_180, a);
+            mask = _mm_cmplt_ps(x, z);
+            a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
+            
+            b = _mm_sub_ps(_360, a);
+            mask = _mm_cmplt_ps(y, z);
+            a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
+            
+            a = _mm_mul_ps(a, scale4);
+            _mm_storeu_ps(angle + i, a);
         }
+    }
 #endif
 
     for( ; i < len; i++ )
     {
-        double x = X[i], y = Y[i], x2 = x*x, y2 = y*y, a;
-
-        if( y2 <= x2 )
-            a = (x < 0 ? CV_PI : y >= 0 ? 0 : CV_PI*2) +
-                    x*y*(x2 + 0.43157974*y2)/(x2*x2 + y2*(0.76443945*x2 + 0.05831938*y2) + (float)DBL_EPSILON);
+        float x = X[i], y = Y[i];
+        float ax = std::abs(x), ay = std::abs(y);
+        float a, c, c2;
+        if( ax >= ay )
+        {
+            c = ay/(ax + (float)DBL_EPSILON);
+            c2 = c*c;
+            a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
+        }
         else
         {
-            a = (y >= 0 ? CV_PI*0.5 : CV_PI*1.5) -
-                    x*y*(y2 + 0.43157974*x2)/(y2*y2 + x2*(0.76443945*y2 + 0.05831938*x2) + (float)DBL_EPSILON);
+            c = ax/(ay + (float)DBL_EPSILON);
+            c2 = c*c;
+            a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
         }
+        if( x < 0 )
+            a = 180.f - a;
+        if( y < 0 )
+            a = 360.f - a;
         angle[i] = (float)(a*scale);
     }
 }
