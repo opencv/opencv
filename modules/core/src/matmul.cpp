@@ -2598,13 +2598,14 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
 #if CV_SSE2
     if( USE_SSE2 )
     {
-        int j, len0 = len & -4, blockSize0 = (1 << 15), blockSize;
+        int j, len0 = len & -4, blockSize0 = (1 << 13), blockSize;
         __m128i z = _mm_setzero_si128();
         while( i < len0 )
         {
             blockSize = std::min(len0 - i, blockSize0);
             __m128i s = _mm_setzero_si128();
-            for( j = 0; j <= blockSize - 16; j += 16 )
+			j = 0;
+            for( ; j <= blockSize - 16; j += 16 )
             {
                 __m128i b0 = _mm_loadu_si128((const __m128i*)(src1 + j));
                 __m128i b1 = _mm_loadu_si128((const __m128i*)(src2 + j));
@@ -2614,7 +2615,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
                 s1 = _mm_unpacklo_epi8(b1, z);
                 s3 = _mm_unpackhi_epi8(b1, z);
                 s0 = _mm_madd_epi16(s0, s1);
-                s1 = _mm_madd_epi16(s2, s3);
+                s2 = _mm_madd_epi16(s2, s3);
                 s = _mm_add_epi32(s, s0);
                 s = _mm_add_epi32(s, s2);
             }

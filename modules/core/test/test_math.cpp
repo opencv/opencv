@@ -2153,7 +2153,7 @@ void Core_SVBkSbTest::prepare_to_validation( int )
     CvMat _w = w, _wdb = wdb;
     // use exactly the same threshold as in icvSVD... ,
     // so the changes in the library and here should be synchronized.
-    double threshold = cv::sum(w)[0]*(is_float ? FLT_EPSILON*10 : DBL_EPSILON*2);
+    double threshold = cv::sum(w)[0]*(DBL_EPSILON*2);//(is_float ? FLT_EPSILON*10 : DBL_EPSILON*2);
     
     wdb = Scalar::all(0);
     for( i = 0; i < min_size; i++ )

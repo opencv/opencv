@@ -850,9 +850,9 @@ float normL1_(const float* a, const float* b, int n)
     if( USE_SSE2 )
     {
         float CV_DECL_ALIGNED(16) buf[4];
-        static const float CV_DECL_ALIGNED(16) absbuf[4] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+        static const int CV_DECL_ALIGNED(16) absbuf[4] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
         __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
-        __m128 absmask = _mm_load_ps(absbuf);
+        __m128 absmask = _mm_load_ps((const float*)absbuf);
         
         for( ; j <= n - 8; j += 8 )
         {

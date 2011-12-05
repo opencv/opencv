@@ -140,7 +140,7 @@ void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
                 r0 = op16(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
                 r1 = op16(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 8)));
                 _mm_storeu_si128((__m128i*)(dst + x), r0);
-                _mm_storeu_si128((__m128i*)(dst + x + 16), r1);
+                _mm_storeu_si128((__m128i*)(dst + x + 8), r1);
             }
             for( ; x <= sz.width - 4; x += 4 )
             {
@@ -194,7 +194,7 @@ void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
                     r0 = op32(r0,_mm_load_si128((const __m128i*)(src2 + x)));
                     r1 = op32(r1,_mm_load_si128((const __m128i*)(src2 + x + 4)));
                     _mm_store_si128((__m128i*)(dst + x), r0);
-                    _mm_store_si128((__m128i*)(dst + x + 16), r1);
+                    _mm_store_si128((__m128i*)(dst + x + 4), r1);
                 }
             else
                 for( ; x <= sz.width - 8; x += 8 )
@@ -204,7 +204,7 @@ void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
                     r0 = op32(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
                     r1 = op32(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 4)));
                     _mm_storeu_si128((__m128i*)(dst + x), r0);
-                    _mm_storeu_si128((__m128i*)(dst + x + 16), r1);
+                    _mm_storeu_si128((__m128i*)(dst + x + 4), r1);
                 }
         }
 #endif
@@ -452,7 +452,7 @@ struct _VAbsDiff64f
 struct _VAnd8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_and_si128(a,b); }};
 struct _VOr8u  { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_or_si128(a,b); }};
 struct _VXor8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_xor_si128(a,b); }};
-struct _VNot8u { __m128i operator()(const __m128i& a, const __m128i&) const { return _mm_andnot_si128(_mm_setzero_si128(),a); }};
+struct _VNot8u { __m128i operator()(const __m128i& a, const __m128i&) const { return _mm_xor_si128(_mm_set1_epi32(-1),a); }};
 
 #endif
 

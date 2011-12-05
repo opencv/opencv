@@ -547,12 +547,12 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
     
     for( i = 0; i < n; i++ )
     {
-        for( k = 0, s = 0; k < m; k++ )
+        for( k = 0, sd = 0; k < m; k++ )
         {
             _Tp t = At[i*astep + k];
-            s += (double)t*t;
+            sd += (double)t*t;
         }
-        W[i] = s;
+        W[i] = sd;
         
         if( Vt )
         {
