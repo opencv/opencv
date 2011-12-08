@@ -672,6 +672,9 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
         }
     }
     
+    for( i = 0; i < n; i++ )
+        _W[i] = (_Tp)W[i];
+    
     if( !Vt )
         return;
     RNG rng(0x12345678);
@@ -722,9 +725,6 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
         for( k = 0; k < m; k++ )
             At[i*astep + k] *= s;
     }
-    
-    for( i = 0; i < n; i++ )
-        _W[i] = (_Tp)W[i];
 }
 
     
