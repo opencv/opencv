@@ -1755,10 +1755,41 @@ The first three variants of the function listed above are actually a part of
     :ref:`MatrixExpressions`
 
 
+minMaxIdx
+---------
+Finds the global minimum and maximum in an array
+
+.. ocv:function:: void minMaxIdx(InputArray src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0, InputArray mask=noArray())
+
+    :param src: Source single-channel array.
+
+    :param minVal: Pointer to the returned minimum value.  ``NULL`` is used if not required.
+
+    :param maxVal: Pointer to the returned maximum value.  ``NULL`` is used if not required.
+    
+    :param minIdx: Pointer to the returned minimum location (in nD case). ``NULL`` is used if not required. Otherwise, it must point to an array of  ``src.dims``  elements. The coordinates of the minimum element in each dimension are stored there sequentially.
+    
+        .. note::
+        
+            When ``minIdx`` is not NULL, it must have at least 2 elements (as well as ``maxIdx``), even if ``src`` is a single-row or single-column matrix. In OpenCV (following MATLAB) each array has at least 2 dimensions, i.e. single-row matrix is ``Mx1`` matrix (and therefore ``minIdx``/``maxIdx`` will be ``(i1,0)``/``(i2,0)``) and single-column matrix is ``1xN`` matrix (and therefore ``minIdx``/``maxIdx`` will be ``(0,j1)``/``(0,j2)``).
+
+    :param maxIdx: Pointer to the returned maximum location (in nD case).  ``NULL`` is used if not required.
+    
+    The function ``minMaxIdx`` finds the minimum and maximum element values and their positions. The extremums are searched across the whole array or, if ``mask`` is not an empty array, in the specified array region.
+
+    The function does not work with multi-channel arrays. If you need to find minimum or maximum elements across all the channels, use
+    :ocv:func:`Mat::reshape` first to reinterpret the array as single-channel. Or you may extract the particular channel using either
+    :ocv:func:`extractImageCOI` , or
+    :ocv:func:`mixChannels` , or
+    :ocv:func:`split` .
+
+    In case of a sparse matrix, the minimum is found among non-zero elements only.
+
+
 
 minMaxLoc
 ---------
-Finds the global minimum and maximum in a whole array or sub-array.
+Finds the global minimum and maximum in an array.
 
 .. ocv:function:: void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
 
@@ -1779,10 +1810,6 @@ Finds the global minimum and maximum in a whole array or sub-array.
 
     :param maxLoc: Pointer to the returned maximum location (in 2D case).  ``NULL`` is used if not required.
 
-    :param minIdx: Pointer to the returned minimum location (in nD case). ``NULL`` is used if not required. Otherwise, it must point to an array of  ``src.dims``  elements. The coordinates of the minimum element in each dimension are stored there sequentially.
-
-    :param maxIdx: Pointer to the returned maximum location (in nD case).  ``NULL`` is used if not required.
-
     :param mask: Optional mask used to select a sub-array.
 
 The functions ``minMaxLoc`` find the minimum and maximum element values and their positions. The extremums are searched across the whole array or,
@@ -1793,8 +1820,6 @@ The functions do not work with multi-channel arrays. If you need to find minimum
 :ocv:func:`extractImageCOI` , or
 :ocv:func:`mixChannels` , or
 :ocv:func:`split` .
-
-In case of a sparse matrix, the minimum is found among non-zero elements only.
 
 .. seealso::
 
