@@ -303,11 +303,7 @@ void PointCloudRenderer::update(int key, double aspect)
 
     const double posStep = 0.1;
     
-    #ifdef _WIN32
-        const double mouseStep = 0.001;
-    #else
-        const double mouseStep = 0.000001;
-    #endif
+    const double mouseStep = 0.001;
         
     camera_.setPerspectiveProjection(30.0 + fov_ / 100.0 * 40.0, aspect, 0.1, 1000.0);
 
