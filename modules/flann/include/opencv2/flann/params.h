@@ -39,7 +39,6 @@
 namespace cvflann
 {
 
-typedef cdiggins::any any;
 typedef std::map<std::string, any> IndexParams;
 
 struct SearchParams : public IndexParams

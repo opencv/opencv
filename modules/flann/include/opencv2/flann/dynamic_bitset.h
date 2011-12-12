@@ -45,6 +45,8 @@ typedef boost::dynamic_bitset<> DynamicBitset;
 
 #include "dist.h"
 
+namespace cvflann {
+
 /** Class re-implementing the boost version of it
  * This helps not depending on boost, it also does not do the bound checks
  * and has a way to reset a block for speed
@@ -146,6 +148,8 @@ private:
     size_t size_;
     static const unsigned int cell_bit_size_ = CHAR_BIT * sizeof(size_t);
 };
+
+} // namespace cvflann
 
 #endif
 

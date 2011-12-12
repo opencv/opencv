@@ -16,7 +16,7 @@
 #include <ostream>
 #include <typeinfo>
 
-namespace cdiggins
+namespace cvflann
 {
 
 namespace anyimpl
