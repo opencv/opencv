@@ -894,20 +894,17 @@ if (WITH_QT)
     find_package(Qt4)
     if (QT4_FOUND)
         set(HAVE_QT 1)
-        add_definitions(-DHAVE_QT)#We need to define te macro this way, using cvconfig.h.cmake does not work
-        find_package (OpenGL QUIET)
+        add_definitions(-DHAVE_QT) #We need to define te macro this way, using cvconfig.h.cmake does not work
 
-        #if (NOT WIN32)
         if (WITH_OPENGL)
+            find_package (OpenGL QUIET)
             if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
-                #set(HAVE_OPENGL 1)
+                set(HAVE_OPENGL 1)
                 set(HAVE_QT_OPENGL 1)
                 add_definitions(-DHAVE_QT_OPENGL)
-                #link_directories("${OPENGL_LIBRARIES}")
                 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
             endif()
         endif()
-        #endif()
     endif()
 endif()
 

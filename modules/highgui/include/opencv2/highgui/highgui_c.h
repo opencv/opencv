@@ -251,8 +251,8 @@ CVAPI(int) cvWaitKey(int delay CV_DEFAULT(0));
 
 // OpenGL support
 
-typedef void (CV_CDECL *CvOpenGLCallback)(void* userdata);
-CVAPI(void) cvCreateOpenGLCallback( const char* window_name, CvOpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1));
+typedef void (CV_CDECL *CvOpenGlDrawCallback)(void* userdata);
+CVAPI(void) cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallback callback, void* userdata CV_DEFAULT(NULL));
 
 CVAPI(void) cvSetOpenGlContext(const char* window_name);
 CVAPI(void) cvUpdateWindow(const char* window_name);

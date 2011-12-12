@@ -198,10 +198,14 @@ double cvGetOpenGlProp_GTK(const char* name);
 #if defined (HAVE_QT)
 double cvGetModeWindow_QT(const char* name);
 void cvSetModeWindow_QT(const char* name, double prop_value);
+
 double cvGetPropWindow_QT(const char* name);
 void cvSetPropWindow_QT(const char* name,double prop_value);
+
 double cvGetRatioWindow_QT(const char* name);
 void cvSetRatioWindow_QT(const char* name,double prop_value);
+
+double cvGetOpenGlProp_QT(const char* name);
 #endif
 
 // OpenGL

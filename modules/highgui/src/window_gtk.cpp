@@ -427,7 +427,7 @@ typedef struct CvWindow
 #ifdef HAVE_OPENGL
     bool useGl;
 
-    CvOpenGLCallback glDrawCallback;
+    CvOpenGlDrawCallback glDrawCallback;
     void* glDrawData;
 
     CvOpenGlCleanCallback glCleanCallback;
@@ -1216,7 +1216,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
     __END__;
 }
 
-CV_IMPL void cvCreateOpenGLCallback(const char* name, CvOpenGLCallback callback, void* userdata, double, double, double)
+CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback callback, void* userdata)
 {
     CvWindow* window;
 
