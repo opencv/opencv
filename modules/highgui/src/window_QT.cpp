@@ -41,12 +41,20 @@
 
 #if defined(HAVE_QT)
 
+#include <memory>
+
 #include <window_QT.h>
 
 #include <math.h>
 
 #ifdef _WIN32
 #include <windows.h>
+#endif
+
+#ifdef HAVE_QT_OPENGL
+    #ifdef Q_WS_X11
+        #include <GL/glx.h>
+    #endif
 #endif
 
 
@@ -3176,7 +3184,7 @@ public:
 #ifdef Q_WS_WIN
     GlFuncTab_QT(HDC hDC);
 #else
-    GlFuncTab_QT(HDC hDC);
+    GlFuncTab_QT();
 #endif
 
     void genBuffers(int n, unsigned int* buffers) const;
@@ -3350,8 +3358,7 @@ void GlFuncTab_QT::generateBitmapFont(const std::string& family, int height, int
     __BEGIN__;
 
 #ifndef Q_WS_WIN
-    if (!glXUseXFont(font.handle(), start, count, base))
-        CV_ERROR(CV_OpenGlApiCallError, "Can't create font");
+    glXUseXFont(font.handle(), start, count, base);
 #else
     SelectObject(hDC, font.handle());
     if (!wglUseFontBitmaps(hDC, start, count, base))
