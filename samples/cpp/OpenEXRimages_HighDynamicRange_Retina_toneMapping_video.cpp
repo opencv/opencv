@@ -289,7 +289,7 @@ cv::Mat loadNewFrame(const std::string filenamePrototype, const int currentFileI
 		 currentFrameIndex=startFrameIndex;
 		 while(currentFrameIndex <= endFrameIndex)
 		 {
-			 cv::Mat currentFrame  = loadNewFrame(inputImageNamePrototype, startFrameIndex, false);
+			 cv::Mat currentFrame  = loadNewFrame(inputImageNamePrototype, currentFrameIndex, false);
 
 			 if (currentFrame.empty())
 			 {
