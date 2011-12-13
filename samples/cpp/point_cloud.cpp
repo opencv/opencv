@@ -27,7 +27,7 @@ public:
 private:
     int mouse_dx_;
     int mouse_dy_;
-    
+
     double yaw_;
     double pitch_;
     Point3d pos_;
@@ -35,7 +35,7 @@ private:
     TickMeter tm_;
     static const int step_;
     int frame_;
-    
+
     GlCamera camera_;
     GlArrays pointCloud_;
     string fps_;
@@ -189,7 +189,7 @@ int main(int argc, const char* argv[])
 
     namedWindow(windowName, WINDOW_OPENGL);
     resizeWindow(windowName, 400, 400);
-    
+
     PointCloudRenderer renderer(points, imgLeftColor, scale);
 
     createTrackbar("Fov", windowName, &renderer.fov_, 100);
@@ -198,7 +198,7 @@ int main(int argc, const char* argv[])
 
     while (true)
     {
-        int key = waitKey(1);
+        int key = waitKey(10);
 
         if (key >= 0)
             key = key & 0xff;
@@ -302,9 +302,9 @@ void PointCloudRenderer::update(int key, double aspect)
     const Point3d leftVec(-1.0, 0.0, 0.0);
 
     const double posStep = 0.1;
-    
+
     const double mouseStep = 0.001;
-        
+
     camera_.setPerspectiveProjection(30.0 + fov_ / 100.0 * 40.0, aspect, 0.1, 1000.0);
 
     yaw_ += mouse_dx_ * mouseStep;
@@ -332,7 +332,7 @@ void PointCloudRenderer::update(int key, double aspect)
         ostringstream ostr;
         ostr << "FPS: " << step_ / tm_.getTimeSec();
         fps_ = ostr.str();
-        
+
         frame_ = 0;
         tm_.reset();
     }

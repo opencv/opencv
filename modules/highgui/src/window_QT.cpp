@@ -2311,6 +2311,7 @@ QWidget* DefaultViewPort::getWidget()
 void DefaultViewPort::setMouseCallBack(CvMouseCallback m, void* param)
 {
 	on_mouse = m;
+
 	on_mouse_param = param;
 }
 
@@ -3358,7 +3359,9 @@ void GlFuncTab_QT::generateBitmapFont(const std::string& family, int height, int
     __BEGIN__;
 
 #ifndef Q_WS_WIN
-    glXUseXFont(font.handle(), start, count, base);
+    font.setStyleStrategy(QFont::OpenGLCompatible);
+    if (font.handle())
+        glXUseXFont(font.handle(), start, count, base);
 #else
     SelectObject(hDC, font.handle());
     if (!wglUseFontBitmaps(hDC, start, count, base))
