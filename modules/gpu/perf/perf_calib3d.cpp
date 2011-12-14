@@ -107,8 +107,8 @@ PERF_TEST_P(DevInfo, StereoBeliefPropagation, testing::ValuesIn(devices()))
 
     setDevice(devInfo.deviceID());
 
-    Mat img_l_host = readImage("gpu/stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img_r_host = readImage("gpu/stereobm/aloe-R.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img_l_host = readImage("gpu/stereobp/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img_r_host = readImage("gpu/stereobp/aloe-R.png", CV_LOAD_IMAGE_GRAYSCALE);
 
     ASSERT_FALSE(img_l_host.empty());
     ASSERT_FALSE(img_r_host.empty());
@@ -138,8 +138,8 @@ PERF_TEST_P(DevInfo, StereoConstantSpaceBP, testing::ValuesIn(devices()))
 
     setDevice(devInfo.deviceID());
 
-    Mat img_l_host = readImage("gpu/perf/aloe.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img_r_host = readImage("gpu/perf/aloeR.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img_l_host = readImage("gpu/stereocsbp/aloe.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img_r_host = readImage("gpu/stereocsbp/aloeR.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 
     ASSERT_FALSE(img_l_host.empty());
     ASSERT_FALSE(img_r_host.empty());
