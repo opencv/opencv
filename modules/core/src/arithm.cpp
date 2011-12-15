@@ -2007,7 +2007,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
 
             for( ; x < size.width; x++ )
                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
-        }
+			   }
     }
     else if( code == CMP_EQ || code == CMP_NE )
     {
@@ -2036,7 +2036,79 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
 static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
-    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+  //vz optimized  cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+	int code = *(int*)_cmpop;
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    if( code == CMP_GE || code == CMP_LT )
+    {
+        std::swap(src1, src2);
+        std::swap(step1, step2);
+        code = code == CMP_GE ? CMP_LE : CMP_GT;
+    }
+
+    if( code == CMP_GT || code == CMP_LE )
+    {
+        int m = code == CMP_GT ? 0 : 255;
+		#if CV_SSE2
+		__m128i m128, c128;
+		if( USE_SSE2 ){
+		  m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
+          c128 = _mm_set1_epi8 (0x7f);
+		}
+	   #endif
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        {
+            int x =0;
+		    #if CV_SSE2
+		    if( USE_SSE2 ){
+				for( ; x <= size.width - 16; x += 16 )
+				{
+					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+					// no simd for 8u comparison, that's why we need the trick
+					r00 = _mm_sub_epi8(r00,c128);
+					r10 = _mm_sub_epi8(r10,c128);
+
+					r00 =_mm_xor_si128(_mm_cmpgt_epi8(r00, r10), m128);
+					_mm_storeu_si128((__m128i*)(dst + x),r00);
+				
+				} 
+			}
+           #endif
+
+			for( ; x < size.width; x++ ){
+                dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
+			}
+        }
+    }
+    else if( code == CMP_EQ || code == CMP_NE )
+    {
+        int m = code == CMP_EQ ? 0 : 255;
+		#if CV_SSE2
+		__m128i m128;
+		if( USE_SSE2 ){
+		  m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
+		}
+	   #endif
+		for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        {
+            int x = 0;
+		    #if CV_SSE2
+		    if( USE_SSE2 ){
+				for( ; x <= size.width - 16; x += 16 )
+				{
+					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+					r00 = _mm_xor_si128 ( _mm_cmpeq_epi8 (r00, r10), m128);
+					_mm_storeu_si128((__m128i*)(dst + x), r00);
+				} 
+			}
+           #endif
+           for( ; x < size.width; x++ )
+                dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
+        }
+    }
 }
 
 static void cmp8s(const schar* src1, size_t step1, const schar* src2, size_t step2,
@@ -2054,7 +2126,102 @@ static void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t 
 static void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
-    cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+   //vz optimized cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
+
+	int code = *(int*)_cmpop;
+    step1 /= sizeof(src1[0]);
+    step2 /= sizeof(src2[0]);
+    if( code == CMP_GE || code == CMP_LT )
+    {
+        std::swap(src1, src2);
+        std::swap(step1, step2);
+        code = code == CMP_GE ? CMP_LE : CMP_GT;
+    }
+
+    if( code == CMP_GT || code == CMP_LE )
+    {
+        int m = code == CMP_GT ? 0 : 255;
+		#if CV_SSE2
+		__m128i m128;
+		if( USE_SSE2 ){
+		  m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
+		}
+	   #endif
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        {
+            int x =0;
+		    #if CV_SSE2
+		    if( USE_SSE2){//
+				for( ; x <= size.width - 16; x += 16 )
+				{
+					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+					r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
+					__m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
+					__m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
+					r01 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r01, r11), m128);
+					r11 = _mm_packs_epi16(r00, r01);
+					_mm_storeu_si128((__m128i*)(dst + x), r11);
+				} 
+				if( x <= size.width-8) 
+				{
+					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+					r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
+					r10 = _mm_packs_epi16(r00, r00);
+					_mm_storel_epi64((__m128i*)(dst + x), r10);
+
+					x += 8;
+				}
+			}
+           #endif
+
+			for( ; x < size.width; x++ ){
+                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
+			}
+        }
+    }
+    else if( code == CMP_EQ || code == CMP_NE )
+    {
+        int m = code == CMP_EQ ? 0 : 255;
+		#if CV_SSE2
+		__m128i m128;
+		if( USE_SSE2 ){
+		  m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
+		}
+	   #endif
+		for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        {
+            int x = 0;
+		    #if CV_SSE2
+		    if( USE_SSE2 ){
+				for( ; x <= size.width - 16; x += 16 )
+				{
+					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+					r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
+					__m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
+					__m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
+					r01 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r01, r11), m128);
+					r11 = _mm_packs_epi16(r00, r01);
+					_mm_storeu_si128((__m128i*)(dst + x), r11);
+				} 
+				if( x <= size.width - 8) 
+				{
+					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+					r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
+					r10 = _mm_packs_epi16(r00, r00);
+					_mm_storel_epi64((__m128i*)(dst + x), r10);
+
+					x += 8;
+				}
+			}
+           #endif
+           for( ; x < size.width; x++ )
+                dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
+        }
+    }
 }
 
 static void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2,

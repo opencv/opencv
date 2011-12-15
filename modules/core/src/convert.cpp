@@ -606,6 +606,50 @@ cvtScale_( const T* src, size_t sstep,
     }
 }
 
+//vz optimized template specialization
+template<> static void
+cvtScale_<short, short, float>( const short* src, size_t sstep,
+           short* dst, size_t dstep, Size size,
+           float scale, float shift )   
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    #if CV_SSE2
+		__m128 scale128, shift128;
+		if(USE_SSE2){
+			scale128 = _mm_set1_ps (scale);
+			shift128 = _mm_set1_ps (shift);
+		}
+    #endif
+
+	for( ; size.height--; src += sstep, dst += dstep )
+    {
+        int x = 0;
+		#if CV_SSE2
+			if(USE_SSE2)
+            {
+				for(; x <= size.width - 8; x += 8 )
+				{
+					__m128i r0 = _mm_loadl_epi64((const __m128i*)(src + x));
+                    __m128i r1 = _mm_loadl_epi64((const __m128i*)(src + x + 4));
+					__m128 rf0 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r0, r0), 16));
+                    __m128 rf1 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r1, r1), 16));
+                    rf0 = _mm_add_ps(_mm_mul_ps(rf0, scale128), shift128);
+                    rf1 = _mm_add_ps(_mm_mul_ps(rf1, scale128), shift128);
+					r0 = _mm_cvtps_epi32(rf0);
+					r1 = _mm_cvtps_epi32(rf1);
+    				r0 = _mm_packs_epi32(r0, r1);
+					_mm_storeu_si128((__m128i*)(dst + x), r0);
+				}    
+			}
+        #endif
+
+        for(; x < size.width; x++ )
+            dst[x] = saturate_cast<short>(src[x]*scale + shift);
+    } 
+}
+
 
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
