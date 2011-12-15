@@ -1,10 +1,13 @@
 
 //============================================================================
-// Name        : HighDynamicRange_RetinaCompression.cpp
+// Name        : OpenEXRimages_HighDynamicRange_Retina_toneMapping_video.cpp
 // Author      : Alexandre Benoit (benoit.alexandre.vision@gmail.com)
-// Version     : 0.1
+// Version     : 0.2
 // Copyright   : Alexandre Benoit, LISTIC Lab, december 2011
-// Description : HighDynamicRange compression (tone mapping) with the help of the Gipsa/Listic's retina in C++, Ansi-style
+// Description : HighDynamicRange compression (tone mapping) for image sequences with the help of the Gipsa/Listic's retina in C++, Ansi-style
+// Known issues: the input OpenEXR sequences can have bad computed pixels that should be removed
+//               => a simple method consists of cutting histogram edges (a slider for this on the UI is provided)
+//               => however, in image sequences, this histogramm cut must be done in an elegant way from frame to frame... still not done...     
 //============================================================================
 
 #include <iostream>
@@ -22,8 +25,10 @@ void help(std::string errorMessage)
 	std::cout<<"\t[start frame] : the starting frame tat should be considered"<<std::endl;
 	std::cout<<"\t[end frame] : the ending frame tat should be considered"<<std::endl;
 	std::cout<<"\nExamples:"<<std::endl;
-	std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial%3d.exr 20 45"<<std::endl;
-	std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial%3d.exr 20 45 log"<<std::endl;
+	std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping_video memorial%3d.exr 20 45"<<std::endl;
+	std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping_video memorial%3d.exr 20 45 log"<<std::endl;
+	std::cout<<"\t ==> to process images from memorial020d.exr to memorial045d.exr"<<std::endl;
+
 }
 
 // simple procedure for 1D curve tracing
@@ -51,28 +56,38 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 
 	cv::imshow(figureTitle, displayedCurveImage);
 }
+
 /*
  * objective : get the gray level map of the input image and rescale it to the range [0-255] if rescale0_255=TRUE, simply trunks else
- */void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, const float histogramClippingLimit, const bool rescale0_255)
+ */
+void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, const float histogramClippingLimit, const bool rescale0_255)
  {
-
 	 // adjust output matrix wrt the input size but single channel
 	 std::cout<<"Input image rescaling with histogram edges cutting (in order to eliminate bad pixels created during the HDR image creation) :"<<std::endl;
 	 //std::cout<<"=> image size (h,w,channels) = "<<inputMat.size().height<<", "<<inputMat.size().width<<", "<<inputMat.channels()<<std::endl;
 	 //std::cout<<"=> pixel coding (nbchannel, bytes per channel) = "<<inputMat.elemSize()/inputMat.elemSize1()<<", "<<inputMat.elemSize1()<<std::endl;
 
+	 // get min and max values to use afterwards if no 0-255 rescaling is used
+	 double maxInput, minInput, histNormRescalefactor=1.f;
+	 double histNormOffset=0.f;
+	 minMaxLoc(inputMat, &minInput, &maxInput);
+	 histNormRescalefactor=255.f/(maxInput-minInput);
+	 histNormOffset=minInput;
+	 std::cout<<"Hist max,min = "<<maxInput<<", "<<minInput<<" => scale, offset = "<<histNormRescalefactor<<", "<<histNormOffset<<std::endl;
 	 // rescale between 0-255, keeping floating point values
-	 cv::normalize(inputMat, outputMat, 0.0, 255.0, cv::NORM_MINMAX);
-
+	 cv::Mat normalisedImage;
+	 cv::normalize(inputMat, normalisedImage, 0.f, 255.f, cv::NORM_MINMAX);
+	 if (rescale0_255)
+		normalisedImage.copyTo(outputMat);
 	 // extract a 8bit image that will be used for histogram edge cut
 	 cv::Mat intGrayImage;
 	 if (inputMat.channels()==1)
 	 {
-		 outputMat.convertTo(intGrayImage, CV_8U);
+		 normalisedImage.convertTo(intGrayImage, CV_8U);
 	 }else
 	 {
 		 cv::Mat rgbIntImg;
-		 outputMat.convertTo(rgbIntImg, CV_8UC3);
+		 normalisedImage.convertTo(rgbIntImg, CV_8UC3);
 		 cvtColor(rgbIntImg, intGrayImage, CV_BGR2GRAY);
 	 }
 
@@ -81,12 +96,8 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 	 int histSize = 256;
 	 calcHist(&intGrayImage, 1, 0, cv::Mat(), hist, 1, &histSize, 0);
 	 cv::Mat normalizedHist;
-	 normalize(hist, normalizedHist, 1, 0, cv::NORM_L1, CV_32F); // normalize histogram so that its sum equals 1
-
-	 double min_val, max_val;
-	 CvMat histArr(normalizedHist);
-	 cvMinMaxLoc(&histArr, &min_val, &max_val);
-	 //std::cout<<"Hist max,min = "<<max_val<<", "<<min_val<<std::endl;
+	
+	 normalize(hist, normalizedHist, 1.f, 0.f, cv::NORM_L1, CV_32F); // normalize histogram so that its sum equals 1
 
 	 // compute density probability
 	 cv::Mat denseProb=cv::Mat::zeros(normalizedHist.size(), CV_32F);
@@ -98,42 +109,54 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		 //std::cout<<normalizedHist.at<float>(i)<<", "<<denseProb.at<float>(i)<<std::endl;
 		 if ( denseProb.at<float>(i)<histogramClippingLimit)
 			 histLowerLimit=i;
-		 if ( denseProb.at<float>(i)<1-histogramClippingLimit)
+		 if ( denseProb.at<float>(i)<1.f-histogramClippingLimit)
 			 histUpperLimit=i;
 	 }
 	 // deduce min and max admitted gray levels
-	 float minInputValue = (float)histLowerLimit/histSize*255;
-	 float maxInputValue = (float)histUpperLimit/histSize*255;
+	 float minInputValue = (float)histLowerLimit/histSize*255.f;
+	 float maxInputValue = (float)histUpperLimit/histSize*255.f;
 
 	 std::cout<<"=> Histogram limits "
-			 <<"\n\t"<<histogramClippingLimit*100<<"% index = "<<histLowerLimit<<" => normalizedHist value = "<<denseProb.at<float>(histLowerLimit)<<" => input gray level = "<<minInputValue
-			 <<"\n\t"<<(1-histogramClippingLimit)*100<<"% index = "<<histUpperLimit<<" => normalizedHist value = "<<denseProb.at<float>(histUpperLimit)<<" => input gray level = "<<maxInputValue
+			 <<"\n\t"<<histogramClippingLimit*100.f<<"% index = "<<histLowerLimit<<" => normalizedHist value = "<<denseProb.at<float>(histLowerLimit)<<" => input gray level = "<<minInputValue
+			 <<"\n\t"<<(1.f-histogramClippingLimit)*100.f<<"% index = "<<histUpperLimit<<" => normalizedHist value = "<<denseProb.at<float>(histUpperLimit)<<" => input gray level = "<<maxInputValue
 			 <<std::endl;
 	 //drawPlot(denseProb, "input histogram density probability", histLowerLimit, histUpperLimit);
 	 drawPlot(normalizedHist, "input histogram", histLowerLimit, histUpperLimit);
 
 	if(rescale0_255) // rescale between 0-255 if asked to
 	{
-		 // rescale image range [minInputValue-maxInputValue] to [0-255]
-		 outputMat-=minInputValue;
-		 outputMat*=255.0/(maxInputValue-minInputValue);
-		 // cut original histogram and back project to original image
-		 minInputValue=0.0;
-		 maxInputValue=255.0;
+		cv::threshold( outputMat, outputMat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above maxInputValue
+		cv::threshold( outputMat, outputMat, minInputValue, minInputValue, 3 ); //THRESH_TOZERO, clips values under minInputValue
+		// rescale image range [minInputValue-maxInputValue] to [0-255]
+		outputMat-=minInputValue;
+		outputMat*=255.f/(maxInputValue-minInputValue);
+	}else
+	{
+		inputMat.copyTo(outputMat);
+		// update threshold in the initial input image range
+		maxInputValue=(maxInputValue-255.f)/histNormRescalefactor+maxInput;
+		minInputValue=minInputValue/histNormRescalefactor+minInput;
+	 	std::cout<<"===> Input Hist clipping values (max,min) = "<<maxInputValue<<", "<<minInputValue<<std::endl;
+		cv::threshold( outputMat, outputMat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above maxInputValue
+		cv::threshold( outputMat, outputMat, minInputValue, minInputValue, 3 ); //
 	}
-	cv::threshold( outputMat, outputMat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above 255
-	cv::threshold( outputMat, outputMat, minInputValue, minInputValue, 3 ); //THRESH_TOZERO, clips values under 0
  }
 
  // basic callback method for interface management
  cv::Mat inputImage;
  cv::Mat imageInputRescaled;
+ float globalRescalefactor=1;
+ cv::Scalar globalOffset=0;
  int histogramClippingValue;
  void callBack_rescaleGrayLevelMat(int, void*)
  {
 	 std::cout<<"Histogram clipping value changed, current value = "<<histogramClippingValue<<std::endl;
-	 rescaleGrayLevelMat(inputImage, imageInputRescaled, (float)(histogramClippingValue/100.0), false);
-	 normalize(imageInputRescaled, imageInputRescaled, 0.0, 255.0, cv::NORM_MINMAX);
+	// rescale and process
+	inputImage+=globalOffset;
+	inputImage*=globalRescalefactor;
+	inputImage+=cv::Scalar(50, 50, 50, 50); // WARNING value linked to the hardcoded value (200.0) used in the globalRescalefactor in order to center on the 128 mean value... experimental but... basic compromise
+	rescaleGrayLevelMat(inputImage, imageInputRescaled, (float)histogramClippingValue/100.f, true);
+
  }
 
  cv::Ptr<cv::Retina> retina;
@@ -152,7 +175,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  }
 
 // loadNewFrame : loads a n image wrt filename parameters. it also manages image rescaling/histogram edges cutting (acts differently at first image i.e. if firstTimeread=true)
-cv::Mat loadNewFrame(const std::string filenamePrototype, const int currentFileIndex, const bool firstTimeread)
+void loadNewFrame(const std::string filenamePrototype, const int currentFileIndex, const bool firstTimeread)
 {
 	 char *currentImageName=NULL;
 	currentImageName = (char*)malloc(sizeof(char)*filenamePrototype.size()+10);
@@ -170,17 +193,30 @@ cv::Mat loadNewFrame(const std::string filenamePrototype, const int currentFileI
 	 if (inputImage.empty())
 	 {
 	    help("could not load image, program end");
-            return cv::Mat(); 
+            return;; 
          }
 
 	// rescaling/histogram clipping stage
 	// rescale between 0 and 1
 	// TODO : take care of this step !!! maybe disable of do this in a nicer way ... each successive image should get the same transformation... but it depends on the initial image format
-	//normalize(inputImage, inputImage, 0.0, 1.0, cv::NORM_MINMAX);
-	//inputImage/=255.0;
-	rescaleGrayLevelMat(inputImage, imageInputRescaled, (float)histogramClippingValue/100, false);
-	// return rescaled image
-	return imageInputRescaled;
+	double maxInput, minInput;
+	minMaxLoc(inputImage, &minInput, &maxInput);
+	std::cout<<"ORIGINAL IMAGE pixels values range (max,min) : "<<maxInput<<", "<<minInput<<std::endl
+;if (firstTimeread)
+	{
+		/* the first time, get the pixel values range and rougthly update scaling value
+		in order to center values around 128 and getting a range close to [0-255], 
+		=> actually using a little less in order to let some more flexibility in range evolves...
+		*/
+		double maxInput, minInput;
+	 	minMaxLoc(inputImage, &minInput, &maxInput);
+	 	std::cout<<"FIRST IMAGE pixels values range (max,min) : "<<maxInput<<", "<<minInput<<std::endl;
+		globalRescalefactor=50.0/(maxInput-minInput); // less than 255 for flexibility... experimental value to be carefull about
+		float channelOffset = -1.5*minInput;
+		globalOffset= cv::Scalar(channelOffset, channelOffset, channelOffset, channelOffset);	
+	}
+	// call the generic input image rescaling callback	
+	callBack_rescaleGrayLevelMat(1,NULL);
 }
 
  int main(int argc, char* argv[]) {
@@ -226,7 +262,7 @@ cv::Mat loadNewFrame(const std::string filenamePrototype, const int currentFileI
 	 //////////////////////////////////////////////////////////////////////////////
 	 // checking input media type (still image, video file, live video acquisition)
 	 std::cout<<"RetinaDemo: setting up system with first image..."<<std::endl;
-	 inputImage = loadNewFrame(inputImageNamePrototype, startFrameIndex, true);
+	 loadNewFrame(inputImageNamePrototype, startFrameIndex, true);
 
 	 if (inputImage.empty())
 	 {
@@ -289,23 +325,23 @@ cv::Mat loadNewFrame(const std::string filenamePrototype, const int currentFileI
 		 currentFrameIndex=startFrameIndex;
 		 while(currentFrameIndex <= endFrameIndex)
 		 {
-			 cv::Mat currentFrame  = loadNewFrame(inputImageNamePrototype, currentFrameIndex, false);
+			 loadNewFrame(inputImageNamePrototype, currentFrameIndex, false);
 
-			 if (currentFrame.empty())
+			 if (inputImage.empty())
 			 {
 			    std::cout<<"Could not load new image (index = "<<currentFrameIndex<<"), program end"<<std::endl;
 			    return -1; 
 			 }
 			// display input & process standard power transformation 	
- 			imshow("EXR image original image, 16bits=>8bits linear rescaling ", currentFrame);
+ 			imshow("EXR image original image, 16bits=>8bits linear rescaling ", imageInputRescaled);
 	 		cv::Mat gammaTransformedImage;
-	 		cv::pow(currentFrame, 1./5, gammaTransformedImage); // apply gamma curve: img = img ** (1./5)
+	 		cv::pow(imageInputRescaled, 1./5, gammaTransformedImage); // apply gamma curve: img = img ** (1./5)
 	 		imshow(powerTransformedInput, gammaTransformedImage);
 			 // run retina filter
 			 retina->run(imageInputRescaled);
 			 // Retrieve and display retina output
 			 retina->getParvo(retinaOutput_parvo);
-			 cv::imshow(retinaInputCorrected, imageInputRescaled/255.0);
+			 cv::imshow(retinaInputCorrected, imageInputRescaled/255.f);
 			 cv::imshow(RetinaParvoWindow, retinaOutput_parvo);
 			 cv::waitKey(4);
 			// jump to next frame			
