@@ -607,7 +607,7 @@ cvtScale_( const T* src, size_t sstep,
 }
 
 //vz optimized template specialization
-template<> static void
+template<> void
 cvtScale_<short, short, float>( const short* src, size_t sstep,
            short* dst, size_t dstep, Size size,
            float scale, float shift )   

@@ -14,7 +14,7 @@ def getSetName(tset, idx, columns, short = True):
         return prefix
     name = tset[0].replace(".xml","").replace("_", "\n")
     if prefix:
-        return prefix + "\n" + ("-"*int(len(prefix)*1.7)) + "\n" + name
+        return prefix + "\n" + ("-"*int(len(max(prefix.split("\n"), key=len))*1.5)) + "\n" + name
     return name
 
 if __name__ == "__main__":
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         options.calc_relatives = False
         options.calc_cr = False
     if options.columns:
-        options.columns = [s.strip() for s in options.columns.split(",")]
+        options.columns = [s.strip().replace("\\n", "\n") for s in options.columns.split(",")]
     
     # expand wildcards and filter duplicates
     files = []    

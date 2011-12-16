@@ -32,7 +32,7 @@ PERF_TEST_P( stitch, a123, testing::Values("surf", "orb"))
             ? new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE)
             : new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
 
-    declare.time(30 * 20).iterations(50);
+    declare.time(30 * 20).iterations(20);
 
     while(next())
     {
@@ -65,7 +65,7 @@ PERF_TEST_P( stitch, b12, testing::Values("surf", "orb"))
             ? new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE)
             : new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
 
-    declare.time(30 * 20).iterations(50);
+    declare.time(30 * 20).iterations(20);
 
     while(next())
     {
