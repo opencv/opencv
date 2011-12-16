@@ -198,6 +198,13 @@ if(MSVC)
         endforeach(flag_var)
     endif(BUILD_WITH_STATIC_CRT)
 
+	include(ProcessorCount)
+	ProcessorCount(N)
+	if(NOT N EQUAL 0)
+		SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /MP${N} ")
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP${N} ")
+	endif()
+
     if(NOT BUILD_WITH_DEBUG_INFO)
         string(REPLACE "/debug" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
         string(REPLACE "/DEBUG" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
