@@ -1246,11 +1246,7 @@ struct NormOp : public BaseElemWiseOp
     }
     double getMaxErr(int)
     {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-		return 2e-6;
-#else
-		return 1e-6;
-#endif
+        return 1e-6;
     }
     int normType;
 };        
