@@ -148,7 +148,7 @@ def getRunningProcessExePathByName(name):
         return None
         
 class RunInfo(object):
-    def __init__(self, path, configuration = None):
+    def __init__(self, path, options):
         self.path = path
         self.error = None
         for p in parse_patterns:
@@ -191,16 +191,30 @@ class RunInfo(object):
             if not self.adb:
                 self.adb = getRunningProcessExePathByName("adb")
             if not self.adb:
-                try:
-                    output = Popen(["adb", "devices"], stdout=PIPE, stderr=PIPE).communicate()
-                    self.adb = "adb"
-                except OSError:
-                    pass
-            else:
-                try:
-                    output = Popen([self.adb, "devices"], stdout=PIPE, stderr=PIPE).communicate()
-                except OSError:
-                    self.adb = None
+                self.adb = "adb"
+            if options.adb_serial:
+                self.adb = [self.adb, "-s", options.adb_serial]
+	    else:
+                self.adb = [self.adb]
+            try:
+                output = Popen(self.adb + ["shell", "ls"], stdout=PIPE, stderr=PIPE).communicate()
+            except OSError:
+                self.adb = []
+            # remember current device serial. Needed if another device is connected while this script runs
+            if self.adb and not options.adb_serial:
+                adb_res = self.runAdb("devices")
+                if not adb_res:
+                    self.error = "Could not run adb command: %s (for %s)" % (self.error, self.path)
+                    self.adb = []
+                else:
+                    connected_devices = re.findall(r"^[^ \t]+[ \t]+device\r?$", adb_res, re.MULTILINE)
+                    if len(connected_devices) != 1:
+                        self.error = "Too many (%s) devices are connected. Please specify single device using --serial option" % (len(connected_devices))
+                        self.adb = []
+                    else:
+                        adb_serial = connected_devices[0].split("\t")[0]
+                        self.adb = self.adb + ["-s", adb_serial]
+            print "adb command:", " ".join(self.adb)
 
         # fix has_perf_tests param
         self.has_perf_tests = self.has_perf_tests == "ON"
@@ -211,8 +225,8 @@ class RunInfo(object):
 
         # fix test path
         if "Visual Studio" in self.cmake_generator:
-            if configuration:
-                self.tests_dir = os.path.join(self.tests_dir, configuration)
+            if options.configuration:
+                self.tests_dir = os.path.join(self.tests_dir, options.configuration)
             else:
                 self.tests_dir = os.path.join(self.tests_dir, self.build_type)
         elif not self.is_x64 and self.cxx_compiler:
@@ -371,39 +385,26 @@ class RunInfo(object):
         return None
     
     def runAdb(self, *args):
-        cmd = [self.adb]
+        cmd = self.adb[:]
         cmd.extend(args)
         try:
             output = Popen(cmd, stdout=PIPE, stderr=PIPE).communicate()
             if not output[1]:
                 return output[0]
             self.error = output[1]
-            print self.error
         except OSError:
             pass
         return None
     
     def isRunnable(self):
-        #if not self.has_perf_tests or not self.tests:
-            #self.error = "Performance tests are not built (at %s)" % self.path
-            #return False
+        if self.error:
+            return False
         if self.targetarch == "x64" and hostmachine == "x86":
             self.error = "Target architecture is incompatible with current platform (at %s)" % self.path
             return False
         if self.targetos == "android":
             if not self.adb:
                 self.error = "Could not find adb executable (for %s)" % self.path
-                return False
-            adb_res = self.runAdb("devices")
-            if not adb_res:
-                self.error = "Could not run adb command: %s (for %s)" % (self.error, self.path)
-                return False
-            connected_devices = len(re.findall(r"^[^ \t]+[ \t]+device\r?$", adb_res, re.MULTILINE))
-            if connected_devices == 0:
-                self.error = "No Android device connected (for %s)" % self.path
-                return False
-            if connected_devices > 1:
-                self.error = "Too many (%s) devices are connected. Single device is required. (for %s)" % (connected_devices, self.path)
                 return False
             if "armeabi-v7a" in self.android_abi:
                 adb_res = self.runAdb("shell", "cat /proc/cpuinfo")
@@ -442,29 +443,29 @@ class RunInfo(object):
                 androidexe = andoidcwd + exename
                 #upload
                 print >> _stderr, "Uploading", exename, "to device..."
-                output = Popen([self.adb, "push", exe, androidexe], stdout=_stdout, stderr=_stderr).wait()
+                output = Popen(self.adb + ["push", exe, androidexe], stdout=_stdout, stderr=_stderr).wait()
                 if output != 0:
                     print >> _stderr, "adb finishes unexpectedly with error code", output
                     return
                 #chmod
                 print >> _stderr, "Changing mode of ", androidexe
-                output = Popen([self.adb, "shell", "chmod 777 " + androidexe], stdout=_stdout, stderr=_stderr).wait()
+                output = Popen(self.adb + ["shell", "chmod 777 " + androidexe], stdout=_stdout, stderr=_stderr).wait()
                 if output != 0:
                     print >> _stderr, "adb finishes unexpectedly with error code", output
                     return
                 #run
                 command = exename + " " + " ".join(args)
                 print >> _stderr, "Running:", command
-                Popen([self.adb, "shell", "export OPENCV_TEST_DATA_PATH=" + self.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
+                Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
                 # try get log
                 print >> _stderr, "Pulling", logfile, "from device..."
                 hostlogpath = os.path.join(workingDir, logfile)
-                output = Popen([self.adb, "pull", andoidcwd + logfile, hostlogpath], stdout=_stdout, stderr=_stderr).wait()
+                output = Popen(self.adb + ["pull", andoidcwd + logfile, hostlogpath], stdout=_stdout, stderr=_stderr).wait()
                 if output != 0:
                     print >> _stderr, "adb finishes unexpectedly with error code", output
                     return
                 #rm log
-                Popen([self.adb, "shell", "rm " + andoidcwd + logfile], stdout=_stdout, stderr=_stderr).wait()
+                Popen(self.adb + ["shell", "rm " + andoidcwd + logfile], stdout=_stdout, stderr=_stderr).wait()
             except OSError:
                 pass
             if os.path.isfile(hostlogpath):
@@ -509,6 +510,7 @@ if __name__ == "__main__":
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
     parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
     parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
+    parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
     
     (options, args) = parser.parse_args(argv)
     
@@ -537,7 +539,7 @@ if __name__ == "__main__":
     
     logs = []
     for path in run_args:
-        info = RunInfo(path, options.configuration)
+        info = RunInfo(path, options)
         #print vars(info),"\n"
         if not info.isRunnable():
             print >> sys.stderr, "Error:", info.error
