@@ -739,8 +739,7 @@ Computes an optimal affine transformation between two 3D point sets.
 
 .. ocv:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray inliers, double ransacThreshold = 3.0, double confidence = 0.99)
 
-.. ocv:pyfunction:: cv2.estimateAffine3D(_from, _to[, _out[, _inliers[, param1[, param2]]]]) -> retval, _out, _inliers
-.. ocv:pyfunction:: cv2.estimateAffine3D(from, to[, dst[, outliers[, param1[, param2]]]]) -> retval, dst, outliers
+.. ocv:pyfunction:: cv2.estimateAffine3D(srcpt, dstpt[, out[, inliers[, ransacThreshold[, confidence]]]]) -> retval, out, inliers
 
     :param srcpt: First input 3D point set.
 
