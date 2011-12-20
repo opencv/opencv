@@ -30,8 +30,12 @@ double ePnP( InputArray _opoints, InputArray _ipoints,
 	
 	_tvec.create(3,1,CV_64F);
 	_rvec.create(3,1,CV_64F);
-	Mat(3, 1, CV_64FC1, t_est).copyTo(_tvec.getMat());
-    Rodrigues(Mat(3, 3, CV_64FC1, R_est), _rvec.getMat());
+        Mat t = Mat(3, 1, CV_64FC1, t_est);
+        Mat tvec = _tvec.getMat();
+        t.copyTo(tvec);
+        Mat R = Mat(3, 3, CV_64FC1, R_est);
+        Mat rvec = _rvec.getMat();
+        Rodrigues(R, rvec);
 	return error;
 }
 }
