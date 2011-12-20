@@ -393,7 +393,6 @@ CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-
 class CV_EXPORTS CvLevMarq
 {
 public:
@@ -432,6 +431,9 @@ public:
 
 namespace cv
 {
+CV_EXPORTS_W double ePnP( InputArray _opoints, InputArray _ipoints,
+                InputArray _cameraMatrix, InputArray _distCoeffs,
+                OutputArray _rvec, OutputArray _tvec);
 
 //! converts rotation vector to rotation matrix or vice versa using Rodrigues transformation
 CV_EXPORTS_W void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=noArray());
