@@ -1,9 +1,5 @@
 package org.opencv.test.core;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import org.opencv.core.Core;
 import org.opencv.core.Core.MinMaxLocResult;
 import org.opencv.core.CvException;
@@ -17,6 +13,10 @@ import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class CoreTest extends OpenCVTestCase {
 
@@ -144,18 +144,18 @@ public class CoreTest extends OpenCVTestCase {
 
         Core.cartToPolar(x, y, dst, dst_angle);
 
-        Mat magnitude = new Mat(1, 3, CvType.CV_32F) {
+        Mat expected_magnitude = new Mat(1, 3, CvType.CV_32F) {
             {
                 put(0, 0, 5.0, 10.0, 13.0);
             }
         };
-        Mat angle = new Mat(1, 3, CvType.CV_32F) {
+        Mat expected_angle = new Mat(1, 3, CvType.CV_32F) {
             {
-                put(0, 0, 0.92729962, 0.92729962, 1.1759995);
+                put(0, 0, atan2rad(4,3), atan2rad(8,6), atan2rad(12,5));
             }
         };
-        assertMatEqual(magnitude, dst, EPS);
-        assertMatEqual(angle, dst_angle, EPS);
+        assertMatEqual(expected_magnitude, dst, EPS);
+        assertMatEqual(expected_angle, dst_angle, EPS);
     }
 
     public void testCartToPolarMatMatMatMatBoolean() {
@@ -173,18 +173,18 @@ public class CoreTest extends OpenCVTestCase {
 
         Core.cartToPolar(x, y, dst, dst_angle, true);
 
-        Mat magnitude = new Mat(1, 3, CvType.CV_32F) {
+        Mat expected_magnitude = new Mat(1, 3, CvType.CV_32F) {
             {
                 put(0, 0, 5.0, 10.0, 13.0);
             }
         };
-        Mat angle = new Mat(1, 3, CvType.CV_32F) {
+        Mat expected_angle = new Mat(1, 3, CvType.CV_32F) {
             {
-                put(0, 0, 53.130356, 53.130356, 67.379814);
+                put(0, 0, atan2deg(4,3), atan2deg(8,6), atan2deg(12,5));
             }
         };
-        assertMatEqual(magnitude, dst, EPS);
-        assertMatEqual(angle, dst_angle, EPS);
+        assertMatEqual(expected_magnitude, dst, EPS);
+        assertMatEqual(expected_angle, dst_angle, EPS * 180/Math.PI);
     }
 
     public void testCheckRangeMat() {
@@ -1131,7 +1131,7 @@ public class CoreTest extends OpenCVTestCase {
         truth = Mat.eye(3, 3, CvType.CV_32FC1);
         truth.put(0, 2, -1);
         assertMatEqual(truth, dst, EPS);
-        assertEquals(0.3819660544395447, cond);
+        assertEquals(0.3819660544395447, cond, EPS);
     }
 
     public void testKmeansMatIntMatTermCriteriaIntInt() {
@@ -1811,6 +1811,22 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(src, dst, EPS);
     }
 
+    private static double atan2deg(double y, double x)
+    {
+        double res = Math.atan2(y, x);
+        if (res < 0)
+            res = Math.PI * 2 + res;
+        return res * 180 / Math.PI;
+    }
+
+    private static double atan2rad(double y, double x)
+    {
+        double res = Math.atan2(y, x);
+        if (res < 0)
+            res = Math.PI * 2 + res;
+        return res;
+    }
+
     public void testPhaseMatMatMat() {
         Mat x = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1822,15 +1838,15 @@ public class CoreTest extends OpenCVTestCase {
                 put(0, 0, 20.0, 15.0, 20.0, 20.0);
             }
         };
+        Mat gold = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, atan2rad(20, 10), atan2rad(15, 10), atan2rad(20, 20), atan2rad(20, 5));
+            }
+        };
 
         Core.phase(x, y, dst);
 
-        Mat res = new Mat(1, 4, CvType.CV_32F) {
-            {
-                put(0, 0, 1.1071469, 0.98280007, 0.78539175, 1.3258134);
-            }
-        };
-        assertMatEqual(res, dst, EPS);
+        assertMatEqual(gold, dst, EPS);
     }
 
     public void testPhaseMatMatMatBoolean() {
@@ -1844,15 +1860,15 @@ public class CoreTest extends OpenCVTestCase {
                 put(0, 0, 20.0, 15.0, 20.0, 20.0);
             }
         };
+        Mat gold = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, atan2deg(20, 10), atan2deg(15, 10), atan2deg(20, 20), atan2deg(20, 5));
+            }
+        };
 
         Core.phase(x, y, dst, true);
 
-        Mat res = new Mat(1, 4, CvType.CV_32F) {
-            {
-                put(0, 0, 63.434, 56.310, 44.999, 75.963);
-            }
-        };
-        assertMatEqual(res, dst, EPS);
+        assertMatEqual(gold, dst, EPS * 180 / Math.PI);
     }
 
     public void testPolarToCartMatMatMatMat() {
