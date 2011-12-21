@@ -50,25 +50,25 @@
 namespace cv { namespace gpu { namespace device 
 {
     template <typename T, typename D, typename UnOp>
-    void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, cudaStream_t stream = 0)
+    static inline void transform(DevMem2D_<T> src, DevMem2D_<D> dst, UnOp op, cudaStream_t stream = 0)
     {
         transform_detail::transform_caller(src, dst, op, WithOutMask(), stream);
     }
 
     template <typename T, typename D, typename UnOp>
-    void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const PtrStepb& mask, const UnOp& op, cudaStream_t stream = 0)
+    static inline void transform(DevMem2D_<T> src, DevMem2D_<D> dst, PtrStepb mask, UnOp op, cudaStream_t stream = 0)
     {
         transform_detail::transform_caller(src, dst, op, SingleMask(mask), stream);
     }
 
     template <typename T1, typename T2, typename D, typename BinOp>
-    void transform(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, cudaStream_t stream = 0)
+    static inline void transform(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, BinOp op, cudaStream_t stream = 0)
     {
         transform_detail::transform_caller(src1, src2, dst, op, WithOutMask(), stream);
     }
 
     template <typename T1, typename T2, typename D, typename BinOp>
-    void transform(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const PtrStepb& mask, const BinOp& op, cudaStream_t stream = 0)
+    static inline void transform(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, PtrStepb mask, BinOp op, cudaStream_t stream = 0)
     {
         transform_detail::transform_caller(src1, src2, dst, op, SingleMask(mask), stream);
     }

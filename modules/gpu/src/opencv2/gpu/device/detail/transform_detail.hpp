@@ -309,7 +309,7 @@ namespace cv { namespace gpu { namespace device
         template<> struct TransformDispatcher<false>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
+            static void call(DevMem2D_<T> src, DevMem2D_<D> dst, UnOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<UnOp> ft;
 
@@ -324,7 +324,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
+            static void call(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, BinOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<BinOp> ft;
 
@@ -341,11 +341,17 @@ namespace cv { namespace gpu { namespace device
         template<> struct TransformDispatcher<true>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
+            static void call(DevMem2D_<T> src, DevMem2D_<D> dst, UnOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<UnOp> ft;
 
                 StaticAssert<ft::smart_shift != 1>::check();
+
+                if (!isAligned(src.data, ft::smart_shift * sizeof(T)) || !isAligned(dst.data, ft::smart_shift * sizeof(D)))
+                {
+                    TransformDispatcher<false>::call(src, dst, op, mask, stream);
+                    return;
+                }
 
                 const dim3 threads(ft::smart_block_dim_x, ft::smart_block_dim_y, 1);
                 const dim3 grid(divUp(src.cols, threads.x * ft::smart_shift), divUp(src.rows, threads.y), 1);      
@@ -358,11 +364,17 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
+            static void call(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, BinOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<BinOp> ft;
 
                 StaticAssert<ft::smart_shift != 1>::check();
+
+                if (!isAligned(src1.data, ft::smart_shift * sizeof(T1)) || !isAligned(src2.data, ft::smart_shift * sizeof(T2)) || !isAligned(dst.data, ft::smart_shift * sizeof(D)))
+                {
+                    TransformDispatcher<false>::call(src1, src2, dst, op, mask, stream);
+                    return;
+                }
 
                 const dim3 threads(ft::smart_block_dim_x, ft::smart_block_dim_y, 1);
                 const dim3 grid(divUp(src1.cols, threads.x * ft::smart_shift), divUp(src1.rows, threads.y), 1);    
@@ -376,14 +388,14 @@ namespace cv { namespace gpu { namespace device
         };        
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        static void transform_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
+        static inline void transform_caller(DevMem2D_<T> src, DevMem2D_<D> dst, UnOp op, Mask mask, cudaStream_t stream)
         {
             typedef TransformFunctorTraits<UnOp> ft;
             TransformDispatcher<VecTraits<T>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src, dst, op, mask, stream);
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static void transform_caller(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
+        static inline void transform_caller(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, BinOp op, Mask mask, cudaStream_t stream)
         {
             typedef TransformFunctorTraits<BinOp> ft;
             TransformDispatcher<VecTraits<T1>::cn == 1 && VecTraits<T2>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src1, src2, dst, op, mask, stream);

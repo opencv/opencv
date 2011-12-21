@@ -448,7 +448,7 @@ namespace cv { namespace gpu
     {
         int area = rows * cols;
         if (!m.isContinuous() || m.type() != type || m.size().area() != area)
-            m.create(1, area, type);
+            ensureSizeIsEnough(1, area, type, m);
         m = m.reshape(0, rows);
     }
 

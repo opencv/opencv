@@ -159,7 +159,13 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    if (mask.empty() && dst.type() == src1.type() && (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F))
+    bool useNpp = 
+        mask.empty() && 
+        dst.type() == src1.type() && 
+        (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F) &&
+        (isAligned(src1.data, 16) && isAligned(src2.data, 16) && isAligned(dst.data, 16));
+
+    if (useNpp)
     {
         nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, stream);
         return;
@@ -271,7 +277,13 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cons
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    if (mask.empty() && dst.type() == src1.type() && (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F))
+    bool useNpp = 
+        mask.empty() && 
+        dst.type() == src1.type() && 
+        (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F) &&
+        (isAligned(src1.data, 16) && isAligned(src2.data, 16) && isAligned(dst.data, 16));
+
+    if (useNpp)
     {
         nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R, stream);
         return;
@@ -403,8 +415,13 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, doub
 
         dst.create(src1.size(), CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src1.channels()));
 
+        bool useNpp = 
+            scale == 1 && 
+            dst.type() == src1.type() && 
+            (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F) &&
+            (isAligned(src1.data, 16) && isAligned(src2.data, 16) && isAligned(dst.data, 16));
 
-        if (scale == 1 && dst.type() == src1.type() && (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F))
+        if (useNpp)
         {
             nppArithmCaller(src2, src1, dst, nppiMul_8u_C1RSfs, nppiMul_8u_C4RSfs, nppiMul_32s_C1R, nppiMul_32f_C1R, stream);
             return;
@@ -528,8 +545,13 @@ void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double
 
         dst.create(src1.size(), CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src1.channels()));
 
+        bool useNpp = 
+            scale == 1 && 
+            dst.type() == src1.type() && 
+            (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F) &&
+            (isAligned(src1.data, 16) && isAligned(src2.data, 16) && isAligned(dst.data, 16));
 
-        if (scale == 1 && dst.type() == src1.type() && (src1.depth() == CV_8U || src1.depth() == CV_32S || src1.depth() == CV_32F))
+        if (useNpp)
         {
             nppArithmCaller(src2, src1, dst, nppiDiv_8u_C1RSfs, nppiDiv_8u_C4RSfs, nppiDiv_32s_C1R, nppiDiv_32f_C1R, stream);
             return;
@@ -643,7 +665,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
 
     static const func_t funcs[] = 
     {
-        0/*absdiff_gpu<unsigned char>*/, absdiff_gpu<signed char>, absdiff_gpu<unsigned short>, absdiff_gpu<short>, 0/*absdiff_gpu<int>*/, 0/*absdiff_gpu<float>*/, absdiff_gpu<double>
+       absdiff_gpu<unsigned char>, absdiff_gpu<signed char>, absdiff_gpu<unsigned short>, absdiff_gpu<short>, absdiff_gpu<int>, absdiff_gpu<float>, absdiff_gpu<double>
     };
 
     CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
@@ -656,7 +678,9 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
     sz.width  = src1.cols * src1.channels();
     sz.height = src1.rows;
 
-    if (src1.depth() == CV_8U && (src1.cols * src1.channels()) % 4 == 0)
+    bool aligned = isAligned(src1.data, 16) && isAligned(src2.data, 16) && isAligned(dst.data, 16);
+
+    if (aligned && src1.depth() == CV_8U && (src1.cols * src1.channels()) % 4 == 0)
     {
         NppStreamHandler h(stream);
 
@@ -668,7 +692,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
-    else if (src1.depth() == CV_8U)
+    else if (aligned && src1.depth() == CV_8U)
     {
         NppStreamHandler h(stream);
 
@@ -678,7 +702,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
-    else if (src1.depth() == CV_32S)
+    else if (aligned && src1.depth() == CV_32S)
     {
         NppStreamHandler h(stream);
 
@@ -688,7 +712,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
-    else if (src1.depth() == CV_32F)
+    else if (aligned && src1.depth() == CV_32F)
     {
         NppStreamHandler h(stream);
 
