@@ -12,7 +12,6 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -742,7 +741,6 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(gray0.total() > Core.countNonZero(gray0));
 
         Core.fillConvexPoly(gray0, polyline2, colorBlack, Core.LINE_8, 1);
-        OpenCVTestRunner.Log(gray0);
 
         assertEquals("see https://code.ros.org/trac/opencv/ticket/1284", 0, Core.countNonZero(gray0));
     }

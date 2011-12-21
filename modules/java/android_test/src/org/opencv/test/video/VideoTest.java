@@ -1,8 +1,5 @@
 package org.opencv.test.video;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -10,6 +7,9 @@ import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.utils.Converters;
 import org.opencv.video.Video;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class VideoTest extends OpenCVTestCase {
 
@@ -39,7 +39,7 @@ public class VideoTest extends OpenCVTestCase {
         subLena2 = rgbLena.submat(shift2, h + shift2, shift2, w + shift2);
 
         prevPts = new ArrayList<Point>();
-        prevPts.add(new Point(1.0, 1.0));
+        prevPts.add(new Point(11.0, 8.0));
         prevPts.add(new Point(5.0, 5.0));
         prevPts.add(new Point(10.0, 10.0));
 

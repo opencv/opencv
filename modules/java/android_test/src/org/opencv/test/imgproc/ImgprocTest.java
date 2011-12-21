@@ -1780,10 +1780,10 @@ public class ImgprocTest extends OpenCVTestCase {
 
         truth = new Mat(4, 4, CvType.CV_32F) {
             {
-                put(0, 0, 2, 1.75, 1.375, 1.25);
-                put(1, 0, 2.25, 2, 1.625, 1.5);
-                put(2, 0, 2.5, 2.25, 1.875, 1.75);
-                put(3, 0, 2.25, 2, 1.625, 1.5);
+                put(0, 0, 2,     1.75,  1.375, 1.25);
+                put(1, 0, 2.25,  2,     1.625, 1.5);
+                put(2, 0, 2.625, 2.375, 2,     1.875);
+                put(3, 0, 2.75,  2.5,   2.125, 2);
             }
         };
         assertMatEqual(truth, dst, EPS);
