@@ -36,8 +36,8 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
     protected void setUp() throws Exception {
         detector = FeatureDetector.create(FeatureDetector.FAST);
 
-        truth = new KeyPoint[] { new KeyPoint(32, 27, 6, -1, 254, 0, -1), new KeyPoint(27, 32, 6, -1, 254, 0, -1), new KeyPoint(73, 68, 6, -1, 254, 0, -1),
-                new KeyPoint(68, 73, 6, -1, 254, 0, -1) };
+        truth = new KeyPoint[] { new KeyPoint(32, 27, 7, -1, 254, 0, -1), new KeyPoint(27, 32, 7, -1, 254, 0, -1), new KeyPoint(73, 68, 7, -1, 254, 0, -1),
+                new KeyPoint(68, 73, 7, -1, 254, 0, -1) };
 
         super.setUp();
     }
