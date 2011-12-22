@@ -65,16 +65,17 @@ struct CalcRotation
     {
         int pair_idx = edge.from * num_images + edge.to;
 
-        double f_from = cameras[edge.from].focal;
-        double f_to = cameras[edge.to].focal;
+        Mat_<double> K_from = Mat::eye(3, 3, CV_64F);
+        K_from(0,0) = cameras[edge.from].focal;
+        K_from(1,1) = cameras[edge.from].focal * cameras[edge.from].aspect;
+        K_from(0,2) = cameras[edge.from].ppx;
+        K_from(0,2) = cameras[edge.from].ppy;
 
-        Mat K_from = Mat::eye(3, 3, CV_64F);
-        K_from.at<double>(0, 0) = f_from;
-        K_from.at<double>(1, 1) = f_from;
-
-        Mat K_to = Mat::eye(3, 3, CV_64F);
-        K_to.at<double>(0, 0) = f_to;
-        K_to.at<double>(1, 1) = f_to;
+        Mat_<double> K_to = Mat::eye(3, 3, CV_64F);
+        K_to(0,0) = cameras[edge.to].focal;
+        K_to(1,1) = cameras[edge.to].focal * cameras[edge.to].aspect;
+        K_to(0,2) = cameras[edge.to].ppx;
+        K_to(0,2) = cameras[edge.to].ppy;
 
         Mat R = K_from.inv() * pairwise_matches[pair_idx].H.inv() * K_to;
         cameras[edge.to].R = cameras[edge.from].R * R;
@@ -129,12 +130,23 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
     }
 #endif
 
-    // Estimate focal length and set it for all cameras
-    vector<double> focals;
-    estimateFocal(features, pairwise_matches, focals);
-    cameras.assign(num_images, CameraParams());
-    for (int i = 0; i < num_images; ++i)
-        cameras[i].focal = focals[i];
+    if (!is_focals_estimated_)
+    {
+        // Estimate focal length and set it for all cameras
+        vector<double> focals;
+        estimateFocal(features, pairwise_matches, focals);
+        cameras.assign(num_images, CameraParams());
+        for (int i = 0; i < num_images; ++i)
+            cameras[i].focal = focals[i];
+    }
+    else
+    {
+        for (int i = 0; i < num_images; ++i)
+        {
+            cameras[i].ppx -= 0.5 * features[i].img_size.width;
+            cameras[i].ppy -= 0.5 * features[i].img_size.height;
+        }
+    }
 
     // Restore global motion
     Graph span_tree;
@@ -145,8 +157,8 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
     // As calculations were performed under assumption that p.p. is in image center
     for (int i = 0; i < num_images; ++i)
     {
-        cameras[i].ppx = 0.5 * features[i].img_size.width;
-        cameras[i].ppy = 0.5 * features[i].img_size.height;
+        cameras[i].ppx += 0.5 * features[i].img_size.width;
+        cameras[i].ppy += 0.5 * features[i].img_size.height;
     }
 
     LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");

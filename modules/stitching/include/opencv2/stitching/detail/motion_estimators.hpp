@@ -69,7 +69,9 @@ protected:
 class CV_EXPORTS HomographyBasedEstimator : public Estimator
 {
 public:
-    HomographyBasedEstimator() : is_focals_estimated_(false) {}
+    HomographyBasedEstimator(bool is_focals_estimated = false)
+        : is_focals_estimated_(is_focals_estimated) {}
+
     bool isFocalsEstimated() const { return is_focals_estimated_; }
 
 private:   
