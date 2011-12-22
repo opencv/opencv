@@ -32,6 +32,8 @@ struct CvCascadeBoostTrainData : CvDTreeTrainData
                           const CvDTreeParams& _params=CvDTreeParams() );
     void precalculate();
 
+    virtual CvDTreeNode* subsample_data( const CvMat* _subsample_idx );
+
     virtual const int* get_class_labels( CvDTreeNode* n, int* labelsBuf );
     virtual const int* get_cv_labels( CvDTreeNode* n, int* labelsBuf);
     virtual const int* get_sample_indices( CvDTreeNode* n, int* indicesBuf );
@@ -67,7 +69,7 @@ public:
                         const CvCascadeBoostParams& _params=CvCascadeBoostParams() );
     virtual float predict( int sampleIdx, bool returnSum = false ) const;
 
-    float getThreshold() const { return threshold; }; 
+    float getThreshold() const { return threshold; }
     void write( FileStorage &fs, const Mat& featureMap ) const;
     bool read( const FileNode &node, const CvFeatureEvaluator* _featureEvaluator,
                const CvCascadeBoostParams& _params );

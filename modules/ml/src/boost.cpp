@@ -1066,7 +1066,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
         if( !tree->train( data, subsample_mask, this ) )
         {
             delete tree;
-            continue;
+            break;
         }
         //cvCheckArr( get_weak_response());
         cvSeqPush( weak, &tree );

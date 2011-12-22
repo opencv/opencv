@@ -718,7 +718,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
         // co - array of count/offset pairs (to handle duplicated values in _subsample_idx)
         int* co, cur_ofs = 0;
         int vi, i;
-        int work_var_count = get_work_var_count();
+        int workVarCount = get_work_var_count();
         int count = isubsample_idx->rows + isubsample_idx->cols - 1;
 
         root = new_node( 0, count, 1, 0 );
@@ -740,7 +740,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
         }
 
         cv::AutoBuffer<uchar> inn_buf(sample_count*(2*sizeof(int) + sizeof(float)));
-        for( vi = 0; vi < work_var_count; vi++ )
+        for( vi = 0; vi < workVarCount; vi++ )
         {
             int ci = get_var_type(vi);
 
@@ -841,14 +841,14 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
         if (is_buf_16u)
         {
             unsigned short* sample_idx_dst = (unsigned short*)(buf->data.s + root->buf_idx*buf->cols + 
-                get_work_var_count()*sample_count + root->offset);            
+                workVarCount*sample_count + root->offset);
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = (unsigned short)sample_idx_src[sidx[i]];
         }
         else
         {
             int* sample_idx_dst = buf->data.i + root->buf_idx*buf->cols + 
-                get_work_var_count()*sample_count + root->offset;            
+                workVarCount*sample_count + root->offset;
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = sample_idx_src[sidx[i]];
         }
@@ -1622,13 +1622,19 @@ bool CvDTree::do_train( const CvMat* _subsample_idx )
 
     CV_CALL( try_split_node(root));
 
-    if( data->params.cv_folds > 0 )
-        CV_CALL( prune_cv() );
+    if( root->split )
+    {
+        CV_Assert( root->left );
+        CV_Assert( root->right );
 
-    if( !data->shared )
-        data->free_train_data();
+        if( data->params.cv_folds > 0 )
+            CV_CALL( prune_cv() );
 
-    result = true;
+        if( !data->shared )
+            data->free_train_data();
+
+        result = true;
+    }
 
     __END__;
 
