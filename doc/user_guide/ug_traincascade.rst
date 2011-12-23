@@ -152,7 +152,9 @@ The scheme of samples creation in this case is as follows. The object instances 
  
 ``opencv_createsamples`` utility may be used for examining samples stored in positive samples file. In order to do this only ``-vec``, ``-w`` and ``-h`` parameters should be specified.
  
-Note that for training, it does not matter how vec-files with positive samples are generated. But ``opencv_createsamples`` utility is the only one way to collect/create a vector file of positive samples, provided by OpenCV.
+Note that for training, it does not matter how vec-files with positive samples are generated. But ``opencv_createsamples`` utility is the only one way to collect/create a vector file of positive samples, provided by OpenCV. 
+
+Example of vec-file is available here ``opencv/data/vec_files/trainingfaces_24-24.vec``. It can be used to train a face detector with the following window size: ``-w 24 -h 24``.
 
 Cascade Training
 ================
