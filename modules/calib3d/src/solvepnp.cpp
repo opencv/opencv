@@ -41,25 +41,62 @@
  //M*/
 
 #include "precomp.hpp"
+#include "epnp.h"
+#include "p3p.h"
+#include <iostream>
 using namespace cv;
 
-void cv::solvePnP( InputArray _opoints, InputArray _ipoints,
+bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
                   InputArray _cameraMatrix, InputArray _distCoeffs,
-                  OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess )
+                  OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
 {
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
-    
+    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) ); 
     _rvec.create(3, 1, CV_64F);
     _tvec.create(3, 1, CV_64F);
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
-    CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
-    CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-    CvMat c_rvec = _rvec.getMat(), c_tvec = _tvec.getMat();
-    cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
-                                 c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
-                                 &c_rvec, &c_tvec, useExtrinsicGuess );
+
+    if (flags == CV_EPNP)
+    {
+		cv::Mat undistortedPoints;
+		cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+		epnp PnP(cameraMatrix, opoints, undistortedPoints);
+				
+        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        PnP.compute_pose(R, tvec);
+        cv::Rodrigues(R, rvec);
+		return true;
+	}
+	else if (flags == CV_P3P) 
+	{
+		CV_Assert( npoints == 4);
+		cv::Mat undistortedPoints;
+		cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+		p3p P3Psolver(cameraMatrix);
+
+        cv::Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
+        bool result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
+        if (result)
+			cv::Rodrigues(R, rvec);
+		return result;
+	}
+	else if (flags == CV_ITERATIVE) 
+	{
+		CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
+		CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
+		CvMat c_rvec = _rvec.getMat(), c_tvec = _tvec.getMat();
+		cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
+									 c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
+									 &c_rvec, &c_tvec, useExtrinsicGuess );
+		return true;
+	}
+	else 
+	{
+        CV_Error(CV_StsBadArg, "The flags argument must be one of CV_ITERATIVE or CV_EPNP");
+		return false;
+	}
+	return false;
 }
 
 namespace cv
@@ -84,25 +121,25 @@ namespace cv
         class Mutex
         {
         public:
-            Mutex() {}
+            Mutex() {
+			}
             void lock()
             {
 #ifdef HAVE_TBB
-                slock.acquire(resultsMutex);
+				resultsMutex.lock();
 #endif
             }
             
             void unlock()
             {
 #ifdef HAVE_TBB
-                slock.release();
+                resultsMutex.unlock();
 #endif
             }
             
         private:
 #ifdef HAVE_TBB
             tbb::mutex resultsMutex;
-            tbb::mutex::scoped_lock slock;
 #endif
         };
         
@@ -124,6 +161,7 @@ namespace cv
             float reprojectionError;
             int minInliersCount;
             bool useExtrinsicGuess;
+			int flags;
             CameraParameters camera;
         };
         
@@ -159,8 +197,10 @@ namespace cv
             Mat localRvec, localTvec;
             rvecInit.copyTo(localRvec);
             tvecInit.copyTo(localTvec);
-            
-            solvePnP(modelObjectPoints, modelImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec, params.useExtrinsicGuess);
+        
+		    solvePnP(modelObjectPoints, modelImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec,
+				     params.useExtrinsicGuess, params.flags);
+		
             
             vector<Point2f> projected_points;
             projected_points.resize(objectPoints.cols);
@@ -206,7 +246,7 @@ namespace cv
                     generateVar(pointsMask);
                     pnpTask(pointsMask, objectPoints, imagePoints, parameters,
                             inliers, rvec, tvec, initRvec, initTvec, syncMutex);
-                    if ((int)inliers.size() > parameters.minInliersCount)
+                    if ((int)inliers.size() >= parameters.minInliersCount)
                     {
 #ifdef HAVE_TBB
                         tbb::task::self().cancel_group_execution();
@@ -261,7 +301,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
                         int iterationsCount, float reprojectionError, int minInliersCount,
-                        OutputArray _inliers)
+                        OutputArray _inliers, int flags)
 {
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
@@ -288,6 +328,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     params.reprojectionError = reprojectionError;
     params.useExtrinsicGuess = useExtrinsicGuess;
     params.camera.init(cameraMatrix, distCoeffs);
+	params.flags = flags;
     
     vector<int> localInliers;
     Mat localRvec, localTvec;
@@ -302,18 +343,21 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     
     if (localInliers.size() >= (size_t)pnpransac::MIN_POINTS_COUNT)
     {
-        int i, pointsCount = (int)localInliers.size();
-        Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);
-        for (i = 0; i < pointsCount; i++)
-        {
-            int index = localInliers[i];
-            Mat colInlierImagePoints = inlierImagePoints(Rect(i, 0, 1, 1));
-            imagePoints.col(index).copyTo(colInlierImagePoints);
-            Mat colInlierObjectPoints = inlierObjectPoints(Rect(i, 0, 1, 1));
-            objectPoints.col(index).copyTo(colInlierObjectPoints);
-        }
-        solvePnP(inlierObjectPoints, inlierImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec, true);
-        localRvec.copyTo(rvec);
+		if (flags != CV_P3P)
+		{
+			int i, pointsCount = (int)localInliers.size();
+			Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);
+			for (i = 0; i < pointsCount; i++)
+			{
+				int index = localInliers[i];
+				Mat colInlierImagePoints = inlierImagePoints(Rect(i, 0, 1, 1));
+				imagePoints.col(index).copyTo(colInlierImagePoints);
+				Mat colInlierObjectPoints = inlierObjectPoints(Rect(i, 0, 1, 1));
+				objectPoints.col(index).copyTo(colInlierObjectPoints);
+			}
+			solvePnP(inlierObjectPoints, inlierImagePoints, params.camera.intrinsics, params.camera.distortion, localRvec, localTvec, true, flags);
+		}
+		localRvec.copyTo(rvec);
         localTvec.copyTo(tvec);
         if (_inliers.needed())
             Mat(localInliers).copyTo(_inliers);

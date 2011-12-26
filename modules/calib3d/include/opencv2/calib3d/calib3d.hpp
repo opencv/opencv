@@ -86,6 +86,13 @@ CVAPI(void) cvConvertPointsHomogeneous( const CvMat* src, CvMat* dst );
 #define CV_FM_RANSAC_ONLY CV_RANSAC
 #define CV_FM_LMEDS CV_LMEDS
 #define CV_FM_RANSAC CV_RANSAC
+
+enum
+{
+    CV_ITERATIVE = 0,
+    CV_EPNP = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
+	CV_P3P = 2 // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+};
     
 CVAPI(int) cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
                                  CvMat* fundamental_matrix,
@@ -431,10 +438,6 @@ public:
 
 namespace cv
 {
-CV_EXPORTS_W double ePnP( InputArray _opoints, InputArray _ipoints,
-                InputArray _cameraMatrix, InputArray _distCoeffs,
-                OutputArray _rvec, OutputArray _tvec);
-
 //! converts rotation vector to rotation matrix or vice versa using Rodrigues transformation
 CV_EXPORTS_W void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=noArray());
 
@@ -491,10 +494,16 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  double aspectRatio=0 );
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are not handled.
-CV_EXPORTS_W void solvePnP( InputArray objectPoints, InputArray imagePoints,
+enum
+{
+    ITERATIVE=CV_ITERATIVE, 
+    EPNP=CV_EPNP,
+	P3P=CV_P3P
+};
+CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
                             OutputArray rvec, OutputArray tvec,
-                            bool useExtrinsicGuess=false );
+                            bool useExtrinsicGuess=false, int flags=0);
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are possible.
 CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
@@ -503,11 +512,12 @@ CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
                                   InputArray distCoeffs,
                                   OutputArray rvec,
                                   OutputArray tvec,
-                                  bool useExtrinsicGuess = false,
+                                  bool useExtrinsicGuess = false,								  
                                   int iterationsCount = 100,
                                   float reprojectionError = 8.0,
                                   int minInliersCount = 100,
-                                  OutputArray inliers = noArray() );
+                                  OutputArray inliers = noArray(),
+								  int flags = 0);
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
