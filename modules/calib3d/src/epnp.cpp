@@ -3,101 +3,36 @@ using namespace std;
 #include "precomp.hpp"
 #include "epnp.h"
 
-namespace cv
+epnp::epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& ipoints)
 {
-double ePnP( InputArray _opoints, InputArray _ipoints,
-                  InputArray _cameraMatrix, InputArray _distCoeffs,
-                  OutputArray _rvec, OutputArray _tvec)
-{
-    Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
-    int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
-	Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+  if (cameraMatrix.depth() == CV_32F)
+      init_camera_parameters<float>(cameraMatrix);
+  else
+	  init_camera_parameters<double>(cameraMatrix);
 
-	Mat undistortedPoints;
-	undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+  number_of_correspondences = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
 
-    epnp PnP;
-	PnP.set_internal_parameters(cameraMatrix.at<double> (0, 2), cameraMatrix.at<double> (1, 2), cameraMatrix.at<double> (0, 0), cameraMatrix.at<double> (1, 1));
-	PnP.set_maximum_number_of_correspondences(npoints);
-	PnP.reset_correspondences();
-    for(int i = 0; i < npoints; i++) {
-        PnP.add_correspondence(opoints.at<Point3d>(0,i).x, opoints.at<Point3d>(0,i).y, opoints.at<Point3d>(0,i).z, undistortedPoints.at<Point2d>(0,i).x* cameraMatrix.at<double> (0, 0) + cameraMatrix.at<double> (0, 2),
-			undistortedPoints.at<Point2d>(0,i).y* cameraMatrix.at<double> (1, 1) + cameraMatrix.at<double> (1, 2));
-    }
-	double R_est[3][3], t_est[3];
-	double error = PnP.compute_pose(R_est, t_est);
-	
-	_tvec.create(3,1,CV_64F);
-	_rvec.create(3,1,CV_64F);
-        Mat t = Mat(3, 1, CV_64FC1, t_est);
-        Mat tvec = _tvec.getMat();
-        t.copyTo(tvec);
-        Mat R = Mat(3, 3, CV_64FC1, R_est);
-        Mat rvec = _rvec.getMat();
-        Rodrigues(R, rvec);
-	return error;
-}
-}
+  pws.resize(3 * number_of_correspondences);
+  us.resize(2 * number_of_correspondences); 
+  
+  if (opoints.depth() == ipoints.depth())
+  {
+	  if (opoints.depth() == CV_32F)
+		  init_points<cv::Point3f,cv::Point2f>(opoints, ipoints);
+	  else
+		  init_points<cv::Point3d,cv::Point2d>(opoints, ipoints);
+  }
+  else if (opoints.depth() == CV_32F)
+	  init_points<cv::Point3f,cv::Point2d>(opoints, ipoints);
+  else
+	  init_points<cv::Point3d,cv::Point2f>(opoints, ipoints);
 
-epnp::epnp(void)
-{
-  maximum_number_of_correspondences = 0;
-  number_of_correspondences = 0;
-
-  pws = 0;
-  us = 0;
-  alphas = 0;
-  pcs = 0;
+  alphas.resize(4 * number_of_correspondences); 
+  pcs.resize(3 * number_of_correspondences);
 }
 
 epnp::~epnp()
 {
-  delete [] pws;
-  delete [] us;
-  delete [] alphas;
-  delete [] pcs;
-}
-
-void epnp::set_internal_parameters(double uc, double vc, double fu, double fv)
-{
-  this->uc = uc;
-  this->vc = vc;
-  this->fu = fu;
-  this->fv = fv;
-}
-
-void epnp::set_maximum_number_of_correspondences(int n)
-{
-  if (maximum_number_of_correspondences < n) {
-    if (pws != 0) delete [] pws;
-    if (us != 0) delete [] us;
-    if (alphas != 0) delete [] alphas;
-    if (pcs != 0) delete [] pcs;
-
-    maximum_number_of_correspondences = n;
-    pws = new double[3 * maximum_number_of_correspondences];
-    us = new double[2 * maximum_number_of_correspondences];
-    alphas = new double[4 * maximum_number_of_correspondences];
-    pcs = new double[3 * maximum_number_of_correspondences];
-  }
-}
-
-void epnp::reset_correspondences(void)
-{
-  number_of_correspondences = 0;
-}
-
-void epnp::add_correspondence(double X, double Y, double Z, double u, double v)
-{
-  pws[3 * number_of_correspondences    ] = X;
-  pws[3 * number_of_correspondences + 1] = Y;
-  pws[3 * number_of_correspondences + 2] = Z;
-
-  us[2 * number_of_correspondences    ] = u;
-  us[2 * number_of_correspondences + 1] = v;
-
-  number_of_correspondences++;
 }
 
 void epnp::choose_control_points(void)
@@ -149,8 +84,8 @@ void epnp::compute_barycentric_coordinates(void)
   cvInvert(&CC, &CC_inv, CV_SVD);
   double * ci = cc_inv;
   for(int i = 0; i < number_of_correspondences; i++) {
-    double * pi = pws + 3 * i;
-    double * a = alphas + 4 * i;
+    double * pi = pws.data() + 3 * i;
+    double * a = alphas.data() + 4 * i;
 
     for(int j = 0; j < 3; j++)
       a[1 + j] =
@@ -194,15 +129,15 @@ void epnp::compute_ccs(const double * betas, const double * ut)
 void epnp::compute_pcs(void)
 {
   for(int i = 0; i < number_of_correspondences; i++) {
-    double * a = alphas + 4 * i;
-    double * pc = pcs + 3 * i;
+    double * a = alphas.data() + 4 * i;
+    double * pc = pcs.data() + 3 * i;
 
     for(int j = 0; j < 3; j++)
       pc[j] = a[0] * ccs[0][j] + a[1] * ccs[1][j] + a[2] * ccs[2][j] + a[3] * ccs[3][j];
   }
 }
 
-double epnp::compute_pose(double R[3][3], double t[3])
+void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
 {
   choose_control_points();
   compute_barycentric_coordinates();
@@ -210,7 +145,7 @@ double epnp::compute_pose(double R[3][3], double t[3])
   CvMat * M = cvCreateMat(2 * number_of_correspondences, 12, CV_64F);
 
   for(int i = 0; i < number_of_correspondences; i++)
-    fill_M(M, 2 * i, alphas + 4 * i, us[2 * i], us[2 * i + 1]);
+    fill_M(M, 2 * i, alphas.data() + 4 * i, us[2 * i], us[2 * i + 1]);
 
   double mtm[12 * 12], d[12], ut[12 * 12];
   CvMat MtM = cvMat(12, 12, CV_64F, mtm);
@@ -247,9 +182,8 @@ double epnp::compute_pose(double R[3][3], double t[3])
   if (rep_errors[2] < rep_errors[1]) N = 2;
   if (rep_errors[3] < rep_errors[N]) N = 3;
 
-  copy_R_and_t(Rs[N], ts[N], R, t);
-
-  return rep_errors[N];
+  cv::Mat(3, 1, CV_64F, ts[N]).copyTo(t);
+  cv::Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
 }
 
 void epnp::copy_R_and_t(const double R_src[3][3], const double t_src[3],
@@ -275,25 +209,6 @@ double epnp::dot(const double * v1, const double * v2)
   return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
 
-double epnp::reprojection_error(const double R[3][3], const double t[3])
-{
-  double sum2 = 0.0;
-
-  for(int i = 0; i < number_of_correspondences; i++) {
-    double * pw = pws + 3 * i;
-    double Xc = dot(R[0], pw) + t[0];
-    double Yc = dot(R[1], pw) + t[1];
-    double inv_Zc = 1.0 / (dot(R[2], pw) + t[2]);
-    double ue = uc + fu * Xc * inv_Zc;
-    double ve = vc + fv * Yc * inv_Zc;
-    double u = us[2 * i], v = us[2 * i + 1];
-
-    sum2 += sqrt( (u - ue) * (u - ue) + (v - ve) * (v - ve) );
-  }
-
-  return sum2 / number_of_correspondences;
-}
-
 void epnp::estimate_R_and_t(double R[3][3], double t[3])
 {
   double pc0[3], pw0[3];
@@ -302,8 +217,8 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
   pw0[0] = pw0[1] = pw0[2] = 0.0;
 
   for(int i = 0; i < number_of_correspondences; i++) {
-    const double * pc = pcs + 3 * i;
-    const double * pw = pws + 3 * i;
+    const double * pc = &pcs[3 * i];
+    const double * pw = &pws[3 * i];
 
     for(int j = 0; j < 3; j++) {
       pc0[j] += pc[j];
@@ -323,8 +238,8 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
 
   cvSetZero(&ABt);
   for(int i = 0; i < number_of_correspondences; i++) {
-    double * pc = pcs + 3 * i;
-    double * pw = pws + 3 * i;
+    double * pc = &pcs[3 * i];
+    double * pw = &pws[3 * i];
 
     for(int j = 0; j < 3; j++) {
       abt[3 * j    ] += (pc[j] - pc0[j]) * (pw[0] - pw0[0]);
@@ -354,13 +269,6 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
   t[2] = pc0[2] - dot(R[2], pw0);
 }
 
-void epnp::print_pose(const double R[3][3], const double t[3])
-{
-  cout << R[0][0] << " " << R[0][1] << " " << R[0][2] << " " << t[0] << endl;
-  cout << R[1][0] << " " << R[1][1] << " " << R[1][2] << " " << t[1] << endl;
-  cout << R[2][0] << " " << R[2][1] << " " << R[2][2] << " " << t[2] << endl;
-}
-
 void epnp::solve_for_sign(void)
 {
   if (pcs[2] < 0.0) {
@@ -388,6 +296,25 @@ double epnp::compute_R_and_t(const double * ut, const double * betas,
 
   return reprojection_error(R, t);
 }
+
+double epnp::reprojection_error(const double R[3][3], const double t[3])
+{
+  double sum2 = 0.0;
+
+  for(int i = 0; i < number_of_correspondences; i++) {
+    double * pw = &pws[3 * i];
+    double Xc = dot(R[0], pw) + t[0];
+    double Yc = dot(R[1], pw) + t[1];
+    double inv_Zc = 1.0 / (dot(R[2], pw) + t[2]);
+    double ue = uc + fu * Xc * inv_Zc;
+    double ve = vc + fv * Yc * inv_Zc;
+    double u = us[2 * i], v = us[2 * i + 1];
+
+    sum2 += sqrt( (u - ue) * (u - ue) + (v - ve) * (v - ve) );
+  }
+
+  return sum2 / number_of_correspondences;
+} 
 
 // betas10        = [B11 B12 B22 B13 B23 B33 B14 B24 B34 B44]
 // betas_approx_1 = [B11 B12     B13         B14]
@@ -538,7 +465,7 @@ void epnp::compute_rho(double * rho)
 }
 
 void epnp::compute_A_and_b_gauss_newton(const double * l_6x10, const double * rho,
-					double betas[4], CvMat * A, CvMat * b)
+					const double betas[4], CvMat * A, CvMat * b)
 {
   for(int i = 0; i < 6; i++) {
     const double * rowL = l_6x10 + i * 10;
@@ -579,7 +506,6 @@ void epnp::gauss_newton(const CvMat * L_6x10, const CvMat * Rho,
     compute_A_and_b_gauss_newton(L_6x10->data.db, Rho->data.db,
 				 betas, &A, &B);
     qr_solve(&A, &B, &X);
-
     for(int i = 0; i < 4; i++)
       betas[i] += x[i];
   }
@@ -611,10 +537,9 @@ void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
       if (eta < elt) eta = elt;
       ppAik += nc;
     }
-
-    if (eta == 0) {
+	if (eta == 0) {
       A1[k] = A2[k] = 0.0;
-      cerr << "God damnit, A is singular, this shouldn't happen." << endl;
+      //cerr << "God damnit, A is singular, this shouldn't happen." << endl;
       return;
     } else {
       double * ppAik = ppAkk, sum = 0.0, inv_eta = 1. / eta;
@@ -677,72 +602,3 @@ void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
   }
 }
 
-
-
-void epnp::relative_error(double & rot_err, double & transl_err,
-			  const double Rtrue[3][3], const double ttrue[3],
-			  const double Rest[3][3],  const double test[3])
-{
-  double qtrue[4], qest[4];
-
-  mat_to_quat(Rtrue, qtrue);
-  mat_to_quat(Rest, qest);
-
-  double rot_err1 = sqrt((qtrue[0] - qest[0]) * (qtrue[0] - qest[0]) +
-			 (qtrue[1] - qest[1]) * (qtrue[1] - qest[1]) +
-			 (qtrue[2] - qest[2]) * (qtrue[2] - qest[2]) +
-			 (qtrue[3] - qest[3]) * (qtrue[3] - qest[3]) ) /
-    sqrt(qtrue[0] * qtrue[0] + qtrue[1] * qtrue[1] + qtrue[2] * qtrue[2] + qtrue[3] * qtrue[3]);
-
-  double rot_err2 = sqrt((qtrue[0] + qest[0]) * (qtrue[0] + qest[0]) +
-			 (qtrue[1] + qest[1]) * (qtrue[1] + qest[1]) +
-			 (qtrue[2] + qest[2]) * (qtrue[2] + qest[2]) +
-			 (qtrue[3] + qest[3]) * (qtrue[3] + qest[3]) ) /
-    sqrt(qtrue[0] * qtrue[0] + qtrue[1] * qtrue[1] + qtrue[2] * qtrue[2] + qtrue[3] * qtrue[3]);
-
-  rot_err = min(rot_err1, rot_err2);
-
-  transl_err =
-    sqrt((ttrue[0] - test[0]) * (ttrue[0] - test[0]) +
-	 (ttrue[1] - test[1]) * (ttrue[1] - test[1]) +
-	 (ttrue[2] - test[2]) * (ttrue[2] - test[2])) /
-    sqrt(ttrue[0] * ttrue[0] + ttrue[1] * ttrue[1] + ttrue[2] * ttrue[2]);
-}
-
-void epnp::mat_to_quat(const double R[3][3], double q[4])
-{
-  double tr = R[0][0] + R[1][1] + R[2][2];
-  double n4;
-
-  if (tr > 0.0f) {
-    q[0] = R[1][2] - R[2][1];
-    q[1] = R[2][0] - R[0][2];
-    q[2] = R[0][1] - R[1][0];
-    q[3] = tr + 1.0f;
-    n4 = q[3];
-  } else if ( (R[0][0] > R[1][1]) && (R[0][0] > R[2][2]) ) {
-    q[0] = 1.0f + R[0][0] - R[1][1] - R[2][2];
-    q[1] = R[1][0] + R[0][1];
-    q[2] = R[2][0] + R[0][2];
-    q[3] = R[1][2] - R[2][1];
-    n4 = q[0];
-  } else if (R[1][1] > R[2][2]) {
-    q[0] = R[1][0] + R[0][1];
-    q[1] = 1.0f + R[1][1] - R[0][0] - R[2][2];
-    q[2] = R[2][1] + R[1][2];
-    q[3] = R[2][0] - R[0][2];
-    n4 = q[1];
-  } else {
-    q[0] = R[2][0] + R[0][2];
-    q[1] = R[2][1] + R[1][2];
-    q[2] = 1.0f + R[2][2] - R[0][0] - R[1][1];
-    q[3] = R[0][1] - R[1][0];
-    n4 = q[2];
-  }
-  double scale = 0.5f / double(sqrt(n4));
-
-  q[0] *= scale;
-  q[1] *= scale;
-  q[2] *= scale;
-  q[3] *= scale;
-}
