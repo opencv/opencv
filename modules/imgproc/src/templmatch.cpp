@@ -144,6 +144,7 @@ void crossCorr( const Mat& img, const Mat& templ, Mat& corr,
         img0.adjustROI(roiofs.y, wholeSize.height-img.rows-roiofs.y,
                        roiofs.x, wholeSize.width-img.cols-roiofs.x);
     }
+    borderType |= BORDER_ISOLATED;
     
     // calculate correlation by blocks
     for( i = 0; i < tileCount; i++ )

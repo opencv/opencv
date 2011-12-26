@@ -218,6 +218,8 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
         src.adjustROI(dtop, dbottom, dleft, dright);
         top -= dtop;
         left -= dleft;
+        bottom -= dbottom;
+        right -= dright;
     }
     
     borderType &= ~BORDER_ISOLATED;

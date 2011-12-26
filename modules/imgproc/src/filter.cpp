@@ -3026,8 +3026,8 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
     }
 
     Ptr<FilterEngine> f = createLinearFilter(src.type(), dst.type(), kernel,
-                                             anchor, delta, borderType );
-    f->apply(src, dst);
+                                             anchor, delta, borderType & ~BORDER_ISOLATED );
+    f->apply(src, dst, Rect(0,0,-1,-1), Point(), (borderType & BORDER_ISOLATED) != 0 );
 }
 
 
