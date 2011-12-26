@@ -372,7 +372,19 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
                 int xr = (c+1) * gray_image.cols / grid_size.width;
                 int yr = (r+1) * gray_image.rows / grid_size.height;
 
-                (*orb)(gray_image(Range(yl, yr), Range(xl, xr)), Mat(), points, descriptors);
+                LOGLN("OrbFeaturesFinder::find: gray_image.empty=" << (gray_image.empty()?"true":"false") << ", "
+                    << " gray_image.size()=(" << gray_image.size().width << "x" << gray_image.size().height << "), "
+                    << " yl=" << yl << ", yr=" << yr << ", "
+                    << " xl=" << xl << ", xr=" << xr << ", gray_image.data=" << ((size_t)gray_image.data) << ", "
+                    << "gray_image.dims=" << gray_image.dims << "\n");
+
+                Mat gray_image_part=gray_image(Range(yl, yr), Range(xl, xr));
+                LOGLN("OrbFeaturesFinder::find: gray_image_part.empty=" << (gray_image_part.empty()?"true":"false") << ", "
+                    << " gray_image_part.size()=(" << gray_image_part.size().width << "x" << gray_image_part.size().height << "), "
+                    << " gray_image_part.dims=" << gray_image_part.dims << ", "
+                    << " gray_image_part.data=" << ((size_t)gray_image_part.data) << "\n");
+
+                (*orb)(gray_image_part, Mat(), points, descriptors);
 
                 features.keypoints.reserve(features.keypoints.size() + points.size());
                 for (std::vector<KeyPoint>::iterator kp = points.begin(); kp != points.end(); ++kp)
