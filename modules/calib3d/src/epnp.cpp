@@ -84,8 +84,8 @@ void epnp::compute_barycentric_coordinates(void)
   cvInvert(&CC, &CC_inv, CV_SVD);
   double * ci = cc_inv;
   for(int i = 0; i < number_of_correspondences; i++) {
-    double * pi = pws.data() + 3 * i;
-    double * a = alphas.data() + 4 * i;
+    double * pi = &pws[0] + 3 * i;
+    double * a = &alphas[0] + 4 * i;
 
     for(int j = 0; j < 3; j++)
       a[1 + j] =
@@ -129,8 +129,8 @@ void epnp::compute_ccs(const double * betas, const double * ut)
 void epnp::compute_pcs(void)
 {
   for(int i = 0; i < number_of_correspondences; i++) {
-    double * a = alphas.data() + 4 * i;
-    double * pc = pcs.data() + 3 * i;
+    double * a = &alphas[0] + 4 * i;
+    double * pc = &pcs[0] + 3 * i;
 
     for(int j = 0; j < 3; j++)
       pc[j] = a[0] * ccs[0][j] + a[1] * ccs[1][j] + a[2] * ccs[2][j] + a[3] * ccs[3][j];
@@ -145,7 +145,7 @@ void epnp::compute_pose(cv::Mat& R, cv::Mat& t)
   CvMat * M = cvCreateMat(2 * number_of_correspondences, 12, CV_64F);
 
   for(int i = 0; i < number_of_correspondences; i++)
-    fill_M(M, 2 * i, alphas.data() + 4 * i, us[2 * i], us[2 * i + 1]);
+    fill_M(M, 2 * i, &alphas[0] + 4 * i, us[2 * i], us[2 * i + 1]);
 
   double mtm[12 * 12], d[12], ut[12 * 12];
   CvMat MtM = cvMat(12, 12, CV_64F, mtm);
