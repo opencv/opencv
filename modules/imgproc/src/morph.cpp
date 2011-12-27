@@ -585,11 +585,11 @@ struct MorphNoVec
 };
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-typedef tegra::MorphRowIVec<tegra::VMin8u> ErodeRowVec8u;
-typedef tegra::MorphRowIVec<tegra::VMax8u> DilateRowVec8u;
+using tegra::ErodeRowVec8u;
+using tegra::DilateRowVec8u;
 
-typedef tegra::MorphColumnIVec<tegra::VMin8u> ErodeColumnVec8u;
-typedef tegra::MorphColumnIVec<tegra::VMax8u> DilateColumnVec8u;
+using tegra::ErodeColumnVec8u;
+using tegra::DilateColumnVec8u;
 #else
 typedef MorphRowNoVec ErodeRowVec8u;
 typedef MorphRowNoVec DilateRowVec8u;
@@ -780,7 +780,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
         CV_Assert( _kernel.type() == CV_8U );
 
         vector<uchar> coeffs; // we do not really the values of non-zero
-                              // kernel elements, just their locations
+        // kernel elements, just their locations
         preprocess2DKernel( _kernel, coords, coeffs );
         ptrs.resize( coords.size() );
     }
@@ -832,7 +832,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
     vector<uchar*> ptrs;
     VecOp vecOp;
 };
-    
+
 }
 
 /////////////////////////////////// External Interface /////////////////////////////////////
@@ -845,35 +845,35 @@ cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksiz
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
     if( op == MORPH_ERODE )
     {
-		if( depth == CV_8U ) 
-			return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<uchar>,
-			ErodeRowVec8u>(ksize, anchor));
-		if( depth == CV_16U )
+        if( depth == CV_8U )
+            return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<uchar>,
+                                      ErodeRowVec8u>(ksize, anchor));
+        if( depth == CV_16U )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<ushort>,
-                ErodeRowVec16u>(ksize, anchor));
+                                      ErodeRowVec16u>(ksize, anchor));
         if( depth == CV_16S )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<short>,
-                ErodeRowVec16s>(ksize, anchor));
+                                      ErodeRowVec16s>(ksize, anchor));
         if( depth == CV_32F )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<float>,
-                ErodeRowVec32f>(ksize, anchor));
+                                      ErodeRowVec32f>(ksize, anchor));
     }
     else
     {
-		if( depth == CV_8U )
+        if( depth == CV_8U )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<uchar>,
-                DilateRowVec8u>(ksize, anchor));
+                                      DilateRowVec8u>(ksize, anchor));
         if( depth == CV_16U )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<ushort>,
-                DilateRowVec16u>(ksize, anchor));
+                                      DilateRowVec16u>(ksize, anchor));
         if( depth == CV_16S )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<short>,
-                DilateRowVec16s>(ksize, anchor));
+                                      DilateRowVec16s>(ksize, anchor));
         if( depth == CV_32F )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<float>,
-                DilateRowVec32f>(ksize, anchor));
+                                      DilateRowVec32f>(ksize, anchor));
     } 
- 
+
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
     return Ptr<BaseRowFilter>(0);
 }
@@ -886,33 +886,33 @@ cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, in
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
     if( op == MORPH_ERODE )
     {
-		if( depth == CV_8U )
+        if( depth == CV_8U )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<uchar>,
-                ErodeColumnVec8u>(ksize, anchor));
+                                         ErodeColumnVec8u>(ksize, anchor));
         if( depth == CV_16U )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<ushort>,
-                ErodeColumnVec16u>(ksize, anchor));
+                                         ErodeColumnVec16u>(ksize, anchor));
         if( depth == CV_16S )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<short>,
-                ErodeColumnVec16s>(ksize, anchor));
+                                         ErodeColumnVec16s>(ksize, anchor));
         if( depth == CV_32F )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<float>,
-                ErodeColumnVec32f>(ksize, anchor));
+                                         ErodeColumnVec32f>(ksize, anchor));
     }
     else
     {
-		if( depth == CV_8U )
+        if( depth == CV_8U )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<uchar>,
-                DilateColumnVec8u>(ksize, anchor));
+                                         DilateColumnVec8u>(ksize, anchor));
         if( depth == CV_16U )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<ushort>,
-                DilateColumnVec16u>(ksize, anchor));
+                                         DilateColumnVec16u>(ksize, anchor));
         if( depth == CV_16S )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<short>,
-                DilateColumnVec16s>(ksize, anchor));
+                                         DilateColumnVec16s>(ksize, anchor));
         if( depth == CV_32F )
             return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<float>,
-                DilateColumnVec32f>(ksize, anchor));
+                                         DilateColumnVec32f>(ksize, anchor));
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
@@ -955,8 +955,8 @@ cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, InputArray _ke
 
 
 cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, InputArray _kernel,
-         Point anchor, int _rowBorderType, int _columnBorderType,
-         const Scalar& _borderValue )
+                                                      Point anchor, int _rowBorderType, int _columnBorderType,
+                                                      const Scalar& _borderValue )
 {
     Mat kernel = _kernel.getMat();
     anchor = normalizeAnchor(anchor, kernel.size());
@@ -976,20 +976,20 @@ cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, InputArr
 
     Scalar borderValue = _borderValue;
     if( (_rowBorderType == BORDER_CONSTANT || _columnBorderType == BORDER_CONSTANT) &&
-        borderValue == morphologyDefaultBorderValue() )
+            borderValue == morphologyDefaultBorderValue() )
     {
         int depth = CV_MAT_DEPTH(type);
         CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
         if( op == MORPH_ERODE )
             borderValue = Scalar::all( depth == CV_8U ? (double)UCHAR_MAX :
-                depth == CV_16U ? (double)USHRT_MAX : (double)FLT_MAX );
+                                                        depth == CV_16U ? (double)USHRT_MAX : (double)FLT_MAX );
         else
             borderValue = Scalar::all( depth == CV_8U || depth == CV_16U ?
-                0. : (double)-FLT_MAX );
+                                           0. : (double)-FLT_MAX );
     }
 
     return Ptr<FilterEngine>(new FilterEngine(filter2D, rowFilter, columnFilter,
-        type, type, type, _rowBorderType, _columnBorderType, borderValue ));
+                                              type, type, type, _rowBorderType, _columnBorderType, borderValue ));
 }
 
 
@@ -1079,20 +1079,20 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
     {
         anchor = Point(anchor.x*iterations, anchor.y*iterations);
         kernel = getStructuringElement(MORPH_RECT,
-                Size(ksize.width + iterations*(ksize.width-1),
-                     ksize.height + iterations*(ksize.height-1)),
-                anchor);
+                                       Size(ksize.width + iterations*(ksize.width-1),
+                                            ksize.height + iterations*(ksize.height-1)),
+                                       anchor);
         iterations = 1;
     }
 
     Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(),
-        kernel, anchor, borderType, borderType, borderValue );
+                                                 kernel, anchor, borderType, borderType, borderValue );
 
     f->apply( src, dst );
     for( int i = 1; i < iterations; i++ )
         f->apply( dst, dst );
 }
-    
+
 template<> void Ptr<IplConvKernel>::delete_obj()
 { cvReleaseStructuringElement(&obj); }
 
@@ -1170,7 +1170,7 @@ cvCreateStructuringElementEx( int cols, int rows,
     cv::Size ksize = cv::Size(cols, rows);
     cv::Point anchor = cv::Point(anchorX, anchorY);
     CV_Assert( cols > 0 && rows > 0 && anchor.inside(cv::Rect(0,0,cols,rows)) &&
-        (shape != CV_SHAPE_CUSTOM || values != 0));
+               (shape != CV_SHAPE_CUSTOM || values != 0));
 
     int i, size = rows * cols;
     int element_size = sizeof(IplConvKernel) + size*sizeof(int);
@@ -1254,7 +1254,7 @@ cvMorphologyEx( const void* srcarr, void* dstarr, void*,
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), kernel;
     CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
     cv::Point anchor;
-	IplConvKernel* temp_element = NULL;
+    IplConvKernel* temp_element = NULL;
     if (!element)
     {
     	temp_element = cvCreateStructuringElementEx(3, 3, 1, 1, CV_SHAPE_RECT);
