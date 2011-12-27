@@ -46,6 +46,7 @@
 #include "NCVAlg.hpp"
 #include "NCVPyramid.hpp"
 #include "NCVPixelOperations.hpp"
+#include "opencv2/gpu/device/common.hpp"
 
 #ifdef _WIN32
 
@@ -234,6 +235,39 @@ __global__ void kernelDownsampleX2(T *d_src,
     }
 }
 
+namespace cv { namespace gpu { namespace device 
+{
+    namespace pyramid
+    {
+        template <typename T> void kernelDownsampleX2_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream)
+        {
+            dim3 bDim(16, 8);
+            dim3 gDim(divUp(src.cols, bDim.x), divUp(src.rows, bDim.y));
+
+            kernelDownsampleX2<<<gDim, bDim, 0, stream>>>((T*)src.data, src.step, (T*)dst.data, dst.step, NcvSize32u(dst.cols, dst.rows));
+
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        template void kernelDownsampleX2_gpu<uchar1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<uchar3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<uchar4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+
+        template void kernelDownsampleX2_gpu<ushort1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<ushort3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<ushort4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+
+        template void kernelDownsampleX2_gpu<float1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<float3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<float4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+    }
+}}}
+
+
+
 
 template<typename T>
 __global__ void kernelInterpolateFrom1(T *d_srcTop,
@@ -275,6 +309,37 @@ __global__ void kernelInterpolateFrom1(T *d_srcTop,
         d_dst_line[j] = outPix;
     }
 }
+namespace cv { namespace gpu { namespace device 
+{
+    namespace pyramid
+    {
+        template <typename T> void kernelInterpolateFrom1_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream)
+        {
+            dim3 bDim(16, 8);
+            dim3 gDim(divUp(dst.cols, bDim.x), divUp(dst.rows, bDim.y));
+
+            kernelInterpolateFrom1<<<gDim, bDim, 0, stream>>>((T*) src.data, src.step, NcvSize32u(src.cols, src.rows), 
+                (T*) dst.data, dst.step, NcvSize32u(dst.cols, dst.rows));
+
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        template void kernelInterpolateFrom1_gpu<uchar1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<uchar3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<uchar4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+
+        template void kernelInterpolateFrom1_gpu<ushort1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<ushort3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<ushort4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+
+        template void kernelInterpolateFrom1_gpu<float1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<float3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<float4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+    }
+}}}
 
 
 template <class T>

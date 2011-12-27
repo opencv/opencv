@@ -826,6 +826,32 @@ struct CV_EXPORTS CannyBuf
     Ptr<FilterEngine_GPU> filterDX, filterDY;
 };
 
+class CV_EXPORTS ImagePyramid
+{
+public:
+    inline ImagePyramid() : nLayers_(0) {}
+    inline ImagePyramid(const GpuMat& img, int nLayers, Stream& stream = Stream::Null())
+    {
+        build(img, nLayers, stream);
+    }
+
+    void build(const GpuMat& img, int nLayers, Stream& stream = Stream::Null());
+
+    void getLayer(GpuMat& outImg, Size outRoi, Stream& stream = Stream::Null()) const;
+
+    inline void release()
+    {
+        layer0_.release();
+        pyramid_.clear();
+        nLayers_ = 0;
+    }
+
+private:
+    GpuMat layer0_;
+    std::vector<GpuMat> pyramid_;
+    int nLayers_;
+};
+
 ////////////////////////////// Matrix reductions //////////////////////////////
 
 //! computes mean value and standard deviation of all or selected array elements
