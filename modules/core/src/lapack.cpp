@@ -951,34 +951,61 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     bool result = false;
     Mat src = _src.getMat();
     int type = src.type();
-
-    CV_Assert( method == DECOMP_LU || method == DECOMP_CHOLESKY || method == DECOMP_SVD );
-    _dst.create( src.cols, src.rows, type );
-    Mat dst = _dst.getMat();
+    size_t esz = CV_ELEM_SIZE(type);
+    int m = src.rows, n = src.cols;
     
     if( method == DECOMP_SVD )
     {
-        int n = std::min(src.rows, src.cols);
-        SVD svd(src);
-        svd.backSubst(Mat(), dst);
-
+        int nm = std::min(m, n);
+        
+        AutoBuffer<uchar> _buf((m*nm + nm + nm*n)*esz + sizeof(double));
+        uchar* buf = alignPtr((uchar*)_buf, (int)esz);
+        Mat u(m, nm, type, buf);
+        Mat w(nm, 1, type, u.data + m*nm*esz);
+        Mat vt(nm, n, type, w.data + nm*esz);
+        
+        SVD::compute(src, w, u, vt);
+        SVD::backSubst(w, u, vt, Mat(), _dst);
         return type == CV_32F ?
-            (((float*)svd.w.data)[0] >= FLT_EPSILON ?
-            ((float*)svd.w.data)[n-1]/((float*)svd.w.data)[0] : 0) :
-            (((double*)svd.w.data)[0] >= DBL_EPSILON ?
-            ((double*)svd.w.data)[n-1]/((double*)svd.w.data)[0] : 0);
+            (((float*)w.data)[0] >= FLT_EPSILON ?
+             ((float*)w.data)[n-1]/((float*)w.data)[0] : 0) :
+            (((double*)w.data)[0] >= DBL_EPSILON ?
+             ((double*)w.data)[n-1]/((double*)w.data)[0] : 0);
     }
-
-    CV_Assert( src.rows == src.cols && (type == CV_32F || type == CV_64F));
     
-    if( src.rows <= 3 )
+    CV_Assert( m == n && (type == CV_32F || type == CV_64F));
+    
+    if( method == DECOMP_EIG )
+    {
+        AutoBuffer<uchar> _buf((n*n*2 + n)*esz + sizeof(double));
+        uchar* buf = alignPtr((uchar*)_buf, (int)esz);
+        Mat u(n, n, type, buf);
+        Mat w(n, 1, type, u.data + n*n*esz);
+        Mat vt(n, n, type, w.data + n*esz);
+        
+        eigen(src, w, vt);
+        transpose(vt, u);
+        SVD::backSubst(w, u, vt, Mat(), _dst);
+        return type == CV_32F ?
+        (((float*)w.data)[0] >= FLT_EPSILON ?
+         ((float*)w.data)[n-1]/((float*)w.data)[0] : 0) :
+        (((double*)w.data)[0] >= DBL_EPSILON ?
+         ((double*)w.data)[n-1]/((double*)w.data)[0] : 0);
+    }
+    
+    CV_Assert( method == DECOMP_LU || method == DECOMP_CHOLESKY );
+    
+    _dst.create( n, n, type );
+    Mat dst = _dst.getMat();
+
+    if( n <= 3 )
     {
         uchar* srcdata = src.data;
         uchar* dstdata = dst.data;
         size_t srcstep = src.step;
         size_t dststep = dst.step;
 
-        if( src.rows == 2 )
+        if( n == 2 )
         {
             if( type == CV_32FC1 )
             {
@@ -1017,7 +1044,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                 }
             }
         }
-        else if( src.rows == 3 )
+        else if( n == 3 )
         {
             if( type == CV_32FC1 )
             {
@@ -1074,7 +1101,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         }
         else
         {
-            assert( src.rows == 1 );
+            assert( n == 1 );
 
             if( type == CV_32FC1 )
             {
@@ -1100,7 +1127,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         return result;
     }
 
-    int n = dst.cols, elem_size = CV_ELEM_SIZE(type);
+    int elem_size = CV_ELEM_SIZE(type);
     AutoBuffer<uchar> buf(n*n*elem_size);
     Mat src1(n, n, type, (uchar*)buf);
     src.copyTo(src1);
@@ -1621,7 +1648,8 @@ cvInvert( const CvArr* srcarr, CvArr* dstarr, int method )
 
     CV_Assert( src.type() == dst.type() && src.rows == dst.cols && src.cols == dst.rows );
     return cv::invert( src, dst, method == CV_CHOLESKY ? cv::DECOMP_CHOLESKY :
-        method == CV_SVD || method == CV_SVD_SYM ? cv::DECOMP_SVD : cv::DECOMP_LU );
+                      method == CV_SVD ? cv::DECOMP_SVD :
+                      method == CV_SVD_SYM ? cv::DECOMP_EIG : cv::DECOMP_LU );
 }
 
 
@@ -1634,7 +1662,8 @@ cvSolve( const CvArr* Aarr, const CvArr* barr, CvArr* xarr, int method )
     bool is_normal = (method & CV_NORMAL) != 0;
     method &= ~CV_NORMAL;
     return cv::solve( A, b, x, (method == CV_CHOLESKY ? cv::DECOMP_CHOLESKY :
-        method == CV_SVD || method == CV_SVD_SYM ? cv::DECOMP_SVD :
+                                method == CV_SVD ? cv::DECOMP_SVD :
+                                method == CV_SVD_SYM ? cv::DECOMP_EIG :
         A.rows > A.cols ? cv::DECOMP_QR : cv::DECOMP_LU) + (is_normal ? cv::DECOMP_NORMAL : 0) );
 }
 

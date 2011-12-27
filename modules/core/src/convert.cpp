@@ -615,20 +615,14 @@ cvtScale_<short, short, float>( const short* src, size_t sstep,
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    #if CV_SSE2
-		__m128 scale128, shift128;
-		if(USE_SSE2){
-			scale128 = _mm_set1_ps (scale);
-			shift128 = _mm_set1_ps (shift);
-		}
-    #endif
-
 	for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
 		#if CV_SSE2
 			if(USE_SSE2)
             {
+                __m128 scale128 = _mm_set1_ps (scale);
+                __m128 shift128 = _mm_set1_ps (shift);
 				for(; x <= size.width - 8; x += 8 )
 				{
 					__m128i r0 = _mm_loadl_epi64((const __m128i*)(src + x));

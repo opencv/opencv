@@ -2050,18 +2050,13 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
     if( code == CMP_GT || code == CMP_LE )
     {
         int m = code == CMP_GT ? 0 : 255;
-		#if CV_SSE2
-		__m128i m128, c128;
-		if( USE_SSE2 ){
-		  m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
-          c128 = _mm_set1_epi8 (0x7f);
-		}
-	   #endif
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
 		    #if CV_SSE2
 		    if( USE_SSE2 ){
+                __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
+                __m128i c128 = _mm_set1_epi8 (0x7f);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
@@ -2085,17 +2080,12 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
     else if( code == CMP_EQ || code == CMP_NE )
     {
         int m = code == CMP_EQ ? 0 : 255;
-		#if CV_SSE2
-		__m128i m128;
-		if( USE_SSE2 ){
-		  m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
-		}
-	   #endif
 		for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
 		    #if CV_SSE2
 		    if( USE_SSE2 ){
+                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
@@ -2141,17 +2131,12 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
     if( code == CMP_GT || code == CMP_LE )
     {
         int m = code == CMP_GT ? 0 : 255;
-		#if CV_SSE2
-		__m128i m128;
-		if( USE_SSE2 ){
-		  m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
-		}
-	   #endif
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
 		    #if CV_SSE2
 		    if( USE_SSE2){//
+                __m128i m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
@@ -2184,17 +2169,12 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
     else if( code == CMP_EQ || code == CMP_NE )
     {
         int m = code == CMP_EQ ? 0 : 255;
-		#if CV_SSE2
-		__m128i m128;
-		if( USE_SSE2 ){
-		  m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
-		}
-	   #endif
 		for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
 		    #if CV_SSE2
 		    if( USE_SSE2 ){
+                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
