@@ -616,7 +616,7 @@ add_definitions( -DANDROID )
 if( ARMEABI OR ARMEABI_V7A )
  # NDK also defines -ffunction-sections -funwind-tables but they result in worse OpenCV performance
  set( CMAKE_CXX_FLAGS "-fPIC -Wno-psabi -frtti -fexceptions" )
- set( CMAKE_CXX_FLAGS "-fPIC -Wno-psabi -fexceptions" )
+ set( CMAKE_C_FLAGS "-fPIC -Wno-psabi -fexceptions" )
  remove_definitions( -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__ )
  add_definitions( -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__ )
  # extra arm-specific flags
