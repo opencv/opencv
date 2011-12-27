@@ -68,9 +68,9 @@ Structure similar to :ocv:class:`gpu::DevMem2D_` but containing only a pointer a
 
 
 
-gpu::PtrElemStrp\_
+gpu::PtrElemStep\_
 ------------------
-.. ocv:class:: gpu::PtrElemStrp\_
+.. ocv:class:: gpu::PtrElemStep\_
 
 Structure similar to :ocv:class:`gpu::DevMem2D_` but containing only a pointer and a row step in elements. Width and height fields are excluded due to performance reasons. This class can only be constructed if ``sizeof(T)`` is a multiple of 256. The structure is intended for internal use or for users who write device code. ::
 
@@ -123,7 +123,6 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
             void upload(const CudaMem& m, Stream& stream);
 
             //! downloads data from device to host memory. Blocking calls.
-            operator Mat() const;
             void download(cv::Mat& m) const;
 
             //! download async

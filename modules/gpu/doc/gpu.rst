@@ -16,3 +16,4 @@ gpu. GPU-accelerated Computer Vision
     feature_detection_and_description
     image_filtering
     camera_calibration_and_3d_reconstruction
+    video

@@ -328,15 +328,23 @@ gpu::remap
 --------------
 Applies a generic geometrical transformation to an image.
 
-.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
+.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), Stream& stream = Stream::Null()
 
-    :param src: Source image. Only  ``CV_8UC1`` and  ``CV_8UC3`` source types are supported.
+    :param src: Source image.
 
     :param dst: Destination image with the size the same as  ``xmap`` and the type the same as  ``src`` .
 
     :param xmap: X values. Only  ``CV_32FC1`` type is supported.
 
     :param ymap: Y values. Only  ``CV_32FC1`` type is supported.
+    
+    :param interpolation: Interpolation method (see  :ocv:func:`resize` ). ``INTER_NEAREST`` , ``INTER_LINEAR`` and ``INTER_CUBIC`` are supported for now.
+
+    :param borderMode: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
+
+    :param borderValue: Value used in case of a constant border. By default, it is 0.
+
+    :param stream: Stream for the asynchronous version.
 
 The function transforms the source image using the specified map:
 
@@ -400,7 +408,7 @@ Resizes an image.
 
 .. ocv:function:: void gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
-    :param src: Source image.  ``CV_8UC1`` and  ``CV_8UC4`` types are supported.
+    :param src: Source image.
 
     :param dst: Destination image  with the same type as  ``src`` . The size is ``dsize`` (when it is non-zero) or the size is computed from  ``src.size()`` , ``fx`` , and  ``fy`` .
 
@@ -423,7 +431,7 @@ Resizes an image.
 
             \texttt{(double)dsize.height/src.rows}
 
-    :param interpolation: Interpolation method. Only  ``INTER_NEAREST`` and  ``INTER_LINEAR`` are supported.
+    :param interpolation: Interpolation method. ``INTER_NEAREST`` , ``INTER_LINEAR`` and ``INTER_CUBIC`` are supported for now.
 
     :param stream: Stream for the asynchronous version.
 
@@ -503,9 +511,9 @@ Rotates an image around the origin (0,0) and then shifts it.
 
 gpu::copyMakeBorder
 -----------------------
-Copies a 2D array to a larger destination array and pads borders with the given constant.
+Forms a border around an image.
 
-.. ocv:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and  ``CV_32FC1`` types are supported.
 
@@ -519,6 +527,8 @@ Copies a 2D array to a larger destination array and pads borders with the given 
 
     :param right: Number of pixels in each direction from the source image rectangle to extrapolate. For example:  ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
 
+    :param borderType: Border type. See  :ocv:func:`borderInterpolate` for details. ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
+    
     :param value: Border value.
 
     :param stream: Stream for the asynchronous version.
@@ -685,43 +695,17 @@ Builds spherical warping maps.
 
 
 
-gpu::downsample
--------------------
-Downsamples image by rejecting even rows and columns.
-
-.. ocv:function:: void gpu::downsample(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
-
-    :param src: Source image.
-
-    :param dst: Destination image. Will have ``Size((src.cols+1)/2, (src.rows+1)/2)`` size and the same type as ``src`` .
-
-    :param stream: Stream for the asynchronous version.
-
-
-
-gpu::upsample
--------------------
-Upsamples the source image by injecting even zero rows and columns.
-
-.. ocv:function:: void gpu::upsample(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
-
-    :param src: Source image.
-
-    :param dst: Destination image. Will have ``Size(src.cols*2, src.rows*2)`` size and the same type as ``src`` .
-
-    :param stream: Stream for the asynchronous version.
-
-
-
 gpu::pyrDown
 -------------------
 Smoothes an image and downsamples it.
 
-.. ocv:function:: void gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
     :param dst: Destination image. Will have ``Size((src.cols+1)/2, (src.rows+1)/2)`` size and the same type as ``src`` .
+    
+    :param borderType: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
 
     :param stream: Stream for the asynchronous version.
 
@@ -733,11 +717,13 @@ gpu::pyrUp
 -------------------
 Upsamples an image and then smoothes it.
 
-.. ocv:function:: void gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::pyrUp(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
     :param dst: Destination image. Will have ``Size(src.cols*2, src.rows*2)`` size and the same type as ``src`` .
+    
+    :param borderType: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
 
     :param stream: Stream for the asynchronous version.
 

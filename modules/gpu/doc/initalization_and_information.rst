@@ -60,6 +60,7 @@ Class providing GPU computing features. ::
         FEATURE_SET_COMPUTE_20,
         FEATURE_SET_COMPUTE_21,
         GLOBAL_ATOMICS,
+        SHARED_ATOMICS,
         NATIVE_DOUBLE
     };
 

@@ -9,15 +9,19 @@ gpu::add
 ------------
 Computes a matrix-matrix or matrix-scalar sum.
 
-.. ocv:function:: void gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::add(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::add(const GpuMat& src1, const Scalar& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
 
-    :param src1: First source matrix. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and ``CV_32FC1`` matrices are supported for now. Version with scalar supports only ``CV_32FC1`` and ``CV_32FC2`` matrices.
+    :param src1: First source matrix.
 
-    :param src2: Second source matrix or a scalar to be added to ``src1`` .
+    :param src2: Second source matrix or a scalar to be added to ``src1`` . Matrix should have the same size and type as ``src1`` .
 
-    :param dst: Destination matrix with the same size and type as ``src1`` .
+    :param dst: Destination matrix that has the same size and number of channels as the input array(s). The depth is defined by ``dtype`` or ``src1`` depth.
+    
+    :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
+    
+    :param dtype: Optional depth of the output array.
 
     :param stream: Stream for the asynchronous version.
 
@@ -29,15 +33,19 @@ gpu::subtract
 -----------------
 Computes a matrix-matrix or matrix-scalar difference.
 
-.. ocv:function:: void gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::subtract(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::subtract(const GpuMat& src1, const Scalar& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
 
-    :param src1: First source matrix. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and ``CV_32FC1`` matrices are supported for now. Version with scalar supports only ``CV_32FC1`` and ``CV_32FC2`` matrices.
+    :param src1: First source matrix.
 
-    :param src2: Second source matrix or a scalar to be subtracted from ``src1`` .
+    :param src2: Second source matrix or a scalar to be added to ``src1`` . Matrix should have the same size and type as ``src1`` .
 
-    :param dst: Destination matrix with the same size and type as ``src1`` .
+    :param dst: Destination matrix that has the same size and number of channels as the input array(s). The depth is defined by ``dtype`` or ``src1`` depth.
+    
+    :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
+    
+    :param dtype: Optional depth of the output array.
 
     :param stream: Stream for the asynchronous version.
 
@@ -49,15 +57,19 @@ gpu::multiply
 -----------------
 Computes a matrix-matrix or matrix-scalar per-element product.
 
-.. ocv:function:: void gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::multiply(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::multiply(const GpuMat& src1, const Scalar& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
 
-    :param src1: First source matrix. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and ``CV_32FC1`` matrices are supported for now. Version with scalar supports only ``CV_32FC1`` matrices.
+    :param src1: First source matrix.
 
     :param src2: Second source matrix or a scalar to be multiplied by ``src1`` elements.
 
-    :param dst: Destination matrix with the same size and type as ``src1`` .
+    :param dst: Destination matrix that has the same size and number of channels as the input array(s). The depth is defined by ``dtype`` or ``src1`` depth.
+
+    :param scale: Optional scale factor.
+    
+    :param dtype: Optional depth of the output array.
 
     :param stream: Stream for the asynchronous version.
 
@@ -67,23 +79,65 @@ Computes a matrix-matrix or matrix-scalar per-element product.
 
 gpu::divide
 ---------------
-Computes a matrix-matrix or matrix-scalar sum.
+Computes a matrix-matrix or matrix-scalar division.
 
-.. ocv:function:: void gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::divide(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::divide(const GpuMat& src1, const Scalar& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
 
-    :param src1: First source matrix. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and ``CV_32FC1`` matrices are supported for now. Version with scalar supports only ``CV_32FC1`` matrices.
+.. ocv:function:: void gpu::divide(double src1, const GpuMat& src2, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null())
+
+    :param src1: First source matrix or a scalar.
 
     :param src2: Second source matrix or a scalar. The ``src1`` elements are divided by it.
 
-    :param dst: Destination matrix with the same size and type as ``src1`` .
+    :param dst: Destination matrix that has the same size and number of channels as the input array(s). The depth is defined by ``dtype`` or ``src1`` depth.
+
+    :param scale: Optional scale factor.
+    
+    :param dtype: Optional depth of the output array.
 
     :param stream: Stream for the asynchronous version.
 
 This function, in contrast to :ocv:func:`divide`, uses a round-down rounding mode.
 
 .. seealso:: :ocv:func:`divide`
+
+
+
+addWeighted
+---------------
+Computes the weighted sum of two arrays.
+
+.. ocv:function:: void gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null());
+
+    :param src1: First source array.
+
+    :param alpha: Weight for the first array elements.
+
+    :param src2: Second source array of the same size and channel number as  ``src1`` .
+    
+    :param beta: Weight for the second array elements.
+
+    :param dst: Destination array that has the same size and number of channels as the input arrays.
+    
+    :param gamma: Scalar added to each sum.
+    
+    :param dtype: Optional depth of the destination array. When both input arrays have the same depth, ``dtype`` can be set to ``-1``, which will be equivalent to ``src1.depth()``.
+
+    :param stream: Stream for the asynchronous version.
+
+The function ``addWeighted`` calculates the weighted sum of two arrays as follows:
+
+.. math::
+
+    \texttt{dst} (I)= \texttt{saturate} ( \texttt{src1} (I)* \texttt{alpha} +  \texttt{src2} (I)* \texttt{beta} +  \texttt{gamma} )
+
+where ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
+
+.. seealso:: :ocv:func:`addWeighted`
+
+
 
 
 
@@ -151,7 +205,7 @@ Computes per-element absolute difference of two matrices (or of a matrix and sca
 
 .. ocv:function:: void gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& stream = Stream::Null())
 
-    :param src1: First source matrix. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now. Version with scalar supports only ``CV_32FC1`` matrices.
+    :param src1: First source matrix.
 
     :param src2: Second source matrix or a scalar to be added to ``src1`` .
 
@@ -169,11 +223,11 @@ Compares elements of two matrices.
 
 .. ocv:function:: void gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int cmpop, Stream& stream = Stream::Null())
 
-    :param src1: First source matrix. ``CV_8UC4`` and ``CV_32FC1`` matrices are supported for now.
+    :param src1: First source matrix.
 
-    :param src2: Second source matrix with the same size and type as ``a`` .
+    :param src2: Second source matrix with the same size and type as ``src1`` .
 
-    :param dst: Destination matrix with the same size as ``a`` and the ``CV_8UC1`` type.
+    :param dst: Destination matrix with the same size as ``src1`` and the ``CV_8UC1`` type.
 
     :param cmpop: Flag specifying the relation between the elements to be checked:
 

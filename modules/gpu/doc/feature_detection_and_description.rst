@@ -124,7 +124,7 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
         // Return true if the matcher supports mask in match methods.
         bool isMaskSupported() const;
 
-        void matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        void matchSingle(const GpuMat& query, const GpuMat& train,
             GpuMat& trainIdx, GpuMat& distance,
             const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
@@ -133,14 +133,13 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
         static void matchConvert(const Mat& trainIdx,
             const Mat& distance, std::vector<DMatch>& matches);
 
-        void match(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        void match(const GpuMat& query, const GpuMat& train,
             std::vector<DMatch>& matches, const GpuMat& mask = GpuMat());
 
         void makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection,
             const vector<GpuMat>& masks = std::vector<GpuMat>());
 
-        void matchCollection(const GpuMat& queryDescs,
-            const GpuMat& trainCollection,
+        void matchCollection(const GpuMat& query, const GpuMat& trainCollection,
             GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
             const GpuMat& maskCollection, Stream& stream = Stream::Null());
 
@@ -149,50 +148,58 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
         static void matchConvert(const Mat& trainIdx, const Mat& imgIdx,
             const Mat& distance, std::vector<DMatch>& matches);
 
-        void match(const GpuMat& queryDescs, std::vector<DMatch>& matches,
+        void match(const GpuMat& query, std::vector<DMatch>& matches,
             const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
-        void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        void knnMatchSingle(const GpuMat& query, const GpuMat& train,
             GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k,
             const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-        static void knnMatchDownload(const GpuMat& trainIdx,
-            const GpuMat& distance, std::vector< std::vector<DMatch> >& matches,
-            bool compactResult = false);
-        static void knnMatchConvert(const Mat& trainIdx,
-            const Mat& distance, std::vector< std::vector<DMatch> >& matches,
-            bool compactResult = false);
+        static void knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, 
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+        static void knnMatchConvert(const Mat& trainIdx, const Mat& distance, 
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
-        void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        void knnMatch(const GpuMat& query, const GpuMat& train,
             std::vector< std::vector<DMatch> >& matches, int k,
             const GpuMat& mask = GpuMat(), bool compactResult = false);
 
-        void knnMatch(const GpuMat& queryDescs,
-            std::vector< std::vector<DMatch> >& matches, int knn,
+        void knnMatch2Collection(const GpuMat& query, const GpuMat& trainCollection,
+            GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
+            const GpuMat& maskCollection = GpuMat(), Stream& stream = Stream::Null());
+
+        static void knnMatch2Download(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance,
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+        static void knnMatch2Convert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance,
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+
+        void knnMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, int k,
             const std::vector<GpuMat>& masks = std::vector<GpuMat>(),
-            bool compactResult = false );
-
-        void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
-            GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance,
-            float maxDistance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
-
-        static void radiusMatchDownload(const GpuMat& trainIdx,
-            const GpuMat& nMatches, const GpuMat& distance,
-            std::vector< std::vector<DMatch> >& matches,
-            bool compactResult = false);
-        static void radiusMatchConvert(const Mat& trainIdx,
-            const Mat& nMatches, const Mat& distance,
-            std::vector< std::vector<DMatch> >& matches,
             bool compactResult = false);
 
-        void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
+        void radiusMatchSingle(const GpuMat& query, const GpuMat& train,
+            GpuMat& trainIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
+            const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
+
+        static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, const GpuMat& nMatches,
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+        static void radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches,
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+
+        void radiusMatch(const GpuMat& query, const GpuMat& train,
             std::vector< std::vector<DMatch> >& matches, float maxDistance,
             const GpuMat& mask = GpuMat(), bool compactResult = false);
 
-        void radiusMatch(const GpuMat& queryDescs,
-            std::vector< std::vector<DMatch> >& matches, float maxDistance,
-            const std::vector<GpuMat>& masks = std::vector<GpuMat>(),
-            bool compactResult = false);
+        void radiusMatchCollection(const GpuMat& query, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
+            const std::vector<GpuMat>& masks = std::vector<GpuMat>(), Stream& stream = Stream::Null());
+
+        static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, const GpuMat& nMatches,
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+        static void radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches,
+            std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+
+        void radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, float maxDistance,
+            const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
     private:
         std::vector<GpuMat> trainDescCollection;
@@ -209,57 +216,15 @@ gpu::BruteForceMatcher_GPU::match
 -------------------------------------
 Finds the best match for each descriptor from a query set with train descriptors.
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::match(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector<DMatch>& matches, const GpuMat& mask = GpuMat())
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::match(const GpuMat& query, const GpuMat& train, std::vector<DMatch>& matches, const GpuMat& mask = GpuMat())
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::match(const GpuMat& queryDescs, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>())
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::matchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
+
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::match(const GpuMat& query, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>())
+
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::matchCollection(const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& masks, Stream& stream = Stream::Null())
 
 .. seealso:: :ocv:func:`DescriptorMatcher::match`
-
-
-
-gpu::BruteForceMatcher_GPU::matchSingle
--------------------------------------------
-Finds the best match for each query descriptor.
-
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::matchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs, GpuMat& trainIdx, GpuMat& distance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
-
-    :param queryDescs: Query set of descriptors.
-
-    :param trainDescs: Training set of descriptors. It is not added to train descriptors collection stored in the class object.
-
-    :param trainIdx: Output matrix that contains the best train index for each query.
-
-    :param distance: Output matrix that contains the best distance for each query.
-
-    :param mask: Mask specifying permissible matches between the input query and train matrices of descriptors.
-
-    :param stream: Stream for the asynchronous version.
-
-Results are stored in the GPU memory.
-
-
-
-gpu::BruteForceMatcher_GPU::matchCollection
------------------------------------------------
-Finds the best match for each query descriptor from train collection.
-
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::matchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& maskCollection, Stream& stream = Stream::Null())
-
-    :param queryDescs: Query set of descriptors.
-
-    :param trainCollection: :ocv:class:`gpu::GpuMat` containing train collection. It can be obtained from the collection of train descriptors that was set using the ``add`` method by :ocv:func:`gpu::BruteForceMatcher_GPU::makeGpuCollection`. Or it may contain a user-defined collection. This is a one-row matrix where each element is ``DevMem2D`` pointing out to a matrix of train descriptors.
-
-    :param trainIdx: Output matrix that contains the best train index for each query.
-
-    :param imgIdx: Output matrix that contains image train index for each query.
-
-    :param distance: Output matrix that contains the best distance for each query.
-
-    :param maskCollection: ``GpuMat``  containing a set of masks. It can be obtained from  ``std::vector<GpuMat>``  by  :ocv:func:`gpu::BruteForceMatcher_GPU::makeGpuCollection` or it may contain  a user-defined mask set. This is an empty matrix or one-row matrix where each element is a  ``PtrStep``  that points to one mask.
-
-    :param stream: Stream for the asynchronous version.
-
-Results are stored in the GPU memory.
 
 
 
@@ -267,7 +232,7 @@ gpu::BruteForceMatcher_GPU::makeGpuCollection
 -------------------------------------------------
 Performs a GPU collection of train descriptors and masks in a suitable format for the :ocv:func:`gpu::BruteForceMatcher_GPU::matchCollection` function.
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const vector<GpuMat>&masks = std::vector<GpuMat>())
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const vector<GpuMat>& masks = std::vector<GpuMat>())
 
 
 
@@ -295,21 +260,17 @@ gpu::BruteForceMatcher_GPU::knnMatch
 ----------------------------------------
 Finds the k best matches for each descriptor from a query set with train descriptors.
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector< std::vector<DMatch> >&matches, int k, const GpuMat& mask = GpuMat(), bool compactResult = false)
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, int k, const GpuMat& mask = GpuMat(), bool compactResult = false)
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& query, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
 
-    :param queryDescs: Query set of descriptors.
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch2Collection(const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& maskCollection = GpuMat(), Stream& stream = Stream::Null())
 
-    :param trainDescs: Training set of descriptors. It is not be added to train descriptors collection stored in the class object.
+    :param query: Query set of descriptors.
 
-    :param trainIdx: Output matrix that contains the best train index for each query.
-
-    :param distance: Output matrix that contains the best distance for each query.
-
-    :param allDist: Output matrix that contains  all distances between each query descriptors and each train descriptor.
+    :param train: Training set of descriptors. It is not be added to train descriptors collection stored in the class object.
 
     :param k: Number of the best matches per each query descriptor (or less if it is not possible).
 
@@ -329,9 +290,11 @@ The third variant of the method stores the results in GPU memory.
 
 gpu::BruteForceMatcher_GPU::knnMatchDownload
 ------------------------------------------------
-Downloads matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatch` to vector with :ocv:class:`DMatch`.
+Downloads matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatchSingle` or :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatch2Collection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch2Download(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
@@ -339,9 +302,11 @@ If ``compactResult`` is ``true`` , the ``matches`` vector does not contain match
 
 gpu::BruteForceMatcher_GPU::knnMatchConvert
 ------------------------------------------------
-Converts matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatch` to CPU vector with :ocv:class:`DMatch`.
+Converts matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatchSingle` or :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatch2Collection` to CPU vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatchConvert(const Mat& trainIdx, const Mat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch2Convert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
@@ -351,21 +316,17 @@ gpu::BruteForceMatcher_GPU::radiusMatch
 -------------------------------------------
 For each query descriptor, finds the best matches with a distance less than a given threshold.
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector< std::vector<DMatch> >&matches, float maxDistance, const GpuMat& mask = GpuMat(), bool compactResult = false)
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, float maxDistance, const GpuMat& mask = GpuMat(), bool compactResult = false)
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >&matches, float maxDistance, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false)
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, float maxDistance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >&matches, float maxDistance, const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false)
 
-    :param queryDescs: Query set of descriptors.
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchCollection(const GpuMat& query, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance, const std::vector<GpuMat>& masks = std::vector<GpuMat>(), Stream& stream = Stream::Null())
 
-    :param trainDescs: Training set of descriptors. It is not added to train descriptors collection stored in the class object.
+    :param query: Query set of descriptors.
 
-    :param trainIdx: Output matrix that contains the best train index for each query.
-
-    :param nMatches: Output matrix that contains the number of matching descriptors for each query.
-
-    :param distance: Output matrix that contains the best distance for each query.
+    :param train: Training set of descriptors. It is not added to train descriptors collection stored in the class object.
 
     :param maxDistance: Distance threshold.
 
@@ -387,9 +348,11 @@ The third variant of the method stores the results in GPU memory and does not st
 
 gpu::BruteForceMatcher_GPU::radiusMatchDownload
 ---------------------------------------------------
-Downloads matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatch` to vector with :ocv:class:`DMatch`.
+Downloads matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatchSingle` or :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& nMatches, const GpuMat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, const GpuMat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, const GpuMat& nMatches, std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
@@ -398,9 +361,11 @@ If ``compactResult`` is ``true`` , the ``matches`` vector does not contain match
 
 gpu::BruteForceMatcher_GPU::radiusMatchConvert
 ---------------------------------------------------
-Converts matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatch` to vector with :ocv:class:`DMatch`.
+Converts matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatchSingle` or :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& nMatches, const Mat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 

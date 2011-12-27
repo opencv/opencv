@@ -598,7 +598,6 @@ CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream
 CV_EXPORTS void log(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
 
 //! compares elements of two arrays (c = a <cmpop> b)
-//! supports CV_8UC4, CV_32FC1 types
 CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
 
 //! performs per-elements bit-wise inversion
