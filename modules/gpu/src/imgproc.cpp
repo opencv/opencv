@@ -2034,7 +2034,6 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stream)
 {
-#ifdef _WIN32
     using namespace cv::gpu::device::pyramid;
 
     typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
@@ -2081,14 +2080,10 @@ void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stre
 
         szLastLayer = szCurLayer;
     }
-#else
-    throw_nogpu();
-#endif
 }
 
 void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream) const
 {
-#ifdef _WIN32
     using namespace cv::gpu::device::pyramid;
 
     typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
@@ -2145,9 +2140,6 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream
     CV_Assert(func != 0);
 
     func(lastLayer, outImg, StreamAccessor::getStream(stream));
-#else
-    throw_nogpu();
-#endif
 }
 
 #endif /* !defined (HAVE_CUDA) */

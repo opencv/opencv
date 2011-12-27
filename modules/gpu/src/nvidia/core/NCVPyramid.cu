@@ -48,8 +48,6 @@
 #include "NCVPixelOperations.hpp"
 #include "opencv2/gpu/device/common.hpp"
 
-#ifdef _WIN32
-
 template<typename T, Ncv32u CN> struct __average4_CN {static __host__ __device__ T _average4_CN(const T &p00, const T &p01, const T &p10, const T &p11);};
 
 template<typename T> struct __average4_CN<T, 1> {
@@ -176,37 +174,6 @@ static __host__ __device__ Tout _lerp_CN(const Tin &a, const Tin &b, Ncv32f d)
 template<typename Tin, typename Tout> static __host__ __device__ Tout _lerp(const Tin &a, const Tin &b, Ncv32f d)
 {
     return __lerp_CN<Tin, Tout, NC(Tin)>::_lerp_CN(a, b, d);
-}
-
-
-template<typename T>
-static T _interpLinear(const T &a, const T &b, Ncv32f d)
-{
-    typedef typename TConvBase2Vec<Ncv32f, NC(T)>::TVec TVFlt;
-    TVFlt tmp = _lerp<T, TVFlt>(a, b, d);
-    return _pixDemoteClampZ<TVFlt, T>(tmp);
-}
-
-
-template<typename T>
-static T _interpBilinear(const NCVMatrix<T> &refLayer, Ncv32f x, Ncv32f y)
-{
-    Ncv32u xl = (Ncv32u)x;
-    Ncv32u xh = xl+1;
-    Ncv32f dx = x - xl;
-    Ncv32u yl = (Ncv32u)y;
-    Ncv32u yh = yl+1;
-    Ncv32f dy = y - yl;
-    T p00, p01, p10, p11;
-    p00 = refLayer.at(xl, yl);
-    p01 = xh < refLayer.width() ? refLayer.at(xh, yl) : p00;
-    p10 = yh < refLayer.height() ? refLayer.at(xl, yh) : p00;
-    p11 = (xh < refLayer.width() && yh < refLayer.height()) ? refLayer.at(xh, yh) : p00;
-    typedef typename TConvBase2Vec<Ncv32f, NC(T)>::TVec TVFlt;
-    TVFlt m_00_01 = _lerp<T, TVFlt>(p00, p01, dx);
-    TVFlt m_10_11 = _lerp<T, TVFlt>(p10, p11, dx);
-    TVFlt mixture = _lerp<TVFlt, TVFlt>(m_00_01, m_10_11, dy);
-    return _pixDemoteClampZ<TVFlt, T>(mixture);
 }
 
 
@@ -341,6 +308,38 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
+
+#ifdef _WIN32
+
+template<typename T>
+static T _interpLinear(const T &a, const T &b, Ncv32f d)
+{
+    typedef typename TConvBase2Vec<Ncv32f, NC(T)>::TVec TVFlt;
+    TVFlt tmp = _lerp<T, TVFlt>(a, b, d);
+    return _pixDemoteClampZ<TVFlt, T>(tmp);
+}
+
+
+template<typename T>
+static T _interpBilinear(const NCVMatrix<T> &refLayer, Ncv32f x, Ncv32f y)
+{
+    Ncv32u xl = (Ncv32u)x;
+    Ncv32u xh = xl+1;
+    Ncv32f dx = x - xl;
+    Ncv32u yl = (Ncv32u)y;
+    Ncv32u yh = yl+1;
+    Ncv32f dy = y - yl;
+    T p00, p01, p10, p11;
+    p00 = refLayer.at(xl, yl);
+    p01 = xh < refLayer.width() ? refLayer.at(xh, yl) : p00;
+    p10 = yh < refLayer.height() ? refLayer.at(xl, yh) : p00;
+    p11 = (xh < refLayer.width() && yh < refLayer.height()) ? refLayer.at(xh, yh) : p00;
+    typedef typename TConvBase2Vec<Ncv32f, NC(T)>::TVec TVFlt;
+    TVFlt m_00_01 = _lerp<T, TVFlt>(p00, p01, dx);
+    TVFlt m_10_11 = _lerp<T, TVFlt>(p10, p11, dx);
+    TVFlt mixture = _lerp<TVFlt, TVFlt>(m_00_01, m_10_11, dy);
+    return _pixDemoteClampZ<TVFlt, T>(mixture);
+}
 
 template <class T>
 NCVImagePyramid<T>::NCVImagePyramid(const NCVMatrix<T> &img,

@@ -577,7 +577,8 @@ void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
 
         ensureSizeIsEnough(3, keyPointsCount_[level], CV_32FC1, keyPointsPyr_[level]);
 
-        keyPointsCount_[level] = fastDetector_.getKeyPoints(keyPointsPyr_[level].rowRange(0, 2));
+        GpuMat fastKpRange = keyPointsPyr_[level].rowRange(0, 2);
+        keyPointsCount_[level] = fastDetector_.getKeyPoints(fastKpRange);
 
         int n_features = n_features_per_level_[level];
         
@@ -664,7 +665,8 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
 
         mergeLocation_gpu(keyPointsPyr_[level].ptr<short2>(0), keyPointsRange.ptr<float>(0), keyPointsRange.ptr<float>(1), keyPointsCount_[level], locScale, 0);
 
-        keyPointsPyr_[level].rowRange(1, 3).copyTo(keyPointsRange.rowRange(2, 4));
+        GpuMat range = keyPointsRange.rowRange(2, 4);
+        keyPointsPyr_[level].rowRange(1, 3).copyTo(range);
         
         keyPointsRange.row(4).setTo(Scalar::all(level));
         keyPointsRange.row(5).setTo(Scalar::all(params_.patch_size_ * sf));
