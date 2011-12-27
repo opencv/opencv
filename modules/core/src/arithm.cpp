@@ -2056,7 +2056,7 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
 		    #if CV_SSE2
 		    if( USE_SSE2 ){
                 __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
-                __m128i c128 = _mm_set1_epi8 (0x7f);
+                __m128i c128 = _mm_set1_epi8 (128);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
