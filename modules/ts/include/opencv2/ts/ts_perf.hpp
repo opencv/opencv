@@ -269,6 +269,7 @@ private:
     int64 totalTime;
     int64 timeLimit;
     static int64 timeLimitDefault;
+    static unsigned int iterationsLimitDefault;
 
     unsigned int nIters;
     unsigned int currentIter;
@@ -297,7 +298,7 @@ private:
         _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype = WARMUP_WRITE);
         _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype = WARMUP_WRITE);
 
-        _declareHelper& iterations(int n);
+        _declareHelper& iterations(unsigned int n);
         _declareHelper& time(double timeLimitSecs);
         _declareHelper& tbb_threads(int n = -1);
     private:

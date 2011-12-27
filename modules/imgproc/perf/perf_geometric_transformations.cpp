@@ -26,7 +26,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
 
     TEST_CYCLE(100) cv::resize(src, dst, to);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1 + 1e-6);
 }
 
 PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
@@ -50,6 +50,6 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
 
     TEST_CYCLE(100) cv::resize(src, dst, to);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1 + 1e-6);
 }
 

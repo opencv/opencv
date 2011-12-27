@@ -204,12 +204,12 @@ void Regression::write(cv::Mat m)
 
 void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname)
 {
-    double actualmin, actualmax;
-    cv::minMaxLoc(actual, &actualmin, &actualmax);
+    double actual_min, actual_max;
+    cv::minMaxLoc(actual, &actual_min, &actual_max);
 
-    ASSERT_NEAR((double)node["min"], actualmin, eps)
+    ASSERT_NEAR((double)node["min"], actual_min, eps)
             << "  " << argname << " has unexpected minimal value";
-    ASSERT_NEAR((double)node["max"], actualmax, eps)
+    ASSERT_NEAR((double)node["max"], actual_max, eps)
             << "  " << argname << " has unexpected maximal value";
 
     cv::FileNode last = node["last"];
@@ -265,13 +265,13 @@ void Regression::write(cv::InputArray array)
 
 void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
 {
-    ASSERT_EQ((int)node["kind"], array.kind()) << "  Argument " << node.name() << " has unexpected kind";
-    ASSERT_EQ((int)node["type"], array.type()) << "  Argument " << node.name() << " has unexpected type";
+    ASSERT_EQ((int)node["kind"], array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
+    ASSERT_EQ((int)node["type"], array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
 
     cv::FileNode valnode = node["val"];
     if (isVector(array))
     {
-        ASSERT_EQ((int)node["len"], (int)array.total()) << "  Vector " << node.name() << " has unexpected length";
+        ASSERT_EQ((int)node["len"], (int)array.total()) << "  Vector \"" << node.name() << "\" has unexpected length";
         int idx = node["idx"];
 
         cv::Mat actual = array.getMat(idx);
@@ -279,7 +279,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
         if (valnode.isNone())
         {
             ASSERT_LE((size_t)26, actual.total() * (size_t)actual.channels())
-                    << "  " << node.name() << "[" <<  idx << "] has unexpected number of elements";
+                    << "  \"" << node.name() << "[" <<  idx << "]\" has unexpected number of elements";
             verify(node, actual, eps, cv::format("%s[%d]", node.name().c_str(), idx));
         }
         else
@@ -293,8 +293,12 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
             cv::Mat diff;
             cv::absdiff(expected, actual, diff);
             if (!cv::checkRange(diff, true, 0, 0, eps))
-                FAIL() << "  Difference between argument "
-                       << node.name() << "[" <<  idx << "] and expected value is bugger than " << eps;
+            {
+                double max;
+                cv::minMaxLoc(diff, 0, &max);
+                FAIL() << "  Difference (=" << max << ") between argument \""
+                       << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
+            }
         }
     }
     else
@@ -302,7 +306,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
         if (valnode.isNone())
         {
             ASSERT_LE((size_t)26, array.total() * (size_t)array.channels())
-                    << "  Argument " << node.name() << " has unexpected number of elements";
+                    << "  Argument \"" << node.name() << "\" has unexpected number of elements";
             verify(node, array.getMat(), eps, "Argument " + node.name());
         }
         else
@@ -312,13 +316,17 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
             cv::Mat actual = array.getMat();
 
             ASSERT_EQ(expected.size(), actual.size())
-                    << "  Argument " << node.name() << " has unexpected size";
+                    << "  Argument \"" << node.name() << "\" has unexpected size";
 
             cv::Mat diff;
             cv::absdiff(expected, actual, diff);
             if (!cv::checkRange(diff, true, 0, 0, eps))
-                FAIL() << "  Difference between argument " << node.name()
-                       << " and expected value is bugger than " << eps;
+            {
+                double max;
+                cv::minMaxLoc(diff, 0, &max);
+                FAIL() << "  Difference (=" << max << ") between argument \"" << node.name()
+                       << "\" and expected value is bugger than " << eps;
+            }
         }
     }
 }
@@ -378,12 +386,14 @@ performance_metrics::performance_metrics()
 *                                   ::perf::TestBase
 \*****************************************************************************************/
 int64 TestBase::timeLimitDefault = 0;
+unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
 int64 TestBase::_timeadjustment = 0;
 
 const char *command_line_keys =
 {
     "{   |perf_max_outliers   |8        |percent of allowed outliers}"
     "{   |perf_min_samples    |10       |minimal required numer of samples}"
+    "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
     "{   |perf_seed           |809564   |seed for random numbers generator}"
     "{   |perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
     #if ANDROID
@@ -399,6 +409,7 @@ const char *command_line_keys =
 double       param_max_outliers;
 double       param_max_deviation;
 unsigned int param_min_samples;
+unsigned int perf_force_samples;
 uint64       param_seed;
 double       param_time_limit;
 int          param_tbb_nthreads;
@@ -429,6 +440,7 @@ void TestBase::Init(int argc, const char* const argv[])
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
     param_seed = args.get<uint64>("perf_seed");
     param_time_limit = std::max(0., args.get<double>("perf_time_limit"));
+    perf_force_samples = args.get<unsigned int>("perf_force_samples");
 
     param_tbb_nthreads  = args.get<int>("perf_tbb_nthreads");
 #if ANDROID
@@ -443,6 +455,7 @@ void TestBase::Init(int argc, const char* const argv[])
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
+    iterationsLimitDefault = perf_force_samples == 0 ? (unsigned)(-1) : perf_force_samples;
     _timeadjustment = _calibrate();
 }
 
@@ -785,7 +798,7 @@ void TestBase::SetUp()
 #endif
     lastTime = 0;
     totalTime = 0;
-    nIters = (unsigned int)-1;
+    nIters = iterationsLimitDefault;
     currentIter = (unsigned int)-1;
     timeLimit = timeLimitDefault;
     times.clear();
@@ -878,11 +891,11 @@ void TestBase::RunPerfTestBody()
 /*****************************************************************************************\
 *                          ::perf::TestBase::_declareHelper
 \*****************************************************************************************/
-TestBase::_declareHelper& TestBase::_declareHelper::iterations(int n)
+TestBase::_declareHelper& TestBase::_declareHelper::iterations(unsigned int n)
 {
     test->times.clear();
     test->times.reserve(n);
-    test->nIters = n;
+    test->nIters = std::min(n, TestBase::iterationsLimitDefault);
     test->currentIter = (unsigned int)-1;
     return *this;
 }

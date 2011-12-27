@@ -24,5 +24,5 @@ PERF_TEST_P(Size_MatType, dft, TEST_MATS_DFT)
         dft(src, dst);
     }
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-5);
 } 

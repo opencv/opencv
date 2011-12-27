@@ -25,7 +25,7 @@ PERF_TEST_P(Size_MatType, core_arithm__ ## __f, __testset)     \
                                                                \
     TEST_CYCLE(100) __f(a,b, c);                               \
                                                                \
-    SANITY_CHECK(c);                                           \
+    SANITY_CHECK(c, 1e-8);                                     \
 }
 
 #define PERF_TEST_P__CORE_ARITHM_SCALAR(__f, __testset) \
@@ -42,7 +42,7 @@ PERF_TEST_P(Size_MatType, core_arithm__ ## __f ##__Scalar, __testset)     \
                                                                           \
     TEST_CYCLE(100) __f(a,b, c);                                          \
                                                                           \
-    SANITY_CHECK(c);                                                      \
+    SANITY_CHECK(c, 1e-8);                                                \
 }
 
 PERF_TEST_P__CORE_ARITHM(bitwise_and, TYPICAL_MATS_BITW_ARITHM)

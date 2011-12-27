@@ -21,7 +21,7 @@ PERF_TEST_P( Size_MatType, sum, TYPICAL_MATS )
 
     TEST_CYCLE(100) { s = sum(arr); }
 
-    SANITY_CHECK(s);
+    SANITY_CHECK(s, 1e-6);
 }
 
 
@@ -40,7 +40,7 @@ PERF_TEST_P( Size_MatType, mean, TYPICAL_MATS )
     
     TEST_CYCLE(100) { s = mean(src); }
     
-    SANITY_CHECK(s);
+    SANITY_CHECK(s, 1e-6);
 }
 
 
@@ -60,7 +60,7 @@ PERF_TEST_P( Size_MatType, mean_mask, TYPICAL_MATS )
     
     TEST_CYCLE(100) { s = mean(src, mask); }
     
-    SANITY_CHECK(s);
+    SANITY_CHECK(s, 1e-6);
 }
 
 CV_FLAGS(NormType, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NORM_MINMAX)
@@ -89,7 +89,7 @@ PERF_TEST_P( Size_MatType_NormType, norm,
 
     TEST_CYCLE(100) { n = norm(src1, normType); }
     
-    SANITY_CHECK(n);
+    SANITY_CHECK(n, 1e-5);
 }
 
 
@@ -116,7 +116,7 @@ PERF_TEST_P( Size_MatType_NormType, norm_mask,
     
     TEST_CYCLE(100) { n = norm(src1, normType, mask); }
     
-    SANITY_CHECK(n);
+    SANITY_CHECK(n, 1e-5);
 }
 
 
@@ -143,7 +143,7 @@ PERF_TEST_P( Size_MatType_NormType, norm2,
     
     TEST_CYCLE(100) { n = norm(src1, src2, normType); }
     
-    SANITY_CHECK(n);
+    SANITY_CHECK(n, 1e-5);
 }
 
 
@@ -171,7 +171,7 @@ PERF_TEST_P( Size_MatType_NormType, norm2_mask,
     
     TEST_CYCLE(100) { n = norm(src1, src2, normType, mask); }
     
-    SANITY_CHECK(n);
+    SANITY_CHECK(n, 1e-5);
 }
 
 
@@ -200,7 +200,7 @@ PERF_TEST_P( Size_MatType_NormType, normalize,
     
     TEST_CYCLE(100) { normalize(src, dst, alpha, 0., normType);  }
     
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-6);
 }
 
 
@@ -230,7 +230,7 @@ PERF_TEST_P( Size_MatType_NormType, normalize_mask,
     
     TEST_CYCLE(100) { normalize(src, dst, alpha, 0., normType, -1, mask);  }
     
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-6);
 }
 
 
@@ -259,7 +259,7 @@ PERF_TEST_P( Size_MatType_NormType, normalize_32f,
     
     TEST_CYCLE(100) { normalize(src, dst, alpha, 0., normType, CV_32F);  }
     
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-6);
 }
 
 
@@ -279,7 +279,7 @@ PERF_TEST_P( Size_MatType, normalize_minmax, TYPICAL_MATS )
     
     TEST_CYCLE(100) { normalize(src, dst, 20., 100., NORM_MINMAX);  }
     
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-6);
 }
 
 
@@ -298,8 +298,8 @@ PERF_TEST_P( Size_MatType, meanStdDev, TYPICAL_MATS )
 
     TEST_CYCLE(100) { meanStdDev(src, mean, dev);  }
     
-    SANITY_CHECK(mean);
-    SANITY_CHECK(dev);
+    SANITY_CHECK(mean, 1e-6);
+    SANITY_CHECK(dev, 1e-6);
 }
 
 
@@ -319,8 +319,8 @@ PERF_TEST_P( Size_MatType, meanStdDev_mask, TYPICAL_MATS )
     
     TEST_CYCLE(100) { meanStdDev(src, mean, dev, mask);  }
     
-    SANITY_CHECK(mean);
-    SANITY_CHECK(dev);
+    SANITY_CHECK(mean, 1e-6);
+    SANITY_CHECK(dev, 1e-6);
 }
 
 
@@ -368,8 +368,8 @@ PERF_TEST_P( Size_MatType, minMaxLoc, testing::Combine(
     
     TEST_CYCLE(100) { minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);  }
     
-    SANITY_CHECK(minVal);
-    SANITY_CHECK(maxVal);
+    SANITY_CHECK(minVal, 1e-12);
+    SANITY_CHECK(maxVal, 1e-12);
 }
 
 

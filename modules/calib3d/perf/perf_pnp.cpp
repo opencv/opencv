@@ -43,6 +43,6 @@ PERF_TEST_P(PointsNumber, solvePnP, testing::Values(4, 3*9, 7*13)
         solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false);
     }
 
-    SANITY_CHECK(rvec);
-    SANITY_CHECK(tvec);
+    SANITY_CHECK(rvec, 1e-6);
+    SANITY_CHECK(tvec, 1e-6);
 }

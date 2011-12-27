@@ -17,5 +17,5 @@ PERF_TEST_P(VectorLength, phase32f, testing::Values(128, 1000, 128*1024, 512*102
 
     TEST_CYCLE(200) cv::phase(X, Y, angle, true);
 
-    SANITY_CHECK(angle);
+    SANITY_CHECK(angle, 5e-5);
 }
