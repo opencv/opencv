@@ -362,30 +362,81 @@ TEST(meanShift)
 
 TEST(SURF)
 {
-    Mat src1 = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
-    Mat src2 = imread(abspath("aloeR.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
-    if (src1.empty()) throw runtime_error("can't open aloeL.jpg");
-    if (src2.empty()) throw runtime_error("can't open aloeR.jpg");
-
-    gpu::GpuMat d_src1(src1);
-    gpu::GpuMat d_src2(src2);
+    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
 
     SURF surf;
-    vector<KeyPoint> keypoints1, keypoints2;
-    vector<float> descriptors1, descriptors2;
+    vector<KeyPoint> keypoints;
+    vector<float> descriptors;
+
+    surf(src, Mat(), keypoints, descriptors);
 
     CPU_ON;
-    surf(src1, Mat(), keypoints1, descriptors1);
-    surf(src2, Mat(), keypoints2, descriptors2);
+    surf(src, Mat(), keypoints, descriptors);
     CPU_OFF;
 
     gpu::SURF_GPU d_surf;
-    gpu::GpuMat d_keypoints1, d_keypoints2;
-    gpu::GpuMat d_descriptors1, d_descriptors2;
+    gpu::GpuMat d_src(src);
+    gpu::GpuMat d_keypoints;
+    gpu::GpuMat d_descriptors;
+
+    d_surf(d_src, gpu::GpuMat(), d_keypoints, d_descriptors);
 
     GPU_ON;
-    d_surf(d_src1, gpu::GpuMat(), d_keypoints1, d_descriptors1);
-    d_surf(d_src2, gpu::GpuMat(), d_keypoints2, d_descriptors2);
+    d_surf(d_src, gpu::GpuMat(), d_keypoints, d_descriptors);
+    GPU_OFF;
+}
+
+
+TEST(FAST)
+{
+    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+
+    vector<KeyPoint> keypoints;
+
+    FAST(src, keypoints, 20);
+
+    CPU_ON;
+    FAST(src, keypoints, 20);
+    CPU_OFF;
+
+    gpu::FAST_GPU d_FAST(20);
+    gpu::GpuMat d_src(src);
+    gpu::GpuMat d_keypoints;
+
+    d_FAST(d_src, gpu::GpuMat(), d_keypoints);
+
+    GPU_ON;
+    d_FAST(d_src, gpu::GpuMat(), d_keypoints);
+    GPU_OFF;
+}
+
+
+TEST(ORB)
+{
+    Mat src = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+
+    ORB orb(4000);
+    vector<KeyPoint> keypoints;
+    Mat descriptors;
+
+    orb(src, Mat(), keypoints, descriptors);
+
+    CPU_ON;
+    orb(src, Mat(), keypoints, descriptors);
+    CPU_OFF;
+
+    gpu::ORB_GPU d_orb;
+    gpu::GpuMat d_src(src);
+    gpu::GpuMat d_keypoints;
+    gpu::GpuMat d_descriptors;
+
+    d_orb(d_src, gpu::GpuMat(), d_keypoints, d_descriptors);
+
+    GPU_ON;
+    d_orb(d_src, gpu::GpuMat(), d_keypoints, d_descriptors);
     GPU_OFF;
 }
 

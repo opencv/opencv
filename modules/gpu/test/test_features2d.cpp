@@ -70,22 +70,6 @@ struct SURF : testing::TestWithParam<cv::gpu::DeviceInfo>
         cv::SURF fdetector_gold; fdetector_gold.extended = false;
         fdetector_gold(image, mask, keypoints_gold, descriptors_gold);        
     }
-
-    bool isSimilarKeypoints(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
-    {
-        const float maxPtDif = 1.f;
-        const float maxSizeDif = 1.f;
-        const float maxAngleDif = 2.f;
-        const float maxResponseDif = 0.1f;
-
-        float dist = (float)cv::norm(p1.pt - p2.pt);
-        return (dist < maxPtDif &&
-                fabs(p1.size - p2.size) < maxSizeDif &&
-                abs(p1.angle - p2.angle) < maxAngleDif &&
-                abs(p1.response - p2.response) < maxResponseDif &&
-                p1.octave == p2.octave &&
-                p1.class_id == p2.class_id );
-    }
 };
 
 TEST_P(SURF, EmptyDataTest)
@@ -651,5 +635,170 @@ INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher, testing::Combine(
                         testing::ValuesIn(devices()),
                         testing::Values(cv::gpu::BruteForceMatcher_GPU_base::L1Dist, cv::gpu::BruteForceMatcher_GPU_base::L2Dist),
                         testing::Values(57, 64, 83, 128, 179, 256, 304)));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// FAST
+
+struct FAST : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    cv::Mat image;
+
+    int threshold;
+
+    std::vector<cv::KeyPoint> keypoints_gold;
+    
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
+        ASSERT_FALSE(image.empty());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        threshold = rng.uniform(15, 80);
+
+        cv::FAST(image, keypoints_gold, threshold);
+    }
+};
+
+struct HashEq
+{
+    size_t hash;
+    inline HashEq(size_t hash_) : hash(hash_) {}
+    inline bool operator ()(const cv::KeyPoint& kp) const
+    {
+        return kp.hash() == hash;
+    }
+};
+
+struct KeyPointCompare
+{
+    inline bool operator ()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
+    {
+        return kp1.pt.y < kp2.pt.y || (kp1.pt.y == kp2.pt.y && kp1.pt.x < kp2.pt.x);
+    }
+};
+
+TEST_P(FAST, Accuracy)
+{
+    std::vector<cv::KeyPoint> keypoints;
+
+    ASSERT_NO_THROW(
+        cv::gpu::FAST_GPU fastGPU(threshold);
+
+        fastGPU(cv::gpu::GpuMat(image), cv::gpu::GpuMat(), keypoints);
+    );
+    
+    ASSERT_EQ(keypoints.size(), keypoints_gold.size());
+
+    std::sort(keypoints.begin(), keypoints.end(), KeyPointCompare());
+
+    for (size_t i = 0; i < keypoints_gold.size(); ++i)
+    {
+        const cv::KeyPoint& kp1 = keypoints[i];
+        const cv::KeyPoint& kp2 = keypoints_gold[i];
+
+        size_t h1 = kp1.hash();
+        size_t h2 = kp2.hash();
+
+        ASSERT_EQ(h1, h2);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Features2D, FAST, testing::ValuesIn(devices()));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// ORB
+
+struct ORB : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    cv::Mat image;
+    cv::Mat mask;
+
+    int npoints;
+
+    std::vector<cv::KeyPoint> keypoints_gold;
+    cv::Mat descriptors_gold;
+    
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
+        ASSERT_FALSE(image.empty());        
+        
+        mask = cv::Mat(image.size(), CV_8UC1, cv::Scalar::all(1));
+        mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
+
+        npoints = 4000;
+
+        cv::ORB orbCPU(npoints);
+
+        orbCPU(image, mask, keypoints_gold, descriptors_gold);
+    }
+};
+
+int getValidMatchesCount(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const std::vector<cv::DMatch>& matches)
+{
+    int count = 0;
+
+    for (size_t i = 0; i < matches.size(); ++i)
+    {
+        const cv::DMatch& m = matches[i];
+
+        const cv::KeyPoint& kp1 = keypoints1[m.queryIdx];
+        const cv::KeyPoint& kp2 = keypoints2[m.trainIdx];
+
+        bool isEq = 
+            fabs(kp1.pt.x - kp2.pt.x) <= 1 && 
+            fabs(kp1.pt.y - kp2.pt.y) <= 1 && 
+            //fabs(kp1.size - kp2.size) < 1 && 
+            //fabs(kp1.angle - kp2.angle) <= 1 && 
+            //fabs(kp1.response - kp2.response) < 1 &&
+            //kp1.octave == kp2.octave && 
+            //kp1.class_id == kp2.class_id
+            true;
+
+        if (isEq)
+            ++count;
+    }
+
+    return count;
+}
+
+TEST_P(ORB, Accuracy)
+{
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
+
+    ASSERT_NO_THROW(
+        cv::gpu::ORB_GPU orbGPU(npoints);
+        cv::gpu::GpuMat d_descriptors;
+
+        orbGPU(cv::gpu::GpuMat(image), cv::gpu::GpuMat(mask), keypoints, d_descriptors);
+
+        d_descriptors.download(descriptors);
+    );
+
+    cv::BruteForceMatcher<cv::Hamming> matcher;
+    std::vector<cv::DMatch> matches;
+
+    matcher.match(descriptors_gold, descriptors, matches);
+
+    int count = getValidMatchesCount(keypoints_gold, keypoints, matches);
+    double ratio = 100.0 * count / matches.size();
+
+    ASSERT_GE(ratio, 70.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Features2D, ORB, testing::ValuesIn(devices()));
 
 #endif // HAVE_CUDA

@@ -122,11 +122,50 @@ PERF_TEST_P(DevInfo, SURF, testing::ValuesIn(devices()))
     {
         surf(img, GpuMat(), keypoints, descriptors);
     }
-
-    Mat keypoints_host(keypoints);
-    Mat descriptors_host(descriptors);
-    
-    SANITY_CHECK(keypoints_host);
-    SANITY_CHECK(descriptors_host);
 }
 
+PERF_TEST_P(DevInfo, FAST, testing::ValuesIn(devices()))
+{
+    DeviceInfo devInfo = GetParam();
+
+    setDevice(devInfo.deviceID());
+
+    Mat img_host = readImage("gpu/perf/aloe.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+
+    ASSERT_FALSE(img_host.empty());
+
+    GpuMat img(img_host);
+    GpuMat keypoints;
+
+    FAST_GPU fastGPU(20);
+
+    declare.time(2.0);
+
+    TEST_CYCLE(100)
+    {
+        fastGPU(img, GpuMat(), keypoints);
+    }
+}
+
+PERF_TEST_P(DevInfo, ORB, testing::ValuesIn(devices()))
+{
+    DeviceInfo devInfo = GetParam();
+
+    setDevice(devInfo.deviceID());
+
+    Mat img_host = readImage("gpu/perf/aloe.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+
+    ASSERT_FALSE(img_host.empty());
+
+    GpuMat img(img_host);
+    GpuMat keypoints, descriptors;
+
+    ORB_GPU orbGPU(4000);
+
+    declare.time(2.0);
+
+    TEST_CYCLE(100)
+    {
+        orbGPU(img, GpuMat(), keypoints, descriptors);
+    }
+}

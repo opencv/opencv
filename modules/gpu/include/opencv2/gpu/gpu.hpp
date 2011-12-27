@@ -1522,6 +1522,159 @@ public:
     GpuMat maxPosBuffer;
 };
 
+////////////////////////////////// FAST //////////////////////////////////////////
+
+class CV_EXPORTS FAST_GPU
+{
+public:
+    enum
+    {
+        LOCATION_ROW = 0,
+        RESPONSE_ROW,
+        ROWS_COUNT
+    };
+
+    // all features have same size
+    static const int FEATURE_SIZE = 7;
+
+    explicit FAST_GPU(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05);
+
+    //! finds the keypoints using FAST detector
+    //! supports only CV_8UC1 images
+    void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);    
+    void operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
+
+    //! download keypoints from device to host memory
+    void downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+    //! convert keypoints to KeyPoint vector
+    void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
+
+    //! release temporary buffer's memory
+    void release();
+
+    bool nonmaxSupression;
+
+    int threshold;
+
+    //! max keypoints = keypointsRatio * img.size().area()
+    double keypointsRatio;
+
+    //! find keypoints and compute it's response if nonmaxSupression is true
+    //! return count of detected keypoints
+    int calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask);
+
+    //! get final array of keypoints
+    //! performs nonmax supression if needed
+    //! return final count of keypoints
+    int getKeyPoints(GpuMat& keypoints);
+
+private:
+    GpuMat kpLoc_;
+    int count_;
+
+    GpuMat score_;
+
+    GpuMat d_keypoints_;
+};
+
+////////////////////////////////// ORB //////////////////////////////////////////
+
+class CV_EXPORTS ORB_GPU
+{
+public:
+    enum
+    {
+        X_ROW = 0,
+        Y_ROW,
+        RESPONSE_ROW,
+        ANGLE_ROW,
+        OCTAVE_ROW,
+        SIZE_ROW,
+        ROWS_COUNT
+    };
+
+    enum
+    {
+        DEFAULT_FAST_THRESHOLD = 20
+    };
+
+    //! Constructor
+    //! n_features - the number of desired features
+    //! detector_params - parameters to use
+    explicit ORB_GPU(size_t n_features = 500, const ORB::CommonParams& detector_params = ORB::CommonParams());
+
+    //! Compute the ORB features on an image
+    //! image - the image to compute the features (supports only CV_8UC1 images)
+    //! mask - the mask to apply
+    //! keypoints - the resulting keypoints
+    void operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
+    void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
+
+    //! Compute the ORB features and descriptors on an image
+    //! image - the image to compute the features (supports only CV_8UC1 images)
+    //! mask - the mask to apply
+    //! keypoints - the resulting keypoints
+    //! descriptors - descriptors array
+    void operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors);
+    void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors);
+
+    //! download keypoints from device to host memory
+    void downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+    //! convert keypoints to KeyPoint vector
+    void convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+    //! returns the descriptor size in bytes
+    inline int descriptorSize() const { return kBytes; }
+
+    void setParams(size_t n_features, const ORB::CommonParams& detector_params);
+    inline void setFastParams(int threshold, bool nonmaxSupression = true)
+    {
+        fastDetector_.threshold = threshold;
+        fastDetector_.nonmaxSupression = nonmaxSupression;
+    }
+
+    //! release temporary buffer's memory
+    void release();
+
+    //! if true, image will be blurred before descriptors calculation
+    bool blurForDescriptor;
+
+private:
+    enum { kBytes = 32 };
+
+    void buildScalePyramids(const GpuMat& image, const GpuMat& mask);
+
+    void computeKeyPointsPyramid();
+
+    void computeDescriptors(GpuMat& descriptors);
+
+    void mergeKeyPoints(GpuMat& keypoints);
+
+    ORB::CommonParams params_;
+
+    // The number of desired features per scale
+    std::vector<size_t> n_features_per_level_;
+
+    // Points to compute BRIEF descriptors from
+    GpuMat pattern_;
+
+    std::vector<GpuMat> imagePyr_;
+    std::vector<GpuMat> maskPyr_;
+
+    GpuMat buf_;
+
+    std::vector<GpuMat> keyPointsPyr_;
+    std::vector<int> keyPointsCount_;
+
+    FAST_GPU fastDetector_;
+
+    Ptr<FilterEngine_GPU> blurFilter;
+
+    GpuMat d_keypoints_;
+};
+
 ////////////////////////////////// Optical Flow //////////////////////////////////////////
 
 class CV_EXPORTS BroxOpticalFlow
