@@ -8,7 +8,7 @@ using namespace perf;
 #define TYPICAL_MAT_TYPES_MINMAX  CV_8SC1, CV_8SC4, CV_32SC1, CV_32FC1
 #define TYPICAL_MATS_MINMAX       testing::Combine( testing::Values( TYPICAL_MAT_SIZES_MINMAX), testing::Values( TYPICAL_MAT_TYPES_MINMAX) )
 
-PERF_TEST_P(Size_MatType, min_double, TYPICAL_MATS_MINMAX) 
+PERF_TEST_P(Size_MatType, min_double, TYPICAL_MATS_MINMAX)
 {
     Size sz = std::tr1::get<0>(GetParam());
     int type = std::tr1::get<1>(GetParam());
@@ -23,7 +23,7 @@ PERF_TEST_P(Size_MatType, min_double, TYPICAL_MATS_MINMAX)
     SANITY_CHECK(c);
 }
 
-PERF_TEST_P(Size_MatType, max_double, TYPICAL_MATS_MINMAX) 
+PERF_TEST_P(Size_MatType, max_double, TYPICAL_MATS_MINMAX)
 {
     Size sz = std::tr1::get<0>(GetParam());
     int type = std::tr1::get<1>(GetParam());
