@@ -223,6 +223,8 @@ namespace cv { namespace gpu { namespace device
         template <bool calcScore, class Mask>
         __global__ void calcKeypoints(const DevMem2Db img, const Mask mask, short2* kpLoc, const unsigned int maxKeypoints, PtrStepi score, const int threshold)
         {
+            #if __CUDA_ARCH__ >= 110
+
             const int j = threadIdx.x + blockIdx.x * blockDim.x + 3;
             const int i = threadIdx.y + blockIdx.y * blockDim.y + 3;
 
@@ -276,6 +278,8 @@ namespace cv { namespace gpu { namespace device
                         kpLoc[ind] = make_short2(j, i);
                 }
             }
+
+            #endif
         }
 
         int calcKeypoints_gpu(DevMem2Db img, DevMem2Db mask, short2* kpLoc, int maxKeypoints, DevMem2Di score, int threshold)
@@ -321,6 +325,8 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void nonmaxSupression(const short2* kpLoc, int count, const DevMem2Di scoreMat, short2* locFinal, float* responseFinal)
         {
+            #if __CUDA_ARCH__ >= 110
+
             const int kpIdx = threadIdx.x + blockIdx.x * blockDim.x;
 
             if (kpIdx < count)
@@ -349,6 +355,8 @@ namespace cv { namespace gpu { namespace device
                     responseFinal[ind] = static_cast<float>(score);
                 }
             }
+
+            #endif
         }
 
         int nonmaxSupression_gpu(const short2* kpLoc, int count, DevMem2Di score, short2* loc, float* response)

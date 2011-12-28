@@ -666,7 +666,7 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
         mergeLocation_gpu(keyPointsPyr_[level].ptr<short2>(0), keyPointsRange.ptr<float>(0), keyPointsRange.ptr<float>(1), keyPointsCount_[level], locScale, 0);
 
         GpuMat range = keyPointsRange.rowRange(2, 4);
-        keyPointsPyr_[level].rowRange(1, 3).copyTo(range);
+        keyPointsPyr_[level](Range(1, 3), Range(0, keyPointsCount_[level])).copyTo(range);
         
         keyPointsRange.row(4).setTo(Scalar::all(level));
         keyPointsRange.row(5).setTo(Scalar::all(params_.patch_size_ * sf));

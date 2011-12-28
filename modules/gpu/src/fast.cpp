@@ -124,6 +124,7 @@ int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& ma
 
     CV_Assert(img.type() == CV_8UC1);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == img.size()));
+    CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
 
     int maxKeypoints = static_cast<int>(keypointsRatio * img.size().area());
 
@@ -144,6 +145,8 @@ int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& ma
 int cv::gpu::FAST_GPU::getKeyPoints(GpuMat& keypoints)
 {
     using namespace cv::gpu::device::fast;
+
+    CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
 
     if (count_ == 0)
         return 0;
