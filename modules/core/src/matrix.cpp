@@ -201,12 +201,12 @@ void Mat::create(int d, const int* _sizes, int _type)
     if( d == 0 )
         return;
     flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
-    setSize(*this, d, _sizes, 0, allocator == 0);
+    setSize(*this, d, _sizes, 0, true);
     
     if( total() > 0 )
     {
 #ifdef HAVE_TGPU
-        if( !allocator ) allocator = tegra::getAllocator(d, _sizes, _type);
+        if( !allocator || allocator == tegra::getAllocator() ) allocator = tegra::getAllocator(d, _sizes, _type);
 #endif
         if( !allocator )
         {
