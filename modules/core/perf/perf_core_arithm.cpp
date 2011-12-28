@@ -52,14 +52,12 @@ PERF_TEST_P__CORE_ARITHM(add, TYPICAL_MATS_CORE_ARITHM)
 PERF_TEST_P__CORE_ARITHM(subtract, TYPICAL_MATS_CORE_ARITHM)
 PERF_TEST_P__CORE_ARITHM(min, TYPICAL_MATS_CORE_ARITHM)
 PERF_TEST_P__CORE_ARITHM(max, TYPICAL_MATS_CORE_ARITHM)
-PERF_TEST_P__CORE_ARITHM(absdiff, TYPICAL_MATS_CORE_ARITHM)
 
 PERF_TEST_P__CORE_ARITHM_SCALAR(bitwise_and, TYPICAL_MATS_BITW_ARITHM)
 PERF_TEST_P__CORE_ARITHM_SCALAR(bitwise_or, TYPICAL_MATS_BITW_ARITHM)
 PERF_TEST_P__CORE_ARITHM_SCALAR(bitwise_xor, TYPICAL_MATS_BITW_ARITHM)
 PERF_TEST_P__CORE_ARITHM_SCALAR(add, TYPICAL_MATS_CORE_ARITHM)
 PERF_TEST_P__CORE_ARITHM_SCALAR(subtract, TYPICAL_MATS_CORE_ARITHM)
-PERF_TEST_P__CORE_ARITHM_SCALAR(absdiff, TYPICAL_MATS_CORE_ARITHM)
 
 #ifdef ANDROID
 PERF_TEST(convert, cvRound)
@@ -75,3 +73,41 @@ PERF_TEST(convert, cvRound)
     }
 }
 #endif
+
+PERF_TEST_P(Size_MatType, core_arithm__absdiff, TYPICAL_MATS_CORE_ARITHM)
+{
+    Size sz = std::tr1::get<0>(GetParam());
+    int type = std::tr1::get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG)
+            .out(c);
+
+    TEST_CYCLE(100) absdiff(a,b, c);
+
+#if CV_SSE2 //see ticket 1529: absdiff can be without saturation if SSE is enabled
+    if (CV_MAT_DEPTH(type) != CV_32S)
+#endif
+        SANITY_CHECK(c, 1e-8);
+}
+
+PERF_TEST_P(Size_MatType, core_arithm__absdiff__Scalar, TYPICAL_MATS_CORE_ARITHM)
+{
+    Size sz = std::tr1::get<0>(GetParam());
+    int type = std::tr1::get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Scalar b;
+    cv::Mat c = Mat(sz, type);
+
+    declare.in(a, b, WARMUP_RNG)
+            .out(c);
+
+    TEST_CYCLE(100) absdiff(a,b, c);
+
+#if CV_SSE2 //see ticket 1529: absdiff can be without saturation if SSE is enabled
+    if (CV_MAT_DEPTH(type) != CV_32S)
+#endif
+        SANITY_CHECK(c, 1e-8);
+}

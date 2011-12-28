@@ -149,13 +149,19 @@ CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTY
 /*****************************************************************************************\
 *                 Regression control utility for performance testing                      *
 \*****************************************************************************************/
+enum ERROR_TYPE
+{
+    ERROR_ABSOLUTE = 0,
+    ERROR_RELATIVE = 1
+};
+
 class CV_EXPORTS Regression
 {
 public:
-    static Regression& add(const std::string& name, cv::InputArray array, double eps = DBL_EPSILON);
+    static Regression& add(const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
     static void Init(const std::string& testSuitName, const std::string& ext = ".xml");
 
-    Regression& operator() (const std::string& name, cv::InputArray array, double eps = DBL_EPSILON);
+    Regression& operator() (const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
 
 private:
     static Regression& instance();
@@ -181,8 +187,8 @@ private:
     void init(const std::string& testSuitName, const std::string& ext);
     void write(cv::InputArray array);
     void write(cv::Mat m);
-    void verify(cv::FileNode node, cv::InputArray array, double eps);
-    void verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname);
+    void verify(cv::FileNode node, cv::InputArray array, double eps, ERROR_TYPE err);
+    void verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname, ERROR_TYPE err);
 };
 
 #define SANITY_CHECK(array, ...) ::perf::Regression::add(#array, array , ## __VA_ARGS__)

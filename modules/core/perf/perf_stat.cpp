@@ -21,7 +21,7 @@ PERF_TEST_P( Size_MatType, sum, TYPICAL_MATS )
 
     TEST_CYCLE(100) { s = sum(arr); }
 
-    SANITY_CHECK(s, 1e-6);
+    SANITY_CHECK(s, 1e-6, ERROR_RELATIVE);
 }
 
 
@@ -89,7 +89,7 @@ PERF_TEST_P( Size_MatType_NormType, norm,
 
     TEST_CYCLE(100) { n = norm(src1, normType); }
     
-    SANITY_CHECK(n, 1e-5);
+    SANITY_CHECK(n, 1e-6, ERROR_RELATIVE);
 }
 
 
@@ -116,7 +116,7 @@ PERF_TEST_P( Size_MatType_NormType, norm_mask,
     
     TEST_CYCLE(100) { n = norm(src1, normType, mask); }
     
-    SANITY_CHECK(n, 1e-5);
+    SANITY_CHECK(n, 1e-6, ERROR_RELATIVE);
 }
 
 
@@ -143,7 +143,7 @@ PERF_TEST_P( Size_MatType_NormType, norm2,
     
     TEST_CYCLE(100) { n = norm(src1, src2, normType); }
     
-    SANITY_CHECK(n, 1e-5);
+    SANITY_CHECK(n, 1e-5, ERROR_RELATIVE);
 }
 
 
@@ -171,7 +171,7 @@ PERF_TEST_P( Size_MatType_NormType, norm2_mask,
     
     TEST_CYCLE(100) { n = norm(src1, src2, normType, mask); }
     
-    SANITY_CHECK(n, 1e-5);
+    SANITY_CHECK(n, 1e-5, ERROR_RELATIVE);
 }
 
 
@@ -258,8 +258,8 @@ PERF_TEST_P( Size_MatType_NormType, normalize_32f,
     declare.in(src, WARMUP_RNG).out(dst);
     
     TEST_CYCLE(100) { normalize(src, dst, alpha, 0., normType, CV_32F);  }
-    
-    SANITY_CHECK(dst, 1e-6);
+
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
 
 
@@ -404,7 +404,7 @@ PERF_TEST_P( Size_MatType_ROp, reduceR,
     
     TEST_CYCLE(100) { reduce(src, vec, 0, reduceOp, ddepth);  }
     
-    SANITY_CHECK(vec);
+    SANITY_CHECK(vec, 1);
 }
 
 /*
@@ -431,6 +431,6 @@ PERF_TEST_P( Size_MatType_ROp, reduceC,
     declare.in(src, WARMUP_RNG);
     
     TEST_CYCLE(100) { reduce(src, vec, 1, reduceOp, ddepth);  }
-    
-    SANITY_CHECK(vec);
+
+    SANITY_CHECK(vec, 1);
 }

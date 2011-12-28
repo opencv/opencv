@@ -43,9 +43,9 @@ Regression& Regression::instance()
     return single;
 }
 
-Regression& Regression::add(const std::string& name, cv::InputArray array, double eps)
+Regression& Regression::add(const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
-    return instance()(name, array, eps);
+    return instance()(name, array, eps, err);
 }
 
 void Regression::Init(const std::string& testSuitName, const std::string& ext)
@@ -202,13 +202,25 @@ void Regression::write(cv::Mat m)
     write() << "val" << getElem(m, y, x, cn) << "}";
 }
 
-void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname)
+static double evalEps(double expected, double actual, double _eps, ERROR_TYPE err)
+{
+    if (err == ERROR_ABSOLUTE)
+        return _eps;
+    else if (err == ERROR_RELATIVE)
+        return std::max(std::abs(expected), std::abs(actual)) * err;
+    return 0;
+}
+
+void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::string argname, ERROR_TYPE err)
 {
     double actual_min, actual_max;
     cv::minMaxLoc(actual, &actual_min, &actual_max);
 
+    double eps = evalEps((double)node["min"], actual_min, _eps, err);
     ASSERT_NEAR((double)node["min"], actual_min, eps)
             << "  " << argname << " has unexpected minimal value";
+
+    eps = evalEps((double)node["max"], actual_max, _eps, err);
     ASSERT_NEAR((double)node["max"], actual_max, eps)
             << "  " << argname << " has unexpected maximal value";
 
@@ -218,6 +230,8 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::stri
             << "  " << argname << " has unexpected number of columns";
     ASSERT_EQ((int)last["y"], actual.rows - 1)
             << "  " << argname << " has unexpected number of rows";
+
+    eps = evalEps((double)last["val"], actualLast, _eps, err);
     ASSERT_NEAR((double)last["val"], actualLast, eps)
             << "  " << argname << " has unexpected value of last element";
 
@@ -225,6 +239,8 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::stri
     int x1 = rng1["x"];
     int y1 = rng1["y"];
     int cn1 = rng1["cn"];
+
+    eps = evalEps((double)rng1["val"], getElem(actual, y1, x1, cn1), _eps, err);
     ASSERT_NEAR((double)rng1["val"], getElem(actual, y1, x1, cn1), eps)
             << "  " << argname << " has unexpected value of ["<< x1 << ":" << y1 << ":" << cn1 <<"] element";
 
@@ -232,6 +248,8 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::stri
     int x2 = rng2["x"];
     int y2 = rng2["y"];
     int cn2 = rng2["cn"];
+
+    eps = evalEps((double)rng2["val"], getElem(actual, y2, x2, cn2), _eps, err);
     ASSERT_NEAR((double)rng2["val"], getElem(actual, y2, x2, cn2), eps)
             << "  " << argname << " has unexpected value of ["<< x2 << ":" << y2 << ":" << cn2 <<"] element";
 }
@@ -263,7 +281,31 @@ void Regression::write(cv::InputArray array)
     }
 }
 
-void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
+static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const cv::Mat& diff, double eps, double* max_violation = 0, double* max_allowed = 0)
+{
+    cv::Mat diff64f;
+    diff.reshape(1).convertTo(diff64f, CV_64F);
+
+    cv::Mat expected_abs = cv::abs(expected.reshape(1));
+    cv::Mat actual_abs = cv::abs(actual.reshape(1));
+    cv::Mat maximum, mask;
+    cv::max(expected_abs, actual_abs, maximum);
+    cv::multiply(maximum, cv::Vec<double, 1>(eps), maximum, CV_64F);
+    cv::compare(diff64f, maximum, mask, cv::CMP_GT);
+
+    int v = cv::countNonZero(mask);
+
+    if (v > 0 && max_violation != 0 && max_allowed != 0)
+    {
+        int loc[10];
+        cv::minMaxIdx(maximum, 0, max_allowed, 0, loc, mask);
+        *max_violation = diff64f.at<double>(loc[1], loc[0]);
+    }
+
+    return v;
+}
+
+void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERROR_TYPE err)
 {
     ASSERT_EQ((int)node["kind"], array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
     ASSERT_EQ((int)node["type"], array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
@@ -280,7 +322,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
         {
             ASSERT_LE((size_t)26, actual.total() * (size_t)actual.channels())
                     << "  \"" << node.name() << "[" <<  idx << "]\" has unexpected number of elements";
-            verify(node, actual, eps, cv::format("%s[%d]", node.name().c_str(), idx));
+            verify(node, actual, eps, cv::format("%s[%d]", node.name().c_str(), idx), err);
         }
         else
         {
@@ -292,12 +334,26 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
 
             cv::Mat diff;
             cv::absdiff(expected, actual, diff);
-            if (!cv::checkRange(diff, true, 0, 0, eps))
+
+            if (err == ERROR_ABSOLUTE)
             {
-                double max;
-                cv::minMaxLoc(diff, 0, &max);
-                FAIL() << "  Difference (=" << max << ") between argument \""
-                       << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
+                if (!cv::checkRange(diff, true, 0, 0, eps))
+                {
+                    double max;
+                    cv::minMaxLoc(diff.reshape(1), 0, &max);
+                    FAIL() << "  Absolute difference (=" << max << ") between argument \""
+                           << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
+                }
+            }
+            else if (err == ERROR_RELATIVE)
+            {
+                double maxv, maxa;
+                int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
+                if (violations > 0)
+                {
+                    FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
+                           << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps << " in " << violations << " points";
+                }
             }
         }
     }
@@ -307,7 +363,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
         {
             ASSERT_LE((size_t)26, array.total() * (size_t)array.channels())
                     << "  Argument \"" << node.name() << "\" has unexpected number of elements";
-            verify(node, array.getMat(), eps, "Argument " + node.name());
+            verify(node, array.getMat(), eps, "Argument " + node.name(), err);
         }
         else
         {
@@ -320,18 +376,32 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps)
 
             cv::Mat diff;
             cv::absdiff(expected, actual, diff);
-            if (!cv::checkRange(diff, true, 0, 0, eps))
+
+            if (err == ERROR_ABSOLUTE)
             {
-                double max;
-                cv::minMaxLoc(diff, 0, &max);
-                FAIL() << "  Difference (=" << max << ") between argument \"" << node.name()
-                       << "\" and expected value is bugger than " << eps;
+                if (!cv::checkRange(diff, true, 0, 0, eps))
+                {
+                    double max;
+                    cv::minMaxLoc(diff.reshape(1), 0, &max);
+                    FAIL() << "  Difference (=" << max << ") between argument \"" << node.name()
+                           << "\" and expected value is bugger than " << eps;
+                }
+            }
+            else if (err == ERROR_RELATIVE)
+            {
+                double maxv, maxa;
+                int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
+                if (violations > 0)
+                {
+                    FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
+                           << "\" and expected value is bugger than " << eps << " in " << violations << " points";
+                }
             }
         }
     }
 }
 
-Regression& Regression::operator() (const std::string& name, cv::InputArray array, double eps)
+Regression& Regression::operator() (const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
     std::string nodename = getCurrentTestNodeName();
 
@@ -356,7 +426,7 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
         if (!this_arg.isMap())
             ADD_FAILURE() << "  No regression data for " << name << " argument";
         else
-            verify(this_arg, array, eps);
+            verify(this_arg, array, eps, err);
     }
     return *this;
 }
