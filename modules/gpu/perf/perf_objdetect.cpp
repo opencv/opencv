@@ -1,21 +1,27 @@
 #include "perf_precomp.hpp"
 
-PERF_TEST_P(DevInfo, HOGDescriptor, testing::ValuesIn(devices()))
+#ifdef HAVE_CUDA
+
+GPU_PERF_TEST_1(HOG, cv::gpu::DeviceInfo)
 {
-    DeviceInfo devInfo = GetParam();
+    cv::gpu::DeviceInfo devInfo = GetParam();
 
-    setDevice(devInfo.deviceID());
+    cv::gpu::setDevice(devInfo.deviceID());
 
-    Mat img_host = readImage("gpu/hog/road.png", CV_LOAD_IMAGE_GRAYSCALE);
+    cv::Mat img_host = readImage("gpu/hog/road.png", cv::IMREAD_GRAYSCALE);
 
-    GpuMat img(img_host);
-    vector<Rect> found_locations;
+    cv::gpu::GpuMat img(img_host);
+    std::vector<cv::Rect> found_locations;
 
-    gpu::HOGDescriptor hog;
-    hog.setSVMDetector(gpu::HOGDescriptor::getDefaultPeopleDetector());
+    cv::gpu::HOGDescriptor hog;
+    hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
 
     TEST_CYCLE(100)
     {
         hog.detectMultiScale(img, found_locations);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(ObjDetect, HOG, ALL_DEVICES);
+
+#endif

@@ -5,8 +5,7 @@
 int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-    Regression::Init("gpu");
-    TestBase::Init(argc, argv);
+    perf::TestBase::Init(argc, argv);
     return RUN_ALL_TESTS();
 }
 

@@ -5,6 +5,7 @@
 #include <iostream>
 #include "cvconfig.h"
 #include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/ts_perf.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"

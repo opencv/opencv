@@ -1,176 +1,185 @@
 #include "perf_precomp.hpp"
 
-PERF_TEST_P(DevInfo_Size_MatType, merge, testing::Combine(testing::ValuesIn(devices()), 
-                                                          testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                          testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
-{
-    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
-    Size size = std::tr1::get<1>(GetParam());
-    int type = std::tr1::get<2>(GetParam());
+#ifdef HAVE_CUDA
 
-    setDevice(devInfo.deviceID());
+//////////////////////////////////////////////////////////////////////
+// Merge
+
+GPU_PERF_TEST(Merge, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::gpu::setDevice(devInfo.deviceID());
 
     const int num_channels = 4;
 
-    vector<GpuMat> src(num_channels);
+    std::vector<cv::gpu::GpuMat> src(num_channels);
     for (int i = 0; i < num_channels; ++i)
-        src[i] = GpuMat(size, type, cv::Scalar::all(i)); 
+        src[i] = cv::gpu::GpuMat(size, type, cv::Scalar::all(i)); 
 
-    GpuMat dst(size, CV_MAKETYPE(type, num_channels));
+    cv::gpu::GpuMat dst;
 
     TEST_CYCLE(100)
     {
-        merge(src, dst);
+        cv::gpu::merge(src, dst);
     }
-
-    Mat dst_host(dst);
-
-    SANITY_CHECK(dst_host);
 }
 
-PERF_TEST_P(DevInfo_Size_MatType, split, testing::Combine(testing::ValuesIn(devices()), 
-                                                          testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                          testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
-{
-    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
-    Size size = std::tr1::get<1>(GetParam());
-    int type = std::tr1::get<2>(GetParam());
+INSTANTIATE_TEST_CASE_P(MatOp, Merge, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES, 
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
 
-    setDevice(devInfo.deviceID());
+//////////////////////////////////////////////////////////////////////
+// Split
+
+GPU_PERF_TEST(Split, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::gpu::setDevice(devInfo.deviceID());
 
     const int num_channels = 4;
 
-    GpuMat src(size, CV_MAKETYPE(type, num_channels), cv::Scalar(1, 2, 3, 4));
+    cv::gpu::GpuMat src(size, CV_MAKETYPE(type, num_channels), cv::Scalar(1, 2, 3, 4));
 
-    vector<GpuMat> dst(num_channels);
+    std::vector<cv::gpu::GpuMat> dst(num_channels);
     for (int i = 0; i < num_channels; ++i)
-        dst[i] = GpuMat(size, type); 
+        dst[i] = cv::gpu::GpuMat(size, type); 
 
     TEST_CYCLE(100)
     {
-        split(src, dst);
+        cv::gpu::split(src, dst);
     }
-
-    vector<Mat> dst_host(dst.size());
-    for (size_t i = 0; i < dst.size(); ++i)
-        dst[i].download(dst_host[i]);
-
-    SANITY_CHECK(dst_host);
 }
 
-PERF_TEST_P(DevInfo_Size_MatType, setTo, testing::Combine(testing::ValuesIn(devices()), 
-                                                          testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                          testing::Values(CV_8UC1, CV_8UC4, CV_32FC1)))
+INSTANTIATE_TEST_CASE_P(MatOp, Split, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES, 
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+//////////////////////////////////////////////////////////////////////
+// SetTo
+
+GPU_PERF_TEST(SetTo, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
 {
-    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
-    Size size = std::tr1::get<1>(GetParam());
-    int type = std::tr1::get<2>(GetParam());
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
 
-    setDevice(devInfo.deviceID());
+    cv::gpu::setDevice(devInfo.deviceID());
 
-    GpuMat src(size, type);
-    Scalar val(1, 2, 3, 4);
+    cv::gpu::GpuMat src(size, type);
+    cv::Scalar val(1, 2, 3, 4);
 
     TEST_CYCLE(100)
     {
         src.setTo(val);
     }
-
-    Mat src_host(src);
-
-    SANITY_CHECK(src_host);
 }
 
-PERF_TEST_P(DevInfo_Size_MatType, setToMasked, testing::Combine(testing::ValuesIn(devices()), 
-                                                                testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                testing::Values(CV_8UC1, CV_8UC4, CV_32FC1)))
+INSTANTIATE_TEST_CASE_P(MatOp, SetTo, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES, 
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)));
+
+//////////////////////////////////////////////////////////////////////
+// SetToMasked
+
+GPU_PERF_TEST(SetToMasked, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
 {
-    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
-    Size size = std::tr1::get<1>(GetParam());
-    int type = std::tr1::get<2>(GetParam());
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
 
-    setDevice(devInfo.deviceID());
+    cv::gpu::setDevice(devInfo.deviceID());
 
-    Mat src_host(size, type);
+    cv::Mat src_host(size, type);
+    cv::Mat mask_host(size, CV_8UC1);
 
     declare.in(src_host, WARMUP_RNG);
+    fill(mask_host, 0, 2);
 
-    GpuMat src(src_host);
-    Scalar val(1, 2, 3, 4);
-
-    Mat mask_host(size, CV_8UC1);
-    randu(mask_host, 0.0, 2.0);
-    GpuMat mask(mask_host);
+    cv::gpu::GpuMat src(src_host);
+    cv::Scalar val(1, 2, 3, 4);
+    cv::gpu::GpuMat mask(mask_host);
     
     TEST_CYCLE(100)
     {
         src.setTo(val, mask);
     }
-
-    src.download(src_host);
-
-    SANITY_CHECK(src_host);
 }
 
-PERF_TEST_P(DevInfo_Size_MatType, copyToMasked, testing::Combine(testing::ValuesIn(devices()), 
-                                                                 testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                 testing::Values(CV_8UC1, CV_8UC4, CV_32FC1)))
+INSTANTIATE_TEST_CASE_P(MatOp, SetToMasked, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES, 
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)));
+
+//////////////////////////////////////////////////////////////////////
+// CopyToMasked
+
+GPU_PERF_TEST(CopyToMasked, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
 {
-    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
-    Size size = std::tr1::get<1>(GetParam());
-    int type = std::tr1::get<2>(GetParam());
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
 
-    setDevice(devInfo.deviceID());
+    cv::gpu::setDevice(devInfo.deviceID());
 
-    Mat src_host(size, type);
+    cv::Mat src_host(size, type);
+    cv::Mat mask_host(size, CV_8UC1);
 
     declare.in(src_host, WARMUP_RNG);
+    fill(mask_host, 0, 2);
 
-    GpuMat src(src_host);
-    GpuMat dst(size, type);
-
-    Mat mask_host(size, CV_8UC1);
-    randu(mask_host, 0.0, 2.0);
-    GpuMat mask(mask_host);
+    cv::gpu::GpuMat src(src_host);
+    cv::gpu::GpuMat mask(mask_host);
+    cv::gpu::GpuMat dst;
     
     TEST_CYCLE(100)
     {
         src.copyTo(dst, mask);
     }
-
-    Mat dst_host(dst);
-
-    SANITY_CHECK(dst_host);
 }
 
-PERF_TEST_P(DevInfo_Size_MatType_MatType, convertTo, testing::Combine(testing::ValuesIn(devices()), 
-                                                                      testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                      testing::Values(CV_8UC1, CV_16UC1, CV_32FC1),
-                                                                      testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
+INSTANTIATE_TEST_CASE_P(MatOp, CopyToMasked, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES, 
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)));
+
+//////////////////////////////////////////////////////////////////////
+// ConvertTo
+
+GPU_PERF_TEST(ConvertTo, cv::gpu::DeviceInfo, cv::Size, perf::MatType, perf::MatType)
 {
-    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
-    Size size = std::tr1::get<1>(GetParam());
-    int type1 = std::tr1::get<2>(GetParam());
-    int type2 = std::tr1::get<3>(GetParam());
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type1 = GET_PARAM(2);
+    int type2 = GET_PARAM(3);
 
-    setDevice(devInfo.deviceID());
+    cv::gpu::setDevice(devInfo.deviceID());
 
-    Mat src_host(size, type1);
+    cv::Mat src_host(size, type1);
 
     declare.in(src_host, WARMUP_RNG);
 
-    GpuMat src(src_host);
-    GpuMat dst(size, type2);
-
-    double a = 0.5;
-    double b = 1.0;
+    cv::gpu::GpuMat src(src_host);
+    cv::gpu::GpuMat dst;
     
     TEST_CYCLE(100)
     {
-        src.convertTo(dst, type2, a, b);
+        src.convertTo(dst, type2, 0.5, 1.0);
     }
-
-    Mat dst_host(dst);
-
-    SANITY_CHECK(dst_host);
 }
+
+INSTANTIATE_TEST_CASE_P(MatOp, ConvertTo, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES, 
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1), 
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+#endif

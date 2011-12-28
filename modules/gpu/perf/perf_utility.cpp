@@ -1,70 +1,16 @@
 #include "perf_precomp.hpp"
 
 using namespace std;
+using namespace cv;
 using namespace cv::gpu;
 
-Mat readImage(const string& fileName, int flags)
+void fill(Mat& m, double a, double b)
 {
-    return imread(::perf::TestBase::getDataPath(fileName), flags);
+    RNG rng(123456789);
+    rng.fill(m, RNG::UNIFORM, a, b);
 }
 
-bool supportFeature(const DeviceInfo& info, FeatureSet feature)
-{
-    return TargetArchs::builtWith(feature) && info.supports(feature);
-}
-
-const vector<DeviceInfo>& devices()
-{
-    static vector<DeviceInfo> devs;
-    static bool first = true;
-
-    if (first)
-    {
-        int deviceCount = getCudaEnabledDeviceCount();
-
-        devs.reserve(deviceCount);
-
-        for (int i = 0; i < deviceCount; ++i)
-        {
-            DeviceInfo info(i);
-            if (info.isCompatible())
-                devs.push_back(info);
-        }
-
-        first = false;
-    }
-
-    return devs;
-}
-
-vector<DeviceInfo> devices(FeatureSet feature)
-{
-    const vector<DeviceInfo>& d = devices();
-    
-    vector<DeviceInfo> devs_filtered;
-
-    if (TargetArchs::builtWith(feature))
-    {
-        devs_filtered.reserve(d.size());
-
-        for (size_t i = 0, size = d.size(); i < size; ++i)
-        {
-            const DeviceInfo& info = d[i];
-
-            if (info.supports(feature))
-                devs_filtered.push_back(info);
-        }
-    }
-
-    return devs_filtered;
-}
-
-void cv::gpu::PrintTo(const DeviceInfo& info, ostream* os)
-{
-    *os << info.name();
-}
-
-void PrintTo(const CvtColorInfo& info, ::std::ostream* os)
+void PrintTo(const CvtColorInfo& info, ostream* os)
 {
     static const char* str[] = 
     {
@@ -190,3 +136,66 @@ void PrintTo(const CvtColorInfo& info, ::std::ostream* os)
 
     *os << str[info.code];
 }
+
+void cv::gpu::PrintTo(const DeviceInfo& info, ostream* os)
+{
+    *os << info.name();
+}
+
+Mat readImage(const string& fileName, int flags)
+{
+    return imread(perf::TestBase::getDataPath(fileName), flags);
+}
+
+bool supportFeature(const DeviceInfo& info, FeatureSet feature)
+{
+    return TargetArchs::builtWith(feature) && info.supports(feature);
+}
+
+const vector<DeviceInfo>& devices()
+{
+    static vector<DeviceInfo> devs;
+    static bool first = true;
+
+    if (first)
+    {
+        int deviceCount = getCudaEnabledDeviceCount();
+
+        devs.reserve(deviceCount);
+
+        for (int i = 0; i < deviceCount; ++i)
+        {
+            DeviceInfo info(i);
+            if (info.isCompatible())
+                devs.push_back(info);
+        }
+
+        first = false;
+    }
+
+    return devs;
+}
+
+vector<DeviceInfo> devices(FeatureSet feature)
+{
+    const vector<DeviceInfo>& d = devices();
+    
+    vector<DeviceInfo> devs_filtered;
+
+    if (TargetArchs::builtWith(feature))
+    {
+        devs_filtered.reserve(d.size());
+
+        for (size_t i = 0, size = d.size(); i < size; ++i)
+        {
+            const DeviceInfo& info = d[i];
+
+            if (info.supports(feature))
+                devs_filtered.push_back(info);
+        }
+    }
+
+    return devs_filtered;
+}
+
+
