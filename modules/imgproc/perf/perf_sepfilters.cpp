@@ -3,7 +3,6 @@
 using namespace std;
 using namespace cv;
 using namespace perf;
-
 using std::tr1::make_tuple;
 using std::tr1::get;
 
@@ -50,7 +49,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, sobelFilter,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE(100) { Sobel(src, dst, ddepth, dx, dy, 3, 1, 0, border); }
+    TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, 3, 1, 0, border);
 
     SANITY_CHECK(dst);
 }
@@ -78,7 +77,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, sobelFilter,
 
     declare.in(src).out(dst);
 
-    TEST_CYCLE(100) { Sobel(src, dst, ddepth, dx, dy, 3, 1, 0, border); }
+    TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, 3, 1, 0, border);
 
     SANITY_CHECK(dst);
 }
@@ -103,7 +102,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5, sobelFilter,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE(100) { Sobel(src, dst, ddepth, dx, dy, 5, 1, 0, border); }
+    TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, 5, 1, 0, border);
 
     SANITY_CHECK(dst);
 }
@@ -131,7 +130,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5ROI, sobelFilter,
 
     declare.in(src).out(dst);
 
-    TEST_CYCLE(100) { Sobel(src, dst, ddepth, dx, dy, 5, 1, 0, border); }
+    TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, 5, 1, 0, border);
 
     SANITY_CHECK(dst);
 }
@@ -158,7 +157,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrFilter,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE(100) { Scharr(src, dst, ddepth, dx, dy, 1, 0, border); }
+    TEST_CYCLE() Scharr(src, dst, ddepth, dx, dy, 1, 0, border);
 
     SANITY_CHECK(dst);
 }
@@ -186,7 +185,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrFilter,
 
     declare.in(src).out(dst);
 
-    TEST_CYCLE(100) { Scharr(src, dst, ddepth, dx, dy, 1, 0, border); }
+    TEST_CYCLE() Scharr(src, dst, ddepth, dx, dy, 1, 0, border);
 
     SANITY_CHECK(dst);
 }
@@ -211,7 +210,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrViaSobelFilter,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE(100) { Sobel(src, dst, ddepth, dx, dy, -1, 1, 0, border); }
+    TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, -1, 1, 0, border);
 
     SANITY_CHECK(dst);
 }
@@ -239,7 +238,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrViaSobelFilter,
 
     declare.in(src).out(dst);
 
-    TEST_CYCLE(100) { Sobel(src, dst, ddepth, dx, dy, -1, 1, 0, border); }
+    TEST_CYCLE() Sobel(src, dst, ddepth, dx, dy, -1, 1, 0, border);
 
     SANITY_CHECK(dst);
 }

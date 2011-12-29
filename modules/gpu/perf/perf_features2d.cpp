@@ -25,7 +25,7 @@ GPU_PERF_TEST(BruteForceMatcher_match, cv::gpu::DeviceInfo, int)
 
     declare.time(3.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         matcher.matchSingle(query, train, trainIdx, distance);
     }
@@ -59,7 +59,7 @@ GPU_PERF_TEST(BruteForceMatcher_knnMatch, cv::gpu::DeviceInfo, int, int)
 
     declare.time(3.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         matcher.knnMatchSingle(query, train, trainIdx, distance, allDist, k);
     }
@@ -94,7 +94,7 @@ GPU_PERF_TEST(BruteForceMatcher_radiusMatch, cv::gpu::DeviceInfo, int)
 
     declare.time(3.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         matcher.radiusMatchSingle(query, train, trainIdx, distance, nMatches, 2.0);
     }
@@ -124,7 +124,7 @@ GPU_PERF_TEST_1(SURF, cv::gpu::DeviceInfo)
 
     declare.time(2.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         surf(img, cv::gpu::GpuMat(), keypoints, descriptors);
     }
@@ -150,7 +150,7 @@ GPU_PERF_TEST_1(FAST, cv::gpu::DeviceInfo)
 
     cv::gpu::FAST_GPU fastGPU(20);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         fastGPU(img, cv::gpu::GpuMat(), keypoints);
     }
@@ -176,7 +176,7 @@ GPU_PERF_TEST_1(ORB, cv::gpu::DeviceInfo)
 
     cv::gpu::ORB_GPU orbGPU(4000);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         orbGPU(img, cv::gpu::GpuMat(), keypoints, descriptors);
     }

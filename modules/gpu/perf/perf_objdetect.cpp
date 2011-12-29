@@ -16,7 +16,7 @@ GPU_PERF_TEST_1(HOG, cv::gpu::DeviceInfo)
     cv::gpu::HOGDescriptor hog;
     hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         hog.detectMultiScale(img, found_locations);
     }

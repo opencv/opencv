@@ -20,7 +20,7 @@ GPU_PERF_TEST(Transpose, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::transpose(src, dst);
     }
@@ -50,7 +50,7 @@ GPU_PERF_TEST(Flip, cv::gpu::DeviceInfo, cv::Size, perf::MatType, FlipCode)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::flip(src, dst, flipCode);
     }
@@ -81,7 +81,7 @@ GPU_PERF_TEST(LUT, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::LUT(src, lut, dst);
     }
@@ -113,7 +113,7 @@ GPU_PERF_TEST(CartToPolar, cv::gpu::DeviceInfo, cv::Size)
     cv::gpu::GpuMat magnitude;
     cv::gpu::GpuMat angle;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::cartToPolar(x, y, magnitude, angle);
     }
@@ -144,7 +144,7 @@ GPU_PERF_TEST(PolarToCart, cv::gpu::DeviceInfo, cv::Size)
     cv::gpu::GpuMat x;
     cv::gpu::GpuMat y;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::polarToCart(magnitude, angle, x, y, true);
     }
@@ -175,7 +175,7 @@ GPU_PERF_TEST(AddMat, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src2(src2_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::add(src1, src2, dst);
     }
@@ -205,7 +205,7 @@ GPU_PERF_TEST(AddScalar, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::Scalar s(1,2,3,4);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::add(src, s, dst);
     }
@@ -233,7 +233,7 @@ GPU_PERF_TEST(Exp, cv::gpu::DeviceInfo, cv::Size)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::exp(src, dst);
     }
@@ -261,7 +261,7 @@ GPU_PERF_TEST(Pow, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::pow(src, 0.5, dst);
     }
@@ -292,7 +292,7 @@ GPU_PERF_TEST(Compare, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src2(src2_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::compare(src1, src2, dst, cv::CMP_EQ);
     }
@@ -321,7 +321,7 @@ GPU_PERF_TEST(BitwiseNot, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::bitwise_not(src, dst);
     }
@@ -352,7 +352,7 @@ GPU_PERF_TEST(BitwiseAnd, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src2(src2_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::bitwise_and(src1, src2, dst);
     }
@@ -383,7 +383,7 @@ GPU_PERF_TEST(Min, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src2(src2_host);
     cv::gpu::GpuMat dst(size, type);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::min(src1, src2, dst);
     }
@@ -412,7 +412,7 @@ GPU_PERF_TEST(MeanStdDev, cv::gpu::DeviceInfo, cv::Size)
     cv::Scalar mean;
     cv::Scalar stddev;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::meanStdDev(src, mean, stddev);
     }
@@ -442,7 +442,7 @@ GPU_PERF_TEST(Norm, cv::gpu::DeviceInfo, cv::Size, perf::MatType, NormType)
     double dst;
     cv::gpu::GpuMat buf;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         dst = cv::gpu::norm(src, normType, buf);
     }
@@ -474,7 +474,7 @@ GPU_PERF_TEST(NormDiff, cv::gpu::DeviceInfo, cv::Size, NormType)
     cv::gpu::GpuMat src2(src2_host);
     double dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         dst = cv::gpu::norm(src1, src2, normType);
     }
@@ -504,7 +504,7 @@ GPU_PERF_TEST(Sum, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::Scalar dst;
     cv::gpu::GpuMat buf;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         dst = cv::gpu::sum(src, buf);
     }
@@ -534,7 +534,7 @@ GPU_PERF_TEST(MinMax, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     double minVal, maxVal;
     cv::gpu::GpuMat buf;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::minMax(src, &minVal, &maxVal, cv::gpu::GpuMat(), buf);
     }
@@ -565,7 +565,7 @@ GPU_PERF_TEST(MinMaxLoc, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::Point minLoc, maxLoc;
     cv::gpu::GpuMat valbuf, locbuf;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, cv::gpu::GpuMat(), valbuf, locbuf);
     }
@@ -595,7 +595,7 @@ GPU_PERF_TEST(CountNonZero, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     int dst;
     cv::gpu::GpuMat buf;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         dst = cv::gpu::countNonZero(src, buf);
     }
@@ -627,7 +627,7 @@ GPU_PERF_TEST(AddWeighted, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src2(src2_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::addWeighted(src1, 0.5, src2, 0.5, 0.0, dst);
     }
@@ -659,7 +659,7 @@ GPU_PERF_TEST(Reduce, cv::gpu::DeviceInfo, cv::Size, perf::MatType, FlipCode)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::reduce(src, dst, dim, CV_REDUCE_MIN);
     }
@@ -698,7 +698,7 @@ GPU_PERF_TEST(GEMM, cv::gpu::DeviceInfo, cv::Size)
 
     declare.time(5.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::gemm(src1, src2, 1.0, src3, 1.0, dst);
     }

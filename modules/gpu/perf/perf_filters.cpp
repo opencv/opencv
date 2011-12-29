@@ -23,7 +23,7 @@ GPU_PERF_TEST(BoxFilter, cv::gpu::DeviceInfo, cv::Size, perf::MatType, int)
 
     cv::Ptr<cv::gpu::FilterEngine_GPU> filter = cv::gpu::createBoxFilter_GPU(type, type, cv::Size(ksize, ksize));
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         filter->apply(src, dst);
     }
@@ -57,7 +57,7 @@ GPU_PERF_TEST(MorphologyFilter, cv::gpu::DeviceInfo, cv::Size, perf::MatType, Mo
 
     cv::Ptr<cv::gpu::FilterEngine_GPU> filter = cv::gpu::createMorphologyFilter_GPU(op, type, cv::Mat::ones(ksize, ksize, CV_8U));
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         filter->apply(src, dst);
     }
@@ -93,7 +93,7 @@ GPU_PERF_TEST(LinearFilter, cv::gpu::DeviceInfo, cv::Size, perf::MatType, int)
 
     declare.time(1.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         filter->apply(src, dst);
     }
@@ -129,7 +129,7 @@ GPU_PERF_TEST(SeparableLinearFilter, cv::gpu::DeviceInfo, cv::Size, perf::MatTyp
 
     declare.time(1.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         filter->apply(src, dst, cv::Rect(0, 0, src.cols, src.rows));
     }

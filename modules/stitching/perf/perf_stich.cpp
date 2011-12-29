@@ -6,6 +6,8 @@
 using namespace std;
 using namespace cv;
 using namespace perf;
+using std::tr1::make_tuple;
+using std::tr1::get;
 
 #define SURF_MATCH_CONFIDENCE 0.65f
 #define ORB_MATCH_CONFIDENCE  0.3f
@@ -14,7 +16,7 @@ using namespace perf;
 typedef TestBaseWithParam<String> stitch;
 typedef TestBaseWithParam<String> match;
 
-PERF_TEST_P( stitch, a123, testing::Values("surf", "orb"))
+PERF_TEST_P(stitch, a123, testing::Values("surf", "orb"))
 {
     Mat pano;
     
@@ -39,7 +41,7 @@ PERF_TEST_P( stitch, a123, testing::Values("surf", "orb"))
         Stitcher stitcher = Stitcher::createDefault();
         stitcher.setFeaturesFinder(featuresFinder);
         stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(new CylindricalWarper());
+        stitcher.setWarper(new SphericalWarper());
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
@@ -48,7 +50,7 @@ PERF_TEST_P( stitch, a123, testing::Values("surf", "orb"))
     }
 }
 
-PERF_TEST_P( stitch, b12, testing::Values("surf", "orb"))
+PERF_TEST_P(stitch, b12, testing::Values("surf", "orb"))
 {
     Mat pano;
     
@@ -72,7 +74,7 @@ PERF_TEST_P( stitch, b12, testing::Values("surf", "orb"))
         Stitcher stitcher = Stitcher::createDefault();
         stitcher.setFeaturesFinder(featuresFinder);
         stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(new CylindricalWarper());
+        stitcher.setWarper(new SphericalWarper());
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
@@ -114,7 +116,7 @@ PERF_TEST_P( match, bestOf2Nearest, testing::Values("surf", "orb"))
     detail::MatchesInfo pairwise_matches;
 
     declare.in(features1.descriptors, features2.descriptors)
-           .iterations(100);
+            .iterations(100);
 
     while(next())
     {

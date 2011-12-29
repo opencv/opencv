@@ -9,14 +9,14 @@ using std::tr1::get;
 typedef std::tr1::tuple<String, int, bool, std::tr1::tuple<double, double> > Img_Aperture_L2_thresholds_t;
 typedef perf::TestBaseWithParam<Img_Aperture_L2_thresholds_t> Img_Aperture_L2_thresholds;
 
-PERF_TEST_P( Img_Aperture_L2_thresholds, canny,
-             testing::Combine(
-                 testing::Values( "cv/shared/lena.jpg", "stitching/b1.jpg", "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png" ),
-                 testing::Values( 3, 5 ),
-                 testing::Bool(),
-                 testing::Values( make_tuple(50.0, 100.0), make_tuple(0.0, 50.0), make_tuple(100.0, 120.0) )
-             )
-           )
+PERF_TEST_P(Img_Aperture_L2_thresholds, canny,
+            testing::Combine(
+                testing::Values( "cv/shared/lena.jpg", "stitching/b1.jpg", "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png" ),
+                testing::Values( 3, 5 ),
+                testing::Bool(),
+                testing::Values( make_tuple(50.0, 100.0), make_tuple(0.0, 50.0), make_tuple(100.0, 120.0) )
+                )
+            )
 {
     String filename = getDataPath(get<0>(GetParam()));
     int aperture = get<1>(GetParam());
@@ -31,9 +31,7 @@ PERF_TEST_P( Img_Aperture_L2_thresholds, canny,
 
     declare.in(img).out(edges);
 
-
-    TEST_CYCLE(100) { Canny(img, edges, thresh_low, thresh_high, aperture, useL2); }
-
+    TEST_CYCLE() Canny(img, edges, thresh_low, thresh_high, aperture, useL2);
 
     SANITY_CHECK(edges);
 }

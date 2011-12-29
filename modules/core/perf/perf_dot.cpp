@@ -3,30 +3,28 @@
 using namespace std;
 using namespace cv;
 using namespace perf;
+using std::tr1::make_tuple;
+using std::tr1::get;
 
 typedef tr1::tuple<int, int> MatType_Length_t;
 typedef TestBaseWithParam<MatType_Length_t> MatType_Length;
 
 PERF_TEST_P( MatType_Length, dot,
              testing::Combine(
-                testing::Values( CV_8UC1, CV_32SC1, CV_32FC1 ),
-                testing::Values( 32, 64, 128, 256, 512, 1024 )
-            ))
+                 testing::Values( CV_8UC1, CV_32SC1, CV_32FC1 ),
+                 testing::Values( 32, 64, 128, 256, 512, 1024 )
+                 ))
 {
-    unsigned int type = std::tr1::get<0>(GetParam());
-    unsigned int size = std::tr1::get<1>(GetParam());
+    int type = get<0>(GetParam());
+    int size = get<1>(GetParam());
     Mat a(size, size, type);
     Mat b(size, size, type);
 
-    declare.in(a, WARMUP_RNG);
-    declare.in(b, WARMUP_RNG);
+    declare.in(a, b, WARMUP_RNG);
 
     double product;
 
-	TEST_CYCLE(100)
-	{
-        product = a.dot(b);
-	}
+    TEST_CYCLE_N(1000) product = a.dot(b);
 
-    SANITY_CHECK(product, 1e-5);
+    SANITY_CHECK(product, 1e-6, ERROR_RELATIVE);
 }

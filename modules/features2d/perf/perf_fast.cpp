@@ -3,7 +3,8 @@
 using namespace std;
 using namespace cv;
 using namespace perf;
-
+using std::tr1::make_tuple;
+using std::tr1::get;
 
 typedef perf::TestBaseWithParam<std::string> fast;
 
@@ -11,7 +12,7 @@ typedef perf::TestBaseWithParam<std::string> fast;
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
     "stitching/a3.jpg"
 
-PERF_TEST_P( fast, detectForORB, testing::Values(FAST_IMAGES) )
+PERF_TEST_P(fast, detectForORB, testing::Values(FAST_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -19,15 +20,11 @@ PERF_TEST_P( fast, detectForORB, testing::Values(FAST_IMAGES) )
     if (frame.empty())
         FAIL() << "Unable to load source image " << filename;
 
-    Mat mask;
     declare.in(frame);
 
     FastFeatureDetector fd(20, true);
     vector<KeyPoint> points;
 
-    TEST_CYCLE(100)
-    {
-        fd.detect(frame, points);
-    }
+    TEST_CYCLE() fd.detect(frame, points);
 }
 

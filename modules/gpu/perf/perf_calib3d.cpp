@@ -18,7 +18,7 @@ GPU_PERF_TEST_1(TransformPoints, cv::gpu::DeviceInfo)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::transformPoints(src, cv::Mat::ones(1, 3, CV_32FC1), cv::Mat::ones(1, 3, CV_32FC1), dst);
     }
@@ -42,7 +42,7 @@ GPU_PERF_TEST_1(ProjectPoints, cv::gpu::DeviceInfo)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::projectPoints(src, cv::Mat::ones(1, 3, CV_32FC1), cv::Mat::ones(1, 3, CV_32FC1), cv::Mat::ones(3, 3, CV_32FC1), cv::Mat(), dst);
     }
@@ -68,7 +68,7 @@ GPU_PERF_TEST_1(SolvePnPRansac, cv::gpu::DeviceInfo)
 
     declare.time(3.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::solvePnPRansac(object, image, cv::Mat::ones(3, 3, CV_32FC1), cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)), rvec, tvec);
     }
@@ -99,7 +99,7 @@ GPU_PERF_TEST_1(StereoBM, cv::gpu::DeviceInfo)
 
     declare.time(5.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         bm(img_l, img_r, dst);
     }
@@ -130,7 +130,7 @@ GPU_PERF_TEST_1(StereoBeliefPropagation, cv::gpu::DeviceInfo)
 
     declare.time(10.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         bp(img_l, img_r, dst);
     }
@@ -161,7 +161,7 @@ GPU_PERF_TEST_1(StereoConstantSpaceBP, cv::gpu::DeviceInfo)
 
     declare.time(10.0);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         bp(img_l, img_r, dst);
     }
@@ -190,7 +190,7 @@ GPU_PERF_TEST_1(DisparityBilateralFilter, cv::gpu::DeviceInfo)
 
     cv::gpu::DisparityBilateralFilter f(128);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         f(disp, img, dst);
     }

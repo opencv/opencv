@@ -433,7 +433,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 //
 //     declare.in(a, b).out(c).time(0.5);
 //
-//     SIMPLE_TEST_CYCLE() cv::add(a, b, c);
+//     TEST_CYCLE() cv::add(a, b, c);
 //
 //     SANITY_CHECK(c);
 //   }
@@ -458,8 +458,8 @@ int main(int argc, char **argv)\
     return RUN_ALL_TESTS();\
 }
 
-#define TEST_CYCLE(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
-#define SIMPLE_TEST_CYCLE() for(; startTimer(), next(); stopTimer())
+#define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
+#define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
 
 //flags
 namespace perf

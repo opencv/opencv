@@ -3,7 +3,8 @@
 using namespace std;
 using namespace cv;
 using namespace perf;
-
+using std::tr1::make_tuple;
+using std::tr1::get;
 
 typedef perf::TestBaseWithParam<std::string> orb;
 
@@ -11,7 +12,7 @@ typedef perf::TestBaseWithParam<std::string> orb;
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
     "stitching/a3.jpg"
 
-PERF_TEST_P( orb, detect, testing::Values(ORB_IMAGES) )
+PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -24,13 +25,10 @@ PERF_TEST_P( orb, detect, testing::Values(ORB_IMAGES) )
     ORB detector(1500, ORB::CommonParams(1.3f, 5));
     vector<KeyPoint> points;
 
-    TEST_CYCLE(100)
-    {
-        detector(frame, mask, points);
-    }
+    TEST_CYCLE() detector(frame, mask, points);
 }
 
-PERF_TEST_P( orb, extract, testing::Values(ORB_IMAGES) )
+PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -47,13 +45,10 @@ PERF_TEST_P( orb, extract, testing::Values(ORB_IMAGES) )
 
     Mat descriptors;
 
-    TEST_CYCLE(100)
-    {
-        detector(frame, mask, points, descriptors, true);
-    }
+    TEST_CYCLE() detector(frame, mask, points, descriptors, true);
 }
 
-PERF_TEST_P( orb, full, testing::Values(ORB_IMAGES) )
+PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -68,8 +63,5 @@ PERF_TEST_P( orb, full, testing::Values(ORB_IMAGES) )
     vector<KeyPoint> points;
     Mat descriptors;
 
-    TEST_CYCLE(100)
-    {
-        detector(frame, mask, points, descriptors, false);
-    }
+    TEST_CYCLE() detector(frame, mask, points, descriptors, false);
 }

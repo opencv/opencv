@@ -30,7 +30,7 @@ GPU_PERF_TEST_1(BroxOpticalFlow, cv::gpu::DeviceInfo)
 
     declare.time(10);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         d_flow(frame0, frame1, u, v);
     }
@@ -70,7 +70,7 @@ GPU_PERF_TEST_1(InterpolateFrames, cv::gpu::DeviceInfo)
     cv::gpu::GpuMat newFrame;
     cv::gpu::GpuMat buf;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::interpolateFrames(frame0, frame1, fu, fv, bu, bv, 0.5f, newFrame, buf);
     }

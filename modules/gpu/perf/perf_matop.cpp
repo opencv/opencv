@@ -21,7 +21,7 @@ GPU_PERF_TEST(Merge, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
 
     cv::gpu::GpuMat dst;
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::merge(src, dst);
     }
@@ -51,7 +51,7 @@ GPU_PERF_TEST(Split, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     for (int i = 0; i < num_channels; ++i)
         dst[i] = cv::gpu::GpuMat(size, type); 
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         cv::gpu::split(src, dst);
     }
@@ -76,7 +76,7 @@ GPU_PERF_TEST(SetTo, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat src(size, type);
     cv::Scalar val(1, 2, 3, 4);
 
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         src.setTo(val);
     }
@@ -108,7 +108,7 @@ GPU_PERF_TEST(SetToMasked, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::Scalar val(1, 2, 3, 4);
     cv::gpu::GpuMat mask(mask_host);
     
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         src.setTo(val, mask);
     }
@@ -140,7 +140,7 @@ GPU_PERF_TEST(CopyToMasked, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
     cv::gpu::GpuMat mask(mask_host);
     cv::gpu::GpuMat dst;
     
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         src.copyTo(dst, mask);
     }
@@ -170,7 +170,7 @@ GPU_PERF_TEST(ConvertTo, cv::gpu::DeviceInfo, cv::Size, perf::MatType, perf::Mat
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
     
-    TEST_CYCLE(100)
+    TEST_CYCLE()
     {
         src.convertTo(dst, type2, 0.5, 1.0);
     }

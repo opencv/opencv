@@ -3,7 +3,8 @@
 using namespace std;
 using namespace cv;
 using namespace perf;
-
+using std::tr1::make_tuple;
+using std::tr1::get;
 
 typedef perf::TestBaseWithParam<std::string> surf;
 
@@ -11,7 +12,7 @@ typedef perf::TestBaseWithParam<std::string> surf;
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
     "stitching/a3.jpg"
 
-PERF_TEST_P( surf, detect, testing::Values(SURF_IMAGES) )
+PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -24,13 +25,10 @@ PERF_TEST_P( surf, detect, testing::Values(SURF_IMAGES) )
     SURF detector;
     vector<KeyPoint> points;
 
-    TEST_CYCLE(100)
-    {
-        detector(frame, mask, points);
-    }
+    TEST_CYCLE() detector(frame, mask, points);
 }
 
-PERF_TEST_P( surf, extract, testing::Values(SURF_IMAGES) )
+PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -46,13 +44,10 @@ PERF_TEST_P( surf, extract, testing::Values(SURF_IMAGES) )
     vector<float> descriptors;
     detector(frame, mask, points);
 
-    TEST_CYCLE(100)
-    {
-        detector(frame, mask, points, descriptors, true);
-    }
+    TEST_CYCLE() detector(frame, mask, points, descriptors, true);
 }
 
-PERF_TEST_P( surf, full, testing::Values(SURF_IMAGES) )
+PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
 {
     String filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
@@ -66,8 +61,5 @@ PERF_TEST_P( surf, full, testing::Values(SURF_IMAGES) )
     vector<KeyPoint> points;
     vector<float> descriptors;
 
-    TEST_CYCLE(100)
-    {
-        detector(frame, mask, points, descriptors, false);
-    }
+    TEST_CYCLE() detector(frame, mask, points, descriptors, false);
 }
