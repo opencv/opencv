@@ -388,8 +388,8 @@ typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, 
 
 static SumSqrFunc sumSqrTab[] =
 {
-    (SumSqrFunc)sqsum8u, (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
-    (SumSqrFunc)sqsum32s, (SumSqrFunc)sqsum32f, (SumSqrFunc)sqsum64f, 0
+    (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
+    (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f, 0
 };
 
 }
