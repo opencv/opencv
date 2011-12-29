@@ -403,6 +403,13 @@ public:
 };	
 
 
+/*!
+ The class implements the following algorithm:
+ "Improved adaptive Gausian mixture model for background subtraction"
+ Z.Zivkovic
+ International Conference Pattern Recognition, UK, August, 2004.
+ http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
+*/
 class CV_EXPORTS BackgroundSubtractorMOG2 : public BackgroundSubtractor
 {
 public:
