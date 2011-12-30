@@ -6,7 +6,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef tr1::tuple<int, int> MatType_Length_t;
+typedef tr1::tuple<MatType, int> MatType_Length_t;
 typedef TestBaseWithParam<MatType_Length_t> MatType_Length;
 
 PERF_TEST_P( MatType_Length, dot,
