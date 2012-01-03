@@ -28,7 +28,7 @@ if(OPENNI_LIBRARY AND OPENNI_INCLUDES)
     elseif(UNIX OR APPLE)
         find_library(OPENNI_PRIME_SENSOR_MODULE "XnCore" PATHS "/usr/lib" DOC "Core library of PrimeSensor Modules for OpenNI")
     endif()
-	
+
     if(OPENNI_PRIME_SENSOR_MODULE)
         set(HAVE_OPENNI_PRIME_SENSOR_MODULE TRUE)
     endif()

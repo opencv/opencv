@@ -9,7 +9,7 @@ macro(add_opencv_precompiled_headers the_target)
         SET(pch_name "src/precomp")
     endif()
     set(pch_header "${CMAKE_CURRENT_SOURCE_DIR}/${pch_name}.hpp")
-    if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS AND EXISTS "${pch_header}")
+    if(PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS AND EXISTS "${pch_header}")
         if(CMAKE_GENERATOR MATCHES Visual)
             set(${the_target}_pch "${CMAKE_CURRENT_SOURCE_DIR}/${pch_name}.cpp")
             add_native_precompiled_header(${the_target} ${pch_header})
@@ -43,7 +43,7 @@ macro(define_opencv_perf_test name)
 
         file(GLOB perf_srcs "${perf_path}/*.cpp")
         file(GLOB perf_hdrs "${perf_path}/*.h*")
-        
+
         source_group("Src" FILES ${perf_srcs})
         source_group("Include" FILES ${perf_hdrs})
 
@@ -58,7 +58,7 @@ macro(define_opencv_perf_test name)
 
         if(ENABLE_SOLUTION_FOLDERS)
             set_target_properties(${the_target} PROPERTIES FOLDER "performance tests")
-        endif() 
+        endif()
 
         add_dependencies(${the_target} ${perf_deps})
         target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${perf_deps})
@@ -68,7 +68,7 @@ macro(define_opencv_perf_test name)
         if (PYTHON_EXECUTABLE)
             add_dependencies(perf ${the_target})
         endif()
-    endif()    
+    endif()
 endmacro()
 
 # this is a template for a OpenCV regression tests
@@ -92,7 +92,7 @@ macro(define_opencv_test name)
 
         file(GLOB test_srcs "${test_path}/*.cpp")
         file(GLOB test_hdrs "${test_path}/*.h*")
-        
+
         source_group("Src" FILES ${test_srcs})
         source_group("Include" FILES ${test_hdrs})
 
@@ -107,7 +107,7 @@ macro(define_opencv_test name)
 
         if(ENABLE_SOLUTION_FOLDERS)
             set_target_properties(${the_target} PROPERTIES FOLDER "tests")
-        endif() 
+        endif()
 
         add_dependencies(${the_target} ${test_deps})
         target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
@@ -126,13 +126,13 @@ endmacro()
 # this is a template for a OpenCV module
 # define_opencv_module(<module_name> <dependencies>)
 macro(define_opencv_module name)
-    
+
     project(opencv_${name})
 
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}/src"
                         "${CMAKE_CURRENT_BINARY_DIR}")
-    
+
     foreach(d ${ARGN})
         if(d MATCHES "opencv_")
             string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
@@ -153,7 +153,7 @@ macro(define_opencv_module name)
 
     source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
     source_group("Include" FILES ${lib_hdrs})
-    source_group("Include\\detail" FILES ${lib_hdrs_detail})    
+    source_group("Include\\detail" FILES ${lib_hdrs_detail})
     list(APPEND lib_hdrs ${lib_hdrs_detail})
 
     set(the_target "opencv_${name}")
@@ -173,17 +173,17 @@ macro(define_opencv_module name)
             )
     endif()
 
-    set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )    
+    set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )
 
     if(ENABLE_SOLUTION_FOLDERS)
         set_target_properties(${the_target} PROPERTIES FOLDER "modules")
-    endif() 
-        
+    endif()
+
     if (BUILD_SHARED_LIBS)
         if(MSVC)
             set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
         else()
-            add_definitions(-DCVAPI_EXPORTS)        
+            add_definitions(-DCVAPI_EXPORTS)
         endif()
     endif()
 
@@ -222,7 +222,7 @@ macro(define_opencv_module name)
     install(FILES ${lib_hdrs}
         DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
         COMPONENT main)
-        
+
     add_opencv_precompiled_headers(${the_target})
 
     define_opencv_test(${name})

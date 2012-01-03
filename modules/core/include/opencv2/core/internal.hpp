@@ -198,19 +198,6 @@ CV_INLINE IppiSize ippiSize(int width, int height)
             int _begin, _end, _grainsize;
         };
 
-
-#ifdef HAVE_THREADING_FRAMEWORK 
-#include "opencv2/core/threading_framework.hpp"
-
-        template<typename Body> 
-        static void parallel_for( const BlockedRange& range, const Body& body )
-        {
-            tf::parallel_for<Body>(range, body);
-        }
-        
-        typedef tf::ConcurrentVector<Rect> ConcurrentRectVector;
-        typedef tf::ConcurrentVector<double> ConcurrentDoubleVector;
-#else
         template<typename Body> static inline
         void parallel_for( const BlockedRange& range, const Body& body )
         {
@@ -218,7 +205,6 @@ CV_INLINE IppiSize ippiSize(int width, int height)
         }
         typedef std::vector<Rect> ConcurrentRectVector;
         typedef std::vector<double> ConcurrentDoubleVector;
-#endif
         
         template<typename Iterator, typename Body> static inline
         void parallel_do( Iterator first, Iterator last, const Body& body )

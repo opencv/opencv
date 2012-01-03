@@ -211,7 +211,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
     _PCH_WRITE_PCHDEP_CXX(${_targetName} "${_input}" _pch_dephelp_cxx)
 
     ADD_LIBRARY(${_targetName}_pch_dephelp STATIC "${_pch_dephelp_cxx}" "${_input}" )
-  
+
     set_target_properties(${_targetName}_pch_dephelp PROPERTIES
       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
       ARCHIVE_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}"
@@ -221,7 +221,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
 
     #MESSAGE("_compile_FLAGS: ${_compile_FLAGS}")
     #message("COMMAND ${CMAKE_CXX_COMPILER}	${_compile_FLAGS} -x c++-header -o ${_output} ${_input}")
-    
+
     ADD_CUSTOM_COMMAND(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
       COMMAND ${CMAKE_COMMAND} -E copy  "${_input}" "${CMAKE_CURRENT_BINARY_DIR}/${_name}" # ensure same directory! Required by gcc
@@ -242,7 +242,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       )
 
     ADD_PRECOMPILED_HEADER_TO_TARGET(${_targetName} ${_input}  ${_output} ${_dowarn})
-    
+
 ENDMACRO(ADD_PRECOMPILED_HEADER)
 
 
@@ -280,7 +280,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
     ENDIF()
 
     if(CMAKE_GENERATOR MATCHES "^Visual.*$")
-    
+
         # Auto include the precompile (useful for moc processing, since the use of
         # precompiled is specified at the target level
         # and I don't want to specifiy /F- for each moc/res/ui generated files (using Qt)
@@ -297,7 +297,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
         SET_SOURCE_FILES_PROPERTIES(${${_targetName}_pch} PROPERTIES COMPILE_FLAGS "${oldProps} /Yc\"${_input}\"")
 
     elseif (CMAKE_GENERATOR MATCHES Xcode)
-    
+
         # For Xcode, cmake needs my patch to process
         # GCC_PREFIX_HEADER and GCC_PRECOMPILE_PREFIX_HEADER as target properties
 

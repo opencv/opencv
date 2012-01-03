@@ -163,9 +163,6 @@
 /* Intel Threading Building Blocks */
 #cmakedefine  HAVE_TBB
 
-/* Threading Framework --- temporary decision for ARM instead of Intel TBB  */
-#cmakedefine  HAVE_THREADING_FRAMEWORK
-
 /* Eigen Matrix & Linear Algebra Library */
 #cmakedefine  HAVE_EIGEN
 

@@ -4,14 +4,14 @@
 # Try to find OpenEXR's libraries, and include path.
 # Once done this will define:
 #
-# OPENEXR_FOUND = OpenEXR found. 
+# OPENEXR_FOUND = OpenEXR found.
 # OPENEXR_INCLUDE_PATHS = OpenEXR include directories.
 # OPENEXR_LIBRARIES = libraries that are needed to use OpenEXR.
-# 
+#
 
 SET(OPENEXR_LIBRARIES)
 
-SET(LIBRARY_PATHS 
+SET(LIBRARY_PATHS
     /usr/lib
     /usr/local/lib
     /sw/lib
@@ -25,11 +25,11 @@ FIND_PATH(OPENEXR_INCLUDE_PATH ImfRgbaFile.h
     /sw/include
     /opt/local/include)
 
-FIND_LIBRARY(OPENEXR_HALF_LIBRARY 
+FIND_LIBRARY(OPENEXR_HALF_LIBRARY
     NAMES Half
     PATHS ${LIBRARY_PATHS})
 
-FIND_LIBRARY(OPENEXR_IEX_LIBRARY 
+FIND_LIBRARY(OPENEXR_IEX_LIBRARY
     NAMES Iex
     PATHS ${LIBRARY_PATHS})
 

@@ -1076,7 +1076,7 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
 
         int stripCount, stripSize;
 
-    #if defined(HAVE_TBB) || defined(HAVE_THREADING_FRAMEWORK)
+    #ifdef HAVE_TBB
         const int PTS_PER_THREAD = 1000;
         stripCount = ((processingRectSize.width/yStep)*(processingRectSize.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
         stripCount = std::min(std::max(stripCount, 1), 100);

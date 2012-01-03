@@ -1,14 +1,14 @@
 # - Find Latex
 # This module finds if Latex is installed and determines where the
 # executables are. This code sets the following variables:
-#  
+#
 #  LATEX_COMPILER:       path to the LaTeX compiler
 #  PDFLATEX_COMPILER:    path to the PdfLaTeX compiler
 #  BIBTEX_COMPILER:      path to the BibTeX compiler
 #  MAKEINDEX_COMPILER:   path to the MakeIndex compiler
 #  DVIPS_CONVERTER:      path to the DVIPS converter
 #  PS2PDF_CONVERTER:     path to the PS2PDF converter
-#  LATEX2HTML_CONVERTER: path to the LaTeX2Html converter 
+#  LATEX2HTML_CONVERTER: path to the LaTeX2Html converter
 #
 
 IF (WIN32)
@@ -17,7 +17,7 @@ IF (WIN32)
 
   FIND_PATH(MIKTEX_BINARY_PATH mpm.exe
     "[HKEY_LOCAL_MACHINE\\SOFTWARE\\MiK\\MiKTeX\\CurrentVersion\\MiKTeX;Install Root]/miktex/bin"
-    DOC 
+    DOC
     "Path to the MikTex binary directory."
   )
   MARK_AS_ADVANCED(MIKTEX_BINARY_PATH)
