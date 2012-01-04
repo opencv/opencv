@@ -418,12 +418,6 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
     
-    if( ksize.width == 1 && ksize.height == 1 )
-    {
-        src.copyTo(dst);
-        return;
-    }
-
     if( borderType != BORDER_CONSTANT )
     {
         if( src.rows == 1 )
@@ -431,6 +425,18 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         if( src.cols == 1 )
             ksize.width = 1;
     }
+
+    if( ksize.width == 1 && ksize.height == 1 )
+    {
+        src.copyTo(dst);
+        return;
+    }
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::gaussian(src, dst, ksize, borderType))
+        return;
+#endif
+
     Ptr<FilterEngine> f = createGaussianFilter( src.type(), ksize, sigma1, sigma2, borderType );
     f->apply( src, dst );
 }
