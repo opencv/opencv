@@ -1238,6 +1238,11 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     }
 
     CV_Assert( ksize % 2 == 1 );
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::medianBlur(src0, dst, ksize))
+        return;
+#endif
     
     Size size = src0.size();
     int cn = src0.channels();
