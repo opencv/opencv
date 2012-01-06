@@ -46,16 +46,17 @@ if __name__ == "__main__":
         options.columns = [s.strip().replace("\\n", "\n") for s in options.columns.split(",")]
     
     # expand wildcards and filter duplicates
-    files = []    
-    files1 = []
+    files = []
+    seen = set()
     for arg in args:
         if ("*" in arg) or ("?" in arg):
-            files1.extend([os.path.abspath(f) for f in glob.glob(arg)])
+            flist = [os.path.abspath(f) for f in glob.glob(arg)]
+            flist = sorted(flist, key= lambda text: str(text).replace("M", "_"))
+            files.extend([ x for x in flist if x not in seen and not seen.add(x)])
         else:
-            files.append(os.path.abspath(arg))
-    seen = set()
-    files = [ x for x in files if x not in seen and not seen.add(x)]
-    files.extend((set(files1) - set(files)))
+            fname = os.path.abspath(arg)
+            if x not in seen and not seen.add(x):
+                files.append(fname)
     
     # read all passed files
     test_sets = []
