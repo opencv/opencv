@@ -663,6 +663,57 @@ getThreshVal_Otsu_8u( const Mat& _src )
     return max_val;
 }
 
+class ThresholdRunner
+{
+public:
+    ThresholdRunner(Mat _src, Mat _dst, int _nStripes, double _thresh, double _maxval, int _thresholdType)
+    {
+        src = _src;
+        dst = _dst;
+
+        nStripes = _nStripes;
+
+        thresh = _thresh;
+        maxval = _maxval;
+        thresholdType = _thresholdType;
+    }
+
+    void operator () ( const BlockedRange& range ) const
+    {
+        int row0 = std::min(cvRound(range.begin() * src.rows / nStripes), src.rows);
+        int row1 = std::min(cvRound(range.end() * src.rows / nStripes), src.rows);
+
+        if(0)
+            printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",
+                   src.rows, src.cols, range.begin(), range.end(), row0, row1);
+
+        Mat srcStripe = src.rowRange(row0, row1);
+        Mat dstStripe = dst.rowRange(row0, row1);
+
+        if (srcStripe.depth() == CV_8U)
+        {
+            thresh_8u( srcStripe, dstStripe, (uchar)thresh, (uchar)maxval, thresholdType );
+        }
+        else if( srcStripe.depth() == CV_16S )
+        {
+            thresh_16s( srcStripe, dstStripe, (short)thresh, (short)maxval, thresholdType );
+        }
+        else if( srcStripe.depth() == CV_32F )
+        {
+            thresh_32f( srcStripe, dstStripe, (float)thresh, (float)maxval, thresholdType );
+        }
+    }
+
+private:
+    Mat src;
+    Mat dst;
+    int nStripes;
+
+    double thresh;
+    double maxval;
+    int thresholdType;
+};
+
 }
     
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
@@ -679,7 +730,12 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
   
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    
+
+    int nStripes = 1;
+#if defined HAVE_TBB && defined HAVE_TEGRA_OPTIMIZATION
+    nStripes = 4;
+#endif
+
     if( src.depth() == CV_8U )
     {
         int ithresh = cvFloor(thresh);
@@ -704,7 +760,11 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 src.copyTo(dst);
         }
         else
-            thresh_8u( src, dst, (uchar)ithresh, (uchar)imaxval, type );
+        {
+            //thresh_8u( src, dst, (uchar)ithresh, (uchar)imaxval, type );
+            parallel_for(BlockedRange(0, nStripes),
+                         ThresholdRunner(src, dst, nStripes, (uchar)ithresh, (uchar)imaxval, type));
+        }
     }
     else if( src.depth() == CV_16S )
     {
@@ -730,10 +790,18 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 src.copyTo(dst);
         }
         else
-            thresh_16s( src, dst, (short)ithresh, (short)imaxval, type );
+        {
+            //thresh_16s( src, dst, (short)ithresh, (short)imaxval, type );
+            parallel_for(BlockedRange(0, nStripes),
+                         ThresholdRunner(src, dst, nStripes, (short)ithresh, (short)imaxval, type));
+        }
     }
     else if( src.depth() == CV_32F )
-        thresh_32f( src, dst, (float)thresh, (float)maxval, type );
+    {
+        //thresh_32f( src, dst, (float)thresh, (float)maxval, type );
+        parallel_for(BlockedRange(0, nStripes),
+                     ThresholdRunner(src, dst, nStripes, (float)thresh, (float)maxval, type));
+    }
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 

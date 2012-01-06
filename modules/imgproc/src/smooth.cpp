@@ -1244,8 +1244,6 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         return;
 #endif
     
-    Size size = src0.size();
-    int cn = src0.channels();
     bool useSortNet = ksize == 3 || (ksize == 5
 #if !CV_SSE2
             && src0.depth() > CV_8U
@@ -1259,12 +1257,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             src = src0;
         else
             src0.copyTo(src);
-    }
-    else
-        cv::copyMakeBorder( src0, src, 0, 0, ksize/2, ksize/2, BORDER_REPLICATE );
 
-    if( useSortNet )
-    {
         if( src.depth() == CV_8U )
             medianBlur_SortNet<MinMax8u, MinMaxVec8u>( src, dst, ksize );
         else if( src.depth() == CV_16U )
@@ -1275,16 +1268,22 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
             medianBlur_SortNet<MinMax32f, MinMaxVec32f>( src, dst, ksize );
         else
             CV_Error(CV_StsUnsupportedFormat, "");
+
         return;
     }
-
-    CV_Assert( src.depth() == CV_8U && (cn == 1 || cn == 3 || cn == 4) );
-
-    double img_size_mp = (double)(size.width*size.height)/(1 << 20);
-    if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*(MEDIAN_HAVE_SIMD && checkHardwareSupport(CV_CPU_SSE2) ? 1 : 3))
-        medianBlur_8u_Om( src, dst, ksize );
     else
-        medianBlur_8u_O1( src, dst, ksize );
+    {
+        cv::copyMakeBorder( src0, src, 0, 0, ksize/2, ksize/2, BORDER_REPLICATE );
+
+        int cn = src0.channels();
+        CV_Assert( src.depth() == CV_8U && (cn == 1 || cn == 3 || cn == 4) );
+
+        double img_size_mp = (double)(src0.total())/(1 << 20);
+        if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*(MEDIAN_HAVE_SIMD && checkHardwareSupport(CV_CPU_SSE2) ? 1 : 3))
+            medianBlur_8u_Om( src, dst, ksize );
+        else
+            medianBlur_8u_O1( src, dst, ksize );
+    }
 }
 
 /****************************************************************************************\

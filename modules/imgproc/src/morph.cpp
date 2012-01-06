@@ -1049,6 +1049,61 @@ cv::Mat cv::getStructuringElement(int shape, Size ksize, Point anchor)
 namespace cv
 {
 
+class MorphologyRunner
+{
+public:
+    MorphologyRunner(Mat _src, Mat _dst, int _nStripes, int _iterations,
+                     int _op, Mat _kernel, Point _anchor,
+                     int _rowBorderType, int _columnBorderType, const Scalar& _borderValue) :
+        borderValue(_borderValue)
+    {
+        src = _src;
+        dst = _dst;
+
+        nStripes = _nStripes;
+        iterations = _iterations;
+
+        op = _op;
+        kernel = _kernel;
+        anchor = _anchor;
+        rowBorderType = _rowBorderType;
+        columnBorderType = _columnBorderType;
+    }
+
+    void operator () ( const BlockedRange& range ) const
+    {
+        int row0 = min(cvRound(range.begin() * src.rows / nStripes), src.rows);
+        int row1 = min(cvRound(range.end() * src.rows / nStripes), src.rows);
+
+        if(0)
+            printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",
+                   src.rows, src.cols, range.begin(), range.end(), row0, row1);
+
+        Mat srcStripe = src.rowRange(row0, row1);
+        Mat dstStripe = dst.rowRange(row0, row1);
+
+        Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(), kernel, anchor,
+                                                     rowBorderType, columnBorderType, borderValue );
+
+        f->apply( srcStripe, dstStripe );
+        for( int i = 1; i < iterations; i++ )
+            f->apply( dstStripe, dstStripe );
+    }
+
+private:
+    Mat src;
+    Mat dst;
+    int nStripes;
+    int iterations;
+
+    int op;
+    Mat kernel;
+    Point anchor;
+    int rowBorderType;
+    int columnBorderType;
+    const Scalar& borderValue;
+};
+
 static void morphOp( int op, InputArray _src, OutputArray _dst,
                      InputArray _kernel,
                      Point anchor, int iterations,
@@ -1085,12 +1140,23 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
         iterations = 1;
     }
 
-    Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(),
-                                                 kernel, anchor, borderType, borderType, borderValue );
+    int nStripes = 1;
+#if defined HAVE_TBB && defined HAVE_TEGRA_OPTIMIZATION
+    if (src.data != dst.data && iterations == 1 &&  //NOTE: threads are not used for inplace processing
+        (borderType & BORDER_ISOLATED) == 0 && //TODO: check border types
+        src.rows >= 64 ) //NOTE: just heuristics
+        nStripes = 4;
+#endif
 
-    f->apply( src, dst );
-    for( int i = 1; i < iterations; i++ )
-        f->apply( dst, dst );
+    parallel_for(BlockedRange(0, nStripes),
+                 MorphologyRunner(src, dst, nStripes, iterations, op, kernel, anchor, borderType, borderType, borderValue));
+
+    //Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(),
+    //                                             kernel, anchor, borderType, borderType, borderValue );
+
+    //f->apply( src, dst );
+    //for( int i = 1; i < iterations; i++ )
+    //    f->apply( dst, dst );
 }
 
 template<> void Ptr<IplConvKernel>::delete_obj()
