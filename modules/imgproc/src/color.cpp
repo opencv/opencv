@@ -2845,7 +2845,12 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
             
             if( depth == CV_8U )
+            {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+                if( code != CV_RGBA2GRAY || !tegra::Rgba2Gray(src, dst) )
+#endif
                 CvtColorLoop(src, dst, RGB2Gray<uchar>(scn, bidx, 0));
+            }
             else if( depth == CV_16U )
                 CvtColorLoop(src, dst, RGB2Gray<ushort>(scn, bidx, 0));
             else
@@ -2867,7 +2872,12 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
             
             if( depth == CV_8U )
+            {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+                if(code != CV_GRAY2RGBA || !tegra::Gray2Rgba(src, dst))
+#endif
                 CvtColorLoop(src, dst, Gray2RGB<uchar>(dcn));
+            }
             else if( depth == CV_16U )
                 CvtColorLoop(src, dst, Gray2RGB<ushort>(dcn));
             else

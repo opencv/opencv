@@ -2843,6 +2843,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         M[2] = b1; M[5] = b2;
     }
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if( tegra::warpAffine(src, dst, M, interpolation, borderType, borderValue) )
+        return;
+#endif
+
     int x, y, x1, y1, width = dst.cols, height = dst.rows;
     AutoBuffer<int> _abdelta(width*2);
     int* adelta = &_abdelta[0], *bdelta = adelta + width;
