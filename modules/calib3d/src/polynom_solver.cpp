@@ -1,6 +1,7 @@
 #include <math.h>
 #include <iostream>
 using namespace std;
+#include "precomp.hpp"
 
 #include "polynom_solver.h"
 
