@@ -55,7 +55,7 @@ if __name__ == "__main__":
             files.extend([ x for x in flist if x not in seen and not seen.add(x)])
         else:
             fname = os.path.abspath(arg)
-            if x not in seen and not seen.add(x):
+            if fname not in seen and not seen.add(fname):
                 files.append(fname)
     
     # read all passed files
