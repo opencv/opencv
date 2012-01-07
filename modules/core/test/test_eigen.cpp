@@ -1,4 +1,5 @@
 #include "test_precomp.hpp"
+#include <time.h>
 
 using namespace cv;
 using namespace std;
