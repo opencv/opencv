@@ -2906,7 +2906,13 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             dst = _dst.getMat();
             
             if( depth == CV_8U )
+            {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+                if((code == CV_RGB2YCrCb || code == CV_BGR2YCrCb) && tegra::RGB2YCrCb(src, dst, bidx))
+                    break;
+#endif
                 CvtColorLoop(src, dst, RGB2YCrCb_i<uchar>(scn, bidx, coeffs_i));
+            }
             else if( depth == CV_16U )
                 CvtColorLoop(src, dst, RGB2YCrCb_i<ushort>(scn, bidx, coeffs_i));
             else

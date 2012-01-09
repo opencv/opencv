@@ -10,7 +10,8 @@ CV_ENUM(CvtMode, CV_YUV2BGR, CV_YUV2RGB, //YUV
         CV_YUV420i2BGR, CV_YUV420i2RGB, CV_YUV420sp2BGR, CV_YUV420sp2RGB, //YUV420
         CV_RGB2GRAY, CV_RGBA2GRAY, CV_BGR2GRAY, CV_BGRA2GRAY, //Gray
         CV_GRAY2RGB, CV_GRAY2RGBA, /*CV_GRAY2BGR, CV_GRAY2BGRA*/ //Gray2
-        CV_BGR2HSV, CV_RGB2HSV, CV_BGR2HLS, CV_RGB2HLS //H
+        CV_BGR2HSV, CV_RGB2HSV, CV_BGR2HLS, CV_RGB2HLS, //H
+        CV_BGR2YCrCb, CV_RGB2YCrCb
         )
 
 typedef std::tr1::tuple<Size, CvtMode> Size_CvtMode_t;
@@ -82,7 +83,7 @@ PERF_TEST_P(Size_CvtMode, cvtColorGray,
     
     TEST_CYCLE() cvtColor(src, dst, mode);
     
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
 
 
@@ -123,6 +124,31 @@ PERF_TEST_P(Size_CvtMode, cvtColorH,
     
     TEST_CYCLE() cvtColor(src, dst, mode);
     
+    SANITY_CHECK(dst, 1);
+}
+
+typedef std::tr1::tuple<Size, CvtMode, int> Size_CvtMode_Ch_t;
+typedef perf::TestBaseWithParam<Size_CvtMode_Ch_t> Size_CvtMode_Ch;
+
+PERF_TEST_P(Size_CvtMode_Ch, cvtColorYCrCb,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values((int)CV_BGR2YCrCb, (int)CV_RGB2YCrCb),
+                testing::Values(3, 4)
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int mode = get<1>(GetParam());
+    int ch = get<2>(GetParam());
+
+    Mat src(sz, CV_8UC(ch));
+    Mat dst(sz, CV_8UC3);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cvtColor(src, dst, mode);
+
     SANITY_CHECK(dst, 1);
 }
 
