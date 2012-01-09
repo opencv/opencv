@@ -43,7 +43,7 @@ struct base_any_policy
     virtual void clone(void* const* src, void** dest) = 0;
     virtual void move(void* const* src, void** dest) = 0;
     virtual void* get_value(void** src) = 0;
-    virtual size_t get_size() = 0;
+    virtual ::size_t get_size() = 0;
     virtual const std::type_info& type() = 0;
     virtual void print(std::ostream& out, void* const* src) = 0;
 };
@@ -51,7 +51,7 @@ struct base_any_policy
 template<typename T>
 struct typed_base_any_policy : base_any_policy
 {
-    virtual size_t get_size() { return sizeof(T); }
+    virtual ::size_t get_size() { return sizeof(T); }
     virtual const std::type_info& type() { return typeid(T); }
 
 };
