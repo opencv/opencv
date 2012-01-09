@@ -124,14 +124,24 @@ if __name__ == "__main__":
             i += 1
         
     # rows
+    prevGroupName = None
     needNewRow = True
+    lastRow = None
     for name in sorted(test_cases.iterkeys(), key=alphanum_keyselector):
         cases = test_cases[name]
         if needNewRow:
-            tbl.newRow()
+            lastRow = tbl.newRow()
             if not options.showall:
                 needNewRow = False
         tbl.newCell("name", name)
+        
+        groupName = next(c for c in cases if c).shortName()
+        if groupName != prevGroupName:
+            prop = lastRow.props.get("cssclass", "")
+            if "firstingroup" not in prop:
+                lastRow.props["cssclass"] = prop + " firstingroup"
+            prevGroupName = groupName
+
         for i in range(setsCount):
             case = cases[i]
             if case is None:

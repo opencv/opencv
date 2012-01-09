@@ -45,6 +45,7 @@ class table(object):
         else:
             self.rows[ridx + 1].props = properties
         self.ridx += 1
+        return self.rows[self.ridx]
     
     def trimLastRow(self):
         if self.rows:
@@ -378,7 +379,11 @@ class table(object):
         rows = [row for row in self.rows if not self.getValue("header")]
         for r in range(len(rows)):
             row = rows[r]
-            out.write("  <tr>\n")
+            rowattr = ""
+            cssclass = self.getValue("cssclass", row)
+            if cssclass:
+                rowattr += " class=\"%s\"" % cssclass
+            out.write("  <tr%s>\n" % (rowattr))
             i = 0
             while i < len(row.cells):
                 column = columns[i] 
@@ -441,11 +446,12 @@ html, body {font-family: Lucida Console, Courier New, Courier;font-size: 16px;co
 .tbl{background:none repeat scroll 0 0 #FFFFFF;border-collapse:collapse;font-family:"Lucida Sans Unicode","Lucida Grande",Sans-Serif;font-size:14px;margin:20px;text-align:left;width:480px;margin-left: auto;margin-right: auto;white-space:nowrap;}
 .tbl span{display:block;white-space:nowrap;}
 .tbl thead tr:last-child th {padding-bottom:5px;}
-.tbl tbody tr:first-child td {border-top:2px solid #6678B1;}
+.tbl tbody tr:first-child td {border-top:3px solid #6678B1;}
 .tbl th{border:none;color:#003399;font-size:16px;font-weight:normal;white-space:nowrap;padding:3px 10px;}
 .tbl td{border:none;border-bottom:1px solid #CCCCCC;color:#666699;padding:6px 8px;white-space:nowrap;}
 .tbl tbody tr:hover td{color:#000099;}
 .tbl caption{font:italic 16px "Trebuchet MS",Verdana,Arial,Helvetica,sans-serif;padding:0 0 5px;text-align:right;white-space:normal;}
+.firstingroup {border-top:2px solid #6678B1;}
 </style>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
 <script type="text/javascript">
