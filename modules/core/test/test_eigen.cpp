@@ -12,8 +12,6 @@ using namespace std;
 #define CORE_EIGEN_ERROR_ORTHO 4
 #define CORE_EIGEN_ERROR_ORDER 5
 
-// #define CORE_EIGEN_ERROR_DIFF  
-
 class Core_EigenTest: public cvtest::BaseTest
 {
  public: 
@@ -307,7 +305,7 @@ bool Core_EigenTest::check_full(int type)
  return true;
 }
 
-TEST(Core_Eigen_Scalar_32, single_complex) {Core_EigenTest_Scalar_32 test; test.safe_run(); }
-TEST(Core_Eigen_Scalar_64, single_complex) {Core_EigenTest_Scalar_64 test; test.safe_run(); }
+// TEST(Core_Eigen_Scalar_32, single_complex) {Core_EigenTest_Scalar_32 test; test.safe_run(); }
+// TEST(Core_Eigen_Scalar_64, single_complex) {Core_EigenTest_Scalar_64 test; test.safe_run(); }
 TEST(Core_Eigen_32, complex) { Core_EigenTest_32 test; test.safe_run(); }
 TEST(Core_Eigen_64, complex) { Core_EigenTest_64 test; test.safe_run(); }
