@@ -348,7 +348,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    void copy_to_with_mask(DevMem2Db src, DevMem2Db dst, int depth, DevMem2Db mask, int channels, cudaStream_t stream);
+    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int depth, int channels, DevMem2Db mask, cudaStream_t stream);
 
     template <typename T>
     void set_to_gpu(DevMem2Db mat, const T* scalar, int channels, cudaStream_t stream);
@@ -391,13 +391,13 @@ namespace
     template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, cudaStream_t stream)
     {
         Scalar_<T> sf = s;
-        ::cv::gpu::device::set_to_gpu(src, sf.val, src.channels(), stream);
+        cv::gpu::device::set_to_gpu(src, sf.val, src.channels(), stream);
     }
 
     template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)
     {
         Scalar_<T> sf = s;
-        ::cv::gpu::device::set_to_gpu(src, sf.val, mask, src.channels(), stream);
+        cv::gpu::device::set_to_gpu(src, sf.val, mask, src.channels(), stream);
     }
 }
 
@@ -405,17 +405,17 @@ namespace cv { namespace gpu
 {
     CV_EXPORTS void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
     {
-        ::cv::gpu::device::copy_to_with_mask(src, dst, src.depth(), mask, src.channels(), stream);
+        cv::gpu::device::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.depth(), src.channels(), mask, stream);
     }
 
     CV_EXPORTS void convertTo(const GpuMat& src, GpuMat& dst)
     {
-        ::cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
+        cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
     }
 
     CV_EXPORTS void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
     {
-        ::cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
+        cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
     }
 
     CV_EXPORTS void setTo(GpuMat& src, Scalar s, cudaStream_t stream)

@@ -84,9 +84,9 @@ namespace cv { namespace gpu { namespace device
     template <typename T, typename D> void add_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream)
     {
         if (mask.data)
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, mask, Add<T, D>(), stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Add<T, D>(), SingleMask(mask), stream);
         else
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Add<T, D>(), stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Add<T, D>(), WithOutMask(), stream);
     }
 
     template void add_gpu<uchar, uchar>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
@@ -181,9 +181,9 @@ namespace cv { namespace gpu { namespace device
         cudaSafeCall( cudaSetDoubleForDevice(&val) );
         AddScalar<T, D> op(val);
         if (mask.data)
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, mask, op, stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, SingleMask(mask), stream);
         else
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     template void add_gpu<uchar, uchar>(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
@@ -277,9 +277,9 @@ namespace cv { namespace gpu { namespace device
     template <typename T, typename D> void subtract_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream)
     {
         if (mask.data)
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, mask, Subtract<T, D>(), stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Subtract<T, D>(), SingleMask(mask), stream);
         else
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Subtract<T, D>(), stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Subtract<T, D>(), WithOutMask(), stream);
     }
 
     template void subtract_gpu<uchar, uchar>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
@@ -374,9 +374,9 @@ namespace cv { namespace gpu { namespace device
         cudaSafeCall( cudaSetDoubleForDevice(&val) );
         SubtractScalar<T, D> op(val);
         if (mask.data)
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, mask, op, stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, SingleMask(mask), stream);
         else
-            ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     template void subtract_gpu<uchar, uchar>(const DevMem2Db& src1, double val, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream);
@@ -462,7 +462,7 @@ namespace cv { namespace gpu { namespace device
 
     void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform(static_cast< DevMem2D_<uint> >(src1), src2, static_cast< DevMem2D_<uint> >(dst), multiply_8uc4_32f(), stream);
+        cv::gpu::device::transform(static_cast< DevMem2D_<uint> >(src1), src2, static_cast< DevMem2D_<uint> >(dst), multiply_8uc4_32f(), WithOutMask(), stream);
     }
 
     struct multiply_16sc4_32f : binary_function<short4, float, short4>
@@ -483,7 +483,7 @@ namespace cv { namespace gpu { namespace device
 
     void multiply_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform(static_cast< DevMem2D_<short4> >(src1), src2, static_cast< DevMem2D_<short4> >(dst), multiply_16sc4_32f(), stream);
+        cv::gpu::device::transform(static_cast< DevMem2D_<short4> >(src1), src2, static_cast< DevMem2D_<short4> >(dst), multiply_16sc4_32f(), WithOutMask(), stream);
     }
 
     template <typename T, typename D> struct Multiply : binary_function<T, T, D>
@@ -521,7 +521,7 @@ namespace cv { namespace gpu { namespace device
     {
         cudaSafeCall( cudaSetDoubleForDevice(&scale) );
         Multiply<T, D> op(scale);
-        ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     template void multiply_gpu<uchar, uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
@@ -617,7 +617,7 @@ namespace cv { namespace gpu { namespace device
         cudaSafeCall( cudaSetDoubleForDevice(&val) );
         cudaSafeCall( cudaSetDoubleForDevice(&scale) );
         MultiplyScalar<T, D> op(val, scale);
-        ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     template void multiply_gpu<uchar, uchar >(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
@@ -698,7 +698,7 @@ namespace cv { namespace gpu { namespace device
 
     void divide_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
     {
-        transform(static_cast< DevMem2D_<uchar4> >(src1), src2, static_cast< DevMem2D_<uchar4> >(dst), divide_8uc4_32f(), stream);
+        cv::gpu::device::transform(static_cast< DevMem2D_<uchar4> >(src1), src2, static_cast< DevMem2D_<uchar4> >(dst), divide_8uc4_32f(), WithOutMask(), stream);
     }
 
 
@@ -721,7 +721,7 @@ namespace cv { namespace gpu { namespace device
 
     void divide_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
     {
-        transform(static_cast< DevMem2D_<short4> >(src1), src2, static_cast< DevMem2D_<short4> >(dst), divide_16sc4_32f(), stream);
+        cv::gpu::device::transform(static_cast< DevMem2D_<short4> >(src1), src2, static_cast< DevMem2D_<short4> >(dst), divide_16sc4_32f(), WithOutMask(), stream);
     }
 
     template <typename T, typename D> struct Divide : binary_function<T, T, D>
@@ -759,7 +759,7 @@ namespace cv { namespace gpu { namespace device
     {
         cudaSafeCall( cudaSetDoubleForDevice(&scale) );
         Divide<T, D> op(scale);
-        ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     template void divide_gpu<uchar, uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
@@ -855,7 +855,7 @@ namespace cv { namespace gpu { namespace device
         cudaSafeCall( cudaSetDoubleForDevice(&val) );
         cudaSafeCall( cudaSetDoubleForDevice(&scale) );
         DivideScalar<T, D> op(val, scale);
-        ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     template void divide_gpu<uchar, uchar >(const DevMem2Db& src1, double val, const DevMem2Db& dst, double scale, cudaStream_t stream);
@@ -949,7 +949,7 @@ namespace cv { namespace gpu { namespace device
     {
         cudaSafeCall( cudaSetDoubleForDevice(&scalar) );
         Reciprocal<T, D> op(scalar);
-        ::cv::gpu::device::transform((DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     template void divide_gpu<uchar, uchar >(double scalar, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1055,7 +1055,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T> void absdiff_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, Absdiff<T>(), stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, Absdiff<T>(), WithOutMask(), stream);
     }
 
     template void absdiff_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1101,7 +1101,7 @@ namespace cv { namespace gpu { namespace device
     {
         cudaSafeCall( cudaSetDoubleForDevice(&val) );
         AbsdiffScalar<T> op(val);
-        ::cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)dst, op, stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)dst, op, WithOutMask(), stream);
     }
 
     template void absdiff_gpu<uchar >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1188,7 +1188,7 @@ namespace cv { namespace gpu { namespace device
     template <template <typename> class Op, typename T> void compare(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
     {
         Op<T> op;
-        ::cv::gpu::device::transform(static_cast< DevMem2D_<T> >(src1), static_cast< DevMem2D_<T> >(src2), dst, op, stream);
+        cv::gpu::device::transform(static_cast< DevMem2D_<T> >(src1), static_cast< DevMem2D_<T> >(src2), dst, op, WithOutMask(), stream);
     }
 
     template <typename T> void compare_eq(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
@@ -1546,7 +1546,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform(src1, src2, dst, minimum<T>(), stream);    
+        cv::gpu::device::transform(src1, src2, dst, minimum<T>(), WithOutMask(), stream);    
     }
 
     template void min_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1560,7 +1560,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform(src1, src2, dst, maximum<T>(), stream);    
+        cv::gpu::device::transform(src1, src2, dst, maximum<T>(), WithOutMask(), stream);    
     }
 
     template void max_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1574,7 +1574,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform(src1, dst, device::bind2nd(minimum<T>(), src2), stream);    
+        cv::gpu::device::transform(src1, dst, device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);    
     }
 
     template void min_gpu<uchar >(const DevMem2Db& src1, uchar src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1588,7 +1588,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void max_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform(src1, dst, device::bind2nd(maximum<T>(), src2), stream);    
+        cv::gpu::device::transform(src1, dst, device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);    
     }
 
     template void max_gpu<uchar >(const DevMem2Db& src1, uchar src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1635,19 +1635,17 @@ namespace cv { namespace gpu { namespace device
     };
 
     template <template <typename> class Op, typename T>
-    void threshold_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, 
-        cudaStream_t stream)
+    void threshold_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, cudaStream_t stream)
     {
         Op<T> op(thresh, maxVal);
-        ::cv::gpu::device::transform(src, dst, op, stream);
+        cv::gpu::device::transform(src, dst, op, WithOutMask(), stream);
     }
 
     template <typename T>
     void threshold_gpu(const DevMem2Db& src, const DevMem2Db& dst, T thresh, T maxVal, int type,
         cudaStream_t stream)
     {
-        typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, 
-            cudaStream_t stream);
+        typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, cudaStream_t stream);
 
         static const caller_t callers[] = 
         {
@@ -1737,7 +1735,7 @@ namespace cv { namespace gpu { namespace device
     template<typename T>
     void pow_caller(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream)
     {
-        ::cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, PowOp<T>(power), stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, PowOp<T>(power), WithOutMask(), stream);
     }   
 
     template void pow_caller<uchar>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
@@ -1829,7 +1827,7 @@ namespace cv { namespace gpu { namespace device
 
         AddWeighted<T1, T2, D> op(alpha, beta, gamma);
 
-        ::cv::gpu::device::transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), static_cast< DevMem2D_<D> >(dst), op, stream);
+        cv::gpu::device::transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), static_cast< DevMem2D_<D> >(dst), op, WithOutMask(), stream);
     }
 
     template void addWeighted_gpu<uchar, uchar, uchar>(const DevMem2Db& src1, double alpha, const DevMem2Db& src2, double beta, double gamma, const DevMem2Db& dst, cudaStream_t stream);

@@ -74,7 +74,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
-            ::cv::gpu::device::transform(src, dst, TransformOp(), stream);
+            cv::gpu::device::transform(src, dst, TransformOp(), WithOutMask(), stream);
         }
     } // namespace transform_points
 
@@ -113,7 +113,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj0, proj, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj1, proj + 3, sizeof(float) * 3));
-            ::cv::gpu::device::transform(src, dst, ProjectOp(), stream);
+            cv::gpu::device::transform(src, dst, ProjectOp(), WithOutMask(), stream);
         }
     } // namespace project_points
 

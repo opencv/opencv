@@ -114,7 +114,7 @@ namespace cv { namespace gpu { namespace device
     namespace imgproc 
     {
         template <typename T> 
-        void remap_gpu(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, 
+        void remap_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, 
                        int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
     }
 }}}
@@ -123,8 +123,9 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 {
     using namespace ::cv::gpu::device::imgproc;
 
-    typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, 
+    typedef void (*caller_t)(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, 
         int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+
     static const caller_t callers[6][4] = 
     {
         {remap_gpu<uchar>, 0/*remap_gpu<uchar2>*/, remap_gpu<uchar3>, remap_gpu<uchar4>},
@@ -154,8 +155,13 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 
     DeviceInfo info;
     int cc = info.majorVersion() * 10 + info.minorVersion();
+    
+    Size wholeSize;
+    Point ofs;
+    src.locateROI(wholeSize, ofs);
 
-    func(src, xmap, ymap, dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream), cc);
+    func(src, DevMem2Db(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, xmap, ymap, 
+        dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream), cc);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -310,7 +316,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc 
     {
-        template <typename T> void resize_gpu(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
+        template <typename T> void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, 
+            DevMem2Db dst, int interpolation, cudaStream_t stream);
     }
 }}}
 
@@ -342,18 +349,25 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     }
 
     cudaStream_t stream = StreamAccessor::getStream(s);
+    
+    Size wholeSize;
+    Point ofs;
+    src.locateROI(wholeSize, ofs);
 
     if ((src.type() == CV_8UC1 || src.type() == CV_8UC4) && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR))
     {
         static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS};
 
         NppiSize srcsz;
-        srcsz.width  = src.cols;
-        srcsz.height = src.rows;
+        srcsz.width  = wholeSize.width;
+        srcsz.height = wholeSize.height;
+
         NppiRect srcrect;
-        srcrect.x = srcrect.y = 0;
+        srcrect.x = ofs.x;
+        srcrect.y = ofs.y;
         srcrect.width  = src.cols;
         srcrect.height = src.rows;
+
         NppiSize dstsz;
         dstsz.width  = dst.cols;
         dstsz.height = dst.rows;
@@ -362,12 +376,12 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
         if (src.type() == CV_8UC1)
         {
-            nppSafeCall( nppiResize_8u_C1R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
+            nppSafeCall( nppiResize_8u_C1R(src.datastart, srcsz, static_cast<int>(src.step), srcrect,
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
         }
         else
         {
-            nppSafeCall( nppiResize_8u_C4R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
+            nppSafeCall( nppiResize_8u_C4R(src.datastart, srcsz, static_cast<int>(src.step), srcrect,
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
         }
 
@@ -378,7 +392,8 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     {
         using namespace ::cv::gpu::device::imgproc;
 
-        typedef void (*caller_t)(const DevMem2Db& src, float fx, float fy, const DevMem2Db& dst, int interpolation, cudaStream_t stream);
+        typedef void (*caller_t)(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+
         static const caller_t callers[6][4] = 
         {
             {resize_gpu<uchar>, 0/*resize_gpu<uchar2>*/, resize_gpu<uchar3>, resize_gpu<uchar4>},
@@ -389,7 +404,8 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
             {resize_gpu<float>, 0/*resize_gpu<float2>*/, resize_gpu<float3>, resize_gpu<float4>}
         };
 
-        callers[src.depth()][src.channels() - 1](src, static_cast<float>(fx), static_cast<float>(fy), dst, interpolation, stream);
+        callers[src.depth()][src.channels() - 1](src, DevMem2Db(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, 
+            static_cast<float>(fx), static_cast<float>(fy), dst, interpolation, stream);
     }
 }
 
@@ -526,14 +542,21 @@ namespace
         CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
 
         dst.create(dsize, src.type());
+    
+        Size wholeSize;
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
 
         NppiSize srcsz;
-        srcsz.height = src.rows;
-        srcsz.width = src.cols;
+        srcsz.height = wholeSize.height;
+        srcsz.width = wholeSize.width;
+
         NppiRect srcroi;
-        srcroi.x = srcroi.y = 0;
+        srcroi.x = ofs.x;
+        srcroi.y = ofs.y;
         srcroi.height = src.rows;
         srcroi.width = src.cols;
+
         NppiRect dstroi;
         dstroi.x = dstroi.y = 0;
         dstroi.height = dst.rows;
@@ -546,19 +569,19 @@ namespace
         switch (src.depth())
         {
         case CV_8U:
-            nppSafeCall( npp_warp_8u[src.channels()][warpInd](src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcroi,
+            nppSafeCall( npp_warp_8u[src.channels()][warpInd]((Npp8u*)src.datastart, srcsz, static_cast<int>(src.step), srcroi,
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_16U:
-            nppSafeCall( npp_warp_16u[src.channels()][warpInd](src.ptr<Npp16u>(), srcsz, static_cast<int>(src.step), srcroi,
+            nppSafeCall( npp_warp_16u[src.channels()][warpInd]((Npp16u*)src.datastart, srcsz, static_cast<int>(src.step), srcroi,
                 dst.ptr<Npp16u>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32S:
-            nppSafeCall( npp_warp_32s[src.channels()][warpInd](src.ptr<Npp32s>(), srcsz, static_cast<int>(src.step), srcroi,
+            nppSafeCall( npp_warp_32s[src.channels()][warpInd]((Npp32s*)src.datastart, srcsz, static_cast<int>(src.step), srcroi,
                 dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32F:
-            nppSafeCall( npp_warp_32f[src.channels()][warpInd](src.ptr<Npp32f>(), srcsz, static_cast<int>(src.step), srcroi,
+            nppSafeCall( npp_warp_32f[src.channels()][warpInd]((Npp32f*)src.datastart, srcsz, static_cast<int>(src.step), srcroi,
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         default:

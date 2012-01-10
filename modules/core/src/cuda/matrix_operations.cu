@@ -59,56 +59,27 @@ namespace cv { namespace gpu { namespace device
     ////////////////////////////////// CopyTo /////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
-    template<typename T>
-    __global__ void copy_to_with_mask(const T* mat_src, T* mat_dst, const uchar* mask, int cols, int rows, size_t step_mat, size_t step_mask, int channels)
-    {
-        size_t x = blockIdx.x * blockDim.x + threadIdx.x;
-        size_t y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if ((x < cols * channels ) && (y < rows))
-            if (mask[y * step_mask + x / channels] != 0)
-            {
-                size_t idx = y * ( step_mat >> shift_and_sizeof<T>::shift ) + x;
-                mat_dst[idx] = mat_src[idx];
-            }
+    template <typename T> void copyToWithMask(DevMem2Db src, DevMem2Db dst, DevMem2Db mask, int channels, cudaStream_t stream)
+    {        
+        cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, identity<T>(), SingleMaskChannels(mask, channels), stream);
     }
 
-    template<typename T>
-    void copy_to_with_mask_run(DevMem2Db mat_src, DevMem2Db mat_dst, DevMem2Db mask, int channels, cudaStream_t stream)
+    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int depth, int channels, DevMem2Db mask, cudaStream_t stream)
     {
-        dim3 threadsPerBlock(16,16, 1);
-        dim3 numBlocks ( divUp(mat_src.cols * channels , threadsPerBlock.x) , divUp(mat_src.rows , threadsPerBlock.y), 1);
+        typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, DevMem2Db mask, int channels, cudaStream_t stream);
 
-        copy_to_with_mask<T><<<numBlocks,threadsPerBlock, 0, stream>>>
-                ((T*)mat_src.data, (T*)mat_dst.data, (unsigned char*)mask.data, mat_src.cols, mat_src.rows, mat_src.step, mask.step, channels);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall ( cudaDeviceSynchronize() );
-    }
-
-    void copy_to_with_mask(DevMem2Db mat_src, DevMem2Db mat_dst, int depth, DevMem2Db mask, int channels, cudaStream_t stream)
-    {
-        typedef void (*CopyToFunc)(DevMem2Db mat_src, DevMem2Db mat_dst, DevMem2Db mask, int channels, cudaStream_t stream);
-
-        static CopyToFunc tab[8] =
+        static func_t tab[] =
         {
-            copy_to_with_mask_run<unsigned char>,
-            copy_to_with_mask_run<signed char>,
-            copy_to_with_mask_run<unsigned short>,
-            copy_to_with_mask_run<short>,
-            copy_to_with_mask_run<int>,
-            copy_to_with_mask_run<float>,
-            copy_to_with_mask_run<double>,
-            0
+            copyToWithMask<unsigned char>,
+            copyToWithMask<signed char>,
+            copyToWithMask<unsigned short>,
+            copyToWithMask<short>,
+            copyToWithMask<int>,
+            copyToWithMask<float>,
+            copyToWithMask<double>
         };
 
-        CopyToFunc func = tab[depth];
-
-        if (func == 0) 
-            cv::gpu::error("Unsupported copyTo operation", __FILE__, __LINE__, "copy_to_with_mask");
-
-        func(mat_src, mat_dst, mask, channels, stream);
+        tab[depth](src, dst, mask, channels, stream);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -303,7 +274,7 @@ namespace cv { namespace gpu { namespace device
         cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
         cudaSafeCall( cudaSetDoubleForDevice(&beta) );
         Convertor<T, D> op(alpha, beta);
-        ::cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<D>)dst, op, stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
 
     void convert_gpu(DevMem2Db src, int sdepth, DevMem2Db dst, int ddepth, double alpha, double beta, cudaStream_t stream)

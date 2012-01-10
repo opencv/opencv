@@ -42,7 +42,14 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+
 #include <cuda_runtime_api.h>
+
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
+using namespace cvtest;
+using namespace testing;
 
 void print_info()
 {    
@@ -67,18 +74,18 @@ void print_info()
 #   endif
 #endif
 
-    int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
+    int deviceCount = getCudaEnabledDeviceCount();
     int driver;
     cudaDriverGetVersion(&driver);
 
     printf("CUDA Driver  version: %d\n", driver);        
     printf("CUDA Runtime version: %d\n", CUDART_VERSION);    
-    printf("CUDA device count: %d\n\n", deviceCount);
-    
+    printf("CUDA device count: %d\n\n", deviceCount);    
 
     for (int i = 0; i < deviceCount; ++i)
     {
-        cv::gpu::DeviceInfo info(i);
+        DeviceInfo info(i);
+
         printf("Device %d:\n", i);
         printf("    Name: %s\n", info.name().c_str());
         printf("    Compute capability version: %d.%d\n", info.majorVersion(), info.minorVersion());
@@ -106,14 +113,14 @@ extern OutputLevel nvidiaTestOutputLevel;
 
 int main(int argc, char** argv)
 {
-    cvtest::TS::ptr()->init("gpu");
-    testing::InitGoogleTest(&argc, argv);
+    TS::ptr()->init("gpu");
+    InitGoogleTest(&argc, argv);
 
     const char* keys ="{ nvtest_output_level | nvtest_output_level | none | NVidia test verbosity level }";
 
-    cv::CommandLineParser parser(argc, (const char**)argv, keys);
+    CommandLineParser parser(argc, (const char**)argv, keys);
 
-    std::string outputLevel = parser.get<std::string>("nvtest_output_level", "none");
+    string outputLevel = parser.get<string>("nvtest_output_level", "none");
 
     if (outputLevel == "none")
         nvidiaTestOutputLevel = OutputLevelNone;
@@ -123,6 +130,7 @@ int main(int argc, char** argv)
         nvidiaTestOutputLevel = OutputLevelFull;
 
     print_info();
+
     return RUN_ALL_TESTS();
 }
 

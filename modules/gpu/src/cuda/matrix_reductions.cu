@@ -44,7 +44,6 @@
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/transform.hpp"
 
 namespace cv { namespace gpu { namespace device 
 {

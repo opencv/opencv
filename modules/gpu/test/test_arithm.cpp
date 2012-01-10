@@ -43,41 +43,46 @@
 
 #ifdef HAVE_CUDA
 
-struct ArithmTest : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+using namespace cvtest;
+using namespace testing;
+
+PARAM_TEST_CASE(ArithmTestBase, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
-    cv::Mat mat1, mat2;
+    cv::Mat mat1; 
+    cv::Mat mat2;
+    cv::Scalar val;
         
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        mat1 = cvtest::randomMat(rng, size, type, 1, 16, false);
-        mat2 = cvtest::randomMat(rng, size, type, 1, 16, false);
+        mat1 = randomMat(rng, size, type, 1, 16, false);
+        mat2 = randomMat(rng, size, type, 1, 16, false);
+
+        val = cv::Scalar(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // add
 
-struct AddArray : ArithmTest {};
+struct Add : ArithmTestBase {};
 
-TEST_P(AddArray, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    
+TEST_P(Add, Array) 
+{    
     cv::Mat dst_gold;
     cv::add(mat1, mat2, dst_gold);
 
@@ -86,7 +91,7 @@ TEST_P(AddArray, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::add(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
+        cv::gpu::add(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
         gpuRes.download(dst);
     );
@@ -94,24 +99,8 @@ TEST_P(AddArray, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, AddArray, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
-
-struct AddScalar : ArithmTest {};
-
-TEST_P(AddScalar, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
-
-    PRINT_PARAM(val);
-    
+TEST_P(Add, Scalar) 
+{    
     cv::Mat dst_gold;
     cv::add(mat1, val, dst_gold);
 
@@ -120,7 +109,7 @@ TEST_P(AddScalar, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::add(cv::gpu::GpuMat(mat1), val, gpuRes);
+        cv::gpu::add(loadMat(mat1, useRoi), val, gpuRes);
 
         gpuRes.download(dst);
     );
@@ -128,21 +117,18 @@ TEST_P(AddScalar, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, AddScalar, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1, CV_32FC2)));
+INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // subtract
 
-struct SubtractArray : ArithmTest {};
+struct Subtract : ArithmTestBase {};
 
-TEST_P(SubtractArray, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    
+TEST_P(Subtract, Array) 
+{    
     cv::Mat dst_gold;
     cv::subtract(mat1, mat2, dst_gold);
 
@@ -151,7 +137,7 @@ TEST_P(SubtractArray, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::subtract(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
+        cv::gpu::subtract(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
         gpuRes.download(dst);
     );
@@ -159,24 +145,8 @@ TEST_P(SubtractArray, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, SubtractArray, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
-
-struct SubtractScalar : ArithmTest {};
-
-TEST_P(SubtractScalar, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
-
-    PRINT_PARAM(val);
-    
+TEST_P(Subtract, Scalar) 
+{    
     cv::Mat dst_gold;
     cv::subtract(mat1, val, dst_gold);
 
@@ -185,29 +155,26 @@ TEST_P(SubtractScalar, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::subtract(cv::gpu::GpuMat(mat1), val, gpuRes);
+        cv::gpu::subtract(loadMat(mat1, useRoi), val, gpuRes);
 
         gpuRes.download(dst);
     );
 
-    ASSERT_LE(checkNorm(dst_gold, dst), 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, SubtractScalar, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1, CV_32FC2)));
+INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // multiply
 
-struct MultiplyArray : ArithmTest {};
+struct Multiply : ArithmTestBase {};
 
-TEST_P(MultiplyArray, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    
+TEST_P(Multiply, Array) 
+{    
     cv::Mat dst_gold;
     cv::multiply(mat1, mat2, dst_gold);
 
@@ -216,7 +183,7 @@ TEST_P(MultiplyArray, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::multiply(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
+        cv::gpu::multiply(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
         gpuRes.download(dst);
     );
@@ -224,24 +191,8 @@ TEST_P(MultiplyArray, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, MultiplyArray, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
-
-struct MultiplyScalar : ArithmTest {};
-
-TEST_P(MultiplyScalar, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
-
-    PRINT_PARAM(val);
-    
+TEST_P(Multiply, Scalar) 
+{    
     cv::Mat dst_gold;
     cv::multiply(mat1, val, dst_gold);
 
@@ -250,7 +201,7 @@ TEST_P(MultiplyScalar, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::multiply(cv::gpu::GpuMat(mat1), val, gpuRes);
+        cv::gpu::multiply(loadMat(mat1, useRoi), val, gpuRes);
 
         gpuRes.download(dst);
     );
@@ -258,21 +209,18 @@ TEST_P(MultiplyScalar, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, MultiplyScalar, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1)));
+INSTANTIATE_TEST_CASE_P(Arithm, Multiply, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // divide
 
-struct DivideArray : ArithmTest {};
+struct Divide : ArithmTestBase {};
 
-TEST_P(DivideArray, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    
+TEST_P(Divide, Array) 
+{    
     cv::Mat dst_gold;
     cv::divide(mat1, mat2, dst_gold);
 
@@ -281,7 +229,7 @@ TEST_P(DivideArray, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::divide(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
+        cv::gpu::divide(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
         gpuRes.download(dst);
     );
@@ -289,24 +237,8 @@ TEST_P(DivideArray, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, DivideArray, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
-
-struct DivideScalar : ArithmTest {};
-
-TEST_P(DivideScalar, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
-
-    PRINT_PARAM(val);
-    
+TEST_P(Divide, Scalar) 
+{    
     cv::Mat dst_gold;
     cv::divide(mat1, val, dst_gold);
 
@@ -315,7 +247,7 @@ TEST_P(DivideScalar, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::divide(cv::gpu::GpuMat(mat1), val, gpuRes);
+        cv::gpu::divide(loadMat(mat1, useRoi), val, gpuRes);
 
         gpuRes.download(dst);
     );
@@ -323,21 +255,18 @@ TEST_P(DivideScalar, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, DivideScalar, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1)));
+INSTANTIATE_TEST_CASE_P(Arithm, Divide, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // transpose
 
-struct Transpose : ArithmTest {};
+struct Transpose : ArithmTestBase {};
 
 TEST_P(Transpose, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     cv::Mat dst_gold;
     cv::transpose(mat1, dst_gold);
 
@@ -346,7 +275,7 @@ TEST_P(Transpose, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::transpose(cv::gpu::GpuMat(mat1), gpuRes);
+        cv::gpu::transpose(loadMat(mat1, useRoi), gpuRes);
 
         gpuRes.download(dst);
     );
@@ -354,21 +283,18 @@ TEST_P(Transpose, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Transpose, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32SC2, CV_32FC1, CV_32FC2, CV_64FC1)));
+INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32SC2, CV_32FC1, CV_32FC2, CV_64FC1),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // absdiff
 
-struct AbsdiffArray : ArithmTest {};
+struct Absdiff : ArithmTestBase {};
 
-TEST_P(AbsdiffArray, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    
+TEST_P(Absdiff, Array) 
+{    
     cv::Mat dst_gold;
     cv::absdiff(mat1, mat2, dst_gold);
 
@@ -377,7 +303,7 @@ TEST_P(AbsdiffArray, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::absdiff(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
+        cv::gpu::absdiff(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
         gpuRes.download(dst);
     );
@@ -385,24 +311,8 @@ TEST_P(AbsdiffArray, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, AbsdiffArray, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
-
-struct AbsdiffScalar : ArithmTest {};
-
-TEST_P(AbsdiffScalar, Accuracy) 
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
-
-    PRINT_PARAM(val);
-    
+TEST_P(Absdiff, Scalar) 
+{    
     cv::Mat dst_gold;
     cv::absdiff(mat1, val, dst_gold);
 
@@ -411,7 +321,7 @@ TEST_P(AbsdiffScalar, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::absdiff(cv::gpu::GpuMat(mat1), val, gpuRes);
+        cv::gpu::absdiff(loadMat(mat1, useRoi), val, gpuRes);
 
         gpuRes.download(dst);
     );
@@ -419,17 +329,20 @@ TEST_P(AbsdiffScalar, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, AbsdiffScalar, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1)));
+INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // compare
 
-struct Compare : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> > 
+PARAM_TEST_CASE(Compare, cv::gpu::DeviceInfo, MatType, CmpCode, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    int type;
     int cmp_code;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat1, mat2;
@@ -438,17 +351,19 @@ struct Compare : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, in
         
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        cmp_code = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        cmp_code = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        mat1 = cvtest::randomMat(rng, size, CV_32FC1, 1, 16, false);
-        mat2 = cvtest::randomMat(rng, size, CV_32FC1, 1, 16, false);
+        mat1 = randomMat(rng, size, type, 1, 16, false);
+        mat2 = randomMat(rng, size, type, 1, 16, false);
 
         cv::compare(mat1, mat2, dst_gold, cmp_code);
     }
@@ -456,19 +371,12 @@ struct Compare : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, in
 
 TEST_P(Compare, Accuracy) 
 {
-    static const char* cmp_codes[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
-    const char* cmpCodeStr = cmp_codes[cmp_code];
-
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-    PRINT_PARAM(cmpCodeStr);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::compare(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes, cmp_code);
+        cv::gpu::compare(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes, cmp_code);
 
         gpuRes.download(dst);
     );
@@ -476,16 +384,19 @@ TEST_P(Compare, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Compare, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values((int)cv::CMP_EQ, (int)cv::CMP_GT, (int)cv::CMP_GE, (int)cv::CMP_LT, (int)cv::CMP_LE, (int)cv::CMP_NE)));
+INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_16UC1, CV_32SC1),
+                        Values((int) cv::CMP_EQ, (int) cv::CMP_GT, (int) cv::CMP_GE, (int) cv::CMP_LT, (int) cv::CMP_LE, (int) cv::CMP_NE),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // meanStdDev
 
-struct MeanStdDev : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(MeanStdDev, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -495,15 +406,16 @@ struct MeanStdDev : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp() 
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        mat = cvtest::randomMat(rng, size, CV_8UC1, 1, 255, false);
+        mat = randomMat(rng, size, CV_8UC1, 1, 255, false);
 
         cv::meanStdDev(mat, mean_gold, stddev_gold);
     }
@@ -511,14 +423,11 @@ struct MeanStdDev : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(MeanStdDev, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Scalar mean;
     cv::Scalar stddev;
     
     ASSERT_NO_THROW(
-        cv::gpu::meanStdDev(cv::gpu::GpuMat(mat), mean, stddev);
+        cv::gpu::meanStdDev(loadMat(mat, useRoi), mean, stddev);
     );
 
     EXPECT_NEAR(mean_gold[0], mean[0], 1e-5);
@@ -532,18 +441,18 @@ TEST_P(MeanStdDev, Accuracy)
     EXPECT_NEAR(stddev_gold[3], stddev[3], 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(
+                        ALL_DEVICES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // normDiff
 
-static const int norms[] = {cv::NORM_INF, cv::NORM_L1, cv::NORM_L2};
-static const char* norms_str[] = {"NORM_INF", "NORM_L1", "NORM_L2"};
-
-struct NormDiff : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(NormDiff, cv::gpu::DeviceInfo, NormCode, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
-    int normIdx;
+    int normCode;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat1, mat2;
@@ -552,51 +461,48 @@ struct NormDiff : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, i
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        normIdx = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        normCode = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        mat1 = cvtest::randomMat(rng, size, CV_8UC1, 1, 255, false);
-        mat2 = cvtest::randomMat(rng, size, CV_8UC1, 1, 255, false);
+        mat1 = randomMat(rng, size, CV_8UC1, 1, 255, false);
+        mat2 = randomMat(rng, size, CV_8UC1, 1, 255, false);
 
-        norm_gold = cv::norm(mat1, mat2, norms[normIdx]);
+        norm_gold = cv::norm(mat1, mat2, normCode);
     }
 };
 
 TEST_P(NormDiff, Accuracy) 
-{
-    const char* normStr = norms_str[normIdx];
-
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-    PRINT_PARAM(normStr);
-    
+{    
     double norm;
     
     ASSERT_NO_THROW(
-        norm = cv::gpu::norm(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), norms[normIdx]);
+        norm = cv::gpu::norm(loadMat(mat1, useRoi), loadMat(mat2, useRoi), normCode);
     );
 
     EXPECT_NEAR(norm_gold, norm, 1e-6);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, NormDiff, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Range(0, 3)));
+INSTANTIATE_TEST_CASE_P(Arithm, NormDiff, Combine(
+                        ALL_DEVICES,
+                        Values((int) cv::NORM_INF, (int) cv::NORM_L1, (int) cv::NORM_L2),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // flip
 
-struct Flip : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(Flip, cv::gpu::DeviceInfo, MatType, FlipCode, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int flip_code;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -605,38 +511,31 @@ struct Flip : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, 
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        flip_code = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        flip_code = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        mat = cvtest::randomMat(rng, size, type, 1, 255, false);
+        mat = randomMat(rng, size, type, 1, 255, false);
 
         cv::flip(mat, dst_gold, flip_code);
     }
 };
 
 TEST_P(Flip, Accuracy) 
-{
-    static const char* flip_axis[] = {"Both", "X", "Y"};
-    const char* flipAxisStr = flip_axis[flip_code + 1];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(flipAxisStr);
-    
+{    
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::flip(cv::gpu::GpuMat(mat), gpu_res, flip_code);
+        cv::gpu::flip(loadMat(mat, useRoi), gpu_res, flip_code);
 
         gpu_res.download(dst);
     );
@@ -644,18 +543,20 @@ TEST_P(Flip, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Flip, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4),
-                        testing::Values(0, 1, -1)));
+INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_8UC4),
+                        Values((int)FLIP_BOTH, (int)FLIP_X, (int)FLIP_Y),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // LUT
 
-struct LUT : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(LUT, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -665,17 +566,18 @@ struct LUT : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        mat = cvtest::randomMat(rng, size, type, 1, 255, false);
-        lut = cvtest::randomMat(rng, cv::Size(256, 1), CV_8UC1, 100, 200, false);
+        mat = randomMat(rng, size, type, 1, 255, false);
+        lut = randomMat(rng, cv::Size(256, 1), CV_8UC1, 100, 200, false);
 
         cv::LUT(mat, lut, dst_gold);
     }
@@ -683,16 +585,12 @@ struct LUT : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 
 TEST_P(LUT, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::LUT(cv::gpu::GpuMat(mat), lut, gpu_res);
+        cv::gpu::LUT(loadMat(mat, useRoi), lut, gpu_res);
 
         gpu_res.download(dst);
     );
@@ -700,16 +598,18 @@ TEST_P(LUT, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, LUT, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC3)));
+INSTANTIATE_TEST_CASE_P(Arithm, LUT, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_8UC3),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // exp
 
-struct Exp : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(Exp, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -718,15 +618,16 @@ struct Exp : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp() 
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat = cvtest::randomMat(rng, size, CV_32FC1, -10.0, 2.0, false);        
+        mat = randomMat(rng, size, CV_32FC1, -10.0, 2.0, false);        
 
         cv::exp(mat, dst_gold);
     }
@@ -734,15 +635,12 @@ struct Exp : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Exp, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::exp(cv::gpu::GpuMat(mat), gpu_res);
+        cv::gpu::exp(loadMat(mat, useRoi), gpu_res);
 
         gpu_res.download(dst);
     );
@@ -750,17 +648,18 @@ TEST_P(Exp, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Exp, testing::ValuesIn(devices()));
-
-
+INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(
+                        ALL_DEVICES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // pow
 
-struct Pow : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(Pow, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     double power;
     cv::Size size;
@@ -769,18 +668,18 @@ struct Pow : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
     cv::Mat dst_gold;
 
     virtual void SetUp() 
-    {        
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());        
+    {
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-        //size = cv::Size(2, 2);
 
-        mat = cvtest::randomMat(rng, size, type, 0.0, 100.0, false);        
+        mat = randomMat(rng, size, type, 0.0, 100.0, false);        
 
         if (mat.depth() == CV_32F)
             power = rng.uniform(1.2f, 3.f);
@@ -789,43 +688,38 @@ struct Pow : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
             int ipower = rng.uniform(2, 8);
             power = (float)ipower;
         }
+
         cv::pow(mat, power, dst_gold);
     }
 };
 
 TEST_P(Pow, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(power);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::pow(cv::gpu::GpuMat(mat), power, gpu_res);
+        cv::gpu::pow(loadMat(mat, useRoi), power, gpu_res);
 
         gpu_res.download(dst);
     );
 
-    /*std::cout  << mat << std::endl << std::endl;
-    std::cout  << dst << std::endl << std::endl;
-    std::cout  << dst_gold << std::endl;*/
     EXPECT_MAT_NEAR(dst_gold, dst, 2);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Pow, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_32F, CV_32FC3)));
+INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(
+                        ALL_DEVICES,
+                        Values(CV_32F, CV_32FC3),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // log
 
-struct Log : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(Log, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -834,15 +728,16 @@ struct Log : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp() 
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);        
+        mat = randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);        
 
         cv::log(mat, dst_gold);
     }
@@ -850,15 +745,12 @@ struct Log : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Log, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::log(cv::gpu::GpuMat(mat), gpu_res);
+        cv::gpu::log(loadMat(mat, useRoi), gpu_res);
 
         gpu_res.download(dst);
     );
@@ -866,14 +758,17 @@ TEST_P(Log, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Log, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(
+                        ALL_DEVICES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // magnitude
 
-struct Magnitude : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(Magnitude, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat1, mat2;
@@ -882,16 +777,17 @@ struct Magnitude : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp() 
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat1 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
-        mat2 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);       
+        mat1 = randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
+        mat2 = randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);       
 
         cv::magnitude(mat1, mat2, dst_gold);
     }
@@ -899,15 +795,12 @@ struct Magnitude : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Magnitude, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::magnitude(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpu_res);
+        cv::gpu::magnitude(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpu_res);
 
         gpu_res.download(dst);
     );
@@ -915,14 +808,17 @@ TEST_P(Magnitude, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(
+                        ALL_DEVICES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // phase
 
-struct Phase : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(Phase, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat1, mat2;
@@ -931,16 +827,17 @@ struct Phase : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp() 
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat1 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
-        mat2 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);       
+        mat1 = randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
+        mat2 = randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);       
 
         cv::phase(mat1, mat2, dst_gold);
     }
@@ -948,15 +845,12 @@ struct Phase : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Phase, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::phase(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpu_res);
+        cv::gpu::phase(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpu_res);
 
         gpu_res.download(dst);
     );
@@ -964,14 +858,17 @@ TEST_P(Phase, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Phase, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(
+                        ALL_DEVICES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // cartToPolar
 
-struct CartToPolar : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(CartToPolar, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat1, mat2;
@@ -981,16 +878,17 @@ struct CartToPolar : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp() 
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat1 = cvtest::randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);
-        mat2 = cvtest::randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);       
+        mat1 = randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);
+        mat2 = randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);       
 
         cv::cartToPolar(mat1, mat2, mag_gold, angle_gold);
     }
@@ -998,16 +896,13 @@ struct CartToPolar : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(CartToPolar, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat mag, angle;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuMag;
         cv::gpu::GpuMat gpuAngle;
 
-        cv::gpu::cartToPolar(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuMag, gpuAngle);
+        cv::gpu::cartToPolar(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuMag, gpuAngle);
 
         gpuMag.download(mag);
         gpuAngle.download(angle);
@@ -1017,14 +912,17 @@ TEST_P(CartToPolar, Accuracy)
     EXPECT_MAT_NEAR(angle_gold, angle, 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(
+                        ALL_DEVICES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // polarToCart
 
-struct PolarToCart : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(PolarToCart, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mag;
@@ -1035,16 +933,17 @@ struct PolarToCart : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp() 
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mag = cvtest::randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);
-        angle = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 2.0 * CV_PI, false);       
+        mag = randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);
+        angle = randomMat(rng, size, CV_32FC1, 0.0, 2.0 * CV_PI, false);       
 
         cv::polarToCart(mag, angle, x_gold, y_gold);
     }
@@ -1052,16 +951,13 @@ struct PolarToCart : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(PolarToCart, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat x, y;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuX;
         cv::gpu::GpuMat gpuY;
 
-        cv::gpu::polarToCart(cv::gpu::GpuMat(mag), cv::gpu::GpuMat(angle), gpuX, gpuY);
+        cv::gpu::polarToCart(loadMat(mag, useRoi), loadMat(angle, useRoi), gpuX, gpuY);
 
         gpuX.download(x);
         gpuY.download(y);
@@ -1071,15 +967,18 @@ TEST_P(PolarToCart, Accuracy)
     EXPECT_MAT_NEAR(y_gold, y, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(
+                        ALL_DEVICES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // minMax
 
-struct MinMax : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(MinMax, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -1090,17 +989,18 @@ struct MinMax : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
-        mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, false);
+        mat = randomMat(rng, size, type, 0.0, 127.0, false);
+        mask = randomMat(rng, size, CV_8UC1, 0, 2, false);
 
         if (type != CV_8S)
         {
@@ -1131,34 +1031,32 @@ struct MinMax : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int
 
 TEST_P(MinMax, Accuracy) 
 {
-    if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (type == CV_64F && !supportFeature(devInfo,  cv::gpu::NATIVE_DOUBLE))
         return;
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
 
     double minVal, maxVal;
     
     ASSERT_NO_THROW(
-        cv::gpu::minMax(cv::gpu::GpuMat(mat), &minVal, &maxVal, cv::gpu::GpuMat(mask));
+        cv::gpu::minMax(loadMat(mat, useRoi), &minVal, &maxVal, loadMat(mask, useRoi));
     );
 
     EXPECT_DOUBLE_EQ(minVal_gold, minVal);
     EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, MinMax, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // minMaxLoc
 
-struct MinMaxLoc : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(MinMaxLoc, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -1171,17 +1069,18 @@ struct MinMaxLoc : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, 
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
-        mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, false);
+        mat = randomMat(rng, size, type, 0.0, 127.0, false);
+        mask = randomMat(rng, size, CV_8UC1, 0, 2, false);
 
         if (type != CV_8S)
         {
@@ -1215,15 +1114,11 @@ TEST_P(MinMaxLoc, Accuracy)
     if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     double minVal, maxVal;
     cv::Point minLoc, maxLoc;
     
     ASSERT_NO_THROW(
-        cv::gpu::minMaxLoc(cv::gpu::GpuMat(mat), &minVal, &maxVal, &minLoc, &maxLoc, cv::gpu::GpuMat(mask));
+        cv::gpu::minMaxLoc(loadMat(mat, useRoi), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask, useRoi));
     );
 
     EXPECT_DOUBLE_EQ(minVal_gold, minVal);
@@ -1240,17 +1135,19 @@ TEST_P(MinMaxLoc, Accuracy)
     EXPECT_EQ(0, cmpMaxVals);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////
 // countNonZero
 
-struct CountNonZero : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(CountNonZero, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
@@ -1259,16 +1156,17 @@ struct CountNonZero : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInf
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        cv::Mat matBase = cvtest::randomMat(rng, size, CV_8U, 0.0, 1.0, false);
+        cv::Mat matBase = randomMat(rng, size, CV_8U, 0.0, 1.0, false);
         matBase.convertTo(mat, type);
 
         n_gold = cv::countNonZero(mat);
@@ -1280,66 +1178,59 @@ TEST_P(CountNonZero, Accuracy)
     if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     int n;
     
     ASSERT_NO_THROW(
-        n = cv::gpu::countNonZero(cv::gpu::GpuMat(mat));
+        n = cv::gpu::countNonZero(loadMat(mat, useRoi));
     );
 
     ASSERT_EQ(n_gold, n);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                        USE_ROI));
 
 //////////////////////////////////////////////////////////////////////////////
 // sum
 
-struct Sum : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(Sum, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat;
 
-    cv::Scalar sum_gold;
-
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        mat = cvtest::randomMat(rng, size, CV_8U, 0.0, 10.0, false);
-
-        sum_gold = cv::sum(mat);
+        mat = randomMat(rng, size, CV_8U, 0.0, 10.0, false);
     }
 };
 
-TEST_P(Sum, Accuracy) 
+TEST_P(Sum, Simple) 
 {
     if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
+    cv::Scalar sum_gold = cv::sum(mat);
 
     cv::Scalar sum;
     
     ASSERT_NO_THROW(
-        sum = cv::gpu::sum(cv::gpu::GpuMat(mat));
+        sum = cv::gpu::sum(loadMat(mat, useRoi));
     );
 
     EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
@@ -1348,50 +1239,17 @@ TEST_P(Sum, Accuracy)
     EXPECT_NEAR(sum[3], sum_gold[3], mat.size().area() * 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Sum, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
-
-struct AbsSum : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-
-    cv::Size size;
-    cv::Mat mat;
-
-    cv::Scalar sum_gold;
-
-    virtual void SetUp() 
-    {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-
-        mat = cvtest::randomMat(rng, size, CV_8U, 0.0, 10.0, false);
-
-        sum_gold = cv::norm(mat, cv::NORM_L1);
-    }
-};
-
-TEST_P(AbsSum, Accuracy) 
+TEST_P(Sum, Abs) 
 {
     if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
+    cv::Scalar sum_gold = cv::norm(mat, cv::NORM_L1);
 
     cv::Scalar sum;
     
     ASSERT_NO_THROW(
-        sum = cv::gpu::absSum(cv::gpu::GpuMat(mat));
+        sum = cv::gpu::absSum(loadMat(mat, useRoi));
     );
 
     EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
@@ -1400,52 +1258,19 @@ TEST_P(AbsSum, Accuracy)
     EXPECT_NEAR(sum[3], sum_gold[3], mat.size().area() * 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, AbsSum, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
-
-struct SqrSum : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-
-    cv::Size size;
-    cv::Mat mat;
-
-    cv::Scalar sum_gold;
-
-    virtual void SetUp() 
-    {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-
-        mat = cvtest::randomMat(rng, size, CV_8U, 0.0, 10.0, false);
- 
-        cv::Mat sqrmat;
-        cv::multiply(mat, mat, sqrmat);
-        sum_gold = cv::sum(sqrmat);
-    }
-};
-
-TEST_P(SqrSum, Accuracy) 
+TEST_P(Sum, Sqr) 
 {
     if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
+    cv::Mat sqrmat;
+    multiply(mat, mat, sqrmat);
+    cv::Scalar sum_gold = sum(sqrmat);
 
     cv::Scalar sum;
     
     ASSERT_NO_THROW(
-        sum = cv::gpu::sqrSum(cv::gpu::GpuMat(mat));
+        sum = cv::gpu::sqrSum(loadMat(mat, useRoi));
     );
 
     EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
@@ -1454,73 +1279,15 @@ TEST_P(SqrSum, Accuracy)
     EXPECT_NEAR(sum[3], sum_gold[3], mat.size().area() * 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, SqrSum, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                        USE_ROI));
 
 //////////////////////////////////////////////////////////////////////////////
 // bitwise
 
-struct BitwiseNot : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-
-    cv::Size size;
-    cv::Mat mat;
-
-    cv::Mat dst_gold;
-
-    virtual void SetUp() 
-    {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-
-        mat.create(size, type);
-        
-        for (int i = 0; i < mat.rows; ++i)
-        {
-            cv::Mat row(1, static_cast<int>(mat.cols * mat.elemSize()), CV_8U, (void*)mat.ptr(i));
-            rng.fill(row, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
-        }
-
-        dst_gold = ~mat;
-    }
-};
-
-TEST_P(BitwiseNot, Accuracy) 
-{
-    if (mat.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
-        return;
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    cv::Mat dst;
-    
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
-
-        cv::gpu::bitwise_not(cv::gpu::GpuMat(mat), dev_dst);
-
-        dev_dst.download(dst);
-    );
-
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
-}
-
-INSTANTIATE_TEST_CASE_P(Arithm, BitwiseNot, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::ValuesIn(all_types())));
-
-struct BitwiseOr : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(Bitwise, cv::gpu::DeviceInfo, MatType)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
@@ -1529,12 +1296,10 @@ struct BitwiseOr : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, 
     cv::Mat mat1;
     cv::Mat mat2;
 
-    cv::Mat dst_gold;
-
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
@@ -1553,26 +1318,22 @@ struct BitwiseOr : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, 
             cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
             rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
         }
-
-        dst_gold = mat1 | mat2;
     }
 };
 
-TEST_P(BitwiseOr, Accuracy) 
+TEST_P(Bitwise, Not) 
 {
     if (mat1.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
+    cv::Mat dst_gold = ~mat1;
 
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::bitwise_or(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), dev_dst);
+        cv::gpu::bitwise_not(loadMat(mat1), dev_dst);
 
         dev_dst.download(dst);
     );
@@ -1580,63 +1341,19 @@ TEST_P(BitwiseOr, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, BitwiseOr, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::ValuesIn(all_types())));
-
-struct BitwiseAnd : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-
-    cv::Size size;
-    cv::Mat mat1;
-    cv::Mat mat2;
-
-    cv::Mat dst_gold;
-
-    virtual void SetUp() 
-    {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-
-        mat1.create(size, type);
-        mat2.create(size, type);
-        
-        for (int i = 0; i < mat1.rows; ++i)
-        {
-            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
-            rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
-
-            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
-            rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
-        }
-
-        dst_gold = mat1 & mat2;
-    }
-};
-
-TEST_P(BitwiseAnd, Accuracy) 
+TEST_P(Bitwise, Or) 
 {
     if (mat1.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
+    cv::Mat dst_gold = mat1 | mat2;
 
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::bitwise_and(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), dev_dst);
+        cv::gpu::bitwise_or(loadMat(mat1), loadMat(mat2), dev_dst);
 
         dev_dst.download(dst);
     );
@@ -1644,63 +1361,19 @@ TEST_P(BitwiseAnd, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, BitwiseAnd, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::ValuesIn(all_types())));
-
-struct BitwiseXor : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-
-    cv::Size size;
-    cv::Mat mat1;
-    cv::Mat mat2;
-
-    cv::Mat dst_gold;
-
-    virtual void SetUp() 
-    {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-
-        mat1.create(size, type);
-        mat2.create(size, type);
-        
-        for (int i = 0; i < mat1.rows; ++i)
-        {
-            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
-            rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
-
-            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
-            rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
-        }
-
-        dst_gold = mat1 ^ mat2;
-    }
-};
-
-TEST_P(BitwiseXor, Accuracy) 
+TEST_P(Bitwise, And) 
 {
     if (mat1.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
+    cv::Mat dst_gold = mat1 & mat2;
 
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::bitwise_xor(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), dev_dst);
+        cv::gpu::bitwise_and(loadMat(mat1), loadMat(mat2), dev_dst);
 
         dev_dst.download(dst);
     );
@@ -1708,19 +1381,40 @@ TEST_P(BitwiseXor, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, BitwiseXor, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::ValuesIn(all_types())));
+TEST_P(Bitwise, Xor) 
+{
+    if (mat1.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    cv::Mat dst_gold = mat1 ^ mat2;
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::bitwise_xor(loadMat(mat1), loadMat(mat2), dev_dst);
+
+        dev_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise, Combine(
+                        ALL_DEVICES,
+                        ALL_TYPES));
 
 //////////////////////////////////////////////////////////////////////////////
 // addWeighted
 
-struct AddWeighted : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int, int> >
+PARAM_TEST_CASE(AddWeighted, cv::gpu::DeviceInfo, MatType, MatType, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type1;
     int type2;
     int dtype;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src1;
@@ -1733,19 +1427,20 @@ struct AddWeighted : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type1 = std::tr1::get<1>(GetParam());
-        type2 = std::tr1::get<2>(GetParam());
-        dtype = std::tr1::get<3>(GetParam());
+        devInfo = GET_PARAM(0);
+        type1 = GET_PARAM(1);
+        type2 = GET_PARAM(2);
+        dtype = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        src1 = cvtest::randomMat(rng, size, type1, 0.0, 255.0, false);
-        src2 = cvtest::randomMat(rng, size, type2, 0.0, 255.0, false);
+        src1 = randomMat(rng, size, type1, 0.0, 255.0, false);
+        src2 = randomMat(rng, size, type2, 0.0, 255.0, false);
 
         alpha = rng.uniform(-10.0, 10.0);
         beta = rng.uniform(-10.0, 10.0);
@@ -1760,21 +1455,12 @@ TEST_P(AddWeighted, Accuracy)
     if ((src1.depth() == CV_64F || src2.depth() == CV_64F || dst_gold.depth() == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type1);
-    PRINT_TYPE(type2);
-    PRINT_TYPE(dtype);
-    PRINT_PARAM(size);
-    PRINT_PARAM(alpha);
-    PRINT_PARAM(beta);
-    PRINT_PARAM(gamma);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::addWeighted(cv::gpu::GpuMat(src1), alpha, cv::gpu::GpuMat(src2), beta, gamma, dev_dst, dtype);
+        cv::gpu::addWeighted(loadMat(src1, useRoi), alpha, loadMat(src2, useRoi), beta, gamma, dev_dst, dtype);
 
         dev_dst.download(dst);
     );
@@ -1782,21 +1468,23 @@ TEST_P(AddWeighted, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, dtype < CV_32F ? 1.0 : 1e-12);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1)),
-                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1)),
-                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1))));
+INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
+                        ALL_DEVICES,
+                        TYPES(CV_8U, CV_64F, 1, 1),
+                        TYPES(CV_8U, CV_64F, 1, 1),
+                        TYPES(CV_8U, CV_64F, 1, 1),
+                        USE_ROI));
 
 //////////////////////////////////////////////////////////////////////////////
 // reduce
 
-struct Reduce : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int, int> >
+PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, MatType, int, ReduceOp, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int dim;
-    int reduceOp;
+    int reduceOp;    
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
@@ -1805,18 +1493,19 @@ struct Reduce : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        dim = std::tr1::get<2>(GetParam());
-        reduceOp = std::tr1::get<3>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        dim = GET_PARAM(2);
+        reduceOp = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 400), rng.uniform(100, 400));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 255.0, false);
+        src = randomMat(rng, size, type, 0.0, 255.0, false);
 
         cv::reduce(src, dst_gold, dim, reduceOp, reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? CV_32F : CV_MAT_DEPTH(type));
 
@@ -1831,21 +1520,12 @@ struct Reduce : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int
 
 TEST_P(Reduce, Accuracy) 
 {
-    static const char* reduceOpStrs[] = {"CV_REDUCE_SUM", "CV_REDUCE_AVG", "CV_REDUCE_MAX", "CV_REDUCE_MIN"};
-    const char* reduceOpStr = reduceOpStrs[reduceOp];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(dim);
-    PRINT_PARAM(reduceOpStr);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::reduce(cv::gpu::GpuMat(src), dev_dst, dim, reduceOp, reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? CV_32F : CV_MAT_DEPTH(type));
+        cv::gpu::reduce(loadMat(src, useRoi), dev_dst, dim, reduceOp, reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? CV_32F : CV_MAT_DEPTH(type));
 
         dev_dst.download(dst);
     );
@@ -1854,20 +1534,22 @@ TEST_P(Reduce, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, norm);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, Reduce, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        testing::Values(0, 1),
-                        testing::Values((int)CV_REDUCE_SUM, (int)CV_REDUCE_AVG, (int)CV_REDUCE_MAX, (int)CV_REDUCE_MIN)));
+INSTANTIATE_TEST_CASE_P(Arithm, Reduce, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        Values(0, 1),
+                        Values((int)CV_REDUCE_SUM, (int)CV_REDUCE_AVG, (int)CV_REDUCE_MAX, (int)CV_REDUCE_MIN),
+                        USE_ROI));
 
 //////////////////////////////////////////////////////////////////////////////
 // gemm
 
-struct GEMM : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(GEMM, cv::gpu::DeviceInfo, MatType, GemmFlags, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int flags;
+    bool useRoi;
 
     int size;
     cv::Mat src1;
@@ -1880,19 +1562,20 @@ struct GEMM : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, 
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        flags = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        flags = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
-        size = rng.uniform(100, 500);
+        size = rng.uniform(100, 200);
 
-        src1 = cvtest::randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
-        src2 = cvtest::randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
-        src3 = cvtest::randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
+        src1 = randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
+        src2 = randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
+        src3 = randomMat(rng, cv::Size(size, size), type, -10.0, 10.0, false);
         alpha = rng.uniform(-10.0, 10.0);
         beta = rng.uniform(-10.0, 10.0);
 
@@ -1902,16 +1585,12 @@ struct GEMM : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, 
 
 TEST_P(GEMM, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(flags);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::gemm(cv::gpu::GpuMat(src1), cv::gpu::GpuMat(src2), alpha, cv::gpu::GpuMat(src3), beta, dev_dst, flags);
+        cv::gpu::gemm(loadMat(src1, useRoi), loadMat(src2, useRoi), alpha, loadMat(src3, useRoi), beta, dev_dst, flags);
 
         dev_dst.download(dst);
     );
@@ -1919,9 +1598,10 @@ TEST_P(GEMM, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-1);
 }
 
-INSTANTIATE_TEST_CASE_P(Arithm, GEMM, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_32FC1, CV_32FC2),
-                        testing::Values(0, (int)cv::GEMM_1_T, (int)cv::GEMM_2_T, (int)cv::GEMM_3_T)));
+INSTANTIATE_TEST_CASE_P(Arithm, GEMM, Combine(
+                        ALL_DEVICES,
+                        Values(CV_32FC1, CV_32FC2),
+                        Values(0, (int) cv::GEMM_1_T, (int) cv::GEMM_2_T, (int) cv::GEMM_3_T),
+                        USE_ROI));
 
 #endif // HAVE_CUDA

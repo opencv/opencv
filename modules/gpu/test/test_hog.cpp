@@ -43,6 +43,9 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+using namespace testing;
+
 //#define DUMP
 
 struct CV_GpuHogDetectTestRunner : cv::gpu::HOGDescriptor
@@ -169,7 +172,7 @@ struct CV_GpuHogDetectTestRunner : cv::gpu::HOGDescriptor
 #endif
 };
 
-struct HogDetect : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Detect : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
     
@@ -181,17 +184,15 @@ struct HogDetect : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(HogDetect, Accuracy)
+TEST_P(Detect, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-
     ASSERT_NO_THROW(
         CV_GpuHogDetectTestRunner runner;
         runner.run();
     );
 }
 
-INSTANTIATE_TEST_CASE_P(HOG, HogDetect, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(HOG, Detect, ALL_DEVICES);
 
 struct CV_GpuHogGetDescriptorsTestRunner : cv::gpu::HOGDescriptor
 {
@@ -301,7 +302,7 @@ struct CV_GpuHogGetDescriptorsTestRunner : cv::gpu::HOGDescriptor
     int block_hist_size;
 };
 
-struct HogGetDescriptors : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct GetDescriptors : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
     
@@ -313,16 +314,14 @@ struct HogGetDescriptors : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(HogGetDescriptors, Accuracy)
+TEST_P(GetDescriptors, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-
     ASSERT_NO_THROW(
         CV_GpuHogGetDescriptorsTestRunner runner;
         runner.run();
     );
 }
 
-INSTANTIATE_TEST_CASE_P(HOG, HogGetDescriptors, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(HOG, GetDescriptors, ALL_DEVICES);
 
 #endif // HAVE_CUDA

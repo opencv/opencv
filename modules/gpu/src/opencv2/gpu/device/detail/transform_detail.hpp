@@ -386,20 +386,6 @@ namespace cv { namespace gpu { namespace device
                     cudaSafeCall( cudaDeviceSynchronize() );            
             }
         };        
-
-        template <typename T, typename D, typename UnOp, typename Mask>
-        static inline void transform_caller(DevMem2D_<T> src, DevMem2D_<D> dst, UnOp op, Mask mask, cudaStream_t stream)
-        {
-            typedef TransformFunctorTraits<UnOp> ft;
-            TransformDispatcher<VecTraits<T>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src, dst, op, mask, stream);
-        }
-
-        template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static inline void transform_caller(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, BinOp op, Mask mask, cudaStream_t stream)
-        {
-            typedef TransformFunctorTraits<BinOp> ft;
-            TransformDispatcher<VecTraits<T1>::cn == 1 && VecTraits<T2>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src1, src2, dst, op, mask, stream);
-        }
     } // namespace transform_detail
 }}} // namespace cv { namespace gpu { namespace device
 

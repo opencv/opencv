@@ -44,13 +44,17 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+using namespace testing;
+
 ////////////////////////////////////////////////////////////////////////////////
 // merge
 
-struct Merge : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(Merge, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     std::vector<cv::Mat> src;
@@ -59,12 +63,13 @@ struct Merge : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int>
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
@@ -83,10 +88,6 @@ TEST_P(Merge, Accuracy)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
@@ -94,7 +95,7 @@ TEST_P(Merge, Accuracy)
         cv::gpu::GpuMat dev_dst;
 
         for (size_t i = 0; i < src.size(); ++i)
-            dev_src.push_back(cv::gpu::GpuMat(src[i]));
+            dev_src.push_back(loadMat(src[i], useRoi));
 
         cv::gpu::merge(dev_src, dev_dst); 
 
@@ -104,17 +105,19 @@ TEST_P(Merge, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(MatOp, Merge, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::ValuesIn(all_types())));
+INSTANTIATE_TEST_CASE_P(MatOp, Merge, Combine(
+                        ALL_DEVICES, 
+                        ALL_TYPES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // split
 
-struct Split : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(Split, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
@@ -123,12 +126,13 @@ struct Split : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int>
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
@@ -143,17 +147,15 @@ TEST_P(Split, Accuracy)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     std::vector<cv::Mat> dst;
     
     ASSERT_NO_THROW(
         std::vector<cv::gpu::GpuMat> dev_dst;
-        cv::gpu::split(cv::gpu::GpuMat(src), dev_dst);
+
+        cv::gpu::split(loadMat(src, useRoi), dev_dst);
 
         dst.resize(dev_dst.size());
+
         for (size_t i = 0; i < dev_dst.size(); ++i)
             dev_dst[i].download(dst[i]);
     );
@@ -166,14 +168,15 @@ TEST_P(Split, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(MatOp, Split, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::ValuesIn(all_types())));
+INSTANTIATE_TEST_CASE_P(MatOp, Split, Combine(
+                        ALL_DEVICES, 
+                        ALL_TYPES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // split_merge_consistency
 
-struct SplitMerge : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(SplitMerge, cv::gpu::DeviceInfo, MatType)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
@@ -183,12 +186,12 @@ struct SplitMerge : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo,
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
@@ -202,17 +205,13 @@ TEST_P(SplitMerge, Consistency)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     cv::Mat final;
 
     ASSERT_NO_THROW(
         std::vector<cv::gpu::GpuMat> dev_vec;
         cv::gpu::GpuMat dev_final;
 
-        cv::gpu::split(cv::gpu::GpuMat(orig), dev_vec);    
+        cv::gpu::split(loadMat(orig), dev_vec);    
         cv::gpu::merge(dev_vec, dev_final);
 
         dev_final.download(final);
@@ -221,29 +220,31 @@ TEST_P(SplitMerge, Consistency)
     EXPECT_MAT_NEAR(orig, final, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(MatOp, SplitMerge, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::ValuesIn(all_types())));
+INSTANTIATE_TEST_CASE_P(MatOp, SplitMerge, Combine(
+                        ALL_DEVICES, 
+                        ALL_TYPES));
 
 ////////////////////////////////////////////////////////////////////////////////
 // setTo
 
-struct SetTo : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(SetTo, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat mat_gold;
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
@@ -256,16 +257,12 @@ TEST_P(SetTo, Zero)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    static cv::Scalar zero = cv::Scalar::all(0);
+    cv::Scalar zero = cv::Scalar::all(0);
 
     cv::Mat mat;
 
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_mat(mat_gold);
+        cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
 
         mat_gold.setTo(zero);
         dev_mat.setTo(zero);
@@ -281,11 +278,7 @@ TEST_P(SetTo, SameVal)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    static cv::Scalar s = cv::Scalar::all(1);
+    cv::Scalar s = cv::Scalar::all(1);
 
     cv::Mat mat;
 
@@ -306,16 +299,12 @@ TEST_P(SetTo, DifferentVal)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    static cv::Scalar s = cv::Scalar(1, 2, 3, 4);
+    cv::Scalar s = cv::Scalar(1, 2, 3, 4);
 
     cv::Mat mat;
 
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_mat(mat_gold);
+        cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
 
         mat_gold.setTo(s);
         dev_mat.setTo(s);
@@ -331,23 +320,18 @@ TEST_P(SetTo, Masked)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
-    static cv::Scalar s = cv::Scalar(1, 2, 3, 4);
-
+    cv::Scalar s = cv::Scalar(1, 2, 3, 4);
     
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-    cv::Mat mask = cvtest::randomMat(rng, mat_gold.size(), CV_8UC1, 0.0, 1.5, false);
+    cv::RNG& rng = TS::ptr()->get_rng();
+    cv::Mat mask = randomMat(rng, mat_gold.size(), CV_8UC1, 0.0, 1.5, false);
 
     cv::Mat mat;
 
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_mat(mat_gold);
+        cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
 
         mat_gold.setTo(s, mask);
-        dev_mat.setTo(s, cv::gpu::GpuMat(mask));
+        dev_mat.setTo(s, loadMat(mask, useRoi));
 
         dev_mat.download(mat);
     );
@@ -355,33 +339,36 @@ TEST_P(SetTo, Masked)
     EXPECT_MAT_NEAR(mat_gold, mat, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(MatOp, SetTo, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::ValuesIn(all_types())));
+INSTANTIATE_TEST_CASE_P(MatOp, SetTo, Combine(
+                        ALL_DEVICES, 
+                        ALL_TYPES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // copyTo
 
-struct CopyTo : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(CopyTo, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        src = randomMat(rng, size, type, 0.0, 127.0, false);
     }
 };
 
@@ -390,19 +377,14 @@ TEST_P(CopyTo, WithoutMask)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     cv::Mat dst_gold;
     src.copyTo(dst_gold);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src(src);
-
-        cv::gpu::GpuMat dev_dst;
+        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
+        cv::gpu::GpuMat dev_dst = loadMat(src, useRoi);
 
         dev_src.copyTo(dev_dst);
 
@@ -417,25 +399,22 @@ TEST_P(CopyTo, Masked)
     if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
+    cv::RNG& rng = TS::ptr()->get_rng();
 
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+    cv::Mat mask = randomMat(rng, src.size(), CV_8UC1, 0.0, 2.0, false);
 
-    cv::Mat mask = cvtest::randomMat(rng, src.size(), CV_8UC1, 0.0, 2.0, false);
+    cv::Mat zeroMat(src.size(), src.type(), cv::Scalar::all(0));
 
-    cv::Mat dst_gold(src.size(), src.type(), cv::Scalar::all(0));
+    cv::Mat dst_gold = zeroMat.clone();
     src.copyTo(dst_gold, mask);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src(src);
+        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
+        cv::gpu::GpuMat dev_dst = loadMat(zeroMat, useRoi);
 
-        cv::gpu::GpuMat dev_dst(src.size(), src.type(), cv::Scalar::all(0));
-
-        dev_src.copyTo(dev_dst, cv::gpu::GpuMat(mask));
+        dev_src.copyTo(dev_dst, loadMat(mask, useRoi));
 
         dev_dst.download(dst);
     );
@@ -443,35 +422,38 @@ TEST_P(CopyTo, Masked)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(MatOp, CopyTo, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::ValuesIn(all_types())));
+INSTANTIATE_TEST_CASE_P(MatOp, CopyTo, Combine(
+                        ALL_DEVICES, 
+                        ALL_TYPES,
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // convertTo
 
-struct ConvertTo : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(ConvertTo, cv::gpu::DeviceInfo, MatType, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int depth1;
     int depth2;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        depth1 = std::tr1::get<1>(GetParam());
-        depth2 = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        depth1 = GET_PARAM(1);
+        depth2 = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, depth1, 0.0, 127.0, false);
+        src = randomMat(rng, size, depth1, 0.0, 127.0, false);
     }
 };
 
@@ -480,19 +462,13 @@ TEST_P(ConvertTo, WithoutScaling)
     if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(depth1);
-    PRINT_TYPE(depth2);
-    PRINT_PARAM(size);
-
     cv::Mat dst_gold;
     src.convertTo(dst_gold, depth2);
 
     cv::Mat dst;
     
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src(src);
-
+        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
         cv::gpu::GpuMat dev_dst;
 
         dev_src.convertTo(dev_dst, depth2);
@@ -507,19 +483,11 @@ TEST_P(ConvertTo, WithScaling)
 {
     if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(depth1);
-    PRINT_TYPE(depth2);
-    PRINT_PARAM(size);
     
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+    cv::RNG& rng = TS::ptr()->get_rng();
 
     const double a = rng.uniform(0.0, 1.0);
     const double b = rng.uniform(-10.0, 10.0);
-    
-    PRINT_PARAM(a);
-    PRINT_PARAM(b);
 
     cv::Mat dst_gold;
     src.convertTo(dst_gold, depth2, a, b);
@@ -527,7 +495,7 @@ TEST_P(ConvertTo, WithScaling)
     cv::Mat dst;
     
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src(src);
+        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
 
         cv::gpu::GpuMat dev_dst;
 
@@ -541,15 +509,16 @@ TEST_P(ConvertTo, WithScaling)
     EXPECT_MAT_NEAR(dst_gold, dst, eps);
 }
 
-INSTANTIATE_TEST_CASE_P(MatOp, ConvertTo, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1)), 
-                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1))));
+INSTANTIATE_TEST_CASE_P(MatOp, ConvertTo, Combine(
+                        ALL_DEVICES, 
+                        TYPES(CV_8U, CV_64F, 1, 1),
+                        TYPES(CV_8U, CV_64F, 1, 1),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // async
 
-struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Async : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
@@ -564,7 +533,7 @@ struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         int rows = rng.uniform(100, 200);
         int cols = rng.uniform(100, 200);
@@ -578,8 +547,6 @@ struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Async, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat dst0, dst1;
     
     ASSERT_NO_THROW(
@@ -611,6 +578,6 @@ TEST_P(Async, Accuracy)
     EXPECT_MAT_NEAR(dst_gold1, dst1, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(MatOp, Async, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(MatOp, Async, ALL_DEVICES);
 
 #endif // HAVE_CUDA

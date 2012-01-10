@@ -42,6 +42,8 @@
 #ifndef __OPENCV_TEST_GPU_BASE_HPP__
 #define __OPENCV_TEST_GPU_BASE_HPP__
 
+cv::gpu::GpuMat loadMat(const cv::Mat& m, bool useRoi = false);
+
 //! return true if device supports specified feature and gpu module was built with support the feature.
 bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
 
@@ -50,29 +52,11 @@ const std::vector<cv::gpu::DeviceInfo>& devices();
 //! return all devices compatible with current gpu module build which support specified feature.
 std::vector<cv::gpu::DeviceInfo> devices(cv::gpu::FeatureSet feature);
 
-//! return vector with types from specified range.
-std::vector<int> types(int depth_start, int depth_end, int cn_start, int cn_end);
-
-//! return vector with all types (depth: CV_8U-CV_64F, channels: 1-4).
-const std::vector<int>& all_types();
-
 //! read image from testdata folder.
-cv::Mat readImage(const std::string& fileName, int flags = CV_LOAD_IMAGE_COLOR);
+cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 
 double checkNorm(const cv::Mat& m1, const cv::Mat& m2);
 double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2);
-
-#define OSTR_NAME(suf) ostr_ ## suf
-
-#define PRINT_PARAM(name) \
-        std::ostringstream OSTR_NAME(name); \
-        OSTR_NAME(name) << # name << ": " << name; \
-        SCOPED_TRACE(OSTR_NAME(name).str());
-
-#define PRINT_TYPE(type) \
-        std::ostringstream OSTR_NAME(type); \
-        OSTR_NAME(type) << # type << ": " << cvtest::getTypeName(type) << "c" << CV_MAT_CN(type); \
-        SCOPED_TRACE(OSTR_NAME(type).str());
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
     { \
@@ -88,16 +72,66 @@ double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2);
         EXPECT_LE(checkSimilarity(mat1, mat2), eps); \
     }
 
-
-//! for gtest ASSERT
-namespace cv
+namespace cv { namespace gpu 
 {
-    std::ostream& operator << (std::ostream& os, const Size& sz);
-    std::ostream& operator << (std::ostream& os, const Scalar& s);
-    namespace gpu
-    {
-        std::ostream& operator << (std::ostream& os, const DeviceInfo& info);
-    }
-}
+    void PrintTo(const DeviceInfo& info, std::ostream* os);
+}}
+
+using perf::MatDepth;
+using perf::MatType;
+
+//! return vector with types from specified range.
+std::vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end);
+
+//! return vector with all types (depth: CV_8U-CV_64F, channels: 1-4).
+const std::vector<MatType>& all_types();
+
+class UseRoi
+{
+public:
+    inline UseRoi(bool val = false) : val_(val) {}
+
+    inline operator bool() const { return val_; }
+
+private:
+    bool val_;
+};
+
+void PrintTo(const UseRoi& useRoi, std::ostream* os);
+
+CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
+
+CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv::NORM_RELATIVE, cv::NORM_MINMAX)
+
+enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
+CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
+
+CV_ENUM(ReduceOp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+
+CV_FLAGS(GemmFlags, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
+
+CV_ENUM(DistType, cv::gpu::BruteForceMatcher_GPU_base::L1Dist, cv::gpu::BruteForceMatcher_GPU_base::L2Dist)
+
+CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_TOPHAT, cv::MORPH_BLACKHAT)
+
+CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
+
+CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC)
+
+CV_ENUM(Border, cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
+
+CV_FLAGS(WarpFlags, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::WARP_INVERSE_MAP)
+
+CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
+
+CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
+
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) std::tr1::get< k >(GetParam())
+#define ALL_DEVICES testing::ValuesIn(devices())
+#define DEVICES(feature) testing::ValuesIn(devices(feature))
+#define ALL_TYPES testing::ValuesIn(all_types())
+#define TYPES(depth_start, depth_end, cn_start, cn_end) testing::ValuesIn(types(depth_start, depth_end, cn_start, cn_end))
+#define USE_ROI testing::Values(false, true)
 
 #endif // __OPENCV_TEST_GPU_BASE_HPP__

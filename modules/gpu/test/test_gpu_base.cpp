@@ -41,25 +41,53 @@
 
 #include "test_precomp.hpp"
 
-bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature)
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
+using namespace cvtest;
+
+GpuMat loadMat(const Mat& m, bool useRoi)
 {
-    return cv::gpu::TargetArchs::builtWith(feature) && info.supports(feature);
+    Size size = m.size();
+    Size size0 = size;
+
+    if (useRoi)
+    {
+        RNG& rng = TS::ptr()->get_rng();
+
+        size0.width += rng.uniform(5, 15);
+        size0.height += rng.uniform(5, 15);
+    }
+        
+    GpuMat d_m(size0, m.type());
+    
+    if (size0 != size)
+        d_m = d_m(Rect((size0.width - size.width) / 2, (size0.height - size.height) / 2, size.width, size.height));
+
+    d_m.upload(m);
+
+    return d_m;
 }
 
-const std::vector<cv::gpu::DeviceInfo>& devices()
+bool supportFeature(const DeviceInfo& info, FeatureSet feature)
 {
-    static std::vector<cv::gpu::DeviceInfo> devs;
+    return TargetArchs::builtWith(feature) && info.supports(feature);
+}
+
+const vector<DeviceInfo>& devices()
+{
+    static vector<DeviceInfo> devs;
     static bool first = true;
 
     if (first)
     {
-        int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
+        int deviceCount = getCudaEnabledDeviceCount();
 
         devs.reserve(deviceCount);
 
         for (int i = 0; i < deviceCount; ++i)
         {
-            cv::gpu::DeviceInfo info(i);
+            DeviceInfo info(i);
             if (info.isCompatible())
                 devs.push_back(info);
         }
@@ -70,19 +98,19 @@ const std::vector<cv::gpu::DeviceInfo>& devices()
     return devs;
 }
 
-std::vector<cv::gpu::DeviceInfo> devices(cv::gpu::FeatureSet feature)
+vector<DeviceInfo> devices(FeatureSet feature)
 {
-    const std::vector<cv::gpu::DeviceInfo>& d = devices();
+    const vector<DeviceInfo>& d = devices();
     
-    std::vector<cv::gpu::DeviceInfo> devs_filtered;
+    vector<DeviceInfo> devs_filtered;
 
-    if (cv::gpu::TargetArchs::builtWith(feature))
+    if (TargetArchs::builtWith(feature))
     {
         devs_filtered.reserve(d.size());
 
         for (size_t i = 0, size = d.size(); i < size; ++i)
         {
-            const cv::gpu::DeviceInfo& info = d[i];
+            const DeviceInfo& info = d[i];
 
             if (info.supports(feature))
                 devs_filtered.push_back(info);
@@ -92,9 +120,9 @@ std::vector<cv::gpu::DeviceInfo> devices(cv::gpu::FeatureSet feature)
     return devs_filtered;
 }
 
-std::vector<int> types(int depth_start, int depth_end, int cn_start, int cn_end)
+vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
 {
-    std::vector<int> v;
+    vector<MatType> v;
 
     v.reserve((depth_end - depth_start + 1) * (cn_end - cn_start + 1));
 
@@ -109,46 +137,39 @@ std::vector<int> types(int depth_start, int depth_end, int cn_start, int cn_end)
     return v;
 }
 
-const std::vector<int>& all_types()
+const vector<MatType>& all_types()
 {
-    static std::vector<int> v = types(CV_8U, CV_64F, 1, 4);
+    static vector<MatType> v = types(CV_8U, CV_64F, 1, 4);
+
     return v;
 }
 
-cv::Mat readImage(const std::string& fileName, int flags)
+Mat readImage(const string& fileName, int flags)
 {
-    return cv::imread(std::string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
+    return imread(string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
 }
 
-double checkNorm(const cv::Mat& m1, const cv::Mat& m2)
+double checkNorm(const Mat& m1, const Mat& m2)
 {
-    return cv::norm(m1, m2, cv::NORM_INF);
+    return norm(m1, m2, NORM_INF);
 }
 
-double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2)
+double checkSimilarity(const Mat& m1, const Mat& m2)
 {
-    cv::Mat diff;
-    cv::matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+    Mat diff;
+    matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
 
-namespace cv
+void cv::gpu::PrintTo(const DeviceInfo& info, ostream* os)
 {
-    std::ostream& operator << (std::ostream& os, const Size& sz)
-    {
-        return os << sz.width << "x" << sz.height;
-    }
+    (*os) << info.name();
+}
 
-    std::ostream& operator << (std::ostream& os, const Scalar& s)
-    {
-        return os << "[" << s[0] << ", " << s[1] << ", " << s[2] << ", " << s[3] << "]";
-    }
-
-    namespace gpu
-    {
-        std::ostream& operator << (std::ostream& os, const DeviceInfo& info)
-        {
-            return os << info.name();
-        }
-    }
+void PrintTo(const UseRoi& useRoi, std::ostream* os)
+{
+    if (useRoi)
+        (*os) << "sub matrix";
+    else
+        (*os) << "whole matrix";
 }

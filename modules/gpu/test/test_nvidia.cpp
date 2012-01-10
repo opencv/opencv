@@ -43,6 +43,9 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+using namespace testing;
+
 enum OutputLevel
 {
     OutputLevelNone,
@@ -62,26 +65,21 @@ bool nvidia_NCV_Haar_Cascade_Application(const std::string& test_data_path, Outp
 bool nvidia_NCV_Hypotheses_Filtration(const std::string& test_data_path, OutputLevel outputLevel);
 bool nvidia_NCV_Visualization(const std::string& test_data_path, OutputLevel outputLevel);
 
-struct NVidiaTest : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 {
-    static std::string path;
-
     cv::gpu::DeviceInfo devInfo;
 
-    static void SetUpTestCase() 
-    {
-        path = std::string(cvtest::TS::ptr()->get_data_path()) + "haarcascade/";
-    }
+    std::string path;
 
     virtual void SetUp() 
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
+
+        path = std::string(TS::ptr()->get_data_path()) + "haarcascade/";
     }
 };
-
-std::string NVidiaTest::path;
 
 struct NPPST : NVidiaTest {};
 struct NCV : NVidiaTest {};
@@ -90,8 +88,6 @@ OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
 
 TEST_P(NPPST, Integral) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -103,8 +99,6 @@ TEST_P(NPPST, Integral)
 
 TEST_P(NPPST, SquaredIntegral) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -116,8 +110,6 @@ TEST_P(NPPST, SquaredIntegral)
 
 TEST_P(NPPST, RectStdDev) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -129,8 +121,6 @@ TEST_P(NPPST, RectStdDev)
 
 TEST_P(NPPST, Resize) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -142,8 +132,6 @@ TEST_P(NPPST, Resize)
 
 TEST_P(NPPST, VectorOperations) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -155,8 +143,6 @@ TEST_P(NPPST, VectorOperations)
 
 TEST_P(NPPST, Transpose) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -168,8 +154,6 @@ TEST_P(NPPST, Transpose)
 
 TEST_P(NCV, VectorOperations) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -181,8 +165,6 @@ TEST_P(NCV, VectorOperations)
 
 TEST_P(NCV, HaarCascadeLoader) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -194,8 +176,6 @@ TEST_P(NCV, HaarCascadeLoader)
 
 TEST_P(NCV, HaarCascadeApplication) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -207,8 +187,6 @@ TEST_P(NCV, HaarCascadeApplication)
 
 TEST_P(NCV, HypothesesFiltration) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -220,8 +198,6 @@ TEST_P(NCV, HypothesesFiltration)
 
 TEST_P(NCV, Visualization) 
 {
-    PRINT_PARAM(devInfo);
-
     bool res;
 
     ASSERT_NO_THROW(
@@ -231,7 +207,7 @@ TEST_P(NCV, Visualization)
     ASSERT_TRUE(res);
 }
 
-INSTANTIATE_TEST_CASE_P(NVidia, NPPST, testing::ValuesIn(devices()));
-INSTANTIATE_TEST_CASE_P(NVidia, NCV, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(NVidia, NPPST, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(NVidia, NCV, ALL_DEVICES);
 
 #endif // HAVE_CUDA

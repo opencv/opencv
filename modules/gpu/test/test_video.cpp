@@ -43,6 +43,9 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+using namespace testing;
+
 //#define DUMP
 
 #define OPTICAL_FLOW_DUMP_FILE            "opticalflow/opticalflow_gold.bin"
@@ -50,7 +53,10 @@
 #define INTERPOLATE_FRAMES_DUMP_FILE      "opticalflow/interpolate_frames_gold.bin"
 #define INTERPOLATE_FRAMES_DUMP_FILE_CC20 "opticalflow/interpolate_frames_gold_cc20.bin"
 
-struct BroxOpticalFlow : testing::TestWithParam< cv::gpu::DeviceInfo >
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// BroxOpticalFlow
+
+struct BroxOpticalFlow : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
     
@@ -105,8 +111,6 @@ struct BroxOpticalFlow : testing::TestWithParam< cv::gpu::DeviceInfo >
 
 TEST_P(BroxOpticalFlow, Regression)
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat u;
     cv::Mat v;
 
@@ -149,9 +153,12 @@ TEST_P(BroxOpticalFlow, Regression)
 #endif
 }
 
-INSTANTIATE_TEST_CASE_P(Video, BroxOpticalFlow, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Video, BroxOpticalFlow, ALL_DEVICES);
 
-struct InterpolateFrames : testing::TestWithParam< cv::gpu::DeviceInfo >
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// InterpolateFrames
+
+struct InterpolateFrames : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
     
@@ -200,8 +207,6 @@ struct InterpolateFrames : testing::TestWithParam< cv::gpu::DeviceInfo >
 
 TEST_P(InterpolateFrames, Regression)
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat newFrame;
 
     cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
@@ -246,6 +251,6 @@ TEST_P(InterpolateFrames, Regression)
 #endif
 }
 
-INSTANTIATE_TEST_CASE_P(Video, InterpolateFrames, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Video, InterpolateFrames, ALL_DEVICES);
 
 #endif

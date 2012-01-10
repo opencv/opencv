@@ -226,7 +226,7 @@ namespace cv { namespace gpu { namespace device
         traits::functor_type functor = traits::create_functor(); \
         typedef typename traits::functor_type::argument_type src_t; \
         typedef typename traits::functor_type::result_type   dst_t; \
-        ::cv::gpu::device::transform((DevMem2D_<src_t>)src, (DevMem2D_<dst_t>)dst, functor, stream); \
+        cv::gpu::device::transform((DevMem2D_<src_t>)src, (DevMem2D_<dst_t>)dst, functor, WithOutMask(), stream); \
     }
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(name) \

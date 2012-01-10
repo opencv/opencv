@@ -43,14 +43,18 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+using namespace testing;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // threshold
 
-struct Threshold : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, MatType, ThreshOp, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int threshOp;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
@@ -61,17 +65,18 @@ struct Threshold : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, 
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        threshOp = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        threshOp = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        src = randomMat(rng, size, type, 0.0, 127.0, false);
 
         maxVal = rng.uniform(20.0, 127.0);
         thresh = rng.uniform(0.0, maxVal);
@@ -82,22 +87,12 @@ struct Threshold : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, 
 
 TEST_P(Threshold, Accuracy)
 {
-    static const char* ops[] = {"THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC", "THRESH_TOZERO", "THRESH_TOZERO_INV"};
-    const char* threshOpStr = ops[threshOp];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(threshOpStr);
-    PRINT_PARAM(maxVal);
-    PRINT_PARAM(thresh);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::threshold(cv::gpu::GpuMat(src), gpuRes, thresh, maxVal, threshOp);
+        cv::gpu::threshold(loadMat(src, useRoi), gpuRes, thresh, maxVal, threshOp);
 
         gpuRes.download(dst);
     );
@@ -105,88 +100,94 @@ TEST_P(Threshold, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Threshold, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8U, CV_32F), 
-                        testing::Values((int)cv::THRESH_BINARY, (int)cv::THRESH_BINARY_INV, (int)cv::THRESH_TRUNC, (int)cv::THRESH_TOZERO, (int)cv::THRESH_TOZERO_INV)));
+INSTANTIATE_TEST_CASE_P(ImgProc, Threshold, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_32FC1), 
+                        Values((int)cv::THRESH_BINARY, (int)cv::THRESH_BINARY_INV, (int)cv::THRESH_TRUNC, (int)cv::THRESH_TOZERO, (int)cv::THRESH_TOZERO_INV),
+                        USE_ROI));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // resize
 
-struct Resize : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(Resize, cv::gpu::DeviceInfo, MatType, Interpolation, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int interpolation;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
 
-    cv::Mat dst_gold1;
-    cv::Mat dst_gold2;
+    cv::Mat dst_gold_up;
+    cv::Mat dst_gold_down;
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        interpolation = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        interpolation = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, CV_MAT_DEPTH(type) == CV_32F ? 1.0 : 255.0, false);
+        src = randomMat(rng, size, type, 0.0, CV_MAT_DEPTH(type) == CV_32F ? 1.0 : 255.0, false);
 
-        cv::resize(src, dst_gold1, cv::Size(), 2.0, 2.0, interpolation);
-        cv::resize(src, dst_gold2, cv::Size(), 0.5, 0.5, interpolation);
+        cv::resize(src, dst_gold_up, cv::Size(), 2.0, 2.0, interpolation);
+        cv::resize(src, dst_gold_down, cv::Size(), 0.5, 0.5, interpolation);
     }
 };
 
-TEST_P(Resize, Accuracy)
+TEST_P(Resize, Up)
 {
-    static const char* interpolations[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC"};
-    const char* interpolationStr = interpolations[interpolation];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(interpolationStr);
-
-    cv::Mat dst1;
-    cv::Mat dst2;
+    cv::Mat dst;
 
     ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src(src);
-        cv::gpu::GpuMat gpuRes1;
-        cv::gpu::GpuMat gpuRes2;
+        cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::resize(dev_src, gpuRes1, cv::Size(), 2.0, 2.0, interpolation);
-        cv::gpu::resize(dev_src, gpuRes2, cv::Size(), 0.5, 0.5, interpolation);
+        cv::gpu::resize(loadMat(src, useRoi), gpuRes, cv::Size(), 2.0, 2.0, interpolation);
 
-        gpuRes1.download(dst1);
-        gpuRes2.download(dst2);
+        gpuRes.download(dst);
     );
 
-    EXPECT_MAT_SIMILAR(dst_gold1, dst1, 0.21);
-    EXPECT_MAT_SIMILAR(dst_gold2, dst2, 0.21);
+    EXPECT_MAT_SIMILAR(dst_gold_up, dst, 0.21);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4), 
-                        testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC)));
+TEST_P(Resize, Down)
+{
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::resize(loadMat(src, useRoi), gpuRes, cv::Size(), 0.5, 0.5, interpolation);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_SIMILAR(dst_gold_down, dst, 0.22);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Resize, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4), 
+                        Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC),
+                        USE_ROI));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
 
-struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int, int> >
+PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, MatType, Interpolation, Border, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int interpolation;
     int borderType;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
@@ -197,21 +198,22 @@ struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        interpolation = std::tr1::get<2>(GetParam());
-        borderType = std::tr1::get<3>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        interpolation = GET_PARAM(2);
+        borderType = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 256.0, false);
+        src = randomMat(rng, size, type, 0.0, 256.0, false);
 
-        xmap = cvtest::randomMat(rng, size, CV_32FC1, -20.0, src.cols + 20, false);
-        ymap = cvtest::randomMat(rng, size, CV_32FC1, -20.0, src.rows + 20, false);
+        xmap = randomMat(rng, size, CV_32FC1, -20.0, src.cols + 20, false);
+        ymap = randomMat(rng, size, CV_32FC1, -20.0, src.rows + 20, false);
         
         cv::remap(src, dst_gold, xmap, ymap, interpolation, borderType);
     }
@@ -219,24 +221,12 @@ struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
 
 TEST_P(Remap, Accuracy)
 {
-    static const char* interpolations_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC"};
-    static const char* borderTypes_str[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
-
-    const char* interpolationStr = interpolations_str[interpolation];
-    const char* borderTypeStr = borderTypes_str[borderType];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(interpolationStr);
-    PRINT_PARAM(borderTypeStr);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
         
-        cv::gpu::remap(cv::gpu::GpuMat(src), gpuRes, cv::gpu::GpuMat(xmap), cv::gpu::GpuMat(ymap), interpolation, borderType);
+        cv::gpu::remap(loadMat(src, useRoi), gpuRes, loadMat(xmap, useRoi), loadMat(ymap, useRoi), interpolation, borderType);
 
         gpuRes.download(dst);
     );
@@ -244,29 +234,22 @@ TEST_P(Remap, Accuracy)
     EXPECT_MAT_SIMILAR(dst_gold, dst, 1e-1);
 }
 
-INSTANTIATE_TEST_CASE_P
-(
-    ImgProc, Remap, testing::Combine
-    (
-        testing::ValuesIn(devices()), 
-        testing::Values
-        (
-            CV_8UC1, CV_8UC3, CV_8UC4,
-            CV_32FC1, CV_32FC3, CV_32FC4
-        ),
-        testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC),
-        testing::Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP)
-    )
-);
+INSTANTIATE_TEST_CASE_P(ImgProc, Remap, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC),
+                        Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP),
+                        USE_ROI));
                         
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, MatType, Border, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int borderType;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
@@ -280,17 +263,18 @@ struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        borderType = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        borderType = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        src = randomMat(rng, size, type, 0.0, 127.0, false);
         
         top = rng.uniform(1, 10);
         botton = rng.uniform(1, 10);
@@ -304,26 +288,12 @@ struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
 
 TEST_P(CopyMakeBorder, Accuracy)
 {
-    static const char* borderTypes_str[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
-
-    const char* borderTypeStr = borderTypes_str[borderType];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(top);
-    PRINT_PARAM(botton);
-    PRINT_PARAM(left);
-    PRINT_PARAM(right);
-    PRINT_PARAM(borderTypeStr);
-    PRINT_PARAM(val);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::copyMakeBorder(cv::gpu::GpuMat(src), gpuRes, top, botton, left, right, borderType, val);
+        cv::gpu::copyMakeBorder(loadMat(src, useRoi), gpuRes, top, botton, left, right, borderType, val);
 
         gpuRes.download(dst);
     );
@@ -331,22 +301,20 @@ TEST_P(CopyMakeBorder, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, CopyMakeBorder, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        testing::Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP)));
+INSTANTIATE_TEST_CASE_P(ImgProc, CopyMakeBorder, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP),
+                        USE_ROI));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // warpAffine & warpPerspective
 
-static const int warpFlags[] = {cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::INTER_NEAREST | cv::WARP_INVERSE_MAP, cv::INTER_LINEAR | cv::WARP_INVERSE_MAP, cv::INTER_CUBIC | cv::WARP_INVERSE_MAP};
-static const char* warpFlags_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_NEAREST | WARP_INVERSE_MAP", "INTER_LINEAR | WARP_INVERSE_MAP", "INTER_CUBIC | WARP_INVERSE_MAP"};
-
-struct WarpAffine : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(WarpAffine, cv::gpu::DeviceInfo, MatType, WarpFlags)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
-    int flagIdx;
+    int flags;
 
     cv::Size size;
     cv::Mat src;
@@ -356,17 +324,17 @@ struct WarpAffine : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo,
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        flagIdx = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        flags = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        src = randomMat(rng, size, type, 0.0, 127.0, false);
 
         static double reflect[2][3] = { {-1,  0, 0},
                                         { 0, -1, 0}};
@@ -374,25 +342,18 @@ struct WarpAffine : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo,
         reflect[1][2] = size.height;
         M = cv::Mat(2, 3, CV_64F, (void*)reflect); 
 
-        cv::warpAffine(src, dst_gold, M, src.size(), warpFlags[flagIdx]);       
+        cv::warpAffine(src, dst_gold, M, src.size(), flags);       
     }
 };
 
 TEST_P(WarpAffine, Accuracy)
 {
-    const char* warpFlagStr = warpFlags_str[flagIdx];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(warpFlagStr);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::warpAffine(cv::gpu::GpuMat(src), gpuRes, M, src.size(), warpFlags[flagIdx]);
+        cv::gpu::warpAffine(loadMat(src), gpuRes, M, src.size(), flags);
 
         gpuRes.download(dst);
     );
@@ -404,11 +365,18 @@ TEST_P(WarpAffine, Accuracy)
     EXPECT_MAT_NEAR(dst_gold_roi, dst_roi, 1e-3);
 }
 
-struct WarpPerspective : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+INSTANTIATE_TEST_CASE_P(ImgProc, WarpAffine, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        Values((int) cv::INTER_NEAREST, (int) cv::INTER_LINEAR, (int) cv::INTER_CUBIC, 
+                               (int) (cv::INTER_NEAREST | cv::WARP_INVERSE_MAP), (int) (cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), 
+                               (int) (cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
+
+PARAM_TEST_CASE(WarpPerspective, cv::gpu::DeviceInfo, MatType, WarpFlags)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
-    int flagIdx;
+    int flags;
 
     cv::Size size;
     cv::Mat src;
@@ -418,17 +386,17 @@ struct WarpPerspective : testing::TestWithParam< std::tr1::tuple<cv::gpu::Device
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        flagIdx = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        flags = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        src = randomMat(rng, size, type, 0.0, 127.0, false);
 
         static double reflect[3][3] = { { -1, 0, 0},
                                         { 0, -1, 0},
@@ -437,25 +405,18 @@ struct WarpPerspective : testing::TestWithParam< std::tr1::tuple<cv::gpu::Device
         reflect[1][2] = size.height;
         M = cv::Mat(3, 3, CV_64F, (void*)reflect);
 
-        cv::warpPerspective(src, dst_gold, M, src.size(), warpFlags[flagIdx]);       
+        cv::warpPerspective(src, dst_gold, M, src.size(), flags);       
     }
 };
 
 TEST_P(WarpPerspective, Accuracy)
 {
-    const char* warpFlagStr = warpFlags_str[flagIdx];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(warpFlagStr);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::warpPerspective(cv::gpu::GpuMat(src), gpuRes, M, src.size(), warpFlags[flagIdx]);
+        cv::gpu::warpPerspective(loadMat(src), gpuRes, M, src.size(), flags);
 
         gpuRes.download(dst);
     );
@@ -467,22 +428,20 @@ TEST_P(WarpPerspective, Accuracy)
     EXPECT_MAT_NEAR(dst_gold_roi, dst_roi, 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, WarpAffine, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        testing::Range(0, 6)));
-
-INSTANTIATE_TEST_CASE_P(ImgProc, WarpPerspective, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        testing::Range(0, 6)));
+INSTANTIATE_TEST_CASE_P(ImgProc, WarpPerspective, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        Values((int) cv::INTER_NEAREST, (int) cv::INTER_LINEAR, (int) cv::INTER_CUBIC, 
+                               (int) (cv::INTER_NEAREST | cv::WARP_INVERSE_MAP), (int) (cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), 
+                               (int) (cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // integral
 
-struct Integral : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(Integral, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
@@ -491,15 +450,16 @@ struct Integral : testing::TestWithParam<cv::gpu::DeviceInfo>
     
     virtual void SetUp()
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, CV_8UC1, 0.0, 255.0, false); 
+        src = randomMat(rng, size, CV_8UC1, 0.0, 255.0, false); 
 
         cv::integral(src, dst_gold, CV_32S);     
     }
@@ -507,15 +467,12 @@ struct Integral : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Integral, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::integral(cv::gpu::GpuMat(src), gpuRes);
+        cv::gpu::integral(loadMat(src, useRoi), gpuRes);
 
         gpuRes.download(dst);
     );
@@ -523,22 +480,26 @@ TEST_P(Integral, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Integral, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, Integral, Combine(
+                        ALL_DEVICES, 
+                        USE_ROI));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cvtColor
 
-struct CvtColor : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(CvtColor, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
     
     cv::Mat img;
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
@@ -551,19 +512,16 @@ struct CvtColor : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, i
 
 TEST_P(CvtColor, BGR2RGB)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2RGB);
 
         gpuRes.download(dst);
     );
@@ -573,19 +531,16 @@ TEST_P(CvtColor, BGR2RGB)
 
 TEST_P(CvtColor, BGR2RGBA)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2RGBA);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2RGBA);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2RGBA);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2RGBA);
 
         gpuRes.download(dst);
     );
@@ -595,19 +550,16 @@ TEST_P(CvtColor, BGR2RGBA)
 
 TEST_P(CvtColor, BGR2BGRA)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2BGRA);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2BGRA);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2BGRA);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2BGRA);
 
         gpuRes.download(dst);
     );
@@ -617,20 +569,17 @@ TEST_P(CvtColor, BGR2BGRA)
 
 TEST_P(CvtColor, BGRA2RGB)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGRA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGRA2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGRA2RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGRA2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGRA2RGB);
 
         gpuRes.download(dst);
     );
@@ -640,20 +589,17 @@ TEST_P(CvtColor, BGRA2RGB)
 
 TEST_P(CvtColor, BGRA2BGR)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGRA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGRA2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGRA2BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGRA2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGRA2BGR);
 
         gpuRes.download(dst);
     );
@@ -663,20 +609,17 @@ TEST_P(CvtColor, BGRA2BGR)
 
 TEST_P(CvtColor, BGRA2RGBA)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGRA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGRA2RGBA);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGRA2RGBA);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGRA2RGBA);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGRA2RGBA);
 
         gpuRes.download(dst);
     );
@@ -686,19 +629,16 @@ TEST_P(CvtColor, BGRA2RGBA)
 
 TEST_P(CvtColor, BGR2GRAY)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2GRAY);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2GRAY);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2GRAY);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2GRAY);
 
         gpuRes.download(dst);
     );
@@ -708,20 +648,17 @@ TEST_P(CvtColor, BGR2GRAY)
 
 TEST_P(CvtColor, RGB2GRAY)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2GRAY);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2GRAY);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2GRAY);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2GRAY);
 
         gpuRes.download(dst);
     );
@@ -731,20 +668,17 @@ TEST_P(CvtColor, RGB2GRAY)
 
 TEST_P(CvtColor, GRAY2BGR)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2GRAY);
+    cv::cvtColor(img, src, cv::COLOR_BGR2GRAY);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_GRAY2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_GRAY2BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_GRAY2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_GRAY2BGR);
 
         gpuRes.download(dst);
     );
@@ -754,20 +688,17 @@ TEST_P(CvtColor, GRAY2BGR)
 
 TEST_P(CvtColor, GRAY2BGRA)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2GRAY);
+    cv::cvtColor(img, src, cv::COLOR_BGR2GRAY);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_GRAY2BGRA, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_GRAY2BGRA, 4);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_GRAY2BGRA, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_GRAY2BGRA, 4);
 
         gpuRes.download(dst);
     );
@@ -777,20 +708,17 @@ TEST_P(CvtColor, GRAY2BGRA)
 
 TEST_P(CvtColor, BGRA2GRAY)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGRA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGRA2GRAY);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGRA2GRAY);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGRA2GRAY);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGRA2GRAY);
 
         gpuRes.download(dst);
     );
@@ -800,20 +728,17 @@ TEST_P(CvtColor, BGRA2GRAY)
 
 TEST_P(CvtColor, RGBA2GRAY)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGBA2GRAY);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGBA2GRAY);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGBA2GRAY);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGBA2GRAY);
 
         gpuRes.download(dst);
     );
@@ -826,19 +751,16 @@ TEST_P(CvtColor, BGR2BGR565)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2BGR565);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2BGR565);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2BGR565);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2BGR565);
 
         gpuRes.download(dst);
     );
@@ -851,20 +773,17 @@ TEST_P(CvtColor, RGB2BGR565)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2BGR565);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2BGR565);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2BGR565);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2BGR565);
 
         gpuRes.download(dst);
     );
@@ -877,20 +796,17 @@ TEST_P(CvtColor, BGR5652BGR)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR565);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR565);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5652BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5652BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5652BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5652BGR);
 
         gpuRes.download(dst);
     );
@@ -903,20 +819,17 @@ TEST_P(CvtColor, BGR5652RGB)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR565);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR565);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5652RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5652RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5652RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5652RGB);
 
         gpuRes.download(dst);
     );
@@ -929,20 +842,17 @@ TEST_P(CvtColor, BGRA2BGR565)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGRA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGRA2BGR565);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGRA2BGR565);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGRA2BGR565);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGRA2BGR565);
 
         gpuRes.download(dst);
     );
@@ -955,20 +865,17 @@ TEST_P(CvtColor, RGBA2BGR565)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGBA2BGR565);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGBA2BGR565);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGBA2BGR565);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGBA2BGR565);
 
         gpuRes.download(dst);
     );
@@ -981,20 +888,17 @@ TEST_P(CvtColor, BGR5652BGRA)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR565);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR565);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5652BGRA, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5652BGRA, 4);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5652BGRA, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5652BGRA, 4);
 
         gpuRes.download(dst);
     );
@@ -1007,20 +911,17 @@ TEST_P(CvtColor, BGR5652RGBA)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR565);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR565);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5652RGBA, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5652RGBA, 4);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5652RGBA, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5652RGBA, 4);
 
         gpuRes.download(dst);
     );
@@ -1033,20 +934,17 @@ TEST_P(CvtColor, GRAY2BGR565)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2GRAY);
+    cv::cvtColor(img, src, cv::COLOR_BGR2GRAY);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_GRAY2BGR565);
+    cv::cvtColor(src, dst_gold, cv::COLOR_GRAY2BGR565);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_GRAY2BGR565);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_GRAY2BGR565);
 
         gpuRes.download(dst);
     );
@@ -1059,20 +957,17 @@ TEST_P(CvtColor, BGR5652GRAY)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR565);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR565);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5652GRAY);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5652GRAY);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5652GRAY);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5652GRAY);
 
         gpuRes.download(dst);
     );
@@ -1085,19 +980,16 @@ TEST_P(CvtColor, BGR2BGR555)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2BGR555);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2BGR555);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2BGR555);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2BGR555);
 
         gpuRes.download(dst);
     );
@@ -1110,20 +1002,17 @@ TEST_P(CvtColor, RGB2BGR555)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2BGR555);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2BGR555);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2BGR555);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2BGR555);
 
         gpuRes.download(dst);
     );
@@ -1136,20 +1025,17 @@ TEST_P(CvtColor, BGR5552BGR)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR555);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR555);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5552BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5552BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5552BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5552BGR);
 
         gpuRes.download(dst);
     );
@@ -1162,20 +1048,17 @@ TEST_P(CvtColor, BGR5552RGB)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR555);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR555);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5552RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5552RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5552RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5552RGB);
 
         gpuRes.download(dst);
     );
@@ -1188,20 +1071,17 @@ TEST_P(CvtColor, BGRA2BGR555)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGRA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGRA2BGR555);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGRA2BGR555);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGRA2BGR555);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGRA2BGR555);
 
         gpuRes.download(dst);
     );
@@ -1214,20 +1094,17 @@ TEST_P(CvtColor, RGBA2BGR555)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGBA2BGR555);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGBA2BGR555);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGBA2BGR555);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGBA2BGR555);
 
         gpuRes.download(dst);
     );
@@ -1240,20 +1117,17 @@ TEST_P(CvtColor, BGR5552BGRA)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR555);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR555);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5552BGRA, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5552BGRA, 4);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5552BGRA, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5552BGRA, 4);
 
         gpuRes.download(dst);
     );
@@ -1266,20 +1140,17 @@ TEST_P(CvtColor, BGR5552RGBA)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR555);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR555);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5552RGBA, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5552RGBA, 4);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5552RGBA, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5552RGBA, 4);
 
         gpuRes.download(dst);
     );
@@ -1292,20 +1163,17 @@ TEST_P(CvtColor, GRAY2BGR555)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2GRAY);
+    cv::cvtColor(img, src, cv::COLOR_BGR2GRAY);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_GRAY2BGR555);
+    cv::cvtColor(src, dst_gold, cv::COLOR_GRAY2BGR555);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_GRAY2BGR555);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_GRAY2BGR555);
 
         gpuRes.download(dst);
     );
@@ -1318,20 +1186,17 @@ TEST_P(CvtColor, BGR5552GRAY)
     if (type != CV_8U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGR555);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGR555);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR5552GRAY);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR5552GRAY);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR5552GRAY);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR5552GRAY);
 
         gpuRes.download(dst);
     );
@@ -1341,19 +1206,16 @@ TEST_P(CvtColor, BGR5552GRAY)
 
 TEST_P(CvtColor, BGR2XYZ)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2XYZ);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2XYZ);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2XYZ);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2XYZ);
 
         gpuRes.download(dst);
     );
@@ -1363,20 +1225,17 @@ TEST_P(CvtColor, BGR2XYZ)
 
 TEST_P(CvtColor, RGB2XYZ)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2XYZ);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2XYZ);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2XYZ);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2XYZ);
 
         gpuRes.download(dst);
     );
@@ -1386,19 +1245,16 @@ TEST_P(CvtColor, RGB2XYZ)
 
 TEST_P(CvtColor, BGR2XYZ4)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2XYZ);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2XYZ);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2XYZ, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2XYZ, 4);
 
         gpuRes.download(dst);
     );
@@ -1414,20 +1270,17 @@ TEST_P(CvtColor, BGR2XYZ4)
 
 TEST_P(CvtColor, BGRA2XYZ4)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2BGRA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2XYZ);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2XYZ);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2XYZ, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2XYZ, 4);
 
         gpuRes.download(dst);
     );
@@ -1443,20 +1296,17 @@ TEST_P(CvtColor, BGRA2XYZ4)
 
 TEST_P(CvtColor, XYZ2BGR)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2XYZ);
+    cv::cvtColor(img, src, cv::COLOR_BGR2XYZ);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_XYZ2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_XYZ2BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_XYZ2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_XYZ2BGR);
 
         gpuRes.download(dst);
     );
@@ -1466,20 +1316,17 @@ TEST_P(CvtColor, XYZ2BGR)
 
 TEST_P(CvtColor, XYZ2RGB)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2XYZ);
+    cv::cvtColor(img, src, cv::COLOR_BGR2XYZ);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_XYZ2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_XYZ2RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_XYZ2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_XYZ2RGB);
 
         gpuRes.download(dst);
     );
@@ -1489,13 +1336,10 @@ TEST_P(CvtColor, XYZ2RGB)
 
 TEST_P(CvtColor, XYZ42BGR)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2XYZ);
+    cv::cvtColor(img, src, cv::COLOR_BGR2XYZ);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_XYZ2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_XYZ2BGR);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -1507,7 +1351,7 @@ TEST_P(CvtColor, XYZ42BGR)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_XYZ2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_XYZ2BGR);
 
         gpuRes.download(dst);
     );
@@ -1517,13 +1361,10 @@ TEST_P(CvtColor, XYZ42BGR)
 
 TEST_P(CvtColor, XYZ42BGRA)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2XYZ);
+    cv::cvtColor(img, src, cv::COLOR_BGR2XYZ);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_XYZ2BGR, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_XYZ2BGR, 4);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -1535,7 +1376,7 @@ TEST_P(CvtColor, XYZ42BGRA)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_XYZ2BGR, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_XYZ2BGR, 4);
 
         gpuRes.download(dst);
     );
@@ -1545,19 +1386,16 @@ TEST_P(CvtColor, XYZ42BGRA)
 
 TEST_P(CvtColor, BGR2YCrCb)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2YCrCb);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2YCrCb);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YCrCb);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2YCrCb);
 
         gpuRes.download(dst);
     );
@@ -1567,20 +1405,17 @@ TEST_P(CvtColor, BGR2YCrCb)
 
 TEST_P(CvtColor, RGB2YCrCb)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2YCrCb);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2YCrCb);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2YCrCb);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2YCrCb);
 
         gpuRes.download(dst);
     );
@@ -1590,19 +1425,16 @@ TEST_P(CvtColor, RGB2YCrCb)
 
 TEST_P(CvtColor, BGR2YCrCb4)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2YCrCb);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2YCrCb);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YCrCb, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2YCrCb, 4);
 
         gpuRes.download(dst);
     );
@@ -1618,20 +1450,17 @@ TEST_P(CvtColor, BGR2YCrCb4)
 
 TEST_P(CvtColor, RGBA2YCrCb4)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2YCrCb);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2YCrCb);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YCrCb, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2YCrCb, 4);
 
         gpuRes.download(dst);
     );
@@ -1647,20 +1476,17 @@ TEST_P(CvtColor, RGBA2YCrCb4)
 
 TEST_P(CvtColor, YCrCb2BGR)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2YCrCb);
+    cv::cvtColor(img, src, cv::COLOR_BGR2YCrCb);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YCrCb2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YCrCb2BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YCrCb2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YCrCb2BGR);
 
         gpuRes.download(dst);
     );
@@ -1670,20 +1496,17 @@ TEST_P(CvtColor, YCrCb2BGR)
 
 TEST_P(CvtColor, YCrCb2RGB)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2YCrCb);
+    cv::cvtColor(img, src, cv::COLOR_BGR2YCrCb);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YCrCb2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YCrCb2RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YCrCb2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YCrCb2RGB);
 
         gpuRes.download(dst);
     );
@@ -1693,13 +1516,10 @@ TEST_P(CvtColor, YCrCb2RGB)
 
 TEST_P(CvtColor, YCrCb42RGB)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2YCrCb);
+    cv::cvtColor(img, src, cv::COLOR_BGR2YCrCb);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YCrCb2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YCrCb2RGB);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -1711,7 +1531,7 @@ TEST_P(CvtColor, YCrCb42RGB)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YCrCb2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YCrCb2RGB);
 
         gpuRes.download(dst);
     );
@@ -1721,13 +1541,10 @@ TEST_P(CvtColor, YCrCb42RGB)
 
 TEST_P(CvtColor, YCrCb42RGBA)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2YCrCb);
+    cv::cvtColor(img, src, cv::COLOR_BGR2YCrCb);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YCrCb2RGB, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YCrCb2RGB, 4);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -1739,7 +1556,7 @@ TEST_P(CvtColor, YCrCb42RGBA)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YCrCb2RGB, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YCrCb2RGB, 4);
 
         gpuRes.download(dst);
     );
@@ -1752,19 +1569,16 @@ TEST_P(CvtColor, BGR2HSV)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2HSV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2HSV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2HSV);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2HSV);
 
         gpuRes.download(dst);
     );
@@ -1777,20 +1591,17 @@ TEST_P(CvtColor, RGB2HSV)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HSV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HSV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HSV);
 
         gpuRes.download(dst);
     );
@@ -1803,20 +1614,17 @@ TEST_P(CvtColor, RGB2HSV4)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HSV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HSV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HSV, 4);
 
         gpuRes.download(dst);
     );
@@ -1835,20 +1643,17 @@ TEST_P(CvtColor, RGBA2HSV4)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HSV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HSV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HSV, 4);
 
         gpuRes.download(dst);
     );
@@ -1867,19 +1672,16 @@ TEST_P(CvtColor, BGR2HLS)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2HLS);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2HLS);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2HLS);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2HLS);
 
         gpuRes.download(dst);
     );
@@ -1892,20 +1694,17 @@ TEST_P(CvtColor, RGB2HLS)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HLS);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HLS);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HLS);
 
         gpuRes.download(dst);
     );
@@ -1918,20 +1717,17 @@ TEST_P(CvtColor, RGB2HLS4)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HLS);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HLS);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HLS, 4);
 
         gpuRes.download(dst);
     );
@@ -1950,20 +1746,17 @@ TEST_P(CvtColor, RGBA2HLS4)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HLS);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HLS);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HLS, 4);
 
         gpuRes.download(dst);
     );
@@ -1982,20 +1775,17 @@ TEST_P(CvtColor, HSV2BGR)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2BGR);
 
         gpuRes.download(dst);
     );
@@ -2008,20 +1798,17 @@ TEST_P(CvtColor, HSV2RGB)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2RGB);
 
         gpuRes.download(dst);
     );
@@ -2034,13 +1821,10 @@ TEST_P(CvtColor, HSV42BGR)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2BGR);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2052,7 +1836,7 @@ TEST_P(CvtColor, HSV42BGR)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2BGR);
 
         gpuRes.download(dst);
     );
@@ -2065,13 +1849,10 @@ TEST_P(CvtColor, HSV42BGRA)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2BGR, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2BGR, 4);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2083,7 +1864,7 @@ TEST_P(CvtColor, HSV42BGRA)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2BGR, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2BGR, 4);
 
         gpuRes.download(dst);
     );
@@ -2096,20 +1877,17 @@ TEST_P(CvtColor, HLS2BGR)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2BGR);
 
         gpuRes.download(dst);
     );
@@ -2122,20 +1900,17 @@ TEST_P(CvtColor, HLS2RGB)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2RGB);
 
         gpuRes.download(dst);
     );
@@ -2148,13 +1923,10 @@ TEST_P(CvtColor, HLS42RGB)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2RGB);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2166,7 +1938,7 @@ TEST_P(CvtColor, HLS42RGB)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2RGB);
 
         gpuRes.download(dst);
     );
@@ -2179,13 +1951,10 @@ TEST_P(CvtColor, HLS42RGBA)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2RGB, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2RGB, 4);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2197,7 +1966,7 @@ TEST_P(CvtColor, HLS42RGBA)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2RGB, 4);
 
         gpuRes.download(dst);
     );
@@ -2210,19 +1979,16 @@ TEST_P(CvtColor, BGR2HSV_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2HSV_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2HSV_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2HSV_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2HSV_FULL);
 
         gpuRes.download(dst);
     );
@@ -2235,20 +2001,17 @@ TEST_P(CvtColor, RGB2HSV_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HSV_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HSV_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HSV_FULL);
 
         gpuRes.download(dst);
     );
@@ -2261,20 +2024,17 @@ TEST_P(CvtColor, RGB2HSV4_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HSV_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HSV_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV_FULL, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HSV_FULL, 4);
 
         gpuRes.download(dst);
     );
@@ -2293,20 +2053,17 @@ TEST_P(CvtColor, RGBA2HSV4_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HSV_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HSV_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV_FULL, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HSV_FULL, 4);
 
         gpuRes.download(dst);
     );
@@ -2325,19 +2082,16 @@ TEST_P(CvtColor, BGR2HLS_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2HLS_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2HLS_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2HLS_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2HLS_FULL);
 
         gpuRes.download(dst);
     );
@@ -2350,20 +2104,17 @@ TEST_P(CvtColor, RGB2HLS_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HLS_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HLS_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HLS_FULL);
 
         gpuRes.download(dst);
     );
@@ -2376,20 +2127,17 @@ TEST_P(CvtColor, RGB2HLS4_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HLS_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HLS_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS_FULL, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HLS_FULL, 4);
 
         gpuRes.download(dst);
     );
@@ -2408,20 +2156,17 @@ TEST_P(CvtColor, RGBA2HLS4_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2HLS_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2HLS_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS_FULL, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2HLS_FULL, 4);
 
         gpuRes.download(dst);
     );
@@ -2440,20 +2185,17 @@ TEST_P(CvtColor, HSV2BGR_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2BGR_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2BGR_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2BGR_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2BGR_FULL);
 
         gpuRes.download(dst);
     );
@@ -2466,20 +2208,17 @@ TEST_P(CvtColor, HSV2RGB_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2RGB_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2RGB_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2RGB_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2RGB_FULL);
 
         gpuRes.download(dst);
     );
@@ -2492,13 +2231,10 @@ TEST_P(CvtColor, HSV42RGB_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2RGB_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2RGB_FULL);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2510,7 +2246,7 @@ TEST_P(CvtColor, HSV42RGB_FULL)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2RGB_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2RGB_FULL);
 
         gpuRes.download(dst);
     );
@@ -2523,13 +2259,10 @@ TEST_P(CvtColor, HSV42RGBA_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HSV_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HSV_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HSV2RGB_FULL, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HSV2RGB_FULL, 4);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2541,7 +2274,7 @@ TEST_P(CvtColor, HSV42RGBA_FULL)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2RGB_FULL, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HSV2RGB_FULL, 4);
 
         gpuRes.download(dst);
     );
@@ -2554,20 +2287,17 @@ TEST_P(CvtColor, HLS2BGR_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2BGR_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2BGR_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2BGR_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2BGR_FULL);
 
         gpuRes.download(dst);
     );
@@ -2580,20 +2310,17 @@ TEST_P(CvtColor, HLS2RGB_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2RGB_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2RGB_FULL);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2RGB_FULL);
 
         gpuRes.download(dst);
     );
@@ -2606,13 +2333,10 @@ TEST_P(CvtColor, HLS42RGB_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2RGB_FULL);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2RGB_FULL);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2624,7 +2348,7 @@ TEST_P(CvtColor, HLS42RGB_FULL)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB_FULL);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2RGB_FULL);
 
         gpuRes.download(dst);
     );
@@ -2637,13 +2361,10 @@ TEST_P(CvtColor, HLS42RGBA_FULL)
     if (type == CV_16U)
         return;
 
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2HLS_FULL);
+    cv::cvtColor(img, src, cv::COLOR_BGR2HLS_FULL);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_HLS2RGB_FULL, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_HLS2RGB_FULL, 4);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2655,7 +2376,7 @@ TEST_P(CvtColor, HLS42RGBA_FULL)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB_FULL, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_HLS2RGB_FULL, 4);
 
         gpuRes.download(dst);
     );
@@ -2665,19 +2386,16 @@ TEST_P(CvtColor, HLS42RGBA_FULL)
 
 TEST_P(CvtColor, BGR2YUV)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2YUV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2YUV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YUV);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2YUV);
 
         gpuRes.download(dst);
     );
@@ -2687,20 +2405,17 @@ TEST_P(CvtColor, BGR2YUV)
 
 TEST_P(CvtColor, RGB2YUV)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGB);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2YUV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2YUV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2YUV);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2YUV);
 
         gpuRes.download(dst);
     );
@@ -2710,20 +2425,17 @@ TEST_P(CvtColor, RGB2YUV)
 
 TEST_P(CvtColor, YUV2BGR)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2YUV);
+    cv::cvtColor(img, src, cv::COLOR_BGR2YUV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YUV2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YUV2BGR);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YUV2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YUV2BGR);
 
         gpuRes.download(dst);
     );
@@ -2733,13 +2445,10 @@ TEST_P(CvtColor, YUV2BGR)
 
 TEST_P(CvtColor, YUV42BGR)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2YUV);
+    cv::cvtColor(img, src, cv::COLOR_BGR2YUV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YUV2BGR);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YUV2BGR);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2751,7 +2460,7 @@ TEST_P(CvtColor, YUV42BGR)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YUV2BGR);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YUV2BGR);
 
         gpuRes.download(dst);
     );
@@ -2761,13 +2470,10 @@ TEST_P(CvtColor, YUV42BGR)
 
 TEST_P(CvtColor, YUV42BGRA)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2YUV);
+    cv::cvtColor(img, src, cv::COLOR_BGR2YUV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YUV2BGR, 4);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YUV2BGR, 4);
 
     cv::Mat channels[4];
     cv::split(src, channels);
@@ -2779,7 +2485,7 @@ TEST_P(CvtColor, YUV42BGRA)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YUV2BGR, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YUV2BGR, 4);
 
         gpuRes.download(dst);
     );
@@ -2789,20 +2495,17 @@ TEST_P(CvtColor, YUV42BGRA)
 
 TEST_P(CvtColor, YUV2RGB)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_RGB2YUV);
+    cv::cvtColor(img, src, cv::COLOR_RGB2YUV);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_YUV2RGB);
+    cv::cvtColor(src, dst_gold, cv::COLOR_YUV2RGB);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YUV2RGB);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_YUV2RGB);
 
         gpuRes.download(dst);
     );
@@ -2812,19 +2515,16 @@ TEST_P(CvtColor, YUV2RGB)
 
 TEST_P(CvtColor, BGR2YUV4)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src = img;
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_BGR2YUV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_BGR2YUV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YUV, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_BGR2YUV, 4);
 
         gpuRes.download(dst);
     );
@@ -2840,20 +2540,17 @@ TEST_P(CvtColor, BGR2YUV4)
 
 TEST_P(CvtColor, RGBA2YUV4)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-
     cv::Mat src;
-    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::cvtColor(img, src, cv::COLOR_BGR2RGBA);
     cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, CV_RGB2YUV);
+    cv::cvtColor(src, dst_gold, cv::COLOR_RGB2YUV);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2YUV, 4);
+        cv::gpu::cvtColor(loadMat(src, useRoi), gpuRes, cv::COLOR_RGB2YUV, 4);
 
         gpuRes.download(dst);
     );
@@ -2867,14 +2564,15 @@ TEST_P(CvtColor, RGBA2YUV4)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8U, CV_16U, CV_32F)));
+INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8U, CV_16U, CV_32F),
+                        USE_ROI));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // histograms
 
-struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct HistEven : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
     
@@ -2917,15 +2615,11 @@ struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(HistEven, Accuracy)
 {
-    ASSERT_TRUE(!hsv.empty());
-
-    PRINT_PARAM(devInfo);
-
     cv::Mat hist;
     
     ASSERT_NO_THROW(
         std::vector<cv::gpu::GpuMat> srcs;
-        cv::gpu::split(cv::gpu::GpuMat(hsv), srcs);
+        cv::gpu::split(loadMat(hsv), srcs);
 
         cv::gpu::GpuMat gpuHist;
 
@@ -2937,9 +2631,9 @@ TEST_P(HistEven, Accuracy)
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, HistEven, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, HistEven, ALL_DEVICES);
 
-struct CalcHist : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct CalcHist : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
@@ -2953,11 +2647,11 @@ struct CalcHist : testing::TestWithParam<cv::gpu::DeviceInfo>
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        src = cvtest::randomMat(rng, size, CV_8UC1, 0, 255, false);
+        src = randomMat(rng, size, CV_8UC1, 0, 255, false);
 
         hist_gold.create(1, 256, CV_32SC1);
         hist_gold.setTo(cv::Scalar::all(0));
@@ -2975,15 +2669,12 @@ struct CalcHist : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(CalcHist, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat hist;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuHist;
 
-        cv::gpu::calcHist(cv::gpu::GpuMat(src), gpuHist);
+        cv::gpu::calcHist(loadMat(src), gpuHist);
 
         gpuHist.download(hist);
     );
@@ -2991,9 +2682,9 @@ TEST_P(CalcHist, Accuracy)
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, CalcHist, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, CalcHist, ALL_DEVICES);
 
-struct EqualizeHist : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct EqualizeHist : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
@@ -3007,11 +2698,11 @@ struct EqualizeHist : testing::TestWithParam<cv::gpu::DeviceInfo>
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        src = cvtest::randomMat(rng, size, CV_8UC1, 0, 255, false);
+        src = randomMat(rng, size, CV_8UC1, 0, 255, false);
 
         cv::equalizeHist(src, dst_gold);
     }
@@ -3019,15 +2710,12 @@ struct EqualizeHist : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(EqualizeHist, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuDst;
 
-        cv::gpu::equalizeHist(cv::gpu::GpuMat(src), gpuDst);
+        cv::gpu::equalizeHist(loadMat(src), gpuDst);
 
         gpuDst.download(dst);
     );
@@ -3035,19 +2723,16 @@ TEST_P(EqualizeHist, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 3.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, EqualizeHist, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, EqualizeHist, ALL_DEVICES);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerHarris
 
-static const int borderTypes[] = {cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT101, cv::BORDER_TRANSPARENT};
-static const char* borderTypes_str[] = {"BORDER_REPLICATE", "BORDER_CONSTANT", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT101", "BORDER_TRANSPARENT"};
-
-struct CornerHarris : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, Border)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
-    int borderTypeIdx;
+    int borderType;
 
     cv::Mat src;
     int blockSize;
@@ -3058,13 +2743,13 @@ struct CornerHarris : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInf
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        borderTypeIdx = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        borderType = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
     
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
         
         cv::Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
         ASSERT_FALSE(img.empty());
@@ -3075,44 +2760,36 @@ struct CornerHarris : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInf
         apertureSize = 1 + 2 * (rng.next() % 4);        
         k = rng.uniform(0.1, 0.9);
 
-        cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderTypes[borderTypeIdx]);
+        cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType);
     }
 };
 
 TEST_P(CornerHarris, Accuracy)
 {
-    const char* borderTypeStr = borderTypes_str[borderTypeIdx];
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(borderTypeStr);
-    PRINT_PARAM(blockSize);
-    PRINT_PARAM(apertureSize);
-    PRINT_PARAM(k);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::cornerHarris(cv::gpu::GpuMat(src), dev_dst, blockSize, apertureSize, k, borderTypes[borderTypeIdx]);
+        cv::gpu::cornerHarris(loadMat(src), dev_dst, blockSize, apertureSize, k, borderType);
         dev_dst.download(dst);
     );
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_32FC1), 
-                        testing::Values(0, 4)));
+INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_32FC1), 
+                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE)));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerMinEigen
 
-struct CornerMinEigen : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, Border)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
-    int borderTypeIdx;
+    int borderType;
 
     cv::Mat src;
     int blockSize;
@@ -3122,13 +2799,13 @@ struct CornerMinEigen : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
     
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        borderTypeIdx = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        borderType = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());        
     
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
         
         cv::Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
         ASSERT_FALSE(img.empty());
@@ -3138,39 +2815,32 @@ struct CornerMinEigen : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
         blockSize = 1 + rng.next() % 5;
         apertureSize = 1 + 2 * (rng.next() % 4);
 
-        cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderTypes[borderTypeIdx]);
+        cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType);
     }
 };
 
 TEST_P(CornerMinEigen, Accuracy)
 {
-    const char* borderTypeStr = borderTypes_str[borderTypeIdx];
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(borderTypeStr);
-    PRINT_PARAM(blockSize);
-    PRINT_PARAM(apertureSize);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::cornerMinEigenVal(cv::gpu::GpuMat(src), dev_dst, blockSize, apertureSize, borderTypes[borderTypeIdx]);
+        cv::gpu::cornerMinEigenVal(loadMat(src), dev_dst, blockSize, apertureSize, borderType);
         dev_dst.download(dst);
     );
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, CornerMinEigen, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_32FC1), 
-                        testing::Values(0, 4)));
+INSTANTIATE_TEST_CASE_P(ImgProc, CornerMinEigen, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_32FC1), 
+                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE)));
 
 ////////////////////////////////////////////////////////////////////////
 // ColumnSum
 
-struct ColumnSum : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct ColumnSum : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
@@ -3183,24 +2853,21 @@ struct ColumnSum : testing::TestWithParam<cv::gpu::DeviceInfo>
 
         cv::gpu::setDevice(devInfo.deviceID());
     
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 400), rng.uniform(100, 400));
 
-        src = cvtest::randomMat(rng, size, CV_32F, 0.0, 1.0, false);
+        src = randomMat(rng, size, CV_32F, 0.0, 1.0, false);
     }
 };
 
 TEST_P(ColumnSum, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
     
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::columnSum(cv::gpu::GpuMat(src), dev_dst);
+        cv::gpu::columnSum(loadMat(src), dev_dst);
         dev_dst.download(dst);
     );
 
@@ -3222,19 +2889,17 @@ TEST_P(ColumnSum, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, ColumnSum, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, ColumnSum, ALL_DEVICES);
 
 ////////////////////////////////////////////////////////////////////////
 // Norm
 
-static const int normTypes[] = {cv::NORM_INF, cv::NORM_L1, cv::NORM_L2};
-static const char* normTypes_str[] = {"NORM_INF", "NORM_L1", "NORM_L2"};
-
-struct Norm : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(Norm, cv::gpu::DeviceInfo, MatType, NormCode, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
-    int normTypeIdx;
+    int normType;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat src;
@@ -3243,51 +2908,47 @@ struct Norm : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, 
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
-        normTypeIdx = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        normType = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
     
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 400), rng.uniform(100, 400));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 10.0, false);
+        src = randomMat(rng, size, type, 0.0, 10.0, false);
 
-        gold = cv::norm(src, normTypes[normTypeIdx]);
+        gold = cv::norm(src, normType);
     }
 };
 
 TEST_P(Norm, Accuracy)
 {
-    const char* normTypeStr = normTypes_str[normTypeIdx];
-
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    PRINT_PARAM(normTypeStr);
-
     double res;
 
     ASSERT_NO_THROW(
-        res = cv::gpu::norm(cv::gpu::GpuMat(src), normTypes[normTypeIdx]);
+        res = cv::gpu::norm(loadMat(src, useRoi), normType);
     );
 
     ASSERT_NEAR(res, gold, 0.5);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Norm, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::ValuesIn(types(CV_8U, CV_32F, 1, 1)),
-                        testing::Range(0, 3)));
+INSTANTIATE_TEST_CASE_P(ImgProc, Norm, Combine(
+                        ALL_DEVICES, 
+                        TYPES(CV_8U, CV_32F, 1, 1),
+                        Values((int) cv::NORM_INF, (int) cv::NORM_L1, (int) cv::NORM_L2),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 
-struct ReprojectImageTo3D : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(ReprojectImageTo3D, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
 
     cv::Size size;
     cv::Mat disp;
@@ -3297,17 +2958,18 @@ struct ReprojectImageTo3D : testing::TestWithParam<cv::gpu::DeviceInfo>
 
     virtual void SetUp()
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
     
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 500), rng.uniform(100, 500));
 
-        disp = cvtest::randomMat(rng, size, CV_8UC1, 5.0, 30.0, false);
+        disp = randomMat(rng, size, CV_8UC1, 5.0, 30.0, false);
 
-        Q = cvtest::randomMat(rng, cv::Size(4, 4), CV_32FC1, 0.1, 1.0, false);
+        Q = randomMat(rng, cv::Size(4, 4), CV_32FC1, 0.1, 1.0, false);
 
         cv::reprojectImageTo3D(disp, dst_gold, Q, false);
     }
@@ -3315,14 +2977,11 @@ struct ReprojectImageTo3D : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(ReprojectImageTo3D, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(size);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpures;
-        cv::gpu::reprojectImageTo3D(cv::gpu::GpuMat(disp), gpures, Q);
+        cv::gpu::reprojectImageTo3D(loadMat(disp, useRoi), gpures, Q);
         gpures.download(dst);
     );
 
@@ -3345,12 +3004,12 @@ TEST_P(ReprojectImageTo3D, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, ReprojectImageTo3D, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, ReprojectImageTo3D, Combine(ALL_DEVICES, USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
 // meanShift
 
-struct MeanShift : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct MeanShift : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
     
@@ -3386,13 +3045,11 @@ TEST_P(MeanShift, Filtering)
 
     ASSERT_FALSE(img_template.empty());
 
-    PRINT_PARAM(devInfo);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::meanShiftFiltering(cv::gpu::GpuMat(rgba), dev_dst, spatialRad, colorRad);
+        cv::gpu::meanShiftFiltering(loadMat(rgba), dev_dst, spatialRad, colorRad);
         dev_dst.download(dst);
     );
 
@@ -3420,19 +3077,17 @@ TEST_P(MeanShift, Proc)
 
     ASSERT_TRUE(!rgba.empty() && !spmap_template.empty());
 
-    PRINT_PARAM(devInfo);
-
     cv::Mat rmap_filtered;
     cv::Mat rmap;
     cv::Mat spmap;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_rmap_filtered;
-        cv::gpu::meanShiftFiltering(cv::gpu::GpuMat(rgba), d_rmap_filtered, spatialRad, colorRad);
+        cv::gpu::meanShiftFiltering(loadMat(rgba), d_rmap_filtered, spatialRad, colorRad);
 
         cv::gpu::GpuMat d_rmap;
         cv::gpu::GpuMat d_spmap;
-        cv::gpu::meanShiftProc(cv::gpu::GpuMat(rgba), d_rmap, d_spmap, spatialRad, colorRad);
+        cv::gpu::meanShiftProc(loadMat(rgba), d_rmap, d_spmap, spatialRad, colorRad);
 
         d_rmap_filtered.download(rmap_filtered);
         d_rmap.download(rmap);
@@ -3445,9 +3100,9 @@ TEST_P(MeanShift, Proc)
     EXPECT_MAT_NEAR(spmap_template, spmap, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MeanShift, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, MeanShift, ALL_DEVICES);
 
-struct MeanShiftSegmentation : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(MeanShiftSegmentation, cv::gpu::DeviceInfo, int)
 {
     cv::gpu::DeviceInfo devInfo;
     int minsize;
@@ -3458,8 +3113,8 @@ struct MeanShiftSegmentation : testing::TestWithParam< std::tr1::tuple<cv::gpu::
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        minsize = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        minsize = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
@@ -3482,13 +3137,10 @@ struct MeanShiftSegmentation : testing::TestWithParam< std::tr1::tuple<cv::gpu::
 
 TEST_P(MeanShiftSegmentation, Regression)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(minsize);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
-        cv::gpu::meanShiftSegmentation(cv::gpu::GpuMat(rgba), dst, 10, 10, minsize);
+        cv::gpu::meanShiftSegmentation(loadMat(rgba), dst, 10, 10, minsize);
     );
 
     cv::Mat dst_rgb;
@@ -3497,16 +3149,14 @@ TEST_P(MeanShiftSegmentation, Regression)
     EXPECT_MAT_SIMILAR(dst_gold, dst_rgb, 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftSegmentation, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(0, 4, 20, 84, 340, 1364)));
+INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftSegmentation, Combine(
+                        ALL_DEVICES,
+                        Values(0, 4, 20, 84, 340, 1364)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // matchTemplate
 
-static const char* matchTemplateMethods[] = {"SQDIFF", "SQDIFF_NORMED", "CCORR", "CCORR_NORMED", "CCOEFF", "CCOEFF_NORMED"};
-
-struct MatchTemplate8U : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(MatchTemplate8U, cv::gpu::DeviceInfo, int, TemplateMethod)
 {
     cv::gpu::DeviceInfo devInfo;
     int cn;
@@ -3519,21 +3169,21 @@ struct MatchTemplate8U : testing::TestWithParam< std::tr1::tuple<cv::gpu::Device
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        cn = std::tr1::get<1>(GetParam());
-        method = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        method = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         n = rng.uniform(30, 100);
         m = rng.uniform(30, 100);
         h = rng.uniform(5, n - 1);
         w = rng.uniform(5, m - 1);
 
-        image = cvtest::randomMat(rng, cv::Size(m, n), CV_MAKETYPE(CV_8U, cn), 1.0, 10.0, false);
-        templ = cvtest::randomMat(rng, cv::Size(w, h), CV_MAKETYPE(CV_8U, cn), 1.0, 10.0, false);
+        image = randomMat(rng, cv::Size(m, n), CV_MAKETYPE(CV_8U, cn), 1.0, 10.0, false);
+        templ = randomMat(rng, cv::Size(w, h), CV_MAKETYPE(CV_8U, cn), 1.0, 10.0, false);
 
         cv::matchTemplate(image, templ, dst_gold, method);
     }
@@ -3541,32 +3191,24 @@ struct MatchTemplate8U : testing::TestWithParam< std::tr1::tuple<cv::gpu::Device
 
 TEST_P(MatchTemplate8U, Regression)
 {
-    const char* matchTemplateMethodStr = matchTemplateMethods[method];
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(cn);
-    PRINT_PARAM(matchTemplateMethodStr);
-    PRINT_PARAM(n);
-    PRINT_PARAM(m);
-    PRINT_PARAM(h);
-    PRINT_PARAM(w);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::matchTemplate(cv::gpu::GpuMat(image), cv::gpu::GpuMat(templ), dev_dst, method);
+        cv::gpu::matchTemplate(loadMat(image), loadMat(templ), dev_dst, method);
         dev_dst.download(dst);
     );
 
     EXPECT_MAT_NEAR(dst_gold, dst, 5 * h * w * 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate8U, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Range(1, 5), 
-                        testing::Values((int)CV_TM_SQDIFF, (int)CV_TM_SQDIFF_NORMED, (int)CV_TM_CCORR, (int)CV_TM_CCORR_NORMED, (int)CV_TM_CCOEFF, (int)CV_TM_CCOEFF_NORMED)));
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate8U, Combine(
+                        ALL_DEVICES,
+                        Range(1, 5), 
+                        Values((int)cv::TM_SQDIFF, (int) cv::TM_SQDIFF_NORMED, (int) cv::TM_CCORR, (int) cv::TM_CCORR_NORMED, (int) cv::TM_CCOEFF, (int) cv::TM_CCOEFF_NORMED)));
 
-struct MatchTemplate32F : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+
+PARAM_TEST_CASE(MatchTemplate32F, cv::gpu::DeviceInfo, int, TemplateMethod)
 {
     cv::gpu::DeviceInfo devInfo;
     int cn;
@@ -3579,21 +3221,21 @@ struct MatchTemplate32F : testing::TestWithParam< std::tr1::tuple<cv::gpu::Devic
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        cn = std::tr1::get<1>(GetParam());
-        method = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        method = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         n = rng.uniform(30, 100);
         m = rng.uniform(30, 100);
         h = rng.uniform(5, n - 1);
         w = rng.uniform(5, m - 1);
 
-        image = cvtest::randomMat(rng, cv::Size(m, n), CV_MAKETYPE(CV_32F, cn), 0.001, 1.0, false);
-        templ = cvtest::randomMat(rng, cv::Size(w, h), CV_MAKETYPE(CV_32F, cn), 0.001, 1.0, false);
+        image = randomMat(rng, cv::Size(m, n), CV_MAKETYPE(CV_32F, cn), 0.001, 1.0, false);
+        templ = randomMat(rng, cv::Size(w, h), CV_MAKETYPE(CV_32F, cn), 0.001, 1.0, false);
 
         cv::matchTemplate(image, templ, dst_gold, method);
     }
@@ -3601,51 +3243,39 @@ struct MatchTemplate32F : testing::TestWithParam< std::tr1::tuple<cv::gpu::Devic
 
 TEST_P(MatchTemplate32F, Regression)
 {
-    const char* matchTemplateMethodStr = matchTemplateMethods[method];
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(cn);
-    PRINT_PARAM(matchTemplateMethodStr);
-    PRINT_PARAM(n);
-    PRINT_PARAM(m);
-    PRINT_PARAM(h);
-    PRINT_PARAM(w);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::matchTemplate(cv::gpu::GpuMat(image), cv::gpu::GpuMat(templ), dev_dst, method);
+        cv::gpu::matchTemplate(loadMat(image), loadMat(templ), dev_dst, method);
         dev_dst.download(dst);
     );
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.25 * h * w * 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate32F, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Range(1, 5), 
-                        testing::Values((int)CV_TM_SQDIFF, (int)CV_TM_CCORR)));
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate32F, Combine(
+                        ALL_DEVICES, 
+                        Range(1, 5), 
+                        Values((int) cv::TM_SQDIFF, (int) cv::TM_CCORR)));
 
-struct MatchTemplateBlackSource : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+
+PARAM_TEST_CASE(MatchTemplateBlackSource, cv::gpu::DeviceInfo, TemplateMethod)
 {
     cv::gpu::DeviceInfo devInfo;
     int method;
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        method = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        method = GET_PARAM(1);
+
         cv::gpu::setDevice(devInfo.deviceID());
     }
 };
 
 TEST_P(MatchTemplateBlackSource, Accuracy)
 {
-    const char* matchTemplateMethodStr = matchTemplateMethods[method];
-
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(matchTemplateMethodStr);
-
     cv::Mat image = readImage("matchtemplate/black.png");
     ASSERT_FALSE(image.empty());
 
@@ -3658,7 +3288,7 @@ TEST_P(MatchTemplateBlackSource, Accuracy)
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::matchTemplate(cv::gpu::GpuMat(image), cv::gpu::GpuMat(pattern), dev_dst, method);
+        cv::gpu::matchTemplate(loadMat(image), loadMat(pattern), dev_dst, method);
         dev_dst.download(dst);
     );
 
@@ -3669,12 +3299,12 @@ TEST_P(MatchTemplateBlackSource, Accuracy)
     ASSERT_EQ(maxLocGold, maxLoc);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplateBlackSource, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values((int)CV_TM_CCOEFF_NORMED, (int)CV_TM_CCORR_NORMED)));
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplateBlackSource, Combine(
+                        ALL_DEVICES,
+                        Values((int) cv::TM_CCOEFF_NORMED, (int) cv::TM_CCORR_NORMED)));
 
 
-struct MatchTemplate_CCOEF_NORMED : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::pair<std::string, std::string> > >
+PARAM_TEST_CASE(MatchTemplate_CCOEF_NORMED, cv::gpu::DeviceInfo, std::pair<std::string, std::string>)
 {
     cv::gpu::DeviceInfo devInfo;
     std::string imageName;
@@ -3684,9 +3314,9 @@ struct MatchTemplate_CCOEF_NORMED : testing::TestWithParam< std::tr1::tuple<cv::
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        imageName = std::tr1::get<1>(GetParam()).first;
-        patternName = std::tr1::get<1>(GetParam()).second;
+        devInfo = GET_PARAM(0);
+        imageName = GET_PARAM(1).first;
+        patternName = GET_PARAM(1).second;
 
         image = readImage(imageName);
         ASSERT_FALSE(image.empty());
@@ -3698,10 +3328,6 @@ struct MatchTemplate_CCOEF_NORMED : testing::TestWithParam< std::tr1::tuple<cv::
 
 TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(imageName);
-    PRINT_PARAM(patternName);
-
     cv::Mat dstGold;
     cv::matchTemplate(image, pattern, dstGold, CV_TM_CCOEFF_NORMED);
     double minValGold, maxValGold;
@@ -3711,7 +3337,7 @@ TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
     cv::Mat dst;
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::matchTemplate(cv::gpu::GpuMat(image), cv::gpu::GpuMat(pattern), dev_dst, CV_TM_CCOEFF_NORMED);
+        cv::gpu::matchTemplate(loadMat(image), loadMat(pattern), dev_dst, CV_TM_CCOEFF_NORMED);
         dev_dst.download(dst);
     );
 
@@ -3725,13 +3351,12 @@ TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
     ASSERT_GE(minVal, -1.);
 }
 
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED, Combine(
+                        ALL_DEVICES,
+                        Values(std::make_pair(std::string("matchtemplate/source-0.png"), std::string("matchtemplate/target-0.png")))));
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(std::make_pair(std::string("matchtemplate/source-0.png"), std::string("matchtemplate/target-0.png")))));
 
-
-struct MatchTemplate_CCOEF_NORMED_NoThrow : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::pair<std::string, std::string> > >
+PARAM_TEST_CASE(MatchTemplate_CCOEF_NORMED_NoThrow, cv::gpu::DeviceInfo, std::pair<std::string, std::string>)
 {
     cv::gpu::DeviceInfo devInfo;
     std::string imageName;
@@ -3741,9 +3366,9 @@ struct MatchTemplate_CCOEF_NORMED_NoThrow : testing::TestWithParam< std::tr1::tu
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        imageName = std::tr1::get<1>(GetParam()).first;
-        patternName = std::tr1::get<1>(GetParam()).second;
+        devInfo = GET_PARAM(0);
+        imageName = GET_PARAM(1).first;
+        patternName = GET_PARAM(1).second;
 
         image = readImage(imageName);
         ASSERT_FALSE(image.empty());
@@ -3755,10 +3380,6 @@ struct MatchTemplate_CCOEF_NORMED_NoThrow : testing::TestWithParam< std::tr1::tu
 
 TEST_P(MatchTemplate_CCOEF_NORMED_NoThrow, NoThrow)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(imageName);
-    PRINT_PARAM(patternName);
-
     cv::Mat dstGold;
     cv::matchTemplate(image, pattern, dstGold, CV_TM_CCOEFF_NORMED);
     double minValGold, maxValGold;
@@ -3768,23 +3389,20 @@ TEST_P(MatchTemplate_CCOEF_NORMED_NoThrow, NoThrow)
     cv::Mat dst;
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_dst;
-        cv::gpu::matchTemplate(cv::gpu::GpuMat(image), cv::gpu::GpuMat(pattern), dev_dst, CV_TM_CCOEFF_NORMED);
+        cv::gpu::matchTemplate(loadMat(image), loadMat(pattern), dev_dst, CV_TM_CCOEFF_NORMED);
         dev_dst.download(dst);
     );
 
 }
 
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED_NoThrow, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(std::make_pair(std::string("matchtemplate/source-1.png"), std::string("matchtemplate/target-1.png")))));
-
-
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED_NoThrow, Combine(
+                        ALL_DEVICES,
+                        Values(std::make_pair(std::string("matchtemplate/source-1.png"), std::string("matchtemplate/target-1.png")))));
 
 ////////////////////////////////////////////////////////////////////////////
 // MulSpectrums
 
-struct MulSpectrums : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(MulSpectrums, cv::gpu::DeviceInfo, DftFlags)
 {
     cv::gpu::DeviceInfo devInfo;
     int flag;
@@ -3793,23 +3411,20 @@ struct MulSpectrums : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInf
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        flag = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        flag = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
-        a = cvtest::randomMat(rng, cv::Size(rng.uniform(100, 200), rng.uniform(100, 200)), CV_32FC2, 0.0, 10.0, false);
-        b = cvtest::randomMat(rng, a.size(), CV_32FC2, 0.0, 10.0, false);
+        a = randomMat(rng, cv::Size(rng.uniform(100, 200), rng.uniform(100, 200)), CV_32FC2, 0.0, 10.0, false);
+        b = randomMat(rng, a.size(), CV_32FC2, 0.0, 10.0, false);
     }
 };
 
 TEST_P(MulSpectrums, Simple)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(flag);
-
     cv::Mat c_gold;
     cv::mulSpectrums(a, b, c_gold, flag, false);
     
@@ -3818,7 +3433,7 @@ TEST_P(MulSpectrums, Simple)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_c;
 
-        cv::gpu::mulSpectrums(cv::gpu::GpuMat(a), cv::gpu::GpuMat(b), d_c, flag, false);
+        cv::gpu::mulSpectrums(loadMat(a), loadMat(b), d_c, flag, false);
 
         d_c.download(c);
     );
@@ -3828,9 +3443,6 @@ TEST_P(MulSpectrums, Simple)
 
 TEST_P(MulSpectrums, Scaled)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(flag);
-
     float scale = 1.f / a.size().area();
 
     cv::Mat c_gold;
@@ -3842,7 +3454,7 @@ TEST_P(MulSpectrums, Scaled)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_c;
 
-        cv::gpu::mulAndScaleSpectrums(cv::gpu::GpuMat(a), cv::gpu::GpuMat(b), d_c, flag, scale, false);
+        cv::gpu::mulAndScaleSpectrums(loadMat(a), loadMat(b), d_c, flag, scale, false);
 
         d_c.download(c);
     );
@@ -3850,14 +3462,14 @@ TEST_P(MulSpectrums, Scaled)
     EXPECT_MAT_NEAR(c_gold, c, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MulSpectrums, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(0, (int)cv::DFT_ROWS)));
+INSTANTIATE_TEST_CASE_P(ImgProc, MulSpectrums, Combine(
+                        ALL_DEVICES, 
+                        Values(0, (int) cv::DFT_ROWS)));
 
 ////////////////////////////////////////////////////////////////////////////
 // Dft
 
-struct Dft : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Dft : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
@@ -3870,17 +3482,13 @@ struct Dft : testing::TestWithParam<cv::gpu::DeviceInfo>
 };
 
 
-static void testC2C(const std::string& hint, int cols, int rows, int flags, bool inplace)
+void testC2C(const std::string& hint, int cols, int rows, int flags, bool inplace)
 {
-    PRINT_PARAM(hint);
-    PRINT_PARAM(cols);
-    PRINT_PARAM(rows);
-    PRINT_PARAM(flags);
-    PRINT_PARAM(inplace);
+    SCOPED_TRACE(hint);
 
     cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-    cv::Mat a = cvtest::randomMat(rng, cv::Size(cols, rows), CV_32FC2, 0.0, 10.0, false);
+    cv::Mat a = randomMat(rng, cv::Size(cols, rows), CV_32FC2, 0.0, 10.0, false);
 
     cv::Mat b_gold;
     cv::dft(a, b_gold, flags);
@@ -3892,7 +3500,7 @@ static void testC2C(const std::string& hint, int cols, int rows, int flags, bool
         d_b_data.create(1, a.size().area(), CV_32FC2);
         d_b = cv::gpu::GpuMat(a.rows, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
     }
-    cv::gpu::dft(cv::gpu::GpuMat(a), d_b, cv::Size(cols, rows), flags);
+    cv::gpu::dft(loadMat(a), d_b, cv::Size(cols, rows), flags);
 
     EXPECT_TRUE(!inplace || d_b.ptr() == d_b_data.ptr());
     ASSERT_EQ(CV_32F, d_b.depth());
@@ -3902,8 +3510,6 @@ static void testC2C(const std::string& hint, int cols, int rows, int flags, bool
 
 TEST_P(Dft, C2C)
 {
-    PRINT_PARAM(devInfo);
-
     cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
     int cols = 2 + rng.next() % 100, rows = 2 + rng.next() % 100;
@@ -3930,16 +3536,13 @@ TEST_P(Dft, C2C)
     );
 }
 
-static void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inplace)
+void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inplace)
 {
-    PRINT_PARAM(hint);
-    PRINT_PARAM(cols);
-    PRINT_PARAM(rows);
-    PRINT_PARAM(inplace);
+    SCOPED_TRACE(hint);
     
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+    cv::RNG& rng = TS::ptr()->get_rng();
 
-    cv::Mat a = cvtest::randomMat(rng, cv::Size(cols, rows), CV_32FC1, 0.0, 10.0, false);
+    cv::Mat a = randomMat(rng, cv::Size(cols, rows), CV_32FC1, 0.0, 10.0, false);
 
     cv::gpu::GpuMat d_b, d_c;
     cv::gpu::GpuMat d_b_data, d_c_data;
@@ -3959,7 +3562,7 @@ static void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inp
         d_c = cv::gpu::GpuMat(a.rows, a.cols, CV_32F, d_c_data.ptr(), a.cols * d_c_data.elemSize());
     }
 
-    cv::gpu::dft(cv::gpu::GpuMat(a), d_b, cv::Size(cols, rows), 0);
+    cv::gpu::dft(loadMat(a), d_b, cv::Size(cols, rows), 0);
     cv::gpu::dft(d_b, d_c, cv::Size(cols, rows), cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
     
     EXPECT_TRUE(!inplace || d_b.ptr() == d_b_data.ptr());
@@ -3973,9 +3576,7 @@ static void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inp
 
 TEST_P(Dft, R2CThenC2R)
 {
-    PRINT_PARAM(devInfo);
-
-    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+    cv::RNG& rng = TS::ptr()->get_rng();
 
     int cols = 2 + rng.next() % 100, rows = 2 + rng.next() % 100;
 
@@ -3998,12 +3599,13 @@ TEST_P(Dft, R2CThenC2R)
     );
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Dft, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, Dft, ALL_DEVICES);
 
 ////////////////////////////////////////////////////////////////////////////
 // blend
 
-template <typename T> static void blendLinearGold(const cv::Mat& img1, const cv::Mat& img2, const cv::Mat& weights1, const cv::Mat& weights2, cv::Mat& result_gold)
+template <typename T> 
+void blendLinearGold(const cv::Mat& img1, const cv::Mat& img2, const cv::Mat& weights1, const cv::Mat& weights2, cv::Mat& result_gold)
 {
     result_gold.create(img1.size(), img1.type());
 
@@ -4016,6 +3618,7 @@ template <typename T> static void blendLinearGold(const cv::Mat& img1, const cv:
         const T* img1_row = img1.ptr<T>(y);
         const T* img2_row = img2.ptr<T>(y);
         T* result_gold_row = result_gold.ptr<T>(y);
+
         for (int x = 0; x < img1.cols * cn; ++x)
         {
             float w1 = weights1_row[x / cn];
@@ -4025,13 +3628,12 @@ template <typename T> static void blendLinearGold(const cv::Mat& img1, const cv:
     }
 }
 
-struct Blend : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+PARAM_TEST_CASE(Blend, cv::gpu::DeviceInfo, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
-    int depth;
-    int cn;
-
     int type;
+    bool useRoi;
+
     cv::Size size;
     cv::Mat img1;
     cv::Mat img2;
@@ -4042,22 +3644,22 @@ struct Blend : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        depth = std::tr1::get<1>(GetParam());
-        cn = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        type = CV_MAKETYPE(depth, cn);
+        cv::RNG& rng = TS::ptr()->get_rng();
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        size = cv::Size(200 + randInt(rng) % 1000, 200 + randInt(rng) % 1000);
 
-        size = cv::Size(200 + cvtest::randInt(rng) % 1000, 200 + cvtest::randInt(rng) % 1000);
+        int depth = CV_MAT_DEPTH(type);
 
-        img1 = cvtest::randomMat(rng, size, type, 0.0, depth == CV_8U ? 255.0 : 1.0, false);
-        img2 = cvtest::randomMat(rng, size, type, 0.0, depth == CV_8U ? 255.0 : 1.0, false);
-        weights1 = cvtest::randomMat(rng, size, CV_32F, 0, 1, false);
-        weights2 = cvtest::randomMat(rng, size, CV_32F, 0, 1, false);
+        img1 = randomMat(rng, size, type, 0.0, depth == CV_8U ? 255.0 : 1.0, false);
+        img2 = randomMat(rng, size, type, 0.0, depth == CV_8U ? 255.0 : 1.0, false);
+        weights1 = randomMat(rng, size, CV_32F, 0, 1, false);
+        weights2 = randomMat(rng, size, CV_32F, 0, 1, false);
         
         if (depth == CV_8U)
             blendLinearGold<uchar>(img1, img2, weights1, weights2, result_gold);
@@ -4068,35 +3670,32 @@ struct Blend : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
 
 TEST_P(Blend, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-
     cv::Mat result;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_result;
 
-        cv::gpu::blendLinear(cv::gpu::GpuMat(img1), cv::gpu::GpuMat(img2), cv::gpu::GpuMat(weights1), cv::gpu::GpuMat(weights2), d_result);
+        cv::gpu::blendLinear(loadMat(img1, useRoi), loadMat(img2, useRoi), loadMat(weights1, useRoi), loadMat(weights2, useRoi), d_result);
 
         d_result.download(result);
     );
 
-    EXPECT_MAT_NEAR(result_gold, result, depth == CV_8U ? 1.0 : 1e-5);
+    EXPECT_MAT_NEAR(result_gold, result, CV_MAT_DEPTH(type) == CV_8U ? 1.0 : 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Blend, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(CV_8U, CV_32F),
-                        testing::Range(1, 5)));
+INSTANTIATE_TEST_CASE_P(ImgProc, Blend, Combine(
+                        ALL_DEVICES,
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////
 // pyrDown
 
-struct PyrDown : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(PyrDown, cv::gpu::DeviceInfo, MatType, UseRoi)
 {    
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
     
     cv::Size size;
     cv::Mat src;
@@ -4105,33 +3704,30 @@ struct PyrDown : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, in
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 255.0, false);
+        src = randomMat(rng, size, type, 0.0, 255.0, false);
         
         cv::pyrDown(src, dst_gold);
     }
 };
 
 TEST_P(PyrDown, Accuracy)
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    
+{    
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_dst;
         
-        cv::gpu::pyrDown(cv::gpu::GpuMat(src), d_dst);
+        cv::gpu::pyrDown(loadMat(src, useRoi), d_dst);
         
         d_dst.download(dst);
     );
@@ -4140,24 +3736,23 @@ TEST_P(PyrDown, Accuracy)
     ASSERT_EQ(dst_gold.rows, dst.rows);
     ASSERT_EQ(dst_gold.type(), dst.type());
     
-    double err = cvtest::crossCorr(dst_gold, dst) / (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
+    double err = crossCorr(dst_gold, dst) / (cv::norm(dst_gold, cv::NORM_L2) * cv::norm(dst, cv::NORM_L2));
     ASSERT_NEAR(err, 1., 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
-                                        CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4,
-                                        CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
-                                        CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4)));
+INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////
 // pyrUp
 
-struct PyrUp: testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(PyrUp, cv::gpu::DeviceInfo, MatType, UseRoi)
 {    
     cv::gpu::DeviceInfo devInfo;
     int type;
+    bool useRoi;
     
     cv::Size size;    
     cv::Mat src;
@@ -4166,33 +3761,30 @@ struct PyrUp: testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> 
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        type = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 255.0, false);
+        src = randomMat(rng, size, type, 0.0, 255.0, false);
         
         cv::pyrUp(src, dst_gold);
     }
 };
 
 TEST_P(PyrUp, Accuracy)
-{
-    PRINT_PARAM(devInfo);
-    PRINT_TYPE(type);
-    PRINT_PARAM(size);
-    
+{    
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_dst;
         
-        cv::gpu::pyrUp(cv::gpu::GpuMat(src), d_dst);
+        cv::gpu::pyrUp(loadMat(src, useRoi), d_dst);
         
         d_dst.download(dst);
     );
@@ -4201,26 +3793,24 @@ TEST_P(PyrUp, Accuracy)
     ASSERT_EQ(dst_gold.rows, dst.rows);
     ASSERT_EQ(dst_gold.type(), dst.type());
 
-    double err = cvtest::crossCorr(dst_gold, dst) / (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
+    double err = cvtest::crossCorr(dst_gold, dst) / (cv::norm(dst_gold, cv::NORM_L2) * cv::norm(dst, cv::NORM_L2));
     ASSERT_NEAR(err, 1., 1e-2);
 }
 
-
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
-                                        CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4,
-                                        CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
-                                        CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4)));
+INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, Combine(
+                        ALL_DEVICES, 
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////
 // Canny
 
-struct Canny : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, bool> >
+PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, int, bool, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     int apperture_size;
     bool L2gradient;
+    bool useRoi;
     
     cv::Mat img;
 
@@ -4231,9 +3821,10 @@ struct Canny : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
 
     virtual void SetUp() 
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        apperture_size = std::tr1::get<1>(GetParam());
-        L2gradient = std::tr1::get<2>(GetParam());
+        devInfo = GET_PARAM(0);
+        apperture_size = GET_PARAM(1);
+        L2gradient = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
@@ -4249,16 +3840,12 @@ struct Canny : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
 
 TEST_P(Canny, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(apperture_size);
-    PRINT_PARAM(L2gradient);
-
     cv::Mat edges;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_edges;
 
-        cv::gpu::Canny(cv::gpu::GpuMat(img), d_edges, low_thresh, high_thresh, apperture_size, L2gradient);
+        cv::gpu::Canny(loadMat(img, useRoi), d_edges, low_thresh, high_thresh, apperture_size, L2gradient);
 
         d_edges.download(edges);
     );
@@ -4267,14 +3854,15 @@ TEST_P(Canny, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
-                        testing::ValuesIn(devices()),
-                        testing::Values(3, 5),
-                        testing::Values(false, true)));
+                        DEVICES(cv::gpu::SHARED_ATOMICS),
+                        Values(3, 5),
+                        Values(false, true),
+                        USE_ROI));
 
 ////////////////////////////////////////////////////////
 // convolve
 
-struct Convolve: testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, int)
 {    
     cv::gpu::DeviceInfo devInfo;
     int ksize;
@@ -4287,34 +3875,31 @@ struct Convolve: testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, in
 
     virtual void SetUp()
     {
-        devInfo = std::tr1::get<0>(GetParam());
-        ksize = std::tr1::get<1>(GetParam());
+        devInfo = GET_PARAM(0);
+        ksize = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        src = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 255.0, false);
-        kernel = cvtest::randomMat(rng, cv::Size(ksize, ksize), CV_32FC1, 0.0, 1.0, false);
+        src = randomMat(rng, size, CV_32FC1, 0.0, 255.0, false);
+        kernel = randomMat(rng, cv::Size(ksize, ksize), CV_32FC1, 0.0, 1.0, false);
         
         cv::filter2D(src, dst_gold, CV_32F, kernel, cv::Point(-1, -1), 0, cv::BORDER_REPLICATE);
     }
 };
 
 TEST_P(Convolve, Accuracy)
-{
-    PRINT_PARAM(devInfo);
-    PRINT_PARAM(ksize);
-    
+{    
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat d_dst;
 
-        cv::gpu::convolve(cv::gpu::GpuMat(src), cv::gpu::GpuMat(kernel), d_dst);
-        
+        cv::gpu::convolve(loadMat(src), loadMat(kernel), d_dst);
+
         d_dst.download(dst);
     );
 
@@ -4322,8 +3907,8 @@ TEST_P(Convolve, Accuracy)
 }
 
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(3, 5, 7, 9, 11)));
+INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, Combine(
+                        ALL_DEVICES, 
+                        Values(3, 5, 7, 9, 11)));
 
 #endif // HAVE_CUDA

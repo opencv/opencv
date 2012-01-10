@@ -56,6 +56,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/ts_perf.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "test_gpu_base.hpp"
 

@@ -69,7 +69,7 @@ namespace cv { namespace gpu { namespace device
 
     struct SingleMask
     {
-        explicit __host__ __device__ __forceinline__ SingleMask(const PtrStepb& mask_) : mask(mask_) {}
+        explicit __host__ __device__ __forceinline__ SingleMask(PtrStepb mask_) : mask(mask_) {}
         
         __device__ __forceinline__ bool operator()(int y, int x) const
         {            
@@ -77,6 +77,19 @@ namespace cv { namespace gpu { namespace device
         }
 
         PtrStepb mask;
+    };
+
+    struct SingleMaskChannels
+    {
+        __host__ __device__ __forceinline__ SingleMaskChannels(PtrStepb mask_, int channels_) : mask(mask_), channels(channels_) {}
+        
+        __device__ __forceinline__ bool operator()(int y, int x) const
+        {            
+            return mask.ptr(y)[x / channels] != 0;
+        }
+
+        PtrStepb mask;
+        int channels;
     };
 
     struct MaskCollection

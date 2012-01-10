@@ -43,10 +43,13 @@
 
 #ifdef HAVE_CUDA
 
+using namespace cvtest;
+using namespace testing;
+
 //////////////////////////////////////////////////////////////////////////
 // BlockMatching
 
-struct StereoBlockMatching : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct StereoBlockMatching : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::Mat img_l;
     cv::Mat img_r;
@@ -71,9 +74,7 @@ struct StereoBlockMatching : testing::TestWithParam<cv::gpu::DeviceInfo>
 };
 
 TEST_P(StereoBlockMatching, Regression) 
-{
-    PRINT_PARAM(devInfo);
-    
+{    
     cv::Mat disp;
 
     ASSERT_NO_THROW(
@@ -90,12 +91,12 @@ TEST_P(StereoBlockMatching, Regression)
     EXPECT_MAT_NEAR(img_template, disp, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, StereoBlockMatching, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Calib3D, StereoBlockMatching, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////////
 // BeliefPropagation
 
-struct StereoBeliefPropagation : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct StereoBeliefPropagation : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::Mat img_l;
     cv::Mat img_r;
@@ -121,8 +122,6 @@ struct StereoBeliefPropagation : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(StereoBeliefPropagation, Regression) 
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat disp;
 
     ASSERT_NO_THROW(
@@ -139,12 +138,12 @@ TEST_P(StereoBeliefPropagation, Regression)
     EXPECT_MAT_NEAR(img_template, disp, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, StereoBeliefPropagation, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Calib3D, StereoBeliefPropagation, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////////
 // ConstantSpaceBP
 
-struct StereoConstantSpaceBP : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct StereoConstantSpaceBP : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::Mat img_l;
     cv::Mat img_r;
@@ -174,8 +173,6 @@ struct StereoConstantSpaceBP : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(StereoConstantSpaceBP, Regression) 
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat disp;
 
     ASSERT_NO_THROW(
@@ -192,12 +189,12 @@ TEST_P(StereoConstantSpaceBP, Regression)
     EXPECT_MAT_NEAR(img_template, disp, 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, StereoConstantSpaceBP, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Calib3D, StereoConstantSpaceBP, ALL_DEVICES);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // projectPoints
 
-struct ProjectPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct ProjectPoints : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
     
@@ -231,8 +228,6 @@ struct ProjectPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(ProjectPoints, Accuracy) 
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(   
@@ -257,12 +252,12 @@ TEST_P(ProjectPoints, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, ProjectPoints, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Calib3D, ProjectPoints, ALL_DEVICES);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // transformPoints
 
-struct TransformPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct TransformPoints : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
@@ -289,8 +284,6 @@ struct TransformPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(TransformPoints, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat dst;
 
     ASSERT_NO_THROW(
@@ -318,12 +311,12 @@ TEST_P(TransformPoints, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, TransformPoints, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Calib3D, TransformPoints, ALL_DEVICES);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // solvePnPRansac
 
-struct SolvePnPRansac : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct SolvePnPRansac : TestWithParam<cv::gpu::DeviceInfo>
 {
     static const int num_points = 5000;
 
@@ -360,8 +353,6 @@ struct SolvePnPRansac : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(SolvePnPRansac, Accuracy)
 {
-    PRINT_PARAM(devInfo);
-
     cv::Mat rvec, tvec;
     std::vector<int> inliers;
 
@@ -374,6 +365,6 @@ TEST_P(SolvePnPRansac, Accuracy)
     ASSERT_LE(cv::norm(tvec - tvec_gold), 1e-3f);
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, SolvePnPRansac, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(Calib3D, SolvePnPRansac, ALL_DEVICES);
 
 #endif // HAVE_CUDA

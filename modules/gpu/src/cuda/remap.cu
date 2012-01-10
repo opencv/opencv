@@ -67,7 +67,7 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcherStream
         {
-            static void call(const DevMem2D_<T>& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_<T>& dst, 
+            static void call(DevMem2D_<T> src, DevMem2Df mapx, DevMem2Df mapy, DevMem2D_<T> dst, 
                 const float* borderValue, cudaStream_t stream, int)
             {
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
@@ -86,7 +86,8 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcherNonStream
         {
-            static void call(const DevMem2D_<T>& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_<T>& dst, const float* borderValue, int)
+            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, 
+                DevMem2D_<T> dst, const float* borderValue, int)
             {
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
                 
@@ -110,20 +111,23 @@ namespace cv { namespace gpu { namespace device
             { \
                 typedef type elem_type; \
                 typedef int index_type; \
+                int xoff, yoff; \
+                tex_remap_ ## type ## _reader (int xoff_, int yoff_) : xoff(xoff_), yoff(yoff_) {} \
                 __device__ __forceinline__ elem_type operator ()(index_type y, index_type x) const \
                 { \
-                    return tex2D(tex_remap_ ## type , x, y); \
+                    return tex2D(tex_remap_ ## type , x + xoff, y + yoff); \
                 } \
             }; \
             template <template <typename> class Filter, template <typename> class B> struct RemapDispatcherNonStream<Filter, B, type> \
             { \
-                static void call(const DevMem2D_< type >& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_< type >& dst, const float* borderValue, int cc) \
+                static void call(DevMem2D_< type > src, DevMem2D_< type > srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, \
+                    DevMem2D_< type > dst, const float* borderValue, int cc) \
                 { \
                     typedef typename TypeVec<float, VecTraits< type >::cn>::vec_type work_type; \
                     dim3 block(32, cc >= 20 ? 8 : 4); \
                     dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
-                    bindTexture(&tex_remap_ ## type , src); \
-                    tex_remap_ ## type ##_reader texSrc; \
+                    bindTexture(&tex_remap_ ## type , srcWhole); \
+                    tex_remap_ ## type ##_reader texSrc(xoff, yoff); \
                     B<work_type> brd(src.rows, src.cols, VecTraits<work_type>::make(borderValue)); \
                     BorderReader< tex_remap_ ## type ##_reader, B<work_type> > brdSrc(texSrc, brd); \
                     Filter< BorderReader< tex_remap_ ## type ##_reader, B<work_type> > > filter_src(brdSrc); \
@@ -134,14 +138,25 @@ namespace cv { namespace gpu { namespace device
             }; \
             template <template <typename> class Filter> struct RemapDispatcherNonStream<Filter, BrdReplicate, type> \
             { \
-                static void call(const DevMem2D_< type >& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_< type >& dst, const float*, int) \
+                static void call(DevMem2D_< type > src, DevMem2D_< type > srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, \
+                    DevMem2D_< type > dst, const float*, int) \
                 { \
                     dim3 block(32, 8); \
                     dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
-                    bindTexture(&tex_remap_ ## type , src); \
-                    tex_remap_ ## type ##_reader texSrc; \
-                    Filter< tex_remap_ ## type ##_reader > filter_src(texSrc); \
-                    remap<<<grid, block>>>(filter_src, mapx, mapy, dst); \
+                    bindTexture(&tex_remap_ ## type , srcWhole); \
+                    tex_remap_ ## type ##_reader texSrc(xoff, yoff); \
+                    if (srcWhole.cols == src.cols && srcWhole.rows == src.rows) \
+                    { \
+                        Filter< tex_remap_ ## type ##_reader > filter_src(texSrc); \
+                        remap<<<grid, block>>>(filter_src, mapx, mapy, dst); \
+                    } \
+                    else \
+                    { \
+                        BrdReplicate<type> brd(src.rows, src.cols); \
+                        BorderReader< tex_remap_ ## type ##_reader, BrdReplicate<type> > brdSrc(texSrc, brd); \
+                        Filter< BorderReader< tex_remap_ ## type ##_reader, BrdReplicate<type> > > filter_src(brdSrc); \
+                        remap<<<grid, block>>>(filter_src, mapx, mapy, dst); \
+                    } \
                     cudaSafeCall( cudaGetLastError() ); \
                     cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
@@ -175,21 +190,21 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcher
         { 
-            static void call(const DevMem2D_<T>& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_<T>& dst, 
-                const float* borderValue, cudaStream_t stream, int cc)
+            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, 
+                DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int cc)
             {
                 if (stream == 0)
-                    RemapDispatcherNonStream<Filter, B, T>::call(src, mapx, mapy, dst, borderValue, cc);
+                    RemapDispatcherNonStream<Filter, B, T>::call(src, srcWhole, xoff, yoff, mapx, mapy, dst, borderValue, cc);
                 else
                     RemapDispatcherStream<Filter, B, T>::call(src, mapx, mapy, dst, borderValue, stream, cc);
             }
         };
 
-        template <typename T> void remap_gpu(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, 
-            int borderMode, const float* borderValue, cudaStream_t stream, int cc)
+        template <typename T> void remap_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, 
+            DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc)
         {
-            typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D_<T>& dst, 
-                const float* borderValue, cudaStream_t stream, int cc);
+            typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, 
+                DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int cc);
 
             static const caller_t callers[3][5] = 
             {
@@ -216,37 +231,38 @@ namespace cv { namespace gpu { namespace device
                 }
             };
 
-            callers[interpolation][borderMode](static_cast< DevMem2D_<T> >(src), xmap, ymap, static_cast< DevMem2D_<T> >(dst), borderValue, stream, cc);
+            callers[interpolation][borderMode](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, xmap, ymap, 
+                static_cast< DevMem2D_<T> >(dst), borderValue, stream, cc);
         }
 
-        template void remap_gpu<uchar >(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<uchar2>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<uchar3>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<uchar4>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<uchar >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<uchar2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<uchar3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<uchar4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 
-        //template void remap_gpu<schar>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<char2>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<char3>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<char4>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<schar>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<char2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<char3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<char4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 
-        template void remap_gpu<ushort >(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<ushort2>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<ushort3>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<ushort4>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<ushort >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<ushort2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<ushort3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<ushort4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 
-        template void remap_gpu<short >(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<short2>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<short3>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<short4>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<short >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<short2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<short3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<short4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 
-        //template void remap_gpu<int >(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<int2>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<int3>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<int4>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<int >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<int2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<int3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<int4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 
-        template void remap_gpu<float >(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        //template void remap_gpu<float2>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<float3>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
-        template void remap_gpu<float4>(const DevMem2Db& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2Db& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<float >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        //template void remap_gpu<float2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<float3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+        template void remap_gpu<float4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
     } // namespace imgproc
 }}} // namespace cv { namespace gpu { namespace device
