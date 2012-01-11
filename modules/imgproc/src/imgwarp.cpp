@@ -2977,6 +2977,11 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if( !(flags & WARP_INVERSE_MAP) )
          invert(matM, matM);
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if( tegra::warpPerspective(src, dst, M, interpolation, borderType, borderValue) )
+        return;
+#endif
+
     int x, y, x1, y1, width = dst.cols, height = dst.rows;
 
     int bh0 = std::min(BLOCK_SZ/2, height);
