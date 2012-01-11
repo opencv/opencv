@@ -99,6 +99,252 @@ The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers 
 
 
 
+gpu::FAST_GPU
+-------------
+.. ocv:class:: gpu::FAST_GPU
+
+Class used for corner detection using the FAST algorithm. ::
+
+    class FAST_GPU
+    {
+    public:
+        enum
+        {
+            LOCATION_ROW = 0,
+            RESPONSE_ROW,
+            ROWS_COUNT
+        };
+
+        // all features have same size
+        static const int FEATURE_SIZE = 7;
+
+        explicit FAST_GPU(int threshold, bool nonmaxSupression = true, 
+                          double keypointsRatio = 0.05);
+
+        void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);    
+        void operator ()(const GpuMat& image, const GpuMat& mask, 
+                         std::vector<KeyPoint>& keypoints);
+
+        void downloadKeypoints(const GpuMat& d_keypoints, 
+                               std::vector<KeyPoint>& keypoints);
+
+        void convertKeypoints(const Mat& h_keypoints, 
+                              std::vector<KeyPoint>& keypoints);
+
+        void release();
+
+        bool nonmaxSupression;
+
+        int threshold;
+
+        double keypointsRatio;
+
+        int calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask);
+
+        int getKeyPoints(GpuMat& keypoints);
+    };
+
+
+The class ``FAST_GPU`` implements FAST corner detection algorithm.
+
+.. seealso:: :ocv:func:`FAST`
+
+
+
+gpu::FAST_GPU::FAST_GPU
+-------------------------------------
+Constructor.
+
+.. ocv:function:: gpu::FAST_GPU::FAST_GPU(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05)
+
+    :param threshold: Threshold on difference between intensity of the central pixel and pixels on a circle around this pixel.
+
+    :param nonmaxSupression: If it is true, non-maximum supression is applied to detected corners (keypoints).
+
+    :param keypointsRatio: Inner buffer size for keypoints store is determined as (keypointsRatio * image_width * image_height).
+
+
+
+gpu::FAST_GPU::operator ()
+-------------------------------------
+Finds the keypoints using FAST detector.
+
+.. ocv:function:: void gpu::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints) 
+.. ocv:function:: void gpu::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
+
+    :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
+
+    :param mask: Optional input mask that marks the regions where we should detect features.
+
+    :param keypoints: The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory keypoints.ptr<Vec2s>(LOCATION_ROW)[i] will contain location of i'th point and keypoints.ptr<float>(RESPONSE_ROW)[i] will contaion response of i'th point (if non-maximum supression is applied).
+
+
+
+gpu::FAST_GPU::downloadKeypoints
+-------------------------------------
+Download keypoints from GPU to CPU memory.
+
+.. ocv:function:: void gpu::FAST_GPU::downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
+
+
+
+gpu::FAST_GPU::convertKeypoints
+-------------------------------------
+Converts keypoints from GPU representation to vector of ``KeyPoint``.
+
+.. ocv:function:: void gpu::FAST_GPU::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
+
+
+
+gpu::FAST_GPU::release
+-------------------------------------
+Releases inner buffer memory.
+
+.. ocv:function:: void gpu::FAST_GPU::release()
+
+
+
+gpu::FAST_GPU::calcKeyPointsLocation
+-------------------------------------
+Find keypoints and compute it's response if ``nonmaxSupression`` is true.
+
+.. int gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask)
+
+    :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
+
+    :param mask: Optional input mask that marks the regions where we should detect features.
+
+The function returns count of detected keypoints.
+
+
+
+gpu::FAST_GPU::getKeyPoints
+-------------------------------------
+Gets final array of keypoints.
+
+.. ocv:function:: int gpu::FAST_GPU::getKeyPoints(GpuMat& keypoints)
+
+    :param keypoints: The output vector of keypoints.
+
+The function performs nonmax supression if needed and returns final count of keypoints.
+
+
+
+gpu::ORB_GPU
+-------------
+.. ocv:class:: gpu::ORB_GPU
+
+Class for extracting ORB features and descriptors from an image. ::
+
+    class ORB_GPU
+    {
+    public:
+        enum
+        {
+            X_ROW = 0,
+            Y_ROW,
+            RESPONSE_ROW,
+            ANGLE_ROW,
+            OCTAVE_ROW,
+            SIZE_ROW,
+            ROWS_COUNT
+        };
+
+        enum
+        {
+            DEFAULT_FAST_THRESHOLD = 20
+        };
+
+        explicit ORB_GPU(size_t n_features = 500, 
+                const ORB::CommonParams& detector_params = ORB::CommonParams());
+
+        void operator()(const GpuMat& image, const GpuMat& mask, 
+                        std::vector<KeyPoint>& keypoints);
+        void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
+
+        void operator()(const GpuMat& image, const GpuMat& mask, 
+                        std::vector<KeyPoint>& keypoints, GpuMat& descriptors);
+        void operator()(const GpuMat& image, const GpuMat& mask, 
+                        GpuMat& keypoints, GpuMat& descriptors);
+
+        void downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+        void convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+        int descriptorSize() const;
+
+        void setParams(size_t n_features, const ORB::CommonParams& detector_params);
+        void setFastParams(int threshold, bool nonmaxSupression = true);
+
+        void release();
+
+        bool blurForDescriptor;
+    };
+
+The class implements ORB feature detection and description algorithm.
+
+
+
+gpu::ORB_GPU::ORB_GPU
+-------------------------------------
+Constructor.
+
+.. ocv:function:: gpu::ORB_GPU::ORB_GPU(size_t n_features = 500, const ORB::CommonParams& detector_params = ORB::CommonParams())
+
+
+
+gpu::ORB_GPU::operator()
+-------------------------------------
+Detects keypoints and computes descriptors for them.
+
+.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
+
+.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
+
+.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors)
+
+.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors)
+
+    :param image: Input 8-bit grayscale image.
+    
+    :param mask: Optional input mask that marks the regions where we should detect features.
+    
+    :param keypoints: The input/output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory 
+        * ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i'th feature.
+        * ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i'th feature.
+        * ``keypoints.ptr<float>(RESPONSE_ROW)[i]`` contains the response of the i'th feature.
+        * ``keypoints.ptr<float>(ANGLE_ROW)[i]`` contains orientation of the i'th feature.
+        * ``keypoints.ptr<float>(OCTAVE_ROW)[i]`` contains the octave of the i'th feature.
+        * ``keypoints.ptr<float>(SIZE_ROW)[i]`` contains the size of the i'th feature.
+    
+    :param descriptors: Computed descriptors. if ``blurForDescriptor`` is true, image will be blurred before descriptors calculation.
+
+
+
+gpu::ORB_GPU::downloadKeypoints
+-------------------------------------
+Download keypoints from GPU to CPU memory.
+
+.. ocv:function:: void gpu::ORB_GPU::downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
+
+
+
+gpu::ORB_GPU::convertKeypoints
+-------------------------------------
+Converts keypoints from GPU representation to vector of ``KeyPoint``.
+
+.. ocv:function:: void gpu::ORB_GPU::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
+
+
+
+gpu::ORB_GPU::release
+-------------------------------------
+Releases inner buffer memory.
+
+.. ocv:function:: void gpu::ORB_GPU::release()
+
+
+
 gpu::BruteForceMatcher_GPU
 --------------------------
 .. ocv:class:: gpu::BruteForceMatcher_GPU
