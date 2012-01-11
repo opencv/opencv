@@ -1734,6 +1734,8 @@ CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
                                   float pos, GpuMat& newFrame, GpuMat& buf,
                                   Stream& stream = Stream::Null());
 
+CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
+
 } // namespace gpu
 
 //! Speckle filtering - filters small connected components on diparity image.

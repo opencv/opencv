@@ -81,7 +81,7 @@ namespace cv { namespace gpu { namespace device
             calcSobelRowPass<<<grid, block>>>(src, dx_buf, dy_buf, rows, cols);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         struct L1
@@ -171,7 +171,7 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -252,7 +252,7 @@ namespace cv { namespace gpu { namespace device
             calcMap<<<grid, block>>>(dx, dy, mag, map, rows, cols, low_thresh, high_thresh);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -345,7 +345,7 @@ namespace cv { namespace gpu { namespace device
             edgesHysteresisLocal<<<grid, block>>>(map, st1, rows, cols);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __constant__ int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
@@ -460,7 +460,7 @@ namespace cv { namespace gpu { namespace device
                 edgesHysteresisGlobal<<<grid, block>>>(map, st1, st2, rows, cols, count);
                 cudaSafeCall( cudaGetLastError() );
 
-                cudaSafeCall(cudaThreadSynchronize());
+                cudaSafeCall( cudaDeviceSynchronize() );
 
                 cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 
@@ -485,7 +485,7 @@ namespace cv { namespace gpu { namespace device
             getEdges<<<grid, block>>>(map, dst, rows, cols);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     } // namespace canny
 }}} // namespace cv { namespace gpu { namespace device

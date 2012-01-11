@@ -50,6 +50,7 @@ using namespace std;
 
 void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::interpolateFrames(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 
 #else
 
@@ -186,6 +187,46 @@ void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, cons
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
+}
+
+namespace cv { namespace gpu { namespace device 
+{
+    namespace optical_flow
+    {
+        void NeedleMapAverage_gpu(DevMem2Df u, DevMem2Df v, DevMem2Df u_avg, DevMem2Df v_avg);
+        void CreateOpticalFlowNeedleMap_gpu(DevMem2Df u_avg, DevMem2Df v_avg, float* vertex_buffer, float* color_data, float xscale, float yscale);
+    }
+}}}
+
+void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors)
+{
+    using namespace cv::gpu::device::optical_flow;
+
+    CV_Assert(u.type() == CV_32FC1);
+    CV_Assert(v.type() == u.type() && v.size() == u.size());
+
+    const int NEEDLE_MAP_SCALE = 16;
+
+	const int x_needles = u.cols / NEEDLE_MAP_SCALE;
+	const int y_needles = u.rows / NEEDLE_MAP_SCALE;
+
+    GpuMat u_avg(y_needles, x_needles, CV_32FC1);
+    GpuMat v_avg(y_needles, x_needles, CV_32FC1);
+    
+    NeedleMapAverage_gpu(u, v, u_avg, v_avg);
+    
+    const int NUM_VERTS_PER_ARROW = 6;
+    
+    const int num_arrows = x_needles * y_needles * NUM_VERTS_PER_ARROW;
+
+    vertex.create(1, num_arrows, CV_32FC3);
+    colors.create(1, num_arrows, CV_32FC3);
+
+    colors.setTo(Scalar::all(1.0));
+
+    CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), 1.0f / u.cols, 1.0f / u.rows);
+
+    cvtColor(colors, colors, COLOR_HSV2RGB);
 }
 
 #endif /* HAVE_CUDA */

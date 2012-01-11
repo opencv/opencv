@@ -265,7 +265,7 @@ namespace cv
     }
 
     //! render OpenGL arrays
-    CV_EXPORTS void render(const GlArrays& arr, int mode = RenderMode::POINTS);
+    CV_EXPORTS void render(const GlArrays& arr, int mode = RenderMode::POINTS, Scalar color = Scalar::all(255));
 
     CV_EXPORTS void render(const std::string& str, const Ptr<GlFont>& font, Scalar color, Point2d pos);
 

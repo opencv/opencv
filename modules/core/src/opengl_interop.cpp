@@ -1325,11 +1325,13 @@ void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRe
 #endif
 }
 
-void cv::render(const GlArrays& arr, int mode)
+void cv::render(const GlArrays& arr, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
     throw_nogl;
 #else
+    glColor3d(color[0] / 255.0, color[1] / 255.0, color[3] / 255.0);
+
     arr.bind();
 
     glDrawArrays(mode, 0, arr.size().area());
