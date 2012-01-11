@@ -12,6 +12,7 @@ void TestSystem::run()
     {
         for (vector<Runnable*>::iterator it = tests_.begin(); it != tests_.end(); ++it)
             cout << (*it)->name() << endl;
+
         return;
     }
 
@@ -142,31 +143,43 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
 }
 
 
-int main(int argc, char** argv)
+int main(int argc, const char* argv[])
 {
-    // Parse command line arguments
-    for (int i = 1; i < argc; ++i)
+    redirectError(cvErrorCallback);
+
+    const char* keys =
+       "{ h | help    | false | print help message }"
+       "{ f | filter  |       | filter for test }"
+       "{ w | workdir |       | set working directory }"
+       "{ l | list    | false | show all tests }";
+
+    CommandLineParser cmd(argc, argv, keys);
+
+    if (cmd.get<bool>("help"))
     {
-        string key = argv[i];
-        if (key == "--help")
-        {
-            cout << "Usage: performance_gpu [--ls] [--filter <test_filter>] [--workdir <working_dir_with_slash>]\n";
-            return 0;
-        }
-        if (key == "--filter" && i + 1 < argc)
-            TestSystem::instance().setTestFilter(argv[++i]);
-        else if (key == "--workdir" && i + 1 < argc)
-            TestSystem::instance().setWorkingDir(argv[++i]);
-        else if (key == "--ls")
-            TestSystem::instance().setListMode(true);
-        else 
-        {
-            cout << "Unknown parameter: '" << key << "'" << endl;
-            return -1;
-        }
+        cout << "Avaible options:" << endl;
+        cmd.printParams();
+        return 0;
     }
 
-    redirectError(cvErrorCallback);
+    string filter = cmd.get<string>("filter");
+    string workdir = cmd.get<string>("workdir");
+    bool list = cmd.get<bool>("list");
+
+    if (!filter.empty())
+        TestSystem::instance().setTestFilter(filter);
+
+    if (!workdir.empty())
+    {
+        if (workdir[workdir.size() - 1] != '/' && workdir[workdir.size() - 1] != '\\')
+            workdir += '/';
+
+        TestSystem::instance().setWorkingDir(workdir);
+    }
+
+    if (list)
+        TestSystem::instance().setListMode(true);
+
     TestSystem::instance().run();
 
     return 0;
