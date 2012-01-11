@@ -163,7 +163,9 @@ namespace cv { namespace gpu { namespace device
                     dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
                     bindTexture(&tex_resize_ ## type , srcWhole); \
                     tex_resize_ ## type ##_reader texSrc(xoff, yoff); \
-                    Filter< tex_resize_ ## type ##_reader > filter_src(texSrc); \
+                    BrdReplicate< type > brd(src.rows, src.cols); \
+                    BorderReader< tex_resize_ ## type ##_reader , BrdReplicate< type > > brdSrc(texSrc, brd); \
+                    Filter< BorderReader< tex_resize_ ## type ##_reader , BrdReplicate< type > > > filter_src(brdSrc); \
                     resize<<<grid, block>>>(filter_src, fx, fy, dst); \
                     cudaSafeCall( cudaGetLastError() ); \
                     cudaSafeCall( cudaDeviceSynchronize() ); \
@@ -177,7 +179,9 @@ namespace cv { namespace gpu { namespace device
                     dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
                     bindTexture(&tex_resize_ ## type , srcWhole); \
                     tex_resize_ ## type ##_reader texSrc(xoff, yoff); \
-                    resizeNN<<<grid, block>>>(texSrc, fx, fy, dst); \
+                    BrdReplicate< type > brd(src.rows, src.cols); \
+                    BorderReader< tex_resize_ ## type ##_reader , BrdReplicate< type > > brdSrc(texSrc, brd); \
+                    resizeNN<<<grid, block>>>(brdSrc, fx, fy, dst); \
                     cudaSafeCall( cudaGetLastError() ); \
                     cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
