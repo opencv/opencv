@@ -4,6 +4,9 @@ using namespace std;
 using namespace cv;
 using namespace perf;
 using namespace testing;
+using std::tr1::make_tuple;
+using std::tr1::get;
+
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE);
 CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR);
