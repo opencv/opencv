@@ -25,7 +25,6 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 {
     Size sz;
     int borderMode, interType;
-    //tr1::tie(sz, borderMode, interType) = GetParam();
     sz         = get<0>(GetParam());
     borderMode = get<1>(GetParam());
     interType  = get<2>(GetParam());
@@ -35,7 +34,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
     Mat warpMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
     Mat dst(sz, CV_8UC4);
 
-    //declare.in(src).out(dst);
+    declare.in(src).out(dst);
 
     TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 
@@ -53,7 +52,6 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 {
     Size sz;
     int borderMode, interType;
-    //tr1::tie(sz, borderMode, interType) = GetParam();
     sz         = get<0>(GetParam());
     borderMode = get<1>(GetParam());
     interType  = get<2>(GetParam());
@@ -71,7 +69,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     warpMat.at<double>(2, 2) = 1;
     Mat dst(sz, CV_8UC4);
 
-    //declare.in(src).out(dst);
+    declare.in(src).out(dst);
 
     TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 

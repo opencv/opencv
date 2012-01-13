@@ -6,7 +6,7 @@ convert = lambda text: int(text) if text.isdigit() else text
 alphanum_keyselector = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
 
 def getSetName(tset, idx, columns, short = True):
-    if columns and len(columns) >= idx:
+    if columns and len(columns) > idx:
         prefix = columns[idx]
     else:
         prefix = None
