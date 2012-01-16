@@ -55,3 +55,37 @@ PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
     SANITY_CHECK(dst);
 }
 
+CV_ENUM(AdaptThreshType, THRESH_BINARY, THRESH_BINARY_INV)
+CV_ENUM(AdaptThreshMethod, ADAPTIVE_THRESH_MEAN_C, ADAPTIVE_THRESH_GAUSSIAN_C)
+
+typedef std::tr1::tuple<Size, AdaptThreshType, AdaptThreshMethod, int> Size_AdaptThreshType_AdaptThreshMethod_BlockSize_t;
+typedef perf::TestBaseWithParam<Size_AdaptThreshType_AdaptThreshMethod_BlockSize_t> Size_AdaptThreshType_AdaptThreshMethod_BlockSize;
+
+PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize, adaptiveThreshold,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::ValuesIn(AdaptThreshType::all()),
+                testing::ValuesIn(AdaptThreshMethod::all()),
+                testing::Values(3, 5)
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    AdaptThreshType adaptThreshType = get<1>(GetParam());
+    AdaptThreshMethod adaptThreshMethod = get<2>(GetParam());
+    int blockSize = get<3>(GetParam());
+
+    double maxValue = theRNG().uniform(1, 254);
+    double C = 10.0;
+    
+    int type = CV_8UC1;
+    Mat src(sz, type);
+    Mat dst(sz, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() adaptiveThreshold(src, dst, maxValue, adaptThreshMethod, adaptThreshType, blockSize, C);
+
+    SANITY_CHECK(dst);
+}
+
