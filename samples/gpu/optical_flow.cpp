@@ -127,7 +127,7 @@ int main(int argc, const char* argv[])
         
         GpuMat d_vertex, d_colors;
 
-        createOpticalFlowNeedleMap(d_bu, d_bv, d_vertex, d_colors);
+        createOpticalFlowNeedleMap(d_fu, d_fv, d_vertex, d_colors);
 #endif
 
         cout << "Interpolating..." << endl;
