@@ -78,4 +78,41 @@ GPU_PERF_TEST_1(InterpolateFrames, cv::gpu::DeviceInfo)
 
 INSTANTIATE_TEST_CASE_P(Video, InterpolateFrames, ALL_DEVICES);
 
+//////////////////////////////////////////////////////
+// CreateOpticalFlowNeedleMap
+
+GPU_PERF_TEST_1(CreateOpticalFlowNeedleMap, cv::gpu::DeviceInfo)
+{
+    cv::gpu::DeviceInfo devInfo = GetParam();
+
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat frame0_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1_host = readImage("gpu/perf/aloeR.jpg", cv::IMREAD_GRAYSCALE);
+
+    ASSERT_FALSE(frame0_host.empty());
+    ASSERT_FALSE(frame1_host.empty());
+
+    frame0_host.convertTo(frame0_host, CV_32FC1, 1.0 / 255.0);
+    frame1_host.convertTo(frame1_host, CV_32FC1, 1.0 / 255.0);
+
+    cv::gpu::GpuMat frame0(frame0_host);
+    cv::gpu::GpuMat frame1(frame1_host);
+    cv::gpu::GpuMat d_u, d_v;
+
+    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
+                                    10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+    
+    d_flow(frame0, frame1, d_u, d_v);
+
+    cv::gpu::GpuMat d_vertex, d_colors;
+
+    TEST_CYCLE()
+    {
+        cv::gpu::createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, CreateOpticalFlowNeedleMap, ALL_DEVICES);
+
 #endif
