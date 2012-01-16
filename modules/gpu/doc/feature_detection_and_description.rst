@@ -176,7 +176,10 @@ Finds the keypoints using FAST detector.
 
     :param mask: Optional input mask that marks the regions where we should detect features.
 
-    :param keypoints: The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory keypoints.ptr<Vec2s>(LOCATION_ROW)[i] will contain location of i'th point and keypoints.ptr<float>(RESPONSE_ROW)[i] will contaion response of i'th point (if non-maximum supression is applied).
+    :param keypoints: The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory:
+    
+            * keypoints.ptr<Vec2s>(LOCATION_ROW)[i] will contain location of i'th point 
+            * keypoints.ptr<float>(RESPONSE_ROW)[i] will contaion response of i'th point (if non-maximum supression is applied)
 
 
 
@@ -291,6 +294,10 @@ Constructor.
 
 .. ocv:function:: gpu::ORB_GPU::ORB_GPU(size_t n_features = 500, const ORB::CommonParams& detector_params = ORB::CommonParams())
 
+    :param n_features: Number of features to detect.
+
+    :param detector_params: ORB detector parameters.
+
 
 
 gpu::ORB_GPU::operator()
@@ -309,13 +316,14 @@ Detects keypoints and computes descriptors for them.
     
     :param mask: Optional input mask that marks the regions where we should detect features.
     
-    :param keypoints: The input/output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory 
-        * ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i'th feature.
-        * ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i'th feature.
-        * ``keypoints.ptr<float>(RESPONSE_ROW)[i]`` contains the response of the i'th feature.
-        * ``keypoints.ptr<float>(ANGLE_ROW)[i]`` contains orientation of the i'th feature.
-        * ``keypoints.ptr<float>(OCTAVE_ROW)[i]`` contains the octave of the i'th feature.
-        * ``keypoints.ptr<float>(SIZE_ROW)[i]`` contains the size of the i'th feature.
+    :param keypoints: The input/output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory:
+
+            * ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i'th feature.
+            * ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i'th feature.
+            * ``keypoints.ptr<float>(RESPONSE_ROW)[i]`` contains the response of the i'th feature.
+            * ``keypoints.ptr<float>(ANGLE_ROW)[i]`` contains orientation of the i'th feature.
+            * ``keypoints.ptr<float>(OCTAVE_ROW)[i]`` contains the octave of the i'th feature.
+            * ``keypoints.ptr<float>(SIZE_ROW)[i]`` contains the size of the i'th feature.
     
     :param descriptors: Computed descriptors. if ``blurForDescriptor`` is true, image will be blurred before descriptors calculation.
 
