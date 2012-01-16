@@ -208,7 +208,7 @@ int main(int argc, const char* argv[])
 
         while (true)
         {
-            int key = toupper(waitKey(10));
+            int key = toupper(waitKey(10) & 0xff);
 
             switch (key)
             {
@@ -281,6 +281,7 @@ void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
     {
         const float* ptr_u = u.ptr<float>(i);
         const float* ptr_v = v.ptr<float>(i);
+
 
         Vec4b* row = flowField.ptr<Vec4b>(i);
 
