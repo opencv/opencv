@@ -232,10 +232,10 @@ typedef int (*CountNonZeroFunc)(const uchar*, int);
 
 static CountNonZeroFunc countNonZeroTab[] =
 {
-    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u), (CountNonZeroFunc)(countNonZero8u),
-    (CountNonZeroFunc)(countNonZero16u), (CountNonZeroFunc)(countNonZero16u),
-    (CountNonZeroFunc)(countNonZero32s), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32f),
-    (CountNonZeroFunc)countNonZero64f, 0
+    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
+    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u),
+    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32s), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32f),
+    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64f), 0
 };
 
 
