@@ -146,6 +146,8 @@
 #     [~] ARM_TARGET is renamed to ANDROID_ABI
 #     [~] ARMEABI_NDK_NAME is renamed to ANDROID_NDK_ABI_NAME
 #     [~] ANDROID_API_LEVEL is renamed to ANDROID_NATIVE_API_LEVEL
+#   - modified January 2012 Andrey Kamaev andrey.kamaev@itseez.com
+#     [+] added stlport_static support (experimental)
 # ------------------------------------------------------------------------------
 
 # this one is important
@@ -166,6 +168,8 @@ set( ANDROID_SUPPORTED_ABIS_x86 "x86" )
 
 set( ANDROID_DEFAULT_NDK_API_LEVEL 8 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_x86 9 )
+
+option( ANDROID_USE_STLPORT "Experimental: use stlport_static instead of gnustl_static" FALSE )
 
 macro( __INIT_VARIABLE var_name )
  set( __test_path 0 )
@@ -255,7 +259,7 @@ endmacro()
 
 macro( __COPY_IF_DIFFERENT _source _destination )
  execute_process( COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_source}" "${_destination}" RESULT_VARIABLE __fileCopyProcess )
- if( NOT __fileCopyProcess EQUAL 0 )
+ if( NOT __fileCopyProcess EQUAL 0 OR NOT EXISTS "${_destination}")
   message( SEND_ERROR "Failed copying of ${_source} to the ${_destination}" )
  endif()
  unset( __fileCopyProcess )
@@ -552,8 +556,13 @@ endif()
 if( BUILD_WITH_ANDROID_NDK )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}" )
  set( ANDROID_SYSROOT "${ANDROID_NDK}/platforms/android-${ANDROID_NATIVE_API_LEVEL}/arch-${ANDROID_ARCH_NAME}" )
- set( __stlIncludePath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/include" )
- set( __stlLibPath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/libs/${ANDROID_NDK_ABI_NAME}" )
+ if( ANDROID_USE_STLPORT )
+  set( __stlIncludePath "${ANDROID_NDK}/sources/cxx-stl/stlport/stlport" )
+  set( __stlLibPath "${ANDROID_NDK}/sources/cxx-stl/stlport/libs/${ANDROID_NDK_ABI_NAME}" )
+ else()
+  set( __stlIncludePath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/include" )
+  set( __stlLibPath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/libs/${ANDROID_NDK_ABI_NAME}" )
+ endif()
 endif()
 
 # specify the cross compiler
@@ -615,15 +624,29 @@ add_definitions( -DANDROID )
 # NDK flags
 if( ARMEABI OR ARMEABI_V7A )
  # NDK also defines -ffunction-sections -funwind-tables but they result in worse OpenCV performance
- set( CMAKE_CXX_FLAGS "-fPIC -Wno-psabi -frtti -fexceptions" )
- set( CMAKE_C_FLAGS "-fPIC -Wno-psabi -fexceptions" )
+ set( CMAKE_CXX_FLAGS "-fPIC -Wno-psabi" )
+ set( CMAKE_C_FLAGS "-fPIC -Wno-psabi" )
+ if( ANDROID_USE_STLPORT )
+  set( CMAKE_CXX_FLAGS "-fno-rtti -fno-exceptions" )
+  set( CMAKE_C_FLAGS "-fno-rtti -fno-exceptions" )
+ else()
+  set( CMAKE_CXX_FLAGS "-frtti -fexceptions" )
+  set( CMAKE_C_FLAGS "-fexceptions" )
+ endif()
  remove_definitions( -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__ )
  add_definitions( -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__ )
  # extra arm-specific flags
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fsigned-char" )
 elseif( X86 )
- set( CMAKE_CXX_FLAGS "-ffunction-sections -funwind-tables -frtti -fexceptions" )
- set( CMAKE_C_FLAGS "-ffunction-sections -funwind-tables -fexceptions" )
+ set( CMAKE_CXX_FLAGS "-ffunction-sections -funwind-tables" )
+ set( CMAKE_C_FLAGS "-ffunction-sections -funwind-tables" )
+ if( ANDROID_USE_STLPORT )
+  set( CMAKE_CXX_FLAGS "-fno-rtti -fno-exceptions" )
+  set( CMAKE_C_FLAGS "-fno-rtti -fno-exceptions" )
+ else()
+  set( CMAKE_CXX_FLAGS "-frtti -fexceptions" )
+  set( CMAKE_C_FLAGS "-fexceptions" )
+ endif()
 else()
  set( CMAKE_CXX_FLAGS "" )
  set( CMAKE_C_FLAGS "" )
@@ -678,50 +701,61 @@ endif()
 
 #linker flags
 list( APPEND ANDROID_SYSTEM_LIB_DIRS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}" "${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}" )
-#set( LINKER_FLAGS "-L\"${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}\" -L\"${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}\"" )
 set( LINKER_FLAGS "" )
 #STL
-if( EXISTS "${__stlLibPath}/libgnustl_static.a" )
- __COPY_IF_DIFFERENT( "${__stlLibPath}/libgnustl_static.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
-elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" )
- __COPY_IF_DIFFERENT( "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
-elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" )
- __COPY_IF_DIFFERENT( "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
-elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/thumb/libstdc++.a" )
- __COPY_IF_DIFFERENT( "${__stlLibPath}/thumb/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
-elseif( EXISTS "${__stlLibPath}/libstdc++.a" )
- __COPY_IF_DIFFERENT( "${__stlLibPath}/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
-endif()
-if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
- set( LINKER_FLAGS "${LINKER_FLAGS} -lstdc++" )
-endif()
-#gcc exception & rtti support
-if( EXISTS "${__stlLibPath}/libsupc++.a" )
- __COPY_IF_DIFFERENT( "${__stlLibPath}/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
-elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" )
- __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
-elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" )
- __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
-elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" )
- __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
-elseif( EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" )
- __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
-endif()
-if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
- set( LINKER_FLAGS "${LINKER_FLAGS} -lsupc++" )
-endif()
+if( ANDROID_USE_STLPORT )
+ if( EXISTS "${__stlLibPath}/libstlport_static.a" )
+  __COPY_IF_DIFFERENT( "${__stlLibPath}/libstlport_static.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstlport_static.a" )
+ endif()
+ if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstlport_static.a" )
+  set( LINKER_FLAGS "${LINKER_FLAGS} -Wl,--start-group -lstlport_static" )
+ endif()
+else()
+ if( EXISTS "${__stlLibPath}/libgnustl_static.a" )
+  __COPY_IF_DIFFERENT( "${__stlLibPath}/libgnustl_static.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+ elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" )
+  __COPY_IF_DIFFERENT( "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+ elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" )
+  __COPY_IF_DIFFERENT( "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+ elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/thumb/libstdc++.a" )
+  __COPY_IF_DIFFERENT( "${__stlLibPath}/thumb/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+ elseif( EXISTS "${__stlLibPath}/libstdc++.a" )
+  __COPY_IF_DIFFERENT( "${__stlLibPath}/libstdc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+ endif()
+ if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
+  set( LINKER_FLAGS "${LINKER_FLAGS} -lstdc++" )
+ endif()
+
+ #gcc exception & rtti support
+ if( EXISTS "${__stlLibPath}/libsupc++.a" )
+  __COPY_IF_DIFFERENT( "${__stlLibPath}/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+ elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" )
+  __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+ elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" )
+  __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+ elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" )
+  __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/thumb/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+ elseif( EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" )
+  __COPY_IF_DIFFERENT( "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/libsupc++.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+ endif()
+ if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libsupc++.a" )
+  set( LINKER_FLAGS "${LINKER_FLAGS} -lsupc++" )
+ endif()
+endif( ANDROID_USE_STLPORT )
 
 #cleanup for STL search
 unset( __stlIncludePath )
 unset( __stlLibPath )
 
 #other linker flags
-__INIT_VARIABLE( ANDROID_NO_UNDEFINED OBSOLETE_NO_UNDEFINED VALUES ON )
-set( ANDROID_NO_UNDEFINED ${ANDROID_NO_UNDEFINED} CACHE BOOL "Don't all undefined symbols" FORCE )
-MARK_AS_ADVANCED( ANDROID_NO_UNDEFINED )
-if( ANDROID_NO_UNDEFINED )
- set( LINKER_FLAGS "-Wl,--no-undefined ${LINKER_FLAGS}" )
-endif()
+#if( NOT ANDROID_USE_STLPORT )
+ __INIT_VARIABLE( ANDROID_NO_UNDEFINED OBSOLETE_NO_UNDEFINED VALUES ON )
+ set( ANDROID_NO_UNDEFINED ${ANDROID_NO_UNDEFINED} CACHE BOOL "Don't all undefined symbols" FORCE )
+ MARK_AS_ADVANCED( ANDROID_NO_UNDEFINED )
+ if( ANDROID_NO_UNDEFINED )
+  set( LINKER_FLAGS "-Wl,--no-undefined ${LINKER_FLAGS}" )
+ endif()
+#endif()
 if( ARMEABI_V7A )
  # this is *required* to use the following linker flags that routes around
  # a CPU bug in some Cortex-A8 implementations:
@@ -819,6 +853,7 @@ endif()
 #   ANDROID_NO_UNDEFINED : ON/OFF
 #   ANDROID_SET_OBSOLETE_VARIABLES : ON/OFF
 #   LIBRARY_OUTPUT_PATH_ROOT : <any path>
+#   ANDROID_USE_STLPORT : ON/OFF(default) - EXPERIMENTAL!!! 
 # Can be set only at the first run:
 #   ANDROID_NDK
 #   ANDROID_STANDALONE_TOOLCHAIN

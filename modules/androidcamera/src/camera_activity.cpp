@@ -2,6 +2,7 @@
 #include <android/log.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "camera_activity.hpp"
 #include "camera_wrapper.h"
 
@@ -162,10 +163,11 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
 
     vector<string> listLibs;
     fillListWrapperLibs(folderPath, listLibs);
+    std::sort(listLibs.begin(), listLibs.end(), std::greater<string>());
 
     void * libHandle=0;
     string cur_path;
-    for(size_t i=0; i < listLibs.size(); i++) {
+    for(size_t i = 0; i < listLibs.size(); i++) {
         cur_path=folderPath + listLibs[i];
         LOGD("try to load library '%s'", listLibs[i].c_str());
         libHandle=dlopen(cur_path.c_str(), RTLD_LAZY);

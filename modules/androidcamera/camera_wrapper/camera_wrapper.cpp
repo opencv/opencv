@@ -1,27 +1,43 @@
-#if !defined(ANDROID_r2_2_2) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
-#error unsupported version of Android
+#if !defined(ANDROID_r2_2_2) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1) && !defined(ANDROID_r4_0_0) && !defined(ANDROID_r4_0_3)
+# error Building camera wrapper for your version of Android is not supported by OpenCV. You need to modify OpenCV sources in order to compile camera wrapper for your version of Android.
 #endif
 
-#include <camera/CameraHardwareInterface.h>
+#include <camera/Camera.h>
+#include <camera/CameraParameters.h>
+
+#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+# include <system/camera.h>
+#endif //defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+
 #include "camera_wrapper.h"
 #include "../include/camera_properties.h"
+
+#if defined(ANDROID_r3_0_1) || defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+//Include SurfaceTexture.h file with the SurfaceTexture class
+# include <gui/SurfaceTexture.h>
+# define MAGIC_OPENCV_TEXTURE_ID (0x10)
+#else // defined(ANDROID_r3_0_1) || defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+//TODO: This is either 2.2 or 2.3. Include the headers for ISurface.h access
+# include <surfaceflinger/ISurface.h>
+#endif  // defined(ANDROID_r3_0_1) || defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+
 #include <string>
 
 //undef logging macro from /system/core/libcutils/loghack.h
 #ifdef LOGD
-#undef LOGD
+# undef LOGD
 #endif
 
 #ifdef LOGI
-#undef LOGI
+# undef LOGI
 #endif
 
 #ifdef LOGW
-#undef LOGW
+# undef LOGW
 #endif
 
 #ifdef LOGE
-#undef LOGE
+# undef LOGE
 #endif
 
 
@@ -152,7 +168,7 @@ public:
 
     virtual ~CameraHandler()
     {
-            LOGD("CameraHandler destructor is called");
+        LOGD("CameraHandler destructor is called");
     }
 
     virtual void notify(int32_t msgType, int32_t ext1, int32_t ext2)
@@ -167,7 +183,11 @@ public:
 #endif
     }
 
-    virtual void postData(int32_t msgType, const sp<IMemory>& dataPtr)
+    virtual void postData(int32_t msgType, const sp<IMemory>& dataPtr
+#if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+                          ,camera_frame_metadata_t* metadata
+#endif
+                          )
     {
         debugShowFPS();
 
@@ -177,8 +197,8 @@ public:
             return;
         }
 
-        if (msgType != CAMERA_MSG_PREVIEW_FRAME)
-            LOGE("CameraHandler::postData  Recieved message %d is not equal to CAMERA_MSG_PREVIEW_FRAME (%d)", (int) msgType, CAMERA_MSG_PREVIEW_FRAME);
+        //if (msgType != CAMERA_MSG_PREVIEW_FRAME)
+            //LOGE("CameraHandler::postData  Recieved message %d is not equal to CAMERA_MSG_PREVIEW_FRAME (%d)", (int) msgType, CAMERA_MSG_PREVIEW_FRAME);
 
         if ( msgType & CAMERA_MSG_RAW_IMAGE )
             LOGE("CameraHandler::postData  Unexpected data format: RAW\n");
@@ -209,8 +229,8 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 
 #ifdef ANDROID_r2_2_2
     camera = Camera::connect();
-#endif
-#ifdef ANDROID_r2_3_3
+#else 
+    /* This is 2.3 or higher. The connect method has cameraID parameter */
     camera = Camera::connect(cameraId);
 #endif
 
@@ -293,19 +313,33 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
         }
     }
 
-#ifdef ANDROID_r2_2_2
-    status_t pdstatus = camera->setPreviewDisplay(sp<ISurface>(0 /*new DummySurface*/));
+
+    status_t pdstatus;
+#if defined(ANDROID_r2_2_2)
+    pdstatus = camera->setPreviewDisplay(sp<ISurface>(0 /*new DummySurface*/));
     if (pdstatus != 0)
-        LOGE("initCameraConnect: failed setPreviewDisplay(0) call; camera migth not work correcttly on some devices");
+        LOGE("initCameraConnect: failed setPreviewDisplay(0) call; camera migth not work correctly on some devices");
+#elif defined(ANDROID_r2_3_3)
+    /* Do nothing in case of 2.3 for now */
+
+#elif defined(ANDROID_r3_0_1) || defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3)
+    sp<SurfaceTexture> surfaceTexture = new SurfaceTexture(MAGIC_OPENCV_TEXTURE_ID);
+    pdstatus = camera->setPreviewTexture(surfaceTexture);
+    if (pdstatus != 0)
+        LOGE("initCameraConnect: failed setPreviewTexture call; camera migth not work correctly");
 #endif
 
+#if !(defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3))
+# if 1
     ////ATTENTION: switching between two versions: with and without copying memory inside Android OS
     //// see the method  CameraService::Client::copyFrameAndPostCopiedFrame and where it is used
-#if 1
     camera->setPreviewCallbackFlags( FRAME_CALLBACK_FLAG_ENABLE_MASK | FRAME_CALLBACK_FLAG_COPY_OUT_MASK);//with copy
-#else
+# else
     camera->setPreviewCallbackFlags( FRAME_CALLBACK_FLAG_ENABLE_MASK );//without copy
-#endif
+# endif
+#else
+    camera->setPreviewCallbackFlags( CAMERA_FRAME_CALLBACK_FLAG_ENABLE_MASK | CAMERA_FRAME_CALLBACK_FLAG_COPY_OUT_MASK);//with copy
+#endif //!(defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3))
 
     status_t resStart = camera->startPreview();
 

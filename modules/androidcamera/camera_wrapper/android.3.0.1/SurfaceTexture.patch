@@ -1,0 +1,37 @@
+*** src4.0.3/src/frameworks/base/include/gui/SurfaceTexture.h	2012-01-18 16:32:41.424750385 +0400
+--- src_mock3.0.1/frameworks/base/include/gui/SurfaceTexture.h	2012-01-12 21:28:14.000000000 +0400
+***************
+*** 68,75 ****
+      // texture will be bound in updateTexImage. useFenceSync specifies whether
+      // fences should be used to synchronize access to buffers if that behavior
+      // is enabled at compile-time.
+!     SurfaceTexture(GLuint tex, bool allowSynchronousMode = true,
+!             GLenum texTarget = GL_TEXTURE_EXTERNAL_OES, bool useFenceSync = true);
+  
+      virtual ~SurfaceTexture();
+  
+--- 68,74 ----
+      // texture will be bound in updateTexImage. useFenceSync specifies whether
+      // fences should be used to synchronize access to buffers if that behavior
+      // is enabled at compile-time.
+!     SurfaceTexture(GLuint tex);
+  
+      virtual ~SurfaceTexture();
+  
+***************
+*** 280,286 ****
+                mBufferState(BufferSlot::FREE),
+                mRequestBufferCalled(false),
+                mTransform(0),
+!               mScalingMode(NATIVE_WINDOW_SCALING_MODE_FREEZE),
+                mTimestamp(0),
+                mFrameNumber(0),
+                mFence(EGL_NO_SYNC_KHR) {
+--- 279,285 ----
+                mBufferState(BufferSlot::FREE),
+                mRequestBufferCalled(false),
+                mTransform(0),
+!               mScalingMode(0),
+                mTimestamp(0),
+                mFrameNumber(0),
+                mFence(EGL_NO_SYNC_KHR) {
