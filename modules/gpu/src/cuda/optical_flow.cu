@@ -47,7 +47,6 @@ namespace cv { namespace gpu { namespace device
     namespace optical_flow
     {
         #define NEEDLE_MAP_SCALE 16
-        #define MAX_FLOW 30.0f
         #define NUM_VERTS_PER_ARROW 6
 
         __global__ void NeedleMapAverageKernel(const DevMem2Df u, const PtrStepf v, PtrStepf u_avg, PtrStepf v_avg)
@@ -123,7 +122,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        __global__ void NeedleMapVertexKernel(const DevMem2Df u_avg, const PtrStepf v_avg, float* vertex_data, float* color_data, float xscale, float yscale)
+        __global__ void NeedleMapVertexKernel(const DevMem2Df u_avg, const PtrStepf v_avg, float* vertex_data, float* color_data, float max_flow, float xscale, float yscale)
         {
             // test - just draw a triangle at each pixel
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -142,7 +141,7 @@ namespace cv { namespace gpu { namespace device
                 const float theta = ::atan2f(v_avg_val, u_avg_val) + CV_PI;
 
                 float r = ::sqrtf(v_avg_val * v_avg_val + u_avg_val * u_avg_val);
-                r = fmin(14.0f * (r / MAX_FLOW), 14.0f);
+                r = fmin(14.0f * (r / max_flow), 14.0f);
 
                 v[0].z = 1.0f;
                 v[1].z = 0.7f;
@@ -203,12 +202,12 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void CreateOpticalFlowNeedleMap_gpu(DevMem2Df u_avg, DevMem2Df v_avg, float* vertex_buffer, float* color_data, float xscale, float yscale)
+        void CreateOpticalFlowNeedleMap_gpu(DevMem2Df u_avg, DevMem2Df v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale)
         {
             const dim3 block(16);
             const dim3 grid(divUp(u_avg.cols, block.x), divUp(u_avg.rows, block.y));
 
-            NeedleMapVertexKernel<<<grid, block>>>(u_avg, v_avg, vertex_buffer, color_data, xscale, yscale);
+            NeedleMapVertexKernel<<<grid, block>>>(u_avg, v_avg, vertex_buffer, color_data, max_flow, xscale, yscale);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );

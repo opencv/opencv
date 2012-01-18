@@ -1330,7 +1330,7 @@ void cv::render(const GlArrays& arr, int mode, Scalar color)
 #ifndef HAVE_OPENGL
     throw_nogl;
 #else
-    glColor3d(color[0] / 255.0, color[1] / 255.0, color[3] / 255.0);
+    glColor3d(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0);
 
     arr.bind();
 
@@ -1358,9 +1358,10 @@ void cv::render(const string& str, const Ptr<GlFont>& font, Scalar color, Point2
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
+    glColor3d(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0);
+
     glRasterPos2d(2.0 * (viewport[0] + pos.x) / viewport[2] - 1.0, 1.0 - 2.0 * (viewport[1] + pos.y + font->height()) / viewport[3]);
 
-    glColor4dv(color.val);
     font->draw(str.c_str(), str.length());
 
     glPopAttrib();

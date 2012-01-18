@@ -194,7 +194,7 @@ namespace cv { namespace gpu { namespace device
     namespace optical_flow
     {
         void NeedleMapAverage_gpu(DevMem2Df u, DevMem2Df v, DevMem2Df u_avg, DevMem2Df v_avg);
-        void CreateOpticalFlowNeedleMap_gpu(DevMem2Df u_avg, DevMem2Df v_avg, float* vertex_buffer, float* color_data, float xscale, float yscale);
+        void CreateOpticalFlowNeedleMap_gpu(DevMem2Df u_avg, DevMem2Df v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale);
     }
 }}}
 
@@ -224,7 +224,13 @@ void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMa
 
     colors.setTo(Scalar::all(1.0));
 
-    CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), 1.0f / u.cols, 1.0f / u.rows);
+    double uMax, vMax;
+    minMax(u_avg, 0, &uMax);
+    minMax(v_avg, 0, &vMax);
+
+    float max_flow = static_cast<float>(sqrt(uMax * uMax + vMax * vMax));
+
+    CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), max_flow, 1.0f / u.cols, 1.0f / u.rows);
 
     cvtColor(colors, colors, COLOR_HSV2RGB);
 }
