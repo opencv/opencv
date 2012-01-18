@@ -16,3 +16,5 @@ OpenCV API Reference
    ml/doc/ml.rst
    flann/doc/flann.rst
    gpu/doc/gpu.rst
+   stitching/doc/stitching.rst
+
