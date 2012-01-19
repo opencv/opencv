@@ -74,13 +74,13 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int count_n
 	 
   switch (type)
   {
-   case CV_8U: { if (!src.at<uchar>(i, j)) {src.at<uchar>(i, j) = cv::randu<uchar>(); n += abs(sign(src.at<uchar>(i, j)));} break; }
+   case CV_8U: { if (!src.at<uchar>(i, j)) {src.at<uchar>(i, j) = cv::randu<uchar>(); n += (src.at<uchar>(i, j) > 0);} break; }
    case CV_8S: { if (!src.at<char>(i, j)) {src.at<char>(i, j) = cv::randu<uchar>() - 128; n += abs(sign(src.at<char>(i, j)));} break; }
-   case CV_16U: { if (!src.at<ushort>(i, j)) {src.at<ushort>(i, j) = cv::randu<ushort>(); n += abs(sign(src.at<ushort>(i, j)));} break; }
+   case CV_16U: { if (!src.at<ushort>(i, j)) {src.at<ushort>(i, j) = cv::randu<ushort>(); n += (src.at<ushort>(i, j) > 0);} break; }
    case CV_16S: { if (!src.at<short>(i, j)) {src.at<short>(i, j) = cv::randu<short>(); n += abs(sign(src.at<short>(i, j)));} break; }
    case CV_32S: { if (!src.at<int>(i, j)) {src.at<int>(i, j) = cv::randu<int>(); n += abs(sign(src.at<int>(i, j)));} break; }
-   case CV_32F: { if (fabs(src.at<float>(i, j)) <= eps_32) {src.at<float>(i, j) = cv::randu<float>(); n += sign(fabs(src.at<float>(i, j)) > eps_32);} break; }
-   case CV_64F: { if (fabs(src.at<double>(i, j)) <= eps_64) {src.at<double>(i, j) = cv::randu<double>(); n += sign(fabs(src.at<double>(i, j)) > eps_64);} break; }
+   case CV_32F: { if (fabs(src.at<float>(i, j)) <= eps_32) {src.at<float>(i, j) = cv::randu<float>(); n += (fabs(src.at<float>(i, j)) > eps_32);} break; }
+   case CV_64F: { if (fabs(src.at<double>(i, j)) <= eps_64) {src.at<double>(i, j) = cv::randu<double>(); n += (fabs(src.at<double>(i, j)) > eps_64);} break; }
 
    default: break;
   }
@@ -105,24 +105,24 @@ void CV_CountNonZeroTest::generate_src_stat_data(cv::Size size, int type, int di
 
 int CV_CountNonZeroTest::get_count_non_zero()
 {
- int result = 0, channels = src.channels();
+ int result = 0;
 
  for (size_t i = 0; i < src.rows; ++i)
  for (size_t j = 0; j < src.cols; ++j)
 
- if (current_type == CV_8U) result += abs(sign(src.at<uchar>(i, j)));
+ if (current_type == CV_8U) result += (src.at<uchar>(i, j) > 0);
  
  else if (current_type == CV_8S) result += abs(sign(src.at<char>(i, j))); 
 
- else if (current_type == CV_16U) result += abs(sign(src.at<ushort>(i, j))); 
+ else if (current_type == CV_16U) result += (src.at<ushort>(i, j) > 0); 
 
  else if (current_type == CV_16S) result += abs(sign(src.at<short>(i, j)));
 
  else if (current_type == CV_32S) result += abs(sign(src.at<int>(i, j)));
 
- else if (current_type == CV_32F) result += sign(fabs(src.at<float>(i, j)) > eps_32);
+ else if (current_type == CV_32F) result += (fabs(src.at<float>(i, j)) > eps_32);
 
- else result += sign(fabs(src.at<double>(i, j)) > eps_64);
+ else result += (fabs(src.at<double>(i, j)) > eps_64);
 
  return result;
 }
