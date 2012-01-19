@@ -196,14 +196,14 @@ typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
 
 static SplitFunc splitTab[] =
 {
-    (SplitFunc)split8u, (SplitFunc)split8u, (SplitFunc)split16u, (SplitFunc)split16u,
-    (SplitFunc)split32s, (SplitFunc)split32s, (SplitFunc)split64s, 0
+    (SplitFunc)GET_OPTIMIZED(split8u), (SplitFunc)GET_OPTIMIZED(split8u), (SplitFunc)GET_OPTIMIZED(split16u), (SplitFunc)GET_OPTIMIZED(split16u),
+    (SplitFunc)GET_OPTIMIZED(split32s), (SplitFunc)GET_OPTIMIZED(split32s), (SplitFunc)GET_OPTIMIZED(split64s), 0
 };
 
 static MergeFunc mergeTab[] =
 {
-    (MergeFunc)merge8u, (MergeFunc)merge8u, (MergeFunc)merge16u, (MergeFunc)merge16u,
-    (MergeFunc)merge32s, (MergeFunc)merge32s, (MergeFunc)merge64s, 0
+    (MergeFunc)GET_OPTIMIZED(merge8u), (MergeFunc)GET_OPTIMIZED(merge8u), (MergeFunc)GET_OPTIMIZED(merge16u), (MergeFunc)GET_OPTIMIZED(merge16u),
+    (MergeFunc)GET_OPTIMIZED(merge32s), (MergeFunc)GET_OPTIMIZED(merge32s), (MergeFunc)GET_OPTIMIZED(merge64s), 0
 };
   
 }
