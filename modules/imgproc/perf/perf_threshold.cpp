@@ -88,4 +88,3 @@ PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize, adaptiveThreshold,
 
     SANITY_CHECK(dst);
 }
-
