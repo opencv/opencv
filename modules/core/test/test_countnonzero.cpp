@@ -56,18 +56,18 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int channel
 		 else if (type == CV_8S) switch (channels)
 		 {
 		  case 1: {src.at<char>(j,i) = cv::randu<uchar>()-128; break; }
-		  case 2: {src.at<Vec<char, 2>>(j, i) = Vec<char, 2>(cv::randu<uchar>()-128, cv::randu<uchar>()-128); break;}
-		  case 3: {src.at<Vec<char, 3>>(j, i) = Vec<char, 3>(cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128); break;}
-		  case 4: {src.at<Vec<char, 4>>(j, i) = Vec<char, 4>(cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128); break;}
+		  case 2: {src.at< Vec<char, 2> >(j, i) = Vec<char, 2>(cv::randu<uchar>()-128, cv::randu<uchar>()-128); break;}
+		  case 3: {src.at< Vec<char, 3> >(j, i) = Vec<char, 3>(cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128); break;}
+		  case 4: {src.at< Vec<char, 4> >(j, i) = Vec<char, 4>(cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128); break;}
 		  default:break;
 		 }
 			
 		 else if (type == CV_16U) switch (channels)
 		 {
 		  case 1: {src.at<ushort>(j, i) = cv::randu<ushort>(); break;}
-		  case 2: {src.at<Vec<ushort, 2>>(j, i) = Vec<ushort, 2>(cv::randu<ushort>(), cv::randu<ushort>()); break;}
-		  case 3: {src.at<Vec<ushort, 3>>(j, i) = Vec<ushort, 3>(cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>()); break;}
-		  case 4: {src.at<Vec<ushort, 4>>(j, i) = Vec<ushort, 4>(cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>()); break;}
+		  case 2: {src.at< Vec<ushort, 2> >(j, i) = Vec<ushort, 2>(cv::randu<ushort>(), cv::randu<ushort>()); break;}
+		  case 3: {src.at< Vec<ushort, 3> >(j, i) = Vec<ushort, 3>(cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>()); break;}
+		  case 4: {src.at< Vec<ushort, 4> >(j, i) = Vec<ushort, 4>(cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>()); break;}
 		  default: break;
 		 }
 
@@ -164,20 +164,20 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int channel
 		   else if (channels == 2)
 		   {
 			Vec<char, 2> value(cv::randu<uchar>()-128, cv::randu<uchar>()-128);
-			if (value != Vec<char, 2>(0, 0)) {src.at<Vec<char, 2>>(i, j) = value; n++;}
+			if (value != Vec<char, 2>(0, 0)) {src.at< Vec<char, 2 > >(i, j) = value; n++;}
 		   }
 
 		   else if (channels == 3)
 		   {
 			Vec<char, 3> value(cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128);
-			if (value != Vec<char, 3>(0, 0, 0)) {src.at<Vec<char, 3>>(i, j) = value; n++;}
+			if (value != Vec<char, 3>(0, 0, 0)) {src.at< Vec<char, 3> >(i, j) = value; n++;}
 		   }
 
 		   else
 
 		   {
 		    Vec<char, 4> value(cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128, cv::randu<uchar>()-128);
-			if (value != Vec<char, 4>(0, 0, 0, 0)) {src.at<Vec<char, 4>>(i, j) = value; n++;}
+			if (value != Vec<char, 4>(0, 0, 0, 0)) {src.at< Vec<char, 4> >(i, j) = value; n++;}
 		   }
 
 		   break;
@@ -195,20 +195,20 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int channel
 		   else if (channels == 2)
 		   {
 			Vec<ushort, 2> value(cv::randu<ushort>(), cv::randu<ushort>());
-			if (value != Vec<ushort, 2>(0, 0)) {src.at<Vec<ushort, 2>>(i, j) = value; n++;}
+			if (value != Vec<ushort, 2>(0, 0)) {src.at< Vec<ushort, 2> >(i, j) = value; n++;}
 		   }
 
 		   else if (channels == 3)
 		   {
 		    Vec<ushort, 3> value(cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>());
-			if (value != Vec<ushort, 3>(0, 0, 0)) {src.at<Vec<ushort, 3>>(i, j) = value; n++;}
+			if (value != Vec<ushort, 3>(0, 0, 0)) {src.at< Vec<ushort, 3> >(i, j) = value; n++;}
 		   }
 
 		   else
 
 		   {
 		    Vec<ushort, 4> value(cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>(), cv::randu<ushort>());
-			if (value != Vec<ushort, 4>(0, 0, 0, 0)) {src.at<Vec<ushort, 4>>(i, j) = value; n++;}
+			if (value != Vec<ushort, 4>(0, 0, 0, 0)) {src.at< Vec<ushort, 4> >(i, j) = value; n++;}
 		   }
 
 		   break;
