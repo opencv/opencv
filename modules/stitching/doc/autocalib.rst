@@ -27,7 +27,7 @@ Estimates focal lengths for each given camera.
 
     :param features: Features of images.
 
-    :param pairwise_matches: Matches between all images pairs.
+    :param pairwise_matches: Matches between all image pairs.
 
     :param focals: Estimated focal lengths for each camera.
 
