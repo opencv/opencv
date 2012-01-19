@@ -6,6 +6,7 @@ stitching. Images stitching
     :maxdepth: 2
     
     high_level
+    camera
     matching
     motion_estimation
     autocalib
