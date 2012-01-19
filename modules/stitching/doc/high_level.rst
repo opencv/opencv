@@ -88,6 +88,67 @@ High level image stitcher. It's possible to use this class without being aware o
         /* hidden */
     };
 
+Stitcher::createDefault
+-----------------------
+Creates a stitcher with the default parameters.
+
+.. ocv:function:: Stitcher Stitcher::createDefault(bool try_use_gpu = false)
+
+    :param try_use_gpu: Flag indicating whether GPU should be used whenever it's possible.
+
+    :return: Stitcher class instance.
+
+Stitcher::estimateTransform
+---------------------------
+
+These functions try to match the given images and to estimate rotations of each camera.
+
+.. note:: Use the functions only if you're aware of the stitching pipeline, otherwise use :ocv:func:`Stitcher::stitch`.
+
+.. ocv:function:: Status Stitcher::estimateTransform(InputArray images)
+
+.. ocv:function:: Status Stitcher::estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois)
+
+    :param images: Input images.
+
+    :param rois: Region of interest rectangles.
+    
+    :return: Status code.
+
+Stitcher::composePanorama
+-------------------------
+
+These functions try to compose the given images (or images stored internally from the other function calls) into the final pano under the assumption that the image transformations were estimated before.
+
+.. note:: Use the functions only if you're aware of the stitching pipeline, otherwise use :ocv:func:`Stitcher::stitch`.
+
+.. ocv:function:: Status Stitcher::composePanorama(OutputArray pano)
+
+.. ocv:function:: Status Stitcher::composePanorama(InputArray images, OutputArray pano)
+
+    :param images: Input images.
+    
+    :param pano: Final pano.
+
+    :return: Status code.
+
+Stitcher::stitch
+----------------
+
+These functions try to stitch the given images.
+
+.. ocv:function:: Status Stitcher::stitch(InputArray images, OutputArray pano)
+
+.. ocv:function:: Status Stitcher::stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
+
+    :param images: Input images.
+    
+    :param rois: Region of interest rectangles.
+
+    :param pano: Final pano.
+
+    :return: Status code.
+
 WarperCreator
 -------------
 .. ocv:class:: WarperCreator
