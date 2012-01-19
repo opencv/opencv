@@ -123,7 +123,6 @@ struct CV_EXPORTS PlaneProjector : ProjectorBase
 };
 
 
-// Projects image onto z = plane_dist plane
 class CV_EXPORTS PlaneWarper : public RotationWarperBase<PlaneProjector>
 {
 public:
