@@ -1,5 +1,14 @@
+.. _stitching-pipeline:
+
+Stitching Pipeline
+==================
+
+This figure illustrates the stitching module pipeline implemented in the :ocv:class:`Stitcher` class. Using that class it's possible to configure/remove some steps, i.e. adjust the stitching pipeline according to the particular needs. All building blocks from the pipeline are available in the ``detail`` namespace, one can combine and use them separately.
+
+.. image:: StitchingPipeline.jpg
+
 References
-==========
+----------
 
 .. [BL07] M. Brown and D. Lowe. Automatic Panoramic Image Stitching using Invariant Features. International Journal of Computer Vision, 74(1), pages 59-73, 2007.
 
