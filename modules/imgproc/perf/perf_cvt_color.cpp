@@ -152,3 +152,63 @@ PERF_TEST_P(Size_CvtMode_Ch, cvtColorYCrCb,
     SANITY_CHECK(dst, 1);
 }
 
+CV_ENUM(CvtInBGR565Type, CV_RGB2BGR565, CV_RGBA2BGR565, CV_BGR2BGR565, CV_BGRA2BGR565)
+
+typedef std::tr1::tuple<Size, CvtInBGR565Type> Size_CvtInBGR565Type_t;
+typedef perf::TestBaseWithParam<Size_CvtInBGR565Type_t> Size_CvtInBGR565Type;
+
+PERF_TEST_P( Size_CvtInBGR565Type, cvtColor_toBGR565,
+             testing::Combine
+             (
+                 testing::Values(TYPICAL_MAT_SIZES),
+                 testing::ValuesIn(CvtInBGR565Type::all())
+             )
+           )
+{
+    Size sz = get<0>(GetParam());
+    CvtInBGR565Type code = get<1>(GetParam());
+
+    Mat src;
+    if ( code == CV_RGB2BGR565 || code == CV_BGR2BGR565 )
+        src.create(sz, CV_8UC3);
+    else
+        src.create(sz, CV_8UC4);
+
+    randu(src, 0, 255);
+
+    Mat dst;
+    
+    TEST_CYCLE() cvtColor( src, dst, code );
+
+    SANITY_CHECK(dst);
+}
+
+CV_ENUM(CvtMode2, CV_RGB2BGR, CV_RGB2RGBA, CV_RGB2BGRA, CV_RGBA2RGB, CV_RGBA2BGR, CV_RGBA2BGRA)
+
+typedef std::tr1::tuple<Size, CvtMode2> Size_CvtMode2_t;
+typedef perf::TestBaseWithParam<Size_CvtMode2_t> Size_CvtMode2;
+
+PERF_TEST_P( Size_CvtMode2, cvtColor_C3toC4_and_back,
+             testing::Combine
+             (
+                 testing::Values(TYPICAL_MAT_SIZES),
+                 testing::ValuesIn(CvtMode2::all())
+             )
+           )
+{
+    Size sz = get<0>(GetParam());
+    CvtMode2 code = get<1>(GetParam());
+
+    Mat src;
+    if ( code == CV_RGB2BGR || code == CV_RGB2RGBA || code == CV_RGB2BGRA )
+        src.create(sz, CV_8UC3);
+    else
+        src.create(sz, CV_8UC4);
+
+    randu(src, 0, 255);
+
+    Mat dst;
+    TEST_CYCLE() cvtColor( src, dst, code );
+
+    SANITY_CHECK(dst);
+}
