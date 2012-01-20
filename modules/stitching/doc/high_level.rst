@@ -7,7 +7,7 @@ Stitcher
 --------
 .. ocv:class:: Stitcher
 
-High level image stitcher. It's possible to use this class without being aware of the entire stitching pipeline. However, to be able to achieve higher stitching stability and quality of the final images at least being familiar with the theory is recommended. ::
+High level image stitcher. It's possible to use this class without being aware of the entire stitching pipeline. However, to be able to achieve higher stitching stability and quality of the final images at least being familiar with the theory is recommended (see :ref:`stitching-pipeline`). ::
 
     class CV_EXPORTS Stitcher
     {

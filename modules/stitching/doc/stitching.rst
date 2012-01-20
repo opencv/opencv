@@ -5,6 +5,7 @@ stitching. Images stitching
 .. toctree::
     :maxdepth: 2
     
+    introduction
     high_level
     camera
     matching
@@ -14,6 +15,5 @@ stitching. Images stitching
     seam_estimation
     exposure_compensation
     blenders
-    references
 
 
