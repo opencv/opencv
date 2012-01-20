@@ -64,6 +64,10 @@
 #    ANDROID_NO_UNDEFINED=ON - set true to show all undefined symbols as linker
 #      errors even if they are not used.
 #
+#    ANDROID_SO_UNDEFINED=OFF - set true to allow undefined symbols in shared
+#      libraries. Automatically turned on for NDK r5x and r6x due to GLESv2
+#      problems.
+#
 #    LIBRARY_OUTPUT_PATH_ROOT=${CMAKE_SOURCE_DIR} - where to output binary
 #      files. See additional details below.
 #
@@ -148,6 +152,9 @@
 #     [~] ANDROID_API_LEVEL is renamed to ANDROID_NATIVE_API_LEVEL
 #   - modified January 2012 Andrey Kamaev andrey.kamaev@itseez.com
 #     [+] added stlport_static support (experimental)
+#     [+] added special check for cygwin
+#     [+] filtered out hidden files (starting with .) while globbing inside NDK
+#     [+] automatically applied GLESv2 linkage fix for NDK revisions 5-6
 # ------------------------------------------------------------------------------
 
 # this one is important
@@ -169,7 +176,16 @@ set( ANDROID_SUPPORTED_ABIS_x86 "x86" )
 set( ANDROID_DEFAULT_NDK_API_LEVEL 8 )
 set( ANDROID_DEFAULT_NDK_API_LEVEL_x86 9 )
 
-option( ANDROID_USE_STLPORT "Experimental: use stlport_static instead of gnustl_static" FALSE )
+
+macro( __LIST_FILTER listvar regex )
+ if( ${listvar} )
+  foreach( __val ${${listvar}} )
+   if( __val MATCHES "${regex}" )
+    list( REMOVE_ITEM ${listvar} "${__val}" )
+   endif()
+  endforeach()
+ endif()
+endmacro()
 
 macro( __INIT_VARIABLE var_name )
  set( __test_path 0 )
@@ -244,6 +260,7 @@ endmacro()
 
 macro( __DETECT_TOOLCHAIN_MACHINE_NAME _var _root )
  file( GLOB __gccExePath "${_root}/bin/*-gcc${TOOL_OS_SUFFIX}" )
+ __LIST_FILTER( __gccExePath "bin/[.].*-gcc${TOOL_OS_SUFFIX}$" )
  list( LENGTH __gccExePath __gccExePathsCount )
  if( NOT __gccExePathsCount EQUAL 1 )
   message( WARNING "Could not uniquely determine machine name for compiler from ${_root}." )
@@ -264,6 +281,28 @@ macro( __COPY_IF_DIFFERENT _source _destination )
  endif()
  unset( __fileCopyProcess )
 endmacro()
+
+
+#stl version: by default gnustl_static will be used
+set( ANDROID_USE_STLPORT FALSE CACHE BOOL "Experimental: use stlport_static instead of gnustl_static")
+mark_as_advanced( ANDROID_USE_STLPORT )
+
+#fight against cygwin
+set( ANDROID_FORBID_SYGWIN TRUE CACHE BOOL "Prevent cmake from working under cygwin and using cygwin tools")
+mark_as_advanced( ANDROID_FORBID_SYGWIN )
+if( ANDROID_FORBID_SYGWIN )
+ if( CYGWIN )
+  message( FATAL_ERROR "Android NDK and android-cmake toolchain are not welcome Cygwin. It is unlikely that this cmake toolchain will work under cygwin. But if you want to try then you can set cmake variable ANDROID_FORBID_SYGWIN to FALSE and rerun cmake." )
+ endif()
+
+ if( CMAKE_HOST_WIN32 )
+  #remove cygwin from PATH
+  set( __new_path "$ENV{PATH}")
+  __LIST_FILTER( __new_path "cygwin" )
+  set(ENV{PATH} "${__new_path}")
+  unset(__new_path)
+ endif()
+endif()
 
 #detect current host platform
 set( TOOL_OS_SUFFIX "" )
@@ -376,6 +415,7 @@ if( BUILD_WITH_ANDROID_NDK )
  file( GLOB ANDROID_SUPPORTED_NATIVE_API_LEVELS RELATIVE "${ANDROID_NDK}/platforms" "${ANDROID_NDK}/platforms/android-*" )
  string( REPLACE "android-" "" ANDROID_SUPPORTED_NATIVE_API_LEVELS "${ANDROID_SUPPORTED_NATIVE_API_LEVELS}" )
  file( GLOB __availableToolchains RELATIVE "${ANDROID_NDK}/toolchains" "${ANDROID_NDK}/toolchains/*" )
+ __LIST_FILTER( __availableToolchains "^[.]" )
  set( __availableToolchainMachines "" )
  set( __availableToolchainArchs "" )
  set( __availableToolchainCompilerVersions "" )
@@ -475,7 +515,7 @@ endif()
 if( ANDROID_ARCH_NAME STREQUAL "arm" AND NOT ARMEABI_V6 )
  __INIT_VARIABLE( ANDROID_FORCE_ARM_BUILD OBSOLETE_FORCE_ARM VALUES OFF )
  set( ANDROID_FORCE_ARM_BUILD ${ANDROID_FORCE_ARM_BUILD} CACHE BOOL "Use 32-bit ARM instructions instead of Thumb-1" FORCE )
- MARK_AS_ADVANCED( ANDROID_FORCE_ARM_BUILD )
+ mark_as_advanced( ANDROID_FORCE_ARM_BUILD )
 else()
  unset( ANDROID_FORCE_ARM_BUILD CACHE )
 endif()
@@ -710,7 +750,7 @@ if( ANDROID_USE_STLPORT )
  if( EXISTS "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstlport_static.a" )
   set( LINKER_FLAGS "${LINKER_FLAGS} -Wl,--start-group -lstlport_static" )
  endif()
-else()
+else( ANDROID_USE_STLPORT )
  if( EXISTS "${__stlLibPath}/libgnustl_static.a" )
   __COPY_IF_DIFFERENT( "${__stlLibPath}/libgnustl_static.a" "${CMAKE_BINARY_DIR}/systemlibs/${ANDROID_NDK_ABI_NAME}/libstdc++.a" )
  elseif( ANDROID_ARCH_NAME STREQUAL "arm" AND EXISTS "${__stlLibPath}/${CMAKE_SYSTEM_PROCESSOR}/thumb/libstdc++.a" )
@@ -748,14 +788,25 @@ unset( __stlIncludePath )
 unset( __stlLibPath )
 
 #other linker flags
-#if( NOT ANDROID_USE_STLPORT )
- __INIT_VARIABLE( ANDROID_NO_UNDEFINED OBSOLETE_NO_UNDEFINED VALUES ON )
- set( ANDROID_NO_UNDEFINED ${ANDROID_NO_UNDEFINED} CACHE BOOL "Don't all undefined symbols" FORCE )
- MARK_AS_ADVANCED( ANDROID_NO_UNDEFINED )
- if( ANDROID_NO_UNDEFINED )
-  set( LINKER_FLAGS "-Wl,--no-undefined ${LINKER_FLAGS}" )
- endif()
-#endif()
+__INIT_VARIABLE( ANDROID_NO_UNDEFINED OBSOLETE_NO_UNDEFINED VALUES ON )
+set( ANDROID_NO_UNDEFINED ${ANDROID_NO_UNDEFINED} CACHE BOOL "Show all undefined symbols as linker errors" FORCE )
+mark_as_advanced( ANDROID_NO_UNDEFINED )
+if( ANDROID_NO_UNDEFINED )
+ set( LINKER_FLAGS "-Wl,--no-undefined ${LINKER_FLAGS}" )
+endif()
+
+if (ANDROID_NDK MATCHES "-r[56].?$")
+ #libGLESv2.so in NDK's prior to r7 refers to exteranal symbols. So this flag option is required for all projects using OpenGL from native.
+ __INIT_VARIABLE( ANDROID_SO_UNDEFINED VALUES ON )
+else()
+ __INIT_VARIABLE( ANDROID_SO_UNDEFINED VALUES OFF )
+endif()
+set( ANDROID_SO_UNDEFINED ${ANDROID_SO_UNDEFINED} CACHE BOOL "Allows or disallows undefined symbols in shared libraries" FORCE )
+mark_as_advanced( ANDROID_SO_UNDEFINED )
+if( ANDROID_SO_UNDEFINED )
+ set( LINKER_FLAGS "${LINKER_FLAGS} -Wl,-allow-shlib-undefined" )
+endif()
+
 if( ARMEABI_V7A )
  # this is *required* to use the following linker flags that routes around
  # a CPU bug in some Cortex-A8 implementations:
@@ -839,7 +890,7 @@ macro( find_host_program )
 endmacro()
 
 set( ANDROID_SET_OBSOLETE_VARIABLES ON CACHE BOOL "Define obsolete Andrid-specific cmake variables" )
-MARK_AS_ADVANCED( ANDROID_SET_OBSOLETE_VARIABLES )
+mark_as_advanced( ANDROID_SET_OBSOLETE_VARIABLES )
 if( ANDROID_SET_OBSOLETE_VARIABLES )
  set( ANDROID_API_LEVEL ${ANDROID_NATIVE_API_LEVEL} )
  set( ARM_TARGET "${ANDROID_ABI}" )
@@ -851,9 +902,11 @@ endif()
 #   ANDROID_FORCE_ARM_BUILD : ON/OFF
 #   ANDROID_NATIVE_API_LEVEL : 3,4,5,8,9,14 (depends on NDK version)
 #   ANDROID_NO_UNDEFINED : ON/OFF
+#   ANDROID_SO_UNDEFINED : OFF/ON  (default depends on NDK version)
 #   ANDROID_SET_OBSOLETE_VARIABLES : ON/OFF
 #   LIBRARY_OUTPUT_PATH_ROOT : <any path>
-#   ANDROID_USE_STLPORT : ON/OFF(default) - EXPERIMENTAL!!! 
+#   ANDROID_USE_STLPORT : OFF/ON - EXPERIMENTAL!!! 
+#   ANDROID_FORBID_SYGWIN : ON/OFF
 # Can be set only at the first run:
 #   ANDROID_NDK
 #   ANDROID_STANDALONE_TOOLCHAIN
