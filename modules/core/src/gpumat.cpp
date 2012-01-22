@@ -348,7 +348,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int depth, int channels, DevMem2Db mask, cudaStream_t stream);
+    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream);
 
     template <typename T>
     void set_to_gpu(DevMem2Db mat, const T* scalar, int channels, cudaStream_t stream);
@@ -405,7 +405,10 @@ namespace cv { namespace gpu
 {
     CV_EXPORTS void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
     {
-        cv::gpu::device::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.depth(), src.channels(), mask, stream);
+        CV_Assert(src.size() == dst.size() && src.type() == dst.type());
+        CV_Assert(src.size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == src.channels()));
+
+        cv::gpu::device::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.elemSize1(), src.channels(), mask.reshape(1), mask.channels() != 1, stream);
     }
 
     CV_EXPORTS void convertTo(const GpuMat& src, GpuMat& dst)

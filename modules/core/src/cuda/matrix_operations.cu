@@ -59,27 +59,32 @@ namespace cv { namespace gpu { namespace device
     ////////////////////////////////// CopyTo /////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
-    template <typename T> void copyToWithMask(DevMem2Db src, DevMem2Db dst, DevMem2Db mask, int channels, cudaStream_t stream)
-    {        
-        cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, identity<T>(), SingleMaskChannels(mask, channels), stream);
+    template <typename T> void copyToWithMask(DevMem2Db src, DevMem2Db dst, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream)
+    {
+        if (colorMask)
+            cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, identity<T>(), SingleMask(mask), stream);
+        else
+            cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, identity<T>(), SingleMaskChannels(mask, cn), stream);
     }
 
-    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int depth, int channels, DevMem2Db mask, cudaStream_t stream)
+    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream)
     {
-        typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, DevMem2Db mask, int channels, cudaStream_t stream);
+        typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream);
 
         static func_t tab[] =
         {
+            0,
             copyToWithMask<unsigned char>,
-            copyToWithMask<signed char>,
             copyToWithMask<unsigned short>,
-            copyToWithMask<short>,
+            0,
             copyToWithMask<int>,
-            copyToWithMask<float>,
+            0,
+            0,
+            0,
             copyToWithMask<double>
         };
 
-        tab[depth](src, dst, mask, channels, stream);
+        tab[elemSize1](src, dst, cn, mask, colorMask, stream);
     }
 
     ///////////////////////////////////////////////////////////////////////////
