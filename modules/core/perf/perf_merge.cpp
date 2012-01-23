@@ -6,7 +6,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<Size, int, int> Size_SrcDepth_DstChannels_t;
+typedef std::tr1::tuple<Size, MatType, int> Size_SrcDepth_DstChannels_t;
 typedef perf::TestBaseWithParam<Size_SrcDepth_DstChannels_t> Size_SrcDepth_DstChannels;
 
 PERF_TEST_P( Size_SrcDepth_DstChannels, merge,
