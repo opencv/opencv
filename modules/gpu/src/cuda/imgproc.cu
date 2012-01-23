@@ -373,49 +373,17 @@ namespace cv { namespace gpu { namespace device
             reprojectImageTo3D_caller(disp, xyzw, q, stream);
         }
 
-        //////////////////////////////////////// Extract Cov Data ////////////////////////////////////////////////
+        /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
 
-        __global__ void extractCovData_kernel(const int cols, const int rows, const PtrStepf Dx, 
-                                              const PtrStepf Dy, PtrStepf dst)
+        texture<float, cudaTextureType2D, cudaReadModeElementType> harrisDxTex(0, cudaFilterModePoint, cudaAddressModeClamp);
+        texture<float, cudaTextureType2D, cudaReadModeElementType> harrisDyTex(0, cudaFilterModePoint, cudaAddressModeClamp);
+
+        __global__ void cornerHarris_kernel(const int block_size, const float k, DevMem2Df dst)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < cols && y < rows)
-            {            
-                float dx = Dx.ptr(y)[x];
-                float dy = Dy.ptr(y)[x];
-
-                dst.ptr(y)[x] = dx * dx;
-                dst.ptr(y + rows)[x] = dx * dy;
-                dst.ptr(y + (rows << 1))[x] = dy * dy;
-            }
-        }
-
-        void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst, cudaStream_t stream)
-        {
-            dim3 threads(32, 8);
-            dim3 grid(divUp(Dx.cols, threads.x), divUp(Dx.rows, threads.y));
-
-            extractCovData_kernel<<<grid, threads, 0, stream>>>(Dx.cols, Dx.rows, Dx, Dy, dst);
-            cudaSafeCall( cudaGetLastError() );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-
-        /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
-
-        texture<float, 2> harrisDxTex;
-        texture<float, 2> harrisDyTex;
-
-        __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
-                                            PtrStepb dst)
-        {
-            const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-            if (x < cols && y < rows)
+            if (x < dst.cols && y < dst.rows)
             {
                 float a = 0.f;
                 float b = 0.f;
@@ -432,24 +400,24 @@ namespace cv { namespace gpu { namespace device
                     {
                         float dx = tex2D(harrisDxTex, j, i);
                         float dy = tex2D(harrisDyTex, j, i);
+
                         a += dx * dx;
                         b += dx * dy;
                         c += dy * dy;
                     }
                 }
 
-                ((float*)dst.ptr(y))[x] = a * c - b * b - k * (a + c) * (a + c);
+                dst(y, x) = a * c - b * b - k * (a + c) * (a + c);
             }
         }
 
         template <typename BR, typename BC>
-        __global__ void cornerHarris_kernel(const int cols, const int rows, const int block_size, const float k,
-                                            PtrStepb dst, BR border_row, BC border_col)
+        __global__ void cornerHarris_kernel(const int block_size, const float k, DevMem2Df dst, const BR border_row, const BC border_col)
         {
-            const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < cols && y < rows)
+            if (x < dst.cols && y < dst.rows)
             {
                 float a = 0.f;
                 float b = 0.f;
@@ -462,50 +430,45 @@ namespace cv { namespace gpu { namespace device
 
                 for (int i = ibegin; i < iend; ++i)
                 {
-                    int y = border_col.idx_row(i);
+                    const int y = border_col.idx_row(i);
+
                     for (int j = jbegin; j < jend; ++j)
                     {
-                        int x = border_row.idx_col(j);
+                        const int x = border_row.idx_col(j);
+
                         float dx = tex2D(harrisDxTex, x, y);
                         float dy = tex2D(harrisDyTex, x, y);
+
                         a += dx * dx;
                         b += dx * dy;
                         c += dy * dy;
                     }
                 }
 
-                ((float*)dst.ptr(y))[x] = a * c - b * b - k * (a + c) * (a + c);
+                dst(y, x) = a * c - b * b - k * (a + c) * (a + c);
             }
         }
 
-        void cornerHarris_caller(const int block_size, const float k, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, 
-                                 int border_type, cudaStream_t stream)
+        void cornerHarris_gpu(int block_size, float k, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream)
         {
-            const int rows = Dx.rows;
-            const int cols = Dx.cols;
+            dim3 block(32, 8);
+            dim3 grid(divUp(Dx.cols, block.x), divUp(Dx.rows, block.y));
 
-            dim3 threads(32, 8);
-            dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
-
-            cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
-            cudaBindTexture2D(0, harrisDxTex, Dx.data, desc, Dx.cols, Dx.rows, Dx.step);
-            cudaBindTexture2D(0, harrisDyTex, Dy.data, desc, Dy.cols, Dy.rows, Dy.step);
-            harrisDxTex.filterMode = cudaFilterModePoint;
-            harrisDyTex.filterMode = cudaFilterModePoint;
+            bindTexture(&harrisDxTex, Dx);
+            bindTexture(&harrisDyTex, Dy);
 
             switch (border_type) 
             {
             case BORDER_REFLECT101_GPU:
-                cornerHarris_kernel<<<grid, threads, 0, stream>>>(
-                        cols, rows, block_size, k, dst, BrdRowReflect101<void>(cols), BrdColReflect101<void>(rows));
+                cornerHarris_kernel<<<grid, block, 0, stream>>>(block_size, k, dst, BrdRowReflect101<void>(Dx.cols), BrdColReflect101<void>(Dx.rows));
                 break;
-            case BORDER_REPLICATE_GPU:
-                harrisDxTex.addressMode[0] = cudaAddressModeClamp;
-                harrisDxTex.addressMode[1] = cudaAddressModeClamp;
-                harrisDyTex.addressMode[0] = cudaAddressModeClamp;
-                harrisDyTex.addressMode[1] = cudaAddressModeClamp;
 
-                cornerHarris_kernel<<<grid, threads, 0, stream>>>(cols, rows, block_size, k, dst);
+            case BORDER_REFLECT_GPU:
+                cornerHarris_kernel<<<grid, block, 0, stream>>>(block_size, k, dst, BrdRowReflect<void>(Dx.cols), BrdColReflect<void>(Dx.rows));
+                break;
+
+            case BORDER_REPLICATE_GPU:
+                cornerHarris_kernel<<<grid, block, 0, stream>>>(block_size, k, dst);
                 break;
             }
 
@@ -513,23 +476,19 @@ namespace cv { namespace gpu { namespace device
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
-
-            //cudaSafeCall(cudaUnbindTexture(harrisDxTex));
-            //cudaSafeCall(cudaUnbindTexture(harrisDyTex));
         }
 
         /////////////////////////////////////////// Corner Min Eigen Val /////////////////////////////////////////////////
 
-        texture<float, 2> minEigenValDxTex;
-        texture<float, 2> minEigenValDyTex;
+        texture<float, cudaTextureType2D, cudaReadModeElementType> minEigenValDxTex(0, cudaFilterModePoint, cudaAddressModeClamp);
+        texture<float, cudaTextureType2D, cudaReadModeElementType> minEigenValDyTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
-        __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, 
-                                                 PtrStepb dst)
+        __global__ void cornerMinEigenVal_kernel(const int block_size, DevMem2Df dst)
         {
-            const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < cols && y < rows)
+            if (x < dst.cols && y < dst.rows)
             {
                 float a = 0.f;
                 float b = 0.f;
@@ -546,6 +505,7 @@ namespace cv { namespace gpu { namespace device
                     {
                         float dx = tex2D(minEigenValDxTex, j, i);
                         float dy = tex2D(minEigenValDyTex, j, i);
+
                         a += dx * dx;
                         b += dx * dy;
                         c += dy * dy;
@@ -554,19 +514,19 @@ namespace cv { namespace gpu { namespace device
 
                 a *= 0.5f;
                 c *= 0.5f;
-                ((float*)dst.ptr(y))[x] = (a + c) - sqrtf((a - c) * (a - c) + b * b);
+
+                dst(y, x) = (a + c) - sqrtf((a - c) * (a - c) + b * b);
             }
         }
 
 
         template <typename BR, typename BC>
-        __global__ void cornerMinEigenVal_kernel(const int cols, const int rows, const int block_size, 
-                                                 PtrStepb dst, BR border_row, BC border_col)
+        __global__ void cornerMinEigenVal_kernel(const int block_size, DevMem2Df dst, const BR border_row, const BC border_col)
         {
-            const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < cols && y < rows)
+            if (x < dst.cols && y < dst.rows)
             {
                 float a = 0.f;
                 float b = 0.f;
@@ -580,11 +540,14 @@ namespace cv { namespace gpu { namespace device
                 for (int i = ibegin; i < iend; ++i)
                 {
                     int y = border_col.idx_row(i);
+
                     for (int j = jbegin; j < jend; ++j)
                     {
                         int x = border_row.idx_col(j);
+
                         float dx = tex2D(minEigenValDxTex, x, y);
                         float dy = tex2D(minEigenValDyTex, x, y);
+
                         a += dx * dx;
                         b += dx * dy;
                         c += dy * dy;
@@ -593,38 +556,31 @@ namespace cv { namespace gpu { namespace device
 
                 a *= 0.5f;
                 c *= 0.5f;
-                ((float*)dst.ptr(y))[x] = (a + c) - sqrtf((a - c) * (a - c) + b * b);
+
+                dst(y, x) = (a + c) - sqrtf((a - c) * (a - c) + b * b);
             }
         }
 
-        void cornerMinEigenVal_caller(const int block_size, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst,
-                                      int border_type, cudaStream_t stream)
+        void cornerMinEigenVal_gpu(int block_size, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream)
         {
-            const int rows = Dx.rows;
-            const int cols = Dx.cols;
-
-            dim3 threads(32, 8);
-            dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
-
-            cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
-            cudaBindTexture2D(0, minEigenValDxTex, Dx.data, desc, Dx.cols, Dx.rows, Dx.step);
-            cudaBindTexture2D(0, minEigenValDyTex, Dy.data, desc, Dy.cols, Dy.rows, Dy.step);
-            minEigenValDxTex.filterMode = cudaFilterModePoint;
-            minEigenValDyTex.filterMode = cudaFilterModePoint;
+            dim3 block(32, 8);
+            dim3 grid(divUp(Dx.cols, block.x), divUp(Dx.rows, block.y));
+            
+            bindTexture(&minEigenValDxTex, Dx);
+            bindTexture(&minEigenValDyTex, Dy);
 
             switch (border_type)
             {
             case BORDER_REFLECT101_GPU:
-                cornerMinEigenVal_kernel<<<grid, threads, 0, stream>>>(
-                        cols, rows, block_size, dst, BrdRowReflect101<void>(cols), BrdColReflect101<void>(rows));
+                cornerMinEigenVal_kernel<<<grid, block, 0, stream>>>(block_size, dst, BrdRowReflect101<void>(Dx.cols), BrdColReflect101<void>(Dx.rows));
                 break;
-            case BORDER_REPLICATE_GPU:
-                minEigenValDxTex.addressMode[0] = cudaAddressModeClamp;
-                minEigenValDxTex.addressMode[1] = cudaAddressModeClamp;
-                minEigenValDyTex.addressMode[0] = cudaAddressModeClamp;
-                minEigenValDyTex.addressMode[1] = cudaAddressModeClamp;
 
-                cornerMinEigenVal_kernel<<<grid, threads, 0, stream>>>(cols, rows, block_size, dst);
+            case BORDER_REFLECT_GPU:
+                cornerMinEigenVal_kernel<<<grid, block, 0, stream>>>(block_size, dst, BrdRowReflect<void>(Dx.cols), BrdColReflect<void>(Dx.rows));
+                break;
+
+            case BORDER_REPLICATE_GPU:
+                cornerMinEigenVal_kernel<<<grid, block, 0, stream>>>(block_size, dst);
                 break;
             }
 
@@ -632,9 +588,6 @@ namespace cv { namespace gpu { namespace device
 
             if (stream == 0)
                 cudaSafeCall(cudaDeviceSynchronize());
-
-            //cudaSafeCall(cudaUnbindTexture(minEigenValDxTex));
-            //cudaSafeCall(cudaUnbindTexture(minEigenValDyTex));
         }
 
         ////////////////////////////// Column Sum //////////////////////////////////////

@@ -2774,13 +2774,13 @@ TEST_P(CornerHarris, Accuracy)
         dev_dst.download(dst);
     );
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-3);
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.02);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, Combine(
                         ALL_DEVICES, 
                         Values(CV_8UC1, CV_32FC1), 
-                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE)));
+                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT)));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerMinEigen
@@ -2829,13 +2829,13 @@ TEST_P(CornerMinEigen, Accuracy)
         dev_dst.download(dst);
     );
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-2);
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.02);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, CornerMinEigen, Combine(
                         ALL_DEVICES, 
                         Values(CV_8UC1, CV_32FC1), 
-                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE)));
+                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT)));
 
 ////////////////////////////////////////////////////////////////////////
 // ColumnSum

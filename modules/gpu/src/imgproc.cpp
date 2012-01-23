@@ -1344,22 +1344,23 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc 
     {
-        void extractCovData_caller(const DevMem2Df Dx, const DevMem2Df Dy, PtrStepf dst, cudaStream_t stream);
-        void cornerHarris_caller(const int block_size, const float k, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, int border_type, cudaStream_t stream);
-        void cornerMinEigenVal_caller(const int block_size, const DevMem2Db Dx, const DevMem2Db Dy, DevMem2Db dst, int border_type, cudaStream_t stream);
+        void cornerHarris_gpu(int block_size, float k, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream);
+        void cornerMinEigenVal_gpu(int block_size, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream);
     }
 }}}
 
 namespace 
 {
-    template <typename T>
     void extractCovData(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
-    {   
-        double scale = (double)(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
+    {
+        double scale = static_cast<double>(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
+
         if (ksize < 0) 
             scale *= 2.;
+
         if (src.depth() == CV_8U)
             scale *= 255.;
+
         scale = 1./scale;
 
         Dx.create(src.size(), CV_32F);
@@ -1376,23 +1377,7 @@ namespace
             Scharr(src, Dy, CV_32F, 0, 1, buf, scale, borderType, -1, stream);
         }
     }
-
-    void extractCovData(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
-    {
-        switch (src.type())
-        {
-        case CV_8U:
-            extractCovData<unsigned char>(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
-            break;
-        case CV_32F:
-            extractCovData<float>(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
-            break;
-        default:
-            CV_Error(CV_StsBadArg, "extractCovData: unsupported type of the source matrix");
-        }
-    }
-
-} // Anonymous namespace
+}
 
 bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
 {
@@ -1433,17 +1418,18 @@ void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& D
 
 void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, int borderType, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
+    using namespace cv::gpu::device::imgproc;
 
-    CV_Assert(borderType == cv::BORDER_REFLECT101 ||
-              borderType == cv::BORDER_REPLICATE);
+    CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
     extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
+
     dst.create(src.size(), CV_32F);
-    cornerHarris_caller(blockSize, (float)k, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
+
+    cornerHarris_gpu(blockSize, static_cast<float>(k), Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType)
@@ -1462,15 +1448,16 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 {  
     using namespace ::cv::gpu::device::imgproc;
 
-    CV_Assert(borderType == cv::BORDER_REFLECT101 ||
-              borderType == cv::BORDER_REPLICATE);
+    CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
 
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
-    extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);    
+    extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);   
+
     dst.create(src.size(), CV_32F);
-    cornerMinEigenVal_caller(blockSize, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
+
+    cornerMinEigenVal_gpu(blockSize, Dx, Dy, dst, gpuBorderType, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
