@@ -84,8 +84,8 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
                 for( j = 1; j <= rows - 2; j += 2 )
                 {
-                    dataDst[j*stepDst] = (float)((double)dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
-                                         (double)dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc]);
+                    dataDst[j*stepDst] = (float)std::sqrt((double)dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
+                                                          (double)dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc]);
                 }
 
                 if( k == 1 )
@@ -104,7 +104,7 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
             for( j = j0; j < j1; j += 2 )
             {
-                dataDst[j] = (float)((double)dataSrc[j]*dataSrc[j] + (double)dataSrc[j+1]*dataSrc[j+1]);
+                dataDst[j] = (float)std::sqrt((double)dataSrc[j]*dataSrc[j] + (double)dataSrc[j+1]*dataSrc[j+1]);
             }
         }
     }
@@ -128,8 +128,8 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
                 for( j = 1; j <= rows - 2; j += 2 )
                 {
-                    dataDst[j*stepDst] = dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
-                                         dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc];
+                    dataDst[j*stepDst] = std::sqrt(dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
+                                                   dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc]);
                 }
 
                 if( k == 1 )
@@ -148,13 +148,10 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
             for( j = j0; j < j1; j += 2 )
             {
-                dataDst[j] = dataSrc[j]*dataSrc[j] + dataSrc[j+1]*dataSrc[j+1];
+                dataDst[j] = std::sqrt(dataSrc[j]*dataSrc[j] + dataSrc[j+1]*dataSrc[j+1]);
             }
         }
     }
-
-    // do batch sqrt to use SSE optimizations...
-    cv::sqrt(dst, dst);
 }
 
 static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB)
@@ -197,9 +194,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
             {
                 if( k == 1 )
                     dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
-                dataC[0] = dataA[0] / dataB[0];
+                dataC[0] = dataA[0] / (dataB[0] + eps);
                 if( rows % 2 == 0 )
-                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / dataB[(rows-1)*stepB];
+                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / (dataB[(rows-1)*stepB] + eps);
                 if( !conjB )
                     for( j = 1; j <= rows - 2; j += 2 )
                     {
@@ -240,9 +237,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
         {
             if( is_1d && cn == 1 )
             {
-                dataC[0] = dataA[0] / dataB[0];
+                dataC[0] = dataA[0] / (dataB[0] + eps);
                 if( cols % 2 == 0 )
-                    dataC[j1] = dataA[j1] / dataB[j1];
+                    dataC[j1] = dataA[j1] / (dataB[j1] + eps);
             }
 
             if( !conjB )
@@ -282,9 +279,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
             {
                 if( k == 1 )
                     dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
-                dataC[0] = dataA[0] / dataB[0];
+                dataC[0] = dataA[0] / (dataB[0] + eps);
                 if( rows % 2 == 0 )
-                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / dataB[(rows-1)*stepB];
+                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / (dataB[(rows-1)*stepB] + eps);
                 if( !conjB )
                     for( j = 1; j <= rows - 2; j += 2 )
                     {
@@ -324,9 +321,9 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
         {
             if( is_1d && cn == 1 )
             {
-                dataC[0] = dataA[0] / dataB[0];
+                dataC[0] = dataA[0] / (dataB[0] + eps);
                 if( cols % 2 == 0 )
-                    dataC[j1] = dataA[j1] / dataB[j1];
+                    dataC[j1] = dataA[j1] / (dataB[j1] + eps);
             }
 
             if( !conjB )
@@ -355,31 +352,57 @@ static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, 
 static void fftShift(InputOutputArray _out)
 {
     Mat out = _out.getMat();
-    
+
+    if(out.rows == 1 && out.cols == 1)
+    {
+        // trivially shifted.
+        return;
+    }
+
     vector<Mat> planes;
     split(out, planes);
-    
+
     int xMid = out.cols >> 1;
     int yMid = out.rows >> 1;
-    
-    for(size_t i = 0; i < planes.size(); i++)
+
+    bool is_1d = xMid == 0 || yMid == 0;
+
+    if(is_1d)
     {
-        // perform quadrant swaps...
-        Mat tmp;
-        Mat q0(planes[i], Rect(0,    0,    xMid, yMid));
-        Mat q1(planes[i], Rect(xMid, 0,    xMid, yMid));
-        Mat q2(planes[i], Rect(0,    yMid, xMid, yMid));
-        Mat q3(planes[i], Rect(xMid, yMid, xMid, yMid));
-        
-        q0.copyTo(tmp);
-        q3.copyTo(q0);
-        tmp.copyTo(q3);
-        
-        q1.copyTo(tmp);
-        q2.copyTo(q1);
-        tmp.copyTo(q2);
+        xMid = xMid + yMid;
+
+        for(size_t i = 0; i < planes.size(); i++)
+        {
+            Mat tmp;
+            Mat half0(planes[i], Rect(0, 0, xMid, 1));
+            Mat half1(planes[i], Rect(xMid, 0, xMid, 1));
+
+            half0.copyTo(tmp);
+            half1.copyTo(half0);
+            tmp.copyTo(half1);
+        }
     }
-    
+    else
+    {
+        for(size_t i = 0; i < planes.size(); i++)
+        {
+            // perform quadrant swaps...
+            Mat tmp;
+            Mat q0(planes[i], Rect(0,    0,    xMid, yMid));
+            Mat q1(planes[i], Rect(xMid, 0,    xMid, yMid));
+            Mat q2(planes[i], Rect(0,    yMid, xMid, yMid));
+            Mat q3(planes[i], Rect(xMid, yMid, xMid, yMid));
+
+            q0.copyTo(tmp);
+            q3.copyTo(q0);
+            tmp.copyTo(q3);
+
+            q1.copyTo(tmp);
+            q2.copyTo(q1);
+            tmp.copyTo(q2);
+        }
+    }
+
     merge(planes, out);
 }
 
