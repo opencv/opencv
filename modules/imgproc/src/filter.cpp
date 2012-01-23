@@ -2186,10 +2186,12 @@ struct FilterVec_32f
 #else
 
 typedef RowNoVec RowVec_8u32s;
+typedef RowNoVec RowVec_16s32f;
 typedef RowNoVec RowVec_32f;
 typedef SymmRowSmallNoVec SymmRowSmallVec_8u32s;
 typedef SymmRowSmallNoVec SymmRowSmallVec_32f;
 typedef ColumnNoVec SymmColumnVec_32s8u;
+typedef ColumnNoVec SymmColumnVec_32f16s;
 typedef ColumnNoVec SymmColumnVec_32f;
 typedef SymmColumnSmallNoVec SymmColumnSmallVec_32s16s;
 typedef SymmColumnSmallNoVec SymmColumnSmallVec_32f;
