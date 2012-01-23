@@ -6,6 +6,49 @@ hostos = os.name # 'nt', 'posix'
 hostmachine = platform.machine() # 'x86', 'AMD64', 'x86_64'
 nameprefix = "opencv_perf_"
 
+SIMD_DETECTION_PROGRAM="""
+#if __SSE5__
+# error SSE5
+#endif
+#if __AVX2__
+# error AVX2
+#endif
+#if __AVX__
+# error AVX
+#endif
+#if __SSE4_2__
+# error SSE4.2
+#endif
+#if __SSE4_1__
+# error SSE4.1
+#endif
+#if __SSSE3__
+# error SSSE3
+#endif
+#if __SSE3__
+# error SSE3
+#endif
+#if __AES__
+# error AES
+#endif
+#if __SSE2__
+# error SSE2
+#endif
+#if __SSE__
+# error SSE
+#endif
+#if __3dNOW__
+# error 3dNOW
+#endif
+#if __MMX__
+# error MMX
+#endif
+#if __ARM_NEON__
+# error NEON
+#endif
+#error NOSIMD
+"""
+
 parse_patterns = (
   {'name': "has_perf_tests",     'default': "OFF",      'pattern': re.compile("^BUILD_PERF_TESTS:BOOL=(ON)$")},
   {'name': "cmake_home",         'default': None,       'pattern': re.compile("^CMAKE_HOME_DIRECTORY:INTERNAL=(.+)$")},
@@ -16,6 +59,8 @@ parse_patterns = (
   {'name': "cxx_flags",          'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS:STRING=(.*)$")},
   {'name': "cxx_flags_debug",    'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS_DEBUG:STRING=(.*)$")},
   {'name': "cxx_flags_release",  'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS_RELEASE:STRING=(.*)$")},
+  {'name': "cxx_flags_android",  'default': None,       'pattern': re.compile("^ANDROID_CXX_FLAGS:INTERNAL=(.*)$")},
+  {'name': "cxx_compiler_path",  'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.*)$")},
   {'name': "ndk_path",           'default': None,       'pattern': re.compile("^(?:ANDROID_NDK|ANDROID_STANDALONE_TOOLCHAIN)?:PATH=(.*)$")},
   {'name': "android_abi",        'default': None,       'pattern': re.compile("^ANDROID_ABI:STRING=(.*)$")},
   {'name': "android_executable", 'default': None,       'pattern': re.compile("^ANDROID_EXECUTABLE:FILEPATH=(.*android.*)$")},
@@ -24,6 +69,7 @@ parse_patterns = (
   {'name': "cxx_compiler",       'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.+)$")},
   {'name': "with_cuda",          'default': "OFF",      'pattern': re.compile("^WITH_CUDA:BOOL=(ON)$")},
   {'name': "cuda_library",       'default': None,       'pattern': re.compile("^CUDA_CUDA_LIBRARY:FILEPATH=(.+)$")},
+  {'name': "core_dependencies",  'default': None,       'pattern': re.compile("^opencv_core_LIB_DEPENDS:STATIC=(.+)$")},
 )
 
 def query_yes_no(stdout, question, default="yes"):
@@ -149,6 +195,7 @@ def getRunningProcessExePathByName(name):
         
 class RunInfo(object):
     def __init__(self, path, options):
+        self.options = options
         self.path = path
         self.error = None
         for p in parse_patterns:
@@ -240,7 +287,16 @@ class RunInfo(object):
 
         # detect target arch
         if self.targetos == "android":
-            self.targetarch = "arm"
+            if "armeabi-v7a" in self.android_abi:
+                self.targetarch = "ARMv7a"
+            elif "armeabi-v6" in self.android_abi:
+                self.targetarch = "ARMv6"
+            elif "armeabi" in self.android_abi:
+                self.targetarch = "ARMv5te"
+            elif "x86" in self.android_abi:
+                self.targetarch = "x86"
+            else:
+                self.targetarch = "ARM"
         elif self.is_x64 and hostmachine in ["AMD64", "x86_64"]:
             self.targetarch = "x64"
         elif hostmachine in ["x86", "AMD64", "x86_64"]:
@@ -329,6 +385,7 @@ class RunInfo(object):
             app = app[:-4]
         if app.startswith(nameprefix):
             app = app[len(nameprefix):]
+
         if self.cmake_home_svn:
             if self.cmake_home_svn == self.opencv_home_svn:
                 rev = self.cmake_home_svn
@@ -339,18 +396,97 @@ class RunInfo(object):
         else:
             rev = None
         if rev:
-            rev = rev.replace(":","to") + "_" 
+            rev = rev.replace(":","to")
         else:
             rev = ""
-        if self.hardware:
-            hw = str(self.hardware).replace(" ", "_") + "_"
-        elif self.has_cuda:
-            hw = "CUDA_"
+
+        if self.options.useLongNames:
+            if not rev:
+                rev = "unknown"
+            tstamp = timestamp.strftime("%Y%m%d-%H%M%S")
+
+            features = []
+            #OS
+            _os = ""
+            if self.targetos == "android":
+                _os = "Android" + self.runAdb("shell", "getprop ro.build.version.release").strip()
+            else:
+                mv = platform.mac_ver()
+                if mv[0]:
+                    _os = "Darwin" + mv[0]
+                else:
+                    wv = platform.win32_ver()
+                    if wv[0]:
+                        _os = "Windows" + wv[0]
+                    else:
+                        lv = platform.linux_distribution()
+                        if lv[0]:
+                            _os = lv[0] + lv[1]
+                        else:
+                            _os = self.targetos
+            features.append(_os)
+
+            #HW(x86, x64, ARMv7a)
+            if self.targetarch:
+                features.append(self.targetarch)
+
+            #TBB
+            if ";tbb;" in self.core_dependencies:
+                features.append("TBB")
+
+            #CUDA
+            if self.has_cuda:
+                #TODO: determine compute capability
+                features.append("CUDA")
+
+            #SIMD
+            compiler_output = ""
+            try:
+                tmpfile = tempfile.mkstemp(suffix=".cpp", text = True)
+                fd = os.fdopen(tmpfile[0], "w+b")
+                fd.write(SIMD_DETECTION_PROGRAM)
+                fd.close();
+                options = [self.cxx_compiler_path]
+                cxx_flags = self.cxx_flags + " " + self.cxx_flags_release
+                if self.targetos == "android":
+                    cxx_flags = self.cxx_flags_android + " " + cxx_flags
+
+                prev_option = None
+                for opt in cxx_flags.split(" "):
+                    if opt.count('\"') % 2 == 1:
+                        if prev_option is None:
+                             prev_option = opt
+                        else:
+                             options.append(prev_option + " " + opt)
+                             prev_option = None
+                    elif prev_option is None:
+                        options.append(opt)
+                    else:
+                        prev_option = prev_option + " " + opt
+                options.append(tmpfile[1])
+                output = Popen(options, stdout=PIPE, stderr=PIPE).communicate()
+                compiler_output = output[1]
+                os.remove(tmpfile[1])
+            except OSError:
+                pass
+            if compiler_output:
+                m = re.search("#error\W+(\w+)", compiler_output)
+                if m:
+                    features.append(m.group(1))
+
+            #fin
+            return "%s__%s__%s__%s.xml" % (app, rev, tstamp, "_".join(features))
         else:
-            hw = ""
-        #stamp = timestamp.strftime("%Y%m%dT%H%M%S")
-        stamp = timestamp.strftime("%Y-%m-%d--%H-%M-%S")
-        return "%s_%s_%s_%s%s%s.xml" %(app, self.targetos, self.targetarch, hw, rev, stamp)
+            if rev:
+                rev = rev + "_"
+            if self.hardware:
+                hw = str(self.hardware).replace(" ", "_") + "_"
+            elif self.has_cuda:
+                hw = "CUDA_"
+            else:
+                hw = ""
+            tstamp = timestamp.strftime("%Y-%m-%d--%H-%M-%S")
+            return "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
         
     def getTest(self, name):
         # full path
@@ -508,6 +644,7 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
+    parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
     parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
     parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
     parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")

@@ -828,6 +828,7 @@ include_directories( SYSTEM ${ANDROID_SYSTEM_INCLUDE_DIRS} )
 link_directories( ${ANDROID_SYSTEM_LIB_DIRS} )
 
 #finish flags
+set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS}" CACHE INTERNAL "Extra Android falgs")
 set( CMAKE_CXX_FLAGS "${ANDROID_CXX_FLAGS} ${CMAKE_CXX_FLAGS}" )
 set( CMAKE_C_FLAGS   "${ANDROID_CXX_FLAGS} ${CMAKE_C_FLAGS}" )
 # workaround for ugly cmake bug - compiler identification replaces all spaces (and somethimes " (quote symbol)) in the compiler flags with ; symbol
