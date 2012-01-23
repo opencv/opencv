@@ -339,6 +339,11 @@ namespace cv { namespace gpu { namespace device
 
         void edgesHysteresisLocal_gpu(PtrStepi map, ushort2* st1, int rows, int cols)
         {
+            void* counter_ptr;
+            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
+
+            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+
             dim3 block(16, 16, 1);
             dim3 grid(divUp(cols, block.x), divUp(rows, block.y), 1);
 
