@@ -3010,6 +3010,11 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
     Mat dst = _dst.getMat();
     anchor = normalizeAnchor(anchor, kernel.size());
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if( tegra::filter2D(src, dst, kernel, anchor, delta, borderType) )
+        return;
+#endif
+
     if( kernel.cols*kernel.rows >= dft_filter_size )
     {
         Mat temp;
