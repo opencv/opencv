@@ -40,7 +40,7 @@ int main(int argc, const char* argv[])
 
         if (cmd.get<bool>("help"))
         {
-            cout << "Usage: optical_float [options]" << endl;
+            cout << "Usage: optical_flow [options]" << endl;
             cout << "Avaible options:" << endl;
             cmd.printParams();
             return 0;
