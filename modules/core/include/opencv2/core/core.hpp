@@ -989,7 +989,6 @@ public:
     typedef value_type work_type;
     typedef value_type channel_type;
     typedef value_type vec_type;
-    
     enum { generic_type = 1, depth = -1, channels = 1, fmt=0,
         type = CV_MAKETYPE(depth, channels) };
 };
@@ -1209,7 +1208,6 @@ public:
            type = CV_MAKETYPE(depth, channels) };
     typedef Vec<channel_type, channels> vec_type;
 };
-
     
 //////////////////// generic_type ref-counting pointer class for C/C++ objects ////////////////////////
 
@@ -1256,6 +1254,9 @@ public:
     //! returns true iff obj==NULL
     bool empty() const;
 
+    //! cast pointer to another type
+    template<typename _Tp2> Ptr<_Tp2> ptr();
+    template<typename _Tp2> const Ptr<_Tp2> ptr() const;
     
     //! helper operators making "Ptr<T> ptr" use very similar to "T* ptr".
     _Tp* operator -> ();
@@ -1264,7 +1265,6 @@ public:
     operator _Tp* ();
     operator const _Tp*() const;
     
-protected:
     _Tp* obj; //< the object pointer.
     int* refcount; //< the associated reference counter
 };
@@ -2154,6 +2154,12 @@ CV_EXPORTS_W void log(InputArray src, OutputArray dst);
 CV_EXPORTS_W float cubeRoot(float val);
 //! computes the angle in degrees (0..360) of the vector (x,y)
 CV_EXPORTS_W float fastAtan2(float y, float x);
+
+CV_EXPORTS void exp(const float* src, float* dst, int n);
+CV_EXPORTS void log(const float* src, float* dst, int n);
+CV_EXPORTS void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
+CV_EXPORTS void magnitude(const float* x, const float* y, float* dst, int n);    
+    
 //! converts polar coordinates to Cartesian
 CV_EXPORTS_W void polarToCart(InputArray magnitude, InputArray angle,
                               OutputArray x, OutputArray y, bool angleInDegrees=false);
@@ -4219,54 +4225,145 @@ public:
 };
 
 
-#if 0
-class CV_EXPORTS AlgorithmImpl;
-
+class CV_EXPORTS Algorithm;
+class CV_EXPORTS AlgorithmInfo;
+struct CV_EXPORTS AlgorithmInfoData;
+    
+template<typename _Tp> struct ParamType {};
+    
 /*!
   Base class for high-level OpenCV algorithms
 */    
 class CV_EXPORTS Algorithm
 {
 public:
+    Algorithm();
     virtual ~Algorithm();
-    virtual string name() const;
+    string name() const;
     
-    template<typename _Tp> _Tp get(int paramId) const;
-    template<typename _Tp> bool set(int paramId, const _Tp& value);
-    string paramName(int paramId) const;
-    string paramHelp(int paramId) const;
-    int paramType(int paramId) const;
-    int findParam(const string& name) const;
-    template<typename _Tp> _Tp paramDefaultValue(int paramId) const;
-    template<typename _Tp> bool paramRange(int paramId, _Tp& minVal, _Tp& maxVal) const;
+    template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const;
+    template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
+    template<typename _Tp> void set(const string& name,
+                                    typename ParamType<_Tp>::const_param_type value);
+    template<typename _Tp> void set(const char* name,
+                                    typename ParamType<_Tp>::const_param_type value);
+    string paramHelp(const string& name) const;
+    int paramType(const char* name) const;
+    int paramType(const string& name) const;
+    void getParams(vector<string>& names) const;
     
-    virtual void getParams(vector<int>& ids) const;
-    virtual void write(vector<uchar>& buf) const;
-    virtual bool read(const vector<uchar>& buf);
+    
+    virtual void write(FileStorage& fs) const;
+    virtual void read(const FileNode& fn);
     
     typedef Algorithm* (*Constructor)(void);
-    static void add(const string& name, Constructor create);
+    typedef int (Algorithm::*Getter)() const;
+    typedef void (Algorithm::*Setter)(int);
+    
     static void getList(vector<string>& algorithms);
-    static Ptr<Algorithm> create(const string& name);
+    static Ptr<Algorithm> _create(const string& name);
+    template<typename _Tp> static Ptr<_Tp> create(const string& name);
     
-protected:
-    template<typename _Tp> void addParam(int propId, _Tp& value, bool readOnly, const string& name,
-                                         const string& help=string(), const _Tp& defaultValue=_Tp(),
-                                         _Tp (Algorithm::*getter)()=0, bool (Algorithm::*setter)(const _Tp&)=0);
-    template<typename _Tp> void setParamRange(int propId, const _Tp& minVal, const _Tp& maxVal);
-    
-    bool set_(int paramId, int argType, const void* value);
-    void get_(int paramId, int argType, void* value);
-    void paramDefaultValue_(int paramId, int argType, void* value);
-    void paramRange_(int paramId, int argType, void* minval, void* maxval);
-    void addParam_(int propId, int argType, void* value, bool readOnly, const string& name,
-                  const string& help, const void* defaultValue, void* getter, void* setter);
-    void setParamRange_(int propId, int argType, const void* minVal, const void* maxVal);
-    
-    Ptr<AlgorithmImpl> impl;
+    virtual AlgorithmInfo* info() const /* TODO: make it = 0;*/ { return 0; }
 };
-#endif
 
+    
+class CV_EXPORTS AlgorithmInfo
+{
+public:
+    AlgorithmInfo(const string& name, Algorithm::Constructor create);
+    ~AlgorithmInfo();
+    void get(const Algorithm* algo, const char* name, int argType, void* value) const;
+    void set(Algorithm* algo, const char* name, int argType, const void* value) const;
+    void addParam_(const Algorithm* algo, const char* name, int argType,
+                   const void* value, bool readOnly, 
+                   Algorithm::Getter getter, Algorithm::Setter setter,
+                   const string& help=string());
+    string paramHelp(const char* name) const;
+    int paramType(const char* name) const;
+    void getParams(vector<string>& names) const;
+    
+    void write(const Algorithm* algo, FileStorage& fs) const;
+    void read(Algorithm* algo, const FileNode& fn) const;
+    string name() const;
+    
+    template<typename _Tp> void addParam(const Algorithm* algo, const char* name,
+                                         const typename ParamType<_Tp>::member_type& value,
+                                         bool readOnly=false, 
+                                         typename ParamType<_Tp>::member_type (Algorithm::*getter)()=0,
+                                         void (Algorithm::*setter)(typename ParamType<_Tp>::const_param_type)=0,
+                                         const string& help=string());
+protected:
+    AlgorithmInfoData* data;
+};
+
+
+struct CV_EXPORTS Param
+{
+    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, ALGORITHM=5 };
+    
+    Param();
+    Param(int _type, bool _readonly, int _offset,
+          Algorithm::Getter _getter=0,
+          Algorithm::Setter _setter=0,
+          const string& _help=string());
+    int type;
+    int offset;
+    bool readonly;
+    Algorithm::Getter getter;
+    Algorithm::Setter setter;
+    string help;
+};
+
+template<> struct ParamType<bool>
+{
+    typedef bool const_param_type;
+    typedef bool member_type;
+    
+    enum { type = Param::BOOLEAN };
+};    
+    
+template<> struct ParamType<int>
+{
+    typedef int const_param_type;
+    typedef int member_type;
+    
+    enum { type = Param::INT };
+};
+
+template<> struct ParamType<double>
+{
+    typedef double const_param_type;
+    typedef double member_type;
+    
+    enum { type = Param::REAL };
+};
+
+template<> struct ParamType<string>
+{
+    typedef const string& const_param_type;
+    typedef string member_type;
+    
+    enum { type = Param::STRING };
+};
+
+template<> struct ParamType<Mat>
+{
+    typedef const Mat& const_param_type;
+    typedef Mat member_type;
+    
+    enum { type = Param::MAT };
+};
+
+template<> struct ParamType<Algorithm>
+{
+    typedef const Ptr<Algorithm>& const_param_type;
+    typedef Ptr<Algorithm> member_type;
+    
+    enum { type = Param::ALGORITHM };
+};
+    
+    
 /*!
 "\nThe CommandLineParser class is designed for command line arguments parsing\n"
            "Keys map: \n"

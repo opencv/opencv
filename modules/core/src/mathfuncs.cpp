@@ -2113,6 +2113,27 @@ bool checkRange(InputArray _src, bool quiet, Point* pt,
     return badPt.x < 0;
 }
 
+    
+void exp(const float* src, float* dst, int n)
+{
+    Exp_32f(src, dst, n);
+}
+    
+void log(const float* src, float* dst, int n)
+{
+    Log_32f(src, dst, n);
+}
+    
+void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees)
+{
+    FastAtan2_32f(y, x, dst, n, angleInDegrees);
+}
+    
+void magnitude(const float* x, const float* y, float* dst, int n)
+{
+    Magnitude_32f(x, y, dst, n);
+}
+
 }
 
 CV_IMPL float cvCbrt(float value) { return cv::cubeRoot(value); }

@@ -1878,8 +1878,6 @@ typedef struct CvModuleInfo
 }
 CvModuleInfo;
 
-enum { CV_PARAM_TYPE_INT=0, CV_PARAM_TYPE_REAL=1, CV_PARAM_TYPE_STRING=2, CV_PARAM_TYPE_MAT=3 };
-
 #endif /*_CXCORE_TYPES_H_*/
 
 /* End of file. */

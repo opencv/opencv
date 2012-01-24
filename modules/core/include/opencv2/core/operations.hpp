@@ -2601,6 +2601,30 @@ template<typename _Tp> inline Ptr<_Tp>::operator const _Tp*() const { return obj
 
 template<typename _Tp> inline bool Ptr<_Tp>::empty() const { return obj == 0; }
 
+template<typename _Tp> template<typename _Tp2> inline Ptr<_Tp2> Ptr<_Tp>::ptr()
+{
+    Ptr<_Tp2> p;
+    if( !obj )
+        return p;
+    if( refcount )
+        CV_XADD(refcount, 1);
+    p.obj = dynamic_cast<_Tp2*>(obj);
+    p.refcount = refcount;
+    return p;
+}
+    
+template<typename _Tp> template<typename _Tp2> inline const Ptr<_Tp2> Ptr<_Tp>::ptr() const
+{
+    Ptr<_Tp2> p;
+    if( !obj )
+        return p;
+    if( refcount )
+        CV_XADD(refcount, 1);
+    p.obj = dynamic_cast<_Tp2*>(obj);
+    p.refcount = refcount;
+    return p;
+}
+    
 //// specializied implementations of Ptr::delete_obj() for classic OpenCV types
 
 template<> CV_EXPORTS void Ptr<CvMat>::delete_obj();
@@ -3766,50 +3790,49 @@ template<typename _Tp> static inline std::ostream& operator << (std::ostream& ou
     return out;
 }
     
-/*template<typename _Tp> struct AlgorithmParamType {};
-template<> struct AlgorithmParamType<int> { enum { type = CV_PARAM_TYPE_INT }; };
-template<> struct AlgorithmParamType<double> { enum { type = CV_PARAM_TYPE_REAL }; };
-template<> struct AlgorithmParamType<string> { enum { type = CV_PARAM_TYPE_STRING }; };
-template<> struct AlgorithmParamType<Mat> { enum { type = CV_PARAM_TYPE_MAT }; };
-    
-template<typename _Tp> _Tp Algorithm::get(int paramId) const
+
+template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const string& name)
 {
-    _Tp value = _Tp();
-    get_(paramId, AlgorithmParamType<_Tp>::type, &value);
-    return value;
+    return _create(name).ptr<_Tp>();
 }
     
-template<typename _Tp> bool Algorithm::set(int paramId, const _Tp& value)
+template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
 {
-    set_(paramId, AlgorithmParamType<_Tp>::type, &value);
+    typename ParamType<_Tp>::member_type value;
+    info()->get(this, name.c_str(), ParamType<_Tp>::type, &value);
     return value;
-}
-    
-template<typename _Tp> _Tp Algorithm::paramDefaultValue(int paramId) const
-{
-    _Tp value = _Tp();
-    paramDefaultValue_(paramId, AlgorithmParamType<_Tp>::type, &value);
-    return value;
-}
-    
-template<typename _Tp> bool Algorithm::paramRange(int paramId, _Tp& minVal, _Tp& maxVal) const
-{
-    return paramRange_(paramId, AlgorithmParamType<_Tp>::type, &minVal, &maxVal);
 }
 
-template<typename _Tp> void Algorithm::addParam(int propId, _Tp& value, bool readOnly, const string& name,
-                                         const string& help, const _Tp& defaultValue,
-                                         _Tp (Algorithm::*getter)(), bool (Algorithm::*setter)(const _Tp&))
+template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const char* name) const
 {
-    addParam_(propId, AlgorithmParamType<_Tp>::type, &value, readOnly, name, help, &defaultValue,
-             (void*)getter, (void*)setter);
+    typename ParamType<_Tp>::member_type value;
+    info()->get(this, name, ParamType<_Tp>::type, &value);
+    return value;
+}    
+    
+template<typename _Tp> inline void Algorithm::set(const string& name,
+                                                  typename ParamType<_Tp>::const_param_type value)
+{
+    info()->set(this, name.c_str(), ParamType<_Tp>::type, &value);
 }
-    
-template<typename _Tp> void Algorithm::setParamRange(int propId, const _Tp& minVal, const _Tp& maxVal)
+
+template<typename _Tp> inline void Algorithm::set(const char* name,
+                                                  typename ParamType<_Tp>::const_param_type value)
 {
-    setParamRange_(propId, AlgorithmParamType<_Tp>::type, &minVal, &maxVal);
-}*/
-    
+    info()->set(this, name, ParamType<_Tp>::type, &value);
+}
+
+template<typename _Tp> inline void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
+                                                    const typename ParamType<_Tp>::member_type& value,
+                                                    bool readOnly, 
+                                                    typename ParamType<_Tp>::member_type (Algorithm::*getter)(),
+                                                    void (Algorithm::*setter)(typename ParamType<_Tp>::const_param_type),
+                                                    const string& help)
+{
+    addParam_(algo, name, ParamType<_Tp>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}
+
 }
 
 #endif // __cplusplus

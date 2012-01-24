@@ -613,6 +613,16 @@ template<typename _Tp> inline const _Tp& Mat::at(const int* idx) const
     CV_DbgAssert( elemSize() == CV_ELEM_SIZE(DataType<_Tp>::type) );
     return *(const _Tp*)ptr(idx);
 }
+template<typename _Tp, int n> _Tp& Mat::at(const Vec<int, n>& idx)
+{
+    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(DataType<_Tp>::type) );
+    return *(_Tp*)ptr(idx.val);
+}
+template<typename _Tp, int n> inline const _Tp& Mat::at(const Vec<int, n>& idx) const
+{
+    CV_DbgAssert( elemSize() == CV_ELEM_SIZE(DataType<_Tp>::type) );
+    return *(const _Tp*)ptr(idx.val);
+}
     
     
 template<typename _Tp> inline MatConstIterator_<_Tp> Mat::begin() const
@@ -1025,6 +1035,16 @@ template<typename _Tp> inline const _Tp& Mat_<_Tp>::operator ()(const int* idx) 
     return Mat::at<_Tp>(idx);
 }
 
+template<typename _Tp> template<int n> inline _Tp& Mat_<_Tp>::operator ()(const Vec<int, n>& idx)
+{
+    return Mat::at<_Tp>(idx);
+}
+
+template<typename _Tp> template<int n> inline const _Tp& Mat_<_Tp>::operator ()(const Vec<int, n>& idx) const
+{
+    return Mat::at<_Tp>(idx);
+}    
+    
 template<typename _Tp> inline _Tp& Mat_<_Tp>::operator ()(int i0)
 {
     return this->at<_Tp>(i0);
