@@ -3,7 +3,14 @@
 #   Some parts taken from version of Hartmut Seichter, HIT Lab NZ.
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
-project(opencv_highgui)
+
+option(OCVMODULE_HIGHGUI "Include highgui module into the OpenCV build" ON)
+if(NOT OCVMODULE_HIGHGUI)
+    return()
+endif()
+
+set(the_target "opencv_highgui")
+project(${the_target})
 
 set(GRFMT_LIBS)
 
@@ -66,10 +73,6 @@ if(WITH_OPENEXR AND OPENEXR_FOUND)
     add_definitions(-DHAVE_OPENEXR)
     include_directories(${OPENEXR_INCLUDE_PATHS})
     set(GRFMT_LIBS ${GRFMT_LIBS} ${OPENEXR_LIBRARIES})
-endif()
-
-if(MSVC)
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:libcmt.lib")
 endif()
 
 file(GLOB grfmt_hdrs src/grfmt*.hpp)
@@ -250,19 +253,15 @@ if(OPENCV_BUILD_3RDPARTY_LIBS)
     if(WIN32)
         link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
     endif()
-    link_directories(
-        "${CMAKE_BINARY_DIR}/3rdparty/lib"
-        "${CMAKE_BINARY_DIR}/3rdparty/lib/${ConfigurationName}"
-        )
+    #link_directories(
+     #   "${CMAKE_BINARY_DIR}/3rdparty/lib"
+      #  "${CMAKE_BINARY_DIR}/3rdparty/lib/${ConfigurationName}"
+       # )
 endif()
-
-set(lib_srcs ${highgui_srcs} ${grfmt_srcs})
 
 # ----------------------------------------------------------------------------------
 #               Define the library target:
 # ----------------------------------------------------------------------------------
-set(the_target "opencv_highgui")
-
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                     "${CMAKE_CURRENT_SOURCE_DIR}/../core/include"
                     "${CMAKE_CURRENT_SOURCE_DIR}/../imgproc/include"
@@ -273,75 +272,15 @@ if(WIN32)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")
 endif()
 
-add_library(${the_target} ${lib_srcs} ${highgui_hdrs} ${grfmt_hdrs} ${highgui_ext_hdrs})
+add_library(${the_target} ${highgui_srcs} ${grfmt_srcs} ${highgui_hdrs} ${grfmt_hdrs} ${highgui_ext_hdrs})
+register_opencv_module(${the_target})
 
 if (BUILD_SHARED_LIBS)
-	add_definitions(-DHIGHGUI_EXPORTS)
-	if(MSVC)
-		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
-	else()
-		add_definitions(-DCVAPI_EXPORTS)
-	endif()
+    add_definitions(-DHIGHGUI_EXPORTS)
 endif()
-
-add_opencv_precompiled_headers(${the_target})
-
-# For dynamic link numbering convenions
-if(NOT ANDROID)
-    # Android SDK build scripts can include only .so files into final .apk
-    set_target_properties(${the_target} PROPERTIES
-        VERSION ${OPENCV_VERSION}
-        SOVERSION ${OPENCV_SOVERSION}
-        )
-endif()
-
-set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )
-
-# Additional target properties
-set_target_properties(${the_target} PROPERTIES
-    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-    ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
-    RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    INSTALL_NAME_DIR lib
-    LINK_INTERFACE_LIBRARIES ""
-    )
-
-if(ENABLE_SOLUTION_FOLDERS)
-    set_target_properties(${the_target} PROPERTIES FOLDER "modules")
-endif() 
-
 
 if(MSVC)
-    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
-endif(MSVC)
-
-# Dependencies of this target:
-add_dependencies(${the_target} opencv_core opencv_imgproc)
-
-# Add the required libraries for linking:
-
-if(WITH_JASPER AND NOT JASPER_FOUND)
-    add_dependencies(${the_target} libjasper)
-endif()
-
-if(WITH_JPEG AND NOT JPEG_FOUND)
-    add_dependencies(${the_target} libjpeg)
-endif()
-
-if(WITH_PNG AND NOT PNG_FOUND)
-    add_dependencies(${the_target} libpng)
-endif()
-
-if(WITH_TIFF AND NOT TIFF_FOUND)
-    add_dependencies(${the_target} libtiff)
-endif()
-
-if(NOT ZLIB_FOUND)
-    add_dependencies(${the_target} zlib)
-endif()
-
-if(WITH_ANDROID_CAMERA)
-    add_dependencies(${the_target} opencv_androidcamera)
+    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
 
 #message(STATUS "GRFMT: ${GRFMT_LIBS}")
@@ -368,19 +307,9 @@ if(APPLE AND NOT IOS)
 endif()
 
 if (IOS)
-	target_link_libraries(${the_target} "-lbz2 -framework QuartzCore -framework CoreFoundation -framework ImageIO -framework CoreGraphics -framework AVFoundation")
+    target_link_libraries(${the_target} "-lbz2 -framework QuartzCore -framework CoreFoundation -framework ImageIO -framework CoreGraphics -framework AVFoundation")
 endif()
 
-install(TARGETS ${the_target}
-    RUNTIME DESTINATION bin COMPONENT main
-    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
-
-install(FILES ${highgui_ext_hdrs}
-        DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/highgui
-        COMPONENT main)
-
-
-############################# highgui tests ################################
+setup_opencv_module(highgui)
 define_opencv_test(highgui)
 define_opencv_perf_test(highgui)

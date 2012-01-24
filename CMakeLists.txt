@@ -228,6 +228,7 @@ OCV_OPTION(ENABLE_SSE3                "Enable SSE3 instructions"                
 OCV_OPTION(ENABLE_SSSE3               "Enable SSSE3 instructions"                                OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"                               OFF  IF (CV_ICC OR CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
+OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -1056,21 +1057,16 @@ include_directories("."
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv"
     )
 
-# ----------------------------------------------------------------------------
-#           Set the maximum level of warnings:
-# ----------------------------------------------------------------------------
-# Should be set to true for development
-set(OPENCV_WARNINGS_ARE_ERRORS OFF CACHE BOOL "Treat warnings as errors")
 if (WIN32 AND ${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
 endif()
 
-set(OPENCV_EXTRA_C_FLAGS)
-set(OPENCV_EXTRA_C_FLAGS_RELEASE)
-set(OPENCV_EXTRA_C_FLAGS_DEBUG)
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS)
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE)
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG)
+set(OPENCV_EXTRA_C_FLAGS "")
+set(OPENCV_EXTRA_C_FLAGS_RELEASE "")
+set(OPENCV_EXTRA_C_FLAGS_DEBUG "")
+set(OPENCV_EXTRA_EXE_LINKER_FLAGS "")
+set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "")
+set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "")
 
 if(MSVC)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
@@ -1667,3 +1663,4 @@ status("")
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
     message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()
+

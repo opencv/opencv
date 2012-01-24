@@ -1,5 +1,11 @@
-#opencv precompiled headers macro (can add pch to modules and tests)
-#this macro must be called after any "add_definitions" commands, otherwise precompiled headers will not work
+set(opencv_public_modules "" CACHE INTERNAL "List of OpenCV modules included into the build")
+# helper macro for modules management
+macro(register_opencv_module name)
+   set(opencv_public_modules ${opencv_public_modules} ${name} CACHE INTERNAL "List of OpenCV modules included into the build")
+endmacro()
+
+# opencv precompiled headers macro (can add pch to modules and tests)
+# this macro must be called after any "add_definitions" commands, otherwise precompiled headers will not work
 macro(add_opencv_precompiled_headers the_target)
     if("${the_target}" MATCHES "opencv_test_.*")
         SET(pch_name "test/test_precomp")
@@ -123,46 +129,8 @@ macro(define_opencv_test name)
     endif()
 endmacro()
 
-# this is a template for a OpenCV module
-# define_opencv_module(<module_name> <dependencies>)
-macro(define_opencv_module name)
-
-    project(opencv_${name})
-
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src"
-                        "${CMAKE_CURRENT_BINARY_DIR}")
-
-    foreach(d ${ARGN})
-        if(d MATCHES "opencv_")
-            string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
-            if (EXISTS "${d_dir}/include")
-                include_directories("${d_dir}/include")
-            endif()
-        endif()
-    endforeach()
-
-    file(GLOB lib_srcs "src/*.cpp")
-    file(GLOB lib_int_hdrs "src/*.h*")
-    file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
-    file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.h*")
-
-    if(COMMAND get_module_external_sources)
-       get_module_external_sources(${name})
-    endif()
-
-    source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
-    source_group("Include" FILES ${lib_hdrs})
-    source_group("Include\\detail" FILES ${lib_hdrs_detail})
-    list(APPEND lib_hdrs ${lib_hdrs_detail})
-
+macro(setup_opencv_module name)
     set(the_target "opencv_${name}")
-    if (${name} MATCHES "ts" AND MINGW)
-        add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
-    else()
-        add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
-    endif()
-
     # For dynamic link numbering convenions
     if(NOT ANDROID)
         # Android SDK build scripts can include only .so files into final .apk
@@ -195,23 +163,11 @@ macro(define_opencv_module name)
         INSTALL_NAME_DIR lib
         )
 
-    # Add the required libraries for linking:
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
-
     if(MSVC)
         if(CMAKE_CROSSCOMPILING)
-            set_target_properties(${the_target} PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:secchk"
-                )
+            set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:secchk")
         endif()
-        set_target_properties(${the_target} PROPERTIES
-            LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG"
-            )
-    endif()
-
-    # Dependencies of this target:
-    if(ARGN)
-        add_dependencies(${the_target} ${ARGN})
+        set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG")
     endif()
 
     install(TARGETS ${the_target}
@@ -219,12 +175,71 @@ macro(define_opencv_module name)
         LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
         ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
-    install(FILES ${lib_hdrs}
-        DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
-        COMPONENT main)
+    if(lib_hdrs)
+        install(FILES ${lib_hdrs}
+            DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
+            COMPONENT main)
+    endif()
 
     add_opencv_precompiled_headers(${the_target})
-
-    define_opencv_test(${name})
-    define_opencv_perf_test(${name})
 endmacro()
+
+# this is a template for a OpenCV module declaration
+# define_opencv_moduleEx(<module_name> [public|internal] [STATIC|SHARED|AUTO] <dependencies>)
+macro(define_opencv_moduleEx _name _visibility moduletype)
+    string(TOLOWER "${_name}" name)
+    string(TOUPPER "${_name}" mname)
+    string(TOLOWER "${_visibility}" visibility)
+    string(TOUPPER "${moduletype}" modtype)
+    if(modtype STREQUAL "AUTO" )
+        set(modtype "")
+    endif()
+
+    option(OCVMODULE_${mname} "Include ${name} module into the OpenCV build" ON)
+    if(OCVMODULE_${mname})
+        set(the_target "opencv_${name}")
+
+        if(visibility STREQUAL "public")
+            register_opencv_module(${the_target})
+        endif()
+
+        project(${the_target})
+
+        include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+                            "${CMAKE_CURRENT_BINARY_DIR}")
+
+        include_opencv_modules(${ARGN})
+
+        file(GLOB lib_srcs "src/*.cpp")
+        file(GLOB lib_int_hdrs "src/*.h*")
+        file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
+        file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.h*")
+
+        if(COMMAND get_module_external_sources)
+            get_module_external_sources(${name})
+        endif()
+
+        source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
+        source_group("Include" FILES ${lib_hdrs})
+        source_group("Include\\detail" FILES ${lib_hdrs_detail})
+
+        list(APPEND lib_hdrs ${lib_hdrs_detail})
+
+        add_library(${the_target} ${modtype} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
+
+        # Add the required libraries for linking:
+        target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+
+        setup_opencv_module("${name}")
+        define_opencv_test(${name})
+        define_opencv_perf_test(${name})
+    endif()
+endmacro()
+
+# this is a shorthand for a public OpenCV module declaration
+# define_opencv_module(<module_name> <dependencies>)
+macro(define_opencv_module name)
+    define_opencv_moduleEx(${name} PUBLIC AUTO ${ARGN})
+endmacro()
+

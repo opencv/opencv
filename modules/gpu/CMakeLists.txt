@@ -1,3 +1,8 @@
+option(OCVMODULE_GPU "Include gpu module into the OpenCV build" ON)
+if(NOT OCVMODULE_GPU)
+    return()
+endif()
+
 set(name "gpu")
 
 set(the_target "opencv_${name}")
@@ -28,12 +33,7 @@ file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
-foreach(d ${DEPS_HEADER})
-	if(${d} MATCHES "opencv_")
-		string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-		include_directories("${d_dir}/include")
-	endif()
-endforeach()
+include_opencv_modules(${DEPS_HEADER})
 
 if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
@@ -91,35 +91,6 @@ endif()
 
 add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
 
-# For dynamic link numbering convenions
-set_target_properties(${the_target} PROPERTIES
-	VERSION ${OPENCV_VERSION}
-	SOVERSION ${OPENCV_SOVERSION}
-	OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"
-	)
-
-if(ENABLE_SOLUTION_FOLDERS)
-	set_target_properties(${the_target} PROPERTIES FOLDER "modules")
-endif()	
-	
-if (BUILD_SHARED_LIBS)
-	if (MSVC)
-		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
-	else()
-		add_definitions(-DCVAPI_EXPORTS)
-	endif()
-endif()
-
-add_opencv_precompiled_headers(${the_target})
-
-# Additional target properties
-set_target_properties(${the_target} PROPERTIES
-    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-    ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
-    RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-    INSTALL_NAME_DIR lib
-    )
-
 # Add the required libraries for linking:
 target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
 
@@ -139,25 +110,7 @@ if (HAVE_CUDA)
     endif()
 endif()
 
-if(MSVC)
-    if(CMAKE_CROSSCOMPILING)
-        set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:secchk")
-    endif()
-
-    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:libc")
-endif()
-
-# Dependencies of this target:
-add_dependencies(${the_target} ${DEPS})
-
-install(TARGETS ${the_target}
-	RUNTIME DESTINATION bin COMPONENT main
-	LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-	ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
-
-install(FILES ${lib_hdrs}
-	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
-	COMPONENT main)
+setup_opencv_module(${name})
 
 install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
 	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
