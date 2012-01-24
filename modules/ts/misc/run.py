@@ -50,26 +50,29 @@ SIMD_DETECTION_PROGRAM="""
 """
 
 parse_patterns = (
-  {'name': "has_perf_tests",     'default': "OFF",      'pattern': re.compile("^BUILD_PERF_TESTS:BOOL=(ON)$")},
-  {'name': "cmake_home",         'default': None,       'pattern': re.compile("^CMAKE_HOME_DIRECTORY:INTERNAL=(.+)$")},
-  {'name': "opencv_home",        'default': None,       'pattern': re.compile("^OpenCV_SOURCE_DIR:STATIC=(.+)$")},
-  {'name': "tests_dir",          'default': None,       'pattern': re.compile("^EXECUTABLE_OUTPUT_PATH:PATH=(.+)$")},
-  {'name': "build_type",         'default': "Release",  'pattern': re.compile("^CMAKE_BUILD_TYPE:STRING=(.*)$")},
-  {'name': "svnversion_path",    'default': None,       'pattern': re.compile("^SVNVERSION_PATH:FILEPATH=(.*)$")},
-  {'name': "cxx_flags",          'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS:STRING=(.*)$")},
-  {'name': "cxx_flags_debug",    'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS_DEBUG:STRING=(.*)$")},
-  {'name': "cxx_flags_release",  'default': None,       'pattern': re.compile("^CMAKE_CXX_FLAGS_RELEASE:STRING=(.*)$")},
-  {'name': "cxx_flags_android",  'default': None,       'pattern': re.compile("^ANDROID_CXX_FLAGS:INTERNAL=(.*)$")},
-  {'name': "cxx_compiler_path",  'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.*)$")},
-  {'name': "ndk_path",           'default': None,       'pattern': re.compile("^(?:ANDROID_NDK|ANDROID_STANDALONE_TOOLCHAIN)?:PATH=(.*)$")},
-  {'name': "android_abi",        'default': None,       'pattern': re.compile("^ANDROID_ABI:STRING=(.*)$")},
-  {'name': "android_executable", 'default': None,       'pattern': re.compile("^ANDROID_EXECUTABLE:FILEPATH=(.*android.*)$")},
-  {'name': "is_x64",             'default': "OFF",      'pattern': re.compile("^CUDA_64_BIT_DEVICE_CODE:BOOL=(ON)$")},#ugly(
-  {'name': "cmake_generator",    'default': None,       'pattern': re.compile("^CMAKE_GENERATOR:INTERNAL=(.+)$")},
-  {'name': "cxx_compiler",       'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.+)$")},
-  {'name': "with_cuda",          'default': "OFF",      'pattern': re.compile("^WITH_CUDA:BOOL=(ON)$")},
-  {'name': "cuda_library",       'default': None,       'pattern': re.compile("^CUDA_CUDA_LIBRARY:FILEPATH=(.+)$")},
-  {'name': "core_dependencies",  'default': None,       'pattern': re.compile("^opencv_core_LIB_DEPENDS:STATIC=(.+)$")},
+  {'name': "has_perf_tests",           'default': "OFF",      'pattern': re.compile("^BUILD_PERF_TESTS:BOOL=(ON)$")},
+  {'name': "cmake_home",               'default': None,       'pattern': re.compile("^CMAKE_HOME_DIRECTORY:INTERNAL=(.+)$")},
+  {'name': "opencv_home",              'default': None,       'pattern': re.compile("^OpenCV_SOURCE_DIR:STATIC=(.+)$")},
+  {'name': "tests_dir",                'default': None,       'pattern': re.compile("^EXECUTABLE_OUTPUT_PATH:PATH=(.+)$")},
+  {'name': "build_type",               'default': "Release",  'pattern': re.compile("^CMAKE_BUILD_TYPE:STRING=(.*)$")},
+  {'name': "svnversion_path",          'default': None,       'pattern': re.compile("^SVNVERSION_PATH:FILEPATH=(.*)$")},
+  {'name': "cxx_flags",                'default': "",         'pattern': re.compile("^CMAKE_CXX_FLAGS:STRING=(.*)$")},
+  {'name': "cxx_flags_debug",          'default': "",         'pattern': re.compile("^CMAKE_CXX_FLAGS_DEBUG:STRING=(.*)$")},
+  {'name': "cxx_flags_release",        'default': "",         'pattern': re.compile("^CMAKE_CXX_FLAGS_RELEASE:STRING=(.*)$")},
+  {'name': "opencv_cxx_flags",         'default': "",         'pattern': re.compile("^OPENCV_EXTRA_C_FLAGS:INTERNAL=(.*)$")},
+  {'name': "opencv_cxx_flags_debug",   'default': "",         'pattern': re.compile("^OPENCV_EXTRA_C_FLAGS_DEBUG:INTERNAL=(.*)$")},
+  {'name': "opencv_cxx_flags_release", 'default': "",         'pattern': re.compile("^OPENCV_EXTRA_C_FLAGS_RELEASE:INTERNAL=(.*)$")},
+  {'name': "cxx_flags_android",        'default': None,       'pattern': re.compile("^ANDROID_CXX_FLAGS:INTERNAL=(.*)$")},
+  {'name': "cxx_compiler_path",        'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.*)$")},
+  {'name': "ndk_path",                 'default': None,       'pattern': re.compile("^(?:ANDROID_NDK|ANDROID_STANDALONE_TOOLCHAIN)?:PATH=(.*)$")},
+  {'name': "android_abi",              'default': None,       'pattern': re.compile("^ANDROID_ABI:STRING=(.*)$")},
+  {'name': "android_executable",       'default': None,       'pattern': re.compile("^ANDROID_EXECUTABLE:FILEPATH=(.*android.*)$")},
+  {'name': "is_x64",                   'default': "OFF",      'pattern': re.compile("^CUDA_64_BIT_DEVICE_CODE:BOOL=(ON)$")},#ugly(
+  {'name': "cmake_generator",          'default': None,       'pattern': re.compile("^CMAKE_GENERATOR:INTERNAL=(.+)$")},
+  {'name': "cxx_compiler",             'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.+)$")},
+  {'name': "with_cuda",                'default': "OFF",      'pattern': re.compile("^WITH_CUDA:BOOL=(ON)$")},
+  {'name': "cuda_library",             'default': None,       'pattern': re.compile("^CUDA_CUDA_LIBRARY:FILEPATH=(.+)$")},
+  {'name': "core_dependencies",        'default': None,       'pattern': re.compile("^opencv_core_LIB_DEPENDS:STATIC=(.+)$")},
 )
 
 def query_yes_no(stdout, question, default="yes"):
@@ -447,7 +450,7 @@ class RunInfo(object):
                 fd.write(SIMD_DETECTION_PROGRAM)
                 fd.close();
                 options = [self.cxx_compiler_path]
-                cxx_flags = self.cxx_flags + " " + self.cxx_flags_release
+                cxx_flags = self.cxx_flags + " " + self.cxx_flags_release + " " + self.opencv_cxx_flags + " " + self.opencv_cxx_flags_release
                 if self.targetos == "android":
                     cxx_flags = self.cxx_flags_android + " " + cxx_flags
 
@@ -464,6 +467,7 @@ class RunInfo(object):
                     else:
                         prev_option = prev_option + " " + opt
                 options.append(tmpfile[1])
+                print options
                 output = Popen(options, stdout=PIPE, stderr=PIPE).communicate()
                 compiler_output = output[1]
                 os.remove(tmpfile[1])
