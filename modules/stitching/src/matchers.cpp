@@ -491,7 +491,7 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
         parallel_for(BlockedRange(0, static_cast<int>(near_pairs.size())), body);
     else
         body(BlockedRange(0, static_cast<int>(near_pairs.size())));
-    LOGLN("");
+    LOGLN_CHAT("");
 }
 
 

@@ -171,7 +171,7 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
                                   const vector<MatchesInfo> &pairwise_matches,
                                   vector<CameraParams> &cameras)
 {
-    LOG("Bundle adjustment");
+    LOG_CHAT("Bundle adjustment");
     int64 t = getTickCount();
 
     num_images_ = static_cast<int>(features.size());
@@ -230,16 +230,16 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
         if (_err)
         {
             calcError(err);
-            LOG(".");
+            LOG_CHAT(".");
             iter++;
             CvMat tmp = err;
             cvCopy(&tmp, _err);
         }
     }
 
-    LOGLN("");
-    LOGLN("Bundle adjustment, final RMS error: " << sqrt(err.dot(err) / total_num_matches_));
-    LOGLN("Bundle adjustment, iterations done: " << iter);
+    LOGLN_CHAT("");
+    LOGLN_CHAT("Bundle adjustment, final RMS error: " << sqrt(err.dot(err) / total_num_matches_));
+    LOGLN_CHAT("Bundle adjustment, iterations done: " << iter);
 
     obtainRefinedCameraParams(cameras);
 
@@ -251,7 +251,7 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
     for (int i = 0; i < num_images_; ++i)
         cameras[i].R = R_inv * cameras[i].R;
 
-    LOGLN("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    LOGLN_CHAT("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 

@@ -165,5 +165,11 @@ void selectRandomSubset(int count, int size, vector<int> &subset)
     }
 }
 
+int& stitchingLogLevel()
+{
+    static int _log_level=1;
+    return _log_level;
+}
+
 } // namespace detail
 } // namespace cv

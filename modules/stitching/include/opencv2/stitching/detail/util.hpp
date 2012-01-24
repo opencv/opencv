@@ -54,7 +54,7 @@
   #include <iostream>
   #include <sstream>
   #include <android/log.h>
-  #define LOG(msg) \
+  #define LOG_STITCHING_MSG(msg) \
     do { \
         std::stringstream _os; \
         _os << msg; \
@@ -62,13 +62,33 @@
     } while(0);
 #else
   #include <iostream>
-  #define LOG(msg) do { std::cout << msg; std::cout.flush(); } while(0);
+  #define LOG_STITCHING_MSG(msg) do { std::cout << msg; std::cout.flush(); } while(0);
 #endif
 #else
-  #define LOG(msg)
+  #define LOG_STITCHING_MSG(msg)
 #endif
 
+#define LOG_(_level, _msg)                     \
+    do {                                       \
+        if ((_level) >= ::cv::detail::stitchingLogLevel()) { \
+            LOG_STITCHING_MSG(_msg);           \
+        }                                      \
+    } while(0)
+
+
+#define LOG(msg) LOG_(1, msg)
+#define LOG_CHAT(msg) LOG_(0, msg)
+
 #define LOGLN(msg) LOG(msg << std::endl)
+#define LOGLN_CHAT(msg) LOG_CHAT(msg << std::endl)
+
+//#if DEBUG_LOG_CHAT
+//  #define LOG_CHAT(msg) LOG(msg)
+//  #define LOGLN_CHAT(msg) LOGLN(msg)
+//#else
+//  #define LOG_CHAT(msg) do{}while(0)
+//  #define LOGLN_CHAT(msg) do{}while(0)
+//#endif
 
 namespace cv {
 namespace detail {
@@ -127,6 +147,8 @@ Point CV_EXPORTS resultTl(const std::vector<Point> &corners);
 
 // Returns random 'count' element subset of the {0,1,...,size-1} set
 void CV_EXPORTS selectRandomSubset(int count, int size, std::vector<int> &subset);
+
+int& CV_EXPORTS stitchingLogLevel();
 
 } // namespace detail
 } // namespace cv
