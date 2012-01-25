@@ -2,8 +2,10 @@ if(IOS)
     return()
 endif()
 
-if(ANDROID)
-    define_opencv_module(stitching opencv_core opencv_imgproc opencv_features2d opencv_calib3d opencv_flann opencv_objdetect)
-else()
-    define_opencv_module(stitching opencv_core opencv_imgproc opencv_features2d opencv_calib3d opencv_flann opencv_objdetect opencv_gpu)
+set(DEPS opencv_core opencv_imgproc opencv_features2d opencv_calib3d opencv_flann opencv_objdetect)
+if(NOT ANDROID)
+    set(DEPS ${DEPS} opencv_gpu)
 endif()
+
+define_opencv_module(stitching ${DEPS})
+
