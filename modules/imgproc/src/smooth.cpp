@@ -311,8 +311,9 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         if( src.cols == 1 )
             ksize.width = 1;
     }
-
 #ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::box(src, dst, ksize, borderType))
+        return;
     if ( tegra::boxFilter(src, dst, ksize, anchor, normalize, borderType) )
         return;
 #endif
