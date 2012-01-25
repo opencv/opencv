@@ -44,7 +44,7 @@
 namespace cv
 {
 
-void crossCorr( const Mat& img, const Mat& templ, Mat& corr,
+void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 Size corrsize, int ctype,
                 Point anchor, double delta, int borderType )
 {
@@ -52,14 +52,21 @@ void crossCorr( const Mat& img, const Mat& templ, Mat& corr,
     const int minBlockSize = 256;
     std::vector<uchar> buf;
 
+    Mat templ = _templ;
     int depth = img.depth(), cn = img.channels();
     int tdepth = templ.depth(), tcn = templ.channels();
     int cdepth = CV_MAT_DEPTH(ctype), ccn = CV_MAT_CN(ctype);
     
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
     CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F );
-    CV_Assert( depth == tdepth || tdepth == CV_32F );
     
+    if( depth != tdepth && tdepth != std::max(CV_32F, depth) )
+    {
+        _templ.convertTo(templ, std::max(CV_32F, depth));
+        tdepth = templ.depth();
+    }
+    
+    CV_Assert( depth == tdepth || tdepth == CV_32F);
     CV_Assert( corrsize.height <= img.rows + templ.rows - 1 &&
                corrsize.width <= img.cols + templ.cols - 1 );
     
