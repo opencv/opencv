@@ -140,15 +140,15 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-bool CV_EXPORTS overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
-Rect CV_EXPORTS resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images);
-Rect CV_EXPORTS resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
-Point CV_EXPORTS resultTl(const std::vector<Point> &corners);
+CV_EXPORTS bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
+CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images);
+CV_EXPORTS Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+CV_EXPORTS Point resultTl(const std::vector<Point> &corners);
 
 // Returns random 'count' element subset of the {0,1,...,size-1} set
-void CV_EXPORTS selectRandomSubset(int count, int size, std::vector<int> &subset);
+CV_EXPORTS void selectRandomSubset(int count, int size, std::vector<int> &subset);
 
-int& CV_EXPORTS stitchingLogLevel();
+CV_EXPORTS int& stitchingLogLevel();
 
 } // namespace detail
 } // namespace cv
