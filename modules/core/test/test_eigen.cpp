@@ -98,18 +98,26 @@ Core_EigenTest_Scalar_64::~Core_EigenTest_Scalar_64() {}
 
 void Core_EigenTest_Scalar_32::run(int) 
 {
-    float value = cv::randu<float>();
-    cv::Mat src(1, 1, CV_32FC1, Scalar::all((float)value));
-    test_values(src);
-    src.~Mat();
+    const size_t MATRIX_COUNT = 500;
+    for (size_t i = 0; i < MATRIX_COUNT; ++i)
+    {
+        float value = cv::randu<float>();
+        cv::Mat src(1, 1, CV_32FC1, Scalar::all((float)value));
+        test_values(src);
+        src.~Mat();
+    }
 }
 
 void Core_EigenTest_Scalar_64::run(int)
 {
-    float value = cv::randu<float>();
-    cv::Mat src(1, 1, CV_64FC1, Scalar::all((double)value));
-    test_values(src);
-    src.~Mat();
+    const size_t MATRIX_COUNT = 500;
+    for (size_t i = 0; i < MATRIX_COUNT; ++i)
+    {
+        float value = cv::randu<float>();
+        cv::Mat src(1, 1, CV_64FC1, Scalar::all((double)value));
+        test_values(src);
+        src.~Mat();
+    }
 }
 
 void Core_EigenTest_32::run(int) { check_full(CV_32FC1); }
@@ -358,7 +366,7 @@ bool Core_EigenTest::check_full(int type)
     return true;
 }
 
-// TEST(Core_Eigen_Scalar_32, accuracy) {Core_EigenTest_Scalar_32 test; test.safe_run(); }
-// TEST(Core_Eigen_Scalar_64, accuracy) {Core_EigenTest_Scalar_64 test; test.safe_run(); }
-TEST(Core_Eigen_32, accuracy) { Core_EigenTest_32 test; test.safe_run(); }
-TEST(Core_Eigen_64, accuracy) { Core_EigenTest_64 test; test.safe_run(); }
+TEST(Core_Eigen, scalar_32) {Core_EigenTest_Scalar_32 test; test.safe_run(); }
+TEST(Core_Eigen, scalar_64) {Core_EigenTest_Scalar_64 test; test.safe_run(); }
+TEST(Core_Eigen, vector_32) { Core_EigenTest_32 test; test.safe_run(); }
+TEST(Core_Eigen, vector_64) { Core_EigenTest_64 test; test.safe_run(); }

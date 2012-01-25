@@ -278,7 +278,7 @@ JacobiImpl_( _Tp* A, size_t astep, _Tp* W, _Tp* V, size_t vstep, int n, uchar* b
         }
     }
     
-    for( iters = 0; iters < maxIters; iters++ )
+    if( n > 1 ) for( iters = 0; iters < maxIters; iters++ )
     {
         // find index (k,l) of pivot p
         for( k = 0, mv = maxSR[0], i = 1; i < n-1; i++ )
