@@ -758,12 +758,12 @@ CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRange, int flags );
 
 //! builds the discrete Voronoi diagram
-CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
+CV_EXPORTS_AS(distanceTransformWithLabels) void distanceTransform( InputArray src, OutputArray dst,
                                      OutputArray labels, int distanceType, int maskSize );
 
 //! computes the distance transform map
-CV_EXPORTS void distanceTransform( InputArray src, OutputArray dst,
-                                   int distanceType, int maskSize );
+CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
+                                     int distanceType, int maskSize );
 
 enum { FLOODFILL_FIXED_RANGE = 1 << 16, FLOODFILL_MASK_ONLY = 1 << 17 };
 

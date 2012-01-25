@@ -826,14 +826,14 @@ cvDistTransform( const void* srcarr, void* dstarr,
         else
         {
             CvSeq *contours = 0;
-            CvPoint top_left = {0,0}, bottom_right = {size.width-1,size.height-1};
             int label;
 
             st = cvCreateMemStorage();
-            src_copy = cvCreateMat( size.height, size.width, src->type );
-            cvCmpS( src, 0, src_copy, CV_CMP_EQ );
+            src_copy = cvCreateMat( size.height+border*2, size.width+border*2, src->type );
+            cvCopyMakeBorder(src, src_copy, cvPoint(border, border), IPL_BORDER_CONSTANT, cvScalarAll(255));
+            cvCmpS( src_copy, 0, src_copy, CV_CMP_EQ );
             cvFindContours( src_copy, st, &contours, sizeof(CvContour),
-                            CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+                           CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(-border, -border));
             cvZero( labels );
             for( label = 1; contours != 0; contours = contours->h_next, label++ )
             {
@@ -841,10 +841,11 @@ cvDistTransform( const void* srcarr, void* dstarr,
                 cvDrawContours( labels, contours, area_color, area_color, -255, -1, 8 );
             }
 
-            cvCopy( src, src_copy );
-            cvRectangle( src_copy, top_left, bottom_right, cvScalarAll(255), 1, 8 );
+            //cvCopy( src, src_copy );
+            //CvPoint top_left = {0,0}, bottom_right = {size.width-1,size.height-1};
+            //cvRectangle( src_copy, top_left, bottom_right, cvScalarAll(255), 1, 8 );
 
-            icvDistanceTransformEx_5x5_C1R( src_copy->data.ptr, src_copy->step, temp->data.i, temp->step,
+            icvDistanceTransformEx_5x5_C1R( src->data.ptr, src->step, temp->data.i, temp->step,
                         dst->data.fl, dst->step, labels->data.i, labels->step, size, _mask );
         }
     }
