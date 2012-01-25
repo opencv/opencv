@@ -213,10 +213,10 @@ macro(define_opencv_moduleEx _name _visibility)
 
         list(APPEND lib_hdrs ${lib_hdrs_detail})
 
-        if(HAVE_CUDA AND EXISTS "src/cuda/")
+        if(HAVE_CUDA AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")	
             file(GLOB lib_cuda "src/cuda/*.cu")
             source_group("Cuda" FILES "${lib_cuda}")
- 
+  
             include_directories(${CUDA_INCLUDE_DIRS})
             include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/src")
             include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/src/cuda")
@@ -247,7 +247,7 @@ macro(define_opencv_moduleEx _name _visibility)
         add_library(${the_target} ${OPENCV_${mname}_MODULE_TYPE} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${cuda_objs})
         target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
 
-        if(HAVE_CUDA AND EXISTS "src/cuda/")
+        if(HAVE_CUDA AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")	
             target_link_libraries(${the_target} ${CUDA_LIBRARIES})
 
             unset(CUDA_npp_LIBRARY CACHE)
