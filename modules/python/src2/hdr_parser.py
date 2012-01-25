@@ -235,7 +235,7 @@ class CppHeaderParser(object):
             modlist.append("=" + macro_arg)
             l = l[:npos] + l[npos3+1:]
 
-        l = self.batch_replace(l, [("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("public ", " "), ("::", ".")]).strip()
+        l = self.batch_replace(l, [("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("public virtual ", " "), ("public ", " "), ("::", ".")]).strip()
         ll = re.split(r'\s*[,:]?\s*', l)
         ll = [le for le in ll if le]
         classname = ll[1]

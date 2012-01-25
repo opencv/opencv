@@ -238,47 +238,18 @@ static PyObject *iplimage_repr(PyObject *self)
 
 static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
 {
-  iplimage_t *pc = (iplimage_t*)self;
-  IplImage *i;
+  IplImage *i=0;
   if (!convert_to_IplImage(self, &i, "self"))
     return NULL;
   if (i == NULL)
     return NULL;
-  int bps;
-  switch (i->depth) {
-  case IPL_DEPTH_8U:
-  case IPL_DEPTH_8S:
-    bps = 1;
-    break;
-  case IPL_DEPTH_16U:
-  case IPL_DEPTH_16S:
-    bps = 2;
-    break;
-  case IPL_DEPTH_32S:
-  case IPL_DEPTH_32F:
-    bps = 4;
-    break;
-  case IPL_DEPTH_64F:
-    bps = 8;
-    break;
-  default:
-    return failmsg("Unrecognised depth %d", i->depth), (PyObject*)0;
-  }
-  int bpl = i->width * i->nChannels * bps;
-  if (PyString_Check(pc->data) && bpl == i->widthStep && pc->offset == 0 && ((bpl * i->height) == what_size(pc->data))) {
-    Py_INCREF(pc->data);
-    return pc->data;
-  } else {
-    int l = bpl * i->height;
-    char *s = new char[l];
-    int y;
-    for (y = 0; y < i->height; y++) {
-      memcpy(s + y * bpl, i->imageData + y * i->widthStep, bpl);
-    }
-    PyObject *r = PyString_FromStringAndSize(s, l);
-    delete[] s;
-    return r;
-  }
+  cv::Mat img(i);
+  size_t esz = img.elemSize();
+  int nrows = img.rows, ncols = img.cols;
+    
+  if( !img.isContinuous() )
+      img = img.clone();
+  return PyString_FromStringAndSize((char*)img.data, (Py_ssize_t)(esz*nrows*ncols));
 }
 
 static struct PyMethodDef iplimage_methods[] =

@@ -215,9 +215,11 @@ class ClassInfo(object):
         if decl:
             self.bases = decl[1].split()[1:]
             if len(self.bases) > 1:
-                print "Error: class %s has more than 1 base class (not supported by Python C extensions)" % (self.name,)
+                print "Warning: class %s has more than 1 base class (not supported by Python C extensions)" % (self.name,)
                 print "Bases: ", self.bases
-                return sys.exit(-1)
+                print "Only the first base class will be used"
+                self.bases = self.bases[:1]
+                #return sys.exit(-1)
             for m in decl[2]:
                 if m.startswith("="):
                     self.wname = m[1:]
