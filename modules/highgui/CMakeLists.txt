@@ -229,13 +229,37 @@ if(WITH_ANDROID_CAMERA)
   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} opencv_androidcamera)
 endif()
 
-#XIMEA API
 if(HAVE_XIMEA AND XIMEA_FOUND)
    set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
    include_directories(${XIMEA_PATH})
    link_directories(${XIMEA_LIBRARY_DIR})
    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} m3api)
    set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
+endif()
+
+if(OPENNI_LIBRARY)
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENNI_LIBRARY})
+endif()
+
+if(APPLE AND NOT IOS)
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} -lbz2 -framework Cocoa -framework QuartzCore)
+    if(WITH_CARBON)
+        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} -framework Carbon)
+    endif()
+    if(NOT WITH_QUICKTIME)
+        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} -framework QTKit)
+    endif()
+    if(WITH_CARBON OR WITH_QUICKTIME)
+        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} -framework QuickTime -framework CoreFoundation)
+    endif()
+endif()
+
+if(IOS)
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} -lbz2 -framework QuartzCore -framework CoreFoundation -framework ImageIO -framework CoreGraphics -framework AVFoundation)
+endif()
+
+if(OPENCV_BUILD_3RDPARTY_LIBS AND WIN32)
+    link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
 endif()
 
 if(COMMAND get_module_external_sources)
@@ -249,33 +273,23 @@ endif()
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 
-if(OPENCV_BUILD_3RDPARTY_LIBS)
-    if(WIN32)
-        link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
-    endif()
-    #link_directories(
-     #   "${CMAKE_BINARY_DIR}/3rdparty/lib"
-      #  "${CMAKE_BINARY_DIR}/3rdparty/lib/${ConfigurationName}"
-       # )
-endif()
+#message(STATUS "GRFMT: ${GRFMT_LIBS}")
+#message(STATUS "OPENCV_LIBS: ${OPENCV_LINKER_LIBS}")
+#message(STATUS "HIGHGUI_LIBS: ${HIGHGUI_LIBRARIES}")
 
 # ----------------------------------------------------------------------------------
 #               Define the library target:
 # ----------------------------------------------------------------------------------
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/../core/include"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/../imgproc/include"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/src"
-                    "${CMAKE_CURRENT_BINARY_DIR}")
-
+opencv_module_includes(opencv_core opencv_imgproc)
 if(WIN32)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")
 endif()
 
 add_library(${the_target} ${highgui_srcs} ${grfmt_srcs} ${highgui_hdrs} ${grfmt_hdrs} ${highgui_ext_hdrs})
-register_opencv_module(${the_target})
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core opencv_imgproc ${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
+opencv_module_register(${the_target})
 
-if (BUILD_SHARED_LIBS)
+if(BUILD_SHARED_LIBS)
     add_definitions(-DHIGHGUI_EXPORTS)
 endif()
 
@@ -283,33 +297,6 @@ if(MSVC)
     set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
 
-#message(STATUS "GRFMT: ${GRFMT_LIBS}")
-#message(STATUS "HIGHGUI_LIBS: ${HIGHGUI_LIBRARIES}")
-#message(STATUS "OPENCV_LIBS: ${OPENCV_LINKER_LIBS}")
-
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core
-                      opencv_imgproc ${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
-if( OPENNI_LIBRARY )
-    target_link_libraries(${the_target} ${OPENNI_LIBRARY})
-endif()
-
-if(APPLE AND NOT IOS)
-    target_link_libraries(${the_target} "-lbz2 -framework Cocoa -framework QuartzCore")
-    if(WITH_CARBON)
-        target_link_libraries(${the_target} "-framework Carbon")
-    endif()
-    if(NOT WITH_QUICKTIME)
-        target_link_libraries(${the_target} "-framework QTKit")
-    endif()
-    if(WITH_CARBON OR WITH_QUICKTIME)
-        target_link_libraries(${the_target} "-framework QuickTime -framework CoreFoundation")
-    endif()
-endif()
-
-if (IOS)
-    target_link_libraries(${the_target} "-lbz2 -framework QuartzCore -framework CoreFoundation -framework ImageIO -framework CoreGraphics -framework AVFoundation")
-endif()
-
-setup_opencv_module(highgui)
+opencv_module_setup(highgui)
 define_opencv_test(highgui)
 define_opencv_perf_test(highgui)

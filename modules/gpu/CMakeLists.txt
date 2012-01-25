@@ -1,3 +1,7 @@
+if(ANDROID OR IOS)
+    return()
+endif()
+
 option(OCVMODULE_GPU "Include gpu module into the OpenCV build" ON)
 if(NOT OCVMODULE_GPU)
     return()
@@ -12,10 +16,8 @@ set(DEPS "opencv_core" "opencv_imgproc" "opencv_calib3d" "opencv_objdetect")
 set(DEPS_HEADER ${DEPS} "opencv_features2d" "opencv_flann")
 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-					"${CMAKE_CURRENT_SOURCE_DIR}/src/cuda"
-					"${CMAKE_CURRENT_SOURCE_DIR}/src"
-					"${CMAKE_CURRENT_BINARY_DIR}")
+opencv_module_includes(${DEPS_HEADER})
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
 file(GLOB lib_srcs "src/*.cpp")
 file(GLOB lib_int_hdrs "src/*.h*")
@@ -32,8 +34,6 @@ file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
 file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
-
-include_opencv_modules(${DEPS_HEADER})
 
 if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
@@ -90,9 +90,8 @@ if (HAVE_CUDA)
 endif()
 
 add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
-
-# Add the required libraries for linking:
 target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
+opencv_module_register(${the_target})
 
 if (HAVE_CUDA)
     target_link_libraries(${the_target} ${CUDA_LIBRARIES})
@@ -110,7 +109,7 @@ if (HAVE_CUDA)
     endif()
 endif()
 
-setup_opencv_module(${name})
+opencv_module_setup(${name})
 
 install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
 	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
@@ -129,34 +128,23 @@ install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
 # filter creation in Visual Studio 
 if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     set(the_test_target "opencv_test_${name}")   
-    
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/test"
-                        "${CMAKE_CURRENT_BINARY_DIR}")                      
-    
     set(test_deps opencv_${name} opencv_ts opencv_highgui opencv_calib3d ${DEPS})
-    foreach(d ${test_deps})
-        if(${d} MATCHES "opencv_")
-            string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-            include_directories("${d_dir}/include")
-        endif()
-    endforeach()
+
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test")
+    opencv_module_includes(${test_deps})
     
     file(GLOB test_srcs "test/*.cpp")
     file(GLOB test_hdrs "test/*.h*")
 	
-	source_group("Src" FILES ${test_hdrs} ${test_srcs})
+    source_group("Src" FILES ${test_hdrs} ${test_srcs})
     if(HAVE_CUDA)
-		include_directories(${CUDA_INCLUDE_DIRS} ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
+        include_directories(${CUDA_INCLUDE_DIRS} ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
 
-		file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.h*")            
-		source_group("Src\\NVidia" FILES ${nvidia})
+        file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.h*")            
+        source_group("Src\\NVidia" FILES ${nvidia})
     endif()
     
-    
     add_executable(${the_test_target} ${test_srcs} ${test_hdrs} ${nvidia})
-    
-    add_opencv_precompiled_headers(${the_test_target})
     
     # Additional target properties
     set_target_properties(${the_test_target} PROPERTIES
@@ -164,11 +152,9 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
         RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
         )
 	
-	if(ENABLE_SOLUTION_FOLDERS)
-		set_target_properties(${the_test_target} PROPERTIES FOLDER "tests")
-	endif()
-    
-    add_dependencies(${the_test_target} ${test_deps})
+    if(ENABLE_SOLUTION_FOLDERS)
+        set_target_properties(${the_test_target} PROPERTIES FOLDER "tests")
+    endif()
     
     # Add the required libraries for linking:
     target_link_libraries(${the_test_target} ${OPENCV_LINKER_LIBS} ${test_deps})
@@ -180,6 +166,8 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     #if(WIN32)
     #    install(TARGETS ${the_test_target} RUNTIME DESTINATION bin COMPONENT main)
     #endif()
+
+    add_opencv_precompiled_headers(${the_test_target})
 endif()
 
 

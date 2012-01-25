@@ -1,6 +1,9 @@
 if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     return()
 endif()
+if(NOT PYTHONLIBS_FOUND OR NOT BUILD_NEW_PYTHON_SUPPORT OR NOT PYTHON_USE_NUMPY)
+    return()
+endif()
 
 # ----------------------------------------------------------------------------
 #  CMake file for python support

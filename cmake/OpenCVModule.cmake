@@ -1,7 +1,22 @@
 set(opencv_public_modules "" CACHE INTERNAL "List of OpenCV modules included into the build")
 # helper macro for modules management
-macro(register_opencv_module name)
+macro(opencv_module_register name)
    set(opencv_public_modules ${opencv_public_modules} ${name} CACHE INTERNAL "List of OpenCV modules included into the build")
+endmacro()
+
+# Setup include path for OpenCV headers for specified modules
+macro(opencv_module_includes)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+                        "${CMAKE_CURRENT_BINARY_DIR}")
+    foreach(d ${ARGN})
+        if(d MATCHES "opencv_")
+            string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
+            if (EXISTS "${d_dir}/include")
+                include_directories("${d_dir}/include")
+            endif()
+        endif()
+    endforeach()
 endmacro()
 
 # opencv precompiled headers macro (can add pch to modules and tests)
@@ -28,24 +43,16 @@ macro(add_opencv_precompiled_headers the_target)
 endmacro()
 
 # this is a template for a OpenCV performance tests
-# define_opencv_perf_test(<module_name> <dependencies>)
+# define_opencv_perf_test(<module_name> <extra_dependencies>)
 macro(define_opencv_perf_test name)
     set(perf_path "${CMAKE_CURRENT_SOURCE_DIR}/perf")
     if(BUILD_PERF_TESTS AND EXISTS "${perf_path}")
 
-        include_directories("${perf_path}" "${CMAKE_CURRENT_BINARY_DIR}")
-
         # opencv_highgui is required for imread/imwrite
         set(perf_deps opencv_${name} ${ARGN} opencv_ts opencv_highgui ${EXTRA_OPENCV_${name}_DEPS})
 
-        foreach(d ${perf_deps})
-            if(d MATCHES "opencv_")
-                string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
-                if (EXISTS "${d_dir}/include")
-                   include_directories("${d_dir}/include")
-                endif()
-            endif()
-        endforeach()
+        include_directories("${perf_path}")
+        opencv_module_includes(${perf_deps})
 
         file(GLOB perf_srcs "${perf_path}/*.cpp")
         file(GLOB perf_hdrs "${perf_path}/*.h*")
@@ -66,7 +73,6 @@ macro(define_opencv_perf_test name)
             set_target_properties(${the_target} PROPERTIES FOLDER "performance tests")
         endif()
 
-        add_dependencies(${the_target} ${perf_deps})
         target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${perf_deps})
 
         add_opencv_precompiled_headers(${the_target})
@@ -78,23 +84,16 @@ macro(define_opencv_perf_test name)
 endmacro()
 
 # this is a template for a OpenCV regression tests
-# define_opencv_test(<module_name> <dependencies>)
+# define_opencv_test(<module_name> <extra_dependencies>)
 macro(define_opencv_test name)
     set(test_path "${CMAKE_CURRENT_SOURCE_DIR}/test")
     if(BUILD_TESTS AND EXISTS "${test_path}")
-        include_directories("${test_path}" "${CMAKE_CURRENT_BINARY_DIR}")
 
         # opencv_highgui is required for imread/imwrite
         set(test_deps opencv_${name} ${ARGN} opencv_ts opencv_highgui ${EXTRA_OPENCV_${name}_DEPS})
 
-        foreach(d ${test_deps})
-            if(d MATCHES "opencv_")
-                string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
-                if (EXISTS "${d_dir}/include")
-                   include_directories("${d_dir}/include")
-                endif()
-            endif()
-        endforeach()
+        include_directories("${test_path}")
+        opencv_module_includes(${test_deps})
 
         file(GLOB test_srcs "${test_path}/*.cpp")
         file(GLOB test_hdrs "${test_path}/*.h*")
@@ -115,7 +114,6 @@ macro(define_opencv_test name)
             set_target_properties(${the_target} PROPERTIES FOLDER "tests")
         endif()
 
-        add_dependencies(${the_target} ${test_deps})
         target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
 
         enable_testing()
@@ -129,8 +127,10 @@ macro(define_opencv_test name)
     endif()
 endmacro()
 
-macro(setup_opencv_module name)
+# Set standard properties, install rules and precompiled headers for OpenCV module
+macro(opencv_module_setup name)
     set(the_target "opencv_${name}")
+    
     # For dynamic link numbering convenions
     if(NOT ANDROID)
         # Android SDK build scripts can include only .so files into final .apk
@@ -185,31 +185,18 @@ macro(setup_opencv_module name)
 endmacro()
 
 # this is a template for a OpenCV module declaration
-# define_opencv_moduleEx(<module_name> [public|internal] [STATIC|SHARED|AUTO] <dependencies>)
-macro(define_opencv_moduleEx _name _visibility moduletype)
+# define_opencv_moduleEx(<module_name> [public|internal] <dependencies>)
+macro(define_opencv_moduleEx _name _visibility)
     string(TOLOWER "${_name}" name)
     string(TOUPPER "${_name}" mname)
     string(TOLOWER "${_visibility}" visibility)
-    string(TOUPPER "${moduletype}" modtype)
-    if(modtype STREQUAL "AUTO" )
-        set(modtype "")
-    endif()
 
     option(OCVMODULE_${mname} "Include ${name} module into the OpenCV build" ON)
     if(OCVMODULE_${mname})
         set(the_target "opencv_${name}")
-
-        if(visibility STREQUAL "public")
-            register_opencv_module(${the_target})
-        endif()
-
         project(${the_target})
 
-        include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/src"
-                            "${CMAKE_CURRENT_BINARY_DIR}")
-
-        include_opencv_modules(${ARGN})
+        opencv_module_includes(${ARGN})
 
         file(GLOB lib_srcs "src/*.cpp")
         file(GLOB lib_int_hdrs "src/*.h*")
@@ -226,12 +213,14 @@ macro(define_opencv_moduleEx _name _visibility moduletype)
 
         list(APPEND lib_hdrs ${lib_hdrs_detail})
 
-        add_library(${the_target} ${modtype} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
-
-        # Add the required libraries for linking:
+        add_library(${the_target} ${OPENCV_${mname}_MODULE_TYPE} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
         target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
 
-        setup_opencv_module("${name}")
+        if(visibility STREQUAL "public")
+            opencv_module_register(${the_target})
+        endif()
+
+        opencv_module_setup(${name})
         define_opencv_test(${name})
         define_opencv_perf_test(${name})
     endif()
@@ -240,6 +229,6 @@ endmacro()
 # this is a shorthand for a public OpenCV module declaration
 # define_opencv_module(<module_name> <dependencies>)
 macro(define_opencv_module name)
-    define_opencv_moduleEx(${name} PUBLIC AUTO ${ARGN})
+    define_opencv_moduleEx(${name} PUBLIC ${ARGN})
 endmacro()
 

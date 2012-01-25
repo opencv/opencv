@@ -1,3 +1,7 @@
+if(IOS)
+    return()
+endif()
+
 project(traincascade)
 
 include_directories(
