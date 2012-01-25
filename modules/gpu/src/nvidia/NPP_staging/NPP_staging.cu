@@ -315,7 +315,8 @@ NCVStatus scanRowsWrapperDevice(T_in *d_src, Ncv32u srcStride,
         <T_in, T_out, tbDoSqr>
         <<<roi.height, NUM_SCAN_THREADS, 0, nppStGetActiveCUDAstream()>>>
         (d_src, (Ncv32u)alignmentOffset, roi.width, srcStride, d_dst, dstStride);
-    ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+    
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return NPPST_SUCCESS;
 }
@@ -768,7 +769,7 @@ static NCVStatus decimateWrapperDevice(T *d_src, Ncv32u srcStep,
             (d_src, srcStep, d_dst, dstStep, dstRoi, scale);
     }
 
-    ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return NPPST_SUCCESS;
 }
@@ -997,7 +998,7 @@ NCVStatus nppiStRectStdDev_32f_C1R(Ncv32u *d_sum, Ncv32u sumStep,
             (NULL, sumStep, NULL, sqsumStep, d_norm, normStep, roi, rect, invRectArea);
     }
 
-    ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return NPPST_SUCCESS;
 }
@@ -1157,7 +1158,7 @@ NCVStatus transposeWrapperDevice(T *d_src, Ncv32u srcStride,
         <T>
         <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
         (d_src, srcStride, d_dst, dstStride, srcRoi);
-    ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return NPPST_SUCCESS;
 }
@@ -1407,7 +1408,8 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
              d_hierSums.ptr(),
              d_hierSums.ptr() + partSumOffsets[1],
              elemRemove);
-        ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
+        ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
         //calculate hierarchical partial sums
         for (Ncv32u i=1; i<partSumNums.size()-1; i++)
@@ -1438,7 +1440,8 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
                      NULL,
                      NULL);
             }
-            ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
+            ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
         }
 
         //adjust hierarchical partial sums
@@ -1454,7 +1457,8 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
                 <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
                 (d_hierSums.ptr() + partSumOffsets[i], partSumNums[i],
                  d_hierSums.ptr() + partSumOffsets[i+1]);
-            ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
+            ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
         }
     }
     else
@@ -1466,7 +1470,8 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
             (d_src, srcLen,
              d_hierSums.ptr(),
              NULL, elemRemove);
-        ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
+        ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
     }
 
     //compact source vector using indices
@@ -1480,7 +1485,8 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
         <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
         (d_src, srcLen, d_hierSums.ptr(), d_dst,
          elemRemove, d_numDstElements.ptr());
-    ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     //get number of dst elements
     if (dstLenPinned != NULL)
@@ -1773,6 +1779,7 @@ NCVStatus nppiStFilterRowBorder_32f_C1R(const Ncv32f *pSrc,
     case nppStBorderMirror:
         FilterRowBorderMirror_32f_C1R <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream ()>>>
             (srcStep, pDst, dstSize, dstStep, oROI, nKernelSize, nAnchor, multiplier);
+        ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
         break;
     default:
         return NPPST_ERROR;
@@ -1842,6 +1849,7 @@ NCVStatus nppiStFilterColumnBorder_32f_C1R(const Ncv32f *pSrc,
     case nppStBorderMirror:
         FilterColumnBorderMirror_32f_C1R <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream ()>>>
             (srcStep, pDst, dstSize, dstStep, oROI, nKernelSize, nAnchor, multiplier);
+        ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
         break;
     default:
         return NPPST_ERROR;
@@ -1946,7 +1954,7 @@ NCVStatus BlendFrames(const Ncv32f *src0,
     BlendFramesKernel<<<blocks, threads, 0, nppStGetActiveCUDAstream ()>>>
         (ufi, vfi, ubi, vbi, o1, o2, width, height, stride, theta, out);
 
-    ncvAssertCUDAReturn (cudaGetLastError (), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return NPPST_SUCCESS;
 }
@@ -2262,6 +2270,8 @@ NCVStatus nppiStVectorWarp_PSF1x1_32f_C1(const Ncv32f *pSrc,
     ForwardWarpKernel_PSF1x1 <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream()>>>
         (pU, pV, pSrc, srcSize.width, srcSize.height, vfStep, srcStep, timeScale, pDst);
 
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
     return NPPST_SUCCESS;
 }
 
@@ -2294,11 +2304,17 @@ NCVStatus nppiStVectorWarp_PSF2x2_32f_C1(const Ncv32f *pSrc,
     MemsetKernel <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream()>>>
         (0, srcSize.width, srcSize.height, pBuffer);
 
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
     ForwardWarpKernel_PSF2x2 <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream()>>>
         (pU, pV, pSrc, srcSize.width, srcSize.height, vfStep, srcStep, timeScale, pBuffer, pDst);
 
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
+
     NormalizeKernel <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream()>>>
         (pBuffer, srcSize.width, srcSize.height, srcStep, pDst);
+
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return NPPST_SUCCESS;
 }
@@ -2556,6 +2572,8 @@ NCVStatus nppiStResize_32f_C1R(const Ncv32f *pSrc,
     {
         status = NPPST_ERROR;
     }
+
+    ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return status;
 }

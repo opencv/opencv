@@ -874,7 +874,7 @@ static NCVStatus drawRectsWrapperDevice(T *d_dst,
 
     drawRects<T><<<grid, block>>>(d_dst, dstStride, dstWidth, dstHeight, d_rects, numRects, color);
 
-    ncvAssertCUDAReturn(cudaGetLastError(), NCV_CUDA_ERROR);
+    ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
 
     return NCV_SUCCESS;
 }
