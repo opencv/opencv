@@ -213,8 +213,47 @@ macro(define_opencv_moduleEx _name _visibility)
 
         list(APPEND lib_hdrs ${lib_hdrs_detail})
 
-        add_library(${the_target} ${OPENCV_${mname}_MODULE_TYPE} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
+        if(HAVE_CUDA AND EXISTS "src/cuda/")
+            file(GLOB lib_cuda "src/cuda/*.cu")
+            source_group("Cuda" FILES "${lib_cuda}")
+ 
+            include_directories(${CUDA_INCLUDE_DIRS})
+            include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/src")
+            include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/src/cuda")
+ 
+            set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_10,code=sm_10
+                                                   -gencode arch=compute_11,code=sm_11
+                                                   -gencode arch=compute_12,code=sm_12
+                                                   -gencode arch=compute_13,code=sm_13
+                                                   -gencode arch=compute_20,code=sm_20
+                                                   -gencode arch=compute_20,code=sm_21)
+
+            if(UNIX OR APPLE)
+                set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
+            endif()
+            if(APPLE)
+                set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
+            endif()
+
+            #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
+            #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
+    
+            CUDA_COMPILE(cuda_objs ${lib_cuda})
+        else()
+            set(lib_cuda "")
+            set(cuda_objs "")
+        endif()
+
+        add_library(${the_target} ${OPENCV_${mname}_MODULE_TYPE} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${cuda_objs})
         target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+
+        if(HAVE_CUDA AND EXISTS "src/cuda/")
+            target_link_libraries(${the_target} ${CUDA_LIBRARIES})
+
+            unset(CUDA_npp_LIBRARY CACHE)
+            find_cuda_helper_libs(npp)
+            target_link_libraries(${the_target} ${CUDA_npp_LIBRARY})
+        endif()
 
         if(visibility STREQUAL "public")
             opencv_module_register(${the_target})
