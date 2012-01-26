@@ -309,7 +309,7 @@ namespace cv { namespace gpu { namespace device
 }}}
 
 
-#ifdef _WIN32
+#if 0 //def _WIN32
 
 template<typename T>
 static T _interpLinear(const T &a, const T &b, Ncv32f d)

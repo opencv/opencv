@@ -47,7 +47,7 @@
 #include <vector>
 #include "NCV.hpp"
 
-#ifdef _WIN32
+#if 0 //def _WIN32
 
 template <class T>
 class NCV_EXPORTS NCVMatrixStack
