@@ -136,6 +136,8 @@ Base class for all camera parameters refinement methods. ::
         std::vector<std::pair<int,int> > edges_;
     };
 
+.. seealso:: :ocv:class:`detail::Estimator`
+
 detail::BundleAdjusterBase::BundleAdjusterBase
 ----------------------------------------------
 
@@ -146,6 +148,42 @@ Construct a bundle adjuster base instance.
     :param num_params_per_cam: Number of parameters per camera
     
     :param num_errs_per_measurement: Number of error terms (components) per match
+
+detail::BundleAdjusterBase::setUpInitialCameraParams
+----------------------------------------------------
+
+Sets initial camera parameter to refine.
+
+.. ocv:function:: void detail::BundleAdjusterBase::setUpInitialCameraParams(const std::vector<CameraParams> &cameras) = 0;
+
+    :param cameras: Camera parameters
+
+detail::BundleAdjusterBase::calcError
+-------------------------------------
+
+Calculates error vector.
+
+.. ocv:function:: void detail::BundleAdjusterBase::calcError(Mat &err) = 0;
+
+    :param err: Error column-vector of length ``total_num_matches * num_errs_per_measurement``
+
+detail::BundleAdjusterBase::calcJacobian
+----------------------------------------
+
+Calculates the cost function jacobian.
+
+.. ocv:function:: void detail::BundleAdjusterBase::calcJacobian(Mat &jac) = 0;
+
+    :param jac: Jacobian matrix of dimensions ``(total_num_matches * num_errs_per_measurement) x (num_images * num_params_per_cam)``
+
+detail::BundleAdjusterBase::obtainRefinedCameraParams
+-----------------------------------------------------
+
+Gets the refined camera parameters.
+
+.. ocv:function:: void detail::BundleAdjusterBase::obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const = 0;
+
+    :param cameras: Refined camera parameters
 
 detail::BundleAdjusterReproj
 ----------------------------
@@ -201,5 +239,3 @@ Tries to make panorama more horizontal (or verical).
     :param rmats: Camera rotation matrices.
 
     :param kind: Correction kind, see :ocv:class:`detail::WaveCorrectKind`.
-
-
