@@ -27,6 +27,41 @@ Base class for all blenders. ::
         Rect dst_roi_;
     };
 
+detail::Blender::prepare
+------------------------
+
+Prepares the blender for blending.
+
+.. ocv:function:: void detail::Blender::prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes)
+
+    :param corners: Source images top-left corners
+
+    :param sizes: Source image sizes
+
+detail::Blender::feed
+---------------------
+
+Processes the image.
+
+.. ocv:function:: void detail::Blender::feed(const Mat &img, const Mat &mask, Point tl)
+
+    :param img: Source image
+
+    :param mask: Source image masks
+    
+    :param tl: Source image top-left corners
+
+detail::Blender::blend
+----------------------
+
+Blends and returns the final pano.
+
+.. ocv:function:: void detail::Blender::blend(Mat &dst, Mat &dst_mask)
+
+    :param dst: Final pano
+
+    :param dst_mask: Final pano mask
+
 detail::FeatherBlender
 ----------------------
 .. ocv:class:: detail::FeatherBlender

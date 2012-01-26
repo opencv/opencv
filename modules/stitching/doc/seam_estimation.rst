@@ -7,7 +7,7 @@ detail::SeamFinder
 ------------------
 .. ocv:class:: detail::SeamFinder
 
-Base class for seam estimators. ::
+Base class for a seam estimator. ::
 
     class CV_EXPORTS SeamFinder
     {
@@ -16,6 +16,20 @@ Base class for seam estimators. ::
         virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
                           std::vector<Mat> &masks) = 0;
     };
+
+detail::SeamFinder::find
+------------------------
+
+Estimates seams.
+
+.. ocv:function:: void detail::SeamFinder::find(const std::vector<Mat> &src, const std::vector<Point> &corners, std::vector<Mat> &masks)
+
+    :param src: Source images
+
+    :param corners: Source image top-left corners
+
+    :param masks: Source image masks to update
+
 
 detail::NoSeamFinder
 --------------------
@@ -54,6 +68,19 @@ Base class for all pairwise seam estimators. ::
     };
 
 .. seealso:: :ocv:class:`detail::SeamFinder`
+
+detail::PairwiseSeamFinder::findInPair
+--------------------------------------
+
+Resolves masks intersection of two specified images in the given ROI.
+
+.. ocv:function:: void detail::PairwiseSeamFinder::findInPair(size_t first, size_t second, Rect roi)
+
+    :param first: First image index
+
+    :param second: Second image index
+
+    :param roi: Region of interest
 
 detail::VoronoiSeamFinder
 -------------------------

@@ -24,6 +24,43 @@ Base class for all exposure compensators. ::
         virtual void apply(int index, Point corner, Mat &image, const Mat &mask) = 0;
     };
 
+detail::ExposureCompensation::feed
+----------------------------------
+
+.. ocv:function:: void detail::ExposureCompensation::feed(const std::vector<Point> &corners, const std::vector<Mat> &images, const std::vector<Mat> &masks)
+
+    :param corners: Source image top-left corners
+
+    :param images: Source images
+
+    :param masks: Image masks to update
+
+detail::ExposureCompensation::feed
+----------------------------------
+
+.. ocv:function:: void detail::ExposureCompensation::feed(const std::vector<Point> &corners, const std::vector<Mat> &images, const std::vector<std::pair<Mat,uchar> > &masks)
+
+    :param corners: Source image top-left corners
+
+    :param images: Source images
+
+    :param masks: Image masks to update (second value in pair specifies the value which should be used to detect where image is)
+
+detil::ExposureCompensation::apply
+----------------------------------
+
+Compensate exposure in the specified image.
+
+.. ocv:function:: void detail::ExposureCompensation::apply(int index, Point corner, Mat &image, const Mat &mask)
+
+    :param index: Image index
+
+    :param corner: Image top-left corner
+
+    :param image: Image to process
+
+    :param mask: Image mask
+
 detail::NoExposureCompensator
 -----------------------------
 .. ocv:class:: detail::NoExposureCompensator
