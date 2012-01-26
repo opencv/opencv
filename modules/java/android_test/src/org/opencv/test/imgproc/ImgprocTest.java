@@ -608,11 +608,11 @@ public class ImgprocTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
-    public void testDistanceTransform() {
+    public void testDistanceTransformWithLabels() {
         Mat dstLables = getMat(CvType.CV_32SC1, 0);
         Mat labels = new Mat();
 
-        Imgproc.distanceTransform(gray128, dst, labels, Imgproc.CV_DIST_L2, 3);
+        Imgproc.distanceTransformWithLabels(gray128, dst, labels, Imgproc.CV_DIST_L2, 3);
 
         assertMatEqual(dstLables, labels);
         assertMatEqual(getMat(CvType.CV_32FC1, 8192), dst, EPS);
@@ -807,15 +807,22 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img2 = img.submat(5, 50, 3, 50);
         List<Mat> contours = new ArrayList<Mat>();
         List<Mat> contours2 = new ArrayList<Mat>();
+        Mat hierarchy = new Mat();
 
         Core.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, Core.LINE_AA);
         Core.rectangle(img, new Point(30, 35), new Point(40, 45), new Scalar(200));
 
-        Imgproc.findContours(img, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-        Imgproc.findContours(img2, contours2, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE, new Point(3, 5));
+        Imgproc.findContours(img, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(img2, contours2, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE, new Point(3, 5));
 
         assertEquals(contours.size(), contours2.size());
         assertMatEqual(contours.get(0), contours2.get(0));
+        /*
+        Log.d("findContours", "hierarchy=" + hierarchy);
+        int iBuff[] = new int[ (int) (hierarchy.total() * hierarchy.channels()) ]; // [ Contour0 (next sibling num, previous sibling num, 1st child num, parent num), Contour1(...), ...
+        hierarchy.get(0, 0, iBuff);
+        Log.d("findContours", Arrays.toString(iBuff));
+		*/
     }
 
     public void testFitEllipse() {
