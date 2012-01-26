@@ -821,8 +821,13 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
 
 #ifdef USE_TEMP_BUFFER
        if (n_buffers == 0) {
-	 capture->buffers[MAX_V4L_BUFFERS].start = malloc(buf.length);
-	 capture->buffers[MAX_V4L_BUFFERS].length = buf.length;
+           if (capture->buffers[MAX_V4L_BUFFERS].start) {
+               free(capture->buffers[MAX_V4L_BUFFERS].start);
+               capture->buffers[MAX_V4L_BUFFERS].start = NULL;
+		   }
+		
+           capture->buffers[MAX_V4L_BUFFERS].start = malloc(buf.length);
+           capture->buffers[MAX_V4L_BUFFERS].length = buf.length;
        };
 #endif
    }
@@ -1006,6 +1011,10 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    capture->width  = DEFAULT_V4L_WIDTH;
    capture->height = DEFAULT_V4L_HEIGHT;
 
+#ifdef USE_TEMP_BUFFER
+   capture->buffers[MAX_V4L_BUFFERS].start = NULL;
+#endif
+
    /* Select camera, or rather, V4L video source */
    if (index<0) { // Asking for the first device available
      for (; autoindex<MAX_CAMERAS;autoindex++)
@@ -1183,7 +1192,6 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
         }
 
       }
-
 
       /* preparation is ok */
       capture->FirstCapture = 0;
@@ -1693,6 +1701,13 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
 
      if (capture->frame.imageData)
        cvFree(&capture->frame.imageData);
+
+#ifdef USE_TEMP_BUFFER
+     if (capture->buffers[MAX_V4L_BUFFERS].start) {
+       free(capture->buffers[MAX_V4L_BUFFERS].start);
+       capture->buffers[MAX_V4L_BUFFERS].start = NULL;
+     }
+#endif
 
      //v4l2_free_ranges(capture);
      //cvFree((void **)capture);
