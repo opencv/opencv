@@ -464,6 +464,7 @@ void CvCapture_FFMPEG::close()
     }
 
 
+
     init();
 }
 
@@ -491,7 +492,7 @@ bool CvCapture_FFMPEG::reopen()
     AVCodecContext *enc = &ic->streams[video_stream]->codec;
 #endif
 
-    avcodec_thread_init(enc, get_number_of_cpus());
+    avcodec_thread_init(enc, std::min(get_number_of_cpus(), 16));
 
     AVCodec *codec = avcodec_find_decoder(enc->codec_id);
     avcodec_open(enc, codec);
