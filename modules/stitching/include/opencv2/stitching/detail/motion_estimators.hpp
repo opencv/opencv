@@ -72,8 +72,6 @@ public:
     HomographyBasedEstimator(bool is_focals_estimated = false)
         : is_focals_estimated_(is_focals_estimated) {}
 
-    bool isFocalsEstimated() const { return is_focals_estimated_; }
-
 private:   
     void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
                   std::vector<CameraParams> &cameras);

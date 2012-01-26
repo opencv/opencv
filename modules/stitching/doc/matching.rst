@@ -35,6 +35,43 @@ Feature finders base class. ::
         virtual void find(const Mat &image, ImageFeatures &features) = 0;
     };
 
+detail::FeaturesFinder::operator()
+----------------------------------
+
+Finds features in the given image.
+
+.. ocv:function:: void detail::FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
+
+.. ocv:function:: void detail::FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, const std::vector<cv::Rect> &rois)
+
+    :param image: Source image
+
+    :param features: Found features
+    
+    :param rois: Regions of interest
+
+.. seealso:: :ocv:struct:`detail::ImageFeatures`, :ocv:class:`Rect_`    
+
+detail::FeaturesFinder::collectGarbage
+--------------------------------------
+
+Frees unused memory allocated before if there is any.
+
+.. ocv:function:: void detail::FeaturesFinder::collectGarbage()
+
+detail::FeaturesFinder::find
+----------------------------
+
+This method must implement features finding logic in order to make the wrappers `detail::FeaturesFinder::operator()`_ work.
+
+.. ocv:function:: void find(const Mat &image, ImageFeatures &features)
+
+    :param image: Source image
+    
+    :param features: Found features
+
+.. seealso:: :ocv:struct:`detail::ImageFeatures`
+
 detail::SurfFeaturesFinder
 --------------------------
 .. ocv:class:: detail::SurfFeaturesFinder
@@ -51,9 +88,7 @@ SURF features finder. ::
         /* hidden */
     };
 
-.. seealso::
-    :ocv:class:`detail::FeaturesFinder`
-    :ocv:class:`SURF`
+.. seealso:: :ocv:class:`detail::FeaturesFinder`, :ocv:class:`SURF`
 
 detail::OrbFeaturesFinder
 -------------------------
@@ -71,13 +106,11 @@ ORB features finder. ::
         /* hidden */
     };
 
-.. seealso:: 
-    :ocv:class:`detail::FeaturesFinder`,
-    :ocv:class:`ORB`
+.. seealso:: :ocv:class:`detail::FeaturesFinder`, :ocv:class:`ORB`
 
 detail::MatchesInfo
 -------------------
-.. ocv:struct: detail::MatchesInfo
+.. ocv:struct:: detail::MatchesInfo
 
 Structure containing information about matches between two images. It's assumed that there is a homography between those images. ::
 
@@ -110,7 +143,7 @@ Feature matchers base class. ::
                          MatchesInfo& matches_info) { match(features1, features2, matches_info); }
 
         void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, 
-                         const cv::Mat &mask = cv::Mat());
+                         const Mat &mask = cv::Mat());
 
         bool isThreadSafe() const { return is_thread_safe_; }
 
@@ -124,6 +157,56 @@ Feature matchers base class. ::
 
         bool is_thread_safe_;
     };
+
+detail::FeaturesMatcher::operator()
+-----------------------------------
+
+Performs images matching.
+
+.. ocv:function:: void detail::FeaturesMatcher::operator ()(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
+
+    :param features1: First image features
+
+    :param features2: Second image features
+
+    :param matches_info: Found matches
+
+.. ocv:function:: void detail::FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, const Mat &mask)
+    
+    :param features: Features of the source images
+
+    :param pairwise_matches: Found pairwise matches
+
+    :param mask: Mask indicating which image pairs must be matched
+
+.. seealso:: :ocv:struct:`detail::MatchesInfo`
+
+detail::FeaturesMatcher::isThreadSafe
+-------------------------------------
+
+.. ocv:function:: bool detail::FeaturesMatcher::isThreadSafe() const
+
+    :return: True, if it's possible to use the same matcher instance in parallel, false otherwise
+
+detail::FeaturesMatcher::collectGarbage
+---------------------------------------
+
+Frees unused memory allocated before if there is any.
+
+.. ocv:function:: void detail::FeaturesMatcher::collectGarbage()
+
+detail::FeaturesMatcher::match
+------------------------------
+
+This method must implement matching logic in order to make the wrappers `detail::FeaturesMatcher::operator()`_ work.
+
+.. ocv:function:: void detail::FeaturesMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
+
+    :param features1: First image features
+    
+    :param features2: Second image features
+
+    :param matches_info: Found matches
 
 detail::BestOf2NearestMatcher
 -----------------------------
@@ -149,3 +232,17 @@ Features matcher which finds two best matches for each feature and leaves the be
 
 .. seealso:: :ocv:class:`detail::FeaturesMatcher`
 
+detail::BestOf2NearestMatcher::BestOf2NearestMatcher
+----------------------------------------------------
+
+Constructs a "best of 2 nearest" matcher.
+
+.. ocv:function:: detail::BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.65f, int num_matches_thresh1 = 6, int num_matches_thresh2 = 6)
+
+    :param try_use_gpu: Should try to use GPU or not
+
+    :param match_conf: Match distances ration threshold
+
+    :param num_matches_thresh1: Minimum number of matches required for the 2D projective transform estimation used in the inliers classification step
+
+    :param num_matches_thresh1: Minimum number of matches required for the 2D projective transform re-estimation on inliers

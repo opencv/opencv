@@ -27,6 +27,32 @@ Rotation estimator base class. It takes features of all images, pairwise matches
                               std::vector<CameraParams> &cameras) = 0;
     };
 
+detail::Estimator::operator()
+-----------------------------
+
+Estimates camera parameters.
+
+.. ocv:function:: detail::Estimator::operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
+
+    :param features: Features of images
+
+    :param pairwise_matches: Pairwise matches of images
+
+    :param cameras: Estimated camera parameters
+
+detail::Estimator::estimate
+---------------------------
+
+This method must implement camera parameters estimation logic in order to make the wrapper `detail::Estimator::operator()`_ work.
+
+.. ocv:function:: void detail::Estimator::estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
+
+    :param features: Features of images
+
+    :param pairwise_matches: Pairwise matches of images
+
+    :param cameras: Estimated camera parameters
+
 detail::HomographyBasedEstimator
 --------------------------------
 .. ocv:class:: detail::HomographyBasedEstimator
@@ -39,13 +65,8 @@ Homography based rotation estimator. ::
         HomographyBasedEstimator(bool is_focals_estimated = false)
             : is_focals_estimated_(is_focals_estimated) {}
 
-        bool isFocalsEstimated() const { return is_focals_estimated_; }
-
-    private:   
-        void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
-                      std::vector<CameraParams> &cameras);
-
-        bool is_focals_estimated_;
+    private:
+        /* hidden */
     };
 
 detail::BundleAdjusterBase
@@ -115,6 +136,16 @@ Base class for all camera parameters refinement methods. ::
         std::vector<std::pair<int,int> > edges_;
     };
 
+detail::BundleAdjusterBase::BundleAdjusterBase
+----------------------------------------------
+
+Construct a bundle adjuster base instance.
+
+.. ocv:function:: detail::BundleAdjusterBase::BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement)
+
+    :param num_params_per_cam: Number of parameters per camera
+    
+    :param num_errs_per_measurement: Number of error terms (components) per match
 
 detail::BundleAdjusterReproj
 ----------------------------
