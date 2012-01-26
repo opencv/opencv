@@ -245,9 +245,7 @@ JacobiImpl_( _Tp* A, size_t astep, _Tp* W, _Tp* V, size_t vstep, int n, uchar* b
     
     int iters, maxIters = n*n*30;
     
-    _Tp* maxSR = (_Tp*)alignPtr(buf, sizeof(_Tp));
-    _Tp* maxSC = maxSR + n;
-    int* indR = (int*)(maxSC + n);
+    int* indR = (int*)alignPtr(buf, sizeof(int));
     int* indC = indR + n;
     _Tp mv = (_Tp)0;
     
@@ -262,7 +260,6 @@ JacobiImpl_( _Tp* A, size_t astep, _Tp* W, _Tp* V, size_t vstep, int n, uchar* b
                 if( mv < val )
                     mv = val, m = i;
             }
-            maxSR[k] = mv;
             indR[k] = m;
         }
         if( k > 0 )
@@ -273,7 +270,6 @@ JacobiImpl_( _Tp* A, size_t astep, _Tp* W, _Tp* V, size_t vstep, int n, uchar* b
                 if( mv < val )
                     mv = val, m = i;
             }
-            maxSC[k] = mv;
             indC[k] = m;
         }
     }
@@ -281,16 +277,16 @@ JacobiImpl_( _Tp* A, size_t astep, _Tp* W, _Tp* V, size_t vstep, int n, uchar* b
     if( n > 1 ) for( iters = 0; iters < maxIters; iters++ )
     {
         // find index (k,l) of pivot p
-        for( k = 0, mv = maxSR[0], i = 1; i < n-1; i++ )
+        for( k = 0, mv = std::abs(A[indR[0]]), i = 1; i < n-1; i++ )
         {
-            _Tp val = maxSR[i];
+            _Tp val = std::abs(A[astep*i + indR[i]]);
             if( mv < val )
                 mv = val, k = i;
         }
         int l = indR[k];
         for( i = 1; i < n; i++ )
         {
-            _Tp val = maxSC[i];
+            _Tp val = std::abs(A[astep*indC[i] + i]);
             if( mv < val )
                 mv = val, k = indC[i], l = i;
         }
@@ -341,7 +337,6 @@ JacobiImpl_( _Tp* A, size_t astep, _Tp* W, _Tp* V, size_t vstep, int n, uchar* b
                     if( mv < val )
                         mv = val, m = i;
                 }
-                maxSR[idx] = mv;
                 indR[idx] = m;
             }
             if( idx > 0 )
@@ -352,7 +347,6 @@ JacobiImpl_( _Tp* A, size_t astep, _Tp* W, _Tp* V, size_t vstep, int n, uchar* b
                     if( mv < val )
                         mv = val, m = i;
                 }
-                maxSC[idx] = mv;
                 indC[idx] = m;
             }
         }
