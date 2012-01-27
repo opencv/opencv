@@ -81,7 +81,7 @@ detail::GainCompensator
 -----------------------
 .. ocv:class:: detail::GainCompensator
 
-Exposure compensator which tries to remove exposure related artifacts by adjusting image intensities. ::
+Exposure compensator which tries to remove exposure related artifacts by adjusting image intensities, see [BL07]_ and [WJ10]_ for details. ::
 
     class CV_EXPORTS GainCompensator : public ExposureCompensator
     {
@@ -92,7 +92,7 @@ Exposure compensator which tries to remove exposure related artifacts by adjusti
         std::vector<double> gains() const;
 
     private:
-        Mat_<double> gains_;
+        /* hidden */
     };
 
 .. seealso:: :ocv:class:`detail::ExposureCompensation`
@@ -101,7 +101,7 @@ detail::BlocksGainCompensator
 -----------------------------
 .. ocv:class:: detail::BlocksGainCompensator
 
-Exposure compensator which tries to remove exposure related artifacts by adjusting image block intensities. ::
+Exposure compensator which tries to remove exposure related artifacts by adjusting image block intensities, see [UES01]_ for details. ::
 
     class CV_EXPORTS BlocksGainCompensator : public ExposureCompensator
     {
@@ -113,8 +113,7 @@ Exposure compensator which tries to remove exposure related artifacts by adjusti
         void apply(int index, Point corner, Mat &image, const Mat &mask);
 
     private:
-        int bl_width_, bl_height_;
-        std::vector<Mat_<float> > gain_maps_;
+        /* hidden */
     };
 
 .. seealso:: :ocv:class:`detail::ExposureCompensation`

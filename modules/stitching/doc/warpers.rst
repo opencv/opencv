@@ -198,6 +198,15 @@ Warper that maps an image onto the z = 1 plane. ::
 
 .. seealso:: :ocv:class:`detail::RotationWarper`
 
+detail::PlaneWarper::PlaneWarper
+--------------------------------
+
+Construct an instance of the plane warper class.
+
+.. ocv:function:: void detail::PlaneWarper::PlaneWarper(float scale = 1.f)
+
+    :param scale: Projected image scale multiplier
+
 detail::SphericalWarper
 -----------------------
 .. ocv:class:: detail::SphericalWarper
@@ -214,6 +223,15 @@ Warper that maps an image onto the unit sphere located at the origin. ::
     };
 
 .. seealso:: :ocv:class:`detail::RotationWarper`
+
+detail::SphericalWarper::SphericalWarper
+----------------------------------------
+
+Construct an instance of the spherical warper class.
+
+.. ocv:function:: void detail::SphericalWarper::SphericalWarper(float scale)
+
+    :param scale: Projected image scale multiplier
    
 detail::CylindricalWarper
 -------------------------
@@ -235,3 +253,11 @@ Warper that maps an image onto the x*x + z*z = 1 cylinder. ::
 
 .. seealso:: :ocv:class:`detail::RotationWarper`
 
+detail::CylindricalWarper::CylindricalWarper
+--------------------------------------------
+
+Construct an instance of the cylindrical warper class.
+
+.. ocv:function:: void detail::CylindricalWarper::CylindricalWarper(float scale)
+
+    :param scale: Projected image scale multiplier

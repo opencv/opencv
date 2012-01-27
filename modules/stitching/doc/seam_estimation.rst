@@ -103,7 +103,7 @@ detail::GraphCutSeamFinderBase
 ------------------------------
 .. ocv:class:: detail::GraphCutSeamFinderBase
 
-Base class for all minimum graph cut-based seam estimators. ::
+Base class for all minimum graph-cut-based seam estimators. ::
 
     class CV_EXPORTS GraphCutSeamFinderBase
     {
@@ -115,7 +115,7 @@ detail::GraphCutSeamFinder
 --------------------------
 .. ocv:class:: detail::GraphCutSeamFinder
 
-Minimum graph cut-based seam estimator. ::
+Minimum graph cut-based seam estimator. See details in [V03]_. ::
 
     class CV_EXPORTS GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
     {
