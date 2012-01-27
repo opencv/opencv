@@ -72,6 +72,11 @@ namespace cv { namespace gpu
     {
         return reinterpret_cast<size_t>(ptr) % size == 0;
     }
+
+    static inline bool isAligned(size_t step, size_t size)
+    {
+        return step % size == 0;
+    }
 }}
 
 static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")

@@ -347,7 +347,8 @@ namespace cv { namespace gpu { namespace device
 
                 StaticAssert<ft::smart_shift != 1>::check();
 
-                if (!isAligned(src.data, ft::smart_shift * sizeof(T)) || !isAligned(dst.data, ft::smart_shift * sizeof(D)))
+                if (!isAligned(src.data, ft::smart_shift * sizeof(T)) || !isAligned(src.step, ft::smart_shift * sizeof(T)) || 
+                    !isAligned(dst.data, ft::smart_shift * sizeof(D)) || !isAligned(dst.step, ft::smart_shift * sizeof(D)))
                 {
                     TransformDispatcher<false>::call(src, dst, op, mask, stream);
                     return;
@@ -370,7 +371,9 @@ namespace cv { namespace gpu { namespace device
 
                 StaticAssert<ft::smart_shift != 1>::check();
 
-                if (!isAligned(src1.data, ft::smart_shift * sizeof(T1)) || !isAligned(src2.data, ft::smart_shift * sizeof(T2)) || !isAligned(dst.data, ft::smart_shift * sizeof(D)))
+                if (!isAligned(src1.data, ft::smart_shift * sizeof(T1)) || !isAligned(src1.step, ft::smart_shift * sizeof(T1)) ||
+                    !isAligned(src2.data, ft::smart_shift * sizeof(T2)) || !isAligned(src2.step, ft::smart_shift * sizeof(T2)) ||
+                    !isAligned(dst.data, ft::smart_shift * sizeof(D)) || !isAligned(dst.step, ft::smart_shift * sizeof(D)))
                 {
                     TransformDispatcher<false>::call(src1, src2, dst, op, mask, stream);
                     return;
