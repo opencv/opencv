@@ -12,6 +12,9 @@ endif()
 set(the_target "opencv_highgui")
 project(${the_target})
 
+#so that the headers get installed.
+file(GLOB lib_hdrs "include/opencv2/highgui/*.h*")
+
 set(GRFMT_LIBS)
 
 if(WITH_PNG OR WITH_TIFF OR WITH_OPENEXR)
