@@ -43,6 +43,8 @@ int main(int argc, char* argv[])
         }
     }
 
+    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
     SURF_GPU surf;
 
     // detecting keypoints & computing descriptors

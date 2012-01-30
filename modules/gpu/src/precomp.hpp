@@ -70,6 +70,7 @@
 
 #ifdef HAVE_CUDA
 
+    #include "cuda.h"
     #include "cuda_runtime_api.h"
     #include "npp.h"
     

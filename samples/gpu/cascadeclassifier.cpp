@@ -109,6 +109,8 @@ int main(int argc, const char *argv[])
         return cerr << "No GPU found or the library is compiled without GPU support" << endl, -1;
     }
 
+    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
     string cascadeName;
     string inputName;
     bool isInputImage = false;

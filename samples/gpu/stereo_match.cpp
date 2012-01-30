@@ -139,6 +139,8 @@ Params Params::read(int argc, char** argv)
 App::App(const Params& p)
     : p(p), running(false) 
 {
+    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
     cout << "stereo_match_gpu sample\n";
     cout << "\nControls:\n"
         << "\tesc - exit\n"

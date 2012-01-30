@@ -139,6 +139,9 @@ private:
     int minorVersion_;
 };
 
+CV_EXPORTS void printCudaDeviceInfo(int device);
+CV_EXPORTS void printShortCudaDeviceInfo(int device);
+
 //////////////////////////////// CudaMem ////////////////////////////////
 // CudaMem is limited cv::Mat with page locked memory allocation.
 // Page locked memory is only needed for async and faster coping to GPU.

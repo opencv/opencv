@@ -71,6 +71,8 @@ int main(int argc, const char* argv[])
             return -1;
         }
 
+        cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
         cout << "OpenCV / NVIDIA Computer Vision" << endl;
         cout << "Optical Flow Demo: Frame Interpolation" << endl;
         cout << "=========================================" << endl;

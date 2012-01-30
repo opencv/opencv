@@ -5,6 +5,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace cv::gpu;
 
 void TestSystem::run()
 {
@@ -75,6 +76,7 @@ void TestSystem::finishCurrentSubtest()
 
 void TestSystem::printHeading()
 {
+    cout << endl;
     cout << setiosflags(ios_base::left);
     cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
         << setw(14) << "SPEEDUP" 
@@ -145,13 +147,21 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
 
 int main(int argc, const char* argv[])
 {
+    int num_devices = getCudaEnabledDeviceCount();
+    if (num_devices == 0)
+    {
+        cerr << "No GPU found or the library was compiled without GPU support";
+        return -1;
+    }
+
     redirectError(cvErrorCallback);
 
     const char* keys =
        "{ h | help    | false | print help message }"
        "{ f | filter  |       | filter for test }"
        "{ w | workdir |       | set working directory }"
-       "{ l | list    | false | show all tests }";
+       "{ l | list    | false | show all tests }"
+       "{ d  | device  |   0   | device id }";
 
     CommandLineParser cmd(argc, argv, keys);
 
@@ -161,6 +171,21 @@ int main(int argc, const char* argv[])
         cmd.printParams();
         return 0;
     }
+
+    int device = cmd.get<int>("device");
+    if (device < 0 || device >= num_devices)
+    {
+        cerr << "Invalid device ID" << endl;
+        return -1;
+    }
+    DeviceInfo dev_info(device);
+    if (!dev_info.isCompatible())
+    {
+        cerr << "GPU module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion() << endl;
+        return -1;
+    }
+    setDevice(device);
+    printShortCudaDeviceInfo(device);
 
     string filter = cmd.get<string>("filter");
     string workdir = cmd.get<string>("workdir");

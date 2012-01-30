@@ -193,6 +193,8 @@ Args Args::read(int argc, char** argv)
 
 App::App(const Args& s)
 {
+    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
     args = s;
     cout << "\nControls:\n"
          << "\tESC - exit\n"

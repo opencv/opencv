@@ -71,6 +71,8 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < num_devices; ++i)
     {
+        cv::gpu::printShortCudaDeviceInfo(i);
+
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
         {

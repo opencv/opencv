@@ -154,6 +154,8 @@ int main(int argc, const char** argv)
     ncvAssertPrintReturn(cv::gpu::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without GPU support", -1);
     ncvAssertPrintReturn(argc == 3, "Invalid number of arguments", -1);
 
+    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
     string cascadeName = argv[1];
     string inputName = argv[2];
 

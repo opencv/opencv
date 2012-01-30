@@ -74,6 +74,8 @@ int main( int argc, char** argv )
         return -1;
     }
 
+    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
     help();
 
 	
