@@ -935,6 +935,31 @@ void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
 
 void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
 {
+#if CUDART_VERSION > 4000 
+    CV_Assert(src.type() == CV_32SC1 && sqr.type() == CV_64FC1);
+
+    dst.create(src.size(), CV_32FC1);
+
+    NppiSize sz;
+    sz.width = src.cols;
+    sz.height = src.rows;
+
+    NppiRect nppRect;
+    nppRect.height = rect.height;
+    nppRect.width = rect.width;
+    nppRect.x = rect.x;
+    nppRect.y = rect.y;
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    NppStreamHandler h(stream);
+
+    nppSafeCall( nppiRectStdDev_32s32f_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), sqr.ptr<Npp64f>(), static_cast<int>(sqr.step),
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, nppRect) );
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
+#else
     CV_Assert(src.type() == CV_32SC1 && sqr.type() == CV_32FC1);
 
     dst.create(src.size(), CV_32FC1);
@@ -958,6 +983,7 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
+#endif
 }
 
 

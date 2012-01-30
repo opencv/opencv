@@ -117,7 +117,15 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 
     DeviceBuffer dbuf(2);
 
+#if CUDART_VERSION > 4000 
+    int bufSize;
+    nppSafeCall( nppiMeanStdDev8uC1RGetBufferHostSize(sz, &bufSize) );
+
+    GpuMat buf(1, bufSize, CV_8UC1);
+    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dbuf, (double*)dbuf + 1) );
+#else
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, dbuf, (double*)dbuf + 1) );
+#endif
 
     cudaSafeCall( cudaDeviceSynchronize() );
     

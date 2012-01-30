@@ -77,8 +77,18 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
 
     NppStreamHandler h(stream);
 
+#if CUDART_VERSION > 4000 
+    NppiGraphcutState* pState;
+    nppSafeCall( nppiGraphcutInitAlloc(sznpp, &pState, buf.ptr<Npp8u>()) );
+    
+    nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
+        static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), pState) );
+
+    nppSafeCall( nppiGraphcutFree(pState) );
+#else
     nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
         static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), buf.ptr<Npp8u>()) );
+#endif
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );

@@ -680,6 +680,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
 
     bool aligned = isAligned(src1.data, 16) && isAligned(src2.data, 16) && isAligned(dst.data, 16);
 
+#if CUDART_VERSION == 4000 
     if (aligned && src1.depth() == CV_8U && (src1.cols * src1.channels()) % 4 == 0)
     {
         NppStreamHandler h(stream);
@@ -692,42 +693,48 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
-    else if (aligned && src1.depth() == CV_8U)
+    else 
+#endif
     {
-        NppStreamHandler h(stream);
+        if (aligned && src1.depth() == CV_8U)
+        {
+            NppStreamHandler h(stream);
 
-        nppSafeCall( nppiAbsDiff_8u_C1R(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
+            nppSafeCall( nppiAbsDiff_8u_C1R(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
 
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+#if CUDART_VERSION == 4000 
+        else if (aligned && src1.depth() == CV_32S)
+        {
+            NppStreamHandler h(stream);
+
+            nppSafeCall( nppiAbsDiff_32s_C1R(src1.ptr<Npp32s>(), static_cast<int>(src1.step), src2.ptr<Npp32s>(), static_cast<int>(src2.step), 
+                dst.ptr<Npp32s>(), static_cast<int>(dst.step), sz) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+#endif
+        else if (aligned && src1.depth() == CV_32F)
+        {
+            NppStreamHandler h(stream);
+
+            nppSafeCall( nppiAbsDiff_32f_C1R(src1.ptr<Npp32f>(), static_cast<int>(src1.step), src2.ptr<Npp32f>(), static_cast<int>(src2.step), 
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+        else
+        {
+            const func_t func = funcs[src1.depth()];
+            CV_Assert(func != 0);
+
+            func(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
     }
-    else if (aligned && src1.depth() == CV_32S)
-    {
-        NppStreamHandler h(stream);
-
-        nppSafeCall( nppiAbsDiff_32s_C1R(src1.ptr<Npp32s>(), static_cast<int>(src1.step), src2.ptr<Npp32s>(), static_cast<int>(src2.step), 
-            dst.ptr<Npp32s>(), static_cast<int>(dst.step), sz) );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-    else if (aligned && src1.depth() == CV_32F)
-    {
-        NppStreamHandler h(stream);
-
-        nppSafeCall( nppiAbsDiff_32f_C1R(src1.ptr<Npp32f>(), static_cast<int>(src1.step), src2.ptr<Npp32f>(), static_cast<int>(src2.step), 
-            dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-    else
-    {
-        const func_t func = funcs[src1.depth()];
-        CV_Assert(func != 0);
-
-        func(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
     }
 }
 
