@@ -503,9 +503,7 @@ namespace cv { namespace gpu { namespace device
         __constant__ float c_NY[2][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
 
         __global__ void icvCalcOrientation(const float* featureX, const float* featureY, const float* featureSize, float* featureDir)
-        {        
-            #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
-
+        {
             __shared__ float s_X[128];
             __shared__ float s_Y[128];
             __shared__ float s_angle[128];
@@ -597,6 +595,8 @@ namespace cv { namespace gpu { namespace device
                         bestx = sumx;
                         besty = sumy;
                     }
+
+                    __syncthreads();
                 }
 
                 if (threadIdx.x == 0)
@@ -642,8 +642,6 @@ namespace cv { namespace gpu { namespace device
                     featureDir[blockIdx.x] = kp_dir;
                 }
             }
-
-            #endif
         }
 
         #undef ORI_SEARCH_INC
