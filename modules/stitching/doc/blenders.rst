@@ -86,9 +86,7 @@ Simple blender which mixes images at its borders. ::
                               std::vector<Mat> &weight_maps);
 
     private:
-        float sharpness_;
-        Mat weight_map_;
-        Mat dst_weight_map_;
+        /* hidden */
     };
 
 .. seealso:: :ocv:class:`detail::Blender`
@@ -111,11 +109,7 @@ Blender which uses multi-band blending algorithm (see [BA83]_). ::
         void blend(Mat &dst, Mat &dst_mask);
 
     private:
-        int actual_num_bands_, num_bands_;
-        std::vector<Mat> dst_pyr_laplace_;
-        std::vector<Mat> dst_band_weights_;
-        Rect dst_roi_final_;
-        bool can_use_gpu_;
+        /* hidden */
     };
 
 .. seealso:: :ocv:class:`detail::Blender`
