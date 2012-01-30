@@ -48,6 +48,7 @@
 namespace cv {
 namespace detail {
 
+
 // Simple blender which puts one image over another
 class CV_EXPORTS Blender
 {
@@ -96,6 +97,7 @@ class CV_EXPORTS MultiBandBlender : public Blender
 {
 public:
     MultiBandBlender(int try_gpu = false, int num_bands = 5);
+
     int numBands() const { return actual_num_bands_; }
     void setNumBands(int val) { actual_num_bands_ = val; }
 

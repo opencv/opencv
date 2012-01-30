@@ -7,5 +7,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/stitching/stitcher.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
+#include <opencv2/stitching/detail/blenders.hpp>
 
 #endif
