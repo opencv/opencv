@@ -166,6 +166,16 @@ public:
 	virtual ~Retina();
 
 	/**
+        * retreive retina input buffer size 
+        */
+        Size inputSize();
+
+	/**
+        * retreive retina output buffer size 
+        */
+        Size outputSize();
+
+	/**
 	 * try to open an XML retina parameters file to adjust current retina instance setup
 	 * => if the xml file does not exist, then default setup is applied
 	 * => warning, Exceptions are thrown if read XML file is not valid

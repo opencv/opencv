@@ -93,6 +93,17 @@ Retina::~Retina()
         delete _retinaFilter;
 }
 
+/**
+* retreive retina input buffer size 
+*/
+Size Retina::inputSize(){return cv::Size(_retinaFilter->getInputNBcolumns(), _retinaFilter->getInputNBrows());}
+
+/**
+* retreive retina output buffer size 
+*/
+Size Retina::outputSize(){return cv::Size(_retinaFilter->getOutputNBcolumns(), _retinaFilter->getOutputNBrows());}
+
+
 void Retina::setColorSaturation(const bool saturateColors, const float colorSaturationValue)
 {
 	_retinaFilter->setColorSaturation(saturateColors, colorSaturationValue);
