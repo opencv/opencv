@@ -47,7 +47,7 @@ Processes the image.
 
     :param img: Source image
 
-    :param mask: Source image masks
+    :param mask: Source image mask
     
     :param tl: Source image top-left corners
 
