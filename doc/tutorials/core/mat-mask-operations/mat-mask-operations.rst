@@ -15,7 +15,7 @@ Let us consider the issue of an image contrast enhancement method. Basically we 
    I(i,j) = 5*I(i,j) - [ I(i-1,j) + I(i+1,j) + I(i,j-1) + I(i,j+1)] 
 
    \iff I(i,j)*M, \text{where }
-   M = \bordermatrix{ _i\backslash ^j  & -1 &  0 & -1 \cr
+   M = \bordermatrix{ _i\backslash ^j  & -1 &  0 & +1 \cr
                         -1 &  0 & -1 &  0 \cr
                          0 & -1 &  5 & -1 \cr
                         +1 &  0 & -1 &  0 \cr
@@ -92,14 +92,14 @@ We'll use the plain C [] operator to access pixels. Because we need to access mu
        }
    }
 
-On the borders of the image the upper notation results inexistent pixel locations (like minus one - minus one). In these points our formula is undefined. A simple solution is to do not apply the mask in these points and, for example, maintain the images previous values by copying these values over to these locations:
+On the borders of the image the upper notation results inexistent pixel locations (like minus one - minus one). In these points our formula is undefined. A simple solution is to do not apply the mask in these points and, for example, set the pixels on the borders to zeros:
 
 .. code-block:: cpp
 
    Result.row(0).setTo(Scalar(0));             // The top row 
-   Result.row(Result.rows-1).setTo(Scalar(0)); // The left column
-   Result.col(0).setTo(Scalar(0));             // The right column
-   Result.col(Result.cols-1).setTo(Scalar(0)); // The bottom row
+   Result.row(Result.rows-1).setTo(Scalar(0)); // The bottom row
+   Result.col(0).setTo(Scalar(0));             // The left column
+   Result.col(Result.cols-1).setTo(Scalar(0)); // The right column
 
 The filter2D function
 =====================
@@ -118,7 +118,7 @@ Then call the :filtering:`filter2D <filter2d>` function specifying the input, th
 
    filter2D(I, K, I.depth(), kern ); 
 
-The function even has a fifth optional argument to specify the center of the kernel, and a sixth one for determining what to do in the regions where the operation is undefined (borders). Using this function has the advantage that it's shorter, more verbose and that because they are some optimization techniques implemented usually faster than the *hand method*. For example in my while the first one took only 13 milliseconds the second took around 31 milliseconds. Quite some difference.
+The function even has a fifth optional argument to specify the center of the kernel, and a sixth one for determining what to do in the regions where the operation is undefined (borders). Using this function has the advantage that it's shorter, less verbose and that because they are some optimization techniques implemented usually faster than the *hand method*. For example in my test while the second one took only 13 milliseconds the first took around 31 milliseconds. Quite some difference.
 
 For example: 
 
