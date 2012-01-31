@@ -507,6 +507,9 @@ bool CvCapture_FFMPEG::reopen()
 #ifndef AVSEEK_FLAG_FRAME
 	#define AVSEEK_FLAG_FRAME 0
 #endif
+ifndef AVSEEK_FLAG_ANY
+	#define AVSEEK_FLAG_ANY 1
+#endif
 
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
@@ -832,7 +835,7 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             }
             else
             {
-                int flags = AVSEEK_FLAG_FRAME;
+                int flags = AVSEEK_FLAG_ANY;
                 if (timestamp < ic->streams[video_stream]->cur_dts)
                   flags |= AVSEEK_FLAG_BACKWARD;
                 int ret = av_seek_frame(ic, video_stream, timestamp, flags);

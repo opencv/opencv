@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
+  #include "stdio.h"
 
 using namespace cv;
 using namespace std;
@@ -54,6 +55,12 @@ protected:
 
 public:
     void run(int);
+};
+
+class CV_PositioningTest : public cvtest::BaseTest
+{
+public:
+void run(int);
 };
 
 double PSNR(const Mat& m1, const Mat& m2)
@@ -232,6 +239,11 @@ void CV_HighGuiTest::VideoTest(const string& dir, int fourcc)
     ts->printf(ts->LOG, "end test function : ImagesVideo \n");
 }
 
+void CV_PositioningTest::run(int)
+{
+
+}
+
 
 void CV_HighGuiTest::run( int /*start_from */)
 {
@@ -240,13 +252,21 @@ void CV_HighGuiTest::run( int /*start_from */)
 #if defined WIN32 || (defined __linux__ && !defined ANDROID)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP  
 
-    VideoTest(ts->get_data_path(), CV_FOURCC_DEFAULT);
+    const char codecs[][4] = { {'I', 'Y', 'U', 'V'},
+                               {'X', 'V', 'I', 'D'},
+                               {'M', 'P', 'G', '2'},
+                               {'M', 'J', 'P', 'G'} };
 
-    VideoTest(ts->get_data_path(), CV_FOURCC('X', 'V', 'I', 'D'));
+                               printf("%s", ts->get_data_path().c_str());
 
-    VideoTest(ts->get_data_path(), CV_FOURCC('M', 'P', 'G', '2'));
+    int count = sizeof(codecs)/(4*sizeof(char));
 
-    VideoTest(ts->get_data_path(), CV_FOURCC('M', 'J', 'P', 'G'));
+    for (int i = 0; i < count; ++i)
+    {
+     VideoTest(ts->get_data_path(), CV_FOURCC(codecs[i][0], codecs[i][1], codecs[i][2], codecs[i][3]));
+    }
+
+
 
 #endif
 #endif
