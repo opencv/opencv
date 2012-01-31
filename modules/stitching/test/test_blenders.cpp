@@ -48,7 +48,7 @@ TEST(MultiBandBlender, CanBlendTwoImages)
 {    
     Mat image1 = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/baboon.jpg");
     Mat image2 = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/lena.jpg");
-    EXPECT_EQ(image1.rows, image2.rows); EXPECT_EQ(image1.cols, image2.cols);
+    ASSERT_EQ(image1.rows, image2.rows); ASSERT_EQ(image1.cols, image2.cols);
 
     Mat image1s, image2s;
     image1.convertTo(image1s, CV_16S);
@@ -73,6 +73,6 @@ TEST(MultiBandBlender, CanBlendTwoImages)
     Mat result; result_s.convertTo(result, CV_8U);
 
     Mat expected = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/baboon_lena.png");
-    double error = norm(expected, result, NORM_L2) / expected.size().area();
-    ASSERT_LT(error, 1e-3);
+    double rmsErr = norm(expected, result, NORM_L2) / sqrt(expected.size().area());
+    ASSERT_LT(rmsErr, 1e-3);
 }
