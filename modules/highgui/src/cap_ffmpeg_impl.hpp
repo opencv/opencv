@@ -507,7 +507,7 @@ bool CvCapture_FFMPEG::reopen()
 #ifndef AVSEEK_FLAG_FRAME
 	#define AVSEEK_FLAG_FRAME 0
 #endif
-ifndef AVSEEK_FLAG_ANY
+#ifndef AVSEEK_FLAG_ANY
 	#define AVSEEK_FLAG_ANY 1
 #endif
 
