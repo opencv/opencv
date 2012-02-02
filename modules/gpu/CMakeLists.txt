@@ -85,7 +85,14 @@ if (HAVE_CUDA)
         set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/wd4251")
     endif()
 
+	
+
+    # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
+    set(tmp ${CMAKE_CXX_FLAGS_DEBUG})
+    string(REPLACE "-ggdb3" "" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
     CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
+    set(CMAKE_CXX_DEBUG_FLAGS ${tmp})
+
     #CUDA_BUILD_CLEAN_TARGET()
 endif()
 

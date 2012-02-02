@@ -237,8 +237,13 @@ macro(define_opencv_moduleEx _name _visibility)
 
             #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
             #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
-    
+            
+            # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
+            set(tmp ${CMAKE_CXX_FLAGS_DEBUG})
+            string(REPLACE "-ggdb3" "" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
             CUDA_COMPILE(cuda_objs ${lib_cuda})
+            set(CMAKE_CXX_DEBUG_FLAGS ${tmp})
+
         else()
             set(lib_cuda "")
             set(cuda_objs "")
