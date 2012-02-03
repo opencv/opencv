@@ -285,12 +285,21 @@ macro(ocv_glob_modules)
 
   #resolve dependencies
   __ocv_flatten_module_dependencies()
+  
+  #order modules by dependencies
+  set(OPENCV_MODULES_BUILD_ "")
+  foreach(m ${OPENCV_MODULES_BUILD})
+    list(APPEND OPENCV_MODULES_BUILD_ ${OPENCV_MODULE_${m}_DEPS} ${m})
+  endforeach()
+  ocv_list_unique(OPENCV_MODULES_BUILD_)
 
   #create modules
   set(OPENCV_INITIAL_PASS OFF)
-  foreach(m ${OPENCV_MODULES_BUILD})
-    string(REGEX REPLACE "^opencv_" "" __shortname "${m}")
-    add_subdirectory("${OPENCV_MODULE_${m}_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/${__shortname}")
+  foreach(m ${OPENCV_MODULES_BUILD_})
+    if(m MATCHES "^opencv_")
+      string(REGEX REPLACE "^opencv_" "" __shortname "${m}")
+      add_subdirectory("${OPENCV_MODULE_${m}_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/${__shortname}")
+    endif()
   endforeach()
   unset(__shortname)
 endmacro()
