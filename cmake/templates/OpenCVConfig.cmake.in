@@ -94,7 +94,6 @@ SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGMAKE@)
 
 @OPENCV_DEPENDENCIES_MAP_DBG@
 
-
 # ==============================================================
 #  Check OpenCV availability
 # ==============================================================
@@ -230,7 +229,7 @@ endif()
 # ==============================================================
 SET(OpenCV_SOURCE_PATH "@CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@")
 if(NOT "${OpenCV_SOURCE_PATH}" STREQUAL  "")
-  foreach(__cvlib ${OpenCV_REQUIRED_MODULES})
+  foreach(__cvlib ${OpenCV_LIB_COMPONENTS})
     # We only need the "core",... part here: "opencv_core" -> "core"
     string(REGEX REPLACE "opencv_(.*)" "\\1" __MODNAME ${__cvlib})
     include_directories("${OpenCV_SOURCE_PATH}/modules/${__MODNAME}/include")
