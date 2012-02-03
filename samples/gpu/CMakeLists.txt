@@ -17,7 +17,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     )
 
   if(HAVE_CUDA)
-    include_directories(${CUDA_INCLUDE_DIRS} ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core)
+    include_directories(${CUDA_INCLUDE_DIRS})
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX)
