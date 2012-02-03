@@ -1,6 +1,11 @@
 set(the_description "The Core Functionality")
 ocv_add_module(core ${ZLIB_LIBRARY})
 
+if(NOT ZLIB_FOUND)
+    set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/zlib")
+endif()
+ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
+
 if(HAVE_CUDA)
   file(GLOB lib_cuda "src/cuda/*.cu")
   source_group("Cuda" FILES "${lib_cuda}")
@@ -26,11 +31,6 @@ else()
 endif()
 
 ocv_glob_module_sources(SOURCES ${lib_cuda} ${cuda_objs})
-
-if(NOT ZLIB_FOUND)
-    set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/zlib")
-endif()
-ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 
 ocv_create_module(${cuda_link_libs})
 ocv_add_precompiled_headers(${the_module})
