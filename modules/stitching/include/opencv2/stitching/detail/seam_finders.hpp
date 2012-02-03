@@ -44,6 +44,7 @@
 #define __OPENCV_STITCHING_SEAM_FINDERS_HPP__
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/opencv_modules.hpp"
 
 namespace cv {
 namespace detail {
@@ -114,7 +115,7 @@ private:
 };
 
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 class CV_EXPORTS GraphCutSeamFinderGpu : public GraphCutSeamFinderBase, public PairwiseSeamFinder
 {
 public:

@@ -58,7 +58,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
     stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());

@@ -17,44 +17,45 @@ set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 # Run "cmake --help-policy CMP0003" for more information.
 # --------------------------------------------------------------
 if(COMMAND cmake_policy)
-    cmake_policy(SET CMP0003 NEW)
+  cmake_policy(SET CMP0003 NEW)
 endif()
 
 # Following block can broke build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
 if(NOT CMAKE_TOOLCHAIN_FILE)
-    # Add these standard paths to the search paths for FIND_LIBRARY
-    # to find libraries from these locations first
-    if(UNIX)
-        set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
-    endif()
+  # Add these standard paths to the search paths for FIND_LIBRARY
+  # to find libraries from these locations first
+  if(UNIX)
+    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
+  endif()
 
-    # it _must_ go before PROJECT(OpenCV) in order to work
-    if(WIN32)
-        set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-    else()
-        set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
-    endif()
+  # it _must_ go before project(OpenCV) in order to work
+  if(WIN32)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
+  else()
+    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
+  endif()
 
-    if(MSVC)
-        set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
-    endif()
+  if(MSVC)
+    set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
+  endif()
 endif(NOT CMAKE_TOOLCHAIN_FILE)
 
 # --------------------------------------------------------------
 # Top level OpenCV project
 # --------------------------------------------------------------
 if(NOT IOS)
-    cmake_minimum_required(VERSION 2.6.3)
+  cmake_minimum_required(VERSION 2.6.3)
 else()
-    cmake_minimum_required(VERSION 2.8)
+  cmake_minimum_required(VERSION 2.8)
 endif()
+
 project(OpenCV)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE AND CMAKE_VERSION VERSION_GREATER "2.8")
-    set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES} )
+  set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES} )
 endif()
 
 set(CMAKE_C_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
@@ -67,6 +68,7 @@ set(CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
 set(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "" CACHE INTERNAL "" FORCE)
 set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
 set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "" CACHE INTERNAL "" FORCE)
+
 set(CMAKE_VERBOSE OFF CACHE BOOL "Verbose mode")
 if(CMAKE_VERBOSE)
     set(CMAKE_VERBOSE_MAKEFILE 1)
@@ -75,81 +77,14 @@ endif()
 include(cmake/OpenCVUtils.cmake REQUIRED)
 
 # ----------------------------------------------------------------------------
-# Detect Microsoft compiler:
+# Detect compiler and target platform architecture
 # ----------------------------------------------------------------------------
-if(CMAKE_CL_64)
-    set(MSVC64 1)
-endif()
+include(cmake/OpenCVDetectCXXCompiler.cmake REQUIRED)
 
-# ----------------------------------------------------------------------------
-# Detect Intel ICC compiler -- for -fPIC in 3rdparty ( UNIX ONLY ):
-#  see  include/opencv/cxtypes.h file for related   ICC & CV_ICC defines.
-# NOTE: The system needs to determine if the '-fPIC' option needs to be added
-#  for the 3rdparty static libs being compiled.  The CMakeLists.txt files
-#  in 3rdparty use the CV_ICC definition being set here to determine if
-#  the -fPIC flag should be used.
-# ----------------------------------------------------------------------------
-if(UNIX)
-    if  (__ICL)
-        set(CV_ICC   __ICL)
-    elseif(__ICC)
-        set(CV_ICC   __ICC)
-    elseif(__ECL)
-        set(CV_ICC   __ECL)
-    elseif(__ECC)
-        set(CV_ICC   __ECC)
-    elseif(__INTEL_COMPILER)
-        set(CV_ICC   __INTEL_COMPILER)
-    elseif(CMAKE_C_COMPILER MATCHES "icc")
-        set(CV_ICC   icc_matches_c_compiler)
-    endif()
-endif()
-
-if(MSVC AND CMAKE_C_COMPILER MATCHES "icc")
-    set(CV_ICC   __INTEL_COMPILER_FOR_WINDOWS)
-endif()
 
 # ----------------------------------------------------------------------------
-# Detect GNU version:
+# OpenCV cmake options
 # ----------------------------------------------------------------------------
-if(CMAKE_COMPILER_IS_GNUCXX)
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
-                  OUTPUT_VARIABLE CMAKE_OPENCV_GCC_VERSION_FULL
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
-                  ERROR_VARIABLE CMAKE_OPENCV_GCC_INFO_FULL
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-    # Typical output in CMAKE_OPENCV_GCC_VERSION_FULL: "c+//0 (whatever) 4.2.3 (...)"
-    # Look for the version number
-    string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
-
-    # Split the three parts:
-    string(REGEX MATCHALL "[0-9]+" CMAKE_OPENCV_GCC_VERSIONS "${CMAKE_GCC_REGEX_VERSION}")
-
-    list(GET CMAKE_OPENCV_GCC_VERSIONS 0 CMAKE_OPENCV_GCC_VERSION_MAJOR)
-    list(GET CMAKE_OPENCV_GCC_VERSIONS 1 CMAKE_OPENCV_GCC_VERSION_MINOR)
-
-    set(CMAKE_OPENCV_GCC_VERSION ${CMAKE_OPENCV_GCC_VERSION_MAJOR}${CMAKE_OPENCV_GCC_VERSION_MINOR})
-    math(EXPR CMAKE_OPENCV_GCC_VERSION_NUM "${CMAKE_OPENCV_GCC_VERSION_MAJOR}*100 + ${CMAKE_OPENCV_GCC_VERSION_MINOR}")
-    message(STATUS "Detected version of GNU GCC: ${CMAKE_OPENCV_GCC_VERSION} (${CMAKE_OPENCV_GCC_VERSION_NUM})")
-
-    if(WIN32)
-        execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
-                  OUTPUT_VARIABLE CMAKE_OPENCV_GCC_TARGET_MACHINE
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-        if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "64")
-            set(MINGW64 1)
-        endif()
-    endif()
-endif()
-
-if(CMAKE_SYSTEM_PROCESSOR MATCHES amd64.*|x86_64.*)
-    set(X86_64 1)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES i686.*|i386.*|x86.*)
-    set(X86 1)
-endif()
 
 # Optional 3rd party components
 # ===================================================
@@ -212,7 +147,7 @@ endif()
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
 OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
 OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF  IF ANDROID )
-OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT IOS AND BUILD_SHARED_LIBS) )
 
 # OpenCV build options
 # ===================================================
@@ -230,49 +165,24 @@ OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"              
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 
+
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
 # ----------------------------------------------------------------------------
-SET(OPENCV_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/modules/core/include/opencv2/core/version.hpp")
-FILE(STRINGS "${OPENCV_VERSION_FILE}" OPENCV_VERSION_PARTS REGEX "#define CV_.+OR_VERSION[ ]+[0-9]+" )
-string(REGEX REPLACE ".+CV_MAJOR_VERSION[ ]+([0-9]+).*" "\\1" OPENCV_VERSION_MAJOR "${OPENCV_VERSION_PARTS}")
-string(REGEX REPLACE ".+CV_MINOR_VERSION[ ]+([0-9]+).*" "\\1" OPENCV_VERSION_MINOR "${OPENCV_VERSION_PARTS}")
-string(REGEX REPLACE ".+CV_SUBMINOR_VERSION[ ]+([0-9]+).*" "\\1" OPENCV_VERSION_PATCH "${OPENCV_VERSION_PARTS}")
-set(OPENCV_VERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}")
+include(cmake/OpenCVVersion.cmake REQUIRED)
 
-set(OPENCV_SOVERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}")
 
-# create a dependency on version file
-# we never use output of the following command but cmake will rerun if version file changes
-configure_file("${OPENCV_VERSION_FILE}" "${CMAKE_BINARY_DIR}/junk/version.junk" COPYONLY)
+# ----------------------------------------------------------------------------
+#  Build & install layouts
+# ----------------------------------------------------------------------------
 
-if(WIN32)
-    # Postfix of DLLs:
-    set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
-    set(OPENCV_DEBUG_POSTFIX d)
-else()
-    # Postfix of so's:
-    set(OPENCV_DLLVERSION "")
-    set(OPENCV_DEBUG_POSTFIX)
-endif()
-
-#name mangling
-set(OPENCV_INCLUDE_PREFIX include)
-if(INSTALL_TO_MANGLED_PATHS AND BUILD_SHARED_LIBS)
-    SET(OPENCV_MANGLED_INSTALL_PATHS ${INSTALL_TO_MANGLED_PATHS} )
-    if(OPENCV_MANGLED_INSTALL_PATHS)
-      set(OPENCV_INCLUDE_PREFIX include/opencv-${OPENCV_VERSION})
-    endif()
-endif()
-
-# SUBDIRECTORIES:
 # Save libs and executables in the same place
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" CACHE PATH "Output directory for libraries" )
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications" )
 
 if(ANDROID OR WIN32)
     set(OPENCV_DOC_INSTALL_PATH doc)
-elseif(OPENCV_MANGLED_INSTALL_PATHS)
+elseif(INSTALL_TO_MANGLED_PATHS)
     set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
 else()
     set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
@@ -287,83 +197,23 @@ endif()
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+
+# ----------------------------------------------------------------------------
+#  Path for build/platform -specific headers
+# ----------------------------------------------------------------------------
+set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cvconfig.h")
+add_definitions(-DHAVE_CVCONFIG_H)
+include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
+
+
 # ----------------------------------------------------------------------------
 # Use statically or dynamically linked CRT?
 # Default: dynamic
 # ----------------------------------------------------------------------------
 if(MSVC)
-    if(NOT BUILD_SHARED_LIBS AND BUILD_WITH_STATIC_CRT)
-        foreach(flag_var
-                CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-                CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-                CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-                CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-           if(${flag_var} MATCHES "/MD")
-              string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-           endif()
-           if(${flag_var} MATCHES "/MDd")
-              string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
-           endif()
-        endforeach(flag_var)
-
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib")
-        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:libcmt.lib")
-        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:libcmtd.lib")
-    else()
-        foreach(flag_var
-                CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-                CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-                CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-                CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-           if(${flag_var} MATCHES "/MT")
-              string(REGEX REPLACE "/MT" "/MD" ${flag_var} "${${flag_var}}")
-           endif()
-           if(${flag_var} MATCHES "/MTd")
-              string(REGEX REPLACE "/MTd" "/MDd" ${flag_var} "${${flag_var}}")
-           endif()
-        endforeach(flag_var)
-    endif()
-
-	if(NOT ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} LESS 2.8 AND NOT ${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} LESS 8.6)
-		include(ProcessorCount)
-		ProcessorCount(N)
-		if(NOT N EQUAL 0)
-			SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /MP${N} ")
-			SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP${N} ")
-		endif()
-	endif()
-
-    if(NOT BUILD_WITH_DEBUG_INFO)
-        string(REPLACE "/debug" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/DEBUG" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/INCREMENTAL:YES" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/INCREMENTAL " "/INCREMENTAL:NO " CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-
-        string(REPLACE "/debug" "" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/DEBUG" "" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/INCREMENTAL:YES" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/INCREMENTAL " "/INCREMENTAL:NO " CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
-
-        string(REPLACE "/debug" "" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/DEBUG" "" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/INCREMENTAL:YES" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
-        string(REPLACE "/INCREMENTAL " "/INCREMENTAL:NO " CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
-
-        string(REPLACE "/Zi" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-        string(REPLACE "/Zi" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-    endif()
-
+  include(cmake/OpenCVCRTLinkage.cmake REQUIRED)
 endif(MSVC)
 
-# ----------------------------------------------------------------------------
-#  Variables for cvconfig.h.cmake
-# ----------------------------------------------------------------------------
-set(PACKAGE "opencv")
-set(PACKAGE_BUGREPORT "opencvlibrary-devel@lists.sourceforge.net")
-set(PACKAGE_NAME "opencv")
-set(PACKAGE_STRING "${PACKAGE} ${OPENCV_VERSION}")
-set(PACKAGE_TARNAME "${PACKAGE}")
-set(PACKAGE_VERSION "${OPENCV_VERSION}")
 
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a SVN repository
@@ -387,25 +237,30 @@ else()
     set(OPENCV_SVNVERSION "")
 endif()
 
+
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
+if(UNIX)
+  include(cmake/OpenCVFindPkgConfig.cmake OPTIONAL)
+  include(CheckFunctionExists)
+  include(CheckIncludeFile)
+endif()
 
 include(cmake/OpenCVPCHSupport.cmake REQUIRED)
 include(cmake/OpenCVModule.cmake REQUIRED)
 
 if(ANDROID)
-    include(cmake/OpenCVAndroidProject.cmake REQUIRED)
+  include(cmake/OpenCVAndroidProject.cmake REQUIRED)
 endif()
 
-if(UNIX)
-    include(cmake/OpenCVFindPkgConfig.cmake OPTIONAL)
-    include(CheckFunctionExists)
-    include(CheckIncludeFile)
-endif()
 
+# ----------------------------------------------------------------------------
+#  Detect 3rd-party tools and libraries
+# ----------------------------------------------------------------------------
+
+#Graphic libraries
 set(HAVE_OPENGL 0)
-
 if(UNIX)
     if(NOT APPLE)
       if(WITH_GTK)
@@ -576,918 +431,211 @@ endif()
 #message(STATUS "Graphic libraries: ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES}")
 
 if(WITH_OPENEXR)
-    include(cmake/OpenCVFindOpenEXR.cmake)
+  include(cmake/OpenCVFindOpenEXR.cmake)
 endif()
 
+#################### LATEX for dpf documentation ##################
 if(BUILD_DOCS)
   include(cmake/OpenCVFindLATEX.cmake REQUIRED)
 endif()
 
-# Always try to find python
-# ===================================================
-find_host_package(PythonInterp)
-find_host_package(PythonLibs)
+########################## Python Support #########################
+include(cmake/OpenCVDetectPython.cmake REQUIRED)
 
-# cmake 2.4 (at least on Ubuntu 8.04 (hardy)) don't define PYTHONLIBS_FOUND
-if(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
-    set(PYTHONLIBS_FOUND ON)
-endif()
+########################### Java Support ##########################
+# current implementation of Java wrappers generator requires python at build time
+if(BUILD_JAVA_SUPPORT AND PYTHON_EXECUTABLE)
+  if(ANDROID)
+    include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
+  endif()
+  include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
-      ERROR_VARIABLE PYTHON_VERSION_FULL
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-string(REGEX MATCH "[0-9]+.[0-9]+" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
-if(CMAKE_HOST_UNIX)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import *; print get_python_lib()"
-                    RESULT_VARIABLE PYTHON_CVPY_PROCESS
-                    OUTPUT_VARIABLE PYTHON_STD_PACKAGES_PATH
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if("${PYTHON_STD_PACKAGES_PATH}" MATCHES "site-packages")
-        set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages CACHE PATH "Where to install the python packages.")
-    else() #debian based assumed, install to the dist-packages.
-        set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/dist-packages CACHE PATH "Where to install the python packages.")
-    endif()
-endif()
-if(CMAKE_HOST_WIN32)
-    get_filename_component(PYTHON_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\${PYTHON_VERSION_MAJOR_MINOR}\\InstallPath]" ABSOLUTE CACHE)
-    set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
-endif()
-
-# Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
-            RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-            OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-if(PYTHON_NUMPY_PROCESS EQUAL 0)
-    set(PYTHON_USE_NUMPY 1)
-    add_definitions(-DPYTHON_USE_NUMPY=1)
-    include_directories(AFTER ${PYTHON_NUMPY_INCLUDE_DIRS})
-    message(STATUS "    Use NumPy headers from: ${PYTHON_NUMPY_INCLUDE_DIRS}")
-else()
-    set(PYTHON_USE_NUMPY 0)
-endif()
-
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sphinx; print sphinx.__version__"
-            RESULT_VARIABLE SPHINX_PROCESS
-            OUTPUT_VARIABLE SPHINX_VERSION
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-set(HAVE_SPHINX 0)
-if(SPHINX_PROCESS EQUAL 0)
-    find_host_program(SPHINX_BUILD sphinx-build)
-    if(SPHINX_BUILD)
-        set(HAVE_SPHINX 1)
-        message(STATUS "    Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
-    endif()
-endif()
-
-# Java support
-# ===================================================
-if (BUILD_JAVA_SUPPORT AND PYTHON_EXECUTABLE)
-    file(TO_CMAKE_PATH "$ENV{ANT_DIR}" ANT_DIR_ENV_PATH)
-    file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)
-
-    if(ANDROID)
-        file(TO_CMAKE_PATH "$ENV{ANDROID_SDK}" ANDROID_SDK_ENV_PATH)
-
-        #find android SDK
-        find_host_program(ANDROID_EXECUTABLE
-            NAMES android.bat android
-            PATHS "${ANDROID_SDK_ENV_PATH}/tools/"
-                  "${ProgramFiles_ENV_PATH}/Android/android-sdk/tools/"
-                  "/opt/android-sdk/tools/"
-                  "/opt/android-sdk-linux_x86/tools/"
-                  "/opt/android-sdk-mac_x86/tools/"
-                  "/opt/android-sdk-linux_86/tools/"
-                  "/opt/android-sdk-mac_86/tools/"
-            )
-        if(ANDROID_EXECUTABLE)
-            message(STATUS "    Found android tool: ${ANDROID_EXECUTABLE}")
-            get_filename_component(ANDROID_SDK_TOOLS_PATH "${ANDROID_EXECUTABLE}" PATH)
-            #read source.properties
-            if (EXISTS "${ANDROID_SDK_TOOLS_PATH}/source.properties")
-                file(STRINGS "${ANDROID_SDK_TOOLS_PATH}/source.properties" ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES REGEX "^[ ]*[^#].*$")
-                foreach(line ${ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES})
-                    string(REPLACE "\\:" ":" line ${line})
-                    string(REPLACE "=" ";" line ${line})
-                    list(GET line 0 line_name)
-                    list(GET line 1 line_value)
-                    string(REPLACE "." "_" line_name ${line_name})
-                    SET(ANDROID_TOOLS_${line_name} "${line_value}")
-                    MARK_AS_ADVANCED(ANDROID_TOOLS_${line_name})
-                endforeach()
-            endif()
-            if (NOT ANDROID_TOOLS_Pkg_Revision)
-                SET(ANDROID_TOOLS_Pkg_Revision "Unknown")
-                MARK_AS_ADVANCED(ANDROID_TOOLS_Pkg_Revision)
-            endif()
-            if (NOT ANDROID_TOOLS_Pkg_Desc)
-                SET(ANDROID_TOOLS_Pkg_Desc "Android SDK Tools, revision ${ANDROID_TOOLS_Pkg_Revision}.")
-                if (NOT ANDROID_TOOLS_Pkg_Revision GREATER 11)
-                    SET(ANDROID_TOOLS_Pkg_Desc "${ANDROID_TOOLS_Pkg_Desc} It is recommended to update your SDK tools to revision 12 or newer.")
-                endif()
-                MARK_AS_ADVANCED(ANDROID_TOOLS_Pkg_Desc)
-            endif()
-
-            #get installed targets
-            execute_process(COMMAND ${ANDROID_EXECUTABLE} list target
-                RESULT_VARIABLE ANDROID_PROCESS
-                OUTPUT_VARIABLE ANDROID_SDK_TARGETS_FULL
-                ERROR_VARIABLE ANDROID_PROCESS_ERRORS
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-            string(REGEX MATCHALL "(^|\n)id: [0-9]+ or \"([^\n]+[0-9+])\"(\n|$)" ANDROID_SDK_TARGETS_FULL "${ANDROID_SDK_TARGETS_FULL}")
-
-            SET(ANDROID_SDK_TARGETS)
-            if (ANDROID_PROCESS EQUAL 0)
-                foreach(line ${ANDROID_SDK_TARGETS_FULL})
-                    string(REGEX REPLACE "(^|\n)id: [0-9]+ or \"([^\n]+[0-9+])\"(\n|$)" "\\2" line "${line}")
-                    list(APPEND ANDROID_SDK_TARGETS "${line}")
-                endforeach()
-            endif()
-
-            # detect ANDROID_SDK_TARGET if no target is provided by user
-            if (NOT ANDROID_SDK_TARGET)
-                set(desired_android_target_level ${ANDROID_NATIVE_API_LEVEL})
-                if (desired_android_target_level LESS 8)
-                    set(desired_android_target_level 8)
-                endif()
-                if (ANDROID_PROCESS EQUAL 0)
-                    math(EXPR desired_android_target_level_1 "${desired_android_target_level}-1")
-
-                    foreach(target ${ANDROID_SDK_TARGETS})
-                        string(REGEX MATCH "[0-9]+$" target_level "${target}")
-                        if (target_level GREATER desired_android_target_level_1)
-                           set(ANDROID_SDK_TARGET "${target}")
-                           break()
-                        endif()
-                    endforeach()
-                else()
-                    set(ANDROID_SDK_TARGET android-${desired_android_target_level})
-                    message(WARNING "Could not retrieve list of installed Android targets. Will try to use \"${ANDROID_SDK_TARGET}\" target")
-                endif()
-            endif()
-
-            SET(ANDROID_SDK_TARGET ${ANDROID_SDK_TARGET} CACHE STRING "SDK target for Android tests and samples")
-            if (ANDROID_PROCESS EQUAL 0 AND CMAKE_VERSION VERSION_GREATER "2.8")
-                set_property( CACHE ANDROID_SDK_TARGET PROPERTY STRINGS ${ANDROID_SDK_TARGETS} )
-            endif()
-            string(REGEX MATCH "[0-9]+$" ANDROID_SDK_TARGET_LEVEL "${ANDROID_SDK_TARGET}")
-        endif()
-    endif()
-
-    #find apache ant
-    find_host_program(ANT_EXECUTABLE NAMES ant.bat ant
-        PATHS "${ANT_DIR_ENV_PATH}/bin"
-              "${ProgramFiles_ENV_PATH}/apache-ant/bin"
-        )
-    if(ANT_EXECUTABLE)
-        execute_process(COMMAND ${ANT_EXECUTABLE} -version
-            OUTPUT_VARIABLE ANT_VERSION_FULL
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" ANT_VERSION "${ANT_VERSION_FULL}")
-
-        message(STATUS "    Found apache ant ${ANT_VERSION}: ${ANT_EXECUTABLE}")
-    endif()
-
-    if (ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_SDK_TARGET_LEVEL GREATER 7))
-        SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
-    else()
-        SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
-    endif()
+  if(ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_SDK_TARGET_LEVEL GREATER 7))
+    SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
+  else()
+    SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
+  endif()
 endif()
 
 if(NOT CAN_BUILD_ANDROID_PROJECTS)
-    UNSET(BUILD_ANDROID_EXAMPLES CACHE)
+  UNSET(BUILD_ANDROID_EXAMPLES CACHE)
 endif()
 
-#YV
 ############################### QT ################################
-
 set(HAVE_QT 0)
 set(HAVE_QT_OPENGL 0)
 
-if (WITH_QT)
-    find_package(Qt4)
-    if (QT4_FOUND)
-        set(HAVE_QT 1)
-        add_definitions(-DHAVE_QT) #We need to define te macro this way, using cvconfig.h.cmake does not work
+if(WITH_QT)
+  find_package(Qt4)
+  if(QT4_FOUND)
+    set(HAVE_QT 1)
+    add_definitions(-DHAVE_QT) #We need to define te macro this way, using cvconfig.h.cmake does not work
 
-        if (WITH_OPENGL)
-            find_package (OpenGL QUIET)
-            if (QT_QTOPENGL_FOUND AND OPENGL_FOUND)
-                set(HAVE_OPENGL 1)
-                set(HAVE_QT_OPENGL 1)
-                add_definitions(-DHAVE_QT_OPENGL)
-                set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-            endif()
-        endif()
+    if(WITH_OPENGL)
+      find_package (OpenGL QUIET)
+      if(QT_QTOPENGL_FOUND AND OPENGL_FOUND)
+        set(HAVE_OPENGL 1)
+        set(HAVE_QT_OPENGL 1)
+        add_definitions(-DHAVE_QT_OPENGL)
+        set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
+      endif()
     endif()
+  endif()
 endif()
 
 ############################### TBB ################################
-
-if (WITH_TBB)
-    if (UNIX AND NOT APPLE AND NOT ANDROID)
-        PKG_CHECK_MODULES(TBB tbb)
-
-        if (TBB_FOUND)
-            set(HAVE_TBB 1)
-            if(NOT ${TBB_INCLUDE_DIRS} STREQUAL "")
-                include_directories(${TBB_INCLUDE_DIRS})
-            endif()
-            link_directories(${TBB_LIBRARY_DIRS})
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${TBB_LIBRARIES})
-        endif()
-    endif()
-
-    if (NOT HAVE_TBB)
-        set(TBB_DEFAULT_INCLUDE_DIRS "/opt/intel/tbb" "/usr/local/include" "/usr/include" "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB" "C:/Program Files (x86)/TBB" "${CMAKE_INSTALL_PREFIX}/include")
-
-        find_path(TBB_INCLUDE_DIR "tbb/tbb.h" PATHS ${TBB_DEFAULT_INCLUDE_DIRS} DOC "The path to TBB headers")
-        if (TBB_INCLUDE_DIR)
-            if (UNIX)
-                set(TBB_LIB_DIR "${TBB_INCLUDE_DIR}/../lib" CACHE PATH "Full path of TBB library directory")
-                link_directories("${TBB_LIB_DIR}")
-            endif()
-            if (APPLE)
-                set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} libtbb.dylib)
-            elseif (ANDROID)
-                set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS}  tbb)
-                add_definitions(-DTBB_USE_GCC_BUILTINS)
-            elseif (UNIX)
-                set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
-            elseif (WIN32)
-                if (CMAKE_COMPILER_IS_GNUCXX)
-                    set(TBB_LIB_DIR "${TBB_INCLUDE_DIR}/../lib" CACHE PATH "Full path of TBB library directory")
-                    link_directories("${TBB_LIB_DIR}")
-                    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
-                else()
-                    get_filename_component(_TBB_LIB_PATH "${TBB_INCLUDE_DIR}/../lib" ABSOLUTE)
-
-                    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*|x86_64* OR MSVC64)
-                        set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/intel64")
-                    elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86*|i386*|i686*)
-                        set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/ia32")
-                    endif()
-
-                    if (MSVC80)
-                       set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc8")
-                    elseif(MSVC90)
-                       set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc9")
-                    elseif(MSVC10)
-                        set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc10")
-                    endif()
-                    set(TBB_LIB_DIR "${_TBB_LIB_PATH}" CACHE PATH "Full path of TBB library directory")
-                    link_directories("${TBB_LIB_DIR}")
-                endif()
-            endif()
-
-            set(HAVE_TBB 1)
-            if(NOT "${TBB_INCLUDE_DIR}" STREQUAL "")
-                include_directories("${TBB_INCLUDE_DIR}")
-            endif()
-        endif()
-    endif()
-endif(WITH_TBB)
+if(WITH_TBB)
+  include(cmake/OpenCVDetectTBB.cmake REQUIRED)
+endif()
 
 ############################ Intel IPP #############################
 set(IPP_FOUND)
 
 if(WITH_IPP)
-    include(cmake/OpenCVFindIPP.cmake)
+  include(cmake/OpenCVFindIPP.cmake)
 endif()
 
 if(IPP_FOUND)
-    add_definitions(-DHAVE_IPP)
-    include_directories(${IPP_INCLUDE_DIRS})
-    link_directories(${IPP_LIBRARY_DIRS})
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_LIBRARIES})
+  add_definitions(-DHAVE_IPP)
+  include_directories(${IPP_INCLUDE_DIRS})
+  link_directories(${IPP_LIBRARY_DIRS})
+  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_LIBRARIES})
 endif()
-
 
 ############################### CUDA ################################
-
 if(WITH_CUDA)
-    find_package(CUDA 4.0)
-
-    if(CUDA_FOUND)
-        set(HAVE_CUDA 1)
-
-        if(WITH_CUFFT)
-            set(HAVE_CUFFT 1)
-        endif()
-
-        if(WITH_CUBLAS)
-            set(HAVE_CUBLAS 1)
-        endif()
-
-        message(STATUS "CUDA detected: " ${CUDA_VERSION})
-
-        set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0)" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
-        set(CUDA_ARCH_PTX "2.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
-
-        string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
-        string(REGEX REPLACE "\\." "" ARCH_PTX_NO_POINTS "${CUDA_ARCH_PTX}")
-
-        # Ckeck if user specified 1.0 compute capability: we don't support it
-        string(REGEX MATCH "1.0" HAS_ARCH_10 "${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}")
-        set(CUDA_ARCH_BIN_OR_PTX_10 0)
-        if(NOT ${HAS_ARCH_10} STREQUAL "")
-            set(CUDA_ARCH_BIN_OR_PTX_10 1)
-        endif()
-
-        # NVCC flags to be set
-        set(NVCC_FLAGS_EXTRA "")
-
-        # These vars will be passed into the templates
-        set(OPENCV_CUDA_ARCH_BIN "")
-        set(OPENCV_CUDA_ARCH_PTX "")
-        set(OPENCV_CUDA_ARCH_FEATURES "")
-
-        # Tell NVCC to add binaries for the specified GPUs
-        string(REGEX MATCHALL "[0-9()]+" ARCH_LIST "${ARCH_BIN_NO_POINTS}")
-        foreach(ARCH IN LISTS ARCH_LIST)
-            if (ARCH MATCHES "([0-9]+)\\(([0-9]+)\\)")
-                # User explicitly specified PTX for the concrete BIN
-                set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${CMAKE_MATCH_2},code=sm_${CMAKE_MATCH_1})
-                set(OPENCV_CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN} ${CMAKE_MATCH_1}")
-                set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${CMAKE_MATCH_2}")
-            else()
-                # User didn't explicitly specify PTX for the concrete BIN, we assume PTX=BIN
-                set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH},code=sm_${ARCH})
-                set(OPENCV_CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN} ${ARCH}")
-                set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
-            endif()
-        endforeach()
-
-        # Tell NVCC to add PTX intermediate code for the specified architectures
-        string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_PTX_NO_POINTS}")
-        foreach(ARCH IN LISTS ARCH_LIST)
-            set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH},code=compute_${ARCH})
-            set(OPENCV_CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX} ${ARCH}")
-            set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
-        endforeach()
-
-        # These vars will be processed in other scripts
-        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
-        set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
-
-        message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
-    else()
-        unset(CUDA_ARCH_BIN CACHE)
-        unset(CUDA_ARCH_PTX CACHE)
-    endif()
+  include(cmake/OpenCVDetectCUDA.cmake REQUIRED)
 endif()
-
 
 ############################### OpenNI ################################
 set(HAVE_OPENNI FALSE)
 set(HAVE_OPENNI_PRIME_SENSOR_MODULE FALSE)
 
 if(WITH_OPENNI)
-    include(cmake/OpenCVFindOpenNI.cmake)
+  include(cmake/OpenCVFindOpenNI.cmake)
 endif()
 
 ############################### XIMEA ################################
 set(HAVE_XIMEA FALSE)
 
 if(WITH_XIMEA)
-    include(cmake/OpenCVFindXimea.cmake)
+  include(cmake/OpenCVFindXimea.cmake)
 endif()
 
 if(XIMEA_FOUND)
-    set(HAVE_XIMEA TRUE)
+  set(HAVE_XIMEA TRUE)
 endif()
 
 ############################## Eigen ##############################
-
 if(WITH_EIGEN)
-    find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
+  find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
             PATHS "/usr/local/include/eigen2" "/opt/include/eigen2" "/usr/include/eigen2"
-            "/usr/local/include/eigen3" "/opt/include/eigen3" "/usr/include/eigen3"
+                  "/usr/local/include/eigen3" "/opt/include/eigen3" "/usr/include/eigen3"
             DOC "The path to Eigen2/Eigen3 headers")
-    if(EIGEN_INCLUDE_PATH)
-        include_directories(${EIGEN_INCLUDE_PATH})
-        set(HAVE_EIGEN 1)
-    endif()
-endif()
-
-
-################## Extra HighGUI libs on Windows ###################
-
-if(WIN32)
-    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32)
-
-    if(WITH_VIDEOINPUT)
-        set(HAVE_VIDEOINPUT 1)
-    endif()
-
-    if (MSVC)
-        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
-    endif()
-
-    if(MINGW)
-        if(MINGW64)
-            set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} msvfw32 avifil32 avicap32 winmm)
-        else()
-            set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32 winmm)
-        endif()
-    endif()
-
-    if(WITH_OPENGL AND NOT HAVE_QT_OPENGL)
-        find_package(OpenGL QUIET)
-
-        if(OPENGL_FOUND)
-            set(HAVE_OPENGL 1)
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-            include_directories(${OPENGL_INCLUDE_DIR})
-        endif()
-    endif()
-endif()
-
-############## Android source tree for native camera ###############
-if(ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7)
-    SET (ANDROID_SOURCE_TREE "ANDROID_SOURCE_TREE-NOTFOUND" CACHE PATH
-"Path to Android source tree.
-Set this variable to path to your Android sources to compile
-libnative_camera_rx.x.x.so for your Android")
-    SET(BUILD_ANDROID_CAMERA_WRAPPER OFF)
-    if (ANDROID_SOURCE_TREE)
-        FILE(STRINGS "${ANDROID_SOURCE_TREE}/development/sdk/platform_source.properties" ANDROID_VERSION REGEX "Platform\\.Version=[0-9]+\\.[0-9]+(\\.[0-9]+)?" )
-        string(REGEX REPLACE "Platform\\.Version=([0-9]+\\.[0-9]+(\\.[0-9]+)?)" "\\1" ANDROID_VERSION "${ANDROID_VERSION}")
-        if (ANDROID_VERSION MATCHES "^[0-9]+\\.[0-9]+$")
-            SET(ANDROID_VERSION "${ANDROID_VERSION}.0")
-        endif()
-        if(NOT "${ANDROID_VERSION}" STREQUAL "")
-            SET(BUILD_ANDROID_CAMERA_WRAPPER ON)
-        endif()
-    endif()
-    MARK_AS_ADVANCED(ANDROID_SOURCE_TREE)
-endif()
-
-# ----------------------------------------------------------------------------
-#                   UPDATE CONFIG FILES & SCRIPTS:
-#
-#  CONFIGURE_FILE(InputFile OutputFile [COPYONLY] [ESCAPE_QUOTES] [@ONLY])
-#  If @ONLY is specified, only variables of the form @VAR@ will be
-#  replaces and ${VAR} will be ignored.
-#
-#  A directory will be created for each platform so the "cvconfig.h" file is
-#  not overwritten if cmake generates code in the same path.
-# ----------------------------------------------------------------------------
-add_definitions(-DHAVE_CVCONFIG_H)
-
-set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cvconfig.h")
-
-message(STATUS "Parsing 'cvconfig.h.cmake'")
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/cvconfig.h.cmake" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
-
-# ---------------------------------------------------------------------------
-# The C+//0 include & link directories:
-# ---------------------------------------------------------------------------
-include_directories("."
-    "${OPENCV_CONFIG_FILE_INCLUDE_DIR}"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv"
-    )
-
-if (WIN32 AND ${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
-endif()
-
-set(OPENCV_EXTRA_C_FLAGS "")
-set(OPENCV_EXTRA_C_FLAGS_RELEASE "")
-set(OPENCV_EXTRA_C_FLAGS_DEBUG "")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS "")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "")
-
-if(MSVC)
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
-    # 64-bit portability warnings, in MSVC8
-    if(MSVC80)
-        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Wp64")
-    endif()
-    #if(MSVC90)
-    #    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /D _BIND_TO_CURRENT_CRT_VERSION=1 /D _BIND_TO_CURRENT_VCLIBS_VERSION=1")
-    #endif()
-
-    if(BUILD_WITH_DEBUG_INFO)
-        set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
-    endif()
-
-    # Remove unreferenced functions: function level linking
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Gy")
-    if(BUILD_WITH_DEBUG_INFO)
-       set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Zi")
-    endif()
-endif()
-
-if(CMAKE_COMPILER_IS_GNUCXX)
-    # High level of warnings.
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -Wall")
-
-    # The -Wno-long-long is required in 64bit systems when including sytem headers.
-    if(X86_64)
-        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -Wno-long-long")
-    endif()
-
-    # We need pthread's
-    if(UNIX AND NOT ANDROID)
-        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -pthread")
-    endif()
-
-    if(OPENCV_WARNINGS_ARE_ERRORS)
-        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -Werror")
-    endif()
-
-    if(X86 AND NOT MINGW64 AND NOT X86_64 AND NOT APPLE)
-        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -march=i686")
-    endif()
-
-    # Other optimizations
-    if(ENABLE_OMIT_FRAME_POINTER)
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -fomit-frame-pointer")
-    else()
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
-    endif()
-    if(ENABLE_FAST_MATH)
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -ffast-math")
-    endif()
-    if(ENABLE_POWERPC)
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mcpu=G3 -mtune=G5")
-    endif()
-    if(ENABLE_SSE)
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse")
-    endif()
-    if(ENABLE_SSE2)
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse2")
-    endif()
-    # SSE3 and further should be disabled under MingW because it generates compiler errors
-    if(NOT MINGW)
-        if(ENABLE_SSE3)
-            set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse3")
-        endif()
-
-        if(${CMAKE_OPENCV_GCC_VERSION_NUM} GREATER 402)
-            set(HAVE_GCC43_OR_NEWER 1)
-        endif()
-        if(${CMAKE_OPENCV_GCC_VERSION_NUM} GREATER 401)
-            set(HAVE_GCC42_OR_NEWER 1)
-        endif()
-
-        if(HAVE_GCC42_OR_NEWER OR APPLE)
-            if(ENABLE_SSSE3)
-                set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mssse3")
-            endif()
-            if(HAVE_GCC43_OR_NEWER)
-                if(ENABLE_SSE41)
-                    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse4.1")
-                endif()
-                if(ENABLE_SSE42)
-                    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse4.2")
-                endif()
-            endif()
-        endif()
-    endif()
-
-    if(X86 OR X86_64)
-        if(NOT APPLE AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-            set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mfpmath=387")
-        endif()
-    endif()
-
-    # Profiling?
-    if(ENABLE_PROFILING)
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -pg -g")
-    elseif(NOT APPLE)
-        # Remove unreferenced functions: function level linking
-        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -ffunction-sections")
-    endif()
-
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -DNDEBUG")
-    set(OPENCV_EXTRA_C_FLAGS_DEBUG "${OPENCV_EXTRA_C_FLAGS_DEBUG} -O0 -DDEBUG -D_DEBUG")
-    if(BUILD_WITH_DEBUG_INFO)
-       set(OPENCV_EXTRA_C_FLAGS_DEBUG "${OPENCV_EXTRA_C_FLAGS_DEBUG} -ggdb3")
-    endif()
-endif()
-
-if(MSVC)
-    # 64-bit MSVC compiler uses SSE/SSE2 by default
-    if(NOT MSVC64)
-       if(ENABLE_SSE)
-          set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE")
-       endif()
-       if(ENABLE_SSE2)
-          set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE2")
-       endif()
-    endif()
-    if(ENABLE_SSE3)
-       set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE3")
-    endif()
-    if(ENABLE_SSE4_1)
-       set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE4.1")
-    endif()
-    if (ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1)
-       set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Oi")
-    endif()
-endif()
-
-# Extra link libs if the user selects building static libs:
-if(NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX AND NOT ANDROID)
-    # Android does not need these settings because they are already set by toolchain file
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
-    set(OPENCV_EXTRA_C_FLAGS "-fPIC ${OPENCV_EXTRA_C_FLAGS}")
-endif()
-
-# Add user supplied extra options (optimization, etc...)
-# ==========================================================
-set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS}" CACHE INTERNAL "Extra compiler options")
-set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE}" CACHE INTERNAL "Extra compiler options for Release build")
-set(OPENCV_EXTRA_C_FLAGS_DEBUG "${OPENCV_EXTRA_C_FLAGS_DEBUG}" CACHE INTERNAL "Extra compiler options for Debug build")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS}" CACHE INTERNAL "Extra linker flags")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}" CACHE INTERNAL "Extra linker flags for Release build")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}" CACHE INTERNAL "Extra linker flags for Debug build")
-
-#combine all "extra" options
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}  ${OPENCV_EXTRA_C_FLAGS_RELEASE}")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OPENCV_EXTRA_C_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${OPENCV_EXTRA_C_FLAGS_DEBUG}")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${OPENCV_EXTRA_C_FLAGS_DEBUG}")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OPENCV_EXTRA_EXE_LINKER_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}")
-
-# In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
-if (CMAKE_GENERATOR MATCHES ".*Makefiles" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
-if (WIN32 AND MSVC)
-    # avoid warnings from MSVC about overriding the /W* option
-    # we replace /W3 with /W4 only for C++ files,
-    # since all the 3rd-party libraries OpenCV uses are in C,
-    # and we do not care about their warnings.
-    string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-    string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-
-    # allow extern "C" functions throw exceptions
-    string(REPLACE "/EHsc" "/EHsc-" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REPLACE "/EHsc" "/EHsc-" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
-    string(REPLACE "/EHsc" "/EHsc-" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-    string(REPLACE "/EHsc" "/EHsc-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REPLACE "/EHsc" "/EHsc-" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-    string(REPLACE "/EHsc" "/EHsc-" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-
-    string(REPLACE "/Zm1000" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-endif()
-
-if("${CMAKE_CONFIGURE_LDFLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CONFIGURE_LDFLAGS}")
-endif("${CMAKE_CONFIGURE_LDFLAGS}")
-
-# --------------------------------------------------------------------------------------------
-#  Installation for CMake Module:  OpenCVConfig.cmake
-#  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
-#  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use with "make install"
-#  Part 3/3: ${BIN_DIR}/win-install/OpenCVConfig.cmake  -> For use within binary installers/packages
-# -------------------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------------------
-#  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
-# -------------------------------------------------------------------------------------------
-set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${CMAKE_CURRENT_SOURCE_DIR}/include\" \"${CMAKE_CURRENT_SOURCE_DIR}/include/opencv\"")
-set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "${CMAKE_CURRENT_SOURCE_DIR}")
-set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
-set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
-#support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
-# --------------------------------------------------------------------------------------------
-#  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
-# -------------------------------------------------------------------------------------------
-set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}/opencv" "\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}\"")
-
-set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
-if(ANDROID)
-    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/libs/\${ANDROID_NDK_ABI_NAME}\"")
-    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV/3rdparty/libs/\${ANDROID_NDK_ABI_NAME}\"")
-else()
-    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_LIB_INSTALL_PATH}\"")
-    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
-    if(OPENCV_MANGLED_INSTALL_PATHS)
-      set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV-${OPENCV_VERSION}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
-    endif()
-endif()
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
-
-if(UNIX)
-  #http://www.vtk.org/Wiki/CMake/Tutorials/Packaging reference
-  # For a command "find_package(<name> [major[.minor]] [EXACT] [REQUIRED|QUIET])"
-  # cmake will look in the following dir on unix:
-  #                <prefix>/(share|lib)/cmake/<name>*/                     (U)
-  #                <prefix>/(share|lib)/<name>*/                           (U)
-  #                <prefix>/(share|lib)/<name>*/(cmake|CMake)/             (U)
-  if(OPENCV_MANGLED_INSTALL_PATHS)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION share/OpenCV-${OPENCV_VERSION}/)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION share/OpenCV-${OPENCV_VERSION}/)
-  else()
-    install(FILES "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" DESTINATION share/OpenCV/)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION share/OpenCV/)
+  if(EIGEN_INCLUDE_PATH)
+    include_directories(${EIGEN_INCLUDE_PATH})
+    set(HAVE_EIGEN 1)
   endif()
 endif()
 
-if(ANDROID)
-    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/android/android.toolchain.cmake" DESTINATION share/OpenCV)
-endif()
-
-# --------------------------------------------------------------------------------------------
-#  Part 3/3: ${BIN_DIR}/win-install/OpenCVConfig.cmake  -> For use within binary installers/packages
-# -------------------------------------------------------------------------------------------
+################## Extra HighGUI libs on Windows ###################
 if(WIN32)
-    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/include\" \"\${OpenCV_CONFIG_PATH}/include/opencv\"")
-    set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
-    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/${OPENCV_LIB_INSTALL_PATH}\"")
-    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+  set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32)
 
-    exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/win-install/\"" OUTPUT_VARIABLE RET_VAL)
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
+  if(WITH_VIDEOINPUT)
+    set(HAVE_VIDEOINPUT 1)
+  endif()
 
-    # Install the OpenCVConfig.cmake file which has the right paths pointing to the install directory
-    install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/")
-endif()
+  if(MSVC)
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
+  endif()
 
-# --------------------------------------------------------------------------------------------
-#  Installation for Android ndk-build makefile:  OpenCV.mk
-#  Part 1/2: ${BIN_DIR}/OpenCV.mk              -> For use *without* "make install"
-#  Part 2/2: ${BIN_DIR}/unix-install/OpenCV.mk -> For use with "make install"
-# -------------------------------------------------------------------------------------------
-if(ANDROID)
-    if(BUILD_SHARED_LIBS)
-        SET(OPENCV_LIBTYPE_CONFIGMAKE "SHARED")
+  if(MINGW)
+    if(MINGW64)
+      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} msvfw32 avifil32 avicap32 winmm)
     else()
-        SET(OPENCV_LIBTYPE_CONFIGMAKE "STATIC")
+      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32 winmm)
     endif()
-    if(BUILD_ANDROID_CAMERA_WRAPPER)
-        set(CMAKE_CAMERA_LIBS_CONFIGCMAKE "native_camera_r${ANDROID_VERSION}")
-    elseif(WITH_ANDROID_CAMERA)
-        SET(CMAKE_CAMERA_LIBS_CONFIGCMAKE "")
-        file(GLOB CMAKE_CAMERA_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}/libnative_camera_r*.so")
-        foreach(cam_lib ${CMAKE_CAMERA_LIBS})
-            get_filename_component(cam_lib "${cam_lib}" NAME)
-            string(REGEX REPLACE "lib(native_camera_r[0-9]+\\.[0-9]+\\.[0-9]+)\\.so" "\\1" cam_lib "${cam_lib}")
-            SET(CMAKE_CAMERA_LIBS_CONFIGCMAKE "${CMAKE_CAMERA_LIBS_CONFIGCMAKE} ${cam_lib}")
-        endforeach()
+  endif()
+
+  if(WITH_OPENGL AND NOT HAVE_QT_OPENGL)
+    find_package(OpenGL QUIET)
+
+    if(OPENGL_FOUND)
+      set(HAVE_OPENGL 1)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
+      include_directories(${OPENGL_INCLUDE_DIR})
     endif()
-endif(ANDROID)
-
-# -------------------------------------------------------------------------------------------
-#  Part 1/2: ${BIN_DIR}/OpenCV.mk              -> For use *without* "make install"
-# -------------------------------------------------------------------------------------------
-if(ANDROID)
-    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${CMAKE_CURRENT_SOURCE_DIR}/include\" \"${CMAKE_CURRENT_SOURCE_DIR}/include/opencv\"")
-    set(CMAKE_BASE_INCLUDE_DIR_CONFIGCMAKE "\"${CMAKE_CURRENT_SOURCE_DIR}\"")
-    set(CMAKE_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)")
-
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/OpenCV.mk" IMMEDIATE @ONLY)
-endif(ANDROID)
-
-# -------------------------------------------------------------------------------------------
-#  Part 2/2: ${BIN_DIR}/unix-install/OpenCV.mk -> For use with "make install"
-# -------------------------------------------------------------------------------------------
-if(ANDROID)
-    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\$(LOCAL_PATH)/\$(OPENCV_THIS_DIR)/../../include/opencv\" \"\$(LOCAL_PATH)/\$(OPENCV_THIS_DIR)/../../include\"")
-    set(CMAKE_BASE_INCLUDE_DIR_CONFIGCMAKE "")
-    set(CMAKE_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../..")
-
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" IMMEDIATE @ONLY)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION share/OpenCV/)
-endif(ANDROID)
-
-# --------------------------------------------------------------------------------------------
-#according to man pkg-config
-#  The package name specified on the pkg-config command line is defined to
-#      be the name of the metadata file, minus the .pc extension. If a library
-#      can install multiple versions simultaneously, it must give each version
-#      its own name (for example, GTK 1.2 might have the package  name  "gtk+"
-#      while GTK 2.0 has "gtk+-2.0").
-#  Part 2/2: ${BIN_DIR}/unix-install/opencv.pc -> For use *with* "make install"
-# prefix=/usr
-# exec_prefix=${prefix}
-# libdir=${exec_prefix}/lib
-# includedir=${prefix}/include/opencv
-# -------------------------------------------------------------------------------------------
-set(prefix      ${CMAKE_INSTALL_PREFIX})
-set(exec_prefix "\${prefix}")
-set(libdir      "\${exec_prefix}/lib${LIB_SUFFIX}")
-set(includedir  "\${prefix}/${OPENCV_INCLUDE_PREFIX}")
-set(VERSION     ${OPENCV_VERSION})
-
-set(OPENCV_PC_FILE_NAME opencv.pc)
-#need to be explicit with naming the pc file and version number for side by side installs to work.
-if(OPENCV_MANGLED_INSTALL_PATHS)
-  SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core )
-  #be explicit about the library names.
-  set(OpenCV_LIB_COMPONENTS_ )
-  foreach( CVLib ${OpenCV_LIB_COMPONENTS})
-    set(OpenCV_LIB_COMPONENTS_ "${OpenCV_LIB_COMPONENTS_} ${libdir}/lib${CVLib}.so.${OPENCV_VERSION}" )
-  endforeach()
-  set(OpenCV_LIB_COMPONENTS ${OpenCV_LIB_COMPONENTS_})
-  set(OPENCV_PC_FILE_NAME "opencv-${OPENCV_VERSION}.pc")
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv-XXX.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME}" @ONLY IMMEDIATE)
-else()
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME}" @ONLY IMMEDIATE)
-endif()
-
-if(UNIX AND NOT ANDROID)
-  install(FILES ${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME} DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig)
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------
-#   Uninstall target, for "make uninstall"
+# OpenCV compiler and linker options
 # ----------------------------------------------------------------------------
-CONFIGURE_FILE(
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/cmake_uninstall.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-  IMMEDIATE @ONLY)
+include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 
-ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
-
-#-----------------------------------
-# Source package:
-#-----------------------------------
-if(BUILD_PACKAGE)
-    set(TARBALL_NAME "${CMAKE_PROJECT_NAME}-${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}")
-    if (NOT WIN32)
-        if(APPLE)
-            set(TAR_CMD gnutar)
-        else()
-            set(TAR_CMD tar)
-        endif()
-        set(TAR_TRANSFORM "\"s,^,${TARBALL_NAME}/,\"")
-        add_custom_target(package_source
-        #TODO: maybe we should not remove dll's
-        COMMAND ${TAR_CMD} --transform ${TAR_TRANSFORM} -cjpf ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.tar.bz2 --exclude=".svn" --exclude="*.pyc" --exclude="*.vcproj" --exclude="*/lib/*" --exclude="*.dll" ./
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    else()
-        add_custom_target(package_source
-        COMMAND zip -9 -r ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.zip . -x '*/.svn/*' '*.vcproj' '*.pyc'
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    endif()
+# In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
+if(CMAKE_GENERATOR MATCHES "Makefiles" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
+  set(CMAKE_BUILD_TYPE Release)
 endif()
 
-
-#-----------------------------------
+# ----------------------------------------------------------------------------
 # Solution folders:
-#-----------------------------------
+# ----------------------------------------------------------------------------
 if(ENABLE_SOLUTION_FOLDERS)
-    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-    set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")
+  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")
 endif()
 
-#-----------------------------------
-# performance tests
-#-----------------------------------
-if(BUILD_PERF_TESTS AND PYTHON_EXECUTABLE)
-    if(CMAKE_VERSION VERSION_GREATER "2.8.2")
-        add_custom_target(perf
-            ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py" --configuration $<CONFIGURATION> "${CMAKE_BINARY_DIR}"
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py"
-        )
-    else()
-        add_custom_target(perf
-            ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py" "${CMAKE_BINARY_DIR}"
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py"
-        )
-    endif()
-endif()
+# Extra OpenCV targets: uninstall, package_source, perf, etc.
+include(cmake/OpenCVExtraTargets.cmake REQUIRED)
 
-#-----------------------------------
-# Subdirectories:
-#-----------------------------------
+# ----------------------------------------------------------------------------
+# Process subdirectories
+# ----------------------------------------------------------------------------
+
+# opencv.hpp and legacy headers
 add_subdirectory(include)
+
+# OpenCV modules
 add_subdirectory(modules)
+
+# Generate targets for documentation
 add_subdirectory(doc)
+
+# various data that is used by cv libraries and/or demo applications.
 add_subdirectory(data)
+
+# 3rdparty libraries on-board
 add_subdirectory(3rdparty)
 
+# extra applications
+add_subdirectory(apps)
+
+# examples
 if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
-    add_subdirectory(samples)
+  add_subdirectory(samples)
 endif()
 
 # ----------------------------------------------------------------------------
-#   Summary:
+# Finalization: generate configuration-based files
+# ----------------------------------------------------------------------------
+ocv_track_build_dependencies()
+
+# Generate platform-dependent and configuration-dependent headers
+include(cmake/OpenCVGenHeaders.cmake REQUIRED)
+
+# Generate opencv.pc for pkg-config command
+include(cmake/OpenCVGenPkgconfig.cmake REQUIRED)
+
+# Generate OpenCV.mk for ndk-build (Android build tool)
+include(cmake/OpenCVGenAndroidMK.cmake REQUIRED)
+
+# Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
+include(cmake/OpenCVGenConfig.cmake REQUIRED)
+
+# ----------------------------------------------------------------------------
+# Summary:
 # ----------------------------------------------------------------------------
 status("")
 status("General configuration for opencv ${OPENCV_VERSION} =====================================")
@@ -1503,6 +651,18 @@ else()
     status("    Linker flags (Release):" ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_RELEASE})
     status("    Linker flags (Debug):"   ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
 endif()
+
+status("")
+status("  OpenCV modules:")
+string(REPLACE "opencv_" "" OPENCV_MODULES_BUILD_ST          "${OPENCV_MODULES_BUILD}")
+string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_USER_ST  "${OPENCV_MODULES_DISABLED_USER}")
+string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_AUTO_ST  "${OPENCV_MODULES_DISABLED_AUTO}")
+string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_FORCE_ST "${OPENCV_MODULES_DISABLED_FORCE}")
+status("    To be built:"            OPENCV_MODULES_BUILD          THEN ${OPENCV_MODULES_BUILD_ST}          ELSE "-")
+status("    Disabled by user:"       OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV_MODULES_DISABLED_USER_ST}  ELSE "-")
+status("    Disabled by dependency:" OPENCV_MODULES_DISABLED_AUTO  THEN ${OPENCV_MODULES_DISABLED_AUTO_ST}  ELSE "-")
+status("    Unavailable:"            OPENCV_MODULES_DISABLED_FORCE THEN ${OPENCV_MODULES_DISABLED_FORCE_ST} ELSE "-")
+
 
 if(ANDROID)
     status("")
@@ -1655,7 +815,9 @@ status("  cvconfig.h is in:" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}")
 status("-----------------------------------------------------------------")
 status("")
 
-# warn in the case of in-source build
+# ----------------------------------------------------------------------------
+# Warn in the case of in-source build
+# ----------------------------------------------------------------------------
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
     message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()

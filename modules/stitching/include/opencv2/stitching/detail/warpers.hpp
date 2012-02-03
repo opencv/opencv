@@ -45,7 +45,8 @@
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#ifndef ANDROID
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_GPU
 # include "opencv2/gpu/gpu.hpp"
 #endif
 
@@ -184,7 +185,7 @@ protected:
 };
 
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:

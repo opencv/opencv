@@ -212,7 +212,7 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
 }
 
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
 {
     return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);

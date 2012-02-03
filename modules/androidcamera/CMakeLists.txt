@@ -1,11 +1,30 @@
-IF(NOT ANDROID OR NOT WITH_ANDROID_CAMERA)
-  return()
+IF(NOT ANDROID OR ANDROID_NATIVE_API_LEVEL LESS 8)
+  ocv_module_disable(androidcamera)
 ENDIF()
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/camera_wrapper")
-set(OPENCV_ANDROIDCAMERA_MODULE_TYPE STATIC)
-define_opencv_moduleEx(androidcamera INTERNAL log dl)
+set(the_description "Auxiliary module for Android native camera support")
+set(OPENCV_MODULE_TYPE STATIC)
 
+ocv_define_module(androidcamera INTERNAL log dl)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/camera_wrapper")
+
+# Android source tree for native camera
+SET (ANDROID_SOURCE_TREE "ANDROID_SOURCE_TREE-NOTFOUND" CACHE PATH
+  "Path to Android source tree. Set this variable to path to your Android sources to compile libnative_camera_rx.x.x.so for your Android")
+SET(BUILD_ANDROID_CAMERA_WRAPPER OFF)
+if(ANDROID_SOURCE_TREE)
+  FILE(STRINGS "${ANDROID_SOURCE_TREE}/development/sdk/platform_source.properties" ANDROID_VERSION REGEX "Platform\\.Version=[0-9]+\\.[0-9]+(\\.[0-9]+)?" )
+  string(REGEX REPLACE "Platform\\.Version=([0-9]+\\.[0-9]+(\\.[0-9]+)?)" "\\1" ANDROID_VERSION "${ANDROID_VERSION}")
+  if(ANDROID_VERSION MATCHES "^[0-9]+\\.[0-9]+$")
+    SET(ANDROID_VERSION "${ANDROID_VERSION}.0")
+  endif()
+  if(NOT "${ANDROID_VERSION}" STREQUAL "")
+    SET(BUILD_ANDROID_CAMERA_WRAPPER ON)
+  endif()
+endif()
+MARK_AS_ADVANCED(ANDROID_SOURCE_TREE)
+
+# process wrapper libs
 if (BUILD_ANDROID_CAMERA_WRAPPER)
   add_subdirectory(camera_wrapper)
 else()
@@ -13,13 +32,12 @@ else()
 
   foreach(wrapper ${camera_wrappers})
     ADD_CUSTOM_COMMAND(
-        TARGET ${the_target}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${LIBRARY_OUTPUT_PATH}"
-    )
+      TARGET ${the_module} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${LIBRARY_OUTPUT_PATH}"
+      )
     get_filename_component(wrapper_name "${wrapper}" NAME)
     install(FILES "${LIBRARY_OUTPUT_PATH}/${wrapper_name}"
-          DESTINATION ${OPENCV_LIB_INSTALL_PATH}
-          COMPONENT main)
+            DESTINATION ${OPENCV_LIB_INSTALL_PATH}
+            COMPONENT main)
   endforeach()
 endif()

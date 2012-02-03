@@ -42,7 +42,6 @@
 #include "precomp.hpp"
 #include <stdio.h>
 #include <iostream>
-#include <highgui.h>
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/contrib/hybridtracker.hpp"
 

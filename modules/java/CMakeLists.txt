@@ -1,21 +1,17 @@
-if(NOT BUILD_JAVA_SUPPORT OR NOT PYTHON_EXECUTABLE)
-    return()
-endif()
-
 # ----------------------------------------------------------------------------
 #  CMake file for java support
 # ----------------------------------------------------------------------------
-project(opencv_java)
-set(target opencv_java)
+if(NOT BUILD_JAVA_SUPPORT OR NOT PYTHON_EXECUTABLE)
+  ocv_module_disable(java)
+endif()
+
+set(the_description "The java bindings")
+ocv_add_module(java BINDINGS opencv_objdetect opencv_features2d opencv_imgproc opencv_video opencv_highgui opencv_ml opencv_core opencv_calib3d)
+
+string(REPLACE "opencv_" "" OPENCV_JAVA_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS}")
+
+set(target ${the_module})
 include_directories("${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp")
-
-
-SET(OPENCV_JAVA_MODULES objdetect features2d imgproc video highgui ml core calib3d)
-SET(OPENCV_EXTRA_JAVA_MODULES contrib legacy flann)
-IF(WITH_ANDROID_CAMERA AND NOT BUILD_SHARED_LIBS)
-    LIST(APPEND OPENCV_EXTRA_JAVA_MODULES androidcamera)
-ENDIF()
-
 
 SET(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
 SET(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
@@ -81,25 +77,21 @@ foreach(module ${OPENCV_JAVA_MODULES})
 endforeach()
 
 FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
-FILE(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.h*")
+FILE(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.h??")
 FILE(GLOB handwrittren_java_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/java/*.java")
 SET (generated_cpp_sources)
 SET (generated_java_sources)
 SET (documented_java_files)
 SET (undocumented_java_files)
-SET (dependent_libs)
-SET (dependent_extra_libs)
 
 foreach(module ${OPENCV_JAVA_MODULES})
     LIST(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp")
     LIST(APPEND generated_java_sources ${${module}_generated_java_sources})
-    LIST(APPEND dependent_libs opencv_${module})
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
 endforeach()
 
-# extra includes and dependencies
-foreach(module ${OPENCV_EXTRA_JAVA_MODULES})
-    LIST(APPEND dependent_extra_libs opencv_${module})
+# all needed includes
+foreach(module ${OPENCV_MODULE_${the_module}_DEPS})
+    string(REPLACE "opencv_" "" module "${module}")
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
 endforeach()
 
@@ -154,8 +146,8 @@ ADD_CUSTOM_TARGET(${api_target} DEPENDS ${java_files})
 
 # add opencv_java library
 add_library(${target} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources})
-target_link_libraries(${target} ${dependent_libs} ${dependent_extra_libs} ${OPENCV_LINKER_LIBS})
-add_dependencies(${target} ${dependent_extra_libs} ${dependent_libs} ${api_target})
+target_link_libraries(${target} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+add_dependencies(${target} ${api_target})
 
 # Additional target properties
 set_target_properties(${target} PROPERTIES

@@ -46,7 +46,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 using namespace cv::gpu;
 #endif
 
@@ -127,7 +127,7 @@ private:
     float match_conf_;
 };
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -202,7 +202,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -398,7 +398,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
 {
@@ -499,7 +499,7 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuMatcher(match_conf);
     else

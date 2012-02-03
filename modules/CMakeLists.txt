@@ -1,10 +1,5 @@
-file(GLOB ocvmodules RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/*")
-if(ocvmodules)
-    list(SORT ocvmodules)
+if(NOT OPENCV_MODULES_PATH)
+  set(OPENCV_MODULES_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
-foreach(mod ${ocvmodules})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${mod}/CMakeLists.txt")
-        add_subdirectory("${mod}")
-    endif()
-endforeach()
+ocv_glob_modules(${OPENCV_MODULES_PATH})

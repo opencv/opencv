@@ -11,14 +11,15 @@
  *
  */
 
-#include <cv.h>
-#include <ml.h>
-#include <cvaux.h>
-#include <highgui.h>
+//#include <cv.h>
+//#include <ml.h>
+//#include <cvaux.h>
+//#include <highgui.h>
 #include <stdio.h>
 #include <time.h>
 #include <iostream>
 
+#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/hybridtracker.hpp"
 
 using namespace cv;

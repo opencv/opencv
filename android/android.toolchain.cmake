@@ -155,6 +155,7 @@
 #     [+] added special check for cygwin
 #     [+] filtered out hidden files (starting with .) while globbing inside NDK
 #     [+] automatically applied GLESv2 linkage fix for NDK revisions 5-6
+#     [+] added ANDROID_GET_ABI_RAWNAME to get NDK ABI names by CMake flags
 # ------------------------------------------------------------------------------
 
 # this one is important
@@ -888,6 +889,18 @@ macro( find_host_program )
  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endmacro()
+
+macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
+ if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
+  set( ${VAR} "armeabi" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI_V7A" )
+    set( ${VAR} "armeabi-v7a" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86" )
+    set( ${VAR} "x86" )
+ else()
+    set( ${VAR} "unknown" )
+ endif()
 endmacro()
 
 set( ANDROID_SET_OBSOLETE_VARIABLES ON CACHE BOOL "Define obsolete Andrid-specific cmake variables" )

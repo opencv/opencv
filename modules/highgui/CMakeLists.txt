@@ -1,21 +1,13 @@
+set(the_description "High-level GUI and Media I/O")
+ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
+
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
 #   Some parts taken from version of Hartmut Seichter, HIT Lab NZ.
 #   Jose Luis Blanco, 2008
 # ----------------------------------------------------------------------------
 
-option(OCVMODULE_HIGHGUI "Include highgui module into the OpenCV build" ON)
-if(NOT OCVMODULE_HIGHGUI)
-    return()
-endif()
-
-set(the_target "opencv_highgui")
-project(${the_target})
-
-#so that the headers get installed.
-file(GLOB lib_hdrs "include/opencv2/highgui/*.h*")
-
-set(GRFMT_LIBS)
+set(GRFMT_LIBS "")
 
 if(WITH_PNG OR WITH_TIFF OR WITH_OPENEXR)
     if(ZLIB_FOUND)
@@ -85,6 +77,7 @@ set(grfmt_srcs src/bitstrm.cpp ${grfmt_srcs})
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
+set(highgui_hdrs src/precomp.hpp src/utils.hpp)
 set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
@@ -94,15 +87,7 @@ set(highgui_srcs
     src/utils.cpp
     src/window.cpp
     )
-
-set(highgui_hdrs src/precomp.hpp src/utils.hpp)
-
-#YV
-set(lib_hdr_names highgui_c.h highgui.hpp)
-set(highgui_ext_hdrs)
-foreach(h ${lib_hdr_names})
-    list(APPEND highgui_ext_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/highgui/${h}")
-endforeach()
+file(GLOB highgui_ext_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
 #YV
 if (HAVE_QT)
@@ -225,11 +210,9 @@ if(APPLE)
     endif()
 endif(APPLE)
 
-if(WITH_ANDROID_CAMERA)
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../androidcamera/include")
+if(WITH_ANDROID_CAMERA AND OPENCV_MODULE_ANDROIDCAMERA)
   set(highgui_srcs ${highgui_srcs} src/cap_android.cpp)
-  add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)
-  set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} opencv_androidcamera)
+  add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)#TODO: remove this line
 endif()
 
 if(HAVE_XIMEA AND XIMEA_FOUND)
@@ -265,32 +248,16 @@ if(OPENCV_BUILD_3RDPARTY_LIBS AND WIN32)
     link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
 endif()
 
-if(COMMAND get_module_external_sources)
-    set( lib_srcs "${highgui_srcs}" )
-    set( lib_int_hdrs "${highgui_hdrs}" )
-    get_module_external_sources(highgui)
-    set( highgui_srcs "${lib_srcs}" )
-    set( highgui_hdrs "${lib_int_hdrs}" )
-endif()
-
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
+ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
 
-#message(STATUS "GRFMT: ${GRFMT_LIBS}")
-#message(STATUS "OPENCV_LIBS: ${OPENCV_LINKER_LIBS}")
-#message(STATUS "HIGHGUI_LIBS: ${HIGHGUI_LIBRARIES}")
-
-# ----------------------------------------------------------------------------------
-#               Define the library target:
-# ----------------------------------------------------------------------------------
-opencv_module_includes(opencv_core opencv_imgproc)
+ocv_module_include_directories()
 if(WIN32)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")
 endif()
 
-add_library(${the_target} ${highgui_srcs} ${grfmt_srcs} ${highgui_hdrs} ${grfmt_hdrs} ${highgui_ext_hdrs})
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core opencv_imgproc ${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
-opencv_module_register(${the_target})
+ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
 
 if(BUILD_SHARED_LIBS)
     add_definitions(-DHIGHGUI_EXPORTS)
@@ -300,6 +267,7 @@ if(MSVC)
     set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
 
-opencv_module_setup(highgui)
-define_opencv_test(highgui)
-define_opencv_perf_test(highgui)
+ocv_add_precompiled_headers(${the_module})
+
+ocv_add_accuracy_tests()
+ocv_add_perf_tests()

@@ -1,8 +1,7 @@
-#include "cv.h" // include standard OpenCV headers, same as before
-#include "highgui.h"
-#include "ml.h"
 #include <stdio.h>
 #include <iostream>
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/flann/miniflann.hpp"
 
 using namespace cv; // all the new API is put into "cv" namespace. Export its content

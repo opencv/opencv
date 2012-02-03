@@ -189,7 +189,7 @@ Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Poi
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands)
 {
     setNumBands(num_bands);
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
     can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
 #else
     can_use_gpu_ = false;
@@ -383,7 +383,7 @@ void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 
 void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
     pyr.resize(num_levels + 1);
 
     vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
@@ -419,7 +419,7 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
 
 void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
 {
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
     if (pyr.empty())
         return;
 

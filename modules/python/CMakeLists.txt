@@ -1,14 +1,16 @@
-if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-    return()
-endif()
-if(NOT PYTHONLIBS_FOUND OR NOT BUILD_NEW_PYTHON_SUPPORT OR NOT PYTHON_USE_NUMPY)
-    return()
-endif()
-
 # ----------------------------------------------------------------------------
 #  CMake file for python support
 # ----------------------------------------------------------------------------
-project(opencv_python)
+
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  ocv_module_disable(python)
+endif()
+if(NOT PYTHONLIBS_FOUND OR NOT BUILD_NEW_PYTHON_SUPPORT OR NOT PYTHON_USE_NUMPY)
+  ocv_module_disable(python)
+endif()
+
+set(the_description "The python bindings")
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib)
 
 include_directories(${PYTHON_INCLUDE_PATH})
 include_directories(

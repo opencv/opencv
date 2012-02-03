@@ -43,6 +43,7 @@
 
 #include <fstream>
 #include <string>
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
@@ -346,7 +347,7 @@ int main(int argc, char* argv[])
     Ptr<FeaturesFinder> finder;
     if (features == "surf")
     {
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             finder = new SurfFeaturesFinderGpu();
         else
@@ -530,7 +531,7 @@ int main(int argc, char* argv[])
     // Warp images and their masks
 
     Ptr<WarperCreator> warper_creator;
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
     if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
         if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();
@@ -582,7 +583,7 @@ int main(int argc, char* argv[])
         seam_finder = new detail::VoronoiSeamFinder();
     else if (seam_find_type == "gc_color")
     {
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR);
         else
@@ -591,7 +592,7 @@ int main(int argc, char* argv[])
     }
     else if (seam_find_type == "gc_colorgrad")
     {
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else

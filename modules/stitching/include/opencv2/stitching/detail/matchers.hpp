@@ -46,7 +46,8 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 
-#ifndef ANDROID
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_GPU
 #include "opencv2/gpu/gpu.hpp"
 #endif
 
@@ -102,7 +103,7 @@ private:
 };
 
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
 {
 public:

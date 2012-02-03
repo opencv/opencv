@@ -46,6 +46,7 @@
 #ifdef HAVE_CVCONFIG_H 
 #include "cvconfig.h"
 #endif
+#include "opencv2/opencv_modules.hpp"
 
 #include <vector>
 #include <algorithm>
@@ -69,11 +70,11 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 # include "opencv2/gpu/gpu.hpp"
 #endif
 
-#include "modules/imgproc/src/gcgraph.hpp"
+#include "../../imgproc/src/gcgraph.hpp"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 # include "opencv2/stitching/stitching_tegra.hpp"

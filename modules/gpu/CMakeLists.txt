@@ -1,181 +1,101 @@
 if(ANDROID OR IOS)
-    return()
+  ocv_module_disable(gpu)
 endif()
 
-option(OCVMODULE_GPU "Include gpu module into the OpenCV build" ON)
-if(NOT OCVMODULE_GPU)
-    return()
-endif()
+set(the_description "GPU-accelerated Computer Vision")
+ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect)
 
-set(name "gpu")
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
-set(the_target "opencv_${name}")
-project(${the_target})
+file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB lib_int_hdrs           "src/*.hpp" "src/*.h")
+file(GLOB lib_cuda_hdrs          "src/cuda/*.hpp" "src/cuda/*.h")
+file(GLOB lib_device_hdrs        "src/opencv2/gpu/device/*.hpp" "src/opencv2/gpu/device/*.h")
+file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.hpp" "src/opencv2/gpu/device/detail/*.h")
+file(GLOB lib_srcs               "src/*.cpp")
+file(GLOB lib_cuda               "src/cuda/*.cu*")
 
-set(DEPS "opencv_core" "opencv_imgproc" "opencv_calib3d" "opencv_objdetect")
-set(DEPS_HEADER ${DEPS} "opencv_features2d" "opencv_flann")
-set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
-
-opencv_module_includes(${DEPS_HEADER})
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
-
-file(GLOB lib_srcs "src/*.cpp")
-file(GLOB lib_int_hdrs "src/*.h*")
-file(GLOB lib_cuda "src/cuda/*.cu*")
-file(GLOB lib_cuda_hdrs "src/cuda/*.h*")
+source_group("Include" FILES ${lib_hdrs})
 source_group("Src\\Host" FILES ${lib_srcs} ${lib_int_hdrs})
 source_group("Src\\Cuda" FILES ${lib_cuda} ${lib_cuda_hdrs})
-
-file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
-source_group("Include" FILES ${lib_hdrs})
-
-#file(GLOB lib_device_hdrs "include/opencv2/${name}/device/*.h*")
-file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
-file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
 if (HAVE_CUDA)
-    file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
-    file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
-    file(GLOB_RECURSE ncv_hdrs "src/nvidia/*.hpp" "src/nvidia/*.h")
+  file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
+  file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
+  file(GLOB_RECURSE ncv_hdrs "src/nvidia/*.hpp" "src/nvidia/*.h")
+  set(ncv_files ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
+
+  source_group("Src\\NVidia" FILES ${ncv_files})
+  include_directories("src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
+
+  #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
+  #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
     
-    source_group("Src\\NVidia" FILES ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
-    include_directories("src/nvidia/core" "src/nvidia/NPP_staging")
+  foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+    string(REPLACE "/W4" "/W3" ${var} "${${var}}")
+  endforeach()
+
+  if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408 /wd4251")
+
+    foreach(var CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+      string(REPLACE "/EHsc-" "/EHs" ${var} "${${var}}")
+    endforeach()
+    
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
+  endif()
+
+  OCV_CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
+  #CUDA_BUILD_CLEAN_TARGET()
+  
+  unset(CUDA_npp_LIBRARY CACHE)
+  find_cuda_helper_libs(npp)
+  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+else()
+  set(lib_cuda "")
+  set(cuda_objs "")
+  set(cuda_link_libs "")
+  set(ncv_files "")
 endif()
 
-if (HAVE_CUDA)       
-    include_directories(${CUDA_INCLUDE_DIRS})
+ocv_set_module_sources(
+  HEADERS ${lib_hdrs}
+  SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
+  )
+  
+ocv_create_module(${cuda_link_libs})
+  
+if(HAVE_CUDA)
+  if(HAVE_CUFFT)
+    CUDA_ADD_CUFFT_TO_TARGET(${the_module})
+  endif()
 
-    if (UNIX OR APPLE)
-        set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;-fPIC;")
-        #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" "-fPIC")
-    endif()
-
-    #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
-    #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
-    
-    if (APPLE)
-        set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-fno-finite-math-only;")
-    endif()
-
-    string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-    string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-
-    if(MSVC)
-        #string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-        #string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-        #string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408 /wd4251")
-
-        string(REPLACE "/EHsc-" "/EHs" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-        string(REPLACE "/EHsc-" "/EHs" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
-        string(REPLACE "/EHsc-" "/EHs" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-        string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-        string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-        string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-    endif()
-
-    if (BUILD_SHARED_LIBS)
-        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-DCVAPI_EXPORTS")
-    endif()
-    
-    if(MSVC)
-        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/wd4251")
-    endif()
-
-	
-
-    # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
-    set(tmp ${CMAKE_CXX_FLAGS_DEBUG})
-    string(REPLACE "-ggdb3" "" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-    CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
-    set(CMAKE_CXX_DEBUG_FLAGS ${tmp})
-
-    #CUDA_BUILD_CLEAN_TARGET()
-endif()
-
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
-opencv_module_register(${the_target})
-
-if (HAVE_CUDA)
-    target_link_libraries(${the_target} ${CUDA_LIBRARIES})
-
-    unset(CUDA_npp_LIBRARY CACHE)
-    find_cuda_helper_libs(npp)
-    target_link_libraries(${the_target} ${CUDA_npp_LIBRARY})
-
-    if(HAVE_CUFFT)
-        CUDA_ADD_CUFFT_TO_TARGET(${the_target})
-    endif()
-
-    if(HAVE_CUBLAS)
-        CUDA_ADD_CUBLAS_TO_TARGET(${the_target})
-    endif()
-endif()
-
-opencv_module_setup(${name})
-
-install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
+  if(HAVE_CUBLAS)
+    CUDA_ADD_CUBLAS_TO_TARGET(${the_module})
+  endif()
+  
+  install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
 	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
 	COMPONENT main)
+endif()
 
-#install(FILES ${lib_device_hdrs}
-#	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}/device
-#	COMPONENT main)
-
+ocv_add_precompiled_headers(${the_module})
 
 ################################################################################################################
 ################################      GPU Module Tests     #####################################################
 ################################################################################################################
-
-# Test files processing is in the separated directory to avoid 'Src' source 
-# filter creation in Visual Studio 
-if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
-    set(the_test_target "opencv_test_${name}")   
-    set(test_deps opencv_${name} opencv_ts opencv_highgui opencv_calib3d ${DEPS})
-
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test")
-    opencv_module_includes(${test_deps})
-    
-    file(GLOB test_srcs "test/*.cpp")
-    file(GLOB test_hdrs "test/*.h*")
-	
-    source_group("Src" FILES ${test_hdrs} ${test_srcs})
-    if(HAVE_CUDA)
-        include_directories(${CUDA_INCLUDE_DIRS} ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
-
-        file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.h*")            
-        source_group("Src\\NVidia" FILES ${nvidia})
-    endif()
-    
-    add_executable(${the_test_target} ${test_srcs} ${test_hdrs} ${nvidia})
-    
-    # Additional target properties
-    set_target_properties(${the_test_target} PROPERTIES
-        DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-        RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
-        )
-	
-    if(ENABLE_SOLUTION_FOLDERS)
-        set_target_properties(${the_test_target} PROPERTIES FOLDER "tests")
-    endif()
-    
-    # Add the required libraries for linking:
-    target_link_libraries(${the_test_target} ${OPENCV_LINKER_LIBS} ${test_deps})
-    
-    enable_testing()
-    get_target_property(LOC ${the_test_target} LOCATION)
-    add_test(${the_test_target} "${LOC}")
-    
-    #if(WIN32)
-    #    install(TARGETS ${the_test_target} RUNTIME DESTINATION bin COMPONENT main)
-    #endif()
-
-    add_opencv_precompiled_headers(${the_test_target})
+file(GLOB test_srcs "test/*.cpp")
+file(GLOB test_hdrs "test/*.hpp" "test/*.h")
+if(HAVE_CUDA)
+  file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.hpp" "test/nvidia/*.h")            
+  set(nvidia FILES "Src\\\\\\\\NVidia" ${nvidia}) # 8 ugly backslashes :'(
+else()
+  set(nvidia "")
 endif()
 
-
-define_opencv_perf_test(${name})
+ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}
+                       FILES "Src" ${test_srcs}
+                       ${nvidia})
+ocv_add_perf_tests()

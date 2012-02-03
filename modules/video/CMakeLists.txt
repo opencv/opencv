@@ -1,1 +1,2 @@
-define_opencv_module(video opencv_core opencv_imgproc)
+set(the_description "Video Analysis")
+ocv_define_module(video opencv_imgproc)

@@ -76,7 +76,7 @@ public:
 };
 
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 class PlaneWarperGpu: public WarperCreator
 {
 public:

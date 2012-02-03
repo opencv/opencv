@@ -6,7 +6,6 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
-#include "opencv2/opencv.hpp"
 #include "opencv2/gpu/gpu.hpp"
 
 #ifdef HAVE_CUDA
@@ -228,6 +227,7 @@ int main(int argc, const char** argv)
     NCVVectorAlloc<HaarClassifierNode128> h_haarNodes(cpuCascadeAllocator, haarNumNodes);
     ncvAssertPrintReturn(h_haarNodes.isMemAllocated(), "Error in cascade CPU allocator", -1);
     NCVVectorAlloc<HaarFeature64> h_haarFeatures(cpuCascadeAllocator, haarNumFeatures);
+
     ncvAssertPrintReturn(h_haarFeatures.isMemAllocated(), "Error in cascade CPU allocator", -1);
 
     HaarClassifierCascadeDescriptor haar;

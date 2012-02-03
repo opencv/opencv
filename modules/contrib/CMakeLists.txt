@@ -1,1 +1,1 @@
-define_opencv_module(contrib opencv_core opencv_imgproc opencv_calib3d opencv_features2d opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_flann)
+ocv_define_module(contrib opencv_imgproc opencv_calib3d opencv_features2d opencv_highgui opencv_ml opencv_video opencv_objdetect)

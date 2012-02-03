@@ -417,7 +417,7 @@ void GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
 }
 
 
-#ifndef ANDROID
+#ifdef HAVE_OPENCV_GPU
 void GraphCutSeamFinderGpu::find(const vector<Mat> &src, const vector<Point> &corners,
                                  vector<Mat> &masks)
 {

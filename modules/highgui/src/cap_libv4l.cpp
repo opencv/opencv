@@ -221,7 +221,6 @@ make & enjoy!
 //
 //M*/
 
-#include "highgui.h"
 #include "precomp.hpp"
 
 #if !defined WIN32 && defined HAVE_LIBV4L
@@ -393,6 +392,7 @@ static void icvInitCapture_V4L() {
 
 
 static int try_init_v4l(CvCaptureCAM_V4L* capture, char *deviceName)
+
 {
 
   // if detect = -1 then unable to open device
