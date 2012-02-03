@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <cstdio>
 #include "opencv2/gpu/gpu.hpp"
-#include "opencv2/gpu/highgui.hpp"
+#include "opencv2/highgui/highgui.hpp"
 
 #ifdef HAVE_CUDA
 #include "NCVHaarObjectDetection.hpp"
