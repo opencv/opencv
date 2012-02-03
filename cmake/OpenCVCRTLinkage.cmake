@@ -1,5 +1,5 @@
 if(NOT MSVC)
-  message(FATAL_ERROR "CRT options are available only for MSVC"
+  message(FATAL_ERROR "CRT options are available only for MSVC")
 endif()
 
 if(NOT BUILD_SHARED_LIBS AND BUILD_WITH_STATIC_CRT)
