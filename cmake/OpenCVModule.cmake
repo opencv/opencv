@@ -299,6 +299,12 @@ macro(ocv_glob_modules)
     if(m MATCHES "^opencv_")
       string(REGEX REPLACE "^opencv_" "" __shortname "${m}")
       add_subdirectory("${OPENCV_MODULE_${m}_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/${__shortname}")
+      
+      #workaround for link_directories inheritance
+      get_directory_property(__lnkfix DIRECTORY "${OPENCV_MODULE_${m}_LOCATION}" LINK_DIRECTORIES)
+      if(__lnkfix)
+        link_directories(${__lnkfix})
+      endif()
     endif()
   endforeach()
   unset(__shortname)
