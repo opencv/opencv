@@ -1,120 +1,155 @@
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include <stdio.h>
-
-/* #include <cv.h>
-#include <cxcore.h>
-
-    #include <iostream>
-    #include <sstream>
-    #include <string> */
 
 using namespace cv;
 using namespace std;
 
-//ticket #1497
-
-#define HIGHGUI_POSITIONING_ERROR_OPEN 0
-
-#define MESSAGE_ERROR_CONTENT "Cannot read source video file."
+enum NAVIGATION_METHOD {PROGRESSIVE, RANDOM};
 
 class CV_VideoPositioningTest: public cvtest::BaseTest
 {
 public:
-    void run(int);
+	CV_VideoPositioningTest();
+	~CV_VideoPositioningTest();
+	virtual void run(int) = 0;
 
+protected:
+	vector <int> idx;
+	void run_test(int method);
+
+private:
+	void generate_idx_seq(CvCapture *cap, int method);
 };
 
-void CV_VideoPositioningTest::run(int)
+class CV_VideoProgressivePositioningTest: public CV_VideoPositioningTest
 {
-    const string& src_dir = ts->get_data_path();
+public:
+	CV_VideoProgressivePositioningTest::CV_VideoProgressivePositioningTest(): CV_VideoPositioningTest() {};
+	~CV_VideoProgressivePositioningTest();
+	void run(int);
+};
 
-    std::cout << src_dir.c_str() << endl;
+class CV_VideoRandomPositioningTest: public CV_VideoPositioningTest
+{
+public:
+	CV_VideoRandomPositioningTest::CV_VideoRandomPositioningTest(): CV_VideoPositioningTest() {};
+	~CV_VideoRandomPositioningTest();
+	void run(int);
+};
 
-    string file_path = "/home/reshetnikov/SVN_Projects/OpenCV/opencv_extra/testdata/perf/video/sample_sorenson.mov";
+CV_VideoPositioningTest::CV_VideoPositioningTest() {}
+CV_VideoPositioningTest::~CV_VideoPositioningTest() {}
+CV_VideoProgressivePositioningTest::~CV_VideoProgressivePositioningTest() {}
+CV_VideoRandomPositioningTest::~CV_VideoRandomPositioningTest() {}
 
-    std::cout << file_path.c_str() << endl;
-
-    cv::VideoCapture cap(file_path);
-
-    // CvCapture* cap = cvCreateFileCapture(file_path.c_str());
-     if (!cap.isOpened())
-    {
-        printf("Error!");
-        return;
-    }
-
-    std::cout << "Frame pos: " << cap.get(CV_CAP_PROP_POS_FRAMES) << std::endl;
-
-    // IplImage* frame = cvQueryFrame(cap);
-
-    Mat frame; cap >> frame;
-
-    /* if (!frame)
-    {
-
-            return;
-    } */
-
-    std::cout << "Frames number: " << cap.get(CV_CAP_PROP_FRAME_COUNT) << std::endl;
-    
-    int step = 20;
-    int frameCount = 1;
-    while (frameCount < 100)
-    {
-            std::cout << "Frame count: " << frameCount << "\tActual frame pos: " << cap.get(CV_CAP_PROP_POS_FRAMES) << std::endl;
-
-            // Save the frame
-            std::stringstream ss;
-            ss << frameCount;
-            std::string filename = ss.str() + ".png";
-            imwrite(file_path, frame, vector<int>(1));
-            // Advance by step frames
-            frameCount += step;
-            std::cout << "cvSetCaptureProperty result: " << cap.set(CV_CAP_PROP_POS_FRAMES, frameCount) << std::endl;;
-            // frame = cvQueryFrame(cap);
-    }
-
-    // cvReleaseCapture(&cap);
-    cap.release();
+void CV_VideoPositioningTest::generate_idx_seq(CvCapture* cap, int method)
+{
+	idx.clear();
+	int N = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
+	switch(method)
+	{
+	case NAVIGATION_METHOD::PROGRESSIVE:
+		{
+			int pos = 1, step = 20;
+			do
+			{
+				idx.push_back(pos);
+				pos += step;
+			}
+			while (pos <= N);
+			break;
+		}
+	case NAVIGATION_METHOD::RANDOM:
+		{
+			RNG rng(N);
+			idx.clear();
+			for( int i = 0; i < N-1; i++ )
+				idx.push_back(rng.uniform(0, N));
+			idx.push_back(N-1);
+			std::swap(idx.at(rng.uniform(0, N-1)), idx.at(N-1));
+			break;
+		}
+	default:break;
+	}
 }
 
+void CV_VideoPositioningTest::run_test(int method)
+{
+	const string& src_dir = ts->get_data_path(); 
 
+	ts->printf(cvtest::TS::LOG, "\n\nSource files directory: %s\n", (src_dir+"../perf/video/").c_str());
 
+	const string ext[] = {"mov", "avi", "mp4", "mpg", "wmv"};
 
+	const int time_sec = 5, fps = 25;
 
-    /*
-47	NOTES
-48
-49	Output:
-50	Frame pos: 0
-51	Frame count: 1  Actual frame pos: -1.84467e+017
-52	cvSetCaptureProperty result: 1
-53	Frame count: 21 Actual frame pos: -1.84467e+017
-54	cvSetCaptureProperty result: 1
-55	Frame count: 41 Actual frame pos: -1.84467e+017
-56	cvSetCaptureProperty result: 1
-57	Frame count: 61 Actual frame pos: -1.84467e+017
-58	cvSetCaptureProperty result: 1
-59	Frame count: 81 Actual frame pos: -1.84467e+017
-60	cvSetCaptureProperty result: 1
-61
-62	Expected:
-63	Frame pos: 0
-64	Frame count: 1  Actual frame pos: 1
-65	cvSetCaptureProperty result: 1
-66	Frame count: 21 Actual frame pos: 21
-67	cvSetCaptureProperty result: 1
-68	Frame count: 41 Actual frame pos: 41
-69	cvSetCaptureProperty result: 1
-70	Frame count: 61 Actual frame pos: 61
-71	cvSetCaptureProperty result: 1
-72	Frame count: 81 Actual frame pos: 81
-73	cvSetCaptureProperty result: 1
-74
-75	In addition, the frame retrieved from cvQueryFrame was not the correct frame
-76	*/
+	size_t n = sizeof(ext)/sizeof(ext[0]);
 
-TEST (HighguiPositioning, regression) { CV_VideoPositioningTest test; test.safe_run(); }
+	int failed = 0;
 
+	for (size_t i = 0; i < n; ++i)
+	{
+		string file_path = src_dir + "../perf/video/big_buck_bunny." + ext[i];
 
+		CvCapture* cap = cvCreateFileCapture(file_path.c_str());
+
+		if (!cap)
+		{
+			ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
+			ts->printf(cvtest::TS::LOG, "Error: cannot read source video file.\n");
+			ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+			failed++; continue;
+		}
+
+		cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, 0);
+
+		generate_idx_seq(cap, method);
+
+		int N = idx.size(), failed_frames = 0;
+
+		bool flag = false;
+
+		for (int j = 0; j < N; ++j)
+		{
+			bool res = cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, (double)idx.at(j));
+			
+			IplImage* frame = cvRetrieveFrame(cap); 
+
+			if (!frame)
+			{
+				if (!flag) failed++; flag = true;
+				if (!failed_frames) ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
+				ts->printf(cvtest::TS::LOG, "Error: cannot read a frame with index %d.\n", idx.at(j));
+				ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION); failed_frames++;
+			} 
+
+			if (idx.at(j) != cvGetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES))
+			{
+				ts->printf(cvtest::TS::LOG, "Iteration: %d\n"\
+					"Actual pos: %d Returned pos: %d", idx.at(j), cvGetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES));
+				ts->printf(cvtest::TS::LOG, "Error: required and returned position are not matched.\n");
+				ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+			}
+
+			cvReleaseImage(&frame);
+		}
+
+		cvReleaseCapture(&cap);
+	}
+
+	ts->printf(cvtest::TS::LOG, "\nSuccessfull experiments: %d (%d%%)\n", n-failed, 100*(n-failed)/n);
+	ts->printf(cvtest::TS::LOG, "Failed experiments: %d (%d%%)\n", failed, 100*failed/n);
+}
+
+void CV_VideoProgressivePositioningTest::run(int) 
+{
+	run_test(NAVIGATION_METHOD::PROGRESSIVE);
+}
+
+void CV_VideoRandomPositioningTest::run(int)
+{
+	run_test(NAVIGATION_METHOD::RANDOM);
+}
+
+TEST (HighguiPositioning, progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
+TEST (HighguiPositioning, random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
