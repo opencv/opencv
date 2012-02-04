@@ -244,18 +244,11 @@ if(IOS)
     set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} bz2 "-framework QuartzCore" "-framework CoreFoundation" "-framework ImageIO" "-framework CoreGraphics" "-framework AVFoundation")
 endif()
 
-if(OPENCV_BUILD_3RDPARTY_LIBS AND WIN32)
-    link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
-endif()
-
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
 
 ocv_module_include_directories()
-if(WIN32)
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")
-endif()
 
 ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
 
@@ -264,8 +257,11 @@ if(BUILD_SHARED_LIBS)
 endif()
 
 if(MSVC)
-    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
+    set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
+
+#stop automatic dependencies propagation for this module
+set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_add_precompiled_headers(${the_module})
 
