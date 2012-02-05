@@ -24,7 +24,7 @@ private:
 class CV_VideoProgressivePositioningTest: public CV_VideoPositioningTest
 {
 public:
-	CV_VideoProgressivePositioningTest::CV_VideoProgressivePositioningTest(): CV_VideoPositioningTest() {};
+	CV_VideoProgressivePositioningTest() : CV_VideoPositioningTest() {};
 	~CV_VideoProgressivePositioningTest();
 	void run(int);
 };
@@ -32,7 +32,7 @@ public:
 class CV_VideoRandomPositioningTest: public CV_VideoPositioningTest
 {
 public:
-	CV_VideoRandomPositioningTest::CV_VideoRandomPositioningTest(): CV_VideoPositioningTest() {};
+	CV_VideoRandomPositioningTest(): CV_VideoPositioningTest() {};
 	~CV_VideoRandomPositioningTest();
 	void run(int);
 };
@@ -48,7 +48,7 @@ void CV_VideoPositioningTest::generate_idx_seq(CvCapture* cap, int method)
 	int N = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
 	switch(method)
 	{
-	case NAVIGATION_METHOD::PROGRESSIVE:
+	case PROGRESSIVE:
 		{
 			int pos = 1, step = 20;
 			do
@@ -59,7 +59,7 @@ void CV_VideoPositioningTest::generate_idx_seq(CvCapture* cap, int method)
 			while (pos <= N);
 			break;
 		}
-	case NAVIGATION_METHOD::RANDOM:
+	case RANDOM:
 		{
 			RNG rng(N);
 			idx.clear();
@@ -143,12 +143,12 @@ void CV_VideoPositioningTest::run_test(int method)
 
 void CV_VideoProgressivePositioningTest::run(int) 
 {
-	run_test(NAVIGATION_METHOD::PROGRESSIVE);
+	run_test(PROGRESSIVE);
 }
 
 void CV_VideoRandomPositioningTest::run(int)
 {
-	run_test(NAVIGATION_METHOD::RANDOM);
+	run_test(RANDOM);
 }
 
 TEST (HighguiPositioning, progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
