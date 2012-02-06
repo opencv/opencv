@@ -122,7 +122,7 @@ OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF
 # OpenCV build components
 # ===================================================
 if(ANDROID OR IOS)
-    OCV_OPTION(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" OFF )
+    OCV_OPTION(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead 6of static ones (.lib/.a)" OFF )
 else()
     OCV_OPTION(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON )
 endif()
@@ -458,7 +458,7 @@ if((NOT DEFINED BUILD_opencv_java OR BUILD_opencv_java) AND PYTHON_EXECUTABLE)
   endif()
 endif()
 
-if(NOT CAN_BUILD_ANDROID_PROJECTS)
+if(BUILD_ANDROID_EXAMPLES AND NOT CAN_BUILD_ANDROID_PROJECTS)
   message(WARNING "Android examples are chosen for build, but required SDK tools are not found.")
   unset(BUILD_ANDROID_EXAMPLES CACHE)
 endif()
