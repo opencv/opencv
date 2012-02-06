@@ -61,6 +61,7 @@
 #include <new>
 #include <string>
 #include <vector>
+#include <sstream>
 #endif // SKIP_INCLUDES
 
 /*! \namespace cv
