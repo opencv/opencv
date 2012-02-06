@@ -399,7 +399,7 @@ void Retina::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrix
 	}
 }
 
-const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix)
+bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix)
 {
 	// first check input consistency
 	if (inputMatToConvert.empty())
