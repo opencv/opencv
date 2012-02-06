@@ -37,7 +37,7 @@ if(NOT HAVE_TBB)
 
         if(CMAKE_SYSTEM_PROCESSOR MATCHES amd64*|x86_64* OR MSVC64)
           set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/intel64")
-        elseif()
+        else()
           set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/ia32")
         endif()
 
