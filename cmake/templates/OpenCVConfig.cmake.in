@@ -73,8 +73,10 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 # ======================================================
 
 # Provide the libs directories to the caller
-SET(OpenCV_LIB_DIR @CMAKE_LIB_DIRS_CONFIGCMAKE@)
-link_directories(${OpenCV_LIB_DIR})
+set(OpenCV_LIB_DIR_OPT @CMAKE_LIB_DIRS_CONFIGCMAKE@)
+set(OpenCV_LIB_DIR_DBG @CMAKE_LIB_DIRS_CONFIGCMAKE@)
+set(OpenCV_3RDPARTY_LIB_DIR_OPT @CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
+set(OpenCV_3RDPARTY_LIB_DIR_DBG @CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
 
 # ======================================================
 #  Version variables:
@@ -93,6 +95,21 @@ SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGMAKE@)
 @OPENCV_DEPENDENCIES_MAP_OPT@
 
 @OPENCV_DEPENDENCIES_MAP_DBG@
+
+# ==============================================================
+#  Extra include directories, needed by OpenCV 2 new structure
+# ==============================================================
+SET(OpenCV2_INCLUDE_DIRS @CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@)
+if(OpenCV2_INCLUDE_DIRS)
+  include_directories(${OpenCV2_INCLUDE_DIRS})
+  list(APPEND OpenCV_INCLUDE_DIRS ${OpenCV2_INCLUDE_DIRS})
+  if(MSVC)
+    set(OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/Release")
+    set(OpenCV_LIB_DIR_DBG "${OpenCV_LIB_DIR_DBG}/Debug")
+    set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_3RDPARTY_LIB_DIR_OPT}/Release")
+    set(OpenCV_3RDPARTY_LIB_DIR_DBG "${OpenCV_3RDPARTY_LIB_DIR_DBG}/Debug")
+  endif()
+endif()
 
 # ==============================================================
 #  Check OpenCV availability
@@ -114,10 +131,10 @@ endif()
 #  Form list of modules (components) to find
 # ==============================================================
 if(NOT OpenCV_FIND_COMPONENTS)
- set(OpenCV_FIND_COMPONENTS ${OpenCV_LIB_COMPONENTS})
+  set(OpenCV_FIND_COMPONENTS ${OpenCV_LIB_COMPONENTS})
 endif()
 
-#expand short module names
+# expand short module names and see if requested components exist
 set(OpenCV_FIND_COMPONENTS_ "")
 foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
   if(NOT __cvcomponent MATCHES "^opencv_")
@@ -125,15 +142,20 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
   endif()
   list(FIND OpenCV_LIB_COMPONENTS ${__cvcomponent} __cvcomponentIdx)
   if(__cvcomponentIdx LESS 0)
+    #requested component is not found...
     if(OpenCV_FIND_REQUIRED)
       message(FATAL_ERROR "${__cvcomponent} is required but was not found")
     elseif(NOT OpenCV_FIND_QUIETLY)
       message(WARNING "${__cvcomponent} is required but was not found")
     endif()
+    #indicate that module is NOT found
     string(TOUPPER "${__cvcomponent}" __cvcomponent)
     set(${__cvcomponent}_FOUND "${__cvcomponent}_FOUND-NOTFOUND")
   else()
     list(APPEND OpenCV_FIND_COMPONENTS_ ${__cvcomponent})
+    #indicate that module is found
+    string(TOUPPER "${__cvcomponent}" __cvcomponent)
+    set(${__cvcomponent}_FOUND 1)
   endif()
 endforeach()
 set(OpenCV_FIND_COMPONENTS ${OpenCV_FIND_COMPONENTS_})
@@ -142,39 +164,27 @@ set(OpenCV_FIND_COMPONENTS ${OpenCV_FIND_COMPONENTS_})
 #  Resolve dependencies
 # ==============================================================
 if(OpenCV_USE_MANGLED_PATHS)
-  set(OpenCV_LIB_SUFFIX_DBG ".so.${OpenCV_VERSION}")
-  set(OpenCV_LIB_SUFFIX_OPT ".so.${OpenCV_VERSION}")
+  set(OpenCV_LIB_SUFFIX ".${OpenCV_VERSION}")
 else()
-  set(OpenCV_LIB_SUFFIX_DBG "@OPENCV_DLLVERSION@@OPENCV_DEBUG_POSTFIX@")
-  set(OpenCV_LIB_SUFFIX_OPT "@OPENCV_DLLVERSION@")
+  set(OpenCV_LIB_SUFFIX "")
 endif()
-set(OpenCV_3RDPARTY_LIB_SUFFIX_DBG "@OPENCV_DEBUG_POSTFIX@")
-set(OpenCV_3RDPARTY_LIB_SUFFIX_OPT "")
 
-# choose required dependencies
-set(OpenCV_NEED_3RDPARTY_LINK_DEPS FALSE)
-set(OpenCV_REQUIRED_MODULES ${OpenCV_FIND_COMPONENTS})
 foreach(__opttype OPT DBG)
   SET(OpenCV_LIBS_${__opttype} "")
   SET(OpenCV_EXTRA_LIBS_${__opttype} "")
   foreach(__cvlib ${OpenCV_FIND_COMPONENTS})
     foreach(__cvdep ${OpenCV_${__cvlib}_DEPS_${__opttype}})
       if(__cvdep MATCHES "^opencv_")
-        list(APPEND OpenCV_LIBS_${__opttype} ${__cvdep}${OpenCV_LIB_SUFFIX_${__opttype}})
-        list(APPEND OpenCV_REQUIRED_MODULES ${__cvdep})
+        list(APPEND OpenCV_LIBS_${__opttype} "${OpenCV_LIB_DIR_${__opttype}}/${OpenCV_${__cvdep}_LIBNAME_${__opttype}}${OpenCV_LIB_SUFFIX}")
         #indicate that this module is also found
         string(TOUPPER "${__cvdep}" __cvdep)
         set(${__cvdep}_FOUND 1)
       else()
-        list(APPEND OpenCV_LIBS_${__opttype} ${__cvdep}${OpenCV_3RDPARTY_LIB_SUFFIX_${__opttype}})
-        set(OpenCV_NEED_3RDPARTY_LINK_DEPS TRUE)
+        list(APPEND OpenCV_LIBS_${__opttype} "${OpenCV_3RDPARTY_LIB_DIR_${__opttype}}/${OpenCV_${__cvdep}_LIBNAME_${__opttype}}")
       endif()
     endforeach()
-    list(APPEND OpenCV_LIBS_${__opttype} ${__cvlib}${OpenCV_LIB_SUFFIX_${__opttype}})
+    list(APPEND OpenCV_LIBS_${__opttype} "${OpenCV_LIB_DIR_${__opttype}}/${OpenCV_${__cvlib}_LIBNAME_${__opttype}}${OpenCV_LIB_SUFFIX}")
     list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${OpenCV_${__cvlib}_EXTRA_DEPS_${__opttype}})
-    #indicate that module is found
-    string(TOUPPER "${__cvlib}" __cvlib)
-    set(${__cvlib}_FOUND 1)
   endforeach()
 
   if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 2.4)
@@ -184,18 +194,10 @@ foreach(__opttype OPT DBG)
     if(OpenCV_EXTRA_LIBS_${__opttype})
       list(REMOVE_DUPLICATES OpenCV_EXTRA_LIBS_${__opttype})
     endif()
-    if(OpenCV_REQUIRED_MODULES)
-      list(REMOVE_DUPLICATES OpenCV_REQUIRED_MODULES)
-    endif()
   else()
     #TODO: duplicates are annoying but they should not be the problem
   endif()
 endforeach()
-
-if(OpenCV_NEED_3RDPARTY_LINK_DEPS)
-  list(APPEND OpenCV_LIB_DIR @CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
-  link_directories(@CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
-endif()
 
 if(OpenCV_LIBS_DBG)
   list(REVERSE OpenCV_LIBS_DBG)
@@ -222,19 +224,6 @@ else()
   else()
     SET(OpenCV_LIBS ${OpenCV_LIBS_OPT} ${OpenCV_EXTRA_LIBS_OPT})
   endif()
-endif()
-
-# ==============================================================
-#  Extra include directories, needed by OpenCV 2 new structure
-# ==============================================================
-SET(OpenCV_SOURCE_PATH "@CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@")
-if(NOT "${OpenCV_SOURCE_PATH}" STREQUAL  "")
-  foreach(__cvlib ${OpenCV_LIB_COMPONENTS})
-    # We only need the "core",... part here: "opencv_core" -> "core"
-    string(REGEX REPLACE "opencv_(.*)" "\\1" __MODNAME ${__cvlib})
-    include_directories("${OpenCV_SOURCE_PATH}/modules/${__MODNAME}/include")
-    list(APPEND OpenCV_INCLUDE_DIRS "${OpenCV_SOURCE_PATH}/modules/${__MODNAME}/include")
-  endforeach()
 endif()
 
 # ==============================================================

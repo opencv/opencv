@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #  CMake file for java support
 # ----------------------------------------------------------------------------
-if(NOT BUILD_JAVA_SUPPORT OR NOT PYTHON_EXECUTABLE)
+if(NOT PYTHON_EXECUTABLE)
   ocv_module_disable(java)
 endif()
 

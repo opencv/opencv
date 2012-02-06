@@ -40,6 +40,9 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
   if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
   endif()
+else(NOT CMAKE_TOOLCHAIN_FILE)
+  #Android: set output folder to ${CMAKE_BINARY_DIR}
+  set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
 endif(NOT CMAKE_TOOLCHAIN_FILE)
 
 # --------------------------------------------------------------
@@ -89,7 +92,6 @@ include(cmake/OpenCVDetectCXXCompiler.cmake REQUIRED)
 # Optional 3rd party components
 # ===================================================
 OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_ANDROID_CAMERA "Build with native Android camera support"    ON   IF (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7) )
 OCV_OPTION(WITH_AVFOUNDATION   "Use AVFoundation for Video I/O"              ON   IF IOS)
 OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa"          OFF  IF APPLE )
 OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
@@ -126,9 +128,7 @@ else()
 endif()
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
 OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON )
-OCV_OPTION(BUILD_JAVA_SUPPORT       "Build with Java support"                     ON  IF (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7) )
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
-OCV_OPTION(BUILD_NEW_PYTHON_SUPPORT "Build with Python support"                   ON  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON )
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     ON  IF (NOT IOS) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           ON  IF (NOT IOS) )
@@ -165,6 +165,7 @@ OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"              
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 
+include(cmake/OpenCVLegacyOptions.cmake OPTIONAL)
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -444,7 +445,7 @@ include(cmake/OpenCVDetectPython.cmake REQUIRED)
 
 ########################### Java Support ##########################
 # current implementation of Java wrappers generator requires python at build time
-if(BUILD_JAVA_SUPPORT AND PYTHON_EXECUTABLE)
+if((NOT DEFINED BUILD_opencv_java OR BUILD_opencv_java) AND PYTHON_EXECUTABLE)
   if(ANDROID)
     include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
   endif()
@@ -458,7 +459,8 @@ if(BUILD_JAVA_SUPPORT AND PYTHON_EXECUTABLE)
 endif()
 
 if(NOT CAN_BUILD_ANDROID_PROJECTS)
-  UNSET(BUILD_ANDROID_EXAMPLES CACHE)
+  message(WARNING "Android examples are chosen for build, but required SDK tools are not found.")
+  unset(BUILD_ANDROID_EXAMPLES CACHE)
 endif()
 
 ############################### QT ################################
@@ -778,10 +780,10 @@ status("  Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTAB
 # interfaces to other languages
 status("")
 status("  Interfaces:")
-status("    Python:"              BUILD_NEW_PYTHON_SUPPORT AND PYTHON_EXECUTABLE THEN YES ELSE NO)
-status("    Python numpy:"        PYTHON_USE_NUMPY AND BUILD_NEW_PYTHON_SUPPORT  THEN YES ELSE "NO (Python wrappers will not be generated)")
+status("    Python:"              HAVE_opencv_python THEN YES ELSE NO)
+status("    Python numpy:"        PYTHON_USE_NUMPY THEN YES ELSE "NO (Python wrappers will not be generated)")
 if(ANDROID)
-    status("    Java:" BUILD_JAVA_SUPPORT AND PYTHON_EXECUTABLE THEN YES ELSE NO)
+    status("    Java:" HAVE_opencv_java THEN YES ELSE NO)
 endif()
 
 # documentation

@@ -36,13 +36,16 @@ if(OpenCV_LIB_COMPONENTS)
   list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE ${OpenCV_LIB_COMPONENTS})
 endif()
 
-macro(ocv_generate_dependencies_map_configmake suffix)
+macro(ocv_generate_dependencies_map_configmake suffix configuration)
   set(OPENCV_DEPENDENCIES_MAP_${suffix} "")
   set(OPENCV_PROCESSED_LIBS "")
   set(OPENCV_LIBS_TO_PROCESS ${OPENCV_MODULES_CONFIGMAKE})
   while(OPENCV_LIBS_TO_PROCESS)
     list(GET OPENCV_LIBS_TO_PROCESS 0 __ocv_lib)
+    get_target_property(__libname ${__ocv_lib} LOCATION_${configuration})
+    get_filename_component(__libname "${__libname}" NAME)
   
+    set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_LIBNAME_${suffix} \"${__libname}\")\n")
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_DEPS_${suffix} ${${__ocv_lib}_MODULE_DEPS_${suffix}})\n")
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_EXTRA_DEPS_${suffix} ${${__ocv_lib}_EXTRA_DEPS_${suffix}})\n")
 
@@ -53,18 +56,26 @@ macro(ocv_generate_dependencies_map_configmake suffix)
   unset(OPENCV_PROCESSED_LIBS)
   unset(OPENCV_LIBS_TO_PROCESS)
   unset(__ocv_lib)
+  unset(__libname)
 endmacro()
 
-ocv_generate_dependencies_map_configmake(OPT)
-ocv_generate_dependencies_map_configmake(DBG)
+ocv_generate_dependencies_map_configmake(OPT Release)
+ocv_generate_dependencies_map_configmake(DBG Debug)
 
 # -------------------------------------------------------------------------------------------
 #  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
 # -------------------------------------------------------------------------------------------
 set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${OpenCV_SOURCE_DIR}/include\" \"${OpenCV_SOURCE_DIR}/include/opencv\"")
-set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "${OpenCV_SOURCE_DIR}")
-set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
+set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"${LIBRARY_OUTPUT_PATH}\"")
 set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+
+#set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "${OpenCV_SOURCE_DIR}")
+set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
+foreach(m ${OPENCV_MODULES_BUILD})
+  if(EXISTS "${OPENCV_MODULE_${m}_LOCATION}/include")
+    list(APPEND CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "${OPENCV_MODULE_${m}_LOCATION}/include")
+  endif()
+endforeach()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
@@ -77,7 +88,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/OpenCVConfig-version
 # -------------------------------------------------------------------------------------------
 set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}/opencv" "\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}\"")
 
-set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
+set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
 if(ANDROID)
     set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/libs/\${ANDROID_NDK_ABI_NAME}\"")
     set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV/3rdparty/libs/\${ANDROID_NDK_ABI_NAME}\"")
@@ -117,7 +128,7 @@ endif()
 # -------------------------------------------------------------------------------------------
 if(WIN32)
     set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/include\" \"\${OpenCV_CONFIG_PATH}/include/opencv\"")
-    set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
+    set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
     set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/${OPENCV_LIB_INSTALL_PATH}\"")
     set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
 

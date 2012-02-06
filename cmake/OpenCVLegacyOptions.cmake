@@ -1,0 +1,15 @@
+macro(ocv_legacy_option old superseded_by)
+  if(DEFINED ${old})
+    if(ARGV2)
+      set(${superseded_by} ${${old}} CACHE ${ARGV2} "Set via depricated ${old}" FORCE)
+    else()
+      set(${superseded_by} ${${old}} CACHE BOOL     "Set via depricated ${old}" FORCE)
+    endif()
+    unset(${old} CACHE)
+  endif()
+endmacro()
+
+ocv_legacy_option(BUILD_NEW_PYTHON_SUPPORT BUILD_opencv_python)
+ocv_legacy_option(BUILD_JAVA_SUPPORT       BUILD_opencv_java)
+ocv_legacy_option(WITH_ANDROID_CAMERA      BUILD_opencv_androidcamera)
+
