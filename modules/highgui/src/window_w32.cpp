@@ -232,7 +232,7 @@ CV_IMPL int cvInitSystem( int, char** )
 
         // Register the class
         WNDCLASS wndc;
-        wndc.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW;
+        wndc.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS;
         wndc.lpfnWndProc = WindowProc;
         wndc.cbClsExtra = 0;
         wndc.cbWndExtra = 0;
