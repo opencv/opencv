@@ -66,7 +66,7 @@ FaceDetection::FaceDetection()
     m_seqRects = NULL;
     m_iNumLayers = 16;
     assert(m_iNumLayers <= MAX_LAYERS);
-    m_pFaceList = new List();
+    m_pFaceList = new FaceDetectionList();
     
 
 
@@ -241,7 +241,7 @@ void FaceDetection::CreateResults(CvSeq * lpSeq)
 void FaceDetection::ResetImage()
 {
         delete m_pFaceList;
-        m_pFaceList = new List();
+        m_pFaceList = new FaceDetectionList();
 
 }//FaceDetection::ResetImage
 
@@ -424,16 +424,16 @@ void FaceDetection::PostBoostingFindCandidats(IplImage * FaceImage)
 
 
 //////
-//List Class
+//FaceDetectionList Class
 /////
-ListElem::ListElem()
+FaceDetectionListElem::FaceDetectionListElem()
 {
     m_pNext = this;
     m_pPrev = this;
     m_pFace = NULL;
-}///ListElem::ListElem()
+}///FaceDetectionListElem::FaceDetectionListElem()
 
-ListElem::ListElem(Face * pFace,ListElem * pHead)
+FaceDetectionListElem::FaceDetectionListElem(Face * pFace,FaceDetectionListElem * pHead)
 {
     m_pNext = pHead;
     m_pPrev = pHead->m_pPrev;
@@ -441,26 +441,26 @@ ListElem::ListElem(Face * pFace,ListElem * pHead)
     pHead->m_pPrev = this;
 
     m_pFace = pFace;
-}//ListElem::ListElem(Face * pFace)
+}//FaceDetectionListElem::FaceDetectionListElem(Face * pFace)
 
 
 
-ListElem::~ListElem()
+FaceDetectionListElem::~FaceDetectionListElem()
 {
     delete m_pFace;
     m_pNext->m_pPrev = m_pPrev;
     m_pPrev->m_pNext = m_pNext;
 
-}//ListElem::~ListElem()
+}//FaceDetectionListElem::~FaceDetectionListElem()
 
-List::List()
+FaceDetectionList::FaceDetectionList()
 {
-    m_pHead = new ListElem();
+    m_pHead = new FaceDetectionListElem();
     m_FacesCount = 0;
     m_pCurElem = m_pHead;
-}//List::List()
+}//FaceDetectionList::FaceDetectionList()
 
-List::~List()
+FaceDetectionList::~FaceDetectionList()
 {
     void * tmp;
     while((tmp = m_pHead->m_pNext->m_pFace) != 0)
@@ -468,19 +468,19 @@ List::~List()
 
     delete m_pHead;
 
-}//List::~List()
+}//FaceDetectionList::~FaceDetectionList()
 
 
-int List::AddElem(Face * pFace)
+int FaceDetectionList::AddElem(Face * pFace)
 {
-    new ListElem(pFace,m_pHead);
+    new FaceDetectionListElem(pFace,m_pHead);
     return m_FacesCount++;
-}//List::AddElem(Face * pFace)
+}//FaceDetectionList::AddElem(Face * pFace)
 
-Face * List::GetData()
+Face * FaceDetectionList::GetData()
 {
     m_pCurElem = m_pCurElem->m_pNext;
     return m_pCurElem->m_pFace;
-}//Face * List::GetData()
+}//Face * FaceDetectionList::GetData()
 
 

@@ -296,29 +296,29 @@ private:
 }; 
 
 
-class ListElem
+class FaceDetectionListElem
 {
 public:
-    ListElem();
-    ListElem(Face * pFace,ListElem * pHead);
-    virtual ~ListElem();
-    ListElem * m_pNext;
-    ListElem * m_pPrev;
+    FaceDetectionListElem();
+    FaceDetectionListElem(Face * pFace,FaceDetectionListElem * pHead);
+    virtual ~FaceDetectionListElem();
+    FaceDetectionListElem * m_pNext;
+    FaceDetectionListElem * m_pPrev;
     Face * m_pFace;
-};//class ListElem
+};//class FaceDetectionListElem
 
-class List
+class FaceDetectionList
 {
 public:
-    List();
+    FaceDetectionList();
     int AddElem(Face * pFace);
-    virtual ~List();
+    virtual ~FaceDetectionList();
     Face* GetData();
         long m_FacesCount;
 private:
-    ListElem * m_pHead;
-    ListElem * m_pCurElem;
-};//class List
+    FaceDetectionListElem * m_pHead;
+    FaceDetectionListElem * m_pCurElem;
+};//class FaceDetectionList
 
 
 class FaceDetection  
@@ -341,7 +341,7 @@ protected:
     CvSeq* m_seqRects;
     
     bool m_bBoosting;
-    List * m_pFaceList;
+    FaceDetectionList * m_pFaceList;
 
 protected:
     void ResetImage();
