@@ -45,7 +45,8 @@ CV_VideoRandomPositioningTest::~CV_VideoRandomPositioningTest() {}
 void CV_VideoPositioningTest::generate_idx_seq(CvCapture* cap, int method)
 {
 	idx.clear();
-	int N = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
+    int N = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
+    // cout << endl; cout << "Frame count: " << N << endl; cout << endl;
 	switch(method)
 	{
 	case PROGRESSIVE:
@@ -65,7 +66,7 @@ void CV_VideoPositioningTest::generate_idx_seq(CvCapture* cap, int method)
 			idx.clear();
 			for( int i = 0; i < N-1; i++ )
 				idx.push_back(rng.uniform(0, N));
-			idx.push_back(N-1);
+            idx.push_back(N-1);
 			std::swap(idx.at(rng.uniform(0, N-1)), idx.at(N-1));
 			break;
 		}
@@ -79,13 +80,11 @@ void CV_VideoPositioningTest::run_test(int method)
 
 	ts->printf(cvtest::TS::LOG, "\n\nSource files directory: %s\n", (src_dir+"../perf/video/").c_str());
 
-	const string ext[] = {"mov", "avi", "mp4", "mpg", "wmv"};
+    const string ext[] = {/* "mov", */"avi"/*, "mp4", "mpg", "wmv"*/};
 
-	const int time_sec = 5, fps = 25;
+    size_t n = sizeof(ext)/sizeof(ext[0]);
 
-	size_t n = sizeof(ext)/sizeof(ext[0]);
-
-	int failed = 0;
+    int failed_videos = 0;
 
 	for (size_t i = 0; i < n; ++i)
 	{
@@ -96,49 +95,63 @@ void CV_VideoPositioningTest::run_test(int method)
 		if (!cap)
 		{
 			ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
-			ts->printf(cvtest::TS::LOG, "Error: cannot read source video file.\n");
+            ts->printf(cvtest::TS::LOG, "Error: cannot read source video file.\n");
 			ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-			failed++; continue;
+            failed_videos++; continue;
 		}
 
 		cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, 0);
 
 		generate_idx_seq(cap, method);
 
-		int N = idx.size(), failed_frames = 0;
+        int N = idx.size(), failed_frames = 0, failed_positions = 0;
 
-		bool flag = false;
-
-		for (int j = 0; j < N; ++j)
+        for (int j = 0; j < N; ++j)
 		{
-			bool res = cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, (double)idx.at(j));
-			
-			IplImage* frame = cvRetrieveFrame(cap); 
+            cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, idx.at(j));
 
-			if (!frame)
-			{
-				if (!flag) failed++; flag = true;
-				if (!failed_frames) ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
-				ts->printf(cvtest::TS::LOG, "Error: cannot read a frame with index %d.\n", idx.at(j));
-				ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION); failed_frames++;
-			} 
+            IplImage* frame = cvRetrieveFrame(cap);
 
-			if (idx.at(j) != cvGetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES))
+            if (!frame)
 			{
-				ts->printf(cvtest::TS::LOG, "Iteration: %d\n"\
-					"Actual pos: %d Returned pos: %d", idx.at(j), cvGetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES));
-				ts->printf(cvtest::TS::LOG, "Error: required and returned position are not matched.\n");
+                if (!failed_frames)
+                {
+                    ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\n", i+1, ext[i].c_str());
+                }
+                failed_frames++;
+                ts->printf(cvtest::TS::LOG, "\nIteration: %d\n\nError: cannot read a frame with index %d.\n", j, idx.at(j));
+                ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+            }
+
+            int val = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES);
+
+            if (idx.at(j) != val)
+			{
+                if (!(failed_frames||failed_positions))
+                {
+                    ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\n", i+1, ext[i].c_str());
+                }
+                failed_positions++;
+                if (!failed_frames)
+                {
+                    ts->printf(cvtest::TS::LOG, "\nIteration: %d\n", j);
+                }
+                ts->printf(cvtest::TS::LOG, "Required pos: %d\nReturned pos: %d\n", idx.at(j), val);
+                ts->printf(cvtest::TS::LOG, "Error: required and returned positions are not matched.\n");
 				ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
 			}
-
-			cvReleaseImage(&frame);
 		}
+
+        if (failed_frames||failed_positions)
+        {
+            ts->printf(cvtest::TS::LOG, "\nFAILED\n----------\n"); failed_videos++;
+        }
 
 		cvReleaseCapture(&cap);
 	}
 
-	ts->printf(cvtest::TS::LOG, "\nSuccessfull experiments: %d (%d%%)\n", n-failed, 100*(n-failed)/n);
-	ts->printf(cvtest::TS::LOG, "Failed experiments: %d (%d%%)\n", failed, 100*failed/n);
+    ts->printf(cvtest::TS::LOG, "\nSuccessfull experiments: %d (%d%%)\n", n-failed_videos, 100*(n-failed_videos)/n);
+    ts->printf(cvtest::TS::LOG, "Failed experiments: %d (%d%%)\n", failed_videos, 100*failed_videos/n);
 }
 
 void CV_VideoProgressivePositioningTest::run(int) 
