@@ -347,6 +347,11 @@ CV_EXPORTS Ptr<FilterEngine> createBoxFilter( int srcType, int dstType, Size ksi
                                               Point anchor=Point(-1,-1),
                                               bool normalize=true,
                                               int borderType=BORDER_DEFAULT);
+    
+//! returns the Gabor kernel with the specified parameters
+CV_EXPORTS_W Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd,
+                                 double gamma, double psi=CV_PI*0.5, int ktype=CV_64F );
+    
 //! type of morphological operation
 enum { MORPH_ERODE=CV_MOP_ERODE, MORPH_DILATE=CV_MOP_DILATE,
        MORPH_OPEN=CV_MOP_OPEN, MORPH_CLOSE=CV_MOP_CLOSE,
