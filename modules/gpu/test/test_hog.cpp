@@ -186,10 +186,8 @@ struct Detect : TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Detect, Accuracy)
 {
-    ASSERT_NO_THROW(
-        CV_GpuHogDetectTestRunner runner;
-        runner.run();
-    );
+    CV_GpuHogDetectTestRunner runner;
+    runner.run();
 }
 
 INSTANTIATE_TEST_CASE_P(HOG, Detect, ALL_DEVICES);
@@ -316,10 +314,8 @@ struct GetDescriptors : TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(GetDescriptors, Accuracy)
 {
-    ASSERT_NO_THROW(
-        CV_GpuHogGetDescriptorsTestRunner runner;
-        runner.run();
-    );
+    CV_GpuHogGetDescriptorsTestRunner runner;
+    runner.run();
 }
 
 INSTANTIATE_TEST_CASE_P(HOG, GetDescriptors, ALL_DEVICES);

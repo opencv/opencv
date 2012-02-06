@@ -88,121 +88,77 @@ OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
 
 TEST_P(NPPST, Integral) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NPPST_Integral_Image(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NPPST_Integral_Image(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NPPST, SquaredIntegral) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NPPST_Squared_Integral_Image(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NPPST_Squared_Integral_Image(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NPPST, RectStdDev) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NPPST_RectStdDev(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NPPST_RectStdDev(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NPPST, Resize) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NPPST_Resize(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NPPST_Resize(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NPPST, VectorOperations) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NPPST_Vector_Operations(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NPPST_Vector_Operations(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NPPST, Transpose) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NPPST_Transpose(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NPPST_Transpose(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NCV, VectorOperations) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NCV_Vector_Operations(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NCV_Vector_Operations(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NCV, HaarCascadeLoader) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NCV_Haar_Cascade_Loader(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NCV_Haar_Cascade_Loader(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NCV, HaarCascadeApplication) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NCV_Haar_Cascade_Application(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NCV_Haar_Cascade_Application(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NCV, HypothesesFiltration) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NCV_Hypotheses_Filtration(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NCV_Hypotheses_Filtration(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
 TEST_P(NCV, Visualization) 
 {
-    bool res;
-
-    ASSERT_NO_THROW(
-        res = nvidia_NCV_Visualization(path, nvidiaTestOutputLevel);
-    );
+    bool res = nvidia_NCV_Visualization(path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }

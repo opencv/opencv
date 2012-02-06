@@ -88,13 +88,11 @@ TEST_P(Add, Array)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::add(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
+    cv::gpu::add(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -106,13 +104,11 @@ TEST_P(Add, Scalar)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::add(loadMat(mat1, useRoi), val, gpuRes);
+    cv::gpu::add(loadMat(mat1, useRoi), val, gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -134,13 +130,11 @@ TEST_P(Subtract, Array)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::subtract(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
+    cv::gpu::subtract(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -152,13 +146,11 @@ TEST_P(Subtract, Scalar)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::subtract(loadMat(mat1, useRoi), val, gpuRes);
+    cv::gpu::subtract(loadMat(mat1, useRoi), val, gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -180,13 +172,11 @@ TEST_P(Multiply, Array)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::multiply(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
+    cv::gpu::multiply(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -198,13 +188,11 @@ TEST_P(Multiply, Scalar)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::multiply(loadMat(mat1, useRoi), val, gpuRes);
+    cv::gpu::multiply(loadMat(mat1, useRoi), val, gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -226,13 +214,11 @@ TEST_P(Divide, Array)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::divide(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
+    cv::gpu::divide(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
@@ -244,13 +230,11 @@ TEST_P(Divide, Scalar)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::divide(loadMat(mat1, useRoi), val, gpuRes);
+    cv::gpu::divide(loadMat(mat1, useRoi), val, gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -272,13 +256,11 @@ TEST_P(Transpose, Accuracy)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::transpose(loadMat(mat1, useRoi), gpuRes);
+    cv::gpu::transpose(loadMat(mat1, useRoi), gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -300,13 +282,11 @@ TEST_P(Absdiff, Array)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::absdiff(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
+    cv::gpu::absdiff(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -318,13 +298,11 @@ TEST_P(Absdiff, Scalar)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::absdiff(loadMat(mat1, useRoi), val, gpuRes);
+    cv::gpu::absdiff(loadMat(mat1, useRoi), val, gpuRes);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -373,13 +351,11 @@ TEST_P(Compare, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuRes;
+    cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::compare(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes, cmp_code);
+    cv::gpu::compare(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuRes, cmp_code);
 
-        gpuRes.download(dst);
-    );
+    gpuRes.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -426,9 +402,7 @@ TEST_P(MeanStdDev, Accuracy)
     cv::Scalar mean;
     cv::Scalar stddev;
     
-    ASSERT_NO_THROW(
-        cv::gpu::meanStdDev(loadMat(mat, useRoi), mean, stddev);
-    );
+    cv::gpu::meanStdDev(loadMat(mat, useRoi), mean, stddev);
 
     EXPECT_NEAR(mean_gold[0], mean[0], 1e-5);
     EXPECT_NEAR(mean_gold[1], mean[1], 1e-5);
@@ -480,11 +454,7 @@ PARAM_TEST_CASE(NormDiff, cv::gpu::DeviceInfo, NormCode, UseRoi)
 
 TEST_P(NormDiff, Accuracy) 
 {    
-    double norm;
-    
-    ASSERT_NO_THROW(
-        norm = cv::gpu::norm(loadMat(mat1, useRoi), loadMat(mat2, useRoi), normCode);
-    );
+    double norm = cv::gpu::norm(loadMat(mat1, useRoi), loadMat(mat2, useRoi), normCode);
 
     EXPECT_NEAR(norm_gold, norm, 1e-6);
 }
@@ -532,13 +502,11 @@ TEST_P(Flip, Accuracy)
 {    
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpu_res;
+    cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::flip(loadMat(mat, useRoi), gpu_res, flip_code);
+    cv::gpu::flip(loadMat(mat, useRoi), gpu_res, flip_code);
 
-        gpu_res.download(dst);
-    );
+    gpu_res.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -587,13 +555,11 @@ TEST_P(LUT, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpu_res;
+    cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::LUT(loadMat(mat, useRoi), lut, gpu_res);
+    cv::gpu::LUT(loadMat(mat, useRoi), lut, gpu_res);
 
-        gpu_res.download(dst);
-    );
+    gpu_res.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -637,13 +603,11 @@ TEST_P(Exp, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpu_res;
+    cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::exp(loadMat(mat, useRoi), gpu_res);
+    cv::gpu::exp(loadMat(mat, useRoi), gpu_res);
 
-        gpu_res.download(dst);
-    );
+    gpu_res.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -697,13 +661,11 @@ TEST_P(Pow, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpu_res;
+    cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::pow(loadMat(mat, useRoi), power, gpu_res);
+    cv::gpu::pow(loadMat(mat, useRoi), power, gpu_res);
 
-        gpu_res.download(dst);
-    );
+    gpu_res.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 2);
 }
@@ -747,13 +709,11 @@ TEST_P(Log, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpu_res;
+    cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::log(loadMat(mat, useRoi), gpu_res);
+    cv::gpu::log(loadMat(mat, useRoi), gpu_res);
 
-        gpu_res.download(dst);
-    );
+    gpu_res.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -796,14 +756,12 @@ PARAM_TEST_CASE(Magnitude, cv::gpu::DeviceInfo, UseRoi)
 TEST_P(Magnitude, Accuracy) 
 {
     cv::Mat dst;
-    
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::magnitude(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpu_res);
+    cv::gpu::GpuMat gpu_res;
 
-        gpu_res.download(dst);
-    );
+    cv::gpu::magnitude(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpu_res);
+
+    gpu_res.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
 }
@@ -847,13 +805,11 @@ TEST_P(Phase, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpu_res;
+    cv::gpu::GpuMat gpu_res;
 
-        cv::gpu::phase(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpu_res);
+    cv::gpu::phase(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpu_res);
 
-        gpu_res.download(dst);
-    );
+    gpu_res.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-3);
 }
@@ -898,15 +854,13 @@ TEST_P(CartToPolar, Accuracy)
 {
     cv::Mat mag, angle;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuMag;
-        cv::gpu::GpuMat gpuAngle;
+    cv::gpu::GpuMat gpuMag;
+    cv::gpu::GpuMat gpuAngle;
 
-        cv::gpu::cartToPolar(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuMag, gpuAngle);
+    cv::gpu::cartToPolar(loadMat(mat1, useRoi), loadMat(mat2, useRoi), gpuMag, gpuAngle);
 
-        gpuMag.download(mag);
-        gpuAngle.download(angle);
-    );
+    gpuMag.download(mag);
+    gpuAngle.download(angle);
 
     EXPECT_MAT_NEAR(mag_gold, mag, 1e-4);
     EXPECT_MAT_NEAR(angle_gold, angle, 1e-3);
@@ -952,16 +906,14 @@ PARAM_TEST_CASE(PolarToCart, cv::gpu::DeviceInfo, UseRoi)
 TEST_P(PolarToCart, Accuracy) 
 {
     cv::Mat x, y;
-    
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat gpuX;
-        cv::gpu::GpuMat gpuY;
 
-        cv::gpu::polarToCart(loadMat(mag, useRoi), loadMat(angle, useRoi), gpuX, gpuY);
+    cv::gpu::GpuMat gpuX;
+    cv::gpu::GpuMat gpuY;
 
-        gpuX.download(x);
-        gpuY.download(y);
-    );
+    cv::gpu::polarToCart(loadMat(mag, useRoi), loadMat(angle, useRoi), gpuX, gpuY);
+
+    gpuX.download(x);
+    gpuY.download(y);
 
     EXPECT_MAT_NEAR(x_gold, x, 1e-4);
     EXPECT_MAT_NEAR(y_gold, y, 1e-4);
@@ -1036,9 +988,7 @@ TEST_P(MinMax, Accuracy)
 
     double minVal, maxVal;
     
-    ASSERT_NO_THROW(
-        cv::gpu::minMax(loadMat(mat, useRoi), &minVal, &maxVal, loadMat(mask, useRoi));
-    );
+    cv::gpu::minMax(loadMat(mat, useRoi), &minVal, &maxVal, loadMat(mask, useRoi));
 
     EXPECT_DOUBLE_EQ(minVal_gold, minVal);
     EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
@@ -1117,9 +1067,7 @@ TEST_P(MinMaxLoc, Accuracy)
     double minVal, maxVal;
     cv::Point minLoc, maxLoc;
     
-    ASSERT_NO_THROW(
-        cv::gpu::minMaxLoc(loadMat(mat, useRoi), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask, useRoi));
-    );
+    cv::gpu::minMaxLoc(loadMat(mat, useRoi), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask, useRoi));
 
     EXPECT_DOUBLE_EQ(minVal_gold, minVal);
     EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
@@ -1178,11 +1126,7 @@ TEST_P(CountNonZero, Accuracy)
     if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
         return;
 
-    int n;
-    
-    ASSERT_NO_THROW(
-        n = cv::gpu::countNonZero(loadMat(mat, useRoi));
-    );
+    int n = cv::gpu::countNonZero(loadMat(mat, useRoi));
 
     ASSERT_EQ(n_gold, n);
 }
@@ -1227,11 +1171,7 @@ TEST_P(Sum, Simple)
 
     cv::Scalar sum_gold = cv::sum(mat);
 
-    cv::Scalar sum;
-    
-    ASSERT_NO_THROW(
-        sum = cv::gpu::sum(loadMat(mat, useRoi));
-    );
+    cv::Scalar sum = cv::gpu::sum(loadMat(mat, useRoi));
 
     EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
     EXPECT_NEAR(sum[1], sum_gold[1], mat.size().area() * 1e-5);
@@ -1246,11 +1186,7 @@ TEST_P(Sum, Abs)
 
     cv::Scalar sum_gold = cv::norm(mat, cv::NORM_L1);
 
-    cv::Scalar sum;
-    
-    ASSERT_NO_THROW(
-        sum = cv::gpu::absSum(loadMat(mat, useRoi));
-    );
+    cv::Scalar sum = cv::gpu::absSum(loadMat(mat, useRoi));
 
     EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
     EXPECT_NEAR(sum[1], sum_gold[1], mat.size().area() * 1e-5);
@@ -1267,11 +1203,7 @@ TEST_P(Sum, Sqr)
     multiply(mat, mat, sqrmat);
     cv::Scalar sum_gold = sum(sqrmat);
 
-    cv::Scalar sum;
-    
-    ASSERT_NO_THROW(
-        sum = cv::gpu::sqrSum(loadMat(mat, useRoi));
-    );
+    cv::Scalar sum = cv::gpu::sqrSum(loadMat(mat, useRoi));
 
     EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
     EXPECT_NEAR(sum[1], sum_gold[1], mat.size().area() * 1e-5);
@@ -1330,13 +1262,11 @@ TEST_P(Bitwise, Not)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::bitwise_not(loadMat(mat1), dev_dst);
+    cv::gpu::bitwise_not(loadMat(mat1), dev_dst);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -1350,13 +1280,11 @@ TEST_P(Bitwise, Or)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::bitwise_or(loadMat(mat1), loadMat(mat2), dev_dst);
+    cv::gpu::bitwise_or(loadMat(mat1), loadMat(mat2), dev_dst);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -1370,13 +1298,11 @@ TEST_P(Bitwise, And)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::bitwise_and(loadMat(mat1), loadMat(mat2), dev_dst);
+    cv::gpu::bitwise_and(loadMat(mat1), loadMat(mat2), dev_dst);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -1390,13 +1316,11 @@ TEST_P(Bitwise, Xor)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::bitwise_xor(loadMat(mat1), loadMat(mat2), dev_dst);
+    cv::gpu::bitwise_xor(loadMat(mat1), loadMat(mat2), dev_dst);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -1457,13 +1381,11 @@ TEST_P(AddWeighted, Accuracy)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::addWeighted(loadMat(src1, useRoi), alpha, loadMat(src2, useRoi), beta, gamma, dev_dst, dtype);
+    cv::gpu::addWeighted(loadMat(src1, useRoi), alpha, loadMat(src2, useRoi), beta, gamma, dev_dst, dtype);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, dtype < CV_32F ? 1.0 : 1e-12);
 }
@@ -1522,13 +1444,11 @@ TEST_P(Reduce, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::reduce(loadMat(src, useRoi), dev_dst, dim, reduceOp, reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? CV_32F : CV_MAT_DEPTH(type));
+    cv::gpu::reduce(loadMat(src, useRoi), dev_dst, dim, reduceOp, reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? CV_32F : CV_MAT_DEPTH(type));
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     double norm = reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? 1e-1 : 0.0;
     EXPECT_MAT_NEAR(dst_gold, dst, norm);
@@ -1587,13 +1507,11 @@ TEST_P(GEMM, Accuracy)
 {
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        cv::gpu::gemm(loadMat(src1, useRoi), loadMat(src2, useRoi), alpha, loadMat(src3, useRoi), beta, dev_dst, flags);
+    cv::gpu::gemm(loadMat(src1, useRoi), loadMat(src2, useRoi), alpha, loadMat(src3, useRoi), beta, dev_dst, flags);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-1);
 }

@@ -77,14 +77,12 @@ TEST_P(StereoBlockMatching, Regression)
 {    
     cv::Mat disp;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_disp;
-        cv::gpu::StereoBM_GPU bm(0, 128, 19);
+    cv::gpu::GpuMat dev_disp;
+    cv::gpu::StereoBM_GPU bm(0, 128, 19);
 
-        bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
-        
-        dev_disp.download(disp);
-    );
+    bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
+    
+    dev_disp.download(disp);
 
     disp.convertTo(disp, img_template.type());
     
@@ -124,14 +122,12 @@ TEST_P(StereoBeliefPropagation, Regression)
 {
     cv::Mat disp;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_disp;
-        cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+    cv::gpu::GpuMat dev_disp;
+    cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
 
-        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
-        
-        dev_disp.download(disp);
-    );
+    bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
+    
+    dev_disp.download(disp);
 
     disp.convertTo(disp, img_template.type());
     
@@ -175,14 +171,12 @@ TEST_P(StereoConstantSpaceBP, Regression)
 {
     cv::Mat disp;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_disp;
-        cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
+    cv::gpu::GpuMat dev_disp;
+    cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
 
-        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
-        
-        dev_disp.download(disp);
-    );
+    bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
+    
+    dev_disp.download(disp);
 
     disp.convertTo(disp, img_template.type());
     
@@ -229,14 +223,12 @@ struct ProjectPoints : TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(ProjectPoints, Accuracy) 
 {
     cv::Mat dst;
+   
+    cv::gpu::GpuMat d_dst;
 
-    ASSERT_NO_THROW(   
-        cv::gpu::GpuMat d_dst;
+    cv::gpu::projectPoints(cv::gpu::GpuMat(src), rvec, tvec, camera_mat, cv::Mat(), d_dst);
 
-        cv::gpu::projectPoints(cv::gpu::GpuMat(src), rvec, tvec, camera_mat, cv::Mat(), d_dst);
-
-        d_dst.download(dst);
-    );
+    d_dst.download(dst);
 
     ASSERT_EQ(dst_gold.size(), dst.cols);
     ASSERT_EQ(1, dst.rows);
@@ -286,13 +278,11 @@ TEST_P(TransformPoints, Accuracy)
 {
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat d_dst;
+    cv::gpu::GpuMat d_dst;
 
-        cv::gpu::transformPoints(cv::gpu::GpuMat(src), rvec, tvec, d_dst);
+    cv::gpu::transformPoints(cv::gpu::GpuMat(src), rvec, tvec, d_dst);
 
-        d_dst.download(dst);
-    );
+    d_dst.download(dst);
     
     ASSERT_EQ(src.size(), dst.size());
     ASSERT_EQ(src.type(), dst.type());
@@ -356,10 +346,8 @@ TEST_P(SolvePnPRansac, Accuracy)
     cv::Mat rvec, tvec;
     std::vector<int> inliers;
 
-    ASSERT_NO_THROW(
-        cv::gpu::solvePnPRansac(object, cv::Mat(1, image_vec.size(), CV_32FC2, &image_vec[0]), camera_mat, 
-                                cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)), rvec, tvec, false, 200, 2.f, 100, &inliers);
-    );
+    cv::gpu::solvePnPRansac(object, cv::Mat(1, image_vec.size(), CV_32FC2, &image_vec[0]), camera_mat, 
+                            cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)), rvec, tvec, false, 200, 2.f, 100, &inliers);
 
     ASSERT_LE(cv::norm(rvec - rvec_gold), 1e-3f);
     ASSERT_LE(cv::norm(tvec - tvec_gold), 1e-3f);

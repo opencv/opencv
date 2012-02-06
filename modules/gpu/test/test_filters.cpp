@@ -107,13 +107,11 @@ TEST_P(Blur, Rgba)
 {
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::blur(loadMat(img_rgba, useRoi), dev_dst_rgba, ksize);
+    cv::gpu::blur(loadMat(img_rgba, useRoi), dev_dst_rgba, ksize);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 1.0);
 }
@@ -122,13 +120,11 @@ TEST_P(Blur, Gray)
 {
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::blur(loadMat(img_gray, useRoi), dev_dst_gray, ksize);
+    cv::gpu::blur(loadMat(img_gray, useRoi), dev_dst_gray, ksize);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 1.0);
 }
@@ -186,13 +182,11 @@ TEST_P(Sobel, Rgba)
 
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::Sobel(loadMat(img_rgba, useRoi), dev_dst_rgba, -1, dx, dy, ksize);
+    cv::gpu::Sobel(loadMat(img_rgba, useRoi), dev_dst_rgba, -1, dx, dy, ksize);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 0.0);
 }
@@ -204,13 +198,11 @@ TEST_P(Sobel, Gray)
 
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::Sobel(loadMat(img_gray, useRoi), dev_dst_gray, -1, dx, dy, ksize);
+    cv::gpu::Sobel(loadMat(img_gray, useRoi), dev_dst_gray, -1, dx, dy, ksize);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 0.0);
 }
@@ -268,13 +260,11 @@ TEST_P(Scharr, Rgba)
 
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::Scharr(loadMat(img_rgba, useRoi), dev_dst_rgba, -1, dx, dy);
+    cv::gpu::Scharr(loadMat(img_rgba, useRoi), dev_dst_rgba, -1, dx, dy);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
 }
@@ -286,13 +276,11 @@ TEST_P(Scharr, Gray)
 
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::Scharr(loadMat(img_gray, useRoi), dev_dst_gray, -1, dx, dy);
+    cv::gpu::Scharr(loadMat(img_gray, useRoi), dev_dst_gray, -1, dx, dy);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
 }
@@ -348,13 +336,11 @@ TEST_P(GaussianBlur, Rgba)
 {
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::GaussianBlur(loadMat(img_rgba, useRoi), dev_dst_rgba, ksize, sigma1, sigma2);
+    cv::gpu::GaussianBlur(loadMat(img_rgba, useRoi), dev_dst_rgba, ksize, sigma1, sigma2);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 3.0);
 }
@@ -363,13 +349,11 @@ TEST_P(GaussianBlur, Gray)
 {
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::GaussianBlur(loadMat(img_gray, useRoi), dev_dst_gray, ksize, sigma1, sigma2);
+    cv::gpu::GaussianBlur(loadMat(img_gray, useRoi), dev_dst_gray, ksize, sigma1, sigma2);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 3.0);
 }
@@ -417,13 +401,11 @@ TEST_P(Laplacian, Rgba)
 {
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::Laplacian(loadMat(img_rgba, useRoi), dev_dst_rgba, -1, ksize);
+    cv::gpu::Laplacian(loadMat(img_rgba, useRoi), dev_dst_rgba, -1, ksize);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
 }
@@ -432,13 +414,11 @@ TEST_P(Laplacian, Gray)
 {
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::Laplacian(loadMat(img_gray, useRoi), dev_dst_gray, -1, ksize);
+    cv::gpu::Laplacian(loadMat(img_gray, useRoi), dev_dst_gray, -1, ksize);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
 }
@@ -488,13 +468,11 @@ TEST_P(Erode, Rgba)
 {
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::erode(loadMat(img_rgba, useRoi), dev_dst_rgba, kernel);
+    cv::gpu::erode(loadMat(img_rgba, useRoi), dev_dst_rgba, kernel);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
 }
@@ -503,13 +481,11 @@ TEST_P(Erode, Gray)
 {
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::erode(loadMat(img_gray, useRoi), dev_dst_gray, kernel);
+    cv::gpu::erode(loadMat(img_gray, useRoi), dev_dst_gray, kernel);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
 }
@@ -558,13 +534,11 @@ TEST_P(Dilate, Rgba)
 {
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::dilate(loadMat(img_rgba, useRoi), dev_dst_rgba, kernel);
+    cv::gpu::dilate(loadMat(img_rgba, useRoi), dev_dst_rgba, kernel);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
 }
@@ -573,13 +547,11 @@ TEST_P(Dilate, Gray)
 {
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::dilate(loadMat(img_gray, useRoi), dev_dst_gray, kernel);
+    cv::gpu::dilate(loadMat(img_gray, useRoi), dev_dst_gray, kernel);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
 }
@@ -630,13 +602,11 @@ TEST_P(MorphEx, Rgba)
 {
     cv::Mat dst_rgba;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_rgba;
+    cv::gpu::GpuMat dev_dst_rgba;
 
-        cv::gpu::morphologyEx(loadMat(img_rgba, useRoi), dev_dst_rgba, morphOp, kernel);
+    cv::gpu::morphologyEx(loadMat(img_rgba, useRoi), dev_dst_rgba, morphOp, kernel);
 
-        dev_dst_rgba.download(dst_rgba);
-    );
+    dev_dst_rgba.download(dst_rgba);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 4, 0.0);
 }
@@ -645,13 +615,11 @@ TEST_P(MorphEx, Gray)
 {
     cv::Mat dst_gray;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_dst_gray;
+    cv::gpu::GpuMat dev_dst_gray;
 
-        cv::gpu::morphologyEx(loadMat(img_gray, useRoi), dev_dst_gray, morphOp, kernel);
+    cv::gpu::morphologyEx(loadMat(img_gray, useRoi), dev_dst_gray, morphOp, kernel);
 
-        dev_dst_gray.download(dst_gray);
-    );
+    dev_dst_gray.download(dst_gray);
 
     EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 4, 0.0);
 }

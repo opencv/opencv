@@ -117,14 +117,13 @@ TEST_P(BroxOpticalFlow, Regression)
     cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
                                     10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat d_u; 
-        cv::gpu::GpuMat d_v;
-        d_flow(cv::gpu::GpuMat(frame0), cv::gpu::GpuMat(frame1), d_u, d_v);
-        d_u.download(u);
-        d_v.download(v);
-        d_flow.buf.release();
-    );
+    cv::gpu::GpuMat d_u; 
+    cv::gpu::GpuMat d_v;
+
+    d_flow(cv::gpu::GpuMat(frame0), cv::gpu::GpuMat(frame1), d_u, d_v);
+
+    d_u.download(u);
+    d_v.download(v);
 
 #ifndef DUMP
 
@@ -212,21 +211,23 @@ TEST_P(InterpolateFrames, Regression)
     cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
                                     10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat d_frame0(frame0);
-        cv::gpu::GpuMat d_frame1(frame1);
-        cv::gpu::GpuMat d_fu; 
-        cv::gpu::GpuMat d_fv;
-        cv::gpu::GpuMat d_bu; 
-        cv::gpu::GpuMat d_bv;
-        cv::gpu::GpuMat d_newFrame;
-        cv::gpu::GpuMat d_buf;
-        d_flow(d_frame0, d_frame1, d_fu, d_fv);
-        d_flow(d_frame1, d_frame0, d_bu, d_bv);
-        cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
-        d_newFrame.download(newFrame);
-        d_flow.buf.release();
-    );
+    cv::gpu::GpuMat d_frame0(frame0);
+    cv::gpu::GpuMat d_frame1(frame1);
+
+    cv::gpu::GpuMat d_fu; 
+    cv::gpu::GpuMat d_fv;
+    cv::gpu::GpuMat d_bu; 
+    cv::gpu::GpuMat d_bv;
+
+    d_flow(d_frame0, d_frame1, d_fu, d_fv);
+    d_flow(d_frame1, d_frame0, d_bu, d_bv);
+
+    cv::gpu::GpuMat d_newFrame;
+    cv::gpu::GpuMat d_buf;
+
+    cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
+
+    d_newFrame.download(newFrame);
 
 #ifndef DUMP
 

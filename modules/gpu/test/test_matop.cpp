@@ -90,17 +90,15 @@ TEST_P(Merge, Accuracy)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        std::vector<cv::gpu::GpuMat> dev_src;
-        cv::gpu::GpuMat dev_dst;
+    std::vector<cv::gpu::GpuMat> dev_src;
+    cv::gpu::GpuMat dev_dst;
 
-        for (size_t i = 0; i < src.size(); ++i)
-            dev_src.push_back(loadMat(src[i], useRoi));
+    for (size_t i = 0; i < src.size(); ++i)
+        dev_src.push_back(loadMat(src[i], useRoi));
 
-        cv::gpu::merge(dev_src, dev_dst); 
+    cv::gpu::merge(dev_src, dev_dst); 
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -149,16 +147,14 @@ TEST_P(Split, Accuracy)
 
     std::vector<cv::Mat> dst;
     
-    ASSERT_NO_THROW(
-        std::vector<cv::gpu::GpuMat> dev_dst;
+    std::vector<cv::gpu::GpuMat> dev_dst;
 
-        cv::gpu::split(loadMat(src, useRoi), dev_dst);
+    cv::gpu::split(loadMat(src, useRoi), dev_dst);
 
-        dst.resize(dev_dst.size());
+    dst.resize(dev_dst.size());
 
-        for (size_t i = 0; i < dev_dst.size(); ++i)
-            dev_dst[i].download(dst[i]);
-    );
+    for (size_t i = 0; i < dev_dst.size(); ++i)
+        dev_dst[i].download(dst[i]);
 
     ASSERT_EQ(dst_gold.size(), dst.size());
 
@@ -207,15 +203,13 @@ TEST_P(SplitMerge, Consistency)
 
     cv::Mat final;
 
-    ASSERT_NO_THROW(
-        std::vector<cv::gpu::GpuMat> dev_vec;
-        cv::gpu::GpuMat dev_final;
+    std::vector<cv::gpu::GpuMat> dev_vec;
+    cv::gpu::GpuMat dev_final;
 
-        cv::gpu::split(loadMat(orig), dev_vec);    
-        cv::gpu::merge(dev_vec, dev_final);
+    cv::gpu::split(loadMat(orig), dev_vec);    
+    cv::gpu::merge(dev_vec, dev_final);
 
-        dev_final.download(final);
-    );
+    dev_final.download(final);
 
     EXPECT_MAT_NEAR(orig, final, 0.0);
 }
@@ -261,14 +255,12 @@ TEST_P(SetTo, Zero)
 
     cv::Mat mat;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
+    cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
 
-        mat_gold.setTo(zero);
-        dev_mat.setTo(zero);
+    mat_gold.setTo(zero);
+    dev_mat.setTo(zero);
 
-        dev_mat.download(mat);
-    );
+    dev_mat.download(mat);
 
     EXPECT_MAT_NEAR(mat_gold, mat, 0.0);
 }
@@ -282,14 +274,12 @@ TEST_P(SetTo, SameVal)
 
     cv::Mat mat;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_mat(mat_gold);
+    cv::gpu::GpuMat dev_mat(mat_gold);
 
-        mat_gold.setTo(s);
-        dev_mat.setTo(s);
+    mat_gold.setTo(s);
+    dev_mat.setTo(s);
 
-        dev_mat.download(mat);
-    );
+    dev_mat.download(mat);
 
     EXPECT_MAT_NEAR(mat_gold, mat, 0.0);
 }
@@ -303,14 +293,12 @@ TEST_P(SetTo, DifferentVal)
 
     cv::Mat mat;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
+    cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
 
-        mat_gold.setTo(s);
-        dev_mat.setTo(s);
+    mat_gold.setTo(s);
+    dev_mat.setTo(s);
 
-        dev_mat.download(mat);
-    );
+    dev_mat.download(mat);
 
     EXPECT_MAT_NEAR(mat_gold, mat, 0.0);
 }
@@ -327,14 +315,12 @@ TEST_P(SetTo, Masked)
 
     cv::Mat mat;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
+    cv::gpu::GpuMat dev_mat = loadMat(mat_gold, useRoi);
 
-        mat_gold.setTo(s, mask);
-        dev_mat.setTo(s, loadMat(mask, useRoi));
+    mat_gold.setTo(s, mask);
+    dev_mat.setTo(s, loadMat(mask, useRoi));
 
-        dev_mat.download(mat);
-    );
+    dev_mat.download(mat);
 
     EXPECT_MAT_NEAR(mat_gold, mat, 0.0);
 }
@@ -382,14 +368,12 @@ TEST_P(CopyTo, WithoutMask)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
-        cv::gpu::GpuMat dev_dst = loadMat(src, useRoi);
+    cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
+    cv::gpu::GpuMat dev_dst = loadMat(src, useRoi);
 
-        dev_src.copyTo(dev_dst);
+    dev_src.copyTo(dev_dst);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -410,14 +394,12 @@ TEST_P(CopyTo, Masked)
 
     cv::Mat dst;
 
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
-        cv::gpu::GpuMat dev_dst = loadMat(zeroMat, useRoi);
+    cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
+    cv::gpu::GpuMat dev_dst = loadMat(zeroMat, useRoi);
 
-        dev_src.copyTo(dev_dst, loadMat(mask, useRoi));
+    dev_src.copyTo(dev_dst, loadMat(mask, useRoi));
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -467,14 +449,12 @@ TEST_P(ConvertTo, WithoutScaling)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
+    cv::gpu::GpuMat dev_dst;
 
-        dev_src.convertTo(dev_dst, depth2);
+    dev_src.convertTo(dev_dst, depth2);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
@@ -494,15 +474,13 @@ TEST_P(ConvertTo, WithScaling)
 
     cv::Mat dst;
     
-    ASSERT_NO_THROW(
-        cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
+    cv::gpu::GpuMat dev_src = loadMat(src, useRoi);
 
-        cv::gpu::GpuMat dev_dst;
+    cv::gpu::GpuMat dev_dst;
 
-        dev_src.convertTo(dev_dst, depth2, a, b);
+    dev_src.convertTo(dev_dst, depth2, a, b);
 
-        dev_dst.download(dst);
-    );
+    dev_dst.download(dst);
 
     const double eps = depth2 < CV_32F ? 1 : 1e-4;
 
@@ -549,30 +527,28 @@ TEST_P(Async, Accuracy)
 {
     cv::Mat dst0, dst1;
     
-    ASSERT_NO_THROW(
-        cv::gpu::CudaMem cpudst0;
-        cv::gpu::CudaMem cpudst1;
+    cv::gpu::CudaMem cpudst0;
+    cv::gpu::CudaMem cpudst1;
 
-        cv::gpu::GpuMat gpusrc;
-        cv::gpu::GpuMat gpudst0;
-        cv::gpu::GpuMat gpudst1(src.rows, src.cols, CV_8UC1);
+    cv::gpu::GpuMat gpusrc;
+    cv::gpu::GpuMat gpudst0;
+    cv::gpu::GpuMat gpudst1(src.rows, src.cols, CV_8UC1);
 
-        cv::gpu::Stream stream0;
-        cv::gpu::Stream stream1;
+    cv::gpu::Stream stream0;
+    cv::gpu::Stream stream1;
 
-        stream0.enqueueUpload(src, gpusrc);
-        cv::gpu::bitwise_not(gpusrc, gpudst0, cv::gpu::GpuMat(), stream0);
-        stream0.enqueueDownload(gpudst0, cpudst0);
+    stream0.enqueueUpload(src, gpusrc);
+    cv::gpu::bitwise_not(gpusrc, gpudst0, cv::gpu::GpuMat(), stream0);
+    stream0.enqueueDownload(gpudst0, cpudst0);
 
-        stream1.enqueueMemSet(gpudst1, cv::Scalar::all(128));
-        stream1.enqueueDownload(gpudst1, cpudst1);
+    stream1.enqueueMemSet(gpudst1, cv::Scalar::all(128));
+    stream1.enqueueDownload(gpudst1, cpudst1);
 
-        stream0.waitForCompletion();
-        stream1.waitForCompletion();
+    stream0.waitForCompletion();
+    stream1.waitForCompletion();
 
-        dst0 = cpudst0.createMatHeader();
-        dst1 = cpudst1.createMatHeader();
-    );
+    dst0 = cpudst0.createMatHeader();
+    dst1 = cpudst1.createMatHeader();
 
     EXPECT_MAT_NEAR(dst_gold0, dst0, 0.0);
     EXPECT_MAT_NEAR(dst_gold1, dst1, 0.0);
