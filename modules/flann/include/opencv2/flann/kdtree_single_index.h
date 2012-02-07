@@ -404,7 +404,7 @@ private:
         cutfeat = 0;
         cutval = (bbox[0].high+bbox[0].low)/2;
         for (size_t i=1; i<dim_; ++i) {
-            ElementType span = bbox[i].low-bbox[i].low;
+            ElementType span = bbox[i].high-bbox[i].low;
             if (span>max_span) {
                 max_span = span;
                 cutfeat = i;
