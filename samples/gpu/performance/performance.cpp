@@ -60,8 +60,11 @@ void TestSystem::finishCurrentSubtest()
         // There is no need to print subtest statistics
         return;
 
-    int cpu_time = static_cast<int>(cpu_elapsed_ / getTickFrequency() * 1000.0);
-    int gpu_time = static_cast<int>(gpu_elapsed_ / getTickFrequency() * 1000.0);
+    //int cpu_time = static_cast<int>(cpu_elapsed_ / getTickFrequency() * 1000.0);
+    //int gpu_time = static_cast<int>(gpu_elapsed_ / getTickFrequency() * 1000.0);
+
+    double cpu_time = cpu_elapsed_ / getTickFrequency() * 1000.0;
+    double gpu_time = gpu_elapsed_ / getTickFrequency() * 1000.0;
 
     double speedup = static_cast<double>(cpu_elapsed_) /
                      std::max((int64)1, gpu_elapsed_);
@@ -161,7 +164,8 @@ int main(int argc, const char* argv[])
        "{ f | filter  |       | filter for test }"
        "{ w | workdir |       | set working directory }"
        "{ l | list    | false | show all tests }"
-       "{ d  | device  |   0   | device id }";
+       "{ d | device  | 0     | device id }"
+       "{ i | iters   | 10    | iteration count }";
 
     CommandLineParser cmd(argc, argv, keys);
 
@@ -190,6 +194,7 @@ int main(int argc, const char* argv[])
     string filter = cmd.get<string>("filter");
     string workdir = cmd.get<string>("workdir");
     bool list = cmd.get<bool>("list");
+    int iters = cmd.get<int>("iters");
 
     if (!filter.empty())
         TestSystem::instance().setTestFilter(filter);
@@ -204,6 +209,8 @@ int main(int argc, const char* argv[])
 
     if (list)
         TestSystem::instance().setListMode(true);
+
+    TestSystem::instance().setIters(iters);
 
     TestSystem::instance().run();
 

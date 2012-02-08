@@ -767,6 +767,27 @@ TEST(threshold)
         gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
         GPU_OFF;
     }
+
+    for (int size = 2000; size <= 4000; size += 1000)
+    {
+        SUBTEST << size << 'x' << size << ", 32FC1, THRESH_TRUNC [NPP]";
+
+        gen(src, size, size, CV_32FC1, 0, 100);
+
+        threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
+
+        CPU_ON; 
+        threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
+        CPU_OFF;
+
+        d_src.upload(src);
+
+        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
+
+        GPU_ON;
+        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
+        GPU_OFF;
+    }
 }
 
 TEST(pow)
