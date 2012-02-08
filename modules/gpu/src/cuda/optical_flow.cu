@@ -138,7 +138,7 @@ namespace cv { namespace gpu { namespace device
                 const float u_avg_val = u_avg(y, x);
                 const float v_avg_val = v_avg(y, x);
 
-                const float theta = ::atan2f(v_avg_val, u_avg_val) + CV_PI;
+                const float theta = ::atan2f(v_avg_val, u_avg_val);// + CV_PI;
 
                 float r = ::sqrtf(v_avg_val * v_avg_val + u_avg_val * u_avg_val);
                 r = fmin(14.0f * (r / max_flow), 14.0f);
