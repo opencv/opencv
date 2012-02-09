@@ -103,14 +103,7 @@ SET(OpenCV2_INCLUDE_DIRS @CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@)
 if(OpenCV2_INCLUDE_DIRS)
   include_directories(${OpenCV2_INCLUDE_DIRS})
   list(APPEND OpenCV_INCLUDE_DIRS ${OpenCV2_INCLUDE_DIRS})
-  set(OpenCV_AddDebugRelease)
   if(MSVC)
-    set(OpenCV_AddDebugRelease 1)
-  elseif(CMAKE_GENERATOR MATCHES Xcode)
-    set(OpenCV_AddDebugRelease 1)
-  endif()  
-  
-  if(OpenCV_AddDebugRelease)  
     set(OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/Release")
     set(OpenCV_LIB_DIR_DBG "${OpenCV_LIB_DIR_DBG}/Debug")
     set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_3RDPARTY_LIB_DIR_OPT}/Release")
@@ -121,7 +114,7 @@ endif()
 # ==============================================================
 #  Check OpenCV availability
 # ==============================================================
-if(ANDROID AND OpenCV_ANDROID_NATIVE_API_LEVEL LESS ANDROID_NATIVE_API_LEVEL)
+if(ANDROID AND OpenCV_ANDROID_NATIVE_API_LEVEL GREATER ANDROID_NATIVE_API_LEVEL)
   message(FATAL_ERROR "Minimum required by OpenCV API level is android-${OpenCV_ANDROID_NATIVE_API_LEVEL}")
   #always FATAL_ERROR because we can't say to the caller that OpenCV is not found
   #http://www.mail-archive.com/cmake@cmake.org/msg37831.html
