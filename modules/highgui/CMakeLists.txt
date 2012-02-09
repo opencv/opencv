@@ -210,8 +210,7 @@ if(APPLE)
     endif()
 endif(APPLE)
 
-set(OPENCV_MODULE_ANDROIDCAMERA "ON") #TODO: fix it
-if(HAVE_opencv_androidcamera AND OPENCV_MODULE_ANDROIDCAMERA)
+if(HAVE_opencv_androidcamera)
   set(highgui_srcs ${highgui_srcs} src/cap_android.cpp)
   add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)#TODO: remove this line
 endif()

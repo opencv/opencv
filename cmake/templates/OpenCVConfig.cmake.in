@@ -18,7 +18,7 @@
 #    This file will define the following variables:
 #      - 
 #      - OpenCV_LIBS                     : The list of libraries to links against.
-#      - OpenCV_LIB_DIR                  : The directory where lib files are. Calling LINK_DIRECTORIES
+#      - OpenCV_LIB_DIR                  : The directory(es) where lib files are. Calling LINK_DIRECTORIES
 #                                          with this path is NOT needed.
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
 #      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability
@@ -35,7 +35,6 @@
 #      - OpenCV_LIB_COMPONENTS
 #      - OpenCV_USE_MANGLED_PATHS
 #      - OpenCV_HAVE_ANDROID_CAMERA
-#      - OpenCV_SOURCE_PATH
 #
 # =================================================================================================
 
@@ -103,7 +102,13 @@ SET(OpenCV2_INCLUDE_DIRS @CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@)
 if(OpenCV2_INCLUDE_DIRS)
   include_directories(${OpenCV2_INCLUDE_DIRS})
   list(APPEND OpenCV_INCLUDE_DIRS ${OpenCV2_INCLUDE_DIRS})
-  if(MSVC)
+  
+  set(OpenCV_AddDebugRelease FALSE)
+  if(MSVC OR CMAKE_GENERATOR MATCHES Xcode)
+    set(OpenCV_AddDebugRelease TRUE)
+  endif()  
+  
+  if(OpenCV_AddDebugRelease)  
     set(OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/Release")
     set(OpenCV_LIB_DIR_DBG "${OpenCV_LIB_DIR_DBG}/Debug")
     set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_3RDPARTY_LIB_DIR_OPT}/Release")
@@ -247,4 +252,9 @@ endif()
 # ==============================================================
 # Compatibility stuff
 # ==============================================================
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  SET(OpenCV_LIB_DIR ${OpenCV_LIB_DIR_DBG} ${OpenCV_3RDPARTY_LIB_DIR_DBG})
+else()
+  SET(OpenCV_LIB_DIR ${OpenCV_LIB_DIR_OPT} ${OpenCV_3RDPARTY_LIB_DIR_OPT})
+endif()
 set(OpenCV_LIBRARIES ${OpenCV_LIBS})

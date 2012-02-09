@@ -44,6 +44,10 @@ macro(ocv_generate_dependencies_map_configmake suffix configuration)
     list(GET OPENCV_LIBS_TO_PROCESS 0 __ocv_lib)
     get_target_property(__libname ${__ocv_lib} LOCATION_${configuration})
     get_filename_component(__libname "${__libname}" NAME)
+    
+    if(WIN32)
+      string(REGEX REPLACE "[.]dll$" ".lib" __libname "${__libname}")
+    endif()
   
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_LIBNAME_${suffix} \"${__libname}\")\n")
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_DEPS_${suffix} ${${__ocv_lib}_MODULE_DEPS_${suffix}})\n")
