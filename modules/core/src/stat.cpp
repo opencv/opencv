@@ -65,13 +65,16 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
     const T* src = src0;
     if( !mask )
     {
-        int i;
+        int i=0;
         int k = cn % 4;
         if( k == 1 )
         {
             ST s0 = dst[0];
-            for( i = 0; i <= len - 4; i += 4, src += cn*4 )
+
+			#if CV_ENABLE_UNROLLED
+            for(; i <= len - 4; i += 4, src += cn*4 )
                 s0 += src[0] + src[cn] + src[cn*2] + src[cn*3];
+            #endif
             for( ; i < len; i++, src += cn )
                 s0 += src[0];
             dst[0] = s0;
@@ -151,6 +154,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
             if( mask[i] )
             {
                 int k = 0;
+				#if CV_ENABLE_UNROLLED
                 for( ; k <= cn - 4; k += 4 )
                 {
                     ST s0, s1;
@@ -161,6 +165,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
                     s1 = dst[k+3] + src[k+3];
                     dst[k+2] = s0; dst[k+3] = s1;
                 }
+                #endif
                 for( ; k < cn; k++ )
                     dst[k] += src[k];
                 nzm++;
@@ -205,9 +210,11 @@ static SumFunc sumTab[] =
 template<typename T>
 static int countNonZero_(const T* src, int len )
 {
-    int i, nz = 0;
-    for( i = 0; i <= len - 4; i += 4 )
+    int i=0, nz = 0;
+	#if CV_ENABLE_UNROLLED
+    for(; i <= len - 4; i += 4 )
         nz += (src[i] != 0) + (src[i+1] != 0) + (src[i+2] != 0) + (src[i+3] != 0);
+    #endif
     for( ; i < len; i++ )
         nz += src[i] != 0;
     return nz;
@@ -826,14 +833,15 @@ float normL2Sqr_(const float* a, const float* b, int n)
     }
     else
 #endif
-    {
+    //vz why do we need unroll here? no sse = no need to unroll
+	{
         for( ; j <= n - 4; j += 4 )
         {
             float t0 = a[j] - b[j], t1 = a[j+1] - b[j+1], t2 = a[j+2] - b[j+2], t3 = a[j+3] - b[j+3];
             d += t0*t0 + t1*t1 + t2*t2 + t3*t3;
         }
     }
-    
+ 
     for( ; j < n; j++ )
     {
         float t = a[j] - b[j];
@@ -866,6 +874,7 @@ float normL1_(const float* a, const float* b, int n)
     }
     else
 #endif
+     //vz no need to unroll here - if no sse
     {
         for( ; j <= n - 4; j += 4 )
         {
@@ -873,7 +882,7 @@ float normL1_(const float* a, const float* b, int n)
                     std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
         }
     }
-    
+
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
     return d;
@@ -906,6 +915,7 @@ int normL1_(const uchar* a, const uchar* b, int n)
     }
     else
 #endif
+     //vz why do we need unroll here? no sse = no unroll
     {
         for( ; j <= n - 4; j += 4 )
         {
@@ -913,7 +923,6 @@ int normL1_(const uchar* a, const uchar* b, int n)
                     std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
         }
     }
-    
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
     return d;
@@ -997,9 +1006,11 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
     else
         CV_Error( CV_StsBadSize, "bad cell size (not 1, 2 or 4) in normHamming" );
     int i = 0, result = 0;
+	#if CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
                 tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
+    #endif
     for( ; i < n; i++ )
         result += tab[a[i] ^ b[i]];
     return result;

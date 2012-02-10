@@ -59,6 +59,7 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
         const T* src = (const T*)_src;
         T* dst = (T*)_dst;
         int x = 0;
+		 #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             if( mask[x] )
@@ -70,6 +71,7 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
             if( mask[x+3] )
                 dst[x+3] = src[x+3];
         }
+        #endif
         for( ; x < size.width; x++ )
             if( mask[x] )
                 dst[x] = src[x];

@@ -63,7 +63,9 @@ GEMM_CopyBlock( const uchar* src, size_t src_step,
 
     for( ; size.height--; src += src_step, dst += dst_step )
     {
-        for( j = 0; j <= size.width - 4; j += 4 )
+		j=0;
+         #if CV_ENABLE_UNROLLED
+        for( ; j <= size.width - 4; j += 4 )
         {
             int t0 = ((const int*)src)[j];
             int t1 = ((const int*)src)[j+1];
@@ -74,7 +76,7 @@ GEMM_CopyBlock( const uchar* src, size_t src_step,
             ((int*)dst)[j+2] = t0;
             ((int*)dst)[j+3] = t1;
         }
-
+        #endif
         for( ; j < size.width; j++ )
             ((int*)dst)[j] = ((const int*)src)[j];
     }
@@ -237,15 +239,16 @@ GEMMSingleMul( const T* a_data, size_t a_step,
                                                c_data += c_step1 )
             {
                 WT s0(0), s1(0), s2(0), s3(0);
-
-                for( k = 0; k <= n - 4; k += 4 )
+                k = 0;
+                 #if CV_ENABLE_UNROLLED
+                for( ; k <= n - 4; k += 4 )
                 {
                     s0 += WT(a_data[k])*WT(b_data[k]);
                     s1 += WT(a_data[k+1])*WT(b_data[k+1]);
                     s2 += WT(a_data[k+2])*WT(b_data[k+2]);
                     s3 += WT(a_data[k+3])*WT(b_data[k+3]);
                 }
-
+                #endif
                 for( ; k < n; k++ )
                     s0 += WT(a_data[k])*WT(b_data[k]);
                 s0 = (s0+s1+s2+s3)*alpha;
@@ -342,8 +345,9 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             for( k = 0; k < n; k++, b_data += b_step )
             {
                 WT al(a_data[k]);
-
-                for( j = 0; j <= m - 4; j += 4 )
+				j=0;
+                 #if CV_ENABLE_UNROLLED
+                for(; j <= m - 4; j += 4 )
                 {
                     WT t0 = d_buf[j] + WT(b_data[j])*al;
                     WT t1 = d_buf[j+1] + WT(b_data[j+1])*al;
@@ -354,7 +358,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
                     d_buf[j+2] = t0;
                     d_buf[j+3] = t1;
                 }
-
+                #endif
                 for( ; j < m; j++ )
                     d_buf[j] += WT(b_data[j])*al;
             }
@@ -509,7 +513,9 @@ GEMMStore( const T* c_data, size_t c_step,
         if( _c_data )
         {
             c_data = _c_data;
-            for( j = 0; j <= d_size.width - 4; j += 4, c_data += 4*c_step1 )
+			j=0;
+			 #if CV_ENABLE_UNROLLED
+            for(; j <= d_size.width - 4; j += 4, c_data += 4*c_step1 )
             {
                 WT t0 = alpha*d_buf[j];
                 WT t1 = alpha*d_buf[j+1];
@@ -524,6 +530,7 @@ GEMMStore( const T* c_data, size_t c_step,
                 d_data[j+2] = T(t0);
                 d_data[j+3] = T(t1);
             }
+            #endif
             for( ; j < d_size.width; j++, c_data += c_step1 )
             {
                 WT t0 = alpha*d_buf[j];
@@ -532,7 +539,9 @@ GEMMStore( const T* c_data, size_t c_step,
         }
         else
         {
-            for( j = 0; j <= d_size.width - 4; j += 4 )
+			j = 0;
+			 #if CV_ENABLE_UNROLLED
+            for( ; j <= d_size.width - 4; j += 4 )
             {
                 WT t0 = alpha*d_buf[j];
                 WT t1 = alpha*d_buf[j+1];
@@ -543,6 +552,7 @@ GEMMStore( const T* c_data, size_t c_step,
                 d_data[j+2] = T(t0);
                 d_data[j+3] = T(t1);
             }
+			#endif
             for( ; j < d_size.width; j++ )
                 d_data[j] = T(alpha*d_buf[j]);
         }
@@ -1987,6 +1997,7 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
     }
     else
 #endif
+    //vz why do we need unroll here?
     for( ; i <= len - 4; i += 4 )
     {
         float t0, t1;
@@ -1997,7 +2008,7 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
         t1 = src1[i+3]*alpha + src2[i+3];
         dst[i+2] = t0; dst[i+3] = t1;
     }
-    for( ; i < len; i++ )
+	for(; i < len; i++ )
         dst[i] = src1[i]*alpha + src2[i];
 }
 
@@ -2024,6 +2035,7 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
     }
     else
 #endif
+     //vz why do we need unroll here? 
     for( ; i <= len - 4; i += 4 )
     {
         double t0, t1;
@@ -2034,7 +2046,7 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
         t1 = src1[i+3]*alpha + src2[i+3];
         dst[i+2] = t0; dst[i+3] = t1;
     }
-    for( ; i < len; i++ )
+	for(; i < len; i++ )
         dst[i] = src1[i]*alpha + src2[i];
 }
 
@@ -2198,9 +2210,12 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         for( i = 0; i < len; i++, mat += matstep )
         {
             double row_sum = 0;
-            for( j = 0; j <= len - 4; j += 4 )
+            j = 0;
+			 #if CV_ENABLE_UNROLLED
+            for(; j <= len - 4; j += 4 )
                 row_sum += diff[j]*mat[j] + diff[j+1]*mat[j+1] +
                            diff[j+2]*mat[j+2] + diff[j+3]*mat[j+3];
+            #endif
             for( ; j < len; j++ )
                 row_sum += diff[j]*mat[j];
             result += row_sum * diff[i];
@@ -2226,9 +2241,12 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         for( i = 0; i < len; i++, mat += matstep )
         {
             double row_sum = 0;
-            for( j = 0; j <= len - 4; j += 4 )
+            j = 0;
+			 #if CV_ENABLE_UNROLLED
+            for(; j <= len - 4; j += 4 )
                 row_sum += diff[j]*mat[j] + diff[j+1]*mat[j+1] +
                            diff[j+2]*mat[j+2] + diff[j+3]*mat[j+3];
+            #endif
             for( ; j < len; j++ )
                 row_sum += diff[j]*mat[j];
             result += row_sum * diff[i];
@@ -2574,9 +2592,11 @@ dotProd_(const T* src1, const T* src2, int len)
 {
     int i = 0;
     double result = 0;
+	 #if CV_ENABLE_UNROLLED
     for( ; i <= len - 4; i += 4 )
         result += (double)src1[i]*src2[i] + (double)src1[i+1]*src2[i+1] +
             (double)src1[i+2]*src2[i+2] + (double)src1[i+3]*src2[i+3];
+    #endif
     for( ; i < len; i++ )
         result += (double)src1[i]*src2[i];
 

@@ -99,7 +99,7 @@ void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, s
             }
         }
     #endif
-
+#if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
         {
             T v0 = op(src1[x], src2[x]);
@@ -109,7 +109,7 @@ void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, s
             v1 = op(src1[x+3], src2[x+3]);
             dst[x+2] = v0; dst[x+3] = v1;
         }
-
+#endif
         for( ; x < sz.width; x++ )
             dst[x] = op(src1[x], src2[x]);
     }
@@ -208,7 +208,7 @@ void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
                 }
         }
 #endif
-
+#if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
         {
             int v0 = op(src1[x], src2[x]);
@@ -218,7 +218,7 @@ void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
             v1 = op(src1[x+3], src2[x+3]);
             dst[x+2] = v0; dst[x+3] = v1;
         }
-
+#endif
         for( ; x < sz.width; x++ )
             dst[x] = op(src1[x], src2[x]);
     }
@@ -265,6 +265,7 @@ void vBinOp32f(const float* src1, size_t step1, const float* src2, size_t step2,
                 }
         }
     #endif
+#if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
         {
             float v0 = op(src1[x], src2[x]);
@@ -274,7 +275,7 @@ void vBinOp32f(const float* src1, size_t step1, const float* src2, size_t step2,
             v1 = op(src1[x+3], src2[x+3]);
             dst[x+2] = v0; dst[x+3] = v1;
         }
-
+#endif
         for( ; x < sz.width; x++ )
             dst[x] = op(src1[x], src2[x]);
     }
@@ -1508,8 +1509,9 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
     {
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
-            int i;
-            for( i = 0; i <= size.width - 4; i += 4 )
+            int i=0;
+			#if CV_ENABLE_UNROLLED
+            for(; i <= size.width - 4; i += 4 )
             {
                 T t0;
                 T t1;
@@ -1523,7 +1525,7 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
                 dst[i+2] = t0;
                 dst[i+3] = t1;
             }
-
+            #endif
             for( ; i < size.width; i++ )
                 dst[i] = saturate_cast<T>(src1[i] * src2[i]);
         }
@@ -1532,8 +1534,9 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
     {
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
-            int i;
-            for( i = 0; i <= size.width - 4; i += 4 )
+            int i = 0;
+			#if CV_ENABLE_UNROLLED
+            for(; i <= size.width - 4; i += 4 )
             {
                 T t0 = saturate_cast<T>(scale*(WT)src1[i]*src2[i]);
                 T t1 = saturate_cast<T>(scale*(WT)src1[i+1]*src2[i+1]);
@@ -1543,7 +1546,7 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
                 t1 = saturate_cast<T>(scale*(WT)src1[i+3]*src2[i+3]);
                 dst[i+2] = t0; dst[i+3] = t1;
             }
-
+            #endif
             for( ; i < size.width; i++ )
                 dst[i] = saturate_cast<T>(scale*(WT)src1[i]*src2[i]);
         }
@@ -1561,6 +1564,7 @@ div_( const T* src1, size_t step1, const T* src2, size_t step2,
     for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
         int i = 0;
+		#if CV_ENABLE_UNROLLED
         for( ; i <= size.width - 4; i += 4 )
         {
             if( src2[i] != 0 && src2[i+1] != 0 && src2[i+2] != 0 && src2[i+3] != 0 )
@@ -1590,7 +1594,7 @@ div_( const T* src1, size_t step1, const T* src2, size_t step2,
                 dst[i+2] = z2; dst[i+3] = z3;
             }
         }
-
+        #endif
         for( ; i < size.width; i++ )
             dst[i] = src2[i] != 0 ? saturate_cast<T>(src1[i]*scale/src2[i]) : 0;
     }
@@ -1606,6 +1610,7 @@ recip_( const T*, size_t, const T* src2, size_t step2,
     for( ; size.height--; src2 += step2, dst += step )
     {
         int i = 0;
+		#if CV_ENABLE_UNROLLED
         for( ; i <= size.width - 4; i += 4 )
         {
             if( src2[i] != 0 && src2[i+1] != 0 && src2[i+2] != 0 && src2[i+3] != 0 )
@@ -1635,7 +1640,7 @@ recip_( const T*, size_t, const T* src2, size_t step2,
                 dst[i+2] = z2; dst[i+3] = z3;
             }
         }
-
+        #endif
         for( ; i < size.width; i++ )
             dst[i] = src2[i] != 0 ? saturate_cast<T>(scale/src2[i]) : 0;
     }
@@ -1834,6 +1839,7 @@ addWeighted_( const T* src1, size_t step1, const T* src2, size_t step2,
     for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
         int x = 0;
+		#if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             T t0 = saturate_cast<T>(src1[x]*alpha + src2[x]*beta + gamma);
@@ -1844,7 +1850,7 @@ addWeighted_( const T* src1, size_t step1, const T* src2, size_t step2,
             t1 = saturate_cast<T>(src1[x+3]*alpha + src2[x+3]*beta + gamma);
             dst[x+2] = t0; dst[x+3] = t1;
         }
-
+        #endif
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<T>(src1[x]*alpha + src2[x]*beta + gamma);
     }
@@ -1891,6 +1897,7 @@ addWeighted8u( const uchar* src1, size_t step1,
             }
         }
 #endif
+		#if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             float t0, t1;
@@ -1906,6 +1913,7 @@ addWeighted8u( const uchar* src1, size_t step1,
             dst[x+2] = saturate_cast<uchar>(t0);
             dst[x+3] = saturate_cast<uchar>(t1);
         }
+        #endif
 
         for( ; x < size.width; x++ )
         {
@@ -1994,6 +2002,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
+			#if CV_ENABLE_UNROLLED
             for( ; x <= size.width - 4; x += 4 )
             {
                 int t0, t1;
@@ -2004,7 +2013,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
                 t1 = -(src1[x+3] > src2[x+3]) ^ m;
                 dst[x+2] = (uchar)t0; dst[x+3] = (uchar)t1;
             }
-
+            #endif
             for( ; x < size.width; x++ )
                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
 			   }
@@ -2015,6 +2024,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
+			#if CV_ENABLE_UNROLLED
             for( ; x <= size.width - 4; x += 4 )
             {
                 int t0, t1;
@@ -2025,7 +2035,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
                 t1 = -(src1[x+3] == src2[x+3]) ^ m;
                 dst[x+2] = (uchar)t0; dst[x+3] = (uchar)t1;
             }
-
+            #endif
             for( ; x < size.width; x++ )
                 dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
         }
@@ -2382,6 +2392,7 @@ inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
     {
         int x = 0;
+		#if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             int t0, t1;
@@ -2392,7 +2403,7 @@ inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
             t1 = src2[x+3] <= src1[x+3] && src1[x+3] <= src3[x+3];
             dst[x+2] = (uchar)-t0; dst[x+3] = (uchar)-t1;
         }
-
+        #endif
         for( ; x < size.width; x++ )
             dst[x] = (uchar)-(src2[x] <= src1[x] && src1[x] <= src3[x]);
     }

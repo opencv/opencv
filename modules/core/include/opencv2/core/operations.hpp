@@ -48,6 +48,7 @@
   #include <limits.h>
 #endif // SKIP_INCLUDES
 
+
 #ifdef __cplusplus
 
 /////// exchange-add operation for atomic operations on reference counters ///////
@@ -903,12 +904,14 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, int n)
 {
     _AccTp s = 0;
-    int i;
-    for( i = 0; i <= n - 4; i += 4 )
+    int i=0;
+ #if CV_ENABLE_UNROLLED
+    for( ; i <= n - 4; i += 4 )
     {
         _AccTp v0 = a[i], v1 = a[i+1], v2 = a[i+2], v3 = a[i+3];
         s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
     }
+#endif
     for( ; i < n; i++ )
     {
         _AccTp v = a[i];
@@ -922,12 +925,14 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normL1(const _Tp* a, int n)
 {
     _AccTp s = 0;
-    int i;
-    for( i = 0; i <= n - 4; i += 4 )
+    int i = 0;
+#if CV_ENABLE_UNROLLED
+    for(; i <= n - 4; i += 4 )
     {
         s += (_AccTp)fast_abs(a[i]) + (_AccTp)fast_abs(a[i+1]) +
             (_AccTp)fast_abs(a[i+2]) + (_AccTp)fast_abs(a[i+3]);
     }
+#endif
     for( ; i < n; i++ )
         s += fast_abs(a[i]);
     return s;
@@ -948,12 +953,14 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
-    int i;
-    for( i = 0; i <= n - 4; i += 4 )
+    int i= 0;
+ #if CV_ENABLE_UNROLLED
+    for(; i <= n - 4; i += 4 )
     {
         _AccTp v0 = a[i] - b[i], v1 = a[i+1] - b[i+1], v2 = a[i+2] - b[i+2], v3 = a[i+3] - b[i+3];
         s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
     }
+#endif
     for( ; i < n; i++ )
     {
         _AccTp v = a[i] - b[i];
@@ -986,12 +993,14 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normL1(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
-    int i;
-    for( i = 0; i <= n - 4; i += 4 )
+    int i= 0;
+ #if CV_ENABLE_UNROLLED
+    for(; i <= n - 4; i += 4 )
     {
         _AccTp v0 = a[i] - b[i], v1 = a[i+1] - b[i+1], v2 = a[i+2] - b[i+2], v3 = a[i+3] - b[i+3];
         s += std::abs(v0) + std::abs(v1) + std::abs(v2) + std::abs(v3);
     }
+#endif
     for( ; i < n; i++ )
     {
         _AccTp v = a[i] - b[i];
@@ -2422,14 +2431,16 @@ template<typename _Tp> inline typename DataType<_Tp>::work_type
 dot(const Vector<_Tp>& v1, const Vector<_Tp>& v2)
 {
     typedef typename DataType<_Tp>::work_type _Tw;
-    size_t i, n = v1.size();
+    size_t i = 0, n = v1.size();
     assert(v1.size() == v2.size());
 
     _Tw s = 0;
     const _Tp *ptr1 = &v1[0], *ptr2 = &v2[0];
-    for( i = 0; i <= n - 4; i += 4 )
+ #if CV_ENABLE_UNROLLED
+    for(; i <= n - 4; i += 4 )
         s += (_Tw)ptr1[i]*ptr2[i] + (_Tw)ptr1[i+1]*ptr2[i+1] +
             (_Tw)ptr1[i+2]*ptr2[i+2] + (_Tw)ptr1[i+3]*ptr2[i+3];
+#endif
     for( ; i < n; i++ )
         s += (_Tw)ptr1[i]*ptr2[i];
     return s;

@@ -131,6 +131,12 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #define CPU_HAS_NEON_FEATURE (false)
 #endif
 
+#ifdef CV_ICC
+#define CV_ENABLE_UNROLLED 0
+#else
+#define CV_ENABLE_UNROLLED 1
+#endif
+
 #ifndef IPPI_CALL
 #define IPPI_CALL(func) CV_Assert((func) >= 0)
 #endif

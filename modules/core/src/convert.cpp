@@ -578,7 +578,8 @@ cvtScaleAbs_( const T* src, size_t sstep,
             dst[x] = saturate_cast<DT>(std::abs(src[x]*scale + shift));
     }
 }    
-    
+
+
 template<typename T, typename DT, typename WT> static void
 cvtScale_( const T* src, size_t sstep,
            DT* dst, size_t dstep, Size size,
@@ -590,6 +591,7 @@ cvtScale_( const T* src, size_t sstep,
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
+#if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             DT t0, t1;
@@ -600,6 +602,7 @@ cvtScale_( const T* src, size_t sstep,
             t1 = saturate_cast<DT>(src[x+3]*scale + shift);
             dst[x+2] = t0; dst[x+3] = t1;
         }
+#endif
 
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(src[x]*scale + shift);
@@ -655,21 +658,53 @@ cvt_( const T* src, size_t sstep,
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
-        {
-            DT t0, t1;
-            t0 = saturate_cast<DT>(src[x]);
-            t1 = saturate_cast<DT>(src[x+1]);
-            dst[x] = t0; dst[x+1] = t1;
-            t0 = saturate_cast<DT>(src[x+2]);
-            t1 = saturate_cast<DT>(src[x+3]);
-            dst[x+2] = t0; dst[x+3] = t1;
-        }
-        
+		for( ; x <= size.width - 4; x += 4 )
+		{
+			DT t0, t1;
+			t0 = saturate_cast<DT>(src[x]);
+			t1 = saturate_cast<DT>(src[x+1]);
+			dst[x] = t0; dst[x+1] = t1;
+			t0 = saturate_cast<DT>(src[x+2]);
+			t1 = saturate_cast<DT>(src[x+3]);
+			dst[x+2] = t0; dst[x+3] = t1;
+		}
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(src[x]);
     }
 }
+
+//vz optimized template specialization, test Core_ConvertScale/ElemWiseTest
+template<> static void
+cvt_<float, short>( const float* src, size_t sstep,
+     short* dst, size_t dstep, Size size )
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+ 
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        int x = 0;
+		#if CV_SSE2
+		if(USE_SSE2){
+			  for( ; x <= size.width - 8; x += 8 )
+			{
+				__m128 src128 = _mm_loadu_ps (src + x);
+				__m128i src_int128 = _mm_cvtps_epi32 (src128);
+	
+				src128 = _mm_loadu_ps (src + x + 4); 
+				__m128i src1_int128 = _mm_cvtps_epi32 (src128);
+				
+				src1_int128 = _mm_packs_epi32(src_int128, src1_int128);
+				_mm_storeu_si128((__m128i*)(dst + x),src1_int128);
+			}
+		}
+        #endif
+        for( ; x < size.width; x++ )
+            dst[x] = (src[x]);
+    }
+
+}
+ 
 
 template<typename T> static void
 cpy_( const T* src, size_t sstep, T* dst, size_t dstep, Size size )

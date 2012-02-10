@@ -1657,9 +1657,10 @@ namespace cv
 template<typename T> static void
 transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 {
-    int i, j, m = sz.width, n = sz.height;
-    
-    for( i = 0; i <= m - 4; i += 4 )
+    int i=0, j, m = sz.width, n = sz.height;
+
+	#if CV_ENABLE_UNROLLED
+    for(; i <= m - 4; i += 4 )
     {
         T* d0 = (T*)(dst + dstep*i);
         T* d1 = (T*)(dst + dstep*(i+1));
@@ -1685,12 +1686,13 @@ transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
             d0[j] = s0[0]; d1[j] = s0[1]; d2[j] = s0[2]; d3[j] = s0[3];
         }
     }
-    
+    #endif
     for( ; i < m; i++ )
     {
         T* d0 = (T*)(dst + dstep*i);
-        
-        for( j = 0; j <= n - 4; j += 4 )
+        j = 0;
+		#if CV_ENABLE_UNROLLED
+        for(; j <= n - 4; j += 4 )
         {
             const T* s0 = (const T*)(src + i*sizeof(T) + sstep*j);
             const T* s1 = (const T*)(src + i*sizeof(T) + sstep*(j+1));
@@ -1699,7 +1701,7 @@ transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
             
             d0[j] = s0[0]; d0[j+1] = s1[0]; d0[j+2] = s2[0]; d0[j+3] = s3[0];
         }
-        
+        #endif
         for( ; j < n; j++ )
         {
             const T* s0 = (const T*)(src + i*sizeof(T) + j*sstep);
@@ -1878,7 +1880,9 @@ reduceR_( const Mat& srcmat, Mat& dstmat )
     for( ; --size.height; )
     {
         src += srcstep;
-        for( i = 0; i <= size.width - 4; i += 4 )
+        i = 0;
+		#if CV_ENABLE_UNROLLED
+        for(; i <= size.width - 4; i += 4 )
         {
             WT s0, s1;
             s0 = op(buf[i], (WT)src[i]);
@@ -1889,7 +1893,7 @@ reduceR_( const Mat& srcmat, Mat& dstmat )
             s1 = op(buf[i+3], (WT)src[i+3]);
             buf[i+2] = s0; buf[i+3] = s1;
         }
-
+        #endif
         for( ; i < size.width; i++ )
             buf[i] = op(buf[i], (WT)src[i]);
     }
@@ -2467,7 +2471,9 @@ double cv::kmeans( InputArray _data, int K,
                     sample = data.ptr<float>(i);
                     k = labels[i];
                     float* center = centers.ptr<float>(k);
-                    for( j = 0; j <= dims - 4; j += 4 )
+					j=0;
+					#if CV_ENABLE_UNROLLED
+                    for(; j <= dims - 4; j += 4 )
                     {
                         float t0 = center[j] + sample[j];
                         float t1 = center[j+1] + sample[j+1];
@@ -2481,6 +2487,7 @@ double cv::kmeans( InputArray _data, int K,
                         center[j+2] = t0;
                         center[j+3] = t1;
                     }
+                    #endif
                     for( ; j < dims; j++ )
                         center[j] += sample[j];
                     counters[k]++;
