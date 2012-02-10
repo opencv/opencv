@@ -674,7 +674,7 @@ cvt_( const T* src, size_t sstep,
 }
 
 //vz optimized template specialization, test Core_ConvertScale/ElemWiseTest
-template<> static void
+template<>  void
 cvt_<float, short>( const float* src, size_t sstep,
      short* dst, size_t dstep, Size size )
 {
