@@ -563,6 +563,7 @@ cvtScaleAbs_( const T* src, size_t sstep,
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
+        #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             DT t0, t1;
@@ -573,7 +574,7 @@ cvtScaleAbs_( const T* src, size_t sstep,
             t1 = saturate_cast<DT>(std::abs(src[x+3]*scale + shift));
             dst[x+2] = t0; dst[x+3] = t1;
         }
-        
+        #endif      
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(std::abs(src[x]*scale + shift));
     }
@@ -591,7 +592,7 @@ cvtScale_( const T* src, size_t sstep,
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
-#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             DT t0, t1;
@@ -602,7 +603,7 @@ cvtScale_( const T* src, size_t sstep,
             t1 = saturate_cast<DT>(src[x+3]*scale + shift);
             dst[x+2] = t0; dst[x+3] = t1;
         }
-#endif
+        #endif
 
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(src[x]*scale + shift);
@@ -658,6 +659,7 @@ cvt_( const T* src, size_t sstep,
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
+		#if CV_ENABLE_UNROLLED
 		for( ; x <= size.width - 4; x += 4 )
 		{
 			DT t0, t1;
@@ -668,6 +670,7 @@ cvt_( const T* src, size_t sstep,
 			t1 = saturate_cast<DT>(src[x+3]);
 			dst[x+2] = t0; dst[x+3] = t1;
 		}
+        #endif
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(src[x]);
     }
@@ -684,7 +687,7 @@ cvt_<float, short>( const float* src, size_t sstep,
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
-		#if CV_SSE2
+		#if   CV_SSE2
 		if(USE_SSE2){
 			  for( ; x <= size.width - 8; x += 8 )
 			{
@@ -700,11 +703,11 @@ cvt_<float, short>( const float* src, size_t sstep,
 		}
         #endif
         for( ; x < size.width; x++ )
-            dst[x] = (src[x]);
+            dst[x] = saturate_cast<short>(src[x]);
     }
 
 }
- 
+
 
 template<typename T> static void
 cpy_( const T* src, size_t sstep, T* dst, size_t dstep, Size size )
