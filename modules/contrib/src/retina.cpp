@@ -337,6 +337,9 @@ void Retina::getMagno(cv::Mat &retinaOutput_magno)
 // original API level data accessors : copy buffers if size matches
 void Retina::getMagno(std::valarray<float> &magnoOutputBufferCopy){if (magnoOutputBufferCopy.size()==_retinaFilter->getMovingContours().size()) magnoOutputBufferCopy = _retinaFilter->getMovingContours();}
 void Retina::getParvo(std::valarray<float> &parvoOutputBufferCopy){if (parvoOutputBufferCopy.size()==_retinaFilter->getContours().size()) parvoOutputBufferCopy = _retinaFilter->getContours();}
+// original API level data accessors : get buffers addresses...
+const std::valarray<float> & Retina::getMagno() const {return _retinaFilter->getMovingContours();}
+const std::valarray<float> & Retina::getParvo() const {if (_retinaFilter->getColorMode())return _retinaFilter->getColorOutput(); /* implicite else */return _retinaFilter->getContours();}
 
 // private method called by constructirs
 void Retina::_init(const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)

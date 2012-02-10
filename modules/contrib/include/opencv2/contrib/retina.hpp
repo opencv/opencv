@@ -288,6 +288,10 @@ public:
 	 */
 	void getMagno(std::valarray<float> &retinaOutput_magno);
 
+	// original API level data accessors : get buffers addresses...
+	const std::valarray<float> & getMagno() const;
+	const std::valarray<float> & getParvo() const;
+
 	/**
 	 * activate color saturation as the final step of the color demultiplexing process
 	 * -> this saturation is a sigmoide function applied to each channel of the demultiplexed image.
