@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include <stdio.h>
 
 using namespace cv;
 using namespace std;
@@ -130,6 +131,8 @@ void CV_VideoPositioningTest::run_test(int method)
 	for (size_t i = 0; i < n; ++i)
 	{
         string file_path = src_dir + "video/big_buck_bunny." + ext[i];
+
+        printf("\nReading video file in %s...\n", file_path.c_str());
 
 		CvCapture* cap = cvCreateFileCapture(file_path.c_str());
 
