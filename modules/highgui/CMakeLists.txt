@@ -270,5 +270,5 @@ set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_add_precompiled_headers(${the_module})
 
-ocv_add_accuracy_tests()
+ocv_add_accuracy_tests(highgui opencv_imgproc)
 ocv_add_perf_tests()

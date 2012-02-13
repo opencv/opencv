@@ -412,11 +412,11 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
 
             cv::resize(img, img, Size(968, 757), 0.0, 0.0, cv::INTER_CUBIC);
 
-            for (int i = 0; i < img.rows; ++i)
-                for (int j = 0; j < img.cols; ++j)
-                    if (img.at<Vec3b>(i, j) == Vec3b::all(0))
-                        img.at<Vec3b>(i, j) = Vec3b(0, 255, 0);
-            else img.at<Vec3b>(i, j) = Vec3b(0, 0, 255);
+            for (int k = 0; k < img.rows; ++k)
+                for (int l = 0; l < img.cols; ++l)
+                    if (img.at<Vec3b>(k, l) == Vec3b::all(0))
+                        img.at<Vec3b>(k, l) = Vec3b(0, 255, 0);
+            else img.at<Vec3b>(k, l) = Vec3b(0, 0, 255);
 
             imwrite(dir+"QCIF_"+s_digit.str()+".bmp", img);
 
