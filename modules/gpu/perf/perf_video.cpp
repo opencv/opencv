@@ -11,8 +11,8 @@ GPU_PERF_TEST_1(BroxOpticalFlow, cv::gpu::DeviceInfo)
 
     cv::gpu::setDevice(devInfo.deviceID());
 
-    cv::Mat frame0_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-    cv::Mat frame1_host = readImage("gpu/perf/aloeR.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame0_host = readImage("gpu/opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1_host = readImage("gpu/opticalflow/frame1.png", cv::IMREAD_GRAYSCALE);
 
     ASSERT_FALSE(frame0_host.empty());
     ASSERT_FALSE(frame1_host.empty());
@@ -202,8 +202,8 @@ GPU_PERF_TEST_1(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo)
 
     cv::gpu::setDevice(devInfo.deviceID());
 
-    cv::Mat frame0_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-    cv::Mat frame1_host = readImage("gpu/perf/aloeR.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame0_host = readImage("gpu/opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1_host = readImage("gpu/opticalflow/frame1.png", cv::IMREAD_GRAYSCALE);
 
     ASSERT_FALSE(frame0_host.empty());
     ASSERT_FALSE(frame1_host.empty());
