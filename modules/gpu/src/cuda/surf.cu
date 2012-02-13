@@ -541,8 +541,8 @@ namespace cv { namespace gpu { namespace device
                     
                         angle = atan2f(Y, X);
                         if (angle < 0)
-                            angle += 2.0f * CV_PI;
-                        angle *= 180.0f / CV_PI;
+                            angle += 2.0f * CV_PI_F;
+                        angle *= 180.0f / CV_PI_F;
                     }
                 }
                 s_X[tid] = X;
@@ -636,8 +636,8 @@ namespace cv { namespace gpu { namespace device
                 {
                     float kp_dir = atan2f(besty, bestx);
                     if (kp_dir < 0)
-                        kp_dir += 2.0f * CV_PI;
-                    kp_dir *= 180.0f / CV_PI;
+                        kp_dir += 2.0f * CV_PI_F;
+                    kp_dir *= 180.0f / CV_PI_F;
 
                     featureDir[blockIdx.x] = kp_dir;
                 }
@@ -724,7 +724,7 @@ namespace cv { namespace gpu { namespace device
             const float centerX = featureX[blockIdx.x];
             const float centerY = featureY[blockIdx.x];
             const float size = featureSize[blockIdx.x];
-            const float descriptor_dir = featureDir[blockIdx.x] * (float)(CV_PI / 180);
+            const float descriptor_dir = featureDir[blockIdx.x] * (float)(CV_PI_F / 180.0f);
 
             /* The sampling intervals and wavelet sized for selecting an orientation
              and building the keypoint descriptor are defined relative to 's' */
@@ -816,6 +816,7 @@ namespace cv { namespace gpu { namespace device
 
             calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir);
             __syncthreads();
+
 
             const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 

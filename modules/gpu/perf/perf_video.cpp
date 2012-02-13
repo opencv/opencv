@@ -193,4 +193,36 @@ INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, testing::Combine
                             testing::Values(17, 21)
                         ));
 
+//////////////////////////////////////////////////////
+// PyrLKOpticalFlowDense
+
+GPU_PERF_TEST_1(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo)
+{
+    cv::gpu::DeviceInfo devInfo = GetParam();
+
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat frame0_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1_host = readImage("gpu/perf/aloeR.jpg", cv::IMREAD_GRAYSCALE);
+
+    ASSERT_FALSE(frame0_host.empty());
+    ASSERT_FALSE(frame1_host.empty());
+
+    cv::gpu::GpuMat frame0(frame0_host);
+    cv::gpu::GpuMat frame1(frame1_host);
+    cv::gpu::GpuMat u; 
+    cv::gpu::GpuMat v;
+
+    cv::gpu::PyrLKOpticalFlow pyrLK;
+
+    declare.time(10);
+
+    TEST_CYCLE()
+    {
+        pyrLK.dense(frame0, frame1, u, v);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowDense, ALL_DEVICES);
+
 #endif
