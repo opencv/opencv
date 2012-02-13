@@ -254,4 +254,172 @@ TEST_P(InterpolateFrames, Regression)
 
 INSTANTIATE_TEST_CASE_P(Video, InterpolateFrames, ALL_DEVICES);
 
-#endif
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// GoodFeaturesToTrack
+
+PARAM_TEST_CASE(GoodFeaturesToTrack, cv::gpu::DeviceInfo, double)
+{
+    cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat image;
+
+    int maxCorners;
+    double qualityLevel;
+    double minDistance;
+
+    std::vector<cv::Point2f> pts_gold;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        minDistance = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        image = readImage("opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(image.empty());
+
+        maxCorners = 1000;
+        qualityLevel= 0.01;
+
+        cv::goodFeaturesToTrack(image, pts_gold, maxCorners, qualityLevel, minDistance);
+    }
+};
+
+TEST_P(GoodFeaturesToTrack, Accuracy)
+{
+    cv::gpu::GoodFeaturesToTrackDetector_GPU detector(maxCorners, qualityLevel, minDistance);
+
+    cv::gpu::GpuMat d_pts;
+
+    detector(loadMat(image), d_pts);
+
+    std::vector<cv::Point2f> pts(d_pts.cols);
+    cv::Mat pts_mat(1, d_pts.cols, CV_32FC2, (void*)&pts[0]);
+    d_pts.download(pts_mat);
+
+    ASSERT_EQ(pts_gold.size(), pts.size());
+
+    size_t mistmatch = 0;
+
+    for (size_t i = 0; i < pts.size(); ++i)
+    {
+        cv::Point2i a = pts_gold[i];
+        cv::Point2i b = pts[i];
+
+        bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
+
+        if (!eq)
+            ++mistmatch;
+    }
+
+    double bad_ratio = static_cast<double>(mistmatch) / pts.size();
+
+    ASSERT_LE(bad_ratio, 0.01);
+}
+
+INSTANTIATE_TEST_CASE_P(Video, GoodFeaturesToTrack, Combine(ALL_DEVICES, Values(0.0, 3.0)));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// PyrLKOpticalFlow
+
+PARAM_TEST_CASE(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, bool)
+{
+    cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat frame0;
+    cv::Mat frame1;
+
+    std::vector<cv::Point2f> pts;
+
+    std::vector<cv::Point2f> nextPts_gold;
+    std::vector<unsigned char> status_gold;
+    std::vector<float> err_gold;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        bool useGray = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        frame0 = readImage("opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+        ASSERT_FALSE(frame0.empty());
+        
+        frame1 = readImage("opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+        ASSERT_FALSE(frame1.empty());
+
+        cv::Mat gray_frame;
+        if (useGray)
+            gray_frame = frame0;
+        else
+            cv::cvtColor(frame0, gray_frame, cv::COLOR_BGR2GRAY);
+
+        cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
+
+        cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, err_gold, cv::Size(21, 21), 3, 
+            cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01), 0.5, CV_LKFLOW_GET_MIN_EIGENVALS);
+    }
+};
+
+TEST_P(PyrLKOpticalFlowSparse, Accuracy)
+{
+    cv::gpu::PyrLKOpticalFlow d_pyrLK;
+
+    cv::gpu::GpuMat d_pts;
+    cv::Mat pts_mat(1, pts.size(), CV_32FC2, (void*)&pts[0]);
+    d_pts.upload(pts_mat);
+
+    cv::gpu::GpuMat d_nextPts;
+    cv::gpu::GpuMat d_status;
+    cv::gpu::GpuMat d_err;
+
+    d_pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status, &d_err);
+
+    std::vector<cv::Point2f> nextPts(d_nextPts.cols);
+    cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*)&nextPts[0]);
+    d_nextPts.download(nextPts_mat);
+
+    std::vector<unsigned char> status(d_status.cols);
+    cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void*)&status[0]);
+    d_status.download(status_mat);
+
+    std::vector<float> err(d_err.cols);
+    cv::Mat err_mat(1, d_err.cols, CV_32FC1, (void*)&err[0]);
+    d_err.download(err_mat);
+
+    ASSERT_EQ(nextPts_gold.size(), nextPts.size());
+    ASSERT_EQ(status_gold.size(), status.size());
+    ASSERT_EQ(err_gold.size(), err.size());
+
+    size_t mistmatch = 0;
+
+    for (size_t i = 0; i < nextPts.size(); ++i)
+    {
+        if (status[i] != status_gold[i])
+        {
+            ++mistmatch;
+            continue;
+        }
+
+        if (status[i])
+        {
+            cv::Point2i a = nextPts[i];
+            cv::Point2i b = nextPts_gold[i];
+
+            bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
+            float errdiff = std::abs(err[i] - err_gold[i]);
+
+            if (!eq || errdiff > 1e-4)
+                ++mistmatch;
+        }
+    }
+
+    double bad_ratio = static_cast<double>(mistmatch) / nextPts.size();
+
+    ASSERT_LE(bad_ratio, 0.01);
+}
+
+INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, Combine(ALL_DEVICES, Bool()));
+
+#endif // HAVE_CUDA

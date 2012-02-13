@@ -1717,6 +1717,108 @@ public:
     GpuMat buf;
 };
 
+class CV_EXPORTS GoodFeaturesToTrackDetector_GPU
+{
+public:
+    GoodFeaturesToTrackDetector_GPU(int maxCorners_, double qualityLevel_, double minDistance_)
+    {
+        maxCorners = maxCorners_;
+        qualityLevel = qualityLevel_;
+        minDistance = minDistance_;
+
+        blockSize = 3;
+        useHarrisDetector = false;
+        harrisK = 0.04;
+    }
+
+    //! return 1 rows matrix with CV_32FC2 type
+    void operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat());
+
+    int maxCorners;
+    double qualityLevel;
+    double minDistance;
+
+    int blockSize;
+    bool useHarrisDetector;
+    double harrisK;
+
+    void releaseMemory()
+    {
+        Dx_.release();
+        Dy_.release();
+        buf_.release();
+        eig_.release();
+        minMaxbuf_.release();
+        tmpCorners_.release();
+    }
+
+private:
+    GpuMat Dx_;
+    GpuMat Dy_;
+    GpuMat buf_;
+    GpuMat eig_;
+    GpuMat minMaxbuf_;
+    GpuMat tmpCorners_;
+};
+
+class CV_EXPORTS PyrLKOpticalFlow
+{
+public:
+    PyrLKOpticalFlow()
+    {
+        winSize = Size(21, 21);
+        maxLevel = 3;
+        iters = 30;
+        derivLambda = 0.5;
+        useInitialFlow = false;
+        minEigThreshold = 1e-4f;
+    }
+
+    void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
+        GpuMat& status, GpuMat* err = 0);
+
+    void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
+
+    Size winSize;
+    int maxLevel;
+    int iters;
+    double derivLambda;
+    bool useInitialFlow;
+    float minEigThreshold;
+
+    void releaseMemory()
+    {
+        dx_calcBuf_.release();
+        dy_calcBuf_.release();
+
+        prevPyr_.clear();
+        nextPyr_.clear();
+
+        dx_buf_.release();
+        dy_buf_.release();
+
+        uPyr_.clear();
+        vPyr_.clear();
+    }
+
+private:
+    void calcSharrDeriv(const GpuMat& src, GpuMat& dx, GpuMat& dy);
+
+    void buildImagePyramid(const GpuMat& img0, vector<GpuMat>& pyr, bool withBorder);
+
+    GpuMat dx_calcBuf_;
+    GpuMat dy_calcBuf_;
+
+    vector<GpuMat> prevPyr_;
+    vector<GpuMat> nextPyr_; 
+
+    GpuMat dx_buf_;
+    GpuMat dy_buf_;
+
+    vector<GpuMat> uPyr_;
+    vector<GpuMat> vPyr_;
+};
+
 //! Interpolate frames (images) using provided optical flow (displacement field).
 //! frame0   - frame 0 (32-bit floating point images, single channel)
 //! frame1   - frame 1 (the same type and size)

@@ -2,6 +2,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "performance.h"
 
@@ -1106,6 +1107,79 @@ TEST(gemm)
 
         GPU_ON;
         gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
+        GPU_OFF;
+    }
+}
+
+TEST(GoodFeaturesToTrack)
+{
+    Mat src = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+
+    vector<Point2f> pts;
+
+    goodFeaturesToTrack(src, pts, 8000, 0.01, 0.0);
+
+    CPU_ON;
+    goodFeaturesToTrack(src, pts, 8000, 0.01, 0.0);
+    CPU_OFF;
+
+    gpu::GoodFeaturesToTrackDetector_GPU detector(8000, 0.01, 0.0);
+
+    gpu::GpuMat d_src(src);
+    gpu::GpuMat d_pts;
+
+    detector(d_src, d_pts);
+
+    GPU_ON;
+    detector(d_src, d_pts);
+    GPU_OFF;
+}
+
+TEST(PyrLKOpticalFlow)
+{
+    Mat frame0 = imread(abspath("rubberwhale1.png"));
+    if (frame0.empty()) throw runtime_error("can't open rubberwhale1.png");
+
+    Mat frame1 = imread(abspath("rubberwhale2.png"));
+    if (frame1.empty()) throw runtime_error("can't open rubberwhale2.png");
+    
+    Mat gray_frame;
+    cvtColor(frame0, gray_frame, COLOR_BGR2GRAY);
+    
+    for (int points = 1000; points <= 8000; points *= 2)
+    {
+        SUBTEST << points;
+
+        vector<Point2f> pts;
+        goodFeaturesToTrack(gray_frame, pts, points, 0.01, 0.0);
+
+        vector<Point2f> nextPts;
+        vector<unsigned char> status;
+
+        calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, noArray());
+
+        CPU_ON;
+        calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, noArray());
+        CPU_OFF;
+
+        gpu::PyrLKOpticalFlow d_pyrLK;
+
+        gpu::GpuMat d_frame0(frame0);
+        gpu::GpuMat d_frame1(frame1);
+
+        gpu::GpuMat d_pts;
+        Mat pts_mat(1, pts.size(), CV_32FC2, (void*)&pts[0]);
+        d_pts.upload(pts_mat);
+
+        gpu::GpuMat d_nextPts;
+        gpu::GpuMat d_status;
+        gpu::GpuMat d_err;
+
+        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
+
+        GPU_ON;
+        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
         GPU_OFF;
     }
 }

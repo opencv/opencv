@@ -98,21 +98,99 @@ GPU_PERF_TEST_1(CreateOpticalFlowNeedleMap, cv::gpu::DeviceInfo)
 
     cv::gpu::GpuMat frame0(frame0_host);
     cv::gpu::GpuMat frame1(frame1_host);
-    cv::gpu::GpuMat d_u, d_v;
+    cv::gpu::GpuMat u, v;
 
     cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
                                     10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
     
-    d_flow(frame0, frame1, d_u, d_v);
+    d_flow(frame0, frame1, u, v);
 
-    cv::gpu::GpuMat d_vertex, d_colors;
+    cv::gpu::GpuMat vertex, colors;
 
     TEST_CYCLE()
     {
-        cv::gpu::createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
+        cv::gpu::createOpticalFlowNeedleMap(u, v, vertex, colors);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(Video, CreateOpticalFlowNeedleMap, ALL_DEVICES);
+
+//////////////////////////////////////////////////////
+// GoodFeaturesToTrack
+
+GPU_PERF_TEST(GoodFeaturesToTrack, cv::gpu::DeviceInfo, double)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    double minDistance = GET_PARAM(1);
+
+    cv::gpu::setDevice(devInfo.deviceID());
+    
+    cv::Mat image_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
+
+    ASSERT_FALSE(image_host.empty());
+
+    cv::gpu::GoodFeaturesToTrackDetector_GPU detector(8000, 0.01, minDistance);
+
+    cv::gpu::GpuMat image(image_host);
+    cv::gpu::GpuMat pts;
+
+    TEST_CYCLE()
+    {
+        detector(image, pts);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, GoodFeaturesToTrack, testing::Combine(ALL_DEVICES, testing::Values(0.0, 3.0)));
+
+//////////////////////////////////////////////////////
+// PyrLKOpticalFlowSparse
+
+GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, bool, int, int)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    bool useGray = GET_PARAM(1);
+    int points = GET_PARAM(2);
+    int win_size = GET_PARAM(3);
+
+    cv::gpu::setDevice(devInfo.deviceID());
+    
+    cv::Mat frame0_host = readImage("gpu/opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame1_host = readImage("gpu/opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+
+    ASSERT_FALSE(frame0_host.empty());
+    ASSERT_FALSE(frame1_host.empty());
+
+    cv::Mat gray_frame;
+    if (useGray)
+        gray_frame = frame0_host;
+    else
+        cv::cvtColor(frame0_host, gray_frame, cv::COLOR_BGR2GRAY);
+
+    cv::gpu::GpuMat pts;
+
+    cv::gpu::GoodFeaturesToTrackDetector_GPU detector(points, 0.01, 0.0);
+    detector(cv::gpu::GpuMat(gray_frame), pts);
+
+    cv::gpu::PyrLKOpticalFlow pyrLK;
+    pyrLK.winSize = cv::Size(win_size, win_size);
+
+    cv::gpu::GpuMat frame0(frame0_host);
+    cv::gpu::GpuMat frame1(frame1_host);
+    cv::gpu::GpuMat nextPts;
+    cv::gpu::GpuMat status;
+
+    TEST_CYCLE()
+    {
+        pyrLK.sparse(frame0, frame1, pts, nextPts, status);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, testing::Combine
+                        (
+                            ALL_DEVICES, 
+                            testing::Bool(), 
+                            testing::Values(1000, 2000, 4000, 8000), 
+                            testing::Values(17, 21)
+                        ));
 
 #endif
