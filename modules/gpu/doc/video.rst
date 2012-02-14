@@ -45,6 +45,159 @@ Class computing the optical flow for two images using Brox et al Optical Flow al
 
 
 
+gpu::GoodFeaturesToTrackDetector_GPU
+------------------------------------
+
+Class used for strong corners detection on an image. ::
+
+    class GoodFeaturesToTrackDetector_GPU
+    {
+    public:
+        explicit GoodFeaturesToTrackDetector_GPU(int maxCorners_ = 1000, double qualityLevel_ = 0.01, double minDistance_ = 0.0,
+            int blockSize_ = 3, bool useHarrisDetector_ = false, double harrisK_ = 0.04);
+
+        void operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat());
+
+        int maxCorners;
+        double qualityLevel;
+        double minDistance;
+
+        int blockSize;
+        bool useHarrisDetector;
+        double harrisK;
+
+        void releaseMemory();
+    };
+
+The class finds the most prominent corners in the image.
+
+.. seealso:: :ocv:func:`goodFeaturesToTrack`
+
+
+
+gpu::GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU
+---------------------------------------------------------------------
+Constructor.
+
+.. ocv:function:: gpu::GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU(int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0, int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
+
+    :param maxCorners: Maximum number of corners to return. If there are more corners than are found, the strongest of them is returned.
+
+    :param qualityLevel: Parameter characterizing the minimal accepted quality of image corners. The parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue (see  :ocv:func:`gpu::cornerMinEigenVal` ) or the Harris function response (see  :ocv:func:`gpu::cornerHarris` ). The corners with the quality measure less than the product are rejected. For example, if the best corner has the quality measure = 1500, and the  ``qualityLevel=0.01`` , then all the corners with the quality measure less than 15 are rejected.
+
+    :param minDistance: Minimum possible Euclidean distance between the returned corners.
+
+    :param blockSize: Size of an average block for computing a derivative covariation matrix over each pixel neighborhood. See  :ocv:func:`cornerEigenValsAndVecs` .
+    
+    :param useHarrisDetector: Parameter indicating whether to use a Harris detector (see :ocv:func:`gpu::cornerHarris`) or :ocv:func:`gpu::cornerMinEigenVal`.
+    
+    :param harrisK: Free parameter of the Harris detector.
+
+
+
+gpu::GoodFeaturesToTrackDetector_GPU::operator ()
+-------------------------------------------------
+Finds the most prominent corners in the image.
+
+.. ocv:function:: void gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat()) 
+
+    :param image: Input 8-bit, single-channel image.
+
+    :param corners: Output vector of detected corners (it will be one row matrix with CV_32FC2 type).
+
+    :param mask: Optional region of interest. If the image is not empty (it needs to have the type  ``CV_8UC1``  and the same size as  ``image`` ), it  specifies the region in which the corners are detected.
+
+.. seealso:: :ocv:func:`goodFeaturesToTrack`
+
+
+
+gpu::GoodFeaturesToTrackDetector_GPU::releaseMemory
+---------------------------------------------------
+Releases inner buffers memory.
+
+.. ocv:function:: void gpu::GoodFeaturesToTrackDetector_GPU::releaseMemory()
+
+
+
+gpu::PyrLKOpticalFlow
+---------------------
+
+Class used for calculating an optical flow. ::
+
+    class PyrLKOpticalFlow
+    {
+    public:
+        PyrLKOpticalFlow();
+
+        void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
+            GpuMat& status, GpuMat* err = 0);
+
+        void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
+
+        Size winSize;
+        int maxLevel;
+        int iters;
+        double derivLambda;
+        bool useInitialFlow;
+        float minEigThreshold;
+
+        void releaseMemory();
+    };
+
+The class can calculate an optical flow for a sparse feature set or dense optical flow using the iterative Lucas-Kanade method with pyramids.
+
+.. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
+
+
+
+gpu::PyrLKOpticalFlow::sparse
+-----------------------------
+Calculate an optical flow for a sparse feature set.
+
+.. ocv:function:: void gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err = 0)
+
+    :param prevImg: First 8-bit input image (supports both grayscale and color images).
+
+    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
+
+    :param prevPts: Vector of 2D points for which the flow needs to be found. It must be one row matrix with CV_32FC2 type.
+
+    :param nextPts: Output vector of 2D points (with single-precision floating-point coordinates) containing the calculated new positions of input features in the second image. When ``useInitialFlow`` is true, the vector must have the same size as in the input.
+
+    :param status: Output status vector (CV_8UC1 type). Each element of the vector is set to 1 if the flow for the corresponding features has been found. Otherwise, it is set to 0.
+
+    :param err: Output vector (CV_32FC1 type) that contains min eigen value. It can be NULL, if not needed.
+
+.. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
+
+
+
+gpu::PyrLKOpticalFlow::dense
+-----------------------------
+Calculate dense optical flow.
+
+.. ocv:function:: void gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0)
+
+    :param prevImg: First 8-bit grayscale input image.
+
+    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
+
+    :param u: Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel 
+
+    :param v: Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel 
+
+    :param err: Output vector (CV_32FC1 type) that contains min eigen value. It can be NULL, if not needed.
+
+
+
+gpu::PyrLKOpticalFlow::releaseMemory
+------------------------------------
+Releases inner buffers memory.
+
+.. ocv:function:: void gpu::PyrLKOpticalFlow::releaseMemory()
+
+
+
 gpu::interpolateFrames
 ----------------------
 Interpolate frames (images) using provided optical flow (displacement field).

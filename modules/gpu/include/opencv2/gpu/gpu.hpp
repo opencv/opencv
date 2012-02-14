@@ -1720,15 +1720,15 @@ public:
 class CV_EXPORTS GoodFeaturesToTrackDetector_GPU
 {
 public:
-    GoodFeaturesToTrackDetector_GPU(int maxCorners_, double qualityLevel_, double minDistance_)
+    explicit GoodFeaturesToTrackDetector_GPU(int maxCorners_ = 1000, double qualityLevel_ = 0.01, double minDistance_ = 0.0,
+        int blockSize_ = 3, bool useHarrisDetector_ = false, double harrisK_ = 0.04)
     {
         maxCorners = maxCorners_;
         qualityLevel = qualityLevel_;
         minDistance = minDistance_;
-
-        blockSize = 3;
-        useHarrisDetector = false;
-        harrisK = 0.04;
+        blockSize = blockSize_;
+        useHarrisDetector = useHarrisDetector_;
+        harrisK = harrisK_;
     }
 
     //! return 1 rows matrix with CV_32FC2 type
