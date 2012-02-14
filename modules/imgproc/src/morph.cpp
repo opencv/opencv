@@ -1099,10 +1099,7 @@ private:
     Point anchor;
     int rowBorderType;
     int columnBorderType;
-    const Scalar& borderValue;
-
-	MorphologyRunner(const MorphologyRunner&);
-	MorphologyRunner& operator=(const MorphologyRunner&);
+    Scalar borderValue;
 };
 
 static void morphOp( int op, InputArray _src, OutputArray _dst,
