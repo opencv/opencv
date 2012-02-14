@@ -1664,7 +1664,7 @@ private:
     GpuMat pattern_;
 
     std::vector<GpuMat> imagePyr_;
-	cv::Ptr<std::vector<GpuMat>> maskPyr_;
+	std::vector<GpuMat> maskPyr_;
 
     GpuMat buf_;
 

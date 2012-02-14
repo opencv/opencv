@@ -493,7 +493,7 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()));
 
     imagePyr_.resize(params_.n_levels_);
-    maskPyr_->resize(params_.n_levels_);
+    maskPyr_.resize(params_.n_levels_);
 
     for (int level = 0; level < static_cast<int>(params_.n_levels_); ++level)
     {
@@ -502,8 +502,8 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         Size sz(cvRound(image.cols * scale), cvRound(image.rows * scale));
 
         ensureSizeIsEnough(sz, image.type(), imagePyr_[level]);
-        ensureSizeIsEnough(sz, CV_8UC1, (*maskPyr_)[level]);
-        (*maskPyr_)[level].setTo(Scalar::all(255));
+        ensureSizeIsEnough(sz, CV_8UC1, maskPyr_[level]);
+        maskPyr_[level].setTo(Scalar::all(255));
         
         // Compute the resized image
         if (level != static_cast<int>(params_.first_level_))
@@ -528,7 +528,7 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
             image.copyTo(imagePyr_[level]);
 
             if (!mask.empty())
-                mask.copyTo((*maskPyr_)[level]);
+                mask.copyTo(maskPyr_[level]);
         }
 
         // Filter keypoints by image border
@@ -537,7 +537,7 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         Rect inner(params_.edge_threshold_, params_.edge_threshold_, sz.width - 2 * params_.edge_threshold_, sz.height - 2 * params_.edge_threshold_);
         buf_(inner).setTo(Scalar::all(255));
 
-        bitwise_and((*maskPyr_)[level], buf_, (*maskPyr_)[level]);
+        bitwise_and(maskPyr_[level], buf_, maskPyr_[level]);
     }
 }
 
@@ -573,7 +573,7 @@ void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
     
     for (int level = 0; level < static_cast<int>(params_.n_levels_); ++level)
     {
-        keyPointsCount_[level] = fastDetector_.calcKeyPointsLocation(imagePyr_[level], (*maskPyr_)[level]);
+        keyPointsCount_[level] = fastDetector_.calcKeyPointsLocation(imagePyr_[level], maskPyr_[level]);
 
         ensureSizeIsEnough(3, keyPointsCount_[level], CV_32FC1, keyPointsPyr_[level]);
 
@@ -752,7 +752,7 @@ void cv::gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::
 void cv::gpu::ORB_GPU::release()
 {
     imagePyr_.clear();
-    maskPyr_->clear();
+    maskPyr_.clear();
 
     buf_.release();
 
