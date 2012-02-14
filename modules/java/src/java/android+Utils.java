@@ -73,12 +73,20 @@ public class Utils {
         return decoded;
     }
 
-    public static Mat bitmapToMat(Bitmap b) {
-        return new Mat(nBitmapToMat(b));
+    public static void bitmapToMat(Bitmap b, Mat m) {
+        if (b == null)
+            throw new java.lang.IllegalArgumentException("Bitmap b == null");
+        if (m == null)
+            throw new java.lang.IllegalArgumentException("Mat m == null");
+    	nBitmapToMat(b, m.nativeObj);
     }
 
-    public static boolean matToBitmap(Mat m, Bitmap b) {
-        return nMatToBitmap(m.nativeObj, b);
+    public static void matToBitmap(Mat m, Bitmap b) {
+        if (m == null)
+            throw new java.lang.IllegalArgumentException("Mat m == null");
+        if (b == null)
+            throw new java.lang.IllegalArgumentException("Bitmap b == null");
+        nMatToBitmap(m.nativeObj, b);
     }
 
     // native stuff
@@ -86,7 +94,7 @@ public class Utils {
         System.loadLibrary("opencv_java");
     }
 
-    private static native long nBitmapToMat(Bitmap b);
+    private static native void nBitmapToMat(Bitmap b, long m_addr);
 
-    private static native boolean nMatToBitmap(long m, Bitmap b);
+    private static native void nMatToBitmap(long m_addr, Bitmap b);
 }

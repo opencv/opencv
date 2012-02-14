@@ -11,6 +11,7 @@ import org.opencv.highgui.VideoCapture;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.View;
@@ -135,13 +136,15 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         }
 
         drawGrid(cols, rows);
-
         Bitmap bmp = Bitmap.createBitmap(cols, rows, Bitmap.Config.ARGB_8888);
-        if (Utils.matToBitmap(mRgba15, bmp))
+        try {
+        	Utils.matToBitmap(mRgba15, bmp);
             return bmp;
-
-        bmp.recycle();
-        return null;
+        } catch(Exception e) {
+        	Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            bmp.recycle();
+            return null;
+        }
     }
 
     private void drawGrid(int cols, int rows) {

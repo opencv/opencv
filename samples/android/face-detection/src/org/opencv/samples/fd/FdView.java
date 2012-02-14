@@ -89,13 +89,16 @@ class FdView extends SampleCvViewBase {
                 Core.rectangle(mRgba, r.tl(), r.br(), new Scalar(0, 255, 0, 255), 3);
         }
 
-        Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
+        Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.RGB_565/*.ARGB_8888*/);
 
-        if (Utils.matToBitmap(mRgba, bmp))
+        try {
+        	Utils.matToBitmap(mRgba, bmp);
             return bmp;
-
-        bmp.recycle();
-        return null;
+        } catch(Exception e) {
+        	Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            bmp.recycle();
+            return null;
+        }
     }
 
     @Override

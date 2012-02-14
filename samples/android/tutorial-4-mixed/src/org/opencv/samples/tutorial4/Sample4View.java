@@ -7,6 +7,7 @@ import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
 class Sample4View extends SampleViewBase {
@@ -56,11 +57,14 @@ class Sample4View extends SampleViewBase {
 
         Bitmap bmp = Bitmap.createBitmap(getFrameWidth(), getFrameHeight(), Bitmap.Config.ARGB_8888);
 
-        if (Utils.matToBitmap(mRgba, bmp))
+        try {
+        	Utils.matToBitmap(mRgba, bmp);
             return bmp;
-
-        bmp.recycle();
-        return null;
+        } catch(Exception e) {
+        	Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            bmp.recycle();
+            return null;
+        }
     }
 
     @Override

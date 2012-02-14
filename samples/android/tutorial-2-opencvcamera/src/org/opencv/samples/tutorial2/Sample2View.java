@@ -11,6 +11,7 @@ import org.opencv.highgui.VideoCapture;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
 class Sample2View extends SampleCvViewBase {
@@ -54,11 +55,14 @@ class Sample2View extends SampleCvViewBase {
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
 
-        if (Utils.matToBitmap(mRgba, bmp))
+        try {
+        	Utils.matToBitmap(mRgba, bmp);
             return bmp;
-
-        bmp.recycle();
-        return null;
+        } catch(Exception e) {
+        	Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            bmp.recycle();
+            return null;
+        }
     }
 
     @Override
