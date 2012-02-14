@@ -267,7 +267,7 @@ TEST_P(BruteForceMatcher, MatchAdd)
         cv::DMatch match = matches[i];
         int shift = isMaskSupported ? 1 : 0;
         {
-            if (i < queryDescCount / 2)
+            if ((int)i < queryDescCount / 2)
             {
                 if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + shift) || (match.imgIdx != 0))
                     badCount++;
@@ -390,7 +390,7 @@ TEST_P(BruteForceMatcher, KnnMatchAdd2)
             {
                 cv::DMatch match = matches[i][k];
                 {
-                    if (i < queryDescCount / 2)
+                    if ((int)i < queryDescCount / 2)
                     {
                         if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + k + shift) || (match.imgIdx != 0) )
                             localBadCount++;
@@ -452,7 +452,7 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
             {
                 cv::DMatch match = matches[i][k];
                 {
-                    if (i < queryDescCount / 2)
+                    if ((int)i < queryDescCount / 2)
                     {
                         if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + k + shift) || (match.imgIdx != 0) )
                             localBadCount++;
@@ -552,7 +552,7 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
             {
                 cv::DMatch match = matches[i][k];
                 {
-                    if (i < queryDescCount / 2)
+                    if ((int)i < queryDescCount / 2)
                     {
                         if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + k + shift) || (match.imgIdx != 0) )
                             localBadCount++;

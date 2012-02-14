@@ -291,7 +291,7 @@ template<typename _Tp>
 		buf = "";
 		if (del_space(it->second[1]) != "") buf += del_space(it->second[1]);
 
-		while (true)
+		for(;;)
 		{
 			bool tr = ((int)buf.length() > col_d-2) ? true: false;
 			int pos;
@@ -299,7 +299,7 @@ template<typename _Tp>
 			if (tr)
 			{
 				pos = buf.find_first_of(' ');
-				while (true)
+				for(;;)
 				{
 					if ((int)buf.find_first_of(' ', pos + 1 ) < col_d-2 &&
                         (int)buf.find_first_of(' ', pos + 1 ) != (int)std::string::npos)

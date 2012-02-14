@@ -158,6 +158,8 @@ public:
     Impl(int cost_type, float terminal_cost, float bad_region_penalty)
         : cost_type_(cost_type), terminal_cost_(terminal_cost), bad_region_penalty_(bad_region_penalty) {}
 
+	~Impl() {}
+
     void find(const vector<Mat> &src, const vector<Point> &corners, vector<Mat> &masks);
     void findInPair(size_t first, size_t second, Rect roi);
 

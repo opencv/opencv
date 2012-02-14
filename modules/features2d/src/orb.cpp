@@ -974,7 +974,7 @@ void ORB::computeKeyPoints(const vector<Mat>& image_pyramid,
  * @param scale the scale at which we compute the orientation
  * @param keypoints the resulting keypoints
  */
-void ORB::computeOrientation(const Mat& image, const Mat&, unsigned int scale,
+void ORB::computeOrientation(const Mat& image, const Mat&, unsigned int /*scale*/,
                              vector<KeyPoint>& keypoints) const
 {
     int half_patch_size = params_.patch_size_/2;
@@ -1003,7 +1003,7 @@ void ORB::computeIntegralImage(const Mat&, unsigned int, Mat&)
  * @param keypoints the keypoints to use
  * @param descriptors the resulting descriptors
  */
-void ORB::computeDescriptors(const Mat& image, const Mat& integral_image, unsigned int,
+void ORB::computeDescriptors(const Mat& image, const Mat& /*integral_image*/, unsigned int,
                              vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     //convert to grayscale if more than one color

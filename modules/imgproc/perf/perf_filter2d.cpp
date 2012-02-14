@@ -32,7 +32,7 @@ PERF_TEST_P( TestFilter2d, Filter2d,
 
     Mat kernel(kSize, kSize, CV_32FC1);
     randu(kernel, -3, 10);
-    float s = fabs( sum(kernel)[0] );
+    float s = (float)fabs( sum(kernel)[0] );
     if(s > 1e-3) kernel /= s;
 
     declare.in(src, WARMUP_RNG).out(dst).time(20);

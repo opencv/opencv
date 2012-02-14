@@ -280,7 +280,7 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
                     {
                         cornerpos[ncorners++] = j+k;
                         if(nonmax_suppression)
-                            curr[j+k] = cornerScore(ptr+k, pixel, threshold);
+                            curr[j+k] = (uchar)cornerScore(ptr+k, pixel, threshold);
                     }
             }
     #endif
@@ -318,7 +318,7 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = cornerScore(ptr, pixel, threshold);
+                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
                                 break;
                             }
                         }
@@ -340,7 +340,7 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = cornerScore(ptr, pixel, threshold);
+                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
                                 break;
                             }
                         }

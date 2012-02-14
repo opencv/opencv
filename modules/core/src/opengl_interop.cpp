@@ -161,9 +161,11 @@ void icvSetOpenGlFuncTab(const CvOpenGlFuncTab* tab)
 void cv::gpu::setGlDevice(int device)
 {
 #ifndef HAVE_CUDA
+	(void)device;
     throw_nocuda;
 #else
     #ifndef HAVE_OPENGL
+	    (void)device;
         throw_nogl;
     #else
         if (!glFuncTab()->isGlContextInitialized())
@@ -483,6 +485,7 @@ inline void cv::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
 cv::GlBuffer::GlBuffer(Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
+	(void)usage;
     throw_nogl;
 #else
     impl_ = Impl::empty();
@@ -492,6 +495,10 @@ cv::GlBuffer::GlBuffer(Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage
 cv::GlBuffer::GlBuffer(int rows, int cols, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
+	(void)rows;
+	(void)cols;
+	(void)type;
+	(void)usage;
     throw_nogl;
 #else
     impl_ = new Impl(rows, cols, type, usage);
@@ -504,6 +511,9 @@ cv::GlBuffer::GlBuffer(int rows, int cols, int type, Usage usage) : rows_(0), co
 cv::GlBuffer::GlBuffer(Size size, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
+	(void)size;
+	(void)type;
+	(void)usage;
     throw_nogl;
 #else
     impl_ = new Impl(size.height, size.width, type, usage);
@@ -516,6 +526,8 @@ cv::GlBuffer::GlBuffer(Size size, int type, Usage usage) : rows_(0), cols_(0), t
 cv::GlBuffer::GlBuffer(InputArray mat_, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
 {
 #ifndef HAVE_OPENGL
+	(void)mat_;
+	(void)usage;
     throw_nogl;
 #else
     int kind = mat_.kind();
@@ -547,6 +559,10 @@ cv::GlBuffer::GlBuffer(InputArray mat_, Usage usage) : rows_(0), cols_(0), type_
 void cv::GlBuffer::create(int rows, int cols, int type, Usage usage)
 {
 #ifndef HAVE_OPENGL
+	(void)rows;
+	(void)cols;
+	(void)type;
+	(void)usage;
     throw_nogl;
 #else
     if (rows_ != rows || cols_ != cols || type_ != type || usage_ != usage)
@@ -572,6 +588,7 @@ void cv::GlBuffer::release()
 void cv::GlBuffer::copyFrom(InputArray mat_)
 {
 #ifndef HAVE_OPENGL
+	(void)mat_;
     throw_nogl;
 #else
     int kind = mat_.kind();
@@ -910,6 +927,9 @@ cv::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0)
 cv::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
+	(void)rows;
+	(void)cols;
+	(void)type;
     throw_nogl;
 #else
     impl_ = new Impl(rows, cols, type);
@@ -922,6 +942,8 @@ cv::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), typ
 cv::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
+	(void)size;
+	(void)type;
     throw_nogl;
 #else
     impl_ = new Impl(size.height, size.width, type);
@@ -934,6 +956,8 @@ cv::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0)
 cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
+	(void)mat_;
+	(void)bgra;
     throw_nogl;
 #else    
     int kind = mat_.kind();
@@ -977,6 +1001,9 @@ cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_
 void cv::GlTexture::create(int rows, int cols, int type)
 {
 #ifndef HAVE_OPENGL
+	(void)rows;
+	(void)cols;
+	(void)type;
     throw_nogl;
 #else
     if (rows_ != rows || cols_ != cols || type_ != type)
@@ -1001,6 +1028,8 @@ void cv::GlTexture::release()
 void cv::GlTexture::copyFrom(InputArray mat_, bool bgra)
 {
 #ifndef HAVE_OPENGL
+	(void)mat_;
+	(void)bgra;
     throw_nogl;
 #else
     int kind = mat_.kind();
@@ -1229,6 +1258,8 @@ cv::GlFont::GlFont(const string& family, int height, Weight weight, Style style)
 void cv::GlFont::draw(const char* str, int len) const
 {
 #ifndef HAVE_OPENGL
+	(void)str;
+	(void)len;
     throw_nogl;
 #else
     if (base_ && len > 0)
@@ -1271,6 +1302,10 @@ namespace
 Ptr<GlFont> cv::GlFont::get(const std::string& family, int height, Weight weight, Style style)
 {
 #ifndef HAVE_OPENGL
+	(void)family;
+	(void)height;
+	(void)weight;
+	(void)style;
     throw_nogl;
     return Ptr<GlFont>();
 #else
@@ -1296,6 +1331,9 @@ Ptr<GlFont> cv::GlFont::get(const std::string& family, int height, Weight weight
 void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRect)
 {
 #ifndef HAVE_OPENGL
+	(void)tex;
+	(void)wndRect;
+	(void)texRect;
     throw_nogl;
 #else
     if (!tex.empty())
@@ -1328,6 +1366,9 @@ void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRe
 void cv::render(const GlArrays& arr, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
+	(void)arr;
+	(void)mode;
+	(void)color;
     throw_nogl;
 #else
     glColor3d(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0);
@@ -1343,6 +1384,10 @@ void cv::render(const GlArrays& arr, int mode, Scalar color)
 void cv::render(const string& str, const Ptr<GlFont>& font, Scalar color, Point2d pos)
 {
 #ifndef HAVE_OPENGL
+	(void)str;
+	(void)font;
+	(void)color;
+	(void)pos;
     throw_nogl;
 #else
     glPushAttrib(GL_DEPTH_BUFFER_BIT);
@@ -1497,6 +1542,9 @@ void cv::GlCamera::setupModelViewMatrix() const
 bool icvCheckGlError(const char* file, const int line, const char* func)
 {
 #ifndef HAVE_OPENGL
+	(void)file;
+	(void)line;
+	(void)func;
     return true;
 #else
     GLenum err = glGetError();

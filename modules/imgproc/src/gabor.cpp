@@ -60,12 +60,12 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
     if( ksize.width > 0 )
         xmax = ksize.width/2;
     else
-        xmax = std::max(fabs(nstds*sigma_x*c), fabs(nstds*sigma_y*s));
+        xmax = (int)std::max(fabs(nstds*sigma_x*c), fabs(nstds*sigma_y*s));
     
     if( ksize.height > 0 )
         ymax = ksize.height/2;
     else
-        ymax = std::max(fabs(nstds*sigma_x*s), fabs(nstds*sigma_y*c));
+        ymax = (int)std::max(fabs(nstds*sigma_x*s), fabs(nstds*sigma_y*c));
         
     xmin = -xmax;
     ymin = -ymax;

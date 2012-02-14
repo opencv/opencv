@@ -62,18 +62,21 @@
     } while(0);
 #else
   #include <iostream>
-  #define LOG_STITCHING_MSG(msg) do { std::cout << msg; std::cout.flush(); } while(0);
+  #define LOG_STITCHING_MSG(msg) for(;;) { std::cout << msg; std::cout.flush(); break; }
 #endif
 #else
   #define LOG_STITCHING_MSG(msg)
 #endif
 
 #define LOG_(_level, _msg)                     \
-    do {                                       \
-        if ((_level) >= ::cv::detail::stitchingLogLevel()) { \
+    for(;;)                                    \
+    {                                          \
+        if ((_level) >= ::cv::detail::stitchingLogLevel()) \
+        {                                      \
             LOG_STITCHING_MSG(_msg);           \
         }                                      \
-    } while(0)
+		break;                                 \
+    } 
 
 
 #define LOG(msg) LOG_(1, msg)

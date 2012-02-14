@@ -102,10 +102,10 @@ private:
 	void print_information_8(int j, int N, int k, int l, double diff);
 };
 
-CV_HomographyTest::CV_HomographyTest() : max_diff(1e-2), max_2diff(2e-2)
+CV_HomographyTest::CV_HomographyTest() : max_diff(1e-2f), max_2diff(2e-2f)
 {
     method = 0;
-    image_size = 1e+2;
+    image_size = 100;
     reproj_threshold = 3.0;
     sigma = 0.01;
 }

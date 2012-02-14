@@ -393,6 +393,9 @@ void cv::pointCloudShow(const string& winname, const GlCamera& camera, const GlA
 {
 #ifndef HAVE_OPENGL
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+	(void)winname;
+	(void)camera;
+	(void)arr;
 #else
     namedWindow(winname, WINDOW_OPENGL);
 
@@ -436,6 +439,10 @@ void cv::pointCloudShow(const string& winname, const GlCamera& camera, const GlA
 void cv::pointCloudShow(const std::string& winname, const cv::GlCamera& camera, InputArray points, InputArray colors)
 {
 #ifndef HAVE_OPENGL
+	(void)winname;
+	(void)camera;
+	(void)points;
+	(void)colors;
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     namedWindow(winname, WINDOW_OPENGL);

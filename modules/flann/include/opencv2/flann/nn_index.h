@@ -119,7 +119,7 @@ public:
             dists_ptr = dists[0];
         }
 
-        RadiusUniqueResultSet<DistanceType> resultSet(radius);
+        RadiusUniqueResultSet<DistanceType> resultSet((DistanceType)radius);
         resultSet.clear();
         findNeighbors(resultSet, query[0], params);
         if (n>0) {

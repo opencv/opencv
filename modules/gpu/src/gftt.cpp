@@ -130,7 +130,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
 
                     if (!m.empty())
                     {
-                        for(int j = 0; j < m.size(); j++)
+                        for(size_t j = 0; j < m.size(); j++)
                         {
                             float dx = p.x - m[j].x;
                             float dy = p.y - m[j].y;

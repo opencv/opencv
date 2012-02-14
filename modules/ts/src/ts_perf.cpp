@@ -985,6 +985,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::tbb_threads(int n)
     if (n > 0)
         test->p_tbb_initializer=new tbb::task_scheduler_init(n);
 #endif
+	(void)n;
     return *this;
 }
 

@@ -82,7 +82,7 @@ private:
     void print_information(int right, int result);
 };
 
-CV_CountNonZeroTest::CV_CountNonZeroTest(): eps_32(1e-8), eps_64(1e-16), src(Mat()), current_type(-1) {}
+CV_CountNonZeroTest::CV_CountNonZeroTest(): eps_32(1e-8f), eps_64(1e-16f), src(Mat()), current_type(-1) {}
 CV_CountNonZeroTest::~CV_CountNonZeroTest() {}
 
 void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type)

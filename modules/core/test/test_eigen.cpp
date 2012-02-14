@@ -165,7 +165,7 @@ void Core_EigenTest_Scalar_64::run(int)
 void Core_EigenTest_32::run(int) { check_full(CV_32FC1); }
 void Core_EigenTest_64::run(int) { check_full(CV_64FC1); }
 
-Core_EigenTest::Core_EigenTest() : eps_val_32(1e-3), eps_vec_32(1e-2), eps_val_64(1e-4), eps_vec_64(1e-3) {}
+Core_EigenTest::Core_EigenTest() : eps_val_32(1e-3f), eps_vec_32(1e-2f), eps_val_64(1e-4f), eps_vec_64(1e-3f) {}
 Core_EigenTest::~Core_EigenTest() {}
 
 bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues, int low_index, int high_index)
@@ -387,7 +387,7 @@ bool Core_EigenTest::check_full(int type)
     const int MATRIX_COUNT = 500;
     const int MAX_DEGREE = 7;
 
-    srand(time(0));
+    srand((unsigned int)time(0));
 
     for (int i = 1; i <= MATRIX_COUNT; ++i)
     {

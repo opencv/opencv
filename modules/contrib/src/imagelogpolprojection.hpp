@@ -231,6 +231,9 @@ private:
 	bool _initLogRetinaSampling(const double reductionFactor, const double samplingStrenght);
 	bool _initLogPolarCortexSampling(const double reductionFactor, const double samplingStrenght);
 
+	ImageLogPolProjection(const ImageLogPolProjection&);
+	ImageLogPolProjection& operator=(const ImageLogPolProjection&);
+
 };
 
 }

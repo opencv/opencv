@@ -401,7 +401,7 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
         res = baseline;
         break;
     case CV_CAP_PROP_OPENNI_FOCAL_LENGTH :
-        res = depthFocalLength_VGA;
+        res = (double)depthFocalLength_VGA;
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION :
         res = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
@@ -552,7 +552,7 @@ inline void getDepthMapFromMetaData( const xn::DepthMetaData& depthMetaData, cv:
     // CV_Assert( sizeof(unsigned short) == sizeof(XnDepthPixel) );
     memcpy( depthMap.data, pDepthMap, cols*rows*sizeof(XnDepthPixel) );
 
-    cv::Mat badMask = (depthMap == noSampleValue) | (depthMap == shadowValue) | (depthMap == 0);
+    cv::Mat badMask = (depthMap == (double)noSampleValue) | (depthMap == (double)shadowValue) | (depthMap == 0);
 
     // mask the pixels with invalid depth
     depthMap.setTo( cv::Scalar::all( CvCapture_OpenNI::INVALID_PIXEL_VAL ), badMask );
@@ -588,8 +588,8 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
         for( int x = 0; x < cols; x++ )
         {
             int ind = y*cols+x;
-            proj[ind].X = x;
-            proj[ind].Y = y;
+            proj[ind].X = (float)x;
+            proj[ind].Y = (float)y;
             proj[ind].Z = depth.at<unsigned short>(y, x);
         }
     }
@@ -625,7 +625,7 @@ void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp
 
     // disparity = baseline * F / z;
 
-    float mult = baseline /*mm*/ * F /*pixels*/;
+    float mult = (float)(baseline /*mm*/ * F /*pixels*/);
 
     disp.create( depth.size(), CV_32FC1);
     disp = cv::Scalar::all( CvCapture_OpenNI::INVALID_PIXEL_VAL );

@@ -63,7 +63,7 @@ void downsamplePoints( const Mat& src, Mat& dst, size_t count )
     {
         for( int j = i; j < dists.cols; j++ )
         {
-            float dist = norm(src.at<Point3_<uchar> >(i) - src.at<Point3_<uchar> >(j));
+            float dist = (float)norm(src.at<Point3_<uchar> >(i) - src.at<Point3_<uchar> >(j));
             dists.at<float>(j, i) = dists.at<float>(i, j) = dist;
         }
     }

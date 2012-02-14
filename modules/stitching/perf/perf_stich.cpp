@@ -87,8 +87,8 @@ PERF_TEST_P( match, bestOf2Nearest, testing::Values("surf", "orb"))
 {
     Mat img1, img1_full = imread( getDataPath("stitching/b1.jpg") );
     Mat img2, img2_full = imread( getDataPath("stitching/b2.jpg") );
-    float scale1 = std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
-    float scale2 = std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
+    float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
+    float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
     resize(img1_full, img1, Size(), scale1, scale1);
     resize(img2_full, img2, Size(), scale2, scale2);
 
