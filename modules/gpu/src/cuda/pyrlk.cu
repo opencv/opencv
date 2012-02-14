@@ -535,7 +535,7 @@ namespace cv { namespace gpu { namespace device
             for (int k = 0; k < c_iters; ++k)
             {
                 if (nextPt.x < -c_winSize_x || nextPt.x >= cols || nextPt.y < -c_winSize_y || nextPt.y >= rows)
-                    break;
+                    return;
 
                 float b1 = 0;
                 float b2 = 0;
@@ -555,7 +555,7 @@ namespace cv { namespace gpu { namespace device
 
                 b1 *= SCALE;
                 b2 *= SCALE;
-                    
+
                 float2 delta;
                 delta.x = A12 * b2 - A22 * b1;
                 delta.y = A12 * b1 - A11 * b2;
