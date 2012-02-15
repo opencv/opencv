@@ -64,6 +64,9 @@ if(CUDA_FOUND)
 
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
 
+  unset(CUDA_npp_LIBRARY CACHE)
+  find_cuda_helper_libs(npp)
+
   macro(OCV_CUDA_COMPILE VAR)
     if (BUILD_SHARED_LIBS)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -DCVAPI_EXPORTS)

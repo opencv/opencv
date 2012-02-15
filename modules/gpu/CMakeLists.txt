@@ -50,8 +50,6 @@ if (HAVE_CUDA)
   OCV_CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
   #CUDA_BUILD_CLEAN_TARGET()
   
-  unset(CUDA_npp_LIBRARY CACHE)
-  find_cuda_helper_libs(npp)
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 else()
   set(lib_cuda "")
