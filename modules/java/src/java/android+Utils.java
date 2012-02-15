@@ -73,6 +73,18 @@ public class Utils {
         return decoded;
     }
 
+    /**
+     * Converts Android Bitmap to OpenCV Mat.
+     * <p>
+     * The function converts an image in the Android Bitmap representation to the OpenCV Mat.
+     * <br>The 'ARGB_8888' and 'RGB_565' input Bitmap formats are supported.
+     * <br>The output Mat is always created of the same size as the input Bitmap and of the 'CV_8UC4' type,
+     * it keeps the image in RGBA format.
+     * <br>The function throws an exception if the conversion fails.
+     *
+     * @param b is a valid input Bitmap object of the type 'ARGB_8888' or 'RGB_565'.
+     * @param m is a valid output Mat object, it will be reallocated if needed, so it's possible to pass an empty Mat.
+     */
     public static void bitmapToMat(Bitmap b, Mat m) {
         if (b == null)
             throw new java.lang.IllegalArgumentException("Bitmap b == null");
@@ -81,6 +93,18 @@ public class Utils {
     	nBitmapToMat(b, m.nativeObj);
     }
 
+
+    /**
+     * Converts OpenCV Mat to Android Bitmap.
+     * <p>
+     * <br>The function converts an image in the OpenCV Mat representation to the Android Bitmap.
+     * <br>The input Mat object has to be of the types 'CV_8UC1' (gray-scale), 'CV_8UC3' (RGB) or 'CV_8UC4' (RGBA).
+     * <br>The output Bitmap object has to be of the same size as the input Mat and of the types 'ARGB_8888' or 'RGB_565'.
+     * <br>The function throws an exception if the conversion fails.
+     *
+     * @param m is a valid input Mat object of the types 'CV_8UC1', 'CV_8UC3' or 'CV_8UC4'.
+     * @param b is a valid Bitmap object of the same size as the Mat m and of type 'ARGB_8888' or 'RGB_565'.
+     */
     public static void matToBitmap(Mat m, Bitmap b) {
         if (m == null)
             throw new java.lang.IllegalArgumentException("Mat m == null");
