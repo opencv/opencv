@@ -304,7 +304,11 @@ public:
 	/**
 	* @return the input image sampled by the photoreceptors spatial sampling
 	*/
-	inline const std::valarray<float> &getPhotoreceptorsSampledFrame() const {if (_photoreceptorsLogSampling)return _photoreceptorsLogSampling->getSampledFrame();};
+	inline const std::valarray<float> &getPhotoreceptorsSampledFrame() const
+    {
+        CV_Assert(_photoreceptorsLogSampling);
+        return _photoreceptorsLogSampling->getSampledFrame();
+    };
 
 	/**
 	* @return photoreceptors output, locally adapted luminance only, no high frequency spatio-temporal noise reduction at the next retina processing stages, use getPhotoreceptors method to get complete photoreceptors output

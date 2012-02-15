@@ -72,6 +72,7 @@ private:
     class ImageIterator
     {
     public:
+        virtual ~ImageIterator() {}
         virtual bool hasNext() const = 0;
         virtual location_scale_t next() = 0;
     };

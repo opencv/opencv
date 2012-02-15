@@ -103,13 +103,13 @@ namespace cv
 
         inline Usage usage() const { return usage_; }
 
+        class Impl;
     private:
         int rows_;
         int cols_;
         int type_;
         Usage usage_;
 
-        class Impl;
         Ptr<Impl> impl_;
     };
 
@@ -150,12 +150,12 @@ namespace cv
         inline int elemSize() const { return CV_ELEM_SIZE(type_); }
         inline int elemSize1() const { return CV_ELEM_SIZE1(type_); }
 
+        class Impl;
     private:
         int rows_;
         int cols_;
         int type_;
 
-        class Impl;
         Ptr<Impl> impl_;
     };
 

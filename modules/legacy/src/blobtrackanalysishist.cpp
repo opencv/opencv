@@ -1045,7 +1045,7 @@ public:
 		return NULL;
 	}
 
-	virtual void    SetFileName(const char* DataBaseName)
+	virtual void    SetFileName(char* DataBaseName)
 	{
 		if(m_HistMat.m_Volume!=m_HistVolumeSaved)SaveHist();
 		m_DataFileName[0] = 0;

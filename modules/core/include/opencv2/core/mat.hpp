@@ -1089,7 +1089,6 @@ template<typename T1, typename T2, typename Op> inline void
 process( const Mat_<T1>& m1, Mat_<T2>& m2, Op op )
 {
     int y, x, rows = m1.rows, cols = m1.cols;
-    int c1 = m1.channels(), c2 = m2.channels();
 
     CV_DbgAssert( m1.size() == m2.size() );
 

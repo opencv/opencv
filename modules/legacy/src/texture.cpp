@@ -135,7 +135,7 @@ cvCreateGLCM( const IplImage* srcImage,
     }
 
     CV_CALL( newGLCM = (CvGLCM*)cvAlloc(sizeof(newGLCM)));
-    memset( newGLCM, 0, sizeof(newGLCM) );
+    memset( newGLCM, 0, sizeof(*newGLCM) );
 
     newGLCM->matrices = 0;
     newGLCM->numMatrices = numStepDirections;
@@ -515,8 +515,8 @@ icvCreateGLCMDescriptors_AllowDoubleNest( CvGLCM* destGLCM, int matrixIndex )
         correlationStdDeviation += (actualSideLoop1-correlationMean) * (actualSideLoop1-correlationMean) * sideEntryValueSum;
     }
 
-    HXY1 =- HXY1;
-    HXY2 =- HXY2;
+    HXY1 = -HXY1;
+    HXY2 = -HXY2;
 
     descriptors[ CV_GLCMDESC_CORRELATIONINFO1 ] = ( HXY - HXY1 ) / ( correlationMean );
     descriptors[ CV_GLCMDESC_CORRELATIONINFO2 ] = sqrt( 1.0 - exp( -2.0 * (HXY2 - HXY ) ) );

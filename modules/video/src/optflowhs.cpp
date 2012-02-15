@@ -177,7 +177,7 @@ icvCalcOpticalFlowHS_8u32fR( uchar*  imgA,
     BufferSize = imageHeight * imageWidth;
 
     II = (icvDerProductEx *) cvAlloc( BufferSize * sizeof( icvDerProductEx ));
-    if( (II == NULL) )
+    if( II == NULL )
         NoMem = 1;
 
     if( NoMem )

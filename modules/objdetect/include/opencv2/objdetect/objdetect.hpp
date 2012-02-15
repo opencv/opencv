@@ -470,11 +470,12 @@ protected:
     Ptr<CvHaarClassifierCascade> oldCascade;
 
 public:
-    class MaskGenerator
+    class CV_EXPORTS MaskGenerator
     {
-        public:
-            virtual cv::Mat generateMask(const cv::Mat& src)=0;
-            virtual void initializeMask(const cv::Mat& /*src*/) {};
+    public:
+        virtual ~MaskGenerator() {}    
+        virtual cv::Mat generateMask(const cv::Mat& src)=0;
+        virtual void initializeMask(const cv::Mat& /*src*/) {};
     };
     void setMaskGenerator(Ptr<MaskGenerator> maskGenerator);
     Ptr<MaskGenerator> getMaskGenerator();

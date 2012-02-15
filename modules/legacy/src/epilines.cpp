@@ -2179,9 +2179,8 @@ icvCvt_64d_32f( double *src, float *dst, int size )
 void FindLineForEpiline(    CvSize imageSize,
                             float a,float b,float c,
                             CvPoint2D32f *start,CvPoint2D32f *end,
-                            int* result)
+                            int*)
 {
-    result = result;
     CvPoint2D32f frameBeg;
 
     CvPoint2D32f frameEnd;

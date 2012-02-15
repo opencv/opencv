@@ -154,23 +154,16 @@ icvMakeScanlines( CvMatrix3 * matrix,
                   int *scanlines_1, int *scanlines_2, int *lens_1, int *lens_2, int *numlines )
 {
 
-    CvStatus error;
-
-    error = icvGetCoefficient( matrix, imgSize, scanlines_2, scanlines_1, numlines );
+    CvStatus error = icvGetCoefficient( matrix, imgSize, scanlines_2, scanlines_1, numlines );
 
     /* Make Length of scanlines */
-
     if( scanlines_1 == 0 && scanlines_2 == 0 )
         return error;
 
     icvMakeScanlinesLengths( scanlines_1, *numlines, lens_1 );
-
     icvMakeScanlinesLengths( scanlines_2, *numlines, lens_2 );
 
-    matrix = matrix;
     return CV_NO_ERR;
-
-
 }                               /* icvMakeScanlines */
 
 
@@ -332,7 +325,7 @@ icvGetCoefficient( CvMatrix3 * matrix,
 
 /*===========================================================================*/
 CvStatus
-icvGetCoefficientDefault( CvMatrix3 * matrix,
+icvGetCoefficientDefault( CvMatrix3 *,
                           CvSize imgSize, int *scanlines_1, int *scanlines_2, int *numlines )
 {
     int curr;
@@ -359,7 +352,6 @@ icvGetCoefficientDefault( CvMatrix3 * matrix,
         curr += 4;
     }
 
-    matrix = matrix;
     return CV_NO_ERR;
 
 }                               /* icvlGetCoefficientDefault */
