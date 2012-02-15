@@ -70,7 +70,7 @@ namespace cv { namespace gpu { namespace device
 
             typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
 
-            __shared__ typename sum_t smem[BLOCK_DIM_Y][(PATCH_PER_BLOCK + 2 * HALO_SIZE) * BLOCK_DIM_X];
+            __shared__ sum_t smem[BLOCK_DIM_Y][(PATCH_PER_BLOCK + 2 * HALO_SIZE) * BLOCK_DIM_X];
             
             const int y = blockIdx.y * BLOCK_DIM_Y + threadIdx.y;
 
