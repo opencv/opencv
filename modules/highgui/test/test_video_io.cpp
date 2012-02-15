@@ -403,8 +403,8 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
 
             if (img.empty())
             {
-                ts->printf(ts->LOG, "Creating a video in %s\n", video_file.c_str());
-                ts->printf(ts->LOG, "Cannot read frame in %s\n", (ts->get_data_path()+",,/python/images/QCIF_"+s_digit.str()+"."+ext[j]).c_str());
+                ts->printf(ts->LOG, "Creating a video in %s...\n", video_file.c_str());
+                ts->printf(ts->LOG, "Error: cannot read frame from %s.\n", (ts->get_data_path()+"../python/images/QCIF_"+s_digit.str()+".bmp").c_str());
                 ts->printf(ts->LOG, "Continue creating the video file...\n");
                 ts->set_failed_test_info(ts->FAIL_INVALID_TEST_DATA);
                 continue;
@@ -426,7 +426,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
 
                 if (!writer.isOpened())
                 {
-                    ts->printf(ts->LOG, "Creating a video in %s\n", video_file.c_str());
+                    ts->printf(ts->LOG, "Creating a video in %s...\n", video_file.c_str());
                     ts->printf(ts->LOG, "Cannot create VideoWriter with codec %s.\n", string(&codecchars[0], 4).c_str());
                     ts->set_failed_test_info(ts->FAIL_MISMATCH);
                     return;
@@ -445,7 +445,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
         if (FRAME_COUNT != IMAGE_COUNT)
         {
             ts->printf(ts->LOG, "\nFrame count checking for video_%s.%s...\n", string(&codecchars[0], 4).c_str(), ext[j].c_str());
-            ts->printf(ts->LOG, "Video codec: %s\n.", string(&codecchars[0], 4).c_str());
+            ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
             ts->printf(ts->LOG, "Required frame count: %d; Returned frame count: %d\n", IMAGE_COUNT, FRAME_COUNT);
             ts->printf(ts->LOG, "Error: Incorrect frame count in the video.\n");
             ts->set_failed_test_info(ts->FAIL_BAD_ACCURACY);
@@ -459,7 +459,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             cv::Mat frame; cap >> frame;
             if (frame.empty())
             {
-                ts->printf(ts->LOG, "\nError: cannot read the next frame with index %d\n", i+1);
+                ts->printf(ts->LOG, "\nError: cannot read the next frame with index %d.\n", i+1);
                 ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
                 break;
             }
@@ -472,7 +472,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
 
             if (img.empty())
             {
-                ts->printf(ts->LOG, "\nError: cannot read an image with index %d\n", i+1);
+                ts->printf(ts->LOG, "\nError: cannot read an image with index %d.\n", i+1);
                 ts->set_failed_test_info(ts->FAIL_MISMATCH);
                 break;
             }
@@ -526,7 +526,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
         {
             ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
             ts->printf(ts->LOG, "Video codec: %s\n", std::string(&codecchars[0], 4).c_str());
-            ts->printf(ts->LOG, "Error: cannot create VideoWriter object for video_%s.%s\n", string(&codecchars[0]).c_str(), ext[i].c_str());
+            ts->printf(ts->LOG, "Error: cannot create VideoWriter object for video_%s.%s.\n", string(&codecchars[0]).c_str(), ext[i].c_str());
             ts->set_failed_test_info(ts->FAIL_EXCEPTION);
             continue;
         }
@@ -652,6 +652,9 @@ void CV_VideoTest::run(int)
 
 void CV_SpecificVideoFileTest::run(int)
 {
+#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
+
     const char codecs[][4] = { {'M', 'P', 'G', '2'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'J', 'P', 'G'},
@@ -663,6 +666,9 @@ void CV_SpecificVideoFileTest::run(int)
     {
         SpecificVideoFileTest(ts->get_data_path(), codecs[i]);
     }
+
+#endif
+#endif
 }
 
 void CV_SpecificVideoCameraTest::run(int)
