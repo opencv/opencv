@@ -740,13 +740,13 @@ namespace cv { namespace gpu { namespace device
     namespace row_filter
     {
         template <typename T, typename D>
-        void linearRowFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+        void linearRowFilter_gpu(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     }
 
     namespace column_filter
     {
         template <typename T, typename D>
-        void linearColumnFilter_gpu(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+        void linearColumnFilter_gpu(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     }
 }}}
 
@@ -755,7 +755,7 @@ namespace
     typedef NppStatus (*nppFilter1D_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oROI, 
         const Npp32s * pKernel, Npp32s nMaskSize, Npp32s nAnchor, Npp32s nDivisor);
 
-    typedef void (*gpuFilter1D_t)(const DevMem2Db& src, const DevMem2Db& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    typedef void (*gpuFilter1D_t)(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
 
     struct NppLinearRowFilter : public BaseRowFilter_GPU
     {
@@ -825,8 +825,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
-    CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC4 /*|| srcType == CV_16SC1*/ /*|| srcType == CV_16SC2*/ 
-        || srcType == CV_16SC3 || srcType == CV_32SC1 || srcType == CV_32FC1);
+    CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC4 || srcType == CV_16SC3 || srcType == CV_32SC1 || srcType == CV_32FC1);
 
     CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(srcType) == CV_MAT_CN(bufType));
 
@@ -836,7 +835,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
 
     int ksize = cont_krnl.cols;
 
-    CV_Assert(ksize > 0 && ksize <= 16);
+    CV_Assert(ksize > 0 && ksize <= 32);
 
     normalizeAnchor(anchor, ksize);
 
@@ -850,12 +849,6 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     case CV_8UC4:
         func = linearRowFilter_gpu<uchar4, float4>;
         break;
-    /*case CV_16SC1:
-        func = linearRowFilter_gpu<short, float>;
-        break;*/
-    /*case CV_16SC2:
-        func = linearRowFilter_gpu<short2, float2>;
-        break;*/
     case CV_16SC3:
         func = linearRowFilter_gpu<short3, float3>;
         break;
@@ -940,8 +933,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
    
-    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC4 /*|| dstType == CV_16SC1*/ /*|| dstType == CV_16SC2*/
-        || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1);
+    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC4 || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1);
 
     CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(dstType) == CV_MAT_CN(bufType));
 
@@ -951,7 +943,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
 
     int ksize = cont_krnl.cols;
 
-    CV_Assert(ksize > 0 && ksize <= 16);
+    CV_Assert(ksize > 0 && ksize <= 32);
 
     normalizeAnchor(anchor, ksize);
 
@@ -965,12 +957,6 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     case CV_8UC4:
         func = linearColumnFilter_gpu<float4, uchar4>;
         break;
-    /*case CV_16SC1:
-        func = linearColumnFilter_gpu<float, short>;
-        break;*/
-    /*case CV_16SC2:
-        func = linearColumnFilter_gpu<float2, short2>;
-        break;*/
     case CV_16SC3:
         func = linearColumnFilter_gpu<float3, short3>;
         break;

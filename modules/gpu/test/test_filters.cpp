@@ -188,7 +188,7 @@ TEST_P(Sobel, Rgba)
 
     dev_dst_rgba.download(dst_rgba);
 
-    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_rgba, dst_rgba, 0.0);
 }
 
 TEST_P(Sobel, Gray)
@@ -204,7 +204,7 @@ TEST_P(Sobel, Gray)
 
     dev_dst_gray.download(dst_gray);
 
-    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 0.0);
+    EXPECT_MAT_NEAR(dst_gold_gray, dst_gray, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(Filter, Sobel, Combine(
@@ -342,7 +342,7 @@ TEST_P(GaussianBlur, Rgba)
 
     dev_dst_rgba.download(dst_rgba);
 
-    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 3.0);
+    EXPECT_MAT_NEAR(dst_gold_rgba, dst_rgba, 4.0);
 }
 
 TEST_P(GaussianBlur, Gray)
@@ -355,12 +355,12 @@ TEST_P(GaussianBlur, Gray)
 
     dev_dst_gray.download(dst_gray);
 
-    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 3.0);
+    EXPECT_MAT_NEAR(dst_gold_gray, dst_gray, 4.0);
 }
 
 INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, Combine(
                         ALL_DEVICES, 
-                        Values(cv::Size(3, 3), cv::Size(5, 5), cv::Size(7, 7)),
+                        Values(cv::Size(3, 3), cv::Size(5, 5), cv::Size(7, 7), cv::Size(9, 9), cv::Size(11, 11), cv::Size(13, 13), cv::Size(15, 15), cv::Size(17, 17), cv::Size(19, 19), cv::Size(21, 21), cv::Size(23, 23), cv::Size(25, 25), cv::Size(27, 27), cv::Size(29, 29), cv::Size(31, 31)),
                         USE_ROI));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
