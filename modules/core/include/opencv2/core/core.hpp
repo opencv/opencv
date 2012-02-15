@@ -4288,12 +4288,31 @@ public:
     void read(Algorithm* algo, const FileNode& fn) const;
     string name() const;
     
-    template<typename _Tp> void addParam(const Algorithm* algo, const char* name,
-                                         const typename ParamType<_Tp>::member_type& value,
-                                         bool readOnly=false, 
-                                         typename ParamType<_Tp>::member_type (Algorithm::*getter)()=0,
-                                         void (Algorithm::*setter)(typename ParamType<_Tp>::const_param_type)=0,
-                                         const string& help=string());
+    void addParam(const Algorithm* algo, const char* name,
+                  const int& value, bool readOnly=false, 
+                  int (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(int)=0,
+                  const string& help=string());
+    void addParam(const Algorithm* algo, const char* name,
+                  const double& value, bool readOnly=false, 
+                  double (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(double)=0,
+                  const string& help=string());
+    void addParam(const Algorithm* algo, const char* name,
+                  const string& value, bool readOnly=false, 
+                  string (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const string&)=0,
+                  const string& help=string());
+    void addParam(const Algorithm* algo, const char* name,
+                  const Mat& value, bool readOnly=false, 
+                  Mat (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const Mat&)=0,
+                  const string& help=string());
+    void addParam(const Algorithm* algo, const char* name,
+                  const Ptr<Algorithm>& value, bool readOnly=false, 
+                  Ptr<Algorithm> (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const Ptr<Algorithm>&)=0,
+                  const string& help=string());
 protected:
     AlgorithmInfoData* data;
 };

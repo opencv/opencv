@@ -41,70 +41,32 @@
 
 #include "precomp.hpp"
 
-CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
-                      double low_thresh, double high_thresh,
-                      int aperture_size )
+void cv::Canny( InputArray _src, OutputArray _dst,
+                double low_thresh, double high_thresh,
+                int aperture_size, bool L2gradient )
 {
+    Mat src = _src.getMat();
+    CV_Assert( src.depth() == CV_8U );
+    
+    _dst.create(src.size(), CV_8U);
+    Mat dst = _dst.getMat();
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::canny(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr), low_thresh, high_thresh,
-                     aperture_size & ~CV_CANNY_L2_GRADIENT, (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT))
+    if (tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
         return;
 #endif
-    cv::Ptr<CvMat> dx, dy;
-    cv::AutoBuffer<char> buffer;
-    std::vector<uchar*> stack;
-    uchar **stack_top = 0, **stack_bottom = 0;
-
-    CvMat srcstub, *src = cvGetMat( srcarr, &srcstub );
-    CvMat dststub, *dst = cvGetMat( dstarr, &dststub );
-    CvSize size;
-    int flags = aperture_size;
-    int low, high;
-    int* mag_buf[3];
-    uchar* map;
-    ptrdiff_t mapstep;
-    int maxsize;
-    int i, j;
-    CvMat mag_row;
-
-    if( CV_MAT_TYPE( src->type ) != CV_8UC1 ||
-        CV_MAT_TYPE( dst->type ) != CV_8UC1 )
-        CV_Error( CV_StsUnsupportedFormat, "" );
-
-    if( !CV_ARE_SIZES_EQ( src, dst ))
-        CV_Error( CV_StsUnmatchedSizes, "" );
-
+    
     if( low_thresh > high_thresh )
-    {
-        double t;
-        CV_SWAP( low_thresh, high_thresh, t );
-    }
+        std::swap(low_thresh, high_thresh);
 
-    aperture_size &= INT_MAX;
-    if( (aperture_size & 1) == 0 || aperture_size < 3 || aperture_size > 7 )
+    if( (aperture_size & 1) == 0 || (aperture_size != -1 && (aperture_size < 3 || aperture_size > 7)) )
         CV_Error( CV_StsBadFlag, "" );
 
-    size = cvGetMatSize( src );
+    Mat dx, dy;
+    Sobel(src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REFLECT_101);
+    Sobel(src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REFLECT_101);
 
-    dx = cvCreateMat( size.height, size.width, CV_16SC1 );
-    dy = cvCreateMat( size.height, size.width, CV_16SC1 );
-    cvSobel( src, dx, 1, 0, aperture_size );
-    cvSobel( src, dy, 0, 1, aperture_size );
-
-    /*if( icvCannyGetSize_p && icvCanny_16s8u_C1R_p && !(flags & CV_CANNY_L2_GRADIENT) )
-    {
-        int buf_size=  0;
-        IPPI_CALL( icvCannyGetSize_p( size, &buf_size ));
-        CV_CALL( buffer = cvAlloc( buf_size ));
-        IPPI_CALL( icvCanny_16s8u_C1R_p( (short*)dx->data.ptr, dx->step,
-                                     (short*)dy->data.ptr, dy->step,
-                                     dst->data.ptr, dst->step,
-                                     size, (float)low_thresh,
-                                     (float)high_thresh, buffer ));
-        EXIT;
-    }*/
-
-    if( flags & CV_CANNY_L2_GRADIENT )
+    int low, high;
+    if( L2gradient )
     {
         Cv32suf ul, uh;
         ul.f = (float)low_thresh;
@@ -119,21 +81,23 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
         high = cvFloor( high_thresh );
     }
 
-    buffer.allocate( (size.width+2)*(size.height+2) + (size.width+2)*3*sizeof(int) );
-
-    mag_buf[0] = (int*)(char*)buffer;
-    mag_buf[1] = mag_buf[0] + size.width + 2;
-    mag_buf[2] = mag_buf[1] + size.width + 2;
-    map = (uchar*)(mag_buf[2] + size.width + 2);
-    mapstep = size.width + 2;
-
-    maxsize = MAX( 1 << 10, size.width*size.height/10 );
-    stack.resize( maxsize );
+    Size size = src.size();
+    int i, j, k, mstep = size.width + 2, cn = src.channels();
+    
+    Mat mask(size.height + 2, mstep, CV_8U);
+    memset( mask.ptr<uchar>(0), 1, mstep );
+    memset( mask.ptr<uchar>(size.height+1), 1, mstep );
+    
+    Mat mag(6+cn, mstep, CV_32S);
+    mag = Scalar::all(0);
+    int* mag_buf[3] = { mag.ptr<int>(0), mag.ptr<int>(1), mag.ptr<int>(2) };
+    short* dxybuf[3] = { (short*)mag.ptr<int>(3), (short*)mag.ptr<int>(4), (short*)mag.ptr<int>(5) }; 
+    int* mbuf = mag.ptr<int>(6);
+    
+    int maxsize = MAX( 1 << 10, size.width*size.height/10 );
+    std::vector<uchar*> stack( maxsize );
+    uchar **stack_top, **stack_bottom;
     stack_top = stack_bottom = &stack[0];
-
-    memset( mag_buf[0], 0, (size.width+2)*sizeof(int) );
-    memset( map, 1, mapstep );
-    memset( map + mapstep*(size.height + 1), 1, mapstep );
 
     /* sector numbers 
        (Top-Left Origin)
@@ -150,8 +114,6 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
     #define CANNY_PUSH(d)    *(d) = (uchar)2, *stack_top++ = (d)
     #define CANNY_POP(d)     (d) = *--stack_top
 
-    mag_row = cvMat( 1, size.width, CV_32F );
-
     // calculate magnitude and angle of gradient, perform non-maxima supression.
     // fill the map with one of the following values:
     //   0 - the pixel might belong to an edge
@@ -159,10 +121,10 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
     //   2 - the pixel does belong to an edge
     for( i = 0; i <= size.height; i++ )
     {
-        int* _mag = mag_buf[(i > 0) + 1] + 1;
+        int *_mag = mag_buf[(i > 0) + 1] + 1;
         float* _magf = (float*)_mag;
-        const short* _dx = (short*)(dx->data.ptr + dx->step*i);
-        const short* _dy = (short*)(dy->data.ptr + dy->step*i);
+        const short *_dx, *_dy;
+        short *_ddx, *_ddy;
         uchar* _map;
         int x, y;
         ptrdiff_t magstep1, magstep2;
@@ -170,45 +132,71 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
 
         if( i < size.height )
         {
-            _mag[-1] = _mag[size.width] = 0;
-
-            if( !(flags & CV_CANNY_L2_GRADIENT) )
-                for( j = 0; j < size.width; j++ )
-                    _mag[j] = abs(_dx[j]) + abs(_dy[j]);
-            /*else if( icvFilterSobelVert_8u16s_C1R_p != 0 ) // check for IPP
+            _dx = dx.ptr<short>(i);
+            _dy = dy.ptr<short>(i);
+            _ddx = dxybuf[(i > 0) + 1];
+            _ddy = _ddx + size.width;
+            
+            if( cn > 1 )
             {
-                // use vectorized sqrt
-                mag_row.data.fl = _magf;
-                for( j = 0; j < size.width; j++ )
+                _mag = mbuf;
+                _magf = (float*)_mag;
+            }
+            
+            if( !L2gradient )
+                for( j = 0; j < size.width*cn; j++ )
+                    _mag[j] = std::abs(_dx[j]) + std::abs(_dy[j]);
+            else
+            {
+                for( j = 0; j < size.width*cn; j++ )
                 {
                     x = _dx[j]; y = _dy[j];
-                    _magf[j] = (float)((double)x*x + (double)y*y);
+                    _magf[j] = sqrtf((float)x*x + (float)y*y);
                 }
-                cvPow( &mag_row, &mag_row, 0.5 );
-            }*/
+            }
+            
+            if( cn > 1 )
+            {
+                _mag = mag_buf[(i > 0) + 1] + 1;
+                for( j = 0; j < size.width; j++ )
+                {
+                    _mag[j] = mbuf[(j+1)*cn];
+                    _ddx[j] = _dx[j*cn]; _ddy[j] = _dy[j*cn];
+                }
+                
+                for( k = 1; k < cn; k++ )
+                {
+                    for( j = 0; j < size.width; j++ )
+                        if( mbuf[(j+1)*cn + k] > _mag[j] )
+                        {
+                            _mag[j] = mbuf[(j+1)*cn + k];
+                            _ddx[j] = _dx[j*cn + k];
+                            _ddy[j] = _dy[j*cn + k];
+                        }
+                }
+            }
             else
             {
                 for( j = 0; j < size.width; j++ )
-                {
-                    x = _dx[j]; y = _dy[j];
-                    _magf[j] = (float)std::sqrt((double)x*x + (double)y*y);
-                }
+                    _ddx[j] = _dx[j]; _ddy[j] = _dy[j];
             }
+            
+            _mag[-1] = _mag[size.width] = 0;
         }
         else
-            memset( _mag-1, 0, (size.width + 2)*sizeof(int) );
+            memset( _mag-1, 0, (size.width + 2)*sizeof(_mag[0]) );
 
         // at the very beginning we do not have a complete ring
         // buffer of 3 magnitude rows for non-maxima suppression
         if( i == 0 )
             continue;
 
-        _map = map + mapstep*i + 1;
+        _map = &mask.at<uchar>(i, 1);
         _map[-1] = _map[size.width] = 1;
         
         _mag = mag_buf[1] + 1; // take the central row
-        _dx = (short*)(dx->data.ptr + dx->step*(i-1));
-        _dy = (short*)(dy->data.ptr + dy->step*(i-1));
+        _dx = dxybuf[1];
+        _dy = _dx + size.width;
         
         magstep1 = mag_buf[2] - mag_buf[1];
         magstep2 = mag_buf[0] - mag_buf[1];
@@ -216,7 +204,7 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
         if( (stack_top - stack_bottom) + size.width > maxsize )
         {
             int sz = (int)(stack_top - stack_bottom);
-            maxsize = MAX( maxsize * 3/2, maxsize + 8 );
+            maxsize = MAX( maxsize * 3/2, maxsize + size.width );
             stack.resize(maxsize);
             stack_bottom = &stack[0];
             stack_top = stack_bottom + sz;
@@ -232,8 +220,8 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
             int s = x ^ y;
             int m = _mag[j];
 
-            x = abs(x);
-            y = abs(y);
+            x = std::abs(x);
+            y = std::abs(y);
             if( m > low )
             {
                 int tg22x = x * TG22;
@@ -245,7 +233,7 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
                 {
                     if( m > _mag[j-1] && m >= _mag[j+1] )
                     {
-                        if( m > high && !prev_flag && _map[j-mapstep] != 2 )
+                        if( m > high && !prev_flag && _map[j-mstep] != 2 )
                         {
                             CANNY_PUSH( _map + j );
                             prev_flag = 1;
@@ -259,7 +247,7 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
                 {
                     if( m > _mag[j+magstep2] && m >= _mag[j+magstep1] )
                     {
-                        if( m > high && !prev_flag && _map[j-mapstep] != 2 )
+                        if( m > high && !prev_flag && _map[j-mstep] != 2 )
                         {
                             CANNY_PUSH( _map + j );
                             prev_flag = 1;
@@ -274,7 +262,7 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
                     s = s < 0 ? -1 : 1;
                     if( m > _mag[j+magstep2-s] && m > _mag[j+magstep1+s] )
                     {
-                        if( m > high && !prev_flag && _map[j-mapstep] != 2 )
+                        if( m > high && !prev_flag && _map[j-mstep] != 2 )
                         {
                             CANNY_PUSH( _map + j );
                             prev_flag = 1;
@@ -289,11 +277,16 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
             _map[j] = (uchar)1;
         }
 
-        // scroll the ring buffer
+        // scroll the ring buffers
         _mag = mag_buf[0];
         mag_buf[0] = mag_buf[1];
         mag_buf[1] = mag_buf[2];
         mag_buf[2] = _mag;
+                    
+        _ddx = dxybuf[0];
+        dxybuf[0] = dxybuf[1];
+        dxybuf[1] = dxybuf[2];
+        dxybuf[2] = _ddx;
     }
 
     // now track the edges (hysteresis thresholding)
@@ -315,40 +308,39 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
             CANNY_PUSH( m - 1 );
         if( !m[1] )
             CANNY_PUSH( m + 1 );
-        if( !m[-mapstep-1] )
-            CANNY_PUSH( m - mapstep - 1 );
-        if( !m[-mapstep] )
-            CANNY_PUSH( m - mapstep );
-        if( !m[-mapstep+1] )
-            CANNY_PUSH( m - mapstep + 1 );
-        if( !m[mapstep-1] )
-            CANNY_PUSH( m + mapstep - 1 );
-        if( !m[mapstep] )
-            CANNY_PUSH( m + mapstep );
-        if( !m[mapstep+1] )
-            CANNY_PUSH( m + mapstep + 1 );
+        if( !m[-mstep-1] )
+            CANNY_PUSH( m - mstep - 1 );
+        if( !m[-mstep] )
+            CANNY_PUSH( m - mstep );
+        if( !m[-mstep+1] )
+            CANNY_PUSH( m - mstep + 1 );
+        if( !m[mstep-1] )
+            CANNY_PUSH( m + mstep - 1 );
+        if( !m[mstep] )
+            CANNY_PUSH( m + mstep );
+        if( !m[mstep+1] )
+            CANNY_PUSH( m + mstep + 1 );
     }
 
     // the final pass, form the final image
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* _map = map + mapstep*(i+1) + 1;
-        uchar* _dst = dst->data.ptr + dst->step*i;
+        const uchar* _map = mask.ptr<uchar>(i+1) + 1;
+        uchar* _dst = dst.ptr<uchar>(i);
         
         for( j = 0; j < size.width; j++ )
             _dst[j] = (uchar)-(_map[j] >> 1);
     }
 }
 
-void cv::Canny( InputArray image, OutputArray _edges,
-                double threshold1, double threshold2,
-                int apertureSize, bool L2gradient )
+void cvCanny( const CvArr* image, CvArr* edges, double threshold1,
+              double threshold2, int aperture_size )
 {
-    Mat src = image.getMat();
-    _edges.create(src.size(), CV_8U);
-    CvMat c_src = src, c_dst = _edges.getMat();
-    cvCanny( &c_src, &c_dst, threshold1, threshold2,
-        apertureSize + (L2gradient ? CV_CANNY_L2_GRADIENT : 0));
+    cv::Mat src = cv::cvarrToMat(image), dst = cv::cvarrToMat(edges);
+    CV_Assert( src.size == dst.size && src.depth() == CV_8U && dst.type() == CV_8U );
+    
+    cv::Canny(src, dst, threshold1, threshold2, aperture_size & 255,
+              (aperture_size & CV_CANNY_L2_GRADIENT) != 0);
 }
 
 /* End of file. */

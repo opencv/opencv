@@ -493,6 +493,57 @@ void AlgorithmInfo::addParam_(const Algorithm* algo, const char* name, int argTy
                      (int)((size_t)value - (size_t)(void*)algo),
                      getter, setter, help));
 }
+    
+    
+void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
+                             const int& value, bool readOnly, 
+                             int (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(int),
+                             const string& help)
+{
+    addParam_(algo, name, ParamType<int>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}
+
+void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
+                             const double& value, bool readOnly, 
+                             double (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(double),
+                             const string& help)
+{
+    addParam_(algo, name, ParamType<double>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}
+
+void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
+                             const string& value, bool readOnly, 
+                             string (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(const string&),
+                             const string& help)
+{
+    addParam_(algo, name, ParamType<string>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}
+
+void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
+                             const Mat& value, bool readOnly, 
+                             Mat (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(const Mat&),
+                             const string& help)
+{
+    addParam_(algo, name, ParamType<Mat>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}
+    
+void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
+                             const Ptr<Algorithm>& value, bool readOnly, 
+                             Ptr<Algorithm> (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(const Ptr<Algorithm>&),
+                             const string& help)
+{
+    addParam_(algo, name, ParamType<Algorithm>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}    
 
 }
     

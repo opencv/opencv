@@ -3833,17 +3833,6 @@ template<typename _Tp> inline void Algorithm::set(const char* name,
     info()->set(this, name, ParamType<_Tp>::type, &value);
 }
 
-template<typename _Tp> inline void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
-                                                    const typename ParamType<_Tp>::member_type& value,
-                                                    bool readOnly, 
-                                                    typename ParamType<_Tp>::member_type (Algorithm::*getter)(),
-                                                    void (Algorithm::*setter)(typename ParamType<_Tp>::const_param_type),
-                                                    const string& help)
-{
-    addParam_(algo, name, ParamType<_Tp>::type, &value, readOnly,
-              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
-}
-
 }
 
 #endif // __cplusplus
