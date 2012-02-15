@@ -61,12 +61,20 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float)) );
         }
 
-        template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int PATCH_PER_BLOCK, int HALO_SIZE, int KSIZE, typename T, typename D, typename B>
+        template <int KSIZE, typename T, typename D, typename B>
         __global__ void linearRowFilter(const DevMem2D_<T> src, PtrStep<D> dst, const int anchor, const B brd)
         {
-            Static<KSIZE <= MAX_KERNEL_SIZE>::check();
-            Static<HALO_SIZE * BLOCK_DIM_X >= KSIZE>::check();
-            Static<VecTraits<T>::cn == VecTraits<D>::cn>::check();
+            #if __CUDA_ARCH__ >= 200
+                const int BLOCK_DIM_X = 32;
+                const int BLOCK_DIM_Y = 8;
+                const int PATCH_PER_BLOCK = 4;
+                const int HALO_SIZE = 1;
+            #else
+                const int BLOCK_DIM_X = 32;
+                const int BLOCK_DIM_Y = 4;
+                const int PATCH_PER_BLOCK = 4;
+                const int HALO_SIZE = 1;
+            #endif
 
             typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
 
@@ -103,32 +111,45 @@ namespace cv { namespace gpu { namespace device
             {
                 const int x = xStart + j * BLOCK_DIM_X;
 
-                if (x >= src.cols)
-                    return;
+                if (x < src.cols)
+                {
+                    sum_t sum = VecTraits<sum_t>::all(0);
 
-                sum_t sum = VecTraits<sum_t>::all(0);
+                    #pragma unroll
+                    for (int k = 0; k < KSIZE; ++k)
+                        sum = sum + smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X - anchor + k] * c_kernel[k];
 
-                #pragma unroll
-                for (int k = 0; k < KSIZE; ++k)
-                    sum = sum + smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X - anchor + k] * c_kernel[k];
-
-                dst(y, x) = saturate_cast<D>(sum);
+                    dst(y, x) = saturate_cast<D>(sum);
+                }
             }
         }
 
         template <int KSIZE, typename T, typename D, template<typename> class B>
-        void linearRowFilter_caller(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, cudaStream_t stream)
+        void linearRowFilter_caller(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, int cc, cudaStream_t stream)
         {
-            const int BLOCK_DIM_X = 32;
-            const int BLOCK_DIM_Y = 8;
-            const int PATCH_PER_BLOCK = 4;
+            int BLOCK_DIM_X;
+            int BLOCK_DIM_Y;
+            int PATCH_PER_BLOCK;
+
+            if (cc >= 20)
+            {
+                BLOCK_DIM_X = 32;
+                BLOCK_DIM_Y = 8;
+                PATCH_PER_BLOCK = 4;
+            }
+            else
+            {
+                BLOCK_DIM_X = 32;
+                BLOCK_DIM_Y = 4;
+                PATCH_PER_BLOCK = 4;
+            }
 
             const dim3 block(BLOCK_DIM_X, BLOCK_DIM_Y);
             const dim3 grid(divUp(src.cols, BLOCK_DIM_X * PATCH_PER_BLOCK), divUp(src.rows, BLOCK_DIM_Y));
 
             B<T> brd(src.cols);
 
-            linearRowFilter<BLOCK_DIM_X, BLOCK_DIM_Y, PATCH_PER_BLOCK, 1, KSIZE, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, brd);
+            linearRowFilter<KSIZE, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, brd);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
@@ -136,9 +157,9 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D>
-        void linearRowFilter_gpu(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream)
+        void linearRowFilter_gpu(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream)
         {
-            typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, cudaStream_t stream);
+            typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, int cc, cudaStream_t stream);
 
             static const caller_t callers[5][33] = 
             {
@@ -321,13 +342,13 @@ namespace cv { namespace gpu { namespace device
             
             loadKernel(kernel, ksize);
 
-            callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, stream);
+            callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, cc, stream);
         }
 
-        template void linearRowFilter_gpu<uchar , float >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-        template void linearRowFilter_gpu<uchar4, float4>(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-        template void linearRowFilter_gpu<short3, float3>(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-        template void linearRowFilter_gpu<int   , float >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
-        template void linearRowFilter_gpu<float , float >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+        template void linearRowFilter_gpu<uchar , float >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<uchar4, float4>(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<short3, float3>(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<int   , float >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<float , float >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
     } // namespace row_filter
 }}} // namespace cv { namespace gpu { namespace device
