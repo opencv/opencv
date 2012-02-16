@@ -891,6 +891,8 @@ void ORB::operator()(const Mat &image_in, const Mat &mask, vector<KeyPoint> & ke
         // Get the features and compute their orientation
         vector<KeyPoint>& keypoints = all_keypoints[level];
         int nkeypoints = (int)keypoints.size();
+        if (nkeypoints==0)
+            continue;
         
         // Compute the descriptors
         if (do_descriptors)
