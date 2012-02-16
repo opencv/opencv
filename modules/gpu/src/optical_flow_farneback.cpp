@@ -339,15 +339,15 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
         }
         else
         {
-            GpuMat tmp[2] =
+            GpuMat blurredFrame[2] =
             {
-                allocMatFromBuf(size.height, size.width, CV_32F, tmp_[0]),
-                allocMatFromBuf(size.height, size.width, CV_32F, tmp_[1])
+                allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[0]),
+                allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[1])
             };
-            GpuMat I[2] =
+            GpuMat pyrLevel[2] =
             {
-                allocMatFromBuf(height, width, CV_32F, I_[0]),
-                allocMatFromBuf(height, width, CV_32F, I_[1])
+                allocMatFromBuf(height, width, CV_32F, pyrLevel_[0]),
+                allocMatFromBuf(height, width, CV_32F, pyrLevel_[1])
             };
 
             Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
@@ -356,16 +356,16 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             for (int i = 0; i < 2; i++)
             {
                 device::optflow_farneback::gaussianBlurGpu(
-                        frames_[i], smoothSize/2, tmp[i], BORDER_REFLECT101_GPU, S(streams[i]));
+                        frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101_GPU, S(streams[i]));
 #if ENABLE_GPU_RESIZE
-                resize(tmp[i], I[i], Size(width, height), INTER_LINEAR, streams[i]);
+                resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR, streams[i]);
 #else
                 Mat tmp1, tmp2;
                 tmp[i].download(tmp1);
                 resize(tmp1, tmp2, Size(width, height), INTER_LINEAR);
                 I[i].upload(tmp2);
 #endif
-                device::optflow_farneback::polynomialExpansionGpu(I[i], polyN, R[i], S(streams[i]));
+                device::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
             }
         }
 

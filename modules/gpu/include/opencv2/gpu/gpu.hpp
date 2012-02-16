@@ -1850,14 +1850,14 @@ public:
     {
         frames_[0].release();
         frames_[1].release();
-        I_[0].release();
-        I_[1].release();
+        pyrLevel_[0].release();
+        pyrLevel_[1].release();
         M_.release();
         bufM_.release();
-        R_[0].release();
-        R_[1].release();
-        tmp_[0].release();
-        tmp_[1].release();
+        polyCoefs_[0].release();
+        polyCoefs_[1].release();
+        blurredFrame_[0].release();
+        blurredFrame_[1].release();
         pyramid0_.clear();
         pyramid1_.clear();
     }
@@ -1878,7 +1878,7 @@ private:
             GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[]);
 
     GpuMat frames_[2];
-    GpuMat I_[2], M_, bufM_, R_[2], tmp_[2];
+    GpuMat pyrLevel_[2], M_, bufM_, polyCoefs_[2], blurredFrame_[2];
     std::vector<GpuMat> pyramid0_, pyramid1_;
 };
 
