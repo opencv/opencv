@@ -214,6 +214,8 @@ namespace cv { namespace gpu
     CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
     CV_EXPORTS void ensureSizeIsEnough(Size size, int type, GpuMat& m);
 
+    CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat &mat);
+
     ////////////////////////////////////////////////////////////////////////
     // Error handling
 
@@ -458,6 +460,13 @@ namespace cv { namespace gpu
             m = m(Rect(0, 0, cols, rows));
         else
             m.create(rows, cols, type);
+    }
+
+    inline GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat &mat)
+    {
+        if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
+            return mat(Rect(0, 0, cols, rows));
+        return mat = GpuMat(rows, cols, type);
     }
 }}
 

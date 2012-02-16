@@ -81,6 +81,7 @@ namespace cv { namespace gpu
 
 struct Stream::Impl
 {
+    static cudaStream_t getStream(const Impl* impl) { return impl ? impl->stream : 0; }
     cudaStream_t stream;
     int ref_counter;
 };
@@ -95,7 +96,10 @@ namespace
     };
 }
 
-CV_EXPORTS cudaStream_t cv::gpu::StreamAccessor::getStream(const Stream& stream) { return stream.impl ? stream.impl->stream : 0; };
+CV_EXPORTS cudaStream_t cv::gpu::StreamAccessor::getStream(const Stream& stream)
+{
+    return Stream::Impl::getStream(stream.impl);
+};
 
 void cv::gpu::Stream::create()
 {
@@ -143,7 +147,7 @@ Stream& cv::gpu::Stream::operator=(const Stream& stream)
 
 bool cv::gpu::Stream::queryIfComplete()
 {
-    cudaError_t err = cudaStreamQuery( impl->stream );
+    cudaError_t err = cudaStreamQuery( Impl::getStream(impl) );
 
     if (err == cudaErrorNotReady || err == cudaSuccess)
         return err == cudaSuccess;
@@ -152,19 +156,19 @@ bool cv::gpu::Stream::queryIfComplete()
     return false;
 }
 
-void cv::gpu::Stream::waitForCompletion() { cudaSafeCall( cudaStreamSynchronize( impl->stream ) ); }
+void cv::gpu::Stream::waitForCompletion() { cudaSafeCall( cudaStreamSynchronize( Impl::getStream(impl) ) ); }
 
 void cv::gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
 {
     // if not -> allocation will be done, but after that dst will not point to page locked memory
     CV_Assert(src.cols == dst.cols && src.rows == dst.rows && src.type() == dst.type() );
-    devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost);
+    devcopy(src, dst, Impl::getStream(impl), cudaMemcpyDeviceToHost);
 }
-void cv::gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToHost); }
+void cv::gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst) { devcopy(src, dst, Impl::getStream(impl), cudaMemcpyDeviceToHost); }
 
-void cv::gpu::Stream::enqueueUpload(const CudaMem& src, GpuMat& dst){ devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
-void cv::gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)  { devcopy(src, dst, impl->stream,   cudaMemcpyHostToDevice); }
-void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(src, dst, impl->stream, cudaMemcpyDeviceToDevice); }
+void cv::gpu::Stream::enqueueUpload(const CudaMem& src, GpuMat& dst){ devcopy(src, dst, Impl::getStream(impl),   cudaMemcpyHostToDevice); }
+void cv::gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)  { devcopy(src, dst, Impl::getStream(impl),   cudaMemcpyHostToDevice); }
+void cv::gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst) { devcopy(src, dst, Impl::getStream(impl), cudaMemcpyDeviceToDevice); }
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar s)
 {
@@ -173,7 +177,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar s)
 
     if (s[0] == 0.0 && s[1] == 0.0 && s[2] == 0.0 && s[3] == 0.0)
     {
-        cudaSafeCall( cudaMemset2DAsync(src.data, src.step, 0, src.cols * src.elemSize(), src.rows, impl->stream) );
+        cudaSafeCall( cudaMemset2DAsync(src.data, src.step, 0, src.cols * src.elemSize(), src.rows, Impl::getStream(impl)) );
         return;
     }
     if (src.depth() == CV_8U)
@@ -183,12 +187,12 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar s)
         if (cn == 1 || (cn == 2 && s[0] == s[1]) || (cn == 3 && s[0] == s[1] && s[0] == s[2]) || (cn == 4 && s[0] == s[1] && s[0] == s[2] && s[0] == s[3]))
         {
             int val = saturate_cast<uchar>(s[0]);
-            cudaSafeCall( cudaMemset2DAsync(src.data, src.step, val, src.cols * src.elemSize(), src.rows, impl->stream) );
+            cudaSafeCall( cudaMemset2DAsync(src.data, src.step, val, src.cols * src.elemSize(), src.rows, Impl::getStream(impl)) );
             return;
         }
     }
 
-    setTo(src, s, impl->stream);
+    setTo(src, s, Impl::getStream(impl));
 }
 
 void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
@@ -198,7 +202,7 @@ void cv::gpu::Stream::enqueueMemSet(GpuMat& src, Scalar val, const GpuMat& mask)
 
     CV_Assert(mask.type() == CV_8UC1);
 
-    setTo(src, val, mask, impl->stream);
+    setTo(src, val, mask, Impl::getStream(impl));
 }
 
 void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, double alpha, double beta)
@@ -226,7 +230,7 @@ void cv::gpu::Stream::enqueueConvert(const GpuMat& src, GpuMat& dst, int rtype, 
         psrc = &(temp = src);
 
     dst.create( src.size(), rtype );
-    convertTo(src, dst, alpha, beta, impl->stream);
+    convertTo(src, dst, alpha, beta, Impl::getStream(impl));
 }
 
 cv::gpu::Stream::operator bool() const

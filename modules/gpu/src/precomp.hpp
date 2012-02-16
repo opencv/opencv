@@ -65,6 +65,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/core/internal.hpp"
+#include "opencv2/video/video.hpp"
 
 #define OPENCV_GPU_UNUSED(x) (void)x
 

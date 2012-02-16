@@ -1819,6 +1819,70 @@ private:
     vector<GpuMat> vPyr_;
 };
 
+
+class CV_EXPORTS FarnebackOpticalFlow
+{
+public:
+    FarnebackOpticalFlow()
+    {
+        numLevels = 5;
+        pyrScale = 0.5;
+        fastPyramids = false;
+        winSize = 13;
+        numIters = 10;
+        polyN = 5;
+        polySigma = 1.1;
+        flags = 0;
+    }
+
+    int numLevels;
+    double pyrScale;
+    bool fastPyramids;
+    int winSize;
+    int numIters;
+    int polyN;
+    double polySigma;
+    int flags;
+
+    void operator ()(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s = Stream::Null());
+
+    void releaseMemory()
+    {
+        frames_[0].release();
+        frames_[1].release();
+        I_[0].release();
+        I_[1].release();
+        M_.release();
+        bufM_.release();
+        R_[0].release();
+        R_[1].release();
+        tmp_[0].release();
+        tmp_[1].release();
+        pyramid0_.clear();
+        pyramid1_.clear();
+    }
+
+private:
+    void prepareGaussian(
+            int n, double sigma, float *g, float *xg, float *xxg,
+            double &ig11, double &ig03, double &ig33, double &ig55);
+
+    void setPolynomialExpansionConsts(int n, double sigma);
+
+    void updateFlow_boxFilter(
+            const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat &flowy,
+            GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[]);
+
+    void updateFlow_gaussianBlur(
+            const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat& flowy,
+            GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[]);
+
+    GpuMat frames_[2];
+    GpuMat I_[2], M_, bufM_, R_[2], tmp_[2];
+    std::vector<GpuMat> pyramid0_, pyramid1_;
+};
+
+
 //! Interpolate frames (images) using provided optical flow (displacement field).
 //! frame0   - frame 0 (32-bit floating point images, single channel)
 //! frame1   - frame 1 (the same type and size)

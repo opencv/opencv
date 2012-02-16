@@ -1183,3 +1183,36 @@ TEST(PyrLKOpticalFlow)
         GPU_OFF;
     }
 }
+
+
+TEST(FarnebackOpticalFlow)
+{
+    const string names[] = {"rubberwhale", "basketball"};
+    for (size_t i = 0; i < sizeof(names)/sizeof(*names); ++i) {
+    for (int fastPyramids = 0; fastPyramids < 2; ++fastPyramids) {
+    for (int useGaussianBlur = 0; useGaussianBlur < 2; ++useGaussianBlur) {
+
+    SUBTEST << "dataset=" << names[i] << ", fastPyramids=" << fastPyramids << ", useGaussianBlur=" << useGaussianBlur;
+    Mat frame0 = imread(abspath(names[i] + "1.png"), IMREAD_GRAYSCALE);
+    Mat frame1 = imread(abspath(names[i] + "2.png"), IMREAD_GRAYSCALE);
+    if (frame0.empty()) throw runtime_error("can't open " + names[i] + "1.png");
+    if (frame1.empty()) throw runtime_error("can't open " + names[i] + "2.png");
+
+    gpu::FarnebackOpticalFlow calc;
+    calc.fastPyramids = fastPyramids;
+    calc.flags |= useGaussianBlur ? OPTFLOW_FARNEBACK_GAUSSIAN : 0;
+
+    gpu::GpuMat d_frame0(frame0), d_frame1(frame1), d_flowx, d_flowy;
+    calc(d_frame0, d_frame1, d_flowx, d_flowy);
+    GPU_ON;
+    calc(d_frame0, d_frame1, d_flowx, d_flowy);
+    GPU_OFF;
+
+    Mat flow;
+    calcOpticalFlowFarneback(frame0, frame1, flow, calc.pyrScale, calc.numLevels, calc.winSize, calc.numIters, calc.polyN, calc.polySigma, calc.flags);
+    CPU_ON;
+    calcOpticalFlowFarneback(frame0, frame1, flow, calc.pyrScale, calc.numLevels, calc.winSize, calc.numIters, calc.polyN, calc.polySigma, calc.flags);
+    CPU_OFF;
+
+    }}}
+}

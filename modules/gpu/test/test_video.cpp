@@ -423,3 +423,74 @@ TEST_P(PyrLKOpticalFlowSparse, Accuracy)
 INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, Combine(ALL_DEVICES, Bool()));
 
 #endif // HAVE_CUDA
+
+
+PARAM_TEST_CASE(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo, double, int, int, bool)
+{
+    Mat frame0, frame1;
+
+    double pyrScale;
+    int polyN;
+    double polySigma;
+    int flags;
+    bool useInitFlow;
+
+    virtual void SetUp()
+    {
+        frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+        frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(frame0.empty()); ASSERT_FALSE(frame1.empty());
+
+        cv::gpu::setDevice(GET_PARAM(0).deviceID());
+
+        pyrScale = GET_PARAM(1);
+        polyN = GET_PARAM(2);
+        polySigma = polyN <= 5 ? 1.1 : 1.5;
+        flags = GET_PARAM(3);
+        useInitFlow = GET_PARAM(4);
+    }
+};
+
+TEST_P(FarnebackOpticalFlowTest, Accuracy)
+{
+    using namespace cv;
+
+    gpu::FarnebackOpticalFlow calc;
+    calc.pyrScale = pyrScale;
+    calc.polyN = polyN;
+    calc.polySigma = polySigma;
+    calc.flags = flags;
+
+    gpu::GpuMat d_flowx, d_flowy;
+    calc(gpu::GpuMat(frame0), gpu::GpuMat(frame1), d_flowx, d_flowy);
+
+    Mat flow;
+    if (useInitFlow)
+    {
+        Mat flowxy[] = {(Mat)d_flowx, (Mat)d_flowy};
+        merge(flowxy, 2, flow);
+    }
+
+    if (useInitFlow)
+    {
+        calc.flags |= OPTFLOW_USE_INITIAL_FLOW;
+        calc(gpu::GpuMat(frame0), gpu::GpuMat(frame1), d_flowx, d_flowy);
+    }
+
+    calcOpticalFlowFarneback(
+                frame0, frame1, flow, calc.pyrScale, calc.numLevels, calc.winSize,
+                calc.numIters,  calc.polyN, calc.polySigma, calc.flags);
+
+    std::vector<Mat> flowxy; split(flow, flowxy);
+    /*std::cout << checkSimilarity(flowxy[0], (Mat)d_flowx) << " "
+              << checkSimilarity(flowxy[1], (Mat)d_flowy) << std::endl;*/
+    EXPECT_LT(checkSimilarity(flowxy[0], (Mat)d_flowx), 0.1);
+    EXPECT_LT(checkSimilarity(flowxy[1], (Mat)d_flowy), 0.1);
+}
+
+INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlowTest,
+                        Combine(ALL_DEVICES,
+                                Values(0.3, 0.5, 0.8),
+                                Values(5, 7),
+                                Values(0, (int)cv::OPTFLOW_FARNEBACK_GAUSSIAN),
+                                Values(false, true)));
