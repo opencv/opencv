@@ -586,7 +586,7 @@ icvCreateContourTree( const CvSeq * contour, CvMemStorage * storage,
 /*    CV_WRITE_SEQ_ELEM (tree_one, start_writer);   */
     i_tree++;
 /*  create Sequence hearder     */
-    *((CvSeq **) tree) = cvEndWriteSeq( &writer );
+    *tree = (CvContourTree*)cvEndWriteSeq( &writer );
 /*   write points for the main segment into sequence header   */
     (*tree)->p1 = pt1[0];
 

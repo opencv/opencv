@@ -198,6 +198,25 @@ endif()
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+set(OPENCV_INCLUDE_PREFIX include)
+if(INSTALL_TO_MANGLED_PATHS)
+  set(OPENCV_INCLUDE_PREFIX include/opencv-${OPENCV_VERSION})
+endif()
+
+if(WIN32)
+  # Postfix of DLLs:
+  set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+  set(OPENCV_DEBUG_POSTFIX d)
+else()
+  # Postfix of so's:
+  set(OPENCV_DLLVERSION "")
+  set(OPENCV_DEBUG_POSTFIX "")
+endif()
+
+if(NOT "${CMAKE_DEBUG_POSTFIX}" STREQUAL "")
+  set(OPENCV_DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
+endif()
+
 
 # ----------------------------------------------------------------------------
 #  Path for build/platform -specific headers

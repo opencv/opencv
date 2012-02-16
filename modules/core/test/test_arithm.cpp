@@ -517,7 +517,7 @@ inRangeS_(const _Tp* src, const _WTp* a, const _WTp* b, uchar* dst, size_t total
     for( i = 0; i < total; i++ )
     {
         _Tp val = src[i*cn];
-        dst[i] = a[0] <= val && val <= b[0] ? 255 : 0;
+        dst[i] = (a[0] <= val && val <= b[0]) ? uchar(255) : 0;
     }
     for( c = 1; c < cn; c++ )
     {
@@ -609,10 +609,10 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
 	int depth = src.depth(), cn = src.channels();
-    double lbuf[4], rbuf[4];
+    union { double d[4]; float f[4]; int i[4];} lbuf, rbuf;
     int wtype = CV_MAKETYPE(depth <= CV_32S ? CV_32S : depth, cn);
-    scalarToRawData(lb, lbuf, wtype, cn);
-    scalarToRawData(rb, rbuf, wtype, cn);
+    scalarToRawData(lb, lbuf.d, wtype, cn);
+    scalarToRawData(rb, rbuf.d, wtype, cn);
     
     for( i = 0; i < nplanes; i++, ++it )
     {
@@ -622,25 +622,25 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
         switch( depth )
         {
         case CV_8U:
-            inRangeS_((const uchar*)sptr, (const int*)lbuf, (const int*)rbuf, dptr, total, cn);
+            inRangeS_((const uchar*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
         case CV_8S:
-            inRangeS_((const schar*)sptr, (const int*)lbuf, (const int*)rbuf, dptr, total, cn);
+            inRangeS_((const schar*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
         case CV_16U:
-            inRangeS_((const ushort*)sptr, (const int*)lbuf, (const int*)rbuf, dptr, total, cn);
+            inRangeS_((const ushort*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
         case CV_16S:
-            inRangeS_((const short*)sptr, (const int*)lbuf, (const int*)rbuf, dptr, total, cn);
+            inRangeS_((const short*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
         case CV_32S:
-            inRangeS_((const int*)sptr, (const int*)lbuf, (const int*)rbuf, dptr, total, cn);
+            inRangeS_((const int*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
             break;
         case CV_32F:
-            inRangeS_((const float*)sptr, (const float*)lbuf, (const float*)rbuf, dptr, total, cn);
+            inRangeS_((const float*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
             break;
         case CV_64F:
-            inRangeS_((const double*)sptr, (const double*)lbuf, (const double*)rbuf, dptr, total, cn);
+            inRangeS_((const double*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         default:
             CV_Error(CV_StsUnsupportedFormat, "");

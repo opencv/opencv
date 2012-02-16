@@ -332,7 +332,6 @@ int icvComputeCoeffForStereo(  CvStereoCamera* stereoCamera)
 }
 
 
-
 /*--------------------------------------------------------------------------------------*/
 int icvComCoeffForLine(   CvPoint2D64d point1,
                             CvPoint2D64d point2,
@@ -350,33 +349,33 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
     /* Get direction for all points */
     /* Direction for camera 1 */
     
-    double direct1[3];
-    double direct2[3];
-    double camPoint1[3];
+    CvPoint3D64f direct1;
+    CvPoint3D64f direct2;
+    CvPoint3D64f camPoint1;
     
-    double directS3[3];
-    double directS4[3];
-    double direct3[3];
-    double direct4[3];
-    double camPoint2[3];
+    CvPoint3D64f directS3;
+    CvPoint3D64f directS4;
+    CvPoint3D64f direct3;
+    CvPoint3D64f direct4;
+    CvPoint3D64f camPoint2;
     
     icvGetDirectionForPoint(   point1,
                             camMatr1,
-                            (CvPoint3D64d*)direct1);
+                            &direct1);
     
     icvGetDirectionForPoint(   point2,
                             camMatr1,
-                            (CvPoint3D64d*)direct2);
+                            &direct2);
 
     /* Direction for camera 2 */
 
     icvGetDirectionForPoint(   point3,
                             camMatr2,
-                            (CvPoint3D64d*)directS3);
+                            &directS3);
     
     icvGetDirectionForPoint(   point4,
                             camMatr2,
-                            (CvPoint3D64d*)directS4);
+                            &directS4);
 
     /* Create convertion for camera 2: two direction and camera point */
     
@@ -390,30 +389,30 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
                             convRotMatr,
                             convTransVect);
 
-    double zeroVect[3];
-    zeroVect[0] = zeroVect[1] = zeroVect[2] = 0.0;
-    camPoint1[0] = camPoint1[1] = camPoint1[2] = 0.0;
+    CvPoint3D64f zeroVect;
+    zeroVect.x = zeroVect.y = zeroVect.z = 0.0;
+    camPoint1.x = camPoint1.y = camPoint1.z = 0.0;
     
-    icvConvertPointSystem(*((CvPoint3D64d*)directS3),(CvPoint3D64d*)direct3,convRotMatr,convTransVect);
-    icvConvertPointSystem(*((CvPoint3D64d*)directS4),(CvPoint3D64d*)direct4,convRotMatr,convTransVect);
-    icvConvertPointSystem(*((CvPoint3D64d*)zeroVect),(CvPoint3D64d*)camPoint2,convRotMatr,convTransVect);
+    icvConvertPointSystem(directS3,&direct3,convRotMatr,convTransVect);
+    icvConvertPointSystem(directS4,&direct4,convRotMatr,convTransVect);
+    icvConvertPointSystem(zeroVect,&camPoint2,convRotMatr,convTransVect);
 
-    double pointB[3];
+    CvPoint3D64f pointB;
         
     int postype = 0;
     
     /* Changed order */
     /* Compute point B: xB,yB,zB */
-    icvGetCrossLines(*((CvPoint3D64d*)camPoint1),*((CvPoint3D64d*)direct2),
-                  *((CvPoint3D64d*)camPoint2),*((CvPoint3D64d*)direct3),
-                  (CvPoint3D64d*)pointB);
+    icvGetCrossLines(camPoint1,direct2,
+                  camPoint2,direct3,
+                  &pointB);
 
-    if( pointB[2] < 0 )/* If negative use other lines for cross */
+    if( pointB.z < 0 )/* If negative use other lines for cross */
     {
         postype = 1;
-        icvGetCrossLines(*((CvPoint3D64d*)camPoint1),*((CvPoint3D64d*)direct1),
-                      *((CvPoint3D64d*)camPoint2),*((CvPoint3D64d*)direct4),
-                      (CvPoint3D64d*)pointB);
+        icvGetCrossLines(camPoint1,direct1,
+                      camPoint2,direct4,
+                      &pointB);
     }
 
     CvPoint3D64d pointNewA;
@@ -424,27 +423,27 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
 
     if( postype == 0 )
     {
-        icvGetSymPoint3D(   *((CvPoint3D64d*)camPoint1),
-                            *((CvPoint3D64d*)direct1),
-                            *((CvPoint3D64d*)pointB),
+        icvGetSymPoint3D(   camPoint1,
+                            direct1,
+                            pointB,
                             &pointNewA);
 
-        icvGetSymPoint3D(   *((CvPoint3D64d*)camPoint2),
-                            *((CvPoint3D64d*)direct4),
-                            *((CvPoint3D64d*)pointB),
+        icvGetSymPoint3D(   camPoint2,
+                            direct4,
+                            pointB,
                             &pointNewC);
     }
     else
     {/* In this case we must change cameras */
         *needSwapCamera = 1;
-        icvGetSymPoint3D(   *((CvPoint3D64d*)camPoint2),
-                            *((CvPoint3D64d*)direct3),
-                            *((CvPoint3D64d*)pointB),
+        icvGetSymPoint3D(   camPoint2,
+                            direct3,
+                            pointB,
                             &pointNewA);
 
-        icvGetSymPoint3D(   *((CvPoint3D64d*)camPoint1),
-                            *((CvPoint3D64d*)direct2),
-                            *((CvPoint3D64d*)pointB),
+        icvGetSymPoint3D(   camPoint1,
+                            direct2,
+                            pointB,
                             &pointNewC);
     }
 
@@ -453,9 +452,9 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
     
     double x1,y1,z1;
 
-    x1 = camPoint1[0];
-    y1 = camPoint1[1];
-    z1 = camPoint1[2];
+    x1 = camPoint1.x;
+    y1 = camPoint1.y;
+    z1 = camPoint1.z;
 
     double xA,yA,zA;
     double xB,yB,zB;
@@ -465,9 +464,9 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
     yA = pointNewA.y;
     zA = pointNewA.z;
 
-    xB = pointB[0];
-    yB = pointB[1];
-    zB = pointB[2];
+    xB = pointB.x;
+    yB = pointB.y;
+    zB = pointB.z;
 
     xC = pointNewC.x;
     yC = pointNewC.y;
@@ -479,8 +478,8 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
     gamma = len2 / len1;
 
     icvComputeStereoLineCoeffs( pointNewA,
-                                *((CvPoint3D64d*)pointB),
-                                *((CvPoint3D64d*)camPoint1),
+                                pointB,
+                                camPoint1,
                                 gamma,
                                 coeffs);
     

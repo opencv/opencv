@@ -834,8 +834,8 @@ void TestBase::reportMetrics(bool toJUnitXML)
             break;
         };
 
-        LOGD("bytesIn   =%11lu", m.bytesIn);
-        LOGD("bytesOut  =%11lu", m.bytesOut);
+        LOGD("bytesIn   =%11lu", (unsigned long)m.bytesIn);
+        LOGD("bytesOut  =%11lu", (unsigned long)m.bytesOut);
         if (nIters == (unsigned int)-1 || m.terminationReason == performance_metrics::TERM_ITERATIONS)
             LOGD("samples   =%11u",  m.samples);
         else

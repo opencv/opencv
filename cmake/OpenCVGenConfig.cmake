@@ -46,7 +46,7 @@ macro(ocv_generate_dependencies_map_configmake suffix configuration)
     get_filename_component(__libname "${__libname}" NAME)
     
     if(WIN32)
-      string(REGEX REPLACE "[.]dll$" ".lib" __libname "${__libname}")
+      string(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "${CMAKE_LINK_LIBRARY_SUFFIX}" __libname "${__libname}")
     endif()
   
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_LIBNAME_${suffix} \"${__libname}\")\n")

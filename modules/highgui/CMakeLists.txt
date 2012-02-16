@@ -244,7 +244,7 @@ if(IOS)
   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} bz2 "-framework QuartzCore" "-framework CoreFoundation" "-framework ImageIO" "-framework CoreGraphics" "-framework AVFoundation")
 endif()
 
-if(MINGW)
+if(WIN32)
   link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")#for directshow
 endif()
@@ -270,5 +270,5 @@ set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_add_precompiled_headers(${the_module})
 
-ocv_add_accuracy_tests(highgui opencv_imgproc)
+ocv_add_accuracy_tests()
 ocv_add_perf_tests()
