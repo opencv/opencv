@@ -63,7 +63,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(const GpuMat&, const GpuMat&, Gp
 
 namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 {
-    void setPolinomialExpansionConsts(
+    void setPolynomialExpansionConsts(
             int polyN, const float *g, const float *xg, const float *xxg,
             float ig11, float ig03, float ig33, float ig55);
 
@@ -160,7 +160,7 @@ void cv::gpu::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double s
     double ig11, ig03, ig33, ig55;
     prepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
 
-    device::optflow_farneback::setPolinomialExpansionConsts(n, g, xg, xxg, ig11, ig03, ig33, ig55);
+    device::optflow_farneback::setPolynomialExpansionConsts(n, g, xg, xxg, ig11, ig03, ig33, ig55);
 }
 
 

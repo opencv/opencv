@@ -121,7 +121,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
-    void setPolinomialExpansionConsts(
+    void setPolynomialExpansionConsts(
             int polyN, const float *g, const float *xg, const float *xxg,
             float ig11, float ig03, float ig33, float ig55)
     {
