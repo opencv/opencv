@@ -1203,13 +1203,11 @@ TEST(FarnebackOpticalFlow)
     calc.flags |= useGaussianBlur ? OPTFLOW_FARNEBACK_GAUSSIAN : 0;
 
     gpu::GpuMat d_frame0(frame0), d_frame1(frame1), d_flowx, d_flowy;
-    calc(d_frame0, d_frame1, d_flowx, d_flowy);
     GPU_ON;
     calc(d_frame0, d_frame1, d_flowx, d_flowy);
     GPU_OFF;
 
     Mat flow;
-    calcOpticalFlowFarneback(frame0, frame1, flow, calc.pyrScale, calc.numLevels, calc.winSize, calc.numIters, calc.polyN, calc.polySigma, calc.flags);
     CPU_ON;
     calcOpticalFlowFarneback(frame0, frame1, flow, calc.pyrScale, calc.numLevels, calc.winSize, calc.numIters, calc.polyN, calc.polySigma, calc.flags);
     CPU_OFF;
