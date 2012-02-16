@@ -422,12 +422,10 @@ TEST_P(PyrLKOpticalFlowSparse, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, Combine(ALL_DEVICES, Bool()));
 
-#endif // HAVE_CUDA
-
 
 PARAM_TEST_CASE(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo, double, int, int, bool)
 {
-    Mat frame0, frame1;
+    cv::Mat frame0, frame1;
 
     double pyrScale;
     int polyN;
@@ -494,3 +492,5 @@ INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlowTest,
                                 Values(5, 7),
                                 Values(0, (int)cv::OPTFLOW_FARNEBACK_GAUSSIAN),
                                 Values(false, true)));
+
+#endif // HAVE_CUDA
