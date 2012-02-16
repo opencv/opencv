@@ -225,4 +225,37 @@ GPU_PERF_TEST_1(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo)
 
 INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowDense, ALL_DEVICES);
 
+
+//////////////////////////////////////////////////////
+// FarnebackOpticalFlowTest
+
+GPU_PERF_TEST_1(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo)
+{
+    cv::gpu::DeviceInfo devInfo = GetParam();
+
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat frame0_host = readImage("gpu/opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1_host = readImage("gpu/opticalflow/frame1.png", cv::IMREAD_GRAYSCALE);
+
+    ASSERT_FALSE(frame0_host.empty());
+    ASSERT_FALSE(frame1_host.empty());
+
+    cv::gpu::GpuMat frame0(frame0_host);
+    cv::gpu::GpuMat frame1(frame1_host);
+    cv::gpu::GpuMat u;
+    cv::gpu::GpuMat v;
+
+    cv::gpu::FarnebackOpticalFlow calc;
+
+    declare.time(10);
+
+    TEST_CYCLE()
+    {
+        calc(frame0, frame1, u, v);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlowTest, ALL_DEVICES);
+
 #endif
