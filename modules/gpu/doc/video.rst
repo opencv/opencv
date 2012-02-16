@@ -118,6 +118,64 @@ Releases inner buffers memory.
 .. ocv:function:: void gpu::GoodFeaturesToTrackDetector_GPU::releaseMemory()
 
 
+gpu::FarnebackOpticalFlow
+-------------------------
+Class computing a dense optical flow using the Gunnar Farneback’s algorithm. ::
+
+    class CV_EXPORTS FarnebackOpticalFlow
+    {
+    public:
+        FarnebackOpticalFlow()
+        {
+            numLevels = 5;
+            pyrScale = 0.5;
+            fastPyramids = false;
+            winSize = 13;
+            numIters = 10;
+            polyN = 5;
+            polySigma = 1.1;
+            flags = 0;
+        }
+
+        int numLevels;
+        double pyrScale;
+        bool fastPyramids;
+        int winSize;
+        int numIters;
+        int polyN;
+        double polySigma;
+        int flags;
+
+        void operator ()(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s = Stream::Null());
+
+        void releaseMemory();
+
+    private:
+        /* hidden */
+    };
+
+
+gpu::FarnebackOpticalFlow::operator ()
+--------------------------------------
+Computes a dense optical flow using the Gunnar Farneback’s algorithm.
+
+.. ocv:function:: void gpu::FarnebackOpticalFlow::operator ()(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s = Stream::Null())
+
+    :param frame0: First 8-bit gray-scale input image
+    :param frame1: Second 8-bit gray-scale input image
+    :param flowx: Flow horizontal component
+    :param flowy: Flow vertical component
+    :param s: Stream
+
+.. seealso:: :ocv:func:`calcOpticalFlowFarneback`
+
+
+gpu::FarnebackOpticalFlow::releaseMemory
+----------------------------------------
+Releases unused auxiliary memory buffers.
+
+.. ocv:function:: void gpu::FarnebackOpticalFlow::releaseMemory()
+
 
 gpu::PyrLKOpticalFlow
 ---------------------
