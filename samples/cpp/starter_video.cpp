@@ -41,7 +41,7 @@ namespace {
         for (;;) {
             capture >> frame;
             if (frame.empty())
-                continue;
+                break;
             imshow(window_name, frame);
             char key = (char)waitKey(5); //delay N millis, usually long enough to display and capture input
             switch (key) {
