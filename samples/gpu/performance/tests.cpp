@@ -1187,16 +1187,16 @@ TEST(PyrLKOpticalFlow)
 
 TEST(FarnebackOpticalFlow)
 {
-    const string names[] = {"rubberwhale", "basketball"};
-    for (size_t i = 0; i < sizeof(names)/sizeof(*names); ++i) {
+    const string datasets[] = {"rubberwhale", "basketball"};
+    for (size_t i = 0; i < sizeof(datasets)/sizeof(*datasets); ++i) {
     for (int fastPyramids = 0; fastPyramids < 2; ++fastPyramids) {
     for (int useGaussianBlur = 0; useGaussianBlur < 2; ++useGaussianBlur) {
 
-    SUBTEST << "dataset=" << names[i] << ", fastPyramids=" << fastPyramids << ", useGaussianBlur=" << useGaussianBlur;
-    Mat frame0 = imread(abspath(names[i] + "1.png"), IMREAD_GRAYSCALE);
-    Mat frame1 = imread(abspath(names[i] + "2.png"), IMREAD_GRAYSCALE);
-    if (frame0.empty()) throw runtime_error("can't open " + names[i] + "1.png");
-    if (frame1.empty()) throw runtime_error("can't open " + names[i] + "2.png");
+    SUBTEST << "dataset=" << datasets[i] << ", fastPyramids=" << fastPyramids << ", useGaussianBlur=" << useGaussianBlur;
+    Mat frame0 = imread(abspath(datasets[i] + "1.png"), IMREAD_GRAYSCALE);
+    Mat frame1 = imread(abspath(datasets[i] + "2.png"), IMREAD_GRAYSCALE);
+    if (frame0.empty()) throw runtime_error("can't open " + datasets[i] + "1.png");
+    if (frame1.empty()) throw runtime_error("can't open " + datasets[i] + "2.png");
 
     gpu::FarnebackOpticalFlow calc;
     calc.fastPyramids = fastPyramids;
