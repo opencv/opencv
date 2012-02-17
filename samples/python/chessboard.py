@@ -10,12 +10,18 @@ if __name__ == "__main__":
         im = cv.LoadImage(filename, cv.CV_LOAD_IMAGE_GRAYSCALE)
         im3 = cv.LoadImage(filename, cv.CV_LOAD_IMAGE_COLOR)
     else:
-        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/left01.jpg'
-        filedata = urllib2.urlopen(url).read()
-        imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
-        cv.SetData(imagefiledata, filedata, len(filedata))
-        im = cv.DecodeImageM(imagefiledata, cv.CV_LOAD_IMAGE_GRAYSCALE)
-        im3 = cv.DecodeImageM(imagefiledata, cv.CV_LOAD_IMAGE_COLOR)
+       try: # try opening local copy of image
+            fileName = '../cpp/left01.jpg'
+            im = cv.LoadImageM(fileName, False)
+            im3 = cv.LoadImageM(fileName, True)
+       except: # if local copy cannot be opened, try downloading it
+            url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/left01.jpg'
+            filedata = urllib2.urlopen(url).read()
+            imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
+            cv.SetData(imagefiledata, filedata, len(filedata))
+            im = cv.DecodeImageM(imagefiledata, cv.CV_LOAD_IMAGE_GRAYSCALE)
+            im3 = cv.DecodeImageM(imagefiledata, cv.CV_LOAD_IMAGE_COLOR)
+
     chessboard_dim = ( 9, 6 )
     
     found_all, corners = cv.FindChessboardCorners( im, chessboard_dim )
