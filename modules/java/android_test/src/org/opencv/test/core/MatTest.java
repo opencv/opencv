@@ -708,10 +708,10 @@ public class MatTest extends OpenCVTestCase {
         Mat roi = rgba0.submat(3, 5, 7, 10);
         Mat m = roi.clone();
 
-        assertEquals(rgba0.channels() * rgba0.cols(), roi.step1(0));
+        assertTrue(rgba0.channels() * rgba0.cols() <= roi.step1(0));
         assertEquals(rgba0.channels(), roi.step1(1));
-        assertEquals(rgba0.channels() * (10 - 7), m.step1(0));
-        assertEquals(rgba0.channels(), m.step1(1));
+        assertTrue(m.channels() * (10 - 7) <= m.step1(0));
+        assertEquals(m.channels(), m.step1(1));
     }
 
     public void testSubmatIntIntIntInt() {
