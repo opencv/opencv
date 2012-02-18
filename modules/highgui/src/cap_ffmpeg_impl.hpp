@@ -384,6 +384,7 @@ struct CvCapture_FFMPEG
     void close();
 
     double getProperty(int);
+    bool seekKeyAndRunOverFrames(int framenumber);
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
@@ -509,6 +510,9 @@ bool CvCapture_FFMPEG::reopen()
 #endif
 #ifndef AVSEEK_FLAG_ANY
 	#define AVSEEK_FLAG_ANY 1
+#endif
+#ifndef SHORTER_DISTANCE_FOR_SEEK_TO_MAKE_IT_FASTER
+    #define SHORTER_DISTANCE_FOR_SEEK_TO_MAKE_IT_FASTER 25
 #endif
 
 bool CvCapture_FFMPEG::open( const char* _filename )
@@ -724,7 +728,7 @@ double CvCapture_FFMPEG::getProperty( int property_id )
     {
     case CV_FFMPEG_CAP_PROP_POS_MSEC:        
         if(video_st->parser && video_st->parser->dts != AV_NOPTS_VALUE_)
-            return (((double)video_st->parser->dts-1) *1000.0f) * av_q2d (video_st->time_base);
+            return (((double)video_st->parser->dts-1) *1000.0) * av_q2d (video_st->time_base);
         if(video_st->cur_dts != AV_NOPTS_VALUE_)
             return ((video_st->cur_dts-video_st->first_dts) * 1000.0 * av_q2d (video_st->time_base));
         break;
@@ -742,7 +746,7 @@ double CvCapture_FFMPEG::getProperty( int property_id )
         break;
 	case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
 	    if(video_st->duration != AV_NOPTS_VALUE_)
-		    return (double)video_st->duration * frameScale;
+            return (double)ceil(ic->duration * av_q2d(video_st->r_frame_rate) / AV_TIME_BASE);
 	    break;
     case CV_FFMPEG_CAP_PROP_FRAME_WIDTH:
         return (double)frame.width;
@@ -787,10 +791,36 @@ bool CvCapture_FFMPEG::slowSeek( int framenumber )
     return true;
 }
 
+bool CvCapture_FFMPEG::seekKeyAndRunOverFrames(int framenumber)
+{
+    int ret;
+    if (framenumber > video_st->cur_dts-1) {
+    if (framenumber-(video_st->cur_dts-1) > SHORTER_DISTANCE_FOR_SEEK_TO_MAKE_IT_FASTER) {
+    ret = av_seek_frame(ic, video_stream, framenumber, 1);
+    assert(ret >= 0);
+    if( ret < 0 )
+    return false;
+    }
+    grabFrame();
+    while ((video_st->cur_dts-1) < framenumber)
+    if ( !grabFrame() ) return false;
+    }
+    else if ( framenumber < (video_st->cur_dts-1) ) {
+    ret=av_seek_frame(ic, video_stream, framenumber, 1);
+    assert( ret >= 0 );
+    if( ret < 0 )
+    return false;
+    grabFrame();
+    while ((video_st->cur_dts-1) < framenumber )
+    if ( !grabFrame() ) return false;
+    }
+    return true;
+}
 
 bool CvCapture_FFMPEG::setProperty( int property_id, double value )
 {
     if( !video_st ) return false;
+    int framenumber = 0;
 
     switch( property_id )
     {
@@ -805,21 +835,18 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             switch( property_id )
             {
             case CV_FFMPEG_CAP_PROP_POS_FRAMES:
-                timestamp += (int64_t)(value * timeScale);
-                if(ic->start_time != AV_NOPTS_VALUE_)
-                    timestamp += ic->start_time;
+                framenumber=(int)value;
+                seekKeyAndRunOverFrames(framenumber);
                 break;
 
             case CV_FFMPEG_CAP_PROP_POS_MSEC:
-                timestamp +=(int64_t)(value*(float(time_base.den)/float(time_base.num))/1000);
-                if(ic->start_time != AV_NOPTS_VALUE_)
-                    timestamp += ic->start_time;
+                framenumber=(int)(value/(1000.0f * av_q2d (video_st->time_base)));
+                seekKeyAndRunOverFrames(framenumber);
                 break;
 
             case CV_FFMPEG_CAP_PROP_POS_AVI_RATIO:
-                timestamp += (int64_t)(value*ic->duration);
-                if(ic->start_time != AV_NOPTS_VALUE_ && ic->duration != AV_NOPTS_VALUE_)
-                    timestamp += ic->start_time;
+                framenumber = (int)(value*ic->duration);
+                seekKeyAndRunOverFrames(framenumber);
                 break;
             }
 
