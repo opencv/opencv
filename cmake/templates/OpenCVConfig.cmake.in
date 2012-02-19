@@ -13,10 +13,9 @@
 #
 #    FIND_PACKAGE(OpenCV REQUIRED core highgui)
 #
-#    If the module found then OPENCV_<MODULE>_FOUND is set.
+#    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #
 #    This file will define the following variables:
-#      - 
 #      - OpenCV_LIBS                     : The list of libraries to links against.
 #      - OpenCV_LIB_DIR                  : The directory(es) where lib files are. Calling LINK_DIRECTORIES
 #                                          with this path is NOT needed.
@@ -36,19 +35,19 @@
 #      - OpenCV_USE_MANGLED_PATHS
 #      - OpenCV_HAVE_ANDROID_CAMERA
 #
-# =================================================================================================
+# ===================================================================================
 
 # Version Compute Capability from which OpenCV has been compiled is remembered
-set(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC_CONFIGMAKE@)
+set(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC_CONFIGCMAKE@)
 
 # Android API level from which OpenCV has been compiled is remembered
-set(OpenCV_ANDROID_NATIVE_API_LEVEL @OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGMAKE@)
+set(OpenCV_ANDROID_NATIVE_API_LEVEL @OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGCMAKE@)
 
 # Some additional settings are required if OpenCV is built as static libs
 set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
 
 # Enables mangled install paths, that help with side by side installs
-set(OpenCV_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS@)
+set(OpenCV_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE@)
 
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
@@ -64,7 +63,7 @@ set(OpenCV_HAVE_ANDROID_CAMERA @HAVE_opencv_androidcamera@)
 # ======================================================
 
 # Provide the include directories to the caller
-set(OpenCV_INCLUDE_DIRS @CMAKE_INCLUDE_DIRS_CONFIGCMAKE@)
+set(OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 # ======================================================
@@ -72,10 +71,10 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 # ======================================================
 
 # Provide the libs directories to the caller
-set(OpenCV_LIB_DIR_OPT @CMAKE_LIB_DIRS_CONFIGCMAKE@)
-set(OpenCV_LIB_DIR_DBG @CMAKE_LIB_DIRS_CONFIGCMAKE@)
-set(OpenCV_3RDPARTY_LIB_DIR_OPT @CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
-set(OpenCV_3RDPARTY_LIB_DIR_DBG @CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
+set(OpenCV_LIB_DIR_OPT @OpenCV_LIB_DIRS_CONFIGCMAKE@)
+set(OpenCV_LIB_DIR_DBG @OpenCV_LIB_DIRS_CONFIGCMAKE@)
+set(OpenCV_3RDPARTY_LIB_DIR_OPT @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
+set(OpenCV_3RDPARTY_LIB_DIR_DBG @OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
 
 # ======================================================
 #  Version variables:
@@ -89,7 +88,7 @@ SET(OpenCV_VERSION_PATCH  @OPENCV_VERSION_PATCH@)
 # Link libraries: e.g.   libopencv_core.so, opencv_imgproc220d.lib, etc...
 # ====================================================================
 
-SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGMAKE@)
+SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGCMAKE@)
 
 @OPENCV_DEPENDENCIES_MAP_OPT@
 
@@ -98,17 +97,13 @@ SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGMAKE@)
 # ==============================================================
 #  Extra include directories, needed by OpenCV 2 new structure
 # ==============================================================
-SET(OpenCV2_INCLUDE_DIRS @CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@)
+SET(OpenCV2_INCLUDE_DIRS @OpenCV2_INCLUDE_DIRS_CONFIGCMAKE@)
 if(OpenCV2_INCLUDE_DIRS)
   include_directories(${OpenCV2_INCLUDE_DIRS})
   list(APPEND OpenCV_INCLUDE_DIRS ${OpenCV2_INCLUDE_DIRS})
-  
-  set(OpenCV_AddDebugRelease FALSE)
-  if(MSVC OR CMAKE_GENERATOR MATCHES Xcode)
-    set(OpenCV_AddDebugRelease TRUE)
-  endif()  
-  
-  if(OpenCV_AddDebugRelease)  
+
+  set(OpenCV_ADD_DEBUG_RELEASE @OpenCV_ADD_DEBUG_RELEASE_CONFIGCMAKE@)
+  if(OpenCV_ADD_DEBUG_RELEASE)
     set(OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/Release")
     set(OpenCV_LIB_DIR_DBG "${OpenCV_LIB_DIR_DBG}/Debug")
     set(OpenCV_3RDPARTY_LIB_DIR_OPT "${OpenCV_3RDPARTY_LIB_DIR_OPT}/Release")
