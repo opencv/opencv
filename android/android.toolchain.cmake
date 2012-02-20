@@ -165,10 +165,10 @@ set( CMAKE_SYSTEM_VERSION 1 )
 
 set( ANDROID_SUPPORTED_NDK_VERSIONS -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
 if( CMAKE_HOST_WIN32 )
- file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATH )
- set( ANDROID_NDK_SEARCH_PATH "${ANDROID_NDK_SEARCH_PATH}/android-ndk" )
+ file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATHS )
+ set( ANDROID_NDK_SEARCH_PATHS "${ANDROID_NDK_SEARCH_PATHS}/android-ndk" "$ENV{SystemDrive}/NVPACK/android-ndk" )
 else()
- set( ANDROID_NDK_SEARCH_PATH /opt/android-ndk )
+ set( ANDROID_NDK_SEARCH_PATHS /opt/android-ndk "$ENV{HOME}/NVPACK/android-ndk" )
 endif()
 set( ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH /opt/android-toolchain )
 set( ANDROID_SUPPORTED_ABIS_arm "armeabi-v7a;armeabi;armeabi-v7a with NEON;armeabi-v7a with VFPV3;armeabi-v6 with VFP" )
@@ -327,8 +327,10 @@ if( NOT ANDROID_NDK )
  if( NOT ANDROID_STANDALONE_TOOLCHAIN )
   #try to find Android NDK in one of the the default locations
   set( __ndkSearchPaths )
-  foreach( suffix ${ANDROID_SUPPORTED_NDK_VERSIONS} )
-   list( APPEND __ndkSearchPaths "${ANDROID_NDK_SEARCH_PATH}${suffix}" )
+  foreach( __ndkSearchPath ${ANDROID_NDK_SEARCH_PATHS} )
+   foreach( suffix ${ANDROID_SUPPORTED_NDK_VERSIONS} )
+    list( APPEND __ndkSearchPaths "${__ndkSearchPath}${suffix}" )
+   endforeach()
   endforeach()
   __INIT_VARIABLE( ANDROID_NDK PATH VALUES ${__ndkSearchPaths} )
   unset( __ndkSearchPaths )
@@ -378,6 +380,7 @@ elseif( ANDROID_STANDALONE_TOOLCHAIN )
  set( ANDROID_STANDALONE_TOOLCHAIN "${ANDROID_STANDALONE_TOOLCHAIN}" CACHE INTERNAL "Path of the Android standalone toolchain" )
  set( BUILD_WITH_STANDALONE_TOOLCHAIN True )
 else()
+ list(GET ANDROID_NDK_SEARCH_PATHS 0 ANDROID_NDK_SEARCH_PATH)
  message( FATAL_ERROR "Could not find neither Android NDK nor Android standalone toolcahin.
     You should either set an environment variable:
       export ANDROID_NDK=~/my-android-ndk
@@ -964,7 +967,7 @@ endif()
 # Defaults:
 #   ANDROID_DEFAULT_NDK_API_LEVEL
 #   ANDROID_DEFAULT_NDK_API_LEVEL_${ARCH}
-#   ANDROID_NDK_SEARCH_PATH
+#   ANDROID_NDK_SEARCH_PATHS
 #   ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH
 #   ANDROID_SUPPORTED_ABIS_${ARCH}
 #   ANDROID_SUPPORTED_NDK_VERSIONS

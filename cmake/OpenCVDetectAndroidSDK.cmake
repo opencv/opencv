@@ -8,9 +8,18 @@ find_host_program(ANDROID_EXECUTABLE
         "${ProgramFiles_ENV_PATH}/Android/android-sdk/tools/"
         "/opt/android-sdk/tools/"
         "/opt/android-sdk-linux_x86/tools/"
-        "/opt/android-sdk-mac_x86/tools/"
         "/opt/android-sdk-linux_86/tools/"
+        "/opt/android-sdk-linux/tools/"
+        "/opt/android-sdk-mac_x86/tools/"
         "/opt/android-sdk-mac_86/tools/"
+        "/opt/android-sdk-mac/tools/"
+        "$ENV{HOME}/NVPACK/android-sdk-linux_x86/tools/"
+        "$ENV{HOME}/NVPACK/android-sdk-linux_86/tools/"
+        "$ENV{HOME}/NVPACK/android-sdk-linux/tools/"
+        "$ENV{HOME}/NVPACK/android-sdk-mac_x86/tools/"
+        "$ENV{HOME}/NVPACK/android-sdk-mac_86/tools/"
+        "$ENV{HOME}/NVPACK/android-sdk-mac/tools/"
+        "$ENV{SystemDrive}/NVPACK/android-sdk-windows/tools/"
   )
 
 if(ANDROID_EXECUTABLE)
