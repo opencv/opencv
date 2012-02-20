@@ -17,20 +17,28 @@ if(NOT "${OPENNI_PRIME_SENSOR_MODULE_BIN_DIR}" STREQUAL "${OPENNI_PRIME_SENSOR_M
     unset(OPENNI_PRIME_SENSOR_MODULE_BIN_DIR CACHE)
 endif()
 
-find_file(OPENNI_INCLUDES "XnCppWrapper.h" PATHS $ENV{OPEN_NI_INCLUDE} "/usr/include/ni" "/usr/include/openni" "c:/Program Files/OpenNI/Include" DOC "OpenNI c++ interface header")
-find_library(OPENNI_LIBRARY "OpenNI" PATHS $ENV{OPEN_NI_LIB} "/usr/lib" "c:/Program Files/OpenNI/Lib" DOC "OpenNI library")
+if(WIN32)
+    if(NOT (MSVC64 OR MINGW64))
+        find_file(OPENNI_INCLUDES "XnCppWrapper.h" PATHS "$ENV{OPEN_NI_INSTALL_PATH}Include" DOC "OpenNI c++ interface header")
+        find_library(OPENNI_LIBRARY "OpenNI" PATHS $ENV{OPEN_NI_LIB} DOC "OpenNI library")
+    else()
+        find_file(OPENNI_INCLUDES "XnCppWrapper.h" PATHS "$ENV{OPEN_NI_INSTALL_PATH64}Include" DOC "OpenNI c++ interface header")
+        find_library(OPENNI_LIBRARY "OpenNI64" PATHS $ENV{OPEN_NI_LIB64} DOC "OpenNI library")
+    endif()
+elseif(UNIX OR APPLE)
+    find_file(OPENNI_INCLUDES "XnCppWrapper.h" PATHS "/usr/include/ni" "/usr/include/openni" DOC "OpenNI c++ interface header")
+    find_library(OPENNI_LIBRARY "OpenNI" PATHS "/usr/lib" DOC "OpenNI library")
+endif()
 
 if(OPENNI_LIBRARY AND OPENNI_INCLUDES)
     set(HAVE_OPENNI TRUE)
     # the check: are PrimeSensor Modules for OpenNI installed
     if(WIN32)
-        find_file(OPENNI_PRIME_SENSOR_MODULE "XnCore.dll" 
-				PATHS 
-					"c:/Program Files/Prime Sense/Sensor/Bin" 
-					"c:/Program Files (x86)/Prime Sense/Sensor/Bin"
-					"c:/Program Files/PrimeSense/SensorKinect/Bin" 
-					"c:/Program Files (x86)/PrimeSense/SensorKinect/Bin"
-				DOC "Core library of PrimeSensor Modules for OpenNI")		
+	if(NOT (MSVC64 OR MINGW64))
+            find_file(OPENNI_PRIME_SENSOR_MODULE "XnCore.dll" PATHS "$ENV{OPEN_NI_INSTALL_PATH}../PrimeSense/Sensor/Bin" "$ENV{OPEN_NI_INSTALL_PATH}../PrimeSense/SensorKinect/Bin" DOC "Core library of PrimeSensor Modules for OpenNI")
+        else()
+            find_file(OPENNI_PRIME_SENSOR_MODULE "XnCore64.dll" PATHS "$ENV{OPEN_NI_INSTALL_PATH64}../PrimeSense/Sensor/Bin64" "$ENV{OPEN_NI_INSTALL_PATH64}../PrimeSense/SensorKinect/Bin64" DOC "Core library of PrimeSensor Modules for OpenNI")
+        endif()
     elseif(UNIX OR APPLE)
         find_library(OPENNI_PRIME_SENSOR_MODULE "XnCore" PATHS "/usr/lib" DOC "Core library of PrimeSensor Modules for OpenNI")
     endif()
