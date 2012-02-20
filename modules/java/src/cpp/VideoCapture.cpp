@@ -1,7 +1,3 @@
-//
-// This file is auto-generated, please don't edit!
-//
-
 #include <jni.h>
 
 #ifdef DEBUG
@@ -9,6 +5,9 @@
 #define MODULE_LOG_TAG "OpenCV.highgui"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
 #endif // DEBUG
+
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_HIGHGUI
 
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/highgui/highgui.hpp"
@@ -452,3 +451,4 @@ JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1delete
 
 } // extern "C"
 
+#endif // HAVE_OPENCV_HIGHGUI

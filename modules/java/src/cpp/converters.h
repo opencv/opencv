@@ -1,9 +1,8 @@
 #include <jni.h>
 
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
 #include "features2d_manual.hpp"
-
 
 void Mat_to_vector_int(cv::Mat& mat, std::vector<int>& v_int);
 void vector_int_to_Mat(std::vector<int>& v_int, cv::Mat& mat);
@@ -41,12 +40,15 @@ void vector_Point3d_to_Mat(std::vector<cv::Point3d>& v_point, cv::Mat& mat);
 void vector_Vec4f_to_Mat(std::vector<cv::Vec4f>& v_vec, cv::Mat& mat);
 void vector_Vec6f_to_Mat(std::vector<cv::Vec6f>& v_vec, cv::Mat& mat);
 
+#ifdef HAVE_OPENCV_FEATURES2D
 void Mat_to_vector_KeyPoint(cv::Mat& mat, std::vector<cv::KeyPoint>& v_kp);
 void vector_KeyPoint_to_Mat(std::vector<cv::KeyPoint>& v_kp, cv::Mat& mat);
+#endif
 
 void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat);
 void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat);
 
+#ifdef HAVE_OPENCV_FEATURES2D
 void Mat_to_vector_DMatch(cv::Mat& mat, std::vector<cv::DMatch>& v_dm);
 void vector_DMatch_to_Mat(std::vector<cv::DMatch>& v_dm, cv::Mat& mat);
 
@@ -55,6 +57,7 @@ void vector_vector_KeyPoint_to_Mat(std::vector< std::vector< cv::KeyPoint > >& v
 
 void Mat_to_vector_vector_DMatch(cv::Mat& mat, std::vector< std::vector< cv::DMatch > >& vv_dm);
 void vector_vector_DMatch_to_Mat(std::vector< std::vector< cv::DMatch > >& vv_dm, cv::Mat& mat);
+#endif
 
 void Mat_to_vector_vector_char(cv::Mat& mat, std::vector< std::vector< char > >& vv_ch);
 void vector_vector_char_to_Mat(std::vector< std::vector< char > >& vv_ch, cv::Mat& mat);

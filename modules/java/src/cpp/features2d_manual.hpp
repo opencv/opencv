@@ -1,6 +1,9 @@
 #ifndef __OPENCV_FEATURES_2D_MANUAL_HPP__
 #define __OPENCV_FEATURES_2D_MANUAL_HPP__
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_FEATURES2D
 #include "opencv2/features2d/features2d.hpp"
 
 namespace cv
@@ -10,6 +13,7 @@ class CV_EXPORTS_AS(FeatureDetector) javaFeatureDetector : public FeatureDetecto
 {
 public:
 #if 0
+    //DO NOT REMOVE! The block is required for sources parser
     CV_WRAP void detect( const Mat& image, CV_OUT vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
     CV_WRAP void detect( const vector<Mat>& images, CV_OUT vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const;
     CV_WRAP virtual bool empty() const;
@@ -152,6 +156,7 @@ class CV_EXPORTS_AS(DescriptorMatcher) javaDescriptorMatcher : public Descriptor
 {
 public:
 #if 0
+    //DO NOT REMOVE! The block is required for sources parser
     CV_WRAP virtual bool isMaskSupported() const;
     CV_WRAP virtual void add( const vector<Mat>& descriptors );
     CV_WRAP const vector<Mat>& getTrainDescriptors() const;
@@ -245,6 +250,7 @@ class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor : public Descri
 {
 public:
 #if 0
+    //DO NOT REMOVE! The block is required for sources parser
     CV_WRAP void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
     CV_WRAP void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, CV_OUT vector<Mat>& descriptors ) const;
     CV_WRAP virtual int descriptorSize() const;
@@ -326,6 +332,7 @@ class CV_EXPORTS_AS(GenericDescriptorMatcher) javaGenericDescriptorMatcher : pub
 {
 public:
 #if 0
+    //DO NOT REMOVE! The block is required for sources parser
     CV_WRAP virtual void add( const vector<Mat>& images,
                       vector<vector<KeyPoint> >& keypoints );
     CV_WRAP const vector<Mat>& getTrainImages() const;
@@ -411,6 +418,7 @@ public:
 };
 
 #if 0
+//DO NOT REMOVE! The block is required for sources parser
 enum
 { 
           DRAW_OVER_OUTIMG = 1, // Output image matrix will not be created (Mat::create).
@@ -440,5 +448,7 @@ CV_EXPORTS_AS(drawMatches2) void drawMatches( const Mat& img1, const vector<KeyP
 #endif
 
 } //cv
+
+#endif // HAVE_OPENCV_FEATURES2D
 
 #endif // __OPENCV_FEATURES_2D_MANUAL_HPP__

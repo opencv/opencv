@@ -98,6 +98,8 @@ macro(ocv_add_module _name)
     endif()
     set(OPENCV_MODULE_${the_module}_DESCRIPTION "${the_description}" CACHE INTERNAL "Brief description of ${the_module} module")
     set(OPENCV_MODULE_${the_module}_LOCATION    "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Location of ${the_module} module sources")
+    unset(OPENCV_MODULE_${the_module}_REQ_DEPS CACHE)
+    unset(OPENCV_MODULE_${the_module}_OPT_DEPS CACHE)
     
     #create option to enable/disable this module
     option(BUILD_${the_module} "Include ${the_module} module into the OpenCV build" ON)

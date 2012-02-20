@@ -180,7 +180,7 @@ void vector_Point3d_to_Mat(vector<Point3d>& v_point, Mat& mat)
     mat = Mat(v_point, true);
 }
 
-
+#ifdef HAVE_OPENCV_FEATURES2D
 //vector_KeyPoint
 void Mat_to_vector_KeyPoint(Mat& mat, vector<KeyPoint>& v_kp)
 {
@@ -206,6 +206,7 @@ void vector_KeyPoint_to_Mat(vector<KeyPoint>& v_kp, Mat& mat)
         mat.at< Vec<double, 7> >(i, 0) = Vec<double, 7>(kp.pt.x, kp.pt.y, kp.size, kp.angle, kp.response, kp.octave, kp.class_id);
     }
 }
+#endif
 
 
 //vector_Mat
@@ -239,6 +240,7 @@ void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
     }
 }
 
+#ifdef HAVE_OPENCV_FEATURES2D
 //vector_DMatch
 void Mat_to_vector_DMatch(Mat& mat, vector<DMatch>& v_dm)
 {
@@ -264,6 +266,7 @@ void vector_DMatch_to_Mat(vector<DMatch>& v_dm, Mat& mat)
         mat.at< Vec<double, 4> >(i, 0) = Vec<double, 4>(dm.queryIdx, dm.trainIdx, dm.imgIdx, dm.distance);
     }
 }
+#endif
 
 void Mat_to_vector_vector_Point(Mat& mat, vector< vector< Point > >& vv_pt)
 {
@@ -278,6 +281,7 @@ void Mat_to_vector_vector_Point(Mat& mat, vector< vector< Point > >& vv_pt)
     }
 }
 
+#ifdef HAVE_OPENCV_FEATURES2D
 void Mat_to_vector_vector_KeyPoint(Mat& mat, vector< vector< KeyPoint > >& vv_kp)
 {
     vector<Mat> vm;
@@ -329,6 +333,7 @@ void vector_vector_DMatch_to_Mat(vector< vector< DMatch > >& vv_dm, Mat& mat)
     }
     vector_Mat_to_Mat(vm, mat);
 }
+#endif
 
 void Mat_to_vector_vector_char(Mat& mat, vector< vector< char > >& vv_ch)
 {

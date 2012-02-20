@@ -5,66 +5,72 @@ if(NOT ANDROID OR NOT PYTHON_EXECUTABLE)
   ocv_module_disable(java)
 endif()
 
-set(the_description "The java bindings")
-ocv_add_module(java BINDINGS opencv_objdetect opencv_features2d opencv_imgproc opencv_video opencv_highgui opencv_ml opencv_core opencv_calib3d)
+set(OPENCV_MODULES_EXPORTED_TO_JAVA opencv_objdetect opencv_features2d opencv_video opencv_highgui opencv_ml opencv_calib3d CACHE STRING "List of modules exported to Java API")
+mark_as_advanced(OPENCV_MODULES_EXPORTED_TO_JAVA)
 
-string(REPLACE "opencv_" "" OPENCV_JAVA_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS}")
+set(the_description "The java bindings")
+ocv_add_module(java BINDINGS opencv_core opencv_imgproc OPTIONAL ${OPENCV_MODULES_EXPORTED_TO_JAVA})
+
+string(REPLACE "opencv_" "" OPENCV_JAVA_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS};${OPENCV_MODULE_${the_module}_OPT_DEPS}")
+foreach(module ${OPENCV_JAVA_MODULES})
+  if(NOT HAVE_opencv_${module})
+    list(REMOVE_ITEM OPENCV_JAVA_MODULES ${module})
+  endif()
+endforeach()
 
 set(target ${the_module})
 include_directories("${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp")
 
-SET(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
-SET(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
-SET(GEN_JAVADOC "${CMAKE_CURRENT_SOURCE_DIR}/gen_javadoc.py")
-SET(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
-SET(CHECK_TEST_COVERAGE "${CMAKE_CURRENT_SOURCE_DIR}/check-tests.py")
+set(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
+set(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
+set(GEN_JAVADOC "${CMAKE_CURRENT_SOURCE_DIR}/gen_javadoc.py")
+set(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
+set(CHECK_TEST_COVERAGE "${CMAKE_CURRENT_SOURCE_DIR}/check-tests.py")
 
 # setup raw java and cpp files generation (without javadoc and at temporary location)
 foreach(module ${OPENCV_JAVA_MODULES})
-    # get list of module headers
-    IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist")
-        FILE(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist" headers_to_parse)
-        SET (module_cheaders "")
-        SET (module_cppheaders "")
-        foreach(header ${headers_to_parse})
-            list(APPEND module_cppheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/${header}")
-        endforeach()
-    ELSE()
-        FILE(GLOB module_cheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include/opencv2/${module}/*.h")
-        FILE(GLOB module_cppheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include/opencv2/${module}/*.hpp")
-        list(SORT module_cheaders)
-        list(SORT module_cppheaders)
-    ENDIF()
-
-    # add dependencies to cmake (we should rerun cmake if any of these headers are modified)
-    foreach(header ${module_cheaders} ${module_cppheaders})
-        get_filename_component(header_name "${header}" NAME_WE)
-        configure_file("${header}" "${CMAKE_BINARY_DIR}/junk/${header_name}.junk" COPYONLY)
+  # get list of module headers
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist")
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist" headers_to_parse)
+    set(module_cheaders "")
+    set(module_cppheaders "")
+    foreach(header ${headers_to_parse})
+      list(APPEND module_cppheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/${header}")
     endforeach()
+  else()
+    file(GLOB module_cheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include/opencv2/${module}/*.h")
+    file(GLOB module_cppheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include/opencv2/${module}/*.hpp")
+    list(SORT module_cheaders)
+    list(SORT module_cppheaders)
+  endif()
 
-    # the same about gen_java.py and hdr_parser.py
-    configure_file("${GEN_JAVA}" "${CMAKE_BINARY_DIR}/junk/gen_java.junk" COPYONLY)
-    configure_file("${HDR_PARSER}" "${CMAKE_BINARY_DIR}/junk/hdr_parser.junk" COPYONLY)
+  # add dependencies to cmake (we should rerun cmake if any of these headers is modified)
+  foreach(header ${module_cheaders} ${module_cppheaders})
+    get_filename_component(header_name "${header}" NAME_WE)
+    configure_file("${header}" "${CMAKE_BINARY_DIR}/junk/${header_name}.junk" COPYONLY)
+  endforeach()
 
+  # the same about gen_java.py and hdr_parser.py
+  configure_file("${GEN_JAVA}" "${CMAKE_BINARY_DIR}/junk/gen_java.junk" COPYONLY)
+  configure_file("${HDR_PARSER}" "${CMAKE_BINARY_DIR}/junk/hdr_parser.junk" COPYONLY)
 
-    # first run (to get list of generated files)
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
-    
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
+  # first run (to get list of generated files)
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
                   OUTPUT_QUIET ERROR_QUIET)
 
-    # create list of generated files
-    file(GLOB_RECURSE generated_java_sources RELATIVE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/" "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/*.java")
-    file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
+  # create list of generated files
+  file(GLOB_RECURSE generated_java_sources RELATIVE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/" "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/*.java")
+  file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
     
-    set(${module}_generated_java_sources)
-    foreach(f ${generated_java_sources})
-        list(APPEND ${module}_generated_java_sources "${CMAKE_CURRENT_BINARY_DIR}/${f}")
-    endforeach()
+  set(${module}_generated_java_sources)
+  foreach(f ${generated_java_sources})
+    list(APPEND ${module}_generated_java_sources "${CMAKE_CURRENT_BINARY_DIR}/${f}")
+  endforeach()
 
-    # second run
-    add_custom_command(
+  # second run
+  add_custom_command(
         OUTPUT ${${module}_generated_java_sources}
         OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
         COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
@@ -76,32 +82,39 @@ foreach(module ${OPENCV_JAVA_MODULES})
         )
 endforeach()
 
-FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
-FILE(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.h??")
-FILE(GLOB handwrittren_java_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/java/*.java")
-SET (generated_cpp_sources)
-SET (generated_java_sources)
-SET (documented_java_files)
-SET (undocumented_java_files)
+file(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
+file(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.hpp")
+file(GLOB handwrittren_java_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/java/*.java")
+set(generated_cpp_sources)
+set(generated_java_sources)
+set(documented_java_files)
+set(undocumented_java_files)
+
+foreach(jfile ${handwrittren_java_sources})
+  string(REGEX REPLACE "^.*/([^+]+)\\+.*\\.java$" "\\1" jmodname "${jfile}")
+  if(DEFINED HAVE_opencv_${jmodname} AND NOT HAVE_opencv_${jmodname})
+    list(REMOVE_ITEM handwrittren_java_sources "${jfile}")
+  endif()
+endforeach()
 
 foreach(module ${OPENCV_JAVA_MODULES})
-    LIST(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp")
-    LIST(APPEND generated_java_sources ${${module}_generated_java_sources})
+  list(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp")
+  list(APPEND generated_java_sources ${${module}_generated_java_sources})
 endforeach()
 
 # all needed includes
 foreach(module ${OPENCV_MODULE_${the_module}_DEPS})
-    string(REPLACE "opencv_" "" module "${module}")
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
+  string(REPLACE "opencv_" "" module "${module}")
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
 endforeach()
 
 # created list of documented files targets
 foreach(java_file ${handwrittren_java_sources} ${generated_java_sources})
-    get_filename_component(java_file_name "${java_file}" NAME_WE)
-    if (NOT java_file_name MATCHES ".*-jdoc$")
-        list(APPEND documented_java_files "${CMAKE_CURRENT_BINARY_DIR}/${java_file_name}-jdoc.java")
-        list(APPEND undocumented_java_files "${java_file}")
-    endif()
+  get_filename_component(java_file_name "${java_file}" NAME_WE)
+  if(NOT java_file_name MATCHES ".*-jdoc$")
+    list(APPEND documented_java_files "${CMAKE_CURRENT_BINARY_DIR}/${java_file_name}-jdoc.java")
+    list(APPEND undocumented_java_files "${java_file}")
+  endif()
 endforeach()
 
 # generate javadoc files
@@ -117,31 +130,32 @@ add_custom_command(
 )
 
 # copy generated java files to the final location
-SET(JAVA_OUTPUT_DIR "src/org/opencv")
+set(JAVA_OUTPUT_DIR "src/org/opencv")
 
 set(java_files)
 foreach(java_file ${documented_java_files})
-    get_filename_component(java_file_name "${java_file}" NAME)
-    string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
-    string(REPLACE "+" "/" java_file_name "${java_file_name}")
+  get_filename_component(java_file_name "${java_file}" NAME)
+  string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
+  string(REPLACE "+" "/" java_file_name "${java_file_name}")
 
-    add_custom_command(
+  add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
         COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
         DEPENDS "${java_file}"
         COMMENT "Generating ${JAVA_OUTPUT_DIR}/${java_file_name}"
         )
-    list(APPEND java_files "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}")
+  list(APPEND java_files "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}")
     
-    if(ANDROID)
-        get_filename_component(install_subdir "${java_file_name}" PATH)
-        install(FILES "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
-    endif()
+  if(ANDROID)
+    get_filename_component(install_subdir "${java_file_name}" PATH)
+    install(FILES "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
+  endif()
 endforeach()
+
 
 # custom target for java API
 set(api_target ${target}_api)
-ADD_CUSTOM_TARGET(${api_target} DEPENDS ${java_files})
+add_custom_target(${api_target} DEPENDS ${java_files})
 
 
 # add opencv_java library
@@ -160,78 +174,78 @@ set_target_properties(${target} PROPERTIES
 install(TARGETS ${target} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
 if(ANDROID)
-    target_link_libraries(${target} jnigraphics)
+  target_link_libraries(${target} jnigraphics)
 
-    # force strip library after build command
-    # because samples and tests will make a copy of library before install
-    ADD_CUSTOM_COMMAND(
+  # force strip library after build command
+  # because samples and tests will make a copy of library before install
+  add_custom_command(
         TARGET ${target}
         POST_BUILD
         COMMAND ${CMAKE_STRIP} "${LIBRARY_OUTPUT_PATH}/lib${target}.so"
         )
 
-    set(lib_proj_files)
-    # library project blank
-    file(GLOB_RECURSE android_lib_project_files "${CMAKE_CURRENT_SOURCE_DIR}/android/*")
-    foreach(file ${android_lib_project_files})
-        if(NOT file MATCHES "\\.svn")
-            file(RELATIVE_PATH file_rel "${CMAKE_CURRENT_SOURCE_DIR}/android/" "${file}")
-            add_custom_command(
+  set(lib_proj_files "")
+  # library project blank
+  file(GLOB_RECURSE android_lib_project_files "${CMAKE_CURRENT_SOURCE_DIR}/android/*")
+  foreach(file ${android_lib_project_files})
+    if(NOT file MATCHES "\\.svn")
+      file(RELATIVE_PATH file_rel "${CMAKE_CURRENT_SOURCE_DIR}/android/" "${file}")
+      add_custom_command(
                 OUTPUT "${CMAKE_BINARY_DIR}/${file_rel}"
                 COMMAND ${CMAKE_COMMAND} -E copy "${file}" "${CMAKE_BINARY_DIR}/${file_rel}"
                 DEPENDS "${file}"
                 COMMENT "Generating ${file_rel}"
                 )
             
-            list(APPEND lib_proj_files "${CMAKE_BINARY_DIR}/${file_rel}")
+      list(APPEND lib_proj_files "${CMAKE_BINARY_DIR}/${file_rel}")
 
-            if(NOT file_rel MATCHES "jni/.+")
-                install(FILES "${CMAKE_BINARY_DIR}/${file_rel}" DESTINATION . COMPONENT main)
-            endif()
-        endif()
-    endforeach()
+      if(NOT file_rel MATCHES "jni/.+")
+        install(FILES "${CMAKE_BINARY_DIR}/${file_rel}" DESTINATION . COMPONENT main)
+      endif()
+    endif()
+  endforeach()
 
-    # library project jni sources
-    foreach(jni_file ${handwrittren_cpp_sources} ${handwrittren_h_sources} ${generated_cpp_sources})
-        get_filename_component(jni_file_name "${jni_file}" NAME)
-        add_custom_command(
+  # library project jni sources
+  foreach(jni_file ${handwrittren_cpp_sources} ${handwrittren_h_sources} ${generated_cpp_sources})
+    get_filename_component(jni_file_name "${jni_file}" NAME)
+    add_custom_command(
             OUTPUT "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
             COMMAND ${CMAKE_COMMAND} -E copy "${jni_file}" "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
             COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
             DEPENDS "${jni_file}"
             COMMENT "Generating jni/${jni_file_name}"
-        )
-        list(APPEND lib_proj_files "${CMAKE_BINARY_DIR}/jni/${jni_file_name}")
-    endforeach()    
+            )
+    list(APPEND lib_proj_files "${CMAKE_BINARY_DIR}/jni/${jni_file_name}")
+  endforeach()    
     
-    # create Android library project in build folder
-    set(lib_target ${target}_android_library)
-    ADD_CUSTOM_TARGET(${lib_target}
+  # create Android library project in build folder
+  set(lib_target ${target}_android_library)
+  add_custom_target(${lib_target}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/res"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/gen"
         DEPENDS ${lib_proj_files}
-        )	
-    if (ANT_EXECUTABLE AND ANDROID_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
-        add_custom_command(
-            TARGET ${target}
+        )
+  if(ANT_EXECUTABLE AND ANDROID_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
+    add_custom_command(TARGET ${target}
             COMMAND ${ANDROID_EXECUTABLE} update lib-project --target "${ANDROID_SDK_TARGET}" --path "${CMAKE_BINARY_DIR}"
             COMMAND ${ANT_EXECUTABLE} debug
             WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
             DEPENDS ${lib_target}
             )
-    endif()
+  endif()
 
-    add_dependencies(${lib_target} ${api_target})
-    add_dependencies(${target} ${lib_target})
-
+  add_dependencies(${lib_target} ${api_target})
+  add_dependencies(${target} ${lib_target})
 endif(ANDROID)
 
 #android test project
-if(BUILD_TESTS)
-    add_android_project(opencv_test_java "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
+ocv_check_dependencies(${OPENCV_MODULE_${the_module}_OPT_DEPS})
+if(BUILD_TESTS AND OCV_DEPENDENCIES_FOUND)
+  add_android_project(opencv_test_java "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
 
-    add_custom_command(
+  add_custom_command(
         TARGET opencv_test_java_android_project POST_BUILD
         COMMAND ${PYTHON_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/android_test/src" "${CMAKE_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
         )
 endif()
+
