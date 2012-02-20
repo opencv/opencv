@@ -236,7 +236,7 @@ if(OpenCV_HAVE_ANDROID_CAMERA)
   macro(COPY_NATIVE_CAMERA_LIBS target)
     get_target_property(target_location ${target} LOCATION)
     get_filename_component(target_location "${target_location}" PATH)
-    file(GLOB camera_wrappers "${OpenCV_LIB_DIR}/libnative_camera_r*.so")
+    file(GLOB camera_wrappers "${OpenCV_LIB_DIR_OPT}/libnative_camera_r*.so")
     foreach(wrapper ${camera_wrappers})
       add_custom_command(
         TARGET ${target}
