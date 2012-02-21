@@ -2227,7 +2227,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
 
         i = vecOp(src, dst, width, cn);
         width *= cn;
-
+        #if CV_ENABLE_UNROLLED
         for( ; i <= width - 4; i += 4 )
         {
             S = (const ST*)src + i;
@@ -2245,7 +2245,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
             D[i] = s0; D[i+1] = s1;
             D[i+2] = s2; D[i+3] = s3;
         }
-
+        #endif
         for( ; i < width; i++ )
         {
             S = (const ST*)src + i;
@@ -2426,6 +2426,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
         {
             DT* D = (DT*)dst;
             i = vecOp(src, dst, width);
+			#if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
                 ST f = ky[0];
@@ -2443,7 +2444,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
                 D[i] = castOp(s0); D[i+1] = castOp(s1);
                 D[i+2] = castOp(s2); D[i+3] = castOp(s3);
             }
-
+            #endif
             for( ; i < width; i++ )
             {
                 ST s0 = ky[0]*((const ST*)src[0])[i] + _delta;
@@ -2492,7 +2493,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
             {
                 DT* D = (DT*)dst;
                 i = (this->vecOp)(src, dst, width);
-
+                #if CV_ENABLE_UNROLLED
                 for( ; i <= width - 4; i += 4 )
                 {
                     ST f = ky[0];
@@ -2514,7 +2515,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
                     D[i] = castOp(s0); D[i+1] = castOp(s1);
                     D[i+2] = castOp(s2); D[i+3] = castOp(s3);
                 }
-
+                #endif
                 for( ; i < width; i++ )
                 {
                     ST s0 = ky[0]*((const ST*)src[0])[i] + _delta;
@@ -2530,7 +2531,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
             {
                 DT* D = (DT*)dst;
                 i = this->vecOp(src, dst, width);
-
+                #if CV_ENABLE_UNROLLED
                 for( ; i <= width - 4; i += 4 )
                 {
                     ST f = ky[0];
@@ -2551,7 +2552,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
                     D[i] = castOp(s0); D[i+1] = castOp(s1);
                     D[i+2] = castOp(s2); D[i+3] = castOp(s3);
                 }
-
+                #endif
                 for( ; i < width; i++ )
                 {
                     ST s0 = _delta;
@@ -2608,6 +2609,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
             {
                 if( is_1_2_1 )
                 {
+					#if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = S0[i] + S1[i]*2 + S2[i] + _delta;
@@ -2620,9 +2622,17 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
+                    #else
+		            for( ; i < width; i ++ )
+                    {
+                        ST s0 = S0[i] + S1[i]*2 + S2[i] + _delta;
+                        D[i] = castOp(s0);
+                    }
+                    #endif
                 }
                 else if( is_1_m2_1 )
                 {
+					#if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = S0[i] - S1[i]*2 + S2[i] + _delta;
@@ -2635,9 +2645,17 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
+                    #else
+		            for( ; i < width; i ++ )
+                    {
+                        ST s0 = S0[i] - S1[i]*2 + S2[i] + _delta;
+                        D[i] = castOp(s0);
+                    }
+                    #endif
                 }
                 else
                 {
+                   #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = (S0[i] + S2[i])*f1 + S1[i]*f0 + _delta;
@@ -2650,8 +2668,14 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
+                    #else
+                    for( ; i < width; i ++ )
+                    {
+                        ST s0 = (S0[i] + S2[i])*f1 + S1[i]*f0 + _delta;
+                        D[i] = castOp(s0);
+                    }
+                    #endif
                 }
-
                 for( ; i < width; i++ )
                     D[i] = castOp((S0[i] + S2[i])*f1 + S1[i]*f0 + _delta);
             }
@@ -2661,7 +2685,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                 {
                     if( f1 < 0 )
                         std::swap(S0, S2);
-
+                   #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = S2[i] - S0[i] + _delta;
@@ -2674,12 +2698,19 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
-
+                    #else
+	                for( ; i < width; i ++ )
+                    {
+                        ST s0 = S2[i] - S0[i] + _delta;
+                        D[i] = castOp(s0);
+                    }
+                    #endif
                     if( f1 < 0 )
                         std::swap(S0, S2);
                 }
                 else
                 {
+                   #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = (S2[i] - S0[i])*f1 + _delta;
@@ -2692,6 +2723,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+2] = castOp(s0);
                         D[i+3] = castOp(s1);
                     }
+                    #endif
                 }
 
                 for( ; i < width; i++ )
@@ -3043,7 +3075,7 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
                 kp[k] = (const ST*)src[pt[k].y] + pt[k].x*cn;
 
             i = vecOp((const uchar**)kp, dst, width);
-
+            #if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
                 KT s0 = _delta, s1 = _delta, s2 = _delta, s3 = _delta;
@@ -3061,7 +3093,7 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
                 D[i] = castOp(s0); D[i+1] = castOp(s1);
                 D[i+2] = castOp(s2); D[i+3] = castOp(s3);
             }
-
+            #endif
             for( ; i < width; i++ )
             {
                 KT s0 = _delta;

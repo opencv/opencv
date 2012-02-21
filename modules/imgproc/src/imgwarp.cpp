@@ -877,6 +877,7 @@ struct VResizeLinear
         VecOp vecOp;
 
         int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+	    #if CV_ENABLE_UNROLLED
 		for( ; x <= width - 4; x += 4 )
         {
             WT t0, t1;
@@ -887,7 +888,7 @@ struct VResizeLinear
             t1 = S0[x+3]*b0 + S1[x+3]*b1;
             dst[x+2] = castOp(t0); dst[x+3] = castOp(t1);
         }
-
+        #endif
         for( ; x < width; x++ )
             dst[x] = castOp(S0[x]*b0 + S1[x]*b1);
     }
@@ -1033,7 +1034,7 @@ struct VResizeLanczos4
         CastOp castOp;
         VecOp vecOp;
         int k, x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
-
+		#if CV_ENABLE_UNROLLED       
         for( ; x <= width - 4; x += 4 )
         {
             WT b = beta[0];
@@ -1050,7 +1051,7 @@ struct VResizeLanczos4
             dst[x] = castOp(s0); dst[x+1] = castOp(s1);
             dst[x+2] = castOp(s2); dst[x+3] = castOp(s3);
         }
-
+        #endif
         for( ; x < width; x++ )
         {
             dst[x] = castOp(src[0][x]*beta[0] + src[1][x]*beta[1] +
@@ -1161,8 +1162,11 @@ static void resizeAreaFast_( const Mat& src, Mat& dst, const int* ofs, const int
         {
             const T* S = (const T*)(src.data + src.step*sy0) + xofs[dx];
             WT sum = 0;
-            for( k = 0; k <= area - 4; k += 4 )
+			k=0;
+			#if CV_ENABLE_UNROLLED
+            for( ; k <= area - 4; k += 4 )
                 sum += S[ofs[k]] + S[ofs[k+1]] + S[ofs[k+2]] + S[ofs[k+3]];
+            #endif
             for( ; k < area; k++ )
                 sum += S[ofs[k]];
 

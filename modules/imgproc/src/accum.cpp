@@ -53,6 +53,7 @@ acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
     if( !mask )
     {
         len *= cn;
+		#if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
@@ -64,7 +65,7 @@ acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
             t1 = src[i+3] + dst[i+3];
             dst[i+2] = t0; dst[i+3] = t1;
         }
-        
+        #endif
         for( ; i < len; i++ )
             dst[i] += src[i];
     }
@@ -110,6 +111,7 @@ accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
     if( !mask )
     {
         len *= cn;
+		 #if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
@@ -121,7 +123,7 @@ accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
             t1 = (AT)src[i+3]*src[i+3] + dst[i+3];
             dst[i+2] = t0; dst[i+3] = t1;
         }
-        
+        #endif
         for( ; i < len; i++ )
             dst[i] += (AT)src[i]*src[i];
     }
@@ -167,6 +169,7 @@ accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int
     if( !mask )
     {
         len *= cn;
+		#if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
@@ -178,7 +181,7 @@ accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int
             t1 = (AT)src1[i+3]*src2[i+3] + dst[i+3];
             dst[i+2] = t0; dst[i+3] = t1;
         }
-        
+        #endif
         for( ; i < len; i++ )
             dst[i] += (AT)src1[i]*src2[i];
     }
@@ -225,6 +228,7 @@ accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
     if( !mask )
     {
         len *= cn;
+		#if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
@@ -236,7 +240,7 @@ accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
             t1 = src[i+3]*a + dst[i+3]*b;
             dst[i+2] = t0; dst[i+3] = t1;
         }
-        
+        #endif
         for( ; i < len; i++ )
             dst[i] = src[i]*a + dst[i]*b;
     }

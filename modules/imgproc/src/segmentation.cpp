@@ -454,6 +454,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                     {
                         int row_count = 0;
                         x = minx;
+						#if CV_ENABLE_UNROLLED
                         for( ; x + 3 <= maxx; x += 4, ptr += 12 )
                         {
                             int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
@@ -481,7 +482,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                                 sx += x+3; row_count++;
                             }
                         }
-                        
+                        #endif
                         for( ; x <= maxx; x++, ptr += 3 )
                         {      
                             int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];

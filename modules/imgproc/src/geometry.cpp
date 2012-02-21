@@ -439,8 +439,8 @@ static char segSegInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, P
              (0.0 > t) || (t > 1.0) )
         code = '0';
     
-    p.x = (float)(a.x + s * ( b.x - a.x ));
-    p.y = (float)(a.y + s * ( b.y - a.y ));
+    p.x = a.x + s * ( b.x - a.x );
+    p.y = a.y + s * ( b.y - a.y );
     
     return code;
 }
@@ -652,7 +652,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
             _p12.release();
             return 0.f;
         }
-        area = (float)contourArea(_InputArray(result, nr), false);
+        area = contourArea(_InputArray(result, nr), false);
     }
     
     if( _p12.needed() )

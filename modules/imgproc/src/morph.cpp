@@ -700,7 +700,9 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
 
         for( ; _ksize > 1 && count > 1; count -= 2, D += dststep*2, src += 2 )
         {
-            for( i = i0; i <= width - 4; i += 4 )
+			i = i0;
+			#if CV_ENABLE_UNROLLED
+            for( ; i <= width - 4; i += 4 )
             {
                 const T* sptr = src[1] + i;
                 T s0 = sptr[0], s1 = sptr[1], s2 = sptr[2], s3 = sptr[3];
@@ -724,7 +726,7 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
                 D[i+dststep+2] = op(s2, sptr[2]);
                 D[i+dststep+3] = op(s3, sptr[3]);
             }
-
+            #endif
             for( ; i < width; i++ )
             {
                 T s0 = src[1][i];
@@ -739,7 +741,9 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
 
         for( ; count > 0; count--, D += dststep, src++ )
         {
-            for( i = i0; i <= width - 4; i += 4 )
+			i = i0;
+			#if CV_ENABLE_UNROLLED
+            for( ; i <= width - 4; i += 4 )
             {
                 const T* sptr = src[0] + i;
                 T s0 = sptr[0], s1 = sptr[1], s2 = sptr[2], s3 = sptr[3];
@@ -754,7 +758,7 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
                 D[i] = s0; D[i+1] = s1;
                 D[i+2] = s2; D[i+3] = s3;
             }
-
+            #endif
             for( ; i < width; i++ )
             {
                 T s0 = src[0][i];
@@ -801,7 +805,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
                 kp[k] = (const T*)src[pt[k].y] + pt[k].x*cn;
 
             i = vecOp(&ptrs[0], nz, dst, width);
-
+            #if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
                 const T* sptr = kp[0] + i;
@@ -817,7 +821,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
                 D[i] = s0; D[i+1] = s1;
                 D[i+2] = s2; D[i+3] = s3;
             }
-
+            #endif
             for( ; i < width; i++ )
             {
                 T s0 = kp[0][i];
@@ -1074,8 +1078,10 @@ public:
     {
         int row0 = min(cvRound(range.begin() * src.rows / nStripes), src.rows);
         int row1 = min(cvRound(range.end() * src.rows / nStripes), src.rows);
-        
-        //printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n", src.rows, src.cols, range.begin(), range.end(), row0, row1);
+
+        if(0)
+            printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",
+                   src.rows, src.cols, range.begin(), range.end(), row0, row1);
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
@@ -1099,7 +1105,7 @@ private:
     Point anchor;
     int rowBorderType;
     int columnBorderType;
-    Scalar borderValue;
+    const Scalar& borderValue;
 };
 
 static void morphOp( int op, InputArray _src, OutputArray _dst,
