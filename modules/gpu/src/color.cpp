@@ -181,6 +181,7 @@ namespace cv { namespace gpu { namespace device
     OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgb_to_hls)
     OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgba_to_hls)
     OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgb_to_hls4)
+
     OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgba_to_hls4)
     OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgr_to_hls)
     OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgra_to_hls)
@@ -1409,12 +1410,7 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         0,                      // CV_BayerBG2GRAY = 86
         0,                      // CV_BayerGB2GRAY = 87
         0,                      // CV_BayerRG2GRAY = 88
-        0,                      // CV_BayerGR2GRAY = 89
-
-        0,                      // CV_YUV420i2RGB  = 90
-        0,                      // CV_YUV420i2BGR  = 91
-        0,                      // CV_YUV420sp2RGB = 92
-        0                       // CV_YUV420sp2BGR = 93
+        0                       // CV_BayerGR2GRAY = 89
     };
 
     CV_Assert(code < 94);

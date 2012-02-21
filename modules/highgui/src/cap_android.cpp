@@ -93,7 +93,7 @@ protected:
     {
         noformat = 0,
         yuv420sp,
-        yuv420i,
+        yvu420sp,
         yuvUnknown
     };
 
@@ -371,8 +371,8 @@ IplImage* CvCapture_Android::retrieveFrame( int outputType )
             u.prop = getProperty(CV_CAP_PROP_PREVIEW_FORMAT);
             if (0 == strcmp(u.name, "yuv420sp"))
                 m_frameFormat = yuv420sp;
-            else if (0 == strcmp(u.name, "yuv420i"))
-                m_frameFormat = yuv420i;
+            else if (0 == strcmp(u.name, "yvu420sp"))
+                m_frameFormat = yvu420sp;
             else
                 m_frameFormat = yuvUnknown;
         }
@@ -467,7 +467,7 @@ void CvCapture_Android::prepareCacheForYUV(int width, int height)
 bool CvCapture_Android::convertYUV2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat)
 {
     if (yuv == 0) return false;
-    if (m_frameFormat != yuv420sp && m_frameFormat != yuv420i) return false;
+    if (m_frameFormat != yuv420sp && m_frameFormat != yvu420sp) return false;
 #define ALWAYS_COPY_GRAY 0
 #if ALWAYS_COPY_GRAY
     resmat.create(height, width, CV_8UC1);
@@ -482,7 +482,7 @@ bool CvCapture_Android::convertYUV2Grey(int width, int height, const unsigned ch
 bool CvCapture_Android::convertYUV2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha)
 {
     if (yuv == 0) return false;
-    if (m_frameFormat != yuv420sp && m_frameFormat != yuv420i) return false;
+    if (m_frameFormat != yuv420sp && m_frameFormat != yvu420sp) return false;
 
     CV_Assert(width % 2 == 0 && height % 2 == 0);
 
@@ -490,8 +490,8 @@ bool CvCapture_Android::convertYUV2BGR(int width, int height, const unsigned cha
 
     if (m_frameFormat == yuv420sp)
         cv::cvtColor(src, resmat, inRGBorder ? CV_YUV420sp2RGB : CV_YUV420sp2BGR, withAlpha ? 4 : 3);
-    else if (m_frameFormat == yuv420i)
-        cv::cvtColor(src, resmat, inRGBorder ? CV_YUV420i2RGB : CV_YUV420i2BGR, withAlpha ? 4 : 3);
+    else if (m_frameFormat == yvu420sp)
+        cv::cvtColor(src, resmat, inRGBorder ? CV_YUV2RGB_NV12 : CV_YUV2BGR_NV12, withAlpha ? 4 : 3);
 
     return !resmat.empty();
 }

@@ -3203,10 +3203,10 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 Bayer2RGB_VNG_8u(src, dst, code);
             }
             break;
-        case CV_YUV420sp2BGR:  case CV_YUV420sp2RGB:  case CV_YUV420i2BGR:  case CV_YUV420i2RGB:
-        case CV_YUV420sp2BGRA: case CV_YUV420sp2RGBA: case CV_YUV420i2BGRA: case CV_YUV420i2RGBA:
+        case CV_YUV420sp2BGR:  case CV_YUV420sp2RGB:  case CV_YUV2BGR_NV12:  case CV_YUV2RGB_NV12:
+        case CV_YUV420sp2BGRA: case CV_YUV420sp2RGBA: case CV_YUV2BGRA_NV12: case CV_YUV2RGBA_NV12:
             {
-                if (dcn <= 0) dcn = (code==CV_YUV420sp2BGRA || code==CV_YUV420sp2RGBA || code==CV_YUV420i2BGRA || code==CV_YUV420i2RGBA) ? 4 : 3;
+                if (dcn <= 0) dcn = (code==CV_YUV420sp2BGRA || code==CV_YUV420sp2RGBA || code==CV_YUV2BGRA_NV12 || code==CV_YUV2RGBA_NV12) ? 4 : 3;
                 CV_Assert( dcn == 3 || dcn == 4 );
                 CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
 
@@ -3218,7 +3218,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 const uchar* uv = y + dstSz.area();
 
                 // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
-                // http://www.fourcc.org/yuv.php#NV12 == yuv420i  -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
+                // http://www.fourcc.org/yuv.php#NV12 == yvu420sp -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
                 if (CV_YUV420sp2RGB == code || COLOR_YUV420sp2RGBA == code)
                 {
                     if (dcn == 3)
@@ -3233,14 +3233,14 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     else
                         cvtYUV4202RGBA<0, 1>(dst, src.step, y, uv);
                 }
-                else if (CV_YUV420i2RGB == code || CV_YUV420i2RGBA == code)
+                else if (CV_YUV2RGB_NV12 == code || CV_YUV2RGBA_NV12 == code)
                 {
                     if (dcn == 3)
                         cvtYUV4202RGB<2, 0>(dst, src.step, y, uv);
                     else
                         cvtYUV4202RGBA<2, 0>(dst, src.step, y, uv);
                 }
-                else //if (CV_YUV420i2BGR == code || CV_YUV420i2BGRA == code)
+                else //if (CV_YUV2BGR_NV12 == code || CV_YUV2BGRA_NV12 == code)
                 {
                     if (dcn == 3)
                         cvtYUV4202RGB<0, 0>(dst, src.step, y, uv);

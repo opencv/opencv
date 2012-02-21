@@ -291,8 +291,8 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
                         format_to_set = "yuv420sp";
                         break;
                     }
-                    if (0 == strncmp(pos, "yuv420i", ptr - pos))
-                        format_to_set = "yuv420i";
+                    if (0 == strncmp(pos, "yvu420sp", ptr - pos))
+                        format_to_set = "yvu420sp";
                 }
                 if (*ptr == 0)
                     break;
