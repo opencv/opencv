@@ -88,6 +88,10 @@ endif()
 
 add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs})
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+  set_source_files_properties(tif_stream.cxx PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+endif()
+
 set_target_properties(${the_target}
 	PROPERTIES
 	OUTPUT_NAME "${the_target}"

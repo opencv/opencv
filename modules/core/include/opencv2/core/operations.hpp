@@ -3655,12 +3655,13 @@ public:
     static int isInstance(const void* ptr)
     {
         static _ClsName dummy;
+        static void* dummyp = &dummy;
         union
         {
             const void* p;
             const void** pp;
         } a, b;
-        a.p = &dummy;
+        a.p = dummyp;
         b.p = ptr;
         return *a.pp == *b.pp;
     }

@@ -32,8 +32,8 @@ public:
                      CvPoint ****_partsDisplacement) :
     n(_n), b(_b), maxXBorder(_maxXBorder), 
         maxYBorder(_maxYBorder), scoreThreshold(_scoreThreshold),
-        kLevels(_kLevels), score(_score), points(_points), kPoints(_kPoints),
-        partsDisplacement(_partsDisplacement)
+        kLevels(_kLevels), score(_score), points(_points),
+        partsDisplacement(_partsDisplacement), kPoints(_kPoints)
     {
         filters = _filters;
         H = _H;
