@@ -840,6 +840,9 @@ set( CMAKE_C_FLAGS   "${ANDROID_CXX_FLAGS} ${CMAKE_C_FLAGS}" )
 include( CMakeForceCompiler )
 CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
 CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
+set( CMAKE_SIZEOF_VOID_P 4 )
+set( CMAKE_C_SIZEOF_DATA_PTR 4 )
+set( CMAKE_CXX_SIZEOF_DATA_PTR 4 )
 
 #set these global flags for cmake client scripts to change behavior
 set( ANDROID True )
