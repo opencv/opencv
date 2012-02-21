@@ -1087,7 +1087,7 @@ Computes disparity using the BM algorithm for a rectified stereo pair.
 
 .. ocv:pyoldfunction:: cv.FindStereoCorrespondenceBM(left, right, disparity, state)-> None
 
-    :param left: Left 8-bit single-channel or 3-channel image.
+    :param left: Left 8-bit single-channel image.
 
     :param right: Right image of the same size and the same type as the left one.
 
