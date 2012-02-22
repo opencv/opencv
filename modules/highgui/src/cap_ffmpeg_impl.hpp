@@ -1246,7 +1246,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 #else
 		img_convert_ctx = sws_getContext(width,
 		             height,
-		             PIX_FMT_BGR24,
+                     (PixelFormat)input_pix_fmt,
 		             c->width,
 		             c->height,
 		             c->pix_fmt,
