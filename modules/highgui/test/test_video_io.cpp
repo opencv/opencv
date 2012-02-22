@@ -379,11 +379,15 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
 
 void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecchars[4])
 {
-    const string ext[] = {"avi", "mov", "mp4"/*, "mpg", "wmv"*/};
+    const string ext[] = {"avi", "mov", "mp4", "mpg", "wmv"};
 
     const size_t n = sizeof(ext)/sizeof(ext[0]);
 
-    for (size_t j = 0; j < n; ++j) if ((ext[j]!="mp4")||(string(&codecchars[0], 4)!="IYUV"))
+    for (size_t j = 0; j < n; ++j) 
+		if ((ext[j]!="mp4")||(string(&codecchars[0], 4)!="IYUV"))
+	#if defined WIN32 || defined _WIN32
+		if (((ext[j]!="mov")||(string(&codecchars[0], 4)=="XVID"))&&(ext[j]!="mp4"))
+	#endif
     {
         const string video_file = dir + "video_" + string(&codecchars[0], 4) + "." + ext[j];
 
@@ -484,6 +488,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             if (psnr > thresDbell)
             {
                 ts->printf(ts->LOG, "\nReading frame from the file video_%s.%s...\n", string(&codecchars[0], 4).c_str(), ext[j].c_str());
+				ts->printf(ts->LOG, "Frame index: %d\n", i+1);
                 ts->printf(ts->LOG, "Difference between saved and original images: %g\n", psnr);
                 ts->printf(ts->LOG, "Maximum allowed difference: %g", thresDbell);
                 ts->printf(ts->LOG, "Error: too big difference between saved and original images.\n");
@@ -498,7 +503,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
 
 void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codecchars[4])
 {
-    const string ext[] = {"avi", "mov", "mp4"/*, "mpg", "wmv"*/};
+    const string ext[] = {"avi", "mov", "mp4", "mpg", "wmv"};
 
     const size_t n = sizeof(ext)/sizeof(ext[0]);
 
@@ -513,7 +518,11 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
         return;
     }
 
-    for (size_t i = 0; i < n; ++i) if ((ext[i]!="mp4")||(string(&codecchars[0], 4)!="IYUV"))
+    for (size_t i = 0; i < n; ++i) 
+		if ((ext[i]!="mp4")||(string(&codecchars[0], 4)!="IYUV"))
+	#if defined WIN32 || defined _WIN32
+		if (((ext[i]!="mov")||(string(&codecchars[0], 4)=="XVID"))&&(ext[i]!="mp4"))
+	#endif
     {
         Mat frame; int framecount = 0;
         cv::VideoWriter writer;
@@ -603,6 +612,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
             if (psnr > thresDbell)
             {
                 ts->printf(ts->LOG, "\nReading frame from the file video_%s.%s...\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
+				ts->printf(ts->LOG, "Frame index: %d\n", framecount);
                 ts->printf(ts->LOG, "Difference between saved and original images: %g\n", psnr);
                 ts->printf(ts->LOG, "Maximum allowed difference: %g", thresDbell);
                 ts->printf(ts->LOG, "Error: too big difference between saved and original images.\n");
