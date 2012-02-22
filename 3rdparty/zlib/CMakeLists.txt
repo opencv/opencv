@@ -10,11 +10,6 @@ include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(CheckCSourceCompiles)
 
-include(CheckTypeSize)
-include(CheckFunctionExists)
-include(CheckIncludeFile)
-include(CheckCSourceCompiles)
-
 #
 # Check to see if we have large file support
 #
@@ -87,6 +82,10 @@ if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   endif()
+endif()
+
+if(MSVC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4013")
 endif()
 
 set_target_properties(${the_target} PROPERTIES
