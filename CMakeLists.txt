@@ -72,11 +72,6 @@ set(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "" CACHE INTERNAL "" FORCE)
 set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
 set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "" CACHE INTERNAL "" FORCE)
 
-set(CMAKE_VERBOSE OFF CACHE BOOL "Verbose mode")
-if(CMAKE_VERBOSE)
-    set(CMAKE_VERBOSE_MAKEFILE 1)
-endif()
-
 include(cmake/OpenCVUtils.cmake REQUIRED)
 
 # ----------------------------------------------------------------------------
@@ -121,11 +116,7 @@ OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF
 
 # OpenCV build components
 # ===================================================
-if(ANDROID OR IOS)
-    OCV_OPTION(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead 6of static ones (.lib/.a)" OFF )
-else()
-    OCV_OPTION(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON )
-endif()
+OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR IOS) )
 OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"         ON  IF ANDROID )
 OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" ON )
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
@@ -165,7 +156,14 @@ OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"              
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 
+# uncategorized options
+# ===================================================
+OCV_OPTION(CMAKE_VERBOSE "Verbose mode" OFF )
+
+# backward compatibility
+# ===================================================
 include(cmake/OpenCVLegacyOptions.cmake OPTIONAL)
+
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -215,6 +213,10 @@ endif()
 
 if(DEFINED CMAKE_DEBUG_POSTFIX)
   set(OPENCV_DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
+endif()
+
+if(CMAKE_VERBOSE)
+  set(CMAKE_VERBOSE_MAKEFILE 1)
 endif()
 
 
