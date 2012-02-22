@@ -153,7 +153,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
 
                 tmp2.push_back(p);
 
-                if (maxCorners > 0 && tmp2.size() == maxCorners)
+                if (maxCorners > 0 && tmp2.size() == static_cast<size_t>(maxCorners))
                     break;
             }
         }

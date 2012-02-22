@@ -83,8 +83,6 @@ void cv::gpu::PyrLKOpticalFlow::calcSharrDeriv(const GpuMat& src, GpuMat& dIdx, 
     ensureSizeIsEnough(src.size(), CV_MAKETYPE(CV_16S, cn), dx_calcBuf_);
     ensureSizeIsEnough(src.size(), CV_MAKETYPE(CV_16S, cn), dy_calcBuf_);
 
-    const int colsn = src.cols * cn;
-
     calcSharrDeriv_gpu(src, dx_calcBuf_, dy_calcBuf_, dIdx, dIdy, cn);
 }
 

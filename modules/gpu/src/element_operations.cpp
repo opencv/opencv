@@ -654,11 +654,9 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, doub
 
 namespace
 {
-    bool isIntScalar(Scalar sc)
+    inline bool isIntScalar(Scalar sc)
     {
-        Scalar_<int> isc(sc);
-
-        return sc.val[0] == isc.val[0] && sc.val[1] == isc.val[1] && sc.val[2] == isc.val[2] && sc.val[3] == isc.val[3];
+        return sc.val[0] == static_cast<int>(sc.val[0]) && sc.val[1] == static_cast<int>(sc.val[1]) && sc.val[2] == static_cast<int>(sc.val[2]) && sc.val[3] == static_cast<int>(sc.val[3]);
     }
 }
 
