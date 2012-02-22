@@ -391,7 +391,15 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
     {
         const string video_file = dir + "video_" + string(&codecchars[0], 4) + "." + ext[j];
 
-        VideoWriter writer;
+        VideoWriter writer = cv::VideoWriter(video_file, CV_FOURCC(codecchars[0], codecchars[1], codecchars[2], codecchars[3]), 25, cv::Size(968, 757), true);
+
+		if (!writer.isOpened())
+		{
+			ts->printf(ts->LOG, "Creating a video in %s...\n", video_file.c_str());
+			ts->printf(ts->LOG, "Cannot create VideoWriter object with codec %s.\n", string(&codecchars[0], 4).c_str());
+			ts->set_failed_test_info(ts->FAIL_MISMATCH);
+			continue;
+		}
 
         const size_t IMAGE_COUNT = 30;
 
@@ -424,19 +432,6 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
 
             imwrite(dir+"QCIF_"+s_digit.str()+".bmp", img);
 
-            if (!writer.isOpened())
-            {
-                writer = cv::VideoWriter(video_file, CV_FOURCC(codecchars[0], codecchars[1], codecchars[2], codecchars[3]), 25, cv::Size(img.cols, img.rows), true);
-
-                if (!writer.isOpened())
-                {
-                    ts->printf(ts->LOG, "Creating a video in %s...\n", video_file.c_str());
-                    ts->printf(ts->LOG, "Cannot create VideoWriter with codec %s.\n", string(&codecchars[0], 4).c_str());
-                    ts->set_failed_test_info(ts->FAIL_MISMATCH);
-                    return;
-                }
-            }
-
             writer << img;
         }
 
@@ -452,33 +447,36 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
             ts->printf(ts->LOG, "Required frame count: %d; Returned frame count: %d\n", IMAGE_COUNT, FRAME_COUNT);
             ts->printf(ts->LOG, "Error: Incorrect frame count in the video.\n");
+			ts->printf(ts->LOG, "Continue checking...\n");
             ts->set_failed_test_info(ts->FAIL_BAD_ACCURACY);
-            continue;
         }
 
         cap.set(CV_CAP_PROP_POS_FRAMES, -1);
 
-        for (size_t i = -1; i < FRAME_COUNT-1; i++)
+		for (int i = -1; i < (int)std::min<size_t>(FRAME_COUNT, IMAGE_COUNT)-1; i++)
         {
             cv::Mat frame; cap >> frame;
             if (frame.empty())
             {
-                ts->printf(ts->LOG, "\nError: cannot read the next frame with index %d.\n", i+1);
+                ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
+                ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
+                ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
+				ts->printf(ts->LOG, "Error: cannot read the next frame with index %d.\n", i+1);
                 ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
                 break;
             }
 
             stringstream s_digit;
-            if (i < 10) {s_digit << "0"; s_digit << i;}
-            else s_digit <<  i;
+            if (i+1 < 10) {s_digit << "0"; s_digit << i+1;}
+            else s_digit << i+1;
 
             cv::Mat img = imread(dir+"QCIF_"+s_digit.str()+".bmp", CV_LOAD_IMAGE_COLOR);
 
             if (img.empty())
             {
-                ts->printf(ts->LOG, "\nError: cannot read an image with index %d.\n", i+1);
+				ts->printf(ts->LOG, "\nError: cannot read an image from %s.\n", (dir+"QCIF_"+s_digit.str()+".bmp").c_str());
                 ts->set_failed_test_info(ts->FAIL_MISMATCH);
-                break;
+                continue;
             }
 
             const double thresDbell = 20;
@@ -490,7 +488,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
                 ts->printf(ts->LOG, "\nReading frame from the file video_%s.%s...\n", string(&codecchars[0], 4).c_str(), ext[j].c_str());
 				ts->printf(ts->LOG, "Frame index: %d\n", i+1);
                 ts->printf(ts->LOG, "Difference between saved and original images: %g\n", psnr);
-                ts->printf(ts->LOG, "Maximum allowed difference: %g", thresDbell);
+                ts->printf(ts->LOG, "Maximum allowed difference: %g\n", thresDbell);
                 ts->printf(ts->LOG, "Error: too big difference between saved and original images.\n");
                 continue;
             }
@@ -514,7 +512,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
     if (!cap.isOpened())
     {
         ts->printf(ts->LOG, "\nError: cannot start working with device.\n");
-        ts->set_failed_test_info(ts->FAIL_EXCEPTION);
+		ts->set_failed_test_info(ts->OK);
         return;
     }
 
@@ -549,8 +547,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
                 ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
                 ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
                 ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
-                ts->printf(ts->LOG, "Frame index: %d\n", framecount);
-                ts->printf(ts->LOG, "Error: cannot read next frame from the device.\n");
+				ts->printf(ts->LOG, "Error: cannot read next frame with index %d from the device.\n", framecount);
                 break;
             }
 
@@ -585,14 +582,14 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
             ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
             ts->printf(ts->LOG, "Required frame count: %d  Returned frame count: %d\n", IMAGE_COUNT, FRAME_COUNT);
             ts->printf(ts->LOG, "Error: required and returned frame count are not matched.\n");
+			ts->printf(ts->LOG, "Continue checking...\n");
             ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
-            continue;
         }
 
         cv::Mat img; framecount = 0;
         vcap.set(CV_CAP_PROP_POS_FRAMES, 0);
 
-        for ( ; framecount <= std::min<int>(FRAME_COUNT, IMAGE_COUNT); framecount++ )
+        for ( ; framecount < std::min<int>(FRAME_COUNT, IMAGE_COUNT); framecount++ )
         {
             vcap >> img;
 
@@ -601,8 +598,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
                 ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
                 ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
                 ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
-                ts->printf(ts->LOG, "Frame index: %d\n", framecount);
-                ts->printf(ts->LOG, "Error: cannot read next frame from the video.\n");
+                ts->printf(ts->LOG, "Error: cannot read frame with index %d from the video.\n", framecount);
                 break;
             }
 
@@ -614,7 +610,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
                 ts->printf(ts->LOG, "\nReading frame from the file video_%s.%s...\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
 				ts->printf(ts->LOG, "Frame index: %d\n", framecount);
                 ts->printf(ts->LOG, "Difference between saved and original images: %g\n", psnr);
-                ts->printf(ts->LOG, "Maximum allowed difference: %g", thresDbell);
+                ts->printf(ts->LOG, "Maximum allowed difference: %g\n", thresDbell);
                 ts->printf(ts->LOG, "Error: too big difference between saved and original images.\n");
                 continue;
             }
