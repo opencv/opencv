@@ -2,22 +2,86 @@
 #  CMake file for zlib. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
-PROJECT(zlib)
 
-# List of C++ files:
+project(zlib C)
 
+include(CheckTypeSize)
+include(CheckFunctionExists)
+include(CheckIncludeFile)
+include(CheckCSourceCompiles)
+
+include(CheckTypeSize)
+include(CheckFunctionExists)
+include(CheckIncludeFile)
+include(CheckCSourceCompiles)
+
+#
+# Check to see if we have large file support
+#
+check_type_size(off64_t OFF64_T)
+if(HAVE_OFF64_T)
+  add_definitions(-D_LARGEFILE64_SOURCE=1)
+endif()
+
+#
+# Check for fseeko
+#
+check_function_exists(fseeko HAVE_FSEEKO)
+if(NOT HAVE_FSEEKO)
+  add_definitions(-DNO_FSEEKO)
+endif()
+
+#
+# Check for unistd.h
+#
+check_include_file(unistd.h Z_HAVE_UNISTD_H)
+
+if(MSVC)
+  add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+  add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+endif()
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein"
+               "${OpenCV_BINARY_DIR}/zconf.h" @ONLY)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
-file(GLOB lib_srcs *.c)
-file(GLOB lib_hdrs *.h)
+set(ZLIB_PUBLIC_HDRS
+    "${OpenCV_BINARY_DIR}/zconf.h"
+    zlib.h
+)
+set(ZLIB_PRIVATE_HDRS
+    crc32.h
+    deflate.h
+    gzguts.h
+    inffast.h
+    inffixed.h
+    inflate.h
+    inftrees.h
+    trees.h
+    zutil.h
+)
+set(ZLIB_SRCS
+    adler32.c
+    compress.c
+    crc32.c
+    deflate.c
+    gzclose.c
+    gzlib.c
+    gzread.c
+    gzwrite.c
+    inflate.c
+    infback.c
+    inftrees.c
+    inffast.c
+    trees.c
+    uncompr.c
+    zutil.c
+)
 
 set(the_target "zlib")
 
-add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs})
-
-if(MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3")
-endif()
+add_library(${the_target} STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
+set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
@@ -25,18 +89,16 @@ if(UNIX)
   endif()
 endif()
 
-set_target_properties(${the_target}
-    PROPERTIES
+set_target_properties(${the_target} PROPERTIES
         OUTPUT_NAME "${the_target}"
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
     )
 
 if(ENABLE_SOLUTION_FOLDERS)
-	set_target_properties(${the_target} PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${the_target} PROPERTIES FOLDER "3rdparty")
 endif()
 	
 if(NOT BUILD_SHARED_LIBS)
-    install(TARGETS ${the_target}
-	    ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+  install(TARGETS ${the_target} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()

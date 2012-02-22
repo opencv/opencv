@@ -1,22 +1,22 @@
 ZLIB DATA COMPRESSION LIBRARY
 
-zlib 1.2.5 is a general purpose data compression library.  All the code is
+zlib 1.2.6 is a general purpose data compression library.  All the code is
 thread safe.  The data format used by the zlib library is described by RFCs
 (Request for Comments) 1950 to 1952 in the files
-http://www.ietf.org/rfc/rfc1950.txt (zlib format), rfc1951.txt (deflate format)
-and rfc1952.txt (gzip format).
+http://tools.ietf.org/html/rfc1950 (zlib format), rfc1951 (deflate format) and
+rfc1952 (gzip format).
 
 All functions of the compression library are documented in the file zlib.h
 (volunteer to write man pages welcome, contact zlib@gzip.org).  A usage example
-of the library is given in the file example.c which also tests that the library
-is working correctly.  Another example is given in the file minigzip.c.  The
-compression library itself is composed of all source files except example.c and
-minigzip.c.
+of the library is given in the file test/example.c which also tests that
+the library is working correctly.  Another example is given in the file
+test/minigzip.c.  The compression library itself is composed of all source
+files in the root directory.
 
 To compile all files and run the test program, follow the instructions given at
 the top of Makefile.in.  In short "./configure; make test", and if that goes
-well, "make install" should work for most flavors of Unix.  For Windows, use one
-of the special makefiles in win32/ or contrib/vstudio/ .  For VMS, use
+well, "make install" should work for most flavors of Unix.  For Windows, use
+one of the special makefiles in win32/ or contrib/vstudio/ .  For VMS, use
 make_vms.com.
 
 Questions about zlib should be sent to <zlib@gzip.org>, or to Gilles Vollant
@@ -31,7 +31,7 @@ Mark Nelson <markn@ieee.org> wrote an article about zlib for the Jan.  1997
 issue of Dr.  Dobb's Journal; a copy of the article is available at
 http://marknelson.us/1997/01/01/zlib-engine/ .
 
-The changes made in version 1.2.5 are documented in the file ChangeLog.
+The changes made in version 1.2.6 are documented in the file ChangeLog.
 
 Unsupported third party contributions are provided in directory contrib/ .
 
@@ -44,7 +44,7 @@ http://search.cpan.org/~pmqs/IO-Compress-Zlib/ .
 
 A Python interface to zlib written by A.M. Kuchling <amk@amk.ca> is
 available in Python 1.5 and later versions, see
-http://www.python.org/doc/lib/module-zlib.html .
+http://docs.python.org/library/zlib.html .
 
 zlib is built into tcl: http://wiki.tcl.tk/4610 .
 
@@ -84,7 +84,7 @@ Acknowledgments:
 
 Copyright notice:
 
- (C) 1995-2010 Jean-loup Gailly and Mark Adler
+ (C) 1995-2012 Jean-loup Gailly and Mark Adler
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages

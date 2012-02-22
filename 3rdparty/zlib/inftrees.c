@@ -1,5 +1,5 @@
 /* inftrees.c -- generate Huffman trees for efficient decoding
- * Copyright (C) 1995-2010 Mark Adler
+ * Copyright (C) 1995-2012 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
@@ -9,7 +9,7 @@
 #define MAXBITS 15
 
 const char inflate_copyright[] =
-   " inflate 1.2.5 Copyright 1995-2010 Mark Adler ";
+   " inflate 1.2.6 Copyright 1995-2012 Mark Adler ";
 /*
   If you use the zlib library in a product, an acknowledgment is welcome
   in the documentation of your product. If for some reason you cannot
@@ -62,7 +62,7 @@ unsigned short FAR *work;
         35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0};
     static const unsigned short lext[31] = { /* Length codes 257..285 extra */
         16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18,
-        19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 73, 195};
+        19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 203, 69};
     static const unsigned short dbase[32] = { /* Distance codes 0..29 base */
         1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
         257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
@@ -289,38 +289,14 @@ unsigned short FAR *work;
         }
     }
 
-    /*
-       Fill in rest of table for incomplete codes.  This loop is similar to the
-       loop above in incrementing huff for table indices.  It is assumed that
-       len is equal to curr + drop, so there is no loop needed to increment
-       through high index bits.  When the current sub-table is filled, the loop
-       drops back to the root table to fill in any remaining entries there.
-     */
-    here.op = (unsigned char)64;                /* invalid code marker */
-    here.bits = (unsigned char)(len - drop);
-    here.val = (unsigned short)0;
-    while (huff != 0) {
-        /* when done with sub-table, drop back to root table */
-        if (drop != 0 && (huff & mask) != low) {
-            drop = 0;
-            len = root;
-            next = *table;
-            here.bits = (unsigned char)len;
-        }
-
-        /* put invalid code marker in table */
-        next[huff >> drop] = here;
-
-        /* backwards increment the len-bit code huff */
-        incr = 1U << (len - 1);
-        while (huff & incr)
-            incr >>= 1;
-        if (incr != 0) {
-            huff &= incr - 1;
-            huff += incr;
-        }
-        else
-            huff = 0;
+    /* fill in remaining table entry if code is incomplete (guaranteed to have
+       at most one remaining entry, since if the code is incomplete, the
+       maximum code length that was allowed to get this far is one bit) */
+    if (huff != 0) {
+        here.op = (unsigned char)64;            /* invalid code marker */
+        here.bits = (unsigned char)(len - drop);
+        here.val = (unsigned short)0;
+        next[huff] = here;
     }
 
     /* set return parameters */

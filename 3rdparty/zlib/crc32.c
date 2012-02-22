@@ -1,5 +1,5 @@
 /* crc32.c -- compute the CRC-32 of a data stream
- * Copyright (C) 1995-2006, 2010 Mark Adler
+ * Copyright (C) 1995-2006, 2010, 2011 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  *
  * Thanks to Rodney Brown <rbrown64@csc.com.au> for his contribution of faster
@@ -17,6 +17,8 @@
   of the crc tables.  Therefore, if you #define DYNAMIC_CRC_TABLE, you should
   first call get_crc_table() to initialize the tables before allowing more than
   one thread to use crc32().
+
+  DYNAMIC_CRC_TABLE and MAKECRCH can be #defined to write out crc32.h.
  */
 
 #ifdef MAKECRCH
@@ -53,6 +55,7 @@
 
 /* Definitions for doing the crc four data bytes at a time. */
 #ifdef BYFOUR
+   typedef u4 crc_table_t;
 #  define REV(w) ((((w)>>24)&0xff)+(((w)>>8)&0xff00)+ \
                 (((w)&0xff00)<<8)+(((w)&0xff)<<24))
    local unsigned long crc32_little OF((unsigned long,
@@ -61,6 +64,7 @@
                         const unsigned char FAR *, unsigned));
 #  define TBLS 8
 #else
+   typedef unsigned long crc_table_t;
 #  define TBLS 1
 #endif /* BYFOUR */
 
@@ -68,16 +72,16 @@
 local unsigned long gf2_matrix_times OF((unsigned long *mat,
                                          unsigned long vec));
 local void gf2_matrix_square OF((unsigned long *square, unsigned long *mat));
-local uLong crc32_combine_(uLong crc1, uLong crc2, z_off64_t len2);
+local uLong crc32_combine_ OF((uLong crc1, uLong crc2, z_off64_t len2));
 
 
 #ifdef DYNAMIC_CRC_TABLE
 
 local volatile int crc_table_empty = 1;
-local unsigned long FAR crc_table[TBLS][256];
+local crc_table_t FAR crc_table[TBLS][256];
 local void make_crc_table OF((void));
 #ifdef MAKECRCH
-   local void write_table OF((FILE *, const unsigned long FAR *));
+   local void write_table OF((FILE *, const crc_table_t FAR *));
 #endif /* MAKECRCH */
 /*
   Generate tables for a byte-wise 32-bit CRC calculation on the polynomial:
@@ -107,9 +111,9 @@ local void make_crc_table OF((void));
 */
 local void make_crc_table()
 {
-    unsigned long c;
+    crc_table_t c;
     int n, k;
-    unsigned long poly;                 /* polynomial exclusive-or pattern */
+    crc_table_t poly;                   /* polynomial exclusive-or pattern */
     /* terms of polynomial defining this crc (except x^32): */
     static volatile int first = 1;      /* flag to limit concurrent making */
     static const unsigned char p[] = {0,1,2,4,5,7,8,10,11,12,16,22,23,26};
@@ -121,13 +125,13 @@ local void make_crc_table()
         first = 0;
 
         /* make exclusive-or pattern from polynomial (0xedb88320UL) */
-        poly = 0UL;
-        for (n = 0; n < sizeof(p)/sizeof(unsigned char); n++)
-            poly |= 1UL << (31 - p[n]);
+        poly = 0;
+        for (n = 0; n < (int)(sizeof(p)/sizeof(unsigned char)); n++)
+            poly |= (crc_table_t)1 << (31 - p[n]);
 
         /* generate a crc for every 8-bit value */
         for (n = 0; n < 256; n++) {
-            c = (unsigned long)n;
+            c = (crc_table_t)n;
             for (k = 0; k < 8; k++)
                 c = c & 1 ? poly ^ (c >> 1) : c >> 1;
             crc_table[0][n] = c;
@@ -164,7 +168,7 @@ local void make_crc_table()
         if (out == NULL) return;
         fprintf(out, "/* crc32.h -- tables for rapid CRC calculation\n");
         fprintf(out, " * Generated automatically by crc32.c\n */\n\n");
-        fprintf(out, "local const unsigned long FAR ");
+        fprintf(out, "local const crc_table_t FAR ");
         fprintf(out, "crc_table[TBLS][256] =\n{\n  {\n");
         write_table(out, crc_table[0]);
 #  ifdef BYFOUR
@@ -184,12 +188,13 @@ local void make_crc_table()
 #ifdef MAKECRCH
 local void write_table(out, table)
     FILE *out;
-    const unsigned long FAR *table;
+    const crc_table_t FAR *table;
 {
     int n;
 
     for (n = 0; n < 256; n++)
-        fprintf(out, "%s0x%08lxUL%s", n % 5 ? "" : "    ", table[n],
+        fprintf(out, "%s0x%08lxUL%s", n % 5 ? "" : "    ",
+                (unsigned long)(table[n]),
                 n == 255 ? "\n" : (n % 5 == 4 ? ",\n" : ", "));
 }
 #endif /* MAKECRCH */

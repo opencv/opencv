@@ -1,5 +1,5 @@
 /* zutil.c -- target dependent utility functions for the compression library
- * Copyright (C) 1995-2005, 2010 Jean-loup Gailly.
+ * Copyright (C) 1995-2005, 2010, 2011 Jean-loup Gailly.
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
@@ -85,37 +85,17 @@ uLong ZEXPORT zlibCompileFlags()
 #ifdef FASTEST
     flags += 1L << 21;
 #endif
-#ifdef STDC
-#  ifdef NO_vsnprintf
-        flags += 1L << 25;
-#    ifdef HAS_vsprintf_void
-        flags += 1L << 26;
-#    endif
-#  else
-#    ifdef HAS_vsnprintf_void
-        flags += 1L << 26;
-#    endif
-#  endif
-#else
-        flags += 1L << 24;
-#  ifdef NO_snprintf
-        flags += 1L << 25;
-#    ifdef HAS_sprintf_void
-        flags += 1L << 26;
-#    endif
-#  else
-#    ifdef HAS_snprintf_void
-        flags += 1L << 26;
-#    endif
-#  endif
-#endif
+#ifdef Z_SOLO
     return flags;
+#else
+    return flags + gzflags();
+#endif
 }
 
 #ifdef DEBUG
 
 #  ifndef verbose
-#    define verbose -1
+#    define verbose 0
 #  endif
 int ZLIB_INTERNAL z_verbose = verbose;
 
@@ -181,6 +161,7 @@ void ZLIB_INTERNAL zmemzero(dest, len)
 }
 #endif
 
+#ifndef Z_SOLO
 
 #ifdef SYS16BIT
 
@@ -316,3 +297,5 @@ void ZLIB_INTERNAL zcfree (opaque, ptr)
 }
 
 #endif /* MY_ZCALLOC */
+
+#endif /* !Z_SOLO */
