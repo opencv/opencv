@@ -24,12 +24,6 @@ endif()
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
 if(NOT CMAKE_TOOLCHAIN_FILE)
-  # Add these standard paths to the search paths for FIND_LIBRARY
-  # to find libraries from these locations first
-  if(UNIX)
-    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
-  endif()
-
   # it _must_ go before project(OpenCV) in order to work
   if(WIN32)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
@@ -78,6 +72,34 @@ include(cmake/OpenCVUtils.cmake REQUIRED)
 # Detect compiler and target platform architecture
 # ----------------------------------------------------------------------------
 include(cmake/OpenCVDetectCXXCompiler.cmake REQUIRED)
+
+# Add these standard paths to the search paths for FIND_LIBRARY
+# to find libraries from these locations first
+if(UNIX AND NOT ANDROID)
+  if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if(EXISTS /lib64)
+      list(APPEND CMAKE_LIBRARY_PATH /lib64)
+    else()
+      list(APPEND CMAKE_LIBRARY_PATH /lib)
+    endif()
+    if(EXISTS /usr/lib64)
+      list(APPEND CMAKE_LIBRARY_PATH /usr/lib64)
+    else()
+      list(APPEND CMAKE_LIBRARY_PATH /usr/lib)
+    endif()
+  elseif(X86 OR CMAKE_SIZEOF_VOID_P EQUAL 4)
+    if(EXISTS /lib32)
+      list(APPEND CMAKE_LIBRARY_PATH /lib32)
+    else()
+      list(APPEND CMAKE_LIBRARY_PATH /lib)
+    endif()
+    if(EXISTS /usr/lib32)
+      list(APPEND CMAKE_LIBRARY_PATH /usr/lib32)
+    else()
+      list(APPEND CMAKE_LIBRARY_PATH /usr/lib)
+    endif()
+  endif()
+endif()
 
 
 # ----------------------------------------------------------------------------
