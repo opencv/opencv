@@ -59,7 +59,7 @@ GPU_PERF_TEST(Flip, cv::gpu::DeviceInfo, cv::Size, perf::MatType, FlipCode)
 INSTANTIATE_TEST_CASE_P(Arithm, Flip, testing::Combine(
                         ALL_DEVICES, 
                         GPU_TYPICAL_MAT_SIZES, 
-                        testing::Values(CV_8UC1, CV_8UC4),
+                        testing::Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                         testing::Values((int) HORIZONTAL_AXIS, (int) VERTICAL_AXIS, (int) BOTH_AXIS)));
 
 //////////////////////////////////////////////////////////////////////
@@ -363,6 +363,33 @@ INSTANTIATE_TEST_CASE_P(Arithm, BitwiseAnd, testing::Combine(
                         GPU_TYPICAL_MAT_SIZES, 
                         testing::Values(CV_8UC1, CV_16UC1, CV_32SC1)));
 
+GPU_PERF_TEST(BitwiseScalarAnd, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat src_host(size, type);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    cv::gpu::GpuMat src(src_host);
+    cv::gpu::GpuMat dst;
+    cv::Scalar sc = cv::Scalar(123, 123, 123, 123);
+
+    TEST_CYCLE()
+    {
+        cv::gpu::bitwise_and(src, sc, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseScalarAnd, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES, 
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4)));
+
 //////////////////////////////////////////////////////////////////////
 // Min
 
@@ -411,10 +438,11 @@ GPU_PERF_TEST(MeanStdDev, cv::gpu::DeviceInfo, cv::Size)
     cv::gpu::GpuMat src(src_host); 
     cv::Scalar mean;
     cv::Scalar stddev;
+    cv::gpu::GpuMat buf;
 
     TEST_CYCLE()
     {
-        cv::gpu::meanStdDev(src, mean, stddev);
+        cv::gpu::meanStdDev(src, mean, stddev, buf);
     }
 }
 

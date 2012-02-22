@@ -62,7 +62,6 @@ void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, 
 void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_nogpu(); }
 void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::integral(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::sqrIntegral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::columnSum(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_nogpu(); }
@@ -91,7 +90,7 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, f
 void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int, Stream&) { throw_nogpu(); }
 void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
-void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream& stream) { throw_nogpu(); }
+void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream&) { throw_nogpu(); }
 void cv::gpu::pyrDown(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::pyrUp(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
@@ -780,44 +779,78 @@ void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, 
 ////////////////////////////////////////////////////////////////////////
 // rotate
 
-void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, Stream& s)
-{
-    static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
+namespace
+{    
+    template<int DEPTH> struct NppTypeTraits;
+    template<> struct NppTypeTraits<CV_8U>  { typedef Npp8u npp_t; };
+    template<> struct NppTypeTraits<CV_8S>  { typedef Npp8s npp_t; };
+    template<> struct NppTypeTraits<CV_16U> { typedef Npp16u npp_t; };
+    template<> struct NppTypeTraits<CV_16S> { typedef Npp16s npp_t; };
+    template<> struct NppTypeTraits<CV_32S> { typedef Npp32s npp_t; };
+    template<> struct NppTypeTraits<CV_32F> { typedef Npp32f npp_t; };
+    template<> struct NppTypeTraits<CV_64F> { typedef Npp64f npp_t; };
 
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
+    template <int DEPTH> struct NppRotateFunc
+    {
+        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+
+        typedef NppStatus (*func_t)(const npp_t* pSrc, NppiSize oSrcSize, int nSrcStep, NppiRect oSrcROI, 
+                                    npp_t* pDst, int nDstStep, NppiRect oDstROI,
+                                    double nAngle, double nShiftX, double nShiftY, int eInterpolation);
+    };
+
+    template <int DEPTH, typename NppRotateFunc<DEPTH>::func_t func> struct NppRotate
+    {
+        typedef typename NppRotateFunc<DEPTH>::npp_t npp_t;
+
+        static void call(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, cudaStream_t stream)
+        {
+            static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
+
+            NppStreamHandler h(stream);
+
+            NppiSize srcsz;
+            srcsz.height = src.rows;
+            srcsz.width = src.cols;
+            NppiRect srcroi;
+            srcroi.x = srcroi.y = 0;
+            srcroi.height = src.rows;
+            srcroi.width = src.cols;
+            NppiRect dstroi;
+            dstroi.x = dstroi.y = 0;
+            dstroi.height = dst.rows;
+            dstroi.width = dst.cols;
+
+            nppSafeCall( func(src.ptr<npp_t>(), srcsz, static_cast<int>(src.step), srcroi,
+                dst.ptr<npp_t>(), static_cast<int>(dst.step), dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+    };
+}
+
+void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, cudaStream_t stream);
+
+    static const func_t funcs[6][4] = 
+    {
+        {NppRotate<CV_8U, nppiRotate_8u_C1R>::call, 0, NppRotate<CV_8U, nppiRotate_8u_C3R>::call, NppRotate<CV_8U, nppiRotate_8u_C4R>::call},
+        {0,0,0,0},
+        {NppRotate<CV_16U, nppiRotate_16u_C1R>::call, 0, NppRotate<CV_16U, nppiRotate_16u_C3R>::call, NppRotate<CV_16U, nppiRotate_16u_C4R>::call},
+        {0,0,0,0},
+        {0,0,0,0},
+        {NppRotate<CV_32F, nppiRotate_32f_C1R>::call, 0, NppRotate<CV_32F, nppiRotate_32f_C3R>::call, NppRotate<CV_32F, nppiRotate_32f_C4R>::call}
+    };
+
+    CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+    CV_Assert(src.channels() == 1 || src.channels() == 3 || src.channels() == 4);
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
 
     dst.create(dsize, src.type());
 
-    NppiSize srcsz;
-    srcsz.height = src.rows;
-    srcsz.width = src.cols;
-    NppiRect srcroi;
-    srcroi.x = srcroi.y = 0;
-    srcroi.height = src.rows;
-    srcroi.width = src.cols;
-    NppiRect dstroi;
-    dstroi.x = dstroi.y = 0;
-    dstroi.height = dst.rows;
-    dstroi.width = dst.cols;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStreamHandler h(stream);
-
-    if (src.type() == CV_8UC1)
-    {
-        nppSafeCall( nppiRotate_8u_C1R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcroi,
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
-    }
-    else
-    {
-        nppSafeCall( nppiRotate_8u_C4R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcroi,
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
-    }
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+    funcs[src.depth()][src.channels() - 1](src, dst, dsize, angle, xShift, yShift, interpolation, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -852,30 +885,6 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     ncvSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), static_cast<int>(src.step), 
         sum.ptr<Ncv32u>(), static_cast<int>(sum.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
-
-void cv::gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum, Stream& s)
-{
-    CV_Assert(src.type() == CV_8UC1);
-
-    int width = src.cols + 1, height = src.rows + 1;
-
-    sum.create(height, width, CV_32S);
-    sqsum.create(height, width, CV_32F);
-
-    NppiSize sz;
-    sz.width = src.cols;
-    sz.height = src.rows;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStreamHandler h(stream);
-
-    nppSafeCall( nppiSqrIntegral_8u32s32f_C1R(const_cast<Npp8u*>(src.ptr<Npp8u>()), static_cast<int>(src.step), 
-        sum.ptr<Npp32s>(), static_cast<int>(sum.step), sqsum.ptr<Npp32f>(), static_cast<int>(sqsum.step), sz, 0, 0.0f, height) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -935,7 +944,6 @@ void cv::gpu::columnSum(const GpuMat& src, GpuMat& dst)
 
 void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
 {
-#if CUDART_VERSION > 4000 
     CV_Assert(src.type() == CV_32SC1 && sqr.type() == CV_64FC1);
 
     dst.create(src.size(), CV_32FC1);
@@ -959,31 +967,6 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
-#else
-    CV_Assert(src.type() == CV_32SC1 && sqr.type() == CV_32FC1);
-
-    dst.create(src.size(), CV_32FC1);
-
-    NppiSize sz;
-    sz.width = src.cols;
-    sz.height = src.rows;
-
-    NppiRect nppRect;
-    nppRect.height = rect.height;
-    nppRect.width = rect.width;
-    nppRect.x = rect.x;
-    nppRect.y = rect.y;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStreamHandler h(stream);
-
-    nppSafeCall( nppiRectStdDev_32s32f_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), sqr.ptr<Npp32f>(), static_cast<int>(sqr.step),
-                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, nppRect) );
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-#endif
 }
 
 
@@ -992,25 +975,19 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 
 namespace
 {
-    template<int n> struct NPPTypeTraits;
-    template<> struct NPPTypeTraits<CV_8U>  { typedef Npp8u npp_type; };
-    template<> struct NPPTypeTraits<CV_16U> { typedef Npp16u npp_type; };
-    template<> struct NPPTypeTraits<CV_16S> { typedef Npp16s npp_type; };
-    template<> struct NPPTypeTraits<CV_32F> { typedef Npp32f npp_type; };
-
     typedef NppStatus (*get_buf_size_c1_t)(NppiSize oSizeROI, int nLevels, int* hpBufferSize);
     typedef NppStatus (*get_buf_size_c4_t)(NppiSize oSizeROI, int nLevels[], int* hpBufferSize);
 
     template<int SDEPTH> struct NppHistogramEvenFuncC1
     {
-        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef typename NppTypeTraits<SDEPTH>::npp_t src_t;
 
 	typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI, Npp32s * pHist,
 		    int nLevels, Npp32s nLowerLevel, Npp32s nUpperLevel, Npp8u * pBuffer);
     };
     template<int SDEPTH> struct NppHistogramEvenFuncC4
     {
-        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef typename NppTypeTraits<SDEPTH>::npp_t src_t;
 
         typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, NppiSize oSizeROI,
             Npp32s * pHist[4], int nLevels[4], Npp32s nLowerLevel[4], Npp32s nUpperLevel[4], Npp8u * pBuffer);
@@ -1079,7 +1056,7 @@ namespace
 
     template<int SDEPTH> struct NppHistogramRangeFuncC1
     {
-        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef typename NppTypeTraits<SDEPTH>::npp_t src_t;
         typedef Npp32s level_t;
         enum {LEVEL_TYPE_CODE=CV_32SC1};
 
@@ -1097,7 +1074,7 @@ namespace
     };
     template<int SDEPTH> struct NppHistogramRangeFuncC4
     {
-        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+        typedef typename NppTypeTraits<SDEPTH>::npp_t src_t;
         typedef Npp32s level_t;
         enum {LEVEL_TYPE_CODE=CV_32SC1};
 

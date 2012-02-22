@@ -429,11 +429,11 @@ void cv::gpu::ORB_GPU::setParams(size_t n_features, const ORB::CommonParams& det
     // pre-compute the end of a row in a circular patch
     int half_patch_size = params_.patch_size_ / 2;
     vector<int> u_max(half_patch_size + 1);
-    for (int v = 0; v <= half_patch_size * sqrt(2.f) / 2 + 1; ++v)
-        u_max[v] = cvRound(sqrt(static_cast<float>(half_patch_size * half_patch_size - v * v)));
+    for (int v = 0; v <= half_patch_size * std::sqrt(2.f) / 2 + 1; ++v)
+        u_max[v] = cvRound(std::sqrt(static_cast<float>(half_patch_size * half_patch_size - v * v)));
     
     // Make sure we are symmetric
-    for (int v = half_patch_size, v_0 = 0; v >= half_patch_size * sqrt(2.f) / 2; --v)
+    for (int v = half_patch_size, v_0 = 0; v >= half_patch_size * std::sqrt(2.f) / 2; --v)
     {
         while (u_max[v_0] == u_max[v_0 + 1])
             ++v_0;

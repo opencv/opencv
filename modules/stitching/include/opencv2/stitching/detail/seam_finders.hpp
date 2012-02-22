@@ -105,6 +105,8 @@ public:
     GraphCutSeamFinder(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);
 
+    ~GraphCutSeamFinder();
+
     void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
               std::vector<Mat> &masks);
 

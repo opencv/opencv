@@ -136,7 +136,7 @@ int main(int argc, char** argv)
 
 #else // HAVE_CUDA
 
-int main(int argc, char** argv)
+int main()
 {
     printf("OpenCV was built without CUDA support\n");
     return 0;

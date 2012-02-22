@@ -45,12 +45,41 @@
 #if !defined (HAVE_CUDA)
 
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
+
+namespace
+{
+    typedef NppStatus (*init_func_t)(NppiSize oSize, NppiGraphcutState** ppState, Npp8u* pDeviceMem);
+
+    class NppiGraphcutStateHandler
+    {
+    public:
+        NppiGraphcutStateHandler(NppiSize sznpp, Npp8u* pDeviceMem, const init_func_t func)
+        {
+            nppSafeCall( func(sznpp, &pState, pDeviceMem) );
+        }
+
+        ~NppiGraphcutStateHandler()
+        {
+            nppSafeCall( nppiGraphcutFree(pState) );
+        }
+
+        operator NppiGraphcutState*()
+        {
+            return pState;
+        }
+
+    private:        
+        NppiGraphcutState* pState;
+    };
+}
 
 void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf, Stream& s)
 {
     Size src_size = terminals.size();
+
     CV_Assert(terminals.type() == CV_32S);
     CV_Assert(leftTransp.size() == Size(src_size.height, src_size.width));
     CV_Assert(leftTransp.type() == CV_32S);
@@ -70,30 +99,76 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
     int bufsz;
     nppSafeCall( nppiGraphcutGetSize(sznpp, &bufsz) );
 
-    if ((size_t)bufsz > buf.cols * buf.rows * buf.elemSize())
-        buf.create(1, bufsz, CV_8U);
+    ensureSizeIsEnough(1, bufsz, CV_8U, buf);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     NppStreamHandler h(stream);
 
-#if CUDART_VERSION > 4000 
-    NppiGraphcutState* pState;
-    nppSafeCall( nppiGraphcutInitAlloc(sznpp, &pState, buf.ptr<Npp8u>()) );
+    NppiGraphcutStateHandler state(sznpp, buf.ptr<Npp8u>(), nppiGraphcutInitAlloc);
     
     nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
-        static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), pState) );
-
-    nppSafeCall( nppiGraphcutFree(pState) );
-#else
-    nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
-        static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), buf.ptr<Npp8u>()) );
-#endif
+        static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), state) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
 }
 
+void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight, 
+              GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight, GpuMat& labels, GpuMat& buf, Stream& s)
+{
+    Size src_size = terminals.size();
+
+    CV_Assert(terminals.type() == CV_32S);
+
+    CV_Assert(leftTransp.size() == Size(src_size.height, src_size.width));
+    CV_Assert(leftTransp.type() == CV_32S);
+
+    CV_Assert(rightTransp.size() == Size(src_size.height, src_size.width));
+    CV_Assert(rightTransp.type() == CV_32S);
+
+    CV_Assert(top.size() == src_size);
+    CV_Assert(top.type() == CV_32S);
+
+    CV_Assert(topLeft.size() == src_size);
+    CV_Assert(topLeft.type() == CV_32S);
+
+    CV_Assert(topRight.size() == src_size);
+    CV_Assert(topRight.type() == CV_32S);
+
+    CV_Assert(bottom.size() == src_size);
+    CV_Assert(bottom.type() == CV_32S);
+
+    CV_Assert(bottomLeft.size() == src_size);
+    CV_Assert(bottomLeft.type() == CV_32S);
+
+    CV_Assert(bottomRight.size() == src_size);
+    CV_Assert(bottomRight.type() == CV_32S);
+
+    labels.create(src_size, CV_8U);
+
+    NppiSize sznpp;
+    sznpp.width = src_size.width;
+    sznpp.height = src_size.height;
+
+    int bufsz;
+    nppSafeCall( nppiGraphcut8GetSize(sznpp, &bufsz) );
+
+    ensureSizeIsEnough(1, bufsz, CV_8U, buf);
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    NppStreamHandler h(stream);
+
+    NppiGraphcutStateHandler state(sznpp, buf.ptr<Npp8u>(), nppiGraphcut8InitAlloc);
+    
+    nppSafeCall( nppiGraphcut8_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), 
+        top.ptr<Npp32s>(), topLeft.ptr<Npp32s>(), topRight.ptr<Npp32s>(),
+        bottom.ptr<Npp32s>(), bottomLeft.ptr<Npp32s>(), bottomRight.ptr<Npp32s>(),
+        static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), state) );
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
+}
 
 #endif /* !defined (HAVE_CUDA) */
-

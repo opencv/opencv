@@ -1199,7 +1199,7 @@ TEST(FarnebackOpticalFlow)
     if (frame1.empty()) throw runtime_error("can't open " + datasets[i] + "2.png");
 
     gpu::FarnebackOpticalFlow calc;
-    calc.fastPyramids = fastPyramids;
+    calc.fastPyramids = fastPyramids != 0;
     calc.flags |= useGaussianBlur ? OPTFLOW_FARNEBACK_GAUSSIAN : 0;
 
     gpu::GpuMat d_frame0(frame0), d_frame1(frame1), d_flowx, d_flowy;

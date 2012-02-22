@@ -228,7 +228,7 @@ void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMa
     minMax(u_avg, 0, &uMax);
     minMax(v_avg, 0, &vMax);
 
-    float max_flow = static_cast<float>(sqrt(uMax * uMax + vMax * vMax));
+    float max_flow = static_cast<float>(std::sqrt(uMax * uMax + vMax * vMax));
 
     CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), max_flow, 1.0f / u.cols, 1.0f / u.rows);
 

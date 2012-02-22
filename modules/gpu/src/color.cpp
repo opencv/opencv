@@ -48,6 +48,7 @@ using namespace cv::gpu;
 #if !defined (HAVE_CUDA)
 
 void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
+void cv::gpu::swapChannels(GpuMat&, const int[], Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -1421,6 +1422,21 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
 
     func(src, dst, dcn, stream);
+}
+
+void cv::gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& s)
+{
+    CV_Assert(image.type() == CV_8UC4);
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    NppStreamHandler h(stream);
+
+    NppiSize sz;
+    sz.width  = image.cols;
+    sz.height = image.rows;
+
+    nppSafeCall( nppiSwapChannels_8u_C4IR(image.ptr<Npp8u>(), static_cast<int>(image.step), sz, dstOrder) );	
 }
 
 #endif /* !defined (HAVE_CUDA) */

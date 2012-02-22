@@ -48,6 +48,7 @@ using namespace cv::gpu;
 #if !defined (HAVE_CUDA)
 
 void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_nogpu(); }
+void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_nogpu(); }
 double cv::gpu::norm(const GpuMat&, int) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_nogpu(); return 0.0; }
 double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_nogpu(); return 0.0; }
@@ -109,6 +110,12 @@ namespace
 
 void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 {
+    GpuMat buf;
+    meanStdDev(src, mean, stddev, buf);
+}
+
+void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat& buf)
+{
     CV_Assert(src.type() == CV_8UC1);
 
     NppiSize sz;
@@ -117,22 +124,18 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 
     DeviceBuffer dbuf(2);
 
-#if CUDART_VERSION > 4000 
     int bufSize;
     nppSafeCall( nppiMeanStdDev8uC1RGetBufferHostSize(sz, &bufSize) );
 
-    GpuMat buf(1, bufSize, CV_8UC1);
+    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
+
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dbuf, (double*)dbuf + 1) );
-#else
-    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, dbuf, (double*)dbuf + 1) );
-#endif
 
     cudaSafeCall( cudaDeviceSynchronize() );
     
     double* ptrs[2] = {mean.val, stddev.val};
     dbuf.download(ptrs);
 }
-
 
 ////////////////////////////////////////////////////////////////////////
 // norm
@@ -151,7 +154,7 @@ double cv::gpu::norm(const GpuMat& src, int normType, GpuMat& buf)
         return absSum(src_single_channel, buf)[0];
 
     if (normType == NORM_L2)
-        return sqrt(sqrSum(src_single_channel, buf)[0]);
+        return std::sqrt(sqrSum(src_single_channel, buf)[0]);
 
     if (normType == NORM_INF)
     {

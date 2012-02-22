@@ -63,7 +63,7 @@ void TestSystem::finishCurrentSubtest()
     double cpu_time = cpu_elapsed_ / getTickFrequency() * 1000.0;
     double gpu_time = gpu_elapsed_ / getTickFrequency() * 1000.0;
 
-    double speedup = static_cast<double>(cpu_elapsed_) / std::max((int64)1, gpu_elapsed_);
+    double speedup = static_cast<double>(cpu_elapsed_) / std::max(1.0, gpu_elapsed_);
     speedup_total_ += speedup;
 
     printMetrics(cpu_time, gpu_time, speedup);

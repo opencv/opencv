@@ -2378,6 +2378,49 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, Combine(
                         USE_ROI));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+// swapChannels
+
+PARAM_TEST_CASE(SwapChannels, cv::gpu::DeviceInfo, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    bool useRoi;
+    
+    cv::Mat img;
+    
+    cv::Mat dst_gold;
+    
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat imgBase = readImage("stereobm/aloe-L.png");
+        ASSERT_FALSE(imgBase.empty());
+
+        cv::cvtColor(imgBase, img, cv::COLOR_BGR2BGRA);
+
+        cv::cvtColor(img, dst_gold, cv::COLOR_BGRA2RGBA);
+    }
+};
+
+TEST_P(SwapChannels, Accuracy)
+{
+    cv::gpu::GpuMat gpuImage = loadMat(img, useRoi);
+
+    const int dstOrder[] = {2, 1, 0, 3};
+    cv::gpu::swapChannels(gpuImage, dstOrder);
+
+    cv::Mat dst;
+    gpuImage.download(dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, SwapChannels, Combine(ALL_DEVICES, USE_ROI));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // histograms
 
 struct HistEven : TestWithParam<cv::gpu::DeviceInfo>

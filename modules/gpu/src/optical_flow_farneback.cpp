@@ -160,7 +160,7 @@ void cv::gpu::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double s
     double ig11, ig03, ig33, ig55;
     prepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
 
-    device::optflow_farneback::setPolynomialExpansionConsts(n, g, xg, xxg, ig11, ig03, ig33, ig55);
+    device::optflow_farneback::setPolynomialExpansionConsts(n, g, xg, xxg, static_cast<float>(ig11), static_cast<float>(ig03), static_cast<float>(ig33), static_cast<float>(ig55));
 }
 
 

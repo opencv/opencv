@@ -411,6 +411,8 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
 GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float bad_region_penalty)
     : impl_(new Impl(cost_type, terminal_cost, bad_region_penalty)) {}
 
+GraphCutSeamFinder::~GraphCutSeamFinder() {}
+
 
 void GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
                               vector<Mat> &masks)

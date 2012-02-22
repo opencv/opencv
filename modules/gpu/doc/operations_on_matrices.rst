@@ -63,7 +63,7 @@ Flips a 2D matrix around vertical, horizontal, or both axes.
 
 .. ocv:function:: void gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream = Stream::Null())
 
-    :param src: Source matrix. Only  ``CV_8UC1``  and  ``CV_8UC4``  matrices are supported for now.
+    :param src: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth.
 
     :param dst: Destination matrix.
 

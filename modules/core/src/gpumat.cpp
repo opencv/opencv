@@ -48,6 +48,17 @@
 #ifdef HAVE_CUDA
     #include <cuda_runtime.h>
     #include <npp.h>
+
+    #define CUDART_MINIMUM_REQUIRED_VERSION 4010
+    #define NPP_MINIMUM_REQUIRED_VERSION 4100
+
+    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
+        #error "Insufficient Cuda Runtime library version, please update it."
+    #endif
+
+    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
+        #error "Insufficient NPP version, please update it."
+    #endif
 #endif
 
 using namespace std;
@@ -460,15 +471,17 @@ namespace cv { namespace gpu
 
 namespace
 {
-    //////////////////////////////////////////////////////////////////////////
-    // Convert
-
     template<int n> struct NPPTypeTraits;
     template<> struct NPPTypeTraits<CV_8U>  { typedef Npp8u npp_type; };
+    template<> struct NPPTypeTraits<CV_8S>  { typedef Npp8s npp_type; };
     template<> struct NPPTypeTraits<CV_16U> { typedef Npp16u npp_type; };
     template<> struct NPPTypeTraits<CV_16S> { typedef Npp16s npp_type; };
     template<> struct NPPTypeTraits<CV_32S> { typedef Npp32s npp_type; };
     template<> struct NPPTypeTraits<CV_32F> { typedef Npp32f npp_type; };
+    template<> struct NPPTypeTraits<CV_64F> { typedef Npp64f npp_type; };
+
+    //////////////////////////////////////////////////////////////////////////
+    // Convert
 
     template<int SDEPTH, int DDEPTH> struct NppConvertFunc
     {
@@ -494,6 +507,7 @@ namespace
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
+
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -508,6 +522,7 @@ namespace
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
+
             nppSafeCall( func(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz, NPP_RND_NEAR) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -528,6 +543,14 @@ namespace
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
 
         typedef NppStatus (*func_ptr)(src_t val, src_t* pSrc, int nSrcStep, NppiSize oSizeROI);
+    };
+    template<int SCN> struct NppSetFunc<CV_8S, SCN>
+    {
+        typedef NppStatus (*func_ptr)(Npp8s values[], Npp8s* pSrc, int nSrcStep, NppiSize oSizeROI);
+    };
+    template<> struct NppSetFunc<CV_8S, 1>
+    {
+        typedef NppStatus (*func_ptr)(Npp8s val, Npp8s* pSrc, int nSrcStep, NppiSize oSizeROI);
     };
 
     template<int SDEPTH, int SCN, typename NppSetFunc<SDEPTH, SCN>::func_ptr func> struct NppSet
@@ -613,6 +636,35 @@ namespace
         }
     };
 
+    //////////////////////////////////////////////////////////////////////////
+    // CopyMasked
+
+    template<int SDEPTH> struct NppCopyMaskedFunc
+    {
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, src_t* pDst, int nDstStep, NppiSize oSizeROI, const Npp8u* pMask, int nMaskStep);
+    };
+
+    template<int SDEPTH, typename NppCopyMaskedFunc<SDEPTH>::func_ptr func> struct NppCopyMasked
+    {
+        typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
+
+        static void copyMasked(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t /*stream*/)
+        {
+            NppiSize sz;
+            sz.width = src.cols;
+            sz.height = src.rows;
+
+            nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), dst.ptr<src_t>(), static_cast<int>(dst.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+        }
+    };
+
+    //////////////////////////////////////////////////////////////////////////
+    // CudaFuncTable
+
     class CudaFuncTable : public GpuFuncTable
     {
     public:
@@ -631,7 +683,26 @@ namespace
 
         void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask) const
         {
-            ::cv::gpu::copyWithMask(src, dst, mask);
+            CV_Assert(src.size() == dst.size() && src.type() == dst.type());
+            CV_Assert(src.size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == src.channels()));
+
+            typedef void (*caller_t)(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream);
+
+            static const caller_t callers[7][4] = 
+            {
+                /*  8U */ {NppCopyMasked<CV_8U, nppiCopy_8u_C1MR>::copyMasked, cv::gpu::copyWithMask, NppCopyMasked<CV_8U, nppiCopy_8u_C3MR>::copyMasked, NppCopyMasked<CV_8U, nppiCopy_8u_C4MR>::copyMasked},
+                /*  8S */ {cv::gpu::copyWithMask, cv::gpu::copyWithMask, cv::gpu::copyWithMask, cv::gpu::copyWithMask},
+                /* 16U */ {NppCopyMasked<CV_16U, nppiCopy_16u_C1MR>::copyMasked, cv::gpu::copyWithMask, NppCopyMasked<CV_16U, nppiCopy_16u_C3MR>::copyMasked, NppCopyMasked<CV_16U, nppiCopy_16u_C4MR>::copyMasked},
+                /* 16S */ {NppCopyMasked<CV_16S, nppiCopy_16s_C1MR>::copyMasked, cv::gpu::copyWithMask, NppCopyMasked<CV_16S, nppiCopy_16s_C3MR>::copyMasked, NppCopyMasked<CV_16S, nppiCopy_16s_C4MR>::copyMasked},
+                /* 32S */ {NppCopyMasked<CV_32S, nppiCopy_32s_C1MR>::copyMasked, cv::gpu::copyWithMask, NppCopyMasked<CV_32S, nppiCopy_32s_C3MR>::copyMasked, NppCopyMasked<CV_32S, nppiCopy_32s_C4MR>::copyMasked},
+                /* 32F */ {NppCopyMasked<CV_32F, nppiCopy_32f_C1MR>::copyMasked, cv::gpu::copyWithMask, NppCopyMasked<CV_32F, nppiCopy_32f_C3MR>::copyMasked, NppCopyMasked<CV_32F, nppiCopy_32f_C4MR>::copyMasked},
+                /* 64F */ {cv::gpu::copyWithMask, cv::gpu::copyWithMask, cv::gpu::copyWithMask, cv::gpu::copyWithMask}
+            };
+
+            caller_t func =  mask.channels() == src.channels() ? callers[src.depth()][src.channels()] : cv::gpu::copyWithMask;
+            CV_DbgAssert(func != 0);
+
+            func(src, dst, mask, 0);
         }
 
         void convert(const GpuMat& src, GpuMat& dst) const
@@ -641,65 +712,65 @@ namespace
             {
                 {
                     /*  8U ->  8U */ {0, 0, 0, 0},
-                    /*  8U ->  8S */ {::cv::gpu::convertTo, ::cv::gpu::convertTo, ::cv::gpu::convertTo, ::cv::gpu::convertTo},
-                    /*  8U -> 16U */ {NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C4R>::cvt},
-                    /*  8U -> 16S */ {NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C4R>::cvt},
-                    /*  8U -> 32S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /*  8U -> 32F */ {NppCvt<CV_8U, CV_32F, nppiConvert_8u32f_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /*  8U -> 64F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo}
+                    /*  8U ->  8S */ {cv::gpu::convertTo, cv::gpu::convertTo, cv::gpu::convertTo, cv::gpu::convertTo},
+                    /*  8U -> 16U */ {NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,NppCvt<CV_8U, CV_16U, nppiConvert_8u16u_C4R>::cvt},
+                    /*  8U -> 16S */ {NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,NppCvt<CV_8U, CV_16S, nppiConvert_8u16s_C4R>::cvt},
+                    /*  8U -> 32S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /*  8U -> 32F */ {NppCvt<CV_8U, CV_32F, nppiConvert_8u32f_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /*  8U -> 64F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo}
                 },
                 {
-                    /*  8S ->  8U */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
+                    /*  8S ->  8U */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
                     /*  8S ->  8S */ {0,0,0,0},
-                    /*  8S -> 16U */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /*  8S -> 16S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /*  8S -> 32S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /*  8S -> 32F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /*  8S -> 64F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo}
+                    /*  8S -> 16U */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /*  8S -> 16S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /*  8S -> 32S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /*  8S -> 32F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /*  8S -> 64F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo}
                 },
                 {
-                    /* 16U ->  8U */ {NppCvt<CV_16U, CV_8U, nppiConvert_16u8u_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,NppCvt<CV_16U, CV_8U, nppiConvert_16u8u_C4R>::cvt},
-                    /* 16U ->  8S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
+                    /* 16U ->  8U */ {NppCvt<CV_16U, CV_8U, nppiConvert_16u8u_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,NppCvt<CV_16U, CV_8U, nppiConvert_16u8u_C4R>::cvt},
+                    /* 16U ->  8S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
                     /* 16U -> 16U */ {0,0,0,0},
-                    /* 16U -> 16S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 16U -> 32S */ {NppCvt<CV_16U, CV_32S, nppiConvert_16u32s_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 16U -> 32F */ {NppCvt<CV_16U, CV_32F, nppiConvert_16u32f_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 16U -> 64F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo}
+                    /* 16U -> 16S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 16U -> 32S */ {NppCvt<CV_16U, CV_32S, nppiConvert_16u32s_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 16U -> 32F */ {NppCvt<CV_16U, CV_32F, nppiConvert_16u32f_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 16U -> 64F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo}
                 },
                 {
-                    /* 16S ->  8U */ {NppCvt<CV_16S, CV_8U, nppiConvert_16s8u_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,NppCvt<CV_16S, CV_8U, nppiConvert_16s8u_C4R>::cvt},
-                    /* 16S ->  8S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 16S -> 16U */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
+                    /* 16S ->  8U */ {NppCvt<CV_16S, CV_8U, nppiConvert_16s8u_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,NppCvt<CV_16S, CV_8U, nppiConvert_16s8u_C4R>::cvt},
+                    /* 16S ->  8S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 16S -> 16U */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
                     /* 16S -> 16S */ {0,0,0,0},
-                    /* 16S -> 32S */ {NppCvt<CV_16S, CV_32S, nppiConvert_16s32s_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 16S -> 32F */ {NppCvt<CV_16S, CV_32F, nppiConvert_16s32f_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 16S -> 64F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo}
+                    /* 16S -> 32S */ {NppCvt<CV_16S, CV_32S, nppiConvert_16s32s_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 16S -> 32F */ {NppCvt<CV_16S, CV_32F, nppiConvert_16s32f_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 16S -> 64F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo}
                 },
                 {
-                    /* 32S ->  8U */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32S ->  8S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32S -> 16U */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32S -> 16S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
+                    /* 32S ->  8U */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32S ->  8S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32S -> 16U */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32S -> 16S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
                     /* 32S -> 32S */ {0,0,0,0},
-                    /* 32S -> 32F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32S -> 64F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo}
+                    /* 32S -> 32F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32S -> 64F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo}
                 },
                 {
-                    /* 32F ->  8U */ {NppCvt<CV_32F, CV_8U, nppiConvert_32f8u_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32F ->  8S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32F -> 16U */ {NppCvt<CV_32F, CV_16U, nppiConvert_32f16u_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32F -> 16S */ {NppCvt<CV_32F, CV_16S, nppiConvert_32f16s_C1R>::cvt,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 32F -> 32S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
+                    /* 32F ->  8U */ {NppCvt<CV_32F, CV_8U, nppiConvert_32f8u_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32F ->  8S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32F -> 16U */ {NppCvt<CV_32F, CV_16U, nppiConvert_32f16u_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32F -> 16S */ {NppCvt<CV_32F, CV_16S, nppiConvert_32f16s_C1R>::cvt,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 32F -> 32S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
                     /* 32F -> 32F */ {0,0,0,0},
-                    /* 32F -> 64F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo}
+                    /* 32F -> 64F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo}
                 },
                 {
-                    /* 64F ->  8U */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 64F ->  8S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 64F -> 16U */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 64F -> 16S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 64F -> 32S */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
-                    /* 64F -> 32F */ {::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo,::cv::gpu::convertTo},
+                    /* 64F ->  8U */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 64F ->  8S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 64F -> 16U */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 64F -> 16S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 64F -> 32S */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
+                    /* 64F -> 32F */ {cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo,cv::gpu::convertTo},
                     /* 64F -> 64F */ {0,0,0,0}
                 }
             };
@@ -712,7 +783,7 @@ namespace
 
         void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const
         {
-            ::cv::gpu::convertTo(src, dst, alpha, beta);
+            cv::gpu::convertTo(src, dst, alpha, beta);
         }
 
         void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const
@@ -744,13 +815,13 @@ namespace
                 typedef void (*caller_t)(GpuMat& src, Scalar s);
                 static const caller_t callers[7][4] =
                 {
-                    {NppSet<CV_8U, 1, nppiSet_8u_C1R>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSet<CV_8U, 4, nppiSet_8u_C4R>::set},
-                    {::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo},
-                    {NppSet<CV_16U, 1, nppiSet_16u_C1R>::set, NppSet<CV_16U, 2, nppiSet_16u_C2R>::set, ::cv::gpu::setTo, NppSet<CV_16U, 4, nppiSet_16u_C4R>::set},
-                    {NppSet<CV_16S, 1, nppiSet_16s_C1R>::set, NppSet<CV_16S, 2, nppiSet_16s_C2R>::set, ::cv::gpu::setTo, NppSet<CV_16S, 4, nppiSet_16s_C4R>::set},
-                    {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSet<CV_32S, 4, nppiSet_32s_C4R>::set},
-                    {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSet<CV_32F, 4, nppiSet_32f_C4R>::set},
-                    {::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo}
+                    {NppSet<CV_8U, 1, nppiSet_8u_C1R>::set, cv::gpu::setTo, cv::gpu::setTo, NppSet<CV_8U, 4, nppiSet_8u_C4R>::set},
+                    {NppSet<CV_8S, 1, nppiSet_8s_C1R>::set, NppSet<CV_8S, 2, nppiSet_8s_C2R>::set, NppSet<CV_8S, 3, nppiSet_8s_C3R>::set, NppSet<CV_8S, 4, nppiSet_8s_C4R>::set},
+                    {NppSet<CV_16U, 1, nppiSet_16u_C1R>::set, NppSet<CV_16U, 2, nppiSet_16u_C2R>::set, cv::gpu::setTo, NppSet<CV_16U, 4, nppiSet_16u_C4R>::set},
+                    {NppSet<CV_16S, 1, nppiSet_16s_C1R>::set, NppSet<CV_16S, 2, nppiSet_16s_C2R>::set, cv::gpu::setTo, NppSet<CV_16S, 4, nppiSet_16s_C4R>::set},
+                    {NppSet<CV_32S, 1, nppiSet_32s_C1R>::set, cv::gpu::setTo, cv::gpu::setTo, NppSet<CV_32S, 4, nppiSet_32s_C4R>::set},
+                    {NppSet<CV_32F, 1, nppiSet_32f_C1R>::set, cv::gpu::setTo, cv::gpu::setTo, NppSet<CV_32F, 4, nppiSet_32f_C4R>::set},
+                    {cv::gpu::setTo, cv::gpu::setTo, cv::gpu::setTo, cv::gpu::setTo}
                 };
 
                 callers[m.depth()][m.channels() - 1](m, s);
@@ -761,13 +832,13 @@ namespace
 
                 static const caller_t callers[7][4] =
                 {
-                    {NppSetMask<CV_8U, 1, nppiSet_8u_C1MR>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSetMask<CV_8U, 4, nppiSet_8u_C4MR>::set},
-                    {::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo},
-                    {NppSetMask<CV_16U, 1, nppiSet_16u_C1MR>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSetMask<CV_16U, 4, nppiSet_16u_C4MR>::set},
-                    {NppSetMask<CV_16S, 1, nppiSet_16s_C1MR>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSetMask<CV_16S, 4, nppiSet_16s_C4MR>::set},
-                    {NppSetMask<CV_32S, 1, nppiSet_32s_C1MR>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSetMask<CV_32S, 4, nppiSet_32s_C4MR>::set},
-                    {NppSetMask<CV_32F, 1, nppiSet_32f_C1MR>::set, ::cv::gpu::setTo, ::cv::gpu::setTo, NppSetMask<CV_32F, 4, nppiSet_32f_C4MR>::set},
-                    {::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo, ::cv::gpu::setTo}
+                    {NppSetMask<CV_8U, 1, nppiSet_8u_C1MR>::set, cv::gpu::setTo, cv::gpu::setTo, NppSetMask<CV_8U, 4, nppiSet_8u_C4MR>::set},
+                    {cv::gpu::setTo, cv::gpu::setTo, cv::gpu::setTo, cv::gpu::setTo},
+                    {NppSetMask<CV_16U, 1, nppiSet_16u_C1MR>::set, cv::gpu::setTo, cv::gpu::setTo, NppSetMask<CV_16U, 4, nppiSet_16u_C4MR>::set},
+                    {NppSetMask<CV_16S, 1, nppiSet_16s_C1MR>::set, cv::gpu::setTo, cv::gpu::setTo, NppSetMask<CV_16S, 4, nppiSet_16s_C4MR>::set},
+                    {NppSetMask<CV_32S, 1, nppiSet_32s_C1MR>::set, cv::gpu::setTo, cv::gpu::setTo, NppSetMask<CV_32S, 4, nppiSet_32s_C4MR>::set},
+                    {NppSetMask<CV_32F, 1, nppiSet_32f_C1MR>::set, cv::gpu::setTo, cv::gpu::setTo, NppSetMask<CV_32F, 4, nppiSet_32f_C4MR>::set},
+                    {cv::gpu::setTo, cv::gpu::setTo, cv::gpu::setTo, cv::gpu::setTo}
                 };
 
                 callers[m.depth()][m.channels() - 1](m, s, mask);

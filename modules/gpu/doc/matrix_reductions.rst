@@ -10,12 +10,15 @@ gpu::meanStdDev
 Computes a mean value and a standard deviation of matrix elements.
 
 .. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev)
+.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
 
     :param mtx: Source matrix.  ``CV_8UC1``  matrices are supported for now.
 
     :param mean: Mean value.
 
     :param stddev: Standard deviation value.
+
+    :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 .. seealso:: :ocv:func:`meanStdDev`
 

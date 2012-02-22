@@ -498,7 +498,7 @@ CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
 CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! reverses the order of the rows, columns or both in a matrix
-//! supports CV_8UC1, CV_8UC4 types
+//! supports 1, 3 and 4 channels images with CV_8U, CV_16U, CV_32S or CV_32F depth
 CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode, Stream& stream = Stream::Null());
 
 //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
@@ -586,19 +586,31 @@ CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& str
 //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
 CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c, Stream& stream = Stream::Null());
 
+//! computes absolute value of each matrix element
+//! supports CV_16S and CV_32F depth
+CV_EXPORTS void abs(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+
+//! computes square of each pixel in an image
+//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
+CV_EXPORTS void sqr(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+
+//! computes square root of each pixel in an image
+//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
+CV_EXPORTS void sqrt(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+
 //! computes exponent of each matrix element (b = e**a)
-//! supports only CV_32FC1 type
+//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
 CV_EXPORTS void exp(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
+
+//! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
+//! supports CV_8U, CV_16U, CV_16S and CV_32F depth
+CV_EXPORTS void log(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
 
 //! computes power of each matrix element:
 //    (dst(i,j) = pow(     src(i,j) , power), if src.type() is integer
 //    (dst(i,j) = pow(fabs(src(i,j)), power), otherwise
 //! supports all, except depth == CV_64F
 CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream = Stream::Null());
-
-//! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
-//! supports only CV_32FC1 type
-CV_EXPORTS void log(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
 
 //! compares elements of two arrays (c = a <cmpop> b)
 CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
@@ -608,12 +620,29 @@ CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=G
 
 //! calculates per-element bit-wise disjunction of two arrays
 CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
+//! calculates per-element bit-wise disjunction of array and scalar
+//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
+CV_EXPORTS void bitwise_or(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! calculates per-element bit-wise conjunction of two arrays
 CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
+//! calculates per-element bit-wise conjunction of array and scalar
+//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
+CV_EXPORTS void bitwise_and(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! calculates per-element bit-wise "exclusive or" operation
 CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
+//! calculates per-element bit-wise "exclusive or" of array and scalar
+//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
+CV_EXPORTS void bitwise_xor(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
+
+//! pixel by pixel right shift of an image by a constant value
+//! supports 1, 3 and 4 channels images with integers elements
+CV_EXPORTS void rshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
+
+//! pixel by pixel left shift of an image by a constant value
+//! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
+CV_EXPORTS void lshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
 CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());
@@ -626,6 +655,13 @@ CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream&
 
 //! computes per-element maximum of array and scalar (dst = max(src1, src2))
 CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
+
+enum { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA_OVER_PREMUL, ALPHA_IN_PREMUL, ALPHA_OUT_PREMUL,
+       ALPHA_ATOP_PREMUL, ALPHA_XOR_PREMUL, ALPHA_PLUS_PREMUL, ALPHA_PREMUL};
+
+//! Composite two images using alpha opacity values contained in each image
+//! Supports CV_8UC4, CV_16UC4, CV_32SC4 and CV_32FC4 types
+CV_EXPORTS void alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, int alpha_op, Stream& stream = Stream::Null());
 
 
 ////////////////////////////// Image processing //////////////////////////////
@@ -665,6 +701,13 @@ CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& 
 //! converts image from one color space to another
 CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null());
 
+//! swap channels
+//! dstOrder - Integer array describing how channel values are permutated. The n-th entry
+//!            of the array contains the number of the channel that is stored in the n-th channel of
+//!            the output image. E.g. Given an RGBA image, aDstOrder = [3,2,1,0] converts this to ABGR
+//!            channel order.
+CV_EXPORTS void swapChannels(GpuMat& image, const int dstOrder[4], Stream& stream = Stream::Null());
+
 //! applies fixed threshold to the image
 CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
 
@@ -692,9 +735,9 @@ CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat 
 CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                        GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
 
-//! rotate 8bit single or four channel image
-//! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-//! supports CV_8UC1, CV_8UC4 types
+//! rotates an image around the origin (0,0) and then shifts it
+//! supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+//! supports 1, 3 or 4 channels images with CV_8U, CV_16U or CV_32F depth
 CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, 
                        int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
@@ -706,14 +749,8 @@ CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bott
 //! sum will have CV_32S type, but will contain unsigned int values
 //! supports only CV_8UC1 source type
 CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null());
-
 //! buffered version
 CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& stream = Stream::Null());
-
-//! computes the integral image and integral for the squared image
-//! sum will have CV_32S type, sqsum - CV32F type
-//! supports only CV_8UC1 source type
-CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum, Stream& stream = Stream::Null());
 
 //! computes squared integral image
 //! result matrix will have 64F type, but will contain 64U values
@@ -859,6 +896,8 @@ private:
 //! computes mean value and standard deviation of all or selected array elements
 //! supports only CV_8UC1 type
 CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
+//! buffered version
+CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
 
 //! computes norm of array
 //! supports NORM_INF, NORM_L1, NORM_L2
@@ -939,8 +978,14 @@ CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& c
 
 //////////////////////////////// Image Labeling ////////////////////////////////
 
-//!performs labeling via graph cuts
+//!performs labeling via graph cuts of a 2D regular 4-connected graph. 
 CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, 
+                         GpuMat& buf, Stream& stream = Stream::Null());
+
+//!performs labeling via graph cuts of a 2D regular 8-connected graph. 
+CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight, 
+                         GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight,
+                         GpuMat& labels, 
                          GpuMat& buf, Stream& stream = Stream::Null());
 
 ////////////////////////////////// Histograms //////////////////////////////////

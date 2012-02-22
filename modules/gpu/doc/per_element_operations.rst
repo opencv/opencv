@@ -139,6 +139,50 @@ where ``I`` is a multi-dimensional index of array elements. In case of multi-cha
 
 
 
+gpu::abs
+------------
+Computes an absolute value of each matrix element.
+
+.. ocv:function:: void gpu::abs(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source matrix. Supports ``CV_16S`` and ``CV_32F`` depth.
+
+    :param dst: Destination matrix with the same size and type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`abs`
+
+
+
+gpu::sqr
+------------
+Computes a square value of each matrix element.
+
+.. ocv:function:: void gpu::sqr(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source matrix. Supports ``CV_8U`` , ``CV_16U`` , ``CV_16S`` and ``CV_32F`` depth.
+
+    :param dst: Destination matrix with the same size and type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::sqrt
+------------
+Computes a square root of each matrix element.
+
+.. ocv:function:: void gpu::sqrt(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source matrix. Supports ``CV_8U`` , ``CV_16U`` , ``CV_16S`` and ``CV_32F`` depth.
+
+    :param dst: Destination matrix with the same size and type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`sqrt`
+
 
 
 gpu::exp
@@ -147,13 +191,29 @@ Computes an exponent of each matrix element.
 
 .. ocv:function:: void gpu::exp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
 
-    :param src: Source matrix. ``CV_32FC1`` matrixes are supported for now.
+    :param src: Source matrix. Supports ``CV_8U`` , ``CV_16U`` , ``CV_16S`` and ``CV_32F`` depth.
 
     :param dst: Destination matrix with the same size and type as ``src`` .
 
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`exp`
+
+
+
+gpu::log
+------------
+Computes a natural logarithm of absolute value of each matrix element.
+
+.. ocv:function:: void gpu::log(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source matrix. Supports ``CV_8U`` , ``CV_16U`` , ``CV_16S`` and ``CV_32F`` depth.
+
+    :param dst: Destination matrix with the same size and type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`log`
 
 
 
@@ -178,22 +238,6 @@ The function ``pow`` raises every element of the input matrix to ``p`` :
     \texttt{dst} (I) =  \fork{\texttt{src}(I)^p}{if \texttt{p} is integer}{|\texttt{src}(I)|^p}{otherwise}
 
 .. seealso:: :ocv:func:`pow`
-
-
-
-gpu::log
-------------
-Computes a natural logarithm of absolute value of each matrix element.
-
-.. ocv:function:: void gpu::log(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
-
-    :param src: Source matrix. ``CV_32FC1`` matrixes are supported for now.
-
-    :param dst: Destination matrix with the same size and type as ``src`` .
-
-    :param stream: Stream for the asynchronous version.
-
-.. seealso:: :ocv:func:`log`
 
 
 
@@ -262,9 +306,10 @@ Performs a per-element bitwise inversion.
 
 gpu::bitwise_or
 -------------------
-Performs a per-element bitwise disjunction of two matrices.
+Performs a per-element bitwise disjunction of two matrices or of matrix and scalar.
 
 .. ocv:function:: void gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::bitwise_or(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null())
 
     :param src1: First source matrix.
 
@@ -280,9 +325,10 @@ Performs a per-element bitwise disjunction of two matrices.
 
 gpu::bitwise_and
 --------------------
-Performs a per-element bitwise conjunction of two matrices.
+Performs a per-element bitwise conjunction of two matrices or of matrix and scalar.
 
 .. ocv:function:: void gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::bitwise_and(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null())
 
     :param src1: First source matrix.
 
@@ -298,9 +344,10 @@ Performs a per-element bitwise conjunction of two matrices.
 
 gpu::bitwise_xor
 --------------------
-Performs a per-element bitwise ``exclusive or`` operation of two matrices.
+Performs a per-element bitwise ``exclusive or`` operation of two matrices of matrix and scalar.
 
 .. ocv:function:: void gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::bitwise_xor(const GpuMat& src1, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null())
 
     :param src1: First source matrix.
 
@@ -309,6 +356,38 @@ Performs a per-element bitwise ``exclusive or`` operation of two matrices.
     :param dst: Destination matrix with the same size and type as ``src1`` .
 
     :param mask: Optional operation mask. 8-bit single channel image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::rshift
+--------------------
+Performs pixel by pixel right shift of an image by a constant value.
+
+.. ocv:function:: void gpu::rshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source matrix. Supports 1, 3 and 4 channels images with integers elements.
+
+    :param sc: Constant values, one per channel.
+
+    :param dst: Destination matrix with the same size and type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::lshift
+--------------------
+Performs pixel by pixel right left of an image by a constant value.
+
+.. ocv:function:: void gpu::lshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U`` , ``CV_16U`` or ``CV_32S`` depth.
+
+    :param sc: Constant values, one per channel.
+
+    :param dst: Destination matrix with the same size and type as ``src`` .
 
     :param stream: Stream for the asynchronous version.
 

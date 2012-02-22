@@ -52,8 +52,6 @@ void cv::gpu::gemm(const GpuMat&, const GpuMat&, double, const GpuMat&, double, 
 void cv::gpu::transpose(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::flip(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::LUT(const GpuMat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::exp(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::log(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::magnitude(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::magnitudeSqr(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::magnitude(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -89,9 +87,9 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     CV_Assert(src1.type() == CV_32FC1 || src1.type() == CV_32FC2 || src1.type() == CV_64FC1 || src1.type() == CV_64FC2);
     CV_Assert(src2.type() == src1.type() && (src3.empty() || src3.type() == src1.type()));
 
-    bool tr1 = flags & GEMM_1_T;
-    bool tr2 = flags & GEMM_2_T;
-    bool tr3 = flags & GEMM_3_T;
+    bool tr1 = (flags & GEMM_1_T) != 0;
+    bool tr2 = (flags & GEMM_2_T) != 0;
+    bool tr3 = (flags & GEMM_3_T) != 0;
 
     Size src1Size = tr1 ? Size(src1.rows, src1.cols) : src1.size();
     Size src2Size = tr2 ? Size(src2.rows, src2.cols) : src2.size();
@@ -243,35 +241,66 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
 ////////////////////////////////////////////////////////////////////////
 // flip
 
-void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& s)
+namespace
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
+    template<int DEPTH> struct NppTypeTraits;
+    template<> struct NppTypeTraits<CV_8U>  { typedef Npp8u npp_t; };
+    template<> struct NppTypeTraits<CV_8S>  { typedef Npp8s npp_t; };
+    template<> struct NppTypeTraits<CV_16U> { typedef Npp16u npp_t; };
+    template<> struct NppTypeTraits<CV_16S> { typedef Npp16s npp_t; };
+    template<> struct NppTypeTraits<CV_32S> { typedef Npp32s npp_t; };
+    template<> struct NppTypeTraits<CV_32F> { typedef Npp32f npp_t; };
+    template<> struct NppTypeTraits<CV_64F> { typedef Npp64f npp_t; };
 
-    dst.create( src.size(), src.type() );
-
-    NppiSize sz;
-    sz.width  = src.cols;
-    sz.height = src.rows;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStreamHandler h(stream);
-
-    if (src.type() == CV_8UC1)
+    template <int DEPTH> struct NppMirrorFunc
     {
-        nppSafeCall( nppiMirror_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz,
-            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
-    }
-    else
-    {
-        nppSafeCall( nppiMirror_8u_C4R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz,
-            (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
-    }
+        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        typedef NppStatus (*func_t)(const npp_t* pSrc, int nSrcStep, npp_t* pDst, int nDstStep, NppiSize oROI, NppiAxis flip);
+    };
+
+    template <int DEPTH, typename NppMirrorFunc<DEPTH>::func_t func> struct NppMirror
+    {
+        typedef typename NppMirrorFunc<DEPTH>::npp_t npp_t;
+
+        static void call(const GpuMat& src, GpuMat& dst, int flipCode, cudaStream_t stream)
+        {
+            NppStreamHandler h(stream);
+
+            NppiSize sz;
+            sz.width  = src.cols;
+            sz.height = src.rows;
+
+            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step),
+                dst.ptr<npp_t>(), static_cast<int>(dst.step), sz,
+                (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+    };
+}
+
+void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream)
+{
+    typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int flipCode, cudaStream_t stream);
+
+    static const func_t funcs[6][4] = 
+    {
+        {NppMirror<CV_8U, nppiMirror_8u_C1R>::call, 0, NppMirror<CV_8U, nppiMirror_8u_C3R>::call, NppMirror<CV_8U, nppiMirror_8u_C4R>::call},
+        {0,0,0,0},
+        {NppMirror<CV_16U, nppiMirror_16u_C1R>::call, 0, NppMirror<CV_16U, nppiMirror_16u_C3R>::call, NppMirror<CV_16U, nppiMirror_16u_C4R>::call},
+        {0,0,0,0},
+        {NppMirror<CV_32S, nppiMirror_32s_C1R>::call, 0, NppMirror<CV_32S, nppiMirror_32s_C3R>::call, NppMirror<CV_32S, nppiMirror_32s_C4R>::call},
+        {NppMirror<CV_32F, nppiMirror_32f_C1R>::call, 0, NppMirror<CV_32F, nppiMirror_32f_C3R>::call, NppMirror<CV_32F, nppiMirror_32f_C4R>::call}
+    };
+
+    CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32S || src.depth() == CV_32F);
+    CV_Assert(src.channels() == 1 || src.channels() == 3 || src.channels() == 4);
+
+    dst.create(src.size(), src.type());
+
+    funcs[src.depth()][src.channels() - 1](src, dst, flipCode, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -335,52 +364,6 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
         nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
             dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, lvls.pLevels3, lvls.nValues3) );
     }
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
-
-////////////////////////////////////////////////////////////////////////
-// exp
-
-void cv::gpu::exp(const GpuMat& src, GpuMat& dst, Stream& s)
-{
-    CV_Assert(src.type() == CV_32FC1);
-
-    dst.create(src.size(), src.type());
-
-    NppiSize sz;
-    sz.width = src.cols;
-    sz.height = src.rows;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStreamHandler h(stream);
-
-    nppSafeCall( nppiExp_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-}
-
-////////////////////////////////////////////////////////////////////////
-// log
-
-void cv::gpu::log(const GpuMat& src, GpuMat& dst, Stream& s)
-{
-    CV_Assert(src.type() == CV_32FC1);
-
-    dst.create(src.size(), src.type());
-
-    NppiSize sz;
-    sz.width = src.cols;
-    sz.height = src.rows;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    NppStreamHandler h(stream);
-
-    nppSafeCall( nppiLn_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );

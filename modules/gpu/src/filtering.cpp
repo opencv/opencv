@@ -50,7 +50,7 @@ using namespace cv::gpu;
 
 Ptr<FilterEngine_GPU> cv::gpu::createFilter2D_GPU(const Ptr<BaseFilter_GPU>&, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
 Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int, GpuMat& buf) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>&, const Ptr<BaseColumnFilter_GPU>&, int, int, int, GpuMat&) { throw_nogpu(); return Ptr<FilterEngine_GPU>(0); }
 Ptr<BaseRowFilter_GPU> cv::gpu::getRowSumFilter_GPU(int, int, int, int) { throw_nogpu(); return Ptr<BaseRowFilter_GPU>(0); }
 Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int, int, int, int) { throw_nogpu(); return Ptr<BaseColumnFilter_GPU>(0); }
 Ptr<BaseFilter_GPU> cv::gpu::getBoxFilter_GPU(int, int, const Size&, Point) { throw_nogpu(); return Ptr<BaseFilter_GPU>(0); }

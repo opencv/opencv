@@ -247,7 +247,7 @@ inline int clamp(int val, int minVal, int maxVal)
     return max(min(val, maxVal), minVal);
 }
 
-void PointCloudRenderer::onMouseEvent(int event, int x, int y, int flags)
+void PointCloudRenderer::onMouseEvent(int event, int x, int y, int /*flags*/)
 {
     static int oldx = x;
     static int oldy = y;

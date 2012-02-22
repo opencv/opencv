@@ -226,7 +226,7 @@ int main(int argc, const char* argv[])
                 break;
 
             case 'S':
-                if (currentFrame < frames.size() - 1)
+                if (currentFrame < static_cast<int>(frames.size()) - 1)
                     ++currentFrame;
 
                 imshow("Interpolated frame", frames[currentFrame]);

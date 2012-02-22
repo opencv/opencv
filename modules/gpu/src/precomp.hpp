@@ -91,8 +91,8 @@
     #include "nvidia/NCVHaarObjectDetection.hpp"
     #include "nvidia/NCVBroxOpticalFlow.hpp"
 
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4000
-    #define NPP_MINIMUM_REQUIRED_VERSION 4000
+    #define CUDART_MINIMUM_REQUIRED_VERSION 4010
+    #define NPP_MINIMUM_REQUIRED_VERSION 4100
 
     #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
         #error "Insufficient Cuda Runtime library version, please update it."

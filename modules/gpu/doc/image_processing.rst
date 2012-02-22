@@ -69,17 +69,13 @@ Performs a mean-shift segmentation of the source image and eliminates small segm
 
 gpu::integral
 -----------------
-Computes an integral image and a squared integral image.
+Computes an integral image.
 
 .. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null())
-
-.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum, Stream& stream = Stream::Null())
 
     :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
 
     :param sum: Integral image containing 32-bit unsigned integer values packed into  ``CV_32SC1`` .
-
-    :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
     :param stream: Stream for the asynchronous version.
 
@@ -380,6 +376,22 @@ Converts an image from one color space to another.
 
 
 
+gpu::swapChannels
+-----------------
+Exchanges the color channels of an image in-place.
+
+.. ocv:function:: void gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& stream = Stream::Null())
+
+    :param src: Source image. Supports only ``CV_8UC4`` type.
+
+    :param dstOrder: Integer array describing how channel values are permutated. The n-th entry of the array contains the number of the channel that is stored in the n-th channel of the output image. E.g. Given an RGBA image, aDstOrder = [3,2,1,0] converts this to ABGR channel order.
+
+    :param stream: Stream for the asynchronous version.
+
+The methods support arbitrary permutations of the original channels, including replication.
+
+
+
 gpu::threshold
 ------------------
 Applies a fixed-level threshold to each array element.
@@ -489,7 +501,7 @@ Rotates an image around the origin (0,0) and then shifts it.
 
 .. ocv:function:: void gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
-    :param src: Source image.  ``CV_8UC1`` and  ``CV_8UC4`` types are supported.
+    :param src: Source image. Supports 1, 3 or 4 channels images with ``CV_8U`` , ``CV_16U`` or ``CV_32F`` depth.
 
     :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` .
 
@@ -746,6 +758,38 @@ Performs linear blending of two images.
     :param weights2: Weights for second image. Must have tha same size as ``img2`` . Supports only ``CV_32F`` type.
 
     :param result: Destination image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::alphaComp
+-------------------
+Composites two images using alpha opacity values contained in each image.
+
+.. ocv:function:: void gpu::alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, int alpha_op, Stream& stream = Stream::Null())
+
+    :param img1: First image. Supports ``CV_8UC4`` , ``CV_16UC4`` , ``CV_32SC4`` and ``CV_32FC4`` types.
+
+    :param img1: Second image. Must have the same size and the same type as ``img1`` .
+
+    :param dst: Destination image.
+
+    :param alpha_op: Flag specifying the alpha-blending operation:
+
+            * **ALPHA_OVER**
+            * **ALPHA_IN** 
+            * **ALPHA_OUT** 
+            * **ALPHA_ATOP** 
+            * **ALPHA_XOR** 
+            * **ALPHA_PLUS** 
+            * **ALPHA_OVER_PREMUL** 
+            * **ALPHA_IN_PREMUL** 
+            * **ALPHA_OUT_PREMUL** 
+            * **ALPHA_ATOP_PREMUL** 
+            * **ALPHA_XOR_PREMUL** 
+            * **ALPHA_PLUS_PREMUL** 
+            * **ALPHA_PREMUL**
 
     :param stream: Stream for the asynchronous version.
 

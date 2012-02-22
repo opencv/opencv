@@ -209,7 +209,7 @@ namespace cv { namespace gpu { namespace device
                 cv::gpu::error("Unsupported channels count", __FILE__, __LINE__, "bilateral_filter_caller");
             }
 
-            if (stream != 0)
+            if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 

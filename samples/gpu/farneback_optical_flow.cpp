@@ -26,7 +26,7 @@ void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
     minMaxLoc(v, &vMin, &vMax, 0, 0);
     uMin = ::abs(uMin); uMax = ::abs(uMax);
     vMin = ::abs(vMin); vMax = ::abs(vMax);
-    float dMax = ::max(::max(uMin, uMax), ::max(vMin, vMax));
+    float dMax = static_cast<float>(::max(::max(uMin, uMax), ::max(vMin, vMax)));
 
     dst.create(u.size(), CV_8UC3);
     for (int y = 0; y < u.rows; ++y)
@@ -111,11 +111,11 @@ int main(int argc, char **argv)
 
         s.str("");
         s << "opt. flow FPS: " << cvRound((getTickFrequency()/(tc1-tc0)));
-        putText(image, s.str(), Point(5, 65), FONT_HERSHEY_SIMPLEX, 1., Scalar(255,0,255), 2.);
+        putText(image, s.str(), Point(5, 65), FONT_HERSHEY_SIMPLEX, 1., Scalar(255,0,255), 2);
 
         s.str("");
         s << "total FPS: " << cvRound((getTickFrequency()/(t1-t0)));
-        putText(image, s.str(), Point(5, 105), FONT_HERSHEY_SIMPLEX, 1., Scalar(255,0,255), 2.);
+        putText(image, s.str(), Point(5, 105), FONT_HERSHEY_SIMPLEX, 1., Scalar(255,0,255), 2);
 
         imshow("flow", image);
 

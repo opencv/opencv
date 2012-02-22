@@ -69,10 +69,10 @@ PARAM_TEST_CASE(ArithmTestBase, cv::gpu::DeviceInfo, MatType, UseRoi)
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
         
-        mat1 = randomMat(rng, size, type, 1, 16, false);
-        mat2 = randomMat(rng, size, type, 1, 16, false);
+        mat1 = randomMat(rng, size, type, 5, 16, false);
+        mat2 = randomMat(rng, size, type, 5, 16, false);
 
-        val = cv::Scalar(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
+        val = cv::Scalar(rng.uniform(1, 3), rng.uniform(1, 3), rng.uniform(1, 3), rng.uniform(1, 3));
     }
 };
 
@@ -115,7 +115,8 @@ TEST_P(Add, Scalar)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(
                         ALL_DEVICES,
-                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, 
+                               CV_32SC1, CV_32SC2, CV_32SC3, CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),
                         USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -157,7 +158,8 @@ TEST_P(Subtract, Scalar)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(
                         ALL_DEVICES,
-                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, 
+                               CV_32SC1, CV_32SC2, CV_32SC3, CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),
                         USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -199,7 +201,8 @@ TEST_P(Multiply, Scalar)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Multiply, Combine(
                         ALL_DEVICES,
-                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, 
+                               CV_32SC1, CV_32SC3, CV_32FC1, CV_32FC3, CV_32FC4),
                         USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -220,7 +223,7 @@ TEST_P(Divide, Array)
 
     gpuRes.download(dst);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, mat1.depth() == CV_32F ? 1e-5 : 1);
 }
 
 TEST_P(Divide, Scalar) 
@@ -236,12 +239,13 @@ TEST_P(Divide, Scalar)
 
     gpuRes.download(dst);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, mat1.depth() == CV_32F ? 1e-5 : 1);
 }
 
 INSTANTIATE_TEST_CASE_P(Arithm, Divide, Combine(
                         ALL_DEVICES,
-                        Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, 
+                               CV_32SC1, CV_32SC3, CV_32FC1, CV_32FC3, CV_32FC4),
                         USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -310,6 +314,83 @@ TEST_P(Absdiff, Scalar)
 INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
+                        USE_ROI));
+
+////////////////////////////////////////////////////////////////////////////////
+// abs
+
+struct Abs : ArithmTestBase {};
+
+TEST_P(Abs, Array) 
+{
+    cv::Mat dst_gold = cv::abs(mat1);
+
+    cv::Mat dst;
+
+    cv::gpu::GpuMat gpuRes;
+
+    cv::gpu::abs(loadMat(mat1, useRoi), gpuRes);
+
+    gpuRes.download(dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Abs, Combine(
+                        ALL_DEVICES,
+                        Values(CV_16SC1, CV_32FC1),
+                        USE_ROI));
+
+////////////////////////////////////////////////////////////////////////////////
+// Sqr
+
+struct Sqr : ArithmTestBase {};
+
+TEST_P(Sqr, Array) 
+{
+    cv::Mat dst_gold;
+    cv::multiply(mat1, mat1, dst_gold);
+
+    cv::Mat dst;
+
+    cv::gpu::GpuMat gpuRes;
+
+    cv::gpu::sqr(loadMat(mat1, useRoi), gpuRes);
+
+    gpuRes.download(dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Sqr, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
+                        USE_ROI));
+
+////////////////////////////////////////////////////////////////////////////////
+// Sqrt
+
+struct Sqrt : ArithmTestBase {};
+
+TEST_P(Sqrt, Array) 
+{
+    cv::Mat dst_gold;
+    cv::sqrt(mat1, dst_gold);
+
+    cv::Mat dst;
+
+    cv::gpu::GpuMat gpuRes;
+
+    cv::gpu::sqrt(loadMat(mat1, useRoi), gpuRes);
+
+    gpuRes.download(dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(
+                        ALL_DEVICES,
+                        Values(MatType(CV_32FC1)),
                         USE_ROI));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -513,7 +594,7 @@ TEST_P(Flip, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(
                         ALL_DEVICES,
-                        Values(CV_8UC1, CV_8UC4),
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                         Values((int)FLIP_BOTH, (int)FLIP_X, (int)FLIP_Y),
                         USE_ROI));
 
@@ -1328,6 +1409,90 @@ TEST_P(Bitwise, Xor)
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise, Combine(
                         ALL_DEVICES,
                         ALL_TYPES));
+
+PARAM_TEST_CASE(BitwiseScalar, cv::gpu::DeviceInfo, MatType)
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat;
+    cv::Scalar sc;
+
+    virtual void SetUp() 
+    {
+        devInfo = GET_PARAM(0);
+        type = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat.create(size, type);
+        
+        for (int i = 0; i < mat.rows; ++i)
+        {
+            cv::Mat row(1, static_cast<int>(mat.cols * mat.elemSize()), CV_8U, (void*)mat.ptr(i));
+            rng.fill(row, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+        }
+
+        sc = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+    }
+};
+
+TEST_P(BitwiseScalar, Or) 
+{
+    cv::Mat dst_gold;
+    cv::bitwise_or(mat, sc, dst_gold);
+
+    cv::Mat dst;
+    
+    cv::gpu::GpuMat dev_dst;
+
+    cv::gpu::bitwise_or(loadMat(mat), sc, dev_dst);
+
+    dev_dst.download(dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+TEST_P(BitwiseScalar, And) 
+{
+    cv::Mat dst_gold;
+    cv::bitwise_and(mat, sc, dst_gold);
+
+    cv::Mat dst;
+    
+    cv::gpu::GpuMat dev_dst;
+
+    cv::gpu::bitwise_and(loadMat(mat), sc, dev_dst);
+
+    dev_dst.download(dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+TEST_P(BitwiseScalar, Xor) 
+{
+    cv::Mat dst_gold;
+    cv::bitwise_xor(mat, sc, dst_gold);
+
+    cv::Mat dst;
+    
+    cv::gpu::GpuMat dev_dst;
+
+    cv::gpu::bitwise_xor(loadMat(mat), sc, dev_dst);
+
+    dev_dst.download(dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseScalar, Combine(
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4)));
 
 //////////////////////////////////////////////////////////////////////////////
 // addWeighted

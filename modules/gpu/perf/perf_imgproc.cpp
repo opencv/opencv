@@ -201,7 +201,7 @@ GPU_PERF_TEST(CvtColor, cv::gpu::DeviceInfo, cv::Size, perf::MatType, CvtColorIn
     declare.in(src_host, WARMUP_RNG);
 
     cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst(size, CV_MAKETYPE(type, info.dcn));
+    cv::gpu::GpuMat dst;
 
     TEST_CYCLE()
     {
@@ -217,6 +217,32 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
                             CvtColorInfo(4, 4, cv::COLOR_RGBA2BGRA), CvtColorInfo(4, 1, cv::COLOR_BGRA2GRAY), CvtColorInfo(1, 4, cv::COLOR_GRAY2BGRA), 
                             CvtColorInfo(4, 4, cv::COLOR_BGR2XYZ), CvtColorInfo(4, 4, cv::COLOR_BGR2YCrCb), CvtColorInfo(4, 4, cv::COLOR_YCrCb2BGR), 
                             CvtColorInfo(4, 4, cv::COLOR_BGR2HSV), CvtColorInfo(4, 4, cv::COLOR_HSV2BGR))));
+
+//////////////////////////////////////////////////////////////////////
+// SwapChannels
+
+GPU_PERF_TEST(SwapChannels, cv::gpu::DeviceInfo, cv::Size)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat src_host(size, CV_8UC4);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    cv::gpu::GpuMat src(src_host);
+
+    const int dstOrder[] = {2, 1, 0, 3};
+
+    TEST_CYCLE()
+    {
+        cv::gpu::swapChannels(src, dstOrder);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, SwapChannels, testing::Combine(ALL_DEVICES, GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // Threshold
@@ -457,7 +483,7 @@ GPU_PERF_TEST(Rotate, cv::gpu::DeviceInfo, cv::Size, perf::MatType, Interpolatio
 INSTANTIATE_TEST_CASE_P(ImgProc, Rotate, testing::Combine(
                         ALL_DEVICES, 
                         GPU_TYPICAL_MAT_SIZES, 
-                        testing::Values(CV_8UC1, CV_8UC4),
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                         testing::Values((int) cv::INTER_NEAREST, (int) cv::INTER_LINEAR, (int) cv::INTER_CUBIC)));
 
 //////////////////////////////////////////////////////////////////////
@@ -516,33 +542,6 @@ GPU_PERF_TEST(Integral, cv::gpu::DeviceInfo, cv::Size)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Integral, testing::Combine(
-                        ALL_DEVICES, 
-                        GPU_TYPICAL_MAT_SIZES));
-
-//////////////////////////////////////////////////////////////////////
-// IntegralBoth
-
-GPU_PERF_TEST(IntegralBoth, cv::gpu::DeviceInfo, cv::Size)
-{
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::Size size = GET_PARAM(1);
-
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Mat src_host(size, CV_8UC1);
-
-    declare.in(src_host, WARMUP_RNG);
-
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat sum, sqsum;
-
-    TEST_CYCLE()
-    {
-        cv::gpu::integral(src, sum, sqsum);
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, IntegralBoth, testing::Combine(
                         ALL_DEVICES, 
                         GPU_TYPICAL_MAT_SIZES));
 
@@ -848,6 +847,39 @@ INSTANTIATE_TEST_CASE_P(ImgProc, BlendLinear, testing::Combine(
                         ALL_DEVICES, 
                         GPU_TYPICAL_MAT_SIZES,
                         testing::Values(CV_8UC1, CV_32FC1)));
+
+//////////////////////////////////////////////////////////////////////
+// AlphaComp
+
+GPU_PERF_TEST(AlphaComp, cv::gpu::DeviceInfo, cv::Size, perf::MatType, AlphaOp)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+    int alpha_op = GET_PARAM(3);
+
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat img1_host(size, type);
+    cv::Mat img2_host(size, type);
+
+    declare.in(img1_host, img2_host, WARMUP_RNG);
+
+    cv::gpu::GpuMat img1(img1_host);
+    cv::gpu::GpuMat img2(img2_host);
+    cv::gpu::GpuMat dst;
+
+    TEST_CYCLE()
+    {
+        cv::gpu::alphaComp(img1, img2, dst, alpha_op);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, AlphaComp, testing::Combine(
+                        ALL_DEVICES, 
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC4, CV_16UC4, CV_32SC4, CV_32FC4),
+                        testing::Values((int)cv::gpu::ALPHA_OVER, (int)cv::gpu::ALPHA_IN, (int)cv::gpu::ALPHA_OUT, (int)cv::gpu::ALPHA_ATOP, (int)cv::gpu::ALPHA_XOR, (int)cv::gpu::ALPHA_PLUS, (int)cv::gpu::ALPHA_OVER_PREMUL, (int)cv::gpu::ALPHA_IN_PREMUL, (int)cv::gpu::ALPHA_OUT_PREMUL, (int)cv::gpu::ALPHA_ATOP_PREMUL, (int)cv::gpu::ALPHA_XOR_PREMUL, (int)cv::gpu::ALPHA_PLUS_PREMUL, (int)cv::gpu::ALPHA_PREMUL)));
 
 //////////////////////////////////////////////////////////////////////
 // Canny
