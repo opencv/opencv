@@ -1199,10 +1199,30 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
             temp_image.width = width;
             temp_image.height = height;
             temp_image.cn = cn;
-            temp_image.data = malloc(temp_image.step*temp_image.height);
+            temp_image.data = (unsigned char*)malloc(temp_image.step*temp_image.height);
         }
         for( int y = 0; y < height; y++ )
             memcpy(temp_image.data + y*temp_image.step, data + (height-1-y)*step, width*cn);
+        data = temp_image.data;
+        step = temp_image.step;
+    }
+#else
+    if( width*cn != step )
+    {
+        if( !temp_image.data )
+        {
+            temp_image.step = width*cn;
+            temp_image.width = width;
+            temp_image.height = height;
+            temp_image.cn = cn;
+            temp_image.data = (unsigned char*)malloc(temp_image.step*temp_image.height);
+        }
+        if (origin == 1)
+            for( int y = 0; y < height; y++ )
+                memcpy(temp_image.data + y*temp_image.step, data + (height-1-y)*step, temp_image.step);
+        else
+            for( int y = 0; y < height; y++ )
+                memcpy(temp_image.data + y*temp_image.step, data + y*step, temp_image.step);
         data = temp_image.data;
         step = temp_image.step;
     }
