@@ -296,5 +296,48 @@ Point CylindricalWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat
 }
 #endif
 
+void SphericalPortraitWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
+{
+    detectResultRoiByBorder(src_size, dst_tl, dst_br);
+
+    float tl_uf = static_cast<float>(dst_tl.x);
+    float tl_vf = static_cast<float>(dst_tl.y);
+    float br_uf = static_cast<float>(dst_br.x);
+    float br_vf = static_cast<float>(dst_br.y);
+
+    float x = projector_.rinv[0];
+    float y = projector_.rinv[3];
+    float z = projector_.rinv[6];
+    if (y > 0.f)
+    {
+        float x_ = (projector_.k[0] * x + projector_.k[1] * y) / z + projector_.k[2];
+        float y_ = projector_.k[4] * y / z + projector_.k[5];
+        if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
+        {
+            tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(CV_PI * projector_.scale));
+            br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(CV_PI * projector_.scale));
+        }
+    }
+
+    x = projector_.rinv[0];
+    y = -projector_.rinv[3];
+    z = projector_.rinv[6];
+    if (y > 0.f)
+    {
+        float x_ = (projector_.k[0] * x + projector_.k[1] * y) / z + projector_.k[2];
+        float y_ = projector_.k[4] * y / z + projector_.k[5];
+        if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
+        {
+            tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(0));
+            br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(0));
+        }
+    }
+
+    dst_tl.x = static_cast<int>(tl_uf);
+    dst_tl.y = static_cast<int>(tl_vf);
+    dst_br.x = static_cast<int>(br_uf);
+    dst_br.y = static_cast<int>(br_vf);
+}
+
 } // namespace detail
 } // namespace cv

@@ -298,6 +298,97 @@ void CylindricalProjector::mapBackward(float u, float v, float &x, float &y)
     else x = y = -1;
 }
 
+inline
+void SphericalPortraitProjector::mapForward(float x, float y, float &u0, float &v0)
+{    
+    float x0_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
+    float y0_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
+    float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
+
+    float x_ = y0_;
+    float y_ = x0_;
+    float u, v;
+
+    u = scale * atan2f(x_, z_);
+    v = scale * (static_cast<float>(CV_PI) - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_)));
+
+    u0 = -u;//v;
+    v0 = v;//u;
+}
+
+
+inline
+void SphericalPortraitProjector::mapBackward(float u0, float v0, float &x, float &y)
+{
+    float u, v;
+    u = -u0;//v0;
+    v = v0;//u0;
+
+    u /= scale;
+    v /= scale;
+
+    float sinv = sinf(static_cast<float>(CV_PI) - v);
+    float x0_ = sinv * sinf(u);
+    float y0_ = cosf(static_cast<float>(CV_PI) - v);
+    float z_ = sinv * cosf(u);
+
+    float x_ = y0_;
+    float y_ = x0_;
+
+    float z;
+    x = k_rinv[0] * x_ + k_rinv[1] * y_ + k_rinv[2] * z_;
+    y = k_rinv[3] * x_ + k_rinv[4] * y_ + k_rinv[5] * z_;
+    z = k_rinv[6] * x_ + k_rinv[7] * y_ + k_rinv[8] * z_;
+
+    if (z > 0) { x /= z; y /= z; }
+    else x = y = -1;
+}
+
+inline
+void CylindricalPortraitProjector::mapForward(float x, float y, float &u0, float &v0)
+{    
+    float x0_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
+    float y0_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
+    float z_  = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
+
+    float x_ = y0_;
+    float y_ = x0_;
+    float u, v;
+
+    u = scale * atan2f(x_, z_);
+    v = scale * y_ / sqrtf(x_ * x_ + z_ * z_);
+
+    u0 = -u;//v;
+    v0 = v;//u;
+}
+
+
+inline
+void CylindricalPortraitProjector::mapBackward(float u0, float v0, float &x, float &y)
+{
+    float u, v;
+    u = -u0;//v0;
+    v = v0;//u0;
+
+    u /= scale;
+    v /= scale;
+
+    float x0_ = sinf(u);
+    float y0_ = v;
+    float z_  = cosf(u);
+
+    float x_ = y0_;
+    float y_ = x0_;
+
+    float z;
+    x = k_rinv[0] * x_ + k_rinv[1] * y_ + k_rinv[2] * z_;
+    y = k_rinv[3] * x_ + k_rinv[4] * y_ + k_rinv[5] * z_;
+    z = k_rinv[6] * x_ + k_rinv[7] * y_ + k_rinv[8] * z_;
+
+    if (z > 0) { x /= z; y /= z; }
+    else x = y = -1;
+}
+
 } // namespace detail
 } // namespace cv
 

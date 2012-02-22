@@ -304,6 +304,45 @@ private:
 };
 #endif
 
+
+struct SphericalPortraitProjector : ProjectorBase
+{
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+// Projects image onto unit sphere with origin at (0, 0, 0).
+// Poles are located NOT at (0, -1, 0) and (0, 1, 0) points, BUT at (1, 0, 0) and (-1, 0, 0) points.
+class SphericalPortraitWarper : public RotationWarperBase<SphericalPortraitProjector>
+{
+public:
+    SphericalPortraitWarper(float scale) { projector_.scale = scale; }
+
+protected:
+    void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br);
+};
+
+struct CylindricalPortraitProjector : ProjectorBase
+{
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CylindricalPortraitWarper : public RotationWarperBase<CylindricalPortraitProjector>
+{
+public:
+    CylindricalPortraitWarper(float scale) { projector_.scale = scale; }
+
+protected:
+    void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
+    { 
+        RotationWarperBase<CylindricalPortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br); 
+    }
+};
+
+
 } // namespace detail
 } // namespace cv
 
