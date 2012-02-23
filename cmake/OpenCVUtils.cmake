@@ -90,13 +90,13 @@ macro(CHECK_MODULE module_name define)
 endmacro()
 
 
-# Status report macro.
+# Status report function.
 # Automatically align right column and selects text based on condition.
 # Usage:
 #   status(<text>)
 #   status(<heading> <value1> [<value2> ...])
 #   status(<heading> <condition> THEN <text for TRUE> ELSE <text for FALSE> )
-macro(status text)
+function(status text)
   set(status_cond)
   set(status_then)
   set(status_else)
@@ -140,7 +140,7 @@ macro(status text)
   else()
     message(STATUS "${text}")
   endif()
-endmacro()
+endfunction()
 
 
 # splits cmake libraries list of format "general;item1;debug;item2;release;item3" to two lists
