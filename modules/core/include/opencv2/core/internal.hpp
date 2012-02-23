@@ -113,10 +113,15 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #include "pmmintrin.h"
 #define CV_SSE3 1
 #endif
+#if defined __SSSE3__
+#include "tmmintrin.h"
+#define CV_SSSE3 1
+#endif
 #else
 #define CV_SSE 0
 #define CV_SSE2 0
 #define CV_SSE3 0
+#define CV_SSSE3 0
 #endif
 
 #if defined ANDROID && defined __ARM_NEON__ && defined __GNUC__
