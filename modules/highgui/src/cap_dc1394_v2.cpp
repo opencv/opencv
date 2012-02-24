@@ -750,7 +750,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
                  //set AUTO
                  if (cvRound(value) == CV_CAP_PROP_DC1394_MODE_AUTO)
                  {
-                     if (dc1394_feature_set_mode(dcCam, atc_feature->id, DC1394_FEATURE_MODE_AUTO)!=DC1394_SUCCESS)
+                     if (dc1394_feature_set_mode(dcCam, act_feature->id, DC1394_FEATURE_MODE_AUTO)!=DC1394_SUCCESS)
                          return false;
                      act_feature->current_mode=DC1394_FEATURE_MODE_AUTO;
                      return true;
