@@ -365,7 +365,11 @@ enum
     CV_CAP_PROP_TRIGGER       =24,
     CV_CAP_PROP_TRIGGER_DELAY =25,
     CV_CAP_PROP_WHITE_BALANCE_RED_V =26,
-    CV_CAP_PROP_MAX_DC1394    =27,
+    CV_CAP_PROP_ZOOM          =27,
+    CV_CAP_PROP_FOCUS         =28,	
+    CV_CAP_PROP_GUID          =29,	
+    CV_CAP_PROP_ISO_SPEED     =30,	
+    CV_CAP_PROP_MAX_DC1394    =31,
     CV_CAP_PROP_AUTOGRAB      =1024, // property for highgui class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
     CV_CAP_PROP_PREVIEW_FORMAT=1026, // readonly, tricky property, returns cpnst char* indeed
@@ -467,7 +471,7 @@ typedef struct CvVideoWriter CvVideoWriter;
 
 CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 {
-    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 &255) << 16) + ((c4 & 255) << 24);
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
 #define CV_FOURCC_PROMPT -1  /* Open Codec Selection Dialog (Windows only) */
