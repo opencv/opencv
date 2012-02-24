@@ -156,6 +156,8 @@
 #     [+] filtered out hidden files (starting with .) while globbing inside NDK
 #     [+] automatically applied GLESv2 linkage fix for NDK revisions 5-6
 #     [+] added ANDROID_GET_ABI_RAWNAME to get NDK ABI names by CMake flags
+#   - modified February 2012
+#     [+] mostly fixed try_compile (it was always failing for Android)
 # ------------------------------------------------------------------------------
 
 # this one is important
@@ -661,9 +663,24 @@ elseif( EXISTS "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/incl
 endif()
 
 #flags and definitions
-set( ANDROID_CXX_FLAGS "--sysroot=\"${ANDROID_SYSROOT}\"" )
+if(ANDROID_SYSROOT MATCHES "[ ;\"]")
+ set( ANDROID_CXX_FLAGS "--sysroot=\"${ANDROID_SYSROOT}\"" )
+ # quotes will break try_compile and compiler identification
+ message(WARNING "Your Android system root has non-alphanumeric symbols. It can break compiler features detection and the whole build.")
+else()
+ set( ANDROID_CXX_FLAGS "--sysroot=${ANDROID_SYSROOT}" )
+endif()
+
 remove_definitions( -DANDROID )
 add_definitions( -DANDROID )
+
+# Force set compilers because standard identification works badly for us
+include( CMakeForceCompiler )
+CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
+CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
+set( CMAKE_SIZEOF_VOID_P 4 )
+set( CMAKE_C_SIZEOF_DATA_PTR 4 )
+set( CMAKE_CXX_SIZEOF_DATA_PTR 4 )
 
 # NDK flags
 if( ARMEABI OR ARMEABI_V7A )
@@ -835,14 +852,6 @@ link_directories( ${ANDROID_SYSTEM_LIB_DIRS} )
 set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS}" CACHE INTERNAL "Extra Android falgs")
 set( CMAKE_CXX_FLAGS "${ANDROID_CXX_FLAGS} ${CMAKE_CXX_FLAGS}" )
 set( CMAKE_C_FLAGS   "${ANDROID_CXX_FLAGS} ${CMAKE_C_FLAGS}" )
-# workaround for ugly cmake bug - compiler identification replaces all spaces (and somethimes " (quote symbol)) in the compiler flags with ; symbol
-# as result identification fails if ANDROID_SYSROOT contain spaces
-include( CMakeForceCompiler )
-CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
-CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
-set( CMAKE_SIZEOF_VOID_P 4 )
-set( CMAKE_C_SIZEOF_DATA_PTR 4 )
-set( CMAKE_CXX_SIZEOF_DATA_PTR 4 )
 
 #set these global flags for cmake client scripts to change behavior
 set( ANDROID True )
