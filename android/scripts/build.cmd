@@ -73,7 +73,7 @@ ECHO. & ECHO Updating Android project...
 
 :: compile java part
 ECHO. & ECHO Compiling Android project...
-(CALL "%ANT_DIR%\bin\ant" compile) || (ECHO. & ECHO failed to compile android project & GOTO end)
+(CALL "%ANT_DIR%\bin\ant" debug) || (ECHO. & ECHO failed to compile android project & GOTO end)
 
 :end
 POPD
