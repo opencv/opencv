@@ -283,6 +283,17 @@ endif()
 
 
 # ----------------------------------------------------------------------------
+# OpenCV compiler and linker options
+# ----------------------------------------------------------------------------
+include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
+
+# In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
+if(CMAKE_GENERATOR MATCHES "Makefiles" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+
+# ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
 if(UNIX)
@@ -563,15 +574,6 @@ if(WIN32)
   endif()
 endif()
 
-# ----------------------------------------------------------------------------
-# OpenCV compiler and linker options
-# ----------------------------------------------------------------------------
-include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
-
-# In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
-if(CMAKE_GENERATOR MATCHES "Makefiles" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
-  set(CMAKE_BUILD_TYPE Release)
-endif()
 
 # ----------------------------------------------------------------------------
 # Solution folders:
@@ -583,6 +585,7 @@ endif()
 
 # Extra OpenCV targets: uninstall, package_source, perf, etc.
 include(cmake/OpenCVExtraTargets.cmake REQUIRED)
+
 
 # ----------------------------------------------------------------------------
 # Process subdirectories
@@ -611,6 +614,7 @@ if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(samples)
 endif()
 
+
 # ----------------------------------------------------------------------------
 # Finalization: generate configuration-based files
 # ----------------------------------------------------------------------------
@@ -627,6 +631,7 @@ include(cmake/OpenCVGenAndroidMK.cmake REQUIRED)
 
 # Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
 include(cmake/OpenCVGenConfig.cmake REQUIRED)
+
 
 # ----------------------------------------------------------------------------
 # Summary:
