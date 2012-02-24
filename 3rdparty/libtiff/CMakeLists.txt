@@ -2,7 +2,7 @@
 #  CMake file for libtiff. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
-project(libtiff)
+project(${TIFF_LIBRARY})
 
 # List of C++ files:
 
@@ -13,7 +13,7 @@ add_definitions(-DHAVE_STRING_H=1)
 # The .cpp files:
 
 set(lib_srcs
-	t4.h
+    t4.h
     tiffio.hxx
     tiffiop.h
     tif_aux.c
@@ -60,50 +60,47 @@ set(lib_srcs
     )
 
 if(UNIX)
-    set(lib_srcs ${lib_srcs} tif_unix.c)
+  set(lib_srcs ${lib_srcs} tif_unix.c)
 endif()
 
 if(WIN32)
-    set(lib_srcs ${lib_srcs} tif_win32.c)
+  set(lib_srcs ${lib_srcs} tif_win32.c)
 endif(WIN32)
 
 #if(APPLE)
-#    set(lib_srcs ${lib_srcs} tif_apple.c)
+#  set(lib_srcs ${lib_srcs} tif_apple.c)
 #endif(APPLE)
 
 file(GLOB lib_hdrs *.h*)
 
-set(the_target "libtiff")
-
 if(MSVC)
-    string(REPLACE "/W4" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "/W4" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
 if(UNIX)
-    if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-    endif()
+  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+  endif()
 endif()
 
-add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs})
+add_library(${TIFF_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   set_source_files_properties(tif_stream.cxx PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
 endif()
 
-set_target_properties(${the_target}
+set_target_properties(${TIFF_LIBRARY}
 	PROPERTIES
-	OUTPUT_NAME "${the_target}"
+	OUTPUT_NAME "${TIFF_LIBRARY}"
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
 	)
 	
 if(ENABLE_SOLUTION_FOLDERS)
-	set_target_properties(${the_target} PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${TIFF_LIBRARY} PROPERTIES FOLDER "3rdparty")
 endif()	
 
 if(NOT BUILD_SHARED_LIBS)
-    install(TARGETS ${the_target}
-	    ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+  install(TARGETS ${TIFF_LIBRARY} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()

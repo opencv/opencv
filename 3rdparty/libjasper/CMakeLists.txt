@@ -2,7 +2,7 @@
 #  CMake file for libjasper. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
-project(libjasper)
+project(${JASPER_LIBRARY})
 
 
 add_definitions(-DEXCLUDE_MIF_SUPPORT -DEXCLUDE_PNM_SUPPORT -DEXCLUDE_BMP_SUPPORT -DEXCLUDE_RAS_SUPPORT  -DEXCLUDE_JPG_SUPPORT -DEXCLUDE_PGX_SUPPORT)
@@ -19,40 +19,36 @@ file(GLOB lib_ext_hdrs jasper/*.h)
 # 				Define the library target:
 # ----------------------------------------------------------------------------------
 
-set(the_target "libjasper")
-
-add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
+add_library(${JASPER_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
 
 if(MSVC)
-    string(REPLACE "/W3" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    add_definitions(-DJAS_WIN_MSVC_BUILD)
+  string(REPLACE "/W3" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  add_definitions(-DJAS_WIN_MSVC_BUILD)
 endif()
 
 if(UNIX)
-    if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-    endif()
+  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+  endif()
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration -Wno-unused")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration -Wno-unused")
 endif()
 
-
-
-set_target_properties(${the_target}
+set_target_properties(${JASPER_LIBRARY}
 	PROPERTIES
-	OUTPUT_NAME "${the_target}"
+	OUTPUT_NAME ${JASPER_LIBRARY}
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
 	)
 	
 if(ENABLE_SOLUTION_FOLDERS)
-	set_target_properties(${the_target} PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${JASPER_LIBRARY} PROPERTIES FOLDER "3rdparty")
 endif()	
     
 if(NOT BUILD_SHARED_LIBS)
-    install(TARGETS ${the_target}
-	    ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+  install(TARGETS ${JASPER_LIBRARY} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()
+

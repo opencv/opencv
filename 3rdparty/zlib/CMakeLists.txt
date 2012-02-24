@@ -3,7 +3,7 @@
 #
 # ----------------------------------------------------------------------------
 
-project(zlib C)
+project(${ZLIB_LIBRARY} C)
 
 include(CheckTypeSize)
 include(CheckFunctionExists)
