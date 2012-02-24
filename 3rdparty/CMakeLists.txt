@@ -1,6 +1,3 @@
-if(NOT ZLIB_FOUND)
-    add_subdirectory(zlib)
-endif()
 if(WITH_JASPER AND NOT JASPER_FOUND)
     add_subdirectory(libjasper)
 endif()

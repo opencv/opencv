@@ -37,11 +37,11 @@ if(MSVC)
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein"
-               "${OpenCV_BINARY_DIR}/zconf.h" @ONLY)
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+               "${CMAKE_CURRENT_BINARY_DIR}/zconf.h" @ONLY)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
 
 set(ZLIB_PUBLIC_HDRS
-    "${OpenCV_BINARY_DIR}/zconf.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/zconf.h"
     zlib.h
 )
 set(ZLIB_PRIVATE_HDRS
@@ -73,10 +73,8 @@ set(ZLIB_SRCS
     zutil.c
 )
 
-set(the_target "zlib")
-
-add_library(${the_target} STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
-set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
+add_library(${ZLIB_LIBRARY} STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
+set_target_properties(${ZLIB_LIBRARY} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
@@ -88,16 +86,16 @@ if(MSVC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4013")
 endif()
 
-set_target_properties(${the_target} PROPERTIES
-        OUTPUT_NAME "${the_target}"
+set_target_properties(${ZLIB_LIBRARY} PROPERTIES
+        OUTPUT_NAME ${ZLIB_LIBRARY}
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
     )
 
 if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(${the_target} PROPERTIES FOLDER "3rdparty")
+  set_target_properties(${ZLIB_LIBRARY} PROPERTIES FOLDER "3rdparty")
 endif()
 	
 if(NOT BUILD_SHARED_LIBS)
-  install(TARGETS ${the_target} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+  install(TARGETS ${ZLIB_LIBRARY} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()
