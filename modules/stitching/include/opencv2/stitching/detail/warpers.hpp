@@ -342,6 +342,24 @@ protected:
     }
 };
 
+struct PlanePortraitProjector : ProjectorBase
+{
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class PlanePortraitWarper : public RotationWarperBase<PlanePortraitProjector>
+{
+public:
+    PlanePortraitWarper(float scale) { projector_.scale = scale; }
+
+protected:
+    void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
+    { 
+        RotationWarperBase<PlanePortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br); 
+    }
+};
 
 } // namespace detail
 } // namespace cv

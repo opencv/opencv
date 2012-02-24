@@ -389,6 +389,48 @@ void CylindricalPortraitProjector::mapBackward(float u0, float v0, float &x, flo
     else x = y = -1;
 }
 
+inline
+void PlanePortraitProjector::mapForward(float x, float y, float &u0, float &v0)
+{
+    float x0_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
+    float y0_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
+    float z_  = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
+
+    float x_ = y0_;
+    float y_ = x0_;
+
+    x_ = t[0] + x_ / z_ * (1 - t[2]);
+    y_ = t[1] + y_ / z_ * (1 - t[2]);
+
+    float u,v;
+    u = scale * x_;
+    v = scale * y_;
+
+    u0 = -u;
+    v0 = v;
+}
+
+
+inline
+void PlanePortraitProjector::mapBackward(float u0, float v0, float &x, float &y)
+{
+    float u, v;
+    u = -u0;
+    v = v0;
+
+    u = u / scale - t[0];
+    v = v / scale - t[1];
+
+    float z;
+    x = k_rinv[0] * v + k_rinv[1] * u + k_rinv[2] * (1 - t[2]);
+    y = k_rinv[3] * v + k_rinv[4] * u + k_rinv[5] * (1 - t[2]);
+    z = k_rinv[6] * v + k_rinv[7] * u + k_rinv[8] * (1 - t[2]);
+
+    x /= z;
+    y /= z;
+}
+
+
 } // namespace detail
 } // namespace cv
 
