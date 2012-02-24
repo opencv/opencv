@@ -6,8 +6,10 @@ import java.util.List;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
+import android.os.Build;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -59,11 +61,15 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
             params.setPreviewSize(getFrameWidth(), getFrameHeight());
             mCamera.setParameters(params);
-            try {
-				mCamera.setPreviewDisplay(null);
-			} catch (IOException e) {
-				Log.e(TAG, "mCamera.setPreviewDisplay fails: " + e);
-			}
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            	mCamera.setPreviewTexture( new SurfaceTexture(10) );
+            } else {
+	            try {
+					mCamera.setPreviewDisplay(null);
+				} catch (IOException e) {
+					Log.e(TAG, "mCamera.setPreviewDisplay fails: " + e);
+				}
+            }
             mCamera.startPreview();
         }
     }
