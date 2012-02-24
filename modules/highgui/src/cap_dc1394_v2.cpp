@@ -795,9 +795,9 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
 				 //first: check boundaries
                  if (value < act_feature->min)
                  {
-					 value = act_feature->min;
-				 }
-				 else if (value > act_feature->max)
+                     value = act_feature->min;
+                 }
+                 else if (value > act_feature->max)
                  {
                      value = act_feature->max;
                  }
@@ -806,7 +806,8 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
                  {
                      act_feature->value = value;
                      return true;
-				 }
+                 }
+             }
              return false;
     }
     return true;
