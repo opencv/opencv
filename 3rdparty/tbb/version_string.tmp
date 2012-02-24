@@ -1,0 +1,11 @@
+#define __TBB_VERSION_STRINGS \
+"TBB: BUILD_HOST	buit as part of OpenCV" ENDL \
+"TBB: BUILD_OS		crosscompiling" ENDL \
+"TBB: BUILD_KERNEL	UNKNOWN" ENDL \
+"TBB: BUILD_GCC		gcc version 4.4.3" ENDL \
+"TBB: BUILD_GLIBC	2.11.1" ENDL \
+"TBB: BUILD_LD		" ENDL \
+"TBB: BUILD_TARGET	 on " ENDL \
+"TBB: BUILD_COMMAND	TBD" ENDL \
+
+#define __TBB_DATETIME "Sun Jan 01 00:00:01 UTC 2012"
