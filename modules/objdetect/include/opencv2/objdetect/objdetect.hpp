@@ -47,6 +47,9 @@
 #include "opencv2/features2d/features2d.hpp"
 
 #ifdef __cplusplus
+#include <map>
+#include <deque>
+
 extern "C" {
 #endif
 
@@ -655,8 +658,532 @@ struct CV_EXPORTS CvDataMatrixCode {
   CvMat *corners;
 };
 
-#include <deque>
 CV_EXPORTS std::deque<CvDataMatrixCode> cvFindDataMatrix(CvMat *im);
+
+/****************************************************************************************\
+*                                 LINE-MOD                                               *
+\****************************************************************************************/
+
+namespace cv {
+namespace linemod {
+
+using cv::FileNode;
+using cv::FileStorage;
+using cv::Mat;
+using cv::noArray;
+using cv::OutputArrayOfArrays;
+using cv::Point;
+using cv::Ptr;
+using cv::Rect;
+using cv::Size;
+
+/// @todo Convert doxy comments to rst
+/// @todo Move stuff that doesn't need to be public into linemod.cpp
+/**
+ * \brief Compute quantized orientation image from color image.
+ *
+ * Implements section 2.2 "Computing the Gradient Orientations."
+ *
+ * \param[in]  src       The source 8-bit, 3-channel image.
+ * \param[out] magnitude Destination floating-point array of squared magnitudes.
+ * \param[out] angle     Destination 8-bit array of orientations. Each bit
+ *                       represents one bin of the orientation space.
+ * \param      threshold Magnitude threshold. Keep only gradients whose norms are
+ *                       larger than this.
+ */
+void quantizedOrientations(const Mat& src, Mat& magnitude,
+                           Mat& angle, float threshold);
+
+/**
+ * \brief Compute quantized normal image from depth image.
+ *
+ * Implements section 2.6 "Extension to Dense Depth Sensors."
+ *
+ * \param[in]  src  The source 16-bit depth image (in mm).
+ * \param[out] dst  The destination 8-bit image. Each bit represents one bin of
+ *                  the view cone.
+ * \param distance_threshold   Ignore pixels beyond this distance.
+ * \param difference_threshold When computing normals, ignore contributions of pixels whose
+ *                             depth difference with the central pixel is above this threshold.
+ *
+ * \todo Should also need camera model, or at least focal lengths? Replace distance_threshold with mask?
+ */
+void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
+                      int difference_threshold = 50);
+
+/**
+ * \brief Discriminant feature described by its location and label.
+ */
+struct Feature
+{
+  int x; ///< x offset
+  int y; ///< y offset
+  int label; ///< Quantization
+
+  Feature() {}
+  Feature(int x, int y, int label) : x(x), y(y), label(label) {}
+
+  void read(const FileNode& fn);
+  void write(FileStorage& fs) const;
+};
+
+struct Template
+{
+  int width;
+  int height;
+  int pyramid_level;
+  std::vector<Feature> features;
+
+  void read(const FileNode& fn);
+  void write(FileStorage& fs) const;
+};
+
+/**
+ * \brief Crop a set of overlapping templates from different modalities.
+ *
+ * \param[in,out] templates Set of templates representing the same object view.
+ *
+ * \return The bounding box of all the templates in original image coordinates.
+ */
+Rect cropTemplates(std::vector<Template>& templates);
+
+/**
+ * \brief Represents a modality operating over an image pyramid.
+ */
+class QuantizedPyramid
+{
+public:
+  // Virtual destructor
+  virtual ~QuantizedPyramid() {}
+
+  /**
+   * \brief Compute quantized image at current pyramid level for online detection.
+   *
+   * \param[out] dst The destination 8-bit image. For each pixel at most one bit is set,
+   *                 representing its classification.
+   */
+  virtual void quantize(Mat& dst) const =0;
+
+  /**
+   * \brief Extract most discriminant features at current pyramid level to form a new template.
+   *
+   * \param[out] templ The new template.
+   */
+  virtual bool extractTemplate(Template& templ) const =0;
+
+  /**
+   * \brief Go to the next pyramid level.
+   *
+   * \todo Allow pyramid scale factor other than 2
+   */
+  virtual void pyrDown() =0;
+
+protected:
+  /// Candidate feature with a score
+  struct Candidate
+  {
+    Candidate(int x, int y, int label, float score)
+      : f(x, y, label), score(score)
+    {
+    }
+
+    /// Sort candidates with high score to the front
+    bool operator<(const Candidate& rhs) const
+    {
+      return score > rhs.score;
+    }
+
+    Feature f;
+    float score;
+  };
+
+  /**
+   * \brief Choose candidate features so that they are not bunched together.
+   *
+   * \param[in]  candidates   Candidate features sorted by score.
+   * \param[out] features     Destination vector of selected features.
+   * \param[in]  num_features Number of candidates to select.
+   * \param[in]  distance     Hint for desired distance between features.
+   */
+  static void selectScatteredFeatures(const std::vector<Candidate>& candidates,
+                                      std::vector<Feature>& features,
+                                      size_t num_features, float distance);
+};
+
+/**
+ * \brief Interface for modalities that plug into the LINE template matching representation.
+ *
+ * \todo Max response, to allow optimization of summing (255/MAX) features as uint8
+ */
+class Modality
+{
+public:
+  // Virtual destructor
+  virtual ~Modality() {}
+
+  /**
+   * \brief Form a quantized image pyramid from a source image.
+   *
+   * \param[in] src  The source image. Type depends on the modality.
+   * \param[in] mask Optional mask. If not empty, unmasked pixels are set to zero
+   *                 in quantized image and cannot be extracted as features.
+   */
+  Ptr<QuantizedPyramid> process(const Mat& src,
+				    const Mat& mask = Mat()) const
+  {
+    return processImpl(src, mask);
+  }
+
+  virtual std::string name() const =0;
+
+  virtual void read(const FileNode& fn) =0;
+  virtual void write(FileStorage& fs) const =0;
+
+  /**
+   * \brief Create modality by name.
+   *
+   * The following modality types are supported:
+   * - "ColorGradient"
+   * - "DepthNormal"
+   */
+  static Ptr<Modality> create(const std::string& modality_type);
+
+  /**
+   * \brief Load a modality from file.
+   */
+  static Ptr<Modality> create(const FileNode& fn);
+
+protected:
+  // Indirection is because process() has a default parameter.
+  virtual Ptr<QuantizedPyramid> processImpl(const Mat& src,
+						const Mat& mask) const =0;
+};
+
+/**
+ * \brief Modality that computes quantized gradient orientations from a color image.
+ */
+class ColorGradient : public Modality
+{
+public:
+  /**
+   * \brief Default constructor. Uses reasonable default parameter values.
+   */
+  ColorGradient();
+
+  /**
+   * \brief Constructor.
+   *
+   * \param weak_threshold   When quantizing, discard gradients with magnitude less than this.
+   * \param num_features     How many features a template must contain.
+   * \param strong_threshold Consider as candidate features only gradients whose norms are
+   *                         larger than this.
+   */
+  ColorGradient(float weak_threshold, size_t num_features, float strong_threshold);
+
+  virtual std::string name() const;
+
+  virtual void read(const FileNode& fn);
+  virtual void write(FileStorage& fs) const;
+
+  float weak_threshold;
+  size_t num_features;
+  float strong_threshold;
+
+protected:
+  virtual Ptr<QuantizedPyramid> processImpl(const Mat& src,
+						const Mat& mask) const;
+};
+
+/**
+ * \brief Modality that computes quantized surface normals from a dense depth map.
+ */
+class DepthNormal : public Modality
+{
+public:
+  /**
+   * \brief Default constructor. Uses reasonable default parameter values.
+   */
+  DepthNormal();
+
+  /**
+   * \brief Constructor.
+   *
+   * \param distance_threshold   Ignore pixels beyond this distance.
+   * \param difference_threshold When computing normals, ignore contributions of pixels whose
+   *                             depth difference with the central pixel is above this threshold.
+   * \param num_features         How many features a template must contain.
+   * \param extract_threshold    Consider as candidate feature only if there are no differing
+   *                             orientations within a distance of extract_threshold.
+   */
+  DepthNormal(int distance_threshold, int difference_threshold, size_t num_features,
+              int extract_threshold);
+
+  virtual std::string name() const;
+
+  virtual void read(const FileNode& fn);
+  virtual void write(FileStorage& fs) const;
+
+  int distance_threshold;
+  int difference_threshold;
+  size_t num_features;
+  int extract_threshold;
+
+protected:
+  virtual Ptr<QuantizedPyramid> processImpl(const Mat& src,
+						const Mat& mask) const;
+};
+
+/**
+ * \brief Debug function to colormap a quantized image for viewing.
+ */
+void colormap(const Mat& quantized, Mat& dst);
+
+/**
+ * \brief Spread binary labels in a quantized image.
+ *
+ * Implements section 2.3 "Spreading the Orientations."
+ *
+ * \param[in]  src The source 8-bit quantized image.
+ * \param[out] dst Destination 8-bit spread image.
+ * \param      T   Sampling step. Spread labels T/2 pixels in each direction.
+ */
+void spread(const Mat& src, Mat& dst, int T);
+
+/**
+ * \brief Precompute response maps for a spread quantized image.
+ *
+ * Implements section 2.4 "Precomputing Response Maps."
+ *
+ * \param[in]  src           The source 8-bit spread quantized image.
+ * \param[out] response_maps Vector of 8 response maps, one for each bit label.
+ */
+void computeResponseMaps(const Mat& src, std::vector<Mat>& response_maps);
+
+/**
+ * \brief Convert a response map to fast linearized ordering.
+ *
+ * Implements section 2.5 "Linearizing the Memory for Parallelization."
+ *
+ * \param[in]  response_map The 2D response map, an 8-bit image.
+ * \param[out] linearized   The response map in linearized order. It has T*T rows,
+ *                          each of which is a linear memory of length (W/T)*(H/T).
+ * \param      T            Sampling step.
+ */
+void linearize(const Mat& response_map, Mat& linearized, int T);
+
+/**
+ * \brief Compute similarity measure for a given template at each sampled image location.
+ *
+ * Uses linear memories to compute the similarity measure as described in Fig. 7.
+ *
+ * \param[in]  linear_memories Vector of 8 linear memories, one for each label.
+ * \param[in]  templ           Template to match against.
+ * \param[out] dst             Destination 8-bit similarity image of size (W/T, H/T).
+ * \param      size            Size (W, H) of the original input image.
+ * \param      T               Sampling step.
+ */
+void similarity(const std::vector<Mat>& linear_memories, const Template& templ,
+                Mat& dst, Size size, int T);
+
+/**
+ * \brief Compute similarity measure for a given template in a local region.
+ *
+ * \param[in]  linear_memories Vector of 8 linear memories, one for each label.
+ * \param[in]  templ           Template to match against.
+ * \param[out] dst             Destination 8-bit similarity image, 16x16.
+ * \param      size            Size (W, H) of the original input image.
+ * \param      T               Sampling step.
+ * \param      center          Center of the local region.
+ */
+void similarityLocal(const std::vector<Mat>& linear_memories, const Template& templ,
+                     Mat& dst, Size size, int T, Point center);
+
+/**
+ * \brief Accumulate one or more 8-bit similarity images.
+ *
+ * \param[in]  similarities Source 8-bit similarity images.
+ * \param[out] dst          Destination 16-bit similarity image.
+ */
+void addSimilarities(const std::vector<Mat>& similarities, Mat& dst);
+
+/**
+ * \brief Represents a successful template match.
+ */
+struct Match
+{
+  Match()
+  {
+  }
+
+  Match(int x, int y, float similarity, const std::string& class_id, int template_id)
+    : x(x), y(y), similarity(similarity), class_id(class_id), template_id(template_id)
+  {
+  }
+
+  /// Sort matches with high similarity to the front
+  bool operator<(const Match& rhs) const
+  {
+    // Secondarily sort on template_id for the sake of duplicate removal
+    if (similarity != rhs.similarity)
+      return similarity > rhs.similarity;
+    else
+      return template_id < rhs.template_id;
+  }
+
+  bool operator==(const Match& rhs) const
+  {
+    return x == rhs.x && y == rhs.y && similarity == rhs.similarity && class_id == rhs.class_id;
+  }
+
+  int x;
+  int y;
+  float similarity;
+  std::string class_id;
+  int template_id;
+};
+
+/**
+ * \brief Object detector using the LINE template matching algorithm with any set of
+ * modalities.
+ */
+class Detector
+{
+public:
+  /**
+   * \brief Empty constructor, initialize with read().
+   */
+  Detector();
+
+  /**
+   * \brief Constructor.
+   *
+   * \param modalities       Modalities to use (color gradients, depth normals, ...).
+   * \param T_pyramid        Value of the sampling step T at each pyramid level. The
+   *                         number of pyramid levels is T_pyramid.size().
+   * \param pyramid_distance Scale factor between pyramid levels.
+   */
+  Detector(const std::vector< Ptr<Modality> >& modalities,
+	   const std::vector<int>& T_pyramid, double pyramid_distance = 2.0);
+
+  /**
+   * \brief Detect objects by template matching.
+   *
+   * Matches globally at the lowest pyramid level, then refines locally stepping up the pyramid.
+   *
+   * \param      sources   Source images, one for each modality.
+   * \param      threshold Similarity threshold, a percentage between 0 and 100.
+   * \param[out] matches   Template matches, sorted by similarity score.
+   * \param      class_ids If non-empty, only search for the desired object classes.
+   * \param[out] quantized_images Optionally return vector<Mat> of quantized images.
+   * \param      masks     The masks for consideration during matching. The masks should be CV_8UC1
+   *                       where 255 represents a valid pixel.  If non-empty, the vector must be
+   *                       the same size as sources.  Each element must be
+   *                       empty or the same size as its corresponding source.
+   */
+  void match(const std::vector<Mat>& sources, float threshold, std::vector<Match>& matches,
+             const std::vector<std::string>& class_ids = std::vector<std::string>(),
+             OutputArrayOfArrays quantized_images = noArray(),
+             const std::vector<Mat>& masks = std::vector<Mat>()) const;
+
+  /**
+   * \brief Add new object template.
+   *
+   * \param      sources      Source images, one for each modality.
+   * \param      class_id     Object class ID.
+   * \param      object_mask  Mask separating object from background.
+   * \param[out] bounding_box Optionally return bounding box of the extracted features.
+   *
+   * \return Template ID, or -1 if failed to extract a valid template.
+   */
+  int addTemplate(const std::vector<Mat>& sources, const std::string& class_id,
+		  const Mat& object_mask, Rect* bounding_box = NULL);
+
+  /**
+   * \brief Add a new object template computed by external means.
+   */
+  int addSyntheticTemplate(const std::vector<Template>& templates, const std::string& class_id);
+
+  /**
+   * \brief Get the modalities used by this detector.
+   *
+   * You are not permitted to add/remove modalities, but you may dynamic_cast them to
+   * tweak parameters.
+   */
+  const std::vector< Ptr<Modality> >& getModalities() const { return modalities; }
+
+  /**
+   * \brief Get sampling step T at pyramid_level.
+   */
+  int getT(int pyramid_level) const { return T_at_level[pyramid_level]; }
+
+  /**
+   * \brief Get number of pyramid levels used by this detector.
+   */
+  int pyramidLevels() const { return pyramid_levels; }
+
+  /**
+   * \brief Get the template pyramid identified by template_id.
+   *
+   * For example, with 2 modalities (Gradient, Normal) and two pyramid levels
+   * (L0, L1), the order is (GradientL0, NormalL0, GradientL1, NormalL1).
+   */
+  const std::vector<Template>& getTemplates(const std::string& class_id, int template_id) const;
+
+  int numTemplates() const;
+  int numTemplates(const std::string& class_id) const;
+  int numClasses() const { return class_templates.size(); }
+
+  std::vector<std::string> classIds() const;
+
+  void read(const FileNode& fn);
+  void write(FileStorage& fs) const;
+
+  std::string readClass(const FileNode& fn, const std::string &class_id_override = "");
+  void writeClass(const std::string& class_id, FileStorage& fs) const;
+
+  void readClasses(const std::vector<std::string>& class_ids,
+                   const std::string& format = "templates_%s.yml.gz");
+  void writeClasses(const std::string& format = "templates_%s.yml.gz") const;
+
+protected:
+  std::vector< Ptr<Modality> > modalities;
+  int pyramid_levels;
+  double pyramid_distance;
+  std::vector<int> T_at_level;
+
+  typedef std::vector<Template> TemplatePyramid;
+  typedef std::map<std::string, std::vector<TemplatePyramid> > TemplatesMap;
+  TemplatesMap class_templates;
+
+  typedef std::vector<Mat> LinearMemories;
+  // Indexed as [pyramid level][modality][quantized label]
+  typedef std::vector< std::vector<LinearMemories> > LinearMemoryPyramid;
+
+  void matchClass(const LinearMemoryPyramid& lm_pyramid,
+                  const std::vector<Size>& sizes,
+                  float threshold, std::vector<Match>& matches,
+                  const std::string& class_id,
+                  const std::vector<TemplatePyramid>& template_pyramids) const;
+};
+
+/**
+ * \brief Factory function for detector using LINE algorithm with color gradients.
+ *
+ * Default parameter settings suitable for VGA images.
+ */
+Ptr<Detector> getDefaultLINE();
+
+/**
+ * \brief Factory function for detector using LINE-MOD algorithm with color gradients
+ * and depth normals.
+ *
+ * Default parameter settings suitable for VGA images.
+ */
+Ptr<Detector> getDefaultLINEMOD();
+
+} // namespace linemod
+} // namespace cv
+
 #endif
 
 #endif
