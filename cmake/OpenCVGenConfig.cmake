@@ -87,6 +87,11 @@ foreach(m ${OPENCV_MODULES_BUILD})
   endif()
 endforeach()
 
+if(ANDROID AND NOT BUILD_SHARED_LIBS AND HAVE_TBB)
+  #export TBB headers location because static linkage of TBB might be troublesome if application wants to use TBB itself
+  list(APPEND OpenCV2_INCLUDE_DIRS_CONFIGCMAKE ${TBB_INCLUDE_DIRS})
+endif()
+
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 #support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
