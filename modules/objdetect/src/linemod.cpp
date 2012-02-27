@@ -292,11 +292,11 @@ void quantizedOrientations(const Mat& src, Mat& magnitude,
   float * ptr0y = (float *)sobel_dy.data;
   float * ptrmg = (float *)magnitude.data;
 
-  const int length1 = sobel_3dx.step1();
-  const int length2 = sobel_3dy.step1();
-  const int length3 = sobel_dx.step1();
-  const int length4 = sobel_dy.step1();
-  const int length5 = magnitude.step1();
+  const int length1 = static_cast<const int>(sobel_3dx.step1());
+  const int length2 = static_cast<const int>(sobel_3dy.step1());
+  const int length3 = static_cast<const int>(sobel_dx.step1());
+  const int length4 = static_cast<const int>(sobel_dy.step1());
+  const int length5 = static_cast<const int>(magnitude.step1());
   const int length0 = sobel_3dy.cols * 3;
 
   for (int r = 0; r < sobel_3dy.rows; ++r)
@@ -539,7 +539,7 @@ bool ColorGradientPyramid::extractTemplate(Template& templ) const
   std::stable_sort(candidates.begin(), candidates.end());
 
   // Use heuristic based on surplus of candidates in narrow outline for initial distance threshold
-  float distance = candidates.size() / num_features + 1;
+  float distance = static_cast<float>(candidates.size() / num_features + 1);
   selectScatteredFeatures(candidates, templ.features, num_features, distance);
 
   // Size determined externally, needs to match templates for other modalities
@@ -690,9 +690,9 @@ void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
 
         /// @todo Magic number 1150 is focal length? This is something like
         /// f in SXGA mode, but in VGA is more like 530.
-        float l_nx = 1150 * l_ddx;
-        float l_ny = 1150 * l_ddy;
-        float l_nz = -l_det * l_d;
+        float l_nx = static_cast<float>(1150 * l_ddx);
+        float l_ny = static_cast<float>(1150 * l_ddy);
+        float l_nz = static_cast<float>(-l_det * l_d);
 
         float l_sqrt = sqrtf(l_nx * l_nx + l_ny * l_ny + l_nz * l_nz);
 
@@ -706,9 +706,9 @@ void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
 
           //*lp_norm = fabs(l_nz)*255;
 
-          int l_val1 = l_nx * l_offsetx + l_offsetx;
-          int l_val2 = l_ny * l_offsety + l_offsety;
-          int l_val3 = l_nz * GRANULARITY + GRANULARITY;
+          int l_val1 = static_cast<int>(l_nx * l_offsetx + l_offsetx);
+          int l_val2 = static_cast<int>(l_ny * l_offsety + l_offsety);
+          int l_val3 = static_cast<int>(l_nz * GRANULARITY + GRANULARITY);
 
           *lp_norm = NORMAL_LUT[l_val3][l_val2][l_val1];
         }
@@ -856,8 +856,8 @@ bool DepthNormalPyramid::extractTemplate(Template& templ) const
   std::stable_sort(candidates.begin(), candidates.end());
 
   // Use heuristic based on object area for initial distance threshold
-  int area = no_mask ? normal.total() : countNonZero(local_mask);
-  float distance = sqrtf(area) / sqrtf(num_features) + 1.5f;
+  int area = static_cast<int>(no_mask ? normal.total() : countNonZero(local_mask));
+  float distance = sqrtf(static_cast<float>(area)) / sqrtf(static_cast<float>(num_features)) + 1.5f;
   selectScatteredFeatures(candidates, templ.features, num_features, distance);
 
   // Size determined externally, needs to match templates for other modalities
@@ -1000,8 +1000,8 @@ void spread(const Mat& src, Mat& dst, int T)
     int height = src.rows - r;
     for (int c = 0; c < T; ++c)
     {
-      orUnaligned8u(&src.at<unsigned char>(r, c), src.step1(), dst.ptr(),
-                    dst.step1(), src.cols - c, height);
+      orUnaligned8u(&src.at<unsigned char>(r, c), static_cast<const int>(src.step1()), dst.ptr(),
+                    static_cast<const int>(dst.step1()), src.cols - c, height);
     }
   }
 }
@@ -1366,7 +1366,7 @@ void addSimilarities(const std::vector<Mat>& similarities, Mat& dst)
   {
     // NOTE: add() seems to be rather slow in the 8U + 8U -> 16U case
     dst.create(similarities[0].size(), CV_16U);
-    addUnaligned8u16u(similarities[0].ptr(), similarities[1].ptr(), dst.ptr<ushort>(), dst.total());
+    addUnaligned8u16u(similarities[0].ptr(), similarities[1].ptr(), dst.ptr<ushort>(), static_cast<int>(dst.total()));
 
     /// @todo Optimize 16u + 8u -> 16u when more than 2 modalities
     for (size_t i = 2; i < similarities.size(); ++i)
@@ -1385,7 +1385,7 @@ Detector::Detector()
 Detector::Detector(const std::vector< Ptr<Modality> >& modalities,
                    const std::vector<int>& T_pyramid)
   : modalities(modalities),
-    pyramid_levels(T_pyramid.size()),
+    pyramid_levels(static_cast<int>(T_pyramid.size())),
     T_at_level(T_pyramid)
 {
 }
@@ -1396,7 +1396,7 @@ void Detector::match(const std::vector<Mat>& sources, float threshold, std::vect
 {
   matches.clear();
   if (quantized_images.needed())
-    quantized_images.create(1, pyramid_levels * modalities.size(), CV_8U);
+    quantized_images.create(1, static_cast<int>(pyramid_levels * modalities.size()), CV_8U);
 
   assert(sources.size() == modalities.size());
   // Initialize each modality with our sources
@@ -1441,7 +1441,7 @@ void Detector::match(const std::vector<Mat>& sources, float threshold, std::vect
         linearize(response_maps[j], memories[j], T);
 
       if (quantized_images.needed()) //use copyTo here to side step reference semantics.
-        quantized.copyTo(quantized_images.getMatRef(l*quantizers.size() + i));
+        quantized.copyTo(quantized_images.getMatRef(static_cast<int>(l*quantizers.size() + i)));
     }
 
     sizes.push_back(quantized.size());
@@ -1496,13 +1496,13 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
 
     // Compute similarity maps for each modality at lowest pyramid level
     std::vector<Mat> similarities(modalities.size());
-    int lowest_start = tp.size() - modalities.size();
+    int lowest_start = static_cast<int>(tp.size() - modalities.size());
     int lowest_T = T_at_level.back();
     int num_features = 0;
     for (int i = 0; i < (int)modalities.size(); ++i)
     {
       const Template& templ = tp[lowest_start + i];
-      num_features += templ.features.size();
+      num_features += static_cast<int>(templ.features.size());
       similarity(lowest_lm[i], templ, similarities[i], sizes.back(), lowest_T);
     }
 
@@ -1515,7 +1515,7 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
     // threshold scales from half the max response (what you would expect from applying
     // the template to a completely random image) to the max response.
     // NOTE: This assumes max per-feature response is 4, so we scale between [2*nf, 4*nf].
-    int raw_threshold = 2*num_features + (threshold / 100.f) * (2*num_features) + 0.5f;
+    int raw_threshold = static_cast<int>(2*num_features + (threshold / 100.f) * (2*num_features) + 0.5f);
 
     // Find initial matches
     std::vector<Match> candidates;
@@ -1530,8 +1530,8 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
           int offset = lowest_T / 2 + (lowest_T % 2 - 1);
           int x = c * lowest_T + offset;
           int y = r * lowest_T + offset;
-          int score = (raw_score * 100.f) / (4 * num_features) + 0.5f;
-          candidates.push_back(Match(x, y, score, class_id, template_id));
+          float score =(raw_score * 100.f) / (4 * num_features) + 0.5f;
+          candidates.push_back(Match(x, y, score, class_id, static_cast<int>(template_id)));
         }
       }
     }
@@ -1541,7 +1541,7 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
     {
       const std::vector<LinearMemories>& lms = lm_pyramid[l];
       int T = T_at_level[l];
-      int start = l * modalities.size();
+      int start = static_cast<int>(l * modalities.size());
       Size size = sizes[l];
       int border = 8 * T;
       int offset = T / 2 + (T % 2 - 1);
@@ -1569,7 +1569,7 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
         for (int i = 0; i < (int)modalities.size(); ++i)
         {
           const Template& templ = tp[start + i];
-          num_features += templ.features.size();
+          num_features += static_cast<int>(templ.features.size());
           similarityLocal(lms[i], templ, similarities[i], size, T, Point(x, y));
         }
         addSimilarities(similarities, total_similarity);
@@ -1610,9 +1610,9 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
 int Detector::addTemplate(const std::vector<Mat>& sources, const std::string& class_id,
                           const Mat& object_mask, Rect* bounding_box)
 {
-  int num_modalities = modalities.size();
+  int num_modalities = static_cast<int>(modalities.size());
   std::vector<TemplatePyramid>& template_pyramids = class_templates[class_id];
-  int template_id = template_pyramids.size();
+  int template_id = static_cast<int>(template_pyramids.size());
 
   TemplatePyramid tp;
   tp.resize(num_modalities * pyramid_levels);
@@ -1646,7 +1646,7 @@ int Detector::addTemplate(const std::vector<Mat>& sources, const std::string& cl
 int Detector::addSyntheticTemplate(const std::vector<Template>& templates, const std::string& class_id)
 {
   std::vector<TemplatePyramid>& template_pyramids = class_templates[class_id];
-  int template_id = template_pyramids.size();
+  int template_id = static_cast<int>(template_pyramids.size());
   template_pyramids.push_back(templates);
   return template_id;
 }
@@ -1664,7 +1664,7 @@ int Detector::numTemplates() const
   int ret = 0;
   TemplatesMap::const_iterator i = class_templates.begin(), iend = class_templates.end();
   for ( ; i != iend; ++i)
-    ret += i->second.size();
+    ret += static_cast<int>(i->second.size());
   return ret;
 }
 
@@ -1673,7 +1673,7 @@ int Detector::numTemplates(const std::string& class_id) const
   TemplatesMap::const_iterator i = class_templates.find(class_id);
   if (i == class_templates.end())
     return 0;
-  return i->second.size();
+  return static_cast<int>(i->second.size());
 }
 
 std::vector<std::string> Detector::classIds() const

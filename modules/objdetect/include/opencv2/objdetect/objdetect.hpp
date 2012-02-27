@@ -774,7 +774,7 @@ protected:
  *
  * \todo Max response, to allow optimization of summing (255/MAX) features as uint8
  */
-class Modality
+class CV_EXPORTS Modality
 {
 public:
   // Virtual destructor
@@ -821,7 +821,7 @@ protected:
 /**
  * \brief Modality that computes quantized gradient orientations from a color image.
  */
-class ColorGradient : public Modality
+class CV_EXPORTS ColorGradient : public Modality
 {
 public:
   /**
@@ -856,7 +856,7 @@ protected:
 /**
  * \brief Modality that computes quantized surface normals from a dense depth map.
  */
-class DepthNormal : public Modality
+class CV_EXPORTS DepthNormal : public Modality
 {
 public:
   /**
@@ -900,7 +900,7 @@ void colormap(const Mat& quantized, Mat& dst);
 /**
  * \brief Represents a successful template match.
  */
-struct Match
+struct CV_EXPORTS Match
 {
   Match()
   {
@@ -1020,7 +1020,7 @@ public:
 
   int numTemplates() const;
   int numTemplates(const std::string& class_id) const;
-  int numClasses() const { return class_templates.size(); }
+  int numClasses() const { return static_cast<int>(class_templates.size()); }
 
   std::vector<std::string> classIds() const;
 
