@@ -5,9 +5,20 @@ endif()
 
 project(tbb)
 
-set(tbb_ver "tbb40_20111003oss")
-set(tbb_url "http://threadingbuildingblocks.org/uploads/77/177/4.0%20update%201/tbb40_20111003oss_src.tgz")
-set(tbb_md5 "7b5d94eb35a563b29ef402e0fd8f15c9")
+# 4.0 update 3 - build broken
+#set(tbb_ver "tbb40_20120201oss")
+#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/182/4.0%20update%203/tbb40_20120201oss_src.tgz")
+#set(tbb_md5 "4669e7d4adee018de7a7b8b972987218")
+
+# 4.0 update 2 - works fine
+set(tbb_ver "tbb40_20111130oss")
+set(tbb_url "http://threadingbuildingblocks.org/uploads/77/180/4.0%20update%202/tbb40_20111130oss_src.tgz")
+set(tbb_md5 "1e6926b21e865e79772119cd44fc3ad8")
+
+# 4.0 update 1 - works fine
+#set(tbb_ver "tbb40_20111003oss")
+#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/177/4.0%20update%201/tbb40_20111003oss_src.tgz")
+#set(tbb_md5 "7b5d94eb35a563b29ef402e0fd8f15c9")
 
 set(tbb_tarball "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_ver}_src.tgz")
 set(tbb_src_dir "${CMAKE_CURRENT_BINARY_DIR}/${tbb_ver}")
@@ -68,8 +79,7 @@ if(NOT EXISTS "${tbb_src_dir}")
   endif()
 endif()
 
-set(TBB_INCLUDE_DIRS "${tbb_src_dir}/include" CACHE PATH "TBB headers location")
-mark_as_advanced(TBB_INCLUDE_DIRS)
+set(TBB_INCLUDE_DIRS "${tbb_src_dir}/include" PARENT_SCOPE)
 
 include_directories("${tbb_src_dir}/include"
                     "${tbb_src_dir}/src/"
@@ -78,23 +88,22 @@ include_directories("${tbb_src_dir}/include"
 
 file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
-
 list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
-add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0
-                -D__TBB_NO_DLOPEN
-                -D__TBB_WEAK_SYMBOLS
-                -DTBB_USE_GCC_BUILTINS=1
-                -DUSE_PTHREAD
-                -D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1
-                -D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1
-                -D__TBB_BUILD=1
-                -DDO_ITT_NOTIFY
+add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
+                -D__TBB_BUILD=1                        #required
+                -D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1 #needed by TBB 4.0 update 1,2
+                -D__TBB_TASK_CPP_DIRECTLY_INCLUDED=1   #needed by TBB 4.0 update 3
+                -DTBB_USE_GCC_BUILTINS=1               #required
+                -DTBB_USE_DEBUG=0                      #just ot be sure
+                -DTBB_NO_LEGACY=1                      #don't need backward compatibility
+                -DUSE_PTHREAD                          #required
+                -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
                )
 
 add_library(tbb STATIC ${lib_srcs} ${lib_hdrs})
+target_link_libraries(tbb c m dl)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
 
 set_target_properties(tbb
