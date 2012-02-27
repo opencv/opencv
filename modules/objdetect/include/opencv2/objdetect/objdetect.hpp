@@ -679,37 +679,6 @@ using cv::Size;
 
 /// @todo Convert doxy comments to rst
 /// @todo Move stuff that doesn't need to be public into linemod.cpp
-/**
- * \brief Compute quantized orientation image from color image.
- *
- * Implements section 2.2 "Computing the Gradient Orientations."
- *
- * \param[in]  src       The source 8-bit, 3-channel image.
- * \param[out] magnitude Destination floating-point array of squared magnitudes.
- * \param[out] angle     Destination 8-bit array of orientations. Each bit
- *                       represents one bin of the orientation space.
- * \param      threshold Magnitude threshold. Keep only gradients whose norms are
- *                       larger than this.
- */
-void quantizedOrientations(const Mat& src, Mat& magnitude,
-                           Mat& angle, float threshold);
-
-/**
- * \brief Compute quantized normal image from depth image.
- *
- * Implements section 2.6 "Extension to Dense Depth Sensors."
- *
- * \param[in]  src  The source 16-bit depth image (in mm).
- * \param[out] dst  The destination 8-bit image. Each bit represents one bin of
- *                  the view cone.
- * \param distance_threshold   Ignore pixels beyond this distance.
- * \param difference_threshold When computing normals, ignore contributions of pixels whose
- *                             depth difference with the central pixel is above this threshold.
- *
- * \todo Should also need camera model, or at least focal lengths? Replace distance_threshold with mask?
- */
-void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
-                      int difference_threshold = 50);
 
 /**
  * \brief Discriminant feature described by its location and label.
@@ -737,15 +706,6 @@ struct Template
   void read(const FileNode& fn);
   void write(FileStorage& fs) const;
 };
-
-/**
- * \brief Crop a set of overlapping templates from different modalities.
- *
- * \param[in,out] templates Set of templates representing the same object view.
- *
- * \return The bounding box of all the templates in original image coordinates.
- */
-Rect cropTemplates(std::vector<Template>& templates);
 
 /**
  * \brief Represents a modality operating over an image pyramid.
@@ -939,74 +899,6 @@ protected:
 void colormap(const Mat& quantized, Mat& dst);
 
 /**
- * \brief Spread binary labels in a quantized image.
- *
- * Implements section 2.3 "Spreading the Orientations."
- *
- * \param[in]  src The source 8-bit quantized image.
- * \param[out] dst Destination 8-bit spread image.
- * \param      T   Sampling step. Spread labels T/2 pixels in each direction.
- */
-void spread(const Mat& src, Mat& dst, int T);
-
-/**
- * \brief Precompute response maps for a spread quantized image.
- *
- * Implements section 2.4 "Precomputing Response Maps."
- *
- * \param[in]  src           The source 8-bit spread quantized image.
- * \param[out] response_maps Vector of 8 response maps, one for each bit label.
- */
-void computeResponseMaps(const Mat& src, std::vector<Mat>& response_maps);
-
-/**
- * \brief Convert a response map to fast linearized ordering.
- *
- * Implements section 2.5 "Linearizing the Memory for Parallelization."
- *
- * \param[in]  response_map The 2D response map, an 8-bit image.
- * \param[out] linearized   The response map in linearized order. It has T*T rows,
- *                          each of which is a linear memory of length (W/T)*(H/T).
- * \param      T            Sampling step.
- */
-void linearize(const Mat& response_map, Mat& linearized, int T);
-
-/**
- * \brief Compute similarity measure for a given template at each sampled image location.
- *
- * Uses linear memories to compute the similarity measure as described in Fig. 7.
- *
- * \param[in]  linear_memories Vector of 8 linear memories, one for each label.
- * \param[in]  templ           Template to match against.
- * \param[out] dst             Destination 8-bit similarity image of size (W/T, H/T).
- * \param      size            Size (W, H) of the original input image.
- * \param      T               Sampling step.
- */
-void similarity(const std::vector<Mat>& linear_memories, const Template& templ,
-                Mat& dst, Size size, int T);
-
-/**
- * \brief Compute similarity measure for a given template in a local region.
- *
- * \param[in]  linear_memories Vector of 8 linear memories, one for each label.
- * \param[in]  templ           Template to match against.
- * \param[out] dst             Destination 8-bit similarity image, 16x16.
- * \param      size            Size (W, H) of the original input image.
- * \param      T               Sampling step.
- * \param      center          Center of the local region.
- */
-void similarityLocal(const std::vector<Mat>& linear_memories, const Template& templ,
-                     Mat& dst, Size size, int T, Point center);
-
-/**
- * \brief Accumulate one or more 8-bit similarity images.
- *
- * \param[in]  similarities Source 8-bit similarity images.
- * \param[out] dst          Destination 16-bit similarity image.
- */
-void addSimilarities(const std::vector<Mat>& similarities, Mat& dst);
-
-/**
  * \brief Represents a successful template match.
  */
 struct Match
@@ -1060,10 +952,8 @@ public:
    * \param modalities       Modalities to use (color gradients, depth normals, ...).
    * \param T_pyramid        Value of the sampling step T at each pyramid level. The
    *                         number of pyramid levels is T_pyramid.size().
-   * \param pyramid_distance Scale factor between pyramid levels.
    */
-  Detector(const std::vector< Ptr<Modality> >& modalities,
-	   const std::vector<int>& T_pyramid, double pyramid_distance = 2.0);
+  Detector(const std::vector< Ptr<Modality> >& modalities, const std::vector<int>& T_pyramid);
 
   /**
    * \brief Detect objects by template matching.
@@ -1148,7 +1038,6 @@ public:
 protected:
   std::vector< Ptr<Modality> > modalities;
   int pyramid_levels;
-  double pyramid_distance;
   std::vector<int> T_at_level;
 
   typedef std::vector<Template> TemplatePyramid;
