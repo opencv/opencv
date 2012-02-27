@@ -351,8 +351,18 @@ OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, size_t n_features, const O
 void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     Mat gray_image;
-    CV_Assert(image.type() == CV_8UC3);
-    cvtColor(image, gray_image, CV_BGR2GRAY);
+
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC4) || (image.type() == CV_8UC1));
+
+    if (image.type() == CV_8UC3) {
+        cvtColor(image, gray_image, CV_BGR2GRAY);
+    } else if (image.type() == CV_8UC4) {
+        cvtColor(image, gray_image, CV_BGRA2GRAY);
+    } else if (image.type() == CV_8UC1) {
+        gray_image=image;
+    } else {
+        CV_Assert(false);
+    }
 
     if (grid_size.area() == 1)
         (*orb)(gray_image, Mat(), features.keypoints, features.descriptors);
