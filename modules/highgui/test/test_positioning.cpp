@@ -156,7 +156,7 @@ void CV_VideoPositioningTest::run_test(int method)
 
             cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, idx.at(j));
 
-            IplImage* frame = cvRetrieveFrame(cap);
+            /* IplImage* frame = cvRetrieveFrame(cap);
 
             if (!frame)
 			{
@@ -168,7 +168,7 @@ void CV_VideoPositioningTest::run_test(int method)
                 ts->printf(cvtest::TS::LOG, "\nIteration: %d\n\nError: cannot read a frame with index %d.\n", j, idx.at(j));
                 ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
                 flag = !flag;
-            }
+            } */
 
             int val = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES);
 
