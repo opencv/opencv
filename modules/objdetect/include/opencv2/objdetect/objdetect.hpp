@@ -682,7 +682,7 @@ using cv::Size;
 /**
  * \brief Discriminant feature described by its location and label.
  */
-struct Feature
+struct CV_EXPORTS Feature
 {
   int x; ///< x offset
   int y; ///< y offset
@@ -695,7 +695,7 @@ struct Feature
   void write(FileStorage& fs) const;
 };
 
-struct Template
+struct CV_EXPORTS Template
 {
   int width;
   int height;
@@ -937,7 +937,7 @@ struct Match
  * \brief Object detector using the LINE template matching algorithm with any set of
  * modalities.
  */
-class Detector
+class CV_EXPORTS Detector
 {
 public:
   /**
@@ -1059,7 +1059,7 @@ protected:
  *
  * Default parameter settings suitable for VGA images.
  */
-Ptr<Detector> getDefaultLINE();
+CV_EXPORTS Ptr<Detector> getDefaultLINE();
 
 /**
  * \brief Factory function for detector using LINE-MOD algorithm with color gradients
@@ -1067,7 +1067,7 @@ Ptr<Detector> getDefaultLINE();
  *
  * Default parameter settings suitable for VGA images.
  */
-Ptr<Detector> getDefaultLINEMOD();
+CV_EXPORTS Ptr<Detector> getDefaultLINEMOD();
 
 } // namespace linemod
 } // namespace cv
