@@ -157,6 +157,7 @@ namespace cv
         int type_;
 
         Ptr<Impl> impl_;
+        GlBuffer buf_;
     };
 
     template <> CV_EXPORTS void Ptr<GlTexture::Impl>::delete_obj();

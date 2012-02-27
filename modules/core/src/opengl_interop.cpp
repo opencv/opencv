@@ -915,7 +915,7 @@ inline void cv::GlTexture::Impl::unbind() const
 
 #endif // HAVE_OPENGL
 
-cv::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0)
+cv::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
 {
 #ifndef HAVE_OPENGL
     throw_nogl;
@@ -924,7 +924,7 @@ cv::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0)
 #endif
 }
 
-cv::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), type_(0)
+cv::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
 {
 #ifndef HAVE_OPENGL
 	(void)rows;
@@ -939,7 +939,7 @@ cv::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), typ
 #endif
 }
 
-cv::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0)
+cv::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
 {
 #ifndef HAVE_OPENGL
 	(void)size;
@@ -953,7 +953,7 @@ cv::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0)
 #endif
 }
 
-cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_(0)
+cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
 {
 #ifndef HAVE_OPENGL
 	(void)mat_;
@@ -1058,8 +1058,8 @@ void cv::GlTexture::copyFrom(InputArray mat_, bool bgra)
                 throw_nocuda;
             #else
                 GpuMat d_mat = mat_.getGpuMat();
-                GlBuffer buf(d_mat, GlBuffer::TEXTURE_BUFFER);
-                impl_->copyFrom(buf, bgra);
+                buf_.copyFrom(d_mat);
+                impl_->copyFrom(buf_, bgra);
             #endif
 
             break;
