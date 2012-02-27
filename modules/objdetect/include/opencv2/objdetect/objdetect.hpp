@@ -678,7 +678,6 @@ using cv::Rect;
 using cv::Size;
 
 /// @todo Convert doxy comments to rst
-/// @todo Move stuff that doesn't need to be public into linemod.cpp
 
 /**
  * \brief Discriminant feature described by its location and label.
