@@ -688,7 +688,7 @@ struct Feature
   int y; ///< y offset
   int label; ///< Quantization
 
-  Feature() {}
+  Feature() : x(0), y(0), label(0) {}
   Feature(int x, int y, int label) : x(x), y(y), label(label) {}
 
   void read(const FileNode& fn);
