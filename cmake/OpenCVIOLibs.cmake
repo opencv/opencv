@@ -90,5 +90,5 @@ endif()
 
 ################### OpenEXR - optional
 if(WITH_OPENEXR)
-  include(cmake/OpenCVFindOpenEXR.cmake)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenEXR.cmake")
 endif()
