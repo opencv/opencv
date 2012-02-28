@@ -1513,7 +1513,7 @@ cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
 
         FillBitmapInfo( binfo, size.cx, size.cy, channels*8, 1 );
 
-        HGDIOBJ tempImage = SelectObject( hdc, CreateDIBSection( hdc, binfo, DIB_RGB_COLORS, &dst_ptr, 0, 0));
+        SelectObject( hdc, CreateDIBSection( hdc, binfo, DIB_RGB_COLORS, &dst_ptr, 0, 0));
     }
 
     cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4 );
@@ -1522,7 +1522,7 @@ cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
     // Image stretching to fit the window
     RECT rect;
     GetClientRect(w_hWnd, &rect);
-    int bSuccess = StretchDIBits( hdc, 0, 0, rect.right, rect.bottom, 0, 0, image->width, image->height, dst_ptr, &tempbinfo, DIB_RGB_COLORS, SRCCOPY );
+    StretchDIBits( hdc, 0, 0, rect.right, rect.bottom, 0, 0, image->width, image->height, dst_ptr, &tempbinfo, DIB_RGB_COLORS, SRCCOPY );
 
     // ony resize window if needed
     InvalidateRect(w_hWnd, 0, 0);
