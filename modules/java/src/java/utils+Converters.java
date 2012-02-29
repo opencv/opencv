@@ -493,8 +493,8 @@ public class Converters {
 
         List<Mat> mats = new ArrayList<Mat>(m.rows());
         Mat_to_vector_Mat(m, mats);
-        List<Point> pt = new ArrayList<Point>();
         for (Mat mi : mats) {
+            List<Point> pt = new ArrayList<Point>();
             Mat_to_vector_Point2f(mi, pt);
             pts.add(pt);
         }
@@ -523,8 +523,8 @@ public class Converters {
 
         List<Mat> mats = new ArrayList<Mat>(m.rows());
         Mat_to_vector_Mat(m, mats);
-        List<KeyPoint> lkp = new ArrayList<KeyPoint>();
         for (Mat mi : mats) {
+            List<KeyPoint> lkp = new ArrayList<KeyPoint>();
             Mat_to_vector_KeyPoint(mi, lkp);
             kps.add(lkp);
         }
@@ -606,8 +606,8 @@ public class Converters {
 
         List<Mat> mats = new ArrayList<Mat>(m.rows());
         Mat_to_vector_Mat(m, mats);
-        List<DMatch> ldm = new ArrayList<DMatch>();
         for (Mat mi : mats) {
+            List<DMatch> ldm = new ArrayList<DMatch>();
             Mat_to_vector_DMatch(mi, ldm);
             lldm.add(ldm);
         }
@@ -636,8 +636,8 @@ public class Converters {
 
         List<Mat> mats = new ArrayList<Mat>(m.rows());
         Mat_to_vector_Mat(m, mats);
-        List<Byte> lb = new ArrayList<Byte>();
         for (Mat mi : mats) {
+            List<Byte> lb = new ArrayList<Byte>();
             Mat_to_vector_char(mi, lb);
             llb.add(lb);
         }
