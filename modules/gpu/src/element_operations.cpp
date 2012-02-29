@@ -89,92 +89,74 @@ void cv::gpu::addWeighted(const GpuMat&, double, const GpuMat&, double, double, 
 
 namespace
 {
-    typedef NppStatus (*npp_arithm_8u_t)(const Npp8u* pSrc1, int nSrc1Step, const Npp8u* pSrc2, int nSrc2Step, Npp8u* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
-    typedef NppStatus (*npp_arithm_16u_t)(const Npp16u* pSrc1, int nSrc1Step, const Npp16u* pSrc2, int nSrc2Step, Npp16u* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
-    typedef NppStatus (*npp_arithm_16s_t)(const Npp16s* pSrc1, int nSrc1Step, const Npp16s* pSrc2, int nSrc2Step, Npp16s* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
-    typedef NppStatus (*npp_arithm_32s_t)(const Npp32s* pSrc1, int nSrc1Step, const Npp32s* pSrc2, int nSrc2Step, Npp32s* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
-    typedef NppStatus (*npp_arithm_32f_t)(const Npp32f* pSrc1, int nSrc1Step, const Npp32f* pSrc2, int nSrc2Step, Npp32f* pDst, int nDstStep, NppiSize oSizeROI);
+    template<int DEPTH> struct NppTypeTraits;
+    template<> struct NppTypeTraits<CV_8U>  { typedef Npp8u npp_t; };
+    template<> struct NppTypeTraits<CV_8S>  { typedef Npp8s npp_t; };
+    template<> struct NppTypeTraits<CV_16U> { typedef Npp16u npp_t; };
+    template<> struct NppTypeTraits<CV_16S> { typedef Npp16s npp_t; typedef Npp16sc npp_complex_type; };
+    template<> struct NppTypeTraits<CV_32S> { typedef Npp32s npp_t; typedef Npp32sc npp_complex_type; };
+    template<> struct NppTypeTraits<CV_32F> { typedef Npp32f npp_t; typedef Npp32fc npp_complex_type; };
+    template<> struct NppTypeTraits<CV_64F> { typedef Npp64f npp_t; typedef Npp64fc npp_complex_type; };
 
-    bool nppArithmCaller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst,
-                         npp_arithm_8u_t npp_func_8uc1, npp_arithm_8u_t npp_func_8uc4,
-                         npp_arithm_16u_t npp_func_16uc1, npp_arithm_16u_t npp_func_16uc4,
-                         npp_arithm_16s_t npp_func_16sc1, npp_arithm_16s_t npp_func_16sc4,
-                         npp_arithm_32s_t npp_func_32sc1, 
-                         npp_arithm_32f_t npp_func_32fc1, npp_arithm_32f_t npp_func_32fc4,
-                         cudaStream_t stream)
+    template <int DEPTH> struct NppArithmFunc
     {
-        bool useNpp = (src1.depth() == CV_8U || src1.depth() == CV_16U || src1.depth() == CV_16S || src1.depth() == CV_32S || src1.depth() == CV_32F);
+        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+        
+        typedef NppStatus (*func_t)(const npp_t* pSrc1, int nSrc1Step, const npp_t* pSrc2, int nSrc2Step, npp_t* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
+    };
+    template <> struct NppArithmFunc<CV_32F>
+    {        
+        typedef NppTypeTraits<CV_32F>::npp_t npp_t;
 
-        if (!useNpp)
-            return false;
+        typedef NppStatus (*func_t)(const Npp32f* pSrc1, int nSrc1Step, const Npp32f* pSrc2, int nSrc2Step, Npp32f* pDst, int nDstStep, NppiSize oSizeROI);
+    };
 
-        bool aligned = isAligned(src1.data, 16) && isAligned(src2.data, 16) && isAligned(dst.data, 16);
+    template <int DEPTH, typename NppArithmFunc<DEPTH>::func_t func> struct NppArithm
+    {
+        typedef typename NppArithmFunc<DEPTH>::npp_t npp_t;
 
-        NppiSize sz;
-        sz.width  = src1.cols * src1.channels();
-        sz.height = src1.rows;
-
-        NppStreamHandler h(stream);
-
-        if (aligned && src1.depth() == CV_8U && (sz.width % 4) == 0)
+        static void call(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream)
         {
-            sz.width /= 4;
+            NppStreamHandler h(stream);
 
-            nppSafeCall( npp_func_8uc4(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 0) );
-        }
-        else if (src1.depth() == CV_8U)
-        {
-            nppSafeCall( npp_func_8uc1(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 0) );
-        }
-        else if (aligned && src1.depth() == CV_16U && (sz.width % 4) == 0)
-        {
-            sz.width /= 4;
+            NppiSize sz;
+            sz.width  = src1.cols;
+            sz.height = src1.rows;
 
-            nppSafeCall( npp_func_16uc4(src1.ptr<Npp16u>(), static_cast<int>(src1.step), src2.ptr<Npp16u>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp16u>(), static_cast<int>(dst.step), sz, 0) );
-        }
-        else if (src1.depth() == CV_16U)
-        {
-            nppSafeCall( npp_func_16uc1(src1.ptr<Npp16u>(), static_cast<int>(src1.step), src2.ptr<Npp16u>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp16u>(), static_cast<int>(dst.step), sz, 0) );
-        }
-        else if (aligned && src1.depth() == CV_16S && (sz.width % 4) == 0)
-        {
-            sz.width /= 4;
+            nppSafeCall( func((const npp_t*)src1.data, static_cast<int>(src1.step), (const npp_t*)src2.data, static_cast<int>(src2.step), 
+                (npp_t*)dst.data, static_cast<int>(dst.step), sz, 0) );
 
-            nppSafeCall( npp_func_16sc4(src1.ptr<Npp16s>(), static_cast<int>(src1.step), src2.ptr<Npp16s>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp16s>(), static_cast<int>(dst.step), sz, 0) );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
-        else if (src1.depth() == CV_16S)
+        static void call(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream)
         {
-            nppSafeCall( npp_func_16sc1(src1.ptr<Npp16s>(), static_cast<int>(src1.step), src2.ptr<Npp16s>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp16s>(), static_cast<int>(dst.step), sz, 0) );
+            call(src1, src2, dst, PtrStepb(), stream);
         }
-        else if (src1.depth() == CV_32S)
-        {
-            nppSafeCall( npp_func_32sc1(src1.ptr<Npp32s>(), static_cast<int>(src1.step), src2.ptr<Npp32s>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp32s>(), static_cast<int>(dst.step), sz, 0) );
-        }
-        else if (aligned && src1.depth() == CV_32F && (sz.width % 4) == 0)
-        {
-            sz.width /= 4;
+    };
+    template <typename NppArithmFunc<CV_32F>::func_t func> struct NppArithm<CV_32F, func>
+    {
+        typedef typename NppArithmFunc<CV_32F>::npp_t npp_t;
 
-            nppSafeCall( npp_func_32fc4(src1.ptr<Npp32f>(), static_cast<int>(src1.step), src2.ptr<Npp32f>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
-        }
-        else // if (src1.depth() == CV_32F)
+        static void call(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, const PtrStepb& mask, cudaStream_t stream)
         {
-            nppSafeCall( npp_func_32fc1(src1.ptr<Npp32f>(), static_cast<int>(src1.step), src2.ptr<Npp32f>(), static_cast<int>(src2.step), 
-                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
+            NppStreamHandler h(stream);
+
+            NppiSize sz;
+            sz.width  = src1.cols;
+            sz.height = src1.rows;
+ 
+            nppSafeCall( func((const npp_t*)src1.data, static_cast<int>(src1.step), (const npp_t*)src2.data, static_cast<int>(src2.step), 
+                (npp_t*)dst.data, static_cast<int>(dst.step), sz) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-
-        return true;
-    }
+        static void call(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream)
+        {
+            call(src1, src2, dst, PtrStepb(), stream);
+        }
+    };
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -206,6 +188,18 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
         {0/*add_gpu<double, unsigned char>*/, 0/*add_gpu<double, signed char>*/, 0/*add_gpu<double, unsigned short>*/, 0/*add_gpu<double, short>*/, 0/*add_gpu<double, int>*/, 0/*add_gpu<double, float>*/, add_gpu<double, double>}
     };
 
+    static const func_t npp_funcs[7] = 
+    {
+        NppArithm<CV_8U, nppiAdd_8u_C1RSfs>::call,
+        0,
+        NppArithm<CV_16U, nppiAdd_16u_C1RSfs>::call,
+        NppArithm<CV_16S, nppiAdd_16s_C1RSfs>::call,
+        NppArithm<CV_32S, nppiAdd_32s_C1RSfs>::call,
+        NppArithm<CV_32F, nppiAdd_32f_C1R>::call,
+        add_gpu<double, double>
+    };
+
+    CV_Assert(src1.type() != CV_8S);
     CV_Assert(src1.type() == src2.type() && src1.size() == src2.size());
     CV_Assert(mask.empty() || (src1.channels() == 1 && mask.size() == src1.size() && mask.type() == CV_8U));
 
@@ -218,16 +212,8 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
 
     if (mask.empty() && dst.type() == src1.type())
     {
-        if (nppArithmCaller(src1, src2, dst,
-            nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, 
-            nppiAdd_16u_C1RSfs, nppiAdd_16u_C4RSfs,
-            nppiAdd_16s_C1RSfs, nppiAdd_16s_C4RSfs,
-            nppiAdd_32s_C1RSfs, 
-            nppiAdd_32f_C1R, nppiAdd_32f_C4R, 
-            stream))
-        {
-            return;
-        }
+        npp_funcs[src1.depth()](src1.reshape(1), src2.reshape(1), dst.reshape(1), PtrStepb(), stream);
+        return;
     }
 
     const func_t func = funcs[src1.depth()][dst.depth()];
@@ -238,15 +224,6 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Gpu
 
 namespace
 {
-    template<int type> struct NppTypeTraits;
-    template<> struct NppTypeTraits<CV_8U>  { typedef Npp8u npp_t; };
-    template<> struct NppTypeTraits<CV_8S>  { typedef Npp8s npp_t; };
-    template<> struct NppTypeTraits<CV_16U> { typedef Npp16u npp_t; };
-    template<> struct NppTypeTraits<CV_16S> { typedef Npp16s npp_t; typedef Npp16sc npp_complex_type; };
-    template<> struct NppTypeTraits<CV_32S> { typedef Npp32s npp_t; typedef Npp32sc npp_complex_type; };
-    template<> struct NppTypeTraits<CV_32F> { typedef Npp32f npp_t; typedef Npp32fc npp_complex_type; };
-    template<> struct NppTypeTraits<CV_64F> { typedef Npp64f npp_t; typedef Npp64fc npp_complex_type; };
-
     template<int DEPTH, int cn> struct NppArithmScalarFunc
     {
         typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
@@ -485,6 +462,18 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cons
         {0/*subtract_gpu<double, unsigned char>*/, 0/*subtract_gpu<double, signed char>*/, 0/*subtract_gpu<double, unsigned short>*/, 0/*subtract_gpu<double, short>*/, 0/*subtract_gpu<double, int>*/, 0/*subtract_gpu<double, float>*/, subtract_gpu<double, double>}
     };
 
+    static const func_t npp_funcs[7] = 
+    {
+        NppArithm<CV_8U, nppiSub_8u_C1RSfs>::call,
+        0,
+        NppArithm<CV_16U, nppiSub_16u_C1RSfs>::call,
+        NppArithm<CV_16S, nppiSub_16s_C1RSfs>::call,
+        NppArithm<CV_32S, nppiSub_32s_C1RSfs>::call,
+        NppArithm<CV_32F, nppiSub_32f_C1R>::call,
+        subtract_gpu<double, double>
+    };
+
+    CV_Assert(src1.type() != CV_8S);
     CV_Assert(src1.type() == src2.type() && src1.size() == src2.size());
     CV_Assert(mask.empty() || (src1.channels() == 1 && mask.size() == src1.size() && mask.type() == CV_8U));
 
@@ -497,16 +486,8 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cons
 
     if (mask.empty() && dst.type() == src1.type())
     {
-        if (nppArithmCaller(src2, src1, dst,
-            nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, 
-            nppiSub_16u_C1RSfs, nppiSub_16u_C4RSfs,
-            nppiSub_16s_C1RSfs, nppiSub_16s_C4RSfs,
-            nppiSub_32s_C1RSfs, 
-            nppiSub_32f_C1R, nppiSub_32f_C4R, 
-            stream))
-        {
-            return;
-        }
+        npp_funcs[src1.depth()](src2.reshape(1), src1.reshape(1), dst.reshape(1), PtrStepb(), stream);
+        return;
     }
 
     const func_t func = funcs[src1.depth()][dst.depth()];
@@ -604,6 +585,17 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, doub
         {0/*multiply_gpu<double, unsigned char>*/, 0/*multiply_gpu<double, signed char>*/, 0/*multiply_gpu<double, unsigned short>*/, 0/*multiply_gpu<double, short>*/, 0/*multiply_gpu<double, int>*/, 0/*multiply_gpu<double, float>*/, multiply_gpu<double, double>}
     };
 
+    static const func_t npp_funcs[7] = 
+    {
+        NppArithm<CV_8U, nppiMul_8u_C1RSfs>::call,
+        0,
+        NppArithm<CV_16U, nppiMul_16u_C1RSfs>::call,
+        NppArithm<CV_16S, nppiMul_16s_C1RSfs>::call,
+        NppArithm<CV_32S, nppiMul_32s_C1RSfs>::call,
+        NppArithm<CV_32F, nppiMul_32f_C1R>::call,
+        multiply_gpu<double, double>
+    };
+
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     if (src1.type() == CV_8UC4 && src2.type() == CV_32FC1)
@@ -624,6 +616,7 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, doub
     }
     else
     {
+        CV_Assert(src1.type() != CV_8S);
         CV_Assert(src1.type() == src2.type() && src1.size() == src2.size());
 
         if (dtype < 0)
@@ -633,16 +626,8 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, doub
 
         if (scale == 1 && dst.type() == src1.type())
         {
-            if (nppArithmCaller(src1, src2, dst,
-                nppiMul_8u_C1RSfs, nppiMul_8u_C4RSfs, 
-                nppiMul_16u_C1RSfs, nppiMul_16u_C4RSfs,
-                nppiMul_16s_C1RSfs, nppiMul_16s_C4RSfs,
-                nppiMul_32s_C1RSfs, 
-                nppiMul_32f_C1R, nppiMul_32f_C4R, 
-                stream))
-            {
-                return;
-            }
+            npp_funcs[src1.depth()](src1.reshape(1), src2.reshape(1), dst.reshape(1), 1, stream);
+            return;
         }
 
         const func_t func = funcs[src1.depth()][dst.depth()];
@@ -749,6 +734,17 @@ void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double
         {0/*divide_gpu<double, unsigned char>*/, 0/*divide_gpu<double, signed char>*/, 0/*divide_gpu<double, unsigned short>*/, 0/*divide_gpu<double, short>*/, 0/*divide_gpu<double, int>*/, 0/*divide_gpu<double, float>*/, divide_gpu<double, double>}
     };
 
+    static const func_t npp_funcs[7] = 
+    {
+        NppArithm<CV_8U, nppiDiv_8u_C1RSfs>::call,
+        0,
+        NppArithm<CV_16U, nppiDiv_16u_C1RSfs>::call,
+        NppArithm<CV_16S, nppiDiv_16s_C1RSfs>::call,
+        NppArithm<CV_32S, nppiDiv_32s_C1RSfs>::call,
+        NppArithm<CV_32F, nppiDiv_32f_C1R>::call,
+        divide_gpu<double, double>
+    };
+
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     if (src1.type() == CV_8UC4 && src2.type() == CV_32FC1)
@@ -768,7 +764,8 @@ void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double
         multiply_gpu(static_cast<DevMem2D_<short4> >(src1), static_cast<DevMem2Df>(src2), static_cast<DevMem2D_<short4> >(dst), stream);
     }
     else
-    {
+    {        
+        CV_Assert(src1.type() != CV_8S);
         CV_Assert(src1.type() == src2.type() && src1.size() == src2.size());
 
         if (dtype < 0)
@@ -778,16 +775,8 @@ void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double
 
         if (scale == 1 && dst.type() == src1.type())
         {
-            if (nppArithmCaller(src2, src1, dst,
-                nppiDiv_8u_C1RSfs, nppiDiv_8u_C4RSfs, 
-                nppiDiv_16u_C1RSfs, nppiDiv_16u_C4RSfs,
-                nppiDiv_16s_C1RSfs, nppiDiv_16s_C4RSfs,
-                nppiDiv_32s_C1RSfs, 
-                nppiDiv_32f_C1R, nppiDiv_32f_C4R, 
-                stream))
-            {
-                return;
-            }
+            npp_funcs[src1.depth()](src2.reshape(1), src1.reshape(1), dst.reshape(1), 1, stream);
+            return;
         }
 
         const func_t func = funcs[src1.depth()][dst.depth()];
