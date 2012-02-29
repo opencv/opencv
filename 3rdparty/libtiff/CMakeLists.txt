@@ -67,10 +67,6 @@ if(WIN32)
   set(lib_srcs ${lib_srcs} tif_win32.c)
 endif(WIN32)
 
-#if(APPLE)
-#  set(lib_srcs ${lib_srcs} tif_apple.c)
-#endif(APPLE)
-
 file(GLOB lib_hdrs *.h*)
 
 if(MSVC)

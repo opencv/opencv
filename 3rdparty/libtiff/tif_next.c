@@ -1,4 +1,4 @@
-/* $Id: tif_next.c,v 1.8.2.1 2010-06-08 18:50:42 bfriesen Exp $ */
+/* $Id: tif_next.c,v 1.13 2010-03-10 18:56:48 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -46,12 +46,13 @@
 #define WHITE   	((1<<2)-1)
 
 static int
-NeXTDecode(TIFF* tif, tidata_t buf, tsize_t occ, tsample_t s)
+NeXTDecode(TIFF* tif, uint8* buf, tmsize_t occ, uint16 s)
 {
+	static const char module[] = "NeXTDecode";
 	unsigned char *bp, *op;
-	tsize_t cc;
-	tidata_t row;
-	tsize_t scanline, n;
+	tmsize_t cc;
+	uint8* row;
+	tmsize_t scanline, n;
 
 	(void) s;
 	/*
@@ -59,12 +60,17 @@ NeXTDecode(TIFF* tif, tidata_t buf, tsize_t occ, tsample_t s)
 	 * white (we assume a PhotometricInterpretation
 	 * of ``min-is-black'').
 	 */
-	for (op = buf, cc = occ; cc-- > 0;)
+	for (op = (unsigned char*) buf, cc = occ; cc-- > 0;)
 		*op++ = 0xff;
 
 	bp = (unsigned char *)tif->tif_rawcp;
 	cc = tif->tif_rawcc;
 	scanline = tif->tif_scanlinesize;
+	if (occ % scanline)
+	{
+		TIFFErrorExt(tif->tif_clientdata, module, "Fractional scanlines cannot be read");
+		return (0);
+	}
 	for (row = buf; occ > 0; occ -= scanline, row += scanline) {
 		n = *bp++, cc--;
 		switch (n) {
@@ -79,7 +85,7 @@ NeXTDecode(TIFF* tif, tidata_t buf, tsize_t occ, tsample_t s)
 			cc -= scanline;
 			break;
 		case LITERALSPAN: {
-			tsize_t off;
+			tmsize_t off;
 			/*
 			 * The scanline has a literal span that begins at some
 			 * offset.
@@ -105,7 +111,7 @@ NeXTDecode(TIFF* tif, tidata_t buf, tsize_t occ, tsample_t s)
 			 */
 			op = row;
 			for (;;) {
-				grey = (n>>6) & 0x3;
+				grey = (uint32)((n>>6) & 0x3);
 				n &= 0x3f;
 				/*
 				 * Ensure the run does not exceed the scanline
@@ -124,11 +130,11 @@ NeXTDecode(TIFF* tif, tidata_t buf, tsize_t occ, tsample_t s)
 		}
 		}
 	}
-	tif->tif_rawcp = (tidata_t) bp;
+	tif->tif_rawcp = (uint8*) bp;
 	tif->tif_rawcc = cc;
 	return (1);
 bad:
-	TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "NeXTDecode: Not enough data for scanline %ld",
+	TIFFErrorExt(tif->tif_clientdata, module, "Not enough data for scanline %ld",
 	    (long) tif->tif_row);
 	return (0);
 }
@@ -137,8 +143,8 @@ int
 TIFFInitNeXT(TIFF* tif, int scheme)
 {
 	(void) scheme;
-	tif->tif_decoderow = NeXTDecode;
-	tif->tif_decodestrip = NeXTDecode;
+	tif->tif_decoderow = NeXTDecode;  
+	tif->tif_decodestrip = NeXTDecode;  
 	tif->tif_decodetile = NeXTDecode;
 	return (1);
 }

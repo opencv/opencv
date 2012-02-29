@@ -1,4 +1,4 @@
-/* $Id: tif_color.c,v 1.12.2.2 2010-12-14 02:23:09 faxguy Exp $ */
+/* $Id: tif_color.c,v 1.19 2010-12-14 02:22:42 faxguy Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -123,7 +123,7 @@ TIFFXYZToRGB(TIFFCIELabToRGB *cielab, float X, float Y, float Z,
  */
 int
 TIFFCIELabToRGBInit(TIFFCIELabToRGB* cielab,
-		    TIFFDisplay *display, float *refWhite)
+		    const TIFFDisplay *display, float *refWhite)
 {
 	int i;
 	double gamma;
@@ -224,7 +224,7 @@ TIFFYCbCrToRGBInit(TIFFYCbCrToRGB* ycbcr, float *luma, float *refBlackWhite)
 #define LumaBlue    luma[2]
 
     clamptab = (TIFFRGBValue*)(
-	(tidata_t) ycbcr+TIFFroundup(sizeof (TIFFYCbCrToRGB), sizeof (long)));
+	(uint8*) ycbcr+TIFFroundup_32(sizeof (TIFFYCbCrToRGB), sizeof (long)));  
     _TIFFmemset(clamptab, 0, 256);		/* v < 0 => 0 */
     ycbcr->clamptab = (clamptab += 256);
     for (i = 0; i < 256; i++)

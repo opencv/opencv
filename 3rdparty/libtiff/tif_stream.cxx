@@ -1,4 +1,4 @@
-/* $Id: tif_stream.cxx,v 1.6.2.1 2009-01-01 00:10:43 bfriesen Exp $ */
+/* $Id: tif_stream.cxx,v 1.11 2010-12-11 23:12:29 faxguy Exp $ */
 
 /*
  * Copyright (c) 1988-1996 Sam Leffler
@@ -34,76 +34,166 @@
 using namespace std;
 #endif
 
-class tiffis_data
-{
-  public:
+/*
+  ISO C++ uses a 'std::streamsize' type to define counts.  This makes
+  it similar to, (but perhaps not the same as) size_t.
 
-	istream	*myIS;
-        long	myStreamStartPos;
+  The std::ios::pos_type is used to represent stream positions as used
+  by tellg(), tellp(), seekg(), and seekp().  This makes it similar to
+  (but perhaps not the same as) 'off_t'.  The std::ios::streampos type
+  is used for character streams, but is documented to not be an
+  integral type anymore, so it should *not* be assigned to an integral
+  type.
+
+  The std::ios::off_type is used to specify relative offsets needed by
+  the variants of seekg() and seekp() which accept a relative offset
+  argument.
+
+  Useful prototype knowledge:
+
+  Obtain read position
+    ios::pos_type basic_istream::tellg()
+
+  Set read position
+    basic_istream& basic_istream::seekg(ios::pos_type)
+    basic_istream& basic_istream::seekg(ios::off_type, ios_base::seekdir)
+
+  Read data
+    basic_istream& istream::read(char *str, streamsize count)
+
+  Number of characters read in last unformatted read
+    streamsize istream::gcount();
+
+  Obtain write position
+    ios::pos_type basic_ostream::tellp()
+
+  Set write position
+    basic_ostream& basic_ostream::seekp(ios::pos_type)
+    basic_ostream& basic_ostream::seekp(ios::off_type, ios_base::seekdir)
+
+  Write data
+    basic_ostream& ostream::write(const char *str, streamsize count)
+*/
+
+struct tiffis_data;
+struct tiffos_data;
+
+extern "C" {
+
+	static tmsize_t _tiffosReadProc(thandle_t, void*, tmsize_t);
+	static tmsize_t _tiffisReadProc(thandle_t fd, void* buf, tmsize_t size);
+	static tmsize_t _tiffosWriteProc(thandle_t fd, void* buf, tmsize_t size);
+	static tmsize_t _tiffisWriteProc(thandle_t, void*, tmsize_t);
+	static uint64   _tiffosSeekProc(thandle_t fd, uint64 off, int whence);
+	static uint64   _tiffisSeekProc(thandle_t fd, uint64 off, int whence);
+	static uint64   _tiffosSizeProc(thandle_t fd);
+	static uint64   _tiffisSizeProc(thandle_t fd);
+	static int      _tiffosCloseProc(thandle_t fd);
+	static int      _tiffisCloseProc(thandle_t fd);
+	static int 	_tiffDummyMapProc(thandle_t , void** base, toff_t* size );
+	static void     _tiffDummyUnmapProc(thandle_t , void* base, toff_t size );
+	static TIFF*    _tiffStreamOpen(const char* name, const char* mode, void *fd);
+
+struct tiffis_data
+{
+	istream	*stream;
+        ios::pos_type start_pos;
 };
 
-class tiffos_data
+struct tiffos_data
 {
-  public:
-
-	ostream	*myOS;
-	long	myStreamStartPos;
+	ostream	*stream;
+	ios::pos_type start_pos;
 };
 
-static tsize_t
-_tiffosReadProc(thandle_t, tdata_t, tsize_t)
+static tmsize_t
+_tiffosReadProc(thandle_t, void*, tmsize_t)
 {
         return 0;
 }
 
-static tsize_t
-_tiffisReadProc(thandle_t fd, tdata_t buf, tsize_t size)
+static tmsize_t
+_tiffisReadProc(thandle_t fd, void* buf, tmsize_t size)
 {
-        tiffis_data	*data = (tiffis_data *)fd;
+        tiffis_data	*data = reinterpret_cast<tiffis_data *>(fd);
 
-        data->myIS->read((char *)buf, (int)size);
+        // Verify that type does not overflow.
+        streamsize request_size = size;
+        if (static_cast<tmsize_t>(request_size) != size)
+          return static_cast<tmsize_t>(-1);
 
-        return data->myIS->gcount();
+        data->stream->read((char *) buf, request_size);
+
+        return static_cast<tmsize_t>(data->stream->gcount());
 }
 
-static tsize_t
-_tiffosWriteProc(thandle_t fd, tdata_t buf, tsize_t size)
+static tmsize_t
+_tiffosWriteProc(thandle_t fd, void* buf, tmsize_t size)
 {
-	tiffos_data	*data = (tiffos_data *)fd;
-	ostream		*os = data->myOS;
-	int		pos = os->tellp();
+	tiffos_data	*data = reinterpret_cast<tiffos_data *>(fd);
+	ostream		*os = data->stream;
+	ios::pos_type	pos = os->tellp();
 
-	os->write((const char *)buf, size);
+        // Verify that type does not overflow.
+        streamsize request_size = size;
+        if (static_cast<tmsize_t>(request_size) != size)
+          return static_cast<tmsize_t>(-1);
 
-	return ((int)os->tellp()) - pos;
+	os->write(reinterpret_cast<const char *>(buf), request_size);
+
+	return static_cast<tmsize_t>(os->tellp() - pos);
 }
 
-static tsize_t
-_tiffisWriteProc(thandle_t, tdata_t, tsize_t)
+static tmsize_t
+_tiffisWriteProc(thandle_t, void*, tmsize_t)
 {
 	return 0;
 }
 
-static toff_t
-_tiffosSeekProc(thandle_t fd, toff_t off, int whence)
+static uint64
+_tiffosSeekProc(thandle_t fd, uint64 off, int whence)
 {
-	tiffos_data	*data = (tiffos_data *)fd;
-	ostream	*os = data->myOS;
+	tiffos_data	*data = reinterpret_cast<tiffos_data *>(fd);
+	ostream		*os = data->stream;
 
 	// if the stream has already failed, don't do anything
 	if( os->fail() )
-		return os->tellp();
+		return static_cast<uint64>(-1);
 
 	switch(whence) {
 	case SEEK_SET:
-	    os->seekp(data->myStreamStartPos + off, ios::beg);
+		{
+			// Compute 64-bit offset
+			uint64 new_offset = static_cast<uint64>(data->start_pos) + off;
+
+			// Verify that value does not overflow
+			ios::off_type offset = static_cast<ios::off_type>(new_offset);
+			if (static_cast<uint64>(offset) != new_offset)
+				return static_cast<uint64>(-1);
+			
+			os->seekp(offset, ios::beg);
 		break;
+		}
 	case SEEK_CUR:
-		os->seekp(off, ios::cur);
-		break;
+		{
+			// Verify that value does not overflow
+			ios::off_type offset = static_cast<ios::off_type>(off);
+			if (static_cast<uint64>(offset) != off)
+				return static_cast<uint64>(-1);
+
+			os->seekp(offset, ios::cur);
+			break;
+		}
 	case SEEK_END:
-		os->seekp(off, ios::end);
-		break;
+		{
+			// Verify that value does not overflow
+			ios::off_type offset = static_cast<ios::off_type>(off);
+			if (static_cast<uint64>(offset) != off)
+				return static_cast<uint64>(-1);
+
+			os->seekp(offset, ios::end);
+			break;
+		}
 	}
 
 	// Attempt to workaround problems with seeking past the end of the
@@ -116,14 +206,15 @@ _tiffosSeekProc(thandle_t fd, toff_t off, int whence)
 #else
 		ios::iostate	old_state;
 #endif
-		toff_t		origin=0;
+		ios::pos_type	origin;
 
 		old_state = os->rdstate();
 		// reset the fail bit or else tellp() won't work below
 		os->clear(os->rdstate() & ~ios::failbit);
 		switch( whence ) {
 			case SEEK_SET:
-				origin = data->myStreamStartPos;
+                        default:
+				origin = data->start_pos;
 				break;
 			case SEEK_CUR:
 				origin = os->tellp();
@@ -137,80 +228,104 @@ _tiffosSeekProc(thandle_t fd, toff_t off, int whence)
 		os->clear(old_state);	
 
 		// only do something if desired seek position is valid
-		if( origin + off > data->myStreamStartPos ) {
-			toff_t	num_fill;
+		if( (static_cast<uint64>(origin) + off) > static_cast<uint64>(data->start_pos) ) {
+			uint64	num_fill;
 
 			// clear the fail bit 
 			os->clear(os->rdstate() & ~ios::failbit);
 
 			// extend the stream to the expected size
 			os->seekp(0, ios::end);
-			num_fill = origin + off - (toff_t)os->tellp();
-			for( toff_t i = 0; i < num_fill; i++ )
+			num_fill = (static_cast<uint64>(origin)) + off - os->tellp();
+			for( uint64 i = 0; i < num_fill; i++ )
 				os->put('\0');
 
 			// retry the seek
-			os->seekp(origin + off, ios::beg);
+			os->seekp(static_cast<ios::off_type>(static_cast<uint64>(origin) + off), ios::beg);
 		}
 	}
 
-	return os->tellp();
+	return static_cast<uint64>(os->tellp());
 }
 
-static toff_t
-_tiffisSeekProc(thandle_t fd, toff_t off, int whence)
+static uint64
+_tiffisSeekProc(thandle_t fd, uint64 off, int whence)
 {
-	tiffis_data	*data = (tiffis_data *)fd;
+	tiffis_data	*data = reinterpret_cast<tiffis_data *>(fd);
 
 	switch(whence) {
 	case SEEK_SET:
-		data->myIS->seekg(data->myStreamStartPos + off, ios::beg);
-		break;
+		{
+			// Compute 64-bit offset
+			uint64 new_offset = static_cast<uint64>(data->start_pos) + off;
+			
+			// Verify that value does not overflow
+			ios::off_type offset = static_cast<ios::off_type>(new_offset);
+			if (static_cast<uint64>(offset) != new_offset)
+				return static_cast<uint64>(-1);
+
+			data->stream->seekg(offset, ios::beg);
+			break;
+		}
 	case SEEK_CUR:
-		data->myIS->seekg(off, ios::cur);
-		break;
+		{
+			// Verify that value does not overflow
+			ios::off_type offset = static_cast<ios::off_type>(off);
+			if (static_cast<uint64>(offset) != off)
+				return static_cast<uint64>(-1);
+
+			data->stream->seekg(offset, ios::cur);
+			break;
+		}
 	case SEEK_END:
-		data->myIS->seekg(off, ios::end);
-		break;
+		{
+			// Verify that value does not overflow
+			ios::off_type offset = static_cast<ios::off_type>(off);
+			if (static_cast<uint64>(offset) != off)
+				return static_cast<uint64>(-1);
+
+			data->stream->seekg(offset, ios::end);
+			break;
+		}
 	}
 
-	return ((long)data->myIS->tellg()) - data->myStreamStartPos;
+	return (uint64) (data->stream->tellg() - data->start_pos);
 }
 
-static toff_t
+static uint64
 _tiffosSizeProc(thandle_t fd)
 {
-	tiffos_data	*data = (tiffos_data *)fd;
-	ostream		*os = data->myOS;
-	toff_t		pos = os->tellp();
-	toff_t		len;
+	tiffos_data	*data = reinterpret_cast<tiffos_data *>(fd);
+	ostream		*os = data->stream;
+	ios::pos_type	pos = os->tellp();
+	ios::pos_type	len;
 
 	os->seekp(0, ios::end);
 	len = os->tellp();
 	os->seekp(pos);
 
-	return len;
+	return (uint64) len;
 }
 
-static toff_t
+static uint64
 _tiffisSizeProc(thandle_t fd)
 {
-	tiffis_data	*data = (tiffis_data *)fd;
-	int		pos = data->myIS->tellg();
-	int		len;
+	tiffis_data	*data = reinterpret_cast<tiffis_data *>(fd);
+	ios::pos_type	pos = data->stream->tellg();
+	ios::pos_type	len;
 
-	data->myIS->seekg(0, ios::end);
-	len = data->myIS->tellg();
-	data->myIS->seekg(pos);
+	data->stream->seekg(0, ios::end);
+	len = data->stream->tellg();
+	data->stream->seekg(pos);
 
-	return len;
+	return (uint64) len;
 }
 
 static int
 _tiffosCloseProc(thandle_t fd)
 {
 	// Our stream was not allocated by us, so it shouldn't be closed by us.
-	delete (tiffos_data *)fd;
+	delete reinterpret_cast<tiffos_data *>(fd);
 	return 0;
 }
 
@@ -218,18 +333,18 @@ static int
 _tiffisCloseProc(thandle_t fd)
 {
 	// Our stream was not allocated by us, so it shouldn't be closed by us.
-	delete (tiffis_data *)fd;
+	delete reinterpret_cast<tiffis_data *>(fd);
 	return 0;
 }
 
 static int
-_tiffDummyMapProc(thandle_t , tdata_t* , toff_t* )
+_tiffDummyMapProc(thandle_t , void** base, toff_t* size )
 {
 	return (0);
 }
 
 static void
-_tiffDummyUnmapProc(thandle_t , tdata_t , toff_t )
+_tiffDummyUnmapProc(thandle_t , void* base, toff_t size )
 {
 }
 
@@ -243,31 +358,39 @@ _tiffStreamOpen(const char* name, const char* mode, void *fd)
 
 	if( strchr(mode, 'w') ) {
 		tiffos_data	*data = new tiffos_data;
-		data->myOS = (ostream *)fd;
-		data->myStreamStartPos = data->myOS->tellp();
+		data->stream = reinterpret_cast<ostream *>(fd);
+		data->start_pos = data->stream->tellp();
 
 		// Open for writing.
 		tif = TIFFClientOpen(name, mode,
-				(thandle_t) data,
-				_tiffosReadProc, _tiffosWriteProc,
-				_tiffosSeekProc, _tiffosCloseProc,
+				reinterpret_cast<thandle_t>(data),
+				_tiffosReadProc,
+                                _tiffosWriteProc,
+				_tiffosSeekProc,
+                                _tiffosCloseProc,
 				_tiffosSizeProc,
-				_tiffDummyMapProc, _tiffDummyUnmapProc);
+				_tiffDummyMapProc,
+                                _tiffDummyUnmapProc);
 	} else {
 		tiffis_data	*data = new tiffis_data;
-		data->myIS = (istream *)fd;
-		data->myStreamStartPos = data->myIS->tellg();
+		data->stream = reinterpret_cast<istream *>(fd);
+		data->start_pos = data->stream->tellg();
 		// Open for reading.
 		tif = TIFFClientOpen(name, mode,
-				(thandle_t) data,
-				_tiffisReadProc, _tiffisWriteProc,
-				_tiffisSeekProc, _tiffisCloseProc,
+				reinterpret_cast<thandle_t>(data),
+				_tiffisReadProc,
+                                _tiffisWriteProc,
+				_tiffisSeekProc,
+                                _tiffisCloseProc,
 				_tiffisSizeProc,
-				_tiffDummyMapProc, _tiffDummyUnmapProc);
+				_tiffDummyMapProc,
+                                _tiffDummyUnmapProc);
 	}
 
 	return (tif);
 }
+
+} /* extern "C" */
 
 TIFF*
 TIFFStreamOpen(const char* name, ostream *os)
@@ -276,7 +399,7 @@ TIFFStreamOpen(const char* name, ostream *os)
 	// written to it yet, then tellp() will return -1 which will break us.
 	// We workaround this by writing out a dummy character and
 	// then seek back to the beginning.
-	if( !os->fail() && (int)os->tellp() < 0 ) {
+	if( !os->fail() && static_cast<int>(os->tellp()) < 0 ) {
 		*os << '\0';
 		os->seekp(0);
 	}
@@ -293,3 +416,10 @@ TIFFStreamOpen(const char* name, istream *is)
 }
 
 /* vim: set ts=8 sts=8 sw=8 noet: */
+/*
+  Local Variables:
+  mode: c
+  indent-tabs-mode: true
+  c-basic-offset: 8
+  End:
+*/

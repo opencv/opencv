@@ -1,4 +1,4 @@
-/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/tif_version.c,v 1.2.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
+/* $Header: /cvs/maptools/cvsroot/libtiff/libtiff/tif_version.c,v 1.3 2010-03-10 18:56:49 bfriesen Exp $ */
 /*
  * Copyright (c) 1992-1997 Sam Leffler
  * Copyright (c) 1992-1997 Silicon Graphics, Inc.

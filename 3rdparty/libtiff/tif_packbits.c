@@ -1,4 +1,4 @@
-/* $Id: tif_packbits.c,v 1.13.2.2 2010-06-08 18:50:42 bfriesen Exp $ */
+/* $Id: tif_packbits.c,v 1.20 2010-03-10 18:56:49 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -34,19 +34,19 @@
 #include <stdio.h>
 
 static int
-PackBitsPreEncode(TIFF* tif, tsample_t s)
+PackBitsPreEncode(TIFF* tif, uint16 s)
 {
 	(void) s;
 
-        if (!(tif->tif_data = (tidata_t)_TIFFmalloc(sizeof(tsize_t))))
+	if (!(tif->tif_data = (uint8*)_TIFFmalloc(sizeof(tmsize_t))))
 		return (0);
 	/*
 	 * Calculate the scanline/tile-width size in bytes.
 	 */
 	if (isTiled(tif))
-		*(tsize_t*)tif->tif_data = TIFFTileRowSize(tif);
+		*(tmsize_t*)tif->tif_data = TIFFTileRowSize(tif);
 	else
-		*(tsize_t*)tif->tif_data = TIFFScanlineSize(tif);
+		*(tmsize_t*)tif->tif_data = TIFFScanlineSize(tif);
 	return (1);
 }
 
@@ -59,20 +59,15 @@ PackBitsPostEncode(TIFF* tif)
 }
 
 /*
- * NB: tidata is the type representing *(tidata_t);
- *     if tidata_t is made signed then this type must
- *     be adjusted accordingly.
- */
-typedef unsigned char tidata;
-
-/*
  * Encode a run of pixels.
  */
 static int
-PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
+PackBitsEncode(TIFF* tif, uint8* buf, tmsize_t cc, uint16 s)
 {
 	unsigned char* bp = (unsigned char*) buf;
-	tidata_t op, ep, lastliteral;
+	uint8* op;
+	uint8* ep;
+	uint8* lastliteral;
 	long n, slop;
 	int b;
 	enum { BASE, LITERAL, RUN, LITERAL_RUN } state;
@@ -98,8 +93,8 @@ PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
 			 * front of the buffer.
 			 */
 			if (state == LITERAL || state == LITERAL_RUN) {
-				slop = op - lastliteral;
-				tif->tif_rawcc += lastliteral - tif->tif_rawcp;
+				slop = (long)(op - lastliteral);
+				tif->tif_rawcc += (tmsize_t)(lastliteral - tif->tif_rawcp);
 				if (!TIFFFlushData1(tif))
 					return (-1);
 				op = tif->tif_rawcp;
@@ -107,7 +102,7 @@ PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
 					*op++ = *lastliteral++;
 				lastliteral = tif->tif_rawcp;
 			} else {
-				tif->tif_rawcc += op - tif->tif_rawcp;
+				tif->tif_rawcc += (tmsize_t)(op - tif->tif_rawcp);
 				if (!TIFFFlushData1(tif))
 					return (-1);
 				op = tif->tif_rawcp;
@@ -118,17 +113,17 @@ PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
 			if (n > 1) {
 				state = RUN;
 				if (n > 128) {
-					*op++ = (tidata) -127;
-					*op++ = (tidataval_t) b;
+					*op++ = (uint8) -127;
+					*op++ = (uint8) b;
 					n -= 128;
 					goto again;
 				}
-				*op++ = (tidataval_t)(-(n-1));
-				*op++ = (tidataval_t) b;
+				*op++ = (uint8)(-(n-1));
+				*op++ = (uint8) b;
 			} else {
 				lastliteral = op;
 				*op++ = 0;
-				*op++ = (tidataval_t) b;
+				*op++ = (uint8) b;
 				state = LITERAL;
 			}
 			break;
@@ -136,33 +131,33 @@ PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
 			if (n > 1) {
 				state = LITERAL_RUN;
 				if (n > 128) {
-					*op++ = (tidata) -127;
-					*op++ = (tidataval_t) b;
+					*op++ = (uint8) -127;
+					*op++ = (uint8) b;
 					n -= 128;
 					goto again;
 				}
-				*op++ = (tidataval_t)(-(n-1));	/* encode run */
-				*op++ = (tidataval_t) b;
+				*op++ = (uint8)(-(n-1));	/* encode run */
+				*op++ = (uint8) b;
 			} else {			/* extend literal */
 				if (++(*lastliteral) == 127)
 					state = BASE;
-				*op++ = (tidataval_t) b;
+				*op++ = (uint8) b;
 			}
 			break;
 		case RUN:		/* last object was run */
 			if (n > 1) {
 				if (n > 128) {
-					*op++ = (tidata) -127;
-					*op++ = (tidataval_t) b;
+					*op++ = (uint8) -127;
+					*op++ = (uint8) b;
 					n -= 128;
 					goto again;
 				}
-				*op++ = (tidataval_t)(-(n-1));
-				*op++ = (tidataval_t) b;
+				*op++ = (uint8)(-(n-1));
+				*op++ = (uint8) b;
 			} else {
 				lastliteral = op;
 				*op++ = 0;
-				*op++ = (tidataval_t) b;
+				*op++ = (uint8) b;
 				state = LITERAL;
 			}
 			break;
@@ -173,7 +168,7 @@ PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
 			 * case we convert literal-run-literal
 			 * to a single literal.
 			 */
-			if (n == 1 && op[-2] == (tidata) -1 &&
+			if (n == 1 && op[-2] == (uint8) -1 &&
 			    *lastliteral < 126) {
 				state = (((*lastliteral) += 2) == 127 ?
 				    BASE : LITERAL);
@@ -183,7 +178,7 @@ PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
 			goto again;
 		}
 	}
-	tif->tif_rawcc += op - tif->tif_rawcp;
+	tif->tif_rawcc += (tmsize_t)(op - tif->tif_rawcp);
 	tif->tif_rawcp = op;
 	return (1);
 }
@@ -196,12 +191,12 @@ PackBitsEncode(TIFF* tif, tidata_t buf, tsize_t cc, tsample_t s)
  * when it was encoded by strips.
  */
 static int
-PackBitsEncodeChunk(TIFF* tif, tidata_t bp, tsize_t cc, tsample_t s)
+PackBitsEncodeChunk(TIFF* tif, uint8* bp, tmsize_t cc, uint16 s)
 {
-	tsize_t rowsize = *(tsize_t*)tif->tif_data;
+	tmsize_t rowsize = *(tmsize_t*)tif->tif_data;
 
-	while ((long)cc > 0) {
-		int	chunk = rowsize;
+	while (cc > 0) {
+		tmsize_t chunk = rowsize;
 		
 		if( cc < chunk )
 		    chunk = cc;
@@ -215,17 +210,18 @@ PackBitsEncodeChunk(TIFF* tif, tidata_t bp, tsize_t cc, tsample_t s)
 }
 
 static int
-PackBitsDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
+PackBitsDecode(TIFF* tif, uint8* op, tmsize_t occ, uint16 s)
 {
+	static const char module[] = "PackBitsDecode";
 	char *bp;
-	tsize_t cc;
+	tmsize_t cc;
 	long n;
 	int b;
 
 	(void) s;
 	bp = (char*) tif->tif_rawcp;
 	cc = tif->tif_rawcc;
-	while (cc > 0 && (long)occ > 0) {
+	while (cc > 0 && occ > 0) {
 		n = (long) *bp++, cc--;
 		/*
 		 * Watch out for compilers that
@@ -236,39 +232,37 @@ PackBitsDecode(TIFF* tif, tidata_t op, tsize_t occ, tsample_t s)
 		if (n < 0) {		/* replicate next byte -n+1 times */
 			if (n == -128)	/* nop */
 				continue;
-                        n = -n + 1;
-                        if( occ < n )
-                        {
-							TIFFWarningExt(tif->tif_clientdata, tif->tif_name,
-                                        "PackBitsDecode: discarding %ld bytes "
-                                        "to avoid buffer overrun",
-                                        n - occ);
-                            n = occ;
-                        }
+			n = -n + 1;
+			if( occ < (tmsize_t)n )
+			{
+				TIFFWarningExt(tif->tif_clientdata, module,
+				    "Discarding %lu bytes to avoid buffer overrun",
+				    (unsigned long) ((tmsize_t)n - occ));
+				n = (long)occ;
+			}
 			occ -= n;
-			b = *bp++, cc--;
+			b = *bp++, cc--;      /* TODO: may be reading past input buffer here when input data is corrupt or ends prematurely */
 			while (n-- > 0)
-				*op++ = (tidataval_t) b;
+				*op++ = (uint8) b;
 		} else {		/* copy next n+1 bytes literally */
-			if (occ < n + 1)
-                        {
-                            TIFFWarningExt(tif->tif_clientdata, tif->tif_name,
-                                        "PackBitsDecode: discarding %ld bytes "
-                                        "to avoid buffer overrun",
-                                        n - occ + 1);
-                            n = occ - 1;
-                        }
-                        _TIFFmemcpy(op, bp, ++n);
+			if (occ < (tmsize_t)(n + 1))
+			{
+				TIFFWarningExt(tif->tif_clientdata, module,
+				    "Discarding %lu bytes to avoid buffer overrun",
+				    (unsigned long) ((tmsize_t)n - occ + 1));
+				n = (long)occ - 1;
+			}
+			_TIFFmemcpy(op, bp, ++n);  /* TODO: may be reading past input buffer here when input data is corrupt or ends prematurely */
 			op += n; occ -= n;
 			bp += n; cc -= n;
 		}
 	}
-	tif->tif_rawcp = (tidata_t) bp;
+	tif->tif_rawcp = (uint8*) bp;
 	tif->tif_rawcc = cc;
 	if (occ > 0) {
-		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
-		    "PackBitsDecode: Not enough data for scanline %ld",
-		    (long) tif->tif_row);
+		TIFFErrorExt(tif->tif_clientdata, module,
+		    "Not enough data for scanline %lu",
+		    (unsigned long) tif->tif_row);
 		return (0);
 	}
 	return (1);
@@ -282,7 +276,7 @@ TIFFInitPackBits(TIFF* tif, int scheme)
 	tif->tif_decodestrip = PackBitsDecode;
 	tif->tif_decodetile = PackBitsDecode;
 	tif->tif_preencode = PackBitsPreEncode;
-        tif->tif_postencode = PackBitsPostEncode;
+	tif->tif_postencode = PackBitsPostEncode;
 	tif->tif_encoderow = PackBitsEncode;
 	tif->tif_encodestrip = PackBitsEncodeChunk;
 	tif->tif_encodetile = PackBitsEncodeChunk;

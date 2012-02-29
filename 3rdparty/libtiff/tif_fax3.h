@@ -1,4 +1,4 @@
-/* $Id: tif_fax3.h,v 1.5.2.3 2011-03-10 20:22:33 fwarmerdam Exp $ */
+/* $Id: tif_fax3.h,v 1.9 2011-03-10 20:23:07 fwarmerdam Exp $ */
 
 /*
  * Copyright (c) 1990-1997 Sam Leffler
@@ -52,7 +52,7 @@
  * data in the run array as needed (e.g. to append zero runs to bring
  * the count up to a nice multiple).
  */
-typedef	void (*TIFFFaxFillFunc)(unsigned char*, uint32*, uint32*, uint32);
+typedef void (*TIFFFaxFillFunc)(unsigned char*, uint32*, uint32*, uint32);
 
 /*
  * The default run filler; made external for other decoders.
@@ -60,36 +60,36 @@ typedef	void (*TIFFFaxFillFunc)(unsigned char*, uint32*, uint32*, uint32);
 #if defined(__cplusplus)
 extern "C" {
 #endif
-extern	void _TIFFFax3fillruns(unsigned char*, uint32*, uint32*, uint32);
+extern void _TIFFFax3fillruns(unsigned char*, uint32*, uint32*, uint32);
 #if defined(__cplusplus)
 }
 #endif
 
 
 /* finite state machine codes */
-#define S_Null		0
-#define S_Pass		1
-#define S_Horiz		2
-#define S_V0		3
-#define S_VR		4
-#define S_VL		5
-#define S_Ext		6
-#define S_TermW		7
-#define S_TermB		8
-#define S_MakeUpW	9
-#define S_MakeUpB	10
-#define S_MakeUp	11
-#define S_EOL		12
+#define S_Null     0
+#define S_Pass     1
+#define S_Horiz    2
+#define S_V0       3
+#define S_VR       4
+#define S_VL       5
+#define S_Ext      6
+#define S_TermW    7
+#define S_TermB    8
+#define S_MakeUpW  9
+#define S_MakeUpB  10
+#define S_MakeUp   11
+#define S_EOL      12
 
-typedef struct {		/* state table entry */
-	unsigned char State;	/* see above */
-	unsigned char Width;	/* width of code in bits */
-	uint32	Param;		/* unsigned 32-bit run length in bits */
+typedef struct {                /* state table entry */
+	unsigned char State;    /* see above */
+	unsigned char Width;    /* width of code in bits */
+	uint32 Param;           /* unsigned 32-bit run length in bits */
 } TIFFFaxTabEnt;
 
-extern	const TIFFFaxTabEnt TIFFFaxMainTable[];
-extern	const TIFFFaxTabEnt TIFFFaxWhiteTable[];
-extern	const TIFFFaxTabEnt TIFFFaxBlackTable[];
+extern const TIFFFaxTabEnt TIFFFaxMainTable[];
+extern const TIFFFaxTabEnt TIFFFaxWhiteTable[];
+extern const TIFFFaxTabEnt TIFFFaxBlackTable[];
 
 /*
  * The following macros define the majority of the G3/G4 decoder

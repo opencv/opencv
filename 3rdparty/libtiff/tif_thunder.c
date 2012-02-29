@@ -1,4 +1,4 @@
-/* $Id: tif_thunder.c,v 1.5.2.2 2011-03-21 16:01:28 fwarmerdam Exp $ */
+/* $Id: tif_thunder.c,v 1.12 2011-04-02 20:54:09 bfriesen Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -63,7 +63,7 @@ static const int threebitdeltas[8] = { 0, 1, 2, 3, 0, -3, -2, -1 };
 	  if (npixels++ & 1)                  \
 	    *op++ |= lastpixel;               \
 	  else                                \
-	    op[0] = (tidataval_t) (lastpixel << 4); \
+	    op[0] = (uint8) (lastpixel << 4); \
         }                                     \
 }
 
@@ -85,12 +85,13 @@ ThunderSetupDecode(TIFF* tif)
 }
 
 static int
-ThunderDecode(TIFF* tif, tidata_t op, tsize_t maxpixels)
+ThunderDecode(TIFF* tif, uint8* op, tmsize_t maxpixels)
 {
+	static const char module[] = "ThunderDecode";
 	register unsigned char *bp;
-	register tsize_t cc;
+	register tmsize_t cc;
 	unsigned int lastpixel;
-	tsize_t npixels;
+	tmsize_t npixels;
 
 	bp = (unsigned char *)tif->tif_rawcp;
 	cc = tif->tif_rawcc;
@@ -114,7 +115,7 @@ ThunderDecode(TIFF* tif, tidata_t op, tsize_t maxpixels)
 			npixels += n;
 			if (npixels < maxpixels) {
 				for (; n > 0; n -= 2)
-					*op++ = (tidataval_t) lastpixel;
+					*op++ = (uint8) lastpixel;
 			}
 			if (n == -1)
 				*--op &= 0xf0;
@@ -139,41 +140,59 @@ ThunderDecode(TIFF* tif, tidata_t op, tsize_t maxpixels)
 			break;
 		}
 	}
-	tif->tif_rawcp = (tidata_t) bp;
+	tif->tif_rawcp = (uint8*) bp;
 	tif->tif_rawcc = cc;
 	if (npixels != maxpixels) {
-		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
-		    "ThunderDecode: %s data at scanline %ld (%lu != %lu)",
-		    npixels < maxpixels ? "Not enough" : "Too much",
-		    (long) tif->tif_row, (long) npixels, (long) maxpixels);
+#if defined(__WIN32__) && (defined(_MSC_VER) || defined(__MINGW32__))
+		TIFFErrorExt(tif->tif_clientdata, module,
+			     "%s data at scanline %lu (%I64u != %I64u)",
+			     npixels < maxpixels ? "Not enough" : "Too much",
+			     (unsigned long) tif->tif_row,
+			     (unsigned __int64) npixels,
+			     (unsigned __int64) maxpixels);
+#else
+		TIFFErrorExt(tif->tif_clientdata, module,
+			     "%s data at scanline %lu (%llu != %llu)",
+			     npixels < maxpixels ? "Not enough" : "Too much",
+			     (unsigned long) tif->tif_row,
+			     (unsigned long long) npixels,
+			     (unsigned long long) maxpixels);
+#endif
 		return (0);
 	}
-	return (1);
+
+        return (1);
 }
 
 static int
-ThunderDecodeRow(TIFF* tif, tidata_t buf, tsize_t occ, tsample_t s)
+ThunderDecodeRow(TIFF* tif, uint8* buf, tmsize_t occ, uint16 s)
 {
-	tidata_t row = buf;
+	static const char module[] = "ThunderDecodeRow";
+	uint8* row = buf;
 	
 	(void) s;
-	while ((long)occ > 0) {
+	if (occ % tif->tif_scanlinesize)
+	{
+		TIFFErrorExt(tif->tif_clientdata, module, "Fractional scanlines cannot be read");
+		return (0);
+	}
+	while (occ > 0) {
 		if (!ThunderDecode(tif, row, tif->tif_dir.td_imagewidth))
 			return (0);
 		occ -= tif->tif_scanlinesize;
 		row += tif->tif_scanlinesize;
 	}
-
-        return (1);
+	return (1);
 }
 
 int
 TIFFInitThunderScan(TIFF* tif, int scheme)
 {
 	(void) scheme;
-	tif->tif_decoderow = ThunderDecodeRow;
-	tif->tif_decodestrip = ThunderDecodeRow;
+
         tif->tif_setupdecode = ThunderSetupDecode;
+	tif->tif_decoderow = ThunderDecodeRow;
+	tif->tif_decodestrip = ThunderDecodeRow; 
 	return (1);
 }
 #endif /* THUNDER_SUPPORT */
@@ -186,4 +205,3 @@ TIFFInitThunderScan(TIFF* tif, int scheme)
  * fill-column: 78
  * End:
  */
-
