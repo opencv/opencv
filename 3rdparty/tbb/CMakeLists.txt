@@ -92,16 +92,16 @@ list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
 add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
                 -D__TBB_BUILD=1                        #required
-                -D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1 #needed by TBB 4.0 update 1,2
-                -D__TBB_TASK_CPP_DIRECTLY_INCLUDED=1   #needed by TBB 4.0 update 3
+                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android
+                -D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1 #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
+                -DUSE_PTHREAD                          #required
                 -DTBB_USE_GCC_BUILTINS=1               #required
                 -DTBB_USE_DEBUG=0                      #just ot be sure
                 -DTBB_NO_LEGACY=1                      #don't need backward compatibility
-                -DUSE_PTHREAD                          #required
                 -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
                )
 
-add_library(tbb STATIC ${lib_srcs} ${lib_hdrs})
+add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/version_string.tmp")
 target_link_libraries(tbb c m dl)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")

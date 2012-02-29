@@ -108,7 +108,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     # Profiling?
     if(ENABLE_PROFILING)
         set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -pg -g")
-    elseif(NOT APPLE)
+    elseif(NOT APPLE AND NOT ANDROID)
         # Remove unreferenced functions: function level linking
         set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -ffunction-sections")
     endif()

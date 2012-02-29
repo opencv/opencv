@@ -1,27 +1,41 @@
-#include <sys/syscall.h>
-#include <pthread.h>
+#include <cstdio>
 
-typedef unsigned long cpu_set_t;
-#define __NCPUBITS      (8 * sizeof (unsigned long))
-
-
-#define CPU_SET(cpu, cpusetp) \
-	        ((*(cpusetp)) |= (1UL << ((cpu) % __NCPUBITS)))
-
-#define CPU_ISSET(cpu, cpusetp) \
-	        ((*(cpusetp)) & (1UL << ((cpu) % __NCPUBITS)))
-
-#define CPU_ZERO(cpusetp) \
-	        memset((cpusetp), 0, sizeof(cpu_set_t))
-
-inline static int
-sched_setaffinity(pid_t pid, size_t len, cpu_set_t const * cpusetp)
+static inline int getPossibleCPUs()
 {
-	return syscall(__NR_sched_setaffinity, pid, len, cpusetp);
+   FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
+   if(!cpuPossible)
+       return 1;
+
+   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
+   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
+   fclose(cpuPossible);
+   if(!pbuf)
+      return 1;
+
+   //parse string of form "0-1,3,5-7,10,13-15"
+   int cpusAvailable = 0;
+
+   while(*pbuf)
+   {
+      const char* pos = pbuf;
+      bool range = false;
+      while(*pbuf && *pbuf != ',')
+      {
+          if(*pbuf == '-') range = true;
+          ++pbuf;
+      }
+      if(*pbuf) *pbuf++ = 0;
+      if(!range)
+        ++cpusAvailable;
+      else
+      {
+          int rstart = 0, rend = 0;
+          sscanf(pos, "%d-%d", &rstart, &rend);
+          cpusAvailable += rend - rstart + 1;
+      }
+      
+   }
+   return cpusAvailable ? cpusAvailable : 1;
 }
 
-inline static int
-sched_getaffinity(pid_t pid, size_t len, cpu_set_t const * cpusetp)
-{
-	return syscall(__NR_sched_getaffinity, pid, len, cpusetp);
-}
+#define __TBB_HardwareConcurrency() getPossibleCPUs()
