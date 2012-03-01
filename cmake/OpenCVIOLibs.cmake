@@ -32,7 +32,7 @@ if(WITH_TIFF AND NOT TIFF_FOUND)
   set(TIFF_LIBRARY libtiff)
   set(TIFF_LIBRARIES ${TIFF_LIBRARY})
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libtiff")
-  set(TIFF_INCLUDE_DIR "${${TIFF_LIBRARY}_SOURCE_DIR}")
+  set(TIFF_INCLUDE_DIR "${${TIFF_LIBRARY}_SOURCE_DIR}" "${${TIFF_LIBRARY}_BINARY_DIR}")
 endif()
 
 ################### libjpeg - optional
