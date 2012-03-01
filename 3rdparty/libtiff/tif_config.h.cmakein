@@ -48,7 +48,9 @@
 #cmakedefine HAVE_SYS_TYPES_H
 
 /* Define to 1 if you have the <unistd.h> header file. */
+#ifndef HAVE_UNISTD_H
 #cmakedefine HAVE_UNISTD_H
+#endif
 
 /* Native cpu byte order: 1 if big-endian (Motorola) or 0 if little-endian
    (Intel) */
