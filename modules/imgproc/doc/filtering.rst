@@ -10,9 +10,17 @@ Functions and classes described in this section are used to perform various line
 
 Another common feature of the functions and classes described in this section is that, unlike simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For example, if you want to smooth an image using a Gaussian
 :math:`3 \times 3` filter, then, when processing the left-most pixels in each row, you need pixels to the left of them, that is, outside of the image. You can let these pixels be the same as the left-most image pixels ("replicated border" extrapolation method), or assume that all the non-existing pixels are zeros ("constant border" extrapolation method), and so on.
-OpenCV enables you to specify the extrapolation method. For details, see the function  :ocv:func:`borderInterpolate`  and discussion of the  ``borderType``  parameter in various functions below.
+OpenCV enables you to specify the extrapolation method. For details, see the function  :ocv:func:`borderInterpolate`  and discussion of the  ``borderType``  parameter in the section and various functions below. ::
 
-
+   /*
+    Various border types, image boundaries are denoted with '|'
+    
+    * BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
+    * BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
+    * BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
+    * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg        
+    * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
+    */
 
 BaseColumnFilter
 ----------------
