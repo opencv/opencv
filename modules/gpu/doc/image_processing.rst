@@ -247,7 +247,7 @@ Computes a convolution (or cross-correlation) of two images.
 
     :param templ: Template image. The size is not greater than the  ``image`` size. The type is the same as  ``image`` .
 
-    :param result: Result image. The size and type is the same as  ``image`` .
+    :param result: Result image. If  ``image`` is  *W x H*  and ``templ`` is  *w x h*, then  ``result`` must be *W-w+1 x H-h+1*.
 
     :param ccorr: Flags to evaluate cross-correlation instead of convolution.
 
