@@ -101,7 +101,11 @@ if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
+include_directories(${ZLIB_INCLUDE_DIR})
+
 add_library(${TIFF_LIBRARY} STATIC ${lib_srcs})
+target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})
+
 set_target_properties(${TIFF_LIBRARY}
 	PROPERTIES
 	OUTPUT_NAME "${TIFF_LIBRARY}"
