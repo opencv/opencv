@@ -86,6 +86,11 @@ if(WITH_PNG AND NOT PNG_FOUND)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libpng")
   set(PNG_INCLUDE_DIR "${${PNG_LIBRARY}_SOURCE_DIR}")
   set(PNG_DEFINITIONS "")
+  unset(HAVE_LIBPNG_PNG_H CACHE)
+  unset(HAVE_PNG_H CACHE)
+  unset(HAVE_PNG_H CACHE)
+  unset(PNG_LIBRARY CACHE)
+  unset(PNG_PNG_INCLUDE_DIR CACHE)
 endif()
 
 ################### OpenEXR - optional
