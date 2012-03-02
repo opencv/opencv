@@ -5,6 +5,7 @@
  *      Author: Ethan Rublee
  *
  * A starter sample for using opencv, get a video stream and display the images
+ * Use http://datamatrix.kaywa.com/  to generate datamatrix images using strings of length 3 or less.
  * easy as CV_PI right?
  */
 #include "opencv2/highgui/highgui.hpp"
@@ -29,6 +30,11 @@ void help(char** av)
       << "\tThe program captures frames from a camera connected to your computer.\n"
       << "\tTo find the video device number, try ls /dev/video* \n"
       << "\tYou may also pass a video file, like my_vide.avi instead of a device number"
+      << "\n"
+      << "DATA:\n"
+      << "Generate a datamatrix from  from http://datamatrix.kaywa.com/  \n"
+      << "  NOTE: This only handles strings of len 3 or less\n"
+      << "  Resize the screen to be large enough for your camera to see, and it should find an read it.\n\n"
       << endl;
 }
 
