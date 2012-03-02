@@ -109,7 +109,7 @@ addWeighted
 ---------------
 Computes the weighted sum of two arrays.
 
-.. ocv:function:: void gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null());
+.. ocv:function:: void gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null())
 
     :param src1: First source array.
 

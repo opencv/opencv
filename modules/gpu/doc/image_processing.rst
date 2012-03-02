@@ -324,7 +324,7 @@ gpu::remap
 --------------
 Applies a generic geometrical transformation to an image.
 
-.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), Stream& stream = Stream::Null()
+.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -678,7 +678,7 @@ Equalizes the histogram of a grayscale image.
 
 
 gpu::buildWarpPlaneMaps
--------------------
+-----------------------
 Builds plane warping maps.
 
 .. ocv:function:: void gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, double dist, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
@@ -688,7 +688,7 @@ Builds plane warping maps.
 
 
 gpu::buildWarpCylindricalMaps
--------------------
+-----------------------------
 Builds cylindrical warping maps.
 
 .. ocv:function:: void gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
@@ -698,7 +698,7 @@ Builds cylindrical warping maps.
 
 
 gpu::buildWarpSphericalMaps
--------------------
+---------------------------
 Builds spherical warping maps.
 
 .. ocv:function:: void gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())

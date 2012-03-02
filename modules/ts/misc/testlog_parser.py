@@ -8,7 +8,6 @@ class TestInfo(object):
         self.name = xmlnode.getAttribute("name")
         self.value_param = xmlnode.getAttribute("value_param")
         self.type_param = xmlnode.getAttribute("type_param")
-        self.name = xmlnode.getAttribute("name")
         if xmlnode.getElementsByTagName("failure"):
             self.status = "failed"
         else:

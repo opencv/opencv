@@ -212,7 +212,7 @@ Two types of constructors.
     :param classNames: A set of trained models names. If it's empty then the name of each model will be constructed from the name of file containing the model. E.g. the model stored in "/home/user/cat.xml" will get the name "cat".
 
 LatentSvmDetector::~LatentSvmDetector
-------------------------------------
+-------------------------------------
 Destructor.
 
 .. ocv:function:: LatentSvmDetector::~LatentSvmDetector()

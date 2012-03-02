@@ -20,7 +20,7 @@ Note that ``opencv_traincascade`` application can use TBB for multi-threading. T
 
 Also there are some auxilary utilities related to the training. 
 
-    * ``opencv_createsamples`` is used to prepare a training dataset of positive and test samples. ``opencv_createsamples`` produces dataset of positive samples in a format that is supported by both ``opencv_haartraining`` and ``opencv_traincascade`` applications. The output is a file with *.vec extension, it is a binary format which contains images.
+    * ``opencv_createsamples`` is used to prepare a training dataset of positive and test samples. ``opencv_createsamples`` produces dataset of positive samples in a format that is supported by both ``opencv_haartraining`` and ``opencv_traincascade`` applications. The output is a file with \*.vec extension, it is a binary format which contains images.
     
     * ``opencv_performance`` may be used to evaluate the quality of classifiers, but for trained by ``opencv_haartraining`` only. It takes a collection of marked up images, runs the classifier and reports the performance, i.e. number of found objects, number of missed objects, number of false alarms and other information.
 

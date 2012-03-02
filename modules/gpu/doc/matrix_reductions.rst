@@ -10,7 +10,7 @@ gpu::meanStdDev
 Computes a mean value and a standard deviation of matrix elements.
 
 .. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev)
-.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf);
+.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev, GpuMat& buf)
 
     :param mtx: Source matrix.  ``CV_8UC1``  matrices are supported for now.
 
@@ -163,7 +163,7 @@ The function does not work with ``CV_64F`` images on GPUs with the compute capab
 
 
 gpu::reduce
-------
+-----------
 Reduces a matrix to a vector.
 
 .. ocv:function:: void gpu::reduce(const GpuMat& mtx, GpuMat& vec, int dim, int reduceOp, int dtype = -1, Stream& stream = Stream::Null())
