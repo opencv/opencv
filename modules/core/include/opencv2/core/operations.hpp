@@ -52,7 +52,9 @@
 #ifdef __cplusplus
 
 /////// exchange-add operation for atomic operations on reference counters ///////
-#ifdef __GNUC__
+#ifdef __INTEL_COMPILER // atomic increment on the Intel(tm) compiler
+  #define CV_XADD(addr,delta) _InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
+#elif defined __GNUC__
     
   #if __GNUC__*10 + __GNUC_MINOR__ >= 42
 
@@ -80,11 +82,10 @@
   #undef max
   #undef abs
   #define CV_XADD(addr,delta) InterlockedExchangeAdd((long volatile*)(addr), (delta))
-#else
 
+#else
   static inline int CV_XADD(int* addr, int delta)
-  { int tmp = *addr; *addr += delta; return tmp; }
-    
+  { int tmp = *addr; *addr += delta; return tmp; }    
 #endif
 
 #include <limits>
