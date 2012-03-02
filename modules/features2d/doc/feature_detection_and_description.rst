@@ -295,10 +295,9 @@ Class for extracting ORB features and descriptors from an image. ::
             int edge_threshold_;
         };
 
-        // c:function::default constructor
-        ORB();
         // constructor that initializes all the algorithm parameters
-        ORB( const CommonParams detector_params );
+        // n_features is the number of desired features
+        ORB(size_t n_features = 500, const CommonParams & detector_params = CommonParams());
         // returns the number of elements in each descriptor (32 bytes)
         int descriptorSize() const;
         // detects keypoints using ORB
