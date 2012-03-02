@@ -124,17 +124,23 @@ static void test_threshold( const Mat& _src, Mat& _dst,
     int i, j;
     int depth = _src.depth(), cn = _src.channels();
     int width_n = _src.cols*cn, height = _src.rows;
-    int ithresh = cvFloor(thresh), ithresh2, imaxval = cvRound(maxval);
+    int ithresh = cvFloor(thresh);
+    int imaxval, ithresh2;
     
     if( depth == CV_8U )
     {
         ithresh2 = saturate_cast<uchar>(ithresh);
-        imaxval = saturate_cast<uchar>(imaxval);
+        imaxval = saturate_cast<uchar>(maxval);
     }
     else if( depth == CV_16S )
     {
         ithresh2 = saturate_cast<short>(ithresh);
-        imaxval = saturate_cast<short>(imaxval);
+        imaxval = saturate_cast<short>(maxval);
+    }
+    else
+    {
+        ithresh2 = cvRound(ithresh);
+        imaxval = cvRound(maxval);
     }
 
     assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );

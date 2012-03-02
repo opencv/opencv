@@ -117,7 +117,7 @@ int main(int argc, const char ** argv)
 
   Mat outimg;
   drawMatches(im2, kpts_2, im1, kpts_1, matches_popcount, outimg, Scalar::all(-1), Scalar::all(-1),
-              reinterpret_cast<const vector<char>&> (outlier_mask));
+              *(const vector<char>*)(void*)(&outlier_mask));
   imshow("matches - popcount - outliers removed", outimg);
 
   Mat warped;

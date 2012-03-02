@@ -314,6 +314,9 @@ endif()
 #  Detect 3rd-party tools and libraries
 # ----------------------------------------------------------------------------
 
+# IO libraries
+include(cmake/OpenCVIOLibs.cmake REQUIRED)
+
 #Graphic libraries
 set(HAVE_OPENGL 0)
 if(UNIX)
@@ -432,9 +435,6 @@ if(UNIX)
         add_definitions(-DHAVE_ALLOCA -DHAVE_ALLOCA_H -DHAVE_LIBPTHREAD -DHAVE_UNISTD_H)
     endif()
 endif()
-
-# IO libraries
-include(cmake/OpenCVIOLibs.cmake REQUIRED)
 
 #################### LATEX for dpf documentation ##################
 if(BUILD_DOCS)
@@ -814,7 +814,7 @@ status("  Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTAB
 status("")
 status("  Interfaces:")
 status("    Python:"              HAVE_opencv_python THEN YES ELSE NO)
-status("    Python numpy:"        PYTHON_USE_NUMPY THEN YES ELSE "NO (Python wrappers will not be generated)")
+status("    Python numpy:"        PYTHON_USE_NUMPY THEN YES ELSE "NO (Python wrappers can not be generated)")
 if(ANDROID)
   status("    Java:" HAVE_opencv_java THEN YES ELSE NO)
 endif()

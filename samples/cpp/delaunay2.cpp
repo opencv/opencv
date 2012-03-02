@@ -55,8 +55,6 @@ static void locate_point( Mat& img, Subdiv2D& subdiv, Point2f fp, Scalar active_
 {
     int e0=0, vertex=0;
     
-    CvSubdiv2DEdge e00;
-    
     subdiv.locate(fp, e0, vertex);
     
     if( e0 > 0 )

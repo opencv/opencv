@@ -73,10 +73,9 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	FILE* f;
+	FILE* f = 0;
 	VideoCapture cap;
 	char test_file[20] = "";
-	char dir[20] = "";
 
 	if (strcmp(argv[1], "live") != 0)
 	{
