@@ -541,6 +541,7 @@ macro(ocv_add_perf_tests)
 
       add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES})
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${perf_deps} ${OPENCV_LINKER_LIBS})
+      add_dependencies(opencv_perf_tests ${the_target})
 
       # Additional target properties
       set_target_properties(${the_target} PROPERTIES
@@ -591,6 +592,7 @@ macro(ocv_add_accuracy_tests)
     
       add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
+      add_dependencies(opencv_tests ${the_target})
 
       # Additional target properties
       set_target_properties(${the_target} PROPERTIES

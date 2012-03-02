@@ -37,17 +37,37 @@ endif()
 # performance tests, for "make perf"
 #-----------------------------------
 if(BUILD_PERF_TESTS AND PYTHON_EXECUTABLE)
-    if(CMAKE_VERSION VERSION_GREATER "2.8.2")
-        add_custom_target(perf
-            ${PYTHON_EXECUTABLE} "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py" --configuration $<CONFIGURATION> "${CMAKE_BINARY_DIR}"
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-            DEPENDS "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py"
-        )
-    else()
-        add_custom_target(perf
-            ${PYTHON_EXECUTABLE} "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py" "${CMAKE_BINARY_DIR}"
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-            DEPENDS "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py"
-        )
-    endif()
+  if(CMAKE_VERSION VERSION_GREATER "2.8.2")
+    add_custom_target(perf
+      ${PYTHON_EXECUTABLE} "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py" --configuration $<CONFIGURATION> "${CMAKE_BINARY_DIR}"
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+      DEPENDS "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py"
+     )
+  else()
+    add_custom_target(perf
+      ${PYTHON_EXECUTABLE} "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py" "${CMAKE_BINARY_DIR}"
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+      DEPENDS "${OpenCV_SOURCE_DIR}/modules/ts/misc/run.py"
+      )
+  endif()
+  if(ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(perf PROPERTIES FOLDER "tests performance")
+  endif()
 endif()
+
+#-----------------------------------
+# spefial targets to build all tests
+#-----------------------------------
+if(BUILD_TESTS)
+  add_custom_target(opencv_tests)
+  if(ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(opencv_tests PROPERTIES FOLDER "tests accuracy")
+  endif()
+endif()
+if(BUILD_PERF_TESTS)
+  add_custom_target(opencv_perf_tests)
+  if(ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(opencv_perf_tests PROPERTIES FOLDER "tests performance")
+  endif()
+endif()
+
