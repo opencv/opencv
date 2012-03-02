@@ -2161,7 +2161,7 @@ The sample below is the function that takes two matrices. The first function sto
             // and then reconstruct it
             pca.backProject(coeffs, reconstructed);
             // and measure the error
-            printf("
+            printf("%d. diff = %g\n", i, norm(vec, reconstructed, NORM_L2));
         }
         return pca;
     }
