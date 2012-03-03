@@ -247,7 +247,7 @@ endif()
 # ----------------------------------------------------------------------------
 set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cvconfig.h")
 add_definitions(-DHAVE_CVCONFIG_H)
-include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
+ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 
 
 # ----------------------------------------------------------------------------
@@ -331,7 +331,7 @@ if(UNIX)
                 if(OPENGL_FOUND)
                     set(HAVE_OPENGL 1)
                     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-                    include_directories(${OPENGL_INCLUDE_DIR})
+                    ocv_include_directories(${OPENGL_INCLUDE_DIR})
                 endif()
             endif()
         endif()
@@ -502,7 +502,7 @@ endif()
 
 if(IPP_FOUND)
   add_definitions(-DHAVE_IPP)
-  include_directories(${IPP_INCLUDE_DIRS})
+  ocv_include_directories(${IPP_INCLUDE_DIRS})
   link_directories(${IPP_LIBRARY_DIRS})
   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_LIBRARIES})
 endif()
@@ -538,7 +538,7 @@ if(WITH_EIGEN)
                   "/usr/local/include/eigen3" "/opt/include/eigen3" "/usr/include/eigen3"
             DOC "The path to Eigen2/Eigen3 headers")
   if(EIGEN_INCLUDE_PATH)
-    include_directories(${EIGEN_INCLUDE_PATH})
+    ocv_include_directories(${EIGEN_INCLUDE_PATH})
     set(HAVE_EIGEN 1)
   endif()
 endif()
@@ -569,7 +569,7 @@ if(WIN32)
     if(OPENGL_FOUND)
       set(HAVE_OPENGL 1)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-      include_directories(${OPENGL_INCLUDE_DIR})
+      ocv_include_directories(${OPENGL_INCLUDE_DIR})
     endif()
   endif()
 endif()
@@ -602,9 +602,6 @@ add_subdirectory(doc)
 
 # various data that is used by cv libraries and/or demo applications.
 add_subdirectory(data)
-
-# 3rdparty libraries on-board
-add_subdirectory(3rdparty)
 
 # extra applications
 add_subdirectory(apps)

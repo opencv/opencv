@@ -9,11 +9,8 @@ ocv_check_dependencies(${OPENCV_ANDROID_SAMPLES_REQUIRED_DEPS} opencv_java)
 if(BUILD_ANDROID_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   project(android_samples)
 
-  foreach(m ${OPENCV_ANDROID_SAMPLES_REQUIRED_DEPS})
-    string(REPLACE "opencv_" "" m "${m}")
-    include_directories("${OpenCV_SOURCE_DIR}/modules/${m}/include")
-  endforeach()
-
+  ocv_include_modules(${OPENCV_ANDROID_SAMPLES_REQUIRED_DEPS})
+  
   file(GLOB android_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
   list(REMOVE_ITEM android_samples hello-android)
   list(SORT android_samples)

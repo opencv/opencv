@@ -12,8 +12,8 @@ endif()
 set(the_description "The python bindings")
 ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib)
 
-include_directories(${PYTHON_INCLUDE_PATH})
-include_directories(
+ocv_include_directories(${PYTHON_INCLUDE_PATH})
+ocv_include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     "${OpenCV_SOURCE_DIR}/modules/core/include"
     "${OpenCV_SOURCE_DIR}/modules/flann/include"

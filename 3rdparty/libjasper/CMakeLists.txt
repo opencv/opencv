@@ -8,7 +8,7 @@ project(${JASPER_LIBRARY})
 add_definitions(-DEXCLUDE_MIF_SUPPORT -DEXCLUDE_PNM_SUPPORT -DEXCLUDE_BMP_SUPPORT -DEXCLUDE_RAS_SUPPORT  -DEXCLUDE_JPG_SUPPORT -DEXCLUDE_PGX_SUPPORT)
 
 # List of C++ files:
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+ocv_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # The .cpp files:
 file(GLOB lib_srcs *.c)

@@ -81,10 +81,10 @@ endif()
 
 set(TBB_INCLUDE_DIRS "${tbb_src_dir}/include" PARENT_SCOPE)
 
-include_directories("${tbb_src_dir}/include"
-                    "${tbb_src_dir}/src/"
-                    "${tbb_src_dir}/src/rml/include"
-                    "${CMAKE_CURRENT_SOURCE_DIR}")
+ocv_include_directories("${tbb_src_dir}/include"
+                        "${tbb_src_dir}/src/"
+                        "${tbb_src_dir}/src/rml/include"
+                        "${CMAKE_CURRENT_SOURCE_DIR}")
 
 file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")

@@ -6,8 +6,7 @@ project(${PNG_LIBRARY})
 
 # List of C++ files:
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
-include_directories(${ZLIB_INCLUDE_DIR})
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIR})
 
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)

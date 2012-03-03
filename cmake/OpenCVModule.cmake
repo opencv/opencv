@@ -311,10 +311,10 @@ macro(ocv_include_modules)
   foreach(d ${ARGN})
     if(d MATCHES "^opencv_" AND HAVE_${d})
       if (EXISTS "${OPENCV_MODULE_${d}_LOCATION}/include")
-        include_directories("${OPENCV_MODULE_${d}_LOCATION}/include")
+        ocv_include_directories("${OPENCV_MODULE_${d}_LOCATION}/include")
       endif()
     elseif(EXISTS "${d}")
-      include_directories("${d}")
+      ocv_include_directories("${d}")
     endif()
   endforeach()
 endmacro()
@@ -322,10 +322,10 @@ endmacro()
 # setup include path for OpenCV headers for specified module
 # ocv_module_include_directories(<extra include directories/extra include modules>)
 macro(ocv_module_include_directories)
-  include_directories("${OPENCV_MODULE_${the_module}_LOCATION}/include"
-                      "${OPENCV_MODULE_${the_module}_LOCATION}/src"
-                      "${CMAKE_CURRENT_BINARY_DIR}"#for precompiled headers
-                      )
+  ocv_include_directories("${OPENCV_MODULE_${the_module}_LOCATION}/include"
+                          "${OPENCV_MODULE_${the_module}_LOCATION}/src"
+                          "${CMAKE_CURRENT_BINARY_DIR}"#for precompiled headers
+                          )
   ocv_include_modules(${OPENCV_MODULE_${the_module}_DEPS} ${ARGN})
 endmacro()
 
@@ -378,6 +378,7 @@ endmacro()
 macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES})
   target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+  add_dependencies(opencv_modules ${the_module})
   
   if(ENABLE_SOLUTION_FOLDERS)
     set_target_properties(${the_module} PROPERTIES FOLDER "modules")

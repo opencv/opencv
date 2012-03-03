@@ -11,7 +11,7 @@ endif()
 
 project(haartraining)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
 ocv_include_modules(${OPENCV_HAARTRAINING_DEPS})
 
 if(WIN32)

@@ -24,7 +24,7 @@ endif()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmakein"
                "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h" @ONLY)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIR})
 
 # List of C++ files:
 set(lib_srcs
@@ -100,8 +100,6 @@ endif()
 if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
-
-include_directories(${ZLIB_INCLUDE_DIR})
 
 add_library(${TIFF_LIBRARY} STATIC ${lib_srcs})
 target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})

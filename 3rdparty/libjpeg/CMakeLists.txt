@@ -6,7 +6,7 @@ project(${JPEG_LIBRARY})
 
 # List of C++ files:
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+ocv_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # The .cpp files:
 file(GLOB lib_srcs *.c)

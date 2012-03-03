@@ -11,7 +11,7 @@ endif()
 
 project(traincascade)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${OpenCV_SOURCE_DIR}/include/opencv")
 ocv_include_modules(${OPENCV_TRAINCASCADE_DEPS})
 
 set(traincascade_files traincascade.cpp

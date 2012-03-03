@@ -11,13 +11,13 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   project("${project}_samples")
 
   ocv_include_modules(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
-  include_directories(
+  ocv_include_directories(
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia"
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
     )
 
   if(HAVE_CUDA)
-    include_directories(${CUDA_INCLUDE_DIRS})
+    ocv_include_directories(${CUDA_INCLUDE_DIRS})
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX)

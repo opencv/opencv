@@ -10,38 +10,38 @@ ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
 set(GRFMT_LIBS "")
 
 if(WITH_PNG OR WITH_TIFF OR WITH_OPENEXR)
-  include_directories(${ZLIB_INCLUDE_DIR})
+  ocv_include_directories(${ZLIB_INCLUDE_DIR})
   set(GRFMT_LIBS ${GRFMT_LIBS} ${ZLIB_LIBRARIES})
 endif()
 
 if(WITH_JPEG)
   add_definitions(-DHAVE_JPEG)
-  include_directories(${JPEG_INCLUDE_DIR})
+  ocv_include_directories(${JPEG_INCLUDE_DIR})
   set(GRFMT_LIBS ${GRFMT_LIBS} ${JPEG_LIBRARIES})
 endif()
 
 if(WITH_PNG)
   add_definitions(-DHAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
-  include_directories(${PNG_INCLUDE_DIR})
+  ocv_include_directories(${PNG_INCLUDE_DIR})
   set(GRFMT_LIBS ${GRFMT_LIBS} ${PNG_LIBRARIES})
 endif()
 
 if(WITH_TIFF)
   add_definitions(-DHAVE_TIFF)
-  include_directories(${TIFF_INCLUDE_DIR})
+  ocv_include_directories(${TIFF_INCLUDE_DIR})
   set(GRFMT_LIBS ${GRFMT_LIBS} ${TIFF_LIBRARIES})
 endif()
 
 if(WITH_JASPER)
   add_definitions(-DHAVE_JASPER)
-  include_directories(${JASPER_INCLUDE_DIR})
+  ocv_include_directories(${JASPER_INCLUDE_DIR})
   set(GRFMT_LIBS ${GRFMT_LIBS} ${JASPER_LIBRARIES})
 endif()
 
 if(WITH_OPENEXR AND OPENEXR_FOUND)
   add_definitions(-DHAVE_OPENEXR)
-  include_directories(${OPENEXR_INCLUDE_PATHS})
+  ocv_include_directories(${OPENEXR_INCLUDE_PATHS})
   set(GRFMT_LIBS ${GRFMT_LIBS} ${OPENEXR_LIBRARIES})
 endif()
 
@@ -139,7 +139,7 @@ if(UNIX)
     endif()
 
     foreach(P ${HIGHGUI_INCLUDE_DIRS})
-        include_directories(${P})
+        ocv_include_directories(${P})
     endforeach()
 
     foreach(P ${HIGHGUI_LIBRARY_DIRS})
@@ -150,7 +150,7 @@ endif()
 #OpenNI
 if(WITH_OPENNI AND HAVE_OPENNI)
     set(highgui_srcs ${highgui_srcs} src/cap_openni.cpp)
-    include_directories(${OPENNI_INCLUDE_DIR})
+    ocv_include_directories(${OPENNI_INCLUDE_DIR})
 endif()
 
 #YV
@@ -192,7 +192,7 @@ endif()
 
 if(HAVE_XIMEA AND XIMEA_FOUND)
   set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
-  include_directories(${XIMEA_PATH})
+  ocv_include_directories(${XIMEA_PATH})
   link_directories(${XIMEA_LIBRARY_DIR})
   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} m3api)
   set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
@@ -221,7 +221,7 @@ endif()
 
 if(WIN32)
   link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")#for directshow
+  include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include") #for directshow
 endif()
 
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
@@ -244,6 +244,37 @@ endif()
 set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_add_precompiled_headers(${the_module})
+
+if(WIN32)
+  #copy ffmpeg dll to the output folder
+  if(MSVC64 OR MINGW64)
+    set(FFMPEG_SUFFIX _64)
+  endif()
+  
+  set(ffmpeg_bare_name "opencv_ffmpeg${FFMPEG_SUFFIX}.dll")
+  set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
+  
+  if(CMAKE_VERSION VERSION_GREATER "2.8.2")
+    add_custom_command(TARGET ${the_module} POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name}"
+                       COMMENT "Copying ${ffmpeg_path} to the output directory")
+  elseif(MSVC_IDE)
+    add_custom_command(TARGET ${the_module} POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name}"
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name}"
+                       COMMENT "Copying ${ffmpeg_path} to the output directory")
+  elseif(MSVC)
+    add_custom_command(TARGET ${the_module} POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name}"
+                       COMMENT "Copying ${ffmpeg_path} to the output directory")
+  else()
+    add_custom_command(TARGET ${the_module} POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name}"
+                       COMMENT "Copying ${ffmpeg_path} to the output directory")
+  endif()
+  
+  install(FILES "${ffmpeg_path}" DESTINATION bin COMPONENT main)
+endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()

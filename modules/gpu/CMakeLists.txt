@@ -28,7 +28,7 @@ if (HAVE_CUDA)
   set(ncv_files ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
 
   source_group("Src\\NVidia" FILES ${ncv_files})
-  include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
+  ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
 
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")

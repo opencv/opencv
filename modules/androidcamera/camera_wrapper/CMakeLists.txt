@@ -4,7 +4,7 @@ project(${the_target})
 
 link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib")
 
-INCLUDE_DIRECTORIES(
+INCLUDE_DIRECTORIES(BEFORE
 	${ANDROID_SOURCE_TREE}
 	${ANDROID_SOURCE_TREE}/frameworks/base/include/ui
 	${ANDROID_SOURCE_TREE}/frameworks/base/include/surfaceflinger

@@ -12,11 +12,11 @@ ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   project(cpp_samples)
 
-  include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
+  ocv_include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
   ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
   if (HAVE_opencv_gpu)
-    include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX)

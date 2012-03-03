@@ -19,7 +19,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
 endforeach()
 
 set(target ${the_module})
-include_directories("${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp")
+ocv_include_directories("${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp")
 
 set(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
 set(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
@@ -105,7 +105,7 @@ endforeach()
 # all needed includes
 foreach(module ${OPENCV_MODULE_${the_module}_DEPS})
   string(REPLACE "opencv_" "" module "${module}")
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
+  ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
 endforeach()
 
 # created list of documented files targets
