@@ -1309,7 +1309,7 @@ Computes the inverse Discrete Fourier Transform of a 1D or 2D array.
     
     :param nonzeroRows: Number of  ``dst``  rows to compute. The rest of the rows have undefined content. See the convolution sample in  :ocv:func:`dft`  description.
     
-``idft(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DFT_INVERSE)`` .
+``idft(src, dst, flags)`` is equivalent to ``dft(src, dst, flags | DFT_INVERSE)`` .
 
 See :ocv:func:`dft` for details.
 
