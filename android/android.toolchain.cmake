@@ -3,6 +3,9 @@
 #  Requires cmake 2.6.3 or newer (2.8.3 or newer is recommended).
 #  See home page: http://code.google.com/p/android-cmake/
 #
+#  The file is mantained by the OpenCV project. And also can be found at
+#  http://code.opencv.org/svn/opencv/trunk/opencv/android/android.toolchain.cmake
+#
 #  Usage Linux:
 #   $ export ANDROID_NDK=/absolute/path/to/the/android-ndk
 #   $ mkdir build && cd build
@@ -87,7 +90,7 @@
 #
 #    Make sure to do the following in your scripts:
 #      SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${my_cxx_flags}" )
-#      SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${my_cxx_flags}" )
+#      SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${my_cxx_flags}" )
 #      The flags will be prepopulated with critical flags, so don't loose them.
 #      Also be aware that toolchain also sets configuration-specific compiler
 #      flags and linker flags.
@@ -103,6 +106,7 @@
 #    Default is ${CMAKE_SOURCE_DIR}, and the android libs will always be
 #    under the ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ANDROID_NDK_ABI_NAME}
 #    (depending on the target ABI). This is convenient for Android packaging.
+#
 #
 #  Change Log:
 #   - initial version December 2010 Ethan Rublee ethan.ruble@gmail.com
@@ -156,9 +160,18 @@
 #     [+] filtered out hidden files (starting with .) while globbing inside NDK
 #     [+] automatically applied GLESv2 linkage fix for NDK revisions 5-6
 #     [+] added ANDROID_GET_ABI_RAWNAME to get NDK ABI names by CMake flags
-#   - modified February 2012
-#     [+] mostly fixed try_compile (it was always failing for Android)
+#   - modified February 2012 Andrey Kamaev andrey.kamaev@itseez.com
+#     [+] updated for NDK r7b
+#     [~] fixed cmake try_compile() command
+#     [~] Fix for missing install_name_tool on OS X
 # ------------------------------------------------------------------------------
+
+cmake_minimum_required( VERSION 2.6.3 )
+
+if( PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
+ # all needed flags and variables are already inherited from the parent project
+ return()
+endif()
 
 # this one is important
 set( CMAKE_SYSTEM_NAME Linux )
@@ -622,7 +635,13 @@ set( CMAKE_NM           "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHI
 set( CMAKE_OBJCOPY      "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-objcopy${TOOL_OS_SUFFIX}" CACHE PATH "objcopy" )
 set( CMAKE_OBJDUMP      "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-objdump${TOOL_OS_SUFFIX}" CACHE PATH "objdump" )
 set( CMAKE_RANLIB       "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-ranlib${TOOL_OS_SUFFIX}"  CACHE PATH "ranlib" )
-
+if( APPLE )
+ find_program( CMAKE_INSTALL_NAME_TOOL NAMES install_name_tool )
+ if( NOT CMAKE_INSTALL_NAME_TOOL )
+  message( FATAL_ERROR "Could not find install_name_tool, please check your installation." )
+ endif()
+ mark_as_advanced( CMAKE_INSTALL_NAME_TOOL )
+endif()
 #export directories
 set( ANDROID_SYSTEM_INCLUDE_DIRS "" )
 set( ANDROID_SYSTEM_LIB_DIRS "" )
@@ -865,6 +884,7 @@ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 
+
 #macro to find packages on the host OS
 macro( find_host_package )
  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
@@ -885,6 +905,8 @@ macro( find_host_package )
  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 endmacro()
+
+
 #macro to find programs on the host OS
 macro( find_host_program )
  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
@@ -906,6 +928,7 @@ macro( find_host_program )
  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 endmacro()
 
+
 macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
  if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
   set( ${VAR} "armeabi" )
@@ -917,6 +940,7 @@ macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
     set( ${VAR} "unknown" )
  endif()
 endmacro()
+
 
 set( ANDROID_SET_OBSOLETE_VARIABLES ON CACHE BOOL "Define obsolete Andrid-specific cmake variables" )
 mark_as_advanced( ANDROID_SET_OBSOLETE_VARIABLES )
@@ -933,7 +957,7 @@ endif()
 #   ANDROID_NO_UNDEFINED : ON/OFF
 #   ANDROID_SO_UNDEFINED : OFF/ON  (default depends on NDK version)
 #   ANDROID_SET_OBSOLETE_VARIABLES : ON/OFF
-#   LIBRARY_OUTPUT_PATH_ROOT : <any path>
+#   LIBRARY_OUTPUT_PATH_ROOT : <any valid path>
 #   ANDROID_USE_STLPORT : OFF/ON - EXPERIMENTAL!!! 
 #   ANDROID_FORBID_SYGWIN : ON/OFF
 # Can be set only at the first run:
@@ -983,4 +1007,3 @@ endif()
 #   ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH
 #   ANDROID_SUPPORTED_ABIS_${ARCH}
 #   ANDROID_SUPPORTED_NDK_VERSIONS
-
