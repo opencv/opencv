@@ -169,8 +169,7 @@
 cmake_minimum_required( VERSION 2.6.3 )
 
 if( PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
- # all needed flags and variables are already inherited from the parent project
- return()
+ include( "${CMAKE_CURRENT_SOURCE_DIR}/../android.toolchain.config.cmake" OPTIONAL )
 endif()
 
 # this one is important
@@ -942,6 +941,20 @@ macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
 endmacro()
 
 
+# export toolchain settings for the try_compile() command
+if( NOT PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
+ set( __toolchain_config "")
+ foreach( __var ANDROID_ABI ANDROID_FORCE_ARM_BUILD ANDROID_NATIVE_API_LEVEL ANDROID_NO_UNDEFINED ANDROID_SO_UNDEFINED ANDROID_SET_OBSOLETE_VARIABLES LIBRARY_OUTPUT_PATH_ROOT ANDROID_USE_STLPORT ANDROID_FORBID_SYGWIN ANDROID_NDK ANDROID_STANDALONE_TOOLCHAIN )
+  if( DEFINED ${__var} )
+   set( __toolchain_config "${__toolchain_config}set( ${__var} \"${${__var}}\" )\n" )
+  endif()
+ endforeach()
+ file( WRITE "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/android.toolchain.config.cmake" "${__toolchain_config}" )
+ unset( __toolchain_config )
+endif()
+
+
+# set some obsolete variables for backward compatibility
 set( ANDROID_SET_OBSOLETE_VARIABLES ON CACHE BOOL "Define obsolete Andrid-specific cmake variables" )
 mark_as_advanced( ANDROID_SET_OBSOLETE_VARIABLES )
 if( ANDROID_SET_OBSOLETE_VARIABLES )
