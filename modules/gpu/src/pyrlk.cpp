@@ -63,11 +63,11 @@ namespace cv { namespace gpu { namespace device
             cudaStream_t stream = 0);
 
         void lkSparse_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy,
-            const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount, 
+            const float2* prevPts, float2* nextPts, uchar* status, float* err, bool GET_MIN_EIGENVALS, int ptcount, 
             int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
         void lkDense_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy, 
-            DevMem2Df u, DevMem2Df v, DevMem2Df* err, cudaStream_t stream = 0);
+            DevMem2Df u, DevMem2Df v, DevMem2Df* err, bool GET_MIN_EIGENVALS, cudaStream_t stream = 0);
     }
 }}}
 
@@ -205,7 +205,7 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
         calcSharrDeriv(prevPyr_[level], dIdx, dIdy);
 
         lkSparse_gpu(prevPyr_[level], nextPyr_[level], dIdx, dIdy, 
-            prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols, 
+            prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, getMinEigenVals, prevPts.cols, 
             level, block, patch);
     }
 }
@@ -272,7 +272,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
         calcSharrDeriv(prevPyr_[level], dIdx, dIdy);
 
         lkDense_gpu(prevPyr_[level], nextPyr_[level], dIdx, dIdy, uPyr_[level], vPyr_[level], 
-            level == 0 && err ? &derr : 0);
+            level == 0 && err ? &derr : 0, getMinEigenVals);
 
         if (level == 0)
         {

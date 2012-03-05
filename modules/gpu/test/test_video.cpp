@@ -358,7 +358,7 @@ PARAM_TEST_CASE(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, bool)
         cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
 
         cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, err_gold, cv::Size(21, 21), 3, 
-            cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01), 0.5, CV_LKFLOW_GET_MIN_EIGENVALS);
+            cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01), 0.5);
     }
 };
 
@@ -410,7 +410,7 @@ TEST_P(PyrLKOpticalFlowSparse, Accuracy)
             bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
             float errdiff = std::abs(err[i] - err_gold[i]);
 
-            if (!eq || errdiff > 1e-4)
+            if (!eq || errdiff > 1e-1)
                 ++mistmatch;
         }
     }

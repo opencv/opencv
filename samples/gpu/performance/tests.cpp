@@ -1157,10 +1157,12 @@ TEST(PyrLKOpticalFlow)
         vector<Point2f> nextPts;
         vector<unsigned char> status;
 
-        calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, noArray());
+        vector<float> err;
+
+        calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
 
         CPU_ON;
-        calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, noArray());
+        calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
         CPU_OFF;
 
         gpu::PyrLKOpticalFlow d_pyrLK;
@@ -1176,10 +1178,10 @@ TEST(PyrLKOpticalFlow)
         gpu::GpuMat d_status;
         gpu::GpuMat d_err;
 
-        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
+        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
 
         GPU_ON;
-        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
+        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
         GPU_OFF;
     }
 }

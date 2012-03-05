@@ -274,9 +274,39 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
+        __device__ void reduce(float& val1, float* smem1, int tid)
+        {
+            smem1[tid] = val1;
+            __syncthreads();
+
+            if (tid < 128) 
+            { 
+                smem1[tid] = val1 += smem1[tid + 128]; 
+            } 
+            __syncthreads();
+
+            if (tid < 64) 
+            { 
+                smem1[tid] = val1 += smem1[tid + 64]; 
+            } 
+            __syncthreads();
+
+            if (tid < 32)
+            {
+                volatile float* vmem1 = smem1;
+
+                vmem1[tid] = val1 += vmem1[tid + 32]; 
+                vmem1[tid] = val1 += vmem1[tid + 16]; 
+                vmem1[tid] = val1 += vmem1[tid + 8]; 
+                vmem1[tid] = val1 += vmem1[tid + 4];
+                vmem1[tid] = val1 += vmem1[tid + 2]; 
+                vmem1[tid] = val1 += vmem1[tid + 1]; 
+            }
+        }
+
         #define SCALE (1.0f / (1 << 20))
 
-        template <int PATCH_X, int PATCH_Y, bool calcErr>
+        template <int PATCH_X, int PATCH_Y, bool calcErr, bool GET_MIN_EIGENVALS>
         __global__ void lkSparse(const PtrStepb I, const PtrStepb J, const PtrStep<short> dIdx, const PtrStep<short> dIdy,
             const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
         {
@@ -349,7 +379,7 @@ namespace cv { namespace gpu { namespace device
                 float D = A11 * A22 - A12 * A12;
                 float minEig = (A22 + A11 - ::sqrtf((A11 - A22) * (A11 - A22) + 4.f * A12 * A12)) / (2 * c_winSize_x * c_winSize_y);
             
-                if (calcErr && tid == 0) 
+                if (calcErr && GET_MIN_EIGENVALS && tid == 0) 
                     err[blockIdx.x] = minEig;
 
                 if (minEig < c_minEigThreshold || D < numeric_limits<float>::epsilon())
@@ -377,7 +407,7 @@ namespace cv { namespace gpu { namespace device
             bool status_ = true;
 
             for (int k = 0; k < c_iters; ++k)
-            {                
+            {
                 if (nextPt.x < -c_winSize_x || nextPt.x >= cols || nextPt.y < -c_winSize_y || nextPt.y >= rows)
                 {
                     status_ = false;
@@ -415,38 +445,76 @@ namespace cv { namespace gpu { namespace device
                 nextPt.y += delta.y;
 
                 if (::fabs(delta.x) < 0.01f && ::fabs(delta.y) < 0.01f)
+                {
+                    nextPt.x -= delta.x * 0.5f;
+                    nextPt.y -= delta.y * 0.5f;
                     break;
+                }
+            }
+
+            if (nextPt.x < -c_winSize_x || nextPt.x >= cols || nextPt.y < -c_winSize_y || nextPt.y >= rows)
+                status_ = false;
+
+            // TODO : Why do we compute patch error in shifted window?
+            nextPt.x += c_halfWin_x;
+            nextPt.y += c_halfWin_y;
+
+            float errval = 0.f;
+            if (calcErr && !GET_MIN_EIGENVALS && status_)
+            {
+                for (int y = threadIdx.y, i = 0; y < c_winSize_y; y += blockDim.y, ++i)
+                {
+                    for (int x = threadIdx.x, j = 0; x < c_winSize_x_cn; x += blockDim.x, ++j)
+                    {
+                        int diff = linearFilter(J, nextPt, x, y) - I_patch[i][j];
+                        errval += ::fabsf((float)diff);
+                    }
+                }
+
+                reduce(errval, smem1, tid);
+
+                errval /= 32 * c_winSize_x_cn * c_winSize_y;
             }
 
             if (tid == 0)
             {
-                nextPt.x += c_halfWin_x;
-                nextPt.y += c_halfWin_y;
-
-                nextPts[blockIdx.x] = nextPt;
                 status[blockIdx.x] = status_;
+                nextPts[blockIdx.x] = nextPt;
+
+                if (calcErr && !GET_MIN_EIGENVALS)
+                    err[blockIdx.x] = errval;
             }
         }
 
         template <int PATCH_X, int PATCH_Y>
         void lkSparse_caller(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy,
-            const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount, 
+            const float2* prevPts, float2* nextPts, uchar* status, float* err, bool GET_MIN_EIGENVALS, int ptcount, 
             int level, dim3 block, cudaStream_t stream)
         {
             dim3 grid(ptcount);
 
-            if (err)
+            if (level == 0 && err)
             {
-                cudaSafeCall( cudaFuncSetCacheConfig(lkSparse<PATCH_X, PATCH_Y, true>, cudaFuncCachePreferL1) );
+                if (GET_MIN_EIGENVALS)
+                {
+                    cudaSafeCall( cudaFuncSetCacheConfig(lkSparse<PATCH_X, PATCH_Y, true, true>, cudaFuncCachePreferL1) );
 
-                lkSparse<PATCH_X, PATCH_Y, true><<<grid, block>>>(I, J, dIdx, dIdy,
-                    prevPts, nextPts, status, err, level, I.rows, I.cols);
+                    lkSparse<PATCH_X, PATCH_Y, true, true><<<grid, block>>>(I, J, dIdx, dIdy,
+                        prevPts, nextPts, status, err, level, I.rows, I.cols);
+                }
+                else
+                {
+                    cudaSafeCall( cudaFuncSetCacheConfig(lkSparse<PATCH_X, PATCH_Y, true, false>, cudaFuncCachePreferL1) );
+
+                    lkSparse<PATCH_X, PATCH_Y, true, false><<<grid, block>>>(I, J, dIdx, dIdy,
+                        prevPts, nextPts, status, err, level, I.rows, I.cols);
+                }
             }
             else
             {
-                cudaSafeCall( cudaFuncSetCacheConfig(lkSparse<PATCH_X, PATCH_Y, false>, cudaFuncCachePreferL1) );
+                cudaSafeCall( cudaFuncSetCacheConfig(lkSparse<PATCH_X, PATCH_Y, false, false>, cudaFuncCachePreferL1) );
 
-                lkSparse<PATCH_X, PATCH_Y, false><<<grid, block>>>(I, J, dIdx, dIdy,
+                lkSparse<PATCH_X, PATCH_Y, false, false><<<grid, block>>>(I, J, dIdx, dIdy,
                         prevPts, nextPts, status, err, level, I.rows, I.cols);
             }
 
@@ -457,11 +525,11 @@ namespace cv { namespace gpu { namespace device
         }
 
         void lkSparse_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy,
-            const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount, 
+            const float2* prevPts, float2* nextPts, uchar* status, float* err, bool GET_MIN_EIGENVALS, int ptcount, 
             int level, dim3 block, dim3 patch, cudaStream_t stream)
         {
             typedef void (*func_t)(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy,
-                const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount, 
+                const float2* prevPts, float2* nextPts, uchar* status, float* err, bool GET_MIN_EIGENVALS, int ptcount, 
                 int level, dim3 block, cudaStream_t stream);
 
             static const func_t funcs[5][5] = 
@@ -474,11 +542,11 @@ namespace cv { namespace gpu { namespace device
             };            
 
             funcs[patch.y - 1][patch.x - 1](I, J, dIdx, dIdy,
-                prevPts, nextPts, status, err, ptcount, 
+                prevPts, nextPts, status, err, GET_MIN_EIGENVALS, ptcount, 
                 level, block, stream);
         }
 
-        template <bool calcErr>
+        template <bool calcErr, bool GET_MIN_EIGENVALS>
         __global__ void lkDense(const PtrStepb I, const PtrStepb J, const PtrStep<short> dIdx, const PtrStep<short> dIdy,
             PtrStepf u, PtrStepf v, PtrStepf err, const int rows, const int cols)
         {
@@ -515,7 +583,7 @@ namespace cv { namespace gpu { namespace device
                 float D = A11 * A22 - A12 * A12;
                 float minEig = (A22 + A11 - ::sqrtf((A11 - A22) * (A11 - A22) + 4.f * A12 * A12)) / (2 * c_winSize_x * c_winSize_y);
 
-                if (calcErr)
+                if (calcErr && GET_MIN_EIGENVALS)
                     err(y, x) = minEig;
             
                 if (minEig < c_minEigThreshold || D < numeric_limits<float>::epsilon())
@@ -565,30 +633,63 @@ namespace cv { namespace gpu { namespace device
 
                 if (::fabs(delta.x) < 0.01f && ::fabs(delta.y) < 0.01f)
                     break;
-            }
+            }            
 
-            u(y, x) = nextPt.x - x + c_halfWin_x;
-            v(y, x) = nextPt.y - y + c_halfWin_y;
+            // TODO : Why do we compute patch error in shifted window?
+            nextPt.x += c_halfWin_x;
+            nextPt.y += c_halfWin_y;
+
+            u(y, x) = nextPt.x - x;
+            v(y, x) = nextPt.y - y;            
+
+            if (calcErr && !GET_MIN_EIGENVALS)
+            {
+                float errval = 0.0f;
+
+                for (int i = 0; i < c_winSize_y; ++i)
+                {
+                    for (int j = 0; j < c_winSize_x; ++j)
+                    {
+                        int I_val = I(y - c_halfWin_y + i, x - c_halfWin_x + j);
+                        int diff = linearFilter(J, nextPt, j, i) - CV_DESCALE(I_val * (1 << W_BITS), W_BITS1 - 5);
+                        errval += ::fabsf((float)diff);
+                    }
+                }
+
+                errval /= 32 * c_winSize_x_cn * c_winSize_y;
+
+                err(y, x) = errval;
+            }
         }
 
         void lkDense_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy, 
-            DevMem2Df u, DevMem2Df v, DevMem2Df* err, cudaStream_t stream)
+            DevMem2Df u, DevMem2Df v, DevMem2Df* err, bool GET_MIN_EIGENVALS, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(I.cols, block.x), divUp(I.rows, block.y));
 
             if (err)
             {
-                cudaSafeCall( cudaFuncSetCacheConfig(lkDense<true>, cudaFuncCachePreferL1) );
+                if (GET_MIN_EIGENVALS)
+                {
+                    cudaSafeCall( cudaFuncSetCacheConfig(lkDense<true, true>, cudaFuncCachePreferL1) );
 
-                lkDense<true><<<grid, block, 0, stream>>>(I, J, dIdx, dIdy, u, v, *err, I.rows, I.cols);
-                cudaSafeCall( cudaGetLastError() );
+                    lkDense<true, true><<<grid, block, 0, stream>>>(I, J, dIdx, dIdy, u, v, *err, I.rows, I.cols);
+                    cudaSafeCall( cudaGetLastError() );
+                }
+                else
+                {
+                    cudaSafeCall( cudaFuncSetCacheConfig(lkDense<true, false>, cudaFuncCachePreferL1) );
+
+                    lkDense<true, false><<<grid, block, 0, stream>>>(I, J, dIdx, dIdy, u, v, *err, I.rows, I.cols);
+                    cudaSafeCall( cudaGetLastError() );
+                }
             }
             else
             {
-                cudaSafeCall( cudaFuncSetCacheConfig(lkDense<false>, cudaFuncCachePreferL1) );
+                cudaSafeCall( cudaFuncSetCacheConfig(lkDense<false, false>, cudaFuncCachePreferL1) );
 
-                lkDense<false><<<grid, block, 0, stream>>>(I, J, dIdx, dIdy, u, v, PtrStepf(), I.rows, I.cols);
+                lkDense<false, false><<<grid, block, 0, stream>>>(I, J, dIdx, dIdy, u, v, PtrStepf(), I.rows, I.cols);
                 cudaSafeCall( cudaGetLastError() );
             }
 

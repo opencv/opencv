@@ -1817,6 +1817,7 @@ public:
         derivLambda = 0.5;
         useInitialFlow = false;
         minEigThreshold = 1e-4f;
+        getMinEigenVals = false;
     }
 
     void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
@@ -1830,6 +1831,7 @@ public:
     double derivLambda;
     bool useInitialFlow;
     float minEigThreshold;
+    bool getMinEigenVals;
 
     void releaseMemory()
     {
