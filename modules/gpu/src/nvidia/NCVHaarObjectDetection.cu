@@ -77,56 +77,110 @@ NCV_CT_ASSERT(K_WARP_SIZE == 32); //this is required for the manual unroll of th
 
 //Almost the same as naive scan1Inclusive, but doesn't need __syncthreads()
 //assuming size <= WARP_SIZE and size is power of 2
-template <class T>
-inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
+//template <class T>
+//inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
+//{
+//    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
+//    s_Data[pos] = 0;
+//    pos += K_WARP_SIZE;
+//    s_Data[pos] = idata;
+//
+//    s_Data[pos] += s_Data[pos - 1];
+//    s_Data[pos] += s_Data[pos - 2];
+//    s_Data[pos] += s_Data[pos - 4];
+//    s_Data[pos] += s_Data[pos - 8];
+//    s_Data[pos] += s_Data[pos - 16];
+//
+//    return s_Data[pos];
+//}
+
+
+//template <class T>
+//inline __device__ T warpScanExclusive(T idata, volatile T *s_Data)
+//{
+//    return warpScanInclusive(idata, s_Data) - idata;
+//}
+//
+//
+//template <class T, Ncv32u tiNumScanThreads>
+//inline __device__ T blockScanInclusive(T idata, volatile T *s_Data)
+//{
+//    if (tiNumScanThreads > K_WARP_SIZE)
+//    {
+//        //Bottom-level inclusive warp scan
+//        T warpResult = warpScanInclusive(idata, s_Data);
+//
+//        //Save top elements of each warp for exclusive warp scan
+//        //sync to wait for warp scans to complete (because s_Data is being overwritten)
+//        __syncthreads();
+//        if( (threadIdx.x & (K_WARP_SIZE - 1)) == (K_WARP_SIZE - 1) )
+//        {
+//            s_Data[threadIdx.x >> K_LOG2_WARP_SIZE] = warpResult;
+//        }
+//
+//        //wait for warp scans to complete
+//        __syncthreads();
+//
+//        if( threadIdx.x < (tiNumScanThreads / K_WARP_SIZE) )
+//        {
+//            //grab top warp elements
+//            T val = s_Data[threadIdx.x];
+//            //calculate exclusive scan and write back to shared memory
+//            s_Data[threadIdx.x] = warpScanExclusive(val, s_Data);
+//        }
+//
+//        //return updated warp scans with exclusive scan results
+//        __syncthreads();
+//        return warpResult + s_Data[threadIdx.x >> K_LOG2_WARP_SIZE];
+//    }
+//    else
+//    {
+//        return warpScanInclusive(idata, s_Data);
+//    }
+//}
+
+template <Ncv32u size>
+__device__ Ncv32u warpScanInclusive(Ncv32u idata, volatile Ncv32u* s_Data)
 {
-    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
+    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (size - 1));
     s_Data[pos] = 0;
-    pos += K_WARP_SIZE;
+    pos += size;
     s_Data[pos] = idata;
 
-    s_Data[pos] += s_Data[pos - 1];
-    s_Data[pos] += s_Data[pos - 2];
-    s_Data[pos] += s_Data[pos - 4];
-    s_Data[pos] += s_Data[pos - 8];
-    s_Data[pos] += s_Data[pos - 16];
+    for(Ncv32u offset = 1; offset < size; offset <<= 1)
+        s_Data[pos] += s_Data[pos - offset];
 
     return s_Data[pos];
 }
 
-
-template <class T>
-inline __device__ T warpScanExclusive(T idata, volatile T *s_Data)
+template <Ncv32u size>
+__forceinline__ __device__ Ncv32u warpScanExclusive(Ncv32u idata, volatile Ncv32u *s_Data)
 {
-    return warpScanInclusive(idata, s_Data) - idata;
+    return warpScanInclusive<size>(idata, s_Data) - idata;
 }
 
-
-template <class T, Ncv32u tiNumScanThreads>
-inline __device__ T blockScanInclusive(T idata, volatile T *s_Data)
+template <Ncv32u size, Ncv32u tiNumScanThreads>
+__device__ Ncv32u scan1Inclusive(Ncv32u idata, volatile Ncv32u *s_Data)
 {
-    if (tiNumScanThreads > K_WARP_SIZE)
+    if(size > K_WARP_SIZE)
     {
         //Bottom-level inclusive warp scan
-        T warpResult = warpScanInclusive(idata, s_Data);
+        Ncv32u warpResult = warpScanInclusive<K_WARP_SIZE>(idata, s_Data);
 
         //Save top elements of each warp for exclusive warp scan
         //sync to wait for warp scans to complete (because s_Data is being overwritten)
         __syncthreads();
         if( (threadIdx.x & (K_WARP_SIZE - 1)) == (K_WARP_SIZE - 1) )
-        {
             s_Data[threadIdx.x >> K_LOG2_WARP_SIZE] = warpResult;
-        }
 
         //wait for warp scans to complete
         __syncthreads();
-
         if( threadIdx.x < (tiNumScanThreads / K_WARP_SIZE) )
         {
             //grab top warp elements
-            T val = s_Data[threadIdx.x];
-            //calculate exclusive scan and write back to shared memory
-            s_Data[threadIdx.x] = warpScanExclusive(val, s_Data);
+            Ncv32u val = s_Data[threadIdx.x];
+            //calculate exclsive scan and write back to shared memory
+            s_Data[threadIdx.x] = warpScanExclusive<(size >> K_LOG2_WARP_SIZE)>(val, s_Data);
         }
 
         //return updated warp scans with exclusive scan results
@@ -135,7 +189,7 @@ inline __device__ T blockScanInclusive(T idata, volatile T *s_Data)
     }
     else
     {
-        return warpScanInclusive(idata, s_Data);
+        return warpScanInclusive<size>(idata, s_Data);
     }
 }
 
@@ -233,30 +287,29 @@ __device__ Ncv32u getElemIImg(Ncv32u x, Ncv32u *d_IImg)
 __device__ Ncv32u d_outMaskPosition;
 
 
-__inline __device__ void compactBlockWriteOutAnchorParallel(NcvBool threadPassFlag,
-                                                            Ncv32u threadElem,
-                                                            Ncv32u *vectorOut)
+__device__ void compactBlockWriteOutAnchorParallel(Ncv32u threadPassFlag, Ncv32u threadElem, Ncv32u *vectorOut)
 {
 #if __CUDA_ARCH__ >= 110
-    Ncv32u passMaskElem = threadPassFlag ? 1 : 0;
+    
     __shared__ Ncv32u shmem[NUM_THREADS_ANCHORSPARALLEL * 2];
-    Ncv32u incScan = blockScanInclusive<Ncv32u, NUM_THREADS_ANCHORSPARALLEL>(passMaskElem, shmem);
-    __syncthreads();
-    Ncv32u excScan = incScan - passMaskElem;
-
     __shared__ Ncv32u numPassed;
     __shared__ Ncv32u outMaskOffset;
+
+    Ncv32u incScan = scan1Inclusive<NUM_THREADS_ANCHORSPARALLEL, NUM_THREADS_ANCHORSPARALLEL>(threadPassFlag, shmem);
+    __syncthreads();
+
     if (threadIdx.x == NUM_THREADS_ANCHORSPARALLEL-1)
     {
         numPassed = incScan;
         outMaskOffset = atomicAdd(&d_outMaskPosition, incScan);
     }
-    __syncthreads();
 
     if (threadPassFlag)
     {
+        Ncv32u excScan = incScan - threadPassFlag;
         shmem[excScan] = threadElem;
     }
+
     __syncthreads();
 
     if (threadIdx.x < numPassed)
@@ -1047,7 +1100,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
 
     NcvBool bTexCacheCascade = devProp.major < 2;
     NcvBool bTexCacheIImg = true; //this works better even on Fermi so far
-    NcvBool bDoAtomicCompaction = devProp.major >= 2 || (devProp.major == 1 && devProp.minor >= 3);
+    NcvBool bDoAtomicCompaction = false;// devProp.major >= 2 || (devProp.major == 1 && devProp.minor >= 3);
 
     NCVVector<Ncv32u> *d_ptrNowData = &d_vecPixelMask;
     NCVVector<Ncv32u> *d_ptrNowTmp = &d_vecPixelMaskTmp;
@@ -2073,13 +2126,16 @@ static NCVStatus loadFromNVBIN(const std::string &filename,
                                std::vector<HaarClassifierNode128> &haarClassifierNodes,
                                std::vector<HaarFeature64> &haarFeatures)
 {
+    size_t readCount;
     FILE *fp = fopen(filename.c_str(), "rb");
     ncvAssertReturn(fp != NULL, NCV_FILE_ERROR);
     Ncv32u fileVersion;
-    ncvAssertReturn(1 == fread(&fileVersion, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
+    readCount = fread(&fileVersion, sizeof(Ncv32u), 1, fp);
+    ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
     ncvAssertReturn(fileVersion == NVBIN_HAAR_VERSION, NCV_FILE_ERROR);
     Ncv32u fsize;
-    ncvAssertReturn(1 == fread(&fsize, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
+    readCount = fread(&fsize, sizeof(Ncv32u), 1, fp);
+    ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
     fseek(fp, 0, SEEK_END);
     Ncv32u fsizeActual = ftell(fp);
     ncvAssertReturn(fsize == fsizeActual, NCV_FILE_ERROR);
@@ -2088,7 +2144,8 @@ static NCVStatus loadFromNVBIN(const std::string &filename,
     fdata.resize(fsize);
     Ncv32u dataOffset = 0;
     fseek(fp, 0, SEEK_SET);
-    ncvAssertReturn(1 == fread(&fdata[0], fsize, 1, fp), NCV_FILE_ERROR);
+    readCount = fread(&fdata[0], fsize, 1, fp);
+    ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
     fclose(fp);
 
     //data
@@ -2130,6 +2187,7 @@ static NCVStatus loadFromNVBIN(const std::string &filename,
 NCVStatus ncvHaarGetClassifierSize(const std::string &filename, Ncv32u &numStages,
                                    Ncv32u &numNodes, Ncv32u &numFeatures)
 {
+    size_t readCount;
     NCVStatus ncvStat;
 
     std::string fext = filename.substr(filename.find_last_of(".") + 1);
@@ -2140,14 +2198,19 @@ NCVStatus ncvHaarGetClassifierSize(const std::string &filename, Ncv32u &numStage
         FILE *fp = fopen(filename.c_str(), "rb");
         ncvAssertReturn(fp != NULL, NCV_FILE_ERROR);
         Ncv32u fileVersion;
-        ncvAssertReturn(1 == fread(&fileVersion, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
+        readCount = fread(&fileVersion, sizeof(Ncv32u), 1, fp);
+        ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
         ncvAssertReturn(fileVersion == NVBIN_HAAR_VERSION, NCV_FILE_ERROR);
         fseek(fp, NVBIN_HAAR_SIZERESERVED, SEEK_SET);
         Ncv32u tmp;
-        ncvAssertReturn(1 == fread(&numStages,   sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
-        ncvAssertReturn(1 == fread(&tmp,         sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
-        ncvAssertReturn(1 == fread(&numNodes,    sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
-        ncvAssertReturn(1 == fread(&numFeatures, sizeof(Ncv32u), 1, fp), NCV_FILE_ERROR);
+        readCount = fread(&numStages,   sizeof(Ncv32u), 1, fp);
+        ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
+        readCount = fread(&tmp,         sizeof(Ncv32u), 1, fp);
+        ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
+        readCount = fread(&numNodes,    sizeof(Ncv32u), 1, fp);
+        ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
+        readCount = fread(&numFeatures, sizeof(Ncv32u), 1, fp);
+        ncvAssertReturn(1 == readCount, NCV_FILE_ERROR);
         fclose(fp);
     }
     else if (fext == "xml")
