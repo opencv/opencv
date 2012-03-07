@@ -629,4 +629,94 @@ INSTANTIATE_TEST_CASE_P(Filter, MorphEx, Combine(
                         Values((int)cv::MORPH_OPEN, (int)cv::MORPH_CLOSE, (int)cv::MORPH_GRADIENT, (int)cv::MORPH_TOPHAT, (int)cv::MORPH_BLACKHAT),
                         USE_ROI));
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// filter2D
+
+PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, int, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    int ksize;
+    bool useRoi;
+
+    cv::Mat img;
+    cv::Mat kernel;
+    
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+
+        kernel = cv::Mat::ones(ksize, ksize, CV_32FC1);
+    }
+};
+
+TEST_P(Filter2D, Rgba)
+{
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2BGRA);
+
+    cv::Mat dst_gold;
+    cv::filter2D(src, dst_gold, -1, kernel, cv::Point(-1, -1), 0, cv::BORDER_CONSTANT);
+
+    cv::Mat dst;
+
+    cv::gpu::GpuMat dev_dst;
+
+    cv::gpu::filter2D(loadMat(src, useRoi), dev_dst, -1, kernel);
+
+    dev_dst.download(dst);
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold, dst, ksize, 0.0);
+}
+
+TEST_P(Filter2D, Gray)
+{
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2GRAY);
+
+    cv::Mat dst_gold;
+    cv::filter2D(src, dst_gold, -1, kernel, cv::Point(-1, -1), 0, cv::BORDER_CONSTANT);
+
+    cv::Mat dst;
+
+    cv::gpu::GpuMat dev_dst;
+
+    cv::gpu::filter2D(loadMat(src, useRoi), dev_dst, -1, kernel);
+
+    dev_dst.download(dst);
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold, dst, ksize, 0.0);
+}
+
+TEST_P(Filter2D, 32FC1)
+{
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2GRAY);
+    src.convertTo(src, CV_32F, 1.0 / 255.0);
+
+    cv::Mat dst_gold;
+    cv::filter2D(src, dst_gold, -1, kernel, cv::Point(-1, -1), 0, cv::BORDER_CONSTANT);
+
+    cv::Mat dst;
+
+    cv::gpu::GpuMat dev_dst;
+
+    cv::gpu::filter2D(loadMat(src, useRoi), dev_dst, -1, kernel);
+
+    dev_dst.download(dst);
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold, dst, ksize, 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, Filter2D, Combine(
+                        ALL_DEVICES,
+                        Values(3, 5, 7, 11, 13, 15),
+                        USE_ROI));
+
 #endif // HAVE_CUDA

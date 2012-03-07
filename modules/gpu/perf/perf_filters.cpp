@@ -102,8 +102,8 @@ GPU_PERF_TEST(LinearFilter, cv::gpu::DeviceInfo, cv::Size, perf::MatType, int)
 INSTANTIATE_TEST_CASE_P(Filter, LinearFilter, testing::Combine(
                         ALL_DEVICES, 
                         GPU_TYPICAL_MAT_SIZES, 
-                        testing::Values(CV_8UC1, CV_8UC4),
-                        testing::Values(3, 5)));
+                        testing::Values(CV_8UC1, CV_8UC4, CV_32FC1),
+                        testing::Values(3, 5, 7, 9)));
 
 //////////////////////////////////////////////////////////////////////
 // SeparableLinearFilter

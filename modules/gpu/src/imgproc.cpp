@@ -1673,137 +1673,82 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     convolve(image, templ, result, ccorr, buf);
 }
 
-namespace cv { namespace gpu { namespace device 
-{
-    namespace imgproc
-    {
-        void convolve_gpu(const DevMem2Df& src, const PtrStepf& dst, int kWidth, int kHeight, float* kernel, cudaStream_t stream);
-    }
-}}}
-
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream)
 {
     using namespace ::cv::gpu::device::imgproc;
 
 #ifndef HAVE_CUFFT
-
-    CV_Assert(image.type() == CV_32F);
-    CV_Assert(templ.type() == CV_32F);
-    CV_Assert(templ.cols <= 17 && templ.rows <= 17);
-    
-    result.create(image.size(), CV_32F);
-
-    GpuMat& contKernel = buf.templ_block;
-
-    if (templ.isContinuous())
-        contKernel = templ;
-    else
-    {
-        contKernel = createContinuous(templ.size(), templ.type());
-
-        if (stream)
-            stream.enqueueCopy(templ, contKernel);
-        else
-            templ.copyTo(contKernel);
-    }
-
-    convolve_gpu(image, result, templ.cols, templ.rows, contKernel.ptr<float>(), StreamAccessor::getStream(stream));
-
+    throw_nogpu();
 #else
-
     StaticAssert<sizeof(float) == sizeof(cufftReal)>::check();
     StaticAssert<sizeof(float) * 2 == sizeof(cufftComplex)>::check();
 
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
 
-    if (templ.cols < 13 && templ.rows < 13)
+    buf.create(image.size(), templ.size());
+    result.create(buf.result_size, CV_32F);
+
+    Size& block_size = buf.block_size;
+    Size& dft_size = buf.dft_size;
+
+    GpuMat& image_block = buf.image_block;
+    GpuMat& templ_block = buf.templ_block;
+    GpuMat& result_data = buf.result_data;
+
+    GpuMat& image_spect = buf.image_spect;
+    GpuMat& templ_spect = buf.templ_spect;
+    GpuMat& result_spect = buf.result_spect;
+
+    cufftHandle planR2C, planC2R;
+    cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
+    cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
+
+    cufftSafeCall( cufftSetStream(planR2C, StreamAccessor::getStream(stream)) );
+    cufftSafeCall( cufftSetStream(planC2R, StreamAccessor::getStream(stream)) );
+
+    GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
+    copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
+                   templ_block.cols - templ_roi.cols, 0, Scalar(), stream);
+
+    cufftSafeCall(cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(), 
+                               templ_spect.ptr<cufftComplex>()));
+
+    // Process all blocks of the result matrix
+    for (int y = 0; y < result.rows; y += block_size.height)
     {
-        result.create(image.size(), CV_32F);
-
-        GpuMat& contKernel = buf.templ_block;
-
-        if (templ.isContinuous())
-            contKernel = templ;
-        else
+        for (int x = 0; x < result.cols; x += block_size.width)
         {
-            contKernel = createContinuous(templ.size(), templ.type());
+            Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
+                                std::min(y + dft_size.height, image.rows) - y);
+            GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), 
+                             image.step);
+            copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                           0, image_block.cols - image_roi.cols, 0, Scalar(), stream);
+
+            cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(), 
+                                       image_spect.ptr<cufftComplex>()));
+            mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
+                                 1.f / dft_size.area(), ccorr, stream);
+            cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(), 
+                                       result_data.ptr<cufftReal>()));
+
+            Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
+                                 std::min(y + block_size.height, result.rows) - y);
+            GpuMat result_roi(result_roi_size, result.type(), 
+                              (void*)(result.ptr<float>(y) + x), result.step);
+            GpuMat result_block(result_roi_size, result_data.type(), 
+                                result_data.ptr(), result_data.step);
 
             if (stream)
-                stream.enqueueCopy(templ, contKernel);
+                stream.enqueueCopy(result_block, result_roi);
             else
-                templ.copyTo(contKernel);
+                result_block.copyTo(result_roi);
         }
-
-        convolve_gpu(image, result, templ.cols, templ.rows, contKernel.ptr<float>(), StreamAccessor::getStream(stream));
-    }
-    else
-    {
-        buf.create(image.size(), templ.size());
-        result.create(buf.result_size, CV_32F);
-
-        Size& block_size = buf.block_size;
-        Size& dft_size = buf.dft_size;
-
-        GpuMat& image_block = buf.image_block;
-        GpuMat& templ_block = buf.templ_block;
-        GpuMat& result_data = buf.result_data;
-
-        GpuMat& image_spect = buf.image_spect;
-        GpuMat& templ_spect = buf.templ_spect;
-        GpuMat& result_spect = buf.result_spect;
-
-        cufftHandle planR2C, planC2R;
-        cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
-        cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
-
-        cufftSafeCall( cufftSetStream(planR2C, StreamAccessor::getStream(stream)) );
-        cufftSafeCall( cufftSetStream(planC2R, StreamAccessor::getStream(stream)) );
-
-        GpuMat templ_roi(templ.size(), CV_32F, templ.data, templ.step);
-        copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0, 
-                       templ_block.cols - templ_roi.cols, 0, Scalar(), stream);
-
-        cufftSafeCall(cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(), 
-                                   templ_spect.ptr<cufftComplex>()));
-
-        // Process all blocks of the result matrix
-        for (int y = 0; y < result.rows; y += block_size.height)
-        {
-            for (int x = 0; x < result.cols; x += block_size.width)
-            {
-                Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
-                                    std::min(y + dft_size.height, image.rows) - y);
-                GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x), 
-                                 image.step);
-                copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
-                               0, image_block.cols - image_roi.cols, 0, Scalar(), stream);
-
-                cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(), 
-                                           image_spect.ptr<cufftComplex>()));
-                mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
-                                     1.f / dft_size.area(), ccorr, stream);
-                cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(), 
-                                           result_data.ptr<cufftReal>()));
-
-                Size result_roi_size(std::min(x + block_size.width, result.cols) - x,
-                                     std::min(y + block_size.height, result.rows) - y);
-                GpuMat result_roi(result_roi_size, result.type(), 
-                                  (void*)(result.ptr<float>(y) + x), result.step);
-                GpuMat result_block(result_roi_size, result_data.type(), 
-                                    result_data.ptr(), result_data.step);
-
-                if (stream)
-                    stream.enqueueCopy(result_block, result_roi);
-                else
-                    result_block.copyTo(result_roi);
-            }
-        }
-
-        cufftSafeCall(cufftDestroy(planR2C));
-        cufftSafeCall(cufftDestroy(planC2R));
     }
 
+    cufftSafeCall(cufftDestroy(planR2C));
+    cufftSafeCall(cufftDestroy(planC2R));
 #endif
 }
 

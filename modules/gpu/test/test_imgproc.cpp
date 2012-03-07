@@ -2573,36 +2573,36 @@ INSTANTIATE_TEST_CASE_P(ImgProc, EqualizeHist, ALL_DEVICES);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerHarris
 
-PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, Border)
+PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, Border, int, int)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int borderType;
+    int blockSize;
+    int apertureSize;
 
     cv::Mat src;
-    int blockSize;
-    int apertureSize;        
     double k;
 
     cv::Mat dst_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         type = GET_PARAM(1);
         borderType = GET_PARAM(2);
+        blockSize = GET_PARAM(3);
+        apertureSize = GET_PARAM(4); 
 
         cv::gpu::setDevice(devInfo.deviceID());
-    
+
         cv::RNG& rng = TS::ptr()->get_rng();
-        
+
         cv::Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
         ASSERT_FALSE(img.empty());
-        
+
         img.convertTo(src, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
-        
-        blockSize = 1 + rng.next() % 5;
-        apertureSize = 1 + 2 * (rng.next() % 4);        
+
         k = rng.uniform(0.1, 0.9);
 
         cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType);
@@ -2612,7 +2612,7 @@ PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, Border)
 TEST_P(CornerHarris, Accuracy)
 {
     cv::Mat dst;
-    
+
     cv::gpu::GpuMat dev_dst;
 
     cv::gpu::cornerHarris(loadMat(src), dev_dst, blockSize, apertureSize, k, borderType);
@@ -2625,20 +2625,22 @@ TEST_P(CornerHarris, Accuracy)
 INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, Combine(
                         ALL_DEVICES, 
                         Values(CV_8UC1, CV_32FC1), 
-                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT)));
+                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT),
+                        Values(3, 5, 7),
+                        Values(0, 3, 5, 7)));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerMinEigen
 
-PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, Border)
+PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, Border, int, int)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
     int borderType;
-
-    cv::Mat src;
     int blockSize;
     int apertureSize;
+
+    cv::Mat src;
 
     cv::Mat dst_gold;
     
@@ -2647,18 +2649,17 @@ PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, Border)
         devInfo = GET_PARAM(0);
         type = GET_PARAM(1);
         borderType = GET_PARAM(2);
+        blockSize = GET_PARAM(3);
+        apertureSize = GET_PARAM(4); 
 
-        cv::gpu::setDevice(devInfo.deviceID());        
-    
+        cv::gpu::setDevice(devInfo.deviceID());
+
         cv::RNG& rng = TS::ptr()->get_rng();
-        
+
         cv::Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
         ASSERT_FALSE(img.empty());
 
         img.convertTo(src, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
-        
-        blockSize = 1 + rng.next() % 5;
-        apertureSize = 1 + 2 * (rng.next() % 4);
 
         cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType);
     }
@@ -2667,7 +2668,7 @@ PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, Border)
 TEST_P(CornerMinEigen, Accuracy)
 {
     cv::Mat dst;
-    
+
     cv::gpu::GpuMat dev_dst;
 
     cv::gpu::cornerMinEigenVal(loadMat(src), dev_dst, blockSize, apertureSize, borderType);
@@ -2680,7 +2681,9 @@ TEST_P(CornerMinEigen, Accuracy)
 INSTANTIATE_TEST_CASE_P(ImgProc, CornerMinEigen, Combine(
                         ALL_DEVICES, 
                         Values(CV_8UC1, CV_32FC1), 
-                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT)));
+                        Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT),
+                        Values(3, 5, 7),
+                        Values(0, 3, 5, 7)));
 
 ////////////////////////////////////////////////////////////////////////
 // ColumnSum
@@ -3641,12 +3644,54 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
 ////////////////////////////////////////////////////////
 // convolve
 
-PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, int)
+namespace
+{
+    void convolveDFT(const cv::Mat& A, const cv::Mat& B, cv::Mat& C, bool ccorr = false)
+    {
+        // reallocate the output array if needed
+        C.create(std::abs(A.rows - B.rows) + 1, std::abs(A.cols - B.cols) + 1, A.type());
+        Size dftSize;
+
+        // compute the size of DFT transform
+        dftSize.width = cv::getOptimalDFTSize(A.cols + B.cols - 1);
+        dftSize.height = cv::getOptimalDFTSize(A.rows + B.rows - 1);
+
+        // allocate temporary buffers and initialize them with 0’s
+        cv::Mat tempA(dftSize, A.type(), cv::Scalar::all(0));
+        cv::Mat tempB(dftSize, B.type(), cv::Scalar::all(0));
+
+        // copy A and B to the top-left corners of tempA and tempB, respectively
+        cv::Mat roiA(tempA, cv::Rect(0, 0, A.cols, A.rows));
+        A.copyTo(roiA);
+        cv::Mat roiB(tempB, cv::Rect(0, 0, B.cols, B.rows));
+        B.copyTo(roiB);
+
+        // now transform the padded A & B in-place;
+        // use "nonzeroRows" hint for faster processing
+        cv::dft(tempA, tempA, 0, A.rows);
+        cv::dft(tempB, tempB, 0, B.rows);
+
+        // multiply the spectrums;
+        // the function handles packed spectrum representations well
+        cv::mulSpectrums(tempA, tempB, tempA, 0, ccorr);
+
+        // transform the product back from the frequency domain.
+        // Even though all the result rows will be non-zero,
+        // you need only the first C.rows of them, and thus you
+        // pass nonzeroRows == C.rows
+        cv::dft(tempA, tempA, cv::DFT_INVERSE + cv::DFT_SCALE, C.rows);
+
+        // now copy the result back to C.
+        tempA(cv::Rect(0, 0, C.cols, C.rows)).copyTo(C);
+    }
+}
+
+PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, int, bool)
 {    
     cv::gpu::DeviceInfo devInfo;
     int ksize;
+    bool ccorr;
     
-    cv::Size size;    
     cv::Mat src;
     cv::Mat kernel;
     
@@ -3656,36 +3701,38 @@ PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, int)
     {
         devInfo = GET_PARAM(0);
         ksize = GET_PARAM(1);
+        ccorr = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
         
         cv::RNG& rng = TS::ptr()->get_rng();
 
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        cv::Size size(rng.uniform(200, 400), rng.uniform(200, 400));
 
-        src = randomMat(rng, size, CV_32FC1, 0.0, 255.0, false);
+        src = randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
         kernel = randomMat(rng, cv::Size(ksize, ksize), CV_32FC1, 0.0, 1.0, false);
         
-        cv::filter2D(src, dst_gold, CV_32F, kernel, cv::Point(-1, -1), 0, cv::BORDER_REPLICATE);
+        convolveDFT(src, kernel, dst_gold, ccorr);
     }
 };
 
 TEST_P(Convolve, Accuracy)
-{    
+{
     cv::Mat dst;
 
     cv::gpu::GpuMat d_dst;
 
-    cv::gpu::convolve(loadMat(src), loadMat(kernel), d_dst);
+    cv::gpu::convolve(loadMat(src), loadMat(kernel), d_dst, ccorr);
 
     d_dst.download(dst);
 
-    EXPECT_MAT_NEAR(dst, dst_gold, 1e-2);
+    EXPECT_MAT_NEAR(dst, dst_gold, 1e-1);
 }
 
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, Combine(
                         ALL_DEVICES, 
-                        Values(3, 5, 7, 9, 11)));
+                        Values(3, 7, 11, 17, 19, 23, 45),
+                        Bool()));
 
 #endif // HAVE_CUDA

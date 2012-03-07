@@ -727,11 +727,12 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Dft, testing::Combine(
 //////////////////////////////////////////////////////////////////////
 // Convolve
 
-GPU_PERF_TEST(Convolve, cv::gpu::DeviceInfo, cv::Size, int)
+GPU_PERF_TEST(Convolve, cv::gpu::DeviceInfo, cv::Size, int, bool)
 {
     cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::Size size = GET_PARAM(1);
     int templ_size = GET_PARAM(2);
+    bool ccorr = GET_PARAM(3);
 
     cv::gpu::setDevice(devInfo.deviceID());
 
@@ -748,14 +749,15 @@ GPU_PERF_TEST(Convolve, cv::gpu::DeviceInfo, cv::Size, int)
 
     TEST_CYCLE()
     {
-        cv::gpu::convolve(image, templ, dst, false, buf);
+        cv::gpu::convolve(image, templ, dst, ccorr, buf);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, testing::Combine(
                         ALL_DEVICES, 
                         GPU_TYPICAL_MAT_SIZES,
-                        testing::Values(3, 9, 27, 32, 64)));
+                        testing::Values(3, 9, 27, 32, 64),
+                        testing::Bool()));
 
 //////////////////////////////////////////////////////////////////////
 // PyrDown

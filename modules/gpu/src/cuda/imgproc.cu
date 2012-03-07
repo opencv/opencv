@@ -904,79 +904,49 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall(cudaDeviceSynchronize());
         }
 
-
         //////////////////////////////////////////////////////////////////////////
-        // convolve
+        // filter2D
 
-        #define CONVOLVE_MAX_KERNEL_SIZE 17
+        #define FILTER2D_MAX_KERNEL_SIZE 16
 
-        __constant__ float c_convolveKernel[CONVOLVE_MAX_KERNEL_SIZE * CONVOLVE_MAX_KERNEL_SIZE];
+        __constant__ float c_filter2DKernel[FILTER2D_MAX_KERNEL_SIZE * FILTER2D_MAX_KERNEL_SIZE];
 
-        __global__ void convolve(const DevMem2Df src, PtrStepf dst, int kWidth, int kHeight)
+        texture<float, cudaTextureType2D, cudaReadModeElementType> filter2DTex(0, cudaFilterModePoint, cudaAddressModeBorder);
+
+        __global__ void filter2D(int ofsX, int ofsY, DevMem2Df dst, const int kWidth, const int kHeight, const int anchorX, const int anchorY)
         {
-            __shared__ float smem[16 + 2 * 8][16 + 2 * 8];
-
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            // x | x 0 | 0
-            // -----------
-            // x | x 0 | 0
-            // 0 | 0 0 | 0
-            // -----------
-            // 0 | 0 0 | 0
-            smem[threadIdx.y][threadIdx.x] = src.ptr(::min(::max(y - 8, 0), src.rows - 1))[::min(::max(x - 8, 0), src.cols - 1)];
+            if (x >= dst.cols || y >= dst.rows)
+                return;
 
-            // 0 | 0 x | x
-            // -----------
-            // 0 | 0 x | x
-            // 0 | 0 0 | 0
-            // -----------
-            // 0 | 0 0 | 0
-            smem[threadIdx.y][threadIdx.x + 16] = src.ptr(::min(::max(y - 8, 0), src.rows - 1))[::min(x + 8, src.cols - 1)];
+            float res = 0;
 
-            // 0 | 0 0 | 0
-            // -----------
-            // 0 | 0 0 | 0
-            // x | x 0 | 0
-            // -----------
-            // x | x 0 | 0
-            smem[threadIdx.y + 16][threadIdx.x] = src.ptr(::min(y + 8, src.rows - 1))[::min(::max(x - 8, 0), src.cols - 1)];
+            const int baseX = ofsX + x - anchorX;
+            const int baseY = ofsY + y - anchorY;
 
-            // 0 | 0 0 | 0
-            // -----------
-            // 0 | 0 0 | 0
-            // 0 | 0 x | x
-            // -----------
-            // 0 | 0 x | x
-            smem[threadIdx.y + 16][threadIdx.x + 16] = src.ptr(::min(y + 8, src.rows - 1))[::min(x + 8, src.cols - 1)];
+            int kInd = 0;
 
-            __syncthreads();
-
-            if (x < src.cols && y < src.rows)
+            for (int i = 0; i < kHeight; ++i)
             {
-                float res = 0;
-
-                for (int i = 0; i < kHeight; ++i)
-                {
-                    for (int j = 0; j < kWidth; ++j)
-                    {
-                        res += smem[threadIdx.y + 8 - kHeight / 2 + i][threadIdx.x + 8 - kWidth / 2 + j] * c_convolveKernel[i * kWidth + j];
-                    }
-                }
-
-                dst.ptr(y)[x] = res;
+                for (int j = 0; j < kWidth; ++j)
+                    res += tex2D(filter2DTex, baseX + j, baseY + i) * c_filter2DKernel[kInd++];
             }
+
+            dst.ptr(y)[x] = res;
         }
 
-        void convolve_gpu(const DevMem2Df& src, const PtrStepf& dst, int kWidth, int kHeight, float* kernel, cudaStream_t stream)
+        void filter2D_gpu(DevMem2Df src, int ofsX, int ofsY, DevMem2Df dst, int kWidth, int kHeight, int anchorX, int anchorY, float* kernel, cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(c_convolveKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+            cudaSafeCall(cudaMemcpyToSymbol(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
 
             const dim3 block(16, 16);
-            const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+            const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
-            convolve<<<grid, block, 0, stream>>>(src, dst, kWidth, kHeight);
+            bindTexture(&filter2DTex, src);
+
+            filter2D<<<grid, block, 0, stream>>>(ofsX, ofsY, dst, kWidth, kHeight, anchorX, anchorY);
             cudaSafeCall(cudaGetLastError());
 
             if (stream == 0)

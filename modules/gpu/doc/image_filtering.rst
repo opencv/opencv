@@ -395,7 +395,7 @@ Applies the non-separable 2D linear filter to an image.
 
 .. ocv:function:: void gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1), Stream& stream = Stream::Null())
 
-    :param src: Source image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
+    :param src: Source image.  ``CV_8UC1`` , ``CV_8UC4`` and ``CV_32FC1``  source types are supported.
 
     :param dst: Destination image. The size and the number of channels is the same as  ``src`` .
 
