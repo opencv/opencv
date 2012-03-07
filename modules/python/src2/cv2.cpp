@@ -105,6 +105,22 @@ static inline int* refcountFromPyObject(const PyObject* obj)
     return (int*)((size_t)obj + REFCOUNT_OFFSET);
 }
 
+class PyAllowThreads
+{
+public:
+    PyAllowThreads() : _state(PyEval_SaveThread()) 
+    {
+        //printf("+GIL\n");
+    }
+    ~PyAllowThreads()
+    {
+        PyEval_RestoreThread(_state);
+        //printf("-GIL\n");
+    }
+private:
+    PyThreadState* _state;
+};
+
 class NumpyAllocator : public MatAllocator
 {
 public:
