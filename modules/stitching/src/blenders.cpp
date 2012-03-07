@@ -287,8 +287,8 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     }
     else// weight_type_ == CV_16S
     {
-        add(mask, 1, weight_map, noArray(), CV_16S);
-        weight_map.setTo(1, mask == 0);
+        mask.convetTo(weight_map, CV_16S);
+        add(weight_map, 1, weight_map, mask != 0);
     }
 
     copyMakeBorder(weight_map, weight_pyr_gauss[0], top, bottom, left, right, BORDER_CONSTANT);
