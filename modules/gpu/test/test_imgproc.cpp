@@ -3484,10 +3484,9 @@ PARAM_TEST_CASE(PyrDown, cv::gpu::DeviceInfo, MatType, UseRoi)
     cv::gpu::DeviceInfo devInfo;
     int type;
     bool useRoi;
-    
-    cv::Size size;
+
     cv::Mat src;
-    
+
     cv::Mat dst_gold;
 
     virtual void SetUp()
@@ -3500,7 +3499,7 @@ PARAM_TEST_CASE(PyrDown, cv::gpu::DeviceInfo, MatType, UseRoi)
 
         cv::RNG& rng = TS::ptr()->get_rng();
 
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        cv::Size size(rng.uniform(100, 200), rng.uniform(100, 200));
 
         src = randomMat(rng, size, type, 0.0, 255.0, false);
         
@@ -3518,12 +3517,7 @@ TEST_P(PyrDown, Accuracy)
     
     d_dst.download(dst);
 
-    ASSERT_EQ(dst_gold.cols, dst.cols);
-    ASSERT_EQ(dst_gold.rows, dst.rows);
-    ASSERT_EQ(dst_gold.type(), dst.type());
-    
-    double err = crossCorr(dst_gold, dst) / (cv::norm(dst_gold, cv::NORM_L2) * cv::norm(dst, cv::NORM_L2));
-    ASSERT_NEAR(err, 1., 1e-2);
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-4 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, Combine(
@@ -3573,12 +3567,7 @@ TEST_P(PyrUp, Accuracy)
     
     d_dst.download(dst);
 
-    ASSERT_EQ(dst_gold.cols, dst.cols);
-    ASSERT_EQ(dst_gold.rows, dst.rows);
-    ASSERT_EQ(dst_gold.type(), dst.type());
-
-    double err = cvtest::crossCorr(dst_gold, dst) / (cv::norm(dst_gold, cv::NORM_L2) * cv::norm(dst, cv::NORM_L2));
-    ASSERT_NEAR(err, 1., 1e-2);
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-4 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, Combine(

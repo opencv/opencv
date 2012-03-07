@@ -75,7 +75,7 @@ namespace cv { namespace gpu { namespace device
 
             if (threadIdx.x < 2)
             {
-                const int left_x = x - 2 + threadIdx.x;
+                const int left_x = x - 2;
 
                 sum = VecTraits<value_type>::all(0);
             
@@ -90,7 +90,7 @@ namespace cv { namespace gpu { namespace device
 
             if (threadIdx.x > 253)
             {
-                const int right_x = x + threadIdx.x + 2;
+                const int right_x = x + 2;
 
                 sum = VecTraits<value_type>::all(0);
             
