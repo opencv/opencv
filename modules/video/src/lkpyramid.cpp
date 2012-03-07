@@ -436,7 +436,7 @@ struct LKTrackerInvoker
             
             if( status[ptidx] && err && level == 0 && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) == 0 )
             {
-                Point2f nextPt = nextPts[ptidx];
+                Point2f nextPt = nextPts[ptidx] - halfWin;
                 Point inextPt;
                 
                 inextPt.x = cvFloor(nextPt.x);
