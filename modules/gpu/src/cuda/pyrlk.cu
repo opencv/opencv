@@ -445,19 +445,11 @@ namespace cv { namespace gpu { namespace device
                 nextPt.y += delta.y;
 
                 if (::fabs(delta.x) < 0.01f && ::fabs(delta.y) < 0.01f)
-                {
-                    nextPt.x -= delta.x * 0.5f;
-                    nextPt.y -= delta.y * 0.5f;
                     break;
-                }
             }
 
             if (nextPt.x < -c_winSize_x || nextPt.x >= cols || nextPt.y < -c_winSize_y || nextPt.y >= rows)
                 status_ = false;
-
-            // TODO : Why do we compute patch error in shifted window?
-            nextPt.x += c_halfWin_x;
-            nextPt.y += c_halfWin_y;
 
             float errval = 0.f;
             if (calcErr && !GET_MIN_EIGENVALS && status_)
@@ -478,6 +470,9 @@ namespace cv { namespace gpu { namespace device
 
             if (tid == 0)
             {
+                nextPt.x += c_halfWin_x;
+                nextPt.y += c_halfWin_y;
+
                 status[blockIdx.x] = status_;
                 nextPts[blockIdx.x] = nextPt;
 
@@ -633,14 +628,10 @@ namespace cv { namespace gpu { namespace device
 
                 if (::fabs(delta.x) < 0.01f && ::fabs(delta.y) < 0.01f)
                     break;
-            }            
+            }
 
-            // TODO : Why do we compute patch error in shifted window?
-            nextPt.x += c_halfWin_x;
-            nextPt.y += c_halfWin_y;
-
-            u(y, x) = nextPt.x - x;
-            v(y, x) = nextPt.y - y;            
+            u(y, x) = nextPt.x - x + c_halfWin_x;
+            v(y, x) = nextPt.y - y + c_halfWin_y;            
 
             if (calcErr && !GET_MIN_EIGENVALS)
             {
