@@ -96,7 +96,7 @@ private:
 class CV_EXPORTS MultiBandBlender : public Blender
 {
 public:
-    MultiBandBlender(int try_gpu = false, int num_bands = 5);
+    MultiBandBlender(int try_gpu = false, int num_bands = 5, int weight_type = CV_32F);
 
     int numBands() const { return actual_num_bands_; }
     void setNumBands(int val) { actual_num_bands_ = val; }
@@ -111,6 +111,7 @@ private:
     std::vector<Mat> dst_band_weights_;
     Rect dst_roi_final_;
     bool can_use_gpu_;
+    int weight_type_; //CV_32F or CV_16S
 };
 
 
