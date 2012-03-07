@@ -19,7 +19,9 @@ gen_template_parse_args = Template("""const char* keywords[] = { $kw_list, NULL 
 gen_template_func_body = Template("""$code_decl
     $code_parse
     {
+        Py_BEGIN_ALLOW_THREADS
         $code_fcall;
+        Py_END_ALLOW_THREADS
         $code_ret;
     }
 """)

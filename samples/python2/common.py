@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import os
+from contextlib import contextmanager
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
 
@@ -115,6 +116,15 @@ def nothing(*arg, **kw):
 
 def clock():
     return cv2.getTickCount() / cv2.getTickFrequency()
+
+@contextmanager
+def Timer(msg):
+    print msg, '...',
+    start = clock()
+    try:
+        yield
+    finally:
+        print "%.2f ms" % ((clock()-start)*1000)
 
 class RectSelector:
     def __init__(self, win, callback):
