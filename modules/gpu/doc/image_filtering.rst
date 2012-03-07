@@ -379,7 +379,7 @@ Creates a non-separable linear filter.
 
     :param kernel: 2D array of filter coefficients. Floating-point coefficients will be converted to fixed-point representation before the actual processing.
 
-    :param ksize: Kernel size.
+    :param ksize: Kernel size. Supports size up to 16. For larger kernels use :ocv:func:`gpu::convolve`.
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
@@ -401,7 +401,7 @@ Applies the non-separable 2D linear filter to an image.
 
     :param ddepth: Desired depth of the destination image. If it is negative, it is the same as  ``src.depth()`` . It supports only the same depth as the source image depth.
 
-    :param kernel: 2D array of filter coefficients. This filter works with integers kernels. If  ``kernel``  has a ``float``  or  ``double``  type, it uses fixed-point arithmetic.
+    :param kernel: 2D array of filter coefficients.
 
     :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor resides within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.
 
@@ -409,7 +409,7 @@ Applies the non-separable 2D linear filter to an image.
 
 .. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-.. seealso:: :ocv:func:`filter2D`
+.. seealso:: :ocv:func:`filter2D`, :ocv:func:`gpu::convolve`
 
 
 

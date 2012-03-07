@@ -253,6 +253,8 @@ Computes a convolution (or cross-correlation) of two images.
 
     :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 
+.. seealso:: :ocv:func:`gpu::filter2D`
+
 
 
 gpu::ConvolveBuf
