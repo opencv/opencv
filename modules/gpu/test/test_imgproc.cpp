@@ -3533,8 +3533,7 @@ PARAM_TEST_CASE(PyrUp, cv::gpu::DeviceInfo, MatType, UseRoi)
     cv::gpu::DeviceInfo devInfo;
     int type;
     bool useRoi;
-    
-    cv::Size size;    
+
     cv::Mat src;
     
     cv::Mat dst_gold;
@@ -3549,7 +3548,7 @@ PARAM_TEST_CASE(PyrUp, cv::gpu::DeviceInfo, MatType, UseRoi)
         
         cv::RNG& rng = TS::ptr()->get_rng();
 
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        cv::Size size(rng.uniform(200, 400), rng.uniform(200, 400));
 
         src = randomMat(rng, size, type, 0.0, 255.0, false);
         
@@ -3563,11 +3562,12 @@ TEST_P(PyrUp, Accuracy)
 
     cv::gpu::GpuMat d_dst;
     
-    cv::gpu::pyrUp(loadMat(src, useRoi), d_dst);
+    cv::gpu::pyrUp(loadMat(src, useRoi), d_dst, cv::BORDER_REFLECT);
     
     d_dst.download(dst);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-4 : 1.0);
+    // results differs only on border left and top border due different border extrapolation type
+    EXPECT_MAT_NEAR(dst_gold(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), dst(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, Combine(

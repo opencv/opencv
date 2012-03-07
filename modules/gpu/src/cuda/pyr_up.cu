@@ -50,73 +50,91 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc 
     {
-        template <typename T, typename B> __global__ void pyrUp(const PtrStep<T> src, DevMem2D_<T> dst, const B b)
+        template <class SrcPtr, typename D> __global__ void pyrUp(const SrcPtr src, DevMem2D_<D> dst)
         {
-            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type value_type;
+            typedef typename SrcPtr::elem_type src_t;
+            typedef typename TypeVec<float, VecTraits<D>::cn>::vec_type sum_t;
 
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            __shared__ T smem1[10][10];
-            __shared__ value_type smem2[20][16];
-
-            value_type sum;
+            __shared__ sum_t s_srcPatch[10][10];
+            __shared__ sum_t s_dstPatch[20][16];
 
             if (threadIdx.x < 10 && threadIdx.y < 10)
-                smem1[threadIdx.y][threadIdx.x] = b.at(blockIdx.y * blockDim.y / 2 + threadIdx.y - 1, blockIdx.x * blockDim.x / 2 + threadIdx.x - 1, src.data, src.step);
+            {
+                const int srcx = static_cast<int>((blockIdx.x * blockDim.x) / 2 + threadIdx.x) - 1;
+                const int srcy = static_cast<int>((blockIdx.y * blockDim.y) / 2 + threadIdx.y) - 1;
+
+                s_srcPatch[threadIdx.y][threadIdx.x] = saturate_cast<sum_t>(src(srcy, srcx));
+            }
 
             __syncthreads();
 
+            sum_t sum = VecTraits<sum_t>::all(0);
+
+            const int evenFlag = static_cast<int>((threadIdx.x & 1) == 0);
+            const int oddFlag  = static_cast<int>((threadIdx.x & 1) != 0);
+            const bool eveny = ((threadIdx.y & 1) == 0);
             const int tidx = threadIdx.x;
 
-            sum = VecTraits<value_type>::all(0);
+            if (eveny)
+            {
+                sum = sum + (evenFlag * 0.0625f) * s_srcPatch[1 + (threadIdx.y >> 1)][1 + ((tidx - 2) >> 1)];
+                sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[1 + (threadIdx.y >> 1)][1 + ((tidx - 1) >> 1)];
+                sum = sum + (evenFlag * 0.375f ) * s_srcPatch[1 + (threadIdx.y >> 1)][1 + ((tidx    ) >> 1)];
+                sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[1 + (threadIdx.y >> 1)][1 + ((tidx + 1) >> 1)];
+                sum = sum + (evenFlag * 0.0625f) * s_srcPatch[1 + (threadIdx.y >> 1)][1 + ((tidx + 2) >> 1)];
+            }
 
-            sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[1 + threadIdx.y / 2][1 + ((tidx - 2) >> 1)];
-            sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[1 + threadIdx.y / 2][1 + ((tidx - 1) >> 1)];
-            sum = sum + (tidx % 2 == 0) * 0.375f  * smem1[1 + threadIdx.y / 2][1 + ((tidx    ) >> 1)];
-            sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[1 + threadIdx.y / 2][1 + ((tidx + 1) >> 1)];
-            sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[1 + threadIdx.y / 2][1 + ((tidx + 2) >> 1)];
-
-            smem2[2 + threadIdx.y][tidx] = sum;
+            s_dstPatch[2 + threadIdx.y][threadIdx.x] = sum;
 
             if (threadIdx.y < 2)
             {
-                sum = VecTraits<value_type>::all(0);
+                sum = VecTraits<sum_t>::all(0);
 
-                sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[0][1 + ((tidx - 2) >> 1)];
-                sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[0][1 + ((tidx - 1) >> 1)];
-                sum = sum + (tidx % 2 == 0) * 0.375f  * smem1[0][1 + ((tidx    ) >> 1)];
-                sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[0][1 + ((tidx + 1) >> 1)];
-                sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[0][1 + ((tidx + 2) >> 1)];
+                if (eveny)
+                {
+                    sum = sum + (evenFlag * 0.0625f) * s_srcPatch[0][1 + ((tidx - 2) >> 1)];
+                    sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[0][1 + ((tidx - 1) >> 1)];
+                    sum = sum + (evenFlag * 0.375f ) * s_srcPatch[0][1 + ((tidx    ) >> 1)];
+                    sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[0][1 + ((tidx + 1) >> 1)];
+                    sum = sum + (evenFlag * 0.0625f) * s_srcPatch[0][1 + ((tidx + 2) >> 1)];
+                }
 
-                smem2[threadIdx.y][tidx] = sum;
+                s_dstPatch[threadIdx.y][threadIdx.x] = sum;
             }
 
             if (threadIdx.y > 13)
             {
-                sum = VecTraits<value_type>::all(0);
+                sum = VecTraits<sum_t>::all(0);
 
-                sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[9][1 + ((tidx - 2) >> 1)];
-                sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[9][1 + ((tidx - 1) >> 1)];
-                sum = sum + (tidx % 2 == 0) * 0.375f  * smem1[9][1 + ((tidx    ) >> 1)];
-                sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[9][1 + ((tidx + 1) >> 1)];
-                sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[9][1 + ((tidx + 2) >> 1)];
+                if (eveny)
+                {
+                    sum = sum + (evenFlag * 0.0625f) * s_srcPatch[9][1 + ((tidx - 2) >> 1)];
+                    sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[9][1 + ((tidx - 1) >> 1)];
+                    sum = sum + (evenFlag * 0.375f ) * s_srcPatch[9][1 + ((tidx    ) >> 1)];
+                    sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[9][1 + ((tidx + 1) >> 1)];
+                    sum = sum + (evenFlag * 0.0625f) * s_srcPatch[9][1 + ((tidx + 2) >> 1)];
+                }
 
-                smem2[4 + threadIdx.y][tidx] = sum;
+                s_dstPatch[4 + threadIdx.y][threadIdx.x] = sum;
             }
 
             __syncthreads();
 
-            sum = VecTraits<value_type>::all(0);
+            sum = VecTraits<sum_t>::all(0);
 
-            sum = sum + (tidx % 2 == 0) * 0.0625f * smem2[2 + threadIdx.y - 2][tidx];
-            sum = sum + (tidx % 2 != 0) * 0.25f   * smem2[2 + threadIdx.y - 1][tidx];
-            sum = sum + (tidx % 2 == 0) * 0.375f  * smem2[2 + threadIdx.y    ][tidx];
-            sum = sum + (tidx % 2 != 0) * 0.25f   * smem2[2 + threadIdx.y + 1][tidx];
-            sum = sum + (tidx % 2 == 0) * 0.0625f * smem2[2 + threadIdx.y + 2][tidx];
+            const int tidy = threadIdx.y;
+
+            sum = sum + 0.0625f * s_dstPatch[2 + tidy - 2][threadIdx.x];
+            sum = sum + 0.25f   * s_dstPatch[2 + tidy - 1][threadIdx.x];
+            sum = sum + 0.375f  * s_dstPatch[2 + tidy    ][threadIdx.x];
+            sum = sum + 0.25f   * s_dstPatch[2 + tidy + 1][threadIdx.x];
+            sum = sum + 0.0625f * s_dstPatch[2 + tidy + 2][threadIdx.x];
 
             if (x < dst.cols && y < dst.rows)
-                dst.ptr(y)[x] = saturate_cast<T>(4.0f * sum);
+                dst(y, x) = saturate_cast<D>(4.0f * sum);
         }
 
         template <typename T, template <typename> class B> void pyrUp_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, cudaStream_t stream)
@@ -125,8 +143,9 @@ namespace cv { namespace gpu { namespace device
             const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
             B<T> b(src.rows, src.cols);
+            BorderReader< PtrStep<T>, B<T> > srcReader(src, b);
 
-            pyrUp<T><<<grid, block, 0, stream>>>(src, dst, b);
+            pyrUp<<<grid, block, 0, stream>>>(srcReader, dst);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
