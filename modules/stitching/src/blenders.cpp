@@ -287,7 +287,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     }
     else// weight_type_ == CV_16S
     {
-        mask.convetTo(weight_map, CV_16S);
+        mask.convertTo(weight_map, CV_16S);
         add(weight_map, 1, weight_map, mask != 0);
     }
 
