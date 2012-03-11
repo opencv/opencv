@@ -933,8 +933,8 @@ static BinaryFunc cvtTab[][8] =
         (BinaryFunc)cvt64f16u, 0
     },
     {
-        (BinaryFunc)cvt8u16s, (BinaryFunc)cvt8s16s, (BinaryFunc)cvt16u16s,
-        (BinaryFunc)cvt16u, (BinaryFunc)cvt32s16s, (BinaryFunc)cvt32f16s,
+        (BinaryFunc)GET_OPTIMIZED(cvt8u16s), (BinaryFunc)cvt8s16s, (BinaryFunc)cvt16u16s,
+        (BinaryFunc)cvt16u, (BinaryFunc)GET_OPTIMIZED(cvt32s16s), (BinaryFunc)GET_OPTIMIZED(cvt32f16s),
         (BinaryFunc)cvt64f16s, 0
     },
     {
