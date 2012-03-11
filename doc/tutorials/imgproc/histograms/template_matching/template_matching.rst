@@ -125,7 +125,7 @@ Code
         * Draw a rectangle around the area corresponding to the highest match
 
    * **Downloadable code**:
-     Click `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp>`_
+     Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp>`_
 
    * **Code at glance:**
 

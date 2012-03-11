@@ -9,7 +9,7 @@ def load_sample(name=None):
         try:
             img0 = cv.LoadImage(name, cv.CV_LOAD_IMAGE_COLOR)
         except IOError:
-            urlbase = 'https://code.ros.org/svn/opencv/trunk/opencv/samples/c/'
+            urlbase = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/c/'
             file = name.split('/')[-1]
             filedata = urllib2.urlopen(urlbase+file).read()
             imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)

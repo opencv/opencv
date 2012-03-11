@@ -83,7 +83,7 @@ Code
         * Display the source and equalized images in a window.
 
    * **Downloadable code**:
-     Click `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp>`_
+     Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/EqualizeHist_Demo.cpp>`_
 
    * **Code at glance:**
 

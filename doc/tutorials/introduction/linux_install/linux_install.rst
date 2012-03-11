@@ -28,7 +28,7 @@ All the libraries above can be installed via Terminal or by using Synaptic Manag
 Getting OpenCV source code 
 ============================
 
-You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from the `SVN repository <http://code.ros.org/svn/opencv/>`_.
+You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from the `SVN repository <http://code.opencv.org/svn/opencv/>`_.
 
 Getting the latest stable OpenCV version
 ------------------------------------------
@@ -43,16 +43,16 @@ Getting the cutting-edge OpenCV from SourceForge SVN repository
 
 Launch SVN client and checkout either
 
-a. the current OpenCV snapshot from here: https://code.ros.org/svn/opencv/trunk
+a. the current OpenCV snapshot from here: http://code.opencv.org/svn/opencv/trunk
 
-#. or the latest tested OpenCV snapshot from here: http://code.ros.org/svn/opencv/tags/latest_tested_snapshot
+#. or the latest tested OpenCV snapshot from here: http://code.opencv.org/svn/opencv/tags/latest_tested_snapshot
 
 In Ubuntu it can be done using the following command, e.g.:
 
 .. code-block:: bash
 
    cd ~/<my_working _directory>
-   svn co https://code.ros.org/svn/opencv/trunk  
+   svn co http://code.opencv.org/svn/opencv/trunk  
  
 
 Building OpenCV from source using CMake, using the command line

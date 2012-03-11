@@ -86,7 +86,7 @@ Code
    * Applies the *Canny Detector* and generates a **mask** (bright lines representing the edges on a black background).
    * Applies the mask obtained on the original image and display it in a window.
  
-#. The tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp>`_
 
 .. code-block::  cpp
 

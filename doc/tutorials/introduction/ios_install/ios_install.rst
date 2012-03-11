@@ -15,16 +15,16 @@ Getting the cutting-edge OpenCV from SourceForge SVN repository
 
 Launch SVN client and checkout either
 
-a. the current OpenCV snapshot from here: https://code.ros.org/svn/opencv/trunk
+a. the current OpenCV snapshot from here: http://code.opencv.org/svn/opencv/trunk
 
-#. or the latest tested OpenCV snapshot from here: http://code.ros.org/svn/opencv/tags/latest_tested_snapshot
+#. or the latest tested OpenCV snapshot from here: http://code.opencv.org/svn/opencv/tags/latest_tested_snapshot
 
 In MacOS it can be done using the following command in Terminal:
 
 .. code-block:: bash
 
    cd ~/<my_working _directory>
-   svn co https://code.ros.org/svn/opencv/trunk  
+   svn co http://code.opencv.org/svn/opencv/trunk  
  
 
 Building OpenCV from source using CMake, using the command line

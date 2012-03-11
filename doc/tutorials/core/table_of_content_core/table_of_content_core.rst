@@ -209,7 +209,7 @@ Here you will learn the about the basic building blocks of the library. A must r
 .. toctree::
    :hidden:
    
-   ../mat - the basic image container/mat - the basic image container
+   ../mat_the_basic_image_container/mat_the_basic_image_container
    ../how_to_scan_images/how_to_scan_images
    ../mat-mask-operations/mat-mask-operations
    ../adding_images/adding_images

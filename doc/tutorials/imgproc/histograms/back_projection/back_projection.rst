@@ -99,9 +99,9 @@ Code
 
    * **Downloadable code**:
 
-      a. Click `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp>`_ for the basic version (explained in this tutorial). 
-      b. For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the skin area) you can check the `improved demo <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp>`_ 
-      c. ...or you can always check out the classical `camshiftdemo <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/camshiftdemo.cpp>`_ in samples.
+      a. Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp>`_ for the basic version (explained in this tutorial). 
+      b. For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the skin area) you can check the `improved demo <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp>`_ 
+      c. ...or you can always check out the classical `camshiftdemo <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/camshiftdemo.cpp>`_ in samples.
 
    * **Code at glance:**
 

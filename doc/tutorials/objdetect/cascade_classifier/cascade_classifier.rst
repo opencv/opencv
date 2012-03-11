@@ -22,7 +22,7 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp>`_ . The second version (using LBP for face detection) can be `found here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/objectDetection/objectDetection2.cpp>`_ 
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp>`_ . The second version (using LBP for face detection) can be `found here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/objectDetection/objectDetection2.cpp>`_ 
 
 .. code-block:: cpp 
 

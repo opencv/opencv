@@ -47,7 +47,7 @@ Code
      The user chooses either option by pressing 'c' (constant) or 'r' (replicate)
    * The program finishes when the user presses 'ESC'
  
-#. The tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/copyMakeBorder_demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/copyMakeBorder_demo.cpp>`_
 
 
 .. code-block:: cpp 

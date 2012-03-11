@@ -82,7 +82,7 @@ Code
         * Plot the three histograms in a window
 
    * **Downloadable code**:
-     Click `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp>`_
+     Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp>`_
 
    * **Code at glance:**
 

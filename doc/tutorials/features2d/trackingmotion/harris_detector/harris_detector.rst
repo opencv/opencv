@@ -151,7 +151,7 @@ How does it work?
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/TrackingMotion/cornerHarris_Demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/TrackingMotion/cornerHarris_Demo.cpp>`_
 
 .. code-block:: cpp 
 

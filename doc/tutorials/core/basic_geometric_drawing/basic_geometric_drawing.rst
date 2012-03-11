@@ -56,7 +56,7 @@ Scalar
 
 Code
 =====
-* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp>`_
+* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp>`_
 
 Explanation
 =============

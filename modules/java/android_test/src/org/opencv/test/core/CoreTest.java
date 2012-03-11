@@ -742,7 +742,7 @@ public class CoreTest extends OpenCVTestCase {
 
         Core.fillConvexPoly(gray0, polyline2, colorBlack, Core.LINE_8, 1);
 
-        assertEquals("see https://code.ros.org/trac/opencv/ticket/1284", 0, Core.countNonZero(gray0));
+        assertEquals("see http://code.opencv.org/issues/1284", 0, Core.countNonZero(gray0));
     }
 
     public void testFillPolyMatListOfListOfPointScalar() {

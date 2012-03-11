@@ -72,7 +72,7 @@ Code
 
    * The filter output (with each kernel) will be shown during 500 milliseconds
 
-#. The tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp>`_
 
 
 .. code-block:: cpp 

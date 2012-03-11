@@ -249,7 +249,7 @@ The methods/functions grab the next frame from video file or camera and return t
 
 The primary use of the function is in multi-camera environments, especially when the cameras do not have hardware synchronization. That is, you call ``VideoCapture::grab()`` for each camera and after that call the slower method ``VideoCapture::retrieve()`` to decode and get frame from each camera. This way the overhead on demosaicing or motion jpeg decompression etc. is eliminated and the retrieved frames from different cameras will be closer in time.
 
-Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the correct way of retrieving data from it is to call `VideoCapture::grab` first and then call :ocv:func:`VideoCapture::retrieve` one or more times with different values of the ``channel`` parameter. See https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/kinect_maps.cpp
+Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the correct way of retrieving data from it is to call `VideoCapture::grab` first and then call :ocv:func:`VideoCapture::retrieve` one or more times with different values of the ``channel`` parameter. See http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/kinect_maps.cpp
 
 
 VideoCapture::retrieve

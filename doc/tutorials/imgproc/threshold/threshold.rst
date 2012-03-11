@@ -130,7 +130,7 @@ Threshold to Zero, Inverted
 Code
 ======
 
-The tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgProc/Threshold.cpp>`_
+The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgProc/Threshold.cpp>`_
 
 .. code-block:: cpp 
 

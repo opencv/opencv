@@ -258,7 +258,7 @@ Approximates a polygonal curve(s) with the specified precision.
 The functions ``approxPolyDP`` approximate a curve or a polygon with another curve/polygon with less vertices so that the distance between them is less or equal to the specified precision. It uses the Douglas-Peucker algorithm
 http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
-See http://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp for the function usage model.
+See http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp for the function usage model.
 
 
 ApproxChains

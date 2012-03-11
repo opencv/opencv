@@ -51,7 +51,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         im = cv.LoadImage( sys.argv[1], cv.CV_LOAD_IMAGE_GRAYSCALE)
     else:
-        url = 'https://code.ros.org/svn/opencv/trunk/opencv/samples/c/baboon.jpg'
+        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/c/baboon.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))

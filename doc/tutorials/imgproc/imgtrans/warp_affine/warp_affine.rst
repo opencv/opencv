@@ -93,7 +93,7 @@ Code
    * Applies a Rotation to the image after being transformed. This rotation is with respect to the image center
    * Waits until the user exits the program
  
-#. The tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp>`_
 
 .. code-block:: cpp
 

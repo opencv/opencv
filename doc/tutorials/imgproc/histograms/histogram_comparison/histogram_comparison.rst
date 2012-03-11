@@ -80,7 +80,7 @@ Code
         * Display the numerical matching parameters obtained.
 
    * **Downloadable code**: 
-     Click `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp>`_ 
+     Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp>`_ 
 
    * **Code at glance:**
 

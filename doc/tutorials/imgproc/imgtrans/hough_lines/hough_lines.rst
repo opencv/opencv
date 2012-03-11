@@ -89,9 +89,9 @@ Code
 ======
 
 .. |TutorialHoughLinesSimpleDownload| replace:: here
-.. _TutorialHoughLinesSimpleDownload: https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/houghlines.cpp
+.. _TutorialHoughLinesSimpleDownload: http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/houghlines.cpp
 .. |TutorialHoughLinesFancyDownload| replace:: here
-.. _TutorialHoughLinesFancyDownload: https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp
+.. _TutorialHoughLinesFancyDownload: http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp
 
 
 #. **What does this program do?**

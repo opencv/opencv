@@ -17,7 +17,7 @@ In this tutorial you will learn how to:
 Source Code
 ===========
 
-Download the source code from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>`_.
+Download the source code from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>`_.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
