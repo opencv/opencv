@@ -29,6 +29,13 @@ else()
   set(OpenCV_ADD_DEBUG_RELEASE_CONFIGCMAKE FALSE)
 endif()
 
+if(WIN32)
+  if(MINGW)
+    set(OPENCV_LINK_LIBRARY_SUFFIX ".dll.a")
+  else()
+    set(OPENCV_LINK_LIBRARY_SUFFIX ".lib")
+  endif()
+endif()
 
 #build list of modules available for the OpenCV user
 set(OpenCV_LIB_COMPONENTS "")
@@ -52,7 +59,7 @@ macro(ocv_generate_dependencies_map_configcmake suffix configuration)
     get_filename_component(__libname "${__libname}" NAME)
 
     if(WIN32)
-      string(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "${CMAKE_LINK_LIBRARY_SUFFIX}" __libname "${__libname}")
+      string(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "${OPENCV_LINK_LIBRARY_SUFFIX}" __libname "${__libname}")
     endif()
 
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_LIBNAME_${suffix} \"${__libname}\")\n")
