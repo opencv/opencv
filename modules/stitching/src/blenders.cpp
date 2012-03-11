@@ -429,6 +429,11 @@ void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 
 void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::createLaplacePyr(img, num_levels, pyr))
+        return;
+#endif
+
     pyr.resize(num_levels + 1);
 
     if(img.depth() == CV_8U)
