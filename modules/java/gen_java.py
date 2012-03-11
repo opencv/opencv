@@ -681,7 +681,7 @@ public class %(jc)s {
             return
         if '/Simple' in decl[2]:
             self.classes_simple.append(name)
-        if '/Map' in decl[2]:
+        if ('/Map' in decl[2]) or (name == 'CvStatModel'):
             self.classes_map.append(name)
             #adding default c-tor
             ffi = FuncFamilyInfo(['cv.'+name+'.'+name, '', [], []])
