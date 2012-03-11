@@ -1482,6 +1482,14 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
 void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
                InputArray mask, int dtype )
 {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U && (dtype == CV_16S || (dtype == -1 && dst.fixedType() && dst.depth() == CV_16S)))
+    {
+        Mat _dst = dst.getMat();
+        if(tegra::subtract_8u8u16s(src1.getMat(), src2.getMat(), _dst))
+            return;
+    }
+#endif
     arithm_op(src1, src2, dst, mask, dtype, subTab );
 }
 
