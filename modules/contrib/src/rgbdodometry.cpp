@@ -47,9 +47,9 @@
 
 #include <iostream>
 
-#ifdef HAVE_EIGEN
+#if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #include <Eigen/Core>
-//#include <unsupported/Eigen/MatrixFunctions>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include <Eigen/Dense>
 #endif
@@ -77,18 +77,18 @@ void computeProjectiveMatrix( const Mat& ksi, Mat& Rt )
 {
     CV_Assert( ksi.size() == Size(1,6) && ksi.type() == CV_64FC1 );
 
-//#ifdef HAVE_EIGEN
-//    const double* ksi_ptr = reinterpret_cast<const double*>(ksi.ptr(0));
-//    Eigen::Matrix<double,4,4> twist, g;
-//    twist << 0.,          -ksi_ptr[2], ksi_ptr[1],  ksi_ptr[3],
-//             ksi_ptr[2],  0.,          -ksi_ptr[0], ksi_ptr[4],
-//             -ksi_ptr[1], ksi_ptr[0],  0,           ksi_ptr[5],
-//             0.,          0.,          0.,          0.;
-//    g = twist.exp();
+#if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
+    const double* ksi_ptr = reinterpret_cast<const double*>(ksi.ptr(0));
+    Eigen::Matrix<double,4,4> twist, g;
+    twist << 0.,          -ksi_ptr[2], ksi_ptr[1],  ksi_ptr[3],
+             ksi_ptr[2],  0.,          -ksi_ptr[0], ksi_ptr[4],
+             -ksi_ptr[1], ksi_ptr[0],  0,           ksi_ptr[5],
+             0.,          0.,          0.,          0.;
+    g = twist.exp();
 
 
-//    eigen2cv(g, Rt);
-//#else
+    eigen2cv(g, Rt);
+#else
     // for infinitesimal transformation
     Rt = Mat::eye(4, 4, CV_64FC1);
 
@@ -100,7 +100,7 @@ void computeProjectiveMatrix( const Mat& ksi, Mat& Rt )
     Rt.at<double>(0,3) = ksi.at<double>(3);
     Rt.at<double>(1,3) = ksi.at<double>(4);
     Rt.at<double>(2,3) = ksi.at<double>(5);
-//#endif
+#endif
 }
 
 static
@@ -286,7 +286,7 @@ static
 bool solveSystem( const Mat& C, const Mat& dI_dt, double detThreshold, Mat& Rt )
 {
     Mat ksi;
-#ifdef HAVE_EIGEN
+#if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> eC, eCt, edI_dt;
     cv2eigen(C, eC);
     cv2eigen(dI_dt, edI_dt);
