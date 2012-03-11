@@ -426,8 +426,11 @@ macro(ocv_create_module)
 
   # only "public" headers need to be installed
   if(OPENCV_MODULE_${the_module}_HEADERS AND OPENCV_MODULES_PUBLIC MATCHES "(^|;)${the_module}(;|$)")
-    install(FILES ${OPENCV_MODULE_${the_module}_HEADERS}
-      DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name} COMPONENT main)
+    foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
+      if(hdr MATCHES "(opencv2/.*)/[^/]+.h(..)?$")
+        install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_PREFIX}/${CMAKE_MATCH_1}" COMPONENT main)
+      endif()
+    endforeach()
   endif()
 endmacro()
 
