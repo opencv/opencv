@@ -137,7 +137,8 @@ void set2shorts( int& dst, int short_v1, int short_v2 )
 static inline
 void get2shorts( int src, int& short_v1, int& short_v2 )
 {
-    unsigned short* ptr = reinterpret_cast<unsigned short*>(&src);
+    typedef union { int vint32; unsigned short vuint16[2]; } s32tou16;
+    const unsigned short* ptr = (reinterpret_cast<s32tou16*>(&src))->vuint16;
     short_v1 = ptr[0];
     short_v2 = ptr[1];
 }
