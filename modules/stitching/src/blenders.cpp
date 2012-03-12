@@ -381,6 +381,10 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 
 void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::normalizeUsingWeightMap(weight, src))
+        return;
+#endif
     CV_Assert(src.type() == CV_16SC3);
 
     if(weight.type() == CV_32FC1)
