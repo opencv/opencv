@@ -385,12 +385,17 @@ if(UNIX)
             set(HAVE_FFMPEG 1)
         endif()
       endif()
+
       # Find the bzip2 library because it is required on some systems
       FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2)
       if(NOT BZIP2_LIBRARIES)
         # Do an other trial
         FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
       endif()
+    endif()
+
+    if(HAVE_FFMPEG)
+    CHECK_MODULE(libavformat>=53 NEW_FFMPEG)
     endif()
 
     if(WITH_1394)
