@@ -78,10 +78,14 @@ int main(int argc, char** argv)
     const Mat cameraMatrix = Mat(3,3,CV_32FC1,vals);
     const Mat distCoeff(1,5,CV_32FC1,Scalar(0));
 
-    if( argc != 5 )
+    if( argc != 5 && argc != 6 )
     {
-        cout << "Format: image0 depth0 image1 depth1" << endl;
+        cout << "Format: image0 depth0 image1 depth1 [transformationType]" << endl;
         cout << "Depth file must be 16U image stored depth in mm." << endl;
+        cout << "Transformation types:" << endl;
+        cout << "   -rbm - rigid body motion (default)" << endl;
+        cout << "   -r   - rotation rotation only" << endl;
+        cout << "   -t   - translation only" << endl;
         return -1;
     }
 
@@ -95,6 +99,29 @@ int main(int argc, char** argv)
     {
         cout << "Data (rgb or depth images) is empty.";
         return -1;
+    }
+
+    int transformationType = TransformationType::RIGID_BODY_MOTION;
+    if( argc == 6 )
+    {
+        string ttype = argv[5];
+        if( ttype == "-rbm" )
+        {
+            transformationType = TransformationType::RIGID_BODY_MOTION;
+        }
+        else if ( ttype == "-r")
+        {
+            transformationType = TransformationType::ROTATION;
+        }
+        else if ( ttype == "-t")
+        {
+            transformationType = TransformationType::TRANSLATION;
+        }
+        else
+        {
+            cout << "Unsupported transformation type." << endl;
+            return -1;
+        }
     }
 
     Mat grayImage0, grayImage1, depthFlt0, depthFlt1/*in meters*/;
@@ -126,7 +153,7 @@ int main(int argc, char** argv)
     bool isFound = cv::RGBDOdometry( Rt, grayImage0, depthFlt0, Mat(),
                                      grayImage1, depthFlt1, Mat(),
                                      cameraMatrix, iterCounts, minGradMagnitudes,
-                                     minDepth, maxDepth, maxDepthDiff );
+                                     minDepth, maxDepth, maxDepthDiff, transformationType );
     tm.stop();
 
     cout << "Rt = " << Rt << endl;
@@ -141,9 +168,9 @@ int main(int argc, char** argv)
     Mat warpedImage0;
     warpImage<Point3_<uchar> >( colorImage0, depthFlt0, Rt, cameraMatrix, distCoeff, warpedImage0 );
 
-    imshow( "im0", colorImage0 );
-    imshow( "warped_im0", warpedImage0 );
-    imshow( "im1", colorImage1 );
+    imshow( "image0", colorImage0 );
+    imshow( "warped_image0", warpedImage0 );
+    imshow( "image1", colorImage1 );
     waitKey();
 
     return 0;

@@ -54,15 +54,13 @@
 #include <Eigen/Dense>
 #endif
 
-#if defined _MSC_VER
 #include <limits>
-#endif
 
-
+#define SHOW_DEBUG_IMAGES 0
 using namespace cv;
 
 inline static
-void computeC( double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy )
+void computeC_RigidBodyMotion( double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy )
 {
     double invz  = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -75,6 +73,32 @@ void computeC( double* C, double dIdx, double dIdy, const Point3f& p3d, double f
     C[3] = v0;
     C[4] = v1;
     C[5] = v2;
+}
+
+inline static
+void computeC_Rotation( double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy )
+{
+    double invz  = 1. / p3d.z,
+           v0 = dIdx * fx * invz,
+           v1 = dIdy * fy * invz,
+           v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+
+    C[0] = -p3d.z * v1 + p3d.y * v2;
+    C[1] =  p3d.z * v0 - p3d.x * v2;
+    C[2] = -p3d.y * v0 + p3d.x * v1;
+}
+
+inline static
+void computeC_Translation( double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy )
+{
+    double invz  = 1. / p3d.z,
+           v0 = dIdx * fx * invz,
+           v1 = dIdy * fy * invz,
+           v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+
+    C[0] = v0;
+    C[1] = v1;
+    C[2] = v2;
 }
 
 inline static
@@ -131,6 +155,45 @@ void cvtDepth2Cloud( const Mat& depth, Mat& cloud, const Mat& cameraMatrix )
     }
 }
 
+#if SHOW_DEBUG_IMAGES
+template<class ImageElemType>
+static void warpImage( const Mat& image, const Mat& depth,
+                       const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+                       Mat& warpedImage )
+{
+    const Rect rect = Rect(0, 0, image.cols, image.rows);
+
+    vector<Point2f> points2d;
+    Mat cloud, transformedCloud;
+
+    cvtDepth2Cloud( depth, cloud, cameraMatrix );
+    perspectiveTransform( cloud, transformedCloud, Rt );
+    projectPoints( transformedCloud.reshape(3,1), Mat::eye(3,3,CV_64FC1), Mat::zeros(3,1,CV_64FC1), cameraMatrix, distCoeff, points2d );
+
+    Mat pointsPositions( points2d );
+    pointsPositions = pointsPositions.reshape( 2, image.rows );
+
+    warpedImage.create( image.size(), image.type() );
+    warpedImage = Scalar::all(0);
+
+    Mat zBuffer( image.size(), CV_32FC1, FLT_MAX );
+    for( int y = 0; y < image.rows; y++ )
+    {
+        for( int x = 0; x < image.cols; x++ )
+        {
+            const Point3f p3d = transformedCloud.at<Point3f>(y,x);
+            const Point p2d = pointsPositions.at<Point2f>(y,x);
+            if( !cvIsNaN(cloud.at<Point3f>(y,x).z) && cloud.at<Point3f>(y,x).z > 0 &&
+                rect.contains(p2d) && zBuffer.at<float>(p2d) > p3d.z )
+            {
+                warpedImage.at<ImageElemType>(p2d) = image.at<ImageElemType>(y,x);
+                zBuffer.at<float>(p2d) = p3d.z;
+            }
+        }
+    }
+}
+#endif
+
 static inline
 void set2shorts( int& dst, int short_v1, int short_v2 )
 {
@@ -186,7 +249,7 @@ int computeCorresp( const Mat& K, const Mat& K_inv, const Mat& Rt,
                 if( r.contains(Point(u0,v0)) )
                 {
                     float d0 = depth0.at<float>(v0,u0);
-                    if( !cvIsNaN(d0) && std::abs(transformed_d1 - d0) < maxDepthDiff )
+                    if( !cvIsNaN(d0) && std::abs(transformed_d1 - d0) <= maxDepthDiff )
                     {
                         int c = corresps.at<int>(v0,u0);
                         if( c != -1 )
@@ -225,18 +288,11 @@ void preprocessDepth( Mat depth0, Mat depth1,
         {
             float& d0 = depth0.at<float>(y,x);
             if( !cvIsNaN(d0) && (d0 > maxDepth || d0 < minDepth || d0 <= 0 || (!validMask0.empty() && !validMask0.at<uchar>(y,x))) )
-#if defined _MSC_VER
                 d0 = std::numeric_limits<float>::quiet_NaN();
-#else
-                d0 = NAN;
-#endif
+
             float& d1 = depth1.at<float>(y,x);
             if( !cvIsNaN(d1) && (d1 > maxDepth || d1 < minDepth || d1 <= 0 || (!validMask1.empty() && !validMask1.at<uchar>(y,x))) )
-#if defined _MSC_VER
                 d1 = std::numeric_limits<float>::quiet_NaN();
-#else
-                d1 = NAN;
-#endif
         }
     }
 }
@@ -244,7 +300,7 @@ void preprocessDepth( Mat depth0, Mat depth1,
 static
 void buildPyramids( const Mat& image0, const Mat& image1,
                     const Mat& depth0, const Mat& depth1,
-                    const Mat& cameraMatrix, double sobelScale,
+                    const Mat& cameraMatrix, int sobelSize, double sobelScale,
                     const vector<float>& minGradMagnitudes,
                     vector<Mat>& pyramidImage0, vector<Mat>& pyramidDepth0,
                     vector<Mat>& pyramidImage1, vector<Mat>& pyramidDepth1,
@@ -267,8 +323,8 @@ void buildPyramids( const Mat& image0, const Mat& image1,
 
     for( size_t i = 0; i < pyramidImage1.size(); i++ )
     {
-        Sobel( pyramidImage1[i], pyramid_dI_dx1[i], CV_16S, 1, 0 );
-        Sobel( pyramidImage1[i], pyramid_dI_dy1[i], CV_16S, 0, 1 );
+        Sobel( pyramidImage1[i], pyramid_dI_dx1[i], CV_16S, 1, 0, sobelSize );
+        Sobel( pyramidImage1[i], pyramid_dI_dy1[i], CV_16S, 0, 1, sobelSize );
 
         const Mat& dx = pyramid_dI_dx1[i];
         const Mat& dy = pyramid_dI_dy1[i];
@@ -295,9 +351,8 @@ void buildPyramids( const Mat& image0, const Mat& image1,
 }
 
 static
-bool solveSystem( const Mat& C, const Mat& dI_dt, double detThreshold, Mat& Rt )
+bool solveSystem( const Mat& C, const Mat& dI_dt, double detThreshold, Mat& ksi )
 {
-    Mat ksi;
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> eC, eCt, edI_dt;
     cv2eigen(C, eC);
@@ -328,9 +383,90 @@ bool solveSystem( const Mat& C, const Mat& dI_dt, double detThreshold, Mat& Rt )
     cv::solve( A, B, ksi, DECOMP_CHOLESKY );
 #endif
 
-	computeProjectiveMatrix( ksi, Rt );
+    return true;
+}
 
-	return true;
+typedef void (*ComputeCFuncPtr)( double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy );
+
+static
+bool computeKsi( int transformType,
+                 const Mat& image0, const Mat&  cloud0,
+                 const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
+                 const Mat& corresps, int correspsCount,
+                 double fx, double fy, double sobelScale, double normScale, double determinantThreshold,
+                 Mat& ksi )
+{
+    int Cwidth = -1;
+    ComputeCFuncPtr computeCFuncPtr = 0;
+    if( transformType == TransformationType::RIGID_BODY_MOTION )
+    {
+        Cwidth = 6;
+        computeCFuncPtr = computeC_RigidBodyMotion;
+    }
+    else if( transformType == TransformationType::ROTATION )
+    {
+        Cwidth = 3;
+        computeCFuncPtr = computeC_Rotation;
+    }
+    else if( transformType == TransformationType::TRANSLATION )
+    {
+        Cwidth = 3;
+        computeCFuncPtr = computeC_Translation;
+    }
+    else
+        CV_Error( CV_StsBadFlag, "Unsupported value of transformation type flag.");
+
+    Mat C( correspsCount, Cwidth, CV_64FC1 );
+    Mat dI_dt( correspsCount, 1, CV_64FC1 );
+
+    int pointCount = 0;
+    for( int v0 = 0; v0 < corresps.rows; v0++ )
+    {
+        for( int u0 = 0; u0 < corresps.cols; u0++ )
+        {
+            if( corresps.at<int>(v0,u0) != -1 )
+            {
+                int u1, v1;
+                get2shorts( corresps.at<int>(v0,u0), u1, v1 );
+
+                (*computeCFuncPtr)( (double*)C.ptr(pointCount),
+                                     normScale * sobelScale * dI_dx1.at<short int>(v1,u1),
+                                     normScale * sobelScale * dI_dy1.at<short int>(v1,u1),
+                                     cloud0.at<Point3f>(v0,u0), fx, fy);
+
+                dI_dt.at<double>(pointCount) = normScale * (static_cast<double>(image1.at<uchar>(v1,u1)) -
+                                                            static_cast<double>(image0.at<uchar>(v0,u0)));
+                pointCount++;
+            }
+        }
+    }
+
+    Mat sln;
+    bool solutionExist = solveSystem( C, dI_dt, determinantThreshold, sln );
+
+    if( solutionExist )
+    {
+        ksi.create(6,1,CV_64FC1);
+        ksi = Scalar(0);
+
+        Mat subksi;
+        if( transformType == TransformationType::RIGID_BODY_MOTION )
+        {
+            subksi = ksi;
+        }
+        else if( transformType == TransformationType::ROTATION )
+        {
+            subksi = ksi.rowRange(0,3);
+        }
+        else if( transformType == TransformationType::TRANSLATION )
+        {
+            subksi = ksi.rowRange(3,6);
+        }
+
+        sln.copyTo( subksi );
+    }
+
+    return solutionExist;
 }
 
 bool cv::RGBDOdometry( cv::Mat& Rt,
@@ -338,8 +474,9 @@ bool cv::RGBDOdometry( cv::Mat& Rt,
                        const cv::Mat& image1, const cv::Mat& _depth1, const cv::Mat& validMask1,
                        const cv::Mat& cameraMatrix, const std::vector<int>& iterCounts,
                        const std::vector<float>& minGradientMagnitudes,
-                       float minDepth, float maxDepth, float maxDepthDiff )
+                       float minDepth, float maxDepth, float maxDepthDiff, int transformType )
 {
+    const int sobelSize = 3;
     const double sobelScale = 1./8;
 
     Mat depth0 = _depth0.clone(),
@@ -366,15 +503,15 @@ bool cv::RGBDOdometry( cv::Mat& Rt,
     CV_Assert( minGradientMagnitudes.size() == iterCounts.size() );
 
     preprocessDepth( depth0, depth1, validMask0, validMask1, minDepth, maxDepth );
-    
+
     vector<Mat> pyramidImage0, pyramidDepth0,
                 pyramidImage1, pyramidDepth1, pyramid_dI_dx1, pyramid_dI_dy1, pyramidTexturedMask1,
                 pyramidCameraMatrix;
-    buildPyramids( image0, image1, depth0, depth1, cameraMatrix, sobelScale, minGradientMagnitudes,
+    buildPyramids( image0, image1, depth0, depth1, cameraMatrix, sobelSize, sobelScale, minGradientMagnitudes,
                    pyramidImage0, pyramidDepth0, pyramidImage1, pyramidDepth1,
                    pyramid_dI_dx1, pyramid_dI_dy1, pyramidTexturedMask1, pyramidCameraMatrix );
 
-    Mat resultRt = Mat::eye(4,4,CV_64FC1);
+    Mat resultRt = Mat::eye(4,4,CV_64FC1), currRt, ksi;
     for( int level = iterCounts.size() - 1; level >= 0; level-- )
     {
         const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
@@ -392,51 +529,49 @@ bool cv::RGBDOdometry( cv::Mat& Rt,
         CV_Assert( level_dI_dx1.type() == CV_16S );
         CV_Assert( level_dI_dy1.type() == CV_16S );
 
-        Mat corresp( levelImage0.size(), levelImage0.type(), CV_32SC1 );
+        Mat corresps( levelImage0.size(), levelImage0.type(), CV_32SC1 );
 
         // Run transformation search on current level iteratively.
         for( int iter = 0; iter < iterCounts[level]; iter ++ )
         {
-            int correspCount = computeCorresp( levelCameraMatrix, levelCameraMatrix.inv(), resultRt.inv(DECOMP_SVD),
-                                               levelDepth0, levelDepth1, pyramidTexturedMask1[level], maxDepthDiff,
-                                               corresp );
+            int correspsCount = computeCorresp( levelCameraMatrix, levelCameraMatrix.inv(), resultRt.inv(DECOMP_SVD),
+                                                levelDepth0, levelDepth1, pyramidTexturedMask1[level], maxDepthDiff,
+                                                corresps );
 
-            if( correspCount == 0 )
+            if( correspsCount == 0 )
                 break;
-
-            Mat C( correspCount, 6, CV_64FC1 );
-            Mat dI_dt( correspCount, 1, CV_64FC1 );
 
             const double fx = levelCameraMatrix.at<double>(0,0);
             const double fy = levelCameraMatrix.at<double>(1,1);
-            int pointCount = 0;
-            for( int v0 = 0; v0 < corresp.rows; v0++ )
-            {
-                for( int u0 = 0; u0 < corresp.cols; u0++ )
-                {
-                    if( corresp.at<int>(v0,u0) != -1 )
-                    {
-                        int u1, v1;
-                        get2shorts( corresp.at<int>(v0,u0), u1, v1 );
+            const double avgf = 0.5 *(fx + fy);
+            const double normScale = 1./(255*avgf);
+            const double determinantThreshold = 1e-6;
 
-                        computeC( (double*)C.ptr(pointCount),
-                                  sobelScale * level_dI_dx1.at<short int>(v1,u1), sobelScale * level_dI_dy1.at<short int>(v1,u1),
-                                  levelCloud0.at<Point3f>(v0,u0), fx, fy);
+            bool solutionExist = computeKsi( transformType,
+                                             levelImage0, levelCloud0,
+                                             levelImage1, level_dI_dx1, level_dI_dy1,
+                                             corresps, correspsCount,
+                                             fx, fy, sobelScale, normScale, determinantThreshold,
+                                             ksi );
 
-                        dI_dt.at<double>(pointCount) = static_cast<double>(levelImage1.at<uchar>(v1,u1)) -
-                                                       static_cast<double>(levelImage0.at<uchar>(v0,u0));
-                        pointCount++;
-                    }
-                }
-            }
-
-            const double detThreshold = 1.e-6;
-            Mat currRt;
-            bool solutionExist = solveSystem( C, dI_dt, detThreshold, currRt );
-			if( !solutionExist )
+            if( !solutionExist )
                 break;
-			
+
+            computeProjectiveMatrix( ksi, currRt );
+
             resultRt = currRt * resultRt;
+
+#if SHOW_DEBUG_IMAGES
+            std::cout << "currRt " << currRt << std::endl;
+            Mat warpedImage0;
+            const Mat distCoeff(1,5,CV_32FC1,Scalar(0));
+            warpImage<uchar>( levelImage0, levelDepth0, resultRt, levelCameraMatrix, distCoeff, warpedImage0 );
+
+            imshow( "im0", levelImage0 );
+            imshow( "wim0", warpedImage0 );
+            imshow( "im1", levelImage1 );
+            waitKey();
+#endif
         }
     }
 
