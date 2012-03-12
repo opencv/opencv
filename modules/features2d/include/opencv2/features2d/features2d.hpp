@@ -1552,38 +1552,38 @@ private:
   mutable ORB orb_;
 };
 
-class CV_EXPORTS SimpleBlobDetector : public cv::FeatureDetector
+class CV_EXPORTS_W SimpleBlobDetector : public FeatureDetector
 {
 public:
-  struct CV_EXPORTS Params
+  struct CV_EXPORTS_W_SIMPLE Params
   {
-      Params();
-      float thresholdStep;
-      float minThreshold;
-      float maxThreshold;
-      size_t minRepeatability;
-      float minDistBetweenBlobs;
+      CV_WRAP Params();
+      CV_PROP_RW float thresholdStep;
+      CV_PROP_RW float minThreshold;
+      CV_PROP_RW float maxThreshold;
+      CV_PROP_RW size_t minRepeatability;
+      CV_PROP_RW float minDistBetweenBlobs;
 
-      bool filterByColor;
-      uchar blobColor;
+      CV_PROP_RW bool filterByColor;
+      CV_PROP_RW uchar blobColor;
 
-      bool filterByArea;
-      float minArea, maxArea;
+      CV_PROP_RW bool filterByArea;
+      CV_PROP_RW float minArea, maxArea;
 
-      bool filterByCircularity;
-      float minCircularity, maxCircularity;
+      CV_PROP_RW bool filterByCircularity;
+      CV_PROP_RW float minCircularity, maxCircularity;
 
-      bool filterByInertia;
-      float minInertiaRatio, maxInertiaRatio;
+      CV_PROP_RW bool filterByInertia;
+      CV_PROP_RW float minInertiaRatio, maxInertiaRatio;
 
-      bool filterByConvexity;
-      float minConvexity, maxConvexity;
+      CV_PROP_RW bool filterByConvexity;
+      CV_PROP_RW float minConvexity, maxConvexity;
 
       void read( const FileNode& fn );
       void write( FileStorage& fs ) const;
   };
 
-  SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+  CV_WRAP SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
 
   virtual void read( const FileNode& fn );
   virtual void write( FileStorage& fs ) const;

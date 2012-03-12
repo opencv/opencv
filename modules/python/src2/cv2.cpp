@@ -87,6 +87,8 @@ typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
 typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 
+typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
+
 typedef cvflann::flann_distance_t cvflann_flann_distance_t;
 typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
 typedef Ptr<flann::IndexParams> Ptr_flann_IndexParams;
@@ -350,6 +352,19 @@ static PyObject* pyopencv_from(int value)
 }
 
 static bool pyopencv_to(PyObject* obj, int& value, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    value = (int)PyInt_AsLong(obj);
+    return value != -1 || !PyErr_Occurred();
+}
+
+static PyObject* pyopencv_from(uchar value)
+{
+    return PyInt_FromLong(value);
+}
+
+static bool pyopencv_to(PyObject* obj, uchar& value, const char* name = "<unknown>")
 {
     if(!obj || obj == Py_None)
         return true;
