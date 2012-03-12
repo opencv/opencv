@@ -54,6 +54,11 @@
 #include <Eigen/Dense>
 #endif
 
+#if defined _MSC_VER
+#include <limits>
+#endif
+
+
 using namespace cv;
 
 inline static
@@ -220,11 +225,18 @@ void preprocessDepth( Mat depth0, Mat depth1,
         {
             float& d0 = depth0.at<float>(y,x);
             if( !cvIsNaN(d0) && (d0 > maxDepth || d0 < minDepth || d0 <= 0 || (!validMask0.empty() && !validMask0.at<uchar>(y,x))) )
+#if defined _MSC_VER
+                d0 = std::numeric_limits<float>::quiet_NaN();
+#else
                 d0 = NAN;
-
+#endif
             float& d1 = depth1.at<float>(y,x);
             if( !cvIsNaN(d1) && (d1 > maxDepth || d1 < minDepth || d1 <= 0 || (!validMask1.empty() && !validMask1.at<uchar>(y,x))) )
+#if defined _MSC_VER
+                d1 = std::numeric_limits<float>::quiet_NaN();
+#else
                 d1 = NAN;
+#endif
         }
     }
 }
