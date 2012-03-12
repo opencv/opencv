@@ -370,6 +370,7 @@ enum
     CV_CAP_PROP_GUID          =29,	
     CV_CAP_PROP_ISO_SPEED     =30,	
     CV_CAP_PROP_MAX_DC1394    =31,
+    CV_CAP_PROP_IMAGE_GENERATOR_PRESENT = 32,
     CV_CAP_PROP_AUTOGRAB      =1024, // property for highgui class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
     CV_CAP_PROP_PREVIEW_FORMAT=1026, // readonly, tricky property, returns cpnst char* indeed
@@ -377,6 +378,7 @@ enum
     CV_CAP_OPENNI_DEPTH_GENERATOR = 0,
     CV_CAP_OPENNI_IMAGE_GENERATOR = 1 << 31,
     CV_CAP_OPENNI_GENERATORS_MASK = 1 << 31,
+    CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_IMAGE_GENERATOR_PRESENT,
 
     // Properties of cameras available through OpenNI interfaces
     CV_CAP_PROP_OPENNI_OUTPUT_MODE      = 100,
@@ -445,7 +447,8 @@ enum
 enum
 {
     CV_CAP_OPENNI_VGA_30HZ     = 0,
-    CV_CAP_OPENNI_SXGA_15HZ    = 1
+    CV_CAP_OPENNI_SXGA_15HZ    = 1,
+    CV_CAP_OPENNI_SXGA_30HZ    = 2
 };
 
 //supported by Android camera output formats

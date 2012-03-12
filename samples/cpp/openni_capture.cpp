@@ -8,7 +8,7 @@ using namespace std;
 
 void help()
 {
-        cout << "\nThis program demonstrates usage of Kinect sensor.\n"
+        cout << "\nThis program demonstrates usage of depth sensors(Kinect,XtionPRO,...).\n"
                         "The user gets some of the supported output images.\n"
             "\nAll supported output map types:\n"
             "1.) Data given from depth generator\n"
@@ -88,19 +88,19 @@ void printCommandLineParams()
 {
     cout << "-cd       Colorized disparity? (0 or 1; 1 by default) Ignored if disparity map is not selected to show." << endl;
     cout << "-fmd      Fixed max disparity? (0 or 1; 0 by default) Ignored if disparity map is not colorized (-cd 0)." << endl;
-    cout << "-sxga     SXGA resolution of image? (0 or 1; 0 by default) Ignored if rgb image or gray image are not selected to show." << endl;
-    cout << "          If -sxga is 0 then vga resolution will be set by default." << endl;
+    cout << "-mode     image mode: resolution and fps, supported three values:  0 - CV_CAP_OPENNI_VGA_30HZ, 1 - CV_CAP_OPENNI_SXGA_15HZ," << endl;
+    cout << "          2 - CV_CAP_OPENNI_SXGA_30HZ (0 by default). Ignored if rgb image or gray image are not selected to show." << endl;
     cout << "-m        Mask to set which output images are need. It is a string of size 5. Each element of this is '0' or '1' and" << endl;
     cout << "          determine: is depth map, disparity map, valid pixels mask, rgb image, gray image need or not (correspondently)?" << endl ;
     cout << "          By default -m 01010 i.e. disparity map and rgb image will be shown." << endl ;
 }
 
-void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, bool& isSetSXGA, bool retrievedImageFlags[] )
+void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[] )
 {
     // set defaut values
     isColorizeDisp = true;
     isFixedMaxDisp = false;
-    isSetSXGA = false;
+    imageMode = 0;
 
     retrievedImageFlags[0] = false;
     retrievedImageFlags[1] = true;
@@ -129,9 +129,9 @@ void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFix
             {
                 isFixedMaxDisp = atoi(argv[++i]) == 0 ? false : true;
             }
-            else if( !strcmp( argv[i], "-sxga" ) )
+            else if( !strcmp( argv[i], "-mode" ) )
             {
-                isSetSXGA = atoi(argv[++i]) == 0 ? false : true;
+                imageMode = atoi(argv[++i]);
             }
             else if( !strcmp( argv[i], "-m" ) )
             {
@@ -164,16 +164,17 @@ void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFix
 }
 
 /*
- * To work with Kinect the user must install OpenNI library and PrimeSensorModule for OpenNI and
+ * To work with Kinect or XtionPRO the user must install OpenNI library and PrimeSensorModule for OpenNI and
  * configure OpenCV with WITH_OPENNI flag is ON (using CMake).
  */
 int main( int argc, char* argv[] )
 {
-    bool isColorizeDisp, isFixedMaxDisp, isSetSXGA;
+    bool isColorizeDisp, isFixedMaxDisp;
+    int imageMode;
     bool retrievedImageFlags[5];
-    parseCommandLine( argc, argv, isColorizeDisp, isFixedMaxDisp, isSetSXGA, retrievedImageFlags );
+    parseCommandLine( argc, argv, isColorizeDisp, isFixedMaxDisp, imageMode, retrievedImageFlags );
 
-    cout << "Kinect opening ..." << endl;
+    cout << "Device opening ..." << endl;
     VideoCapture capture( CV_CAP_OPENNI );
     cout << "done." << endl;
 
@@ -183,22 +184,42 @@ int main( int argc, char* argv[] )
         return -1;
     }
 
-    if( isSetSXGA )
-        capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_15HZ );
-    else
-        capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_VGA_30HZ ); // default
+    bool modeRes;
+    switch ( imageMode )
+    {
+        case 0:
+            modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_VGA_30HZ );
+            break;
+        case 1:
+            modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_15HZ );
+            break;
+        case 2:
+            modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_30HZ );
+            break;
+        default:
+            CV_Error( CV_StsBadArg, "Unsupported image mode property.\n");
+    }
+    if (!modeRes)
+        cout << "\nThis image mode is not supported by the device, the default value (CV_CAP_OPENNI_SXGA_15HZ) will be used.\n" << endl;
 
-    // Print some avalible Kinect settings.
+    // Print some avalible device settings.
     cout << "\nDepth generator output mode:" << endl <<
             "FRAME_WIDTH    " << capture.get( CV_CAP_PROP_FRAME_WIDTH ) << endl <<
             "FRAME_HEIGHT   " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
             "FRAME_MAX_DEPTH    " << capture.get( CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
             "FPS    " << capture.get( CV_CAP_PROP_FPS ) << endl;
-
+    bool isImageGeneratorPresent = capture.get( CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT ) > 0;
+    if (isImageGeneratorPresent)
     cout << "\nImage generator output mode:" << endl <<
             "FRAME_WIDTH    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_WIDTH ) << endl <<
             "FRAME_HEIGHT   " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
             "FPS    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
+    else
+    {
+        cout << "\nDevice doesn't contain image generator" << endl;
+        if (!retrievedImageFlags[0] && !retrievedImageFlags[1] && !retrievedImageFlags[2])
+            return 0;
+    }
 
     for(;;)
     {
