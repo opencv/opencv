@@ -164,9 +164,19 @@
 #     [+] updated for NDK r7b
 #     [~] fixed cmake try_compile() command
 #     [~] Fix for missing install_name_tool on OS X
+#   - modified March 2012 Andrey Kamaev andrey.kamaev@itseez.com
+#     [~] fixed incorrect C compiler flags
+#     [~] fixed CMAKE_SYSTEM_PROCESSOR change on ANDROID_ABI change
+#     [+] improved toolchain loading speed
+#     [+] added assembler language support (.S)
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
+
+if( DEFINED CMAKE_CROSSCOMPILING )
+ #subsequent toolchain loading is not really needed
+ return()
+endif()
 
 if( PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
  include( "${CMAKE_CURRENT_SOURCE_DIR}/../android.toolchain.config.cmake" OPTIONAL )
@@ -524,6 +534,12 @@ else()
  message( SEND_ERROR "Unknown ANDROID_ABI=\"${ANDROID_ABI}\" is specified." )
 endif()
 
+if( CMAKE_BINARY_DIR AND EXISTS "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeSystem.cmake" )
+ #really dirty hack
+ #it is not possible to change CMAKE_SYSTEM_PROCESSOR after the first run...
+ file( APPEND "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeSystem.cmake" "SET(CMAKE_SYSTEM_PROCESSOR \"${CMAKE_SYSTEM_PROCESSOR}\")\n" )
+endif()
+
 set( ANDROID_SUPPORTED_ABIS ${ANDROID_SUPPORTED_ABIS_${ANDROID_ARCH_NAME}} CACHE INTERNAL "ANDROID_ABI can be changed only to one of these ABIs. Changing to any other ABI requires to reset cmake cache." )
 if( CMAKE_VERSION VERSION_GREATER "2.8" )
  list( SORT ANDROID_SUPPORTED_ABIS_${ANDROID_ARCH_NAME} )
@@ -626,14 +642,19 @@ endif()
 # specify the cross compiler
 set( CMAKE_C_COMPILER   "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-gcc${TOOL_OS_SUFFIX}"     CACHE PATH "gcc" )
 set( CMAKE_CXX_COMPILER "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-g++${TOOL_OS_SUFFIX}"     CACHE PATH "g++" )
-set( CMAKE_STRIP        "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-strip${TOOL_OS_SUFFIX}"   CACHE PATH "strip" )
+set( CMAKE_ASM_COMPILER "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-gcc${TOOL_OS_SUFFIX}"     CACHE PATH "Assembler" )
+if( CMAKE_VERSION VERSION_LESS 2.8.5 )
+ set( CMAKE_ASM_COMPILER_ARG1 "-c" )
+endif()
 #there may be a way to make cmake deduce these TODO deduce the rest of the tools
+set( CMAKE_STRIP        "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-strip${TOOL_OS_SUFFIX}"   CACHE PATH "strip" )
 set( CMAKE_AR           "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-ar${TOOL_OS_SUFFIX}"      CACHE PATH "archive" )
 set( CMAKE_LINKER       "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-ld${TOOL_OS_SUFFIX}"      CACHE PATH "linker" )
 set( CMAKE_NM           "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-nm${TOOL_OS_SUFFIX}"      CACHE PATH "nm" )
 set( CMAKE_OBJCOPY      "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-objcopy${TOOL_OS_SUFFIX}" CACHE PATH "objcopy" )
 set( CMAKE_OBJDUMP      "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-objdump${TOOL_OS_SUFFIX}" CACHE PATH "objdump" )
 set( CMAKE_RANLIB       "${ANDROID_TOOLCHAIN_ROOT}/bin/${ANDROID_TOOLCHAIN_MACHINE_NAME}-ranlib${TOOL_OS_SUFFIX}"  CACHE PATH "ranlib" )
+set( _CMAKE_TOOLCHAIN_PREFIX "${ANDROID_TOOLCHAIN_MACHINE_NAME}-" )
 if( APPLE )
  find_program( CMAKE_INSTALL_NAME_TOOL NAMES install_name_tool )
  if( NOT CMAKE_INSTALL_NAME_TOOL )
@@ -695,10 +716,21 @@ add_definitions( -DANDROID )
 # Force set compilers because standard identification works badly for us
 include( CMakeForceCompiler )
 CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
-CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
-set( CMAKE_SIZEOF_VOID_P 4 )
+set( CMAKE_C_PLATFORM_ID Linux )
 set( CMAKE_C_SIZEOF_DATA_PTR 4 )
+set( CMAKE_C_HAS_ISYSROOT 1 )
+set( CMAKE_C_COMPILER_ABI ELF )
+CMAKE_FORCE_CXX_COMPILER( "${CMAKE_CXX_COMPILER}" GNU )
+set( CMAKE_CXX_PLATFORM_ID Linux )
 set( CMAKE_CXX_SIZEOF_DATA_PTR 4 )
+set( CMAKE_CXX_HAS_ISYSROOT 1 )
+set( CMAKE_CXX_COMPILER_ABI ELF )
+#force ASM compiler (required for CMake < 2.8.5)
+set( CMAKE_ASM_COMPILER_ID_RUN TRUE )
+set( CMAKE_ASM_COMPILER_ID GNU )
+set( CMAKE_ASM_COMPILER_WORKS TRUE )
+set( CMAKE_ASM_COMPILER_FORCED TRUE )
+set( CMAKE_COMPILER_IS_GNUASM 1)
 
 # NDK flags
 if( ARMEABI OR ARMEABI_V7A )
@@ -854,11 +886,11 @@ endif()
 
 #cache flags
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "c++ flags" )
-set( CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "c flags" )
+set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "c flags" )
 set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}" CACHE STRING "c++ Release flags" )
-set( CMAKE_C_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}" CACHE STRING "c Release flags" )
+set( CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}" CACHE STRING "c Release flags" )
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING "c++ Debug flags" )
-set( CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING "c Debug flags" )
+set( CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}" CACHE STRING "c Debug flags" )
 set( CMAKE_SHARED_LINKER_FLAGS "${LINKER_FLAGS}" CACHE STRING "linker flags" )
 set( CMAKE_MODULE_LINKER_FLAGS "${LINKER_FLAGS}" CACHE STRING "linker flags" )
 set( CMAKE_EXE_LINKER_FLAGS "-Wl,--gc-sections -Wl,-z,nocopyreloc ${LINKER_FLAGS}" CACHE STRING "linker flags" )
@@ -962,6 +994,7 @@ if( ANDROID_SET_OBSOLETE_VARIABLES )
  set( ARM_TARGET "${ANDROID_ABI}" )
  set( ARMEABI_NDK_NAME "${ANDROID_NDK_ABI_NAME}" )
 endif()
+
 
 # Variables controlling behavior or set by cmake toolchain:
 #   ANDROID_ABI : "armeabi-v7a" (default), "armeabi", "armeabi-v7a with NEON", "armeabi-v7a with VFPV3", "armeabi-v6 with VFP", "x86"
