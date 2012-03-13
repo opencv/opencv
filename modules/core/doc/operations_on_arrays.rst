@@ -445,7 +445,10 @@ The function ``cartToPolar`` calculates either the magnitude, angle, or both for
 
 The angles are calculated with accuracy about 0.3 degrees. For the point (0,0), the angle is set to 0.
 
+.. seealso::
 
+    :ocv:func:`Sobel`,
+    :ocv:func:`Scharr`
 
 checkRange
 ----------

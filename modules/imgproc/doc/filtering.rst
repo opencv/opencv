@@ -1548,7 +1548,8 @@ The second case corresponds to a kernel of:
     :ocv:func:`Laplacian`,
     :ocv:func:`sepFilter2D`,
     :ocv:func:`filter2D`,
-    :ocv:func:`GaussianBlur`
+    :ocv:func:`GaussianBlur`,
+    :ocv:func:`cartToPolar`
 
 
 
@@ -1587,4 +1588,8 @@ is equivalent to
 .. math::
 
     \texttt{Sobel(src, dst, ddepth, xorder, yorder, CV\_SCHARR, scale, delta, borderType)} .
+
+.. seealso::
+
+    :ocv:func:`cartToPolar`
 
