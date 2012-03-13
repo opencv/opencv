@@ -46,7 +46,12 @@
 //#define DEBUG_BLOB_DETECTOR
 
 #ifdef DEBUG_BLOB_DETECTOR
-#include "opencv2/highgui/highgui.hpp"
+#  include "opencv2/opencv_modules.hpp"
+#  ifdef HAVE_OPENCV_HIGHGUI
+#    include "opencv2/highgui/highgui.hpp"
+#  else
+#    undef DEBUG_BLOB_DETECTOR
+#  endif
 #endif
 
 using namespace cv;

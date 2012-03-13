@@ -493,7 +493,6 @@ endo: ; // end search for this o
 }
 
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 namespace cv
 {

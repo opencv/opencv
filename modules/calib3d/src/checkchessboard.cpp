@@ -47,7 +47,12 @@
 //#define DEBUG_WINDOWS
 
 #if defined(DEBUG_WINDOWS)
-#include "highgui.h"
+#  include "opencv2/opencv_modules.hpp"
+#  ifdef HAVE_OPENCV_HIGHGUI
+#    include "opencv2/highgui/highgui.hpp"
+#  else
+#    undef DEBUG_WINDOWS
+#  endif
 #endif
 
 void icvGetQuadrangleHypotheses(CvSeq* contours, std::vector<std::pair<float, int> >& quads, int class_id)

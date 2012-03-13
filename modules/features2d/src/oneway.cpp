@@ -8,8 +8,12 @@
  */
 
 #include "precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/opencv_modules.hpp"
 #include <stdio.h>
+
+#ifdef HAVE_OPENCV_HIGHGUI
+#  include "opencv2/highgui/highgui.hpp"
+#endif
 
 namespace cv{
     
@@ -655,6 +659,7 @@ namespace cv{
     
     void OneWayDescriptor::Save(const char* path)
     {
+#ifdef HAVE_OPENCV_HIGHGUI
         for(int i = 0; i < m_pose_count; i++)
         {
             char buf[1024];
@@ -669,6 +674,9 @@ namespace cv{
             
             cvReleaseImage(&patch);
         }
+#else
+        CV_Error( CV_StsNotImplemented, "This method required opencv_highgui disabled in current build" );
+#endif
     }
     
     void OneWayDescriptor::Write(CvFileStorage* fs, const char* name)
@@ -1772,6 +1780,7 @@ namespace cv{
 
     void loadPCAFeatures(const char* path, const char* images_list, vector<IplImage*>& patches, CvSize patch_size)
     {
+#ifdef HAVE_OPENCV_HIGHGUI
         char images_filename[1024];
         sprintf(images_filename, "%s/%s", path, images_list);
         FILE *pFile = fopen(images_filename, "r");
@@ -1800,6 +1809,9 @@ namespace cv{
             cvReleaseImage(&img);
         }
         fclose(pFile);
+#else
+        CV_Error( CV_StsNotImplemented, "This method required opencv_highgui disabled in current build" );
+#endif
     }
 
     void generatePCAFeatures(const char* path, const char* img_filename, FileStorage& fs, const char* postfix,
