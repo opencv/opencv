@@ -636,12 +636,12 @@ namespace cv
                RIGID_BODY_MOTION = 4
              };
     };
-    CV_EXPORTS bool RGBDOdometry( cv::Mat& Rt,
+    CV_EXPORTS bool RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
                                   const cv::Mat& image0, const cv::Mat& depth0, const cv::Mat& mask0,
                                   const cv::Mat& image1, const cv::Mat& depth1, const cv::Mat& mask1,
-                                  const cv::Mat& cameraMatrix, const std::vector<int>& iterCounts,
-                                  const std::vector<float>& minGradientMagnitudes,
-                                  float minDepth, float maxDepth, float maxDepthDiff, int transformType=TransformationType::RIGID_BODY_MOTION );
+                                  const cv::Mat& cameraMatrix, float minDepth, float maxDepth, float maxDepthDiff,
+                                  const std::vector<int>& iterCounts, const std::vector<float>& minGradientMagnitudes,
+                                  int transformType=TransformationType::RIGID_BODY_MOTION );
 }
 
 #include "opencv2/contrib/retina.hpp"

@@ -150,10 +150,11 @@ int main(int argc, char** argv)
     const float maxDepthDiff = 0.07; //in meters
 
     tm.start();
-    bool isFound = cv::RGBDOdometry( Rt, grayImage0, depthFlt0, Mat(),
+    bool isFound = cv::RGBDOdometry( Rt, Mat(),
+                                     grayImage0, depthFlt0, Mat(),
                                      grayImage1, depthFlt1, Mat(),
-                                     cameraMatrix, iterCounts, minGradMagnitudes,
-                                     minDepth, maxDepth, maxDepthDiff, transformationType );
+                                     cameraMatrix, minDepth, maxDepth, maxDepthDiff,
+                                     iterCounts, minGradMagnitudes, transformationType );
     tm.stop();
 
     cout << "Rt = " << Rt << endl;

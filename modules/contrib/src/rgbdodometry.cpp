@@ -469,12 +469,12 @@ bool computeKsi( int transformType,
     return solutionExist;
 }
 
-bool cv::RGBDOdometry( cv::Mat& Rt,
+bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
                        const cv::Mat& image0, const cv::Mat& _depth0, const cv::Mat& validMask0,
                        const cv::Mat& image1, const cv::Mat& _depth1, const cv::Mat& validMask1,
-                       const cv::Mat& cameraMatrix, const std::vector<int>& iterCounts,
-                       const std::vector<float>& minGradientMagnitudes,
-                       float minDepth, float maxDepth, float maxDepthDiff, int transformType )
+                       const cv::Mat& cameraMatrix, float minDepth, float maxDepth, float maxDepthDiff,
+                       const std::vector<int>& iterCounts, const std::vector<float>& minGradientMagnitudes,
+                       int transformType )
 {
     const int sobelSize = 3;
     const double sobelScale = 1./8;
@@ -501,6 +501,7 @@ bool cv::RGBDOdometry( cv::Mat& Rt,
     // other checks
     CV_Assert( !iterCounts.empty() );
     CV_Assert( minGradientMagnitudes.size() == iterCounts.size() );
+    CV_Assert( initRt.empty() || (initRt.type()==CV_64FC1 && initRt.size()==Size(4,4) ) );
 
     preprocessDepth( depth0, depth1, validMask0, validMask1, minDepth, maxDepth );
 
@@ -511,7 +512,8 @@ bool cv::RGBDOdometry( cv::Mat& Rt,
                    pyramidImage0, pyramidDepth0, pyramidImage1, pyramidDepth1,
                    pyramid_dI_dx1, pyramid_dI_dy1, pyramidTexturedMask1, pyramidCameraMatrix );
 
-    Mat resultRt = Mat::eye(4,4,CV_64FC1), currRt, ksi;
+    Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
+    Mat currRt, ksi;
     for( int level = iterCounts.size() - 1; level >= 0; level-- )
     {
         const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
