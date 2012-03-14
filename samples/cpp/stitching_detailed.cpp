@@ -98,7 +98,7 @@ void printUsage()
         "      Labels description: Nm is number of matches, Ni is number of inliers,\n"
         "      C is confidence.\n"
         "\nCompositing Flags:\n"
-        "  --warp (plane|cylindrical|spherical)\n"
+        "  --warp (plane|cylindrical|spherical|fisheye|stereographic|compressedPlaneA2B1|compressedPlaneA1.5B1|compressedPlanePortraitA2B1|compressedPlanePortraitA1.5B1|paniniA2B1|paniniA1.5B1|paniniPortraitA2B1|paniniPortraitA1.5B1|mercator|transverseMercator)\n"
         "      Warp surface type. The default is 'spherical'.\n"
         "  --seam_megapix <float>\n"
         "      Resolution for seam estimation step. The default is 0.1 Mpx.\n"
@@ -544,6 +544,18 @@ int main(int argc, char* argv[])
         if (warp_type == "plane") warper_creator = new cv::PlaneWarper();
         else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarper();
         else if (warp_type == "spherical") warper_creator = new cv::SphericalWarper();
+		else if (warp_type == "fisheye") warper_creator = new cv::FisheyeWarper();
+		else if (warp_type == "stereographic") warper_creator = new cv::StereographicWarper();
+		else if (warp_type == "compressedPlaneA2B1") warper_creator = new cv::CompressedRectilinearWarper(2, 1);
+		else if (warp_type == "compressedPlaneA1.5B1") warper_creator = new cv::CompressedRectilinearWarper(1.5, 1);
+		else if (warp_type == "compressedPlanePortraitA2B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(2, 1);
+		else if (warp_type == "compressedPlanePortraitA1.5B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(1.5, 1);
+		else if (warp_type == "paniniA2B1") warper_creator = new cv::PaniniWarper(2, 1);
+		else if (warp_type == "paniniA1.5B1") warper_creator = new cv::PaniniWarper(1.5, 1);
+		else if (warp_type == "paniniPortraitA2B1") warper_creator = new cv::PaniniPortraitWarper(2, 1);
+		else if (warp_type == "paniniPortraitA1.5B1") warper_creator = new cv::PaniniPortraitWarper(1.5, 1);
+		else if (warp_type == "mercator") warper_creator = new cv::MercatorWarper();
+		else if (warp_type == "transverseMercator") warper_creator = new cv::TransverseMercatorWarper();
     }
 
     if (warper_creator.empty())

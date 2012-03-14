@@ -75,6 +75,75 @@ public:
     Ptr<detail::RotationWarper> create(float scale) const { return new detail::SphericalWarper(scale); }
 };
 
+class FisheyeWarper : public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::FisheyeWarper(scale); }
+};
+
+class StereographicWarper: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::StereographicWarper(scale); }
+};
+
+class CompressedRectilinearWarper: public WarperCreator
+{
+	float a, b;
+public:
+	CompressedRectilinearWarper(float A = 1, float B = 1)
+	{
+		a = A; b = B;
+	}
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CompressedRectilinearWarper(scale, a, b); }
+};
+
+class CompressedRectilinearPortraitWarper: public WarperCreator
+{
+	float a, b;
+public:
+	CompressedRectilinearPortraitWarper(float A = 1, float B = 1)
+	{
+		a = A; b = B;
+	}
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CompressedRectilinearPortraitWarper(scale, a, b); }
+};
+
+class PaniniWarper: public WarperCreator
+{
+	float a, b;
+public:
+	PaniniWarper(float A = 1, float B = 1)
+	{
+		a = A; b = B;
+	}
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PaniniWarper(scale, a, b); }
+};
+
+class PaniniPortraitWarper: public WarperCreator
+{
+	float a, b;
+public:
+	PaniniPortraitWarper(float A = 1, float B = 1)
+	{
+		a = A; b = B;
+	}
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PaniniPortraitWarper(scale, a, b); }
+};
+
+class MercatorWarper: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::MercatorWarper(scale); }
+};
+
+class TransverseMercatorWarper: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::TransverseMercatorWarper(scale); }
+};
+
+
 
 #ifdef HAVE_OPENCV_GPU
 class PlaneWarperGpu: public WarperCreator

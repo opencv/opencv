@@ -185,6 +185,147 @@ protected:
 };
 
 
+struct CV_EXPORTS FisheyeProjector : ProjectorBase
+{
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS FisheyeWarper : public RotationWarperBase<FisheyeProjector>
+{
+public:
+    FisheyeWarper(float scale) { projector_.scale = scale; }
+};
+
+
+struct CV_EXPORTS StereographicProjector : ProjectorBase
+{
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS StereographicWarper : public RotationWarperBase<StereographicProjector>
+{
+public:
+    StereographicWarper(float scale) { projector_.scale = scale; }
+};
+
+
+struct CV_EXPORTS CompressedRectilinearProjector : ProjectorBase
+{
+	float a, b;
+
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS CompressedRectilinearWarper : public RotationWarperBase<CompressedRectilinearProjector>
+{
+public:
+   CompressedRectilinearWarper(float scale, float A = 1, float B = 1) 
+   { 
+	   projector_.a = A;
+	   projector_.b = B;
+	   projector_.scale = scale; 
+   }
+};
+
+
+struct CV_EXPORTS CompressedRectilinearPortraitProjector : ProjectorBase
+{
+	float a, b;
+
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS CompressedRectilinearPortraitWarper : public RotationWarperBase<CompressedRectilinearPortraitProjector>
+{
+public:
+   CompressedRectilinearPortraitWarper(float scale, float A = 1, float B = 1) 
+   { 
+	   projector_.a = A;
+	   projector_.b = B;
+	   projector_.scale = scale; 
+   }
+};
+
+
+struct CV_EXPORTS PaniniProjector : ProjectorBase
+{
+	float a, b;
+
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS PaniniWarper : public RotationWarperBase<PaniniProjector>
+{
+public:
+   PaniniWarper(float scale, float A = 1, float B = 1) 
+   { 
+	   projector_.a = A;
+	   projector_.b = B;
+	   projector_.scale = scale; 
+   }
+};
+
+
+struct CV_EXPORTS PaniniPortraitProjector : ProjectorBase
+{
+	float a, b;
+
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS PaniniPortraitWarper : public RotationWarperBase<PaniniPortraitProjector>
+{
+public:
+   PaniniPortraitWarper(float scale, float A = 1, float B = 1) 
+   { 
+	   projector_.a = A;
+	   projector_.b = B;
+	   projector_.scale = scale; 
+   }
+
+};
+
+
+struct CV_EXPORTS MercatorProjector : ProjectorBase
+{
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS MercatorWarper : public RotationWarperBase<MercatorProjector>
+{
+public:
+    MercatorWarper(float scale) { projector_.scale = scale; }
+};
+
+
+struct CV_EXPORTS TransverseMercatorProjector : ProjectorBase
+{
+    void mapForward(float x, float y, float &u, float &v);
+    void mapBackward(float u, float v, float &x, float &y);
+};
+
+
+class CV_EXPORTS TransverseMercatorWarper : public RotationWarperBase<TransverseMercatorProjector>
+{
+public:
+    TransverseMercatorWarper(float scale) { projector_.scale = scale; }
+};
+
+
 #ifdef HAVE_OPENCV_GPU
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
