@@ -1,5 +1,9 @@
 package org.opencv.test.features2d;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -12,10 +16,6 @@ import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
@@ -163,7 +163,25 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testKnnMatchMatMatListOfListOfDMatchInt() {
-        fail("Not yet implemented");
+    	final int k = 3; 
+        Mat train = getTrainDescriptors();
+        Mat query = getQueryDescriptors();
+        List<List<DMatch>> matches = new ArrayList<List<DMatch>>();
+        matcher.knnMatch(query, train, matches, k);
+        /*
+        matcher.add(Arrays.asList(train));
+        matcher.knnMatch(query, matches, k);
+        */
+        assertEquals(query.rows(), matches.size());
+        for(int i = 0; i<matches.size(); i++)
+        {
+        	List<DMatch> ldm = matches.get(i); 
+            assertEquals(Math.min(k, train.rows()), ldm.size());
+            for(DMatch dm : ldm)
+            {
+            	assertEquals(dm.queryIdx, i);
+            }
+        }
     }
 
     public void testKnnMatchMatMatListOfListOfDMatchIntMat() {

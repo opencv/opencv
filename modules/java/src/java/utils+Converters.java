@@ -643,4 +643,9 @@ public class Converters {
         }
     }
 
+
+    static {
+        System.loadLibrary("opencv_java");
+    }
+
 }

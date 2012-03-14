@@ -656,9 +656,9 @@ CV_EXPORTS_W Mat getDefaultNewCameraMatrix( InputArray cameraMatrix, Size imgsiz
                                             bool centerPrincipalPoint=false );
     
 //! returns points' coordinates after lens distortion correction
-CV_EXPORTS void undistortPoints( InputArray src, OutputArray dst,
-                                 InputArray cameraMatrix, InputArray distCoeffs,
-                                 InputArray R=noArray(), InputArray P=noArray());
+CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
+                                   InputArray cameraMatrix, InputArray distCoeffs,
+                                   InputArray R=noArray(), InputArray P=noArray());
 
 template<> CV_EXPORTS void Ptr<CvHistogram>::delete_obj();
     

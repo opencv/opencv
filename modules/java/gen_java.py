@@ -514,7 +514,7 @@ func_arg_fix = {
         'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
         'hconcat' : { 'src' : 'vector_Mat', },
         'vconcat' : { 'src' : 'vector_Mat', },
-
+        'undistortPoints' : { 'src' : 'vector_Point2d', 'dst' : 'vector_Point2d' }
     }, # '', i.e. no class
 } # func_arg_fix
 

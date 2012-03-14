@@ -55,7 +55,7 @@ public class UtilsTest extends OpenCVTestCase {
 
     public void testMatToBitmap() {
     	Mat imgBGR = Highgui.imread( OpenCVTestRunner.LENA_PATH );
-    	assertTrue(imgBGR.channels() == 3);
+    	assertTrue(imgBGR != null && !imgBGR.empty() && imgBGR.channels() == 3);
     	
     	Mat m16 = new Mat(imgBGR.rows(), imgBGR.cols(), CvType.CV_8UC4);
     	Mat m32 = new Mat(imgBGR.rows(), imgBGR.cols(), CvType.CV_8UC4);
@@ -71,7 +71,7 @@ public class UtilsTest extends OpenCVTestCase {
     	// RGBA
     	Mat imgRGBA = new Mat();
         Imgproc.cvtColor(imgBGR, imgRGBA, Imgproc.COLOR_BGR2RGBA);
-    	assertTrue(imgRGBA.channels() == 4);
+    	assertTrue(!imgRGBA.empty() && imgRGBA.channels() == 4);
     	
     	bmp16.eraseColor(Color.BLACK); m16.setTo(s0);
     	Utils.matToBitmap(imgRGBA, bmp16); Utils.bitmapToMat(bmp16, m16);
@@ -89,7 +89,7 @@ public class UtilsTest extends OpenCVTestCase {
     	// RGB
     	Mat imgRGB = new Mat();
         Imgproc.cvtColor(imgBGR, imgRGB, Imgproc.COLOR_BGR2RGB);
-    	assertTrue(imgRGB.channels() == 3);
+    	assertTrue(!imgRGB.empty() && imgRGB.channels() == 3);
     	
     	bmp16.eraseColor(Color.BLACK); m16.setTo(s0);
     	Utils.matToBitmap(imgRGB, bmp16); Utils.bitmapToMat(bmp16, m16);
@@ -107,7 +107,7 @@ public class UtilsTest extends OpenCVTestCase {
     	// Gray
         Mat imgGray = new Mat();
         Imgproc.cvtColor(imgBGR, imgGray, Imgproc.COLOR_BGR2GRAY);
-    	assertTrue(imgGray.channels() == 1);
+    	assertTrue(!imgGray.empty() && imgGray.channels() == 1);
     	Mat tmp = new Mat();
     	
     	bmp16.eraseColor(Color.BLACK); m16.setTo(s0);

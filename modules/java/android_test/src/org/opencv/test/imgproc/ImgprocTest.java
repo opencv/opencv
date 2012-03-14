@@ -2102,6 +2102,24 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    //undistortPoints(List<Point> src, List<Point> dst, Mat cameraMatrix, Mat distCoeffs)
+    public void testUndistortPointsListOfPointListOfPointMatMat() {
+        List<Point> src = new ArrayList<Point>(3);
+        src.add( new Point(1, 2) );
+        src.add( new Point(3, 4) );
+        src.add( new Point(-1, -1) );
+        List<Point> dst = new ArrayList<Point>();
+        Mat cameraMatrix = Mat.eye(3, 3, CvType.CV_64FC1);
+        Mat distCoeffs = new Mat(8, 1, CvType.CV_64FC1, new Scalar(0));
+        Imgproc.undistortPoints(src, dst, cameraMatrix, distCoeffs);
+        assertEquals(src.size(), dst.size());
+        for(int i=0; i<src.size(); i++) {
+        	//Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
+        	assertTrue(src.get(i).equals(dst.get(i)));
+        }
+    }
+    
+    
     public void testWarpAffineMatMatMatSize() {
         Mat src = new Mat(3, 3, CvType.CV_32F) {
             {
