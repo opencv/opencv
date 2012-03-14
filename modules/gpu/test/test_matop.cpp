@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -106,7 +106,7 @@ TEST_P(Merge, Accuracy)
 INSTANTIATE_TEST_CASE_P(MatOp, Merge, Combine(
                         ALL_DEVICES, 
                         ALL_TYPES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // split
@@ -167,7 +167,7 @@ TEST_P(Split, Accuracy)
 INSTANTIATE_TEST_CASE_P(MatOp, Split, Combine(
                         ALL_DEVICES, 
                         ALL_TYPES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // split_merge_consistency
@@ -328,7 +328,7 @@ TEST_P(SetTo, Masked)
 INSTANTIATE_TEST_CASE_P(MatOp, SetTo, Combine(
                         ALL_DEVICES, 
                         ALL_TYPES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // copyTo
@@ -407,7 +407,7 @@ TEST_P(CopyTo, Masked)
 INSTANTIATE_TEST_CASE_P(MatOp, CopyTo, Combine(
                         ALL_DEVICES, 
                         ALL_TYPES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // convertTo
@@ -491,7 +491,7 @@ INSTANTIATE_TEST_CASE_P(MatOp, ConvertTo, Combine(
                         ALL_DEVICES, 
                         TYPES(CV_8U, CV_64F, 1, 1),
                         TYPES(CV_8U, CV_64F, 1, 1),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // async

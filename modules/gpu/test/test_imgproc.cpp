@@ -39,387 +39,12 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
 #ifdef HAVE_CUDA
 
 using namespace cvtest;
 using namespace testing;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// threshold
-
-PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, MatType, ThreshOp, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    int threshOp;
-    bool useRoi;
-
-    cv::Size size;
-    cv::Mat src;
-    double maxVal;
-    double thresh;
-
-    cv::Mat dst_gold;
-    
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        threshOp = GET_PARAM(2);
-        useRoi = GET_PARAM(3);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
-
-        src = randomMat(rng, size, type, 0.0, 127.0, false);
-
-        maxVal = rng.uniform(20.0, 127.0);
-        thresh = rng.uniform(0.0, maxVal);
-
-        cv::threshold(src, dst_gold, thresh, maxVal, threshOp);
-    }
-};
-
-TEST_P(Threshold, Accuracy)
-{
-    cv::Mat dst;
-
-    cv::gpu::GpuMat gpuRes;
-
-    cv::gpu::threshold(loadMat(src, useRoi), gpuRes, thresh, maxVal, threshOp);
-
-    gpuRes.download(dst);
-
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Threshold, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_32FC1), 
-                        Values((int)cv::THRESH_BINARY, (int)cv::THRESH_BINARY_INV, (int)cv::THRESH_TRUNC, (int)cv::THRESH_TOZERO, (int)cv::THRESH_TOZERO_INV),
-                        USE_ROI));
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// resize
-
-PARAM_TEST_CASE(Resize, cv::gpu::DeviceInfo, MatType, Interpolation, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    int interpolation;
-    bool useRoi;
-
-    cv::Size size;
-    cv::Mat src;
-
-    cv::Mat dst_gold_up;
-    cv::Mat dst_gold_down;
-    
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        interpolation = GET_PARAM(2);
-        useRoi = GET_PARAM(3);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
-
-        src = randomMat(rng, size, type, 0.0, CV_MAT_DEPTH(type) == CV_32F ? 1.0 : 255.0, false);
-
-        cv::resize(src, dst_gold_up, cv::Size(), 2.0, 2.0, interpolation);
-        cv::resize(src, dst_gold_down, cv::Size(), 0.5, 0.5, interpolation);
-    }
-};
-
-TEST_P(Resize, Up)
-{
-    cv::Mat dst;
-
-    cv::gpu::GpuMat gpuRes;
-
-    cv::gpu::resize(loadMat(src, useRoi), gpuRes, cv::Size(), 2.0, 2.0, interpolation);
-
-    gpuRes.download(dst);
-
-    EXPECT_MAT_SIMILAR(dst_gold_up, dst, 0.21);
-}
-
-TEST_P(Resize, Down)
-{
-    cv::Mat dst;
-
-    cv::gpu::GpuMat gpuRes;
-
-    cv::gpu::resize(loadMat(src, useRoi), gpuRes, cv::Size(), 0.5, 0.5, interpolation);
-
-    gpuRes.download(dst);
-
-    EXPECT_MAT_SIMILAR(dst_gold_down, dst, 0.22);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Resize, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4), 
-                        Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC),
-                        USE_ROI));
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// remap
-
-PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, MatType, Interpolation, Border, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    int interpolation;
-    int borderType;
-    bool useRoi;
-
-    cv::Size size;
-    cv::Mat src;
-    cv::Mat xmap;
-    cv::Mat ymap;
-
-    cv::Mat dst_gold;
-    
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        interpolation = GET_PARAM(2);
-        borderType = GET_PARAM(3);
-        useRoi = GET_PARAM(4);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-
-        src = randomMat(rng, size, type, 0.0, 256.0, false);
-
-        xmap = randomMat(rng, size, CV_32FC1, -20.0, src.cols + 20, false);
-        ymap = randomMat(rng, size, CV_32FC1, -20.0, src.rows + 20, false);
-        
-        cv::remap(src, dst_gold, xmap, ymap, interpolation, borderType);
-    }
-};
-
-TEST_P(Remap, Accuracy)
-{
-    cv::Mat dst;
-
-    cv::gpu::GpuMat gpuRes;
-    
-    cv::gpu::remap(loadMat(src, useRoi), gpuRes, loadMat(xmap, useRoi), loadMat(ymap, useRoi), interpolation, borderType);
-
-    gpuRes.download(dst);
-
-    EXPECT_MAT_SIMILAR(dst_gold, dst, 1e-1);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Remap, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC),
-                        Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP),
-                        USE_ROI));
-                        
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// copyMakeBorder
-
-PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, MatType, Border, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    int borderType;
-    bool useRoi;
-
-    cv::Size size;
-    cv::Mat src;
-    int top;
-    int botton;
-    int left;
-    int right;
-    cv::Scalar val;
-
-    cv::Mat dst_gold;
-    
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        borderType = GET_PARAM(2);
-        useRoi = GET_PARAM(3);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
-
-        src = randomMat(rng, size, type, 0.0, 127.0, false);
-        
-        top = rng.uniform(1, 10);
-        botton = rng.uniform(1, 10);
-        left = rng.uniform(1, 10);
-        right = rng.uniform(1, 10);
-        val = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-
-        cv::copyMakeBorder(src, dst_gold, top, botton, left, right, borderType, val);
-    }
-};
-
-TEST_P(CopyMakeBorder, Accuracy)
-{
-    cv::Mat dst;
-
-    cv::gpu::GpuMat gpuRes;
-
-    cv::gpu::copyMakeBorder(loadMat(src, useRoi), gpuRes, top, botton, left, right, borderType, val);
-
-    gpuRes.download(dst);
-
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, CopyMakeBorder, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP),
-                        USE_ROI));
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// warpAffine & warpPerspective
-
-PARAM_TEST_CASE(WarpAffine, cv::gpu::DeviceInfo, MatType, WarpFlags)
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    int flags;
-
-    cv::Size size;
-    cv::Mat src;
-    cv::Mat M;
-
-    cv::Mat dst_gold;
-    
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        flags = GET_PARAM(2);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
-
-        src = randomMat(rng, size, type, 0.0, 127.0, false);
-
-        static double reflect[2][3] = { {-1,  0, 0},
-                                        { 0, -1, 0}};
-        reflect[0][2] = size.width;
-        reflect[1][2] = size.height;
-        M = cv::Mat(2, 3, CV_64F, (void*)reflect); 
-
-        cv::warpAffine(src, dst_gold, M, src.size(), flags);       
-    }
-};
-
-TEST_P(WarpAffine, Accuracy)
-{
-    cv::Mat dst;
-
-    cv::gpu::GpuMat gpuRes;
-
-    cv::gpu::warpAffine(loadMat(src), gpuRes, M, src.size(), flags);
-
-    gpuRes.download(dst);
-
-    // Check inner parts (ignoring 1 pixel width border)
-    cv::Mat dst_gold_roi = dst_gold.rowRange(1, dst_gold.rows - 1).colRange(1, dst_gold.cols - 1);
-    cv::Mat dst_roi = dst.rowRange(1, dst.rows - 1).colRange(1, dst.cols - 1);
-
-    EXPECT_MAT_NEAR(dst_gold_roi, dst_roi, 1e-3);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, WarpAffine, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        Values((int) cv::INTER_NEAREST, (int) cv::INTER_LINEAR, (int) cv::INTER_CUBIC, 
-                               (int) (cv::INTER_NEAREST | cv::WARP_INVERSE_MAP), (int) (cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), 
-                               (int) (cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
-
-PARAM_TEST_CASE(WarpPerspective, cv::gpu::DeviceInfo, MatType, WarpFlags)
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    int flags;
-
-    cv::Size size;
-    cv::Mat src;
-    cv::Mat M;
-
-    cv::Mat dst_gold;
-    
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        flags = GET_PARAM(2);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
-
-        src = randomMat(rng, size, type, 0.0, 127.0, false);
-
-        static double reflect[3][3] = { { -1, 0, 0},
-                                        { 0, -1, 0},
-                                        { 0,  0, 1}};
-        reflect[0][2] = size.width;
-        reflect[1][2] = size.height;
-        M = cv::Mat(3, 3, CV_64F, (void*)reflect);
-
-        cv::warpPerspective(src, dst_gold, M, src.size(), flags);       
-    }
-};
-
-TEST_P(WarpPerspective, Accuracy)
-{
-    cv::Mat dst;
-
-    cv::gpu::GpuMat gpuRes;
-
-    cv::gpu::warpPerspective(loadMat(src), gpuRes, M, src.size(), flags);
-
-    gpuRes.download(dst);
-
-    // Check inner parts (ignoring 1 pixel width border)
-    cv::Mat dst_gold_roi = dst_gold.rowRange(1, dst_gold.rows - 1).colRange(1, dst_gold.cols - 1);
-    cv::Mat dst_roi = dst.rowRange(1, dst.rows - 1).colRange(1, dst.cols - 1);
-
-    EXPECT_MAT_NEAR(dst_gold_roi, dst_roi, 1e-3);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, WarpPerspective, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        Values((int) cv::INTER_NEAREST, (int) cv::INTER_LINEAR, (int) cv::INTER_CUBIC, 
-                               (int) (cv::INTER_NEAREST | cv::WARP_INVERSE_MAP), (int) (cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), 
-                               (int) (cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // integral
@@ -466,7 +91,7 @@ TEST_P(Integral, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Integral, Combine(
                         ALL_DEVICES, 
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cvtColor
@@ -2375,7 +2000,7 @@ TEST_P(CvtColor, RGBA2YUV4)
 INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, Combine(
                         ALL_DEVICES, 
                         Values(CV_8U, CV_16U, CV_32F),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // swapChannels
@@ -2418,7 +2043,7 @@ TEST_P(SwapChannels, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, SwapChannels, Combine(ALL_DEVICES, USE_ROI));
+INSTANTIATE_TEST_CASE_P(ImgProc, SwapChannels, Combine(ALL_DEVICES, WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // histograms
@@ -2784,7 +2409,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Norm, Combine(
                         ALL_DEVICES, 
                         TYPES(CV_8U, CV_32F, 1, 1),
                         Values((int) cv::NORM_INF, (int) cv::NORM_L1, (int) cv::NORM_L2),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
@@ -2848,7 +2473,7 @@ TEST_P(ReprojectImageTo3D, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, ReprojectImageTo3D, Combine(ALL_DEVICES, USE_ROI));
+INSTANTIATE_TEST_CASE_P(ImgProc, ReprojectImageTo3D, Combine(ALL_DEVICES, WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // meanShift
@@ -3474,7 +3099,7 @@ TEST_P(Blend, Accuracy)
 INSTANTIATE_TEST_CASE_P(ImgProc, Blend, Combine(
                         ALL_DEVICES,
                         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////
 // pyrDown
@@ -3523,7 +3148,7 @@ TEST_P(PyrDown, Accuracy)
 INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, Combine(
                         ALL_DEVICES, 
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////
 // pyrUp
@@ -3567,13 +3192,13 @@ TEST_P(PyrUp, Accuracy)
     d_dst.download(dst);
 
     // results differs only on border left and top border due different border extrapolation type
-    EXPECT_MAT_NEAR(dst_gold(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), dst(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), 1.0);
+    EXPECT_MAT_NEAR(dst_gold(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), dst(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), src.depth() == CV_32F ? 1e-4 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, Combine(
                         ALL_DEVICES, 
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////
 // Canny
@@ -3628,7 +3253,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
                         DEVICES(cv::gpu::SHARED_ATOMICS),
                         Values(3, 5),
                         Values(false, true),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////
 // convolve
@@ -3645,7 +3270,7 @@ namespace
         dftSize.width = cv::getOptimalDFTSize(A.cols + B.cols - 1);
         dftSize.height = cv::getOptimalDFTSize(A.rows + B.rows - 1);
 
-        // allocate temporary buffers and initialize them with 0’s
+        // allocate temporary buffers and initialize them with 0s
         cv::Mat tempA(dftSize, A.type(), cv::Scalar::all(0));
         cv::Mat tempB(dftSize, B.type(), cv::Scalar::all(0));
 
@@ -3725,3 +3350,4 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, Combine(
                         Bool()));
 
 #endif // HAVE_CUDA
+

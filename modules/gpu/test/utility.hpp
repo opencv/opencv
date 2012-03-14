@@ -39,10 +39,19 @@
 //
 //M*/
 
-#ifndef __OPENCV_TEST_GPU_BASE_HPP__
-#define __OPENCV_TEST_GPU_BASE_HPP__
+#ifndef __OPENCV_TEST_UTILITY_HPP__
+#define __OPENCV_TEST_UTILITY_HPP__
 
+int randomInt(int minVal, int maxVal);
+double randomDouble(double minVal, double maxVal);
+cv::Size randomSize(int minVal, int maxVal);
+cv::Scalar randomScalar(double minVal, double maxVal);
+cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 255.0);
+
+cv::gpu::GpuMat createMat(cv::Size size, int type, bool useRoi = false);
 cv::gpu::GpuMat loadMat(const cv::Mat& m, bool useRoi = false);
+
+void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
 
 //! return true if device supports specified feature and gpu module was built with support the feature.
 bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
@@ -54,22 +63,29 @@ std::vector<cv::gpu::DeviceInfo> devices(cv::gpu::FeatureSet feature);
 
 //! read image from testdata folder.
 cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
+cv::Mat readImageType(const std::string& fname, int type);
 
+double checkNorm(const cv::Mat& m);
 double checkNorm(const cv::Mat& m1, const cv::Mat& m2);
 double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2);
+
+#define EXPECT_MAT_NORM(mat, eps) \
+    { \
+        EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \
+    }
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
     { \
         ASSERT_EQ(mat1.type(), mat2.type()); \
         ASSERT_EQ(mat1.size(), mat2.size()); \
-        EXPECT_LE(checkNorm(mat1, mat2), eps); \
+        EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
     }
 
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
     { \
         ASSERT_EQ(mat1.type(), mat2.type()); \
         ASSERT_EQ(mat1.size(), mat2.size()); \
-        EXPECT_LE(checkSimilarity(mat1, mat2), eps); \
+        EXPECT_LE(checkSimilarity(cv::Mat(mat1), cv::Mat(mat2)), eps); \
     }
 
 namespace cv { namespace gpu 
@@ -99,6 +115,19 @@ private:
 
 void PrintTo(const UseRoi& useRoi, std::ostream* os);
 
+class Inverse
+{
+public:
+    inline Inverse(bool val = false) : val_(val) {}
+
+    inline operator bool() const { return val_; }
+
+private:
+    bool val_;
+};
+
+void PrintTo(const Inverse& useRoi, std::ostream* os);
+
 CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
 
 CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv::NORM_RELATIVE, cv::NORM_MINMAX)
@@ -127,11 +156,19 @@ CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::T
 CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
 
 #define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+
 #define GET_PARAM(k) std::tr1::get< k >(GetParam())
+
 #define ALL_DEVICES testing::ValuesIn(devices())
 #define DEVICES(feature) testing::ValuesIn(devices(feature))
+
 #define ALL_TYPES testing::ValuesIn(all_types())
 #define TYPES(depth_start, depth_end, cn_start, cn_end) testing::ValuesIn(types(depth_start, depth_end, cn_start, cn_end))
-#define USE_ROI testing::Values(false, true)
 
-#endif // __OPENCV_TEST_GPU_BASE_HPP__
+#define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
+
+#define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
+
+#define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
+
+#endif // __OPENCV_TEST_UTILITY_HPP__

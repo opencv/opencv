@@ -46,8 +46,9 @@
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
+#include "type_traits.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     template <typename Ptr2D> struct PointFilter
     {
@@ -55,10 +56,10 @@ namespace cv { namespace gpu { namespace device
         typedef float index_type;
 
         explicit __host__ __device__ __forceinline__ PointFilter(const Ptr2D& src_) : src(src_) {}
-         
+
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
         {
-            return src(__float2int_rn(y), __float2int_rn(x));
+            return src(__float2int_rd(y), __float2int_rd(x));
         }
 
         const Ptr2D src;
@@ -76,6 +77,9 @@ namespace cv { namespace gpu { namespace device
             typedef typename TypeVec<float, VecTraits<elem_type>::cn>::vec_type work_type;
 
             work_type out = VecTraits<work_type>::all(0);
+
+            x -= 0.5f;
+            y -= 0.5f;
 
             const int x1 = __float2int_rd(x);
             const int y1 = __float2int_rd(y);
@@ -107,8 +111,8 @@ namespace cv { namespace gpu { namespace device
         typedef typename TypeVec<float, VecTraits<elem_type>::cn>::vec_type work_type;
 
         explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_) : src(src_) {}
-        
-        static __device__ __forceinline__ work_type cubicInterpolate(const work_type& p0, const work_type& p1, const work_type& p2, const work_type& p3, float x) 
+
+        static __device__ __forceinline__ work_type cubicInterpolate(typename TypeTraits<work_type>::ParameterType p0, typename TypeTraits<work_type>::ParameterType p1, typename TypeTraits<work_type>::ParameterType p2, typename TypeTraits<work_type>::ParameterType p3, float x)
         {
             return p1 + 0.5f * x * (p2 - p0 + x * (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3 + x * (3.0f * (p1 - p2) + p3 - p0)));
         }
@@ -117,15 +121,15 @@ namespace cv { namespace gpu { namespace device
         {
             const int xi = __float2int_rn(x);
             const int yi = __float2int_rn(y);
-            
+
             work_type arr[4];
-            
-            arr[0] = cubicInterpolate(saturate_cast<work_type>(src(yi - 1, xi - 1)), saturate_cast<work_type>(src(yi - 1, xi)), saturate_cast<work_type>(src(yi - 1, xi + 1)), saturate_cast<work_type>(src(yi - 1, xi + 2)), x - xi);
-            arr[1] = cubicInterpolate(saturate_cast<work_type>(src(yi    , xi - 1)), saturate_cast<work_type>(src(yi    , xi)), saturate_cast<work_type>(src(yi    , xi + 1)), saturate_cast<work_type>(src(yi    , xi + 2)), x - xi);
-            arr[2] = cubicInterpolate(saturate_cast<work_type>(src(yi + 1, xi - 1)), saturate_cast<work_type>(src(yi + 1, xi)), saturate_cast<work_type>(src(yi + 1, xi + 1)), saturate_cast<work_type>(src(yi + 1, xi + 2)), x - xi);
-            arr[3] = cubicInterpolate(saturate_cast<work_type>(src(yi + 2, xi - 1)), saturate_cast<work_type>(src(yi + 2, xi)), saturate_cast<work_type>(src(yi + 2, xi + 1)), saturate_cast<work_type>(src(yi + 2, xi + 2)), x - xi);
-            
-            return saturate_cast<elem_type>(cubicInterpolate(arr[0], arr[1], arr[2], arr[3], y - yi));
+
+            arr[0] = cubicInterpolate(saturate_cast<work_type>(src(yi - 2, xi - 2)), saturate_cast<work_type>(src(yi - 2, xi - 1)), saturate_cast<work_type>(src(yi - 2, xi)), saturate_cast<work_type>(src(yi - 2, xi + 1)), (x - xi + 2.0f) / 4.0f);
+            arr[1] = cubicInterpolate(saturate_cast<work_type>(src(yi - 1, xi - 2)), saturate_cast<work_type>(src(yi - 1, xi - 1)), saturate_cast<work_type>(src(yi - 1, xi)), saturate_cast<work_type>(src(yi - 1, xi + 1)), (x - xi + 2.0f) / 4.0f);
+            arr[2] = cubicInterpolate(saturate_cast<work_type>(src(yi    , xi - 2)), saturate_cast<work_type>(src(yi    , xi - 1)), saturate_cast<work_type>(src(yi    , xi)), saturate_cast<work_type>(src(yi    , xi + 1)), (x - xi + 2.0f) / 4.0f);
+            arr[3] = cubicInterpolate(saturate_cast<work_type>(src(yi + 1, xi - 2)), saturate_cast<work_type>(src(yi + 1, xi - 1)), saturate_cast<work_type>(src(yi + 1, xi)), saturate_cast<work_type>(src(yi + 1, xi + 1)), (x - xi + 2.0f) / 4.0f);
+
+            return saturate_cast<elem_type>(cubicInterpolate(arr[0], arr[1], arr[2], arr[3], (y - yi + 2.0f) / 4.0f));
         }
 
         const Ptr2D src;

@@ -52,7 +52,7 @@ void cv::gpu::swapChannels(GpuMat&, const int[], Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
 #define OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name) \
     void name(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
@@ -213,11 +213,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgr_to_rgb_8u, 0, bgr_to_rgb_16u, 0, 0, bgr_to_rgb_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -226,11 +226,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgr_to_bgra_8u, 0, bgr_to_bgra_16u, 0, 0, bgr_to_bgra_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -239,11 +239,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgr_to_rgba_8u, 0, bgr_to_rgba_16u, 0, 0, bgr_to_rgba_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -252,11 +252,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgra_to_bgr_8u, 0, bgra_to_bgr_16u, 0, 0, bgra_to_bgr_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -265,11 +265,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgra_to_rgb_8u, 0, bgra_to_rgb_16u, 0, 0, bgra_to_rgb_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -278,171 +278,171 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgra_to_rgba_8u, 0, bgra_to_rgba_16u, 0, 0, bgra_to_rgba_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::bgr_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::bgr_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgb_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::rgb_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgb_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::rgb_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgra_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::bgra_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgra_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::bgra_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgba_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::rgba_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgba_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::rgba_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC3);        
+        dst.create(src.size(), CV_8UC3);
 
         device::bgr555_to_rgb(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC3);        
+        dst.create(src.size(), CV_8UC3);
 
         device::bgr565_to_rgb(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC3);        
+        dst.create(src.size(), CV_8UC3);
 
         device::bgr555_to_bgr(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC3);        
+        dst.create(src.size(), CV_8UC3);
 
         device::bgr565_to_bgr(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC4);        
+        dst.create(src.size(), CV_8UC4);
 
         device::bgr555_to_rgba(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC4);        
+        dst.create(src.size(), CV_8UC4);
 
         device::bgr565_to_rgba(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC4);        
+        dst.create(src.size(), CV_8UC4);
 
         device::bgr555_to_bgra(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC4);        
+        dst.create(src.size(), CV_8UC4);
 
         device::bgr565_to_bgra(src, dst, StreamAccessor::getStream(stream));
     }
@@ -451,11 +451,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {gray_to_bgr_8u, 0, gray_to_bgr_16u, 0, 0, gray_to_bgr_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 1);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -464,51 +464,51 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {gray_to_bgra_8u, 0, gray_to_bgra_16u, 0, 0, gray_to_bgra_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 1);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
 
     void gray_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 1);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::gray_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void gray_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 1);
 
-        dst.create(src.size(), CV_8UC2);        
+        dst.create(src.size(), CV_8UC2);
 
         device::gray_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC1);        
+        dst.create(src.size(), CV_8UC1);
 
         device::bgr555_to_gray(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
-    {        
+    {
         CV_Assert(src.depth() == CV_8U);
         CV_Assert(src.channels() == 2);
 
-        dst.create(src.size(), CV_8UC1);        
+        dst.create(src.size(), CV_8UC1);
 
         device::bgr565_to_gray(src, dst, StreamAccessor::getStream(stream));
     }
@@ -517,11 +517,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {rgb_to_gray_8u, 0, rgb_to_gray_16u, 0, 0, rgb_to_gray_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -530,11 +530,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgr_to_gray_8u, 0, bgr_to_gray_16u, 0, 0, bgr_to_gray_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -543,11 +543,11 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {rgba_to_gray_8u, 0, rgba_to_gray_16u, 0, 0, rgba_to_gray_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -556,19 +556,19 @@ namespace
     {
         using namespace cv::gpu::device;
         static const gpu_func_t funcs[] = {bgra_to_gray_8u, 0, bgra_to_gray_16u, 0, 0, bgra_to_gray_32f};
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));
 
         funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
-    
+
     void rgb_to_yuv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {rgb_to_yuv_8u, 0, rgb_to_yuv_16u, 0, 0, rgb_to_yuv_32f},
@@ -581,12 +581,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -594,7 +594,7 @@ namespace
     void bgr_to_yuv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {bgr_to_yuv_8u, 0, bgr_to_yuv_16u, 0, 0, bgr_to_yuv_32f},
@@ -607,12 +607,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -620,7 +620,7 @@ namespace
     void yuv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {yuv_to_rgb_8u, 0, yuv_to_rgb_16u, 0, 0, yuv_to_rgb_32f},
@@ -633,12 +633,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -646,7 +646,7 @@ namespace
     void yuv_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {yuv_to_bgr_8u, 0, yuv_to_bgr_16u, 0, 0, yuv_to_bgr_32f},
@@ -659,20 +659,20 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
-    
+
     void rgb_to_YCrCb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {rgb_to_YCrCb_8u, 0, rgb_to_YCrCb_16u, 0, 0, rgb_to_YCrCb_32f},
@@ -685,12 +685,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -698,7 +698,7 @@ namespace
     void bgr_to_YCrCb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {bgr_to_YCrCb_8u, 0, bgr_to_YCrCb_16u, 0, 0, bgr_to_YCrCb_32f},
@@ -711,12 +711,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -724,7 +724,7 @@ namespace
     void YCrCb_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {YCrCb_to_rgb_8u, 0, YCrCb_to_rgb_16u, 0, 0, YCrCb_to_rgb_32f},
@@ -737,12 +737,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -750,7 +750,7 @@ namespace
     void YCrCb_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {YCrCb_to_bgr_8u, 0, YCrCb_to_bgr_16u, 0, 0, YCrCb_to_bgr_32f},
@@ -763,12 +763,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -776,7 +776,7 @@ namespace
     void rgb_to_xyz(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {rgb_to_xyz_8u, 0, rgb_to_xyz_16u, 0, 0, rgb_to_xyz_32f},
@@ -789,12 +789,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -802,7 +802,7 @@ namespace
     void bgr_to_xyz(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {bgr_to_xyz_8u, 0, bgr_to_xyz_16u, 0, 0, bgr_to_xyz_32f},
@@ -815,12 +815,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -828,7 +828,7 @@ namespace
     void xyz_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {xyz_to_rgb_8u, 0, xyz_to_rgb_16u, 0, 0, xyz_to_rgb_32f},
@@ -841,12 +841,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -854,7 +854,7 @@ namespace
     void xyz_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {xyz_to_bgr_8u, 0, xyz_to_bgr_16u, 0, 0, xyz_to_bgr_32f},
@@ -867,12 +867,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -880,7 +880,7 @@ namespace
     void rgb_to_hsv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {rgb_to_hsv_8u, 0, 0, 0, 0, rgb_to_hsv_32f},
@@ -893,12 +893,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -906,7 +906,7 @@ namespace
     void bgr_to_hsv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {bgr_to_hsv_8u, 0, 0, 0, 0, bgr_to_hsv_32f},
@@ -919,12 +919,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -932,7 +932,7 @@ namespace
     void hsv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hsv_to_rgb_8u, 0, 0, 0, 0, hsv_to_rgb_32f},
@@ -945,12 +945,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -958,7 +958,7 @@ namespace
     void hsv_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hsv_to_bgr_8u, 0, 0, 0, 0, hsv_to_bgr_32f},
@@ -971,20 +971,20 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
-    }    
+    }
 
     void rgb_to_hls(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {rgb_to_hls_8u, 0, 0, 0, 0, rgb_to_hls_32f},
@@ -997,12 +997,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1010,7 +1010,7 @@ namespace
     void bgr_to_hls(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {bgr_to_hls_8u, 0, 0, 0, 0, bgr_to_hls_32f},
@@ -1023,12 +1023,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1036,7 +1036,7 @@ namespace
     void hls_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hls_to_rgb_8u, 0, 0, 0, 0, hls_to_rgb_32f},
@@ -1049,12 +1049,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1062,7 +1062,7 @@ namespace
     void hls_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hls_to_bgr_8u, 0, 0, 0, 0, hls_to_bgr_32f},
@@ -1075,20 +1075,20 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
-    }   
+    }
 
     void rgb_to_hsv_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {rgb_to_hsv_full_8u, 0, 0, 0, 0, rgb_to_hsv_full_32f},
@@ -1101,12 +1101,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1114,7 +1114,7 @@ namespace
     void bgr_to_hsv_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {bgr_to_hsv_full_8u, 0, 0, 0, 0, bgr_to_hsv_full_32f},
@@ -1127,12 +1127,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1140,7 +1140,7 @@ namespace
     void hsv_to_rgb_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hsv_to_rgb_full_8u, 0, 0, 0, 0, hsv_to_rgb_full_32f},
@@ -1153,12 +1153,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1166,7 +1166,7 @@ namespace
     void hsv_to_bgr_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hsv_to_bgr_full_8u, 0, 0, 0, 0, hsv_to_bgr_full_32f},
@@ -1179,20 +1179,20 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
-    }    
+    }
 
     void rgb_to_hls_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {rgb_to_hls_full_8u, 0, 0, 0, 0, rgb_to_hls_full_32f},
@@ -1205,12 +1205,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1218,7 +1218,7 @@ namespace
     void bgr_to_hls_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {bgr_to_hls_full_8u, 0, 0, 0, 0, bgr_to_hls_full_32f},
@@ -1231,12 +1231,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1244,7 +1244,7 @@ namespace
     void hls_to_rgb_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hls_to_rgb_full_8u, 0, 0, 0, 0, hls_to_rgb_full_32f},
@@ -1257,12 +1257,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1270,7 +1270,7 @@ namespace
     void hls_to_bgr_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         using namespace cv::gpu::device;
-        static const gpu_func_t funcs[2][2][6] = 
+        static const gpu_func_t funcs[2][2][6] =
         {
             {
                 {hls_to_bgr_full_8u, 0, 0, 0, 0, hls_to_bgr_full_32f},
@@ -1283,12 +1283,12 @@ namespace
         };
 
         if (dcn <= 0) dcn = 3;
-        
+
         CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
         CV_Assert(src.channels() == 3 || src.channels() == 4);
         CV_Assert(dcn == 3 || dcn == 4);
 
-        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
@@ -1297,7 +1297,7 @@ namespace
 void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream);
-    static const func_t funcs[] = 
+    static const func_t funcs[] =
     {
         bgr_to_bgra,            // CV_BGR2BGRA    =0
         bgra_to_bgr,            // CV_BGRA2BGR    =1
@@ -1353,7 +1353,7 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         0,                      //                =42
         0,                      //                =43
 
-        0,                      // CV_BGR2Lab     =44 
+        0,                      // CV_BGR2Lab     =44
         0,                      // CV_RGB2Lab     =45
 
         0,                      // CV_BayerBG2BGR =46
@@ -1374,7 +1374,7 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         0,                      // CV_Lab2RGB     =57
         0,                      // CV_Luv2BGR     =58
         0,                      // CV_Luv2RGB     =59
-        
+
         hls_to_bgr,             // CV_HLS2BGR     =60
         hls_to_rgb,             // CV_HLS2RGB     =61
 
@@ -1436,7 +1436,10 @@ void cv::gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& s)
     sz.width  = image.cols;
     sz.height = image.rows;
 
-    nppSafeCall( nppiSwapChannels_8u_C4IR(image.ptr<Npp8u>(), static_cast<int>(image.step), sz, dstOrder) );	
+    nppSafeCall( nppiSwapChannels_8u_C4IR(image.ptr<Npp8u>(), static_cast<int>(image.step), sz, dstOrder) );
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 #endif /* !defined (HAVE_CUDA) */

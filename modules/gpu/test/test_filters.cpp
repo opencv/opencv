@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -132,7 +132,7 @@ TEST_P(Blur, Gray)
 INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
                         ALL_DEVICES, 
                         Values(cv::Size(3, 3), cv::Size(5, 5), cv::Size(7, 7)),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // sobel
@@ -212,7 +212,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Sobel, Combine(
                         Values(3, 5, 7), 
                         Values(0, 1, 2),
                         Values(0, 1, 2),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // scharr
@@ -289,7 +289,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Scharr, Combine(
                         ALL_DEVICES, 
                         Values(0, 1),
                         Values(0, 1),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // gaussianBlur
@@ -361,7 +361,7 @@ TEST_P(GaussianBlur, Gray)
 INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, Combine(
                         ALL_DEVICES, 
                         Values(cv::Size(3, 3), cv::Size(5, 5), cv::Size(7, 7), cv::Size(9, 9), cv::Size(11, 11), cv::Size(13, 13), cv::Size(15, 15), cv::Size(17, 17), cv::Size(19, 19), cv::Size(21, 21), cv::Size(23, 23), cv::Size(25, 25), cv::Size(27, 27), cv::Size(29, 29), cv::Size(31, 31)),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // laplacian
@@ -426,7 +426,7 @@ TEST_P(Laplacian, Gray)
 INSTANTIATE_TEST_CASE_P(Filter, Laplacian, Combine(
                         ALL_DEVICES,
                         Values(1, 3),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // erode
@@ -492,7 +492,7 @@ TEST_P(Erode, Gray)
 
 INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // dilate
@@ -558,7 +558,7 @@ TEST_P(Dilate, Gray)
 
 INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // morphEx
@@ -627,7 +627,7 @@ TEST_P(MorphEx, Gray)
 INSTANTIATE_TEST_CASE_P(Filter, MorphEx, Combine(
                         ALL_DEVICES,
                         Values((int)cv::MORPH_OPEN, (int)cv::MORPH_CLOSE, (int)cv::MORPH_GRADIENT, (int)cv::MORPH_TOPHAT, (int)cv::MORPH_BLACKHAT),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // filter2D
@@ -717,6 +717,6 @@ TEST_P(Filter2D, 32FC1)
 INSTANTIATE_TEST_CASE_P(Filter, Filter2D, Combine(
                         ALL_DEVICES,
                         Values(3, 5, 7, 11, 13, 15),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA

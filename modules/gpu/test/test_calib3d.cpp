@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
 #ifdef HAVE_CUDA
 

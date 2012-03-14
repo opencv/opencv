@@ -64,7 +64,7 @@ CV_EXPORTS int getCudaEnabledDeviceCount();
 CV_EXPORTS void setDevice(int device);
 CV_EXPORTS int getDevice();
 
-//! Explicitly destroys and cleans up all resources associated with the current device in the current process. 
+//! Explicitly destroys and cleans up all resources associated with the current device in the current process.
 //! Any subsequent API call to this device will reinitialize the device.
 CV_EXPORTS void resetDevice();
 
@@ -81,7 +81,7 @@ enum FeatureSet
     NATIVE_DOUBLE = FEATURE_SET_COMPUTE_13
 };
 
-// Gives information about what GPU archs this OpenCV GPU module was 
+// Gives information about what GPU archs this OpenCV GPU module was
 // compiled for
 class CV_EXPORTS TargetArchs
 {
@@ -266,10 +266,10 @@ private:
     Impl *impl;
 
     friend struct StreamAccessor;
-    
+
     explicit Stream(Impl* impl);
 };
-        
+
 
 //////////////////////////////// Filter Engine ////////////////////////////////
 
@@ -432,26 +432,26 @@ CV_EXPORTS Ptr<BaseFilter_GPU> getMinFilter_GPU(int srcType, int dstType, const 
 CV_EXPORTS void boxFilter(const GpuMat& src, GpuMat& dst, int ddepth, Size ksize, Point anchor = Point(-1,-1), Stream& stream = Stream::Null());
 
 //! a synonym for normalized box filter
-static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1), Stream& stream = Stream::Null()) 
-{ 
-    boxFilter(src, dst, -1, ksize, anchor, stream); 
+static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1), Stream& stream = Stream::Null())
+{
+    boxFilter(src, dst, -1, ksize, anchor, stream);
 }
 
 //! erodes the image (applies the local minimum operator)
 CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
-CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, 
-                      Point anchor = Point(-1, -1), int iterations = 1, 
+CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf,
+                      Point anchor = Point(-1, -1), int iterations = 1,
                       Stream& stream = Stream::Null());
 
 //! dilates the image (applies the local maximum operator)
 CV_EXPORTS void dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
-CV_EXPORTS void dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, 
-                       Point anchor = Point(-1, -1), int iterations = 1, 
+CV_EXPORTS void dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf,
+                       Point anchor = Point(-1, -1), int iterations = 1,
                        Stream& stream = Stream::Null());
 
 //! applies an advanced morphological operation to the image
 CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
-CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, GpuMat& buf1, GpuMat& buf2, 
+CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, GpuMat& buf1, GpuMat& buf2,
                              Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
 
 //! applies non-separable 2D linear filter to the image
@@ -461,7 +461,7 @@ CV_EXPORTS void filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& 
 CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY,
                             Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, GpuMat& buf,
-                            Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, 
+                            Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1,
                             Stream& stream = Stream::Null());
 
 //! applies generalized Sobel operator to the image
@@ -490,7 +490,7 @@ CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize 
 ////////////////////////////// Arithmetics ///////////////////////////////////
 
 //! implements generalized matrix product algorithm GEMM from BLAS
-CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha, 
+CV_EXPORTS void gemm(const GpuMat& src1, const GpuMat& src2, double alpha,
     const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null());
 
 //! transposes the matrix
@@ -572,7 +572,7 @@ CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, double scal
 CV_EXPORTS void divide(double scale, const GpuMat& src2, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null());
 
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
-CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, 
+CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
                             int dtype = -1, Stream& stream = Stream::Null());
 
 //! adds scaled array to another one (dst = alpha*src1 + src2)
@@ -669,17 +669,17 @@ CV_EXPORTS void alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, i
 //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]]
 //! supports only CV_32FC1 map type
 CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap,
-                      int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), 
+                      int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(),
                       Stream& stream = Stream::Null());
 
 //! Does mean shift filtering on GPU.
 CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
-                                   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), 
+                                   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
                                    Stream& stream = Stream::Null());
 
 //! Does mean shift procedure on GPU.
 CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr,
-                              TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), 
+                              TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
                               Stream& stream = Stream::Null());
 
 //! Does mean shift segmentation with elimination of small regions.
@@ -717,11 +717,17 @@ CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, 
 
 //! warps the image using affine transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
+CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR,
+    int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
+
+CV_EXPORTS void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
 
 //! warps the image using perspective transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
+CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR,
+    int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
+
+CV_EXPORTS void buildWarpPerspectiveMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
 
 //! builds plane warping maps
 CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, const Mat &T, float scale,
@@ -738,11 +744,11 @@ CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K
 //! rotates an image around the origin (0,0) and then shifts it
 //! supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
 //! supports 1, 3 or 4 channels images with CV_8U, CV_16U or CV_32F depth
-CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, 
+CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
                        int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
 //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, 
+CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType,
                                const Scalar& value = Scalar(), Stream& stream = Stream::Null());
 
 //! computes the integral image
@@ -768,13 +774,13 @@ CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, co
 //! computes Harris cornerness criteria at each image pixel
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
 CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
-CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, 
+CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k,
                              int borderType = BORDER_REFLECT101, Stream& stream = Stream::Null());
 
 //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
 CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
 CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
-CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, 
+CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize,
     int borderType=BORDER_REFLECT101, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
@@ -787,7 +793,7 @@ CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c
 
 //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
 //! Param dft_size is the size of DFT transform.
-//! 
+//!
 //! If the source matrix is not continous, then additional copy will be done,
 //! so to avoid copying ensure the source matrix is continous one. If you want to use
 //! preallocated output ensure it is continuous too, otherwise it will be reallocated.
@@ -808,7 +814,7 @@ CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& resul
 struct CV_EXPORTS ConvolveBuf
 {
     ConvolveBuf() {}
-    ConvolveBuf(Size image_size, Size templ_size) 
+    ConvolveBuf(Size image_size, Size templ_size)
         { create(image_size, templ_size); }
     void create(Size image_size, Size templ_size);
     void create(Size image_size, Size templ_size, Size block_size);
@@ -837,10 +843,10 @@ CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DE
 
 //! performs linear blending of two images
 //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
-CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
+CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
                             GpuMat& result, Stream& stream = Stream::Null());
 
-        
+
 struct CV_EXPORTS CannyBuf;
 
 CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
@@ -855,7 +861,7 @@ struct CV_EXPORTS CannyBuf
     CannyBuf(const GpuMat& dx_, const GpuMat& dy_);
 
     void create(const Size& image_size, int apperture_size = 3);
-    
+
     void release();
 
     GpuMat dx, dy;
@@ -968,24 +974,24 @@ CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& t
                                 GpuMat& dst, Stream& stream = Stream::Null());
 
 CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                              const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, 
+                              const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
                               Stream& stream = Stream::Null());
 
 CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
                                const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false,
-                               int num_iters=100, float max_dist=8.0, int min_inlier_count=100, 
+                               int num_iters=100, float max_dist=8.0, int min_inlier_count=100,
                                std::vector<int>* inliers=NULL);
 
 //////////////////////////////// Image Labeling ////////////////////////////////
 
-//!performs labeling via graph cuts of a 2D regular 4-connected graph. 
-CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, 
+//!performs labeling via graph cuts of a 2D regular 4-connected graph.
+CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels,
                          GpuMat& buf, Stream& stream = Stream::Null());
 
-//!performs labeling via graph cuts of a 2D regular 8-connected graph. 
-CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight, 
+//!performs labeling via graph cuts of a 2D regular 8-connected graph.
+CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
                          GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight,
-                         GpuMat& labels, 
+                         GpuMat& labels,
                          GpuMat& buf, Stream& stream = Stream::Null());
 
 ////////////////////////////////// Histograms //////////////////////////////////
@@ -1243,16 +1249,16 @@ struct CV_EXPORTS HOGDescriptor
     static vector<float> getPeopleDetector48x96();
     static vector<float> getPeopleDetector64x128();
 
-    void detect(const GpuMat& img, vector<Point>& found_locations, 
-                double hit_threshold=0, Size win_stride=Size(), 
+    void detect(const GpuMat& img, vector<Point>& found_locations,
+                double hit_threshold=0, Size win_stride=Size(),
                 Size padding=Size());
 
     void detectMultiScale(const GpuMat& img, vector<Rect>& found_locations,
-                          double hit_threshold=0, Size win_stride=Size(), 
-                          Size padding=Size(), double scale0=1.05, 
+                          double hit_threshold=0, Size win_stride=Size(),
+                          Size padding=Size(), double scale0=1.05,
                           int group_threshold=2);
 
-    void getDescriptors(const GpuMat& img, Size win_stride, 
+    void getDescriptors(const GpuMat& img, Size win_stride,
                         GpuMat& descriptors,
                         int descr_format=DESCR_FORMAT_COL_BY_COL);
 
@@ -1290,11 +1296,11 @@ protected:
     // Gradients conputation results
     GpuMat grad, qangle, grad_buf, qangle_buf;
 
-	// returns subbuffer with required size, reallocates buffer if nessesary.
-	static GpuMat getBuffer(const Size& sz, int type, GpuMat& buf);
-	static GpuMat getBuffer(int rows, int cols, int type, GpuMat& buf);
+    // returns subbuffer with required size, reallocates buffer if nessesary.
+    static GpuMat getBuffer(const Size& sz, int type, GpuMat& buf);
+    static GpuMat getBuffer(int rows, int cols, int type, GpuMat& buf);
 
-	std::vector<GpuMat> image_scales;
+    std::vector<GpuMat> image_scales;
 };
 
 
@@ -1323,8 +1329,8 @@ public:
     bool isMaskSupported() const;
 
     // Find one best match for each query descriptor
-    void matchSingle(const GpuMat& query, const GpuMat& train, 
-        GpuMat& trainIdx, GpuMat& distance, 
+    void matchSingle(const GpuMat& query, const GpuMat& train,
+        GpuMat& trainIdx, GpuMat& distance,
         const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
     // Download trainIdx and distance and convert it to CPU vector with DMatch
@@ -1339,7 +1345,7 @@ public:
     void makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
     // Find one best match from train collection for each query descriptor
-    void matchCollection(const GpuMat& query, const GpuMat& trainCollection, 
+    void matchCollection(const GpuMat& query, const GpuMat& trainCollection,
         GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
         const GpuMat& masks = GpuMat(), Stream& stream = Stream::Null());
 
@@ -1508,7 +1514,7 @@ private:
 class CV_EXPORTS SURF_GPU : public CvSURFParams
 {
 public:
-    enum KeypointLayout 
+    enum KeypointLayout
     {
         SF_X = 0,
         SF_Y,
@@ -1535,7 +1541,7 @@ public:
 
     //! download descriptors from device to host memory
     void downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors);
-    
+
     //! finds the keypoints using fast hessian detector used in SURF
     //! supports CV_8UC1 images
     //! keypoints will have nFeature cols and 6 rows
@@ -1546,16 +1552,16 @@ public:
     //! keypoints.ptr<float>(SF_DIR)[i] will contain orientation of i'th feature
     //! keypoints.ptr<float>(SF_HESSIAN)[i] will contain response of i'th feature
     void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints);
-    //! finds the keypoints and computes their descriptors. 
+    //! finds the keypoints and computes their descriptors.
     //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
-    void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors, 
+    void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors,
         bool useProvidedKeypoints = false);
 
     void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
-    void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors, 
+    void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors,
         bool useProvidedKeypoints = false);
 
-    void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors, 
+    void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors,
         bool useProvidedKeypoints = false);
 
     void releaseMemory();
@@ -1589,7 +1595,7 @@ public:
 
     //! finds the keypoints using FAST detector
     //! supports only CV_8UC1 images
-    void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);    
+    void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
     void operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
 
     //! download keypoints from device to host memory
@@ -1709,7 +1715,7 @@ private:
     GpuMat pattern_;
 
     std::vector<GpuMat> imagePyr_;
-	std::vector<GpuMat> maskPyr_;
+    std::vector<GpuMat> maskPyr_;
 
     GpuMat buf_;
 
@@ -1729,7 +1735,7 @@ class CV_EXPORTS BroxOpticalFlow
 {
 public:
     BroxOpticalFlow(float alpha_, float gamma_, float scale_factor_, int inner_iterations_, int outer_iterations_, int solver_iterations_) :
-        alpha(alpha_), gamma(gamma_), scale_factor(scale_factor_), 
+        alpha(alpha_), gamma(gamma_), scale_factor(scale_factor_),
         inner_iterations(inner_iterations_), outer_iterations(outer_iterations_), solver_iterations(solver_iterations_)
     {
     }
@@ -1857,7 +1863,7 @@ private:
     GpuMat dy_calcBuf_;
 
     vector<GpuMat> prevPyr_;
-    vector<GpuMat> nextPyr_; 
+    vector<GpuMat> nextPyr_;
 
     GpuMat dx_buf_;
     GpuMat dy_buf_;
@@ -1943,10 +1949,10 @@ private:
 //!            occlusion masks            0, occlusion masks            1,
 //!            interpolated forward flow  0, interpolated forward flow  1,
 //!            interpolated backward flow 0, interpolated backward flow 1
-//!            
-CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, 
+//!
+CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
                                   const GpuMat& fu, const GpuMat& fv,
-                                  const GpuMat& bu, const GpuMat& bv, 
+                                  const GpuMat& bu, const GpuMat& bv,
                                   float pos, GpuMat& newFrame, GpuMat& buf,
                                   Stream& stream = Stream::Null());
 

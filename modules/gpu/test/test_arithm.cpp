@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -117,7 +117,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, 
                                CV_32SC1, CV_32SC2, CV_32SC3, CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // subtract
@@ -160,7 +160,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4, 
                                CV_32SC1, CV_32SC2, CV_32SC3, CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // multiply
@@ -203,7 +203,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Multiply, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, 
                                CV_32SC1, CV_32SC3, CV_32FC1, CV_32FC3, CV_32FC4),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // divide
@@ -246,7 +246,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Divide, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, 
                                CV_32SC1, CV_32SC3, CV_32FC1, CV_32FC3, CV_32FC4),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // transpose
@@ -272,7 +272,7 @@ TEST_P(Transpose, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32SC2, CV_32FC1, CV_32FC2, CV_64FC1),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // absdiff
@@ -314,7 +314,7 @@ TEST_P(Absdiff, Scalar)
 INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // abs
@@ -339,7 +339,7 @@ TEST_P(Abs, Array)
 INSTANTIATE_TEST_CASE_P(Arithm, Abs, Combine(
                         ALL_DEVICES,
                         Values(CV_16SC1, CV_32FC1),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Sqr
@@ -365,7 +365,7 @@ TEST_P(Sqr, Array)
 INSTANTIATE_TEST_CASE_P(Arithm, Sqr, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // Sqrt
@@ -391,7 +391,7 @@ TEST_P(Sqrt, Array)
 INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(
                         ALL_DEVICES,
                         Values(MatType(CV_32FC1)),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // compare
@@ -445,7 +445,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_16UC1, CV_32SC1),
                         Values((int) cv::CMP_EQ, (int) cv::CMP_GT, (int) cv::CMP_GE, (int) cv::CMP_LT, (int) cv::CMP_LE, (int) cv::CMP_NE),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // meanStdDev
@@ -498,7 +498,7 @@ TEST_P(MeanStdDev, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // normDiff
@@ -543,7 +543,7 @@ TEST_P(NormDiff, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, NormDiff, Combine(
                         ALL_DEVICES,
                         Values((int) cv::NORM_INF, (int) cv::NORM_L1, (int) cv::NORM_L2),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // flip
@@ -596,7 +596,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                         Values((int)FLIP_BOTH, (int)FLIP_X, (int)FLIP_Y),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // LUT
@@ -648,7 +648,7 @@ TEST_P(LUT, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, LUT, Combine(
                         ALL_DEVICES,
                         Values(CV_8UC1, CV_8UC3),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // exp
@@ -695,7 +695,7 @@ TEST_P(Exp, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // pow
@@ -754,7 +754,7 @@ TEST_P(Pow, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(
                         ALL_DEVICES,
                         Values(CV_32F, CV_32FC3),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // log
@@ -801,7 +801,7 @@ TEST_P(Log, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // magnitude
@@ -849,7 +849,7 @@ TEST_P(Magnitude, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // phase
@@ -897,7 +897,7 @@ TEST_P(Phase, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // cartToPolar
@@ -949,7 +949,7 @@ TEST_P(CartToPolar, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // polarToCart
@@ -1002,7 +1002,7 @@ TEST_P(PolarToCart, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(
                         ALL_DEVICES,
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // minMax
@@ -1078,7 +1078,7 @@ TEST_P(MinMax, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(
                         ALL_DEVICES,
                         Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // minMaxLoc
@@ -1167,7 +1167,7 @@ TEST_P(MinMaxLoc, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(
                         ALL_DEVICES,
                         Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////
 // countNonZero
@@ -1215,7 +1215,7 @@ TEST_P(CountNonZero, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(
                         ALL_DEVICES,
                         Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
 // sum
@@ -1295,7 +1295,7 @@ TEST_P(Sum, Sqr)
 INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(
                         ALL_DEVICES,
                         Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
 // bitwise
@@ -1560,7 +1560,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
                         TYPES(CV_8U, CV_64F, 1, 1),
                         TYPES(CV_8U, CV_64F, 1, 1),
                         TYPES(CV_8U, CV_64F, 1, 1),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
 // reduce
@@ -1624,7 +1624,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Reduce, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                         Values(0, 1),
                         Values((int)CV_REDUCE_SUM, (int)CV_REDUCE_AVG, (int)CV_REDUCE_MAX, (int)CV_REDUCE_MIN),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
 // gemm
@@ -1685,6 +1685,6 @@ INSTANTIATE_TEST_CASE_P(Arithm, GEMM, Combine(
                         ALL_DEVICES,
                         Values(CV_32FC1, CV_32FC2),
                         Values(0, (int) cv::GEMM_1_T, (int) cv::GEMM_2_T, (int) cv::GEMM_3_T),
-                        USE_ROI));
+                        WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA

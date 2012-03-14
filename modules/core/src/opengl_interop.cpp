@@ -1251,7 +1251,7 @@ cv::GlFont::GlFont(const string& family, int height, Weight weight, Style style)
     base_ = glGenLists(256);
     CV_CheckGlError();
 
-    glFuncTab()->generateBitmapFont(family, height, weight, style & STYLE_ITALIC, style & STYLE_UNDERLINE, 0, 256, base_);
+    glFuncTab()->generateBitmapFont(family, height, weight, (style & STYLE_ITALIC) != 0, (style & STYLE_UNDERLINE) != 0, 0, 256, base_);
 #endif
 }
 

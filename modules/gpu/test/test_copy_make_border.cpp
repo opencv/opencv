@@ -39,27 +39,52 @@
 //
 //M*/
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#include "precomp.hpp"
 
-#include <cmath>
-#include <cstdio>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <limits>
-#include <string>
-#include <algorithm>
-#include <iterator>
-#include "cvconfig.h"
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/ts_perf.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "test_gpu_base.hpp"
+#ifdef HAVE_CUDA
 
-#endif
+PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, int, Border, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int border;
+    int borderType;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        border = GET_PARAM(3);
+        borderType = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(CopyMakeBorder, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+    cv::Scalar val = randomScalar(0, 255);
+
+    cv::gpu::GpuMat dst = createMat(cv::Size(size.width + 2 * border, size.height + 2 * border), type, useRoi);
+    cv::gpu::copyMakeBorder(loadMat(src, useRoi), dst, border, border, border, border, borderType, val);
+
+    cv::Mat dst_gold;
+    cv::copyMakeBorder(src, dst_gold, border, border, border, border, borderType, val);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CopyMakeBorder, testing::Combine(
+    ALL_DEVICES, 
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(1, 10, 50),
+    testing::Values(Border(cv::BORDER_REFLECT101), Border(cv::BORDER_REPLICATE), Border(cv::BORDER_CONSTANT), Border(cv::BORDER_REFLECT), Border(cv::BORDER_WRAP)),
+    WHOLE_SUBMAT));
+
+#endif // HAVE_CUDA

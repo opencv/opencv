@@ -47,10 +47,10 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/filters.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace imgproc 
-    {    
+    namespace imgproc
+    {
         template <typename Ptr2D, typename T> __global__ void resize(const Ptr2D src, float fx, float fy, DevMem2D_<T> dst)
         {
             const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -58,52 +58,25 @@ namespace cv { namespace gpu { namespace device
 
             if (x < dst.cols && y < dst.rows)
             {
-                const float xcoo = x / fx;
-                const float ycoo = y / fy;
+                const float xcoo = x * fx;
+                const float ycoo = y * fy;
 
-                dst.ptr(y)[x] = saturate_cast<T>(src(ycoo, xcoo));
-            }
-        }
-        template <typename Ptr2D, typename T> __global__ void resizeNN(const Ptr2D src, float fx, float fy, DevMem2D_<T> dst)
-        {
-            const int x = blockDim.x * blockIdx.x + threadIdx.x;
-            const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-            if (x < dst.cols && y < dst.rows)
-            {
-                const float xcoo = x / fx;
-                const float ycoo = y / fy;
-
-                dst.ptr(y)[x] = src(__float2int_rd(ycoo), __float2int_rd(xcoo));
+                dst(y, x) = saturate_cast<T>(src(ycoo, xcoo));
             }
         }
 
         template <template <typename> class Filter, typename T> struct ResizeDispatcherStream
         {
             static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
-            {            
+            {
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
                 BrdReplicate<T> brd(src.rows, src.cols);
                 BorderReader< PtrStep<T>, BrdReplicate<T> > brdSrc(src, brd);
-                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filter_src(brdSrc);
+                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc);
 
-                resize<<<grid, block, 0, stream>>>(filter_src, fx, fy, dst);
-                cudaSafeCall( cudaGetLastError() );
-            }
-        };
-        template <typename T> struct ResizeDispatcherStream<PointFilter, T>
-        {
-            static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
-            {            
-                dim3 block(32, 8);
-                dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
-
-                BrdReplicate<T> brd(src.rows, src.cols);
-                BorderReader< PtrStep<T>, BrdReplicate<T> > brdSrc(src, brd);
-
-                resizeNN<<<grid, block, 0, stream>>>(brdSrc, fx, fy, dst);
+                resize<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
                 cudaSafeCall( cudaGetLastError() );
             }
         };
@@ -111,31 +84,15 @@ namespace cv { namespace gpu { namespace device
         template <template <typename> class Filter, typename T> struct ResizeDispatcherNonStream
         {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst)
-            {            
+            {
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
                 BrdReplicate<T> brd(src.rows, src.cols);
                 BorderReader< PtrStep<T>, BrdReplicate<T> > brdSrc(src, brd);
-                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filter_src(brdSrc);
+                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc);
 
-                resize<<<grid, block>>>(filter_src, fx, fy, dst);
-                cudaSafeCall( cudaGetLastError() );
-
-                cudaSafeCall( cudaDeviceSynchronize() );
-            }
-        };
-        template <typename T> struct ResizeDispatcherNonStream<PointFilter, T>
-        {
-            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst)
-            {            
-                dim3 block(32, 8);
-                dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
-
-                BrdReplicate<T> brd(src.rows, src.cols);
-                BorderReader< PtrStep<T>, BrdReplicate<T> > brdSrc(src, brd);
-
-                resizeNN<<<grid, block>>>(brdSrc, fx, fy, dst);
+                resize<<<grid, block>>>(filteredSrc, fx, fy, dst);
                 cudaSafeCall( cudaGetLastError() );
 
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -148,73 +105,61 @@ namespace cv { namespace gpu { namespace device
             { \
                 typedef type elem_type; \
                 typedef int index_type; \
-                int xoff, yoff; \
-                tex_resize_ ## type ## _reader (int xoff_, int yoff_) : xoff(xoff_), yoff(yoff_) {} \
+                const int xoff; \
+                const int yoff; \
+                __host__ tex_resize_ ## type ## _reader(int xoff_, int yoff_) : xoff(xoff_), yoff(yoff_) {} \
                 __device__ __forceinline__ elem_type operator ()(index_type y, index_type x) const \
                 { \
-                    return tex2D(tex_resize_ ## type , x + xoff, y + yoff); \
+                    return tex2D(tex_resize_ ## type, x + xoff, y + yoff); \
                 } \
             }; \
-            template <template <typename> class Filter> struct ResizeDispatcherNonStream<Filter, type> \
+            template <template <typename> class Filter> struct ResizeDispatcherNonStream<Filter, type > \
             { \
                 static void call(DevMem2D_< type > src, DevMem2D_< type > srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_< type > dst) \
                 { \
                     dim3 block(32, 8); \
                     dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
-                    bindTexture(&tex_resize_ ## type , srcWhole); \
-                    tex_resize_ ## type ##_reader texSrc(xoff, yoff); \
-                    BrdReplicate< type > brd(src.rows, src.cols); \
-                    BorderReader< tex_resize_ ## type ##_reader , BrdReplicate< type > > brdSrc(texSrc, brd); \
-                    Filter< BorderReader< tex_resize_ ## type ##_reader , BrdReplicate< type > > > filter_src(brdSrc); \
-                    resize<<<grid, block>>>(filter_src, fx, fy, dst); \
-                    cudaSafeCall( cudaGetLastError() ); \
-                    cudaSafeCall( cudaDeviceSynchronize() ); \
-                } \
-            }; \
-            template <> struct ResizeDispatcherNonStream<PointFilter, type> \
-            { \
-                static void call(DevMem2D_< type > src, DevMem2D_< type > srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_< type > dst) \
-                { \
-                    dim3 block(32, 8); \
-                    dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
-                    bindTexture(&tex_resize_ ## type , srcWhole); \
-                    tex_resize_ ## type ##_reader texSrc(xoff, yoff); \
-                    BrdReplicate< type > brd(src.rows, src.cols); \
-                    BorderReader< tex_resize_ ## type ##_reader , BrdReplicate< type > > brdSrc(texSrc, brd); \
-                    resizeNN<<<grid, block>>>(brdSrc, fx, fy, dst); \
+                    bindTexture(&tex_resize_ ## type, srcWhole); \
+                    tex_resize_ ## type ## _reader texSrc(xoff, yoff); \
+                    if (srcWhole.cols == src.cols && srcWhole.rows == src.rows) \
+                    { \
+                        Filter<tex_resize_ ## type ## _reader> filteredSrc(texSrc); \
+                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
+                    } \
+                    else \
+                    { \
+                        BrdReplicate< type > brd(src.rows, src.cols); \
+                        BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > brdSrc(texSrc, brd); \
+                        Filter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
+                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
+                    } \
                     cudaSafeCall( cudaGetLastError() ); \
                     cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             };
-            
+
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(uchar)
-        //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(uchar2)
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(uchar4)
 
         //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(schar)
-        //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(char2)
         //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(char4)
 
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(ushort)
-        //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(ushort2)
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(ushort4)
 
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(short)
-        //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(short2)
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(short4)
 
         //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(int)
-        //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(int2)
         //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(int4)
 
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(float)
-        //OPENCV_GPU_IMPLEMENT_RESIZE_TEX(float2)
         OPENCV_GPU_IMPLEMENT_RESIZE_TEX(float4)
 
         #undef OPENCV_GPU_IMPLEMENT_RESIZE_TEX
 
         template <template <typename> class Filter, typename T> struct ResizeDispatcher
-        { 
+        {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
             {
                 if (stream == 0)

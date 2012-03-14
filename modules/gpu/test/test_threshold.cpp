@@ -39,4 +39,50 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
+
+#ifdef HAVE_CUDA
+
+PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, cv::Size, MatType, ThreshOp, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int threshOp;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        threshOp = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(Threshold, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+    double maxVal = randomDouble(20.0, 127.0);
+    double thresh = randomDouble(0.0, maxVal);
+
+    cv::gpu::GpuMat dst = createMat(src.size(), src.type(), useRoi);
+    cv::gpu::threshold(loadMat(src, useRoi), dst, thresh, maxVal, threshOp);
+
+    cv::Mat dst_gold;
+    cv::threshold(src, dst_gold, thresh, maxVal, threshOp);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Threshold, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
+    testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV)),
+    WHOLE_SUBMAT));
+
+#endif // HAVE_CUDA

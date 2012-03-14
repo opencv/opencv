@@ -39,34 +39,92 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 using namespace cvtest;
 
-GpuMat loadMat(const Mat& m, bool useRoi)
+int randomInt(int minVal, int maxVal)
 {
-    Size size = m.size();
+    RNG& rng = TS::ptr()->get_rng();
+    return rng.uniform(minVal, maxVal);
+}
+
+double randomDouble(double minVal, double maxVal)
+{
+    RNG& rng = TS::ptr()->get_rng();
+    return rng.uniform(minVal, maxVal);
+}
+
+Size randomSize(int minVal, int maxVal)
+{
+    return cv::Size(randomInt(minVal, maxVal), randomInt(minVal, maxVal));
+}
+
+Scalar randomScalar(double minVal, double maxVal)
+{
+    return Scalar(randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal));
+}
+
+Mat randomMat(Size size, int type, double minVal, double maxVal)
+{
+    return randomMat(TS::ptr()->get_rng(), size, type, minVal, maxVal, false);
+}
+
+cv::gpu::GpuMat createMat(cv::Size size, int type, bool useRoi)
+{
     Size size0 = size;
 
     if (useRoi)
     {
-        RNG& rng = TS::ptr()->get_rng();
-
-        size0.width += rng.uniform(5, 15);
-        size0.height += rng.uniform(5, 15);
+        size0.width += randomInt(5, 15);
+        size0.height += randomInt(5, 15);
     }
         
-    GpuMat d_m(size0, m.type());
+    GpuMat d_m(size0, type);
     
     if (size0 != size)
         d_m = d_m(Rect((size0.width - size.width) / 2, (size0.height - size.height) / 2, size.width, size.height));
 
-    d_m.upload(m);
-
     return d_m;
+}
+
+GpuMat loadMat(const Mat& m, bool useRoi)
+{
+    GpuMat d_m = createMat(m.size(), m.type(), useRoi);
+    d_m.upload(m);
+    return d_m;
+}
+
+void showDiff(InputArray gold_, InputArray actual_, double eps)
+{
+    Mat gold;
+    if (gold_.kind() == _InputArray::MAT)
+        gold = gold_.getMat();
+    else
+        gold_.getGpuMat().download(gold);
+
+    Mat actual;
+    if (actual_.kind() == _InputArray::MAT)
+        actual = actual_.getMat();
+    else
+        actual_.getGpuMat().download(actual);
+
+    Mat diff;
+    absdiff(gold, actual, diff);
+    threshold(diff, diff, eps, 255.0, cv::THRESH_BINARY);
+
+    namedWindow("gold", WINDOW_NORMAL);
+    namedWindow("actual", WINDOW_NORMAL);
+    namedWindow("diff", WINDOW_NORMAL);
+
+    imshow("gold", gold);
+    imshow("actual", actual);
+    imshow("diff", diff);
+
+    waitKey();
 }
 
 bool supportFeature(const DeviceInfo& info, FeatureSet feature)
@@ -149,6 +207,24 @@ Mat readImage(const string& fileName, int flags)
     return imread(string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
 }
 
+Mat readImageType(const string& fname, int type)
+{
+    Mat src = readImage(fname, CV_MAT_CN(type) == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
+    if (CV_MAT_CN(type) == 4)
+    {
+        Mat temp;
+        cvtColor(src, temp, cv::COLOR_BGR2BGRA);
+        swap(src, temp);
+    }
+    src.convertTo(src, CV_MAT_DEPTH(type));
+    return src;
+}
+
+double checkNorm(const Mat& m)
+{
+    return norm(m, NORM_INF);
+}
+
 double checkNorm(const Mat& m1, const Mat& m2)
 {
     return norm(m1, m2, NORM_INF);
@@ -172,4 +248,12 @@ void PrintTo(const UseRoi& useRoi, std::ostream* os)
         (*os) << "sub matrix";
     else
         (*os) << "whole matrix";
+}
+
+void PrintTo(const Inverse& inverse, std::ostream* os)
+{
+    if (inverse)
+        (*os) << "inverse";
+    else
+        (*os) << "direct";
 }

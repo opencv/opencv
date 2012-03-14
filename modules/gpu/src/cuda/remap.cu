@@ -47,10 +47,10 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/filters.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace imgproc 
-    {    
+    namespace imgproc
+    {
         template <typename Ptr2D, typename T> __global__ void remap(const Ptr2D src, const PtrStepf mapx, const PtrStepf mapy, DevMem2D_<T> dst)
         {
             const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -67,11 +67,10 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcherStream
         {
-            static void call(DevMem2D_<T> src, DevMem2Df mapx, DevMem2Df mapy, DevMem2D_<T> dst, 
-                const float* borderValue, cudaStream_t stream, int)
+            static void call(DevMem2D_<T> src, DevMem2Df mapx, DevMem2Df mapy, DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int)
             {
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
-                
+
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
@@ -86,11 +85,10 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcherNonStream
         {
-            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, 
-                DevMem2D_<T> dst, const float* borderValue, int)
+            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, DevMem2D_<T> dst, const float* borderValue, int)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
-                
+                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type;
+
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
@@ -189,7 +187,7 @@ namespace cv { namespace gpu { namespace device
         #undef OPENCV_GPU_IMPLEMENT_REMAP_TEX
 
         template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcher
-        { 
+        {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, 
                 DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int cc)
             {
@@ -208,26 +206,26 @@ namespace cv { namespace gpu { namespace device
 
             static const caller_t callers[3][5] = 
             {
-                { 
-                    RemapDispatcher<PointFilter, BrdReflect101, T>::call, 
-                    RemapDispatcher<PointFilter, BrdReplicate, T>::call, 
-                    RemapDispatcher<PointFilter, BrdConstant, T>::call, 
-                    RemapDispatcher<PointFilter, BrdReflect, T>::call, 
-                    RemapDispatcher<PointFilter, BrdWrap, T>::call 
+                {
+                    RemapDispatcher<PointFilter, BrdReflect101, T>::call,
+                    RemapDispatcher<PointFilter, BrdReplicate, T>::call,
+                    RemapDispatcher<PointFilter, BrdConstant, T>::call,
+                    RemapDispatcher<PointFilter, BrdReflect, T>::call,
+                    RemapDispatcher<PointFilter, BrdWrap, T>::call
                 },
-                { 
-                    RemapDispatcher<LinearFilter, BrdReflect101, T>::call, 
-                    RemapDispatcher<LinearFilter, BrdReplicate, T>::call, 
-                    RemapDispatcher<LinearFilter, BrdConstant, T>::call, 
-                    RemapDispatcher<LinearFilter, BrdReflect, T>::call, 
-                    RemapDispatcher<LinearFilter, BrdWrap, T>::call 
+                {
+                    RemapDispatcher<LinearFilter, BrdReflect101, T>::call,
+                    RemapDispatcher<LinearFilter, BrdReplicate, T>::call,
+                    RemapDispatcher<LinearFilter, BrdConstant, T>::call,
+                    RemapDispatcher<LinearFilter, BrdReflect, T>::call,
+                    RemapDispatcher<LinearFilter, BrdWrap, T>::call
                 },
-                { 
-                    RemapDispatcher<CubicFilter, BrdReflect101, T>::call, 
-                    RemapDispatcher<CubicFilter, BrdReplicate, T>::call, 
-                    RemapDispatcher<CubicFilter, BrdConstant, T>::call, 
-                    RemapDispatcher<CubicFilter, BrdReflect, T>::call, 
-                    RemapDispatcher<CubicFilter, BrdWrap, T>::call 
+                {
+                    RemapDispatcher<CubicFilter, BrdReflect101, T>::call,
+                    RemapDispatcher<CubicFilter, BrdReplicate, T>::call,
+                    RemapDispatcher<CubicFilter, BrdConstant, T>::call,
+                    RemapDispatcher<CubicFilter, BrdReflect, T>::call,
+                    RemapDispatcher<CubicFilter, BrdWrap, T>::call
                 }
             };
 
