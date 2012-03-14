@@ -531,6 +531,12 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
         CV_Assert( level_dI_dx1.type() == CV_16S );
         CV_Assert( level_dI_dy1.type() == CV_16S );
 
+        const double fx = levelCameraMatrix.at<double>(0,0);
+        const double fy = levelCameraMatrix.at<double>(1,1);
+        const double avgf = 0.5 *(fx + fy);
+        const double normScale = 1./(255*avgf);
+        const double determinantThreshold = 1e-6;
+
         Mat corresps( levelImage0.size(), levelImage0.type(), CV_32SC1 );
 
         // Run transformation search on current level iteratively.
@@ -542,12 +548,6 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
 
             if( correspsCount == 0 )
                 break;
-
-            const double fx = levelCameraMatrix.at<double>(0,0);
-            const double fy = levelCameraMatrix.at<double>(1,1);
-            const double avgf = 0.5 *(fx + fy);
-            const double normScale = 1./(255*avgf);
-            const double determinantThreshold = 1e-6;
 
             bool solutionExist = computeKsi( transformType,
                                              levelImage0, levelCloud0,
