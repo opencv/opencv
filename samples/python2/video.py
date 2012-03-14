@@ -156,7 +156,7 @@ if __name__ == '__main__':
             ret, img = cap.read()
             imgs.append(img)
             cv2.imshow('capture %d' % i, img)
-        ch = cv2.waitKey(1)
+        ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
             break
         if ch == ord(' '):

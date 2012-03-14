@@ -81,7 +81,7 @@ class App:
             self.prev_gray = frame_gray
             cv2.imshow('lk_track', vis)
 
-            ch = cv2.waitKey(1)
+            ch = 0xFF & cv2.waitKey(1)
             if ch == 27:
                 break
 

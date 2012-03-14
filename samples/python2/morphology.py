@@ -48,7 +48,7 @@ if __name__ == '__main__':
     print "  2 - change structure element shape"
     print
     while True:
-        ch = cv2.waitKey()
+        ch = 0xFF & cv2.waitKey()
         if ch == 27:
             break
         if ch == ord('1'):

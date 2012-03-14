@@ -45,4 +45,4 @@ if __name__ == '__main__':
     update(3)
     cv2.createTrackbar( "levels+3", "contours", 3, 7, update )
     cv2.imshow('image', img)
-    cv2.waitKey()
+    0xFF & cv2.waitKey()

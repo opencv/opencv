@@ -76,5 +76,5 @@ if __name__ == '__main__':
         cv2.imshow('motempl', vis)
 
         prev_frame = frame.copy()
-        if cv2.waitKey(5) == 27:
+        if 0xFF & cv2.waitKey(5) == 27:
             break

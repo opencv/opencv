@@ -33,5 +33,5 @@ if __name__ == '__main__':
         cv2.polylines(vis, hulls, 1, (0, 255, 0))
 
         cv2.imshow('img', vis)
-        if cv2.waitKey(5) == 27:
+        if 0xFF & cv2.waitKey(5) == 27:
             break

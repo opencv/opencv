@@ -99,4 +99,4 @@ if __name__ == '__main__':
                                                    # neighbours, so r_threshold is decreased
     cv2.imshow('find_obj SURF', vis_brute)
     cv2.imshow('find_obj SURF flann', vis_flann)
-    cv2.waitKey()
+    0xFF & cv2.waitKey()

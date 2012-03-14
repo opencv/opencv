@@ -42,6 +42,6 @@ if __name__ == '__main__':
         vis = hsv_map*h[:,:,np.newaxis] / 255.0
         cv2.imshow('hist', vis)
         
-        ch = cv2.waitKey(1)
+        ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
             break

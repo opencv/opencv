@@ -51,6 +51,6 @@ if __name__ == '__main__':
             draw_gaussain(img, m, cov, (0, 0, 255))
 
         cv2.imshow('gaussian mixture', img)
-        ch = cv2.waitKey(0)
+        ch = 0xFF & cv2.waitKey(0)
         if ch == 27:
             break

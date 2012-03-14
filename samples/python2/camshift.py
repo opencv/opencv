@@ -101,7 +101,7 @@ class App(object):
                 
             cv2.imshow('camshift', vis)
 
-            ch = cv2.waitKey(5)
+            ch = 0xFF & cv2.waitKey(5)
             if ch == 27:
                 break
             if ch == ord('b'):

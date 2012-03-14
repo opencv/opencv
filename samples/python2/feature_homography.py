@@ -85,7 +85,7 @@ if __name__ == '__main__':
             draw_str(vis, (20, 40), 'matched: %d ( %d outliers )' % (match_n, match_n-inlier_n))
         
         cv2.imshow('img', vis)
-        ch = cv2.waitKey(1)
+        ch = 0xFF & cv2.waitKey(1)
         if ch == ord(' '):
             matcher.clear()
             matcher.add([desc])
