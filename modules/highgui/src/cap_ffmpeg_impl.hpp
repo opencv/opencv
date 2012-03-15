@@ -1371,7 +1371,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 		double fps, int width, int height, bool is_color )
 {
 	CodecID codec_id = CODEC_ID_NONE;
-	int err, codec_pix_fmt, bitrate_scale=64;
+        int err, codec_pix_fmt, bitrate_scale = 64;
 
     close();
 
