@@ -155,27 +155,24 @@ void CV_MserTest::run(int)
 {
     string image_path = string(ts->get_data_path()) + "mser/puzzle.png";
 
-    IplImage* img = cvLoadImage( image_path.c_str());
-    if (!img)
+    Mat img = imread( image_path );
+    if (img.empty())
     {
         ts->printf( cvtest::TS::LOG, "Unable to open image mser/puzzle.png\n");
         ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
         return;
     }
 
-    CvSeq* contours;
-    CvMemStorage* storage= cvCreateMemStorage();
-    IplImage* hsv = cvCreateImage( cvGetSize( img ), IPL_DEPTH_8U, 3 );
-    cvCvtColor( img, hsv, CV_BGR2YCrCb );
-    CvMSERParams params = cvMSERParams();//cvMSERParams( 5, 60, cvRound(.2*img->width*img->height), .25, .2 );
-    cvExtractMSER( hsv, NULL, &contours, storage, params );
+    Mat yuv;
+    cvtColor(img, yuv, COLOR_BGR2YCrCb);
+    vector<vector<Point> > msers;
+    MSER()(yuv, msers);
 
     vector<CvBox2D> boxes;
     vector<CvBox2D> boxes_orig;
-    for ( int i = 0; i < contours->total; i++ )
+    for ( size_t i = 0; i < msers.size(); i++ )
     {
-        CvContour* r = *(CvContour**)cvGetSeqElem( contours, i );
-        CvBox2D box = cvFitEllipse2( r );
+        RotatedRect box = fitEllipse(msers[i]);
         box.angle=(float)CV_PI/2-box.angle;
         boxes.push_back(box);           
     }
@@ -203,10 +200,6 @@ void CV_MserTest::run(int)
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         ts->printf( cvtest::TS::LOG, "Incorrect correspondence in box %d\n",n_box);
     }
-
-    cvReleaseMemStorage(&storage);
-    cvReleaseImage(&hsv);
-    cvReleaseImage(&img);
 }
 
 TEST(Features2d_MSER, regression) { CV_MserTest test; test.safe_run(); }

@@ -3823,18 +3823,6 @@ template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::ge
     return value;
 }    
     
-template<typename _Tp> inline void Algorithm::set(const string& name,
-                                                  typename ParamType<_Tp>::const_param_type value)
-{
-    info()->set(this, name.c_str(), ParamType<_Tp>::type, &value);
-}
-
-template<typename _Tp> inline void Algorithm::set(const char* name,
-                                                  typename ParamType<_Tp>::const_param_type value)
-{
-    info()->set(this, name, ParamType<_Tp>::type, &value);
-}
-
 }
 
 #endif // __cplusplus

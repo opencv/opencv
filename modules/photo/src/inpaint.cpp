@@ -46,6 +46,7 @@
 // */
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 
 #undef CV_MAT_ELEM_PTR_FAST
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
@@ -383,8 +384,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                   }
                   sat = (float)((Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f)+0.5f));
                   {
-                  int isat = cvRound(sat);
-                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = CV_CAST_8U(isat);
+                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = cv::saturate_cast<uchar>(sat);
                   }
                }
 
@@ -496,8 +496,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                   }
                   sat = (float)((Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f)+0.5f));
                   {
-                  int isat = cvRound(sat);
-                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = CV_CAST_8U(isat);
+                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = cv::saturate_cast<uchar>(sat);
                   }
                }
 
@@ -594,10 +593,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                         }
                      }
                   }
-                  {
-                  int out_val = cvRound((double)Ia/s);
-                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = CV_CAST_8U(out_val);
-                  }
+                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = cv::saturate_cast<uchar>((double)Ia/s);
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
@@ -685,10 +681,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                         }
                      }
                   }
-                  {
-                  int out_val = cvRound((double)Ia/s);
-                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = CV_CAST_8U(out_val);
-                  }
+                  CV_MAT_ELEM(*out,uchar,i-1,j-1) = cv::saturate_cast<uchar>((double)Ia/s);
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
@@ -724,7 +717,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
    }
 
 
-CV_IMPL void
+void
 cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_img,
            double inpaintRange, int flags )
 {

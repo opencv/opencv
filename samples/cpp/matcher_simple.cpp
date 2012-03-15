@@ -2,6 +2,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 
 using namespace cv;
 
@@ -42,7 +43,7 @@ int main(int argc, char** argv)
 	extractor.compute(img2, keypoints2, descriptors2);
 
 	// matching descriptors
-	BruteForceMatcher<L2<float> > matcher;
+	BFMatcher matcher(NORM_L2);
     vector<DMatch> matches;
     matcher.match(descriptors1, descriptors2, matches);
 

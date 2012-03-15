@@ -8,12 +8,8 @@
  */
 
 #include "precomp.hpp"
-#include "opencv2/opencv_modules.hpp"
+#include "opencv2/highgui/highgui.hpp"
 #include <stdio.h>
-
-#ifdef HAVE_OPENCV_HIGHGUI
-#  include "opencv2/highgui/highgui.hpp"
-#endif
 
 namespace cv{
     
@@ -659,7 +655,6 @@ namespace cv{
     
     void OneWayDescriptor::Save(const char* path)
     {
-#ifdef HAVE_OPENCV_HIGHGUI
         for(int i = 0; i < m_pose_count; i++)
         {
             char buf[1024];
@@ -674,9 +669,6 @@ namespace cv{
             
             cvReleaseImage(&patch);
         }
-#else
-        CV_Error( CV_StsNotImplemented, "This method required opencv_highgui disabled in current build" );
-#endif
     }
     
     void OneWayDescriptor::Write(CvFileStorage* fs, const char* name)
@@ -1737,9 +1729,12 @@ namespace cv{
     void extractPatches (IplImage *img, vector<IplImage*>& patches, CvSize patch_size)
     {
         vector<KeyPoint> features;
-        SURF surf_extractor(1.0f);
+        Ptr<FeatureDetector> surf_extractor = FeatureDetector::create("SURF");
+        if( surf_extractor.empty() )
+            CV_Error(CV_StsNotImplemented, "OpenCV was built without SURF support");
+        surf_extractor->set("hessianThreshold", 1.0);
         //printf("Extracting SURF features...");
-        surf_extractor(img, Mat(), features);
+        surf_extractor->detect(Mat(img), features);
         //printf("done\n");
 
         for (int j = 0; j < (int)features.size(); j++)
@@ -1780,7 +1775,6 @@ namespace cv{
 
     void loadPCAFeatures(const char* path, const char* images_list, vector<IplImage*>& patches, CvSize patch_size)
     {
-#ifdef HAVE_OPENCV_HIGHGUI
         char images_filename[1024];
         sprintf(images_filename, "%s/%s", path, images_list);
         FILE *pFile = fopen(images_filename, "r");
@@ -1809,9 +1803,6 @@ namespace cv{
             cvReleaseImage(&img);
         }
         fclose(pFile);
-#else
-        CV_Error( CV_StsNotImplemented, "This method required opencv_highgui disabled in current build" );
-#endif
     }
 
     void generatePCAFeatures(const char* path, const char* img_filename, FileStorage& fs, const char* postfix,
@@ -2158,5 +2149,146 @@ namespace cv{
             *eigenvectors = cvCloneMat(_eigenvectors);
             cvReleaseMat(&_eigenvectors);
         }
+    }
+    
+    /****************************************************************************************\
+     *                                OneWayDescriptorMatcher                                  *
+     \****************************************************************************************/
+    
+    OneWayDescriptorMatcher::Params::Params( int _poseCount, Size _patchSize, string _pcaFilename,
+                                            string _trainPath, string _trainImagesList,
+                                            float _minScale, float _maxScale, float _stepScale ) :
+    poseCount(_poseCount), patchSize(_patchSize), pcaFilename(_pcaFilename),
+    trainPath(_trainPath), trainImagesList(_trainImagesList),
+    minScale(_minScale), maxScale(_maxScale), stepScale(_stepScale)
+    {}
+    
+    
+    OneWayDescriptorMatcher::OneWayDescriptorMatcher( const Params& _params)
+    {
+        initialize(_params);
+    }
+    
+    OneWayDescriptorMatcher::~OneWayDescriptorMatcher()
+    {}
+    
+    void OneWayDescriptorMatcher::initialize( const Params& _params, const Ptr<OneWayDescriptorBase>& _base )
+    {
+        clear();
+        
+        if( _base.empty() )
+            base = _base;
+        
+        params = _params;
+    }
+    
+    void OneWayDescriptorMatcher::clear()
+    {
+        GenericDescriptorMatcher::clear();
+        
+        prevTrainCount = 0;
+        if( !base.empty() )
+            base->clear();
+    }
+    
+    void OneWayDescriptorMatcher::train()
+    {
+        if( base.empty() || prevTrainCount < (int)trainPointCollection.keypointCount() )
+        {
+            base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
+                                              params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale );
+            
+            base->Allocate( (int)trainPointCollection.keypointCount() );
+            prevTrainCount = (int)trainPointCollection.keypointCount();
+            
+            const vector<vector<KeyPoint> >& points = trainPointCollection.getKeypoints();
+            int count = 0;
+            for( size_t i = 0; i < points.size(); i++ )
+            {
+                IplImage _image = trainPointCollection.getImage((int)i);
+                for( size_t j = 0; j < points[i].size(); j++ )
+                    base->InitializeDescriptor( count++, &_image, points[i][j], "" );
+            }
+            
+#if defined(_KDTREE)
+            base->ConvertDescriptorsArrayToTree();
+#endif
+        }
+    }
+    
+    bool OneWayDescriptorMatcher::isMaskSupported()
+    {
+        return false;
+    }
+    
+    void OneWayDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                                               vector<vector<DMatch> >& matches, int knn,
+                                               const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+    {
+        train();
+        
+        CV_Assert( knn == 1 ); // knn > 1 unsupported because of bug in OneWayDescriptorBase for this case
+        
+        matches.resize( queryKeypoints.size() );
+        IplImage _qimage = queryImage;
+        for( size_t i = 0; i < queryKeypoints.size(); i++ )
+        {
+            int descIdx = -1, poseIdx = -1;
+            float distance;
+            base->FindDescriptor( &_qimage, queryKeypoints[i].pt, descIdx, poseIdx, distance );
+            matches[i].push_back( DMatch((int)i, descIdx, distance) );
+        }
+    }
+    
+    void OneWayDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                                                  vector<vector<DMatch> >& matches, float maxDistance,
+                                                  const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+    {
+        train();
+        
+        matches.resize( queryKeypoints.size() );
+        IplImage _qimage = queryImage;
+        for( size_t i = 0; i < queryKeypoints.size(); i++ )
+        {
+            int descIdx = -1, poseIdx = -1;
+            float distance;
+            base->FindDescriptor( &_qimage, queryKeypoints[i].pt, descIdx, poseIdx, distance );
+            if( distance < maxDistance )
+                matches[i].push_back( DMatch((int)i, descIdx, distance) );
+        }
+    }
+    
+    void OneWayDescriptorMatcher::read( const FileNode &fn )
+    {
+        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, string (), string (), string (),
+                                          params.minScale, params.maxScale, params.stepScale );
+        base->Read (fn);
+    }
+    
+    void OneWayDescriptorMatcher::write( FileStorage& fs ) const
+    {
+        base->Write (fs);
+    }
+    
+    bool OneWayDescriptorMatcher::empty() const
+    {
+        return base.empty() || base->empty();
+    }
+    
+    Ptr<GenericDescriptorMatcher> OneWayDescriptorMatcher::clone( bool emptyTrainData ) const
+    {
+        OneWayDescriptorMatcher* matcher = new OneWayDescriptorMatcher( params );
+        
+        if( !emptyTrainData )
+        {
+            CV_Error( CV_StsNotImplemented, "deep clone functionality is not implemented, because "
+                     "OneWayDescriptorBase has not copy constructor or clone method ");
+            
+            //matcher->base;
+            matcher->params = params;
+            matcher->prevTrainCount = prevTrainCount;
+            matcher->trainPointCollection = trainPointCollection;
+        }
+        return matcher;
     }
 }

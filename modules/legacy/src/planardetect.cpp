@@ -1215,5 +1215,363 @@ void FernClassifier::setVerbose(bool _verbose)
 {
     verbose = _verbose;
 }
+    
+    
+/****************************************************************************************\
+*                                  FernDescriptorMatcher                                 *
+\****************************************************************************************/
+FernDescriptorMatcher::Params::Params( int _nclasses, int _patchSize, int _signatureSize,
+                                      int _nstructs, int _structSize, int _nviews, int _compressionMethod,
+                                      const PatchGenerator& _patchGenerator ) :
+nclasses(_nclasses), patchSize(_patchSize), signatureSize(_signatureSize),
+nstructs(_nstructs), structSize(_structSize), nviews(_nviews),
+compressionMethod(_compressionMethod), patchGenerator(_patchGenerator)
+{}
+
+FernDescriptorMatcher::Params::Params( const string& _filename )
+{
+    filename = _filename;
+}
+
+FernDescriptorMatcher::FernDescriptorMatcher( const Params& _params )
+{
+    prevTrainCount = 0;
+    params = _params;
+    if( !params.filename.empty() )
+    {
+        classifier = new FernClassifier;
+        FileStorage fs(params.filename, FileStorage::READ);
+        if( fs.isOpened() )
+            classifier->read( fs.getFirstTopLevelNode() );
+    }
+}
+
+FernDescriptorMatcher::~FernDescriptorMatcher()
+{}
+
+void FernDescriptorMatcher::clear()
+{
+    GenericDescriptorMatcher::clear();
+    
+    classifier.release();
+    prevTrainCount = 0;
+}
+
+void FernDescriptorMatcher::train()
+{
+    if( classifier.empty() || prevTrainCount < (int)trainPointCollection.keypointCount() )
+    {
+        assert( params.filename.empty() );
+        
+        vector<vector<Point2f> > points( trainPointCollection.imageCount() );
+        for( size_t imgIdx = 0; imgIdx < trainPointCollection.imageCount(); imgIdx++ )
+            KeyPoint::convert( trainPointCollection.getKeypoints((int)imgIdx), points[imgIdx] );
+        
+        classifier = new FernClassifier( points, trainPointCollection.getImages(), vector<vector<int> >(), 0, // each points is a class
+                                        params.patchSize, params.signatureSize, params.nstructs, params.structSize,
+                                        params.nviews, params.compressionMethod, params.patchGenerator );
+    }
+}
+
+bool FernDescriptorMatcher::isMaskSupported()
+{
+    return false;
+}
+
+void FernDescriptorMatcher::calcBestProbAndMatchIdx( const Mat& image, const Point2f& pt,
+                                                    float& bestProb, int& bestMatchIdx, vector<float>& signature )
+{
+    (*classifier)( image, pt, signature);
+    
+    bestProb = -FLT_MAX;
+    bestMatchIdx = -1;
+    for( int ci = 0; ci < classifier->getClassCount(); ci++ )
+    {
+        if( signature[ci] > bestProb )
+        {
+            bestProb = signature[ci];
+            bestMatchIdx = ci;
+        }
+    }
+}
+
+void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                                         vector<vector<DMatch> >& matches, int knn,
+                                         const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+{
+    train();
+    
+    matches.resize( queryKeypoints.size() );
+    vector<float> signature( (size_t)classifier->getClassCount() );
+    
+    for( size_t queryIdx = 0; queryIdx < queryKeypoints.size(); queryIdx++ )
+    {
+        (*classifier)( queryImage, queryKeypoints[queryIdx].pt, signature);
+        
+        for( int k = 0; k < knn; k++ )
+        {
+            DMatch bestMatch;
+            size_t best_ci = 0;
+            for( size_t ci = 0; ci < signature.size(); ci++ )
+            {
+                if( -signature[ci] < bestMatch.distance )
+                {
+                    int imgIdx = -1, trainIdx = -1;
+                    trainPointCollection.getLocalIdx( (int)ci , imgIdx, trainIdx );
+                    bestMatch = DMatch( (int)queryIdx, trainIdx, imgIdx, -signature[ci] );
+                    best_ci = ci;
+                }
+            }
+            
+            if( bestMatch.trainIdx == -1 )
+                break;
+            signature[best_ci] = -std::numeric_limits<float>::max();
+            matches[queryIdx].push_back( bestMatch );
+        }
+    }
+}
+
+void FernDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                                            vector<vector<DMatch> >& matches, float maxDistance,
+                                            const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+{
+    train();
+    matches.resize( queryKeypoints.size() );
+    vector<float> signature( (size_t)classifier->getClassCount() );
+    
+    for( size_t i = 0; i < queryKeypoints.size(); i++ )
+    {
+        (*classifier)( queryImage, queryKeypoints[i].pt, signature);
+        
+        for( int ci = 0; ci < classifier->getClassCount(); ci++ )
+        {
+            if( -signature[ci] < maxDistance )
+            {
+                int imgIdx = -1, trainIdx = -1;
+                trainPointCollection.getLocalIdx( ci , imgIdx, trainIdx );
+                matches[i].push_back( DMatch( (int)i, trainIdx, imgIdx, -signature[ci] ) );
+            }
+        }
+    }
+}
+
+void FernDescriptorMatcher::read( const FileNode &fn )
+{
+    params.nclasses = fn["nclasses"];
+    params.patchSize = fn["patchSize"];
+    params.signatureSize = fn["signatureSize"];
+    params.nstructs = fn["nstructs"];
+    params.structSize = fn["structSize"];
+    params.nviews = fn["nviews"];
+    params.compressionMethod = fn["compressionMethod"];
+    
+    //classifier->read(fn);
+}
+
+void FernDescriptorMatcher::write( FileStorage& fs ) const
+{
+    fs << "nclasses" << params.nclasses;
+    fs << "patchSize" << params.patchSize;
+    fs << "signatureSize" << params.signatureSize;
+    fs << "nstructs" << params.nstructs;
+    fs << "structSize" << params.structSize;
+    fs << "nviews" << params.nviews;
+    fs << "compressionMethod" << params.compressionMethod;
+    
+    //    classifier->write(fs);
+}
+
+bool FernDescriptorMatcher::empty() const
+{
+    return classifier.empty() || classifier->empty();
+}
+
+Ptr<GenericDescriptorMatcher> FernDescriptorMatcher::clone( bool emptyTrainData ) const
+{
+    FernDescriptorMatcher* matcher = new FernDescriptorMatcher( params );
+    if( !emptyTrainData )
+    {
+        CV_Error( CV_StsNotImplemented, "deep clone dunctionality is not implemented, because "
+                 "FernClassifier has not copy constructor or clone method ");
+        
+        //matcher->classifier;
+        matcher->params = params;
+        matcher->prevTrainCount = prevTrainCount;
+        matcher->trainPointCollection = trainPointCollection;
+    }
+    return matcher;
+}
+    
+////////////////////////////////////// Planar Object Detector ////////////////////////////////////
+
+PlanarObjectDetector::PlanarObjectDetector()
+{
+}
+
+PlanarObjectDetector::PlanarObjectDetector(const FileNode& node)
+{
+    read(node);
+}
+
+PlanarObjectDetector::PlanarObjectDetector(const vector<Mat>& pyr, int npoints,
+                                           int patchSize, int nstructs, int structSize,
+                                           int nviews, const LDetector& detector,
+                                           const PatchGenerator& patchGenerator)
+{
+    train(pyr, npoints, patchSize, nstructs,
+          structSize, nviews, detector, patchGenerator);
+}
+
+PlanarObjectDetector::~PlanarObjectDetector()
+{
+}
+
+vector<KeyPoint> PlanarObjectDetector::getModelPoints() const
+{
+    return modelPoints;
+}
+
+void PlanarObjectDetector::train(const vector<Mat>& pyr, int npoints,
+                                 int patchSize, int nstructs, int structSize,
+                                 int nviews, const LDetector& detector,
+                                 const PatchGenerator& patchGenerator)
+{
+    modelROI = Rect(0, 0, pyr[0].cols, pyr[0].rows);
+    ldetector = detector;
+    ldetector.setVerbose(verbose);
+    ldetector.getMostStable2D(pyr[0], modelPoints, npoints, patchGenerator);
+    
+    npoints = (int)modelPoints.size();
+    fernClassifier.setVerbose(verbose);
+    fernClassifier.trainFromSingleView(pyr[0], modelPoints,
+                                       patchSize, (int)modelPoints.size(), nstructs, structSize, nviews,
+                                       FernClassifier::COMPRESSION_NONE, patchGenerator);
+}
+
+void PlanarObjectDetector::train(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
+                                 int patchSize, int nstructs, int structSize,
+                                 int nviews, const LDetector& detector,
+                                 const PatchGenerator& patchGenerator)
+{
+    modelROI = Rect(0, 0, pyr[0].cols, pyr[0].rows);
+    ldetector = detector;
+    ldetector.setVerbose(verbose);
+    modelPoints.resize(keypoints.size());
+    std::copy(keypoints.begin(), keypoints.end(), modelPoints.begin());
+    
+    fernClassifier.setVerbose(verbose);
+    fernClassifier.trainFromSingleView(pyr[0], modelPoints,
+                                       patchSize, (int)modelPoints.size(), nstructs, structSize, nviews,
+                                       FernClassifier::COMPRESSION_NONE, patchGenerator);
+}
+
+void PlanarObjectDetector::read(const FileNode& node)
+{
+    FileNodeIterator it = node["model-roi"].begin(), it_end;
+    it >> modelROI.x >> modelROI.y >> modelROI.width >> modelROI.height;
+    ldetector.read(node["detector"]);
+    fernClassifier.read(node["fern-classifier"]);
+    cv::read(node["model-points"], modelPoints);
+    CV_Assert(modelPoints.size() == (size_t)fernClassifier.getClassCount());
+}
+
+
+void PlanarObjectDetector::write(FileStorage& fs, const String& objname) const
+{
+    WriteStructContext ws(fs, objname, CV_NODE_MAP);
+    
+    {
+        WriteStructContext wsroi(fs, "model-roi", CV_NODE_SEQ + CV_NODE_FLOW);
+        cv::write(fs, modelROI.x);
+        cv::write(fs, modelROI.y);
+        cv::write(fs, modelROI.width);
+        cv::write(fs, modelROI.height);
+    }
+    ldetector.write(fs, "detector");
+    cv::write(fs, "model-points", modelPoints);
+    fernClassifier.write(fs, "fern-classifier");
+}
+
+
+bool PlanarObjectDetector::operator()(const Mat& image, Mat& H, vector<Point2f>& corners) const
+{
+    vector<Mat> pyr;
+    buildPyramid(image, pyr, ldetector.nOctaves - 1);
+    vector<KeyPoint> keypoints;
+    ldetector(pyr, keypoints);
+    
+    return (*this)(pyr, keypoints, H, corners);
+}
+
+bool PlanarObjectDetector::operator()(const vector<Mat>& pyr, const vector<KeyPoint>& keypoints,
+                                      Mat& matH, vector<Point2f>& corners, vector<int>* pairs) const
+{
+    int i, j, m = (int)modelPoints.size(), n = (int)keypoints.size();
+    vector<int> bestMatches(m, -1);
+    vector<float> maxLogProb(m, -FLT_MAX);
+    vector<float> signature;
+    vector<Point2f> fromPt, toPt;
+    
+    for( i = 0; i < n; i++ )
+    {
+        KeyPoint kpt = keypoints[i];
+        CV_Assert(0 <= kpt.octave && kpt.octave < (int)pyr.size());
+        kpt.pt.x /= (float)(1 << kpt.octave);
+        kpt.pt.y /= (float)(1 << kpt.octave);
+        int k = fernClassifier(pyr[kpt.octave], kpt.pt, signature);
+        if( k >= 0 && (bestMatches[k] < 0 || signature[k] > maxLogProb[k]) )
+        {
+            maxLogProb[k] = signature[k];
+            bestMatches[k] = i;
+        }
+    }
+    
+    if(pairs)
+        pairs->resize(0);
+    
+    for( i = 0; i < m; i++ )
+        if( bestMatches[i] >= 0 )
+        {
+            fromPt.push_back(modelPoints[i].pt);
+            toPt.push_back(keypoints[bestMatches[i]].pt);
+        }
+    
+    if( fromPt.size() < 4 )
+        return false;
+    
+    vector<uchar> mask;
+    matH = findHomography(fromPt, toPt, RANSAC, 10, mask);
+    if( matH.data )
+    {
+        const Mat_<double>& H = matH;
+        corners.resize(4);
+        for( i = 0; i < 4; i++ )
+        {
+            Point2f pt((float)(modelROI.x + (i == 0 || i == 3 ? 0 : modelROI.width)),
+                       (float)(modelROI.y + (i <= 1 ? 0 : modelROI.height)));
+            double w = 1./(H(2,0)*pt.x + H(2,1)*pt.y + H(2,2));
+            corners[i] = Point2f((float)((H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w),
+                                 (float)((H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w));
+        }
+    }
+    
+    if( pairs )
+    {
+        for( i = j = 0; i < m; i++ )
+            if( bestMatches[i] >= 0 && mask[j++] )
+            {
+                pairs->push_back(i);
+                pairs->push_back(bestMatches[i]);
+            }
+    }
+    
+    return matH.data != 0;
+}
+
+
+void PlanarObjectDetector::setVerbose(bool _verbose)
+{
+    verbose = _verbose;
+}
 
 }

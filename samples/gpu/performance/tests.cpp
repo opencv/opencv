@@ -4,6 +4,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 #include "performance.h"
 
 using namespace std;
@@ -352,7 +353,7 @@ TEST(BruteForceMatcher)
 
     int desc_len = 64;
 
-    BruteForceMatcher< L2<float> > matcher;
+    BFMatcher matcher(NORM_L2);
 
     Mat query; 
     gen(query, 3000, desc_len, CV_32F, 0, 1);

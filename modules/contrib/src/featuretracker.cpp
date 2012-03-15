@@ -53,22 +53,24 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
 	switch (params.feature_type)
 	{
 	case CvFeatureTrackerParams::SIFT:
-		detector = new SiftFeatureDetector(
-				SIFT::DetectorParams::GET_DEFAULT_THRESHOLD(),
-				SIFT::DetectorParams::GET_DEFAULT_EDGE_THRESHOLD() + 0.7,
-				SIFT::CommonParams::DEFAULT_NOCTAVES + 4,
-				SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS + 2,
-				SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
-				SIFT::CommonParams::FIRST_ANGLE);
+        dd = Algorithm::create<Feature2D>("Feature2D.SIFT");
+        if( dd.empty() )
+            CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SIFT support");
+        dd->set("nOctaveLayers", 5);
+        dd->set("contrastThreshold", 0.04);
+        dd->set("edgeThreshold", 10.7);
 	case CvFeatureTrackerParams::SURF:
-		detector = new SurfFeatureDetector(400, 3, 4);
-	default:
-		detector = new GoodFeaturesToTrackDetector();
+        dd = Algorithm::create<Feature2D>("Feature2D.SURF");
+        if( dd.empty() )
+            CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SURF support");
+        dd->set("hessianThreshold", 400);
+        dd->set("nOctaves", 3);
+        dd->set("nOctaveLayers", 4);
+    default:
+        CV_Error(CV_StsBadArg, "Unknown feature type");    
 	}
 
-	descriptor = new SurfDescriptorExtractor(3, 4, false);
-
-	matcher = new BruteForceMatcher<L2<float> > ();
+	matcher = new BFMatcher(NORM_L2);
 }
 
 CvFeatureTracker::~CvFeatureTracker()
@@ -105,7 +107,7 @@ Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
 	rectangle(mask, Point(window.x, window.y), Point(window.x + window.width,
 			window.y + window.height), Scalar(255), CV_FILLED);
 
-	detector->detect(prev_image, prev_keypoints, mask);
+	dd->operator()(prev_image, mask, prev_keypoints, prev_desc);
 
 	window.x -= params.window_size;
 	window.y -= params.window_size;
@@ -114,12 +116,12 @@ Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
 	rectangle(mask, Point(window.x, window.y), Point(window.x + window.width,
 			window.y + window.height), Scalar(255), CV_FILLED);
 
-	detector->detect(image, curr_keypoints, mask);
+	dd->operator()(image, mask, curr_keypoints, curr_desc);
 
 	if (prev_keypoints.size() > 4 && curr_keypoints.size() > 4)
 	{
-		descriptor->compute(prev_image, prev_keypoints, prev_desc);
-		descriptor->compute(image, curr_keypoints, curr_desc);
+		//descriptor->compute(prev_image, prev_keypoints, prev_desc);
+		//descriptor->compute(image, curr_keypoints, curr_desc);
 
 		matcher->match(prev_desc, curr_desc, matches);
 

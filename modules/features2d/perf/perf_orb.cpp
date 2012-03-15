@@ -22,7 +22,7 @@ PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
 
     Mat mask;
     declare.in(frame);
-    ORB detector(1500, ORB::CommonParams(1.3f, 5));
+    ORB detector(1500, 1.3f, 5);
     vector<KeyPoint> points;
 
     TEST_CYCLE() detector(frame, mask, points);
@@ -39,7 +39,7 @@ PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
     Mat mask;
     declare.in(frame);
 
-    ORB detector(1500, ORB::CommonParams(1.3f, 5));
+    ORB detector(1500, 1.3f, 5);
     vector<KeyPoint> points;
     detector(frame, mask, points);
 
@@ -58,7 +58,7 @@ PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
 
     Mat mask;
     declare.in(frame);
-    ORB detector(1500, ORB::CommonParams(1.3f, 5));
+    ORB detector(1500, 1.3f, 5);
 
     vector<KeyPoint> points;
     Mat descriptors;

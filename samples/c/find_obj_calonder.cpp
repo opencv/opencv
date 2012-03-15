@@ -2,6 +2,8 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/legacy/legacy.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -123,7 +125,7 @@ void testCalonderClassifier( const string& classifierFilename, const string& img
     Mat descriptors2;  de.compute( img2, keypoints2, descriptors2 );
 
     // Match descriptors
-    BruteForceMatcher<L1<float> > matcher;
+    BFMatcher matcher(NORM_L1);
     vector<DMatch> matches;
     matcher.match( descriptors1, descriptors2, matches );
 

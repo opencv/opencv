@@ -17,6 +17,8 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
+#include "opencv2/photo/photo.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 using cv::flann::IndexParams;

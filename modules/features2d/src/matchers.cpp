@@ -314,6 +314,144 @@ bool DescriptorMatcher::isMaskedOut( const vector<Mat>& masks, int queryIdx )
     return !masks.empty() && outCount == masks.size() ;
 }
 
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+BFMatcher::BFMatcher( int _normType, bool _crossCheck )
+{
+    normType = _normType;
+    crossCheck = _crossCheck;
+}
+
+Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
+{
+    BFMatcher* matcher = new BFMatcher(normType, crossCheck);
+    if( !emptyTrainData )
+    {
+        matcher->trainDescCollection.resize(trainDescCollection.size());
+        std::transform( trainDescCollection.begin(), trainDescCollection.end(),
+                        matcher->trainDescCollection.begin(), clone_op );
+    }
+    return matcher;
+}
+
+
+void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
+                              const vector<Mat>& masks, bool compactResult )
+{
+    const int IMGIDX_SHIFT = 18;
+    const int IMGIDX_ONE = (1 << IMGIDX_SHIFT);
+    
+    if( queryDescriptors.empty() || trainDescCollection.empty() )
+    {
+        matches.clear();
+        return;
+    }
+    CV_Assert( queryDescriptors.type() == trainDescCollection[0].type() );
+    
+    matches.reserve(queryDescriptors.rows);
+    
+    Mat dist, nidx;
+    
+    int iIdx, imgCount = (int)trainDescCollection.size(), update = 0;
+    int dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
+        (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
+    
+    CV_Assert( (int64)imgCount*IMGIDX_ONE < INT_MAX );
+    
+    for( iIdx = 0; iIdx < imgCount; iIdx++ )
+    {
+        CV_Assert( trainDescCollection[iIdx].rows < IMGIDX_ONE );
+        batchDistance(queryDescriptors, trainDescCollection[iIdx], dist, dtype, nidx,
+                      normType, knn, masks.empty() ? Mat() : masks[iIdx], update, crossCheck);
+        update += IMGIDX_ONE;
+    }
+    
+    if( dtype == CV_32S )
+    {
+        Mat temp;
+        dist.convertTo(temp, CV_32F);
+        dist = temp;
+    }
+    
+    for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
+    {
+        const float* distptr = dist.ptr<float>(qIdx);
+        const int* nidxptr = nidx.ptr<int>(qIdx);
+        
+        matches.push_back( vector<DMatch>() );
+        vector<DMatch>& mq = matches.back();
+        mq.reserve(knn);
+        
+        for( int k = 0; k < knn; k++ )
+        {
+            if( nidxptr[k] < 0 )
+                break;
+            mq.push_back( DMatch(qIdx, nidxptr[k] & (IMGIDX_ONE - 1),
+                          nidxptr[k] >> IMGIDX_SHIFT, distptr[k]) );
+        }
+        
+        if( mq.empty() && compactResult )
+            matches.pop_back();
+    }
+}
+
+    
+void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches,
+                                 float maxDistance, const vector<Mat>& masks, bool compactResult )
+{
+    if( queryDescriptors.empty() || trainDescCollection.empty() )
+    {
+        matches.clear();
+        return;
+    }
+    CV_Assert( queryDescriptors.type() == trainDescCollection[0].type() );
+    
+    matches.resize(queryDescriptors.rows);
+    Mat dist, distf;
+    
+    int iIdx, imgCount = (int)trainDescCollection.size();
+    int dtype = normType == NORM_HAMMING ||
+        (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
+    
+    for( iIdx = 0; iIdx < imgCount; iIdx++ )
+    {
+        batchDistance(queryDescriptors, trainDescCollection[iIdx], dist, dtype, noArray(),
+                      normType, 0, masks.empty() ? Mat() : masks[iIdx], 0, false);
+        if( dtype == CV_32S )
+            dist.convertTo(distf, CV_32F);
+        else
+            distf = dist;
+        
+        for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
+        {
+            const float* distptr = dist.ptr<float>(qIdx);
+            
+            vector<DMatch>& mq = matches[qIdx];
+            for( int k = 0; k < dist.cols; k++ )
+            {
+                if( distptr[k] <= maxDistance )
+                    mq.push_back( DMatch(qIdx, k, iIdx, distptr[k]) );
+            }
+        }
+    }
+    
+    int qIdx0 = 0;
+    for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
+    {
+        if( matches[qIdx].empty() && compactResult )
+            continue;
+        
+        if( qIdx0 < qIdx )
+            std::swap(matches[qIdx], matches[qIdx0]);
+        
+        std::sort( matches[qIdx0].begin(), matches[qIdx0].end() );
+        qIdx0++;
+    }
+}
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+    
 /*
  * Factory function for DescriptorMatcher creating
  */
@@ -326,31 +464,24 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
     }
     else if( !descriptorMatcherType.compare( "BruteForce" ) ) // L2
     {
-        dm = new BruteForceMatcher<L2<float> >();
+        dm = new BFMatcher(NORM_L2);
     }
     else if( !descriptorMatcherType.compare( "BruteForce-SL2" ) ) // Squared L2
     {
-        dm = new BruteForceMatcher<SL2<float> >();
+        dm = new BFMatcher(NORM_L2SQR);
     }
     else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
     {
-        dm = new BruteForceMatcher<L1<float> >();
+        dm = new BFMatcher(NORM_L1);
     }
-    else if( !descriptorMatcherType.compare("BruteForce-Hamming") )
+    else if( !descriptorMatcherType.compare("BruteForce-Hamming") ||
+             !descriptorMatcherType.compare("BruteForce-HammingLUT") )
     {
-        dm = new BruteForceMatcher<Hamming>();
-    }
-    else if( !descriptorMatcherType.compare("BruteForce-HammingLUT") )
-    {
-        dm = new BruteForceMatcher<Hamming>();
+        dm = new BFMatcher(NORM_HAMMING);
     }
     else if( !descriptorMatcherType.compare("BruteForce-Hamming(2)") )
     {
-        dm = new BruteForceMatcher<HammingMultilevel<2> >();
-    }
-    else if( !descriptorMatcherType.compare("BruteForce-Hamming(4)") )
-    {
-        dm = new BruteForceMatcher<HammingMultilevel<4> >();
+        dm = new BFMatcher(NORM_HAMMING2);
     }
     else
         CV_Error( CV_StsBadArg, "Unknown matcher name" );
@@ -358,199 +489,6 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
     return dm;
 }
 
-/*
- * BruteForce SL2 and L2 specialization
- */
-template<>
-void BruteForceMatcher<SL2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
-                                              const vector<Mat>& masks, bool compactResult )
-{
-#ifndef HAVE_EIGEN
-    commonKnnMatchImpl( *this, queryDescriptors, matches, knn, masks, compactResult );
-#else
-    CV_Assert( queryDescriptors.type() == CV_32FC1 ||  queryDescriptors.empty() );
-    CV_Assert( masks.empty() || masks.size() == trainDescCollection.size() );
-
-    matches.reserve(queryDescriptors.rows);
-    size_t imgCount = trainDescCollection.size();
-
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> e_query_t;
-    vector<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> > e_trainCollection(trainDescCollection.size());
-    vector<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> > e_trainNorms2(trainDescCollection.size());
-    cv2eigen( queryDescriptors.t(), e_query_t);
-    for( size_t i = 0; i < trainDescCollection.size(); i++ )
-    {
-        cv2eigen( trainDescCollection[i], e_trainCollection[i] );
-        e_trainNorms2[i] = e_trainCollection[i].rowwise().squaredNorm() / 2;
-    }
-
-    vector<Eigen::Matrix<float, Eigen::Dynamic, 1> > e_allDists( imgCount ); // distances between one query descriptor and all train descriptors
-
-    for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
-    {
-        if( isMaskedOut( masks, qIdx ) )
-        {
-            if( !compactResult ) // push empty vector
-                matches.push_back( vector<DMatch>() );
-        }
-        else
-        {
-            float queryNorm2 = e_query_t.col(qIdx).squaredNorm();
-            // 1. compute distances between i-th query descriptor and all train descriptors
-            for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
-            {
-                CV_Assert( masks.empty() || masks[iIdx].empty() ||
-                           ( masks[iIdx].rows == queryDescriptors.rows && masks[iIdx].cols == trainDescCollection[iIdx].rows &&
-                             masks[iIdx].type() == CV_8UC1 ) );
-                CV_Assert( trainDescCollection[iIdx].type() == CV_32FC1 ||  trainDescCollection[iIdx].empty() );
-                CV_Assert( queryDescriptors.cols == trainDescCollection[iIdx].cols );
-
-                e_allDists[iIdx] = e_trainCollection[iIdx] *e_query_t.col(qIdx);
-                e_allDists[iIdx] -= e_trainNorms2[iIdx];
-
-                if( !masks.empty() && !masks[iIdx].empty() )
-                {
-                    const uchar* maskPtr = (uchar*)masks[iIdx].ptr(qIdx);
-                    for( int c = 0; c < masks[iIdx].cols; c++ )
-                    {
-                        if( maskPtr[c] == 0 )
-                            e_allDists[iIdx](c) = -std::numeric_limits<float>::max();
-                    }
-                }
-            }
-
-            // 2. choose knn nearest matches for query[i]
-            matches.push_back( vector<DMatch>() );
-            vector<vector<DMatch> >::reverse_iterator curMatches = matches.rbegin();
-            for( int k = 0; k < knn; k++ )
-            {
-                float totalMaxCoeff = -std::numeric_limits<float>::max();
-                int bestTrainIdx = -1, bestImgIdx = -1;
-                for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
-                {
-                    int loc;
-                    float curMaxCoeff = e_allDists[iIdx].maxCoeff( &loc );
-                    if( curMaxCoeff > totalMaxCoeff )
-                    {
-                        totalMaxCoeff = curMaxCoeff;
-                        bestTrainIdx = loc;
-                        bestImgIdx = iIdx;
-                    }
-                }
-                if( bestTrainIdx == -1 )
-                    break;
-
-                e_allDists[bestImgIdx](bestTrainIdx) = -std::numeric_limits<float>::max();
-                curMatches->push_back( DMatch(qIdx, bestTrainIdx, bestImgIdx, (-2)*totalMaxCoeff + queryNorm2) );
-            }
-            std::sort( curMatches->begin(), curMatches->end() );
-        }
-    }
-#endif
-}
-
-template<>
-void BruteForceMatcher<SL2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
-                                                     const vector<Mat>& masks, bool compactResult )
-{
-#ifndef HAVE_EIGEN
-    commonRadiusMatchImpl( *this, queryDescriptors, matches, maxDistance, masks, compactResult );
-#else
-    CV_Assert( queryDescriptors.type() == CV_32FC1 ||  queryDescriptors.empty() );
-    CV_Assert( masks.empty() || masks.size() == trainDescCollection.size() );
-
-    matches.reserve(queryDescriptors.rows);
-    size_t imgCount = trainDescCollection.size();
-
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> e_query_t;
-    vector<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> > e_trainCollection(trainDescCollection.size());
-    vector<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> > e_trainNorms2(trainDescCollection.size());
-    cv2eigen( queryDescriptors.t(), e_query_t);
-    for( size_t i = 0; i < trainDescCollection.size(); i++ )
-    {
-        cv2eigen( trainDescCollection[i], e_trainCollection[i] );
-        e_trainNorms2[i] = e_trainCollection[i].rowwise().squaredNorm() / 2;
-    }
-
-    vector<Eigen::Matrix<float, Eigen::Dynamic, 1> > e_allDists( imgCount ); // distances between one query descriptor and all train descriptors
-
-    for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
-    {
-        if( isMaskedOut( masks, qIdx ) )
-        {
-            if( !compactResult ) // push empty vector
-                matches.push_back( vector<DMatch>() );
-        }
-        else
-        {
-            float queryNorm2 = e_query_t.col(qIdx).squaredNorm();
-            // 1. compute distances between i-th query descriptor and all train descriptors
-            for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
-            {
-                CV_Assert( masks.empty() || masks[iIdx].empty() ||
-                           ( masks[iIdx].rows == queryDescriptors.rows && masks[iIdx].cols == trainDescCollection[iIdx].rows &&
-                             masks[iIdx].type() == CV_8UC1 ) );
-                CV_Assert( trainDescCollection[iIdx].type() == CV_32FC1 ||  trainDescCollection[iIdx].empty() );
-                CV_Assert( queryDescriptors.cols == trainDescCollection[iIdx].cols );
-
-                e_allDists[iIdx] = e_trainCollection[iIdx] *e_query_t.col(qIdx);
-                e_allDists[iIdx] -= e_trainNorms2[iIdx];
-            }
-
-            matches.push_back( vector<DMatch>() );
-            vector<vector<DMatch> >::reverse_iterator curMatches = matches.rbegin();
-            for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
-            {
-                assert( e_allDists[iIdx].rows() == trainDescCollection[iIdx].rows );
-                for( int tIdx = 0; tIdx < e_allDists[iIdx].rows(); tIdx++ )
-                {
-                    if( masks.empty() || isPossibleMatch(masks[iIdx], qIdx, tIdx) )
-                    {
-                        float d =  (-2)*e_allDists[iIdx](tIdx) + queryNorm2;
-                        if( d < maxDistance )
-                            curMatches->push_back( DMatch( qIdx, tIdx, iIdx, d ) );
-                    }
-                }
-            }
-            std::sort( curMatches->begin(), curMatches->end() );
-        }
-    }
-#endif
-}
-
-inline void sqrtDistance( vector<vector<DMatch> >& matches )
-{
-    for( size_t imgIdx = 0; imgIdx < matches.size(); imgIdx++ )
-    {
-        for( size_t matchIdx = 0; matchIdx < matches[imgIdx].size(); matchIdx++ )
-        {
-            matches[imgIdx][matchIdx].distance = std::sqrt( matches[imgIdx][matchIdx].distance );
-        }
-    }
-}
-
-template<>
-void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
-                                              const vector<Mat>& masks, bool compactResult )
-{
-    BruteForceMatcher<SL2<float> > matcherSL2;
-    matcherSL2.add( getTrainDescriptors() );
-    matcherSL2.knnMatch( queryDescriptors, matches, knn, masks, compactResult );
-
-    sqrtDistance( matches );
-}
-
-template<>
-void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
-                                                     const vector<Mat>& masks, bool compactResult )
-{
-    const float maxDistance2 = maxDistance * maxDistance;
-    BruteForceMatcher<SL2<float> > matcherSL2;
-    matcherSL2.add( getTrainDescriptors() );
-    matcherSL2.radiusMatch( queryDescriptors, matches, maxDistance2, masks, compactResult );
-
-    sqrtDistance( matches );
-}
 
 /*
  * Flann based matcher
@@ -1124,16 +1062,9 @@ bool GenericDescriptorMatcher::empty() const
 Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const string& genericDescritptorMatcherType,
                                                                 const string &paramsFilename )
 {
-    Ptr<GenericDescriptorMatcher> descriptorMatcher;
-    if( ! genericDescritptorMatcherType.compare("ONEWAY") )
-    {
-        descriptorMatcher = new OneWayDescriptorMatcher();
-    }
-    else if( ! genericDescritptorMatcherType.compare("FERN") )
-    {
-        descriptorMatcher = new FernDescriptorMatcher();
-    }
-
+    Ptr<GenericDescriptorMatcher> descriptorMatcher =
+        Algorithm::create<GenericDescriptorMatcher>("DescriptorMatcher." + genericDescritptorMatcherType);
+    
     if( !paramsFilename.empty() && !descriptorMatcher.empty() )
     {
         FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );
@@ -1146,331 +1077,6 @@ Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const string& ge
     return descriptorMatcher;
 }
 
-/****************************************************************************************\
-*                                OneWayDescriptorMatcher                                  *
-\****************************************************************************************/
-
-OneWayDescriptorMatcher::Params::Params( int _poseCount, Size _patchSize, string _pcaFilename,
-                                         string _trainPath, string _trainImagesList,
-                                         float _minScale, float _maxScale, float _stepScale ) :
-                poseCount(_poseCount), patchSize(_patchSize), pcaFilename(_pcaFilename),
-                trainPath(_trainPath), trainImagesList(_trainImagesList),
-                minScale(_minScale), maxScale(_maxScale), stepScale(_stepScale)
-{}
-
-
-OneWayDescriptorMatcher::OneWayDescriptorMatcher( const Params& _params)
-{
-    initialize(_params);
-}
-
-OneWayDescriptorMatcher::~OneWayDescriptorMatcher()
-{}
-
-void OneWayDescriptorMatcher::initialize( const Params& _params, const Ptr<OneWayDescriptorBase>& _base )
-{
-    clear();
-
-    if( _base.empty() )
-        base = _base;
-
-    params = _params;
-}
-
-void OneWayDescriptorMatcher::clear()
-{
-    GenericDescriptorMatcher::clear();
-
-    prevTrainCount = 0;
-    if( !base.empty() )
-        base->clear();
-}
-
-void OneWayDescriptorMatcher::train()
-{
-    if( base.empty() || prevTrainCount < (int)trainPointCollection.keypointCount() )
-    {
-        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
-                                           params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale );
-
-        base->Allocate( (int)trainPointCollection.keypointCount() );
-        prevTrainCount = (int)trainPointCollection.keypointCount();
-
-        const vector<vector<KeyPoint> >& points = trainPointCollection.getKeypoints();
-        int count = 0;
-        for( size_t i = 0; i < points.size(); i++ )
-        {
-            IplImage _image = trainPointCollection.getImage((int)i);
-            for( size_t j = 0; j < points[i].size(); j++ )
-                base->InitializeDescriptor( count++, &_image, points[i][j], "" );
-        }
-
-#if defined(_KDTREE)
-        base->ConvertDescriptorsArrayToTree();
-#endif
-    }
-}
-
-bool OneWayDescriptorMatcher::isMaskSupported()
-{
-    return false;
-}
-
-void OneWayDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                            vector<vector<DMatch> >& matches, int knn,
-                                            const vector<Mat>& /*masks*/, bool /*compactResult*/ )
-{
-    train();
-
-    CV_Assert( knn == 1 ); // knn > 1 unsupported because of bug in OneWayDescriptorBase for this case
-
-    matches.resize( queryKeypoints.size() );
-    IplImage _qimage = queryImage;
-    for( size_t i = 0; i < queryKeypoints.size(); i++ )
-    {
-        int descIdx = -1, poseIdx = -1;
-        float distance;
-        base->FindDescriptor( &_qimage, queryKeypoints[i].pt, descIdx, poseIdx, distance );
-        matches[i].push_back( DMatch((int)i, descIdx, distance) );
-    }
-}
-
-void OneWayDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                               vector<vector<DMatch> >& matches, float maxDistance,
-                                               const vector<Mat>& /*masks*/, bool /*compactResult*/ )
-{
-    train();
-
-    matches.resize( queryKeypoints.size() );
-    IplImage _qimage = queryImage;
-    for( size_t i = 0; i < queryKeypoints.size(); i++ )
-    {
-        int descIdx = -1, poseIdx = -1;
-        float distance;
-        base->FindDescriptor( &_qimage, queryKeypoints[i].pt, descIdx, poseIdx, distance );
-        if( distance < maxDistance )
-            matches[i].push_back( DMatch((int)i, descIdx, distance) );
-    }
-}
-
-void OneWayDescriptorMatcher::read( const FileNode &fn )
-{
-    base = new OneWayDescriptorObject( params.patchSize, params.poseCount, string (), string (), string (),
-                                       params.minScale, params.maxScale, params.stepScale );
-    base->Read (fn);
-}
-
-void OneWayDescriptorMatcher::write( FileStorage& fs ) const
-{
-    base->Write (fs);
-}
-
-bool OneWayDescriptorMatcher::empty() const
-{
-    return base.empty() || base->empty();
-}
-
-Ptr<GenericDescriptorMatcher> OneWayDescriptorMatcher::clone( bool emptyTrainData ) const
-{
-    OneWayDescriptorMatcher* matcher = new OneWayDescriptorMatcher( params );
-
-    if( !emptyTrainData )
-    {
-        CV_Error( CV_StsNotImplemented, "deep clone functionality is not implemented, because "
-              "OneWayDescriptorBase has not copy constructor or clone method ");
-
-        //matcher->base;
-        matcher->params = params;
-        matcher->prevTrainCount = prevTrainCount;
-        matcher->trainPointCollection = trainPointCollection;
-    }
-    return matcher;
-}
-
-/****************************************************************************************\
-*                                  FernDescriptorMatcher                                 *
-\****************************************************************************************/
-FernDescriptorMatcher::Params::Params( int _nclasses, int _patchSize, int _signatureSize,
-                                     int _nstructs, int _structSize, int _nviews, int _compressionMethod,
-                                     const PatchGenerator& _patchGenerator ) :
-    nclasses(_nclasses), patchSize(_patchSize), signatureSize(_signatureSize),
-    nstructs(_nstructs), structSize(_structSize), nviews(_nviews),
-    compressionMethod(_compressionMethod), patchGenerator(_patchGenerator)
-{}
-
-FernDescriptorMatcher::Params::Params( const string& _filename )
-{
-    filename = _filename;
-}
-
-FernDescriptorMatcher::FernDescriptorMatcher( const Params& _params )
-{
-    prevTrainCount = 0;
-    params = _params;
-    if( !params.filename.empty() )
-    {
-        classifier = new FernClassifier;
-        FileStorage fs(params.filename, FileStorage::READ);
-        if( fs.isOpened() )
-            classifier->read( fs.getFirstTopLevelNode() );
-    }
-}
-
-FernDescriptorMatcher::~FernDescriptorMatcher()
-{}
-
-void FernDescriptorMatcher::clear()
-{
-    GenericDescriptorMatcher::clear();
-
-    classifier.release();
-    prevTrainCount = 0;
-}
-
-void FernDescriptorMatcher::train()
-{
-    if( classifier.empty() || prevTrainCount < (int)trainPointCollection.keypointCount() )
-    {
-        assert( params.filename.empty() );
-
-        vector<vector<Point2f> > points( trainPointCollection.imageCount() );
-        for( size_t imgIdx = 0; imgIdx < trainPointCollection.imageCount(); imgIdx++ )
-            KeyPoint::convert( trainPointCollection.getKeypoints((int)imgIdx), points[imgIdx] );
-
-        classifier = new FernClassifier( points, trainPointCollection.getImages(), vector<vector<int> >(), 0, // each points is a class
-                                         params.patchSize, params.signatureSize, params.nstructs, params.structSize,
-                                         params.nviews, params.compressionMethod, params.patchGenerator );
-    }
-}
-
-bool FernDescriptorMatcher::isMaskSupported()
-{
-    return false;
-}
-
-void FernDescriptorMatcher::calcBestProbAndMatchIdx( const Mat& image, const Point2f& pt,
-                                                     float& bestProb, int& bestMatchIdx, vector<float>& signature )
-{
-    (*classifier)( image, pt, signature);
-
-    bestProb = -FLT_MAX;
-    bestMatchIdx = -1;
-    for( int ci = 0; ci < classifier->getClassCount(); ci++ )
-    {
-        if( signature[ci] > bestProb )
-        {
-            bestProb = signature[ci];
-            bestMatchIdx = ci;
-        }
-    }
-}
-
-void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                          vector<vector<DMatch> >& matches, int knn,
-                                          const vector<Mat>& /*masks*/, bool /*compactResult*/ )
-{
-    train();
-
-    matches.resize( queryKeypoints.size() );
-    vector<float> signature( (size_t)classifier->getClassCount() );
-
-    for( size_t queryIdx = 0; queryIdx < queryKeypoints.size(); queryIdx++ )
-    {
-        (*classifier)( queryImage, queryKeypoints[queryIdx].pt, signature);
-
-        for( int k = 0; k < knn; k++ )
-        {
-            DMatch bestMatch;
-            size_t best_ci = 0;
-            for( size_t ci = 0; ci < signature.size(); ci++ )
-            {
-                if( -signature[ci] < bestMatch.distance )
-                {
-                    int imgIdx = -1, trainIdx = -1;
-                    trainPointCollection.getLocalIdx( (int)ci , imgIdx, trainIdx );
-                    bestMatch = DMatch( (int)queryIdx, trainIdx, imgIdx, -signature[ci] );
-                    best_ci = ci;
-                }
-            }
-
-            if( bestMatch.trainIdx == -1 )
-                break;
-            signature[best_ci] = -std::numeric_limits<float>::max();
-            matches[queryIdx].push_back( bestMatch );
-        }
-    }
-}
-
-void FernDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                             vector<vector<DMatch> >& matches, float maxDistance,
-                                             const vector<Mat>& /*masks*/, bool /*compactResult*/ )
-{
-    train();
-    matches.resize( queryKeypoints.size() );
-    vector<float> signature( (size_t)classifier->getClassCount() );
-
-    for( size_t i = 0; i < queryKeypoints.size(); i++ )
-    {
-        (*classifier)( queryImage, queryKeypoints[i].pt, signature);
-
-        for( int ci = 0; ci < classifier->getClassCount(); ci++ )
-        {
-            if( -signature[ci] < maxDistance )
-            {
-                int imgIdx = -1, trainIdx = -1;
-                trainPointCollection.getLocalIdx( ci , imgIdx, trainIdx );
-                matches[i].push_back( DMatch( (int)i, trainIdx, imgIdx, -signature[ci] ) );
-            }
-        }
-    }
-}
-
-void FernDescriptorMatcher::read( const FileNode &fn )
-{
-    params.nclasses = fn["nclasses"];
-    params.patchSize = fn["patchSize"];
-    params.signatureSize = fn["signatureSize"];
-    params.nstructs = fn["nstructs"];
-    params.structSize = fn["structSize"];
-    params.nviews = fn["nviews"];
-    params.compressionMethod = fn["compressionMethod"];
-
-    //classifier->read(fn);
-}
-
-void FernDescriptorMatcher::write( FileStorage& fs ) const
-{
-    fs << "nclasses" << params.nclasses;
-    fs << "patchSize" << params.patchSize;
-    fs << "signatureSize" << params.signatureSize;
-    fs << "nstructs" << params.nstructs;
-    fs << "structSize" << params.structSize;
-    fs << "nviews" << params.nviews;
-    fs << "compressionMethod" << params.compressionMethod;
-
-//    classifier->write(fs);
-}
-
-bool FernDescriptorMatcher::empty() const
-{
-    return classifier.empty() || classifier->empty();
-}
-
-Ptr<GenericDescriptorMatcher> FernDescriptorMatcher::clone( bool emptyTrainData ) const
-{
-    FernDescriptorMatcher* matcher = new FernDescriptorMatcher( params );
-    if( !emptyTrainData )
-    {
-        CV_Error( CV_StsNotImplemented, "deep clone dunctionality is not implemented, because "
-              "FernClassifier has not copy constructor or clone method ");
-
-        //matcher->classifier;
-        matcher->params = params;
-        matcher->prevTrainCount = prevTrainCount;
-        matcher->trainPointCollection = trainPointCollection;
-    }
-    return matcher;
-}
 
 /****************************************************************************************\
 *                                  VectorDescriptorMatcher                               *

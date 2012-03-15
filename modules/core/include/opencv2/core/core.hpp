@@ -118,7 +118,7 @@ CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
     
 // matrix decomposition types
 enum { DECOMP_LU=0, DECOMP_SVD=1, DECOMP_EIG=2, DECOMP_CHOLESKY=3, DECOMP_QR=4, DECOMP_NORMAL=16 };
-enum { NORM_INF=1, NORM_L1=2, NORM_L2=4, NORM_TYPE_MASK=7, NORM_RELATIVE=8, NORM_MINMAX=32};
+enum { NORM_INF=1, NORM_L1=2, NORM_L2=4, NORM_L2SQR=5, NORM_HAMMING=6, NORM_HAMMING2=7, NORM_TYPE_MASK=7, NORM_RELATIVE=8, NORM_MINMAX=32 };
 enum { CMP_EQ=0, CMP_GT=1, CMP_GE=2, CMP_LT=3, CMP_LE=4, CMP_NE=5 };
 enum { GEMM_1_T=1, GEMM_2_T=2, GEMM_3_T=4 };
 enum { DFT_INVERSE=1, DFT_SCALE=2, DFT_ROWS=4, DFT_COMPLEX_OUTPUT=16, DFT_REAL_OUTPUT=32,
@@ -2057,6 +2057,14 @@ CV_EXPORTS_W double norm(InputArray src1, int normType=NORM_L2, InputArray mask=
 //! computes norm of selected part of the difference between two arrays
 CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
                          int normType=NORM_L2, InputArray mask=noArray());
+
+//! naive nearest neighbor finder
+CV_EXPORTS_W void batchDistance(InputArray src1, InputArray src2,
+                                OutputArray dist, int dtype, OutputArray nidx,
+                                int normType=NORM_L2, int K=0,
+                                InputArray mask=noArray(), int update=0,
+                                bool crosscheck=false);
+
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values 
 CV_EXPORTS_W void normalize( InputArray src, OutputArray dst, double alpha=1, double beta=0,
                              int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray());
@@ -4244,10 +4252,20 @@ public:
     
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const;
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
-    template<typename _Tp> void set(const string& name,
-                                    typename ParamType<_Tp>::const_param_type value);
-    template<typename _Tp> void set(const char* name,
-                                    typename ParamType<_Tp>::const_param_type value);
+    void set(const string& name, int value);
+    void set(const string& name, double value);
+    void set(const string& name, bool value);
+    void set(const string& name, const string& value);
+    void set(const string& name, const Mat& value);
+    void set(const string& name, const Ptr<Algorithm>& value);
+    
+    void set(const char* name, int value);
+    void set(const char* name, double value);
+    void set(const char* name, bool value);
+    void set(const char* name, const string& value);
+    void set(const char* name, const Mat& value);
+    void set(const char* name, const Ptr<Algorithm>& value);
+    
     string paramHelp(const string& name) const;
     int paramType(const char* name) const;
     int paramType(const string& name) const;
@@ -4290,6 +4308,11 @@ public:
     
     void addParam(const Algorithm* algo, const char* name,
                   const int& value, bool readOnly=false, 
+                  int (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(int)=0,
+                  const string& help=string());
+    void addParam(const Algorithm* algo, const char* name,
+                  const bool& value, bool readOnly=false, 
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
                   const string& help=string());

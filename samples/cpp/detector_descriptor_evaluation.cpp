@@ -42,6 +42,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#include "opencv2/legacy/legacy.hpp"
 
 #include <limits>
 #include <cstdio>
@@ -879,7 +880,7 @@ public:
     {
         string classifierFile = data_path + "/features2d/calonder_classifier.rtc";
         defaultDescMatcher = new VectorDescriptorMatch( new CalonderDescriptorExtractor<float>( classifierFile ),
-                                                        new BruteForceMatcher<L2<float> > );
+                                                        new BFMatcher(NORM_L2) );
         specificDescMatcher = defaultDescMatcher;
     }
 };

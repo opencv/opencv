@@ -11,6 +11,9 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/legacy/compat.hpp"
 
 #include <string>
 #include <stdio.h>
@@ -25,8 +28,8 @@ void help()
 
 using namespace cv;
 
-IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
-                              const vector<KeyPoint>& features2, const vector<int>& desc_idx);
+Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, const Mat& img2,
+                        const vector<KeyPoint>& features2, const vector<int>& desc_idx);
 
 int main(int argc, char** argv)
 {
@@ -45,8 +48,8 @@ int main(int argc, char** argv)
     std::string img2_name = path_name + "/" + std::string(argv[3]);
 
     printf("Reading the images...\n");
-    IplImage* img1 = cvLoadImage(img1_name.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
-    IplImage* img2 = cvLoadImage(img2_name.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(img1_name, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img2 = imread(img2_name, CV_LOAD_IMAGE_GRAYSCALE);
     
     // extract keypoints from the first image
     SURF surf_extractor(5.0e3);
@@ -61,7 +64,9 @@ int main(int argc, char** argv)
     // create descriptors
     OneWayDescriptorBase descriptors(patch_size, pose_count, OneWayDescriptorBase::GetPCAFilename(), path_name,
                                      images_list);
-    descriptors.CreateDescriptorsFromImage(img1, keypoints1);
+    IplImage img1_c = img1;
+    IplImage img2_c = img2;
+    descriptors.CreateDescriptorsFromImage(&img1_c, keypoints1);
     printf("done\n");
 
     // extract keypoints from the second image
@@ -77,43 +82,37 @@ int main(int argc, char** argv)
     {
         int pose_idx = 0;
         float distance = 0;
-        descriptors.FindDescriptor(img2, keypoints2[i].pt, desc_idx[i], pose_idx, distance);
+        descriptors.FindDescriptor(&img2_c, keypoints2[i].pt, desc_idx[i], pose_idx, distance);
     }
     printf("done\n");
 
-    IplImage* img_corr = DrawCorrespondences(img1, keypoints1, img2, keypoints2, desc_idx);
+    Mat img_corr = DrawCorrespondences(img1, keypoints1, img2, keypoints2, desc_idx);
 
-    cvNamedWindow("correspondences", 1);
-    cvShowImage("correspondences", img_corr);
-    cvWaitKey(0);
-
-    cvReleaseImage(&img1);
-    cvReleaseImage(&img2);
-    cvReleaseImage(&img_corr);
+    imshow("correspondences", img_corr);
+    waitKey(0);
 }
 
-IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
-                              const vector<KeyPoint>& features2, const vector<int>& desc_idx)
+Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, const Mat& img2,
+                        const vector<KeyPoint>& features2, const vector<int>& desc_idx)
 {
-    IplImage* img_corr = cvCreateImage(cvSize(img1->width + img2->width, MAX(img1->height, img2->height)),
-                                       IPL_DEPTH_8U, 3);
-    cvSetImageROI(img_corr, cvRect(0, 0, img1->width, img1->height));
-    cvCvtColor(img1, img_corr, CV_GRAY2RGB);
-    cvSetImageROI(img_corr, cvRect(img1->width, 0, img2->width, img2->height));
-    cvCvtColor(img2, img_corr, CV_GRAY2RGB);
-    cvResetImageROI(img_corr);
-
+    Mat part, img_corr(Size(img1.cols + img2.cols, MAX(img1.rows, img2.rows)), CV_8UC3);
+    img_corr = Scalar::all(0);
+    part = img_corr(Rect(0, 0, img1.cols, img1.rows));
+    cvtColor(img1, part, COLOR_GRAY2RGB);
+    part = img_corr(Rect(img1.cols, 0, img2.cols, img2.rows));
+    cvtColor(img1, part, COLOR_GRAY2RGB);
+    
     for (size_t i = 0; i < features1.size(); i++)
     {
-        cvCircle(img_corr, features1[i].pt, 3, CV_RGB(255, 0, 0));
+        circle(img_corr, features1[i].pt, 3, CV_RGB(255, 0, 0));
     }
-
+    
     for (size_t i = 0; i < features2.size(); i++)
     {
-        CvPoint pt = cvPoint((int)features2[i].pt.x + img1->width, (int)features2[i].pt.y);
-        cvCircle(img_corr, pt, 3, CV_RGB(255, 0, 0));
-        cvLine(img_corr, features1[desc_idx[i]].pt, pt, CV_RGB(0, 255, 0));
+        Point pt((int)features2[i].pt.x + img1.cols, (int)features2[i].pt.y);
+        circle(img_corr, pt, 3, Scalar(0, 0, 255));
+        line(img_corr, features1[desc_idx[i]].pt, pt, Scalar(0, 255, 0));
     }
-
+    
     return img_corr;
 }

@@ -77,7 +77,7 @@ template<typename _KeyTp, typename _ValueTp> struct sorted_vector
                 b = c;
         }
         
-        if( vec[a].first == key )
+        if( a < vec.size() && vec[a].first == key )
         {
             value = vec[a].second;
             return true;
@@ -176,6 +176,66 @@ string Algorithm::name() const
 {
     return info()->name();
 }
+  
+void Algorithm::set(const string& name, int value)
+{
+    info()->set(this, name.c_str(), ParamType<int>::type, &value);
+}
+
+void Algorithm::set(const string& name, double value)
+{
+    info()->set(this, name.c_str(), ParamType<double>::type, &value);
+}
+
+void Algorithm::set(const string& name, bool value)
+{
+    info()->set(this, name.c_str(), ParamType<bool>::type, &value);
+}
+
+void Algorithm::set(const string& name, const string& value)
+{
+    info()->set(this, name.c_str(), ParamType<string>::type, &value);
+}
+
+void Algorithm::set(const string& name, const Mat& value)
+{
+    info()->set(this, name.c_str(), ParamType<Mat>::type, &value);
+}
+
+void Algorithm::set(const string& name, const Ptr<Algorithm>& value)
+{
+    info()->set(this, name.c_str(), ParamType<Algorithm>::type, &value);
+}
+
+void Algorithm::set(const char* name, int value)
+{
+    info()->set(this, name, ParamType<int>::type, &value);
+}
+
+void Algorithm::set(const char* name, double value)
+{
+    info()->set(this, name, ParamType<double>::type, &value);
+}
+
+void Algorithm::set(const char* name, bool value)
+{
+    info()->set(this, name, ParamType<bool>::type, &value);
+}
+
+void Algorithm::set(const char* name, const string& value)
+{
+    info()->set(this, name, ParamType<string>::type, &value);
+}
+
+void Algorithm::set(const char* name, const Mat& value)
+{
+    info()->set(this, name, ParamType<Mat>::type, &value);
+}
+
+void Algorithm::set(const char* name, const Ptr<Algorithm>& value)
+{
+    info()->set(this, name, ParamType<Algorithm>::type, &value);
+}
     
 string Algorithm::paramHelp(const string& name) const
 {
@@ -261,25 +321,25 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         if( n.empty() )
             continue;
         if( p.type == Param::INT )
-            algo->set<int>(pname, (int)n);
+            algo->set(pname, (int)n);
         else if( p.type == Param::BOOLEAN )
-            algo->set<bool>(pname, (int)n != 0);
+            algo->set(pname, (int)n != 0);
         else if( p.type == Param::REAL )
-            algo->set<double>(pname, (double)n);
+            algo->set(pname, (double)n);
         else if( p.type == Param::STRING )
-            algo->set<string>(pname, (string)n);
+            algo->set(pname, (string)n);
         else if( p.type == Param::MAT )
         {
             Mat m;
             cv::read(fn, m);
-            algo->set<Mat>(pname, m);
+            algo->set(pname, m);
         }
         else if( p.type == Param::ALGORITHM )
         {
             Ptr<Algorithm> nestedAlgo = Algorithm::_create((string)n["name"]);
             CV_Assert( !nestedAlgo.empty() );
             nestedAlgo->read(n);
-            algo->set<Algorithm>(pname, nestedAlgo);
+            algo->set(pname, nestedAlgo);
         }
         else
             CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported parameter type");
@@ -505,6 +565,16 @@ void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
+void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
+                             const bool& value, bool readOnly, 
+                             int (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(int),
+                             const string& help)
+{
+    addParam_(algo, name, ParamType<bool>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}
+    
 void AlgorithmInfo::addParam(const Algorithm* algo, const char* name,
                              const double& value, bool readOnly, 
                              double (Algorithm::*getter)(),

@@ -185,11 +185,10 @@ static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
     return threshold;
 }
     
-}
 
-        
-void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
+    Mat img = _img.getMat();
     const int K = 8, N = 16 + K + 1;
     int i, j, k, pixel[N];
     makeOffsets(pixel, img.step);
@@ -280,7 +279,7 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
                     {
                         cornerpos[ncorners++] = j+k;
                         if(nonmax_suppression)
-                            curr[j+k] = (uchar)cornerScore(ptr+k, pixel, threshold);
+                            curr[j+k] = cornerScore(ptr+k, pixel, threshold);
                     }
             }
     #endif
@@ -318,7 +317,7 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
+                                    curr[j] = cornerScore(ptr, pixel, threshold);
                                 break;
                             }
                         }
@@ -340,7 +339,7 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
+                                    curr[j] = cornerScore(ptr, pixel, threshold);
                                 break;
                             }
                         }
@@ -374,4 +373,39 @@ void cv::FAST(const Mat& img, std::vector<KeyPoint>& keypoints, int threshold, b
             }
         }
     }
+}
+
+    
+/*
+ *   FastFeatureDetector
+ */
+FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression )
+: threshold(_threshold), nonmaxSuppression(_nonmaxSuppression)
+{}
+
+void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+{
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    FAST( grayImage, keypoints, threshold, nonmaxSuppression );
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
+}
+
+    
+static Algorithm* createFAST() { return new FastFeatureDetector; }
+static AlgorithmInfo fast_info("Feature2D.FAST", createFAST);
+    
+AlgorithmInfo* FastFeatureDetector::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        fast_info.addParam(this, "threshold", threshold);
+        fast_info.addParam(this, "nonmaxSuppression", nonmaxSuppression);
+        
+        initialized = true;
+    }
+    return &fast_info;
+}
+    
 }

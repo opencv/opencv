@@ -600,6 +600,138 @@ CV_EXPORTS void  cvProjectPointsSimple( int point_count, CvPoint3D64f* _object_p
 
 #define cvConvertPointsHomogenious cvConvertPointsHomogeneous
 
+    
+//////////////////////////////////// feature extractors: obsolete API //////////////////////////////////
+
+typedef struct CvSURFPoint
+{
+    CvPoint2D32f pt;
+    
+    int          laplacian;
+    int          size;
+    float        dir;
+    float        hessian;
+    
+} CvSURFPoint;
+
+CV_INLINE CvSURFPoint cvSURFPoint( CvPoint2D32f pt, int laplacian,
+                                  int size, float dir CV_DEFAULT(0),
+                                  float hessian CV_DEFAULT(0))
+{
+    CvSURFPoint kp;
+    
+    kp.pt        = pt;
+    kp.laplacian = laplacian;
+    kp.size      = size;
+    kp.dir       = dir;
+    kp.hessian   = hessian;
+    
+    return kp;
+}
+
+typedef struct CvSURFParams
+{
+    int    extended;
+    int    upright;
+    double hessianThreshold;
+    
+    int    nOctaves;
+    int    nOctaveLayers;
+    
+} CvSURFParams;
+
+CVAPI(CvSURFParams) cvSURFParams( double hessianThreshold, int extended CV_DEFAULT(0) );
+
+// If useProvidedKeyPts!=0, keypoints are not detected, but descriptors are computed
+//  at the locations provided in keypoints (a CvSeq of CvSURFPoint).
+CVAPI(void) cvExtractSURF( const CvArr* img, const CvArr* mask,
+                          CvSeq** keypoints, CvSeq** descriptors,
+                          CvMemStorage* storage, CvSURFParams params,
+                             int useProvidedKeyPts CV_DEFAULT(0)  );
+
+/*!
+ Maximal Stable Regions Parameters
+ */
+typedef struct CvMSERParams
+{
+    //! delta, in the code, it compares (size_{i}-size_{i-delta})/size_{i-delta}
+    int delta;
+    //! prune the area which bigger than maxArea
+    int maxArea;
+    //! prune the area which smaller than minArea
+    int minArea;
+    //! prune the area have simliar size to its children
+    float maxVariation;
+    //! trace back to cut off mser with diversity < min_diversity
+    float minDiversity;
+    
+    /////// the next few params for MSER of color image
+    
+    //! for color image, the evolution steps
+    int maxEvolution;
+    //! the area threshold to cause re-initialize
+    double areaThreshold;
+    //! ignore too small margin
+    double minMargin;
+    //! the aperture size for edge blur
+    int edgeBlurSize;
+} CvMSERParams;
+
+CVAPI(CvMSERParams) cvMSERParams( int delta CV_DEFAULT(5), int min_area CV_DEFAULT(60),
+                                 int max_area CV_DEFAULT(14400), float max_variation CV_DEFAULT(.25f),
+                                 float min_diversity CV_DEFAULT(.2f), int max_evolution CV_DEFAULT(200),
+                                 double area_threshold CV_DEFAULT(1.01),
+                                 double min_margin CV_DEFAULT(.003),
+                                 int edge_blur_size CV_DEFAULT(5) );
+
+// Extracts the contours of Maximally Stable Extremal Regions
+CVAPI(void) cvExtractMSER( CvArr* _img, CvArr* _mask, CvSeq** contours, CvMemStorage* storage, CvMSERParams params );
+
+
+typedef struct CvStarKeypoint
+{
+    CvPoint pt;
+    int size;
+    float response;
+} CvStarKeypoint;
+
+CV_INLINE CvStarKeypoint cvStarKeypoint(CvPoint pt, int size, float response)
+{
+    CvStarKeypoint kpt;
+    kpt.pt = pt;
+    kpt.size = size;
+    kpt.response = response;
+    return kpt;
+}
+
+typedef struct CvStarDetectorParams
+{
+    int maxSize;
+    int responseThreshold;
+    int lineThresholdProjected;
+    int lineThresholdBinarized;
+    int suppressNonmaxSize;
+} CvStarDetectorParams;
+
+CV_INLINE CvStarDetectorParams cvStarDetectorParams(
+                                                    int maxSize CV_DEFAULT(45),
+                                                    int responseThreshold CV_DEFAULT(30),
+                                                    int lineThresholdProjected CV_DEFAULT(10),
+                                                    int lineThresholdBinarized CV_DEFAULT(8),
+                                                    int suppressNonmaxSize CV_DEFAULT(5))
+{
+    CvStarDetectorParams params;
+    params.maxSize = maxSize;
+    params.responseThreshold = responseThreshold;
+    params.lineThresholdProjected = lineThresholdProjected;
+    params.lineThresholdBinarized = lineThresholdBinarized;
+    params.suppressNonmaxSize = suppressNonmaxSize;
+    
+    return params;
+}
+
+CVAPI(CvSeq*) cvGetStarKeypoints( const CvArr* img, CvMemStorage* storage,
+                                 CvStarDetectorParams params CV_DEFAULT(cvStarDetectorParams()));
 
 #ifdef __cplusplus
 }

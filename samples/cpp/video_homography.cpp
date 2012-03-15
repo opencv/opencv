@@ -141,7 +141,7 @@ int main(int ac, char ** av)
 
     vector<DMatch> matches;
 
-    BruteForceMatcher<Hamming> desc_matcher;
+    BFMatcher desc_matcher(NORM_HAMMING);
 
     vector<Point2f> train_pts, query_pts;
     vector<KeyPoint> train_kpts, query_kpts;

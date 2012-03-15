@@ -440,7 +440,7 @@ protected:
             fs.open( string(ts->get_data_path()) + FEATURES2D_DIR + "/keypoints.xml.gz", FileStorage::WRITE );
             if( fs.isOpened() )
             {
-                SurfFeatureDetector fd;
+                ORB fd;
                 fd.detect(img, keypoints);
                 write( fs, "keypoints", keypoints );
             }
@@ -491,7 +491,7 @@ private:
     CV_DescriptorExtractorTest& operator=(const CV_DescriptorExtractorTest&) { return *this; }
 };
 
-template<typename T, typename Distance>
+/*template<typename T, typename Distance>
 class CV_CalonderDescriptorExtractorTest : public CV_DescriptorExtractorTest<Distance>
 {
 public:
@@ -506,7 +506,7 @@ protected:
                 new CalonderDescriptorExtractor<T>( string(CV_DescriptorExtractorTest<Distance>::ts->get_data_path()) +
                                                     FEATURES2D_DIR + "/calonder_classifier.rtc");
     }
-};
+};*/
 
 /****************************************************************************************\
 *                       Algorithmic tests for descriptor matchers                        *
@@ -991,21 +991,9 @@ TEST( Features2d_Detector_MSER, regression )
     test.safe_run();
 }
 
-TEST( Features2d_Detector_SIFT, regression )
-{
-    CV_FeatureDetectorTest test( "detector-sift", FeatureDetector::create("SIFT") );
-    test.safe_run();
-}
-
 TEST( Features2d_Detector_STAR, regression )
 {
     CV_FeatureDetectorTest test( "detector-star", FeatureDetector::create("STAR") );
-    test.safe_run();
-}
-
-TEST( Features2d_Detector_SURF, regression )
-{
-    CV_FeatureDetectorTest test( "detector-surf", FeatureDetector::create("SURF") );
     test.safe_run();
 }
 
@@ -1024,23 +1012,6 @@ TEST( Features2d_Detector_GridFAST, regression )
 TEST( Features2d_Detector_PyramidFAST, regression )
 {
     CV_FeatureDetectorTest test( "detector-pyramid-fast", FeatureDetector::create("PyramidFAST") );
-    test.safe_run();
-}
-
-/*
- * Descriptors
- */
-TEST( Features2d_DescriptorExtractor_SIFT, regression )
-{
-    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-sift", 0.03f,
-                                                  DescriptorExtractor::create("SIFT"), 8.06652f  );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_SURF, regression )
-{
-    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.035f,
-                                                 DescriptorExtractor::create("SURF"), 0.147372f );
     test.safe_run();
 }
 
@@ -1066,13 +1037,6 @@ TEST( Features2d_DescriptorExtractor_BRIEF, regression )
     test.safe_run();
 }*/
 
-TEST( Features2d_DescriptorExtractor_OpponentSURF, regression )
-{
-    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-surf",  0.18f,
-                                                 DescriptorExtractor::create("OpponentSURF"), 0.147372f );
-    test.safe_run();
-}
-
 #if CV_SSE2
 TEST( Features2d_DescriptorExtractor_Calonder_uchar, regression )
 {
@@ -1096,7 +1060,7 @@ TEST( Features2d_DescriptorExtractor_Calonder_float, regression )
  */
 TEST( Features2d_DescriptorMatcher_BruteForce, regression )
 {
-    CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force", new BruteForceMatcher<L2<float> >, 0.01f );
+    CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force", new BFMatcher(NORM_L2), 0.01f );
     test.safe_run();
 }
 

@@ -315,12 +315,27 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
 {
     if (num_octaves_descr == num_octaves && num_layers_descr == num_layers)
     {
-        surf = new SURF(hess_thresh, num_octaves, num_layers);
+        surf = Algorithm::create<Feature2D>("Feature2D.SURF");
+        if( surf.empty() )
+            CV_Error( CV_StsNotImplemented, "OpenCV was built without SURF support" );
+        surf->set("hessianThreshold", hess_thresh);
+        surf->set("nOctaves", num_octaves);
+        surf->set("nOctaveLayers", num_layers);
     }
     else
     {
-        detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
-        extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
+        detector_ = Algorithm::create<FeatureDetector>("Feature2D.SURF");
+        extractor_ = Algorithm::create<DescriptorExtractor>("Feature2D.SURF");
+        
+        if( detector_.empty() || extractor_.empty() )
+            CV_Error( CV_StsNotImplemented, "OpenCV was built without SURF support" );
+        
+        detector_->set("hessianThreshold", hess_thresh);
+        detector_->set("nOctaves", num_octaves);
+        detector_->set("nOctaveLayers", num_layers);
+        
+        extractor_->set("nOctaves", num_octaves_descr);
+        extractor_->set("nOctaveLayers", num_layers_descr);
     }
 }
 
@@ -342,10 +357,10 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, size_t n_features, const ORB::CommonParams & detector_params)
+OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, int n_features, float scaleFactor, int nlevels)
 {
     grid_size = _grid_size;
-    orb = new ORB(n_features * (99 + grid_size.area())/100/grid_size.area(), detector_params);
+    orb = new ORB(n_features * (99 + grid_size.area())/100/grid_size.area(), scaleFactor, nlevels);
 }
 
 void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)

@@ -1511,7 +1511,7 @@ private:
 
 ////////////////////////////////// SURF //////////////////////////////////////////
 
-class CV_EXPORTS SURF_GPU : public CvSURFParams
+class CV_EXPORTS SURF_GPU
 {
 public:
     enum KeypointLayout
@@ -1566,6 +1566,14 @@ public:
 
     void releaseMemory();
 
+    // SURF parameters;
+    int    extended;
+    int    upright;
+    double hessianThreshold;
+    
+    int    nOctaves;
+    int    nOctaveLayers;
+    
     //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
     float keypointsRatio;
 
@@ -1656,7 +1664,7 @@ public:
     //! Constructor
     //! n_features - the number of desired features
     //! detector_params - parameters to use
-    explicit ORB_GPU(size_t n_features = 500, const ORB::CommonParams& detector_params = ORB::CommonParams());
+    explicit ORB_GPU(size_t n_features = 500, float scaleFactor = 1.2f, int nlevels = 3);
 
     //! Compute the ORB features on an image
     //! image - the image to compute the features (supports only CV_8UC1 images)
@@ -1682,7 +1690,7 @@ public:
     //! returns the descriptor size in bytes
     inline int descriptorSize() const { return kBytes; }
 
-    void setParams(size_t n_features, const ORB::CommonParams& detector_params);
+    void setParams(size_t n_features, float scaleFactor, int nlevels);
     inline void setFastParams(int threshold, bool nonmaxSupression = true)
     {
         fastDetector_.threshold = threshold;
@@ -1706,7 +1714,7 @@ private:
 
     void mergeKeyPoints(GpuMat& keypoints);
 
-    ORB::CommonParams params_;
+    ORB params_;
 
     // The number of desired features per scale
     std::vector<size_t> n_features_per_level_;

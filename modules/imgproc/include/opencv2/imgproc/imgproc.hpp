@@ -751,17 +751,6 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
                            InputOutputArray bgdModel, InputOutputArray fgdModel,
                            int iterCount, int mode = GC_EVAL );
 
-//! the inpainting algorithm
-enum
-{
-    INPAINT_NS=CV_INPAINT_NS, // Navier-Stokes algorithm
-    INPAINT_TELEA=CV_INPAINT_TELEA // A. Telea algorithm
-};
-
-//! restores the damaged image areas using one of the available intpainting algorithms
-CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
-                           OutputArray dst, double inpaintRange, int flags );
-
 //! builds the discrete Voronoi diagram
 CV_EXPORTS_AS(distanceTransformWithLabels) void distanceTransform( InputArray src, OutputArray dst,
                                      OutputArray labels, int distanceType, int maskSize );

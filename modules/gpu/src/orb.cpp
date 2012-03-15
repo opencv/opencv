@@ -48,14 +48,14 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-cv::gpu::ORB_GPU::ORB_GPU(size_t, const ORB::CommonParams&) : fastDetector_(0) { throw_nogpu(); }
+cv::gpu::ORB_GPU::ORB_GPU(size_t, float, int) : fastDetector_(0) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::convertKeyPoints(Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::setParams(size_t, const ORB::CommonParams&) { throw_nogpu(); }
+void cv::gpu::ORB_GPU::setParams(size_t, float, int) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::release() { throw_nogpu(); }
 void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::computeKeyPointsPyramid() { throw_nogpu(); }
@@ -83,10 +83,10 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-cv::gpu::ORB_GPU::ORB_GPU(size_t n_features, const ORB::CommonParams& detector_params) :
+cv::gpu::ORB_GPU::ORB_GPU(size_t n_features, float scaleFactor, int nlevels) :
     fastDetector_(DEFAULT_FAST_THRESHOLD)
 {
-    setParams(n_features, detector_params);
+    setParams(n_features, scaleFactor, nlevels);
     
     blurFilter = createGaussianFilter_GPU(CV_8UC1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
@@ -407,9 +407,9 @@ namespace
     }
 }
 
-void cv::gpu::ORB_GPU::setParams(size_t n_features, const ORB::CommonParams& detector_params)
+void cv::gpu::ORB_GPU::setParams(size_t n_features, float scaleFactor, int nlevels)
 {
-    params_ = detector_params;
+    params_ = ORB((int)n_features, scaleFactor, nlevels);
     
     // fill the extractors and descriptors for the corresponding scales
     int n_levels = static_cast<int>(params_.n_levels_);

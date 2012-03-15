@@ -145,9 +145,8 @@ public:
 class CV_EXPORTS CvFeatureTracker
 {
 private:
-	FeatureDetector* detector;
-	DescriptorExtractor* descriptor;
-	DescriptorMatcher* matcher;
+	Ptr<Feature2D> dd;
+	Ptr<DescriptorMatcher> matcher;
 	vector<DMatch> matches;
 
 	Mat prev_image;

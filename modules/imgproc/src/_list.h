@@ -345,7 +345,7 @@ void prefix##remove_at_##type(_CVLIST* l, CVPOS pos)\
 void prefix##set_##type(CVPOS pos, type* data)\
 {\
     ELEMENT_##type* element = ((ELEMENT_##type*)(pos.m_pos));\
-    memcpy(&(element->m_data), data, sizeof(data));\
+    memcpy(&(element->m_data), data, sizeof(*data));\
 }\
 type* prefix##get_##type(CVPOS pos)\
 {\

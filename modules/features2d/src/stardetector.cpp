@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2008, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,20 +41,23 @@
 
 #include "precomp.hpp"
 
-static void
-icvComputeIntegralImages( const CvMat* matI, CvMat* matS, CvMat* matT, CvMat* _FT )
+namespace cv
 {
-    int x, y, rows = matI->rows, cols = matI->cols;
-    const uchar* I = matI->data.ptr;
-    int *S = matS->data.i, *T = matT->data.i, *FT = _FT->data.i;
-    int istep = matI->step, step = matS->step/sizeof(S[0]);
+
+static void
+computeIntegralImages( const Mat& matI, Mat& matS, Mat& matT, Mat& _FT )
+{
+    CV_Assert( matI.type() == CV_8U );
     
-    assert( CV_MAT_TYPE(matI->type) == CV_8UC1 &&
-        CV_MAT_TYPE(matS->type) == CV_32SC1 &&
-        CV_ARE_TYPES_EQ(matS, matT) && CV_ARE_TYPES_EQ(matS, _FT) &&
-        CV_ARE_SIZES_EQ(matS, matT) && CV_ARE_SIZES_EQ(matS, _FT) &&
-        matS->step == matT->step && matS->step == _FT->step &&
-        matI->rows+1 == matS->rows && matI->cols+1 == matS->cols );
+    int x, y, rows = matI.rows, cols = matI.cols;
+    
+    matS.create(rows + 1, cols + 1, CV_32S);
+    matT.create(rows + 1, cols + 1, CV_32S);
+    _FT.create(rows + 1, cols + 1, CV_32S);
+    
+    const uchar* I = matI.ptr<uchar>();
+    int *S = matS.ptr<int>(), *T = matT.ptr<int>(), *FT = _FT.ptr<int>();
+    int istep = matI.step, step = matS.step/sizeof(S[0]);
 
     for( x = 0; x <= cols; x++ )
         S[x] = T[x] = FT[x] = 0;
@@ -92,16 +95,14 @@ icvComputeIntegralImages( const CvMat* matI, CvMat* matS, CvMat* matT, CvMat* _F
     }
 }
 
-typedef struct CvStarFeature
+struct StarFeature
 {
     int area;
     int* p[8];
-}
-CvStarFeature;
+};
 
 static int
-icvStarDetectorComputeResponses( const CvMat* img, CvMat* responses, CvMat* sizes,
-                                 const CvStarDetectorParams* params )
+StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int maxSize )
 {
     const int MAX_PATTERN = 17;
     static const int sizes0[] = {1, 2, 3, 4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128, -1};
@@ -117,22 +118,19 @@ icvStarDetectorComputeResponses( const CvMat* img, CvMat* responses, CvMat* size
     absmask.i = 0x7fffffff;
     volatile bool useSIMD = cv::checkHardwareSupport(CV_CPU_SSE2);
 #endif
-    CvStarFeature f[MAX_PATTERN];
+    StarFeature f[MAX_PATTERN];
 
-    CvMat *sum = 0, *tilted = 0, *flatTilted = 0;
-    int y, i=0, rows = img->rows, cols = img->cols, step;
+    Mat sum, tilted, flatTilted;
+    int y, i=0, rows = img.rows, cols = img.cols;
     int border, npatterns=0, maxIdx=0;
-#ifdef _OPENMP
-    int nthreads = cvGetNumThreads();
-#endif
 
-    assert( CV_MAT_TYPE(img->type) == CV_8UC1 &&
-        CV_MAT_TYPE(responses->type) == CV_32FC1 &&
-        CV_MAT_TYPE(sizes->type) == CV_16SC1 &&
-        CV_ARE_SIZES_EQ(responses, sizes) );
+    CV_Assert( img.type() == CV_8UC1 );
+    
+    responses.create( img.size(), CV_32F );
+    sizes.create( img.size(), CV_16S );
 
     while( pairs[i][0] >= 0 && !
-          ( sizes0[pairs[i][0]] >= params->maxSize 
+          ( sizes0[pairs[i][0]] >= maxSize 
            || sizes0[pairs[i+1][0]] + sizes0[pairs[i+1][0]]/2 >= std::min(rows, cols) ) )
     {
         ++i;
@@ -141,13 +139,9 @@ icvStarDetectorComputeResponses( const CvMat* img, CvMat* responses, CvMat* size
     npatterns = i;
     npatterns += (pairs[npatterns-1][0] >= 0);
     maxIdx = pairs[npatterns-1][0];
-
-    sum = cvCreateMat( rows + 1, cols + 1, CV_32SC1 );
-    tilted = cvCreateMat( rows + 1, cols + 1, CV_32SC1 );
-    flatTilted = cvCreateMat( rows + 1, cols + 1, CV_32SC1 );
-    step = sum->step/CV_ELEM_SIZE(sum->type);
-
-    icvComputeIntegralImages( img, sum, tilted, flatTilted );
+    
+    computeIntegralImages( img, sum, tilted, flatTilted );
+    int step = (int)(sum.step/sum.elemSize());
 
     for( i = 0; i <= maxIdx; i++ )
     {
@@ -155,15 +149,15 @@ icvStarDetectorComputeResponses( const CvMat* img, CvMat* responses, CvMat* size
         int ur_area = (2*ur_size + 1)*(2*ur_size + 1);
         int t_area = t_size*t_size + (t_size + 1)*(t_size + 1);
 
-        f[i].p[0] = sum->data.i + (ur_size + 1)*step + ur_size + 1;
-        f[i].p[1] = sum->data.i - ur_size*step + ur_size + 1;
-        f[i].p[2] = sum->data.i + (ur_size + 1)*step - ur_size;
-        f[i].p[3] = sum->data.i - ur_size*step - ur_size;
+        f[i].p[0] = sum.ptr<int>() + (ur_size + 1)*step + ur_size + 1;
+        f[i].p[1] = sum.ptr<int>() - ur_size*step + ur_size + 1;
+        f[i].p[2] = sum.ptr<int>() + (ur_size + 1)*step - ur_size;
+        f[i].p[3] = sum.ptr<int>() - ur_size*step - ur_size;
 
-        f[i].p[4] = tilted->data.i + (t_size + 1)*step + 1;
-        f[i].p[5] = flatTilted->data.i - t_size;
-        f[i].p[6] = flatTilted->data.i + t_size + 1;
-        f[i].p[7] = tilted->data.i - t_size*step + 1;
+        f[i].p[4] = tilted.ptr<int>() + (t_size + 1)*step + 1;
+        f[i].p[5] = flatTilted.ptr<int>() - t_size;
+        f[i].p[6] = flatTilted.ptr<int>() + t_size + 1;
+        f[i].p[7] = tilted.ptr<int>() - t_size*step + 1;
 
         f[i].area = ur_area + t_area;
         sizes1[i] = sizes0[i];
@@ -199,10 +193,10 @@ icvStarDetectorComputeResponses( const CvMat* img, CvMat* responses, CvMat* size
 
     for( y = 0; y < border; y++ )
     {
-        float* r_ptr = (float*)(responses->data.ptr + responses->step*y);
-        float* r_ptr2 = (float*)(responses->data.ptr + responses->step*(rows - 1 - y));
-        short* s_ptr = (short*)(sizes->data.ptr + sizes->step*y);
-        short* s_ptr2 = (short*)(sizes->data.ptr + sizes->step*(rows - 1 - y));
+        float* r_ptr = responses.ptr<float>(y);
+        float* r_ptr2 = responses.ptr<float>(rows - 1 - y);
+        short* s_ptr = sizes.ptr<short>(y);
+        short* s_ptr2 = sizes.ptr<short>(rows - 1 - y);
         
         memset( r_ptr, 0, cols*sizeof(r_ptr[0]));
         memset( r_ptr2, 0, cols*sizeof(r_ptr2[0]));
@@ -210,14 +204,11 @@ icvStarDetectorComputeResponses( const CvMat* img, CvMat* responses, CvMat* size
         memset( s_ptr2, 0, cols*sizeof(s_ptr2[0]));
     }
 
-#ifdef _OPENMP
-    #pragma omp parallel for num_threads(nthreads) schedule(static)
-#endif
     for( y = border; y < rows - border; y++ )
     {
         int x = border, i;
-        float* r_ptr = (float*)(responses->data.ptr + responses->step*y);
-        short* s_ptr = (short*)(sizes->data.ptr + sizes->step*y);
+        float* r_ptr = responses.ptr<float>(y);
+        short* s_ptr = sizes.ptr<short>(y);
         
         memset( r_ptr, 0, border*sizeof(r_ptr[0]));
         memset( s_ptr, 0, border*sizeof(s_ptr[0]));
@@ -300,22 +291,17 @@ icvStarDetectorComputeResponses( const CvMat* img, CvMat* responses, CvMat* size
         }
     }
 
-    cvReleaseMat(&sum);
-    cvReleaseMat(&tilted);
-    cvReleaseMat(&flatTilted);
-
     return border;
 }
 
 
-static bool
-icvStarDetectorSuppressLines( const CvMat* responses, const CvMat* sizes, CvPoint pt,
-                              const CvStarDetectorParams* params )
+static bool StarDetectorSuppressLines( const Mat& responses, const Mat& sizes, Point pt,
+                                       int lineThresholdProjected, int lineThresholdBinarized )
 {
-    const float* r_ptr = responses->data.fl;
-    int rstep = responses->step/sizeof(r_ptr[0]);
-    const short* s_ptr = sizes->data.s;
-    int sstep = sizes->step/sizeof(s_ptr[0]);
+    const float* r_ptr = responses.ptr<float>();
+    int rstep = (int)(responses.step/sizeof(r_ptr[0]));
+    const short* s_ptr = sizes.ptr<short>();
+    int sstep = (int)(sizes.step/sizeof(s_ptr[0]));
     int sz = s_ptr[pt.y*sstep + pt.x];
     int x, y, delta = sz/4, radius = delta*4;
     float Lxx = 0, Lyy = 0, Lxy = 0;
@@ -329,7 +315,7 @@ icvStarDetectorSuppressLines( const CvMat* responses, const CvMat* sizes, CvPoin
             Lxx += Lx*Lx; Lyy += Ly*Ly; Lxy += Lx*Ly;
         }
     
-    if( (Lxx + Lyy)*(Lxx + Lyy) >= params->lineThresholdProjected*(Lxx*Lyy - Lxy*Lxy) )
+    if( (Lxx + Lyy)*(Lxx + Lyy) >= lineThresholdProjected*(Lxx*Lyy - Lxy*Lxy) )
         return true;
 
     for( y = pt.y - radius; y <= pt.y + radius; y += delta )
@@ -340,7 +326,7 @@ icvStarDetectorSuppressLines( const CvMat* responses, const CvMat* sizes, CvPoin
             Lxxb += Lxb * Lxb; Lyyb += Lyb * Lyb; Lxyb += Lxb * Lyb;
         }
 
-    if( (Lxxb + Lyyb)*(Lxxb + Lyyb) >= params->lineThresholdBinarized*(Lxxb*Lyyb - Lxyb*Lxyb) )
+    if( (Lxxb + Lyyb)*(Lxxb + Lyyb) >= lineThresholdBinarized*(Lxxb*Lyyb - Lxyb*Lxyb) )
         return true;
 
     return false;
@@ -348,24 +334,27 @@ icvStarDetectorSuppressLines( const CvMat* responses, const CvMat* sizes, CvPoin
 
 
 static void
-icvStarDetectorSuppressNonmax( const CvMat* responses, const CvMat* sizes,
-                               CvSeq* keypoints, int border,
-                               const CvStarDetectorParams* params )
+StarDetectorSuppressNonmax( const Mat& responses, const Mat& sizes,
+                            vector<KeyPoint>& keypoints, int border,
+                            int responseThreshold,
+                            int lineThresholdProjected,
+                            int lineThresholdBinarized,
+                            int suppressNonmaxSize )
 {
-    int x, y, x1, y1, delta = params->suppressNonmaxSize/2;
-    int rows = responses->rows, cols = responses->cols;
-    const float* r_ptr = responses->data.fl;
-    int rstep = responses->step/sizeof(r_ptr[0]);
-    const short* s_ptr = sizes->data.s;
-    int sstep = sizes->step/sizeof(s_ptr[0]);
+    int x, y, x1, y1, delta = suppressNonmaxSize/2;
+    int rows = responses.rows, cols = responses.cols;
+    const float* r_ptr = responses.ptr<float>();
+    int rstep = (int)(responses.step/sizeof(r_ptr[0]));
+    const short* s_ptr = sizes.ptr<short>();
+    int sstep = (int)(sizes.step/sizeof(s_ptr[0]));
     short featureSize = 0;
 
     for( y = border; y < rows - border; y += delta+1 )
         for( x = border; x < cols - border; x += delta+1 )
         {
-            float maxResponse = (float)params->responseThreshold;
-            float minResponse = (float)-params->responseThreshold;
-            CvPoint maxPt = {-1,-1}, minPt = {-1,-1};
+            float maxResponse = (float)responseThreshold;
+            float minResponse = (float)-responseThreshold;
+            Point maxPt(-1, -1), minPt(-1, -1);
             int tileEndY = MIN(y + delta, rows - border - 1);
             int tileEndX = MIN(x + delta, cols - border - 1);
 
@@ -376,12 +365,12 @@ icvStarDetectorSuppressNonmax( const CvMat* responses, const CvMat* sizes,
                     if( maxResponse < val )
                     {
                         maxResponse = val;
-                        maxPt = cvPoint(x1, y1);
+                        maxPt = Point(x1, y1);
                     }
                     else if( minResponse > val )
                     {
                         minResponse = val;
-                        minPt = cvPoint(x1, y1);
+                        minPt = Point(x1, y1);
                     }
                 }
 
@@ -396,10 +385,11 @@ icvStarDetectorSuppressNonmax( const CvMat* responses, const CvMat* sizes,
                     }
 
                 if( (featureSize = s_ptr[maxPt.y*sstep + maxPt.x]) >= 4 &&
-                    !icvStarDetectorSuppressLines( responses, sizes, maxPt, params ))
+                    !StarDetectorSuppressLines( responses, sizes, maxPt, lineThresholdProjected,
+                                                lineThresholdBinarized ))
                 {
-                    CvStarKeypoint kpt = cvStarKeypoint( maxPt, featureSize, maxResponse );
-                    cvSeqPush( keypoints, &kpt );
+                    KeyPoint kpt((float)maxPt.x, (float)maxPt.y, featureSize, -1, maxResponse);
+                    keypoints.push_back(kpt);
                 }
             }
         skip_max:
@@ -414,66 +404,67 @@ icvStarDetectorSuppressNonmax( const CvMat* responses, const CvMat* sizes,
                     }
 
                 if( (featureSize = s_ptr[minPt.y*sstep + minPt.x]) >= 4 &&
-                    !icvStarDetectorSuppressLines( responses, sizes, minPt, params ))
+                    !StarDetectorSuppressLines( responses, sizes, minPt,
+                                               lineThresholdProjected, lineThresholdBinarized))
                 {
-                    CvStarKeypoint kpt = cvStarKeypoint( minPt, featureSize, minResponse );
-                    cvSeqPush( keypoints, &kpt );
+                    KeyPoint kpt((float)minPt.x, (float)minPt.y, featureSize, -1, maxResponse);
+                    keypoints.push_back(kpt);
                 }
             }
         skip_min:
             ;
         }
 }
-
-CV_IMPL CvSeq*
-cvGetStarKeypoints( const CvArr* _img, CvMemStorage* storage,
-                    CvStarDetectorParams params )
-{
-    CvMat stub, *img = cvGetMat(_img, &stub);
-    CvSeq* keypoints = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvStarKeypoint), storage );
-    CvMat* responses = cvCreateMat( img->rows, img->cols, CV_32FC1 );
-    CvMat* sizes = cvCreateMat( img->rows, img->cols, CV_16SC1 );
-
-    int border = icvStarDetectorComputeResponses( img, responses, sizes, &params );
-    if( border >= 0 )
-        icvStarDetectorSuppressNonmax( responses, sizes, keypoints, border, &params );
-
-    cvReleaseMat( &responses );
-    cvReleaseMat( &sizes );
-
-    return border >= 0 ? keypoints : 0;
-}
-
-namespace cv
-{
-
-StarDetector::StarDetector()
-{
-    *(CvStarDetectorParams*)this = cvStarDetectorParams();
-}
-
+    
 StarDetector::StarDetector(int _maxSize, int _responseThreshold,
                            int _lineThresholdProjected,
                            int _lineThresholdBinarized,
                            int _suppressNonmaxSize)
-{
-    *(CvStarDetectorParams*)this = cvStarDetectorParams(_maxSize, _responseThreshold,
-            _lineThresholdProjected, _lineThresholdBinarized, _suppressNonmaxSize);
-}
+: maxSize(_maxSize), responseThreshold(_responseThreshold),
+    lineThresholdProjected(_lineThresholdProjected),
+    lineThresholdBinarized(_lineThresholdBinarized),
+    suppressNonmaxSize(_suppressNonmaxSize)
+{}
 
-void StarDetector::operator()(const Mat& image, vector<KeyPoint>& keypoints) const
+
+void StarDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
-    CvMat _image = image;
-    MemStorage storage(cvCreateMemStorage(0));
-    Seq<CvStarKeypoint> kp = cvGetStarKeypoints( &_image, storage, *(const CvStarDetectorParams*)this);
-    Seq<CvStarKeypoint>::iterator it = kp.begin();
-    keypoints.resize(kp.size());
-    size_t i, n = kp.size();
-    for( i = 0; i < n; i++, ++it )
-    {
-        const CvStarKeypoint& kpt = *it;
-        keypoints[i] = KeyPoint(kpt.pt, (float)kpt.size, -1.f, kpt.response, 0);
-    }
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    
+    (*this)(grayImage, keypoints);
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
+}    
+
+void StarDetector::operator()(const Mat& img, vector<KeyPoint>& keypoints) const
+{
+    Mat responses, sizes;
+    int border = StarDetectorComputeResponses( img, responses, sizes, maxSize );
+    keypoints.clear();
+    if( border >= 0 )
+        StarDetectorSuppressNonmax( responses, sizes, keypoints, border,
+                                    responseThreshold, lineThresholdProjected,
+                                    lineThresholdBinarized, suppressNonmaxSize );
 }
+    
+    
+static Algorithm* createStarDetector() { return new StarDetector; }
+static AlgorithmInfo star_info("Feature2D.STAR", createStarDetector);
+    
+AlgorithmInfo* StarDetector::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        star_info.addParam(this, "maxSize", maxSize);
+        star_info.addParam(this, "responseThreshold", responseThreshold);
+        star_info.addParam(this, "lineThresholdProjected", lineThresholdProjected);
+        star_info.addParam(this, "lineThresholdBinarized", lineThresholdBinarized);
+        star_info.addParam(this, "suppressNonmaxSize", suppressNonmaxSize);
+        
+        initialized = true;
+    }
+    return &star_info;
+}    
 
 }

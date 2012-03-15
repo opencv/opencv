@@ -416,7 +416,7 @@ public:
     //! the default constructor
     BackgroundSubtractorMOG2();
     //! the full constructor that takes the length of the history, the number of gaussian mixtures, the background ratio parameter and the noise strength
-    BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=1);
+    BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=true);
     //! the destructor
     virtual ~BackgroundSubtractorMOG2();
     //! the update operator

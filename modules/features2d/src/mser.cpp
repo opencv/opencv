@@ -41,7 +41,10 @@
 
 #include "precomp.hpp"
 
-#define TABLE_SIZE 400
+namespace cv
+{
+
+const int TABLE_SIZE = 400;
 
 static double chitab3[]={0,  0.0150057,  0.0239478,  0.0315227,
                   0.0383427,  0.0446605,  0.0506115,  0.0562786,
@@ -144,36 +147,36 @@ static double chitab3[]={0,  0.0150057,  0.0239478,  0.0315227,
                   3.37455,  3.48653,  3.61862,  3.77982,
                   3.98692,  4.2776,  4.77167,  133.333 };
 
-typedef struct CvLinkedPoint
+typedef struct LinkedPoint
 {
-	struct CvLinkedPoint* prev;
-	struct CvLinkedPoint* next;
-	CvPoint pt;
+	struct LinkedPoint* prev;
+	struct LinkedPoint* next;
+	Point pt;
 }
-CvLinkedPoint;
+LinkedPoint;
 
 // the history of region grown
-typedef struct CvMSERGrowHistory
+typedef struct MSERGrowHistory
 {
-	struct CvMSERGrowHistory* shortcut;
-	struct CvMSERGrowHistory* child;
+	struct MSERGrowHistory* shortcut;
+	struct MSERGrowHistory* child;
 	int stable; // when it ever stabled before, record the size
 	int val;
 	int size;
 }
-CvMSERGrowHistory;
+MSERGrowHistory;
 
-typedef struct CvMSERConnectedComp
+typedef struct MSERConnectedComp
 {
-	CvLinkedPoint* head;
-	CvLinkedPoint* tail;
-	CvMSERGrowHistory* history;
+	LinkedPoint* head;
+	LinkedPoint* tail;
+	MSERGrowHistory* history;
 	unsigned long grey_level;
 	int size;
 	int dvar; // the derivative of last var
 	float var; // the current variation (most time is the variation of one-step back)
 }
-CvMSERConnectedComp;
+MSERConnectedComp;
 
 // Linear Time MSER claims by using bsf can get performance gain, here is the implementation
 // however it seems that will not do any good in real world test
@@ -186,24 +189,29 @@ inline void _bitreset(unsigned long * a, unsigned long b)
 	*a &= ~(1<<b);
 }
 
-CvMSERParams cvMSERParams( int delta, int minArea, int maxArea, float maxVariation, float minDiversity, int maxEvolution, double areaThreshold, double minMargin, int edgeBlurSize )
+struct MSERParams
 {
-	CvMSERParams params;
-	params.delta = delta;
-	params.minArea = minArea;
-	params.maxArea = maxArea;
-	params.maxVariation = maxVariation;
-	params.minDiversity = minDiversity;
-	params.maxEvolution = maxEvolution;
-	params.areaThreshold = areaThreshold;
-	params.minMargin = minMargin;
-	params.edgeBlurSize = edgeBlurSize;
-	return params;
-}
+    MSERParams( int _delta, int _minArea, int _maxArea, float _maxVariation,
+                float _minDiversity, int _maxEvolution, double _areaThreshold,
+                double _minMargin, int _edgeBlurSize )
+        : delta(_delta), minArea(_minArea), maxArea(_maxArea), maxVariation(_maxVariation),
+        minDiversity(_minDiversity), maxEvolution(_maxEvolution), areaThreshold(_areaThreshold),
+        minMargin(_minMargin), edgeBlurSize(_edgeBlurSize)
+    {}
+    int delta;
+    int minArea;
+    int maxArea;
+    float maxVariation;
+    float minDiversity;
+    int maxEvolution;
+    double areaThreshold;
+    double minMargin;
+    int edgeBlurSize;
+};
 
 // clear the connected component in stack
-CV_INLINE static void
-icvInitMSERComp( CvMSERConnectedComp* comp )
+static void
+initMSERComp( MSERConnectedComp* comp )
 {
 	comp->size = 0;
 	comp->var = 0;
@@ -212,9 +220,8 @@ icvInitMSERComp( CvMSERConnectedComp* comp )
 }
 
 // add history of size to a connected component
-CV_INLINE static void
-icvMSERNewHistory( CvMSERConnectedComp* comp,
-		   CvMSERGrowHistory* history )
+static void
+MSERNewHistory( MSERConnectedComp* comp, MSERGrowHistory* history )
 {
 	history->child = history;
 	if ( NULL == comp->history )
@@ -232,14 +239,14 @@ icvMSERNewHistory( CvMSERConnectedComp* comp,
 }
 
 // merging two connected component
-CV_INLINE static void
-icvMSERMergeComp( CvMSERConnectedComp* comp1,
-		  CvMSERConnectedComp* comp2,
-		  CvMSERConnectedComp* comp,
-		  CvMSERGrowHistory* history )
+static void
+MSERMergeComp( MSERConnectedComp* comp1,
+		  MSERConnectedComp* comp2,
+		  MSERConnectedComp* comp,
+		  MSERGrowHistory* history )
 {
-	CvLinkedPoint* head;
-	CvLinkedPoint* tail;
+	LinkedPoint* head;
+	LinkedPoint* tail;
 	comp->grey_level = comp2->grey_level;
 	history->child = history;
 	// select the winner by size
@@ -301,18 +308,17 @@ icvMSERMergeComp( CvMSERConnectedComp* comp1,
 	comp->size = comp1->size + comp2->size;
 }
 
-CV_INLINE static float
-icvMSERVariationCalc( CvMSERConnectedComp* comp,
-		      int delta )
+static float
+MSERVariationCalc( MSERConnectedComp* comp, int delta )
 {
-	CvMSERGrowHistory* history = comp->history;
+	MSERGrowHistory* history = comp->history;
 	int val = comp->grey_level;
 	if ( NULL != history )
 	{
-		CvMSERGrowHistory* shortcut = history->shortcut;
+		MSERGrowHistory* shortcut = history->shortcut;
 		while ( shortcut != shortcut->shortcut && shortcut->val + delta > val )
 			shortcut = shortcut->shortcut;
-		CvMSERGrowHistory* child = shortcut->child;
+		MSERGrowHistory* child = shortcut->child;
 		while ( child != child->child && child->val + delta <= val )
 		{
 			shortcut = child;
@@ -328,15 +334,13 @@ icvMSERVariationCalc( CvMSERConnectedComp* comp,
 	return 1.;
 }
 
-CV_INLINE static bool
-icvMSERStableCheck( CvMSERConnectedComp* comp,
-		    CvMSERParams params )
+static bool MSERStableCheck( MSERConnectedComp* comp, MSERParams params )
 {
 	// tricky part: it actually check the stablity of one-step back
 	if ( comp->history == NULL || comp->history->size <= params.minArea || comp->history->size >= params.maxArea )
 		return 0;
 	float div = (float)(comp->history->size-comp->history->stable)/(float)comp->history->size;
-	float var = icvMSERVariationCalc( comp, params.delta );
+	float var = MSERVariationCalc( comp, params.delta );
 	int dvar = ( comp->var < var || (unsigned long)(comp->history->val + 1) < comp->grey_level );
 	int stable = ( dvar && !comp->dvar && comp->var < params.maxVariation && div > params.minDiversity );
 	comp->var = var;
@@ -347,9 +351,7 @@ icvMSERStableCheck( CvMSERConnectedComp* comp,
 }
 
 // add a pixel to the pixel list
-CV_INLINE static void
-icvAccumulateMSERComp( CvMSERConnectedComp* comp,
-		       CvLinkedPoint* point )
+static void accumulateMSERComp( MSERConnectedComp* comp, LinkedPoint* point )
 {
 	if ( comp->size > 0 )
 	{
@@ -366,14 +368,12 @@ icvAccumulateMSERComp( CvMSERConnectedComp* comp,
 }
 
 // convert the point set to CvSeq
-CV_INLINE static CvContour*
-icvMSERToContour( CvMSERConnectedComp* comp,
-		  CvMemStorage* storage )
+static CvContour* MSERToContour( MSERConnectedComp* comp, CvMemStorage* storage )
 {
 	CvSeq* _contour = cvCreateSeq( CV_SEQ_KIND_GENERIC|CV_32SC2, sizeof(CvContour), sizeof(CvPoint), storage );
 	CvContour* contour = (CvContour*)_contour;
 	cvSeqPushMulti( _contour, 0, comp->history->size );
-	CvLinkedPoint* lpt = comp->head;
+	LinkedPoint* lpt = comp->head;
 	for ( int i = 0; i < comp->history->size; i++ )
 	{
 		CvPoint* pt = CV_GET_SEQ_ELEM( CvPoint, _contour, i );
@@ -391,8 +391,7 @@ icvMSERToContour( CvMSERConnectedComp* comp,
 // 17~19 bits is the direction
 // 8~11 bits is the bucket it falls to (for BitScanForward)
 // 0~8 bits is the color
-static int*
-icvPreprocessMSER_8UC1( CvMat* img,
+static int* preprocessMSER_8UC1( CvMat* img,
 			int*** heap_cur,
 			CvMat* src,
 			CvMat* mask )
@@ -476,17 +475,16 @@ icvPreprocessMSER_8UC1( CvMat* img,
 	return startptr;
 }
 
-static void
-icvExtractMSER_8UC1_Pass( int* ioptr,
+static void extractMSER_8UC1_Pass( int* ioptr,
 			  int* imgptr,
 			  int*** heap_cur,
-			  CvLinkedPoint* ptsptr,
-			  CvMSERGrowHistory* histptr,
-			  CvMSERConnectedComp* comptr,
+			  LinkedPoint* ptsptr,
+			  MSERGrowHistory* histptr,
+			  MSERConnectedComp* comptr,
 			  int step,
 			  int stepmask,
 			  int stepgap,
-			  CvMSERParams params,
+			  MSERParams params,
 			  int color,
 			  CvSeq* contours,
 			  CvMemStorage* storage )
@@ -494,7 +492,7 @@ icvExtractMSER_8UC1_Pass( int* ioptr,
 	comptr->grey_level = 256;
 	comptr++;
 	comptr->grey_level = (*imgptr)&0xff;
-	icvInitMSERComp( comptr );
+	initMSERComp( comptr );
 	*imgptr |= 0x80000000;
 	heap_cur += (*imgptr)&0xff;
 	int dir[] = { 1, step, -1, -step };
@@ -527,7 +525,7 @@ icvExtractMSER_8UC1_Pass( int* ioptr,
 #endif
 					imgptr = imgptr_nbr;
 					comptr++;
-					icvInitMSERComp( comptr );
+					initMSERComp( comptr );
 					comptr->grey_level = (*imgptr)&0xff;
 					continue;
 				} else {
@@ -544,7 +542,7 @@ icvExtractMSER_8UC1_Pass( int* ioptr,
 		int i = (int)(imgptr-ioptr);
 		ptsptr->pt = cvPoint( i&stepmask, i>>stepgap );
 		// get the current location
-		icvAccumulateMSERComp( comptr, ptsptr );
+		accumulateMSERComp( comptr, ptsptr );
 		ptsptr++;
 		// get the next pixel from boundary heap
 		if ( **heap_cur )
@@ -595,13 +593,13 @@ icvExtractMSER_8UC1_Pass( int* ioptr,
 				if ( pixel_val < comptr[-1].grey_level )
 				{
 					// check the stablity and push a new history, increase the grey level
-					if ( icvMSERStableCheck( comptr, params ) )
+					if ( MSERStableCheck( comptr, params ) )
 					{
-						CvContour* contour = icvMSERToContour( comptr, storage );
+						CvContour* contour = MSERToContour( comptr, storage );
 						contour->color = color;
 						cvSeqPush( contours, &contour );
 					}
-					icvMSERNewHistory( comptr, histptr );
+					MSERNewHistory( comptr, histptr );
 					comptr[0].grey_level = pixel_val;
 					histptr++;
 				} else {
@@ -609,20 +607,20 @@ icvExtractMSER_8UC1_Pass( int* ioptr,
 					for ( ; ; )
 					{
 						comptr--;
-						icvMSERMergeComp( comptr+1, comptr, comptr, histptr );
+						MSERMergeComp( comptr+1, comptr, comptr, histptr );
 						histptr++;
 						if ( pixel_val <= comptr[0].grey_level )
 							break;
 						if ( pixel_val < comptr[-1].grey_level )
 						{
 							// check the stablity here otherwise it wouldn't be an ER
-							if ( icvMSERStableCheck( comptr, params ) )
+							if ( MSERStableCheck( comptr, params ) )
 							{
-								CvContour* contour = icvMSERToContour( comptr, storage );
+								CvContour* contour = MSERToContour( comptr, storage );
 								contour->color = color;
 								cvSeqPush( contours, &contour );
 							}
-							icvMSERNewHistory( comptr, histptr );
+							MSERNewHistory( comptr, histptr );
 							comptr[0].grey_level = pixel_val;
 							histptr++;
 							break;
@@ -635,12 +633,11 @@ icvExtractMSER_8UC1_Pass( int* ioptr,
 	}
 }
 
-static void
-icvExtractMSER_8UC1( CvMat* src,
+static void extractMSER_8UC1( CvMat* src,
 		     CvMat* mask,
 		     CvSeq* contours,
 		     CvMemStorage* storage,
-		     CvMSERParams params )
+		     MSERParams params )
 {
 	int step = 8;
 	int stepgap = 3;
@@ -662,16 +659,16 @@ icvExtractMSER_8UC1( CvMat* src,
 	heap_start[0] = heap;
 
 	// pre-allocate linked point and grow history
-	CvLinkedPoint* pts = (CvLinkedPoint*)cvAlloc( src->rows*src->cols*sizeof(pts[0]) );
-	CvMSERGrowHistory* history = (CvMSERGrowHistory*)cvAlloc( src->rows*src->cols*sizeof(history[0]) );
-	CvMSERConnectedComp comp[257];
+	LinkedPoint* pts = (LinkedPoint*)cvAlloc( src->rows*src->cols*sizeof(pts[0]) );
+	MSERGrowHistory* history = (MSERGrowHistory*)cvAlloc( src->rows*src->cols*sizeof(history[0]) );
+	MSERConnectedComp comp[257];
 
 	// darker to brighter (MSER-)
-	imgptr = icvPreprocessMSER_8UC1( img, heap_start, src, mask );
-	icvExtractMSER_8UC1_Pass( ioptr, imgptr, heap_start, pts, history, comp, step, stepmask, stepgap, params, -1, contours, storage );
+	imgptr = preprocessMSER_8UC1( img, heap_start, src, mask );
+	extractMSER_8UC1_Pass( ioptr, imgptr, heap_start, pts, history, comp, step, stepmask, stepgap, params, -1, contours, storage );
 	// brighter to darker (MSER+)
-	imgptr = icvPreprocessMSER_8UC1( img, heap_start, src, mask );
-	icvExtractMSER_8UC1_Pass( ioptr, imgptr, heap_start, pts, history, comp, step, stepmask, stepgap, params, 1, contours, storage );
+	imgptr = preprocessMSER_8UC1( img, heap_start, src, mask );
+	extractMSER_8UC1_Pass( ioptr, imgptr, heap_start, pts, history, comp, step, stepmask, stepgap, params, 1, contours, storage );
 
 	// clean up
 	cvFree( &history );
@@ -680,26 +677,26 @@ icvExtractMSER_8UC1( CvMat* src,
 	cvReleaseMat( &img );
 }
 
-struct CvMSCRNode;
+struct MSCRNode;
 
-typedef struct CvTempMSCR
+struct TempMSCR
 {
-	CvMSCRNode* head;
-	CvMSCRNode* tail;
+	MSCRNode* head;
+	MSCRNode* tail;
 	double m; // the margin used to prune area later
 	int size;
-} CvTempMSCR;
+};
 
-typedef struct CvMSCRNode
+struct MSCRNode
 {
-	CvMSCRNode* shortcut;
+	MSCRNode* shortcut;
 	// to make the finding of root less painful
-	CvMSCRNode* prev;
-	CvMSCRNode* next;
+	MSCRNode* prev;
+	MSCRNode* next;
 	// a point double-linked list
-	CvTempMSCR* tmsr;
+	TempMSCR* tmsr;
 	// the temporary msr (set to NULL at every re-initialise)
-	CvTempMSCR* gmsr;
+	TempMSCR* gmsr;
 	// the global msr (once set, never to NULL)
 	int index;
 	// the index of the node, at this point, it should be x at the first 16-bits, and y at the last 16-bits.
@@ -708,25 +705,23 @@ typedef struct CvMSCRNode
 	int size, sizei;
 	double dt, di;
 	double s;
-} CvMSCRNode;
+};
 
-typedef struct CvMSCREdge
+struct MSCREdge
 {
 	double chi;
-	CvMSCRNode* left;
-	CvMSCRNode* right;
-} CvMSCREdge;
+	MSCRNode* left;
+	MSCRNode* right;
+};
 
-CV_INLINE static double
-icvChisquaredDistance( uchar* x, uchar* y )
+static double ChiSquaredDistance( uchar* x, uchar* y )
 {
 	return (double)((x[0]-y[0])*(x[0]-y[0]))/(double)(x[0]+y[0]+1e-10)+
 	       (double)((x[1]-y[1])*(x[1]-y[1]))/(double)(x[1]+y[1]+1e-10)+
 	       (double)((x[2]-y[2])*(x[2]-y[2]))/(double)(x[2]+y[2]+1e-10);
 }
 
-CV_INLINE static void
-icvInitMSCRNode( CvMSCRNode* node )
+static void initMSCRNode( MSCRNode* node )
 {
 	node->gmsr = node->tmsr = NULL;
 	node->reinit = 0xffff;
@@ -736,9 +731,8 @@ icvInitMSCRNode( CvMSCRNode* node )
 }
 
 // the preprocess to get the edge list with proper gaussian blur
-static int
-icvPreprocessMSER_8UC3( CvMSCRNode* node,
-			CvMSCREdge* edge,
+static int preprocessMSER_8UC3( MSCRNode* node,
+			MSCREdge* edge,
 			double* total,
 			CvMat* src,
 			CvMat* mask,
@@ -755,7 +749,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 	{
 		for ( int j = 0; j < src->cols-1; j++ )
 		{
-			*dxptr = icvChisquaredDistance( srcptr, lastptr );
+			*dxptr = ChiSquaredDistance( srcptr, lastptr );
 			dxptr++;
 			srcptr += 3;
 			lastptr += 3;
@@ -770,7 +764,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 	{
 		for ( int j = 0; j < src->cols; j++ )
 		{
-			*dyptr = icvChisquaredDistance( srcptr, lastptr );
+			*dyptr = ChiSquaredDistance( srcptr, lastptr );
 			dyptr++;
 			srcptr += 3;
 			lastptr += 3;
@@ -793,8 +787,8 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 		Ne = 0;
 		int maskcpt = mask->step-mask->cols+1;
 		uchar* maskptr = mask->data.ptr;
-		CvMSCRNode* nodeptr = node;
-		icvInitMSCRNode( nodeptr );
+		MSCRNode* nodeptr = node;
+		initMSCRNode( nodeptr );
 		nodeptr->index = 0;
 		*total += edge->chi = *dxptr;
 		if ( maskptr[0] && maskptr[1] )
@@ -809,7 +803,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 		maskptr++;
 		for ( int i = 1; i < src->cols-1; i++ )
 		{
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = i;
 			if ( maskptr[0] && maskptr[1] )
 			{
@@ -823,13 +817,13 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			nodeptr++;
 			maskptr++;
 		}
-		icvInitMSCRNode( nodeptr );
+		initMSCRNode( nodeptr );
 		nodeptr->index = src->cols-1;
 		nodeptr++;
 		maskptr += maskcpt;
 		for ( int i = 1; i < src->rows-1; i++ )
 		{
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = i<<16;
 			if ( maskptr[0] )
 			{
@@ -856,7 +850,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			maskptr++;
 			for ( int j = 1; j < src->cols-1; j++ )
 			{
-				icvInitMSCRNode( nodeptr );
+				initMSCRNode( nodeptr );
 				nodeptr->index = (i<<16)|j;
 				if ( maskptr[0] )
 				{
@@ -882,7 +876,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 				nodeptr++;
 				maskptr++;
 			}
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = (i<<16)|(src->cols-1);
 			if ( maskptr[0] && maskptr[-mask->step] )
 			{
@@ -896,7 +890,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			nodeptr++;
 			maskptr += maskcpt;
 		}
-		icvInitMSCRNode( nodeptr );
+		initMSCRNode( nodeptr );
 		nodeptr->index = (src->rows-1)<<16;
 		if ( maskptr[0] )
 		{
@@ -923,7 +917,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 		maskptr++;
 		for ( int i = 1; i < src->cols-1; i++ )
 		{
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = ((src->rows-1)<<16)|i;
 			if ( maskptr[0] )
 			{
@@ -949,7 +943,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			nodeptr++;
 			maskptr++;
 		}
-		icvInitMSCRNode( nodeptr );
+		initMSCRNode( nodeptr );
 		nodeptr->index = ((src->rows-1)<<16)|(src->cols-1);
 		if ( maskptr[0] && maskptr[-mask->step] )
 		{
@@ -959,8 +953,8 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			Ne++;
 		}
 	} else {
-		CvMSCRNode* nodeptr = node;
-		icvInitMSCRNode( nodeptr );
+		MSCRNode* nodeptr = node;
+		initMSCRNode( nodeptr );
 		nodeptr->index = 0;
 		*total += edge->chi = *dxptr;
 		dxptr++;
@@ -970,7 +964,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 		nodeptr++;
 		for ( int i = 1; i < src->cols-1; i++ )
 		{
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = i;
 			*total += edge->chi = *dxptr;
 			dxptr++;
@@ -979,12 +973,12 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			edge++;
 			nodeptr++;
 		}
-		icvInitMSCRNode( nodeptr );
+		initMSCRNode( nodeptr );
 		nodeptr->index = src->cols-1;
 		nodeptr++;
 		for ( int i = 1; i < src->rows-1; i++ )
 		{
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = i<<16;
 			*total += edge->chi = *dyptr;
 			dyptr++;
@@ -999,7 +993,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			nodeptr++;
 			for ( int j = 1; j < src->cols-1; j++ )
 			{
-				icvInitMSCRNode( nodeptr );
+				initMSCRNode( nodeptr );
 				nodeptr->index = (i<<16)|j;
 				*total += edge->chi = *dyptr;
 				dyptr++;
@@ -1013,7 +1007,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 				edge++;
 				nodeptr++;
 			}
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = (i<<16)|(src->cols-1);
 			*total += edge->chi = *dyptr;
 			dyptr++;
@@ -1022,7 +1016,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			edge++;
 			nodeptr++;
 		}
-		icvInitMSCRNode( nodeptr );
+		initMSCRNode( nodeptr );
 		nodeptr->index = (src->rows-1)<<16;
 		*total += edge->chi = *dxptr;
 		dxptr++;
@@ -1037,7 +1031,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 		nodeptr++;
 		for ( int i = 1; i < src->cols-1; i++ )
 		{
-			icvInitMSCRNode( nodeptr );
+			initMSCRNode( nodeptr );
 			nodeptr->index = ((src->rows-1)<<16)|i;
 			*total += edge->chi = *dxptr;
 			dxptr++;
@@ -1051,7 +1045,7 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 			edge++;
 			nodeptr++;
 		}
-		icvInitMSCRNode( nodeptr );
+		initMSCRNode( nodeptr );
 		nodeptr->index = ((src->rows-1)<<16)|(src->cols-1);
 		*total += edge->chi = *dyptr;
 		edge->left = nodeptr-src->cols;
@@ -1063,14 +1057,13 @@ icvPreprocessMSER_8UC3( CvMSCRNode* node,
 #define cmp_mscr_edge(edge1, edge2) \
 	((edge1).chi < (edge2).chi)
 
-static CV_IMPLEMENT_QSORT( icvQuickSortMSCREdge, CvMSCREdge, cmp_mscr_edge )
+static CV_IMPLEMENT_QSORT( QuickSortMSCREdge, MSCREdge, cmp_mscr_edge )
 
 // to find the root of one region
-CV_INLINE static CvMSCRNode*
-icvFindMSCR( CvMSCRNode* x )
+static MSCRNode* findMSCR( MSCRNode* x )
 {
-	CvMSCRNode* prev = x;
-	CvMSCRNode* next;
+	MSCRNode* prev = x;
+	MSCRNode* next;
 	for ( ; ; )
 	{
 		next = x->shortcut;
@@ -1079,7 +1072,7 @@ icvFindMSCR( CvMSCRNode* x )
 		prev= x;
 		x = next;
 	}
-	CvMSCRNode* root = x;
+	MSCRNode* root = x;
 	for ( ; ; )
 	{
 		prev = x->shortcut;
@@ -1093,9 +1086,7 @@ icvFindMSCR( CvMSCRNode* x )
 // the stable mscr should be:
 // bigger than minArea and smaller than maxArea
 // differ from its ancestor more than minDiversity
-CV_INLINE static bool
-icvMSCRStableCheck( CvMSCRNode* x,
-		    CvMSERParams params )
+static bool MSCRStableCheck( MSCRNode* x, MSERParams params )
 {
 	if ( x->size <= params.minArea || x->size >= params.maxArea )
 		return 0;
@@ -1106,25 +1097,25 @@ icvMSCRStableCheck( CvMSCRNode* x,
 }
 
 static void
-icvExtractMSER_8UC3( CvMat* src,
+extractMSER_8UC3( CvMat* src,
 		     CvMat* mask,
 		     CvSeq* contours,
 		     CvMemStorage* storage,
-		     CvMSERParams params )
+		     MSERParams params )
 {
-	CvMSCRNode* map = (CvMSCRNode*)cvAlloc( src->cols*src->rows*sizeof(map[0]) );
+	MSCRNode* map = (MSCRNode*)cvAlloc( src->cols*src->rows*sizeof(map[0]) );
 	int Ne = src->cols*src->rows*2-src->cols-src->rows;
-	CvMSCREdge* edge = (CvMSCREdge*)cvAlloc( Ne*sizeof(edge[0]) );
-	CvTempMSCR* mscr = (CvTempMSCR*)cvAlloc( src->cols*src->rows*sizeof(mscr[0]) );
+	MSCREdge* edge = (MSCREdge*)cvAlloc( Ne*sizeof(edge[0]) );
+	TempMSCR* mscr = (TempMSCR*)cvAlloc( src->cols*src->rows*sizeof(mscr[0]) );
 	double emean = 0;
 	CvMat* dx = cvCreateMat( src->rows, src->cols-1, CV_64FC1 );
 	CvMat* dy = cvCreateMat( src->rows-1, src->cols, CV_64FC1 );
-	Ne = icvPreprocessMSER_8UC3( map, edge, &emean, src, mask, dx, dy, Ne, params.edgeBlurSize );
+	Ne = preprocessMSER_8UC3( map, edge, &emean, src, mask, dx, dy, Ne, params.edgeBlurSize );
 	emean = emean / (double)Ne;
-	icvQuickSortMSCREdge( edge, Ne, 0 );
-	CvMSCREdge* edge_ub = edge+Ne;
-	CvMSCREdge* edgeptr = edge;
-	CvTempMSCR* mscrptr = mscr;
+	QuickSortMSCREdge( edge, Ne, 0 );
+	MSCREdge* edge_ub = edge+Ne;
+	MSCREdge* edgeptr = edge;
+	TempMSCR* mscrptr = mscr;
 	// the evolution process
 	for ( int i = 0; i < params.maxEvolution; i++ )
 	{
@@ -1135,21 +1126,21 @@ icvExtractMSER_8UC3( CvMat* src,
 		// to process all the edges in the list that chi < thres
 		while ( edgeptr < edge_ub && edgeptr->chi < thres )
 		{
-			CvMSCRNode* lr = icvFindMSCR( edgeptr->left );
-			CvMSCRNode* rr = icvFindMSCR( edgeptr->right );
+			MSCRNode* lr = findMSCR( edgeptr->left );
+			MSCRNode* rr = findMSCR( edgeptr->right );
 			// get the region root (who is responsible)
 			if ( lr != rr )
 			{
 				// rank idea take from: N-tree Disjoint-Set Forests for Maximally Stable Extremal Regions
 				if ( rr->rank > lr->rank )
 				{
-					CvMSCRNode* tmp;
+					MSCRNode* tmp;
 					CV_SWAP( lr, rr, tmp );
 				} else if ( lr->rank == rr->rank ) {
 					// at the same rank, we will compare the size
 					if ( lr->size > rr->size )
 					{
-						CvMSCRNode* tmp;
+						MSCRNode* tmp;
 						CV_SWAP( lr, rr, tmp );
 					}
 					lr->rank++;
@@ -1181,7 +1172,7 @@ icvExtractMSER_8UC3( CvMat* src,
 					if ( s < lr->s )
 					{
 						// skip the first one and check stablity
-						if ( i > lr->reinit+1 && icvMSCRStableCheck( lr, params ) )
+						if ( i > lr->reinit+1 && MSCRStableCheck( lr, params ) )
 						{
 							if ( lr->tmsr == NULL )
 							{
@@ -1202,13 +1193,13 @@ icvExtractMSER_8UC3( CvMat* src,
 		if ( edgeptr >= edge_ub )
 			break;
 	}
-	for ( CvTempMSCR* ptr = mscr; ptr < mscrptr; ptr++ )
+	for ( TempMSCR* ptr = mscr; ptr < mscrptr; ptr++ )
 		// to prune area with margin less than minMargin
 		if ( ptr->m > params.minMargin )
 		{
 			CvSeq* _contour = cvCreateSeq( CV_SEQ_KIND_GENERIC|CV_32SC2, sizeof(CvContour), sizeof(CvPoint), storage );
 			cvSeqPushMulti( _contour, 0, ptr->size );
-			CvMSCRNode* lpt = ptr->head;
+			MSCRNode* lpt = ptr->head;
 			for ( int i = 0; i < ptr->size; i++ )
 			{
 				CvPoint* pt = CV_GET_SEQ_ELEM( CvPoint, _contour, i );
@@ -1228,12 +1219,12 @@ icvExtractMSER_8UC3( CvMat* src,
 	cvFree( &map );
 }
 
-void
-cvExtractMSER( CvArr* _img,
+static void
+extractMSER( CvArr* _img,
 	       CvArr* _mask,
 	       CvSeq** _contours,
 	       CvMemStorage* storage,
-	       CvMSERParams params )
+	       MSERParams params )
 {
 	CvMat srchdr, *src = cvGetMat( _img, &srchdr );
 	CvMat maskhdr, *mask = _mask ? cvGetMat( _mask, &maskhdr ) : 0;
@@ -1252,30 +1243,24 @@ cvExtractMSER( CvArr* _img,
 	switch ( CV_MAT_TYPE(src->type) )
 	{
 		case CV_8UC1:
-			icvExtractMSER_8UC1( src, mask, contours, storage, params );
+			extractMSER_8UC1( src, mask, contours, storage, params );
 			break;
 		case CV_8UC3:
-			icvExtractMSER_8UC3( src, mask, contours, storage, params );
+			extractMSER_8UC3( src, mask, contours, storage, params );
 			break;
 	}
 }
 
 
-namespace cv
-{
-
-MSER::MSER()
-{
-    *(CvMSERParams*)this = cvMSERParams();
-}
-
 MSER::MSER( int _delta, int _min_area, int _max_area,
       double _max_variation, double _min_diversity,
       int _max_evolution, double _area_threshold,
       double _min_margin, int _edge_blur_size )
+    : delta(_delta), minArea(_min_area), maxArea(_max_area),
+    maxVariation(_max_variation), minDiversity(_min_diversity),
+    maxEvolution(_max_evolution), areaThreshold(_area_threshold),
+    minMargin(_min_margin), edgeBlurSize(_edge_blur_size)
 {
-    *(CvMSERParams*)this = cvMSERParams(_delta, _min_area, _max_area, (float)_max_variation,
-        (float)_min_diversity, _max_evolution, _area_threshold, _min_margin, _edge_blur_size);
 }
 
 void MSER::operator()( const Mat& image, vector<vector<Point> >& dstcontours, const Mat& mask ) const
@@ -1285,12 +1270,56 @@ void MSER::operator()( const Mat& image, vector<vector<Point> >& dstcontours, co
         pmask = &(_mask = mask);
     MemStorage storage(cvCreateMemStorage(0));
     Seq<CvSeq*> contours;
-    cvExtractMSER( &_image, pmask, &contours.seq, storage, *(const CvMSERParams*)this );
+    extractMSER( &_image, pmask, &contours.seq, storage,
+                 MSERParams(delta, minArea, maxArea, maxVariation, minDiversity,
+                            maxEvolution, areaThreshold, minMargin, edgeBlurSize));
     SeqIterator<CvSeq*> it = contours.begin();
     size_t i, ncontours = contours.size();
     dstcontours.resize(ncontours);
     for( i = 0; i < ncontours; i++, ++it )
         Seq<Point>(*it).copyTo(dstcontours[i]);
 }
+    
+
+void MserFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+{
+    vector<vector<Point> > msers;
+    
+    (*this)(image, msers, mask);
+    
+    vector<vector<Point> >::const_iterator contour_it = msers.begin();
+    for( ; contour_it != msers.end(); ++contour_it )
+    {
+        // TODO check transformation from MSER region to KeyPoint
+        RotatedRect rect = fitEllipse(Mat(*contour_it));
+        float diam = sqrt(rect.size.height*rect.size.width);
+        
+        if( diam > std::numeric_limits<float>::epsilon() )
+            keypoints.push_back( KeyPoint( rect.center, diam, rect.angle) );
+    }
+}
+    
+static Algorithm* createMSER() { return new MSER; }
+static AlgorithmInfo mser_info("Feature2D.MSER", createMSER);
+    
+AlgorithmInfo* MSER::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        mser_info.addParam(this, "delta", delta);
+        mser_info.addParam(this, "minArea", minArea);
+        mser_info.addParam(this, "maxArea", maxArea);
+        mser_info.addParam(this, "maxVariation", maxVariation);
+        mser_info.addParam(this, "minDiversity", minDiversity);
+        mser_info.addParam(this, "maxEvolution", maxEvolution);
+        mser_info.addParam(this, "areaThreshold", areaThreshold);
+        mser_info.addParam(this, "minMargin", minMargin);
+        mser_info.addParam(this, "edgeBlurSize", edgeBlurSize);
+        
+        initialized = true;
+    }
+    return &mser_info;
+}    
 
 }

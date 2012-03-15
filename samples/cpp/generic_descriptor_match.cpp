@@ -1,7 +1,8 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 
 #include <cstdio>
 
@@ -14,8 +15,8 @@ void help()
     printf("For example: ./generic_descriptor_match ../c/scene_l.bmp ../c/scene_r.bmp FERN fern_params.xml\n");
 }
 
-IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
-                              const vector<KeyPoint>& features2, const vector<DMatch>& desc_idx);
+Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, const Mat& img2,
+                        const vector<KeyPoint>& features2, const vector<DMatch>& desc_idx);
 
 int main(int argc, char** argv)
 {
@@ -38,8 +39,8 @@ int main(int argc, char** argv)
     }
 
     //printf("Reading the images...\n");
-    IplImage* img1 = cvLoadImage(img1_name.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
-    IplImage* img2 = cvLoadImage(img2_name.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(img1_name, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img2 = imread(img2_name, CV_LOAD_IMAGE_GRAYSCALE);
     
     // extract keypoints from the first image
     SURF surf_extractor(5.0e3);
@@ -60,38 +61,32 @@ int main(int argc, char** argv)
     descriptorMatcher->match( img2, keypoints2, img1, keypoints1, matches2to1 );
     printf("Done\n");
 
-    IplImage* img_corr = DrawCorrespondences(img1, keypoints1, img2, keypoints2, matches2to1);
+    Mat img_corr = DrawCorrespondences(img1, keypoints1, img2, keypoints2, matches2to1);
 
-    cvNamedWindow("correspondences", 1);
-    cvShowImage("correspondences", img_corr);
-    cvWaitKey(0);
-
-    cvReleaseImage(&img1);
-    cvReleaseImage(&img2);
-    cvReleaseImage(&img_corr);
+    imshow("correspondences", img_corr);
+    waitKey(0);
 }
 
-IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
-                              const vector<KeyPoint>& features2, const vector<DMatch>& desc_idx)
+Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, const Mat& img2,
+                        const vector<KeyPoint>& features2, const vector<DMatch>& desc_idx)
 {
-    IplImage* img_corr = cvCreateImage(cvSize(img1->width + img2->width, MAX(img1->height, img2->height)),
-                                       IPL_DEPTH_8U, 3);
-    cvSetImageROI(img_corr, cvRect(0, 0, img1->width, img1->height));
-    cvCvtColor(img1, img_corr, CV_GRAY2RGB);
-    cvSetImageROI(img_corr, cvRect(img1->width, 0, img2->width, img2->height));
-    cvCvtColor(img2, img_corr, CV_GRAY2RGB);
-    cvResetImageROI(img_corr);
+    Mat part, img_corr(Size(img1.cols + img2.cols, MAX(img1.rows, img2.rows)), CV_8UC3);
+    img_corr = Scalar::all(0);
+    part = img_corr(Rect(0, 0, img1.cols, img1.rows));
+    cvtColor(img1, part, COLOR_GRAY2RGB);
+    part = img_corr(Rect(img1.cols, 0, img2.cols, img2.rows));
+    cvtColor(img1, part, COLOR_GRAY2RGB);
 
     for (size_t i = 0; i < features1.size(); i++)
     {
-        cvCircle(img_corr, features1[i].pt, 3, CV_RGB(255, 0, 0));
+        circle(img_corr, features1[i].pt, 3, CV_RGB(255, 0, 0));
     }
 
     for (size_t i = 0; i < features2.size(); i++)
     {
-        CvPoint pt = cvPoint(cvRound(features2[i].pt.x + img1->width), cvRound(features2[i].pt.y));
-        cvCircle(img_corr, pt, 3, CV_RGB(255, 0, 0));
-        cvLine(img_corr, features1[desc_idx[i].trainIdx].pt, pt, CV_RGB(0, 255, 0));
+        Point pt(cvRound(features2[i].pt.x + img1.cols), cvRound(features2[i].pt.y));
+        circle(img_corr, pt, 3, Scalar(0, 0, 255));
+        line(img_corr, features1[desc_idx[i].trainIdx].pt, pt, Scalar(0, 255, 0));
     }
 
     return img_corr;

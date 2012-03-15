@@ -8,7 +8,10 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/legacy/compat.hpp"
 
 #include <iostream>
 #include <vector>
@@ -214,6 +217,7 @@ int main(int argc, char** argv)
     const char* object_filename = argc == 3 ? argv[1] : "box.png";
     const char* scene_filename = argc == 3 ? argv[2] : "box_in_scene.png";
 
+    cv::initModule_nonfree();
     help();
 
     IplImage* object = cvLoadImage( object_filename, CV_LOAD_IMAGE_GRAYSCALE );
