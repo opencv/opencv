@@ -1381,7 +1381,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         assert(width > 0  &&  height > 0);
 
 	// tell FFMPEG to register codecs
-	av_register_all ();
+        av_register_all();
 
 	/* auto detect the output format from the name and fourcc code. */
 
