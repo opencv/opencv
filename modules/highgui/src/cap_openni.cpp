@@ -107,7 +107,7 @@ protected:
         IplImage iplHeader;
     };
 
-    static const int outputTypesCount = 7;
+    static const int outputMapsTypesCount = 7;
 
     IplImage* retrieveDepthMap();
     IplImage* retrievePointCloudMap();
@@ -177,7 +177,6 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     depthOutputMode.nFPS = imageOutputMode.nFPS = 30;
 
     m_isOpened = false;
-    bool isContextInitialized = false;
 
     // Initialize and configure the context.
     if( context.Init() == XN_STATUS_OK )
@@ -215,6 +214,12 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         outfile.close();
 
         status = context.RunXmlScriptFromFile( xmlFilename.c_str() );
+
+        // Remove temporary configuration file.
+        remove( xmlFilename.c_str() );
+#else
+        status = context.RunXmlScript( XMLConfig.c_str() );
+#endif
         if( status != XN_STATUS_OK )
         {
             std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: "
@@ -222,19 +227,9 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
             return;
         }
 
-        // Remove temporary configuration file.
-        remove( xmlFilename.c_str() );
-#else
-        status = context.RunXmlScript( XMLConfig.c_str() );
-#endif
-        isContextInitialized = ( status == XN_STATUS_OK );
-    }
-
-    if( isContextInitialized )
-    {
         // Associate generators with context.
         status = depthGenerator.Create( context );
-        if( status != XN_STATUS_OK )\
+        if( status != XN_STATUS_OK )
         {
             std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create depth generator: "
                       << std::string(xnGetStatusString(status)) << std::endl;
@@ -246,10 +241,11 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         status = context.EnumerateExistingNodes( Imagelist, XN_NODE_TYPE_IMAGE );
         if( status != XN_STATUS_OK )
         {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate Image Generators: "
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: "
                       << std::string(xnGetStatusString(status)) << std::endl;
             return;
         }
+
         if(Imagelist.IsEmpty())
         {
             m_isImageGeneratorPresent = FALSE;
@@ -257,7 +253,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         else
         {
             m_isImageGeneratorPresent = TRUE;
-            imageGenerator.Create( context);
+            imageGenerator.Create( context );
             if( status != XN_STATUS_OK )
             {
                 std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: "
@@ -268,7 +264,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
 
         // Set map output mode.
         CV_Assert( depthGenerator.SetMapOutputMode( depthOutputMode ) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
-        CV_Assert( m_isImageGeneratorPresent ? ( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK ) : TRUE);
+        CV_Assert( m_isImageGeneratorPresent ? ( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK ) : TRUE );
 
         //  Start generating data.
         status = context.StartGeneratingAll();
@@ -285,7 +281,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
             return;
         }
 
-        outputMaps.resize( outputTypesCount );
+        outputMaps.resize( outputMapsTypesCount );
 
         m_isOpened = true;
     }
@@ -756,7 +752,7 @@ IplImage* CvCapture_OpenNI::retrieveGrayImage()
 IplImage* CvCapture_OpenNI::retrieveFrame( int outputType )
 {
     IplImage* image = 0;
-    CV_Assert( outputType < outputTypesCount && outputType >= 0);
+    CV_Assert( outputType < outputMapsTypesCount && outputType >= 0);
 
     if( outputType == CV_CAP_OPENNI_DEPTH_MAP )
     {
