@@ -1187,7 +1187,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 #if LIBAVFORMAT_BUILD > 4628
     AVCodecContext *c = video_st->codec;
 #else
-	AVCodecContext *c = &(video_st->codec);
+    AVCodecContext *c = &(video_st->codec);
 #endif
 
 #if LIBAVFORMAT_BUILD < 5231
@@ -1376,9 +1376,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     close();
 
 	// check arguments
-	assert (filename);
-	assert (fps > 0);
-	assert (width > 0  &&  height > 0);
+        assert(filename);
+        assert(fps > 0);
+        assert(width > 0  &&  height > 0);
 
 	// tell FFMPEG to register codecs
 	av_register_all ();
