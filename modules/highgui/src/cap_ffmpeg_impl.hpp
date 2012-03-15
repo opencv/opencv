@@ -1066,8 +1066,8 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
        of which frame timestamps are represented. for fixed-fps content,
        timebase should be 1/framerate and timestamp increments should be
        identically 1. */
-	frame_rate=(int)(fps+0.5);
-	frame_rate_base=1;
+        frame_rate = static_cast<int>(fps+0.5);
+        frame_rate_base = 1;
 	while (fabs((double)frame_rate/frame_rate_base) - fps > 0.001){
                 frame_rate_base *= 10;
 		frame_rate=(int)(fps*frame_rate_base + 0.5);
