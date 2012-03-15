@@ -1068,7 +1068,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
        identically 1. */
         frame_rate = static_cast<int>(fps+0.5);
         frame_rate_base = 1;
-	while (fabs((double)frame_rate/frame_rate_base) - fps > 0.001){
+        while (fabs(static_cast<double>(frame_rate)/frame_rate_base) - fps > 0.001){
                 frame_rate_base *= 10;
 		frame_rate=(int)(fps*frame_rate_base + 0.5);
 	}
