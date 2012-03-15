@@ -13,7 +13,7 @@ Usage : python hist.py <image_file>
 Abid Rahman 3/14/12 debug Gary Bradski
 '''
 
-import cv2,sys
+import cv2
 import numpy as np
 
 bins = np.arange(256).reshape(256,1)
@@ -50,7 +50,7 @@ def hist_lines(im):
 
 if __name__ == '__main__':
     
-    import urllib2
+    import sys
 
     if len(sys.argv)>1:
         im = cv2.imread(sys.argv[1])
