@@ -395,39 +395,40 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
 {
     CV_Assert( depthGenerator.IsValid() );
 
-    double res = 0;
+    double propValue = 0;
+
     switch( propIdx )
     {
     case CV_CAP_PROP_FRAME_WIDTH :
-        res = depthOutputMode.nXRes;
+        propValue = depthOutputMode.nXRes;
         break;
     case CV_CAP_PROP_FRAME_HEIGHT :
-        res = depthOutputMode.nYRes;
+        propValue = depthOutputMode.nYRes;
         break;
     case CV_CAP_PROP_FPS :
-        res = depthOutputMode.nFPS;
+        propValue = depthOutputMode.nFPS;
         break;
     case CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH :
-        res = depthGenerator.GetDeviceMaxDepth();
+        propValue = depthGenerator.GetDeviceMaxDepth();
         break;
     case CV_CAP_PROP_OPENNI_BASELINE :
-        res = baseline;
+        propValue = baseline;
         break;
     case CV_CAP_PROP_OPENNI_FOCAL_LENGTH :
-        res = (double)depthFocalLength_VGA;
+        propValue = (double)depthFocalLength_VGA;
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION :
-        res = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
+        propValue = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
     default :
         CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for getting.\n");
     }
 
-    return res;
+    return propValue;
 }
 
 bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue )
 {
-    bool res = false;
+    bool isSet = false;
 
     CV_Assert( depthGenerator.IsValid() );
 
@@ -437,7 +438,8 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
             {
                 if( propValue != 0.0 ) // "on"
                 {
-                    // if no Image Generator is present i.e. ASUS XtionPro the imageGenerator cannot be used
+                    // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
+                    // then the property isn't avaliable
                     if( m_isImageGeneratorPresent )
                     {
                         CV_Assert( imageGenerator.IsValid() );
@@ -449,16 +451,14 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
                                 if( status != XN_STATUS_OK )
                                     std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
                                 else
-                                    res = true;
+                                    isSet = true;
                             }
                             else
                                 std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : Unsupported viewpoint." << std::endl;
                         }
                         else
-                            res = true;
+                            isSet = true;
                     }
-                    else
-                            res = false;
                 }
                 else // "off"
                 {
@@ -466,7 +466,7 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
                     if( status != XN_STATUS_OK )
                         std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
                     else
-                        res = true;
+                        isSet = true;
                 }
             }
             break;
@@ -474,46 +474,45 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
             CV_Error( CV_StsBadArg, "Unsupported depth generator property.\n");
     }
 
-    return res;
+    return isSet;
 }
 
 double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
 {
-    double res = 0;
+    double propValue = 0;
+    if( !m_isImageGeneratorPresent )
+	    return propValue;
 
-    if (propIdx == CV_CAP_PROP_IMAGE_GENERATOR_PRESENT)
-        res = m_isImageGeneratorPresent ? 1 : -1;
+    if( propIdx == CV_CAP_PROP_IMAGE_GENERATOR_PRESENT )
+        propValue = m_isImageGeneratorPresent ? 1. : 0.;
     else
-    {
-        if (!m_isImageGeneratorPresent)
-            return res;
-
+    {       
         CV_Assert( imageGenerator.IsValid() );
 
         switch( propIdx )
         {
         case CV_CAP_PROP_FRAME_WIDTH :
-            res = imageOutputMode.nXRes;
+            propValue = imageOutputMode.nXRes;
             break;
         case CV_CAP_PROP_FRAME_HEIGHT :
-            res = imageOutputMode.nYRes;
+            propValue = imageOutputMode.nYRes;
             break;
         case CV_CAP_PROP_FPS :
-            res = imageOutputMode.nFPS;
+            propValue = imageOutputMode.nFPS;
             break;
         default :
             CV_Error( CV_StsBadArg, "Image generator does not support such parameter for getting.\n");
         }
     }
-    return res;
+    return propValue;
 }
 
 bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue )
 {
-    bool res = false;
-    if(!m_isImageGeneratorPresent)
-        return res;
-
+	bool isSet = false;
+    if( !m_isImageGeneratorPresent )
+        return isSet;   
+    
     CV_Assert( imageGenerator.IsValid() );
 
     switch( propIdx )
@@ -549,7 +548,7 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
         else
         {
             imageOutputMode = newImageOutputMode;
-            res = true;
+            isSet = true;
         }
         break;
     }
@@ -557,7 +556,7 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
         CV_Error( CV_StsBadArg, "Unsupported image generator property.\n");
     }
 
-    return res;
+    return isSet;
 }
 
 bool CvCapture_OpenNI::grabFrame()
@@ -570,8 +569,9 @@ bool CvCapture_OpenNI::grabFrame()
         return false;
 
     depthGenerator.GetMetaData( depthMetaData );
-    if(m_isImageGeneratorPresent)
+    if( m_isImageGeneratorPresent )
         imageGenerator.GetMetaData( imageMetaData );
+
     return true;
 }
 

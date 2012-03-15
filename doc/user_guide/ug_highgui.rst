@@ -4,8 +4,8 @@ HighGUI
 
 .. highlight:: cpp
 
-Using depth sensors
-===================
+Using Kinect and other OpenNI compatible depth sensors
+======================================================
 
 Depth sensors compatible with OpenNI (Kinect, XtionPRO, ...) are supported through ``VideoCapture`` class. Depth map, RGB image and some other formats of output can be retrieved by using familiar interface of ``VideoCapture``.
 
@@ -92,10 +92,10 @@ Since two types of sensor's data generators are supported (image generator and d
 
 * CV_CAP_OPENNI_DEPTH_GENERATOR -- A flag for access to the depth generator properties. This flag value is assumed by default if neither of the two possible values of the property is not set.
 
-Some depth sensors (for example XtionPRO) do not have image generator. In order to check it you can get ``CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT`` property. If returned value greater than zero sensor has image generator.
+Some depth sensors (for example XtionPRO) do not have image generator. In order to check it you can get ``CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT`` property.
 ::
 
-    bool isImageGeneratorPresent = capture.get( CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT ) > 0;
+    bool isImageGeneratorPresent = capture.get( CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT ) != 0; // or == 1
 
 
 Flags specifing the needed generator type must be used in combination with particular generator property. The following properties of cameras available through OpenNI interfaces are supported:

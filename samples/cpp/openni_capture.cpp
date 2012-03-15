@@ -208,12 +208,14 @@ int main( int argc, char* argv[] )
             "FRAME_HEIGHT   " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
             "FRAME_MAX_DEPTH    " << capture.get( CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
             "FPS    " << capture.get( CV_CAP_PROP_FPS ) << endl;
-    bool isImageGeneratorPresent = capture.get( CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT ) > 0;
-    if (isImageGeneratorPresent)
-    cout << "\nImage generator output mode:" << endl <<
+    if( capture.get( CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT ) )
+    {
+        cout <<
+            "\nImage generator output mode:" << endl <<
             "FRAME_WIDTH    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_WIDTH ) << endl <<
             "FRAME_HEIGHT   " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
             "FPS    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
+    }
     else
     {
         cout << "\nDevice doesn't contain image generator" << endl;
