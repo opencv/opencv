@@ -533,11 +533,11 @@ class ClassPropInfo(object):
         self.rw = "/RW" in decl[3]
 
 class ClassInfo(object):
-    def __init__(self, decl): # [ 'class/struct cname', [bases], [modlist] ]
+    def __init__(self, decl): # [ 'class/struct cname', ': base', [modlist] ]
         name = decl[0]
         name = name[name.find(" ")+1:].strip()
         self.cname = self.name = self.jname = re.sub(r"^cv\.", "", name)
-        self.cname =self.cname.replace(".", "::")
+        self.cname = self.cname.replace(".", "::")
         self.methods = {}
         self.methods_suffixes = {}
         self.consts = [] # using a list to save the occurence order
@@ -548,6 +548,10 @@ class ClassInfo(object):
         for m in decl[2]:
             if m.startswith("="):
                 self.jname = m[1:]
+        self.base = ''
+        if decl[1]:
+            self.base = re.sub(r"\b"+self.jname+r"\b", "", decl[1].replace(":", "")).strip()
+
 
 
 class ArgInfo(object):
@@ -613,7 +617,7 @@ class JavaWrapperGenerator(object):
         self.clear()
 
     def clear(self):
-        self.classes = { "Mat" : ClassInfo([ 'class Mat', [], [] ]) }
+        self.classes = { "Mat" : ClassInfo([ 'class Mat', '', [], [] ]) }
         self.module = ""
         self.Module = ""
         self.java_code= {} # { class : {j_code, jn_code} }
@@ -624,11 +628,28 @@ class JavaWrapperGenerator(object):
         self.classes_map = []
         self.classes_simple = []
 
-    def add_class_code_stream(self, class_name):
+    def add_class_code_stream(self, class_name, cls_base = ''):
         jname = self.classes[class_name].jname
         self.java_code[class_name] = { "j_code" : StringIO(), "jn_code" : StringIO(), }
         if class_name != self.Module:
-            self.java_code[class_name]["j_code"].write("""
+            if cls_base:
+                self.java_code[class_name]["j_code"].write("""
+//
+// This file is auto-generated. Please don't modify it!
+//
+package org.opencv.%(m)s;
+
+$imports
+
+// C++: class %(c)s
+//javadoc: %(c)s
+public class %(jc)s extends %(base)s {
+
+    protected %(jc)s(long addr) { super(addr); }
+
+""" % { 'm' : self.module, 'c' : class_name, 'jc' : jname, 'base' :  cls_base })
+            else: # not cls_base
+                self.java_code[class_name]["j_code"].write("""
 //
 // This file is auto-generated. Please don't modify it!
 //
@@ -643,8 +664,7 @@ public class %(jc)s {
     protected final long nativeObj;
     protected %(jc)s(long addr) { nativeObj = addr; }
 
-""" % { 'm' : self.module, 'c' : class_name, 'jc' : jname } )
-
+""" % { 'm' : self.module, 'c' : class_name, 'jc' : jname })
         else: # class_name == self.Module
             self.java_code[class_name]["j_code"].write("""
 //
@@ -681,7 +701,7 @@ public class %(jc)s {
             return
         if '/Simple' in decl[2]:
             self.classes_simple.append(name)
-        if ('/Map' in decl[2]) or (name == 'CvStatModel'):
+        if ('/Map' in decl[2]):
             self.classes_map.append(name)
             #adding default c-tor
             ffi = FuncFamilyInfo(['cv.'+name+'.'+name, '', [], []])
@@ -713,7 +733,7 @@ public class %(jc)s {
             else:
                 print "Skipped property: [%s]" % name, p
 
-        self.add_class_code_stream(name)
+        self.add_class_code_stream(name, classinfo.base)
 
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -785,7 +805,7 @@ public class %(jc)s {
         self.Module = module.capitalize()
         parser = hdr_parser.CppHeaderParser()
 
-        self.add_class( ['class ' + self.Module, [], [], []] ) # [ 'class/struct cname', [bases], [modlist] [props] ]
+        self.add_class( ['class ' + self.Module, '', [], []] ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
 
         # scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
@@ -798,16 +818,6 @@ public class %(jc)s {
                     self.add_const(decl)
                 else: # function
                     self.add_func(decl)
-
-        #FIXME: BackgroundSubtractor is merged into BackgroundSubtractorMOG because of inheritance
-        if "BackgroundSubtractor" in self.classes:
-            bs = self.classes["BackgroundSubtractor"]
-            bsmog = self.classes["BackgroundSubtractorMOG"]
-            for name, mtd in bs.methods.items():
-                for fn in mtd.funcs:
-                    fn.classname = "BackgroundSubtractorMOG"
-                bsmog.methods[name] = mtd;
-            del self.classes["BackgroundSubtractor"]
 
         self.cpp_code = StringIO()
         self.cpp_code.write("""
@@ -1054,7 +1064,11 @@ extern "C" {
                 ret_val = ""
                 ret = "return;"
             elif ret_type == "": # c-tor
-                ret_val = "nativeObj = "
+                if fi.classname and self.classes[fi.classname].base:
+                    ret_val = "super( "
+                    tail = " )"
+                else:
+                    ret_val = "nativeObj = "
                 ret = "return;"
             elif ret_type in self.classes: # wrapped class
                 ret_val = type_dict[ret_type]["j_type"] + " retVal = new " + self.classes[ret_type].jname + "("
@@ -1271,7 +1285,6 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
     @Override
     protected void finalize() throws Throwable {
         delete(nativeObj);
-        super.finalize();
     }
 """ )
 
