@@ -395,7 +395,7 @@ if(UNIX)
     endif()
 
     if(HAVE_FFMPEG)
-    CHECK_MODULE(libavformat>=53 NEW_FFMPEG)
+    CHECK_MODULE(libavformat>=52.111.0 NEW_FFMPEG)
     endif()
 
     if(WITH_1394)
