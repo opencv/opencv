@@ -92,6 +92,14 @@ macro(ocv_add_module _name)
   
   # the first pass - collect modules info, the second pass - create targets
   if(OPENCV_INITIAL_PASS)
+    #guard agains redefinition
+    if(";${OPENCV_MODULES_BUILD};${OPENCV_MODULES_DISABLED_USER};" MATCHES ";${the_module};")
+      message(FATAL_ERROR "Redefinition of the ${the_module} module.
+  at:                    ${CMAKE_CURRENT_SOURCE_DIR}
+  previously defined at: ${OPENCV_MODULE_${the_module}_LOCATION}
+")
+    endif()
+
     #remember module details
     if(NOT DEFINED the_description)
       set(the_description "The ${name} OpenCV module")
@@ -103,20 +111,23 @@ macro(ocv_add_module _name)
     
     #create option to enable/disable this module
     option(BUILD_${the_module} "Include ${the_module} module into the OpenCV build" ON)
-    if(NOT BUILD_${the_module})
-      set(OPENCV_MODULES_DISABLED_USER ${OPENCV_MODULES_DISABLED_USER} "${the_module}" CACHE INTERNAL "List of OpenCV modules explicitly disabled by user")
+
+    if("${ARGV1}" STREQUAL "INTERNAL" OR "${ARGV1}" STREQUAL "BINDINGS")
+      set(__ocv_argn__ ${ARGN})
+      list(REMOVE_AT __ocv_argn__ 0)
+      ocv_add_dependencies(${the_module} ${__ocv_argn__})
+      unset(__ocv_argn__)
     else()
-      #register new module
-      if("${ARGV1}" STREQUAL "INTERNAL" OR "${ARGV1}" STREQUAL "BINDINGS")
-        set(__ocv_argn__ ${ARGN})
-        list(REMOVE_AT __ocv_argn__ 0)
-        ocv_add_dependencies(${the_module} ${__ocv_argn__})
-        unset(__ocv_argn__)
-      else()
-        ocv_add_dependencies(${the_module} ${ARGN})
+      ocv_add_dependencies(${the_module} ${ARGN})
+      if(BUILD_${the_module})
         set(OPENCV_MODULES_PUBLIC ${OPENCV_MODULES_PUBLIC} "${the_module}" CACHE INTERNAL "List of OpenCV modules marked for export")
       endif()
+    endif()
+
+    if(BUILD_${the_module})
       set(OPENCV_MODULES_BUILD ${OPENCV_MODULES_BUILD} "${the_module}" CACHE INTERNAL "List of OpenCV modules included into the build")
+    else()
+      set(OPENCV_MODULES_DISABLED_USER ${OPENCV_MODULES_DISABLED_USER} "${the_module}" CACHE INTERNAL "List of OpenCV modules explicitly disabled by user")
     endif()
     
     #TODO: add submodules if any
@@ -148,6 +159,7 @@ macro(ocv_module_disable module)
   endif()
   list(APPEND OPENCV_MODULES_DISABLED_FORCE "${__modname}")
   set(HAVE_${__modname} OFF CACHE INTERNAL "Module ${__modname} can not be built in current configuration")
+  set(OPENCV_MODULE_${__modname}_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Location of ${__modname} module sources")
   set(OPENCV_MODULES_DISABLED_FORCE "${OPENCV_MODULES_DISABLED_FORCE}" CACHE INTERNAL "List of OpenCV modules which can not be build in current configuration")
   unset(__modname)
   return()#leave the current folder
@@ -270,25 +282,43 @@ endmacro()
 # collect modules from specified directories
 # NB: must be called only once!
 macro(ocv_glob_modules)
+  if(DEFINED OPENCV_INITIAL_PASS)
+    message(FATAL_ERROR "OpenCV has already loaded its modules. Calling ocv_glob_modules second time is not allowed.")
+  endif()
+  set(__directories_observed "")
+
   #collect modules
   set(OPENCV_INITIAL_PASS ON)
   foreach(__path ${ARGN})
+    ocv_get_real_path(__path "${__path}")
+    list(FIND __directories_observed "${__path}" __pathIdx)
+    if(__pathIdx GREATER -1)
+      message(FATAL_ERROR "The directory ${__path} is observed for OpenCV modules second time.")
+    endif()
+    list(APPEND __directories_observed "${__path}")
+
     file(GLOB __ocvmodules RELATIVE "${__path}" "${__path}/*")
     if(__ocvmodules)
       list(SORT __ocvmodules)
       foreach(mod ${__ocvmodules})
-        if(CMAKE_VERSION VERSION_LESS 2.8)
-          get_filename_component(__realpath "${__path}/${mod}" ABSOLUTE)
-        else()
-          get_filename_component(__realpath "${__path}/${mod}" REALPATH)
-        endif()
-        if(EXISTS "${__realpath}/CMakeLists.txt" AND NOT __realpath STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-          add_subdirectory("${__path}/${mod}" "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+        ocv_get_real_path(__modpath "${__path}/${mod}")
+        if(EXISTS "${__modpath}/CMakeLists.txt")
+          list(FIND __directories_observed "${__modpath}" __pathIdx)
+          if(__pathIdx GREATER -1)
+            message(FATAL_ERROR "The module from ${__modpath} is already loaded.")
+          endif()
+          list(APPEND __directories_observed "${__modpath}")
+
+          add_subdirectory("${__modpath}" "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
         endif()
       endforeach()
     endif()
   endforeach()
   unset(__ocvmodules)
+  unset(__directories_observed)
+  unset(__path)
+  unset(__modpath)
+  unset(__pathIdx)
 
   #resolve dependencies
   __ocv_flatten_module_dependencies()
@@ -301,6 +331,7 @@ macro(ocv_glob_modules)
   ocv_list_unique(OPENCV_MODULES_BUILD_)
 
   #create modules
+  set(OPENCV_INITIAL_PASS OFF PARENT_SCOPE)
   set(OPENCV_INITIAL_PASS OFF)
   foreach(m ${OPENCV_MODULES_BUILD_})
     if(m MATCHES "^opencv_")

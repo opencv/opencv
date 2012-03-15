@@ -220,3 +220,13 @@ endmacro()
 macro(ocv_regex_escape var regex)
   string(REGEX REPLACE "([+.*^$])" "\\\\1" ${var} "${regex}")
 endmacro()
+
+
+# get absolute path with symlinks resolved
+macro(ocv_get_real_path VAR PATHSTR)
+  if(CMAKE_VERSION VERSION_LESS 2.8)
+    get_filename_component(${VAR} "${PATHSTR}" ABSOLUTE)
+  else()
+    get_filename_component(${VAR} "${PATHSTR}" REALPATH)
+  endif()
+endmacro()
