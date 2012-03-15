@@ -56,3 +56,4 @@ if __name__ == '__main__':
         if ch == ord('2'):
             cur_str_mode = str_modes.next()
         update()
+    cv2.destroyAllWindows() 			

@@ -106,4 +106,5 @@ if __name__ == '__main__':
             print 'ESC'
             cv2.destroyAllWindows()
             break
+    cv2.destroyAllWindows() 			
 

@@ -54,4 +54,5 @@ if __name__ == '__main__':
     print "RMS:", rms
     print "camera matrix:\n", camera_matrix
     print "distortion coefficients: ", dist_coefs.ravel()
+    cv2.destroyAllWindows() 			
 

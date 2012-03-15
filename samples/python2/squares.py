@@ -37,3 +37,4 @@ if __name__ == '__main__':
         ch = 0xFF & cv2.waitKey()
         if ch == 27:
             break
+    cv2.destroyAllWindows() 			

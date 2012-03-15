@@ -165,3 +165,4 @@ if __name__ == '__main__':
                 cv2.imwrite(fn, img)
                 print fn, 'saved'
             shot_idx += 1
+    cv2.destroyAllWindows() 			

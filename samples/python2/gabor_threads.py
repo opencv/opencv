@@ -65,3 +65,4 @@ if __name__ == '__main__':
     cv2.imshow('img', img)
     cv2.imshow('result', res2)
     cv2.waitKey()
+    cv2.destroyAllWindows() 			

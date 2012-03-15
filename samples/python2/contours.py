@@ -46,3 +46,4 @@ if __name__ == '__main__':
     cv2.createTrackbar( "levels+3", "contours", 3, 7, update )
     cv2.imshow('image', img)
     0xFF & cv2.waitKey()
+    cv2.destroyAllWindows() 			

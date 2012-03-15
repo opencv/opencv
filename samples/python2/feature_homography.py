@@ -93,3 +93,4 @@ if __name__ == '__main__':
             ref_img = img.copy()
         if ch == 27:
             break
+    cv2.destroyAllWindows() 			

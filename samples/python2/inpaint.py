@@ -32,4 +32,5 @@ if __name__ == '__main__':
             img_mark[:] = img
             mark[:] = 0
             sketch.show()
+    cv2.destroyAllWindows() 			
             

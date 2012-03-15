@@ -53,7 +53,8 @@ class App:
                 self.markers[:] = 0
                 self.markers_vis[:] = self.img
                 self.sketch.show()
-
+        cv2.destroyAllWindows() 			
+		
 
 if __name__ == '__main__':
     import sys

@@ -70,3 +70,4 @@ if __name__ == '__main__':
             update()
         if ch == 27:
             break
+    cv2.destroyAllWindows() 			

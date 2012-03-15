@@ -154,3 +154,4 @@ if __name__ == '__main__':
         fn = args['--save']
         print 'saving model to %s ...' % fn
         model.save(fn)
+    cv2.destroyAllWindows() 			

@@ -45,3 +45,4 @@ if __name__ == '__main__':
     cv2.imshow('preview', small)
     cv2.setMouseCallback('preview', onmouse)
     cv2.waitKey()
+    cv2.destroyAllWindows() 			

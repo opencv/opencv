@@ -71,3 +71,4 @@ if __name__ == '__main__':
     cv2.imshow('left', imgL)
     cv2.imshow('disparity', (disp-min_disp)/num_disp)
     cv2.waitKey()
+    cv2.destroyAllWindows() 			

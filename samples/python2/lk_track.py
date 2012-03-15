@@ -92,6 +92,7 @@ def main():
 
     print __doc__
     App(video_src).run()
+    cv2.destroyAllWindows() 			
 
 if __name__ == '__main__':
     main()

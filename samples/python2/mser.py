@@ -35,3 +35,4 @@ if __name__ == '__main__':
         cv2.imshow('img', vis)
         if 0xFF & cv2.waitKey(5) == 27:
             break
+    cv2.destroyAllWindows() 			

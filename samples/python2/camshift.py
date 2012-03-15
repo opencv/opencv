@@ -106,6 +106,7 @@ class App(object):
                 break
             if ch == ord('b'):
                 self.show_backproj = not self.show_backproj
+        cv2.destroyAllWindows() 			
 
 
 if __name__ == '__main__':
