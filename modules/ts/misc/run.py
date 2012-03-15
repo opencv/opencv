@@ -577,6 +577,7 @@ class RunInfo(object):
             logfile = userlog[0][userlog[0].find(":")+1:]
         
         if self.targetos == "android":
+            hostlogpath = ""
             try:
                 andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_perf/"
                 exename = os.path.basename(exe)
@@ -594,18 +595,22 @@ class RunInfo(object):
                     print >> _stderr, "adb finishes unexpectedly with error code", output
                     return
                 #run
-                command = exename + " " + " ".join(args)
+                if self.options.help:
+                    command = exename + " --help"
+                else:
+                    command = exename + " " + " ".join(args)
                 print >> _stderr, "Running:", command
                 Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
                 # try get log
-                print >> _stderr, "Pulling", logfile, "from device..."
-                hostlogpath = os.path.join(workingDir, logfile)
-                output = Popen(self.adb + ["pull", andoidcwd + logfile, hostlogpath], stdout=_stdout, stderr=_stderr).wait()
-                if output != 0:
-                    print >> _stderr, "adb finishes unexpectedly with error code", output
-                    return
-                #rm log
-                Popen(self.adb + ["shell", "rm " + andoidcwd + logfile], stdout=_stdout, stderr=_stderr).wait()
+                if not self.options.help:
+                    print >> _stderr, "Pulling", logfile, "from device..."
+                    hostlogpath = os.path.join(workingDir, logfile)
+                    output = Popen(self.adb + ["pull", andoidcwd + logfile, hostlogpath], stdout=_stdout, stderr=_stderr).wait()
+                    if output != 0:
+                        print >> _stderr, "adb finishes unexpectedly with error code", output
+                        return
+                    #rm log
+                    Popen(self.adb + ["shell", "rm " + andoidcwd + logfile], stdout=_stdout, stderr=_stderr).wait()
             except OSError:
                 pass
             if os.path.isfile(hostlogpath):
@@ -613,7 +618,10 @@ class RunInfo(object):
             return None
         else:
             cmd = [exe]
-            cmd.extend(args)
+            if self.options.help:
+                cmd.append("--help")
+            else:
+                cmd.extend(args)
             print >> _stderr, "Running:", " ".join(cmd)
             try: 
                 Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
@@ -652,6 +660,7 @@ if __name__ == "__main__":
     parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
     parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
     parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
+    parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
     
     (options, args) = parser.parse_args(argv)
     
