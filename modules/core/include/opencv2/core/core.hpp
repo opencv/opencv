@@ -2182,7 +2182,7 @@ CV_EXPORTS_W void phase(InputArray x, InputArray y, OutputArray angle,
 //! computes magnitude (magnitude(i)) of each (x(i), y(i)) vector
 CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
 //! checks that each matrix element is within the specified range.
-CV_EXPORTS_W bool checkRange(InputArray a, bool quiet=true, CV_OUT Point* pt=0,
+CV_EXPORTS_W bool checkRange(InputArray a, bool quiet=true, CV_OUT Point* pos=0,
                             double minVal=-DBL_MAX, double maxVal=DBL_MAX);
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
@@ -2560,7 +2560,7 @@ enum
 //! renders text string in the image
 CV_EXPORTS_W void putText( Mat& img, const string& text, Point org,
                          int fontFace, double fontScale, Scalar color,
-                         int thickness=1, int linetype=8,
+                         int thickness=1, int lineType=8,
                          bool bottomLeftOrigin=false );
 
 //! returns bounding box of the text string
