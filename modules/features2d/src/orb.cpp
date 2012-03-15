@@ -57,7 +57,7 @@ HarrisResponses(const Mat& img, vector<KeyPoint>& pts, int blockSize, float harr
     size_t ptidx, ptsize = pts.size();
     
     const uchar* ptr00 = img.ptr<uchar>();
-    size_t step = img.step/img.elemSize1();
+    int step = (int)(img.step/img.elemSize1());
     int r = blockSize/2;
     
     float scale = (1 << 2) * blockSize * 255.0f;
@@ -662,7 +662,7 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
     int v, v0, vmax = cvFloor(halfPatchSize * sqrt(2.f) / 2 + 1);
     int vmin = cvCeil(halfPatchSize * sqrt(2.f) / 2);
     for (v = 0; v <= vmax; ++v)
-        umax[v] = cvRound(sqrt(halfPatchSize * halfPatchSize - v * v));
+        umax[v] = cvRound(sqrt((double)halfPatchSize * halfPatchSize - v * v));
     
     // Make sure we are symmetric
     for (v = halfPatchSize, v0 = 0; v >= vmin; --v)
