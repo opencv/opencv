@@ -217,8 +217,23 @@ void Mat::create(int d, const int* _sizes, int _type)
         }
         else
         {
+#ifdef HAVE_TGPU
+           try 
+            {
+                allocator->allocate(dims, size, _type, refcount, datastart, data, step.p);
+                CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
+            }catch(...)
+            {
+                allocator = 0;
+                size_t total = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
+                data = datastart = (uchar*)fastMalloc(total + (int)sizeof(*refcount));
+                refcount = (int*)(data + total);
+                *refcount = 1;
+            }
+#else
             allocator->allocate(dims, size, _type, refcount, datastart, data, step.p);
             CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
+#endif
         }
     }
     
