@@ -370,28 +370,28 @@ enum
     CV_CAP_PROP_GUID          =29,	
     CV_CAP_PROP_ISO_SPEED     =30,	
     CV_CAP_PROP_MAX_DC1394    =31,
-    CV_CAP_PROP_IMAGE_GENERATOR_PRESENT = 32,
     CV_CAP_PROP_AUTOGRAB      =1024, // property for highgui class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
     CV_CAP_PROP_PREVIEW_FORMAT=1026, // readonly, tricky property, returns cpnst char* indeed
+
     // OpenNI map generators
     CV_CAP_OPENNI_DEPTH_GENERATOR = 0,
     CV_CAP_OPENNI_IMAGE_GENERATOR = 1 << 31,
     CV_CAP_OPENNI_GENERATORS_MASK = 1 << 31,
-    CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_IMAGE_GENERATOR_PRESENT,
 
     // Properties of cameras available through OpenNI interfaces
-    CV_CAP_PROP_OPENNI_OUTPUT_MODE      = 100,
-    CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH  = 101, // in mm
-    CV_CAP_PROP_OPENNI_BASELINE         = 102, // in mm
-    CV_CAP_PROP_OPENNI_FOCAL_LENGTH     = 103, // in pixels
-    CV_CAP_PROP_OPENNI_REGISTRATION_ON  = 104, // flag
-    CV_CAP_PROP_OPENNI_REGISTRATION     = CV_CAP_PROP_OPENNI_REGISTRATION_ON, // flag that synchronizes the remapping depth map to image map
-                                                                              // by changing depth generator's view point (if the flag is "on") or
-                                                                              // sets this view point to its normal one (if the flag is "off").
-    CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE,
-    CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_BASELINE,
-    CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_FOCAL_LENGTH,
+    CV_CAP_PROP_OPENNI_OUTPUT_MODE     = 100,
+    CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH = 101, // in mm
+    CV_CAP_PROP_OPENNI_BASELINE        = 102, // in mm
+    CV_CAP_PROP_OPENNI_FOCAL_LENGTH    = 103, // in pixels
+    CV_CAP_PROP_OPENNI_REGISTRATION_ON = 104, // flag
+    CV_CAP_PROP_OPENNI_REGISTRATION    = CV_CAP_PROP_OPENNI_REGISTRATION_ON, // flag that synchronizes the remapping depth map to image map
+                                                                                      // by changing depth generator's view point (if the flag is "on") or
+                                                                                      // sets this view point to its normal one (if the flag is "off").
+    CV_CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT = 105,
+    CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE,
+    CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE        = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_BASELINE,
+    CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH    = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_FOCAL_LENGTH,
     CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION_ON = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_REGISTRATION_ON,
     
     // Properties of cameras available through GStreamer interface

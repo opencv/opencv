@@ -95,7 +95,7 @@ Since two types of sensor's data generators are supported (image generator and d
 Some depth sensors (for example XtionPRO) do not have image generator. In order to check it you can get ``CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT`` property.
 ::
 
-    bool isImageGeneratorPresent = capture.get( CV_CAP_OPENNI_PROP_IMAGE_GENERATOR_PRESENT ) != 0; // or == 1
+    bool isImageGeneratorPresent = capture.get( CV_CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT ) != 0; // or == 1
 
 
 Flags specifing the needed generator type must be used in combination with particular generator property. The following properties of cameras available through OpenNI interfaces are supported:

@@ -127,13 +127,13 @@ protected:
     // OpenNI context
     xn::Context context;
     bool m_isOpened;
+    bool m_isImageGeneratorPresent;
 
     // Data generators with its metadata
     xn::DepthGenerator depthGenerator;
     xn::DepthMetaData  depthMetaData;
     XnMapOutputMode depthOutputMode;
 
-    bool m_isImageGeneratorPresent;
     xn::ImageGenerator imageGenerator;
     xn::ImageMetaData  imageMetaData;
     XnMapOutputMode imageOutputMode;
@@ -177,6 +177,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     depthOutputMode.nFPS = imageOutputMode.nFPS = 30;
 
     m_isOpened = false;
+    m_isImageGeneratorPresent = false;
 
     // Initialize and configure the context.
     if( context.Init() == XN_STATUS_OK )
@@ -246,13 +247,9 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
             return;
         }
 
-        if(Imagelist.IsEmpty())
+        if( !Imagelist.IsEmpty() )
         {
-            m_isImageGeneratorPresent = FALSE;
-        }
-        else
-        {
-            m_isImageGeneratorPresent = TRUE;
+            m_isImageGeneratorPresent = true;
             imageGenerator.Create( context );
             if( status != XN_STATUS_OK )
             {
@@ -264,7 +261,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
 
         // Set map output mode.
         CV_Assert( depthGenerator.SetMapOutputMode( depthOutputMode ) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
-        CV_Assert( m_isImageGeneratorPresent ? ( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK ) : TRUE );
+        CV_Assert( m_isImageGeneratorPresent ? ( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK ) : true );
 
         //  Start generating data.
         status = context.StartGeneratingAll();
@@ -483,7 +480,7 @@ double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
     if( !m_isImageGeneratorPresent )
 	    return propValue;
 
-    if( propIdx == CV_CAP_PROP_IMAGE_GENERATOR_PRESENT )
+    if( propIdx == CV_CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT )
         propValue = m_isImageGeneratorPresent ? 1. : 0.;
     else
     {       
