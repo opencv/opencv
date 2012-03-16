@@ -1353,17 +1353,17 @@ template<typename _Tp> static inline void min(double s, const Mat_<_Tp>& a, Mat_
 
 template<typename _Tp> static inline void max(const Mat_<_Tp>& a, const Mat_<_Tp>& b, Mat_<_Tp>& c)
 {
-    cv::min((const Mat&)a, (const Mat&)b, (Mat&)c);
+    cv::max((const Mat&)a, (const Mat&)b, (Mat&)c);
 }
 
 template<typename _Tp> static inline void max(const Mat_<_Tp>& a, double s, Mat_<_Tp>& c)
 {
-    cv::min((const Mat&)a, s, (Mat&)c);
+    cv::max((const Mat&)a, s, (Mat&)c);
 }
 
 template<typename _Tp> static inline void max(double s, const Mat_<_Tp>& a, Mat_<_Tp>& c)
 {
-    cv::min((const Mat&)a, s, (Mat&)c);
+    cv::max((const Mat&)a, s, (Mat&)c);
 }
 
     
