@@ -208,7 +208,7 @@ int main( int argc, char* argv[] )
             "FRAME_HEIGHT   " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
             "FRAME_MAX_DEPTH    " << capture.get( CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
             "FPS    " << capture.get( CV_CAP_PROP_FPS ) << endl;
-    if( capture.get( CV_CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT ) )
+    if( capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR_PRESENT ) )
     {
         cout <<
             "\nImage generator output mode:" << endl <<
@@ -218,7 +218,7 @@ int main( int argc, char* argv[] )
     }
     else
     {
-        cout << "\nDevice doesn't contain image generator" << endl;
+        cout << "\nDevice doesn't contain image generator." << endl;
         if (!retrievedImageFlags[0] && !retrievedImageFlags[1] && !retrievedImageFlags[2])
             return 0;
     }

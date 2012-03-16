@@ -127,8 +127,9 @@ protected:
     // OpenNI context
     xn::Context context;
     bool m_isOpened;
+    bool m_isDepthGeneratorPresent;
     bool m_isImageGeneratorPresent;
-
+    
     // Data generators with its metadata
     xn::DepthGenerator depthGenerator;
     xn::DepthMetaData  depthMetaData;
@@ -229,6 +230,21 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         }
 
         // Associate generators with context.
+        // enumerate the nodes to find if depth generator is present
+        xn::NodeInfoList depthList;
+        status = context.EnumerateExistingNodes( depthList, XN_NODE_TYPE_DEPTH );
+        if( status != XN_STATUS_OK )
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate depth generators: "
+                      << std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
+        if( depthList.IsEmpty() )
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : The device doesn't have depth generator. Such devices aren't supported now." << std::endl;
+            return;
+        }
+        m_isDepthGeneratorPresent = true;
         status = depthGenerator.Create( context );
         if( status != XN_STATUS_OK )
         {
@@ -238,8 +254,8 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         }
 
         // enumerate the nodes to find if image generator is present
-        xn::NodeInfoList Imagelist;
-        status = context.EnumerateExistingNodes( Imagelist, XN_NODE_TYPE_IMAGE );
+        xn::NodeInfoList imageList;
+        status = context.EnumerateExistingNodes( imageList, XN_NODE_TYPE_IMAGE );
         if( status != XN_STATUS_OK )
         {
             std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: "
@@ -247,10 +263,10 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
             return;
         }
 
-        if( !Imagelist.IsEmpty() )
+        if( !imageList.IsEmpty() )
         {
             m_isImageGeneratorPresent = true;
-            imageGenerator.Create( context );
+            status = imageGenerator.Create( context );
             if( status != XN_STATUS_OK )
             {
                 std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: "
@@ -390,12 +406,18 @@ bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
 
 double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
 {
-    CV_Assert( depthGenerator.IsValid() );
-
     double propValue = 0;
+    if( !m_isDepthGeneratorPresent )
+        return propValue;
+
+    CV_Assert( depthGenerator.IsValid() );
 
     switch( propIdx )
     {
+    case CV_CAP_PROP_OPENNI_GENERATOR_PRESENT :
+        CV_Assert( m_isDepthGeneratorPresent );
+        propValue = 1.;
+        break;
     case CV_CAP_PROP_FRAME_WIDTH :
         propValue = depthOutputMode.nXRes;
         break;
@@ -417,7 +439,11 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
     case CV_CAP_PROP_OPENNI_REGISTRATION :
         propValue = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
     default :
-        CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for getting.\n");
+    {
+        std::stringstream ss;
+        ss << "Depth generator does not support such parameter (propIdx=" << propIdx << ") for getting.\n";
+        CV_Error( CV_StsBadArg, ss.str().c_str() );
+    }
     }
 
     return propValue;
@@ -431,44 +457,48 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
 
     switch( propIdx )
     {
-        case CV_CAP_PROP_OPENNI_REGISTRATION:
+    case CV_CAP_PROP_OPENNI_REGISTRATION:
+        {
+            if( propValue != 0.0 ) // "on"
             {
-                if( propValue != 0.0 ) // "on"
+                // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
+                // then the property isn't avaliable
+                if( m_isImageGeneratorPresent )
                 {
-                    // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
-                    // then the property isn't avaliable
-                    if( m_isImageGeneratorPresent )
+                    CV_Assert( imageGenerator.IsValid() );
+                    if( !depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) )
                     {
-                        CV_Assert( imageGenerator.IsValid() );
-                        if( !depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) )
+                        if( depthGenerator.GetAlternativeViewPointCap().IsViewPointSupported(imageGenerator) )
                         {
-                            if( depthGenerator.GetAlternativeViewPointCap().IsViewPointSupported(imageGenerator) )
-                            {
-                                XnStatus status = depthGenerator.GetAlternativeViewPointCap().SetViewPoint(imageGenerator);
-                                if( status != XN_STATUS_OK )
-                                    std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
-                                else
-                                    isSet = true;
-                            }
+                            XnStatus status = depthGenerator.GetAlternativeViewPointCap().SetViewPoint(imageGenerator);
+                            if( status != XN_STATUS_OK )
+                                std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
                             else
-                                std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : Unsupported viewpoint." << std::endl;
+                                isSet = true;
                         }
                         else
-                            isSet = true;
+                            std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : Unsupported viewpoint." << std::endl;
                     }
-                }
-                else // "off"
-                {
-                    XnStatus status = depthGenerator.GetAlternativeViewPointCap().ResetViewPoint();
-                    if( status != XN_STATUS_OK )
-                        std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
                     else
                         isSet = true;
                 }
             }
-            break;
-        default:
-            CV_Error( CV_StsBadArg, "Unsupported depth generator property.\n");
+            else // "off"
+            {
+                XnStatus status = depthGenerator.GetAlternativeViewPointCap().ResetViewPoint();
+                if( status != XN_STATUS_OK )
+                    std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
+                else
+                    isSet = true;
+            }
+        }
+        break;
+    default:
+    {
+        std::stringstream ss;
+        ss << "Depth generator does not support such parameter (propIdx=" << propIdx << ") for setting.\n";
+        CV_Error( CV_StsBadArg, ss.str().c_str() );
+    }
     }
 
     return isSet;
@@ -476,31 +506,35 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
 
 double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
 {
-    double propValue = 0;
+    double propValue = 0.;
     if( !m_isImageGeneratorPresent )
 	    return propValue;
 
-    if( propIdx == CV_CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT )
-        propValue = m_isImageGeneratorPresent ? 1. : 0.;
-    else
-    {       
-        CV_Assert( imageGenerator.IsValid() );
+    CV_Assert( imageGenerator.IsValid() );
 
-        switch( propIdx )
-        {
-        case CV_CAP_PROP_FRAME_WIDTH :
-            propValue = imageOutputMode.nXRes;
-            break;
-        case CV_CAP_PROP_FRAME_HEIGHT :
-            propValue = imageOutputMode.nYRes;
-            break;
-        case CV_CAP_PROP_FPS :
-            propValue = imageOutputMode.nFPS;
-            break;
-        default :
-            CV_Error( CV_StsBadArg, "Image generator does not support such parameter for getting.\n");
-        }
+    switch( propIdx )
+    {
+    case CV_CAP_PROP_OPENNI_GENERATOR_PRESENT :
+        CV_Assert( m_isImageGeneratorPresent );
+        propValue = 1.;
+        break;
+    case CV_CAP_PROP_FRAME_WIDTH :
+        propValue = imageOutputMode.nXRes;
+        break;
+    case CV_CAP_PROP_FRAME_HEIGHT :
+        propValue = imageOutputMode.nYRes;
+        break;
+    case CV_CAP_PROP_FPS :
+        propValue = imageOutputMode.nFPS;
+        break;
+    default :
+    {
+        std::stringstream ss;
+        ss << "Image generator does not support such parameter (propIdx=" << propIdx << ") for getting.\n";
+        CV_Error( CV_StsBadArg, ss.str().c_str() );
     }
+    }
+
     return propValue;
 }
 
@@ -550,7 +584,11 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
         break;
     }
     default:
-        CV_Error( CV_StsBadArg, "Unsupported image generator property.\n");
+    {
+        std::stringstream ss;
+        ss << "Image generator does not support such parameter (propIdx=" << propIdx << ") for setting.\n";
+        CV_Error( CV_StsBadArg, ss.str().c_str() );
+    }
     }
 
     return isSet;

@@ -388,7 +388,9 @@ enum
     CV_CAP_PROP_OPENNI_REGISTRATION    = CV_CAP_PROP_OPENNI_REGISTRATION_ON, // flag that synchronizes the remapping depth map to image map
                                                                                       // by changing depth generator's view point (if the flag is "on") or
                                                                                       // sets this view point to its normal one (if the flag is "off").
-    CV_CAP_PROP_OPENNI_IMAGE_GENERATOR_PRESENT = 105,
+    CV_CAP_PROP_OPENNI_GENERATOR_PRESENT = 105,
+
+    CV_CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_GENERATOR_PRESENT,
     CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE,
     CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE        = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_BASELINE,
     CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH    = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_FOCAL_LENGTH,
