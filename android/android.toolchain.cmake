@@ -169,6 +169,7 @@
 #     [~] fixed CMAKE_SYSTEM_PROCESSOR change on ANDROID_ABI change
 #     [+] improved toolchain loading speed
 #     [+] added assembler language support (.S)
+#     [+] allowed preset search paths and extra search suffixes
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -187,14 +188,20 @@ set( CMAKE_SYSTEM_NAME Linux )
 #this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )
 
-set( ANDROID_SUPPORTED_NDK_VERSIONS -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
-if( CMAKE_HOST_WIN32 )
- file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATHS )
- set( ANDROID_NDK_SEARCH_PATHS "${ANDROID_NDK_SEARCH_PATHS}/android-ndk" "$ENV{SystemDrive}/NVPACK/android-ndk" )
-else()
- set( ANDROID_NDK_SEARCH_PATHS /opt/android-ndk "$ENV{HOME}/NVPACK/android-ndk" )
+set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
+if(NOT DEFINED ANDROID_NDK_SEARCH_PATHS)
+ if( CMAKE_HOST_WIN32 )
+  file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATHS )
+  set( ANDROID_NDK_SEARCH_PATHS "${ANDROID_NDK_SEARCH_PATHS}/android-ndk" "$ENV{SystemDrive}/NVPACK/android-ndk" )
+ else()
+  file( TO_CMAKE_PATH "$ENV{HOME}" ANDROID_NDK_SEARCH_PATHS )
+  set( ANDROID_NDK_SEARCH_PATHS /opt/android-ndk "${ANDROID_NDK_SEARCH_PATHS}/NVPACK/android-ndk" )
+ endif()
 endif()
-set( ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH /opt/android-toolchain )
+if(NOT DEFINED ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH)
+ set( ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH /opt/android-toolchain )
+endif()
+
 set( ANDROID_SUPPORTED_ABIS_arm "armeabi-v7a;armeabi;armeabi-v7a with NEON;armeabi-v7a with VFPV3;armeabi-v6 with VFP" )
 set( ANDROID_SUPPORTED_ABIS_x86 "x86" )
 

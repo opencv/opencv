@@ -1,5 +1,6 @@
 file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)
 file(TO_CMAKE_PATH "$ENV{ANDROID_SDK}" ANDROID_SDK_ENV_PATH)
+file(TO_CMAKE_PATH "$ENV{HOME}" HOME_ENV_PATH)
 
 #find android SDK
 find_host_program(ANDROID_EXECUTABLE
@@ -14,12 +15,12 @@ find_host_program(ANDROID_EXECUTABLE
         "/opt/android-sdk-mac_x86/tools/"
         "/opt/android-sdk-mac_86/tools/"
         "/opt/android-sdk/tools/"
-        "$ENV{HOME}/NVPACK/android-sdk-linux_x86/tools/"
-        "$ENV{HOME}/NVPACK/android-sdk-linux_86/tools/"
-        "$ENV{HOME}/NVPACK/android-sdk-linux/tools/"
-        "$ENV{HOME}/NVPACK/android-sdk-mac_x86/tools/"
-        "$ENV{HOME}/NVPACK/android-sdk-mac_86/tools/"
-        "$ENV{HOME}/NVPACK/android-sdk-mac/tools/"
+        "${HOME_ENV_PATH}/NVPACK/android-sdk-linux_x86/tools/"
+        "${HOME_ENV_PATH}/NVPACK/android-sdk-linux_86/tools/"
+        "${HOME_ENV_PATH}/NVPACK/android-sdk-linux/tools/"
+        "${HOME_ENV_PATH}/NVPACK/android-sdk-mac_x86/tools/"
+        "${HOME_ENV_PATH}/NVPACK/android-sdk-mac_86/tools/"
+        "${HOME_ENV_PATH}/NVPACK/android-sdk-mac/tools/"
         "$ENV{SystemDrive}/NVPACK/android-sdk-windows/tools/"
   )
 
@@ -36,20 +37,20 @@ if(ANDROID_EXECUTABLE)
       list(GET line 0 line_name)
       list(GET line 1 line_value)
       string(REPLACE "." "_" line_name ${line_name})
-      SET(ANDROID_TOOLS_${line_name} "${line_value}")
+      SET(ANDROID_TOOLS_${line_name} "${line_value}" CACHE INTERNAL "from ${ANDROID_SDK_TOOLS_PATH}/source.properties")
       MARK_AS_ADVANCED(ANDROID_TOOLS_${line_name})
     endforeach()
   endif()
 
   if(NOT ANDROID_TOOLS_Pkg_Revision)
-    SET(ANDROID_TOOLS_Pkg_Revision "Unknown")
+    SET(ANDROID_TOOLS_Pkg_Revision "Unknown" CACHE INTERNAL "")
     MARK_AS_ADVANCED(ANDROID_TOOLS_Pkg_Revision)
   endif()
 
   if(NOT ANDROID_TOOLS_Pkg_Desc)
-    SET(ANDROID_TOOLS_Pkg_Desc "Android SDK Tools, revision ${ANDROID_TOOLS_Pkg_Revision}.")
+    SET(ANDROID_TOOLS_Pkg_Desc "Android SDK Tools, revision ${ANDROID_TOOLS_Pkg_Revision}." CACHE INTERNAL "")
     if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 11)
-      SET(ANDROID_TOOLS_Pkg_Desc "${ANDROID_TOOLS_Pkg_Desc} It is recommended to update your SDK tools to revision 12 or newer.")
+      SET(ANDROID_TOOLS_Pkg_Desc "${ANDROID_TOOLS_Pkg_Desc} It is recommended to update your SDK tools to revision 12 or newer." CACHE INTERNAL "")
     endif()
     MARK_AS_ADVANCED(ANDROID_TOOLS_Pkg_Desc)
   endif()
