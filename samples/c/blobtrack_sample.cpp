@@ -292,7 +292,7 @@ static int RunBlobTrackingAuto( CvCapture* pCap, CvBlobTrackerAuto* pTracker,cha
  */
 static void set_params(int argc, char* argv[], CvVSModule* pM, const char* prefix, const char* module)
 {
-    int prefix_len = strlen(prefix);
+    int prefix_len = (int)strlen(prefix);
     int i;
     for(i=0; i<argc; ++i)
     {
@@ -306,14 +306,15 @@ static void set_params(int argc, char* argv[], CvVSModule* pM, const char* prefi
         cmd++;
 
         ptr_eq = strchr(cmd,'=');
-        if(ptr_eq)cmd_param_len = ptr_eq-cmd;
+        if(ptr_eq)
+            cmd_param_len = (int)(ptr_eq-cmd);
 
         for(j=0; ; ++j)
         {
             int     param_len;
             const char*   param = pM->GetParamName(j);
             if(param==NULL) break;
-            param_len = strlen(param);
+            param_len = (int)strlen(param);
             if(cmd_param_len!=param_len) continue;
             if(MY_STRNICMP(param,cmd,param_len)!=0) continue;
             cmd+=param_len;

@@ -51,7 +51,7 @@ int process(VideoCapture& capture)
   {
     capture >> frame;
     if (frame.empty())
-      continue;
+      break;
     cv::Mat gray;
     cv::cvtColor(frame,gray,CV_RGB2GRAY);
     findDataMatrix(gray, codes);

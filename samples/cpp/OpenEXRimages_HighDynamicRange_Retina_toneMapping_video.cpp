@@ -134,8 +134,8 @@ void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, const floa
 	{
 		inputMat.copyTo(outputMat);
 		// update threshold in the initial input image range
-		maxInputValue=(maxInputValue-255.f)/histNormRescalefactor+maxInput;
-		minInputValue=minInputValue/histNormRescalefactor+minInput;
+		maxInputValue=(float)((maxInputValue-255.f)/histNormRescalefactor+maxInput);
+		minInputValue=(float)(minInputValue/histNormRescalefactor+minInput);
 	 	std::cout<<"===> Input Hist clipping values (max,min) = "<<maxInputValue<<", "<<minInputValue<<std::endl;
 		cv::threshold( outputMat, outputMat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above maxInputValue
 		cv::threshold( outputMat, outputMat, minInputValue, minInputValue, 3 ); //
@@ -164,8 +164,7 @@ void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, const floa
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  void callBack_updateRetinaParams(int, void*)
  {
-
-	 retina->setupOPLandIPLParvoChannel(true, true, (float)(localAdaptation_photoreceptors/200.0), 0.5f, 0.43f, (double)retinaHcellsGain, 1.f, 7.f, (float)(localAdaptation_Gcells/200.0));
+	 retina->setupOPLandIPLParvoChannel(true, true, (float)(localAdaptation_photoreceptors/200.0), 0.5f, 0.43f, (float)retinaHcellsGain, 1.f, 7.f, (float)(localAdaptation_Gcells/200.0));
  }
 
  int colorSaturationFactor;
@@ -211,8 +210,8 @@ void loadNewFrame(const std::string filenamePrototype, const int currentFileInde
 		double maxInput, minInput;
 	 	minMaxLoc(inputImage, &minInput, &maxInput);
 	 	std::cout<<"FIRST IMAGE pixels values range (max,min) : "<<maxInput<<", "<<minInput<<std::endl;
-		globalRescalefactor=50.0/(maxInput-minInput); // less than 255 for flexibility... experimental value to be carefull about
-		float channelOffset = -1.5*minInput;
+		globalRescalefactor=(float)(50.0/(maxInput-minInput)); // less than 255 for flexibility... experimental value to be carefull about
+		double channelOffset = -1.5*minInput;
 		globalOffset= cv::Scalar(channelOffset, channelOffset, channelOffset, channelOffset);	
 	}
 	// call the generic input image rescaling callback	

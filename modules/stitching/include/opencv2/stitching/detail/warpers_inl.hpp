@@ -306,7 +306,7 @@ void FisheyeProjector::mapForward(float x, float y, float &u, float &v)
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
 	float u_ = atan2f(x_, z_);
-    float v_ = CV_PI - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
+    float v_ = (float)CV_PI - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
 
 	u = scale * v_ * cosf(u_);
 	v = scale * v_ * sinf(u_);
@@ -321,9 +321,9 @@ void FisheyeProjector::mapBackward(float u, float v, float &x, float &y)
 	float u_ = atan2f(v, u);
 	float v_ = sqrtf(u*u + v*v);
 
-	float sinv = sinf(CV_PI - v_);
+	float sinv = sinf((float)CV_PI - v_);
     float x_ = sinv * sinf(u_);
-    float y_ = cosf(CV_PI - v_);
+    float y_ = cosf((float)CV_PI - v_);
     float z_ = sinv * cosf(u_);
 
     float z;
@@ -343,7 +343,7 @@ void StereographicProjector::mapForward(float x, float y, float &u, float &v)
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
 	float u_ = atan2f(x_, z_);
-    float v_ = CV_PI - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
+    float v_ = (float)CV_PI - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
 
 	float r = sinf(v_) / (1 - cosf(v_));
 	
@@ -359,11 +359,11 @@ void StereographicProjector::mapBackward(float u, float v, float &x, float &y)
 
 	float u_ = atan2f(v, u);
 	float r = sqrtf(u*u + v*v);
-	float v_ = 2 * atanf(1.0 / r);
+	float v_ = 2 * atanf(1.f / r);
 
-	float sinv = sinf(CV_PI - v_);
+	float sinv = sinf((float)CV_PI - v_);
     float x_ = sinv * sinf(u_);
-    float y_ = cosf(CV_PI - v_);
+    float y_ = cosf((float)CV_PI - v_);
     float z_ = sinv * cosf(u_);
 
     float z;
@@ -560,7 +560,7 @@ void MercatorProjector::mapForward(float x, float y, float &u, float &v)
     float v_ = asinf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
 	
 	u = scale * u_;
-	v = scale * logf( tanf( CV_PI/4 + v_/2 ) );
+	v = scale * logf( tanf( (float)(CV_PI/4) + v_/2 ) );
 }
 
 inline

@@ -95,7 +95,7 @@ public:
         // Create a permutable array of indices to the input vectors.
         vind_.resize(size_);
         for (size_t i = 0; i < size_; i++) {
-            vind_[i] = i;
+            vind_[i] = (int)i;
         }
     }
 
@@ -116,7 +116,7 @@ public:
     void buildIndex()
     {
         computeBoundingBox(root_bbox_);
-        root_node_ = divideTree(0, size_, root_bbox_ );   // construct the tree
+        root_node_ = divideTree(0, (int)size_, root_bbox_ );   // construct the tree
 
         if (reorder_) {
             delete[] data_.data;
@@ -197,7 +197,7 @@ public:
      */
     int usedMemory() const
     {
-        return pool_.usedMemory+pool_.wastedMemory+dataset_.rows*sizeof(int);  // pool memory and vind array memory
+        return (int)(pool_.usedMemory+pool_.wastedMemory+dataset_.rows*sizeof(int));  // pool memory and vind array memory
     }
 
 
@@ -461,7 +461,7 @@ private:
                 computeMinMax(ind, count, cutfeat, min_elem, max_elem);
                 DistanceType spread = (DistanceType)(max_elem-min_elem);
                 if (spread>max_spread) {
-                    cutfeat = i;
+                    cutfeat = (int)i;
                     max_spread = spread;
                 }
             }
@@ -524,11 +524,11 @@ private:
 
         for (size_t i = 0; i < dim_; ++i) {
             if (vec[i] < root_bbox_[i].low) {
-                dists[i] = distance_.accum_dist(vec[i], root_bbox_[i].low, i);
+                dists[i] = distance_.accum_dist(vec[i], root_bbox_[i].low, (int)i);
                 distsq += dists[i];
             }
             if (vec[i] > root_bbox_[i].high) {
-                dists[i] = distance_.accum_dist(vec[i], root_bbox_[i].high, i);
+                dists[i] = distance_.accum_dist(vec[i], root_bbox_[i].high, (int)i);
                 distsq += dists[i];
             }
         }

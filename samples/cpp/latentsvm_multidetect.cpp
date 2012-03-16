@@ -107,13 +107,13 @@ int main(int argc, char* argv[])
 	help();
 
     string images_folder, models_folder;
-    float overlapThreshold = 0.2;
+    float overlapThreshold = 0.2f;
     int numThreads = -1;
     if( argc > 2 )
 	{
         images_folder = argv[1];
         models_folder = argv[2];
-        if( argc > 3 ) overlapThreshold = atof(argv[3]);
+        if( argc > 3 ) overlapThreshold = (float)atof(argv[3]);
         if( overlapThreshold < 0 || overlapThreshold > 1)
         {
             cout << "overlapThreshold must be in interval (0,1)." << endl;
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 
         imshow( "result", image );
 
-        while(1)
+        for(;;)
         {
             int c = waitKey();
             if( (char)c == 'n')

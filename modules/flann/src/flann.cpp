@@ -27,6 +27,10 @@
  *************************************************************************/
 
 #include "precomp.hpp"
+
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
 #include "opencv2/flann/flann.hpp"
 
 namespace cvflann

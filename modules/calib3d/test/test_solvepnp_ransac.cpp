@@ -126,7 +126,7 @@ protected:
         {
             if (i % 20 == 0)
             {
-                projectedPoints[i] = projectedPoints[rng.uniform(0,points.size()-1)];
+                projectedPoints[i] = projectedPoints[rng.uniform(0,(int)points.size()-1)];
             }
         }
 

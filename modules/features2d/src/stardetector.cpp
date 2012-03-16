@@ -57,7 +57,7 @@ computeIntegralImages( const Mat& matI, Mat& matS, Mat& matT, Mat& _FT )
     
     const uchar* I = matI.ptr<uchar>();
     int *S = matS.ptr<int>(), *T = matT.ptr<int>(), *FT = _FT.ptr<int>();
-    int istep = matI.step, step = matS.step/sizeof(S[0]);
+    int istep = (int)matI.step, step = (int)(matS.step/sizeof(S[0]));
 
     for( x = 0; x <= cols; x++ )
         S[x] = T[x] = FT[x] = 0;

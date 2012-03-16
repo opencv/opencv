@@ -95,11 +95,13 @@ int main( int argc, char** argv )
         imshow("image", isColor ? image : gray);
 
         int c = waitKey(0);
+        if( (c & 255) == 27 )
+        {
+            cout << "Exiting ...\n";
+            break;
+        }
         switch( (char)c )
         {
-        case 27:
-            cout << "Exiting ...\n";
-            return 0;
         case 'c':
             if( isColor )
             {

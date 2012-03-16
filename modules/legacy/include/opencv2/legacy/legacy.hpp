@@ -2717,7 +2717,7 @@ void CalonderDescriptorExtractor<T>::computeImpl( const Mat& image,
     KeyPointsFilter::runByImageBorder(keypoints, image.size(), BORDER_SIZE);
     
     /// @todo Check 16-byte aligned
-    descriptors.create(keypoints.size(), classifier_.classes(), cv::DataType<T>::type);
+    descriptors.create((int)keypoints.size(), classifier_.classes(), cv::DataType<T>::type);
     
     int patchSize = RandomizedTree::PATCH_SIZE;
     int offset = patchSize / 2;
@@ -2725,7 +2725,7 @@ void CalonderDescriptorExtractor<T>::computeImpl( const Mat& image,
     {
         cv::Point2f pt = keypoints[i].pt;
         IplImage ipl = image( Rect((int)(pt.x - offset), (int)(pt.y - offset), patchSize, patchSize) );
-        classifier_.getSignature( &ipl, descriptors.ptr<T>(i));
+        classifier_.getSignature( &ipl, descriptors.ptr<T>((int)i));
     }
 }
 

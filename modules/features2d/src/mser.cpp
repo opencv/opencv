@@ -191,8 +191,8 @@ inline void _bitreset(unsigned long * a, unsigned long b)
 
 struct MSERParams
 {
-    MSERParams( int _delta, int _minArea, int _maxArea, float _maxVariation,
-                float _minDiversity, int _maxEvolution, double _areaThreshold,
+    MSERParams( int _delta, int _minArea, int _maxArea, double _maxVariation,
+                double _minDiversity, int _maxEvolution, double _areaThreshold,
                 double _minMargin, int _edgeBlurSize )
         : delta(_delta), minArea(_minArea), maxArea(_maxArea), maxVariation(_maxVariation),
         minDiversity(_minDiversity), maxEvolution(_maxEvolution), areaThreshold(_areaThreshold),
@@ -201,8 +201,8 @@ struct MSERParams
     int delta;
     int minArea;
     int maxArea;
-    float maxVariation;
-    float minDiversity;
+    double maxVariation;
+    double minDiversity;
     int maxEvolution;
     double areaThreshold;
     double minMargin;

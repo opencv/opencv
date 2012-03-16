@@ -10,7 +10,7 @@ typedef perf::TestBaseWithParam<size_t> VectorLength;
 
 PERF_TEST_P(VectorLength, phase32f, testing::Values(128, 1000, 128*1024, 512*1024, 1024*1024))
 {
-    int length = GetParam();
+    size_t length = GetParam();
     vector<float> X(length);
     vector<float> Y(length);
     vector<float> angle(length);

@@ -4,7 +4,7 @@
 
 using namespace cv;
 
-int main(int argc, char* argv[])
+int main(int, char* [])
 {
     VideoCapture video(0);
     Mat frame, curr, prev, curr64f, prev64f, hann;

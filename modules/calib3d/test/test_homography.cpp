@@ -64,8 +64,8 @@
 #define COUNT_NORM_TYPES 3
 #define METHODS_COUNT 3
 
-size_t NORM_TYPE[COUNT_NORM_TYPES] = {cv::NORM_L1, cv::NORM_L2, cv::NORM_INF};
-size_t METHOD[METHODS_COUNT] = {0, CV_RANSAC, CV_LMEDS};
+int NORM_TYPE[COUNT_NORM_TYPES] = {cv::NORM_L1, cv::NORM_L2, cv::NORM_INF};
+int METHOD[METHODS_COUNT] = {0, CV_RANSAC, CV_LMEDS};
 
 using namespace cv;
 using namespace std;
@@ -247,13 +247,13 @@ void CV_HomographyTest::print_information_8(int j, int N, int k, int l, double d
 
 void CV_HomographyTest::run(int)
 {
-    for (size_t N = 4; N <= MAX_COUNT_OF_POINTS; ++N)
+    for (int N = 4; N <= MAX_COUNT_OF_POINTS; ++N)
     {
         RNG& rng = ts->get_rng();
 
         float *src_data = new float [2*N];
 
-        for (size_t i = 0; i < N; ++i)
+        for (int i = 0; i < N; ++i)
         {
             src_data[2*i] = (float)cvtest::randReal(rng)*image_size;
             src_data[2*i+1] = (float)cvtest::randReal(rng)*image_size;
@@ -266,7 +266,7 @@ void CV_HomographyTest::run(int)
 
         vector <Point2f> src_vec, dst_vec;
 
-        for (size_t i = 0; i < N; ++i)
+        for (int i = 0; i < N; ++i)
         {
             float *tmp = src_mat_2d.ptr<float>()+2*i;
             src_mat_3d.at<float>(0, i) = tmp[0];
@@ -293,7 +293,7 @@ void CV_HomographyTest::run(int)
 
         dst_mat_2d.create(2, N, CV_32F); dst_mat_2f.create(1, N, CV_32FC2);
 
-        for (size_t i = 0; i < N; ++i)
+        for (int i = 0; i < N; ++i)
         {
             float *tmp_2f = dst_mat_2f.ptr<float>()+2*i;
             tmp_2f[0] = dst_mat_2d.at<float>(0, i) = dst_mat_3d.at<float>(0, i) /= dst_mat_3d.at<float>(2, i);
@@ -303,7 +303,7 @@ void CV_HomographyTest::run(int)
             dst_vec.push_back(Point2f(tmp_2f[0], tmp_2f[1]));
         }
 
-        for (size_t i = 0; i < METHODS_COUNT; ++i)
+        for (int i = 0; i < METHODS_COUNT; ++i)
         {
             method = METHOD[i];
             switch (method)
@@ -316,7 +316,7 @@ void CV_HomographyTest::run(int)
                                          cv::findHomography(src_vec, dst_mat_2f, method),
                                          cv::findHomography(src_vec, dst_vec, method) };
 
-                    for (size_t j = 0; j < 4; ++j)
+                    for (int j = 0; j < 4; ++j)
                     {
 
                         if (!check_matrix_size(H_res_64[j]))
@@ -328,7 +328,7 @@ void CV_HomographyTest::run(int)
 
                         double diff;
 
-                        for (size_t k = 0; k < COUNT_NORM_TYPES; ++k)
+                        for (int k = 0; k < COUNT_NORM_TYPES; ++k)
                             if (!check_matrix_diff(H_64, H_res_64[j], NORM_TYPE[k], diff))
                             {
                             print_information_2(j, N, method, H_64, H_res_64[j], k, diff);
@@ -348,7 +348,7 @@ void CV_HomographyTest::run(int)
                                          cv::findHomography(src_vec, dst_mat_2f, CV_RANSAC, reproj_threshold, mask[2]),
                                          cv::findHomography(src_vec, dst_vec, CV_RANSAC, reproj_threshold, mask[3]) };
 
-                    for (size_t j = 0; j < 4; ++j)
+                    for (int j = 0; j < 4; ++j)
                     {
 
                         if (!check_matrix_size(H_res_64[j]))
@@ -358,7 +358,7 @@ void CV_HomographyTest::run(int)
                             return;
                         }
 
-                        for (size_t k = 0; k < COUNT_NORM_TYPES; ++k)
+                        for (int k = 0; k < COUNT_NORM_TYPES; ++k)
                             if (!check_matrix_diff(H_64, H_res_64[j], NORM_TYPE[k], diff))
                             {
                             print_information_2(j, N, method, H_64, H_res_64[j], k, diff);
@@ -398,14 +398,14 @@ void CV_HomographyTest::run(int)
 
         cv::Mat mask(N, 1, CV_8UC1);
 
-        for (size_t i = 0; i < N; ++i)
+        for (int i = 0; i < N; ++i)
         {
             float *a = noise_2f.ptr<float>()+2*i, *_2f = dst_mat_2f.ptr<float>()+2*i;
             _2f[0] += a[0]; _2f[1] += a[1];
             mask.at<bool>(i, 0) = !(sqrt(a[0]*a[0]+a[1]*a[1]) > reproj_threshold);
         }
 
-        for (size_t i = 0; i < METHODS_COUNT; ++i)
+        for (int i = 0; i < METHODS_COUNT; ++i)
         {
             method = METHOD[i];
             switch (method)
@@ -418,7 +418,7 @@ void CV_HomographyTest::run(int)
                                          cv::findHomography(src_vec, dst_mat_2f),
                                          cv::findHomography(src_vec, dst_vec) };
 
-                    for (size_t j = 0; j < 4; ++j)
+                    for (int j = 0; j < 4; ++j)
                     {
 
                         if (!check_matrix_size(H_res_64[j]))
@@ -432,7 +432,7 @@ void CV_HomographyTest::run(int)
 
                         cv::Mat dst_res_3d(3, N, CV_32F), noise_2d(2, N, CV_32F);
 
-                        for (size_t k = 0; k < N; ++k)
+                        for (int k = 0; k < N; ++k)
                         {
 
                             Mat tmp_mat_3d = H_res_32*src_mat_3d.col(k);
@@ -444,7 +444,7 @@ void CV_HomographyTest::run(int)
                             float *a = noise_2f.ptr<float>()+2*k;
                             noise_2d.at<float>(0, k) = a[0]; noise_2d.at<float>(1, k) = a[1];
 
-                            for (size_t l = 0; l < COUNT_NORM_TYPES; ++l)
+                            for (int l = 0; l < COUNT_NORM_TYPES; ++l)
                                 if (cv::norm(tmp_mat_3d, dst_mat_3d.col(k), NORM_TYPE[l]) - cv::norm(noise_2d.col(k), NORM_TYPE[l]) > max_2diff)
                                 {
                                 print_information_4(method, j, N, k, l, cv::norm(tmp_mat_3d, dst_mat_3d.col(k), NORM_TYPE[l]) - cv::norm(noise_2d.col(k), NORM_TYPE[l]));
@@ -454,7 +454,7 @@ void CV_HomographyTest::run(int)
 
                         }
 
-                        for (size_t l = 0; l < COUNT_NORM_TYPES; ++l)
+                        for (int l = 0; l < COUNT_NORM_TYPES; ++l)
                             if (cv::norm(dst_res_3d, dst_mat_3d, NORM_TYPE[l]) - cv::norm(noise_2d, NORM_TYPE[l]) > max_diff)
                             {
                             print_information_5(method, j, N, l, cv::norm(dst_res_3d, dst_mat_3d, NORM_TYPE[l]) - cv::norm(noise_2d, NORM_TYPE[l]));
@@ -475,9 +475,8 @@ void CV_HomographyTest::run(int)
                                          cv::findHomography(src_vec, dst_mat_2f, CV_RANSAC, reproj_threshold, mask_res[2]),
                                          cv::findHomography(src_vec, dst_vec, CV_RANSAC, reproj_threshold, mask_res[3]) };
 
-                    for (size_t j = 0; j < 4; ++j)
+                    for (int j = 0; j < 4; ++j)
                     {
-
                         if (!check_matrix_size(H_res_64[j]))
                         {
                             print_information_1(j, N, method, H_res_64[j]);
@@ -506,7 +505,7 @@ void CV_HomographyTest::run(int)
 
                         cv::Mat dst_res_3d = H_res_32*src_mat_3d;
 
-                        for (size_t k = 0; k < N; ++k)
+                        for (int k = 0; k < N; ++k)
                         {
                             dst_res_3d.at<float>(0, k) /= dst_res_3d.at<float>(2, k);
                             dst_res_3d.at<float>(1, k) /= dst_res_3d.at<float>(2, k);
@@ -542,7 +541,7 @@ void CV_HomographyTest::run(int)
                                 cv::Mat noise_2d(2, 1, CV_32F);
                                 noise_2d.at<float>(0, 0) = a[0]; noise_2d.at<float>(1, 0) = a[1];
 
-                                for (size_t l = 0; l < COUNT_NORM_TYPES; ++l)
+                                for (int l = 0; l < COUNT_NORM_TYPES; ++l)
                                 {
                                     diff = cv::norm(dst_res_3d.col(k), dst_mat_3d.col(k), NORM_TYPE[l]);
 

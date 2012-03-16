@@ -173,13 +173,13 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
     vector<Point> hull;
     convexHull(Mat_<Point>(Mat(imgpt)), hull);
     Mat selectedObjMask = Mat::zeros(frame.size(), CV_8U);
-    fillConvexPoly(selectedObjMask, &hull[0], hull.size(), Scalar::all(255), 8, 0);
+    fillConvexPoly(selectedObjMask, &hull[0], (int)hull.size(), Scalar::all(255), 8, 0);
     Rect roi = boundingRect(Mat(hull)) & Rect(Point(), frame.size());
     
     if( runExtraSegmentation )
     {
         selectedObjMask = Scalar::all(GC_BGD);
-        fillConvexPoly(selectedObjMask, &hull[0], hull.size(), Scalar::all(GC_PR_FGD), 8, 0);
+        fillConvexPoly(selectedObjMask, &hull[0], (int)hull.size(), Scalar::all(GC_PR_FGD), 8, 0);
         Mat bgdModel, fgdModel;
         grabCut(frame, selectedObjMask, roi, bgdModel, fgdModel,
                 3, GC_INIT_WITH_RECT + GC_INIT_WITH_MASK);

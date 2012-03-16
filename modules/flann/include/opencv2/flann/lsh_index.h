@@ -94,7 +94,7 @@ public:
         key_size_ = get_param<int>(index_params_,"key_size",20);
         multi_probe_level_ = get_param<int>(index_params_,"multi_probe_level",2);
 
-        feature_size_ = dataset_.cols;
+        feature_size_ = (unsigned)dataset_.cols;
         fill_xor_mask(0, key_size_, multi_probe_level_, xor_masks_);
     }
 
@@ -168,7 +168,7 @@ public:
      */
     int usedMemory() const
     {
-        return dataset_.rows * sizeof(int);
+        return (int)(dataset_.rows * sizeof(int));
     }
 
 
@@ -344,7 +344,7 @@ private:
             std::vector<lsh::BucketKey>::const_iterator xor_mask_end = xor_masks_.end();
             for (; xor_mask != xor_mask_end; ++xor_mask) {
                 size_t sub_key = key ^ (*xor_mask);
-                const lsh::Bucket* bucket = table->getBucketFromKey(sub_key);
+                const lsh::Bucket* bucket = table->getBucketFromKey((lsh::BucketKey)sub_key);
                 if (bucket == 0) continue;
 
                 // Go over each descriptor index
@@ -355,7 +355,7 @@ private:
                 // Process the rest of the candidates
                 for (; training_index < last_training_index; ++training_index) {
                     // Compute the Hamming distance
-                    hamming_distance = distance_(vec, dataset_[*training_index], dataset_.cols);
+                    hamming_distance = distance_(vec, dataset_[*training_index], (int)dataset_.cols);
                     result.addPoint(hamming_distance, *training_index);
                 }
             }

@@ -89,7 +89,7 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
         *_keypoints = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvSURFPoint), storage);
     
     if( _descriptors )
-        *_descriptors = cvCreateSeq( 0, sizeof(CvSeq), descr.cols*descr.elemSize(), storage );
+        *_descriptors = cvCreateSeq(0, sizeof(CvSeq), descr.cols*descr.elemSize(), storage);
     
     for( size_t i = 0; i < kpt.size(); i++ )
     {
@@ -99,7 +99,7 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
             cvSeqPush(*_keypoints, &pt);
         }
         if( _descriptors )
-            cvSeqPush(*_descriptors, descr.ptr(i));
+            cvSeqPush(*_descriptors, descr.ptr((int)i));
     }
 }
 

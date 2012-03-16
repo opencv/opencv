@@ -232,7 +232,7 @@ void saveCameraParams( const string& filename,
     
     if( !imagePoints.empty() )
     {
-        Mat imagePtMat((int)imagePoints.size(), imagePoints[0].size(), CV_32FC2);
+        Mat imagePtMat((int)imagePoints.size(), (int)imagePoints[0].size(), CV_32FC2);
         for( int i = 0; i < (int)imagePoints.size(); i++ )
         {
             Mat r = imagePtMat.row(i).reshape(2, imagePtMat.cols);

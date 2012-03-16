@@ -977,7 +977,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
             CV_Error(CV_StsError,err_msg.c_str());
         }
         /* convert iterator to index */
-        target_idx = std::distance(output_headers.begin(),target_idx_it);
+        target_idx = (int)std::distance(output_headers.begin(),target_idx_it);
     }
 
     /* prepare variables related to calculating recall if using the recall threshold */
@@ -989,7 +989,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
         /* in order to calculate the total number of relevant images for normalization of recall
             it's necessary to extract the ground truth for the images under consideration */
         getClassifierGroundTruth(obj_class, images, ground_truth);
-        total_relevant = std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<char>(),(char)1));
+        total_relevant = (int)std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<char>(),(char)1));
     }
 
     /* iterate through images */
@@ -1040,7 +1040,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
                     CV_Error(CV_StsError,err_msg.c_str());
                 }
                 /* convert iterator to index */
-                int class_idx = std::distance(output_headers.begin(),class_idx_it);
+                int class_idx = (int)std::distance(output_headers.begin(),class_idx_it);
                 //add to confusion matrix row in proportion
                 output_values[class_idx] += 1.f/static_cast<float>(img_objects.size());
             }
@@ -1174,7 +1174,7 @@ void VocData::calcDetectorConfMatRow(const string& obj_class, const ObdDatasetTy
                     if (ov > maxov)
                     {
                         maxov = ov;
-                        max_gt_obj_idx = gt_obj_idx;
+                        max_gt_obj_idx = (int)gt_obj_idx;
                     }
                 }
             }
@@ -1192,7 +1192,7 @@ void VocData::calcDetectorConfMatRow(const string& obj_class, const ObdDatasetTy
                 CV_Error(CV_StsError,err_msg.c_str());
             }
             /* convert iterator to index */
-            int class_idx = std::distance(output_headers.begin(),class_idx_it);
+            int class_idx = (int)std::distance(output_headers.begin(),class_idx_it);
             //add to confusion matrix row in proportion
             output_values[class_idx] += 1.0;
         } else {
@@ -1540,7 +1540,7 @@ void VocData::readDetectorResultsFile(const string& input_file, vector<string>& 
                     bounding_boxes.push_back(bounding_box_vect);
                 } else {
                     /* if the image index has been seen before, add the current object below it in the 2D arrays */
-                    int image_idx = std::distance(image_codes.begin(),image_codes_it);
+                    int image_idx = (int)std::distance(image_codes.begin(),image_codes_it);
                     scores[image_idx].push_back(score);
                     bounding_boxes[image_idx].push_back(bounding_box);
                 }
@@ -1985,7 +1985,7 @@ struct VocabTrainParams
 {
     VocabTrainParams() : trainObjClass("chair"), vocabSize(1000), memoryUse(200), descProportion(0.3f) {}
     VocabTrainParams( const string _trainObjClass, size_t _vocabSize, size_t _memoryUse, float _descProportion ) :
-            trainObjClass(_trainObjClass), vocabSize(_vocabSize), memoryUse(_memoryUse), descProportion(_descProportion) {}
+            trainObjClass(_trainObjClass), vocabSize((int)_vocabSize), memoryUse((int)_memoryUse), descProportion(_descProportion) {}
     void read( const FileNode& fn )
     {
         fn["trainObjClass"] >> trainObjClass;
@@ -2154,7 +2154,7 @@ Mat trainVocabulary( const string& filename, VocData& vocData, const VocabTrainP
 
             // Randomly pick an image from the dataset which hasn't yet been seen
             // and compute the descriptors from that image.
-            int randImgIdx = rng( images.size() );
+            int randImgIdx = rng( (unsigned)images.size() );
             Mat colorImage = imread( images[randImgIdx].path );
             vector<KeyPoint> imageKeypoints;
             fdetector->detect( colorImage, imageKeypoints );
@@ -2296,12 +2296,12 @@ void removeBowImageDescriptorsByCount( vector<ObdImage>& images, vector<Mat> bow
                                        const SVMTrainParamsExt& svmParamsExt, int descsToDelete )
 {
     RNG& rng = theRNG();
-    int pos_ex = std::count( objectPresent.begin(), objectPresent.end(), (char)1 );
-    int neg_ex = std::count( objectPresent.begin(), objectPresent.end(), (char)0 );
+    int pos_ex = (int)std::count( objectPresent.begin(), objectPresent.end(), (char)1 );
+    int neg_ex = (int)std::count( objectPresent.begin(), objectPresent.end(), (char)0 );
 
     while( descsToDelete != 0 )
     {
-        int randIdx = rng(images.size());
+        int randIdx = rng((unsigned)images.size());
 
         // Prefer positive training examples according to svmParamsExt.targetRatio if required
         if( objectPresent[randIdx] )
@@ -2415,14 +2415,14 @@ void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsExt, cons
         }
 
         // Prepare the input matrices for SVM training.
-        Mat trainData( images.size(), bowExtractor->getVocabulary().rows, CV_32FC1 );
-        Mat responses( images.size(), 1, CV_32SC1 );
+        Mat trainData( (int)images.size(), bowExtractor->getVocabulary().rows, CV_32FC1 );
+        Mat responses( (int)images.size(), 1, CV_32SC1 );
 
         // Transfer bag of words vectors and responses across to the training data matrices
         for( size_t imageIdx = 0; imageIdx < images.size(); imageIdx++ )
         {
             // Transfer image descriptor (bag of words vector) to training data matrix
-            Mat submat = trainData.row(imageIdx);
+            Mat submat = trainData.row((int)imageIdx);
             if( bowImageDescriptors[imageIdx].cols != bowExtractor->descriptorSize() )
             {
                 cout << "Error: computed bow image descriptor size " << bowImageDescriptors[imageIdx].cols
@@ -2432,7 +2432,7 @@ void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsExt, cons
             bowImageDescriptors[imageIdx].copyTo( submat );
 
             // Set response value
-            responses.at<int>(imageIdx) = objectPresent[imageIdx] ? 1 : -1;
+            responses.at<int>((int)imageIdx) = objectPresent[imageIdx] ? 1 : -1;
         }
 
         cout << "TRAINING SVM FOR CLASS ..." << objClassName << "..." << endl;

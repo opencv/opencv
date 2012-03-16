@@ -8,7 +8,7 @@ void randu(cv::Mat& m)
     if (m.depth() < CV_32F)
     {
         int minmax[] = {0, 256};
-        cv::Mat mr = cv::Mat(m.rows, m.cols * m.elemSize(), CV_8U, m.ptr(), m.step[0]);
+        cv::Mat mr = cv::Mat(m.rows, (int)(m.cols * m.elemSize()), CV_8U, m.ptr(), m.step[0]);
         cv::randu(mr, cv::Mat(1, 1, CV_32S, minmax), cv::Mat(1, 1, CV_32S, minmax + 1));
     }
     else if (m.depth() == CV_32F)
@@ -66,7 +66,7 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
 
     if (data_path_dir)
     {
-        int len = strlen(data_path_dir)-1;
+        int len = (int)strlen(data_path_dir)-1;
         if (len < 0) len = 0;
         std::string path_base = (data_path_dir[0] == 0 ? std::string(".") : std::string(data_path_dir))
                 + (data_path_dir[len] == '/' || data_path_dir[len] == '\\' ? "" : path_separator)
@@ -260,7 +260,7 @@ void Regression::write(cv::InputArray array)
     write() << "type" << array.type();
     if (isVector(array))
     {
-        int total = array.total();
+        int total = (int)array.total();
         int idx = regRNG.uniform(0, total);
         write() << "len" << total;
         write() << "idx" << idx;
@@ -586,7 +586,7 @@ void TestBase::warmup(cv::InputOutputArray a, int wtype)
     {
         size_t total = a.total();
         for (size_t i = 0; i < total; ++i)
-            warmup_impl(a.getMat(i), wtype);
+            warmup_impl(a.getMat((int)i), wtype);
     }
 }
 
@@ -908,7 +908,7 @@ std::string TestBase::getDataPath(const std::string& relativePath)
     std::string path;
     if (data_path_dir)
     {
-        int len = strlen(data_path_dir) - 1;
+        int len = (int)strlen(data_path_dir) - 1;
         if (len < 0) len = 0;
         path = (data_path_dir[0] == 0 ? std::string(".") : std::string(data_path_dir))
                 + (data_path_dir[len] == '/' || data_path_dir[len] == '\\' ? "" : path_separator);

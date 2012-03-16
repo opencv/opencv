@@ -570,8 +570,9 @@ int main(int argc, char* argv[])
     {
         Mat_<float> K;
         cameras[i].K().convertTo(K, CV_32F);
-        K(0,0) *= seam_work_aspect; K(0,2) *= seam_work_aspect;
-        K(1,1) *= seam_work_aspect; K(1,2) *= seam_work_aspect;
+        float swa = (float)seam_work_aspect;
+        K(0,0) *= swa; K(0,2) *= swa;
+        K(1,1) *= swa; K(1,2) *= swa;
 
         corners[i] = warper->warp(images[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();

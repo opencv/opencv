@@ -184,7 +184,7 @@ int main( int argc, char* argv[] )
         return -1;
     }
 
-    bool modeRes;
+    bool modeRes=false;
     switch ( imageMode )
     {
         case 0:

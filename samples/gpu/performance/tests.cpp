@@ -1172,7 +1172,7 @@ TEST(PyrLKOpticalFlow)
         gpu::GpuMat d_frame1(frame1);
 
         gpu::GpuMat d_pts;
-        Mat pts_mat(1, pts.size(), CV_32FC2, (void*)&pts[0]);
+        Mat pts_mat(1, (int)pts.size(), CV_32FC2, (void*)&pts[0]);
         d_pts.upload(pts_mat);
 
         gpu::GpuMat d_nextPts;

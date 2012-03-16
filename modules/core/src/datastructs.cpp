@@ -362,35 +362,35 @@ cvMemStorageAllocString( CvMemStorage* storage, const char* ptr, int len )
 
 /* Create empty sequence: */
 CV_IMPL CvSeq *
-cvCreateSeq( int seq_flags, int header_size, int elem_size, CvMemStorage * storage )
+cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* storage )
 {
     CvSeq *seq = 0;
 
     if( !storage )
         CV_Error( CV_StsNullPtr, "" );
-    if( header_size < (int)sizeof( CvSeq ) || elem_size <= 0 )
+    if( header_size < sizeof( CvSeq ) || elem_size <= 0 )
         CV_Error( CV_StsBadSize, "" );
 
     /* allocate sequence header */
     seq = (CvSeq*)cvMemStorageAlloc( storage, header_size );
     memset( seq, 0, header_size );
 
-    seq->header_size = header_size;
+    seq->header_size = (int)header_size;
     seq->flags = (seq_flags & ~CV_MAGIC_MASK) | CV_SEQ_MAGIC_VAL;
     {
         int elemtype = CV_MAT_TYPE(seq_flags);
         int typesize = CV_ELEM_SIZE(elemtype);
 
         if( elemtype != CV_SEQ_ELTYPE_GENERIC && elemtype != CV_USRTYPE1 &&
-            typesize != 0 && typesize != elem_size )
+            typesize != 0 && typesize != (int)elem_size )
             CV_Error( CV_StsBadSize,
             "Specified element size doesn't match to the size of the specified element type "
             "(try to use 0 for element type)" );
     }
-    seq->elem_size = elem_size;
+    seq->elem_size = (int)elem_size;
     seq->storage = storage;
 
-    cvSetSeqBlockSize( seq, (1 << 10)/elem_size );
+    cvSetSeqBlockSize( seq, (int)((1 << 10)/elem_size) );
 
     return seq;
 }

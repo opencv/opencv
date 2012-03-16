@@ -65,10 +65,10 @@ inline float CvHOGEvaluator::Feature::calc( const vector<Mat>& _hists, const Mat
     int binIdx = featComponent % N_BINS;
     int cellIdx = featComponent / N_BINS;
 
-    const float *hist = _hists[binIdx].ptr<float>(y);
+    const float *hist = _hists[binIdx].ptr<float>((int)y);
     res = hist[fastRect[cellIdx].p0] - hist[fastRect[cellIdx].p1] - hist[fastRect[cellIdx].p2] + hist[fastRect[cellIdx].p3];
 
-    const float *normSum = _normSum.ptr<float>(y);
+    const float *normSum = _normSum.ptr<float>((int)y);
     normFactor = (float)(normSum[fastRect[0].p0] - normSum[fastRect[1].p1] - normSum[fastRect[2].p2] + normSum[fastRect[3].p3]);
     res = (res > 0.001f) ? ( res / (normFactor + 0.001f) ) : 0.f; //for cutting negative values, which apper due to floating precision
 

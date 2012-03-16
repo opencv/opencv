@@ -103,12 +103,12 @@ int main(int argc, char** argv)
 	HybridTrackerParams params;
 	// motion model params
 	params.motion_model = CvMotionModel::LOW_PASS_FILTER;
-	params.low_pass_gain = 0.1;
+	params.low_pass_gain = 0.1f;
 	// mean shift params
-	params.ms_tracker_weight = 0.8;
+	params.ms_tracker_weight = 0.8f;
 	params.ms_params.tracking_type = CvMeanShiftTrackerParams::HS;
 	// feature tracking params
-	params.ft_tracker_weight = 0.2;
+	params.ft_tracker_weight = 0.2f;
 	params.ft_params.feature_type = CvFeatureTrackerParams::OPTICAL_FLOW;
 	params.ft_params.window_size = 0;
 
@@ -121,12 +121,14 @@ int main(int argc, char** argv)
 
 	int i = 0;
 	float w[4];
-	while(1)
+	for(;;)
 	{
 		i++;
 		if (live)
 		{
 			cap >> frame;
+            if( frame.empty() )
+                break;
 			frame.copyTo(image);
 		}
 		else
@@ -134,11 +136,11 @@ int main(int argc, char** argv)
 			fscanf(f, "%d %f %f %f %f\n", &i, &w[0], &w[1], &w[2], &w[3]);
 			sprintf(img_file, "seqG/%04d.png", i);
 			image = imread(img_file, CV_LOAD_IMAGE_COLOR);
-			selection = Rect(w[0]*image.cols, w[1]*image.rows, w[2]*image.cols, w[3]*image.rows);
+            if (image.empty())
+			    break;
+			selection = Rect(cvRound(w[0]*image.cols), cvRound(w[1]*image.rows),
+                             cvRound(w[2]*image.cols), cvRound(w[3]*image.rows));
 		}
-
-		if (image.data == NULL)
-			continue;
 
 		sprintf(img_file_num, "Frame: %d", i);
 		putText(image, img_file_num, Point(10, image.rows-20), FONT_HERSHEY_PLAIN, 0.75, Scalar(255, 255, 255));
@@ -163,7 +165,8 @@ int main(int argc, char** argv)
 				bitwise_not(roi, roi);
 			}
 
-			drawRectangle(&image, Rect(w[0]*image.cols, w[1]*image.rows, w[2]*image.cols, w[3]*image.rows));
+			drawRectangle(&image, Rect(cvRound(w[0]*image.cols), cvRound(w[1]*image.rows),
+                                       cvRound(w[2]*image.cols), cvRound(w[3]*image.rows)));
 			imshow("Win", image);
 
 			waitKey(100);
@@ -174,5 +177,4 @@ int main(int argc, char** argv)
 
 	fclose(f);
 	return 0;
-
 }

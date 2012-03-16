@@ -116,7 +116,7 @@ float search_with_ground_truth(NNIndex<Distance>& index, const Matrix<typename D
             index.findNeighbors(resultSet, testData[i], searchParams);
 
             correct += countCorrectMatches(neighbors,matches[i], nn);
-            distR += computeDistanceRaport<Distance>(inputData, testData[i], neighbors, matches[i], testData.cols, nn, distance);
+            distR += computeDistanceRaport<Distance>(inputData, testData[i], neighbors, matches[i], (int)testData.cols, nn, distance);
         }
         t.stop();
     }

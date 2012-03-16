@@ -571,33 +571,30 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
 
     int rows = dst.rows;
     int cols = dst.cols;
-    int step = dst.step/dst.elemSize1();
 
     if(dst.depth() == CV_32F)
     {
-        float* dstData = dst.ptr<float>();
-
         for(int i = 0; i < rows; i++)
         {
+            float* dstData = dst.ptr<float>(i);
             double wr = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)i / (double)(rows - 1)));
             for(int j = 0; j < cols; j++)
             {
                 double wc = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[i*step + j] = (float)(wr * wc);
+                dstData[j] = (float)(wr * wc);
             }
         }
     }
     else
     {
-        double* dstData = dst.ptr<double>();
-
         for(int i = 0; i < rows; i++)
         {
+            double* dstData = dst.ptr<double>(i);
             double wr = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)i / (double)(rows - 1)));
             for(int j = 0; j < cols; j++)
             {
                 double wc = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[i*step + j] = wr * wc;
+                dstData[j] = wr * wc;
             }
         }
     }

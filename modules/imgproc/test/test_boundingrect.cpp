@@ -77,7 +77,7 @@ template <typename T> void CV_BoundingRectTest::generate_src_points(vector <Poin
 
 template <typename T> cv::Rect CV_BoundingRectTest::get_bounding_rect(const vector <Point_<T> > src)
 {
-    int n = src.size();
+    int n = (int)src.size();
     T min_w = std::numeric_limits<T>::max(), max_w = std::numeric_limits<T>::min();
     T min_h = min_w, max_h = max_w;
 

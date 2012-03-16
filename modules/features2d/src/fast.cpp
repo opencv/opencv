@@ -191,7 +191,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     Mat img = _img.getMat();
     const int K = 8, N = 16 + K + 1;
     int i, j, k, pixel[N];
-    makeOffsets(pixel, img.step);
+    makeOffsets(pixel, (int)img.step);
     for(k = 16; k < N; k++)
         pixel[k] = pixel[k - 16];
 
@@ -200,7 +200,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     threshold = std::min(std::max(threshold, 0), 255);
 
 #if CV_SSE2
-    __m128i delta = _mm_set1_epi8(128), t = _mm_set1_epi8(threshold), K16 = _mm_set1_epi8(K);
+    __m128i delta = _mm_set1_epi8(-128), t = _mm_set1_epi8((char)threshold), K16 = _mm_set1_epi8((char)K);
 #endif
     uchar threshold_tab[512];
     for( i = -255; i <= 255; i++ )
@@ -279,7 +279,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                     {
                         cornerpos[ncorners++] = j+k;
                         if(nonmax_suppression)
-                            curr[j+k] = cornerScore(ptr+k, pixel, threshold);
+                            curr[j+k] = (uchar)cornerScore(ptr+k, pixel, threshold);
                     }
             }
     #endif
@@ -317,7 +317,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = cornerScore(ptr, pixel, threshold);
+                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
                                 break;
                             }
                         }
@@ -339,7 +339,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = cornerScore(ptr, pixel, threshold);
+                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
                                 break;
                             }
                         }

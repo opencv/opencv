@@ -294,15 +294,15 @@ template<typename _Tp>
 		for(;;)
 		{
 			bool tr = ((int)buf.length() > col_d-2) ? true: false;
-			int pos;
+			std::string::size_type pos = 0;
 
 			if (tr)
 			{
 				pos = buf.find_first_of(' ');
 				for(;;)
 				{
-					if ((int)buf.find_first_of(' ', pos + 1 ) < col_d-2 &&
-                        (int)buf.find_first_of(' ', pos + 1 ) != (int)std::string::npos)
+					if (buf.find_first_of(' ', pos + 1 ) < (std::string::size_type)(col_d-2) &&
+                        buf.find_first_of(' ', pos + 1 ) != std::string::npos)
 						pos = buf.find_first_of(' ', pos + 1);
 					else
 						break;

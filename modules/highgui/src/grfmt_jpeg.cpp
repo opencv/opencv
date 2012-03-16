@@ -44,6 +44,10 @@
 
 #ifdef HAVE_JPEG
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4324 4611)
+#endif
+
 #include <stdio.h>
 #include <setjmp.h>
 

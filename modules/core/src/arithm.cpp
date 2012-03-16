@@ -2073,8 +2073,8 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
             int x =0;
 		    #if CV_SSE2
 		    if( USE_SSE2 ){
-                __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
-                __m128i c128 = _mm_set1_epi8 (128);
+                __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
+                __m128i c128 = _mm_set1_epi8 (-128);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
@@ -2103,7 +2103,7 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
             int x = 0;
 		    #if CV_SSE2
 		    if( USE_SSE2 ){
-                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (0xff);
+                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
@@ -2154,7 +2154,7 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
             int x =0;
 		    #if CV_SSE2
 		    if( USE_SSE2){//
-                __m128i m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
+                __m128i m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
@@ -2192,7 +2192,7 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
             int x = 0;
 		    #if CV_SSE2
 		    if( USE_SSE2 ){
-                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (0xffff);
+                __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
 				for( ; x <= size.width - 16; x += 16 )
 				{
 					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));

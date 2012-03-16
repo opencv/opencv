@@ -376,7 +376,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     } else if (image.type() == CV_8UC1) {
         gray_image=image;
     } else {
-        CV_Assert(false);
+        CV_Error(CV_StsUnsupportedFormat, "");
     }
 
     if (grid_size.area() == 1)

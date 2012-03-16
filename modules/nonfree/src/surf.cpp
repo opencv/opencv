@@ -252,7 +252,7 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
     {
         kpt.pt.x += x(0,0)*dx;
         kpt.pt.y += x(1,0)*dy;
-        kpt.size = cvRound( kpt.size + x(2,0)*ds );
+        kpt.size = (float)cvRound( kpt.size + x(2,0)*ds );
     }
     return ok;
 }
@@ -341,7 +341,8 @@ findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                     float center_i = sum_i + (size-1)*0.5f;
                     float center_j = sum_j + (size-1)*0.5f;
 
-                    KeyPoint kpt( center_j, center_i, sizes[layer], -1, val0, octave, CV_SIGN(trace_ptr[j]) );
+                    KeyPoint kpt( center_j, center_i, (float)sizes[layer],
+                                  -1, val0, octave, CV_SIGN(trace_ptr[j]) );
 
                     /* Interpolate maxima location within the 3x3x3 neighbourhood  */
                     int ds = size - sizes[layer-1];
@@ -561,8 +562,8 @@ struct SURFInvoker
         {
             maxSize = std::max(maxSize, (*keypoints)[k].size);
         }
-        maxSize = cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f);
-        Ptr<CvMat> winbuf = cvCreateMat( 1, maxSize > 0 ? maxSize*maxSize : 1, CV_8U );
+        int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f), 1);
+        Ptr<CvMat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
         for( k = k1; k < k2; k++ )
         {
             int i, j, kk, x, y, nangle;
@@ -863,7 +864,7 @@ void SURF::operator()(InputArray _img, InputArray _mask,
             cv::min(mask, 1, mask1);
             integral(mask1, msum, CV_32S);
         }
-        fastHessianDetector( sum, msum, keypoints, nOctaves, nOctaveLayers, hessianThreshold );
+        fastHessianDetector( sum, msum, keypoints, nOctaves, nOctaveLayers, (float)hessianThreshold );
     }
     
     int i, j, N = (int)keypoints.size();

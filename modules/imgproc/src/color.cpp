@@ -3216,36 +3216,37 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
                 const uchar* y = src.ptr();
                 const uchar* uv = y + dstSz.area();
+                int srcstep = (int)src.step;
 
                 // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
                 // http://www.fourcc.org/yuv.php#NV12 == yvu420sp -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
                 if (CV_YUV420sp2RGB == code || COLOR_YUV420sp2RGBA == code)
                 {
                     if (dcn == 3)
-                        cvtYUV4202RGB<2, 1>(dst, src.step, y, uv);
+                        cvtYUV4202RGB<2, 1>(dst, srcstep, y, uv);
                     else
-                        cvtYUV4202RGBA<2, 1>(dst, src.step, y, uv);
+                        cvtYUV4202RGBA<2, 1>(dst, srcstep, y, uv);
                 }
                 else if (CV_YUV420sp2BGR == code || CV_YUV420sp2BGRA == code)
                 {
                     if (dcn == 3)
-                        cvtYUV4202RGB<0, 1>(dst, src.step, y, uv);
+                        cvtYUV4202RGB<0, 1>(dst, srcstep, y, uv);
                     else
-                        cvtYUV4202RGBA<0, 1>(dst, src.step, y, uv);
+                        cvtYUV4202RGBA<0, 1>(dst, srcstep, y, uv);
                 }
                 else if (CV_YUV2RGB_NV12 == code || CV_YUV2RGBA_NV12 == code)
                 {
                     if (dcn == 3)
-                        cvtYUV4202RGB<2, 0>(dst, src.step, y, uv);
+                        cvtYUV4202RGB<2, 0>(dst, srcstep, y, uv);
                     else
-                        cvtYUV4202RGBA<2, 0>(dst, src.step, y, uv);
+                        cvtYUV4202RGBA<2, 0>(dst, srcstep, y, uv);
                 }
                 else //if (CV_YUV2BGR_NV12 == code || CV_YUV2BGRA_NV12 == code)
                 {
                     if (dcn == 3)
-                        cvtYUV4202RGB<0, 0>(dst, src.step, y, uv);
+                        cvtYUV4202RGB<0, 0>(dst, srcstep, y, uv);
                     else
-                        cvtYUV4202RGBA<0, 0>(dst, src.step, y, uv);
+                        cvtYUV4202RGBA<0, 0>(dst, srcstep, y, uv);
                 }
             }
             break;

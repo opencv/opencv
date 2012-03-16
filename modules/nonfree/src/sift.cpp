@@ -275,8 +275,8 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
             if( x <= 0 || x >= img.cols - 1 )
                 continue;
             
-            float dx = img.at<short>(y, x+1) - img.at<short>(y, x-1);
-            float dy = img.at<short>(y-1, x) - img.at<short>(y+1, x);
+            float dx = (float)(img.at<short>(y, x+1) - img.at<short>(y, x-1));
+            float dy = (float)(img.at<short>(y-1, x) - img.at<short>(y+1, x));
             
             X[k] = dx; Y[k] = dy; W[k] = (i*i + j*j)*expf_scale;
             k++;
@@ -347,7 +347,7 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
                    (img.at<short>(r+1, c) - img.at<short>(r-1, c))*deriv_scale,
                    (next.at<short>(r, c) - prev.at<short>(r, c))*deriv_scale);
         
-        float v2 = img.at<short>(r, c)*2;
+        float v2 = (float)img.at<short>(r, c)*2;
         float dxx = (img.at<short>(r, c+1) + img.at<short>(r, c-1) - v2)*second_deriv_scale;
         float dyy = (img.at<short>(r+1, c) + img.at<short>(r-1, c) - v2)*second_deriv_scale;
         float dss = (next.at<short>(r, c) + prev.at<short>(r, c) - v2)*second_deriv_scale;
@@ -400,7 +400,7 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
             return false;
         
         /* principal curvatures are computed using the trace and det of Hessian */
-        float v2 = img.at<short>(r, c)*2;
+        float v2 = img.at<short>(r, c)*2.f;
         float dxx = (img.at<short>(r, c+1) + img.at<short>(r, c-1) - v2)*second_deriv_scale;
         float dyy = (img.at<short>(r+1, c) + img.at<short>(r-1, c) - v2)*second_deriv_scale;
         float dxy = (img.at<short>(r+1, c+1) - img.at<short>(r+1, c-1) -
@@ -477,8 +477,9 @@ void SIFT::findScaleSpaceExtrema( const vector<Mat>& gauss_pyr, const vector<Mat
                          val <= prevptr[c+step-1] && val <= prevptr[c+step] && val <= prevptr[c+step+1])))
                     {
                         int r1 = r, c1 = c, layer = i;
-                        if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1, nOctaveLayers,
-                                                contrastThreshold, edgeThreshold, sigma) )
+                        if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1,
+                                                nOctaveLayers, (float)contrastThreshold,
+                                                (float)edgeThreshold, (float)sigma) )
                             continue;
                         float scl_octv = kpt.size*0.5f/(1 << o);
                         float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers+3) + layer],
@@ -551,8 +552,8 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
             if( rbin > -1 && rbin < d && cbin > -1 && cbin < d &&
                r > 0 && r < rows - 1 && c > 0 && c < cols - 1 )
             {
-                float dx = img.at<short>(r, c+1) - img.at<short>(r, c-1);
-                float dy = img.at<short>(r-1, c) - img.at<short>(r+1, c);
+                float dx = (float)(img.at<short>(r, c+1) - img.at<short>(r, c-1));
+                float dy = (float)(img.at<short>(r-1, c) - img.at<short>(r+1, c));
                 X[k] = dx; Y[k] = dy; RBin[k] = rbin; CBin[k] = cbin;
                 W[k] = (c_rot * c_rot + r_rot * r_rot)*exp_scale;
                 k++;
@@ -648,7 +649,7 @@ static void calcDescriptors(const vector<Mat>& gpyr, const vector<KeyPoint>& key
         Point2f ptf(kpt.pt.x*scale, kpt.pt.y*scale);
         const Mat& img = gpyr[octv*(nOctaveLayers + 3) + layer];
         
-        calcSIFTDescriptor(img, ptf, kpt.angle, size*0.5f, d, n, descriptors.ptr<float>(i));
+        calcSIFTDescriptor(img, ptf, kpt.angle, size*0.5f, d, n, descriptors.ptr<float>((int)i));
     }
 }
 
@@ -714,7 +715,7 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
     if( !mask.empty() && mask.type() != CV_8UC1 )
         CV_Error( CV_StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
     
-    Mat base = createInitialImage(image, false, sigma);
+    Mat base = createInitialImage(image, false, (float)sigma);
     vector<Mat> gpyr, dogpyr;
     int nOctaves = cvRound(log( (double)std::min( base.cols, base.rows ) ) / log(2.) - 2);
     

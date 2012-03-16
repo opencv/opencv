@@ -268,7 +268,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         warper->warp(mask, K, cameras_[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 
         // Compensate exposure
-        exposure_comp_->apply(img_idx, corners[img_idx], img_warped, mask_warped);
+        exposure_comp_->apply((int)img_idx, corners[img_idx], img_warped, mask_warped);
 
         img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
@@ -374,7 +374,7 @@ Stitcher::Status Stitcher::matchImages()
             (*features_finder_)(img, features_[i]);
         else
             (*features_finder_)(img, features_[i], rois_[i]);
-        features_[i].img_idx = i;
+        features_[i].img_idx = (int)i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
 
         resize(full_img, img, Size(), seam_scale_, seam_scale_);

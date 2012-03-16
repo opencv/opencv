@@ -101,21 +101,21 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    int transformationType = TransformationType::RIGID_BODY_MOTION;
+    int transformationType = RIGID_BODY_MOTION;
     if( argc == 6 )
     {
         string ttype = argv[5];
         if( ttype == "-rbm" )
         {
-            transformationType = TransformationType::RIGID_BODY_MOTION;
+            transformationType = RIGID_BODY_MOTION;
         }
         else if ( ttype == "-r")
         {
-            transformationType = TransformationType::ROTATION;
+            transformationType = ROTATION;
         }
         else if ( ttype == "-t")
         {
-            transformationType = TransformationType::TRANSLATION;
+            transformationType = TRANSLATION;
         }
         else
         {
@@ -145,9 +145,9 @@ int main(int argc, char** argv)
     minGradMagnitudes[2] = 3;
     minGradMagnitudes[3] = 1;
 
-    const float minDepth = 0; //in meters
-    const float maxDepth = 3; //in meters
-    const float maxDepthDiff = 0.07; //in meters
+    const float minDepth = 0.f; //in meters
+    const float maxDepth = 3.f; //in meters
+    const float maxDepthDiff = 0.07f; //in meters
 
     tm.start();
     bool isFound = cv::RGBDOdometry( Rt, Mat(),

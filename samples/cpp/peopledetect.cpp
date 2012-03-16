@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 		    //	++filename;
 		    if(filename[0] == '#')
 			    continue;
-		    int l = strlen(filename);
+		    int l = (int)strlen(filename);
 		    while(l > 0 && isspace(filename[l-1]))
 			    --l;
 		    filename[l] = '\0';

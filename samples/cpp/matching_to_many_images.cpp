@@ -192,7 +192,7 @@ void saveResultImages( const Mat& queryImage, const vector<KeyPoint>& queryKeypo
     {
         if( !trainImages[i].empty() )
         {
-            maskMatchesByTrainImgIdx( matches, i, mask );
+            maskMatchesByTrainImgIdx( matches, (int)i, mask );
             drawMatches( queryImage, queryKeypoints, trainImages[i], trainKeypoints[i],
                          matches, drawImg, Scalar(255, 0, 0), Scalar(0, 255, 255), mask );
             string filename = resultDir + "/res_" + trainImagesNames[i];

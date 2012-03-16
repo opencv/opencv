@@ -53,9 +53,9 @@ void downsamplePoints( const Mat& src, Mat& dst, size_t count )
     CV_Assert( src.total() >= count );
     CV_Assert( src.type() == CV_8UC3);
 
-    dst.create( 1, count, CV_8UC3 );
+    dst.create( 1, (int)count, CV_8UC3 );
     //TODO: optimize by exploiting symmetry in the distance matrix
-    Mat dists( src.total(), src.total(), CV_32FC1, Scalar(0) );
+    Mat dists( (int)src.total(), (int)src.total(), CV_32FC1, Scalar(0) );
     if( dists.empty() )
         std::cerr << "Such big matrix cann't be created." << std::endl;
 
@@ -88,7 +88,7 @@ void downsamplePoints( const Mat& src, Mat& dst, size_t count )
         Mat minDists;
         reduce( activedDists, minDists, 0, CV_REDUCE_MIN );
         minMaxLoc( minDists, 0, &maxVal, 0, &maxLoc, candidatePointsMask );
-        dst.at<Point3_<uchar> >(i) = src.at<Point3_<uchar> >(maxLoc.x);
+        dst.at<Point3_<uchar> >((int)i) = src.at<Point3_<uchar> >(maxLoc.x);
     }
 }
 
@@ -113,7 +113,7 @@ void cv::generateColors( std::vector<Scalar>& colors, size_t count, size_t facto
 
     // Generate a set of colors in RGB space. A size of the set is severel times (=factor) larger then
     // the needed count of colors.
-    Mat bgr( 1, count*factor, CV_8UC3 );
+    Mat bgr( 1, (int)(count*factor), CV_8UC3 );
     randu( bgr, 0, 256 );
 
     // Convert the colors set to Lab space.
@@ -134,7 +134,7 @@ void cv::generateColors( std::vector<Scalar>& colors, size_t count, size_t facto
     CV_Assert( bgr_subset.total() == count );
     for( size_t i = 0; i < count; i++ )
     {
-        Point3_<uchar> c = bgr_subset.at<Point3_<uchar> >(i);
+        Point3_<uchar> c = bgr_subset.at<Point3_<uchar> >((int)i);
         colors[i] = Scalar(c.x, c.y, c.z);
     }
 }

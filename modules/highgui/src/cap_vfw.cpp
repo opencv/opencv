@@ -54,6 +54,7 @@
 
 #if defined _M_X64
 #pragma optimize("",off)
+#pragma warning(disable: 4748)
 #endif
 
 /********************* Capturing video from AVI via VFW ************************/

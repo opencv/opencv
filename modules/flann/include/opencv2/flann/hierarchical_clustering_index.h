@@ -352,10 +352,10 @@ public:
         for (int i=0; i<trees_; ++i) {
             indices[i] = new int[size_];
             for (size_t j=0; j<size_; ++j) {
-                indices[i][j] = j;
+                indices[i][j] = (int)j;
             }
             root[i] = pool.allocate<Node>();
-            computeClustering(root[i], indices[i], size_, branching_,0);
+            computeClustering(root[i], indices[i], (int)size_, branching_,0);
         }
     }
 
@@ -419,7 +419,7 @@ public:
         int maxChecks = get_param(searchParams,"checks",32);
 
         // Priority queue storing intermediate branches in the best-bin-first search
-        Heap<BranchSt>* heap = new Heap<BranchSt>(size_);
+        Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
 
         std::vector<bool> checked(size_,false);
         int checks = 0;
@@ -487,7 +487,7 @@ private:
     {
         save_value(stream, *node);
         if (node->childs==NULL) {
-            int indices_offset = node->indices - indices[num];
+            int indices_offset = (int)(node->indices - indices[num]);
             save_value(stream, indices_offset);
         }
         else {

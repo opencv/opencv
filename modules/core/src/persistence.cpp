@@ -853,6 +853,7 @@ icvProcessSpecialDouble( CvFileStorage* fs, char* buf, double* value, char** end
         CV_PARSE_ERROR( "Bad format of floating-point constant" );
 
     union{double d; uint64 i;} v;
+    v.d = 0.;
     if( toupper(buf[1]) == 'I' && toupper(buf[2]) == 'N' && toupper(buf[3]) == 'F' )
         v.i = (uint64)inf_hi << 32;
     else if( toupper(buf[1]) == 'N' && toupper(buf[2]) == 'A' && toupper(buf[3]) == 'N' )

@@ -275,7 +275,7 @@ CvDTreeNode* CvCascadeBoostTrainData::subsample_data( const CvMat* _subsample_id
 
     if( _subsample_idx )
     {
-        CV_Assert( isubsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count ) );
+        CV_Assert( (isubsample_idx = cvPreprocessIndexArray( _subsample_idx, sample_count )) != 0 );
 
         if( isubsample_idx->cols + isubsample_idx->rows - 1 == sample_count )
         {
@@ -321,7 +321,7 @@ CvDTreeNode* CvCascadeBoostTrainData::subsample_data( const CvMat* _subsample_id
 
         root = new_node( 0, count, 1, 0 );
 
-        CV_Assert( subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 ));
+        CV_Assert( (subsample_co = cvCreateMat( 1, sample_count*2, CV_32SC1 )) != 0);
         cvZero( subsample_co );
         co = subsample_co->data.i;
         for( int i = 0; i < count; i++ )

@@ -5,6 +5,10 @@
 #include <cstdarg>
 #include <sstream>
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
+
 #ifdef HAVE_CVCONFIG_H
 # include "cvconfig.h"
 #endif

@@ -202,7 +202,7 @@ void print_variable_importance( CvDTree* dtree, const char** var_desc )
         if( var_desc )
         {
             char buf[100];
-            int len = strchr( var_desc[i], '(' ) - var_desc[i] - 1;
+            int len = (int)(strchr( var_desc[i], '(' ) - var_desc[i] - 1);
             strncpy( buf, var_desc[i], len );
             buf[len] = '\0';
             printf( "%s", buf );

@@ -940,11 +940,11 @@ CVAPI(void*) cvMemStorageAlloc( CvMemStorage* storage, size_t size );
 
 /* Allocates string in memory storage */
 CVAPI(CvString) cvMemStorageAllocString( CvMemStorage* storage, const char* ptr,
-                                        int len CV_DEFAULT(-1) );
+                                         int len CV_DEFAULT(-1) );
 
 /* Creates new empty sequence that will reside in the specified storage */
-CVAPI(CvSeq*)  cvCreateSeq( int seq_flags, int header_size,
-                            int elem_size, CvMemStorage* storage );
+CVAPI(CvSeq*)  cvCreateSeq( int seq_flags, size_t header_size,
+                            size_t elem_size, CvMemStorage* storage );
 
 /* Changes default size (granularity) of sequence blocks.
    The default size is ~1Kbyte */

@@ -201,7 +201,7 @@ string extractModelName( const string& filename )
 
     const int extentionSize = 4; //.xml
 
-    int substrLength = filename.size() - startPos - extentionSize;
+    int substrLength = (int)(filename.size() - startPos - extentionSize);
 
     return filename.substr(startPos, substrLength);
 }

@@ -43,7 +43,7 @@ Matrix<T> random_sample(Matrix<T>& srcMatrix, long size, bool remove = false)
 
     T* src,* dest;
     for (long i=0; i<size; ++i) {
-        long r = rand_int(srcMatrix.rows-i);
+        long r = rand_int((int)(srcMatrix.rows-i));
         dest = newSet[i];
         src = srcMatrix[r];
         std::copy(src, src+srcMatrix.cols, dest);
@@ -62,7 +62,7 @@ Matrix<T> random_sample(Matrix<T>& srcMatrix, long size, bool remove = false)
 template<typename T>
 Matrix<T> random_sample(const Matrix<T>& srcMatrix, size_t size)
 {
-    UniqueRandom rand(srcMatrix.rows);
+    UniqueRandom rand((int)srcMatrix.rows);
     Matrix<T> newSet(new T[size * srcMatrix.cols], size,srcMatrix.cols);
 
     T* src,* dest;

@@ -131,8 +131,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  void callBack_updateRetinaParams(int, void*)
  {
-
-	 retina->setupOPLandIPLParvoChannel(true, true, (float)(localAdaptation_photoreceptors/200.0), 0.5f, 0.43f, (double)retinaHcellsGain, 1.f, 7.f, (float)(localAdaptation_Gcells/200.0));
+	 retina->setupOPLandIPLParvoChannel(true, true, (float)(localAdaptation_photoreceptors/200.0), 0.5f, 0.43f, (float)retinaHcellsGain, 1.f, 7.f, (float)(localAdaptation_Gcells/200.0));
  }
 
  int colorSaturationFactor;

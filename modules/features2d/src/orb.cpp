@@ -785,7 +785,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
     vector<Mat> imagePyramid(nlevels), maskPyramid(nlevels);
     for (int level = 0; level < nlevels; ++level)
     {
-        float scale = 1/getScale(level, firstLevel, scale);
+        float scale = 1/getScale(level, firstLevel, scaleFactor);
         Size sz(cvRound(image.cols*scale), cvRound(image.rows*scale));
         Size wholeSize(sz.width + border*2, sz.height + border*2);
         Mat temp(wholeSize, image.type()), masktemp;
@@ -810,10 +810,11 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
             }
             else
             {
-                float sf = scaleFactor;
-                resize(imagePyramid[level-1], imagePyramid[level], sz, 1./sf, 1./sf, INTER_LINEAR);
+                resize(imagePyramid[level-1], imagePyramid[level], sz,
+                       1./scaleFactor, 1./scaleFactor, INTER_LINEAR);
                 if (!mask.empty())
-                    resize(maskPyramid[level-1], maskPyramid[level], sz, 1./sf, 1./sf, INTER_LINEAR);
+                    resize(maskPyramid[level-1], maskPyramid[level], sz,
+                           1./scaleFactor, 1./scaleFactor, INTER_LINEAR);
                 copyMakeBorder(imagePyramid[level], temp, border, border, border, border,
                                BORDER_REFLECT_101+BORDER_ISOLATED);
             }

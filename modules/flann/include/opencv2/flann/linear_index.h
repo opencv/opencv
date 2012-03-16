@@ -108,7 +108,7 @@ public:
         ElementType* data = dataset_.data;
         for (size_t i = 0; i < dataset_.rows; ++i, data += dataset_.cols) {
             DistanceType dist = distance_(data, vec, dataset_.cols);
-            resultSet.addPoint(dist, i);
+            resultSet.addPoint(dist, (int)i);
         }
     }
 

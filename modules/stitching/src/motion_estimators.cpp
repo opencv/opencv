@@ -700,7 +700,7 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
 
     for (size_t i = 0; i < comps.size.size(); ++i)
     {
-        if (comps.size[comps.findSetByElem(i)] == 1)
+        if (comps.size[comps.findSetByElem((int)i)] == 1)
         {
             string name = pathes[i];
             size_t prefix_len = name.find_last_of("/\\");

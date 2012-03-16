@@ -208,7 +208,7 @@ int main(int argc, const char* argv[])
 
         imshow("Interpolated frame", frames[currentFrame]);
 
-        while (true)
+        for(;;)
         {
             int key = toupper(waitKey(10) & 0xff);
 

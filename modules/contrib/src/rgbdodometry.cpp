@@ -148,8 +148,8 @@ void cvtDepth2Cloud( const Mat& depth, Mat& cloud, const Mat& cameraMatrix )
         for( int x = 0; x < cloud.cols; x++ )
         {
             float z = depth_prt[x];
-            cloud_ptr[x].x = (x - ox) * z * inv_fx;
-            cloud_ptr[x].y = (y - oy) * z * inv_fy;
+            cloud_ptr[x].x = (float)((x - ox) * z * inv_fx);
+            cloud_ptr[x].y = (float)((y - oy) * z * inv_fy);
             cloud_ptr[x].z = z;
         }
     }
@@ -242,7 +242,7 @@ int computeCorresp( const Mat& K, const Mat& K_inv, const Mat& Rt,
             float d1 = depth1.at<float>(v1,u1);
             if( !cvIsNaN(d1) && texturedMask1.at<uchar>(v1,u1) )
             {
-                float transformed_d1 = d1 * (KRK_inv_ptr[6] * u1 + KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]) + Kt_ptr[2];
+                float transformed_d1 = (float)(d1 * (KRK_inv_ptr[6] * u1 + KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]) + Kt_ptr[2]);
                 int u0 = cvRound((d1 * (KRK_inv_ptr[0] * u1 + KRK_inv_ptr[1] * v1 + KRK_inv_ptr[2]) + Kt_ptr[0]) / transformed_d1);
                 int v0 = cvRound((d1 * (KRK_inv_ptr[3] * u1 + KRK_inv_ptr[4] * v1 + KRK_inv_ptr[5]) + Kt_ptr[1]) / transformed_d1);
 
@@ -257,7 +257,7 @@ int computeCorresp( const Mat& K, const Mat& K_inv, const Mat& Rt,
                             int exist_u1, exist_v1;
                             get2shorts( c, exist_u1, exist_v1);
 
-                            float exist_d1 = depth1.at<float>(exist_v1,exist_u1) * (KRK_inv_ptr[6] * exist_u1 + KRK_inv_ptr[7] * exist_v1 + KRK_inv_ptr[8]) + Kt_ptr[2];
+                            float exist_d1 = (float)(depth1.at<float>(exist_v1,exist_u1) * (KRK_inv_ptr[6] * exist_u1 + KRK_inv_ptr[7] * exist_v1 + KRK_inv_ptr[8]) + Kt_ptr[2]);
 
                             if( transformed_d1 > exist_d1 )
                                 continue;
@@ -307,7 +307,7 @@ void buildPyramids( const Mat& image0, const Mat& image1,
                     vector<Mat>& pyramid_dI_dx1, vector<Mat>& pyramid_dI_dy1,
                     vector<Mat>& pyramidTexturedMask1, vector<Mat>& pyramidCameraMatrix )
 {
-    const int pyramidMaxLevel = minGradMagnitudes.size() - 1;
+    const int pyramidMaxLevel = (int)minGradMagnitudes.size() - 1;
 
     buildPyramid( image0, pyramidImage0, pyramidMaxLevel );
     buildPyramid( image1, pyramidImage1, pyramidMaxLevel );
@@ -330,12 +330,12 @@ void buildPyramids( const Mat& image0, const Mat& image1,
         const Mat& dy = pyramid_dI_dy1[i];
 
         Mat texturedMask( dx.size(), CV_8UC1, Scalar(0) );
-        const float minScalesGradMagnitude2 = (minGradMagnitudes[i] * minGradMagnitudes[i]) / (sobelScale * sobelScale);
+        const float minScalesGradMagnitude2 = (float)((minGradMagnitudes[i] * minGradMagnitudes[i]) / (sobelScale * sobelScale));
         for( int y = 0; y < dx.rows; y++ )
         {
             for( int x = 0; x < dx.cols; x++ )
             {
-                float m2 = dx.at<short int>(y,x)*dx.at<short int>(y,x) + dy.at<short int>(y,x)*dy.at<short int>(y,x);
+                float m2 = (float)(dx.at<short>(y,x)*dx.at<short>(y,x) + dy.at<short>(y,x)*dy.at<short>(y,x));
                 if( m2 >= minScalesGradMagnitude2 )
                     texturedMask.at<uchar>(y,x) = 255;
             }
@@ -398,17 +398,17 @@ bool computeKsi( int transformType,
 {
     int Cwidth = -1;
     ComputeCFuncPtr computeCFuncPtr = 0;
-    if( transformType == TransformationType::RIGID_BODY_MOTION )
+    if( transformType == RIGID_BODY_MOTION )
     {
         Cwidth = 6;
         computeCFuncPtr = computeC_RigidBodyMotion;
     }
-    else if( transformType == TransformationType::ROTATION )
+    else if( transformType == ROTATION )
     {
         Cwidth = 3;
         computeCFuncPtr = computeC_Rotation;
     }
-    else if( transformType == TransformationType::TRANSLATION )
+    else if( transformType == TRANSLATION )
     {
         Cwidth = 3;
         computeCFuncPtr = computeC_Translation;
@@ -450,15 +450,15 @@ bool computeKsi( int transformType,
         ksi = Scalar(0);
 
         Mat subksi;
-        if( transformType == TransformationType::RIGID_BODY_MOTION )
+        if( transformType == RIGID_BODY_MOTION )
         {
             subksi = ksi;
         }
-        else if( transformType == TransformationType::ROTATION )
+        else if( transformType == ROTATION )
         {
             subksi = ksi.rowRange(0,3);
         }
-        else if( transformType == TransformationType::TRANSLATION )
+        else if( transformType == TRANSLATION )
         {
             subksi = ksi.rowRange(3,6);
         }
@@ -514,7 +514,7 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
 
     Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
     Mat currRt, ksi;
-    for( int level = iterCounts.size() - 1; level >= 0; level-- )
+    for( int level = (int)iterCounts.size() - 1; level >= 0; level-- )
     {
         const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
 

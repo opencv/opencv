@@ -32,7 +32,7 @@ int count_classes(CvMLData& data)
             return -1;
         rmap[ival] = 1; 
     }
-    return rmap.size();
+    return (int)rmap.size();
 }
 
 void print_result(float train_err, float test_err, const CvMat* _var_imp)

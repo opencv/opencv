@@ -536,7 +536,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      FileNode ip = fn["indexParams"];
      CV_Assert(ip.type() == FileNode::SEQ);
 
-     for(size_t i = 0; i < ip.size(); ++i)
+     for(int i = 0; i < (int)ip.size(); ++i)
      {
         CV_Assert(ip[i].type() == FileNode::MAP);
         std::string name =  (std::string)ip[i]["name"];
@@ -561,7 +561,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             indexParams->setString(name, (std::string) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
-            indexParams->setBool(name, (int) ip[i]["value"]);
+            indexParams->setBool(name, (int) ip[i]["value"] != 0);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,3):
             indexParams->setAlgorithm((int) ip[i]["value"]);
@@ -575,7 +575,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      FileNode sp = fn["searchParams"];
      CV_Assert(sp.type() == FileNode::SEQ);
 
-     for(size_t i = 0; i < sp.size(); ++i)
+     for(int i = 0; i < (int)sp.size(); ++i)
      {
         CV_Assert(sp[i].type() == FileNode::MAP);
         std::string name =  (std::string)sp[i]["name"];
@@ -600,7 +600,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             searchParams->setString(name, (std::string) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
-            searchParams->setBool(name, (int) ip[i]["value"]);
+            searchParams->setBool(name, (int) ip[i]["value"] != 0);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,3):
             searchParams->setAlgorithm((int) ip[i]["value"]);

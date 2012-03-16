@@ -42,7 +42,7 @@ int main()
         "ALPHA_ATOP_PREMUL", "ALPHA_XOR_PREMUL", "ALPHA_PLUS_PREMUL", "ALPHA_PREMUL"
     };
 
-    while (true)
+    for(;;)
     {
         cout << op_names[alpha_op] << endl;
 

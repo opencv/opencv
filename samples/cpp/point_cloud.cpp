@@ -196,7 +196,7 @@ int main(int argc, const char* argv[])
     setMouseCallback(windowName, mouseCallback, &renderer);
     setOpenGlDrawCallback(windowName, openGlDrawCallback, &renderer);
 
-    while (true)
+    for(;;)
     {
         int key = waitKey(10);
 

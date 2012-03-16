@@ -687,9 +687,9 @@ public:
         int row0 = std::min(cvRound(range.begin() * src.rows / nStripes), src.rows);
         int row1 = std::min(cvRound(range.end() * src.rows / nStripes), src.rows);
 
-        if(0)
+        /*if(0)
             printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",
-                   src.rows, src.cols, range.begin(), range.end(), row0, row1);
+                   src.rows, src.cols, range.begin(), range.end(), row0, row1);*/
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);

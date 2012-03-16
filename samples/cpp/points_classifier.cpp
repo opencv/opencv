@@ -43,7 +43,7 @@ void on_mouse( int event, int x, int y, int /*flags*/, void* )
             return;
 
         trainedPoints.push_back( Point(x,y) );
-        trainedPointsMarkers.push_back( classColors.size()-1 );
+        trainedPointsMarkers.push_back( (int)(classColors.size()-1) );
         updateFlag = true;
     }
     else if( event == CV_EVENT_RBUTTONUP )

@@ -148,7 +148,7 @@ void CV_VideoPositioningTest::run_test(int method)
 
 		generate_idx_seq(cap, method);
 
-        int N = idx.size(), failed_frames = 0, failed_positions = 0, failed_iterations = 0;
+        int N = (int)idx.size(), failed_frames = 0, failed_positions = 0, failed_iterations = 0;
 
         for (int j = 0; j < N; ++j)
 		{

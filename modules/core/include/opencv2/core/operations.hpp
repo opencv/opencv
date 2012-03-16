@@ -862,9 +862,9 @@ template<typename _Tp> struct CV_EXPORTS Matx_FastSolveOp<_Tp, 2, 1>
 template<typename _Tp> struct CV_EXPORTS Matx_FastSolveOp<_Tp, 3, 1>
 {
     bool operator()(const Matx<_Tp, 3, 3>& a, const Matx<_Tp, 3, 1>& b,
-                    Matx<_Tp, 3, 1>& x, int method) const
+                    Matx<_Tp, 3, 1>& x, int) const
     {
-        _Tp d = determinant(a);
+        _Tp d = (_Tp)determinant(a);
         if( d == 0 )
             return false;
         d = 1/d;
@@ -955,7 +955,7 @@ _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
     int i= 0;
- #if CV_ENABLE_UNROLLED
+#if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4 )
     {
         _AccTp v0 = a[i] - b[i], v1 = a[i+1] - b[i+1], v2 = a[i+2] - b[i+2], v3 = a[i+3] - b[i+3];
@@ -964,7 +964,7 @@ _AccTp normL2Sqr(const _Tp* a, const _Tp* b, int n)
 #endif
     for( ; i < n; i++ )
     {
-        _AccTp v = a[i] - b[i];
+        _AccTp v = (_AccTp)(a[i] - b[i]);
         s += v*v;
     }
     return s;
@@ -995,7 +995,7 @@ _AccTp normL1(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
     int i= 0;
- #if CV_ENABLE_UNROLLED
+#if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4 )
     {
         _AccTp v0 = a[i] - b[i], v1 = a[i+1] - b[i+1], v2 = a[i+2] - b[i+2], v3 = a[i+3] - b[i+3];
@@ -1004,7 +1004,7 @@ _AccTp normL1(const _Tp* a, const _Tp* b, int n)
 #endif
     for( ; i < n; i++ )
     {
-        _AccTp v = a[i] - b[i];
+        _AccTp v = (_AccTp)(a[i] - b[i]);
         s += std::abs(v);
     }
     return s;

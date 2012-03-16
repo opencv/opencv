@@ -61,8 +61,8 @@ using namespace std;
 #define MESSAGE_ERROR_ORTHO "Matrix of eigen vectors is not orthogonal."
 #define MESSAGE_ERROR_ORDER "Eigen values are not sorted in ascending order."
 
-const size_t COUNT_NORM_TYPES = 3;
-const size_t NORM_TYPE[COUNT_NORM_TYPES] = {cv::NORM_L1, cv::NORM_L2, cv::NORM_INF};
+const int COUNT_NORM_TYPES = 3;
+const int NORM_TYPE[COUNT_NORM_TYPES] = {cv::NORM_L1, cv::NORM_L2, cv::NORM_INF};
 
 enum TASK_TYPE_EIGEN {VALUES, VECTORS};
 
@@ -232,7 +232,7 @@ bool Core_EigenTest::check_orthogonality(const cv::Mat& U)
 
     cv::Mat E = Mat::eye(U.rows, U.cols, type);
 
-    for (size_t i = 0; i < COUNT_NORM_TYPES; ++i)
+    for (int i = 0; i < COUNT_NORM_TYPES; ++i)
     {
         double diff = cv::norm(UUt, E, NORM_TYPE[i]);
         if (diff > eps_vec)
@@ -253,7 +253,7 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
     {
     case CV_32FC1:
         {
-            for (size_t i = 0; i < eigen_values.total() - 1; ++i)
+            for (int i = 0; i < (int)(eigen_values.total() - 1); ++i)
                 if (!(eigen_values.at<float>(i, 0) > eigen_values.at<float>(i+1, 0)))
                 {
                 std::cout << endl; std::cout << "Checking order of eigen values vector " << eigen_values << "..." << endl;
@@ -268,7 +268,7 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
 
     case CV_64FC1:
         {
-            for (size_t i = 0; i < eigen_values.total() - 1; ++i)
+            for (int i = 0; i < (int)(eigen_values.total() - 1); ++i)
                 if (!(eigen_values.at<double>(i, 0) > eigen_values.at<double>(i+1, 0)))
                 {
                 std::cout << endl; std::cout << "Checking order of eigen values vector " << eigen_values << "..." << endl;
@@ -338,7 +338,7 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
 
     cv::Mat disparity = src_evec - eval_evec;
 
-    for (size_t i = 0; i < COUNT_NORM_TYPES; ++i)
+    for (int i = 0; i < COUNT_NORM_TYPES; ++i)
     {
         double diff = cv::norm(disparity, NORM_TYPE[i]);
         if (diff > eps_vec)
@@ -367,7 +367,7 @@ bool Core_EigenTest::test_values(const cv::Mat& src)
 
     if (!check_pair_count(src, eigen_values_2)) return false;
 
-    for (size_t i = 0; i < COUNT_NORM_TYPES; ++i)
+    for (int i = 0; i < COUNT_NORM_TYPES; ++i)
     {
         double diff = cv::norm(eigen_values_1, eigen_values_2, NORM_TYPE[i]);
         if (diff > eps_val)
@@ -391,7 +391,7 @@ bool Core_EigenTest::check_full(int type)
 
     for (int i = 1; i <= MATRIX_COUNT; ++i)
     {
-        size_t src_size = (int)(std::pow(2.0, (rand()%MAX_DEGREE+1)*1.0));
+        int src_size = (int)(std::pow(2.0, (rand()%MAX_DEGREE+1)*1.0));
 
         cv::Mat src(src_size, src_size, type);
 

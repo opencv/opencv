@@ -47,6 +47,7 @@
 
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
+#pragma warning( disable: 4748 )
 #endif
 
 namespace cv

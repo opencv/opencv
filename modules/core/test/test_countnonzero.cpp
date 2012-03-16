@@ -112,7 +112,7 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int count_n
 
     while (n < count_non_zero)
     {
-        size_t i = rng.next()%size.height, j = rng.next()%size.width;
+        int i = rng.next()%size.height, j = rng.next()%size.width;
 
         switch (type)
         {
@@ -151,20 +151,15 @@ int CV_CountNonZeroTest::get_count_non_zero()
 
     for (int i = 0; i < src.rows; ++i)
         for (int j = 0; j < src.cols; ++j)
-
+        {
             if (current_type == CV_8U) result += (src.at<uchar>(i, j) > 0);
-
-    else if (current_type == CV_8S) result += abs(sign(src.at<char>(i, j)));
-
-    else if (current_type == CV_16U) result += (src.at<ushort>(i, j) > 0);
-
-    else if (current_type == CV_16S) result += abs(sign(src.at<short>(i, j)));
-
-    else if (current_type == CV_32S) result += abs(sign(src.at<int>(i, j)));
-
-    else if (current_type == CV_32F) result += (fabs(src.at<float>(i, j)) > eps_32);
-
-    else result += (fabs(src.at<double>(i, j)) > eps_64);
+            else if (current_type == CV_8S) result += abs(sign(src.at<char>(i, j)));
+            else if (current_type == CV_16U) result += (src.at<ushort>(i, j) > 0);
+            else if (current_type == CV_16S) result += abs(sign(src.at<short>(i, j)));
+            else if (current_type == CV_32S) result += abs(sign(src.at<int>(i, j)));
+            else if (current_type == CV_32F) result += (fabs(src.at<float>(i, j)) > eps_32);
+            else result += (fabs(src.at<double>(i, j)) > eps_64);
+        }
 
     return result;
 }
