@@ -5,7 +5,7 @@ if(NOT ANDROID OR NOT PYTHON_EXECUTABLE)
   ocv_module_disable(java)
 endif()
 
-set(OPENCV_MODULES_EXPORTED_TO_JAVA opencv_objdetect opencv_features2d opencv_video opencv_highgui opencv_ml opencv_calib3d CACHE STRING "List of modules exported to Java API")
+set(OPENCV_MODULES_EXPORTED_TO_JAVA opencv_objdetect opencv_features2d opencv_video opencv_highgui opencv_ml opencv_calib3d opencv_photo CACHE STRING "List of modules exported to Java API")
 mark_as_advanced(OPENCV_MODULES_EXPORTED_TO_JAVA)
 
 set(the_description "The java bindings")

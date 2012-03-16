@@ -138,10 +138,6 @@ CVAPI(void) cvPyrMeanShiftFiltering( const CvArr* src, CvArr* dst,
 /* Segments image using seed "markers" */
 CVAPI(void) cvWatershed( const CvArr* image, CvArr* markers );
 
-/* Inpaints the selected region in the image */
-CVAPI(void) cvInpaint( const CvArr* src, const CvArr* inpaint_mask,
-                       CvArr* dst, double inpaintRange, int flags );
-
 /* Calculates an image derivative using generalized Sobel
    (aperture_size = 1,3,5,7) or Scharr (aperture_size = -1) operator.
    Scharr can be used only for the first dx or dy derivative */

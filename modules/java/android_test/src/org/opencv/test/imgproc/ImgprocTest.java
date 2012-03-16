@@ -1339,6 +1339,7 @@ public class ImgprocTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
+    /*
     public void testInpaint() {
         Core.circle(gray255, new Point(matSize / 2, matSize / 2), 2, colorBlack, Core.FILLED);
         Core.circle(gray0, new Point(matSize / 2, matSize / 2), 2, colorWhite, Core.FILLED);
@@ -1347,6 +1348,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         assertMatEqual(getMat(CvType.CV_8U, 255), dst);
     }
+    */
 
     public void testIntegral2MatMatMat() {
         Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));

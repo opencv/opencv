@@ -76,13 +76,6 @@ enum
     CV_GAUSSIAN_5x5 = 7
 };
 
-/* Inpainting algorithms */
-enum
-{
-    CV_INPAINT_NS      =0,
-    CV_INPAINT_TELEA   =1
-};
-
 /* Special filters */
 enum
 {
