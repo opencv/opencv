@@ -61,13 +61,9 @@ cvUpdateMotionHistory( const void* silhouette, void* mhimg,
 
     CvSize size = cvGetMatSize( mhi );
 
-    int mhi_step = mhi->step;
-    int silh_step = silh->step;
-
     if( CV_IS_MAT_CONT( mhi->type & silh->type ))
     {
         size.width *= size.height;
-        mhi_step = silh_step = CV_STUB_STEP;
         size.height = 1;
     }
 

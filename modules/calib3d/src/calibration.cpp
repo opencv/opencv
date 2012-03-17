@@ -1363,7 +1363,7 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
 {
     Ptr<CvMat> matA, _b, _allH, _allK;
 
-    int i, j, pos, nimages, total, ni = 0;
+    int i, j, pos, nimages, ni = 0;
     double a[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 1 };
     double H[9], f[2];
     CvMat _a = cvMat( 3, 3, CV_64F, a );
@@ -1388,8 +1388,6 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
     a[2] = (imageSize.width - 1)*0.5;
     a[5] = (imageSize.height - 1)*0.5;
     _allH = cvCreateMat( nimages, 9, CV_64F );
-
-    total = cvRound(cvSum(npoints).val[0]);
 
     // extract vanishing points in order to obtain initial value for the focal length
     for( i = 0, pos = 0; i < nimages; i++, pos += ni )
@@ -2136,7 +2134,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
 
             for( k = 0; k < 2; k++ )
             {
-                double maxErr, l2err;
+                double l2err;
                 imgpt_i[k] = cvMat(1, ni, CV_64FC2, imagePoints[k]->data.db + ofs*2);
 
                 if( JtJ || JtErr )
@@ -2148,7 +2146,6 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
                 cvSub( &tmpimagePoints, &imgpt_i[k], &tmpimagePoints );
 
                 l2err = cvNorm( &tmpimagePoints, 0, CV_L2 );
-                maxErr = cvNorm( &tmpimagePoints, 0, CV_C );
 
                 if( JtJ || JtErr )
                 {

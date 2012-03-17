@@ -391,7 +391,6 @@ float ann_calc_error( CvANN_MLP* ann, CvMLData* _data, map<int, int>& cls_map, i
     int cls_count = (int)cls_map.size();
     Mat output( 1, cls_count, CV_32FC1 );
     CvMat _output = CvMat(output);
-    map<int, int>::iterator b_it = cls_map.begin();
     for( int i = 0; i < sample_count; i++ )
     {
         CvMat sample;

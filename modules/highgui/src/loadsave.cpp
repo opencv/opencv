@@ -399,8 +399,7 @@ Mat imdecode( InputArray _buf, int flags )
 bool imencode( const string& ext, InputArray _image,
                vector<uchar>& buf, const vector<int>& params )
 {
-    Mat temp, image = _image.getMat();
-    const Mat* pimage = &image;
+    Mat image = _image.getMat();
 
     int channels = image.channels();
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );
@@ -412,8 +411,9 @@ bool imencode( const string& ext, InputArray _image,
     if( !encoder->isFormatSupported(image.depth()) )
     {
         CV_Assert( encoder->isFormatSupported(CV_8U) );
+        Mat temp;
         image.convertTo(temp, CV_8U);
-        pimage = &temp;
+        image = temp;
     }
 
     bool code;

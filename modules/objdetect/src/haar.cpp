@@ -657,8 +657,6 @@ CV_IMPL int
 cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                                CvPoint pt, double& stage_sum, int start_stage )
 {
-    int result = -1;
-
     int p_offset, pq_offset;
     int i, j;
     double mean, variance_norm_factor;
@@ -690,11 +688,8 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
 
     if( cascade->is_tree )
     {
-        CvHidHaarStageClassifier* ptr;
+        CvHidHaarStageClassifier* ptr = cascade->stage_classifier;
         assert( start_stage == 0 );
-
-        result = 1;
-        ptr = cascade->stage_classifier;
 
         while( ptr )
         {

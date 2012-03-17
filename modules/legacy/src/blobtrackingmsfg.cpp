@@ -276,14 +276,11 @@ private:
             return cvSum(pHT->m_pHist).val[0] / sqrt(pHC->m_HistVolume*pHM->m_HistVolume);
 #else
             // Do computations manually and let autovectorizer do the job:
-            DefHistType *hm, *hc, *ht;
-            double sum;
-            int     size;
-            hm=(DefHistType *)(pHM->m_pHist->data.ptr);
-            hc=(DefHistType *)(pHC->m_pHist->data.ptr);
-            ht=(DefHistType *)(pHT->m_pHist->data.ptr);
-            size = pHM->m_pHist->width*pHM->m_pHist->height;
-            sum = 0.;
+            DefHistType* hm=(DefHistType *)(pHM->m_pHist->data.ptr);
+            DefHistType* hc=(DefHistType *)(pHC->m_pHist->data.ptr);
+            //ht=(DefHistType *)(pHT->m_pHist->data.ptr);
+            int size = pHM->m_pHist->width*pHM->m_pHist->height;
+            double sum = 0.;
             for(int i = 0; i < size; i++ )
             {
                 sum += sqrt(hm[i]*hc[i]);

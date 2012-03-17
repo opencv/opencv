@@ -520,13 +520,10 @@ private:
         //DefBlobTracker* pBT = (DefBlobTracker*)pB;
         CvBlob*         pBBest = NULL;
         double          DistBest = -1;
-        int             j,BlobID;
 
         if(pB==NULL) return NULL;
 
-        BlobID = pB->ID;
-
-        for(j=m_BlobListNew.GetBlobNum(); j>0; --j)
+        for(int j=m_BlobListNew.GetBlobNum(); j>0; --j)
         {   /* Find best CC: */
             double  Dist = -1;
             CvBlob* pBNew = m_BlobListNew.GetBlob(j-1);

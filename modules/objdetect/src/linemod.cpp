@@ -929,7 +929,9 @@ void orUnaligned8u(const uchar * src, const int src_stride,
 {
 #if CV_SSE2
   volatile bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#if CV_SSE3
   volatile bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+#endif
   bool src_aligned = reinterpret_cast<unsigned long long>(src) % 16 == 0;
 #endif
 
@@ -1203,7 +1205,9 @@ void similarity(const std::vector<Mat>& linear_memories, const Template& templ,
 
 #if CV_SSE2
   volatile bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#if CV_SSE3
   volatile bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+#endif
 #endif
 
   // Compute the similarity measure for this template by accumulating the contribution of
@@ -1281,7 +1285,9 @@ void similarityLocal(const std::vector<Mat>& linear_memories, const Template& te
 
 #if CV_SSE2
   volatile bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#if CV_SSE3
   volatile bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+#endif
   __m128i* dst_ptr_sse = dst.ptr<__m128i>();
 #endif
 

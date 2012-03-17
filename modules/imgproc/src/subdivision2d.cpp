@@ -344,7 +344,6 @@ icvIsPtInCircle3( CvPoint2D32f pt, CvPoint2D32f a, CvPoint2D32f b, CvPoint2D32f 
 CV_IMPL CvSubdiv2DPoint *
 cvSubdivDelaunay2DInsert( CvSubdiv2D * subdiv, CvPoint2D32f pt )
 {
-    CvSubdiv2DPoint *point = 0;
     CvSubdiv2DPointLocation location = CV_PTLOC_ERROR;
 
     CvSubdiv2DPoint *curr_point = 0, *first_point = 0;
@@ -368,7 +367,6 @@ cvSubdivDelaunay2DInsert( CvSubdiv2D * subdiv, CvPoint2D32f pt )
         CV_Error( CV_StsOutOfRange, "" );
 
     case CV_PTLOC_VERTEX:
-        point = curr_point;
         break;
 
     case CV_PTLOC_ON_EDGE:

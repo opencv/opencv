@@ -134,6 +134,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
         }
     }
     
+#if 0
+    double err = 0;
     /* Points was reconstructed. Try to reproject points */
     /* We can compute reprojection error if need */
     {
@@ -172,9 +174,11 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
                 float deltaX,deltaY;
                 deltaX = (float)fabs(x-xr);
                 deltaY = (float)fabs(y-yr);
+                err += deltaX*deltaX + deltaY*deltaY;
             }
         }
     }
+#endif
 }
 
 

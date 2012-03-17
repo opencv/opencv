@@ -88,7 +88,6 @@ public:
         {
             const int img_r = 640;
             const int img_c = 480;
-            Size frame_s = Size(img_c, img_r);
 
             for (int k = 1; k <= 5; ++k)
             {

@@ -697,28 +697,18 @@ float CvRTrees::predict( const CvMat* sample, const CvMat* missing ) const
 
 float CvRTrees::predict_prob( const CvMat* sample, const CvMat* missing) const
 {
-    double result = -1;
-    int k;
-	
 	if( nclasses == 2 ) //classification
     {
-        int max_nvotes = 0;
         cv::AutoBuffer<int> _votes(nclasses);
         int* votes = _votes;
         memset( votes, 0, sizeof(*votes)*nclasses );
-        for( k = 0; k < ntrees; k++ )
+        for( int k = 0; k < ntrees; k++ )
         {
             CvDTreeNode* predicted_node = trees[k]->predict( sample, missing );
-            int nvotes;
             int class_idx = predicted_node->class_idx;
             CV_Assert( 0 <= class_idx && class_idx < nclasses );
 			
-            nvotes = ++votes[class_idx];
-            if( nvotes > max_nvotes )
-            {
-                max_nvotes = nvotes;
-                result = predicted_node->value;
-            }
+            ++votes[class_idx];
         }
 		
 		return float(votes[1])/ntrees;

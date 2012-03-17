@@ -2169,7 +2169,7 @@ void icvReconstructPointsFor3View( CvMat* projMatr1,CvMat* projMatr2,CvMat* proj
 
     /* Points was reconstructed. Try to reproject points */
     /* We can compute reprojection error if need */
-    {
+    /*{
         int i;
         CvMat point3D;
         double point3D_dat[4];
@@ -2188,7 +2188,7 @@ void icvReconstructPointsFor3View( CvMat* projMatr1,CvMat* projMatr2,CvMat* proj
             point3D_dat[2] = cvmGet(points4D,2,i)/W;
             point3D_dat[3] = 1;
 
-                /* !!! Project this point for each camera */
+                // !!! Project this point for each camera
                 for( int currCamera = 0; currCamera < 3; currCamera++ )
                 {
                     cvmMul(projMatrs[currCamera], &point3D, &point2D);
@@ -2207,7 +2207,7 @@ void icvReconstructPointsFor3View( CvMat* projMatr1,CvMat* projMatr2,CvMat* proj
                     deltaY = (float)fabs(y-yr);
                 }
         }
-    }
+    }*/
 
     __END__;
     return;
@@ -2537,8 +2537,7 @@ void FindTransformForProjectMatrices(CvMat* projMatr1,CvMat* projMatr2,CvMat* ro
     double resVect_dat[12];
     resVect = cvMat(12,1,CV_64F,resVect_dat);
 
-    int sing;
-    sing = cvSolve(&matrA,&vectB,&resVect);
+    cvSolve(&matrA,&vectB,&resVect);
 
     /* Fill rotation matrix */
     for( i = 0; i < 12; i++ )

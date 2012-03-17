@@ -39,7 +39,6 @@ namespace
             {
                 Point2f pt_new = query[matches[i].queryIdx].pt;
                 Point2f pt_old = train[matches[i].trainIdx].pt;
-                Point2f dist = pt_new - pt_old;
 
                 cv::line(img, pt_new, pt_old, Scalar(125, 255, 125), 1);
                 cv::circle(img, pt_new, 2, Scalar(255, 0, 125), 1);

@@ -156,7 +156,6 @@ cvImageWidgetNew (int flags)
 static void
 cvImageWidget_realize (GtkWidget *widget)
 {
-  CvImageWidget *image_widget;
   GdkWindowAttr attributes;
   gint attributes_mask;
 
@@ -165,7 +164,6 @@ cvImageWidget_realize (GtkWidget *widget)
   g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
 
   GTK_WIDGET_SET_FLAGS (widget, GTK_REALIZED);
-  image_widget = CV_IMAGE_WIDGET (widget);
 
   attributes.x = widget->allocation.x;
   attributes.y = widget->allocation.y;

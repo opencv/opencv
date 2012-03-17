@@ -1592,11 +1592,6 @@ struct BatchDistInvoker
     {
         AutoBuffer<int> buf(src2->rows);
         int* bufptr = buf;
-        Cv32suf val0;
-        if( dist->type() == CV_32S )
-            val0.i = INT_MAX;
-        else
-            val0.f = FLT_MAX;
         
         for( int i = range.begin(); i < range.end(); i++ )
         {

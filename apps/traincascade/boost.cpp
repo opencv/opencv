@@ -1066,10 +1066,10 @@ void CvCascadeBoostTree::split_node_data( CvDTreeNode* node )
 
         if (data->is_buf_16u)
         {
-            unsigned short *ldst, *rdst, *ldst0, *rdst0;
-            ldst0 = ldst = (unsigned short*)(buf->data.s + left->buf_idx*buf->cols + 
+            ushort *ldst, *rdst;
+            ldst = (ushort*)(buf->data.s + left->buf_idx*buf->cols +
                 vi*scount + left->offset);
-            rdst0 = rdst = (unsigned short*)(ldst + nl);
+            rdst = (ushort*)(ldst + nl);
 
             // split sorted
             for( int i = 0; i < n1; i++ )
@@ -1079,12 +1079,12 @@ void CvCascadeBoostTree::split_node_data( CvDTreeNode* node )
                 idx = newIdx[idx];
                 if (d)
                 {
-                    *rdst = (unsigned short)idx;
+                    *rdst = (ushort)idx;
                     rdst++;
                 }
                 else
                 {
-                    *ldst = (unsigned short)idx;
+                    *ldst = (ushort)idx;
                     ldst++;
                 }
             }
@@ -1092,10 +1092,10 @@ void CvCascadeBoostTree::split_node_data( CvDTreeNode* node )
         }   
         else
         {
-            int *ldst0, *ldst, *rdst0, *rdst;
-            ldst0 = ldst = buf->data.i + left->buf_idx*buf->cols + 
+            int *ldst, *rdst;
+            ldst = buf->data.i + left->buf_idx*buf->cols +
                 vi*scount + left->offset;
-            rdst0 = rdst = buf->data.i + right->buf_idx*buf->cols + 
+            rdst = buf->data.i + right->buf_idx*buf->cols +
                 vi*scount + right->offset;
 
             // split sorted

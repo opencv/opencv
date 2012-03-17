@@ -230,7 +230,6 @@ void CV_HighGuiTest::VideoTest(const string& dir, int fourcc)
 
     CvVideoWriter* writer = 0;
 
-    int counter = 0;
     for(;;)
     {
         IplImage * img = cvQueryFrame( cap );
@@ -267,7 +266,6 @@ void CV_HighGuiTest::VideoTest(const string& dir, int fourcc)
 
     const double thresDbell = 20;
 
-    counter = 0;
     for(;;)
     {
         IplImage* ipl  = cvQueryFrame( cap );

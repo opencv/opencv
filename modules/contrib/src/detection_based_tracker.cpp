@@ -483,12 +483,9 @@ void DetectionBasedTracker::process(const Mat& imageGray)
 
     Mat imageDetect=imageGray;
 
-    Size sz=imageDetect.size();
     int D=parameters.minObjectSize;
     if (D < 1) 
         D=1;
-    Size objectSize=Size(D,D);
-
 
     vector<Rect> rectsWhereRegions;
     bool shouldHandleResult=separateDetectionWork->communicateWithDetectingThread(imageGray, rectsWhereRegions);

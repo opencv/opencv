@@ -130,8 +130,6 @@ void findCorner(const vector<Point>& contour, Point2f point, Point2f& corner)
     double min_dist = std::numeric_limits<double>::max();
     int min_idx = -1;
     
-    Rect brect = boundingRect(Mat(contour));
-    
     // find corner idx
     for(size_t i = 0; i < contour.size(); i++)
     {
@@ -154,8 +152,6 @@ void findCorner(const vector<Point2f>& contour, Point2f point, Point2f& corner)
     // find the nearest point
     double min_dist = std::numeric_limits<double>::max();
     int min_idx = -1;
-    
-    Rect brect = boundingRect(Mat(contour));
     
     // find corner idx
     for(size_t i = 0; i < contour.size(); i++)

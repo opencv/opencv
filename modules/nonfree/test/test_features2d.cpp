@@ -898,7 +898,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
 
         dmatcher->radiusMatch( query, matches, radius, masks );
 
-        int curRes = cvtest::TS::OK;
+        //int curRes = cvtest::TS::OK;
         if( (int)matches.size() != queryDescCount )
         {
             ts->printf(cvtest::TS::LOG, "Incorrect matches count while test radiusMatch() function (1).\n");
@@ -938,7 +938,6 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
         }
         if( (float)badCount > (float)queryDescCount*badPart )
         {
-            curRes = cvtest::TS::FAIL_INVALID_OUTPUT;
             ts->printf( cvtest::TS::LOG, "%f - too large bad matches part while test radiusMatch() function (2).\n",
                         (float)badCount/(float)queryDescCount );
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );

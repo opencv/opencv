@@ -233,7 +233,8 @@ void CvBlobTrackerAuto1::Process(IplImage* pImg, IplImage* pMask)
             double Time;
             TickCount = cvGetTickCount()-TickCount;
             Time = TickCount/FREQ;
-            if(out){fprintf(out,"- %sFrame: %d ALL_TIME - %f\n",stime,Count,Time/1000);fclose(out);}
+            TimeSum += Time;
+            if(out){fprintf(out,"- %sFrame: %d ALL_TIME - %f\n",stime,Count,TimeSum/1000);fclose(out);}
 
             TimeSum = 0;
             TickCount = cvGetTickCount();

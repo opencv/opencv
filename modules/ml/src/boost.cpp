@@ -1249,13 +1249,11 @@ CvBoost::update_weights( CvBoostTree* tree )
         // recent weak classifier we know the responses. For other samples we need to compute them
         if( have_subsample )
         {
-            float* values0, *values = (float*)cur_buf_pos;
+            float* values = (float*)cur_buf_pos;
             cur_buf_pos = (uchar*)(values + data->buf->step);
-            uchar* missing0, *missing = cur_buf_pos;
+            uchar* missing = cur_buf_pos;
             cur_buf_pos = missing + data->buf->step;
             CvMat _sample, _mask;
-            values0 = values;
-            missing0 = missing;
 
             // invert the subsample mask
             cvXorS( subsample_mask, cvScalar(1.), subsample_mask );

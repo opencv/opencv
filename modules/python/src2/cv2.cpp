@@ -345,7 +345,7 @@ static bool pyopencv_to(PyObject* obj, size_t& value, const char* name = "<unkno
     if(!obj || obj == Py_None)
         return true;
     value = (int)PyLong_AsUnsignedLong(obj);
-    return value != -1 || !PyErr_Occurred();
+    return value != (size_t)-1 || !PyErr_Occurred();
 }
 
 static PyObject* pyopencv_from(int value)

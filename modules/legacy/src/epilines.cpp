@@ -450,12 +450,6 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
 
     double gamma;
     
-    double x1,y1,z1;
-
-    x1 = camPoint1.x;
-    y1 = camPoint1.y;
-    z1 = camPoint1.z;
-
     double xA,yA,zA;
     double xB,yB,zB;
     double xC,yC,zC;
@@ -2859,12 +2853,12 @@ int icvSelectBestRt(           int           numImages,
                                         &tmpPoint2,
                                         rotMatrs1_64d + currImagePair*9,
                                         transVects1_64d + currImagePair*3);
-                double err;
+                /*double err;
                 double dx,dy,dz;
                 dx = tmpPoint2.x - points1[i].x;
                 dy = tmpPoint2.y - points1[i].y;
                 dz = tmpPoint2.z - points1[i].z;
-                err = sqrt(dx*dx + dy*dy + dz*dz);
+                err = sqrt(dx*dx + dy*dy + dz*dz);*/
 
 
             }
@@ -3458,43 +3452,37 @@ int GetCrossLines(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f p2_star
 
 int icvGetCrossPieceVector(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f v2_start,CvPoint2D32f v2_end,CvPoint2D32f *cross)
 {
-    double ex1,ey1,ex2,ey2;
-    double px1,py1,px2,py2;
-    double del;
-    double delA,delB,delX,delY;
-    double alpha,betta;
+    double ex1 = p1_start.x;
+    double ey1 = p1_start.y;
+    double ex2 = p1_end.x;
+    double ey2 = p1_end.y;
 
-    ex1 = p1_start.x;
-    ey1 = p1_start.y;
-    ex2 = p1_end.x;
-    ey2 = p1_end.y;
+    double px1 = v2_start.x;
+    double py1 = v2_start.y;
+    double px2 = v2_end.x;
+    double py2 = v2_end.y;
 
-    px1 = v2_start.x;
-    py1 = v2_start.y;
-    px2 = v2_end.x;
-    py2 = v2_end.y;
-
-    del = (ex1-ex2)*(py2-py1)+(ey2-ey1)*(px2-px1);
+    double del = (ex1-ex2)*(py2-py1)+(ey2-ey1)*(px2-px1);
     if( del == 0)
     {
         return -1;
     }
 
-    delA =  (px1-ex1)*(py1-py2) + (ey1-py1)*(px1-px2);
-    delB =  (ex1-px1)*(ey1-ey2) + (py1-ey1)*(ex1-ex2);
+    double delA =  (px1-ex1)*(py1-py2) + (ey1-py1)*(px1-px2);
+    //double delB =  (ex1-px1)*(ey1-ey2) + (py1-ey1)*(ex1-ex2);
 
-    alpha =  delA / del;
-    betta = -delB / del;
+    double alpha =  delA / del;
+    //double betta = -delB / del;
 
     if( alpha < 0 || alpha > 1.0 )
     {
         return -1;
     }
 
-    delX =  (ex1-ex2)*(py1*(px1-px2)-px1*(py1-py2))+
+    double delX =  (ex1-ex2)*(py1*(px1-px2)-px1*(py1-py2))+
             (px1-px2)*(ex1*(ey1-ey2)-ey1*(ex1-ex2));
 
-    delY =  (ey1-ey2)*(px1*(py1-py2)-py1*(px1-px2))+
+    double delY =  (ey1-ey2)*(px1*(py1-py2)-py1*(px1-px2))+
             (py1-py2)*(ey1*(ex1-ex2)-ex1*(ey1-ey2));
 
     cross->x = (float)( delX / del);

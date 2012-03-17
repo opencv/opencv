@@ -68,7 +68,7 @@ int main( int argc, char** argv )
 		for ( int j = 0; j < (int)r.size(); j++ )
 		{
 			Point pt = r[j];
-			img.at<Vec3b>(r[j]) = bcolors[i%9];
+            img.at<Vec3b>(pt) = bcolors[i%9];
 		}
         
         // find ellipse (it seems cvfitellipse2 have error or sth?)

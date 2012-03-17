@@ -1932,10 +1932,9 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat& input = test_mat[INPUT][0];
     int depth = input.depth();
-    int m = input.rows, n = input.cols, min_size = MIN(m, n);
+    int i, m = input.rows, n = input.cols, min_size = MIN(m, n);
     Mat *src, *dst, *w;
     double prev = 0, threshold = depth == CV_32F ? FLT_EPSILON : DBL_EPSILON;
-    int i, step;
     
     if( have_u )
     {
@@ -1954,7 +1953,6 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
     }
     
     w = &test_mat[TEMP][0];
-    step = w->rows == 1 ? 1 : (int)w->step1();
     for( i = 0; i < min_size; i++ )
     {
         double normval = 0, aii;

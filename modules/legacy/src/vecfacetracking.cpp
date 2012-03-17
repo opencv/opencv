@@ -433,14 +433,14 @@ cvInitFaceTracker(CvFaceTracker* pFaceTracker, const IplImage* imgGray, CvRect* 
         (nRects < NUM_FACE_ELEMENTS))
         return NULL;
     
-    int new_face = FALSE;
+    //int new_face = FALSE;
     CvFaceTracker* pFace = pFaceTracker;
     if (NULL == pFace)
     {
         pFace = new CvFaceTracker;
         if (NULL == pFace)
             return NULL;
-        new_face = TRUE;
+        //new_face = TRUE;
     }
     pFace->Init(pRects, (IplImage*)imgGray);
     return pFace;

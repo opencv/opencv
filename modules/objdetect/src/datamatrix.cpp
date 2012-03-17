@@ -169,7 +169,7 @@ int Sampler::hasbars()
 
 void Sampler::timing()
 {
-  uchar light, dark = getpixel(9, 0);
+  /*uchar light, dark = getpixel(9, 0);
   for (int i = 1; i < 3; i += 2) {
     light = getpixel(9, i);
     // if (light <= dark)
@@ -177,7 +177,7 @@ void Sampler::timing()
     dark = getpixel(9, i + 1);
     // if (up <= down)
     //  goto endo;
-  }
+  }*/
 }
 
 CvMat *Sampler::extract()
@@ -528,8 +528,8 @@ namespace
       line(image, code.corners[2], code.corners[3], c);
       line(image, code.corners[3], code.corners[0], c);
       string code_text(code.msg,4);
-      int baseline = 0;
-      Size sz = getTextSize(code_text, CV_FONT_HERSHEY_SIMPLEX, 1, 1, &baseline);
+      //int baseline = 0;
+      //Size sz = getTextSize(code_text, CV_FONT_HERSHEY_SIMPLEX, 1, 1, &baseline);
       putText(image, code_text, code.corners[0], CV_FONT_HERSHEY_SIMPLEX, 0.8, c2, 1, CV_AA, false);
     }
     cv::Mat& image;

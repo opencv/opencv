@@ -696,8 +696,7 @@ int icvRemoveDoublePoins(   CvMat *oldPoints,/* Points on prev image */
             pt.x = (float)cvmGet(oldPoints,0,i);
             pt.y = (float)cvmGet(oldPoints,1,i);
 
-            CvSubdiv2DPoint* point;
-            point = cvSubdivDelaunay2DInsert( subdiv, pt );
+            cvSubdivDelaunay2DInsert( subdiv, pt );
         }
     }
 
@@ -908,22 +907,21 @@ void icvAddNewImageToPrevious____(
 
         /* Remove all new double points */
 
-        int origNum;
         /* Find point of old image */
-        origNum = icvRemoveDoublePoins( oldPoints,/* Points on prev image */
-                                        newFPoints2D1,/* New points */
-                                        oldPntStatus,/* Status for old points */
-                                        newFPointsStatusTmp,
-                                        newFPointsStatusTmp,//orig status
-                                        20);/* Status for new points */
+        icvRemoveDoublePoins( oldPoints,/* Points on prev image */
+                              newFPoints2D1,/* New points */
+                              oldPntStatus,/* Status for old points */
+                              newFPointsStatusTmp,
+                              newFPointsStatusTmp,//orig status
+                              20);/* Status for new points */
 
         /* Find double points on new image */
-        origNum = icvRemoveDoublePoins( newPoints,/* Points on prev image */
-                                        newFPoints2D2,/* New points */
-                                        newPntStatus,/* Status for old points */
-                                        newFPointsStatusTmp,
-                                        newFPointsStatusTmp,//orig status
-                                        20);/* Status for new points */
+        icvRemoveDoublePoins( newPoints,/* Points on prev image */
+                              newFPoints2D2,/* New points */
+                              newPntStatus,/* Status for old points */
+                              newFPointsStatusTmp,
+                              newFPointsStatusTmp,//orig status
+                              20);/* Status for new points */
 
 
 

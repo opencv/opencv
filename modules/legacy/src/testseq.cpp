@@ -1159,10 +1159,9 @@ int cvTestSeqGetObjectPos(CvTestSeq* pTestSeq, int ObjIndex, CvPoint2D32f* pPos)
     if(p && p->pPos && p->PosNum>0)
     {
         CvTSTrans*  pTrans;
-        float       t;
         int         frame = pTS->CurFrame - p->FrameBegin - 1;
         if(frame < 0 || frame >= p->FrameNum) return 0;
-        t = (p->FrameNum>1)?((float)frame / (p->FrameNum-1)):0;
+        //float t = (p->FrameNum>1)?((float)frame / (p->FrameNum-1)):0;
         pTrans = p->pTrans + frame%p->TransNum;
         pPos[0] = p->pPos[frame%p->PosNum];
 
@@ -1210,12 +1209,11 @@ int cvTestSeqGetObjectSize(CvTestSeq* pTestSeq, int ObjIndex, CvPoint2D32f* pSiz
     if(p && p->pSize && p->SizeNum>0)
     {
         CvTSTrans*  pTrans;
-        float       t;
         int         frame = pTS->CurFrame - p->FrameBegin - 1;
 
         if(frame < 0 || frame >= p->FrameNum) return 0;
 
-        t = (p->FrameNum>1)?((float)frame / (p->FrameNum-1)):0;
+        //float t = (p->FrameNum>1)?((float)frame / (p->FrameNum-1)):0;
         pTrans = p->pTrans + frame%p->TransNum;
         pSize[0] = p->pSize[frame%p->SizeNum];
 

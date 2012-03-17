@@ -189,7 +189,7 @@ void CV_OptFlowPyrLKTest::run( int )
 
     if( max_err > 1 )
     {
-        ts->printf( cvtest::TS::LOG, "Maximum tracking error is too big (=%g)\n", max_err );
+        ts->printf( cvtest::TS::LOG, "Maximum tracking error is too big (=%g) at %d\n", max_err, merr_i );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
         goto _exit_;
     }
