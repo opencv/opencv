@@ -556,14 +556,15 @@ AlgorithmInfo* ORB::info() const
     static volatile bool initialized = false;
     if( !initialized )
     {
-        orb_info.addParam(this, "nFeatures", nfeatures);
-        orb_info.addParam(this, "scaleFactor", scaleFactor);
-        orb_info.addParam(this, "nLevels", nlevels);
-        orb_info.addParam(this, "firstLevel", firstLevel);
-        orb_info.addParam(this, "edgeThreshold", edgeThreshold);
-        orb_info.addParam(this, "patchSize", patchSize);
-        orb_info.addParam(this, "WTA_K", WTA_K);
-        orb_info.addParam(this, "scoreType", scoreType);
+        ORB obj;
+        orb_info.addParam(obj, "nFeatures", obj.nfeatures);
+        orb_info.addParam(obj, "scaleFactor", obj.scaleFactor);
+        orb_info.addParam(obj, "nLevels", obj.nlevels);
+        orb_info.addParam(obj, "firstLevel", obj.firstLevel);
+        orb_info.addParam(obj, "edgeThreshold", obj.edgeThreshold);
+        orb_info.addParam(obj, "patchSize", obj.patchSize);
+        orb_info.addParam(obj, "WTA_K", obj.WTA_K);
+        orb_info.addParam(obj, "scoreType", obj.scoreType);
         
         initialized = true;
     }

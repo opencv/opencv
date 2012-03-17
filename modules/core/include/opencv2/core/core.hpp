@@ -4294,8 +4294,8 @@ public:
     ~AlgorithmInfo();
     void get(const Algorithm* algo, const char* name, int argType, void* value) const;
     void set(Algorithm* algo, const char* name, int argType, const void* value) const;
-    void addParam_(const Algorithm* algo, const char* name, int argType,
-                   const void* value, bool readOnly, 
+    void addParam_(Algorithm& algo, const char* name, int argType,
+                   void* value, bool readOnly, 
                    Algorithm::Getter getter, Algorithm::Setter setter,
                    const string& help=string());
     string paramHelp(const char* name) const;
@@ -4306,33 +4306,33 @@ public:
     void read(Algorithm* algo, const FileNode& fn) const;
     string name() const;
     
-    void addParam(const Algorithm* algo, const char* name,
-                  const int& value, bool readOnly=false, 
+    void addParam(Algorithm& algo, const char* name,
+                  int& value, bool readOnly=false, 
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
                   const string& help=string());
-    void addParam(const Algorithm* algo, const char* name,
-                  const bool& value, bool readOnly=false, 
+    void addParam(Algorithm& algo, const char* name,
+                  bool& value, bool readOnly=false, 
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
                   const string& help=string());
-    void addParam(const Algorithm* algo, const char* name,
-                  const double& value, bool readOnly=false, 
+    void addParam(Algorithm& algo, const char* name,
+                  double& value, bool readOnly=false, 
                   double (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(double)=0,
                   const string& help=string());
-    void addParam(const Algorithm* algo, const char* name,
-                  const string& value, bool readOnly=false, 
+    void addParam(Algorithm& algo, const char* name,
+                  string& value, bool readOnly=false, 
                   string (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const string&)=0,
                   const string& help=string());
-    void addParam(const Algorithm* algo, const char* name,
-                  const Mat& value, bool readOnly=false, 
+    void addParam(Algorithm& algo, const char* name,
+                  Mat& value, bool readOnly=false, 
                   Mat (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Mat&)=0,
                   const string& help=string());
-    void addParam(const Algorithm* algo, const char* name,
-                  const Ptr<Algorithm>& value, bool readOnly=false, 
+    void addParam(Algorithm& algo, const char* name,
+                  Ptr<Algorithm>& value, bool readOnly=false, 
                   Ptr<Algorithm> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<Algorithm>&)=0,
                   const string& help=string());

@@ -1307,15 +1307,16 @@ AlgorithmInfo* MSER::info() const
     static volatile bool initialized = false;
     if( !initialized )
     {
-        mser_info.addParam(this, "delta", delta);
-        mser_info.addParam(this, "minArea", minArea);
-        mser_info.addParam(this, "maxArea", maxArea);
-        mser_info.addParam(this, "maxVariation", maxVariation);
-        mser_info.addParam(this, "minDiversity", minDiversity);
-        mser_info.addParam(this, "maxEvolution", maxEvolution);
-        mser_info.addParam(this, "areaThreshold", areaThreshold);
-        mser_info.addParam(this, "minMargin", minMargin);
-        mser_info.addParam(this, "edgeBlurSize", edgeBlurSize);
+        MSER obj;
+        mser_info.addParam(obj, "delta", obj.delta);
+        mser_info.addParam(obj, "minArea", obj.minArea);
+        mser_info.addParam(obj, "maxArea", obj.maxArea);
+        mser_info.addParam(obj, "maxVariation", obj.maxVariation);
+        mser_info.addParam(obj, "minDiversity", obj.minDiversity);
+        mser_info.addParam(obj, "maxEvolution", obj.maxEvolution);
+        mser_info.addParam(obj, "areaThreshold", obj.areaThreshold);
+        mser_info.addParam(obj, "minMargin", obj.minMargin);
+        mser_info.addParam(obj, "edgeBlurSize", obj.edgeBlurSize);
         
         initialized = true;
     }

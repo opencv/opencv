@@ -1814,7 +1814,7 @@ void VocData::getSortOrder(const vector<float>& values, vector<size_t>& order, b
 void VocData::readFileToString(const string filename, string& file_contents)
 {
     std::ifstream ifs(filename.c_str());
-    if (ifs == false) CV_Error(CV_StsError,"could not open text file");
+    if (!ifs.is_open()) CV_Error(CV_StsError,"could not open text file");
 
     stringstream oss;
     oss << ifs.rdbuf();

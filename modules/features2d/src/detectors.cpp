@@ -160,17 +160,18 @@ AlgorithmInfo* GFTTDetector::info() const
     static volatile bool initialized = false;
     if( !initialized )
     {
-        gftt_info.addParam(this, "nfeatures", nfeatures);
-        gftt_info.addParam(this, "qualityLevel", qualityLevel);
-        gftt_info.addParam(this, "minDistance", minDistance);
-        gftt_info.addParam(this, "useHarrisDetector", useHarrisDetector);
-        gftt_info.addParam(this, "k", k);
+        GFTTDetector obj;
+        gftt_info.addParam(obj, "nfeatures", obj.nfeatures);
+        gftt_info.addParam(obj, "qualityLevel", obj.qualityLevel);
+        gftt_info.addParam(obj, "minDistance", obj.minDistance);
+        gftt_info.addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
+        gftt_info.addParam(obj, "k", obj.k);
         
-        harris_info.addParam(this, "nfeatures", nfeatures);
-        harris_info.addParam(this, "qualityLevel", qualityLevel);
-        harris_info.addParam(this, "minDistance", minDistance);
-        harris_info.addParam(this, "useHarrisDetector", useHarrisDetector);
-        harris_info.addParam(this, "k", k);
+        harris_info.addParam(obj, "nfeatures", obj.nfeatures);
+        harris_info.addParam(obj, "qualityLevel", obj.qualityLevel);
+        harris_info.addParam(obj, "minDistance", obj.minDistance);
+        harris_info.addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
+        harris_info.addParam(obj, "k", obj.k);
         
         initialized = true;
     }
@@ -217,24 +218,25 @@ void DenseFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypo
     
 
 static Algorithm* createDense() { return new DenseFeatureDetector; }
-
+static AlgorithmInfo dense_info("Feature2D.Dense", createDense);
+    
 AlgorithmInfo* DenseFeatureDetector::info() const
 {
-    static AlgorithmInfo info_("Feature2D.Dense", createDense);
     static volatile bool initialized = false;
     if( !initialized )
     {
-        info_.addParam(this, "initFeatureScale", initFeatureScale);
-        info_.addParam(this, "featureScaleLevels", featureScaleLevels);
-        info_.addParam(this, "featureScaleMul", featureScaleMul);
-        info_.addParam(this, "initXyStep", initXyStep);
-        info_.addParam(this, "initImgBound", initImgBound);
-        info_.addParam(this, "varyXyStepWithScale", varyXyStepWithScale);
-        info_.addParam(this, "varyImgBoundWithScale", varyImgBoundWithScale);
+        DenseFeatureDetector obj;
+        dense_info.addParam(obj, "initFeatureScale", obj.initFeatureScale);
+        dense_info.addParam(obj, "featureScaleLevels", obj.featureScaleLevels);
+        dense_info.addParam(obj, "featureScaleMul", obj.featureScaleMul);
+        dense_info.addParam(obj, "initXyStep", obj.initXyStep);
+        dense_info.addParam(obj, "initImgBound", obj.initImgBound);
+        dense_info.addParam(obj, "varyXyStepWithScale", obj.varyXyStepWithScale);
+        dense_info.addParam(obj, "varyImgBoundWithScale", obj.varyImgBoundWithScale);
         
         initialized = true;
     }
-    return &info_;
+    return &dense_info;
 }    
 
 /*

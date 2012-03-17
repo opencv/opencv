@@ -930,11 +930,12 @@ AlgorithmInfo* SURF::info() const
     static volatile bool initialized = false;
     if( !initialized )
     {
-        surf_info.addParam(this, "hessianThreshold", hessianThreshold);
-        surf_info.addParam(this, "nOctaves", nOctaves);
-        surf_info.addParam(this, "nOctaveLayers", nOctaveLayers);
-        surf_info.addParam(this, "extended", extended);
-        surf_info.addParam(this, "upright", upright);
+        SURF obj;
+        surf_info.addParam(obj, "hessianThreshold", obj.hessianThreshold);
+        surf_info.addParam(obj, "nOctaves", obj.nOctaves);
+        surf_info.addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+        surf_info.addParam(obj, "extended", obj.extended);
+        surf_info.addParam(obj, "upright", obj.upright);
         
         initialized = true;
     }

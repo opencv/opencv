@@ -683,11 +683,12 @@ AlgorithmInfo* SIFT::info() const
     static volatile bool initialized = false;
     if( !initialized )
     {
-        sift_info.addParam(this, "nFeatures", nfeatures);
-        sift_info.addParam(this, "nOctaveLayers", nOctaveLayers);
-        sift_info.addParam(this, "contrastThreshold", contrastThreshold);
-        sift_info.addParam(this, "edgeThreshold", edgeThreshold);
-        sift_info.addParam(this, "sigma", sigma);
+        SIFT obj;
+        sift_info.addParam(obj, "nFeatures", obj.nfeatures);
+        sift_info.addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+        sift_info.addParam(obj, "contrastThreshold", obj.contrastThreshold);
+        sift_info.addParam(obj, "edgeThreshold", obj.edgeThreshold);
+        sift_info.addParam(obj, "sigma", obj.sigma);
         
         initialized = true;
     }

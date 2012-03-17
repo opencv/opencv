@@ -456,11 +456,12 @@ AlgorithmInfo* StarDetector::info() const
     static volatile bool initialized = false;
     if( !initialized )
     {
-        star_info.addParam(this, "maxSize", maxSize);
-        star_info.addParam(this, "responseThreshold", responseThreshold);
-        star_info.addParam(this, "lineThresholdProjected", lineThresholdProjected);
-        star_info.addParam(this, "lineThresholdBinarized", lineThresholdBinarized);
-        star_info.addParam(this, "suppressNonmaxSize", suppressNonmaxSize);
+        StarDetector obj;
+        star_info.addParam(obj, "maxSize", obj.maxSize);
+        star_info.addParam(obj, "responseThreshold", obj.responseThreshold);
+        star_info.addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
+        star_info.addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
+        star_info.addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize);
         
         initialized = true;
     }

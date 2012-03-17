@@ -481,9 +481,9 @@ public:
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    float initFeatureScale;
+    double initFeatureScale;
     int featureScaleLevels;
-    float featureScaleMul;
+    double featureScaleMul;
     
     int initXyStep;
     int initImgBound;

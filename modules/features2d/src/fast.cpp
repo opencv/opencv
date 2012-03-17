@@ -400,8 +400,9 @@ AlgorithmInfo* FastFeatureDetector::info() const
     static volatile bool initialized = false;
     if( !initialized )
     {
-        fast_info.addParam(this, "threshold", threshold);
-        fast_info.addParam(this, "nonmaxSuppression", nonmaxSuppression);
+        FastFeatureDetector obj;
+        fast_info.addParam(obj, "threshold", obj.threshold);
+        fast_info.addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
         
         initialized = true;
     }
