@@ -1047,7 +1047,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                     {
                         dpdk_p[4] = fx*x*icdist2*r6;
                         dpdk_p[dpdk_step+4] = fy*y*icdist2*r6;
-                        
+
                         if( _dpdk->cols > 5 )
                         {
                             dpdk_p[5] = fx*x*cdist*(-icdist2)*icdist2*r2;
@@ -1361,7 +1361,7 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
                          CvSize imageSize, CvMat* cameraMatrix,
                          double aspectRatio )
 {
-    Ptr<CvMat> matA, _b, _allH, _allK;
+    Ptr<CvMat> matA, _b, _allH;
 
     int i, j, pos, nimages, ni = 0;
     double a[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 1 };
@@ -2303,7 +2303,7 @@ icvGetRectangles( const CvMat* cameraMatrix, const CvMat* distCoeffs,
             if( x == 0 )
                 iX0 = MAX(iX0, p.x);
             if( x == N-1 )
-                iX1 = MIN(iX1, p.x); 
+                iX1 = MIN(iX1, p.x);
             if( y == 0 )
                 iY0 = MAX(iY0, p.y);
             if( y == N-1 )
@@ -2521,7 +2521,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
         cvConvert( &Q, matQ );
     }
 }
-                        
+
 
 void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCoeffs,
                                   CvSize imgSize, double alpha,
@@ -2810,7 +2810,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
     CV_Assert( stype == CV_8UC1 || stype == CV_16SC1 ||
                stype == CV_32SC1 || stype == CV_32FC1 );
     CV_Assert( Q.size() == Size(4,4) );
-    
+
     if( dtype < 0 )
         dtype = CV_32FC3;
     else
@@ -2838,7 +2838,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
     // and we set the corresponding Z's to some fixed big value.
     if( handleMissingValues )
         cv::minMaxIdx( disparity, &minDisparity, 0, 0, 0 );
-    
+
     for( int y = 0; y < disparity.rows; y++ )
     {
         float *sptr = sbuf, *dptr = dbuf;
@@ -2865,7 +2865,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
         }
         else
             sptr = (float*)disparity.ptr<float>(y);
-                
+
         if( dtype == CV_32FC3 )
             dptr = _3dImage.ptr<float>(y);
 
@@ -3183,7 +3183,7 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         npoints.at<int>(i) = ni;
         memcpy( objPtData + j, objpt.data, ni*sizeof(objPtData[0]) );
         memcpy( imgPtData1 + j, imgpt1.data, ni*sizeof(imgPtData1[0]) );
-        
+
         if( imgPtData2 )
         {
             Mat imgpt2 = imagePoints2.getMat(i);
@@ -3361,7 +3361,7 @@ void cv::projectPoints( InputArray _opoints,
         pdpdc = &(dpdc = jacobian.colRange(8, 10));
         pdpddist = &(dpddist = jacobian.colRange(10, 10+ndistCoeffs));
     }
-        
+
     cvProjectPoints2( &c_objectPoints, &c_rvec, &c_tvec, &c_cameraMatrix, &c_distCoeffs,
                       &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
 }
@@ -3406,9 +3406,9 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     double reprojErr = cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
                                           &c_cameraMatrix, &c_distCoeffs, &c_rvecM,
                                           &c_tvecM, flags );
-    
+
     bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
-    
+
     if( rvecs_needed )
         _rvecs.create((int)nimages, 1, CV_64FC3);
     if( tvecs_needed )
@@ -3465,13 +3465,13 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
     cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype);
     distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype);
     distCoeffs2 = prepareDistCoeffs(distCoeffs2, rtype);
-    
+
     if( !(flags & CALIB_RATIONAL_MODEL) )
     {
         distCoeffs1 = distCoeffs1.rows == 1 ? distCoeffs1.colRange(0, 5) : distCoeffs1.rowRange(0, 5);
         distCoeffs2 = distCoeffs2.rows == 1 ? distCoeffs2.colRange(0, 5) : distCoeffs2.rowRange(0, 5);
     }
-    
+
     _Rmat.create(3, 3, rtype);
     _Tmat.create(3, 1, rtype);
 
@@ -3483,7 +3483,7 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
     CvMat c_cameraMatrix1 = cameraMatrix1, c_distCoeffs1 = distCoeffs1;
     CvMat c_cameraMatrix2 = cameraMatrix2, c_distCoeffs2 = distCoeffs2;
     CvMat c_matR = _Rmat.getMat(), c_matT = _Tmat.getMat(), c_matE, c_matF, *p_matE = 0, *p_matF = 0;
-    
+
     if( _Emat.needed() )
     {
         _Emat.create(3, 3, rtype);
@@ -3498,12 +3498,12 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
     double err = cvStereoCalibrate(&c_objPt, &c_imgPt, &c_imgPt2, &c_npoints, &c_cameraMatrix1,
         &c_distCoeffs1, &c_cameraMatrix2, &c_distCoeffs2, imageSize,
         &c_matR, &c_matT, p_matE, p_matF, criteria, flags );
-    
+
     cameraMatrix1.copyTo(_cameraMatrix1);
     cameraMatrix2.copyTo(_cameraMatrix2);
     distCoeffs1.copyTo(_distCoeffs1);
     distCoeffs2.copyTo(_distCoeffs2);
-    
+
     return err;
 }
 
@@ -3525,7 +3525,7 @@ void cv::stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
     CvMat c_distCoeffs1 = distCoeffs1;
     CvMat c_distCoeffs2 = distCoeffs2;
     CvMat c_R = Rmat, c_T = Tmat;
-    
+
     int rtype = CV_64F;
     _Rmat1.create(3, 3, rtype);
     _Rmat2.create(3, 3, rtype);
@@ -3533,13 +3533,13 @@ void cv::stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
     _Pmat2.create(3, 4, rtype);
     CvMat c_R1 = _Rmat1.getMat(), c_R2 = _Rmat2.getMat(), c_P1 = _Pmat1.getMat(), c_P2 = _Pmat2.getMat();
     CvMat c_Q, *p_Q = 0;
-    
+
     if( _Qmat.needed() )
     {
         _Qmat.create(4, 4, rtype);
         p_Q = &(c_Q = _Qmat.getMat());
     }
-    
+
     cvStereoRectify( &c_cameraMatrix1, &c_cameraMatrix2, &c_distCoeffs1, &c_distCoeffs2,
         imageSize, &c_R, &c_T, &c_R1, &c_R2, &c_P1, &c_P2, p_Q, flags, alpha,
         newImageSize, (CvRect*)validPixROI1, (CvRect*)validPixROI2);
@@ -3568,10 +3568,10 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix,
 {
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-    
+
     Mat newCameraMatrix(3, 3, CV_MAT_TYPE(c_cameraMatrix.type));
     CvMat c_newCameraMatrix = newCameraMatrix;
-    
+
     cvGetOptimalNewCameraMatrix(&c_cameraMatrix, &c_distCoeffs, imgSize,
                                 alpha, &c_newCameraMatrix,
                                 newImgSize, (CvRect*)validPixROI, (int)centerPrincipalPoint);
@@ -3628,7 +3628,7 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
     CvMat c_rotMatrixY, *p_rotMatrixY = 0;
     CvMat c_rotMatrixZ, *p_rotMatrixZ = 0;
     CvPoint3D64f *p_eulerAngles = 0;
-    
+
     if( _rotMatrixX.needed() )
     {
         _rotMatrixX.create(3, 3, type);
@@ -3649,7 +3649,7 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
         _eulerAngles.create(3, 1, CV_64F, -1, true);
         p_eulerAngles = (CvPoint3D64f*)_eulerAngles.getMat().data;
     }
-    
+
     cvDecomposeProjectionMatrix(&c_projMatrix, &c_cameraMatrix, &c_rotMatrix,
                                 &c_transVect, p_rotMatrixX, p_rotMatrixY,
                                 p_rotMatrixZ, p_eulerAngles);
@@ -3658,16 +3658,16 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
 
 namespace cv
 {
-    
+
 static void adjust3rdMatrix(InputArrayOfArrays _imgpt1_0,
-                            InputArrayOfArrays _imgpt3_0, 
+                            InputArrayOfArrays _imgpt3_0,
                             const Mat& cameraMatrix1, const Mat& distCoeffs1,
                             const Mat& cameraMatrix3, const Mat& distCoeffs3,
                             const Mat& R1, const Mat& R3, const Mat& P1, Mat& P3 )
 {
     size_t n1 = _imgpt1_0.total(), n3 = _imgpt3_0.total();
     vector<Point2f> imgpt1, imgpt3;
-    
+
     for( int i = 0; i < (int)std::min(n1, n3); i++ )
     {
         Mat pt1 = _imgpt1_0.getMat(i), pt3 = _imgpt3_0.getMat(i);
@@ -3678,29 +3678,29 @@ static void adjust3rdMatrix(InputArrayOfArrays _imgpt1_0,
         std::copy(pt1data, pt1data + ni1, std::back_inserter(imgpt1));
         std::copy(pt3data, pt3data + ni3, std::back_inserter(imgpt3));
     }
-    
+
     undistortPoints(imgpt1, imgpt1, cameraMatrix1, distCoeffs1, R1, P1);
     undistortPoints(imgpt3, imgpt3, cameraMatrix3, distCoeffs3, R3, P3);
-    
+
     double y1_ = 0, y2_ = 0, y1y1_ = 0, y1y2_ = 0;
     size_t n = imgpt1.size();
-    
+
     for( size_t i = 0; i < n; i++ )
     {
         double y1 = imgpt3[i].y, y2 = imgpt1[i].y;
-        
+
         y1_ += y1; y2_ += y2;
         y1y1_ += y1*y1; y1y2_ += y1*y2;
     }
-    
+
     y1_ /= n;
     y2_ /= n;
     y1y1_ /= n;
     y1y2_ /= n;
-    
+
     double a = (y1y2_ - y1_*y2_)/(y1y1_ - y1_*y1_);
     double b = y2_ - a*y1_;
-    
+
     P3.at<double>(0,0) *= a;
     P3.at<double>(1,1) *= a;
     P3.at<double>(0,2) = P3.at<double>(0,2)*a;
@@ -3728,57 +3728,57 @@ float cv::rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
     stereoRectify( _cameraMatrix1, _distCoeffs1, _cameraMatrix2, _distCoeffs2,
                    imageSize, _Rmat12, _Tmat12, _Rmat1, _Rmat2, _Pmat1, _Pmat2, _Qmat,
                    flags, alpha, imageSize, roi1, roi2 );
-    
+
     Mat R12 = _Rmat12.getMat(), R13 = _Rmat13.getMat(), T12 = _Tmat12.getMat(), T13 = _Tmat13.getMat();
-    
+
     _Rmat3.create(3, 3, CV_64F);
     _Pmat3.create(3, 4, CV_64F);
-    
+
     Mat P1 = _Pmat1.getMat(), P2 = _Pmat2.getMat();
     Mat R3 = _Rmat3.getMat(), P3 = _Pmat3.getMat();
-    
+
     // recompute rectification transforms for cameras 1 & 2.
     Mat om, r_r, r_r13;
-    
+
     if( R13.size() != Size(3,3) )
         Rodrigues(R13, r_r13);
     else
         R13.copyTo(r_r13);
-    
+
     if( R12.size() == Size(3,3) )
         Rodrigues(R12, om);
     else
         R12.copyTo(om);
-    
+
     om *= -0.5;
     Rodrigues(om, r_r); // rotate cameras to same orientation by averaging
     Mat_<double> t12 = r_r * T12;
-    
+
     int idx = fabs(t12(0,0)) > fabs(t12(1,0)) ? 0 : 1;
     double c = t12(idx,0), nt = norm(t12, CV_L2);
     Mat_<double> uu = Mat_<double>::zeros(3,1);
     uu(idx, 0) = c > 0 ? 1 : -1;
-    
+
     // calculate global Z rotation
     Mat_<double> ww = t12.cross(uu), wR;
     double nw = norm(ww, CV_L2);
     ww *= acos(fabs(c)/nt)/nw;
     Rodrigues(ww, wR);
-    
+
     // now rotate camera 3 to make its optical axis parallel to cameras 1 and 2.
     R3 = wR*r_r.t()*r_r13.t();
     Mat_<double> t13 = R3 * T13;
-    
+
     P2.copyTo(P3);
     Mat t = P3.col(3);
     t13.copyTo(t);
     P3.at<double>(0,3) *= P3.at<double>(0,0);
     P3.at<double>(1,3) *= P3.at<double>(1,1);
-    
+
     if( !_imgpt1.empty() && _imgpt3.empty() )
         adjust3rdMatrix(_imgpt1, _imgpt3, _cameraMatrix1.getMat(), _distCoeffs1.getMat(),
                         _cameraMatrix3.getMat(), _distCoeffs3.getMat(), _Rmat1.getMat(), R3, P1, P3);
-    
+
     return (float)((P3.at<double>(idx,3)/P3.at<double>(idx,idx))/
                    (P2.at<double>(idx,3)/P2.at<double>(idx,idx)));
 }
