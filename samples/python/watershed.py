@@ -105,3 +105,5 @@ if __name__ == "__main__":
 
             cv.AddWeighted(wshed, 0.5, img_gray, 0.5, 0, wshed)
             cv.ShowImage("watershed transform", wshed)
+    cv.DestroyAllWindows()
+    
