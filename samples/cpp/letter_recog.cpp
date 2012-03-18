@@ -90,7 +90,7 @@ read_num_class_data( const char* filename, int var_count,
     }
 
     cvReleaseMemStorage( &storage );
-    delete el_ptr;
+    delete[] el_ptr;
     return 1;
 }
 
