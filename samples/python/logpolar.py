@@ -42,3 +42,4 @@ if __name__ == "__main__":
     
     cv.ShowImage("original", src)
     cv.WaitKey()
+    cv.DestroyAllWindows()

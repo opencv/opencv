@@ -55,3 +55,4 @@ if __name__ == "__main__":
             USE_STANDARD = not USE_STANDARD
         if k == 27:
             break
+    cv.DestroyAllWindows()

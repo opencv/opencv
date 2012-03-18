@@ -59,3 +59,4 @@ if __name__ == "__main__":
             break
 
         use_seq = not use_seq
+    cv.DestroyAllWindows()

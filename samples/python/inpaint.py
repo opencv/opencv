@@ -66,3 +66,4 @@ if __name__=="__main__":
         if c == ord('i') or c == ord('\n'):
             cv.Inpaint(img, inpaint_mask, inpainted, 3, cv.CV_INPAINT_TELEA)
             cv.ShowImage("inpainted image", inpainted)
+    cv.DestroyAllWindows()

@@ -189,3 +189,4 @@ if __name__ == '__main__':
               night_mode = not night_mode
           elif cc == ' ':
               fc = (fc + 1) % len(frames)
+    cv.DestroyAllWindows()

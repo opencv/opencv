@@ -157,3 +157,4 @@ if __name__ == "__main__":
         elif c == ord('8'):
             print("8-connectivity mode is set");
             connectivity = 8;
+    cv.DestroyAllWindows()
