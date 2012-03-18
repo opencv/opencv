@@ -385,7 +385,7 @@ TEST_P(Sqrt, Array)
 
     gpuRes.download(dst);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
 }
 
 INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(

@@ -334,6 +334,9 @@ PARAM_TEST_CASE(GaussianBlur, cv::gpu::DeviceInfo, cv::Size, UseRoi)
 
 TEST_P(GaussianBlur, Rgba)
 {
+    if (!devInfo.supports(cv::gpu::FEATURE_SET_COMPUTE_20) && ksize.height > 16)
+        return;
+
     cv::Mat dst_rgba;
 
     cv::gpu::GpuMat dev_dst_rgba;
@@ -347,6 +350,9 @@ TEST_P(GaussianBlur, Rgba)
 
 TEST_P(GaussianBlur, Gray)
 {
+    if (!devInfo.supports(cv::gpu::FEATURE_SET_COMPUTE_20) && ksize.height > 16)
+        return;
+
     cv::Mat dst_gray;
 
     cv::gpu::GpuMat dev_dst_gray;

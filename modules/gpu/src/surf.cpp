@@ -109,32 +109,26 @@ namespace
         return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
     }
     
-    class SURF_GPU_Invoker : private CvSURFParams
+    class SURF_GPU_Invoker
     {
     public:
         SURF_GPU_Invoker(SURF_GPU& surf, const GpuMat& img, const GpuMat& mask) :
-            CvSURFParams(surf),
-
-            sum(surf.sum), mask1(surf.mask1), maskSum(surf.maskSum), intBuffer(surf.intBuffer), det(surf.det), trace(surf.trace),
-
-            maxPosBuffer(surf.maxPosBuffer), 
-
+            surf_(surf),
             img_cols(img.cols), img_rows(img.rows),
-
             use_mask(!mask.empty())
         {
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
-            CV_Assert(nOctaves > 0 && nOctaveLayers > 0);
+            CV_Assert(surf_.nOctaves > 0 && surf_.nOctaveLayers > 0);
             CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
                 
-            const int min_size = calcSize(nOctaves - 1, 0);
+            const int min_size = calcSize(surf_.nOctaves - 1, 0);
             CV_Assert(img_rows - min_size >= 0);
             CV_Assert(img_cols - min_size >= 0);
             
-            const int layer_rows = img_rows >> (nOctaves - 1);
-            const int layer_cols = img_cols >> (nOctaves - 1);
-            const int min_margin = ((calcSize((nOctaves - 1), 2) >> 1) >> (nOctaves - 1)) + 1;
+            const int layer_rows = img_rows >> (surf_.nOctaves - 1);
+            const int layer_cols = img_cols >> (surf_.nOctaves - 1);
+            const int min_margin = ((calcSize((surf_.nOctaves - 1), 2) >> 1) >> (surf_.nOctaves - 1)) + 1;
             CV_Assert(layer_rows - 2 * min_margin > 0);
             CV_Assert(layer_cols - 2 * min_margin > 0);
 
@@ -143,44 +137,44 @@ namespace
 
             CV_Assert(maxFeatures > 0);
 
-            counters.create(1, nOctaves + 1, CV_32SC1);
+            counters.create(1, surf_.nOctaves + 1, CV_32SC1);
             counters.setTo(Scalar::all(0));
 
-            loadGlobalConstants(maxCandidates, maxFeatures, img_rows, img_cols, nOctaveLayers, static_cast<float>(hessianThreshold));
+            loadGlobalConstants(maxCandidates, maxFeatures, img_rows, img_cols, surf_.nOctaveLayers, static_cast<float>(surf_.hessianThreshold));
 
             bindImgTex(img);
 
-            integralBuffered(img, sum, intBuffer);
-            bindSumTex(sum);
+            integralBuffered(img, surf_.sum, surf_.intBuffer);
+            bindSumTex(surf_.sum);
 
             if (use_mask)
             {
-                min(mask, 1.0, mask1);
-                integralBuffered(mask1, maskSum, intBuffer);
-                bindMaskSumTex(maskSum);
+                min(mask, 1.0, surf_.mask1);
+                integralBuffered(surf_.mask1, surf_.maskSum, surf_.intBuffer);
+                bindMaskSumTex(surf_.maskSum);
             }
         }
 
         void detectKeypoints(GpuMat& keypoints)
         {
-            ensureSizeIsEnough(img_rows * (nOctaveLayers + 2), img_cols, CV_32FC1, det);
-            ensureSizeIsEnough(img_rows * (nOctaveLayers + 2), img_cols, CV_32FC1, trace);
+            ensureSizeIsEnough(img_rows * (surf_.nOctaveLayers + 2), img_cols, CV_32FC1, surf_.det);
+            ensureSizeIsEnough(img_rows * (surf_.nOctaveLayers + 2), img_cols, CV_32FC1, surf_.trace);
             
-            ensureSizeIsEnough(1, maxCandidates, CV_32SC4, maxPosBuffer);
+            ensureSizeIsEnough(1, maxCandidates, CV_32SC4, surf_.maxPosBuffer);
             ensureSizeIsEnough(SURF_GPU::SF_FEATURE_STRIDE, maxFeatures, CV_32FC1, keypoints);
             keypoints.setTo(Scalar::all(0));
 
-            for (int octave = 0; octave < nOctaves; ++octave)
+            for (int octave = 0; octave < surf_.nOctaves; ++octave)
             {
                 const int layer_rows = img_rows >> octave;
                 const int layer_cols = img_cols >> octave;
 
                 loadOctaveConstants(octave, layer_rows, layer_cols);
 
-                icvCalcLayerDetAndTrace_gpu(det, trace, img_rows, img_cols, octave, nOctaveLayers);
+                icvCalcLayerDetAndTrace_gpu(surf_.det, surf_.trace, img_rows, img_cols, octave, surf_.nOctaveLayers);
 
-                icvFindMaximaInLayer_gpu(det, trace, maxPosBuffer.ptr<int4>(), counters.ptr<unsigned int>() + 1 + octave,
-                    img_rows, img_cols, octave, use_mask, nOctaveLayers);
+                icvFindMaximaInLayer_gpu(surf_.det, surf_.trace, surf_.maxPosBuffer.ptr<int4>(), counters.ptr<unsigned int>() + 1 + octave,
+                    img_rows, img_cols, octave, use_mask, surf_.nOctaveLayers);
 
                 unsigned int maxCounter;
                 cudaSafeCall( cudaMemcpy(&maxCounter, counters.ptr<unsigned int>() + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
@@ -188,7 +182,7 @@ namespace
 
                 if (maxCounter > 0)
                 {
-                    icvInterpolateKeypoint_gpu(det, maxPosBuffer.ptr<int4>(), maxCounter, 
+                    icvInterpolateKeypoint_gpu(surf_.det, surf_.maxPosBuffer.ptr<int4>(), maxCounter, 
                         keypoints.ptr<float>(SURF_GPU::SF_X), keypoints.ptr<float>(SURF_GPU::SF_Y),
                         keypoints.ptr<int>(SURF_GPU::SF_LAPLACIAN), keypoints.ptr<float>(SURF_GPU::SF_SIZE),
                         keypoints.ptr<float>(SURF_GPU::SF_HESSIAN), counters.ptr<unsigned int>());
@@ -200,7 +194,7 @@ namespace
 
             keypoints.cols = featureCounter;
 
-            if (upright)
+            if (surf_.upright)
                 keypoints.row(SURF_GPU::SF_DIR).setTo(Scalar::all(90.0));
             else
                 findOrientation(keypoints);
@@ -228,15 +222,7 @@ namespace
         }
 
     private:
-        GpuMat& sum;
-        GpuMat& mask1;
-        GpuMat& maskSum;
-        GpuMat& intBuffer;
-
-        GpuMat& det;
-        GpuMat& trace;
-
-        GpuMat& maxPosBuffer;
+        SURF_GPU& surf_;
 
         int img_cols, img_rows;
 
@@ -306,7 +292,7 @@ void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMa
 
 namespace
 {
-    int getPointOctave(float size, const CvSURFParams& params)
+    int getPointOctave(float size, const SURF_GPU& params)
     {
         int best_octave = 0;
         float min_diff = numeric_limits<float>::max();

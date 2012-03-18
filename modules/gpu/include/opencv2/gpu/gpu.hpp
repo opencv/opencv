@@ -1566,13 +1566,12 @@ public:
 
     void releaseMemory();
 
-    // SURF parameters;
-    int    extended;
-    int    upright;
+    // SURF parameters
     double hessianThreshold;
-    
-    int    nOctaves;
-    int    nOctaveLayers;
+    int nOctaves;
+    int nOctaveLayers;
+    bool extended;
+    bool upright;
     
     //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
     float keypointsRatio;
@@ -1662,9 +1661,8 @@ public:
     };
 
     //! Constructor
-    //! n_features - the number of desired features
-    //! detector_params - parameters to use
-    explicit ORB_GPU(size_t n_features = 500, float scaleFactor = 1.2f, int nlevels = 3);
+    explicit ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 3, int edgeThreshold = 31,
+                     int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31);
 
     //! Compute the ORB features on an image
     //! image - the image to compute the features (supports only CV_8UC1 images)
@@ -1690,7 +1688,6 @@ public:
     //! returns the descriptor size in bytes
     inline int descriptorSize() const { return kBytes; }
 
-    void setParams(size_t n_features, float scaleFactor, int nlevels);
     inline void setFastParams(int threshold, bool nonmaxSupression = true)
     {
         fastDetector_.threshold = threshold;
@@ -1714,7 +1711,14 @@ private:
 
     void mergeKeyPoints(GpuMat& keypoints);
 
-    ORB params_;
+    int nFeatures_;
+    float scaleFactor_;
+    int nLevels_;
+    int edgeThreshold_;
+    int firstLevel_;
+    int WTA_K_;
+    int scoreType_;
+    int patchSize_;
 
     // The number of desired features per scale
     std::vector<size_t> n_features_per_level_;

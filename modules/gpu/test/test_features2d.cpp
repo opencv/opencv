@@ -96,16 +96,16 @@ struct SURF : TestWithParam<cv::gpu::DeviceInfo>
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
-        ASSERT_FALSE(image.empty());        
-        
+        ASSERT_FALSE(image.empty());
+
         mask = cv::Mat(image.size(), CV_8UC1, cv::Scalar::all(1));
         mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
-                
-        cv::SURF fdetector_gold; 
+
+        cv::SURF fdetector_gold;
         fdetector_gold.extended = false;
-        fdetector_gold(image, mask, keypoints_gold, descriptors_gold);        
+        fdetector_gold(image, mask, keypoints_gold, descriptors_gold);
     }
 };
 
@@ -135,7 +135,7 @@ TEST_P(SURF, Accuracy)
 
     dev_descriptors.download(descriptors);
 
-    cv::BruteForceMatcher< cv::L2<float> > matcher;
+    cv::BFMatcher matcher(cv::NORM_L2);
     std::vector<cv::DMatch> matches;
 
     matcher.match(cv::Mat(static_cast<int>(keypoints_gold.size()), 64, CV_32FC1, &descriptors_gold[0]), descriptors, matches);
@@ -696,7 +696,7 @@ TEST_P(ORB, Accuracy)
 
     d_descriptors.download(descriptors);
 
-    cv::BruteForceMatcher<cv::Hamming> matcher;
+    cv::BFMatcher matcher(cv::NORM_HAMMING);
     std::vector<cv::DMatch> matches;
 
     matcher.match(descriptors_gold, descriptors, matches);

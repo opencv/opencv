@@ -48,14 +48,13 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-cv::gpu::ORB_GPU::ORB_GPU(size_t, float, int) : fastDetector_(0) { throw_nogpu(); }
+cv::gpu::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::convertKeyPoints(Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::setParams(size_t, float, int) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::release() { throw_nogpu(); }
 void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::computeKeyPointsPyramid() { throw_nogpu(); }
@@ -82,16 +81,6 @@ namespace cv { namespace gpu { namespace device
         void mergeLocation_gpu(const short2* loc, float* x, float* y, int npoints, float scale, cudaStream_t stream);
     }
 }}}
-
-cv::gpu::ORB_GPU::ORB_GPU(size_t n_features, float scaleFactor, int nlevels) :
-    fastDetector_(DEFAULT_FAST_THRESHOLD)
-{
-    setParams(n_features, scaleFactor, nlevels);
-    
-    blurFilter = createGaussianFilter_GPU(CV_8UC1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
-
-    blurForDescriptor = false;
-}
 
 namespace
 {
@@ -407,27 +396,27 @@ namespace
     }
 }
 
-void cv::gpu::ORB_GPU::setParams(size_t n_features, float scaleFactor, int nlevels)
-{
-    params_ = ORB((int)n_features, scaleFactor, nlevels);
-    
+cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edgeThreshold, int firstLevel, int WTA_K, int scoreType, int patchSize) :
+    nFeatures_(nFeatures), scaleFactor_(scaleFactor), nLevels_(nLevels), edgeThreshold_(edgeThreshold), firstLevel_(firstLevel), WTA_K_(WTA_K),
+    scoreType_(scoreType), patchSize_(patchSize),
+    fastDetector_(DEFAULT_FAST_THRESHOLD)
+{    
     // fill the extractors and descriptors for the corresponding scales
-    int n_levels = static_cast<int>(params_.n_levels_);
-    float factor = 1.0f / params_.scale_factor_;
-    float n_desired_features_per_scale = n_features * (1.0f - factor) / (1.0f - std::pow(factor, n_levels));
+    float factor = 1.0f / scaleFactor_;
+    float n_desired_features_per_scale = nFeatures_ * (1.0f - factor) / (1.0f - std::pow(factor, nLevels_));
     
-    n_features_per_level_.resize(n_levels);
+    n_features_per_level_.resize(nLevels_);
     int sum_n_features = 0;
-    for (int level = 0; level < n_levels - 1; ++level)
+    for (int level = 0; level < nLevels_ - 1; ++level)
     {
         n_features_per_level_[level] = cvRound(n_desired_features_per_scale);
         sum_n_features += n_features_per_level_[level];
         n_desired_features_per_scale *= factor;
     }
-    n_features_per_level_[n_levels - 1] = n_features - sum_n_features;
+    n_features_per_level_[nLevels_ - 1] = nFeatures - sum_n_features;
 
     // pre-compute the end of a row in a circular patch
-    int half_patch_size = params_.patch_size_ / 2;
+    int half_patch_size = patchSize_ / 2;
     vector<int> u_max(half_patch_size + 1);
     for (int v = 0; v <= half_patch_size * std::sqrt(2.f) / 2 + 1; ++v)
         u_max[v] = cvRound(std::sqrt(static_cast<float>(half_patch_size * half_patch_size - v * v)));
@@ -447,17 +436,17 @@ void cv::gpu::ORB_GPU::setParams(size_t n_features, float scaleFactor, int nleve
     const int npoints = 512;
     Point pattern_buf[npoints];
     const Point* pattern0 = (const Point*)bit_pattern_31_;
-    if (params_.patch_size_ != 31)
+    if (patchSize_ != 31)
     {
         pattern0 = pattern_buf;
-        makeRandomPattern(params_.patch_size_, pattern_buf, npoints);
+        makeRandomPattern(patchSize_, pattern_buf, npoints);
     }
     
-    CV_Assert(params_.WTA_K_ == 2 || params_.WTA_K_ == 3 || params_.WTA_K_ == 4);    
+    CV_Assert(WTA_K_ == 2 || WTA_K_ == 3 || WTA_K_ == 4);    
 
     Mat h_pattern;
 
-    if (params_.WTA_K_ == 2)
+    if (WTA_K_ == 2)
     {
         h_pattern.create(2, npoints, CV_32SC1);
         
@@ -473,17 +462,21 @@ void cv::gpu::ORB_GPU::setParams(size_t n_features, float scaleFactor, int nleve
     else
     {
         int ntuples = descriptorSize() * 4;
-        initializeOrbPattern(pattern0, h_pattern, ntuples, params_.WTA_K_, npoints);
+        initializeOrbPattern(pattern0, h_pattern, ntuples, WTA_K_, npoints);
     }
 
     pattern_.upload(h_pattern);
+    
+    blurFilter = createGaussianFilter_GPU(CV_8UC1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
+
+    blurForDescriptor = false;
 }
 
 namespace
 {
-    inline float getScale(const ORB::CommonParams& params, int level)
+    inline float getScale(float scaleFactor, int firstLevel, int level)
     {
-        return pow(params.scale_factor_, level - static_cast<int>(params.first_level_));
+        return pow(scaleFactor, level - firstLevel);
     }
 }
 
@@ -492,12 +485,12 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
     CV_Assert(image.type() == CV_8UC1);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()));
 
-    imagePyr_.resize(params_.n_levels_);
-    maskPyr_.resize(params_.n_levels_);
+    imagePyr_.resize(nLevels_);
+    maskPyr_.resize(nLevels_);
 
-    for (int level = 0; level < static_cast<int>(params_.n_levels_); ++level)
+    for (int level = 0; level < nLevels_; ++level)
     {
-        float scale = 1.0f / getScale(params_, level);
+        float scale = 1.0f / getScale(scaleFactor_, firstLevel_, level);
 
         Size sz(cvRound(image.cols * scale), cvRound(image.rows * scale));
 
@@ -506,9 +499,9 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         maskPyr_[level].setTo(Scalar::all(255));
         
         // Compute the resized image
-        if (level != static_cast<int>(params_.first_level_))
+        if (level != firstLevel_)
         {
-            if (level < static_cast<int>(params_.first_level_))
+            if (level < firstLevel_)
             {
                 resize(image, imagePyr_[level], sz, 0, 0, INTER_LINEAR);
 
@@ -534,7 +527,7 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         // Filter keypoints by image border
         ensureSizeIsEnough(sz, CV_8UC1, buf_);
         buf_.setTo(Scalar::all(0));
-        Rect inner(params_.edge_threshold_, params_.edge_threshold_, sz.width - 2 * params_.edge_threshold_, sz.height - 2 * params_.edge_threshold_);
+        Rect inner(edgeThreshold_, edgeThreshold_, sz.width - 2 * edgeThreshold_, sz.height - 2 * edgeThreshold_);
         buf_(inner).setTo(Scalar::all(255));
 
         bitwise_and(maskPyr_[level], buf_, maskPyr_[level]);
@@ -566,12 +559,12 @@ void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
 {
     using namespace cv::gpu::device::orb;
 
-    int half_patch_size = params_.patch_size_ / 2;
+    int half_patch_size = patchSize_ / 2;
 
-    keyPointsPyr_.resize(params_.n_levels_);
-    keyPointsCount_.resize(params_.n_levels_);
+    keyPointsPyr_.resize(nLevels_);
+    keyPointsCount_.resize(nLevels_);
     
-    for (int level = 0; level < static_cast<int>(params_.n_levels_); ++level)
+    for (int level = 0; level < nLevels_; ++level)
     {
         keyPointsCount_[level] = fastDetector_.calcKeyPointsLocation(imagePyr_[level], maskPyr_[level]);
 
@@ -582,7 +575,7 @@ void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
 
         int n_features = n_features_per_level_[level];
         
-        if (params_.score_type_ == ORB::CommonParams::HARRIS_SCORE)
+        if (scoreType_ == ORB::HARRIS_SCORE)
         {
             // Keep more points than necessary as FAST does not give amazing corners
             cull(keyPointsPyr_[level], keyPointsCount_[level], 2 * n_features);
@@ -605,7 +598,7 @@ void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
 
     int nAllkeypoints = 0;
 
-    for (size_t level = 0; level < params_.n_levels_; ++level)
+    for (int level = 0; level < nLevels_; ++level)
         nAllkeypoints += keyPointsCount_[level];
 
     if (nAllkeypoints == 0)
@@ -618,7 +611,7 @@ void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
 
     int offset = 0;
 
-    for (size_t level = 0; level < params_.n_levels_; ++level)
+    for (int level = 0; level < nLevels_; ++level)
     {       
         GpuMat descRange = descriptors.rowRange(offset, offset + keyPointsCount_[level]);
 
@@ -630,7 +623,7 @@ void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
         }
 
         computeOrbDescriptor_gpu(blurForDescriptor ? buf_ : imagePyr_[level], keyPointsPyr_[level].ptr<short2>(0), keyPointsPyr_[level].ptr<float>(2), 
-            keyPointsCount_[level], pattern_.ptr<int>(0), pattern_.ptr<int>(1), descRange, descriptorSize(), params_.WTA_K_, 0);
+            keyPointsCount_[level], pattern_.ptr<int>(0), pattern_.ptr<int>(1), descRange, descriptorSize(), WTA_K_, 0);
 
         offset += keyPointsCount_[level];
     }
@@ -642,7 +635,7 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
 
     int nAllkeypoints = 0;
 
-    for (size_t level = 0; level < params_.n_levels_; ++level)
+    for (int level = 0; level < nLevels_; ++level)
         nAllkeypoints += keyPointsCount_[level];
 
     if (nAllkeypoints == 0)
@@ -655,13 +648,13 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
 
     int offset = 0;
     
-    for (int level = 0; level < static_cast<int>(params_.n_levels_); ++level)
+    for (int level = 0; level < nLevels_; ++level)
     {
-        float sf = getScale(params_, level);
+        float sf = getScale(scaleFactor_, firstLevel_, level);
 
         GpuMat keyPointsRange = keypoints.colRange(offset, offset + keyPointsCount_[level]);        
         
-        float locScale = level != static_cast<int>(params_.first_level_) ? sf : 1.0f;
+        float locScale = level != firstLevel_ ? sf : 1.0f;
 
         mergeLocation_gpu(keyPointsPyr_[level].ptr<short2>(0), keyPointsRange.ptr<float>(0), keyPointsRange.ptr<float>(1), keyPointsCount_[level], locScale, 0);
 
@@ -669,7 +662,7 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
         keyPointsPyr_[level](Range(1, 3), Range(0, keyPointsCount_[level])).copyTo(range);
         
         keyPointsRange.row(4).setTo(Scalar::all(level));
-        keyPointsRange.row(5).setTo(Scalar::all(params_.patch_size_ * sf));
+        keyPointsRange.row(5).setTo(Scalar::all(patchSize_ * sf));
 
         offset += keyPointsCount_[level];
     }
