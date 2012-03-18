@@ -69,3 +69,4 @@ if __name__ == "__main__":
 
     # Wait for a key stroke; the same function arranges events processing
     cv.WaitKey(0)
+    cv.DestroyAllWindows()

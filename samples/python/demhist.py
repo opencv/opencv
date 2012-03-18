@@ -77,3 +77,4 @@ if __name__ == "__main__":
     dh = DemHist(src_image)
 
     cv.WaitKey(0)
+    cv.DestroyAllWindows()

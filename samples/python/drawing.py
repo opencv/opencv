@@ -159,3 +159,4 @@ if __name__ == '__main__':
 
     # wait some key to end
     cv.WaitKey(0)
+    cv.DestroyAllWindows()

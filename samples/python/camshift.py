@@ -113,3 +113,4 @@ class CamShiftDemo:
 if __name__=="__main__":
     demo = CamShiftDemo()
     demo.run()
+    cv.DestroyAllWindows()

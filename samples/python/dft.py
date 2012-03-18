@@ -111,3 +111,4 @@ if __name__ == "__main__":
     cv.ShowImage("magnitude", image_Re)
 
     cv.WaitKey(0)
+    cv.DestroyAllWindows()

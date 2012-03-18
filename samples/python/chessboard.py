@@ -31,3 +31,4 @@ if __name__ == "__main__":
     
     cv.ShowImage("win", im3);
     cv.WaitKey()
+    cv.DestroyAllWindows()

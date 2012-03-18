@@ -62,3 +62,4 @@ if __name__ == '__main__':
         if k == 27:
             # user has press the ESC key, so exit
             break
+    cv.DestroyAllWindows()

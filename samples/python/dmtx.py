@@ -5,6 +5,10 @@ import numpy
 import sys
 import math
 
+'''
+Find 2 D barcode based on up to 3 channel datamatrix
+'''
+
 def absnorm8(im, im8):
     """ im may be any single-channel image type.  Return an 8-bit version, absolute value, normalized so that max is 255 """
     (minVal, maxVal, _, _) = cv.MinMaxLoc(im)
@@ -166,6 +170,7 @@ for (sym, coords) in df.find(bg).items():
 
 cv.ShowImage("results", scribble)
 cv.WaitKey()
+cv.DestroyAllWindows()
 
 sys.exit(0)
 

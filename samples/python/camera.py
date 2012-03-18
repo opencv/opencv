@@ -10,3 +10,4 @@ while True:
     cv.ShowImage("camera", img)
     if cv.WaitKey(10) == 27:
         break
+cv.DestroyAllWindows()
