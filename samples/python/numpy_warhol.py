@@ -45,3 +45,4 @@ if __name__ == "__main__":
         cv.ShowImage("camera", paste)
         if cv.WaitKey(6) == 27:
             break
+    cv.DestroyAllWindows()

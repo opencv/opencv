@@ -63,3 +63,4 @@ if __name__ == "__main__":
     cv.ShowImage("gaussian", cv.fromarray(n))
 
     cv.WaitKey(0)
+    cv.DestroyAllWindows()

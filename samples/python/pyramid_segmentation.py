@@ -38,3 +38,4 @@ if __name__ == "__main__":
 
     # segmentation of the color image
     PyrSegmentation(img0).run()
+    cv.DestroyAllWindows()

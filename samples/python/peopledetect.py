@@ -51,3 +51,4 @@ for name in imglist:
     c = WaitKey(0)
     if c == ord('q'):
         break
+cv.DestroyAllWindows()
