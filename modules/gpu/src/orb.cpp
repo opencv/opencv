@@ -48,7 +48,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-cv::gpu::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) { throw_nogpu(); }
+cv::gpu::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) : fastDetector_(20) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
