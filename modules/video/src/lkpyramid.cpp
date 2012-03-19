@@ -498,18 +498,15 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            OutputArray _status, OutputArray _err,
                            Size winSize, int maxLevel,
                            TermCriteria criteria,
-                           double derivLambda,
                            int flags, double minEigThreshold )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, derivLambda, flags, minEigThreshold))
+    if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, flags, minEigThreshold))
         return;
 #endif
     Mat prevImg = _prevImg.getMat(), nextImg = _nextImg.getMat(), prevPtsMat = _prevPts.getMat();
-    derivLambda = std::min(std::max(derivLambda, 0.), 1.);
     const int derivDepth = DataType<deriv_type>::depth;
 
-    CV_Assert( derivLambda >= 0 );
     CV_Assert( maxLevel >= 0 && winSize.width > 2 && winSize.height > 2 );
     CV_Assert( prevImg.size() == nextImg.size() &&
         prevImg.type() == nextImg.type() );

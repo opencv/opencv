@@ -322,7 +322,6 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
                            TermCriteria criteria=TermCriteria(
                             TermCriteria::COUNT+TermCriteria::EPS,
                             30, 0.01),
-                           double derivLambda=0.5,
                            int flags=0,
                            double minEigThreshold=1e-4);
 
