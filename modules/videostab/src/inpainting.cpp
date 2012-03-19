@@ -246,7 +246,11 @@ public:
 
 MotionInpainter::MotionInpainter()
 {
+#if HAVE_OPENCV_GPU
     setOptFlowEstimator(new DensePyrLkOptFlowEstimatorGpu());
+#else
+    CV_Error( CV_StsNotImplemented, "Current implementation of MotionInpainter requires GPU" );
+#endif
     setFlowErrorThreshold(1e-4f);
     setBorderMode(BORDER_REPLICATE);
 }

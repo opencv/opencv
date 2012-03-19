@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/gpu/gpu.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
 
@@ -60,6 +59,7 @@ void SparsePyrLkOptFlowEstimator::run(
 }
 
 
+#if HAVE_OPENCV_GPU
 DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu()
 {
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
@@ -86,6 +86,7 @@ void DensePyrLkOptFlowEstimatorGpu::run(
     flowX_.download(flowX.getMatRef());
     flowY_.download(flowY.getMatRef());
 }
+#endif
 
 
 } // namespace videostab

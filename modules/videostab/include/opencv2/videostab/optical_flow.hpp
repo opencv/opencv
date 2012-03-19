@@ -44,7 +44,11 @@
 #define __OPENCV_VIDEOSTAB_OPTICAL_FLOW_HPP__
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/opencv_modules.hpp"
+
+#if HAVE_OPENCV_GPU
+#  include "opencv2/gpu/gpu.hpp"
+#endif
 
 namespace cv
 {
@@ -94,6 +98,7 @@ public:
             OutputArray status, OutputArray errors);
 };
 
+#if HAVE_OPENCV_GPU
 class DensePyrLkOptFlowEstimatorGpu
         : public PyrLkOptFlowEstimatorBase, public IDenseOptFlowEstimator
 {
@@ -107,6 +112,7 @@ private:
     gpu::PyrLKOpticalFlow optFlowEstimator_;
     gpu::GpuMat frame0_, frame1_, flowX_, flowY_, errors_;
 };
+#endif
 
 } // namespace videostab
 } // namespace cv
