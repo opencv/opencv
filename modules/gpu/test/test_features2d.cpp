@@ -90,7 +90,7 @@ struct SURF : TestWithParam<cv::gpu::DeviceInfo>
 
     std::vector<cv::KeyPoint> keypoints_gold;
     std::vector<float> descriptors_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GetParam();
@@ -157,20 +157,20 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, DistType, int)
     cv::gpu::DeviceInfo devInfo;
     cv::gpu::BruteForceMatcher_GPU_base::DistType distType;
     int dim;
-        
+
     int queryDescCount;
     int countFactor;
-    
+
     cv::Mat query, train;
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         distType = (cv::gpu::BruteForceMatcher_GPU_base::DistType)(int)GET_PARAM(1);
         dim = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         queryDescCount = 300; // must be even number because we split train data in some cases in two
         countFactor = 4; // do not change it
 
@@ -218,7 +218,7 @@ TEST_P(BruteForceMatcher, Match)
 
     matcher.match(loadMat(query), loadMat(train), matches);
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     for (size_t i = 0; i < matches.size(); i++)
@@ -259,7 +259,7 @@ TEST_P(BruteForceMatcher, MatchAdd)
 
     isMaskSupported = matcher.isMaskSupported();
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     for (size_t i = 0; i < matches.size(); i++)
@@ -292,7 +292,7 @@ TEST_P(BruteForceMatcher, KnnMatch2)
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
     matcher.knnMatch(loadMat(query), loadMat(train), matches, knn);
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     for (size_t i = 0; i < matches.size(); i++)
@@ -324,7 +324,7 @@ TEST_P(BruteForceMatcher, KnnMatch3)
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
     matcher.knnMatch(loadMat(query), loadMat(train), matches, knn);
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     for (size_t i = 0; i < matches.size(); i++)
@@ -375,7 +375,7 @@ TEST_P(BruteForceMatcher, KnnMatchAdd2)
 
     isMaskSupported = matcher.isMaskSupported();
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     int shift = isMaskSupported ? 1 : 0;
@@ -437,7 +437,7 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
 
     isMaskSupported = matcher.isMaskSupported();
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     int shift = isMaskSupported ? 1 : 0;
@@ -485,7 +485,7 @@ TEST_P(BruteForceMatcher, RadiusMatch)
 
     matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius);
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     for (size_t i = 0; i < matches.size(); i++)
@@ -536,7 +536,7 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
 
     isMaskSupported = matcher.isMaskSupported();
 
-    ASSERT_EQ(queryDescCount, matches.size());
+    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
     int shift = isMaskSupported ? 1 : 0;
@@ -588,17 +588,16 @@ struct FAST : TestWithParam<cv::gpu::DeviceInfo>
     int threshold;
 
     std::vector<cv::KeyPoint> keypoints_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
         ASSERT_FALSE(image.empty());
 
-        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
         threshold = 30;
 
         cv::FAST(image, keypoints_gold, threshold);
@@ -630,7 +629,7 @@ TEST_P(FAST, Accuracy)
     cv::gpu::FAST_GPU fastGPU(threshold);
 
     fastGPU(cv::gpu::GpuMat(image), cv::gpu::GpuMat(), keypoints);
-    
+
     ASSERT_EQ(keypoints.size(), keypoints_gold.size());
 
     std::sort(keypoints.begin(), keypoints.end(), KeyPointCompare());
@@ -663,16 +662,16 @@ struct ORB : TestWithParam<cv::gpu::DeviceInfo>
 
     std::vector<cv::KeyPoint> keypoints_gold;
     cv::Mat descriptors_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
-        ASSERT_FALSE(image.empty());        
-        
+        ASSERT_FALSE(image.empty());
+
         mask = cv::Mat(image.size(), CV_8UC1, cv::Scalar::all(1));
         mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
 

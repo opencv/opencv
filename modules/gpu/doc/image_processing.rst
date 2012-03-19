@@ -713,13 +713,11 @@ gpu::pyrDown
 -------------------
 Smoothes an image and downsamples it.
 
-.. ocv:function:: void gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
     :param dst: Destination image. Will have ``Size((src.cols+1)/2, (src.rows+1)/2)`` size and the same type as ``src`` .
-    
-    :param borderType: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
 
     :param stream: Stream for the asynchronous version.
 
@@ -731,13 +729,11 @@ gpu::pyrUp
 -------------------
 Upsamples an image and then smoothes it.
 
-.. ocv:function:: void gpu::pyrUp(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
     :param dst: Destination image. Will have ``Size(src.cols*2, src.rows*2)`` size and the same type as ``src`` .
-    
-    :param borderType: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
 
     :param stream: Stream for the asynchronous version.
 

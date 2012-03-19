@@ -836,10 +836,10 @@ private:
 CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream& stream = Stream::Null());
 
 //! smoothes the source image and downsamples it
-CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
+CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! upsamples the source image and then smoothes it
-CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
+CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! performs linear blending of two images
 //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
@@ -1572,7 +1572,7 @@ public:
     int nOctaveLayers;
     bool extended;
     bool upright;
-    
+
     //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
     float keypointsRatio;
 

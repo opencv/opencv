@@ -58,7 +58,7 @@ PARAM_TEST_CASE(Integral, cv::gpu::DeviceInfo, UseRoi)
     cv::Mat src;
 
     cv::Mat dst_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
@@ -70,9 +70,9 @@ PARAM_TEST_CASE(Integral, cv::gpu::DeviceInfo, UseRoi)
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = randomMat(rng, size, CV_8UC1, 0.0, 255.0, false); 
+        src = randomMat(rng, size, CV_8UC1, 0.0, 255.0, false);
 
-        cv::integral(src, dst_gold, CV_32S);     
+        cv::integral(src, dst_gold, CV_32S);
     }
 };
 
@@ -90,7 +90,7 @@ TEST_P(Integral, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Integral, Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -101,9 +101,9 @@ PARAM_TEST_CASE(CvtColor, cv::gpu::DeviceInfo, MatType, UseRoi)
     cv::gpu::DeviceInfo devInfo;
     int type;
     bool useRoi;
-    
+
     cv::Mat img;
-    
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
@@ -111,7 +111,7 @@ PARAM_TEST_CASE(CvtColor, cv::gpu::DeviceInfo, MatType, UseRoi)
         useRoi = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         cv::Mat imgBase = readImage("stereobm/aloe-L.png");
         ASSERT_FALSE(imgBase.empty());
 
@@ -1998,7 +1998,7 @@ TEST_P(CvtColor, RGBA2YUV4)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         Values(CV_8U, CV_16U, CV_32F),
                         WHOLE_SUBMAT));
 
@@ -2009,18 +2009,18 @@ PARAM_TEST_CASE(SwapChannels, cv::gpu::DeviceInfo, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     bool useRoi;
-    
+
     cv::Mat img;
-    
+
     cv::Mat dst_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         cv::Mat imgBase = readImage("stereobm/aloe-L.png");
         ASSERT_FALSE(imgBase.empty());
 
@@ -2051,23 +2051,23 @@ INSTANTIATE_TEST_CASE_P(ImgProc, SwapChannels, Combine(ALL_DEVICES, WHOLE_SUBMAT
 struct HistEven : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
-    
+
     cv::Mat hsv;
-    
+
     int hbins;
     float hranges[2];
 
     cv::Mat hist_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         cv::Mat img = readImage("stereobm/aloe-L.png");
         ASSERT_FALSE(img.empty());
-        
+
         cv::cvtColor(img, hsv, CV_BGR2HSV);
 
         hbins = 30;
@@ -2092,7 +2092,7 @@ struct HistEven : TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(HistEven, Accuracy)
 {
     cv::Mat hist;
-    
+
     std::vector<cv::gpu::GpuMat> srcs;
     cv::gpu::split(loadMat(hsv), srcs);
 
@@ -2114,7 +2114,7 @@ struct CalcHist : TestWithParam<cv::gpu::DeviceInfo>
     cv::Size size;
     cv::Mat src;
     cv::Mat hist_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GetParam();
@@ -2124,7 +2124,7 @@ struct CalcHist : TestWithParam<cv::gpu::DeviceInfo>
         cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-        
+
         src = randomMat(rng, size, CV_8UC1, 0, 255, false);
 
         hist_gold.create(1, 256, CV_32SC1);
@@ -2144,7 +2144,7 @@ struct CalcHist : TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(CalcHist, Accuracy)
 {
     cv::Mat hist;
-    
+
     cv::gpu::GpuMat gpuHist;
 
     cv::gpu::calcHist(loadMat(src), gpuHist);
@@ -2163,7 +2163,7 @@ struct EqualizeHist : TestWithParam<cv::gpu::DeviceInfo>
     cv::Size size;
     cv::Mat src;
     cv::Mat dst_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GetParam();
@@ -2173,7 +2173,7 @@ struct EqualizeHist : TestWithParam<cv::gpu::DeviceInfo>
         cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
-        
+
         src = randomMat(rng, size, CV_8UC1, 0, 255, false);
 
         cv::equalizeHist(src, dst_gold);
@@ -2183,7 +2183,7 @@ struct EqualizeHist : TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(EqualizeHist, Accuracy)
 {
     cv::Mat dst;
-    
+
     cv::gpu::GpuMat gpuDst;
 
     cv::gpu::equalizeHist(loadMat(src), gpuDst);
@@ -2217,7 +2217,7 @@ PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, Border, int, int)
         type = GET_PARAM(1);
         borderType = GET_PARAM(2);
         blockSize = GET_PARAM(3);
-        apertureSize = GET_PARAM(4); 
+        apertureSize = GET_PARAM(4);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
@@ -2248,8 +2248,8 @@ TEST_P(CornerHarris, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_32FC1), 
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_32FC1),
                         Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT),
                         Values(3, 5, 7),
                         Values(0, 3, 5, 7)));
@@ -2268,18 +2268,16 @@ PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, Border, int, int)
     cv::Mat src;
 
     cv::Mat dst_gold;
-    
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         type = GET_PARAM(1);
         borderType = GET_PARAM(2);
         blockSize = GET_PARAM(3);
-        apertureSize = GET_PARAM(4); 
+        apertureSize = GET_PARAM(4);
 
         cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
 
         cv::Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
         ASSERT_FALSE(img.empty());
@@ -2304,8 +2302,8 @@ TEST_P(CornerMinEigen, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, CornerMinEigen, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_32FC1), 
+                        ALL_DEVICES,
+                        Values(CV_8UC1, CV_32FC1),
                         Values((int) cv::BORDER_REFLECT101, (int) cv::BORDER_REPLICATE, (int) cv::BORDER_REFLECT),
                         Values(3, 5, 7),
                         Values(0, 3, 5, 7)));
@@ -2325,7 +2323,7 @@ struct ColumnSum : TestWithParam<cv::gpu::DeviceInfo>
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-    
+
         cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 400), rng.uniform(100, 400));
@@ -2337,7 +2335,7 @@ struct ColumnSum : TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(ColumnSum, Accuracy)
 {
     cv::Mat dst;
-    
+
     cv::gpu::GpuMat dev_dst;
 
     cv::gpu::columnSum(loadMat(src), dev_dst);
@@ -2387,7 +2385,7 @@ PARAM_TEST_CASE(Norm, cv::gpu::DeviceInfo, MatType, NormCode, UseRoi)
         useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
-    
+
         cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 400), rng.uniform(100, 400));
@@ -2406,7 +2404,7 @@ TEST_P(Norm, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Norm, Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         TYPES(CV_8U, CV_32F, 1, 1),
                         Values((int) cv::NORM_INF, (int) cv::NORM_L1, (int) cv::NORM_L2),
                         WHOLE_SUBMAT));
@@ -2431,7 +2429,7 @@ PARAM_TEST_CASE(ReprojectImageTo3D, cv::gpu::DeviceInfo, UseRoi)
         useRoi = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
-    
+
         cv::RNG& rng = TS::ptr()->get_rng();
 
         size = cv::Size(rng.uniform(100, 500), rng.uniform(100, 500));
@@ -2481,7 +2479,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, ReprojectImageTo3D, Combine(ALL_DEVICES, WHOLE_
 struct MeanShift : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
-    
+
     cv::Mat rgba;
 
     int spatialRad;
@@ -2492,10 +2490,10 @@ struct MeanShift : TestWithParam<cv::gpu::DeviceInfo>
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         cv::Mat img = readImage("meanshift/cones.png");
         ASSERT_FALSE(img.empty());
-        
+
         cv::cvtColor(img, rgba, CV_BGR2BGRA);
 
         spatialRad = 30;
@@ -2506,7 +2504,7 @@ struct MeanShift : TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(MeanShift, Filtering)
 {
     cv::Mat img_template;
-    
+
     if (supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_20))
         img_template = readImage("meanshift/con_result.png");
     else
@@ -2562,8 +2560,8 @@ TEST_P(MeanShift, Proc)
     d_spmap.download(spmap);
 
     ASSERT_EQ(CV_8UC4, rmap.type());
-    
-    EXPECT_MAT_NEAR(rmap_filtered, rmap, 0.0);    
+
+    EXPECT_MAT_NEAR(rmap_filtered, rmap, 0.0);
     EXPECT_MAT_NEAR(spmap_template, spmap, 0.0);
 }
 
@@ -2573,7 +2571,7 @@ PARAM_TEST_CASE(MeanShiftSegmentation, cv::gpu::DeviceInfo, int)
 {
     cv::gpu::DeviceInfo devInfo;
     int minsize;
-    
+
     cv::Mat rgba;
 
     cv::Mat dst_gold;
@@ -2584,10 +2582,10 @@ PARAM_TEST_CASE(MeanShiftSegmentation, cv::gpu::DeviceInfo, int)
         minsize = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         cv::Mat img = readImage("meanshift/cones.png");
         ASSERT_FALSE(img.empty());
-        
+
         cv::cvtColor(img, rgba, CV_BGR2BGRA);
 
         std::ostringstream path;
@@ -2669,7 +2667,7 @@ TEST_P(MatchTemplate8U, Regression)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate8U, Combine(
                         ALL_DEVICES,
-                        Range(1, 5), 
+                        Range(1, 5),
                         Values((int)cv::TM_SQDIFF, (int) cv::TM_SQDIFF_NORMED, (int) cv::TM_CCORR, (int) cv::TM_CCORR_NORMED, (int) cv::TM_CCOEFF, (int) cv::TM_CCOEFF_NORMED)));
 
 
@@ -2720,8 +2718,8 @@ TEST_P(MatchTemplate32F, Regression)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate32F, Combine(
-                        ALL_DEVICES, 
-                        Range(1, 5), 
+                        ALL_DEVICES,
+                        Range(1, 5),
                         Values((int) cv::TM_SQDIFF, (int) cv::TM_CCORR)));
 
 
@@ -2830,9 +2828,9 @@ PARAM_TEST_CASE(MulSpectrums, cv::gpu::DeviceInfo, DftFlags)
     cv::gpu::DeviceInfo devInfo;
     int flag;
 
-    cv::Mat a, b; 
+    cv::Mat a, b;
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         flag = GET_PARAM(1);
@@ -2850,7 +2848,7 @@ TEST_P(MulSpectrums, Simple)
 {
     cv::Mat c_gold;
     cv::mulSpectrums(a, b, c_gold, flag, false);
-    
+
     cv::Mat c;
 
     cv::gpu::GpuMat d_c;
@@ -2882,7 +2880,7 @@ TEST_P(MulSpectrums, Scaled)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, MulSpectrums, Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         Values(0, (int) cv::DFT_ROWS)));
 
 ////////////////////////////////////////////////////////////////////////////
@@ -2892,7 +2890,7 @@ struct Dft : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
         devInfo = GetParam();
 
@@ -2956,7 +2954,7 @@ TEST_P(Dft, C2C)
 void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inplace)
 {
     SCOPED_TRACE(hint);
-    
+
     cv::RNG& rng = TS::ptr()->get_rng();
 
     cv::Mat a = randomMat(rng, cv::Size(cols, rows), CV_32FC1, 0.0, 10.0, false);
@@ -2981,7 +2979,7 @@ void testR2CThenC2R(const std::string& hint, int cols, int rows, bool inplace)
 
     cv::gpu::dft(loadMat(a), d_b, cv::Size(cols, rows), 0);
     cv::gpu::dft(d_b, d_c, cv::Size(cols, rows), cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
-    
+
     EXPECT_TRUE(!inplace || d_b.ptr() == d_b_data.ptr());
     EXPECT_TRUE(!inplace || d_c.ptr() == d_c_data.ptr());
     ASSERT_EQ(CV_32F, d_c.depth());
@@ -3019,7 +3017,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Dft, ALL_DEVICES);
 ////////////////////////////////////////////////////////////////////////////
 // blend
 
-template <typename T> 
+template <typename T>
 void blendLinearGold(const cv::Mat& img1, const cv::Mat& img2, const cv::Mat& weights1, const cv::Mat& weights2, cv::Mat& result_gold)
 {
     result_gold.create(img1.size(), img1.type());
@@ -3057,7 +3055,7 @@ PARAM_TEST_CASE(Blend, cv::gpu::DeviceInfo, MatType, UseRoi)
 
     cv::Mat result_gold;
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         type = GET_PARAM(1);
@@ -3075,7 +3073,7 @@ PARAM_TEST_CASE(Blend, cv::gpu::DeviceInfo, MatType, UseRoi)
         img2 = randomMat(rng, size, type, 0.0, depth == CV_8U ? 255.0 : 1.0, false);
         weights1 = randomMat(rng, size, CV_32F, 0, 1, false);
         weights2 = randomMat(rng, size, CV_32F, 0, 1, false);
-        
+
         if (depth == CV_8U)
             blendLinearGold<uchar>(img1, img2, weights1, weights2, result_gold);
         else
@@ -3102,105 +3100,6 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Blend, Combine(
                         WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////
-// pyrDown
-
-PARAM_TEST_CASE(PyrDown, cv::gpu::DeviceInfo, MatType, UseRoi)
-{    
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    bool useRoi;
-
-    cv::Mat src;
-
-    cv::Mat dst_gold;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        useRoi = GET_PARAM(2);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        cv::Size size(rng.uniform(100, 200), rng.uniform(100, 200));
-
-        src = randomMat(rng, size, type, 0.0, 255.0, false);
-        
-        cv::pyrDown(src, dst_gold);
-    }
-};
-
-TEST_P(PyrDown, Accuracy)
-{    
-    cv::Mat dst;
-
-    cv::gpu::GpuMat d_dst;
-    
-    cv::gpu::pyrDown(loadMat(src, useRoi), d_dst);
-    
-    d_dst.download(dst);
-
-    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-4 : 1.0);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        WHOLE_SUBMAT));
-
-////////////////////////////////////////////////////////
-// pyrUp
-
-PARAM_TEST_CASE(PyrUp, cv::gpu::DeviceInfo, MatType, UseRoi)
-{    
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    bool useRoi;
-
-    cv::Mat src;
-    
-    cv::Mat dst_gold;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        useRoi = GET_PARAM(2);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-        
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        cv::Size size(rng.uniform(200, 400), rng.uniform(200, 400));
-
-        src = randomMat(rng, size, type, 0.0, 255.0, false);
-        
-        cv::pyrUp(src, dst_gold);
-    }
-};
-
-TEST_P(PyrUp, Accuracy)
-{    
-    cv::Mat dst;
-
-    cv::gpu::GpuMat d_dst;
-    
-    cv::gpu::pyrUp(loadMat(src, useRoi), d_dst, cv::BORDER_REFLECT);
-    
-    d_dst.download(dst);
-
-    // results differs only on border left and top border due different border extrapolation type
-    EXPECT_MAT_NEAR(dst_gold(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), dst(cv::Range(1, dst_gold.rows), cv::Range(1, dst_gold.cols)), src.depth() == CV_32F ? 1e-4 : 1.0);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, Combine(
-                        ALL_DEVICES, 
-                        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                        WHOLE_SUBMAT));
-
-////////////////////////////////////////////////////////
 // Canny
 
 PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, int, bool, UseRoi)
@@ -3209,7 +3108,7 @@ PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, int, bool, UseRoi)
     int apperture_size;
     bool L2gradient;
     bool useRoi;
-    
+
     cv::Mat img;
 
     double low_thresh;
@@ -3217,7 +3116,7 @@ PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, int, bool, UseRoi)
 
     cv::Mat edges_gold;
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         apperture_size = GET_PARAM(1);
@@ -3225,13 +3124,13 @@ PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, int, bool, UseRoi)
         useRoi = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
-        ASSERT_FALSE(img.empty()); 
+        ASSERT_FALSE(img.empty());
 
         low_thresh = 50.0;
         high_thresh = 100.0;
-        
+
         cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, L2gradient);
     }
 };
@@ -3301,14 +3200,14 @@ namespace
 }
 
 PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, int, bool)
-{    
+{
     cv::gpu::DeviceInfo devInfo;
     int ksize;
     bool ccorr;
-    
+
     cv::Mat src;
     cv::Mat kernel;
-    
+
     cv::Mat dst_gold;
 
     virtual void SetUp()
@@ -3318,14 +3217,14 @@ PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, int, bool)
         ccorr = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         cv::RNG& rng = TS::ptr()->get_rng();
 
         cv::Size size(rng.uniform(200, 400), rng.uniform(200, 400));
 
         src = randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
         kernel = randomMat(rng, cv::Size(ksize, ksize), CV_32FC1, 0.0, 1.0, false);
-        
+
         convolveDFT(src, kernel, dst_gold, ccorr);
     }
 };
@@ -3345,7 +3244,7 @@ TEST_P(Convolve, Accuracy)
 
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         Values(3, 7, 11, 17, 19, 23, 45),
                         Bool()));
 

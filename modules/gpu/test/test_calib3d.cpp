@@ -54,38 +54,38 @@ struct StereoBlockMatching : TestWithParam<cv::gpu::DeviceInfo>
     cv::Mat img_l;
     cv::Mat img_r;
     cv::Mat img_template;
-    
-    cv::gpu::DeviceInfo devInfo;    
-    
-    virtual void SetUp() 
+
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         img_l = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
         img_r = readImage("stereobm/aloe-R.png", CV_LOAD_IMAGE_GRAYSCALE);
         img_template = readImage("stereobm/aloe-disp.png", CV_LOAD_IMAGE_GRAYSCALE);
-        
+
         ASSERT_FALSE(img_l.empty());
         ASSERT_FALSE(img_r.empty());
         ASSERT_FALSE(img_template.empty());
     }
 };
 
-TEST_P(StereoBlockMatching, Regression) 
-{    
+TEST_P(StereoBlockMatching, Regression)
+{
     cv::Mat disp;
 
     cv::gpu::GpuMat dev_disp;
     cv::gpu::StereoBM_GPU bm(0, 128, 19);
 
     bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
-    
+
     dev_disp.download(disp);
 
     disp.convertTo(disp, img_template.type());
-    
+
     EXPECT_MAT_NEAR(img_template, disp, 0.0);
 }
 
@@ -99,26 +99,26 @@ struct StereoBeliefPropagation : TestWithParam<cv::gpu::DeviceInfo>
     cv::Mat img_l;
     cv::Mat img_r;
     cv::Mat img_template;
-    
-    cv::gpu::DeviceInfo devInfo;  
 
-    virtual void SetUp() 
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-           
+
         img_l = readImage("stereobp/aloe-L.png");
         img_r = readImage("stereobp/aloe-R.png");
         img_template = readImage("stereobp/aloe-disp.png", CV_LOAD_IMAGE_GRAYSCALE);
-        
+
         ASSERT_FALSE(img_l.empty());
         ASSERT_FALSE(img_r.empty());
         ASSERT_FALSE(img_template.empty());
     }
 };
 
-TEST_P(StereoBeliefPropagation, Regression) 
+TEST_P(StereoBeliefPropagation, Regression)
 {
     cv::Mat disp;
 
@@ -126,11 +126,11 @@ TEST_P(StereoBeliefPropagation, Regression)
     cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
 
     bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
-    
+
     dev_disp.download(disp);
 
     disp.convertTo(disp, img_template.type());
-    
+
     EXPECT_MAT_NEAR(img_template, disp, 0.0);
 }
 
@@ -144,15 +144,15 @@ struct StereoConstantSpaceBP : TestWithParam<cv::gpu::DeviceInfo>
     cv::Mat img_l;
     cv::Mat img_r;
     cv::Mat img_template;
-    
+
     cv::gpu::DeviceInfo devInfo;
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
+
         img_l = readImage("csstereobp/aloe-L.png");
         img_r = readImage("csstereobp/aloe-R.png");
 
@@ -160,14 +160,14 @@ struct StereoConstantSpaceBP : TestWithParam<cv::gpu::DeviceInfo>
             img_template = readImage("csstereobp/aloe-disp.png", CV_LOAD_IMAGE_GRAYSCALE);
         else
             img_template = readImage("csstereobp/aloe-disp_CC1X.png", CV_LOAD_IMAGE_GRAYSCALE);
-            
+
         ASSERT_FALSE(img_l.empty());
         ASSERT_FALSE(img_r.empty());
-        ASSERT_FALSE(img_template.empty());        
+        ASSERT_FALSE(img_template.empty());
     }
 };
 
-TEST_P(StereoConstantSpaceBP, Regression) 
+TEST_P(StereoConstantSpaceBP, Regression)
 {
     cv::Mat disp;
 
@@ -175,11 +175,11 @@ TEST_P(StereoConstantSpaceBP, Regression)
     cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
 
     bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
-    
+
     dev_disp.download(disp);
 
     disp.convertTo(disp, img_template.type());
-    
+
     EXPECT_MAT_NEAR(img_template, disp, 1.0);
 }
 
@@ -191,12 +191,12 @@ INSTANTIATE_TEST_CASE_P(Calib3D, StereoConstantSpaceBP, ALL_DEVICES);
 struct ProjectPoints : TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
-    
+
     cv::Mat src;
     cv::Mat rvec;
     cv::Mat tvec;
     cv::Mat camera_mat;
-    
+
     std::vector<cv::Point2f> dst_gold;
 
     virtual void SetUp()
@@ -220,17 +220,17 @@ struct ProjectPoints : TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(ProjectPoints, Accuracy) 
+TEST_P(ProjectPoints, Accuracy)
 {
     cv::Mat dst;
-   
+
     cv::gpu::GpuMat d_dst;
 
     cv::gpu::projectPoints(cv::gpu::GpuMat(src), rvec, tvec, camera_mat, cv::Mat(), d_dst);
 
     d_dst.download(dst);
 
-    ASSERT_EQ(dst_gold.size(), dst.cols);
+    ASSERT_EQ(dst_gold.size(), static_cast<size_t>(dst.cols));
     ASSERT_EQ(1, dst.rows);
     ASSERT_EQ(CV_32FC2, dst.type());
 
@@ -257,7 +257,7 @@ struct TransformPoints : TestWithParam<cv::gpu::DeviceInfo>
     cv::Mat rvec;
     cv::Mat tvec;
     cv::Mat rot;
-        
+
     virtual void SetUp()
     {
         devInfo = GetParam();
@@ -283,7 +283,7 @@ TEST_P(TransformPoints, Accuracy)
     cv::gpu::transformPoints(cv::gpu::GpuMat(src), rvec, tvec, d_dst);
 
     d_dst.download(dst);
-    
+
     ASSERT_EQ(src.size(), dst.size());
     ASSERT_EQ(src.type(), dst.type());
 
@@ -318,7 +318,7 @@ struct SolvePnPRansac : TestWithParam<cv::gpu::DeviceInfo>
 
     cv::Mat rvec_gold;
     cv::Mat tvec_gold;
-        
+
     virtual void SetUp()
     {
         devInfo = GetParam();
@@ -346,7 +346,7 @@ TEST_P(SolvePnPRansac, Accuracy)
     cv::Mat rvec, tvec;
     std::vector<int> inliers;
 
-    cv::gpu::solvePnPRansac(object, cv::Mat(1, image_vec.size(), CV_32FC2, &image_vec[0]), camera_mat, 
+    cv::gpu::solvePnPRansac(object, cv::Mat(1, image_vec.size(), CV_32FC2, &image_vec[0]), camera_mat,
                             cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)), rvec, tvec, false, 200, 2.f, 100, &inliers);
 
     ASSERT_LE(cv::norm(rvec - rvec_gold), 1e-3f);

@@ -88,7 +88,7 @@ double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2);
         EXPECT_LE(checkSimilarity(cv::Mat(mat1), cv::Mat(mat2)), eps); \
     }
 
-namespace cv { namespace gpu 
+namespace cv { namespace gpu
 {
     void PrintTo(const DeviceInfo& info, std::ostream* os);
 }}
@@ -167,6 +167,8 @@ CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX
 
 #define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
 
+#define WHOLE testing::Values(UseRoi(false))
+#define SUBMAT testing::Values(UseRoi(true))
 #define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
 
 #define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
