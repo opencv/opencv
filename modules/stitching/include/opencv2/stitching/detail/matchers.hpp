@@ -169,7 +169,7 @@ protected:
 class CV_EXPORTS BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
-    BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.65f, int num_matches_thresh1 = 6,
+    BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
                           int num_matches_thresh2 = 6);
 
     void collectGarbage();

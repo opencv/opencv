@@ -351,9 +351,9 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
     else
     {
-        vector<float> descriptors;
+        Mat descriptors;
         (*surf)(gray_image, Mat(), features.keypoints, descriptors);
-        features.descriptors = Mat(descriptors, true).reshape(1, (int)features.keypoints.size());
+        features.descriptors = descriptors.reshape(1, (int)features.keypoints.size());
     }
 }
 
