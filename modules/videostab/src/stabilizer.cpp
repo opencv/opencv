@@ -54,7 +54,7 @@ Stabilizer::Stabilizer()
 {
     setFrameSource(new NullFrameSource());
     setMotionEstimator(new PyrLkRobustMotionEstimator());
-    setMotionFilter(new GaussianMotionFilter(15, sqrt(15)));
+    setMotionFilter(new GaussianMotionFilter(15, sqrt(15.0)));
     setDeblurer(new NullDeblurer());
     setInpainter(new NullInpainter());
     setEstimateTrimRatio(true);

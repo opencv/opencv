@@ -97,7 +97,7 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
     solve(A, b, sol, DECOMP_SVD);
 
     if (rmse)
-        *rmse = norm(A*sol, b, NORM_L2) / sqrt(npoints);
+        *rmse = norm(A*sol, b, NORM_L2) / sqrt((double)npoints);
 
     Mat_<float> M = Mat::eye(3, 3, CV_32F);
     M(0,0) = M(1,1) = sol(0,0);
@@ -130,7 +130,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
     solve(A, b, sol, DECOMP_SVD);
 
     if (rmse)
-        *rmse = norm(A*sol, b, NORM_L2) / sqrt(npoints);
+        *rmse = norm(A*sol, b, NORM_L2) / sqrt((double)npoints);
 
     Mat_<float> M = Mat::eye(3, 3, CV_32F);
     for (int i = 0, k = 0; i < 2; ++i)
