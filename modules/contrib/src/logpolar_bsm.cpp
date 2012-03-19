@@ -39,9 +39,9 @@
 //
 //M*/
 
-/*************************************************************************************
+/*******************************************************************************************
 
-The LogPolar Blind Spot Model code has been contributed by Fabio Solari.
+The LogPolar Blind Spot Model code has been contributed by Fabio Solari and Manuela Chessa.
 
 More details can be found in:
 
@@ -51,7 +51,7 @@ Computer Vision Systems - 8th International Conference,
 ICVS 2011, Sophia Antipolis, France, September 20-22, 2011
 (http://dx.doi.org/10.1007/978-3-642-23968-7_5)
 
-***************************************************************************************/
+********************************************************************************************/
 
 #include "precomp.hpp"
 
