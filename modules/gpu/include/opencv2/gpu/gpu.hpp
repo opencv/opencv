@@ -638,11 +638,11 @@ CV_EXPORTS void bitwise_xor(const GpuMat& src1, const Scalar& sc, GpuMat& dst, S
 
 //! pixel by pixel right shift of an image by a constant value
 //! supports 1, 3 and 4 channels images with integers elements
-CV_EXPORTS void rshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
+CV_EXPORTS void rshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! pixel by pixel left shift of an image by a constant value
 //! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
-CV_EXPORTS void lshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null());
+CV_EXPORTS void lshift(const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream = Stream::Null());
 
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
 CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());

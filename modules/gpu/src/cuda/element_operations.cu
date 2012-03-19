@@ -47,7 +47,7 @@
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     //////////////////////////////////////////////////////////////////////////
     // add
@@ -684,7 +684,7 @@ namespace cv { namespace gpu { namespace device
         __device__ __forceinline__ uchar4 operator ()(uchar4 a, float b) const
         {
             return b != 0 ? make_uchar4(saturate_cast<uchar>(a.x / b), saturate_cast<uchar>(a.y / b),
-                                        saturate_cast<uchar>(a.z / b), saturate_cast<uchar>(a.w / b)) 
+                                        saturate_cast<uchar>(a.z / b), saturate_cast<uchar>(a.w / b))
                           : make_uchar4(0,0,0,0);
         }
     };
@@ -706,8 +706,8 @@ namespace cv { namespace gpu { namespace device
     {
         __device__ __forceinline__ short4 operator ()(short4 a, float b) const
         {
-            return b != 0 ? make_short4(saturate_cast<short>(a.x / b), saturate_cast<uchar>(a.y / b),
-                                        saturate_cast<short>(a.z / b), saturate_cast<uchar>(a.w / b))
+            return b != 0 ? make_short4(saturate_cast<short>(a.x / b), saturate_cast<short>(a.y / b),
+                                        saturate_cast<short>(a.z / b), saturate_cast<short>(a.w / b))
                           : make_short4(0,0,0,0);
         }
     };
@@ -1106,10 +1106,10 @@ namespace cv { namespace gpu { namespace device
 
     //template void absdiff_gpu<uchar >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
     template void absdiff_gpu<schar >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    //template void absdiff_gpu<ushort>(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);                  
+    //template void absdiff_gpu<ushort>(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
     template void absdiff_gpu<short >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<int   >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);                  
-    //template void absdiff_gpu<float >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);                  
+    template void absdiff_gpu<int   >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
+    //template void absdiff_gpu<float >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
     template void absdiff_gpu<double>(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
 
     //////////////////////////////////////////////////////////////////////////////////////
@@ -1251,7 +1251,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T>
     struct UnOp<T, UN_OP_NOT>
-    { 
+    {
         static __device__ __forceinline__ T call(T v) { return ~v; }
     };
 
@@ -1262,7 +1262,7 @@ namespace cv { namespace gpu { namespace device
         const int x = (blockDim.x * blockIdx.x + threadIdx.x) * 4;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (y < rows) 
+        if (y < rows)
         {
             uchar* dst_ptr = dst.ptr(y) + x;
             const uchar* src_ptr = src.ptr(y) + x;
@@ -1283,29 +1283,29 @@ namespace cv { namespace gpu { namespace device
 
 
     template <int opid>
-    void bitwiseUnOp(int rows, int width, const PtrStepb src, PtrStepb dst, 
+    void bitwiseUnOp(int rows, int width, const PtrStepb src, PtrStepb dst,
                      cudaStream_t stream)
     {
         dim3 threads(16, 16);
-        dim3 grid(divUp(width, threads.x * sizeof(uint)), 
+        dim3 grid(divUp(width, threads.x * sizeof(uint)),
                   divUp(rows, threads.y));
 
         bitwiseUnOpKernel<opid><<<grid, threads>>>(rows, width, src, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        if (stream == 0) 
+        if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
     template <typename T, int opid>
-    __global__ void bitwiseUnOpKernel(int rows, int cols, int cn, const PtrStepb src, 
+    __global__ void bitwiseUnOpKernel(int rows, int cols, int cn, const PtrStepb src,
                                       const PtrStepb mask, PtrStepb dst)
     {
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < cols && y < rows && mask.ptr(y)[x / cn]) 
+        if (x < cols && y < rows && mask.ptr(y)[x / cn])
         {
             T* dst_row = (T*)dst.ptr(y);
             const T* src_row = (const T*)src.ptr(y);
@@ -1316,21 +1316,21 @@ namespace cv { namespace gpu { namespace device
 
 
     template <typename T, int opid>
-    void bitwiseUnOp(int rows, int cols, int cn, const PtrStepb src, 
+    void bitwiseUnOp(int rows, int cols, int cn, const PtrStepb src,
                      const PtrStepb mask, PtrStepb dst, cudaStream_t stream)
     {
         dim3 threads(16, 16);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-        bitwiseUnOpKernel<T, opid><<<grid, threads>>>(rows, cols, cn, src, mask, dst); 
+        bitwiseUnOpKernel<T, opid><<<grid, threads>>>(rows, cols, cn, src, mask, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        if (stream == 0) 
+        if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
-    void bitwiseNotCaller(int rows, int cols, size_t elem_size1, int cn, 
+    void bitwiseNotCaller(int rows, int cols, size_t elem_size1, int cn,
                           const PtrStepb src, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseUnOp<UN_OP_NOT>(rows, static_cast<int>(cols * elem_size1 * cn), src, dst, stream);
@@ -1338,7 +1338,7 @@ namespace cv { namespace gpu { namespace device
 
 
     template <typename T>
-    void bitwiseMaskNotCaller(int rows, int cols, int cn, const PtrStepb src, 
+    void bitwiseMaskNotCaller(int rows, int cols, int cn, const PtrStepb src,
                               const PtrStepb mask, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseUnOp<T, UN_OP_NOT>(rows, cols * cn, cn, src, mask, dst, stream);
@@ -1359,32 +1359,32 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T>
     struct BinOp<T, BIN_OP_OR>
-    { 
-        static __device__ __forceinline__ T call(T a, T b) { return a | b; } 
+    {
+        static __device__ __forceinline__ T call(T a, T b) { return a | b; }
     };
 
 
     template <typename T>
     struct BinOp<T, BIN_OP_AND>
-    { 
-        static __device__ __forceinline__ T call(T a, T b) { return a & b; } 
+    {
+        static __device__ __forceinline__ T call(T a, T b) { return a & b; }
     };
 
     template <typename T>
     struct BinOp<T, BIN_OP_XOR>
-    { 
-        static __device__ __forceinline__ T call(T a, T b) { return a ^ b; } 
+    {
+        static __device__ __forceinline__ T call(T a, T b) { return a ^ b; }
     };
 
 
     template <int opid>
-    __global__ void bitwiseBinOpKernel(int rows, int width, const PtrStepb src1, 
+    __global__ void bitwiseBinOpKernel(int rows, int width, const PtrStepb src1,
                                        const PtrStepb src2, PtrStepb dst)
     {
         const int x = (blockDim.x * blockIdx.x + threadIdx.x) * 4;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (y < rows) 
+        if (y < rows)
         {
             uchar* dst_ptr = dst.ptr(y) + x;
             const uchar* src1_ptr = src1.ptr(y) + x;
@@ -1407,7 +1407,7 @@ namespace cv { namespace gpu { namespace device
 
 
     template <int opid>
-    void bitwiseBinOp(int rows, int width, const PtrStepb src1, const PtrStepb src2, 
+    void bitwiseBinOp(int rows, int width, const PtrStepb src1, const PtrStepb src2,
                       PtrStepb dst, cudaStream_t stream)
     {
         dim3 threads(16, 16);
@@ -1416,20 +1416,20 @@ namespace cv { namespace gpu { namespace device
         bitwiseBinOpKernel<opid><<<grid, threads>>>(rows, width, src1, src2, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        if (stream == 0) 
+        if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
     template <typename T, int opid>
     __global__ void bitwiseBinOpKernel(
-            int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, 
+            int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2,
             const PtrStepb mask, PtrStepb dst)
     {
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-        if (x < cols && y < rows && mask.ptr(y)[x / cn]) 
+        if (x < cols && y < rows && mask.ptr(y)[x / cn])
         {
             T* dst_row = (T*)dst.ptr(y);
             const T* src1_row = (const T*)src1.ptr(y);
@@ -1441,7 +1441,7 @@ namespace cv { namespace gpu { namespace device
 
 
     template <typename T, int opid>
-    void bitwiseBinOp(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, 
+    void bitwiseBinOp(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2,
                         const PtrStepb mask, PtrStepb dst, cudaStream_t stream)
     {
         dim3 threads(16, 16);
@@ -1450,12 +1450,12 @@ namespace cv { namespace gpu { namespace device
         bitwiseBinOpKernel<T, opid><<<grid, threads>>>(rows, cols, cn, src1, src2, mask, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        if (stream == 0) 
+        if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
-    void bitwiseOrCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, 
+    void bitwiseOrCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1,
                          const PtrStepb src2, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseBinOp<BIN_OP_OR>(rows, static_cast<int>(cols * elem_size1 * cn), src1, src2, dst, stream);
@@ -1463,7 +1463,7 @@ namespace cv { namespace gpu { namespace device
 
 
     template <typename T>
-    void bitwiseMaskOrCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, 
+    void bitwiseMaskOrCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2,
                              const PtrStepb mask, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseBinOp<T, BIN_OP_OR>(rows, cols * cn, cn, src1, src2, mask, dst, stream);
@@ -1474,7 +1474,7 @@ namespace cv { namespace gpu { namespace device
     template void bitwiseMaskOrCaller<uint>(int, int, int, const PtrStepb, const PtrStepb, const PtrStepb, PtrStepb, cudaStream_t);
 
 
-    void bitwiseAndCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, 
+    void bitwiseAndCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1,
                           const PtrStepb src2, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseBinOp<BIN_OP_AND>(rows, static_cast<int>(cols * elem_size1 * cn), src1, src2, dst, stream);
@@ -1482,7 +1482,7 @@ namespace cv { namespace gpu { namespace device
 
 
     template <typename T>
-    void bitwiseMaskAndCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, 
+    void bitwiseMaskAndCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2,
                               const PtrStepb mask, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseBinOp<T, BIN_OP_AND>(rows, cols * cn, cn, src1, src2, mask, dst, stream);
@@ -1493,7 +1493,7 @@ namespace cv { namespace gpu { namespace device
     template void bitwiseMaskAndCaller<uint>(int, int, int, const PtrStepb, const PtrStepb, const PtrStepb, PtrStepb, cudaStream_t);
 
 
-    void bitwiseXorCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1, 
+    void bitwiseXorCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStepb src1,
                           const PtrStepb src2, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseBinOp<BIN_OP_XOR>(rows, static_cast<int>(cols * elem_size1 * cn), src1, src2, dst, stream);
@@ -1501,7 +1501,7 @@ namespace cv { namespace gpu { namespace device
 
 
     template <typename T>
-    void bitwiseMaskXorCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2, 
+    void bitwiseMaskXorCaller(int rows, int cols, int cn, const PtrStepb src1, const PtrStepb src2,
                               const PtrStepb mask, PtrStepb dst, cudaStream_t stream)
     {
         bitwiseBinOp<T, BIN_OP_XOR>(rows, cols * cn, cn, src1, src2, mask, dst, stream);
@@ -1546,7 +1546,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, src2, dst, minimum<T>(), WithOutMask(), stream);    
+        cv::gpu::device::transform(src1, src2, dst, minimum<T>(), WithOutMask(), stream);
     }
 
     template void min_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1560,7 +1560,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, src2, dst, maximum<T>(), WithOutMask(), stream);    
+        cv::gpu::device::transform(src1, src2, dst, maximum<T>(), WithOutMask(), stream);
     }
 
     template void max_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1574,7 +1574,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, dst, device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);    
+        cv::gpu::device::transform(src1, dst, device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
     }
 
     template void min_gpu<uchar >(const DevMem2Db& src1, uchar src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1588,7 +1588,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T>
     void max_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, dst, device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);    
+        cv::gpu::device::transform(src1, dst, device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
     }
 
     template void max_gpu<uchar >(const DevMem2Db& src1, uchar src2, const DevMem2Db& dst, cudaStream_t stream);
@@ -1647,12 +1647,12 @@ namespace cv { namespace gpu { namespace device
     {
         typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, cudaStream_t stream);
 
-        static const caller_t callers[] = 
+        static const caller_t callers[] =
         {
-            threshold_caller<thresh_binary_func, T>, 
-            threshold_caller<thresh_binary_inv_func, T>, 
-            threshold_caller<thresh_trunc_func, T>, 
-            threshold_caller<thresh_to_zero_func, T>, 
+            threshold_caller<thresh_binary_func, T>,
+            threshold_caller<thresh_binary_inv_func, T>,
+            threshold_caller<thresh_trunc_func, T>,
+            threshold_caller<thresh_to_zero_func, T>,
             threshold_caller<thresh_to_zero_inv_func, T>
         };
 
@@ -1671,14 +1671,14 @@ namespace cv { namespace gpu { namespace device
     // pow
 
     template<typename T, bool Signed = device::numeric_limits<T>::is_signed> struct PowOp : unary_function<T, T>
-    {    
+    {
         float power;
         PowOp(float power_) : power(power_) {}
-            
+
         __device__ __forceinline__ T operator()(const T& e) const
-        {      
+        {
             return saturate_cast<T>(__powf((float)e, power));
-        }      
+        }
     };
 
     template<typename T> struct PowOp<T, true> : unary_function<T, T>
@@ -1688,11 +1688,11 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ float operator()(const T& e) const
         {
-            T res = saturate_cast<T>(__powf((float)e, power));            
-            
+            T res = saturate_cast<T>(__powf((float)e, power));
+
             if ( (e < 0) && (1 & (int)power) )
-                    res *= -1;            
-            return res;         
+                    res *= -1;
+            return res;
         }
     };
 
@@ -1736,7 +1736,7 @@ namespace cv { namespace gpu { namespace device
     void pow_caller(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream)
     {
         cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, PowOp<T>(power), WithOutMask(), stream);
-    }   
+    }
 
     template void pow_caller<uchar>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
     template void pow_caller<schar>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);

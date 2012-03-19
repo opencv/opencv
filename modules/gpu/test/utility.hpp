@@ -162,15 +162,44 @@ CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX
 #define ALL_DEVICES testing::ValuesIn(devices())
 #define DEVICES(feature) testing::ValuesIn(devices(feature))
 
+#define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
+
+#define ALL_DEPTH testing::Values(MatDepth(CV_8U), MatDepth(CV_8S), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32S), MatDepth(CV_32F), MatDepth(CV_64F))
 #define ALL_TYPES testing::ValuesIn(all_types())
 #define TYPES(depth_start, depth_end, cn_start, cn_end) testing::ValuesIn(types(depth_start, depth_end, cn_start, cn_end))
 
-#define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
+#define DEPTH_PAIRS testing::Values(std::make_pair(MatDepth(CV_8U), MatDepth(CV_8U)),   \
+                                    std::make_pair(MatDepth(CV_8U), MatDepth(CV_16U)),  \
+                                    std::make_pair(MatDepth(CV_8U), MatDepth(CV_16S)),  \
+                                    std::make_pair(MatDepth(CV_8U), MatDepth(CV_32S)),  \
+                                    std::make_pair(MatDepth(CV_8U), MatDepth(CV_32F)),  \
+                                    std::make_pair(MatDepth(CV_8U), MatDepth(CV_64F)),  \
+                                                                                        \
+                                    std::make_pair(MatDepth(CV_16U), MatDepth(CV_16U)), \
+                                    std::make_pair(MatDepth(CV_16U), MatDepth(CV_32S)), \
+                                    std::make_pair(MatDepth(CV_16U), MatDepth(CV_32F)), \
+                                    std::make_pair(MatDepth(CV_16U), MatDepth(CV_64F)), \
+                                                                                        \
+                                    std::make_pair(MatDepth(CV_16S), MatDepth(CV_16S)), \
+                                    std::make_pair(MatDepth(CV_16S), MatDepth(CV_32S)), \
+                                    std::make_pair(MatDepth(CV_16S), MatDepth(CV_32F)), \
+                                    std::make_pair(MatDepth(CV_16S), MatDepth(CV_64F)), \
+                                                                                        \
+                                    std::make_pair(MatDepth(CV_32S), MatDepth(CV_32S)), \
+                                    std::make_pair(MatDepth(CV_32S), MatDepth(CV_32F)), \
+                                    std::make_pair(MatDepth(CV_32S), MatDepth(CV_64F)), \
+                                                                                        \
+                                    std::make_pair(MatDepth(CV_32F), MatDepth(CV_32F)), \
+                                    std::make_pair(MatDepth(CV_32F), MatDepth(CV_64F)), \
+                                                                                        \
+                                    std::make_pair(MatDepth(CV_64F), MatDepth(CV_64F)))
 
 #define WHOLE testing::Values(UseRoi(false))
 #define SUBMAT testing::Values(UseRoi(true))
 #define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
 
 #define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
+
+#define ALL_CMP_CODES testing::Values(CmpCode(cv::CMP_EQ), CmpCode(cv::CMP_NE), CmpCode(cv::CMP_GT), CmpCode(cv::CMP_GE), CmpCode(cv::CMP_LT), CmpCode(cv::CMP_LE))
 
 #endif // __OPENCV_TEST_UTILITY_HPP__
