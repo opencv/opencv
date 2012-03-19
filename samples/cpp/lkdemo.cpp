@@ -91,7 +91,7 @@ int main( int argc, char** argv )
             if(prevGray.empty())
                 gray.copyTo(prevGray);
             calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1], status, err, winSize,
-                                 3, termcrit, 0, 0, 0.001);
+                                 3, termcrit, 0, 0.001);
             size_t i, k;
             for( i = k = 0; i < points[1].size(); i++ )
             {
