@@ -651,8 +651,14 @@ cv::Mat CvCapture_FFMPEG_2::read()
 
                 avpicture_fill(reinterpret_cast<AVPicture*>(rgb_picture), buffer, PIX_FMT_RGB24, avcodec_context->width, avcodec_context->height);
 
-                width  = picture->width;
-                height = picture->height;
+                #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(4<<8)+0)
+
+                                width  = picture->width;
+                                height = picture->height;
+                #else
+                                width = avcodec_context->width;
+                                height = avcodec_context->height;
+                #endif
 
                 struct SwsContext * img_convert_ctx = sws_getContext(
                                                                      width, height,
