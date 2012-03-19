@@ -76,11 +76,11 @@ LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int R, double ro0
 
         if (center.x<=w/2 && center.y>=h/2)
             rtmp=(int)sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
-        if (center.x>=w/2 && center.y>=h/2)
+        else if (center.x>=w/2 && center.y>=h/2)
             rtmp=(int)sqrt((float)center.y*center.y + (float)center.x*center.x);
-        if (center.x>=w/2 && center.y<=h/2)
+        else if (center.x>=w/2 && center.y<=h/2)
             rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
-        if (center.x<=w/2 && center.y<=h/2)
+        else //if (center.x<=w/2 && center.y<=h/2)
             rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
 
         M=2*rtmp; N=2*rtmp;
@@ -222,11 +222,11 @@ LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int R, 
 
         if (center.x<=w/2 && center.y>=h/2)
             rtmp=(int)sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
-        if (center.x>=w/2 && center.y>=h/2)
+        else if (center.x>=w/2 && center.y>=h/2)
             rtmp=(int)sqrt((float)center.y*center.y + (float)center.x*center.x);
-        if (center.x>=w/2 && center.y<=h/2)
+        else if (center.x>=w/2 && center.y<=h/2)
             rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
-        if (center.x<=w/2 && center.y<=h/2)
+        else //if (center.x<=w/2 && center.y<=h/2)
             rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
 
         M=2*rtmp; N=2*rtmp;
@@ -447,11 +447,11 @@ LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int R, double
 
         if (center.x<=w/2 && center.y>=h/2)
             rtmp=(int)sqrt((float)center.y*center.y + (float)(w-center.x)*(w-center.x));
-        if (center.x>=w/2 && center.y>=h/2)
+        else if (center.x>=w/2 && center.y>=h/2)
             rtmp=(int)sqrt((float)center.y*center.y + (float)center.x*center.x);
-        if (center.x>=w/2 && center.y<=h/2)
+        else if (center.x>=w/2 && center.y<=h/2)
             rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)center.x*center.x);
-        if (center.x<=w/2 && center.y<=h/2)
+        else //if (center.x<=w/2 && center.y<=h/2)
             rtmp=(int)sqrt((float)(h-center.y)*(h-center.y) + (float)(w-center.x)*(w-center.x));
 
         M=2*rtmp; N=2*rtmp;
