@@ -46,6 +46,8 @@
 #ifndef __OPENCV_CORE_HPP__
 #define __OPENCV_CORE_HPP__
 
+#define _USE_MATH_DEFINES
+
 #include "opencv2/core/types_c.h"
 #include "opencv2/core/version.hpp"
 
