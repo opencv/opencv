@@ -3344,10 +3344,12 @@ void cv::projectPoints( InputArray _opoints,
     CvMat c_imagePoints = _ipoints.getMat();
     CvMat c_objectPoints = opoints;
     Mat cameraMatrix = _cameraMatrix.getMat();
-    Mat distCoeffs = _distCoeffs.getMat();
+    
     Mat rvec = _rvec.getMat(), tvec = _tvec.getMat();
     CvMat c_cameraMatrix = cameraMatrix;
     CvMat c_rvec = rvec, c_tvec = tvec;
+    
+    Mat distCoeffs = _distCoeffs.getMat();
     CvMat c_distCoeffs = distCoeffs;
     int ndistCoeffs = distCoeffs.rows + distCoeffs.cols - 1;
 
@@ -3362,7 +3364,8 @@ void cv::projectPoints( InputArray _opoints,
         pdpddist = &(dpddist = jacobian.colRange(10, 10+ndistCoeffs));
     }
 
-    cvProjectPoints2( &c_objectPoints, &c_rvec, &c_tvec, &c_cameraMatrix, &c_distCoeffs,
+    cvProjectPoints2( &c_objectPoints, &c_rvec, &c_tvec, &c_cameraMatrix,
+                      (distCoeffs.empty())? 0: &c_distCoeffs,
                       &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
 }
 
