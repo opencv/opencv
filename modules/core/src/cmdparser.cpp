@@ -100,7 +100,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
     std::map<std::string, std::vector<std::string> >::iterator it;
     size_t flagPosition;
     int currentIndex = 1;
-    bool isFound = false;
+    //bool isFound = false;
     bool withNoKey = false;
     bool hasValueThroughEq = false;
 
@@ -169,7 +169,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             if (((curName == keysVector[0]) || (curName == keysVector[1])) && hasValueThroughEq)
             {
                 it->second[0] = buffer;
-                isFound = true;
+                //isFound = true;
                 break;
             }
 
@@ -180,7 +180,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
 				))
             {
                 it->second[0] = "true";
-                isFound = true;
+                //isFound = true;
                 break;
             }
 
@@ -188,7 +188,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
                 ((curName == keysVector[0]) || (curName == keysVector[1])))
             {
                 it->second[0] = argv[++i];
-                isFound = true;
+                //isFound = true;
                 break;
             }
 
@@ -200,7 +200,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
                 {
                     it->second[0] = curName;
                     currentIndex++;
-                    isFound = true;
+                    //isFound = true;
                     break;
                 }
             }
@@ -208,7 +208,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
 
         withNoKey = false;
         hasValueThroughEq = false;
-        isFound = false;
+        //isFound = false;
     }
 }
 
