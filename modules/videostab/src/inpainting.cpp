@@ -110,7 +110,7 @@ struct Pixel3
 
 ConsistentMosaicInpainter::ConsistentMosaicInpainter()
 {
-    setStdevThresh(10);
+    setStdevThresh(20);
 }
 
 
@@ -190,24 +190,17 @@ class MotionInpaintBody
 public:
     void operator ()(int x, int y)
     {
-        float uEst = 0.f, vEst = 0.f;
-        float wSum = 0.f;
+        float uEst = 0.f, vEst = 0.f, wSum = 0.f;
 
         for (int dy = -rad; dy <= rad; ++dy)
         {
             for (int dx = -rad; dx <= rad; ++dx)
             {
                 int qx0 = x + dx;
-                int qy0 = y + dy;
+                int qy0 = y + dy;               
 
-                if (qy0 > 0 && qy0+1 < mask0.rows && qx0 > 0 && qx0+1 < mask0.cols && mask0(qy0,qx0) &&
-                    mask0(qy0-1,qx0) && mask0(qy0+1,qx0) && mask0(qy0,qx0-1) && mask0(qy0,qx0+1))
+                if (qy0 >= 0 && qy0 < mask0.rows && qx0 >= 0 && qx0 < mask0.cols && mask0(qy0,qx0))
                 {
-                    float dudx = 0.5f * (flowX(qy0,qx0+1) - flowX(qy0,qx0-1));
-                    float dvdx = 0.5f * (flowY(qy0,qx0+1) - flowY(qy0,qx0-1));
-                    float dudy = 0.5f * (flowX(qy0+1,qx0) - flowX(qy0-1,qx0));
-                    float dvdy = 0.5f * (flowY(qy0+1,qx0) - flowY(qy0-1,qx0));
-
                     int qx1 = cvRound(qx0 + flowX(qy0,qx0));
                     int qy1 = cvRound(qy0 + flowY(qy0,qx0));
                     int px1 = qx1 - dx;
@@ -216,14 +209,54 @@ public:
                     if (qx1 >= 0 && qx1 < mask1.cols && qy1 >= 0 && qy1 < mask1.rows && mask1(qy1,qx1) &&
                         px1 >= 0 && px1 < mask1.cols && py1 >= 0 && py1 < mask1.rows && mask1(py1,px1))
                     {
+                        float dudx = 0.f, dvdx = 0.f, dudy = 0.f, dvdy = 0.f;
+
+                        if (qx0 > 0 && mask0(qy0,qx0-1))
+                        {
+                            if (qx0+1 < mask0.cols && mask0(qy0,qx0+1))
+                            {
+                                dudx = (flowX(qy0,qx0+1) - flowX(qy0,qx0-1)) * 0.5f;
+                                dvdx = (flowY(qy0,qx0+1) - flowY(qy0,qx0-1)) * 0.5f;
+                            }
+                            else
+                            {
+                                dudx = flowX(qy0,qx0) - flowX(qy0,qx0-1);
+                                dvdx = flowY(qy0,qx0) - flowY(qy0,qx0-1);
+                            }
+                        }
+                        else if (qx0+1 < mask0.cols && mask0(qy0,qx0+1))
+                        {
+                            dudx = flowX(qy0,qx0+1) - flowX(qy0,qx0);
+                            dvdx = flowY(qy0,qx0+1) - flowY(qy0,qx0);
+                        }
+
+                        if (qy0 > 0 && mask0(qy0-1,qx0))
+                        {
+                            if (qy0+1 < mask0.rows && mask0(qy0+1,qx0))
+                            {
+                                dudy = (flowX(qy0+1,qx0) - flowX(qy0-1,qx0)) * 0.5f;
+                                dvdy = (flowY(qy0+1,qx0) - flowY(qy0-1,qx0)) * 0.5f;
+                            }
+                            else
+                            {
+                                dudy = flowX(qy0,qx0) - flowX(qy0-1,qx0);
+                                dvdy = flowY(qy0,qx0) - flowY(qy0-1,qx0);
+                            }
+                        }
+                        else if (qy0+1 < mask0.rows && mask0(qy0+1,qx0))
+                        {
+                            dudy = flowX(qy0+1,qx0) - flowX(qy0,qx0);
+                            dvdy = flowY(qy0+1,qx0) - flowY(qy0,qx0);
+                        }
+
                         Point3_<uchar> cp = frame1(py1,px1), cq = frame1(qy1,qx1);
                         float distColor = sqr(cp.x-cq.x) + sqr(cp.y-cq.y) + sqr(cp.z-cq.z);
                         float w = 1.f / (sqrt(distColor * (dx*dx + dy*dy)) + eps);
+
                         uEst += w * (flowX(qy0,qx0) - dudx*dx - dudy*dy);
                         vEst += w * (flowY(qy0,qx0) - dvdx*dx - dvdy*dy);
                         wSum += w;
                     }
-                    //else return;
                 }
             }
         }
@@ -317,7 +350,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         fmm_.run(flowMask_, body);
 
         completeFrameAccordingToFlow(
-                    flowMask_, flowX_, flowY_, transformedFrame1_, transformedMask1_, frame, mask);
+                flowMask_, flowX_, flowY_, transformedFrame1_, transformedMask1_, frame, mask);
     }
 }
 
@@ -361,6 +394,13 @@ void ColorAverageInpainter::inpaint(int /*idx*/, Mat &frame, Mat &mask)
     body.mask = mask;
     body.frame = frame;
     fmm_.run(mask, body);
+}
+
+
+void ColorInpainter::inpaint(int /*idx*/, Mat &frame, Mat &mask)
+{
+    bitwise_not(mask, invMask_);
+    cv::inpaint(frame, invMask_, frame, radius_, method_);
 }
 
 

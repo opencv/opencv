@@ -47,6 +47,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
+#include "opencv2/photo/photo.hpp"
 
 namespace cv
 {
@@ -161,6 +162,20 @@ public:
 
 private:
     FastMarchingMethod fmm_;
+};
+
+class CV_EXPORTS ColorInpainter : public IInpainter
+{
+public:
+    ColorInpainter(int method = INPAINT_TELEA, double radius = 2.)
+        : method_(method), radius_(radius) {}
+
+    virtual void inpaint(int idx, Mat &frame, Mat &mask);
+
+private:
+    int method_;
+    double radius_;
+    Mat invMask_;
 };
 
 CV_EXPORTS void calcFlowMask(

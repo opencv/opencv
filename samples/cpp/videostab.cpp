@@ -73,7 +73,7 @@ void printHelp()
             "      you can turn it off if you want to use one pass only).\n"
             "  --incl-constr=(yes|no)\n"
             "      Ensure the inclusion constraint is always satisfied. The default is no.\n"
-            "  --border-mode=(replicate|const)\n"
+            "  --border-mode=(replicate|reflect|const)\n"
             "      Set border extrapolation mode. The default is replicate.\n"
             "  --mosaic=(yes|no)\n"
             "      Do consistent mosaicing. The default is no.\n"
@@ -81,8 +81,10 @@ void printHelp()
             "      Consistent mosaicing stdev threshold. The default is 10.\n"
             "  --motion-inpaint=(yes|no)\n"
             "      Do motion inpainting (requires GPU support). The default is no.\n"
-            "  --color-inpaint=(yes|no)\n"
+            "  --color-inpaint=(no|average|ns|telea)\n"
             "      Do color inpainting. The defailt is no.\n"
+            "  --color-inpaint-radius=<float_number>\n"
+            "      Set color inpainting radius (for ns and telea options only).\n"
             "  -o, --output=<file_path>\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
             "  --fps=<int_number>\n"
@@ -115,7 +117,8 @@ int main(int argc, const char **argv)
                 "{ | mosaic | | }"
                 "{ | mosaic-stdev | | }"
                 "{ | motion-inpaint | | }"
-                "{ | color-inpaint | | }"
+                "{ | color-inpaint | no | }"
+                "{ | color-inpaint-radius | | }"
                 "{ o | output | stabilized.avi | }"
                 "{ | fps | | }"
                 "{ q | quiet | false | }"
@@ -172,7 +175,7 @@ int main(int argc, const char **argv)
         if (smoothRadius > 0 && smoothStdev > 0)
             stabilizer->setMotionFilter(new GaussianMotionFilter(smoothRadius, smoothStdev));
         else if (smoothRadius > 0 && smoothStdev < 0)
-            stabilizer->setMotionFilter(new GaussianMotionFilter(smoothRadius, sqrt(smoothRadius)));
+            stabilizer->setMotionFilter(new GaussianMotionFilter(smoothRadius, sqrt(static_cast<float>(smoothRadius))));
 
         if (cmd.get<string>("deblur") == "yes")
         {
@@ -191,7 +194,9 @@ int main(int argc, const char **argv)
         if (!cmd.get<string>("incl-constr").empty())
             stabilizer->setInclusionConstraint(cmd.get<string>("incl-constr") == "yes");
 
-        if (cmd.get<string>("border-mode") == "replicate")
+        if (cmd.get<string>("border-mode") == "reflect")
+            stabilizer->setBorderMode(BORDER_REFLECT);
+        else if (cmd.get<string>("border-mode") == "replicate")
             stabilizer->setBorderMode(BORDER_REPLICATE);
         else if (cmd.get<string>("border-mode") == "const")
             stabilizer->setBorderMode(BORDER_CONSTANT);
@@ -208,8 +213,30 @@ int main(int argc, const char **argv)
         }
         if (cmd.get<string>("motion-inpaint") == "yes")
             inpainters->pushBack(new MotionInpainter());
-        if (cmd.get<string>("color-inpaint") == "yes")
-            inpainters->pushBack(new ColorAverageInpainter());
+        if (!cmd.get<string>("color-inpaint").empty())
+        {
+            if (cmd.get<string>("color-inpaint") == "average")
+                inpainters->pushBack(new ColorAverageInpainter());
+            else if (!cmd.get<string>("color-inpaint-radius").empty())
+            {
+                float radius = cmd.get<float>("color-inpaint-radius");
+                if (cmd.get<string>("color-inpaint") == "ns")
+                    inpainters->pushBack(new ColorInpainter(INPAINT_NS, radius));
+                else if (cmd.get<string>("color-inpaint") == "telea")
+                    inpainters->pushBack(new ColorInpainter(INPAINT_TELEA, radius));
+                else if (cmd.get<string>("color-inpaint") != "no")
+                    throw runtime_error("unknown color inpainting method: " + cmd.get<string>("color-inpaint"));
+            }
+            else
+            {
+                if (cmd.get<string>("color-inpaint") == "ns")
+                    inpainters->pushBack(new ColorInpainter(INPAINT_NS));
+                else if (cmd.get<string>("color-inpaint") == "telea")
+                    inpainters->pushBack(new ColorInpainter(INPAINT_TELEA));
+                else if (cmd.get<string>("color-inpaint") != "no")
+                    throw runtime_error("unknown color inpainting method: " + cmd.get<string>("color-inpaint"));
+            }
+        }
         if (!inpainters->empty())
             stabilizer->setInpainter(inpainters);
 
