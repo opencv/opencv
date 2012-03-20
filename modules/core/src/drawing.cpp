@@ -77,9 +77,9 @@ FillConvexPoly( Mat& img, const Point* v, int npts,
 
 bool clipLine( Size img_size, Point& pt1, Point& pt2 )
 {
-    int x1, y1, x2, y2;
+    int64 x1, y1, x2, y2;
     int c1, c2;
-    int right = img_size.width-1, bottom = img_size.height-1;
+    int64 right = img_size.width-1, bottom = img_size.height-1;
 
     if( img_size.width <= 0 || img_size.height <= 0 )
         return false;
@@ -90,18 +90,18 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
 
     if( (c1 & c2) == 0 && (c1 | c2) != 0 )
     {
-        int a;
+        int64 a;
         if( c1 & 12 )
         {
             a = c1 < 8 ? 0 : bottom;
-            x1 += (int) (((int64) (a - y1)) * (x2 - x1) / (y2 - y1));
+            x1 += (int64) (((int64) (a - y1)) * (x2 - x1) / (y2 - y1));
             y1 = a;
             c1 = (x1 < 0) + (x1 > right) * 2;
         }
         if( c2 & 12 )
         {
             a = c2 < 8 ? 0 : bottom;
-            x2 += (int) (((int64) (a - y2)) * (x2 - x1) / (y2 - y1));
+            x2 += (int64) (((int64) (a - y2)) * (x2 - x1) / (y2 - y1));
             y2 = a;
             c2 = (x2 < 0) + (x2 > right) * 2;
         }
@@ -110,14 +110,14 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
             if( c1 )
             {
                 a = c1 == 1 ? 0 : right;
-                y1 += (int) (((int64) (a - x1)) * (y2 - y1) / (x2 - x1));
+                y1 += (int64) (((int64) (a - x1)) * (y2 - y1) / (x2 - x1));
                 x1 = a;
                 c1 = 0;
             }
             if( c2 )
             {
                 a = c2 == 1 ? 0 : right;
-                y2 += (int) (((int64) (a - x2)) * (y2 - y1) / (x2 - x1));
+                y2 += (int64) (((int64) (a - x2)) * (y2 - y1) / (x2 - x1));
                 x2 = a;
                 c2 = 0;
             }
@@ -125,10 +125,10 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
 
         assert( (c1 & c2) != 0 || (x1 | y1 | x2 | y2) >= 0 );
 
-        pt1.x = x1;
-        pt1.y = y1;
-        pt2.x = x2;
-        pt2.y = y2;
+        pt1.x = (int)x1;
+        pt1.y = (int)y1;
+        pt2.x = (int)x2;
+        pt2.y = (int)y2;
     }
 
     return (c1 | c2) == 0;
