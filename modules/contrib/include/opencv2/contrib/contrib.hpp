@@ -631,14 +631,15 @@ namespace cv
      *  "Real-Time Visual Odometry from Dense RGB-D Images", F. Steinbucker, J. Strum, D. Cremers, ICCV, 2011.
      */
     enum { ROTATION          = 1,
-            TRANSLATION       = 2,
-            RIGID_BODY_MOTION = 4
-            };
+           TRANSLATION       = 2,
+           RIGID_BODY_MOTION = 4
+         };
     CV_EXPORTS bool RGBDOdometry( Mat& Rt, const Mat& initRt,
                                   const Mat& image0, const Mat& depth0, const Mat& mask0,
                                   const Mat& image1, const Mat& depth1, const Mat& mask1,
-                                  const Mat& cameraMatrix, float minDepth, float maxDepth, float maxDepthDiff,
-                                  const std::vector<int>& iterCounts, const std::vector<float>& minGradientMagnitudes,
+                                  const Mat& cameraMatrix, float minDepth=0.f, float maxDepth=4.f, float maxDepthDiff=0.07f,
+                                  const std::vector<int>& iterCounts=std::vector<int>(),
+                                  const std::vector<float>& minGradientMagnitudes=std::vector<float>(),
                                   int transformType=RIGID_BODY_MOTION );
 
     /**

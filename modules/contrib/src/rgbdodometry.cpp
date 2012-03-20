@@ -499,22 +499,45 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
     CV_Assert( cameraMatrix.type() == CV_32FC1 && cameraMatrix.size() == Size(3,3) );
 
     // other checks
-    CV_Assert( !iterCounts.empty() );
-    CV_Assert( minGradientMagnitudes.size() == iterCounts.size() );
+    CV_Assert( iterCounts.empty() || minGradientMagnitudes.empty() ||
+               minGradientMagnitudes.size() == iterCounts.size() );
     CV_Assert( initRt.empty() || (initRt.type()==CV_64FC1 && initRt.size()==Size(4,4) ) );
+
+    vector<int> defaultIterCounts;
+    vector<float> defaultMinGradMagnitudes;
+    vector<int> const* iterCountsPtr = &iterCounts;
+    vector<float> const* minGradientMagnitudesPtr = &minGradientMagnitudes;
+
+    if( iterCounts.empty() || minGradientMagnitudes.empty() )
+    {
+        defaultIterCounts.resize(4);
+        defaultIterCounts[0] = 7;
+        defaultIterCounts[1] = 7;
+        defaultIterCounts[2] = 7;
+        defaultIterCounts[3] = 10;
+
+        defaultMinGradMagnitudes.resize(4);
+        defaultMinGradMagnitudes[0] = 12;
+        defaultMinGradMagnitudes[1] = 5;
+        defaultMinGradMagnitudes[2] = 3;
+        defaultMinGradMagnitudes[3] = 1;
+
+        iterCountsPtr = &defaultIterCounts;
+        minGradientMagnitudesPtr = &defaultMinGradMagnitudes;
+    }
 
     preprocessDepth( depth0, depth1, validMask0, validMask1, minDepth, maxDepth );
 
     vector<Mat> pyramidImage0, pyramidDepth0,
                 pyramidImage1, pyramidDepth1, pyramid_dI_dx1, pyramid_dI_dy1, pyramidTexturedMask1,
                 pyramidCameraMatrix;
-    buildPyramids( image0, image1, depth0, depth1, cameraMatrix, sobelSize, sobelScale, minGradientMagnitudes,
+    buildPyramids( image0, image1, depth0, depth1, cameraMatrix, sobelSize, sobelScale, *minGradientMagnitudesPtr,
                    pyramidImage0, pyramidDepth0, pyramidImage1, pyramidDepth1,
                    pyramid_dI_dx1, pyramid_dI_dy1, pyramidTexturedMask1, pyramidCameraMatrix );
 
     Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
     Mat currRt, ksi;
-    for( int level = (int)iterCounts.size() - 1; level >= 0; level-- )
+    for( int level = (int)iterCountsPtr->size() - 1; level >= 0; level-- )
     {
         const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
 
@@ -540,7 +563,7 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
         Mat corresps( levelImage0.size(), levelImage0.type(), CV_32SC1 );
 
         // Run transformation search on current level iteratively.
-        for( int iter = 0; iter < iterCounts[level]; iter ++ )
+        for( int iter = 0; iter < (*iterCountsPtr)[level]; iter ++ )
         {
             int correspsCount = computeCorresp( levelCameraMatrix, levelCameraMatrix.inv(), resultRt.inv(DECOMP_SVD),
                                                 levelDepth0, levelDepth1, pyramidTexturedMask1[level], maxDepthDiff,
