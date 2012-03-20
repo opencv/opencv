@@ -43,25 +43,27 @@
 #ifndef __OPENCV_VIDEOSTAB_LOG_HPP__
 #define __OPENCV_VIDEOSTAB_LOG_HPP__
 
+#include "opencv2/core/core.hpp"
+
 namespace cv
 {
 namespace videostab
 {
 
-class ILog
+class CV_EXPORTS ILog
 {
 public:
     virtual ~ILog() {}
     virtual void print(const char *format, ...) = 0;
 };
 
-class NullLog : public ILog
+class CV_EXPORTS NullLog : public ILog
 {
 public:
     virtual void print(const char *format, ...) {}
 };
 
-class LogToStdout : public ILog
+class CV_EXPORTS LogToStdout : public ILog
 {
 public:
     virtual void print(const char *format, ...);

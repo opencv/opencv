@@ -51,7 +51,7 @@ namespace cv
 namespace videostab
 {
 
-class IMotionFilter
+class CV_EXPORTS IMotionFilter
 {
 public:
     virtual ~IMotionFilter() {}
@@ -59,7 +59,7 @@ public:
     virtual Mat apply(int index, std::vector<Mat> &Ms) const = 0;
 };
 
-class GaussianMotionFilter : public IMotionFilter
+class CV_EXPORTS GaussianMotionFilter : public IMotionFilter
 {
 public:
     GaussianMotionFilter(int radius, float stdev);

@@ -53,7 +53,7 @@ namespace cv
 namespace videostab
 {
 
-class IInpainter
+class CV_EXPORTS IInpainter
 {
 public:
     IInpainter()
@@ -87,13 +87,13 @@ protected:
     const std::vector<Mat> *stabilizationMotions_;
 };
 
-class NullInpainter : public IInpainter
+class CV_EXPORTS NullInpainter : public IInpainter
 {
 public:
     virtual void inpaint(int idx, Mat &frame, Mat &mask) {}
 };
 
-class InpaintingPipeline : public IInpainter
+class CV_EXPORTS InpaintingPipeline : public IInpainter
 {
 public:
     void pushBack(Ptr<IInpainter> inpainter) { inpainters_.push_back(inpainter); }
@@ -111,7 +111,7 @@ private:
     std::vector<Ptr<IInpainter> > inpainters_;
 };
 
-class ConsistentMosaicInpainter : public IInpainter
+class CV_EXPORTS ConsistentMosaicInpainter : public IInpainter
 {
 public:
     ConsistentMosaicInpainter();
@@ -125,7 +125,7 @@ private:
     float stdevThresh_;
 };
 
-class MotionInpainter : public IInpainter
+class CV_EXPORTS MotionInpainter : public IInpainter
 {
 public:
     MotionInpainter();
@@ -154,7 +154,7 @@ private:
     Mat_<uchar> flowMask_;
 };
 
-class ColorAverageInpainter : public IInpainter
+class CV_EXPORTS ColorAverageInpainter : public IInpainter
 {
 public:
     virtual void inpaint(int idx, Mat &frame, Mat &mask);
@@ -163,11 +163,11 @@ private:
     FastMarchingMethod fmm_;
 };
 
-void calcFlowMask(
+CV_EXPORTS void calcFlowMask(
         const Mat &flowX, const Mat &flowY, const Mat &errors, float maxError,
         const Mat &mask0, const Mat &mask1, Mat &flowMask);
 
-void completeFrameAccordingToFlow(
+CV_EXPORTS void completeFrameAccordingToFlow(
         const Mat &flowMask, const Mat &flowX, const Mat &flowY, const Mat &frame1, const Mat &mask1,
         Mat& frame0, Mat &mask0);
 

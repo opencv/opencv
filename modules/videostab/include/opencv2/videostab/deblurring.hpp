@@ -51,9 +51,9 @@ namespace cv
 namespace videostab
 {
 
-float calcBlurriness(const Mat &frame);
+CV_EXPORTS float calcBlurriness(const Mat &frame);
 
-class IDeblurer
+class CV_EXPORTS IDeblurer
 {
 public:
     IDeblurer() : radius_(0), frames_(0), motions_(0) {}
@@ -81,13 +81,13 @@ protected:
     const std::vector<float> *blurrinessRates_;
 };
 
-class NullDeblurer : public IDeblurer
+class CV_EXPORTS NullDeblurer : public IDeblurer
 {
 public:
     virtual void deblur(int idx, Mat &frame) {}
 };
 
-class WeightingDeblurer : public IDeblurer
+class CV_EXPORTS WeightingDeblurer : public IDeblurer
 {
 public:
     WeightingDeblurer();

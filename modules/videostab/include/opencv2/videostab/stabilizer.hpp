@@ -58,7 +58,7 @@ namespace cv
 namespace videostab
 {
 
-class Stabilizer : public IFrameSource
+class CV_EXPORTS Stabilizer : public IFrameSource
 {
 public:
     Stabilizer();

@@ -55,7 +55,7 @@ namespace cv
 namespace videostab
 {
 
-class ISparseOptFlowEstimator
+class CV_EXPORTS ISparseOptFlowEstimator
 {
 public:
     virtual ~ISparseOptFlowEstimator() {}
@@ -64,7 +64,7 @@ public:
             OutputArray status, OutputArray errors) = 0;
 };
 
-class IDenseOptFlowEstimator
+class CV_EXPORTS IDenseOptFlowEstimator
 {
 public:
     virtual ~IDenseOptFlowEstimator() {}
@@ -73,7 +73,7 @@ public:
             OutputArray errors) = 0;
 };
 
-class PyrLkOptFlowEstimatorBase
+class CV_EXPORTS PyrLkOptFlowEstimatorBase
 {
 public:
     PyrLkOptFlowEstimatorBase() { setWinSize(Size(21, 21)); setMaxLevel(3); }
@@ -89,7 +89,7 @@ protected:
     int maxLevel_;
 };
 
-class SparsePyrLkOptFlowEstimator
+class CV_EXPORTS SparsePyrLkOptFlowEstimator
         : public PyrLkOptFlowEstimatorBase, public ISparseOptFlowEstimator
 {
 public:
@@ -99,7 +99,7 @@ public:
 };
 
 #if HAVE_OPENCV_GPU
-class DensePyrLkOptFlowEstimatorGpu
+class CV_EXPORTS DensePyrLkOptFlowEstimatorGpu
         : public PyrLkOptFlowEstimatorBase, public IDenseOptFlowEstimator
 {
 public:

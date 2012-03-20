@@ -53,7 +53,7 @@ namespace cv
 namespace videostab
 {
 
-class IFrameSource
+class CV_EXPORTS IFrameSource
 {
 public:
     virtual ~IFrameSource() {}
@@ -61,14 +61,14 @@ public:
     virtual Mat nextFrame() = 0;
 };
 
-class NullFrameSource : public IFrameSource
+class CV_EXPORTS NullFrameSource : public IFrameSource
 {
 public:
     virtual void reset() {}
     virtual Mat nextFrame() { return Mat(); }
 };
 
-class VideoFileSource : public IFrameSource
+class CV_EXPORTS VideoFileSource : public IFrameSource
 {
 public:
     VideoFileSource(const std::string &path, bool volatileFrame = false);

@@ -60,11 +60,11 @@ enum MotionModel
     AFFINE = 2
 };
 
-Mat estimateGlobalMotionLeastSquares(
+CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
         const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
         int model = AFFINE, float *rmse = 0);
 
-struct RansacParams
+CV_EXPORTS struct RansacParams
 {
     int size; // subset size
     float thresh; // max error to classify as inlier
@@ -79,19 +79,19 @@ struct RansacParams
     static RansacParams translationMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
 };
 
-Mat estimateGlobalMotionRobust(
+CV_EXPORTS Mat estimateGlobalMotionRobust(
         const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
         int model = AFFINE, const RansacParams &params = RansacParams::affine2dMotionStd(),
         float *rmse = 0, int *ninliers = 0);
 
-class IGlobalMotionEstimator
+class CV_EXPORTS IGlobalMotionEstimator
 {
 public:
     virtual ~IGlobalMotionEstimator() {}
     virtual Mat estimate(const Mat &frame0, const Mat &frame1) = 0;
 };
 
-class PyrLkRobustMotionEstimator : public IGlobalMotionEstimator
+class CV_EXPORTS PyrLkRobustMotionEstimator : public IGlobalMotionEstimator
 {
 public:
     PyrLkRobustMotionEstimator();
@@ -129,14 +129,14 @@ private:
     float minInlierRatio_;
 };
 
-Mat getMotion(int from, int to, const std::vector<Mat> &motions);
+CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 
-Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio);
+CV_EXPORTS Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio);
 
-float estimateOptimalTrimRatio(const Mat &M, Size size);
+CV_EXPORTS float estimateOptimalTrimRatio(const Mat &M, Size size);
 
 // frame1 is non-transformed frame
-float alignementError(const Mat &M, const Mat &frame0, const Mat &mask0, const Mat &frame1);
+CV_EXPORTS float alignementError(const Mat &M, const Mat &frame0, const Mat &mask0, const Mat &frame1);
 
 } // namespace videostab
 } // namespace cv

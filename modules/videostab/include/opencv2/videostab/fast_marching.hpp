@@ -54,7 +54,7 @@ namespace videostab
 {
 
 // See http://iwi.eldoc.ub.rug.nl/FILES/root/2004/JGraphToolsTelea/2004JGraphToolsTelea.pdf
-class FastMarchingMethod
+class CV_EXPORTS FastMarchingMethod
 {
 public:
     FastMarchingMethod() : inf_(1e6f) {}
