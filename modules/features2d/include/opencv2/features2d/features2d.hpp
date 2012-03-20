@@ -273,7 +273,7 @@ public:
     // the size of the signature in bytes
     enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
 
-    explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 3, int edgeThreshold = 31,
+    explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
                  int firstLevel = 0, int WTA_K=2, int scoreType=0, int patchSize=31 );
 
     // returns the descriptor size in bytes
