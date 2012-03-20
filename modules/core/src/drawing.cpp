@@ -94,14 +94,14 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
         if( c1 & 12 )
         {
             a = c1 < 8 ? 0 : bottom;
-            x1 += (int64) (((int64) (a - y1)) * (x2 - x1) / (y2 - y1));
+            x1 +=  (a - y1) * (x2 - x1) / (y2 - y1);
             y1 = a;
             c1 = (x1 < 0) + (x1 > right) * 2;
         }
         if( c2 & 12 )
         {
             a = c2 < 8 ? 0 : bottom;
-            x2 += (int64) (((int64) (a - y2)) * (x2 - x1) / (y2 - y1));
+            x2 += (a - y2) * (x2 - x1) / (y2 - y1);
             y2 = a;
             c2 = (x2 < 0) + (x2 > right) * 2;
         }
@@ -110,14 +110,14 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
             if( c1 )
             {
                 a = c1 == 1 ? 0 : right;
-                y1 += (int64) (((int64) (a - x1)) * (y2 - y1) / (x2 - x1));
+                y1 += (a - x1) * (y2 - y1) / (x2 - x1);
                 x1 = a;
                 c1 = 0;
             }
             if( c2 )
             {
                 a = c2 == 1 ? 0 : right;
-                y2 += (int64) (((int64) (a - x2)) * (y2 - y1) / (x2 - x1));
+                y2 += (a - x2) * (y2 - y1) / (x2 - x1);
                 x2 = a;
                 c2 = 0;
             }
