@@ -60,7 +60,7 @@ public:
 class CV_EXPORTS NullLog : public ILog
 {
 public:
-    virtual void print(const char *format, ...) {}
+    virtual void print(const char */*format*/, ...) {}
 };
 
 class CV_EXPORTS LogToStdout : public ILog

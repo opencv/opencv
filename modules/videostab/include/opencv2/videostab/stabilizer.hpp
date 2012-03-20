@@ -82,7 +82,7 @@ public:
     bool mustEstimateTrimRatio() const { return mustEstimateTrimRatio_; }
 
     void setTrimRatio(float val) { trimRatio_ = val; reset(); }
-    int trimRatio() const { return trimRatio_; }
+    float trimRatio() const { return trimRatio_; }
 
     void setInclusionConstraint(bool val) { inclusionConstraint_ = val; }
     bool inclusionConstraint() const { return inclusionConstraint_; }

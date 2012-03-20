@@ -76,7 +76,7 @@ public:
     virtual void reset();
     virtual Mat nextFrame();
 
-    int frameCount() { return reader_.get(CV_CAP_PROP_FRAME_COUNT); }
+    int frameCount() { return static_cast<int>(reader_.get(CV_CAP_PROP_FRAME_COUNT)); }
     double fps() { return reader_.get(CV_CAP_PROP_FPS); }
 
 private:

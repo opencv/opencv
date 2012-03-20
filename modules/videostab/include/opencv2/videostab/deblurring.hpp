@@ -84,7 +84,7 @@ protected:
 class CV_EXPORTS NullDeblurer : public IDeblurer
 {
 public:
-    virtual void deblur(int idx, Mat &frame) {}
+    virtual void deblur(int /*idx*/, Mat &/*frame*/) {}
 };
 
 class CV_EXPORTS WeightingDeblurer : public IDeblurer

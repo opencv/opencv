@@ -91,7 +91,7 @@ protected:
 class CV_EXPORTS NullInpainter : public IInpainter
 {
 public:
-    virtual void inpaint(int idx, Mat &frame, Mat &mask) {}
+    virtual void inpaint(int /*idx*/, Mat &/*frame*/, Mat &/*mask*/) {}
 };
 
 class CV_EXPORTS InpaintingPipeline : public IInpainter
