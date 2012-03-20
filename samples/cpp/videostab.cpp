@@ -15,6 +15,7 @@ using namespace cv::videostab;
 Ptr<Stabilizer> stabilizer;
 double outputFps;
 string outputPath;
+bool quietMode;
 
 void run();
 void printHelp();
@@ -32,10 +33,13 @@ void run()
                 writer.open(outputPath, CV_FOURCC('X','V','I','D'), outputFps, stabilizedFrame.size());
             writer << stabilizedFrame;
         }
-        imshow("stabilizedFrame", stabilizedFrame);
-        char key = static_cast<char>(waitKey(3));
-        if (key == 27)
-            break;
+        if (!quietMode)
+        {
+            imshow("stabilizedFrame", stabilizedFrame);
+            char key = static_cast<char>(waitKey(3));
+            if (key == 27)
+                break;
+        }
     }
 
     cout << "\nfinished\n";
@@ -83,6 +87,8 @@ void printHelp()
             "      Set output file path explicitely. The default is stabilized.avi.\n"
             "  --fps=<int_number>\n"
             "      Set output video FPS explicitely. By default the source FPS is used.\n"
+            "  -q, --quiet\n"
+            "      Don't show output video frames.\n"
             "  -h, --help\n"
             "      Print help.\n"
             "\n";
@@ -112,6 +118,7 @@ int main(int argc, const char **argv)
                 "{ | color-inpaint | | }"
                 "{ o | output | stabilized.avi | }"
                 "{ | fps | | }"
+                "{ q | quiet | false | }"
                 "{ h | help | false | }";
         CommandLineParser cmd(argc, argv, keys);
 
@@ -212,6 +219,8 @@ int main(int argc, const char **argv)
 
         if (!cmd.get<string>("fps").empty())
             outputFps = cmd.get<double>("fps");
+
+        quietMode = cmd.get<bool>("quiet");
 
         // run video processing
         run();

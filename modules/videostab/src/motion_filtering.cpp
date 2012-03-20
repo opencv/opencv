@@ -66,9 +66,13 @@ Mat GaussianMotionFilter::apply(int idx, vector<Mat> &motions) const
 {
     const Mat &cur = at(idx, motions);
     Mat res = Mat::zeros(cur.size(), cur.type());
-    for (int i = -radius_; i <= radius_; ++i)
-        res += weight_[radius_ + i] * getMotion(idx, idx + i, motions);
-    return res;
+    float sum = 0.f;
+    for (int i = std::max(idx - radius_, 0); i <= idx + radius_; ++i)
+    {
+        res += weight_[radius_ + i - idx] * getMotion(idx, i, motions);
+        sum += weight_[radius_ + i - idx];
+    }
+    return res / sum;
 }
 
 } // namespace videostab
