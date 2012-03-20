@@ -45,6 +45,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 using namespace cvtest;
+using namespace testing;
 
 int randomInt(int minVal, int maxVal)
 {
@@ -82,9 +83,9 @@ cv::gpu::GpuMat createMat(cv::Size size, int type, bool useRoi)
         size0.width += randomInt(5, 15);
         size0.height += randomInt(5, 15);
     }
-        
+
     GpuMat d_m(size0, type);
-    
+
     if (size0 != size)
         d_m = d_m(Rect((size0.width - size.width) / 2, (size0.height - size.height) / 2, size.width, size.height));
 
@@ -96,35 +97,6 @@ GpuMat loadMat(const Mat& m, bool useRoi)
     GpuMat d_m = createMat(m.size(), m.type(), useRoi);
     d_m.upload(m);
     return d_m;
-}
-
-void showDiff(InputArray gold_, InputArray actual_, double eps)
-{
-    Mat gold;
-    if (gold_.kind() == _InputArray::MAT)
-        gold = gold_.getMat();
-    else
-        gold_.getGpuMat().download(gold);
-
-    Mat actual;
-    if (actual_.kind() == _InputArray::MAT)
-        actual = actual_.getMat();
-    else
-        actual_.getGpuMat().download(actual);
-
-    Mat diff;
-    absdiff(gold, actual, diff);
-    threshold(diff, diff, eps, 255.0, cv::THRESH_BINARY);
-
-    namedWindow("gold", WINDOW_NORMAL);
-    namedWindow("actual", WINDOW_NORMAL);
-    namedWindow("diff", WINDOW_NORMAL);
-
-    imshow("gold", gold);
-    imshow("actual", actual);
-    imshow("diff", diff);
-
-    waitKey();
 }
 
 bool supportFeature(const DeviceInfo& info, FeatureSet feature)
@@ -159,7 +131,7 @@ const vector<DeviceInfo>& devices()
 vector<DeviceInfo> devices(FeatureSet feature)
 {
     const vector<DeviceInfo>& d = devices();
-    
+
     vector<DeviceInfo> devs_filtered;
 
     if (TargetArchs::builtWith(feature))
@@ -220,20 +192,50 @@ Mat readImageType(const string& fname, int type)
     return src;
 }
 
-double checkNorm(const Mat& m)
+namespace
 {
-    return norm(m, NORM_INF);
+    Mat getMat(InputArray arr)
+    {
+        if (arr.kind() == _InputArray::GPU_MAT)
+        {
+            Mat m;
+            arr.getGpuMat().download(m);
+            return m;
+        }
+
+        return arr.getMat();
+    }
 }
 
-double checkNorm(const Mat& m1, const Mat& m2)
+void showDiff(InputArray gold_, InputArray actual_, double eps)
 {
-    return norm(m1, m2, NORM_INF);
+    Mat gold = getMat(gold_);
+    Mat actual = getMat(actual_);
+
+    Mat diff;
+    absdiff(gold, actual, diff);
+    threshold(diff, diff, eps, 255.0, cv::THRESH_BINARY);
+
+    namedWindow("gold", WINDOW_NORMAL);
+    namedWindow("actual", WINDOW_NORMAL);
+    namedWindow("diff", WINDOW_NORMAL);
+
+    imshow("gold", gold);
+    imshow("actual", actual);
+    imshow("diff", diff);
+
+    waitKey();
 }
 
-double checkSimilarity(const Mat& m1, const Mat& m2)
+double checkNorm(InputArray m1, const InputArray m2)
+{
+    return norm(getMat(m1), getMat(m2), NORM_INF);
+}
+
+double checkSimilarity(InputArray m1, InputArray m2)
 {
     Mat diff;
-    matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+    matchTemplate(getMat(m1), getMat(m2), diff, CV_TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
 

@@ -1301,50 +1301,26 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
     };
 
     CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
+    CV_Assert(cmpop >= CMP_EQ && cmpop <= CMP_NE);
 
-    int code;
-    const GpuMat* psrc1;
-    const GpuMat* psrc2;
-
-    switch (cmpop)
+    static const int codes[] =
     {
-    case CMP_EQ:
-        code = 0;
-        psrc1 = &src1;
-        psrc2 = &src2;
-        break;
-    case CMP_GE:
-        code = 3;
-        psrc1 = &src2;
-        psrc2 = &src1;
-        break;
-    case CMP_GT:
-        code = 2;
-        psrc1 = &src2;
-        psrc2 = &src1;
-        break;
-    case CMP_LE:
-        code = 3;
-        psrc1 = &src1;
-        psrc2 = &src2;
-        break;
-    case CMP_LT:
-        code = 2;
-        psrc1 = &src1;
-        psrc2 = &src2;
-        break;
-    case CMP_NE:
-        code = 1;
-        psrc1 = &src1;
-        psrc2 = &src2;
-        break;
-    default:
-        CV_Error(CV_StsBadFlag, "Incorrect compare operation");
+        0, 2, 3, 2, 3, 1
+    };
+
+    const GpuMat* psrc1[] =
+    {
+        &src1, &src2, &src2, &src1, &src1, &src1
+    };
+
+    const GpuMat* psrc2[] =
+    {
+        &src2, &src1, &src1, &src2, &src2, &src2
     };
 
     dst.create(src1.size(), CV_MAKE_TYPE(CV_8U, src1.channels()));
 
-    funcs[src1.depth()][code](psrc1->reshape(1), psrc2->reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
+    funcs[src1.depth()][codes[cmpop]](psrc1[cmpop]->reshape(1), psrc2[cmpop]->reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
 }
 
 
@@ -1944,26 +1920,25 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
 namespace cv { namespace gpu { namespace device
 {
     template<typename T>
-    void pow_caller(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
+    void pow_caller(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
 }}}
 
 void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
 {
-    using namespace ::cv::gpu::device;
+    using namespace cv::gpu::device;
 
-    CV_Assert(src.depth() != CV_64F);
-    dst.create(src.size(), src.type());
+    typedef void (*func_t)(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
 
-    typedef void (*caller_t)(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
-
-    static const caller_t callers[] =
+    static const func_t funcs[] =
     {
         pow_caller<unsigned char>,  pow_caller<signed char>,
         pow_caller<unsigned short>, pow_caller<short>,
-        pow_caller<int>, pow_caller<float>
+        pow_caller<int>, pow_caller<float>, pow_caller<double>
     };
 
-    callers[src.depth()](src.reshape(1), (float)power, dst.reshape(1), StreamAccessor::getStream(stream));
+    dst.create(src.size(), src.type());
+
+    funcs[src.depth()](src.reshape(1), power, dst.reshape(1), StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -2052,27 +2027,11 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int dtype, Stream& stream)
 {
-    using namespace ::cv::gpu::device;
+    using namespace cv::gpu::device;
 
-    CV_Assert(src1.size() == src2.size());
-    CV_Assert(src1.type() == src2.type() || (dtype >= 0 && src1.channels() == src2.channels()));
+    typedef void (*func_t)(const DevMem2Db& src1, double alpha, const DevMem2Db& src2, double beta, double gamma, const DevMem2Db& dst, cudaStream_t stream);
 
-    dtype = dtype >= 0 ? CV_MAKETYPE(dtype, src1.channels()) : src1.type();
-
-    dst.create(src1.size(), dtype);
-
-    const GpuMat* psrc1 = &src1;
-    const GpuMat* psrc2 = &src2;
-
-    if (src1.depth() > src2.depth())
-    {
-        std::swap(psrc1, psrc2);
-        std::swap(alpha, beta);
-    }
-
-    typedef void (*caller_t)(const DevMem2Db& src1, double alpha, const DevMem2Db& src2, double beta, double gamma, const DevMem2Db& dst, cudaStream_t stream);
-
-    static const caller_t callers[7][7][7] =
+    static const func_t funcs[7][7][7] =
     {
         {
             {
@@ -2531,7 +2490,26 @@ void cv::gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, 
         }
     };
 
-    callers[psrc1->depth()][psrc2->depth()][dst.depth()](psrc1->reshape(1), alpha, psrc2->reshape(1), beta, gamma, dst.reshape(1), StreamAccessor::getStream(stream));
+    CV_Assert(src1.size() == src2.size());
+    CV_Assert(src1.type() == src2.type() || (dtype >= 0 && src1.channels() == src2.channels()));
+
+    dtype = dtype >= 0 ? CV_MAKETYPE(dtype, src1.channels()) : src1.type();
+
+    dst.create(src1.size(), dtype);
+
+    const GpuMat* psrc1 = &src1;
+    const GpuMat* psrc2 = &src2;
+
+    if (src1.depth() > src2.depth())
+    {
+        std::swap(psrc1, psrc2);
+        std::swap(alpha, beta);
+    }
+
+    const func_t func = funcs[psrc1->depth()][psrc2->depth()][dst.depth()];
+    CV_Assert(func != 0);
+
+    func(psrc1->reshape(1), alpha, psrc2->reshape(1), beta, gamma, dst.reshape(1), StreamAccessor::getStream(stream));
 }
 
 #endif

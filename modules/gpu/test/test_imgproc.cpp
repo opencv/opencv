@@ -2362,53 +2362,6 @@ TEST_P(ColumnSum, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, ColumnSum, ALL_DEVICES);
 
-////////////////////////////////////////////////////////////////////////
-// Norm
-
-PARAM_TEST_CASE(Norm, cv::gpu::DeviceInfo, MatType, NormCode, UseRoi)
-{
-    cv::gpu::DeviceInfo devInfo;
-    int type;
-    int normType;
-    bool useRoi;
-
-    cv::Size size;
-    cv::Mat src;
-
-    double gold;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        type = GET_PARAM(1);
-        normType = GET_PARAM(2);
-        useRoi = GET_PARAM(3);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        cv::RNG& rng = TS::ptr()->get_rng();
-
-        size = cv::Size(rng.uniform(100, 400), rng.uniform(100, 400));
-
-        src = randomMat(rng, size, type, 0.0, 10.0, false);
-
-        gold = cv::norm(src, normType);
-    }
-};
-
-TEST_P(Norm, Accuracy)
-{
-    double res = cv::gpu::norm(loadMat(src, useRoi), normType);
-
-    ASSERT_NEAR(res, gold, 0.5);
-}
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Norm, Combine(
-                        ALL_DEVICES,
-                        TYPES(CV_8U, CV_32F, 1, 1),
-                        Values((int) cv::NORM_INF, (int) cv::NORM_L1, (int) cv::NORM_L2),
-                        WHOLE_SUBMAT));
-
 ////////////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 

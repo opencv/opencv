@@ -65,27 +65,30 @@ std::vector<cv::gpu::DeviceInfo> devices(cv::gpu::FeatureSet feature);
 cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 cv::Mat readImageType(const std::string& fname, int type);
 
-double checkNorm(const cv::Mat& m);
-double checkNorm(const cv::Mat& m1, const cv::Mat& m2);
-double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2);
-
-#define EXPECT_MAT_NORM(mat, eps) \
-    { \
-        EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \
-    }
+double checkNorm(cv::InputArray m1, cv::InputArray m2);
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
     { \
         ASSERT_EQ(mat1.type(), mat2.type()); \
         ASSERT_EQ(mat1.size(), mat2.size()); \
-        EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
+        EXPECT_LE(checkNorm(mat1, mat2), eps); \
     }
+
+#define EXPECT_SCALAR_NEAR(s1, s2, eps) \
+    { \
+        EXPECT_NEAR(s1[0], s2[0], eps); \
+        EXPECT_NEAR(s1[1], s2[1], eps); \
+        EXPECT_NEAR(s1[2], s2[2], eps); \
+        EXPECT_NEAR(s1[3], s2[3], eps); \
+    }
+
+double checkSimilarity(cv::InputArray m1, cv::InputArray m2);
 
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
     { \
         ASSERT_EQ(mat1.type(), mat2.type()); \
         ASSERT_EQ(mat1.size(), mat2.size()); \
-        EXPECT_LE(checkSimilarity(cv::Mat(mat1), cv::Mat(mat2)), eps); \
+        EXPECT_LE(checkSimilarity(mat1, mat2), eps); \
     }
 
 namespace cv { namespace gpu
@@ -112,8 +115,10 @@ public:
 private:
     bool val_;
 };
-
 void PrintTo(const UseRoi& useRoi, std::ostream* os);
+#define WHOLE testing::Values(UseRoi(false))
+#define SUBMAT testing::Values(UseRoi(true))
+#define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
 
 class Inverse
 {
@@ -125,25 +130,30 @@ public:
 private:
     bool val_;
 };
-
 void PrintTo(const Inverse& useRoi, std::ostream* os);
+#define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
 
 CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
+#define ALL_CMP_CODES testing::Values(CmpCode(cv::CMP_EQ), CmpCode(cv::CMP_NE), CmpCode(cv::CMP_GT), CmpCode(cv::CMP_GE), CmpCode(cv::CMP_LT), CmpCode(cv::CMP_LE))
 
 CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv::NORM_RELATIVE, cv::NORM_MINMAX)
 
 enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
 CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
+#define ALL_FLIP_CODES testing::Values(FlipCode(FLIP_BOTH), FlipCode(FLIP_X), FlipCode(FLIP_Y))
 
-CV_ENUM(ReduceOp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+CV_ENUM(ReduceCode, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+#define ALL_REDUCE_CODES testing::Values(ReduceCode(CV_REDUCE_SUM), ReduceCode(CV_REDUCE_AVG), ReduceCode(CV_REDUCE_MAX), ReduceCode(CV_REDUCE_MIN))
 
-CV_FLAGS(GemmFlags, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
+CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
+#define ALL_GEMM_FLAGS testing::Values(GemmFlags(0), GemmFlags(cv::GEMM_1_T), GemmFlags(cv::GEMM_2_T), GemmFlags(cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T | cv::GEMM_3_T))
 
 CV_ENUM(DistType, cv::gpu::BruteForceMatcher_GPU_base::L1Dist, cv::gpu::BruteForceMatcher_GPU_base::L2Dist)
 
 CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_TOPHAT, cv::MORPH_BLACKHAT)
 
 CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
+#define ALL_THRESH_OPS testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))
 
 CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC)
 
@@ -193,13 +203,5 @@ CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX
                                     std::make_pair(MatDepth(CV_32F), MatDepth(CV_64F)), \
                                                                                         \
                                     std::make_pair(MatDepth(CV_64F), MatDepth(CV_64F)))
-
-#define WHOLE testing::Values(UseRoi(false))
-#define SUBMAT testing::Values(UseRoi(true))
-#define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
-
-#define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
-
-#define ALL_CMP_CODES testing::Values(CmpCode(cv::CMP_EQ), CmpCode(cv::CMP_NE), CmpCode(cv::CMP_GT), CmpCode(cv::CMP_GE), CmpCode(cv::CMP_LT), CmpCode(cv::CMP_LE))
 
 #endif // __OPENCV_TEST_UTILITY_HPP__

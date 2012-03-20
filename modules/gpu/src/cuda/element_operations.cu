@@ -1672,38 +1672,51 @@ namespace cv { namespace gpu { namespace device
 
     template<typename T, bool Signed = device::numeric_limits<T>::is_signed> struct PowOp : unary_function<T, T>
     {
-        float power;
-        PowOp(float power_) : power(power_) {}
+        const float power;
 
-        __device__ __forceinline__ T operator()(const T& e) const
+        PowOp(double power_) : power(static_cast<float>(power_)) {}
+
+        __device__ __forceinline__ T operator()(T e) const
         {
             return saturate_cast<T>(__powf((float)e, power));
         }
     };
-
     template<typename T> struct PowOp<T, true> : unary_function<T, T>
     {
-        float power;
-        PowOp(float power_) : power(power_) {}
+        const float power;
 
-        __device__ __forceinline__ float operator()(const T& e) const
+        PowOp(double power_) : power(static_cast<float>(power_)) {}
+
+        __device__ __forceinline__ T operator()(T e) const
         {
             T res = saturate_cast<T>(__powf((float)e, power));
 
-            if ( (e < 0) && (1 & (int)power) )
-                    res *= -1;
+            if ((e < 0) && (1 & static_cast<int>(power)))
+                res *= -1;
+
             return res;
         }
     };
-
     template<> struct PowOp<float> : unary_function<float, float>
     {
-        float power;
-        PowOp(float power_) : power(power_) {}
+        const float power;
 
-        __device__ __forceinline__ float operator()(const float& e) const
+        PowOp(double power_) : power(static_cast<float>(power_)) {}
+
+        __device__ __forceinline__ float operator()(float e) const
         {
             return __powf(::fabs(e), power);
+        }
+    };
+    template<> struct PowOp<double> : unary_function<double, double>
+    {
+        const double power;
+
+        PowOp(double power_) : power(power_) {}
+
+        __device__ __forceinline__ double operator()(double e) const
+        {
+            return ::pow(::fabs(e), power);
         }
     };
 
@@ -1733,17 +1746,18 @@ namespace cv { namespace gpu { namespace device
     };
 
     template<typename T>
-    void pow_caller(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream)
+    void pow_caller(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream)
     {
         cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, PowOp<T>(power), WithOutMask(), stream);
     }
 
-    template void pow_caller<uchar>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
-    template void pow_caller<schar>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
-    template void pow_caller<short>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
-    template void pow_caller<ushort>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
-    template void pow_caller<int>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
-    template void pow_caller<float>(const DevMem2Db& src, float power, DevMem2Db dst, cudaStream_t stream);
+    template void pow_caller<uchar>(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
+    template void pow_caller<schar>(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
+    template void pow_caller<short>(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
+    template void pow_caller<ushort>(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
+    template void pow_caller<int>(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
+    template void pow_caller<float>(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
+    template void pow_caller<double>(DevMem2Db src, double power, DevMem2Db dst, cudaStream_t stream);
 
     //////////////////////////////////////////////////////////////////////////
     // addWeighted

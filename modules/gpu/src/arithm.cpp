@@ -91,6 +91,12 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     bool tr2 = (flags & GEMM_2_T) != 0;
     bool tr3 = (flags & GEMM_3_T) != 0;
 
+    if (src1.type() == CV_64FC2)
+    {
+        if (tr1 || tr2 || tr3)
+            CV_Error(CV_StsNotImplemented, "transpose operation doesn't implemented for CV_64FC2 type");
+    }
+
     Size src1Size = tr1 ? Size(src1.rows, src1.cols) : src1.size();
     Size src2Size = tr2 ? Size(src2.rows, src2.cols) : src2.size();
     Size src3Size = tr3 ? Size(src3.rows, src3.cols) : src3.size();
@@ -99,7 +105,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     CV_Assert(src1Size.width == src2Size.height);
     CV_Assert(src3.empty() || src3Size == dstSize);
 
-    dst.create(dstSize, CV_32FC1);
+    dst.create(dstSize, src1.type());
 
     if (beta != 0)
     {
@@ -149,7 +155,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     {
     case CV_32FC1:
         cublasSafeCall( cublasSgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alphaf, 
+            &alphaf,
             src2.ptr<float>(), static_cast<int>(src2.step / sizeof(float)),
             src1.ptr<float>(), static_cast<int>(src1.step / sizeof(float)),
             &betaf,
@@ -158,7 +164,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 
     case CV_64FC1:
         cublasSafeCall( cublasDgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alpha, 
+            &alpha,
             src2.ptr<double>(), static_cast<int>(src2.step / sizeof(double)),
             src1.ptr<double>(), static_cast<int>(src1.step / sizeof(double)),
             &beta,
@@ -167,7 +173,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 
     case CV_32FC2:
         cublasSafeCall( cublasCgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alphacf, 
+            &alphacf,
             src2.ptr<cuComplex>(), static_cast<int>(src2.step / sizeof(cuComplex)),
             src1.ptr<cuComplex>(), static_cast<int>(src1.step / sizeof(cuComplex)),
             &betacf,
@@ -176,7 +182,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 
     case CV_64FC2:
         cublasSafeCall( cublasZgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alphac, 
+            &alphac,
             src2.ptr<cuDoubleComplex>(), static_cast<int>(src2.step / sizeof(cuDoubleComplex)),
             src1.ptr<cuDoubleComplex>(), static_cast<int>(src1.step / sizeof(cuDoubleComplex)),
             &betac,
@@ -208,8 +214,8 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );		
+        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
     }
     else if (src.elemSize() == 4)
     {
@@ -219,7 +225,7 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        ncvSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), static_cast<int>(src.step), 
+        ncvSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), static_cast<int>(src.step),
             dst.ptr<Ncv32u>(), static_cast<int>(dst.step), sz) );
     }
     else // if (src.elemSize() == 8)
@@ -230,8 +236,8 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        ncvSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), static_cast<int>(src.step), 
-            dst.ptr<Ncv64u>(), static_cast<int>(dst.step), sz) );		
+        ncvSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), static_cast<int>(src.step),
+            dst.ptr<Ncv64u>(), static_cast<int>(dst.step), sz) );
     }
 
     if (stream == 0)
@@ -285,7 +291,7 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int flipCode, cudaStream_t stream);
 
-    static const func_t funcs[6][4] = 
+    static const func_t funcs[6][4] =
     {
         {NppMirror<CV_8U, nppiMirror_8u_C1R>::call, 0, NppMirror<CV_8U, nppiMirror_8u_C3R>::call, NppMirror<CV_8U, nppiMirror_8u_C4R>::call},
         {0,0,0,0},
@@ -345,7 +351,7 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
 
     if (src.type() == CV_8UC1)
     {
-        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
             dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
     }
     else
@@ -361,7 +367,7 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
             pValues3[1] = nppLut3[1].ptr<Npp32s>();
             pValues3[2] = nppLut3[2].ptr<Npp32s>();
         }
-        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step),
             dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, lvls.pLevels3, lvls.nValues3) );
     }
 
@@ -408,9 +414,9 @@ void cv::gpu::magnitudeSqr(const GpuMat& src, GpuMat& dst, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // Polar <-> Cart
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace mathfunc 
+    namespace mathfunc
     {
         void cartToPolar_gpu(DevMem2Df x, DevMem2Df y, DevMem2Df mag, bool magSqr, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream);
         void polarToCart_gpu(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream);

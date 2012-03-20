@@ -82,7 +82,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Threshold, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
-    testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV)),
+    ALL_THRESH_OPS,
     WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA

@@ -52,7 +52,7 @@ using namespace cvtest;
 using namespace testing;
 
 void print_info()
-{    
+{
     printf("\n");
 #if defined _WIN32
 #   if defined _WIN64
@@ -78,9 +78,9 @@ void print_info()
     int driver;
     cudaDriverGetVersion(&driver);
 
-    printf("CUDA Driver  version: %d\n", driver);        
-    printf("CUDA Runtime version: %d\n", CUDART_VERSION);    
-    printf("CUDA device count: %d\n\n", deviceCount);    
+    printf("CUDA Driver  version: %d\n", driver);
+    printf("CUDA Runtime version: %d\n", CUDART_VERSION);
+    printf("CUDA device count: %d\n\n", deviceCount);
 
     for (int i = 0; i < deviceCount; ++i)
     {
@@ -96,7 +96,7 @@ void print_info()
         else
             puts("    This device is NOT compatible with current GPU module build\n");
     }
-    
+
     puts("GPU module was compiled for the following GPU archs:");
     printf("    BIN: %s\n", CUDA_ARCH_BIN);
     printf("    PTX: %s\n\n", CUDA_ARCH_PTX);
