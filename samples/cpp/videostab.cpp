@@ -147,21 +147,21 @@ int main(int argc, const char **argv)
         if (!cmd.get<string>("outlier-ratio").empty())
         {
             RansacParams ransacParams = motionEstimator->ransacParams();
-            ransacParams.eps = atof(cmd.get<string>("outlier-ratio").c_str());
+            ransacParams.eps = cmd.get<float>("outlier-ratio");
             motionEstimator->setRansacParams(ransacParams);
         }
 
         if (!cmd.get<string>("min-inlier-ratio").empty())
-            motionEstimator->setMinInlierRatio(atof(cmd.get<string>("min-inlier-ratio").c_str()));
+            motionEstimator->setMinInlierRatio(cmd.get<float>("min-inlier-ratio"));
 
         stabilizer->setMotionEstimator(motionEstimator);
 
         int smoothRadius = -1;
         float smoothStdev = -1;
         if (!cmd.get<string>("radius").empty())
-            smoothRadius = atoi(cmd.get<string>("radius").c_str());
+            smoothRadius = cmd.get<int>("radius");
         if (!cmd.get<string>("stdev").empty())
-            smoothStdev = atof(cmd.get<string>("stdev").c_str());
+            smoothStdev = cmd.get<float>("stdev");
         if (smoothRadius > 0 && smoothStdev > 0)
             stabilizer->setMotionFilter(new GaussianMotionFilter(smoothRadius, smoothStdev));
         else if (smoothRadius > 0 && smoothStdev < 0)
@@ -171,7 +171,7 @@ int main(int argc, const char **argv)
         {
             WeightingDeblurer *deblurer = new WeightingDeblurer();
             if (!cmd.get<string>("deblur-sens").empty())
-                deblurer->setSensitivity(atof(cmd.get<string>("deblur-sens").c_str()));
+                deblurer->setSensitivity(cmd.get<float>("deblur-sens"));
             stabilizer->setDeblurer(deblurer);
         }
 
@@ -179,7 +179,7 @@ int main(int argc, const char **argv)
             stabilizer->setEstimateTrimRatio(cmd.get<string>("est-trim") == "yes");
 
         if (!cmd.get<string>("trim-ratio").empty())
-            stabilizer->setTrimRatio(atof(cmd.get<string>("trim-ratio").c_str()));
+            stabilizer->setTrimRatio(cmd.get<float>("trim-ratio"));
 
         stabilizer->setInclusionConstraint(cmd.get<string>("incl-constr") == "yes");
 
@@ -195,7 +195,7 @@ int main(int argc, const char **argv)
         {
             ConsistentMosaicInpainter *inpainter = new ConsistentMosaicInpainter();
             if (!cmd.get<string>("mosaic-stdev").empty())
-                inpainter->setStdevThresh(atof(cmd.get<string>("mosaic-stdev").c_str()));
+                inpainter->setStdevThresh(cmd.get<float>("mosaic-stdev"));
             inpainters->pushBack(inpainter);
         }
         if (cmd.get<string>("motion-inpaint") == "yes")
@@ -210,7 +210,7 @@ int main(int argc, const char **argv)
         outputPath = cmd.get<string>("output");
 
         if (!cmd.get<string>("fps").empty())
-            outputFps = atoi(cmd.get<string>("fps").c_str());
+            outputFps = cmd.get<double>("fps");
 
         // run video processing
         run();
