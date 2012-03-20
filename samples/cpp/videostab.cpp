@@ -181,7 +181,8 @@ int main(int argc, const char **argv)
         if (!cmd.get<string>("trim-ratio").empty())
             stabilizer->setTrimRatio(cmd.get<float>("trim-ratio"));
 
-        stabilizer->setInclusionConstraint(cmd.get<string>("incl-constr") == "yes");
+        if (!cmd.get<string>("incl-constr").empty())
+            stabilizer->setInclusionConstraint(cmd.get<string>("incl-constr") == "yes");
 
         if (cmd.get<string>("border-mode") == "replicate")
             stabilizer->setBorderMode(BORDER_REPLICATE);

@@ -351,7 +351,7 @@ static inline bool isGoodMotion(const float M[], float w, float h, float dx, flo
     for (int i = 0; i < 4; ++i)
     {
         Mpt[i].x = M[0]*pt[i].x + M[1]*pt[i].y + M[2];
-        Mpt[i].x = M[3]*pt[i].x + M[4]*pt[i].y + M[5];
+        Mpt[i].y = M[3]*pt[i].x + M[4]*pt[i].y + M[5];
     }
 
     pt[0] = Point2f(dx, dy);
