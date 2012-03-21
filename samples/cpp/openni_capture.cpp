@@ -93,9 +93,11 @@ void printCommandLineParams()
     cout << "-m        Mask to set which output images are need. It is a string of size 5. Each element of this is '0' or '1' and" << endl;
     cout << "          determine: is depth map, disparity map, valid pixels mask, rgb image, gray image need or not (correspondently)?" << endl ;
     cout << "          By default -m 01010 i.e. disparity map and rgb image will be shown." << endl ;
+    cout << "-r        Filename of .oni video file. The data will grabbed from it." << endl ;
 }
 
-void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[] )
+void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[],
+                       string& filename, bool& isFileReading )
 {
     // set defaut values
     isColorizeDisp = true;
@@ -107,6 +109,9 @@ void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFix
     retrievedImageFlags[2] = false;
     retrievedImageFlags[3] = true;
     retrievedImageFlags[4] = false;
+
+    filename.clear();
+    isFileReading = false;
 
     if( argc == 1 )
     {
@@ -154,6 +159,11 @@ void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFix
                     exit(0);
                 }
             }
+            else if( !strcmp( argv[i], "-r" ) )
+            {
+                filename = argv[++i];
+                isFileReading = true;
+            }
             else
             {
                 cout << "Unsupported command line argument: " << argv[i] << "." << endl;
@@ -172,10 +182,17 @@ int main( int argc, char* argv[] )
     bool isColorizeDisp, isFixedMaxDisp;
     int imageMode;
     bool retrievedImageFlags[5];
-    parseCommandLine( argc, argv, isColorizeDisp, isFixedMaxDisp, imageMode, retrievedImageFlags );
+    string filename;
+    bool isVideoReading;
+    parseCommandLine( argc, argv, isColorizeDisp, isFixedMaxDisp, imageMode, retrievedImageFlags, filename, isVideoReading );
 
     cout << "Device opening ..." << endl;
-    VideoCapture capture( CV_CAP_OPENNI );
+    VideoCapture capture;
+    if( isVideoReading )
+        capture.open( filename );
+    else
+        capture.open( CV_CAP_OPENNI );
+
     cout << "done." << endl;
 
     if( !capture.isOpened() )
@@ -184,37 +201,41 @@ int main( int argc, char* argv[] )
         return -1;
     }
 
-    bool modeRes=false;
-    switch ( imageMode )
+    if( !isVideoReading )
     {
-        case 0:
-            modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_VGA_30HZ );
-            break;
-        case 1:
-            modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_15HZ );
-            break;
-        case 2:
-            modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_30HZ );
-            break;
-        default:
-            CV_Error( CV_StsBadArg, "Unsupported image mode property.\n");
+        bool modeRes=false;
+        switch ( imageMode )
+        {
+            case 0:
+                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_VGA_30HZ );
+                break;
+            case 1:
+                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_15HZ );
+                break;
+            case 2:
+                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_30HZ );
+                break;
+            default:
+                CV_Error( CV_StsBadArg, "Unsupported image mode property.\n");
+        }
+        if (!modeRes)
+            cout << "\nThis image mode is not supported by the device, the default value (CV_CAP_OPENNI_SXGA_15HZ) will be used.\n" << endl;
     }
-    if (!modeRes)
-        cout << "\nThis image mode is not supported by the device, the default value (CV_CAP_OPENNI_SXGA_15HZ) will be used.\n" << endl;
 
     // Print some avalible device settings.
     cout << "\nDepth generator output mode:" << endl <<
-            "FRAME_WIDTH    " << capture.get( CV_CAP_PROP_FRAME_WIDTH ) << endl <<
-            "FRAME_HEIGHT   " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
-            "FRAME_MAX_DEPTH    " << capture.get( CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
-            "FPS    " << capture.get( CV_CAP_PROP_FPS ) << endl;
+            "FRAME_WIDTH      " << capture.get( CV_CAP_PROP_FRAME_WIDTH ) << endl <<
+            "FRAME_HEIGHT     " << capture.get( CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
+            "FRAME_MAX_DEPTH  " << capture.get( CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH ) << " mm" << endl <<
+            "FPS              " << capture.get( CV_CAP_PROP_FPS ) << endl <<
+            "REGISTRATION     " << capture.get( CV_CAP_PROP_OPENNI_REGISTRATION ) << endl;
     if( capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR_PRESENT ) )
     {
         cout <<
             "\nImage generator output mode:" << endl <<
-            "FRAME_WIDTH    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_WIDTH ) << endl <<
-            "FRAME_HEIGHT   " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
-            "FPS    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
+            "FRAME_WIDTH   " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_WIDTH ) << endl <<
+            "FRAME_HEIGHT  " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FRAME_HEIGHT ) << endl <<
+            "FPS           " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
     }
     else
     {

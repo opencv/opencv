@@ -124,6 +124,8 @@ protected:
     xn::Context context;
     bool isContextOpened;
     
+    xn::ProductionNode productionNode;
+
     // Data generators with its metadata
     xn::DepthGenerator depthGenerator;
     xn::DepthMetaData  depthMetaData;
@@ -171,118 +173,158 @@ XnMapOutputMode defaultMapOutputMode()
 
 CvCapture_OpenNI::CvCapture_OpenNI( int index )
 {
+    XnStatus status;
+
     isContextOpened = false;
 
     // Initialize and configure the context.
-    if( context.Init() == XN_STATUS_OK )
+    status = context.Init();
+    if( status != XN_STATUS_OK )
     {
-        // Find devices
-        xn::NodeInfoList devicesList;
-        XnStatus status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
-        if( status != XN_STATUS_OK )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: "
-                      << std::string(xnGetStatusString(status)) << std::endl;
-            return;
-        }
-
-        // Chose device according to index
-        xn::NodeInfoList::Iterator it = devicesList.Begin();
-        for( int i = 0; i < index; ++i ) it++;
-
-        xn::NodeInfo deviceNode = *it;
-        status = context.CreateProductionTree( deviceNode );
-        if( status != XN_STATUS_OK )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create production tree: "
-                      << std::string(xnGetStatusString(status)) << std::endl;
-            return;
-        }
-
-        status = context.RunXmlScript( XMLConfig.c_str() );
-        if( status != XN_STATUS_OK )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: "
-                      << std::string(xnGetStatusString(status)) << std::endl;
-            return;
-        }
-
-        // Associate generators with context.
-        // enumerate the nodes to find if depth generator is present
-        xn::NodeInfoList depthList;
-        status = context.EnumerateExistingNodes( depthList, XN_NODE_TYPE_DEPTH );
-        if( status != XN_STATUS_OK )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate depth generators: "
-                      << std::string(xnGetStatusString(status)) << std::endl;
-            return;
-        }
-        if( depthList.IsEmpty() )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : The device doesn't have depth generator. Such devices aren't supported now." << std::endl;
-            return;
-        }
-        status = depthGenerator.Create( context );
-        if( status != XN_STATUS_OK )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create depth generator: "
-                      << std::string(xnGetStatusString(status)) << std::endl;
-            return;
-        }
-
-        // enumerate the nodes to find if image generator is present
-        xn::NodeInfoList imageList;
-        status = context.EnumerateExistingNodes( imageList, XN_NODE_TYPE_IMAGE );
-        if( status != XN_STATUS_OK )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: "
-                      << std::string(xnGetStatusString(status)) << std::endl;
-            return;
-        }
-
-        if( !imageList.IsEmpty() )
-        {
-            status = imageGenerator.Create( context );
-            if( status != XN_STATUS_OK )
-            {
-                std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: "
-                          <<  std::string(xnGetStatusString(status)) << std::endl;
-                return;
-            }
-        }
-
-        // Set map output mode.
-        if( depthGenerator.IsValid() )
-            CV_DbgAssert( depthGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
-        if( imageGenerator.IsValid() )
-            CV_DbgAssert( imageGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
-
-        //  Start generating data.
-        status = context.StartGeneratingAll();
-        if( status != XN_STATUS_OK )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to start generating OpenNI data: "
-                      << std::string(xnGetStatusString(status)) << std::endl;
-            return;
-        }
-
-        if( !readCamerasParams() )
-        {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters" << std::endl;
-            return;
-        }
-
-        outputMaps.resize( outputMapsTypesCount );
-
-        isContextOpened = true;
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
     }
+
+    // Find devices
+    xn::NodeInfoList devicesList;
+    status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    // Chose device according to index
+    xn::NodeInfoList::Iterator it = devicesList.Begin();
+    for( int i = 0; i < index; ++i ) it++;
+
+    xn::NodeInfo deviceNode = *it;
+    status = context.CreateProductionTree( deviceNode, productionNode );
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create production tree: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    status = context.RunXmlScript( XMLConfig.c_str() );
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    // Associate generators with context.
+    // enumerate the nodes to find if depth generator is present
+    xn::NodeInfoList depthList;
+    status = context.EnumerateExistingNodes( depthList, XN_NODE_TYPE_DEPTH );
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate depth generators: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+    if( depthList.IsEmpty() )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : The device doesn't have depth generator. Such devices aren't supported now." << std::endl;
+        return;
+    }
+    status = depthGenerator.Create( context );
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create depth generator: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    // enumerate the nodes to find if image generator is present
+    xn::NodeInfoList imageList;
+    status = context.EnumerateExistingNodes( imageList, XN_NODE_TYPE_IMAGE );
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    if( !imageList.IsEmpty() )
+    {
+        status = imageGenerator.Create( context );
+        if( status != XN_STATUS_OK )
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: "
+                      <<  std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
+    }
+
+    // Set map output mode.
+    if( depthGenerator.IsValid() )
+        CV_DbgAssert( depthGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
+    if( imageGenerator.IsValid() )
+        CV_DbgAssert( imageGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
+
+    //  Start generating data.
+    status = context.StartGeneratingAll();
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to start generating OpenNI data: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    if( !readCamerasParams() )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters" << std::endl;
+        return;
+    }
+
+    outputMaps.resize( outputMapsTypesCount );
+
+    isContextOpened = true;
 
     setProperty(CV_CAP_PROP_OPENNI_REGISTRATION, 1.0);
 }
 
 CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
 {
-    CV_Assert(0);
+    XnStatus status;
+
+    isContextOpened = false;
+
+    // Initialize and configure the context.
+    status = context.Init();
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    // Open file
+    status = context.OpenFileRecording( filename, productionNode );
+    if( status != XN_STATUS_OK )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to open input file (" << filename << "): "
+                  << std::string(xnGetStatusString(status)) << std::endl;
+        return;
+    }
+
+    std::cout << context.FindExistingNode( XN_NODE_TYPE_DEPTH, depthGenerator ) << std::endl;
+    std::cout << context.FindExistingNode( XN_NODE_TYPE_IMAGE, imageGenerator ) << std::endl;
+
+    if( !readCamerasParams() )
+    {
+        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters" << std::endl;
+        return;
+    }
+
+    outputMaps.resize( outputMapsTypesCount );
+
+    isContextOpened = true;
 }
 
 CvCapture_OpenNI::~CvCapture_OpenNI()
@@ -424,6 +466,7 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION :
         propValue = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
+        break;
     default :
     {
         std::stringstream ss;
@@ -731,15 +774,14 @@ IplImage* CvCapture_OpenNI::retrieveValidDepthMask()
 
 inline void getBGRImageFromMetaData( const xn::ImageMetaData& imageMetaData, cv::Mat& bgrImage )
 {
-    int cols = imageMetaData.XRes();
-    int rows = imageMetaData.YRes();
+    if( imageMetaData.PixelFormat() != XN_PIXEL_FORMAT_RGB24 )
+        CV_Error( CV_StsUnsupportedFormat, "Unsupported format of grabbed image\n" );
 
-    cv::Mat rgbImage( rows, cols, CV_8UC3 );
-
+    cv::Mat rgbImage( imageMetaData.YRes(), imageMetaData.XRes(), CV_8UC3 );
     const XnRGB24Pixel* pRgbImage = imageMetaData.RGB24Data();
 
     // CV_Assert( 3*sizeof(uchar) == sizeof(XnRGB24Pixel) );
-    memcpy( rgbImage.data, pRgbImage, cols*rows*sizeof(XnRGB24Pixel) );
+    memcpy( rgbImage.data, pRgbImage, rgbImage.total()*sizeof(XnRGB24Pixel) );
     cv::cvtColor( rgbImage, bgrImage, CV_RGB2BGR );
 }
 
