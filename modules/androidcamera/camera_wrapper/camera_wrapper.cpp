@@ -1,4 +1,4 @@
-#if !defined(ANDROID_r2_2_2) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1) && !defined(ANDROID_r4_0_0) && !defined(ANDROID_r4_0_3)
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1) && !defined(ANDROID_r4_0_0) && !defined(ANDROID_r4_0_3)
 # error Building camera wrapper for your version of Android is not supported by OpenCV. You need to modify OpenCV sources in order to compile camera wrapper for your version of Android.
 #endif
 
@@ -227,7 +227,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 
     sp<Camera> camera = 0;
 
-#ifdef ANDROID_r2_2_2
+#ifdef ANDROID_r2_2_0
     camera = Camera::connect();
 #else 
     /* This is 2.3 or higher. The connect method has cameraID parameter */
@@ -313,9 +313,19 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
         }
     }
 
+    const char* available_focus_modes = handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
+    if (available_focus_modes != 0)
+    {
+        // find auto focus mode
+        if (strstr(available_focus_modes, "auto") != NULL)
+        {
+            handler->params.set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_AUTO);
+            camera->autoFocus();
+        }
+    }
 
     status_t pdstatus;
-#if defined(ANDROID_r2_2_2)
+#if defined(ANDROID_r2_2_0)
     pdstatus = camera->setPreviewDisplay(sp<ISurface>(0 /*new DummySurface*/));
     if (pdstatus != 0)
         LOGE("initCameraConnect: failed setPreviewDisplay(0) call; camera migth not work correctly on some devices");
