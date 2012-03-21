@@ -65,7 +65,7 @@ enum
 
 //! restores the damaged image areas using one of the available intpainting algorithms
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
-                           OutputArray dst, double inpaintRange, int flags );
+                           OutputArray dst, double inpaintRadius, int flags );
 
 }
 
