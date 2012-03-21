@@ -82,7 +82,8 @@ public:
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
 
-    CvCapture_OpenNI( int index=0 );
+    CvCapture_OpenNI(int index=0);
+    CvCapture_OpenNI(const char * filename);
     virtual ~CvCapture_OpenNI();
 
     virtual double getProperty(int propIdx);
@@ -121,18 +122,14 @@ protected:
 
     // OpenNI context
     xn::Context context;
-    bool m_isOpened;
-    bool m_isDepthGeneratorPresent;
-    bool m_isImageGeneratorPresent;
+    bool isContextOpened;
     
     // Data generators with its metadata
     xn::DepthGenerator depthGenerator;
     xn::DepthMetaData  depthMetaData;
-    XnMapOutputMode depthOutputMode;
 
     xn::ImageGenerator imageGenerator;
     xn::ImageMetaData  imageMetaData;
-    XnMapOutputMode imageOutputMode;
 
     // Cameras settings:
     // TODO find in OpenNI function to convert z->disparity and remove fields "baseline" and depthFocalLength_VGA
@@ -160,27 +157,28 @@ IplImage* CvCapture_OpenNI::OutputMap::getIplImagePtr()
 
 bool CvCapture_OpenNI::isOpened() const
 {
-    return m_isOpened;
+    return isContextOpened;
+}
+
+XnMapOutputMode defaultMapOutputMode()
+{
+    XnMapOutputMode mode;
+    mode.nXRes = XN_VGA_X_RES;
+    mode.nYRes = XN_VGA_Y_RES;
+    mode.nFPS  = 30;
+    return mode;
 }
 
 CvCapture_OpenNI::CvCapture_OpenNI( int index )
 {
-    XnStatus status = XN_STATUS_OK;
-
-    // Initialize image output modes (VGA_30HZ by default).
-    depthOutputMode.nXRes = imageOutputMode.nXRes = XN_VGA_X_RES;
-    depthOutputMode.nYRes = imageOutputMode.nYRes = XN_VGA_Y_RES;
-    depthOutputMode.nFPS = imageOutputMode.nFPS = 30;
-
-    m_isOpened = false;
-    m_isImageGeneratorPresent = false;
+    isContextOpened = false;
 
     // Initialize and configure the context.
     if( context.Init() == XN_STATUS_OK )
     {
         // Find devices
         xn::NodeInfoList devicesList;
-        status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
+        XnStatus status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
         if( status != XN_STATUS_OK )
         {
             std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: "
@@ -224,7 +222,6 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
             std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : The device doesn't have depth generator. Such devices aren't supported now." << std::endl;
             return;
         }
-        m_isDepthGeneratorPresent = true;
         status = depthGenerator.Create( context );
         if( status != XN_STATUS_OK )
         {
@@ -245,7 +242,6 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
 
         if( !imageList.IsEmpty() )
         {
-            m_isImageGeneratorPresent = true;
             status = imageGenerator.Create( context );
             if( status != XN_STATUS_OK )
             {
@@ -256,8 +252,10 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         }
 
         // Set map output mode.
-        CV_Assert( depthGenerator.SetMapOutputMode( depthOutputMode ) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
-        CV_Assert( m_isImageGeneratorPresent ? ( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK ) : true );
+        if( depthGenerator.IsValid() )
+            CV_DbgAssert( depthGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
+        if( imageGenerator.IsValid() )
+            CV_DbgAssert( imageGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
 
         //  Start generating data.
         status = context.StartGeneratingAll();
@@ -276,10 +274,15 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
 
         outputMaps.resize( outputMapsTypesCount );
 
-        m_isOpened = true;
+        isContextOpened = true;
     }
 
     setProperty(CV_CAP_PROP_OPENNI_REGISTRATION, 1.0);
+}
+
+CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
+{
+    CV_Assert(0);
 }
 
 CvCapture_OpenNI::~CvCapture_OpenNI()
@@ -387,25 +390,28 @@ bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
 double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
 {
     double propValue = 0;
-    if( !m_isDepthGeneratorPresent )
+    if( !depthGenerator.IsValid() )
         return propValue;
 
-    CV_Assert( depthGenerator.IsValid() );
+    XnMapOutputMode mode;
 
     switch( propIdx )
     {
     case CV_CAP_PROP_OPENNI_GENERATOR_PRESENT :
-        CV_Assert( m_isDepthGeneratorPresent );
+        CV_DbgAssert( depthGenerator.IsValid() );
         propValue = 1.;
         break;
     case CV_CAP_PROP_FRAME_WIDTH :
-        propValue = depthOutputMode.nXRes;
+        if( depthGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nXRes;
         break;
     case CV_CAP_PROP_FRAME_HEIGHT :
-        propValue = depthOutputMode.nYRes;
+        if( depthGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nYRes;
         break;
     case CV_CAP_PROP_FPS :
-        propValue = depthOutputMode.nFPS;
+        if( depthGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nFPS;
         break;
     case CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH :
         propValue = depthGenerator.GetDeviceMaxDepth();
@@ -443,9 +449,8 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
             {
                 // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
                 // then the property isn't avaliable
-                if( m_isImageGeneratorPresent )
+                if( imageGenerator.IsValid() )
                 {
-                    CV_Assert( imageGenerator.IsValid() );
                     if( !depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) )
                     {
                         if( depthGenerator.GetAlternativeViewPointCap().IsViewPointSupported(imageGenerator) )
@@ -487,25 +492,27 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
 double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
 {
     double propValue = 0.;
-    if( !m_isImageGeneratorPresent )
+    if( !imageGenerator.IsValid() )
 	    return propValue;
 
-    CV_Assert( imageGenerator.IsValid() );
-
+    XnMapOutputMode mode;
     switch( propIdx )
     {
     case CV_CAP_PROP_OPENNI_GENERATOR_PRESENT :
-        CV_Assert( m_isImageGeneratorPresent );
+        CV_DbgAssert( imageGenerator.IsValid() );
         propValue = 1.;
         break;
     case CV_CAP_PROP_FRAME_WIDTH :
-        propValue = imageOutputMode.nXRes;
+        if( imageGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nXRes;
         break;
     case CV_CAP_PROP_FRAME_HEIGHT :
-        propValue = imageOutputMode.nYRes;
+        if( imageGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nYRes;
         break;
     case CV_CAP_PROP_FPS :
-        propValue = imageOutputMode.nFPS;
+        if( imageGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
+            propValue = mode.nFPS;
         break;
     default :
     {
@@ -521,46 +528,41 @@ double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
 bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue )
 {
 	bool isSet = false;
-    if( !m_isImageGeneratorPresent )
+    if( !imageGenerator.IsValid() )
         return isSet;   
     
-    CV_Assert( imageGenerator.IsValid() );
-
     switch( propIdx )
     {
     case CV_CAP_PROP_OPENNI_OUTPUT_MODE :
     {
-        XnMapOutputMode newImageOutputMode = imageOutputMode;
+        XnMapOutputMode mode;
 
         switch( cvRound(propValue) )
         {
         case CV_CAP_OPENNI_VGA_30HZ :
-            newImageOutputMode.nXRes = XN_VGA_X_RES;
-            newImageOutputMode.nYRes = XN_VGA_Y_RES;
-            newImageOutputMode.nFPS = 30;
+            mode.nXRes = XN_VGA_X_RES;
+            mode.nYRes = XN_VGA_Y_RES;
+            mode.nFPS = 30;
             break;
         case CV_CAP_OPENNI_SXGA_15HZ :
-            newImageOutputMode.nXRes = XN_SXGA_X_RES;
-            newImageOutputMode.nYRes = XN_SXGA_Y_RES;
-            newImageOutputMode.nFPS = 15;
+            mode.nXRes = XN_SXGA_X_RES;
+            mode.nYRes = XN_SXGA_Y_RES;
+            mode.nFPS = 15;
             break;
         case CV_CAP_OPENNI_SXGA_30HZ :
-            newImageOutputMode.nXRes = XN_SXGA_X_RES;
-            newImageOutputMode.nYRes = XN_SXGA_Y_RES;
-            newImageOutputMode.nFPS = 30;
+            mode.nXRes = XN_SXGA_X_RES;
+            mode.nYRes = XN_SXGA_Y_RES;
+            mode.nFPS = 30;
             break;
         default :
             CV_Error( CV_StsBadArg, "Unsupported image generator output mode.\n");
         }
 
-        XnStatus status = imageGenerator.SetMapOutputMode( newImageOutputMode );
+        XnStatus status = imageGenerator.SetMapOutputMode( mode );
         if( status != XN_STATUS_OK )
             std::cerr << "CvCapture_OpenNI::setImageGeneratorProperty : " << xnGetStatusString(status) << std::endl;
         else
-        {
-            imageOutputMode = newImageOutputMode;
             isSet = true;
-        }
         break;
     }
     default:
@@ -583,8 +585,9 @@ bool CvCapture_OpenNI::grabFrame()
     if( status != XN_STATUS_OK )
         return false;
 
-    depthGenerator.GetMetaData( depthMetaData );
-    if( m_isImageGeneratorPresent )
+    if( depthGenerator.IsValid() )
+        depthGenerator.GetMetaData( depthMetaData );
+    if( imageGenerator.IsValid() )
         imageGenerator.GetMetaData( imageMetaData );
 
     return true;
@@ -805,6 +808,17 @@ IplImage* CvCapture_OpenNI::retrieveFrame( int outputType )
 CvCapture* cvCreateCameraCapture_OpenNI( int index )
 {
     CvCapture_OpenNI* capture = new CvCapture_OpenNI( index );
+
+    if( capture->isOpened() )
+        return capture;
+
+    delete capture;
+    return 0;
+}
+
+CvCapture* cvCreateFileCapture_OpenNI( const char* filename )
+{
+    CvCapture_OpenNI* capture = new CvCapture_OpenNI( filename );
 
     if( capture->isOpened() )
         return capture;

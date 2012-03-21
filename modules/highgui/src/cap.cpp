@@ -326,6 +326,11 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
     if (! result)
         result = cvCreateFileCapture_AVFoundation (filename);
     #endif
+
+    #ifdef HAVE_OPENNI
+    if (! result)
+        result = cvCreateFileCapture_OpenNI (filename);
+    #endif
     
     if (! result)
         result = cvCreateFileCapture_Images (filename);
