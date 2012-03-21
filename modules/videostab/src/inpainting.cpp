@@ -110,7 +110,7 @@ struct Pixel3
 
 ConsistentMosaicInpainter::ConsistentMosaicInpainter()
 {
-    setStdevThresh(20);
+    setStdevThresh(20.f);
 }
 
 
@@ -288,6 +288,7 @@ MotionInpainter::MotionInpainter()
     CV_Error(CV_StsNotImplemented, "Current implementation of MotionInpainter requires GPU");
 #endif
     setFlowErrorThreshold(1e-4f);
+    setDistThreshold(5.f);
     setBorderMode(BORDER_REPLICATE);
 }
 
@@ -353,7 +354,8 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         fmm_.run(flowMask_, body);
 
         completeFrameAccordingToFlow(
-                flowMask_, flowX_, flowY_, transformedFrame1_, transformedMask1_, frame, mask);
+                flowMask_, flowX_, flowY_, transformedFrame1_, transformedMask1_, distThresh_,
+                frame, mask);
     }
 }
 
@@ -446,7 +448,7 @@ void calcFlowMask(
 
 void completeFrameAccordingToFlow(
         const Mat &flowMask, const Mat &flowX, const Mat &flowY, const Mat &frame1, const Mat &mask1,
-        Mat &frame0, Mat &mask0)
+        float distThresh, Mat &frame0, Mat &mask0)
 {
     CV_Assert(flowMask.type() == CV_8U);
     CV_Assert(flowX.type() == CV_32F && flowX.size() == flowMask.size());
@@ -459,6 +461,7 @@ void completeFrameAccordingToFlow(
     Mat_<uchar> flowMask_(flowMask), mask1_(mask1), mask0_(mask0);
     Mat_<float> flowX_(flowX), flowY_(flowY);
 
+    //int count = 0;
     for (int y0 = 0; y0 < frame0.rows; ++y0)
     {
         for (int x0 = 0; x0 < frame0.cols; ++x0)
@@ -468,14 +471,17 @@ void completeFrameAccordingToFlow(
                 int x1 = cvRound(x0 + flowX_(y0,x0));
                 int y1 = cvRound(y0 + flowY_(y0,x0));
 
-                if (x1 >= 0 && x1 < frame1.cols && y1 >= 0 && y1 < frame1.rows && mask1_(y1,x1))
-                {
+                if (x1 >= 0 && x1 < frame1.cols && y1 >= 0 && y1 < frame1.rows && mask1_(y1,x1)
+                    && sqr(flowX_(y0,x0)) + sqr(flowY_(y0,x0)) < sqr(distThresh))
+                {                    
                     frame0.at<Point3_<uchar> >(y0,x0) = frame1.at<Point3_<uchar> >(y1,x1);
                     mask0_(y0,x0) = 255;
+                    //count++;
                 }
             }
         }
     }
+    //cout << count << endl;
 }
 
 } // namespace videostab

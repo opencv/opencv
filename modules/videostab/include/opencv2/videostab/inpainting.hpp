@@ -137,6 +137,9 @@ public:
     void setFlowErrorThreshold(float val) { flowErrorThreshold_ = val; }
     float flowErrorThreshold() const { return flowErrorThreshold_; }
 
+    void setDistThreshold(float val) { distThresh_ = val; }
+    float distThresh() const { return distThresh_; }
+
     void setBorderMode(int val) { borderMode_ = val; }
     int borderMode() const { return borderMode_; }
 
@@ -146,6 +149,7 @@ private:
     FastMarchingMethod fmm_;
     Ptr<IDenseOptFlowEstimator> optFlowEstimator_;
     float flowErrorThreshold_;
+    float distThresh_;
     int borderMode_;
 
     Mat frame1_, transformedFrame1_;
@@ -184,7 +188,7 @@ CV_EXPORTS void calcFlowMask(
 
 CV_EXPORTS void completeFrameAccordingToFlow(
         const Mat &flowMask, const Mat &flowX, const Mat &flowY, const Mat &frame1, const Mat &mask1,
-        Mat& frame0, Mat &mask0);
+        float distThresh, Mat& frame0, Mat &mask0);
 
 } // namespace videostab
 } // namespace cv

@@ -57,40 +57,42 @@ void printHelp()
             "      Outliers ratio in motion estimation. The default is 0.5.\n"
             "  --min-inlier-ratio=<float_number>\n"
             "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1,\n"
-            "      but you may want to increase it.\n"
+            "      but you may want to increase it.\n\n"
             "  -r, --radius=<int_number>\n"
             "      Set smoothing radius. The default is 15.\n"
             "  --stdev=<float_number>\n"
-            "      Set smoothing weights standard deviation. The default is sqrt(radius).\n"
+            "      Set smoothing weights standard deviation. The default is sqrt(radius).\n\n"
             "  --deblur=(yes|no)\n"
             "      Do deblurring.\n"
             "  --deblur-sens=<float_number>\n"
-            "      Set deblurring sensitivity (from 0 to +inf). The default is 0.1.\n"
+            "      Set deblurring sensitivity (from 0 to +inf). The default is 0.1.\n\n"
             "  -t, --trim-ratio=<float_number>\n"
-            "      Set trimming ratio (from 0 to 0.5). The default is 0.\n"
+            "      Set trimming ratio (from 0 to 0.5). The default is 0.0.\n"
             "  --est-trim=(yes|no)\n"
             "      Estimate trim ratio automatically. The default is yes (that leads to two passes,\n"
             "      you can turn it off if you want to use one pass only).\n"
             "  --incl-constr=(yes|no)\n"
-            "      Ensure the inclusion constraint is always satisfied. The default is no.\n"
+            "      Ensure the inclusion constraint is always satisfied. The default is no.\n\n"
             "  --border-mode=(replicate|reflect|const)\n"
-            "      Set border extrapolation mode. The default is replicate.\n"
+            "      Set border extrapolation mode. The default is replicate.\n\n"
             "  --mosaic=(yes|no)\n"
             "      Do consistent mosaicing. The default is no.\n"
             "  --mosaic-stdev=<float_number>\n"
-            "      Consistent mosaicing stdev threshold. The default is 10.\n"
+            "      Consistent mosaicing stdev threshold. The default is 10.0.\n\n"
             "  --motion-inpaint=(yes|no)\n"
             "      Do motion inpainting (requires GPU support). The default is no.\n"
+            "  --dist-thresh=<float_number>\n"
+            "      Estimated flow distance threshold for motion inpainting. The default is 5.0.\n\n"
             "  --color-inpaint=(no|average|ns|telea)\n"
             "      Do color inpainting. The defailt is no.\n"
             "  --color-inpaint-radius=<float_number>\n"
-            "      Set color inpainting radius (for ns and telea options only).\n"
+            "      Set color inpainting radius (for ns and telea options only).\n\n"
             "  -o, --output=<file_path>\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
             "  --fps=<int_number>\n"
             "      Set output video FPS explicitely. By default the source FPS is used.\n"
             "  -q, --quiet\n"
-            "      Don't show output video frames.\n"
+            "      Don't show output video frames.\n\n"
             "  -h, --help\n"
             "      Print help.\n"
             "\n";
@@ -117,6 +119,7 @@ int main(int argc, const char **argv)
                 "{ | mosaic | | }"
                 "{ | mosaic-stdev | | }"
                 "{ | motion-inpaint | | }"
+                "{ | dist-thresh | | }"
                 "{ | color-inpaint | no | }"
                 "{ | color-inpaint-radius | | }"
                 "{ o | output | stabilized.avi | }"
@@ -212,7 +215,12 @@ int main(int argc, const char **argv)
             inpainters->pushBack(inpainter);
         }
         if (cmd.get<string>("motion-inpaint") == "yes")
-            inpainters->pushBack(new MotionInpainter());
+        {
+            MotionInpainter *inpainter = new MotionInpainter();
+            if (!cmd.get<string>("dist-thresh").empty())
+                inpainter->setDistThreshold(cmd.get<float>("dist-thresh"));
+            inpainters->pushBack(inpainter);
+        }
         if (!cmd.get<string>("color-inpaint").empty())
         {
             if (cmd.get<string>("color-inpaint") == "average")
@@ -254,7 +262,7 @@ int main(int argc, const char **argv)
     }
     catch (const exception &e)
     {
-        cout << e.what() << endl;
+        cout << "error: " << e.what() << endl;
         stabilizer.release();
         return -1;
     }
