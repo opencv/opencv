@@ -742,7 +742,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
     avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], PIX_FMT_RGB24, video_st->codec->width, video_st->codec->height);
 
-    #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(6<<8)+0)
+    #if LIBAVCODEC_VERSION_INT >= ((52<<16)+(123<<8)+0)
 
                     frame.width  = picture->width;
                     frame.height = picture->height;
