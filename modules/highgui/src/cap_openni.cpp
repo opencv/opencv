@@ -313,8 +313,8 @@ CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
         return;
     }
 
-    std::cout << context.FindExistingNode( XN_NODE_TYPE_DEPTH, depthGenerator ) << std::endl;
-    std::cout << context.FindExistingNode( XN_NODE_TYPE_IMAGE, imageGenerator ) << std::endl;
+    context.FindExistingNode( XN_NODE_TYPE_DEPTH, depthGenerator );
+    context.FindExistingNode( XN_NODE_TYPE_IMAGE, imageGenerator );
 
     if( !readCamerasParams() )
     {
