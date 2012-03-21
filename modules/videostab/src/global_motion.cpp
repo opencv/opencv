@@ -97,7 +97,7 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
     solve(A, b, sol, DECOMP_SVD);
 
     if (rmse)
-        *rmse = norm(A*sol, b, NORM_L2) / sqrt(static_cast<float>(npoints));
+        *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / sqrt(static_cast<double>(npoints)));
 
     Mat_<float> M = Mat::eye(3, 3, CV_32F);
     M(0,0) = M(1,1) = sol(0,0);
@@ -130,7 +130,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
     solve(A, b, sol, DECOMP_SVD);
 
     if (rmse)
-        *rmse = norm(A*sol, b, NORM_L2) / sqrt(static_cast<float>(npoints));
+        *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / sqrt(static_cast<double>(npoints)));
 
     Mat_<float> M = Mat::eye(3, 3, CV_32F);
     for (int i = 0, k = 0; i < 2; ++i)
@@ -157,8 +157,8 @@ Mat estimateGlobalMotionLeastSquares(
 
 
 Mat estimateGlobalMotionRobust(
-        const vector<Point2f> &points0, const vector<Point2f> &points1, int model, const RansacParams &params,
-        float *rmse, int *ninliers)
+        const vector<Point2f> &points0, const vector<Point2f> &points1, int model,
+        const RansacParams &params, float *rmse, int *ninliers)
 {
     CV_Assert(points0.size() == points1.size());
 
@@ -168,7 +168,8 @@ Mat estimateGlobalMotionRobust(
                             estimateGlobMotionLeastSquaresAffine };
 
     const int npoints = static_cast<int>(points0.size());
-    const int niters = static_cast<int>(ceil(log(1 - params.prob) / log(1 - pow(1 - params.eps, params.size))));
+    const int niters = static_cast<int>(ceil(log(1 - params.prob) /
+                                             log(1 - pow(1 - params.eps, params.size))));
 
     RNG rng(0);
     vector<int> indices(params.size);
@@ -248,7 +249,8 @@ Mat estimateGlobalMotionRobust(
 }
 
 
-PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator() : ransacParams_(RansacParams::affine2dMotionStd())
+PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator()
+    : ransacParams_(RansacParams::affine2dMotionStd())
 {
     setDetector(new GoodFeaturesToTrackDetector());
     setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());

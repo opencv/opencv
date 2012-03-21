@@ -60,7 +60,7 @@ public:
     FastMarchingMethod() : inf_(1e6f) {}
 
     template <typename Inpaint>
-    void run(const Mat &mask, Inpaint inpaint);
+    Inpaint run(const Mat &mask, Inpaint inpaint);
 
     Mat distanceMap() const { return dist_; }
 
