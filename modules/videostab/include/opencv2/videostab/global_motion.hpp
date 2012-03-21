@@ -131,13 +131,6 @@ private:
 
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 
-CV_EXPORTS Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio);
-
-CV_EXPORTS float estimateOptimalTrimRatio(const Mat &M, Size size);
-
-// frame1 is non-transformed frame
-CV_EXPORTS float alignementError(const Mat &M, const Mat &frame0, const Mat &mask0, const Mat &frame1);
-
 } // namespace videostab
 } // namespace cv
 

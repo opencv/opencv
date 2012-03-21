@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEOSTAB_MOTION_FILTERING_HPP__
-#define __OPENCV_VIDEOSTAB_MOTION_FILTERING_HPP__
+#ifndef __OPENCV_VIDEOSTAB_MOTION_STABILIZING_HPP__
+#define __OPENCV_VIDEOSTAB_MOTION_STABILIZING_HPP__
 
 #include <vector>
 #include "opencv2/core/core.hpp"
@@ -70,6 +70,10 @@ private:
     int radius_;
     std::vector<float> weight_;
 };
+
+CV_EXPORTS Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio);
+
+CV_EXPORTS float estimateOptimalTrimRatio(const Mat &M, Size size);
 
 } // namespace videostab
 } // namespace

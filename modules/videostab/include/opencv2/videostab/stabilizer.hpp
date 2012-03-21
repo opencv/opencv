@@ -47,7 +47,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/videostab/global_motion.hpp"
-#include "opencv2/videostab/motion_filtering.hpp"
+#include "opencv2/videostab/motion_stabilizing.hpp"
 #include "opencv2/videostab/frame_source.hpp"
 #include "opencv2/videostab/log.hpp"
 #include "opencv2/videostab/inpainting.hpp"

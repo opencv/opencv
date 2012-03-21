@@ -102,8 +102,8 @@ void WeightingDeblurer::deblur(int idx, Mat &frame)
             {
                 for (int x = 0; x < frame.cols; ++x)
                 {
-                    int x1 = static_cast<int>(M(0,0)*x + M(0,1)*y + M(0,2));
-                    int y1 = static_cast<int>(M(1,0)*x + M(1,1)*y + M(1,2));
+                    int x1 = cvRound(M(0,0)*x + M(0,1)*y + M(0,2));
+                    int y1 = cvRound(M(1,0)*x + M(1,1)*y + M(1,2));
 
                     if (x1 >= 0 && x1 < neighbor.cols && y1 >= 0 && y1 < neighbor.rows)
                     {

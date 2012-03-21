@@ -188,6 +188,37 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 }
 
 
+static float alignementError(
+        const Mat &M, const Mat &frame0, const Mat &mask0, const Mat &frame1)
+{
+    CV_Assert(frame0.type() == CV_8UC3 && frame1.type() == CV_8UC3);
+    CV_Assert(mask0.type() == CV_8U && mask0.size() == frame0.size());
+    CV_Assert(frame0.size() == frame1.size());
+    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
+
+    Mat_<uchar> mask0_(mask0);
+    Mat_<float> M_(M);
+    float err = 0;
+
+    for (int y0 = 0; y0 < frame0.rows; ++y0)
+    {
+        for (int x0 = 0; x0 < frame0.cols; ++x0)
+        {
+            if (mask0_(y0,x0))
+            {
+                int x1 = cvRound(M_(0,0)*x0 + M_(0,1)*y0 + M_(0,2));
+                int y1 = cvRound(M_(1,0)*x0 + M_(1,1)*y0 + M_(1,2));
+                if (y1 >= 0 && y1 < frame1.rows && x1 >= 0 && x1 < frame1.cols)
+                    err += std::abs(intensity(frame1.at<Point3_<uchar> >(y1,x1)) -
+                                    intensity(frame0.at<Point3_<uchar> >(y0,x0)));
+            }
+        }
+    }
+
+    return err;
+}
+
+
 class MotionInpaintBody
 {
 public:
