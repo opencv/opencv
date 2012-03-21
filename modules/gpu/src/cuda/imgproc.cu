@@ -46,16 +46,16 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace imgproc 
+    namespace imgproc
     {
         /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
 
         texture<uchar4, 2> tex_meanshift;
 
-        __device__ short2 do_mean_shift(int x0, int y0, unsigned char* out, 
-                                        size_t out_step, int cols, int rows, 
+        __device__ short2 do_mean_shift(int x0, int y0, unsigned char* out,
+                                        size_t out_step, int cols, int rows,
                                         int sp, int sr, int maxIter, float eps)
         {
             int isr2 = sr*sr;
@@ -78,7 +78,7 @@ namespace cv { namespace gpu { namespace device
                 {
                     int rowCount = 0;
                     for( int x = minx; x <= maxx; x++ )
-                    {                    
+                    {
                         uchar4 t = tex2D( tex_meanshift, x, y );
 
                         int norm2 = (t.x - c.x) * (t.x - c.x) + (t.y - c.y) * (t.y - c.y) + (t.z - c.z) * (t.z - c.z);
@@ -128,16 +128,16 @@ namespace cv { namespace gpu { namespace device
                 do_mean_shift(x0, y0, out, out_step, cols, rows, sp, sr, maxIter, eps);
         }
 
-        __global__ void meanshiftproc_kernel(unsigned char* outr, size_t outrstep, 
-                                             unsigned char* outsp, size_t outspstep, 
-                                             int cols, int rows, 
+        __global__ void meanshiftproc_kernel(unsigned char* outr, size_t outrstep,
+                                             unsigned char* outsp, size_t outspstep,
+                                             int cols, int rows,
                                              int sp, int sr, int maxIter, float eps)
         {
             int x0 = blockIdx.x * blockDim.x + threadIdx.x;
             int y0 = blockIdx.y * blockDim.y + threadIdx.y;
 
             if( x0 < cols && y0 < rows )
-            {            
+            {
                 int basesp = (blockIdx.y * blockDim.y + threadIdx.y) * outspstep + (blockIdx.x * blockDim.x + threadIdx.x) * 2 * sizeof(short);
                 *(short2*)(outsp + basesp) = do_mean_shift(x0, y0, outr, outrstep, cols, rows, sp, sr, maxIter, eps);
             }
@@ -159,10 +159,10 @@ namespace cv { namespace gpu { namespace device
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
 
-            //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
+            //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );
         }
 
-        void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream) 
+        void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream)
         {
             dim3 grid(1, 1, 1);
             dim3 threads(32, 8, 1);
@@ -178,14 +178,14 @@ namespace cv { namespace gpu { namespace device
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
 
-            //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
+            //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );
         }
 
         /////////////////////////////////// drawColorDisp ///////////////////////////////////////////////
 
         template <typename T>
         __device__ unsigned int cvtPixel(T d, int ndisp, float S = 1, float V = 1)
-        {        
+        {
             unsigned int H = ((ndisp-d) * 240)/ndisp;
 
             unsigned int hi = (H/60) % 6;
@@ -195,7 +195,7 @@ namespace cv { namespace gpu { namespace device
             float t = V * (1 - (1 - f) * S);
 
             float3 res;
-            
+
             if (hi == 0) //R = V,	G = t,	B = p
             {
                 res.x = p;
@@ -208,15 +208,15 @@ namespace cv { namespace gpu { namespace device
                 res.x = p;
                 res.y = V;
                 res.z = q;
-            }        
-            
+            }
+
             if (hi == 2) // R = p,	G = V,	B = t
             {
                 res.x = t;
                 res.y = V;
                 res.z = p;
             }
-                
+
             if (hi == 3) // R = p,	G = q,	B = V
             {
                 res.x = V;
@@ -242,15 +242,15 @@ namespace cv { namespace gpu { namespace device
             const unsigned int r = (unsigned int)(::max(0.f, ::min(res.z, 1.f)) * 255.f);
             const unsigned int a = 255U;
 
-            return (a << 24) + (r << 16) + (g << 8) + b;    
-        } 
+            return (a << 24) + (r << 16) + (g << 8) + b;
+        }
 
         __global__ void drawColorDisp(uchar* disp, size_t disp_step, uchar* out_image, size_t out_step, int width, int height, int ndisp)
         {
             const int x = (blockIdx.x * blockDim.x + threadIdx.x) << 2;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if(x < width && y < height) 
+            if(x < width && y < height)
             {
                 uchar4 d4 = *(uchar4*)(disp + y * disp_step + x);
 
@@ -259,7 +259,7 @@ namespace cv { namespace gpu { namespace device
                 res.y = cvtPixel(d4.y, ndisp);
                 res.z = cvtPixel(d4.z, ndisp);
                 res.w = cvtPixel(d4.w, ndisp);
-                        
+
                 uint4* line = (uint4*)(out_image + y * out_step);
                 line[x >> 2] = res;
             }
@@ -270,12 +270,12 @@ namespace cv { namespace gpu { namespace device
             const int x = (blockIdx.x * blockDim.x + threadIdx.x) << 1;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if(x < width && y < height) 
+            if(x < width && y < height)
             {
                 short2 d2 = *(short2*)(disp + y * disp_step + x);
 
                 uint2 res;
-                res.x = cvtPixel(d2.x, ndisp);            
+                res.x = cvtPixel(d2.x, ndisp);
                 res.y = cvtPixel(d2.y, ndisp);
 
                 uint2* line = (uint2*)(out_image + y * out_step);
@@ -290,12 +290,12 @@ namespace cv { namespace gpu { namespace device
             dim3 grid(1, 1, 1);
             grid.x = divUp(src.cols, threads.x << 2);
             grid.y = divUp(src.rows, threads.y);
-             
+
             drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step, dst.data, dst.step, src.cols, src.rows, ndisp);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() ); 
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream)
@@ -304,10 +304,10 @@ namespace cv { namespace gpu { namespace device
             dim3 grid(1, 1, 1);
             grid.x = divUp(src.cols, threads.x << 1);
             grid.y = divUp(src.rows, threads.y);
-             
+
             drawColorDisp<<<grid, threads, 0, stream>>>(src.data, src.step / sizeof(short), dst.data, dst.step, src.cols, src.rows, ndisp);
             cudaSafeCall( cudaGetLastError() );
-            
+
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
@@ -318,7 +318,7 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T>
         __global__ void reprojectImageTo3D(const T* disp, size_t disp_step, float* xyzw, size_t xyzw_step, int rows, int cols)
-        {        
+        {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -328,7 +328,7 @@ namespace cv { namespace gpu { namespace device
                 float qx = cq[1] * y + cq[3], qy = cq[5] * y + cq[7];
                 float qz = cq[9] * y + cq[11], qw = cq[13] * y + cq[15];
 
-                qx += x * cq[0]; 
+                qx += x * cq[0];
                 qy += x * cq[4];
                 qz += x * cq[8];
                 qw += x * cq[12];
@@ -457,7 +457,7 @@ namespace cv { namespace gpu { namespace device
             bindTexture(&harrisDxTex, Dx);
             bindTexture(&harrisDyTex, Dy);
 
-            switch (border_type) 
+            switch (border_type)
             {
             case BORDER_REFLECT101_GPU:
                 cornerHarris_kernel<<<grid, block, 0, stream>>>(block_size, k, dst, BrdRowReflect101<void>(Dx.cols), BrdColReflect101<void>(Dx.rows));
@@ -565,7 +565,7 @@ namespace cv { namespace gpu { namespace device
         {
             dim3 block(32, 8);
             dim3 grid(divUp(Dx.cols, block.x), divUp(Dx.rows, block.y));
-            
+
             bindTexture(&minEigenValDxTex, Dx);
             bindTexture(&minEigenValDyTex, Dy);
 
@@ -630,10 +630,10 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c)
         {
-            const int x = blockIdx.x * blockDim.x + threadIdx.x;    
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;    
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < c.cols && y < c.rows) 
+            if (x < c.cols && y < c.rows)
             {
                 c.ptr(y)[x] = cuCmulf(a.ptr(y)[x], b.ptr(y)[x]);
             }
@@ -658,10 +658,10 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void mulSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c)
         {
-            const int x = blockIdx.x * blockDim.x + threadIdx.x;    
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;    
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < c.cols && y < c.rows) 
+            if (x < c.cols && y < c.rows)
             {
                 c.ptr(y)[x] = cuCmulf(a.ptr(y)[x], cuConjf(b.ptr(y)[x]));
             }
@@ -689,7 +689,7 @@ namespace cv { namespace gpu { namespace device
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < c.cols && y < c.rows) 
+            if (x < c.cols && y < c.rows)
             {
                 cufftComplex v = cuCmulf(a.ptr(y)[x], b.ptr(y)[x]);
                 c.ptr(y)[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
@@ -718,7 +718,7 @@ namespace cv { namespace gpu { namespace device
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < c.cols && y < c.rows) 
+            if (x < c.cols && y < c.rows)
             {
                 cufftComplex v = cuCmulf(a.ptr(y)[x], cuConjf(b.ptr(y)[x]));
                 c.ptr(y)[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
@@ -736,7 +736,7 @@ namespace cv { namespace gpu { namespace device
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
-        }    
+        }
 
         //////////////////////////////////////////////////////////////////////////
         // buildWarpMaps
@@ -842,7 +842,7 @@ namespace cv { namespace gpu { namespace device
 
 
         void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
-                                const float k_rinv[9], const float r_kinv[9], const float t[3], 
+                                const float k_rinv[9], const float r_kinv[9], const float t[3],
                                 float scale, cudaStream_t stream)
         {
             cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
@@ -911,27 +911,28 @@ namespace cv { namespace gpu { namespace device
 
         __constant__ float c_filter2DKernel[FILTER2D_MAX_KERNEL_SIZE * FILTER2D_MAX_KERNEL_SIZE];
 
-        texture<float, cudaTextureType2D, cudaReadModeElementType> filter2DTex(0, cudaFilterModePoint, cudaAddressModeBorder);
+        texture<float, cudaTextureType2D, cudaReadModeElementType> filter2DTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
-        __global__ void filter2D(int ofsX, int ofsY, DevMem2Df dst, const int kWidth, const int kHeight, const int anchorX, const int anchorY)
+        __global__ void filter2D(int ofsX, int ofsY, PtrStepf dst, const int kWidth, const int kHeight, const int anchorX, const int anchorY, const BrdReflect101<float> brd)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x >= dst.cols || y >= dst.rows)
+            if (x > brd.last_col || y > brd.last_row)
                 return;
 
             float res = 0;
-
-            const int baseX = ofsX + x - anchorX;
-            const int baseY = ofsY + y - anchorY;
-
             int kInd = 0;
 
             for (int i = 0; i < kHeight; ++i)
             {
                 for (int j = 0; j < kWidth; ++j)
-                    res += tex2D(filter2DTex, baseX + j, baseY + i) * c_filter2DKernel[kInd++];
+                {
+                    const int srcX = ofsX + brd.idx_col(x - anchorX + j);
+                    const int srcY = ofsY + brd.idx_row(y - anchorY + i);
+
+                    res += tex2D(filter2DTex, srcX, srcY) * c_filter2DKernel[kInd++];
+                }
             }
 
             dst.ptr(y)[x] = res;
@@ -946,7 +947,9 @@ namespace cv { namespace gpu { namespace device
 
             bindTexture(&filter2DTex, src);
 
-            filter2D<<<grid, block, 0, stream>>>(ofsX, ofsY, dst, kWidth, kHeight, anchorX, anchorY);
+            BrdReflect101<float> brd(dst.rows, dst.cols);
+
+            filter2D<<<grid, block, 0, stream>>>(ofsX, ofsY, dst, kWidth, kHeight, anchorX, anchorY, brd);
             cudaSafeCall(cudaGetLastError());
 
             if (stream == 0)

@@ -119,7 +119,7 @@ namespace
     {
         int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
         if (nDivisor) *nDivisor = scale;
-        
+
         Mat temp(kernel.size(), type);
         kernel.convertTo(temp, type, scale);
         Mat cont_krnl = temp.reshape(1, 1);
@@ -134,7 +134,7 @@ namespace
         }
 
         gpu_krnl.upload(cont_krnl);
-    } 
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,7 +144,7 @@ namespace
 {
     struct Filter2DEngine_GPU : public FilterEngine_GPU
     {
-        Filter2DEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int srcType_, int dstType_) : 
+        Filter2DEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int srcType_, int dstType_) :
             filter2D(filter2D_), srcType(srcType_), dstType(dstType_)
         {}
 
@@ -189,9 +189,9 @@ namespace
 {
     struct SeparableFilterEngine_GPU : public FilterEngine_GPU
     {
-        SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter_, const Ptr<BaseColumnFilter_GPU>& columnFilter_, 
+        SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter_, const Ptr<BaseColumnFilter_GPU>& columnFilter_,
                                   int srcType_, int bufType_, int dstType_) :
-            rowFilter(rowFilter_), columnFilter(columnFilter_), 
+            rowFilter(rowFilter_), columnFilter(columnFilter_),
             srcType(srcType_), bufType(bufType_), dstType(dstType_)
         {
             ksize = Size(rowFilter->ksize, columnFilter->ksize);
@@ -199,11 +199,11 @@ namespace
 
             pbuf = &buf;
         }
-        
-        SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter_, const Ptr<BaseColumnFilter_GPU>& columnFilter_, 
+
+        SeparableFilterEngine_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter_, const Ptr<BaseColumnFilter_GPU>& columnFilter_,
                                   int srcType_, int bufType_, int dstType_,
                                   GpuMat& buf_) :
-            rowFilter(rowFilter_), columnFilter(columnFilter_), 
+            rowFilter(rowFilter_), columnFilter(columnFilter_),
             srcType(srcType_), bufType(bufType_), dstType(dstType_)
         {
             ksize = Size(rowFilter->ksize, columnFilter->ksize);
@@ -235,7 +235,7 @@ namespace
             GpuMat srcROI = src(roi);
             GpuMat dstROI = dst(roi);
             GpuMat bufROI = (*pbuf)(roi);
-            
+
             (*rowFilter)(srcROI, bufROI, stream);
             (*columnFilter)(bufROI, dstROI, stream);
         }
@@ -253,13 +253,13 @@ namespace
     };
 }
 
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter, 
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter,
     const Ptr<BaseColumnFilter_GPU>& columnFilter, int srcType, int bufType, int dstType)
 {
     return Ptr<FilterEngine_GPU>(new SeparableFilterEngine_GPU(rowFilter, columnFilter, srcType, bufType, dstType));
 }
 
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter, 
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter,
     const Ptr<BaseColumnFilter_GPU>& columnFilter, int srcType, int bufType, int dstType, GpuMat& buf)
 {
     return Ptr<FilterEngine_GPU>(new SeparableFilterEngine_GPU(rowFilter, columnFilter, srcType, bufType, dstType, buf));
@@ -284,7 +284,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( nppiSumWindowRow_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+            nppSafeCall( nppiSumWindowRow_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
 
             if (stream == 0)
@@ -318,7 +318,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( nppiSumWindowColumn_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+            nppSafeCall( nppiSumWindowColumn_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
 
             if (stream == 0)
@@ -341,7 +341,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getColumnSumFilter_GPU(int sumType, int dstTy
 
 namespace
 {
-    typedef NppStatus (*nppFilterBox_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI, 
+    typedef NppStatus (*nppFilterBox_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI,
         NppiSize oMaskSize, NppiPoint oAnchor);
 
     struct NPPBoxFilter : public BaseFilter_GPU
@@ -363,8 +363,8 @@ namespace
             cudaStream_t stream = StreamAccessor::getStream(s);
 
             NppStreamHandler h(stream);
-            
-            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step),
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, oKernelSize, oAnchor) );
 
             if (stream == 0)
@@ -379,7 +379,7 @@ Ptr<BaseFilter_GPU> cv::gpu::getBoxFilter_GPU(int srcType, int dstType, const Si
 {
     static const nppFilterBox_t nppFilterBox_callers[] = {0, nppiFilterBox_8u_C1R, 0, 0, nppiFilterBox_8u_C4R};
 
-    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType); 
+    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType);
 
     normalizeAnchor(anchor, ksize);
 
@@ -413,7 +413,7 @@ namespace
 
     struct NPPMorphFilter : public BaseFilter_GPU
     {
-        NPPMorphFilter(const Size& ksize_, const Point& anchor_, const GpuMat& kernel_, nppMorfFilter_t func_) : 
+        NPPMorphFilter(const Size& ksize_, const Point& anchor_, const GpuMat& kernel_, nppMorfFilter_t func_) :
             BaseFilter_GPU(ksize_, anchor_), kernel(kernel_), func(func_) {}
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
@@ -432,7 +432,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step),
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, kernel.ptr<Npp8u>(), oKernelSize, oAnchor) );
 
             if (stream == 0)
@@ -446,19 +446,19 @@ namespace
 
 Ptr<BaseFilter_GPU> cv::gpu::getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, Point anchor)
 {
-    static const nppMorfFilter_t nppMorfFilter_callers[2][5] = 
+    static const nppMorfFilter_t nppMorfFilter_callers[2][5] =
     {
         {0, nppiErode_8u_C1R, 0, 0, nppiErode_8u_C4R },
         {0, nppiDilate_8u_C1R, 0, 0, nppiDilate_8u_C4R }
     };
- 
-    CV_Assert(op == MORPH_ERODE || op == MORPH_DILATE);   
-    CV_Assert(type == CV_8UC1 || type == CV_8UC4); 
-        
+
+    CV_Assert(op == MORPH_ERODE || op == MORPH_DILATE);
+    CV_Assert(type == CV_8UC1 || type == CV_8UC4);
+
     GpuMat gpu_krnl;
     normalizeKernel(kernel, gpu_krnl);
     normalizeAnchor(anchor, ksize);
-    
+
     return Ptr<BaseFilter_GPU>(new NPPMorphFilter(ksize, anchor, gpu_krnl, nppMorfFilter_callers[op][CV_MAT_CN(type)]));
 }
 
@@ -466,13 +466,13 @@ namespace
 {
     struct MorphologyFilterEngine_GPU : public FilterEngine_GPU
     {
-        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int type_, int iters_) : 
+        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int type_, int iters_) :
             filter2D(filter2D_), type(type_), iters(iters_)
         {
             pbuf = &buf;
         }
 
-        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int type_, int iters_, GpuMat& buf_) : 
+        MorphologyFilterEngine_GPU(const Ptr<BaseFilter_GPU>& filter2D_, int type_, int iters_, GpuMat& buf_) :
             filter2D(filter2D_), type(type_), iters(iters_)
         {
             pbuf = &buf_;
@@ -576,7 +576,7 @@ namespace
         else if (iterations > 1 && countNonZero(_kernel) == _kernel.rows * _kernel.cols)
         {
             anchor = Point(anchor.x * iterations, anchor.y * iterations);
-            kernel = getStructuringElement(MORPH_RECT, Size(ksize.width + iterations * (ksize.width - 1), 
+            kernel = getStructuringElement(MORPH_RECT, Size(ksize.width + iterations * (ksize.width - 1),
                 ksize.height + iterations * (ksize.height - 1)), anchor);
             iterations = 1;
         }
@@ -659,7 +659,7 @@ void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& ke
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear Filter
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
@@ -669,12 +669,12 @@ namespace cv { namespace gpu { namespace device
 
 namespace
 {
-    typedef NppStatus (*nppFilter2D_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI, 
+    typedef NppStatus (*nppFilter2D_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI,
         const Npp32s * pKernel, NppiSize oKernelSize, NppiPoint oAnchor, Npp32s nDivisor);
 
     struct NPPLinearFilter : public BaseFilter_GPU
     {
-        NPPLinearFilter(const Size& ksize_, const Point& anchor_, const GpuMat& kernel_, Npp32s nDivisor_, nppFilter2D_t func_) : 
+        NPPLinearFilter(const Size& ksize_, const Point& anchor_, const GpuMat& kernel_, Npp32s nDivisor_, nppFilter2D_t func_) :
             BaseFilter_GPU(ksize_, anchor_), kernel(kernel_), nDivisor(nDivisor_), func(func_) {}
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
@@ -692,8 +692,8 @@ namespace
             cudaStream_t stream = StreamAccessor::getStream(s);
 
             NppStreamHandler h(stream);
-                                  
-            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 
+
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz,
                 kernel.ptr<Npp32s>(), oKernelSize, oAnchor, nDivisor) );
 
             if (stream == 0)
@@ -707,9 +707,9 @@ namespace
 
     struct GpuLinearFilter : public BaseFilter_GPU
     {
-        GpuLinearFilter(Size ksize_, Point anchor_, const GpuMat& kernel_) : 
+        GpuLinearFilter(Size ksize_, Point anchor_, const GpuMat& kernel_) :
             BaseFilter_GPU(ksize_, anchor_), kernel(kernel_) {}
-            
+
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
         {
             using namespace cv::gpu::device::imgproc;
@@ -745,7 +745,7 @@ Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int srcType, int dstType, const
     else
     {
         static const nppFilter2D_t cppFilter2D_callers[] = {0, nppiFilter_8u_C1R, 0, 0, nppiFilter_8u_C4R};
-    
+
         GpuMat gpu_krnl;
         int nDivisor;
         normalizeKernel(kernel, gpu_krnl, CV_32S, &nDivisor, true);
@@ -753,8 +753,8 @@ Ptr<BaseFilter_GPU> cv::gpu::getLinearFilter_GPU(int srcType, int dstType, const
         normalizeAnchor(anchor, ksize);
 
         return Ptr<BaseFilter_GPU>(new NPPLinearFilter(ksize, anchor, gpu_krnl, nDivisor, cppFilter2D_callers[CV_MAT_CN(srcType)]));
-    }    
-}    
+    }
+}
 
 Ptr<FilterEngine_GPU> cv::gpu::createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Point& anchor)
 {
@@ -780,7 +780,7 @@ void cv::gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& ke
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Separable Linear Filter
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace row_filter
     {
@@ -797,14 +797,14 @@ namespace cv { namespace gpu { namespace device
 
 namespace
 {
-    typedef NppStatus (*nppFilter1D_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oROI, 
+    typedef NppStatus (*nppFilter1D_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oROI,
         const Npp32s * pKernel, Npp32s nMaskSize, Npp32s nAnchor, Npp32s nDivisor);
 
     typedef void (*gpuFilter1D_t)(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
 
     struct NppLinearRowFilter : public BaseRowFilter_GPU
     {
-        NppLinearRowFilter(int ksize_, int anchor_, const GpuMat& kernel_, Npp32s nDivisor_, nppFilter1D_t func_) : 
+        NppLinearRowFilter(int ksize_, int anchor_, const GpuMat& kernel_, Npp32s nDivisor_, nppFilter1D_t func_) :
             BaseRowFilter_GPU(ksize_, anchor_), kernel(kernel_), nDivisor(nDivisor_), func(func_) {}
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
@@ -817,7 +817,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz,
                 kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
 
             if (stream == 0)
@@ -831,7 +831,7 @@ namespace
 
     struct GpuLinearRowFilter : public BaseRowFilter_GPU
     {
-        GpuLinearRowFilter(int ksize_, int anchor_, const Mat& kernel_, gpuFilter1D_t func_, int brd_type_) : 
+        GpuLinearRowFilter(int ksize_, int anchor_, const Mat& kernel_, gpuFilter1D_t func_, int brd_type_) :
             BaseRowFilter_GPU(ksize_, anchor_), kernel(kernel_), func(func_), brd_type(brd_type_) {}
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
@@ -852,7 +852,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     using namespace ::cv::gpu::device::row_filter;
 
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R};
-    
+
     if ((bufType == srcType) && (srcType == CV_8UC1 || srcType == CV_8UC4))
     {
         CV_Assert(borderType == BORDER_CONSTANT);
@@ -867,7 +867,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
         return Ptr<BaseRowFilter_GPU>(new NppLinearRowFilter(ksize, anchor, gpu_row_krnl, nDivisor,
             nppFilter1D_callers[CV_MAT_CN(srcType)]));
     }
-    
+
     CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
@@ -914,7 +914,7 @@ namespace
 {
     struct NppLinearColumnFilter : public BaseColumnFilter_GPU
     {
-        NppLinearColumnFilter(int ksize_, int anchor_, const GpuMat& kernel_, Npp32s nDivisor_, nppFilter1D_t func_) : 
+        NppLinearColumnFilter(int ksize_, int anchor_, const GpuMat& kernel_, Npp32s nDivisor_, nppFilter1D_t func_) :
             BaseColumnFilter_GPU(ksize_, anchor_), kernel(kernel_), nDivisor(nDivisor_), func(func_) {}
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
@@ -927,7 +927,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz,
                 kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
 
             if (stream == 0)
@@ -941,7 +941,7 @@ namespace
 
     struct GpuLinearColumnFilter : public BaseColumnFilter_GPU
     {
-        GpuLinearColumnFilter(int ksize_, int anchor_, const Mat& kernel_, gpuFilter1D_t func_, int brd_type_) : 
+        GpuLinearColumnFilter(int ksize_, int anchor_, const Mat& kernel_, gpuFilter1D_t func_, int brd_type_) :
             BaseColumnFilter_GPU(ksize_, anchor_), kernel(kernel_), func(func_), brd_type(brd_type_) {}
 
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
@@ -963,7 +963,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     using namespace ::cv::gpu::device::column_filter;
 
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R};
-    
+
     if ((bufType == dstType) && (bufType == CV_8UC1 || bufType == CV_8UC4))
     {
         CV_Assert(borderType == BORDER_CONSTANT);
@@ -975,14 +975,14 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
         int ksize = gpu_col_krnl.cols;
         normalizeAnchor(anchor, ksize);
 
-        return Ptr<BaseColumnFilter_GPU>(new NppLinearColumnFilter(ksize, anchor, gpu_col_krnl, nDivisor, 
+        return Ptr<BaseColumnFilter_GPU>(new NppLinearColumnFilter(ksize, anchor, gpu_col_krnl, nDivisor,
             nppFilter1D_callers[CV_MAT_CN(bufType)]));
     }
-    
+
     CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
-   
+
     CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC4 || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1);
 
     CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(dstType) == CV_MAT_CN(bufType));
@@ -1021,7 +1021,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, cont_krnl, func, gpuBorderType));
 }
 
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, const Mat& columnKernel, 
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, const Mat& columnKernel,
     const Point& anchor, int rowBorderType, int columnBorderType)
 {
     if (columnBorderType < 0)
@@ -1037,7 +1037,7 @@ Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int 
     return createSeparableFilter_GPU(rowFilter, columnFilter, srcType, bufType, dstType);
 }
 
-Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, const Mat& columnKernel, GpuMat& buf, 
+Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel, const Mat& columnKernel, GpuMat& buf,
     const Point& anchor, int rowBorderType, int columnBorderType)
 {
     if (columnBorderType < 0)
@@ -1053,7 +1053,7 @@ Ptr<FilterEngine_GPU> cv::gpu::createSeparableLinearFilter_GPU(int srcType, int 
     return createSeparableFilter_GPU(rowFilter, columnFilter, srcType, bufType, dstType, buf);
 }
 
-void cv::gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, 
+void cv::gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY,
                           Point anchor, int rowBorderType, int columnBorderType)
 {
     if( ddepth < 0 )
@@ -1065,7 +1065,7 @@ void cv::gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat&
     f->apply(src, dst, Rect(0, 0, src.cols, src.rows));
 }
 
-void cv::gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, GpuMat& buf, 
+void cv::gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, GpuMat& buf,
                           Point anchor, int rowBorderType, int columnBorderType,
                           Stream& stream)
 {
@@ -1115,7 +1115,7 @@ void cv::gpu::Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, 
         else
             ky *= scale;
     }
-    
+
     sepFilter2D(src, dst, ddepth, kx, ky, buf, Point(-1,-1), rowBorderType, columnBorderType, stream);
 }
 
@@ -1155,7 +1155,7 @@ void cv::gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize, d
     Mat kernel(3, 3, CV_32S, (void*)K[ksize == 3]);
     if (scale != 1)
         kernel *= scale;
-    
+
     filter2D(src, dst, ddepth, kernel, Point(-1,-1), stream);
 }
 
@@ -1163,7 +1163,7 @@ void cv::gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize, d
 // Gaussian Filter
 
 Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2, int rowBorderType, int columnBorderType)
-{        
+{
     int depth = CV_MAT_DEPTH(type);
 
     if (sigma2 <= 0)
@@ -1191,7 +1191,7 @@ Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int type, Size ksize, do
 }
 
 Ptr<FilterEngine_GPU> cv::gpu::createGaussianFilter_GPU(int type, Size ksize, GpuMat& buf, double sigma1, double sigma2, int rowBorderType, int columnBorderType)
-{        
+{
     int depth = CV_MAT_DEPTH(type);
 
     if (sigma2 <= 0)
@@ -1227,7 +1227,7 @@ void cv::gpu::GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double si
     }
 
     dst.create(src.size(), src.type());
-    
+
     Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2, rowBorderType, columnBorderType);
     f->apply(src, dst, Rect(0, 0, src.cols, src.rows));
 }
@@ -1241,7 +1241,7 @@ void cv::gpu::GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, GpuMat& b
     }
 
     dst.create(src.size(), src.type());
-    
+
     Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, buf, sigma1, sigma2, rowBorderType, columnBorderType);
     f->apply(src, dst, Rect(0, 0, src.cols, src.rows), stream);
 }
@@ -1251,7 +1251,7 @@ void cv::gpu::GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, GpuMat& b
 
 namespace
 {
-    typedef NppStatus (*nppFilterRank_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI, 
+    typedef NppStatus (*nppFilterRank_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oSizeROI,
         NppiSize oMaskSize, NppiPoint oAnchor);
 
     struct NPPRankFilter : public BaseFilter_GPU
@@ -1273,7 +1273,7 @@ namespace
             cudaStream_t stream = StreamAccessor::getStream(s);
 
             NppStreamHandler h(stream);
-            
+
             nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, oKernelSize, oAnchor) );
 
             if (stream == 0)
@@ -1288,7 +1288,7 @@ Ptr<BaseFilter_GPU> cv::gpu::getMaxFilter_GPU(int srcType, int dstType, const Si
 {
     static const nppFilterRank_t nppFilterRank_callers[] = {0, nppiFilterMax_8u_C1R, 0, 0, nppiFilterMax_8u_C4R};
 
-    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType); 
+    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType);
 
     normalizeAnchor(anchor, ksize);
 
@@ -1299,7 +1299,7 @@ Ptr<BaseFilter_GPU> cv::gpu::getMinFilter_GPU(int srcType, int dstType, const Si
 {
     static const nppFilterRank_t nppFilterRank_callers[] = {0, nppiFilterMin_8u_C1R, 0, 0, nppiFilterMin_8u_C4R};
 
-    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType); 
+    CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC4) && dstType == srcType);
 
     normalizeAnchor(anchor, ksize);
 

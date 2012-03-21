@@ -70,7 +70,7 @@ namespace
     {
         typedef void (*func_t)(const cv::Mat& src, const cv::Mat& xmap, const cv::Mat& ymap, cv::Mat& dst, int borderType, cv::Scalar borderVal);
 
-        static const func_t nearest_funcs[] = 
+        static const func_t nearest_funcs[] =
         {
             remapImpl<unsigned char, NearestInterpolator>,
             remapImpl<signed char, NearestInterpolator>,
@@ -80,7 +80,7 @@ namespace
             remapImpl<float, NearestInterpolator>
         };
 
-        static const func_t linear_funcs[] = 
+        static const func_t linear_funcs[] =
         {
             remapImpl<unsigned char, LinearInterpolator>,
             remapImpl<signed char, LinearInterpolator>,
@@ -90,7 +90,7 @@ namespace
             remapImpl<float, LinearInterpolator>
         };
 
-        static const func_t cubic_funcs[] = 
+        static const func_t cubic_funcs[] =
         {
             remapImpl<unsigned char, CubicInterpolator>,
             remapImpl<signed char, CubicInterpolator>,
@@ -109,7 +109,7 @@ namespace
 ///////////////////////////////////////////////////////////////////
 // Test
 
-PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, Border, UseRoi)
+PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -171,7 +171,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Remap, testing::Combine(
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
-    testing::Values(Border(cv::BORDER_REFLECT101), Border(cv::BORDER_REPLICATE), Border(cv::BORDER_CONSTANT), Border(cv::BORDER_REFLECT), Border(cv::BORDER_WRAP)),
+    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT), BorderType(cv::BORDER_WRAP)),
     WHOLE_SUBMAT));
 
 #endif // HAVE_CUDA

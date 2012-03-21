@@ -41,9 +41,11 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_CUDA
+namespace {
 
-PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, int, Border, UseRoi)
+IMPLEMENT_PARAM_CLASS(Border, int)
+
+PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, Border, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -80,11 +82,19 @@ TEST_P(CopyMakeBorder, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CopyMakeBorder, testing::Combine(
-    ALL_DEVICES, 
+    ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(1, 10, 50),
-    testing::Values(Border(cv::BORDER_REFLECT101), Border(cv::BORDER_REPLICATE), Border(cv::BORDER_CONSTANT), Border(cv::BORDER_REFLECT), Border(cv::BORDER_WRAP)),
+    testing::Values(MatType(CV_8UC1),
+                    MatType(CV_8UC3),
+                    MatType(CV_8UC4),
+                    MatType(CV_16UC1),
+                    MatType(CV_16UC3),
+                    MatType(CV_16UC4),
+                    MatType(CV_32FC1),
+                    MatType(CV_32FC3),
+                    MatType(CV_32FC4)),
+    testing::Values(Border(1), Border(10), Border(50)),
+    ALL_BORDER_TYPES,
     WHOLE_SUBMAT));
 
-#endif // HAVE_CUDA
+} // namespace

@@ -42,37 +42,66 @@
 #ifndef __OPENCV_TEST_UTILITY_HPP__
 #define __OPENCV_TEST_UTILITY_HPP__
 
+#include <vector>
+#include <string>
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/ts_perf.hpp"
+
+//////////////////////////////////////////////////////////////////////
+// random generators
+
 int randomInt(int minVal, int maxVal);
 double randomDouble(double minVal, double maxVal);
 cv::Size randomSize(int minVal, int maxVal);
 cv::Scalar randomScalar(double minVal, double maxVal);
 cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 255.0);
 
+//////////////////////////////////////////////////////////////////////
+// GpuMat create
+
 cv::gpu::GpuMat createMat(cv::Size size, int type, bool useRoi = false);
 cv::gpu::GpuMat loadMat(const cv::Mat& m, bool useRoi = false);
 
-void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
+//////////////////////////////////////////////////////////////////////
+// Image load
+
+//! read image from testdata folder
+cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
+
+//! read image from testdata folder and convert it to specified type
+cv::Mat readImageType(const std::string& fname, int type);
+
+//////////////////////////////////////////////////////////////////////
+// Gpu devices
 
 //! return true if device supports specified feature and gpu module was built with support the feature.
 bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
 
 //! return all devices compatible with current gpu module build.
 const std::vector<cv::gpu::DeviceInfo>& devices();
+
 //! return all devices compatible with current gpu module build which support specified feature.
 std::vector<cv::gpu::DeviceInfo> devices(cv::gpu::FeatureSet feature);
 
-//! read image from testdata folder.
-cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
-cv::Mat readImageType(const std::string& fname, int type);
+#define ALL_DEVICES testing::ValuesIn(devices())
+#define DEVICES(feature) testing::ValuesIn(devices(feature))
+
+//////////////////////////////////////////////////////////////////////
+// Additional assertion
+
+cv::Mat getMat(cv::InputArray arr);
 
 double checkNorm(cv::InputArray m1, cv::InputArray m2);
 
-#define EXPECT_MAT_NEAR(mat1, mat2, eps) \
-    { \
-        ASSERT_EQ(mat1.type(), mat2.type()); \
-        ASSERT_EQ(mat1.size(), mat2.size()); \
-        EXPECT_LE(checkNorm(mat1, mat2), eps); \
-    }
+void minMaxLocGold(const cv::Mat& src, double* minVal_, double* maxVal_ = 0, cv::Point* minLoc_ = 0, cv::Point* maxLoc_ = 0, const cv::Mat& mask = cv::Mat());
+
+testing::AssertionResult assertMatNear(const char* expr1, const char* expr2, const char* eps_expr, cv::InputArray m1, cv::InputArray m2, double eps);
+
+#define EXPECT_MAT_NEAR(m1, m2, eps) EXPECT_PRED_FORMAT3(assertMatNear, m1, m2, eps)
+#define ASSERT_MAT_NEAR(m1, m2, eps) ASSERT_PRED_FORMAT3(assertMatNear, m1, m2, eps)
 
 #define EXPECT_SCALAR_NEAR(s1, s2, eps) \
     { \
@@ -80,6 +109,37 @@ double checkNorm(cv::InputArray m1, cv::InputArray m2);
         EXPECT_NEAR(s1[1], s2[1], eps); \
         EXPECT_NEAR(s1[2], s2[2], eps); \
         EXPECT_NEAR(s1[3], s2[3], eps); \
+    }
+#define ASSERT_SCALAR_NEAR(s1, s2, eps) \
+    { \
+        ASSERT_NEAR(s1[0], s2[0], eps); \
+        ASSERT_NEAR(s1[1], s2[1], eps); \
+        ASSERT_NEAR(s1[2], s2[2], eps); \
+        ASSERT_NEAR(s1[3], s2[3], eps); \
+    }
+
+#define EXPECT_POINT2_NEAR(p1, p2, eps) \
+    { \
+        EXPECT_NEAR(p1.x, p2.x, eps); \
+        EXPECT_NEAR(p1.y, p2.y, eps); \
+    }
+#define ASSERT_POINT2_NEAR(p1, p2, eps) \
+    { \
+        ASSERT_NEAR(p1.x, p2.x, eps); \
+        ASSERT_NEAR(p1.y, p2.y, eps); \
+    }
+
+#define EXPECT_POINT3_NEAR(p1, p2, eps) \
+    { \
+        EXPECT_NEAR(p1.x, p2.x, eps); \
+        EXPECT_NEAR(p1.y, p2.y, eps); \
+        EXPECT_NEAR(p1.z, p2.z, eps); \
+    }
+#define ASSERT_POINT3_NEAR(p1, p2, eps) \
+    { \
+        ASSERT_NEAR(p1.x, p2.x, eps); \
+        ASSERT_NEAR(p1.y, p2.y, eps); \
+        ASSERT_NEAR(p1.z, p2.z, eps); \
     }
 
 double checkSimilarity(cv::InputArray m1, cv::InputArray m2);
@@ -90,94 +150,35 @@ double checkSimilarity(cv::InputArray m1, cv::InputArray m2);
         ASSERT_EQ(mat1.size(), mat2.size()); \
         EXPECT_LE(checkSimilarity(mat1, mat2), eps); \
     }
+#define ASSERT_MAT_SIMILAR(mat1, mat2, eps) \
+    { \
+        ASSERT_EQ(mat1.type(), mat2.type()); \
+        ASSERT_EQ(mat1.size(), mat2.size()); \
+        ASSERT_LE(checkSimilarity(mat1, mat2), eps); \
+    }
+
+//////////////////////////////////////////////////////////////////////
+// Helper structs for value-parameterized tests
+
+#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+#define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
 namespace cv { namespace gpu
 {
     void PrintTo(const DeviceInfo& info, std::ostream* os);
 }}
 
-using perf::MatDepth;
-using perf::MatType;
-
-//! return vector with types from specified range.
-std::vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end);
-
-//! return vector with all types (depth: CV_8U-CV_64F, channels: 1-4).
-const std::vector<MatType>& all_types();
-
-class UseRoi
-{
-public:
-    inline UseRoi(bool val = false) : val_(val) {}
-
-    inline operator bool() const { return val_; }
-
-private:
-    bool val_;
-};
-void PrintTo(const UseRoi& useRoi, std::ostream* os);
-#define WHOLE testing::Values(UseRoi(false))
-#define SUBMAT testing::Values(UseRoi(true))
-#define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
-
-class Inverse
-{
-public:
-    inline Inverse(bool val = false) : val_(val) {}
-
-    inline operator bool() const { return val_; }
-
-private:
-    bool val_;
-};
-void PrintTo(const Inverse& useRoi, std::ostream* os);
-#define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
-
-CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
-#define ALL_CMP_CODES testing::Values(CmpCode(cv::CMP_EQ), CmpCode(cv::CMP_NE), CmpCode(cv::CMP_GT), CmpCode(cv::CMP_GE), CmpCode(cv::CMP_LT), CmpCode(cv::CMP_LE))
-
-CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv::NORM_RELATIVE, cv::NORM_MINMAX)
-
-enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
-CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
-#define ALL_FLIP_CODES testing::Values(FlipCode(FLIP_BOTH), FlipCode(FLIP_X), FlipCode(FLIP_Y))
-
-CV_ENUM(ReduceCode, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
-#define ALL_REDUCE_CODES testing::Values(ReduceCode(CV_REDUCE_SUM), ReduceCode(CV_REDUCE_AVG), ReduceCode(CV_REDUCE_MAX), ReduceCode(CV_REDUCE_MIN))
-
-CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
-#define ALL_GEMM_FLAGS testing::Values(GemmFlags(0), GemmFlags(cv::GEMM_1_T), GemmFlags(cv::GEMM_2_T), GemmFlags(cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T | cv::GEMM_3_T))
-
-CV_ENUM(DistType, cv::gpu::BruteForceMatcher_GPU_base::L1Dist, cv::gpu::BruteForceMatcher_GPU_base::L2Dist)
-
-CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_TOPHAT, cv::MORPH_BLACKHAT)
-
-CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
-#define ALL_THRESH_OPS testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))
-
-CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC)
-
-CV_ENUM(Border, cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
-
-CV_FLAGS(WarpFlags, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::WARP_INVERSE_MAP)
-
-CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
-
-CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
-
-#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
-
-#define GET_PARAM(k) std::tr1::get< k >(GetParam())
-
-#define ALL_DEVICES testing::ValuesIn(devices())
-#define DEVICES(feature) testing::ValuesIn(devices(feature))
-
 #define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
 
-#define ALL_DEPTH testing::Values(MatDepth(CV_8U), MatDepth(CV_8S), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32S), MatDepth(CV_32F), MatDepth(CV_64F))
-#define ALL_TYPES testing::ValuesIn(all_types())
-#define TYPES(depth_start, depth_end, cn_start, cn_end) testing::ValuesIn(types(depth_start, depth_end, cn_start, cn_end))
+// Depth
 
+using perf::MatDepth;
+
+//! return vector with depths from specified range.
+std::vector<MatDepth> depths(int depth_start, int depth_end);
+
+#define ALL_DEPTH testing::Values(MatDepth(CV_8U), MatDepth(CV_8S), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32S), MatDepth(CV_32F), MatDepth(CV_64F))
+#define DEPTHS(depth_start, depth_end) testing::ValuesIn(depths(depth_start, depth_end))
 #define DEPTH_PAIRS testing::Values(std::make_pair(MatDepth(CV_8U), MatDepth(CV_8U)),   \
                                     std::make_pair(MatDepth(CV_8U), MatDepth(CV_16U)),  \
                                     std::make_pair(MatDepth(CV_8U), MatDepth(CV_16S)),  \
@@ -203,5 +204,89 @@ CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX
                                     std::make_pair(MatDepth(CV_32F), MatDepth(CV_64F)), \
                                                                                         \
                                     std::make_pair(MatDepth(CV_64F), MatDepth(CV_64F)))
+
+// Type
+
+using perf::MatType;
+
+//! return vector with types from specified range.
+std::vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end);
+
+//! return vector with all types (depth: CV_8U-CV_64F, channels: 1-4).
+const std::vector<MatType>& all_types();
+
+#define ALL_TYPES testing::ValuesIn(all_types())
+#define TYPES(depth_start, depth_end, cn_start, cn_end) testing::ValuesIn(types(depth_start, depth_end, cn_start, cn_end))
+
+// ROI
+
+class UseRoi
+{
+public:
+    inline UseRoi(bool val = false) : val_(val) {}
+
+    inline operator bool() const { return val_; }
+
+private:
+    bool val_;
+};
+
+void PrintTo(const UseRoi& useRoi, std::ostream* os);
+
+#define WHOLE testing::Values(UseRoi(false))
+#define SUBMAT testing::Values(UseRoi(true))
+#define WHOLE_SUBMAT testing::Values(UseRoi(false), UseRoi(true))
+
+// Direct/Inverse
+
+class Inverse
+{
+public:
+    inline Inverse(bool val = false) : val_(val) {}
+
+    inline operator bool() const { return val_; }
+
+private:
+    bool val_;
+};
+void PrintTo(const Inverse& useRoi, std::ostream* os);
+#define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
+
+// Param class
+
+#define IMPLEMENT_PARAM_CLASS(name, type) \
+    class name \
+    { \
+    public: \
+        name ( type arg = type ()) : val_(arg) {} \
+        operator type () const {return val_;} \
+    private: \
+        type val_; \
+    }; \
+    inline void PrintTo( name param, std::ostream* os) \
+    { \
+        *os << #name <<  "(" << static_cast< type >(param) << ")"; \
+    }
+
+IMPLEMENT_PARAM_CLASS(Channels, int)
+
+#define ALL_CHANNELS testing::Values(Channels(1), Channels(2), Channels(3), Channels(4))
+#define IMAGE_CHANNELS testing::Values(Channels(1), Channels(3), Channels(4))
+
+// Flags and enums
+
+CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv::NORM_RELATIVE, cv::NORM_MINMAX)
+
+CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC)
+
+CV_ENUM(BorderType, cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
+#define ALL_BORDER_TYPES testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT), BorderType(cv::BORDER_WRAP))
+
+CV_FLAGS(WarpFlags, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::WARP_INVERSE_MAP)
+
+//////////////////////////////////////////////////////////////////////
+// Other
+
+void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
 
 #endif // __OPENCV_TEST_UTILITY_HPP__

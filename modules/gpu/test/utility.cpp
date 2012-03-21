@@ -47,6 +47,9 @@ using namespace cv::gpu;
 using namespace cvtest;
 using namespace testing;
 
+//////////////////////////////////////////////////////////////////////
+// random generators
+
 int randomInt(int minVal, int maxVal)
 {
     RNG& rng = TS::ptr()->get_rng();
@@ -74,6 +77,9 @@ Mat randomMat(Size size, int type, double minVal, double maxVal)
     return randomMat(TS::ptr()->get_rng(), size, type, minVal, maxVal, false);
 }
 
+//////////////////////////////////////////////////////////////////////
+// GpuMat create
+
 cv::gpu::GpuMat createMat(cv::Size size, int type, bool useRoi)
 {
     Size size0 = size;
@@ -98,6 +104,30 @@ GpuMat loadMat(const Mat& m, bool useRoi)
     d_m.upload(m);
     return d_m;
 }
+
+//////////////////////////////////////////////////////////////////////
+// Image load
+
+Mat readImage(const string& fileName, int flags)
+{
+    return imread(string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
+}
+
+Mat readImageType(const string& fname, int type)
+{
+    Mat src = readImage(fname, CV_MAT_CN(type) == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
+    if (CV_MAT_CN(type) == 4)
+    {
+        Mat temp;
+        cvtColor(src, temp, cv::COLOR_BGR2BGRA);
+        swap(src, temp);
+    }
+    src.convertTo(src, CV_MAT_DEPTH(type));
+    return src;
+}
+
+//////////////////////////////////////////////////////////////////////
+// Gpu devices
 
 bool supportFeature(const DeviceInfo& info, FeatureSet feature)
 {
@@ -150,6 +180,170 @@ vector<DeviceInfo> devices(FeatureSet feature)
     return devs_filtered;
 }
 
+//////////////////////////////////////////////////////////////////////
+// Additional assertion
+
+Mat getMat(InputArray arr)
+{
+    if (arr.kind() == _InputArray::GPU_MAT)
+    {
+        Mat m;
+        arr.getGpuMat().download(m);
+        return m;
+    }
+
+    return arr.getMat();
+}
+
+double checkNorm(InputArray m1, const InputArray m2)
+{
+    return norm(getMat(m1), getMat(m2), NORM_INF);
+}
+
+void minMaxLocGold(const Mat& src, double* minVal_, double* maxVal_, Point* minLoc_, Point* maxLoc_, const Mat& mask)
+{
+    if (src.depth() != CV_8S)
+    {
+        minMaxLoc(src, minVal_, maxVal_, minLoc_, maxLoc_, mask);
+        return;
+    }
+
+    // OpenCV's minMaxLoc doesn't support CV_8S type
+    double minVal = numeric_limits<double>::max();
+    Point minLoc(-1, -1);
+
+    double maxVal = -numeric_limits<double>::max();
+    Point maxLoc(-1, -1);
+
+    for (int y = 0; y < src.rows; ++y)
+    {
+        const schar* src_row = src.ptr<signed char>(y);
+        const uchar* mask_row = mask.empty() ? 0 : mask.ptr<unsigned char>(y);
+
+        for (int x = 0; x < src.cols; ++x)
+        {
+            if (!mask_row || mask_row[x])
+            {
+                schar val = src_row[x];
+
+                if (val < minVal)
+                {
+                    minVal = val;
+                    minLoc = cv::Point(x, y);
+                }
+
+                if (val > maxVal)
+                {
+                    maxVal = val;
+                    maxLoc = cv::Point(x, y);
+                }
+            }
+        }
+    }
+
+    if (minVal_) *minVal_ = minVal;
+    if (maxVal_) *maxVal_ = maxVal;
+
+    if (minLoc_) *minLoc_ = minLoc;
+    if (maxLoc_) *maxLoc_ = maxLoc;
+}
+
+namespace
+{
+    template <typename T, typename OutT> string printMatValImpl(const Mat& m, Point p)
+    {
+        const int cn = m.channels();
+
+        ostringstream ostr;
+        ostr << "(";
+
+        p.x /= cn;
+
+        ostr << static_cast<OutT>(m.at<T>(p.y, p.x * cn));
+        for (int c = 1; c < m.channels(); ++c)
+        {
+            ostr << ", " << static_cast<OutT>(m.at<T>(p.y, p.x * cn + c));
+        }
+        ostr << ")";
+
+        return ostr.str();
+    }
+
+    string printMatVal(const Mat& m, Point p)
+    {
+        typedef string (*func_t)(const Mat& m, Point p);
+
+        static const func_t funcs[] =
+        {
+            printMatValImpl<uchar, int>, printMatValImpl<schar, int>, printMatValImpl<ushort, int>, printMatValImpl<short, int>,
+            printMatValImpl<int, int>, printMatValImpl<float, float>, printMatValImpl<double, double>
+        };
+
+        return funcs[m.depth()](m, p);
+    }
+}
+
+testing::AssertionResult assertMatNear(const char* expr1, const char* expr2, const char* eps_expr, cv::InputArray m1_, cv::InputArray m2_, double eps)
+{
+    Mat m1 = getMat(m1_);
+    Mat m2 = getMat(m2_);
+
+    if (m1.size() != m2.size())
+    {
+        return AssertionFailure() << "Matrices \"" << expr1 << "\" and \"" << expr2 << "\" have different sizes : \""
+                                  << expr1 << "\" [" << PrintToString(m1.size()) << "] vs \""
+                                  << expr2 << "\" [" << PrintToString(m2.size()) << "]";
+    }
+
+    if (m1.type() != m2.type())
+    {
+        return AssertionFailure() << "Matrices \"" << expr1 << "\" and \"" << expr2 << "\" have different types : \""
+                                  << expr1 << "\" [" << PrintToString(MatType(m1.type())) << "] vs \""
+                                  << expr2 << "\" [" << PrintToString(MatType(m2.type())) << "]";
+    }
+
+    Mat diff;
+    absdiff(m1.reshape(1), m2.reshape(1), diff);
+
+    double maxVal = 0.0;
+    Point maxLoc;
+    minMaxLocGold(diff, 0, &maxVal, 0, &maxLoc);
+
+    if (maxVal > eps)
+    {
+        return AssertionFailure() << "The max difference between matrices \"" << expr1 << "\" and \"" << expr2
+                                  << "\" is " << maxVal << " at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ")"
+                                  << ", which exceeds \"" << eps_expr << "\", where \""
+                                  << expr1 << "\" at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ") evaluates to " << printMatVal(m1, maxLoc) << ", \""
+                                  << expr2 << "\" at (" << maxLoc.y << ", " << maxLoc.x / m1.channels() << ") evaluates to " << printMatVal(m2, maxLoc) << ", \""
+                                  << eps_expr << "\" evaluates to " << eps;
+    }
+
+    return AssertionSuccess();
+}
+
+double checkSimilarity(InputArray m1, InputArray m2)
+{
+    Mat diff;
+    matchTemplate(getMat(m1), getMat(m2), diff, CV_TM_CCORR_NORMED);
+    return std::abs(diff.at<float>(0, 0) - 1.f);
+}
+
+//////////////////////////////////////////////////////////////////////
+// Helper structs for value-parameterized tests
+
+vector<MatDepth> depths(int depth_start, int depth_end)
+{
+    vector<MatDepth> v;
+
+    v.reserve((depth_end - depth_start + 1));
+
+    for (int depth = depth_start; depth <= depth_end; ++depth)
+        v.push_back(depth);
+
+    return v;
+}
+
 vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
 {
     vector<MatType> v;
@@ -174,37 +368,25 @@ const vector<MatType>& all_types()
     return v;
 }
 
-Mat readImage(const string& fileName, int flags)
+void cv::gpu::PrintTo(const DeviceInfo& info, ostream* os)
 {
-    return imread(string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
+    (*os) << info.name();
 }
 
-Mat readImageType(const string& fname, int type)
+void PrintTo(const UseRoi& useRoi, std::ostream* os)
 {
-    Mat src = readImage(fname, CV_MAT_CN(type) == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
-    if (CV_MAT_CN(type) == 4)
-    {
-        Mat temp;
-        cvtColor(src, temp, cv::COLOR_BGR2BGRA);
-        swap(src, temp);
-    }
-    src.convertTo(src, CV_MAT_DEPTH(type));
-    return src;
+    if (useRoi)
+        (*os) << "sub matrix";
+    else
+        (*os) << "whole matrix";
 }
 
-namespace
+void PrintTo(const Inverse& inverse, std::ostream* os)
 {
-    Mat getMat(InputArray arr)
-    {
-        if (arr.kind() == _InputArray::GPU_MAT)
-        {
-            Mat m;
-            arr.getGpuMat().download(m);
-            return m;
-        }
-
-        return arr.getMat();
-    }
+    if (inverse)
+        (*os) << "inverse";
+    else
+        (*os) << "direct";
 }
 
 void showDiff(InputArray gold_, InputArray actual_, double eps)
@@ -225,37 +407,4 @@ void showDiff(InputArray gold_, InputArray actual_, double eps)
     imshow("diff", diff);
 
     waitKey();
-}
-
-double checkNorm(InputArray m1, const InputArray m2)
-{
-    return norm(getMat(m1), getMat(m2), NORM_INF);
-}
-
-double checkSimilarity(InputArray m1, InputArray m2)
-{
-    Mat diff;
-    matchTemplate(getMat(m1), getMat(m2), diff, CV_TM_CCORR_NORMED);
-    return std::abs(diff.at<float>(0, 0) - 1.f);
-}
-
-void cv::gpu::PrintTo(const DeviceInfo& info, ostream* os)
-{
-    (*os) << info.name();
-}
-
-void PrintTo(const UseRoi& useRoi, std::ostream* os)
-{
-    if (useRoi)
-        (*os) << "sub matrix";
-    else
-        (*os) << "whole matrix";
-}
-
-void PrintTo(const Inverse& inverse, std::ostream* os)
-{
-    if (inverse)
-        (*os) << "inverse";
-    else
-        (*os) << "direct";
 }

@@ -41,10 +41,12 @@
 
 #include "precomp.hpp"
 
+namespace {
+
 ////////////////////////////////////////////////////////////////////////////////
 // Add_Array
 
-PARAM_TEST_CASE(Add_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, int, UseRoi)
+PARAM_TEST_CASE(Add_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, Channels, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -90,7 +92,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Add_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
-    testing::Values(1, 2, 3, 4),
+    ALL_CHANNELS,
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +141,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Add_Scalar, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Subtract_Array
 
-PARAM_TEST_CASE(Subtract_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, int, UseRoi)
+PARAM_TEST_CASE(Subtract_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, Channels, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -185,7 +187,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Subtract_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
-    testing::Values(1, 2, 3, 4),
+    ALL_CHANNELS,
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -234,7 +236,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Subtract_Scalar, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Multiply_Array
 
-PARAM_TEST_CASE(Multiply_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, int, UseRoi)
+PARAM_TEST_CASE(Multiply_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, Channels, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -279,7 +281,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Multiply_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
-    testing::Values(1, 2, 3, 4),
+    ALL_CHANNELS,
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -425,7 +427,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Multiply_Scalar, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Divide_Array
 
-PARAM_TEST_CASE(Divide_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, int, UseRoi)
+PARAM_TEST_CASE(Divide_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, Channels, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -470,7 +472,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Divide_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
-    testing::Values(1, 2, 3, 4),
+    ALL_CHANNELS,
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -794,31 +796,28 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Sqr, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Sqrt
 
-namespace
+template <typename T> void sqrtImpl(const cv::Mat& src, cv::Mat& dst)
 {
-    template <typename T> void sqrtImpl(const cv::Mat& src, cv::Mat& dst)
+    dst.create(src.size(), src.type());
+
+    for (int y = 0; y < src.rows; ++y)
     {
-        dst.create(src.size(), src.type());
-
-        for (int y = 0; y < src.rows; ++y)
-        {
-            for (int x = 0; x < src.cols; ++x)
-                dst.at<T>(y, x) = static_cast<T>(std::sqrt(static_cast<float>(src.at<T>(y, x))));
-        }
+        for (int x = 0; x < src.cols; ++x)
+            dst.at<T>(y, x) = static_cast<T>(std::sqrt(static_cast<float>(src.at<T>(y, x))));
     }
+}
 
-    void sqrtGold(const cv::Mat& src, cv::Mat& dst)
+void sqrtGold(const cv::Mat& src, cv::Mat& dst)
+{
+    typedef void (*func_t)(const cv::Mat& src, cv::Mat& dst);
+
+    const func_t funcs[] =
     {
-        typedef void (*func_t)(const cv::Mat& src, cv::Mat& dst);
+        sqrtImpl<uchar>, sqrtImpl<schar>, sqrtImpl<ushort>, sqrtImpl<short>,
+        sqrtImpl<int>, sqrtImpl<float>
+    };
 
-        const func_t funcs[] =
-        {
-            sqrtImpl<uchar>, sqrtImpl<schar>, sqrtImpl<ushort>, sqrtImpl<short>,
-            sqrtImpl<int>, sqrtImpl<float>
-        };
-
-        funcs[src.depth()](src, dst);
-    }
+    funcs[src.depth()](src, dst);
 }
 
 PARAM_TEST_CASE(Sqrt, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
@@ -864,31 +863,28 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Sqrt, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Log
 
-namespace
+template <typename T> void logImpl(const cv::Mat& src, cv::Mat& dst)
 {
-    template <typename T> void logImpl(const cv::Mat& src, cv::Mat& dst)
+    dst.create(src.size(), src.type());
+
+    for (int y = 0; y < src.rows; ++y)
     {
-        dst.create(src.size(), src.type());
-
-        for (int y = 0; y < src.rows; ++y)
-        {
-            for (int x = 0; x < src.cols; ++x)
-                dst.at<T>(y, x) = static_cast<T>(std::log(static_cast<float>(src.at<T>(y, x))));
-        }
+        for (int x = 0; x < src.cols; ++x)
+            dst.at<T>(y, x) = static_cast<T>(std::log(static_cast<float>(src.at<T>(y, x))));
     }
+}
 
-    void logGold(const cv::Mat& src, cv::Mat& dst)
+void logGold(const cv::Mat& src, cv::Mat& dst)
+{
+    typedef void (*func_t)(const cv::Mat& src, cv::Mat& dst);
+
+    const func_t funcs[] =
     {
-        typedef void (*func_t)(const cv::Mat& src, cv::Mat& dst);
+        logImpl<uchar>, logImpl<schar>, logImpl<ushort>, logImpl<short>,
+        logImpl<int>, logImpl<float>
+    };
 
-        const func_t funcs[] =
-        {
-            logImpl<uchar>, logImpl<schar>, logImpl<ushort>, logImpl<short>,
-            logImpl<int>, logImpl<float>
-        };
-
-        funcs[src.depth()](src, dst);
-    }
+    funcs[src.depth()](src, dst);
 }
 
 PARAM_TEST_CASE(Log, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
@@ -973,6 +969,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Exp, testing::Combine(
 
 ////////////////////////////////////////////////////////////////////////////////
 // compare
+
+CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
+#define ALL_CMP_CODES testing::Values(CmpCode(cv::CMP_EQ), CmpCode(cv::CMP_NE), CmpCode(cv::CMP_GT), CmpCode(cv::CMP_GE), CmpCode(cv::CMP_LT), CmpCode(cv::CMP_LE))
 
 PARAM_TEST_CASE(Compare, cv::gpu::DeviceInfo, cv::Size, MatDepth, CmpCode, UseRoi)
 {
@@ -1088,7 +1087,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Bitwise_Array, testing::Combine(
 //////////////////////////////////////////////////////////////////////////////
 // Bitwise_Scalar
 
-PARAM_TEST_CASE(Bitwise_Scalar, cv::gpu::DeviceInfo, cv::Size, MatDepth, int)
+PARAM_TEST_CASE(Bitwise_Scalar, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1150,43 +1149,40 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Bitwise_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32S)),
-    testing::Values(1, 3, 4)));
+    IMAGE_CHANNELS));
 
 //////////////////////////////////////////////////////////////////////////////
 // RShift
 
-namespace
+template <typename T> void rhiftImpl(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
 {
-    template <typename T> void rhiftImpl(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
+    const int cn = src.channels();
+
+    dst.create(src.size(), src.type());
+
+    for (int y = 0; y < src.rows; ++y)
     {
-        const int cn = src.channels();
-
-        dst.create(src.size(), src.type());
-
-        for (int y = 0; y < src.rows; ++y)
+        for (int x = 0; x < src.cols; ++x)
         {
-            for (int x = 0; x < src.cols; ++x)
-            {
-                for (int c = 0; c < cn; ++c)
-                    dst.at<T>(y, x * cn + c) = src.at<T>(y, x * cn + c) >> val.val[c];
-            }
+            for (int c = 0; c < cn; ++c)
+                dst.at<T>(y, x * cn + c) = src.at<T>(y, x * cn + c) >> val.val[c];
         }
-    }
-
-    void rhiftGold(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
-    {
-        typedef void (*func_t)(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst);
-
-        const func_t funcs[] =
-        {
-            rhiftImpl<uchar>, rhiftImpl<schar>, rhiftImpl<ushort>, rhiftImpl<short>, rhiftImpl<int>
-        };
-
-        funcs[src.depth()](src, val, dst);
     }
 }
 
-PARAM_TEST_CASE(RShift, cv::gpu::DeviceInfo, cv::Size, MatDepth, int, UseRoi)
+void rhiftGold(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
+{
+    typedef void (*func_t)(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst);
+
+    const func_t funcs[] =
+    {
+        rhiftImpl<uchar>, rhiftImpl<schar>, rhiftImpl<ushort>, rhiftImpl<short>, rhiftImpl<int>
+    };
+
+    funcs[src.depth()](src, val, dst);
+}
+
+PARAM_TEST_CASE(RShift, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1229,44 +1225,41 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, RShift, testing::Combine(
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32S)),
-    testing::Values(1, 3, 4),
+    IMAGE_CHANNELS,
     WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
 // LShift
 
-namespace
+template <typename T> void lhiftImpl(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
 {
-    template <typename T> void lhiftImpl(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
+    const int cn = src.channels();
+
+    dst.create(src.size(), src.type());
+
+    for (int y = 0; y < src.rows; ++y)
     {
-        const int cn = src.channels();
-
-        dst.create(src.size(), src.type());
-
-        for (int y = 0; y < src.rows; ++y)
+        for (int x = 0; x < src.cols; ++x)
         {
-            for (int x = 0; x < src.cols; ++x)
-            {
-                for (int c = 0; c < cn; ++c)
-                    dst.at<T>(y, x * cn + c) = src.at<T>(y, x * cn + c) << val.val[c];
-            }
+            for (int c = 0; c < cn; ++c)
+                dst.at<T>(y, x * cn + c) = src.at<T>(y, x * cn + c) << val.val[c];
         }
-    }
-
-    void lhiftGold(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
-    {
-        typedef void (*func_t)(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst);
-
-        const func_t funcs[] =
-        {
-            lhiftImpl<uchar>, lhiftImpl<schar>, lhiftImpl<ushort>, lhiftImpl<short>, lhiftImpl<int>
-        };
-
-        funcs[src.depth()](src, val, dst);
     }
 }
 
-PARAM_TEST_CASE(LShift, cv::gpu::DeviceInfo, cv::Size, MatDepth, int, UseRoi)
+void lhiftGold(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst)
+{
+    typedef void (*func_t)(const cv::Mat& src, cv::Scalar_<int> val, cv::Mat& dst);
+
+    const func_t funcs[] =
+    {
+        lhiftImpl<uchar>, lhiftImpl<schar>, lhiftImpl<ushort>, lhiftImpl<short>, lhiftImpl<int>
+    };
+
+    funcs[src.depth()](src, val, dst);
+}
+
+PARAM_TEST_CASE(LShift, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1305,7 +1298,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, LShift, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32S)),
-    testing::Values(1, 3, 4),
+    IMAGE_CHANNELS,
     WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1411,7 +1404,7 @@ PARAM_TEST_CASE(Pow, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
 
 TEST_P(Pow, Accuracy)
 {
-    cv::Mat src = randomMat(size, depth, 0.0, 100.0);
+    cv::Mat src = randomMat(size, depth, 0.0, 10.0);
     double power = randomDouble(2.0, 4.0);
 
     if (src.depth() < CV_32F)
@@ -1423,7 +1416,7 @@ TEST_P(Pow, Accuracy)
     cv::Mat dst_gold;
     cv::pow(src, power, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 0.0 : 1e-6);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 0.0 : 1e-1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Pow, testing::Combine(
@@ -1485,6 +1478,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, AddWeighted, testing::Combine(
 
 //////////////////////////////////////////////////////////////////////////////
 // GEMM
+
+CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
+#define ALL_GEMM_FLAGS testing::Values(GemmFlags(0), GemmFlags(cv::GEMM_1_T), GemmFlags(cv::GEMM_2_T), GemmFlags(cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T | cv::GEMM_3_T))
 
 PARAM_TEST_CASE(GEMM, cv::gpu::DeviceInfo, cv::Size, MatType, GemmFlags, UseRoi)
 {
@@ -1578,6 +1574,10 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Transpose, testing::Combine(
 
 ////////////////////////////////////////////////////////////////////////////////
 // Flip
+
+enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
+CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
+#define ALL_FLIP_CODES testing::Values(FlipCode(FLIP_BOTH), FlipCode(FLIP_X), FlipCode(FLIP_Y))
 
 PARAM_TEST_CASE(Flip, cv::gpu::DeviceInfo, cv::Size, MatType, FlipCode, UseRoi)
 {
@@ -1772,7 +1772,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Magnitude, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Phase
 
-PARAM_TEST_CASE(Phase, cv::gpu::DeviceInfo, cv::Size, bool, UseRoi)
+IMPLEMENT_PARAM_CLASS(AngleInDegrees, bool)
+
+PARAM_TEST_CASE(Phase, cv::gpu::DeviceInfo, cv::Size, AngleInDegrees, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1807,13 +1809,13 @@ TEST_P(Phase, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Phase, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Bool(),
+    testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // CartToPolar
 
-PARAM_TEST_CASE(CartToPolar, cv::gpu::DeviceInfo, cv::Size, bool, UseRoi)
+PARAM_TEST_CASE(CartToPolar, cv::gpu::DeviceInfo, cv::Size, AngleInDegrees, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1851,13 +1853,13 @@ TEST_P(CartToPolar, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, CartToPolar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Bool(),
+    testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
 // polarToCart
 
-PARAM_TEST_CASE(PolarToCart, cv::gpu::DeviceInfo, cv::Size, bool, UseRoi)
+PARAM_TEST_CASE(PolarToCart, cv::gpu::DeviceInfo, cv::Size, AngleInDegrees, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1895,7 +1897,7 @@ TEST_P(PolarToCart, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, PolarToCart, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Bool(),
+    testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2026,84 +2028,81 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, NormDiff, testing::Combine(
 //////////////////////////////////////////////////////////////////////////////
 // Sum
 
-namespace
+template <typename T>
+cv::Scalar absSumImpl(const cv::Mat& src)
 {
-    template <typename T>
-    cv::Scalar absSumImpl(const cv::Mat& src)
+    const int cn = src.channels();
+
+    cv::Scalar sum = cv::Scalar::all(0);
+
+    for (int y = 0; y < src.rows; ++y)
     {
-        const int cn = src.channels();
-
-        cv::Scalar sum = cv::Scalar::all(0);
-
-        for (int y = 0; y < src.rows; ++y)
+        for (int x = 0; x < src.cols; ++x)
         {
-            for (int x = 0; x < src.cols; ++x)
+            for (int c = 0; c < cn; ++c)
+                sum[c] += std::abs(src.at<T>(y, x * cn + c));
+        }
+    }
+
+    return sum;
+}
+
+cv::Scalar absSumGold(const cv::Mat& src)
+{
+    typedef cv::Scalar (*func_t)(const cv::Mat& src);
+
+    static const func_t funcs[] =
+    {
+        absSumImpl<uchar>,
+        absSumImpl<schar>,
+        absSumImpl<ushort>,
+        absSumImpl<short>,
+        absSumImpl<int>,
+        absSumImpl<float>,
+        absSumImpl<double>
+    };
+
+    return funcs[src.depth()](src);
+}
+
+template <typename T>
+cv::Scalar sqrSumImpl(const cv::Mat& src)
+{
+    const int cn = src.channels();
+
+    cv::Scalar sum = cv::Scalar::all(0);
+
+    for (int y = 0; y < src.rows; ++y)
+    {
+        for (int x = 0; x < src.cols; ++x)
+        {
+            for (int c = 0; c < cn; ++c)
             {
-                for (int c = 0; c < cn; ++c)
-                    sum[c] += std::abs(src.at<T>(y, x * cn + c));
+                const T val = src.at<T>(y, x * cn + c);
+                sum[c] += val * val;
             }
         }
-
-        return sum;
     }
 
-    cv::Scalar absSumGold(const cv::Mat& src)
+    return sum;
+}
+
+cv::Scalar sqrSumGold(const cv::Mat& src)
+{
+    typedef cv::Scalar (*func_t)(const cv::Mat& src);
+
+    static const func_t funcs[] =
     {
-        typedef cv::Scalar (*func_t)(const cv::Mat& src);
+        sqrSumImpl<uchar>,
+        sqrSumImpl<schar>,
+        sqrSumImpl<ushort>,
+        sqrSumImpl<short>,
+        sqrSumImpl<int>,
+        sqrSumImpl<float>,
+        sqrSumImpl<double>
+    };
 
-        static const func_t funcs[] =
-        {
-            absSumImpl<uchar>,
-            absSumImpl<schar>,
-            absSumImpl<ushort>,
-            absSumImpl<short>,
-            absSumImpl<int>,
-            absSumImpl<float>,
-            absSumImpl<double>
-        };
-
-        return funcs[src.depth()](src);
-    }
-
-    template <typename T>
-    cv::Scalar sqrSumImpl(const cv::Mat& src)
-    {
-        const int cn = src.channels();
-
-        cv::Scalar sum = cv::Scalar::all(0);
-
-        for (int y = 0; y < src.rows; ++y)
-        {
-            for (int x = 0; x < src.cols; ++x)
-            {
-                for (int c = 0; c < cn; ++c)
-                {
-                    const T val = src.at<T>(y, x * cn + c);
-                    sum[c] += val * val;
-                }
-            }
-        }
-
-        return sum;
-    }
-
-    cv::Scalar sqrSumGold(const cv::Mat& src)
-    {
-        typedef cv::Scalar (*func_t)(const cv::Mat& src);
-
-        static const func_t funcs[] =
-        {
-            sqrSumImpl<uchar>,
-            sqrSumImpl<schar>,
-            sqrSumImpl<ushort>,
-            sqrSumImpl<short>,
-            sqrSumImpl<int>,
-            sqrSumImpl<float>,
-            sqrSumImpl<double>
-        };
-
-        return funcs[src.depth()](src);
-    }
+    return funcs[src.depth()](src);
 }
 
 PARAM_TEST_CASE(Sum, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
@@ -2163,57 +2162,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Sum, testing::Combine(
 
 ////////////////////////////////////////////////////////////////////////////////
 // MinMax
-
-namespace
-{
-    void minMaxLocGold(const cv::Mat& src, double* minVal_, double* maxVal_ = 0, cv::Point* minLoc_ = 0, cv::Point* maxLoc_ = 0, const cv::Mat& mask = cv::Mat())
-    {
-        if (src.depth() != CV_8S)
-        {
-            cv::minMaxLoc(src, minVal_, maxVal_, minLoc_, maxLoc_, mask);
-            return;
-        }
-
-        // OpenCV's minMaxLoc doesn't support CV_8S type
-        double minVal = std::numeric_limits<double>::max();
-        cv::Point minLoc(-1, -1);
-
-        double maxVal = -std::numeric_limits<double>::max();
-        cv::Point maxLoc(-1, -1);
-
-        for (int y = 0; y < src.rows; ++y)
-        {
-            const schar* src_row = src.ptr<signed char>(y);
-            const uchar* mask_row = mask.empty() ? 0 : mask.ptr<unsigned char>(y);
-
-            for (int x = 0; x < src.cols; ++x)
-            {
-                if (!mask_row || mask_row[x])
-                {
-                    schar val = src_row[x];
-
-                    if (val < minVal)
-                    {
-                        minVal = val;
-                        minLoc = cv::Point(x, y);
-                    }
-
-                    if (val > maxVal)
-                    {
-                        maxVal = val;
-                        maxLoc = cv::Point(x, y);
-                    }
-                }
-            }
-        }
-
-        if (minVal_) *minVal_ = minVal;
-        if (maxVal_) *maxVal_ = maxVal;
-
-        if (minLoc_) *minLoc_ = minLoc;
-        if (maxLoc_) *maxLoc_ = maxLoc;
-    }
-}
 
 PARAM_TEST_CASE(MinMax, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
 {
@@ -2278,31 +2226,28 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, MinMax, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // MinMaxLoc
 
-namespace
+template <typename T>
+void expectEqualImpl(const cv::Mat& src, cv::Point loc_gold, cv::Point loc)
 {
-    template <typename T>
-    void expectEqualImpl(const cv::Mat& src, cv::Point loc_gold, cv::Point loc)
+    EXPECT_EQ(src.at<T>(loc_gold.y, loc_gold.x), src.at<T>(loc.y, loc.x));
+}
+
+void expectEqual(const cv::Mat& src, cv::Point loc_gold, cv::Point loc)
+{
+    typedef void (*func_t)(const cv::Mat& src, cv::Point loc_gold, cv::Point loc);
+
+    static const func_t funcs[] =
     {
-        EXPECT_EQ(src.at<T>(loc_gold.y, loc_gold.x), src.at<T>(loc.y, loc.x));
-    }
+        expectEqualImpl<uchar>,
+        expectEqualImpl<schar>,
+        expectEqualImpl<ushort>,
+        expectEqualImpl<short>,
+        expectEqualImpl<int>,
+        expectEqualImpl<float>,
+        expectEqualImpl<double>
+    };
 
-    void expectEqual(const cv::Mat& src, cv::Point loc_gold, cv::Point loc)
-    {
-        typedef void (*func_t)(const cv::Mat& src, cv::Point loc_gold, cv::Point loc);
-
-        static const func_t funcs[] =
-        {
-            expectEqualImpl<uchar>,
-            expectEqualImpl<schar>,
-            expectEqualImpl<ushort>,
-            expectEqualImpl<short>,
-            expectEqualImpl<int>,
-            expectEqualImpl<float>,
-            expectEqualImpl<double>
-        };
-
-        funcs[src.depth()](src, loc_gold, loc);
-    }
+    funcs[src.depth()](src, loc_gold, loc);
 }
 
 PARAM_TEST_CASE(MinMaxLoc, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
@@ -2420,7 +2365,10 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, CountNonZero, testing::Combine(
 //////////////////////////////////////////////////////////////////////////////
 // Reduce
 
-PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, cv::Size, MatDepth, int, ReduceCode, UseRoi)
+CV_ENUM(ReduceCode, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+#define ALL_REDUCE_CODES testing::Values(ReduceCode(CV_REDUCE_SUM), ReduceCode(CV_REDUCE_AVG), ReduceCode(CV_REDUCE_MAX), ReduceCode(CV_REDUCE_MIN))
+
+PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, ReduceCode, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -2448,6 +2396,7 @@ PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, cv::Size, MatDepth, int, ReduceCode
         dst_depth = (reduceOp == CV_REDUCE_MAX || reduceOp == CV_REDUCE_MIN) ? depth : CV_32F;
         dst_type = CV_MAKE_TYPE(dst_depth, channels);
     }
+
 };
 
 TEST_P(Reduce, Rows)
@@ -2486,6 +2435,8 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Reduce, testing::Combine(
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
                     MatDepth(CV_32F)),
-    testing::Values(1, 2, 3, 4),
+    ALL_CHANNELS,
     ALL_REDUCE_CODES,
     WHOLE_SUBMAT));
+
+} // namespace

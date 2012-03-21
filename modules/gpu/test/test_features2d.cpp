@@ -41,12 +41,74 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_CUDA
+namespace {
 
-using namespace cvtest;
-using namespace testing;
+bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
+{
+    const double maxPtDif = 1.0;
+    const double maxSizeDif = 1.0;
+    const double maxAngleDif = 2.0;
+    const double maxResponseDif = 0.1;
 
-int getValidMatchesCount(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const std::vector<cv::DMatch>& matches)
+    double dist = cv::norm(p1.pt - p2.pt);
+
+    if (dist < maxPtDif &&
+        fabs(p1.size - p2.size) < maxSizeDif &&
+        abs(p1.angle - p2.angle) < maxAngleDif &&
+        abs(p1.response - p2.response) < maxResponseDif &&
+        p1.octave == p2.octave &&
+        p1.class_id == p2.class_id)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+{
+    bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
+    {
+        return kp1.pt.y < kp2.pt.y || (kp1.pt.y == kp2.pt.y && kp1.pt.x < kp2.pt.x);
+    }
+};
+
+testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char* actual_expr, std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
+{
+    if (gold.size() != actual.size())
+    {
+        return testing::AssertionFailure() << "KeyPoints size mistmach\n"
+                                           << "\"" << gold_expr << "\" : " << gold.size() << "\n"
+                                           << "\"" << actual_expr << "\" : " << actual.size();
+    }
+
+    std::sort(actual.begin(), actual.end(), KeyPointLess());
+    std::sort(gold.begin(), gold.end(), KeyPointLess());
+
+    for (size_t i; i < gold.size(); ++i)
+    {
+        const cv::KeyPoint& p1 = gold[i];
+        const cv::KeyPoint& p2 = actual[i];
+
+        if (!keyPointsEquals(p1, p2))
+        {
+            return testing::AssertionFailure() << "KeyPoints differ at " << i << "\n"
+                                               << "\"" << gold_expr << "\" vs \"" << actual_expr << "\" : \n"
+                                               << "pt : " << testing::PrintToString(p1.pt) << " vs " << testing::PrintToString(p2.pt) << "\n"
+                                               << "size : " << p1.size << " vs " << p2.size << "\n"
+                                               << "angle : " << p1.angle << " vs " << p2.angle << "\n"
+                                               << "response : " << p1.response << " vs " << p2.response << "\n"
+                                               << "octave : " << p1.octave << " vs " << p2.octave << "\n"
+                                               << "class_id : " << p1.class_id << " vs " << p2.class_id;
+        }
+    }
+
+    return ::testing::AssertionSuccess();
+}
+
+#define ASSERT_KEYPOINTS_EQ(gold, actual) EXPECT_PRED_FORMAT2(assertKeyPointsEquals, gold, actual);
+
+int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const std::vector<cv::DMatch>& matches)
 {
     int validCount = 0;
 
@@ -57,22 +119,8 @@ int getValidMatchesCount(const std::vector<cv::KeyPoint>& keypoints1, const std:
         const cv::KeyPoint& p1 = keypoints1[m.queryIdx];
         const cv::KeyPoint& p2 = keypoints2[m.trainIdx];
 
-        const float maxPtDif = 1.f;
-        const float maxSizeDif = 1.f;
-        const float maxAngleDif = 2.f;
-        const float maxResponseDif = 0.1f;
-
-        float dist = (float) cv::norm(p1.pt - p2.pt);
-
-        if (dist < maxPtDif &&
-            fabs(p1.size - p2.size) < maxSizeDif &&
-            abs(p1.angle - p2.angle) < maxAngleDif &&
-            abs(p1.response - p2.response) < maxResponseDif &&
-            p1.octave == p2.octave &&
-            p1.class_id == p2.class_id)
-        {
+        if (keyPointsEquals(p1, p2))
             ++validCount;
-        }
     }
 
     return validCount;
@@ -81,78 +129,280 @@ int getValidMatchesCount(const std::vector<cv::KeyPoint>& keypoints1, const std:
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // SURF
 
-struct SURF : TestWithParam<cv::gpu::DeviceInfo>
+IMPLEMENT_PARAM_CLASS(SURF_HessianThreshold, double)
+IMPLEMENT_PARAM_CLASS(SURF_Octaves, int)
+IMPLEMENT_PARAM_CLASS(SURF_OctaveLayers, int)
+IMPLEMENT_PARAM_CLASS(SURF_Extended, bool)
+IMPLEMENT_PARAM_CLASS(SURF_Upright, bool)
+
+PARAM_TEST_CASE(SURF, cv::gpu::DeviceInfo, SURF_HessianThreshold, SURF_Octaves, SURF_OctaveLayers, SURF_Extended, SURF_Upright)
 {
     cv::gpu::DeviceInfo devInfo;
-
-    cv::Mat image;
-    cv::Mat mask;
-
-    std::vector<cv::KeyPoint> keypoints_gold;
-    std::vector<float> descriptors_gold;
+    double hessianThreshold;
+    int nOctaves;
+    int nOctaveLayers;
+    bool extended;
+    bool upright;
 
     virtual void SetUp()
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        hessianThreshold = GET_PARAM(1);
+        nOctaves = GET_PARAM(2);
+        nOctaveLayers = GET_PARAM(3);
+        extended = GET_PARAM(4);
+        upright = GET_PARAM(5);
 
         cv::gpu::setDevice(devInfo.deviceID());
-
-        image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
-        ASSERT_FALSE(image.empty());
-
-        mask = cv::Mat(image.size(), CV_8UC1, cv::Scalar::all(1));
-        mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
-
-        cv::SURF fdetector_gold;
-        fdetector_gold.extended = false;
-        fdetector_gold(image, mask, keypoints_gold, descriptors_gold);
     }
 };
 
-TEST_P(SURF, EmptyDataTest)
+TEST_P(SURF, Detector)
 {
-    cv::gpu::SURF_GPU fdetector;
+    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
 
-    cv::gpu::GpuMat image;
+    cv::gpu::SURF_GPU surf;
+    surf.hessianThreshold = hessianThreshold;
+    surf.nOctaves = nOctaves;
+    surf.nOctaveLayers = nOctaveLayers;
+    surf.extended = extended;
+    surf.upright = upright;
+    surf.keypointsRatio = 0.05f;
+
     std::vector<cv::KeyPoint> keypoints;
-    std::vector<float> descriptors;
+    surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
 
-    fdetector(image, cv::gpu::GpuMat(), keypoints, descriptors);
+    cv::SURF surf_gold;
+    surf_gold.hessianThreshold = hessianThreshold;
+    surf_gold.nOctaves = nOctaves;
+    surf_gold.nOctaveLayers = nOctaveLayers;
+    surf_gold.extended = extended;
+    surf_gold.upright = upright;
 
-    EXPECT_TRUE(keypoints.empty());
-    EXPECT_TRUE(descriptors.empty());
+    std::vector<cv::KeyPoint> keypoints_gold;
+    surf_gold(image, cv::noArray(), keypoints_gold);
+
+    ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
 }
 
-TEST_P(SURF, Accuracy)
+TEST_P(SURF, Detector_Masked)
 {
+    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    cv::Mat mask(image.size(), CV_8UC1, cv::Scalar::all(1));
+    mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
+
+    cv::gpu::SURF_GPU surf;
+    surf.hessianThreshold = hessianThreshold;
+    surf.nOctaves = nOctaves;
+    surf.nOctaveLayers = nOctaveLayers;
+    surf.extended = extended;
+    surf.upright = upright;
+    surf.keypointsRatio = 0.05f;
+
     std::vector<cv::KeyPoint> keypoints;
-    cv::Mat descriptors;
+    surf(loadMat(image), loadMat(mask), keypoints);
 
-    cv::gpu::GpuMat dev_descriptors;
-    cv::gpu::SURF_GPU fdetector; fdetector.extended = false;
+    cv::SURF surf_gold;
+    surf_gold.hessianThreshold = hessianThreshold;
+    surf_gold.nOctaves = nOctaves;
+    surf_gold.nOctaveLayers = nOctaveLayers;
+    surf_gold.extended = extended;
+    surf_gold.upright = upright;
 
-    fdetector(loadMat(image), loadMat(mask), keypoints, dev_descriptors);
+    std::vector<cv::KeyPoint> keypoints_gold;
+    surf_gold(image, mask, keypoints_gold);
 
-    dev_descriptors.download(descriptors);
+    ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
+}
+
+TEST_P(SURF, Descriptor)
+{
+    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    cv::gpu::SURF_GPU surf;
+    surf.hessianThreshold = hessianThreshold;
+    surf.nOctaves = nOctaves;
+    surf.nOctaveLayers = nOctaveLayers;
+    surf.extended = extended;
+    surf.upright = upright;
+    surf.keypointsRatio = 0.05f;
+
+    cv::SURF surf_gold;
+    surf_gold.hessianThreshold = hessianThreshold;
+    surf_gold.nOctaves = nOctaves;
+    surf_gold.nOctaveLayers = nOctaveLayers;
+    surf_gold.extended = extended;
+    surf_gold.upright = upright;
+
+    std::vector<cv::KeyPoint> keypoints;
+    surf_gold(image, cv::noArray(), keypoints);
+
+    cv::gpu::GpuMat descriptors;
+    surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors, true);
+
+    cv::Mat descriptors_gold;
+    surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);
 
     cv::BFMatcher matcher(cv::NORM_L2);
     std::vector<cv::DMatch> matches;
+    matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
 
-    matcher.match(cv::Mat(static_cast<int>(keypoints_gold.size()), 64, CV_32FC1, &descriptors_gold[0]), descriptors, matches);
+    int matchedCount = getMatchedPointsCount(keypoints, keypoints, matches);
+    double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
 
-    int validCount = getValidMatchesCount(keypoints_gold, keypoints, matches);
-
-    double validRatio = (double) validCount / matches.size();
-
-    EXPECT_GT(validRatio, 0.5);
+    EXPECT_GT(matchedRatio, 0.35);
 }
 
-INSTANTIATE_TEST_CASE_P(Features2D, SURF, DEVICES(cv::gpu::GLOBAL_ATOMICS));
+INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(SURF_HessianThreshold(100.0), SURF_HessianThreshold(500.0), SURF_HessianThreshold(1000.0)),
+    testing::Values(SURF_Octaves(3), SURF_Octaves(4)),
+    testing::Values(SURF_OctaveLayers(2), SURF_OctaveLayers(3)),
+    testing::Values(SURF_Extended(false), SURF_Extended(true)),
+    testing::Values(SURF_Upright(false), SURF_Upright(true))));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// FAST
+
+IMPLEMENT_PARAM_CLASS(FAST_Threshold, int)
+IMPLEMENT_PARAM_CLASS(FAST_NonmaxSupression, bool)
+
+PARAM_TEST_CASE(FAST, cv::gpu::DeviceInfo, FAST_Threshold, FAST_NonmaxSupression)
+{
+    cv::gpu::DeviceInfo devInfo;
+    int threshold;
+    bool nonmaxSupression;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        threshold = GET_PARAM(1);
+        nonmaxSupression = GET_PARAM(2);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(FAST, Accuracy)
+{
+    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    cv::gpu::FAST_GPU fast(threshold);
+    fast.nonmaxSupression = nonmaxSupression;
+
+    std::vector<cv::KeyPoint> keypoints;
+    fast(loadMat(image), cv::gpu::GpuMat(), keypoints);
+
+    std::vector<cv::KeyPoint> keypoints_gold;
+    cv::FAST(image, keypoints_gold, threshold, nonmaxSupression);
+
+    ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Features2D, FAST, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(FAST_Threshold(25), FAST_Threshold(50)),
+    testing::Values(FAST_NonmaxSupression(false), FAST_NonmaxSupression(true))));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// ORB
+
+IMPLEMENT_PARAM_CLASS(ORB_FeaturesCount, int)
+IMPLEMENT_PARAM_CLASS(ORB_ScaleFactor, float)
+IMPLEMENT_PARAM_CLASS(ORB_LevelsCount, int)
+IMPLEMENT_PARAM_CLASS(ORB_EdgeThreshold, int)
+IMPLEMENT_PARAM_CLASS(ORB_firstLevel, int)
+IMPLEMENT_PARAM_CLASS(ORB_WTA_K, int)
+IMPLEMENT_PARAM_CLASS(ORB_PatchSize, int)
+IMPLEMENT_PARAM_CLASS(ORB_BlurForDescriptor, bool)
+
+CV_ENUM(ORB_ScoreType, cv::ORB::HARRIS_SCORE, cv::ORB::FAST_SCORE)
+
+PARAM_TEST_CASE(ORB, cv::gpu::DeviceInfo, ORB_FeaturesCount, ORB_ScaleFactor, ORB_LevelsCount, ORB_EdgeThreshold, ORB_firstLevel, ORB_WTA_K, ORB_ScoreType, ORB_PatchSize, ORB_BlurForDescriptor)
+{
+    cv::gpu::DeviceInfo devInfo;
+    int nFeatures;
+    float scaleFactor;
+    int nLevels;
+    int edgeThreshold;
+    int firstLevel;
+    int WTA_K;
+    int scoreType;
+    int patchSize;
+    bool blurForDescriptor;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        nFeatures = GET_PARAM(1);
+        scaleFactor = GET_PARAM(2);
+        nLevels = GET_PARAM(3);
+        edgeThreshold = GET_PARAM(4);
+        firstLevel = GET_PARAM(5);
+        WTA_K = GET_PARAM(6);
+        scoreType = GET_PARAM(7);
+        patchSize = GET_PARAM(8);
+        blurForDescriptor = GET_PARAM(9);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(ORB, Accuracy)
+{
+    cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    cv::Mat mask(image.size(), CV_8UC1, cv::Scalar::all(1));
+    mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
+
+    cv::gpu::ORB_GPU orb(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
+    orb.blurForDescriptor = blurForDescriptor;
+
+    std::vector<cv::KeyPoint> keypoints;
+    cv::gpu::GpuMat descriptors;
+    orb(loadMat(image), loadMat(mask), keypoints, descriptors);
+
+    cv::ORB orb_gold(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
+
+    std::vector<cv::KeyPoint> keypoints_gold;
+    cv::Mat descriptors_gold;
+    orb_gold(image, mask, keypoints_gold, descriptors_gold);
+
+    cv::BFMatcher matcher(cv::NORM_HAMMING);
+    std::vector<cv::DMatch> matches;
+    matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
+
+    int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints, matches);
+    double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
+
+    EXPECT_GT(matchedRatio, 0.35);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Features2D, ORB,  testing::Combine(
+    ALL_DEVICES,
+    testing::Values(ORB_FeaturesCount(1000)),
+    testing::Values(ORB_ScaleFactor(1.2f)),
+    testing::Values(ORB_LevelsCount(4), ORB_LevelsCount(8)),
+    testing::Values(ORB_EdgeThreshold(31)),
+    testing::Values(ORB_firstLevel(0), ORB_firstLevel(2)),
+    testing::Values(ORB_WTA_K(2), ORB_WTA_K(3), ORB_WTA_K(4)),
+    testing::Values(ORB_ScoreType(cv::ORB::HARRIS_SCORE)),
+    testing::Values(ORB_PatchSize(31), ORB_PatchSize(29)),
+    testing::Values(ORB_BlurForDescriptor(false), ORB_BlurForDescriptor(true))));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // BruteForceMatcher
 
-PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, DistType, int)
+CV_ENUM(DistType, cv::gpu::BruteForceMatcher_GPU_base::L1Dist, cv::gpu::BruteForceMatcher_GPU_base::L2Dist, cv::gpu::BruteForceMatcher_GPU_base::HammingDist)
+IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
+
+PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, DistType, DescriptorSize)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::gpu::BruteForceMatcher_GPU_base::DistType distType;
@@ -212,10 +462,9 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, DistType, int)
 
 TEST_P(BruteForceMatcher, Match)
 {
-    std::vector<cv::DMatch> matches;
-
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
+    std::vector<cv::DMatch> matches;
     matcher.match(loadMat(query), loadMat(train), matches);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
@@ -234,17 +483,13 @@ TEST_P(BruteForceMatcher, Match)
 
 TEST_P(BruteForceMatcher, MatchAdd)
 {
-    std::vector<cv::DMatch> matches;
-
-    bool isMaskSupported;
-
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
     cv::gpu::GpuMat d_train(train);
 
     // make add() twice to test such case
-    matcher.add(std::vector<cv::gpu::GpuMat>(1, d_train.rowRange(0, train.rows/2)));
-    matcher.add(std::vector<cv::gpu::GpuMat>(1, d_train.rowRange(train.rows/2, train.rows)));
+    matcher.add(std::vector<cv::gpu::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
+    matcher.add(std::vector<cv::gpu::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
 
     // prepare masks (make first nearest match illegal)
     std::vector<cv::gpu::GpuMat> masks(2);
@@ -255,28 +500,26 @@ TEST_P(BruteForceMatcher, MatchAdd)
             masks[mi].col(di * countFactor).setTo(cv::Scalar::all(0));
     }
 
+    std::vector<cv::DMatch> matches;
     matcher.match(cv::gpu::GpuMat(query), matches, masks);
-
-    isMaskSupported = matcher.isMaskSupported();
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
+    int shift = matcher.isMaskSupported() ? 1 : 0;
     for (size_t i = 0; i < matches.size(); i++)
     {
         cv::DMatch match = matches[i];
-        int shift = isMaskSupported ? 1 : 0;
+
+        if ((int)i < queryDescCount / 2)
         {
-            if ((int)i < queryDescCount / 2)
-            {
-                if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + shift) || (match.imgIdx != 0))
-                    badCount++;
-            }
-            else
-            {
-                if ((match.queryIdx != (int)i) || (match.trainIdx != ((int)i - queryDescCount / 2) * countFactor + shift) || (match.imgIdx != 1))
-                    badCount++;
-            }
+            if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + shift) || (match.imgIdx != 0))
+                badCount++;
+        }
+        else
+        {
+            if ((match.queryIdx != (int)i) || (match.trainIdx != ((int)i - queryDescCount / 2) * countFactor + shift) || (match.imgIdx != 1))
+                badCount++;
         }
     }
 
@@ -287,9 +530,9 @@ TEST_P(BruteForceMatcher, KnnMatch2)
 {
     const int knn = 2;
 
-    std::vector< std::vector<cv::DMatch> > matches;
-
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+
+    std::vector< std::vector<cv::DMatch> > matches;
     matcher.knnMatch(loadMat(query), loadMat(train), matches, knn);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
@@ -317,11 +560,11 @@ TEST_P(BruteForceMatcher, KnnMatch2)
 
 TEST_P(BruteForceMatcher, KnnMatch3)
 {
+    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+
     const int knn = 3;
 
     std::vector< std::vector<cv::DMatch> > matches;
-
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
     matcher.knnMatch(loadMat(query), loadMat(train), matches, knn);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
@@ -350,9 +593,6 @@ TEST_P(BruteForceMatcher, KnnMatch3)
 TEST_P(BruteForceMatcher, KnnMatchAdd2)
 {
     const int knn = 2;
-    std::vector< std::vector<cv::DMatch> > matches;
-
-    bool isMaskSupported;
 
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
@@ -371,14 +611,14 @@ TEST_P(BruteForceMatcher, KnnMatchAdd2)
             masks[mi].col(di * countFactor).setTo(cv::Scalar::all(0));
     }
 
-    matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
+    std::vector< std::vector<cv::DMatch> > matches;
 
-    isMaskSupported = matcher.isMaskSupported();
+    matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
-    int shift = isMaskSupported ? 1 : 0;
+    int shift = matcher.isMaskSupported() ? 1 : 0;
     for (size_t i = 0; i < matches.size(); i++)
     {
         if ((int)matches[i].size() != knn)
@@ -412,9 +652,6 @@ TEST_P(BruteForceMatcher, KnnMatchAdd2)
 TEST_P(BruteForceMatcher, KnnMatchAdd3)
 {
     const int knn = 3;
-    std::vector< std::vector<cv::DMatch> > matches;
-
-    bool isMaskSupported;
 
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
@@ -433,14 +670,13 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
             masks[mi].col(di * countFactor).setTo(cv::Scalar::all(0));
     }
 
+    std::vector< std::vector<cv::DMatch> > matches;
     matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
-
-    isMaskSupported = matcher.isMaskSupported();
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
-    int shift = isMaskSupported ? 1 : 0;
+    int shift = matcher.isMaskSupported() ? 1 : 0;
     for (size_t i = 0; i < matches.size(); i++)
     {
         if ((int)matches[i].size() != knn)
@@ -473,16 +709,11 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
 
 TEST_P(BruteForceMatcher, RadiusMatch)
 {
-    if (!supportFeature(devInfo, cv::gpu::SHARED_ATOMICS))
-        return;
-
     const float radius = 1.f / countFactor;
-
-
-    std::vector< std::vector<cv::DMatch> > matches;
 
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
+    std::vector< std::vector<cv::DMatch> > matches;
     matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
@@ -505,15 +736,8 @@ TEST_P(BruteForceMatcher, RadiusMatch)
 
 TEST_P(BruteForceMatcher, RadiusMatchAdd)
 {
-    if (!supportFeature(devInfo, cv::gpu::SHARED_ATOMICS))
-        return;
-
-    int n = 3;
+    const int n = 3;
     const float radius = 1.f / countFactor * n;
-
-    std::vector< std::vector<cv::DMatch> > matches;
-
-    bool isMaskSupported;
 
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
@@ -532,15 +756,14 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
             masks[mi].col(di * countFactor).setTo(cv::Scalar::all(0));
     }
 
+    std::vector< std::vector<cv::DMatch> > matches;
     matcher.radiusMatch(cv::gpu::GpuMat(query), matches, radius, masks);
-
-    isMaskSupported = matcher.isMaskSupported();
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
-    int shift = isMaskSupported ? 1 : 0;
-    int needMatchCount = isMaskSupported ? n-1 : n;
+    int shift = matcher.isMaskSupported() ? 1 : 0;
+    int needMatchCount = matcher.isMaskSupported() ? n-1 : n;
     for (size_t i = 0; i < matches.size(); i++)
     {
         if ((int)matches[i].size() != needMatchCount)
@@ -571,141 +794,9 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
     ASSERT_EQ(0, badCount);
 }
 
-INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher, Combine(
-                        ALL_DEVICES,
-                        Values(cv::gpu::BruteForceMatcher_GPU_base::L1Dist, cv::gpu::BruteForceMatcher_GPU_base::L2Dist),
-                        Values(57, 64, 83, 128, 179, 256, 304)));
+INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(DistType(cv::gpu::BruteForceMatcher_GPU_base::L1Dist), DistType(cv::gpu::BruteForceMatcher_GPU_base::L2Dist)),
+    testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304))));
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// FAST
-
-struct FAST : TestWithParam<cv::gpu::DeviceInfo>
-{
-    cv::gpu::DeviceInfo devInfo;
-
-    cv::Mat image;
-
-    int threshold;
-
-    std::vector<cv::KeyPoint> keypoints_gold;
-
-    virtual void SetUp()
-    {
-        devInfo = GetParam();
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
-        ASSERT_FALSE(image.empty());
-
-        threshold = 30;
-
-        cv::FAST(image, keypoints_gold, threshold);
-    }
-};
-
-struct HashEq
-{
-    size_t hash;
-    inline HashEq(size_t hash_) : hash(hash_) {}
-    inline bool operator ()(const cv::KeyPoint& kp) const
-    {
-        return kp.hash() == hash;
-    }
-};
-
-struct KeyPointCompare
-{
-    inline bool operator ()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
-    {
-        return kp1.pt.y < kp2.pt.y || (kp1.pt.y == kp2.pt.y && kp1.pt.x < kp2.pt.x);
-    }
-};
-
-TEST_P(FAST, Accuracy)
-{
-    std::vector<cv::KeyPoint> keypoints;
-
-    cv::gpu::FAST_GPU fastGPU(threshold);
-
-    fastGPU(cv::gpu::GpuMat(image), cv::gpu::GpuMat(), keypoints);
-
-    ASSERT_EQ(keypoints.size(), keypoints_gold.size());
-
-    std::sort(keypoints.begin(), keypoints.end(), KeyPointCompare());
-
-    for (size_t i = 0; i < keypoints_gold.size(); ++i)
-    {
-        const cv::KeyPoint& kp1 = keypoints[i];
-        const cv::KeyPoint& kp2 = keypoints_gold[i];
-
-        size_t h1 = kp1.hash();
-        size_t h2 = kp2.hash();
-
-        ASSERT_EQ(h1, h2);
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(Features2D, FAST, DEVICES(cv::gpu::GLOBAL_ATOMICS));
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// ORB
-
-struct ORB : TestWithParam<cv::gpu::DeviceInfo>
-{
-    cv::gpu::DeviceInfo devInfo;
-
-    cv::Mat image;
-    cv::Mat mask;
-
-    int npoints;
-
-    std::vector<cv::KeyPoint> keypoints_gold;
-    cv::Mat descriptors_gold;
-
-    virtual void SetUp()
-    {
-        devInfo = GetParam();
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
-        ASSERT_FALSE(image.empty());
-
-        mask = cv::Mat(image.size(), CV_8UC1, cv::Scalar::all(1));
-        mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
-
-        npoints = 1000;
-
-        cv::ORB orbCPU(npoints);
-
-        orbCPU(image, mask, keypoints_gold, descriptors_gold);
-    }
-};
-
-TEST_P(ORB, Accuracy)
-{
-    std::vector<cv::KeyPoint> keypoints;
-    cv::Mat descriptors;
-
-    cv::gpu::ORB_GPU orbGPU(npoints);
-    cv::gpu::GpuMat d_descriptors;
-
-    orbGPU(cv::gpu::GpuMat(image), cv::gpu::GpuMat(mask), keypoints, d_descriptors);
-
-    d_descriptors.download(descriptors);
-
-    cv::BFMatcher matcher(cv::NORM_HAMMING);
-    std::vector<cv::DMatch> matches;
-
-    matcher.match(descriptors_gold, descriptors, matches);
-
-    int count = getValidMatchesCount(keypoints_gold, keypoints, matches);
-    double ratio = (double) count / matches.size();
-
-    ASSERT_GE(ratio, 0.65);
-}
-
-INSTANTIATE_TEST_CASE_P(Features2D, ORB, DEVICES(cv::gpu::GLOBAL_ATOMICS));
-
-#endif // HAVE_CUDA
+} // namespace

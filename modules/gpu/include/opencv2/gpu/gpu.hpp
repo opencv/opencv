@@ -1661,7 +1661,7 @@ public:
     };
 
     //! Constructor
-    explicit ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 3, int edgeThreshold = 31,
+    explicit ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31,
                      int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31);
 
     //! Compute the ORB features on an image

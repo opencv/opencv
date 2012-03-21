@@ -2198,7 +2198,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, EqualizeHist, ALL_DEVICES);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerHarris
 
-PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, Border, int, int)
+PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, BorderType, int, int)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
@@ -2257,7 +2257,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerMinEigen
 
-PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, Border, int, int)
+PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, BorderType, int, int)
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
@@ -2572,6 +2572,8 @@ INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftSegmentation, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // matchTemplate
 
+CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
+
 PARAM_TEST_CASE(MatchTemplate8U, cv::gpu::DeviceInfo, int, TemplateMethod)
 {
     cv::gpu::DeviceInfo devInfo;
@@ -2775,6 +2777,8 @@ INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED, Combine(
 
 ////////////////////////////////////////////////////////////////////////////
 // MulSpectrums
+
+CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
 
 PARAM_TEST_CASE(MulSpectrums, cv::gpu::DeviceInfo, DftFlags)
 {

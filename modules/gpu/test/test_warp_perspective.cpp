@@ -175,7 +175,7 @@ namespace
 ///////////////////////////////////////////////////////////////////
 // Test
 
-PARAM_TEST_CASE(WarpPerspective, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse, Interpolation, Border, UseRoi)
+PARAM_TEST_CASE(WarpPerspective, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse, Interpolation, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -225,7 +225,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspective, testing::Combine(
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     DIRECT_INVERSE,
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
-    testing::Values(Border(cv::BORDER_REFLECT101), Border(cv::BORDER_REPLICATE), Border(cv::BORDER_REFLECT), Border(cv::BORDER_WRAP)),
+    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_REFLECT), BorderType(cv::BORDER_WRAP)),
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////
