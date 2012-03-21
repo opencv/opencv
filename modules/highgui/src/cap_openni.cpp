@@ -41,15 +41,10 @@
 #include "precomp.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+
 #ifdef HAVE_OPENNI
 
-#define HACK_WITH_XML
-
-#ifdef HACK_WITH_XML
 #include <iostream>
-#include <fstream>
-#endif
-
 #include "XnCppWrapper.h"
 
 const std::string XMLConfig =
@@ -79,7 +74,7 @@ const std::string XMLConfig =
                         "</Configuration>"
                 "</Node>"
         "</ProductionNodes>"
-"</OpenNI>";
+"</OpenNI>\n";
 
 class CvCapture_OpenNI : public CvCapture
 {
@@ -206,22 +201,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
             return;
         }
 
-#ifdef HACK_WITH_XML
-        // Write configuration to the temporary file.
-        // This is a hack, because there is a bug in RunXmlScript().
-        // TODO: remove hack when bug in RunXmlScript() will be fixed.
-        std::string xmlFilename = "opencv_kinect_configure.xml";
-        std::ofstream outfile( xmlFilename.c_str() );
-        outfile.write( XMLConfig.c_str(), XMLConfig.length() );
-        outfile.close();
-
-        status = context.RunXmlScriptFromFile( xmlFilename.c_str() );
-
-        // Remove temporary configuration file.
-        remove( xmlFilename.c_str() );
-#else
         status = context.RunXmlScript( XMLConfig.c_str() );
-#endif
         if( status != XN_STATUS_OK )
         {
             std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: "
