@@ -545,11 +545,11 @@ bool CvCapture_FFMPEG::reopen()
 	#endif
 
 	AVCodec *codec = avcodec_find_decoder(enc->codec_id);
-	#if FF_API_AVCODEC_OPEN
-		avcodec_open(enc, codec);
-	#else
-		avcodec_open_2(enc, codec, NULL);
-	#endif
+    #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
+        avcodec_open2(enc, codec, NULL);
+    #else
+        avcodec_open(enc, codec);
+    #endif
 	video_st = ic->streams[video_stream];
 
 	// reset framenumber to zero
@@ -742,15 +742,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
     avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], PIX_FMT_RGB24, video_st->codec->width, video_st->codec->height);
 
-    #if LIBAVCODEC_VERSION_INT >= ((52<<16)+(123<<8)+0)
-
-                    frame.width  = picture->width;
-                    frame.height = picture->height;
-
-    #else
-                    frame.width = video_st->codec->width;
-                    frame.height = video_st->codec->height;
-    #endif
+    frame.width = video_st->codec->width;
+    frame.height = video_st->codec->height;
 
    img_convert_ctx = sws_getContext(
                                                          video_st->codec->width, video_st->codec->height,

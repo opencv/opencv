@@ -394,9 +394,9 @@ if(UNIX)
       endif()
     endif()
 
-    #if(HAVE_FFMPEG)
-    #CHECK_MODULE(libavformat>=52.111.0 NEW_FFMPEG)
-    #endif()
+    if(HAVE_FFMPEG)
+    CHECK_MODULE(libavformat>=52.111.0 NEW_FFMPEG)
+    endif()
 
     if(WITH_1394)
       CHECK_MODULE(libdc1394-2 HAVE_DC1394_2)
