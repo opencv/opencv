@@ -59,7 +59,7 @@ float calcBlurriness(const Mat &frame)
     double normGx = norm(Gx);
     double normGy = norm(Gx);
     double sumSq = normGx*normGx + normGy*normGy;
-    return 1.f / (sumSq / frame.size().area() + 1e-6f);
+    return static_cast<float>(1. / (sumSq / frame.size().area() + 1e-6));
 }
 
 
