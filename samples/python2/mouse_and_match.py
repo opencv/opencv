@@ -69,4 +69,4 @@ if __name__ == '__main__':
             cv.imshow("gray",gray)
             if (cv.waitKey() & 255) == 27:
                 break
-    cv2.destroyAllWindows() 			
+    cv.destroyAllWindows() 			
