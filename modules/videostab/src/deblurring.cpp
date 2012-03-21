@@ -59,13 +59,13 @@ float calcBlurriness(const Mat &frame)
     double normGx = norm(Gx);
     double normGy = norm(Gx);
     double sumSq = normGx*normGx + normGy*normGy;
-    return 1.f / (sumSq / frame.size().area() + 1e-6);
+    return 1.f / (sumSq / frame.size().area() + 1e-6f);
 }
 
 
 WeightingDeblurer::WeightingDeblurer()
 {
-    setSensitivity(0.1);
+    setSensitivity(0.1f);
 }
 
 
@@ -102,8 +102,8 @@ void WeightingDeblurer::deblur(int idx, Mat &frame)
             {
                 for (int x = 0; x < frame.cols; ++x)
                 {
-                    int x1 = M(0,0)*x + M(0,1)*y + M(0,2);
-                    int y1 = M(1,0)*x + M(1,1)*y + M(1,2);
+                    int x1 = static_cast<int>(M(0,0)*x + M(0,1)*y + M(0,2));
+                    int y1 = static_cast<int>(M(1,0)*x + M(1,1)*y + M(1,2));
 
                     if (x1 >= 0 && x1 < neighbor.cols && y1 >= 0 && y1 < neighbor.rows)
                     {
@@ -127,7 +127,9 @@ void WeightingDeblurer::deblur(int idx, Mat &frame)
         {
             float wSumInv = 1.f / wSum_(y,x);
             frame.at<Point3_<uchar> >(y,x) = Point3_<uchar>(
-                    bSum_(y,x) * wSumInv, gSum_(y,x) * wSumInv, rSum_(y,x) * wSumInv);
+                    static_cast<uchar>(bSum_(y,x)*wSumInv),
+                    static_cast<uchar>(gSum_(y,x)*wSumInv),
+                    static_cast<uchar>(rSum_(y,x)*wSumInv));
         }
     }
 }

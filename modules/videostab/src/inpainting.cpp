@@ -175,7 +175,10 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
                             c2 = (c2 + pixels[nh].color.y) / 2;
                             c3 = (c3 + pixels[nh].color.z) / 2;
                         }
-                        frame_(y, x) = Point3_<uchar>(c1, c2, c3);
+                        frame_(y, x) = Point3_<uchar>(
+                                static_cast<uchar>(c1),
+                                static_cast<uchar>(c2),
+                                static_cast<uchar>(c3));
                         mask_(y, x) = 255;
                     }
                 }
@@ -379,7 +382,10 @@ public:
         }
 
         float wSumInv = 1.f / wSum;
-        frame(y,x) = Point3_<uchar>(c1*wSumInv, c2*wSumInv, c3*wSumInv);
+        frame(y,x) = Point3_<uchar>(
+                static_cast<uchar>(c1*wSumInv),
+                static_cast<uchar>(c2*wSumInv),
+                static_cast<uchar>(c3*wSumInv));
         mask(y,x) = 255;
     }
 

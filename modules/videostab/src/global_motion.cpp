@@ -97,7 +97,7 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
     solve(A, b, sol, DECOMP_SVD);
 
     if (rmse)
-        *rmse = norm(A*sol, b, NORM_L2) / sqrt((double)npoints);
+        *rmse = norm(A*sol, b, NORM_L2) / sqrt(static_cast<float>(npoints));
 
     Mat_<float> M = Mat::eye(3, 3, CV_32F);
     M(0,0) = M(1,1) = sol(0,0);
@@ -130,7 +130,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
     solve(A, b, sol, DECOMP_SVD);
 
     if (rmse)
-        *rmse = norm(A*sol, b, NORM_L2) / sqrt((double)npoints);
+        *rmse = norm(A*sol, b, NORM_L2) / sqrt(static_cast<float>(npoints));
 
     Mat_<float> M = Mat::eye(3, 3, CV_32F);
     for (int i = 0, k = 0; i < 2; ++i)
@@ -314,9 +314,9 @@ Mat getMotion(int from, int to, const vector<Mat> &motions)
 
 static inline int areaSign(Point2f a, Point2f b, Point2f c)
 {
-    float area = (b-a).cross(c-a);
-    if (area < -1e-5f) return -1;
-    if (area > 1e-5f) return 1;
+    double area = (b-a).cross(c-a);
+    if (area < -1e-5) return -1;
+    if (area > 1e-5) return 1;
     return 0;
 }
 
@@ -378,8 +378,8 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
 {
     CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
 
-    const float w = size.width;
-    const float h = size.height;
+    const float w = static_cast<float>(size.width);
+    const float h = static_cast<float>(size.height);
     const float dx = floor(w * trimRatio);
     const float dy = floor(h * trimRatio);
     const float srcM[6] =
@@ -414,8 +414,8 @@ float estimateOptimalTrimRatio(const Mat &M, Size size)
 {
     CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
 
-    const float w = size.width;
-    const float h = size.height;
+    const float w = static_cast<float>(size.width);
+    const float h = static_cast<float>(size.height);
     Mat_<float> M_(M);
 
     Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};

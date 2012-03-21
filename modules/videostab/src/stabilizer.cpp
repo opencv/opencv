@@ -54,7 +54,7 @@ Stabilizer::Stabilizer()
 {
     setFrameSource(new NullFrameSource());
     setMotionEstimator(new PyrLkRobustMotionEstimator());
-    setMotionFilter(new GaussianMotionFilter(15, sqrt(15.0)));
+    setMotionFilter(new GaussianMotionFilter(15, sqrt(15.f)));
     setDeblurer(new NullDeblurer());
     setInpainter(new NullInpainter());
     setEstimateTrimRatio(true);
@@ -101,8 +101,8 @@ Mat Stabilizer::nextFrame()
         return Mat(); // frame source is empty
 
     const Mat &stabilizedFrame = at(curStabilizedPos_, stabilizedFrames_);
-    int dx = floor(trimRatio_ * stabilizedFrame.cols);
-    int dy = floor(trimRatio_ * stabilizedFrame.rows);
+    int dx = static_cast<int>(floor(trimRatio_ * stabilizedFrame.cols));
+    int dy = static_cast<int>(floor(trimRatio_ * stabilizedFrame.rows));
     return stabilizedFrame(Rect(dx, dy, stabilizedFrame.cols - 2*dx, stabilizedFrame.rows - 2*dy));
 }
 

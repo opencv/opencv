@@ -64,7 +64,7 @@ CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
         const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
         int model = AFFINE, float *rmse = 0);
 
-CV_EXPORTS struct RansacParams
+struct CV_EXPORTS RansacParams
 {
     int size; // subset size
     float thresh; // max error to classify as inlier
