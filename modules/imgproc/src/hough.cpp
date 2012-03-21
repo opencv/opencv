@@ -459,7 +459,7 @@ icvHoughLinesSDiv( const CvMat* img,
 \****************************************************************************************/
 
 static void
-icvHoughLinesProbabalistic( CvMat* image,
+icvHoughLinesProbabilistic( CvMat* image,
                             float rho, float theta, int threshold,
                             int lineLength, int lineGap,
                             CvSeq *lines, int linesMax )
@@ -771,7 +771,7 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
                 threshold, iparam1, iparam2, lines, linesMax );
           break;
     case CV_HOUGH_PROBABILISTIC:
-          icvHoughLinesProbabalistic( img, (float)rho, (float)theta,
+          icvHoughLinesProbabilistic( img, (float)rho, (float)theta,
                 threshold, iparam1, iparam2, lines, linesMax );
           break;
     default:
