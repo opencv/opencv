@@ -360,10 +360,10 @@ public class OpenCVTestCase extends TestCase {
 
         if (isEqualityMeasured)
             assertTrue("Max difference between expected and actiual Mats is bigger than " + eps,
-                    Core.checkRange(diff, true, new Point(), 0.0, eps));
+                    Core.checkRange(diff, true, 0.0, eps));
         else
             assertFalse("Max difference between expected and actiual Mats is less than " + eps,
-                    Core.checkRange(diff, true, new Point(), 0.0, eps));
+                    Core.checkRange(diff, true, 0.0, eps));
     }
 
     protected static String readFile(String path) {

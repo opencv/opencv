@@ -463,6 +463,8 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 
 """,
         }, # getTextSize
+##        "checkRange"           : #TBD
+##            {'j_code' : '/* TBD: checkRange() */', 'jn_code' : '', 'cpp_code' : '' },
 
         "checkHardwareSupport" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "setUseOptimized"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
@@ -514,7 +516,9 @@ func_arg_fix = {
         'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
         'hconcat' : { 'src' : 'vector_Mat', },
         'vconcat' : { 'src' : 'vector_Mat', },
-        'undistortPoints' : { 'src' : 'vector_Point2d', 'dst' : 'vector_Point2d' }
+        'undistortPoints' : { 'src' : 'vector_Point2d', 'dst' : 'vector_Point2d' },
+        'checkRange' : {'pos' : '*'},
+        #'meanStdDev' : {'mean' : 'Scalar', 'stddev' : 'Scalar'},
     }, # '', i.e. no class
 } # func_arg_fix
 
@@ -913,7 +917,7 @@ extern "C" {
         else:
             decl_args = []
             for a in fi.args:
-                s = a.ctype
+                s = a.ctype or ' _hidden_ '
                 if a.pointer:
                     s += "*"
                 elif a.out:
@@ -974,6 +978,8 @@ extern "C" {
                 jni_args.append( ArgInfo([ "__int64", "self", "", [], "" ]) )
             self.get_imports(fi.classname, fi.ctype)
             for a in args:
+                if not a.ctype: # hidden
+                    continue
                 self.get_imports(fi.classname, a.ctype)
                 if "vector" in a.ctype: # pass as Mat
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
@@ -1083,6 +1089,8 @@ extern "C" {
 
             j_args = []
             for a in args:
+                if not a.ctype: #hidden
+                    continue
                 jt = type_dict[a.ctype]["j_type"]
                 if a.out and a.ctype in ('bool', 'int', 'long', 'float', 'double'):
                     jt += '[]'
@@ -1169,11 +1177,13 @@ extern "C" {
                     jni_name = "&%(n)s"
                 else:
                     jni_name = "%(n)s"
+                if not a.ctype: # hidden
+                    jni_name = a.defval
                 cvargs.append( type_dict[a.ctype].get("jni_name", jni_name) % {"n" : a.name})
                 if "vector" not in a.ctype :
                     if ("I" in a.out or not a.out or a.ctype in self.classes) and "jni_var" in type_dict[a.ctype]: # complex type
                         c_prologue.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
-                    if a.out and "I" not in a.out and a.ctype not in self.classes:
+                    if a.out and "I" not in a.out and a.ctype not in self.classes and a.ctype:
                         c_prologue.append("%s %s;" % (a.ctype, a.name))
 
             rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
@@ -1217,16 +1227,19 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         epilogue = "  ".join(c_epilogue), \
         ret = ret, \
         cvname = cvname, \
-        cvargs = ", ".join([a for a in cvargs]), \
+        cvargs = ", ".join(cvargs), \
         default = default, \
         retval = retval, \
     ) )
 
             # processing args with default values
-            if args and args[-1].defval:
-                a = args.pop()
-            else:
+            if not args or not args[-1].defval:
                 break
+            while args and args[-1].defval:
+                # 'smart' overloads filtering
+                a = args.pop()
+                if a.name in ('mask', 'dtype', 'ddepth', 'lineType', 'borderType', 'borderMode', 'criteria'):
+                    break
 
 
 

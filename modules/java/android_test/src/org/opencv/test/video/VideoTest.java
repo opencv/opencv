@@ -71,25 +71,10 @@ public class VideoTest extends OpenCVTestCase {
 
     public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSize() {
         Size sz = new Size(3, 3);
-        Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz);
+        Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz, 3);
         assertEquals(0, Core.countNonZero(Converters.vector_uchar_to_Mat(status)));
     }
 
-    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeInt() {
-        fail("Not yet implemented");
-    }
-
-    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteria() {
-        fail("Not yet implemented");
-    }
-
-    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDouble() {
-        fail("Not yet implemented");
-    }
-
-    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleInt() {
-        fail("Not yet implemented");
-    }
 
     public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleIntDouble() {
         fail("Not yet implemented");

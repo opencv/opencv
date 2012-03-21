@@ -124,7 +124,7 @@ public class Features2dTest extends OpenCVTestCase {
             points2.add(queryKeypoints.get(match.queryIdx).pt);
         }
 
-        Mat hmg = Calib3d.findHomography(points1, points2, Calib3d.RANSAC);
+        Mat hmg = Calib3d.findHomography(points1, points2, Calib3d.RANSAC, 3);
 
         assertMatEqual(Mat.eye(3, 3, CvType.CV_64F), hmg, EPS);
 
