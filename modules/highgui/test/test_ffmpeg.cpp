@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "ffmpeg_codecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #ifdef HAVE_FFMPEG
@@ -60,10 +61,16 @@ public:
         const double time_sec = 2;
         const int coeff = static_cast<int>(static_cast<double>(cv::min(img_c, img_r)) / (fps * time_sec));
 
+        const size_t n = sizeof(codec_bmp_tags)/sizeof(codec_bmp_tags[0]);
+
+        for (size_t j = 0; j < n; ++j)
+        {
+        stringstream s; s << codec_bmp_tags[j].tag;
+
         Mat img(img_r, img_c, CV_8UC3, Scalar::all(0));
         try
         {
-            VideoWriter writer(string(ts->get_data_path()) + "video/output.avi", CV_FOURCC('X', 'V', 'I', 'D'), fps, frame_s);
+            VideoWriter writer(string(ts->get_data_path()) + "video/output_"+s.str()+".avi", codec_bmp_tags[j].tag, fps, frame_s);
 
             if (writer.isOpened() == false) ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
 
@@ -80,6 +87,8 @@ public:
             ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
         }
         ts->set_failed_test_info(cvtest::TS::OK);
+
+        }
     }
 };
 
