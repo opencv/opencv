@@ -41,10 +41,11 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "ffmpeg_codecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #ifdef HAVE_FFMPEG
+
+#include "ffmpeg_codecs.hpp"
 
 using namespace cv;
 using namespace std;
