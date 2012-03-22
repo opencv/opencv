@@ -62,9 +62,19 @@ inline float intensity(const cv::Point3_<uchar> &bgr)
     return 0.3f*bgr.x + 0.59f*bgr.y + 0.11f*bgr.z;
 }
 
+template <typename T> inline T& at(int index, const T *items, int size)
+{
+    return items[cv::borderInterpolate(index, size, cv::BORDER_WRAP)];
+}
+
+template <typename T> inline const T& at(int index, const T *items, int size)
+{
+    return items[cv::borderInterpolate(index, size, cv::BORDER_WRAP)];
+}
+
 template <typename T> inline T& at(int index, std::vector<T> &items)
 {
-    return items[cv::borderInterpolate(index, items.size(), cv::BORDER_WRAP)];
+    return at(index, &items[0], items.size());
 }
 
 template <typename T> inline const T& at(int index, const std::vector<T> &items)

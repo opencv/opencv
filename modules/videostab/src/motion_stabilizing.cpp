@@ -51,26 +51,34 @@ namespace cv
 namespace videostab
 {
 
-GaussianMotionFilter::GaussianMotionFilter(int radius, float stdev) : radius_(radius)
+void MotionFilterBase::stabilize(const Mat *motions, int size, Mat *stabilizationMotions) const
 {
+    for (int i = 0; i < size; ++i)
+        stabilizationMotions[i] = stabilize(i, motions, size);
+}
+
+
+void GaussianMotionFilter::update()
+{
+    float sigma = stdev_ > 0.f ? stdev_ : sqrt(static_cast<float>(radius_));
     float sum = 0;
     weight_.resize(2*radius_ + 1);
     for (int i = -radius_; i <= radius_; ++i)
-        sum += weight_[radius_ + i] = std::exp(-i*i/(stdev*stdev));
+        sum += weight_[radius_ + i] = std::exp(-i*i/(sigma*sigma));
     for (int i = -radius_; i <= radius_; ++i)
         weight_[radius_ + i] /= sum;
 }
 
 
-Mat GaussianMotionFilter::apply(int idx, vector<Mat> &motions) const
+Mat GaussianMotionFilter::stabilize(int index, const Mat *motions, int size) const
 {
-    const Mat &cur = at(idx, motions);
+    const Mat &cur = at(index, motions, size);
     Mat res = Mat::zeros(cur.size(), cur.type());
     float sum = 0.f;
-    for (int i = std::max(idx - radius_, 0); i <= idx + radius_; ++i)
+    for (int i = std::max(index - radius_, 0); i <= index + radius_; ++i)
     {
-        res += weight_[radius_ + i - idx] * getMotion(idx, i, motions);
-        sum += weight_[radius_ + i - idx];
+        res += weight_[radius_ + i - index] * getMotion(index, i, motions, size);
+        sum += weight_[radius_ + i - index];
     }
     return res / sum;
 }

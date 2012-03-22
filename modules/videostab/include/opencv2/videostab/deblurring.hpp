@@ -53,24 +53,26 @@ namespace videostab
 
 CV_EXPORTS float calcBlurriness(const Mat &frame);
 
-class CV_EXPORTS IDeblurer
+class CV_EXPORTS DeblurerBase
 {
 public:
-    IDeblurer() : radius_(0), frames_(0), motions_(0) {}
+    DeblurerBase() : radius_(0), frames_(0), motions_(0) {}
 
-    virtual ~IDeblurer() {}
+    virtual ~DeblurerBase() {}
 
     virtual void setRadius(int val) { radius_ = val; }
-    int radius() const { return radius_; }
+    virtual int radius() const { return radius_; }
 
     virtual void setFrames(const std::vector<Mat> &val) { frames_ = &val; }
-    const std::vector<Mat>& frames() const { return *frames_; }
+    virtual const std::vector<Mat>& frames() const { return *frames_; }
 
     virtual void setMotions(const std::vector<Mat> &val) { motions_ = &val; }
-    const std::vector<Mat>& motions() const { return *motions_; }
+    virtual const std::vector<Mat>& motions() const { return *motions_; }
 
     virtual void setBlurrinessRates(const std::vector<float> &val) { blurrinessRates_ = &val; }
-    const std::vector<float>& blurrinessRates() const { return *blurrinessRates_; }
+    virtual const std::vector<float>& blurrinessRates() const { return *blurrinessRates_; }
+
+    virtual void update() {}
 
     virtual void deblur(int idx, Mat &frame) = 0;
 
@@ -81,13 +83,13 @@ protected:
     const std::vector<float> *blurrinessRates_;
 };
 
-class CV_EXPORTS NullDeblurer : public IDeblurer
+class CV_EXPORTS NullDeblurer : public DeblurerBase
 {
 public:
     virtual void deblur(int /*idx*/, Mat &/*frame*/) {}
 };
 
-class CV_EXPORTS WeightingDeblurer : public IDeblurer
+class CV_EXPORTS WeightingDeblurer : public DeblurerBase
 {
 public:
     WeightingDeblurer();

@@ -51,23 +51,44 @@ namespace cv
 namespace videostab
 {
 
-class CV_EXPORTS IMotionFilter
+class CV_EXPORTS IMotionStabilizer
 {
 public:
-    virtual ~IMotionFilter() {}
-    virtual int radius() const = 0;
-    virtual Mat apply(int index, std::vector<Mat> &Ms) const = 0;
+    virtual void stabilize(const Mat *motions, int size, Mat *stabilizationMotions) const = 0;
 };
 
-class CV_EXPORTS GaussianMotionFilter : public IMotionFilter
+class CV_EXPORTS MotionFilterBase : public IMotionStabilizer
 {
 public:
-    GaussianMotionFilter(int radius, float stdev);
+    MotionFilterBase() : radius_(0) {}
+    virtual ~MotionFilterBase() {}
+
+    virtual void setRadius(int val) { radius_ = val; }
     virtual int radius() const { return radius_; }
-    virtual Mat apply(int idx, std::vector<Mat> &motions) const;
+
+    virtual void update() {}
+
+    virtual Mat stabilize(int index, const Mat *motions, int size) const = 0;
+    virtual void stabilize(const Mat *motions, int size, Mat *stabilizationMotions) const;
+
+protected:
+    int radius_;
+};
+
+class CV_EXPORTS GaussianMotionFilter : public MotionFilterBase
+{
+public:
+    GaussianMotionFilter() : stdev_(-1.f) {}
+
+    void setStdev(float val) { stdev_ = val; }
+    float stdev() const { return stdev_; }
+
+    virtual void update();
+
+    virtual Mat stabilize(int index, const Mat *motions, int size) const;
 
 private:
-    int radius_;
+    float stdev_;
     std::vector<float> weight_;
 };
 

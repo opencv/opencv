@@ -12,7 +12,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::videostab;
 
-Ptr<Stabilizer> stabilizer;
+Ptr<IFrameSource> stabilizedFrames;
 double outputFps;
 string outputPath;
 bool quietMode;
@@ -25,7 +25,7 @@ void run()
     VideoWriter writer;
     Mat stabilizedFrame;
 
-    while (!(stabilizedFrame = stabilizer->nextFrame()).empty())
+    while (!(stabilizedFrame = stabilizedFrames->nextFrame()).empty())
     {
         if (!outputPath.empty())
         {
@@ -87,7 +87,7 @@ void printHelp()
             "      Do color inpainting. The defailt is no.\n"
             "  --color-inpaint-radius=<float_number>\n"
             "      Set color inpainting radius (for ns and telea options only).\n\n"
-            "  -o, --output=<file_path>\n"
+            "  -o, --output=(no|<file_path>)\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
             "  --fps=<int_number>\n"
             "      Set output video FPS explicitely. By default the source FPS is used.\n"
@@ -134,9 +134,35 @@ int main(int argc, const char **argv)
         {
             printHelp();
             return 0;
+        }               
+
+        StabilizerBase *stabilizer;
+        GaussianMotionFilter *motionFilter = 0;
+
+        if (!cmd.get<string>("stdev").empty())
+        {
+            motionFilter = new GaussianMotionFilter();
+            motionFilter->setStdev(cmd.get<float>("stdev"));
         }
 
-        stabilizer = new Stabilizer();
+        bool isTwoPass = cmd.get<string>("est-trim") == "yes";
+
+        if (isTwoPass)
+        {
+            TwoPassStabilizer *twoPassStabilizer = new TwoPassStabilizer();
+            if (!cmd.get<string>("est-trim").empty())
+                twoPassStabilizer->setEstimateTrimRatio(cmd.get<string>("est-trim") == "yes");
+            if (motionFilter)
+                twoPassStabilizer->setMotionStabilizer(motionFilter);
+            stabilizer = twoPassStabilizer;
+        }
+        else
+        {
+            OnePassStabilizer *onePassStabilizer= new OnePassStabilizer();
+            if (motionFilter)
+                onePassStabilizer->setMotionFilter(motionFilter);
+            stabilizer = onePassStabilizer;
+        }
 
         string inputPath = cmd.get<string>("1");
         if (inputPath.empty())
@@ -169,16 +195,8 @@ int main(int argc, const char **argv)
 
         stabilizer->setMotionEstimator(motionEstimator);
 
-        int smoothRadius = -1;
-        float smoothStdev = -1;
         if (!cmd.get<string>("radius").empty())
-            smoothRadius = cmd.get<int>("radius");
-        if (!cmd.get<string>("stdev").empty())
-            smoothStdev = cmd.get<float>("stdev");
-        if (smoothRadius > 0 && smoothStdev > 0)
-            stabilizer->setMotionFilter(new GaussianMotionFilter(smoothRadius, smoothStdev));
-        else if (smoothRadius > 0 && smoothStdev < 0)
-            stabilizer->setMotionFilter(new GaussianMotionFilter(smoothRadius, sqrt(static_cast<float>(smoothRadius))));
+            stabilizer->setRadius(cmd.get<int>("radius"));
 
         if (cmd.get<string>("deblur") == "yes")
         {
@@ -188,14 +206,11 @@ int main(int argc, const char **argv)
             stabilizer->setDeblurer(deblurer);
         }
 
-        if (!cmd.get<string>("est-trim").empty())
-            stabilizer->setEstimateTrimRatio(cmd.get<string>("est-trim") == "yes");
-
         if (!cmd.get<string>("trim-ratio").empty())
             stabilizer->setTrimRatio(cmd.get<float>("trim-ratio"));
 
         if (!cmd.get<string>("incl-constr").empty())
-            stabilizer->setInclusionConstraint(cmd.get<string>("incl-constr") == "yes");
+            stabilizer->setCorrectionForInclusion(cmd.get<string>("incl-constr") == "yes");
 
         if (cmd.get<string>("border-mode") == "reflect")
             stabilizer->setBorderMode(BORDER_REFLECT);
@@ -250,22 +265,23 @@ int main(int argc, const char **argv)
 
         stabilizer->setLog(new LogToStdout());
 
-        outputPath = cmd.get<string>("output");
+        outputPath = cmd.get<string>("output") != "no" ? cmd.get<string>("output") : "";
 
         if (!cmd.get<string>("fps").empty())
             outputFps = cmd.get<double>("fps");
 
         quietMode = cmd.get<bool>("quiet");
 
-        // run video processing
+        stabilizedFrames = dynamic_cast<IFrameSource*>(stabilizer);
+
         run();
     }
     catch (const exception &e)
     {
         cout << "error: " << e.what() << endl;
-        stabilizer.release();
+        stabilizedFrames.release();
         return -1;
     }
-    stabilizer.release();
+    stabilizedFrames.release();
     return 0;
 }

@@ -54,29 +54,31 @@ namespace cv
 namespace videostab
 {
 
-class CV_EXPORTS IInpainter
+class CV_EXPORTS InpainterBase
 {
 public:
-    IInpainter()
+    InpainterBase()
         : radius_(0), frames_(0), motions_(0),
           stabilizedFrames_(0), stabilizationMotions_(0) {}
 
-    virtual ~IInpainter() {}
+    virtual ~InpainterBase() {}
 
     virtual void setRadius(int val) { radius_ = val; }
-    int radius() const { return radius_; }
+    virtual int radius() const { return radius_; }
 
     virtual void setFrames(const std::vector<Mat> &val) { frames_ = &val; }
-    const std::vector<Mat>& frames() const { return *frames_; }
+    virtual const std::vector<Mat>& frames() const { return *frames_; }
 
     virtual void setMotions(const std::vector<Mat> &val) { motions_ = &val; }
-    const std::vector<Mat>& motions() const { return *motions_; }
+    virtual const std::vector<Mat>& motions() const { return *motions_; }
 
     virtual void setStabilizedFrames(const std::vector<Mat> &val) { stabilizedFrames_ = &val; }
-    const std::vector<Mat>& stabilizedFrames() const { return *stabilizedFrames_; }
+    virtual const std::vector<Mat>& stabilizedFrames() const { return *stabilizedFrames_; }
 
     virtual void setStabilizationMotions(const std::vector<Mat> &val) { stabilizationMotions_ = &val; }
-    const std::vector<Mat>& stabilizationMotions() const { return *stabilizationMotions_; }
+    virtual const std::vector<Mat>& stabilizationMotions() const { return *stabilizationMotions_; }
+
+    virtual void update() {}
 
     virtual void inpaint(int idx, Mat &frame, Mat &mask) = 0;
 
@@ -88,16 +90,16 @@ protected:
     const std::vector<Mat> *stabilizationMotions_;
 };
 
-class CV_EXPORTS NullInpainter : public IInpainter
+class CV_EXPORTS NullInpainter : public InpainterBase
 {
 public:
     virtual void inpaint(int /*idx*/, Mat &/*frame*/, Mat &/*mask*/) {}
 };
 
-class CV_EXPORTS InpaintingPipeline : public IInpainter
+class CV_EXPORTS InpaintingPipeline : public InpainterBase
 {
 public:
-    void pushBack(Ptr<IInpainter> inpainter) { inpainters_.push_back(inpainter); }
+    void pushBack(Ptr<InpainterBase> inpainter) { inpainters_.push_back(inpainter); }
     bool empty() const { return inpainters_.empty(); }
 
     virtual void setRadius(int val);
@@ -106,13 +108,15 @@ public:
     virtual void setStabilizedFrames(const std::vector<Mat> &val);
     virtual void setStabilizationMotions(const std::vector<Mat> &val);
 
+    virtual void update();
+
     virtual void inpaint(int idx, Mat &frame, Mat &mask);
 
 private:
-    std::vector<Ptr<IInpainter> > inpainters_;
+    std::vector<Ptr<InpainterBase> > inpainters_;
 };
 
-class CV_EXPORTS ConsistentMosaicInpainter : public IInpainter
+class CV_EXPORTS ConsistentMosaicInpainter : public InpainterBase
 {
 public:
     ConsistentMosaicInpainter();
@@ -126,7 +130,7 @@ private:
     float stdevThresh_;
 };
 
-class CV_EXPORTS MotionInpainter : public IInpainter
+class CV_EXPORTS MotionInpainter : public InpainterBase
 {
 public:
     MotionInpainter();
@@ -159,7 +163,7 @@ private:
     Mat_<uchar> flowMask_;
 };
 
-class CV_EXPORTS ColorAverageInpainter : public IInpainter
+class CV_EXPORTS ColorAverageInpainter : public InpainterBase
 {
 public:
     virtual void inpaint(int idx, Mat &frame, Mat &mask);
@@ -168,7 +172,7 @@ private:
     FastMarchingMethod fmm_;
 };
 
-class CV_EXPORTS ColorInpainter : public IInpainter
+class CV_EXPORTS ColorInpainter : public InpainterBase
 {
 public:
     ColorInpainter(int method = INPAINT_TELEA, double radius = 2.)

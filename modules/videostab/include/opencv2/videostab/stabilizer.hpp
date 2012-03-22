@@ -58,77 +58,124 @@ namespace cv
 namespace videostab
 {
 
-class CV_EXPORTS Stabilizer : public IFrameSource
+class CV_EXPORTS StabilizerBase
 {
 public:
-    Stabilizer();
+    virtual ~StabilizerBase() {}
 
     void setLog(Ptr<ILog> log) { log_ = log; }
     Ptr<ILog> log() const { return log_; }
 
-    void setFrameSource(Ptr<IFrameSource> val) { frameSource_ = val; reset(); }
+    void setRadius(int val) { radius_ = val; }
+    int radius() const { return radius_; }
+
+    void setFrameSource(Ptr<IFrameSource> val) { frameSource_ = val; }
     Ptr<IFrameSource> frameSource() const { return frameSource_; }
 
     void setMotionEstimator(Ptr<IGlobalMotionEstimator> val) { motionEstimator_ = val; }
     Ptr<IGlobalMotionEstimator> motionEstimator() const { return motionEstimator_; }
 
-    void setMotionFilter(Ptr<IMotionFilter> val) { motionFilter_ = val; reset(); }
-    Ptr<IMotionFilter> motionFilter() const { return motionFilter_; }
+    void setDeblurer(Ptr<DeblurerBase> val) { deblurer_ = val; }
+    Ptr<DeblurerBase> deblurrer() const { return deblurer_; }
 
-    void setDeblurer(Ptr<IDeblurer> val) { deblurer_ = val; reset(); }
-    Ptr<IDeblurer> deblurrer() const { return deblurer_; }
-
-    void setEstimateTrimRatio(bool val) { mustEstimateTrimRatio_ = val; reset(); }
-    bool mustEstimateTrimRatio() const { return mustEstimateTrimRatio_; }
-
-    void setTrimRatio(float val) { trimRatio_ = val; reset(); }
+    void setTrimRatio(float val) { trimRatio_ = val; }
     float trimRatio() const { return trimRatio_; }
 
-    void setInclusionConstraint(bool val) { inclusionConstraint_ = val; }
-    bool inclusionConstraint() const { return inclusionConstraint_; }
+    void setCorrectionForInclusion(bool val) { doCorrectionForInclusion_ = val; }
+    bool doCorrectionForInclusion() const { return doCorrectionForInclusion_; }
 
     void setBorderMode(int val) { borderMode_ = val; }
     int borderMode() const { return borderMode_; }
 
-    void setInpainter(Ptr<IInpainter> val) { inpainter_ = val; reset(); }
-    Ptr<IInpainter> inpainter() const { return inpainter_; }
+    void setInpainter(Ptr<InpainterBase> val) { inpainter_ = val; }
+    Ptr<InpainterBase> inpainter() const { return inpainter_; }
 
-    virtual void reset();
-    virtual Mat nextFrame();
+protected:
+    StabilizerBase();
 
-private:
-    void estimateMotionsAndTrimRatio();
-    void processFirstFrame(Mat &frame);
-    bool processNextFrame();
-    void stabilizeFrame(int idx);
+    void setUp(int cacheSize, const Mat &frame);
+    Mat nextStabilizedFrame();
+    bool doOneIteration();
+    void stabilizeFrame(const Mat &stabilizationMotion);
 
+    virtual void setUp(Mat &firstFrame) = 0;
+    virtual void stabilizeFrame() = 0;
+    virtual void estimateMotion() = 0;
+
+    Ptr<ILog> log_;
     Ptr<IFrameSource> frameSource_;
     Ptr<IGlobalMotionEstimator> motionEstimator_;
-    Ptr<IMotionFilter> motionFilter_;
-    Ptr<IDeblurer> deblurer_;
-    Ptr<IInpainter> inpainter_;
-    bool mustEstimateTrimRatio_;
+    Ptr<DeblurerBase> deblurer_;
+    Ptr<InpainterBase> inpainter_;
+    int radius_;
     float trimRatio_;
-    bool inclusionConstraint_;
-    int borderMode_;    
-    Ptr<ILog> log_;
+    bool doCorrectionForInclusion_;
+    int borderMode_;
 
     Size frameSize_;
     Mat frameMask_;
-    int radius_;
     int curPos_;
     int curStabilizedPos_;
-    bool auxPassWasDone_;
     bool doDeblurring_;
     Mat preProcessedFrame_;
     bool doInpainting_;
     Mat inpaintingMask_;
     std::vector<Mat> frames_;
-    std::vector<Mat> motions_; // motions_[i] is the motion from i to i+1 frame
+    std::vector<Mat> motions_; // motions_[i] is the motion from i-th to i+1-th frame
     std::vector<float> blurrinessRates_;
     std::vector<Mat> stabilizedFrames_;
     std::vector<Mat> stabilizedMasks_;
     std::vector<Mat> stabilizationMotions_;
+};
+
+class CV_EXPORTS OnePassStabilizer : public StabilizerBase, public IFrameSource
+{
+public:
+    OnePassStabilizer();
+
+    void setMotionFilter(Ptr<MotionFilterBase> val) { motionFilter_ = val; }
+    Ptr<MotionFilterBase> motionFilter() const { return motionFilter_; }
+
+    virtual void reset() { resetImpl(); }
+    virtual Mat nextFrame() { return nextStabilizedFrame(); }
+
+private:
+    void resetImpl();
+
+    virtual void setUp(Mat &firstFrame);
+    virtual void estimateMotion();
+    virtual void stabilizeFrame();
+
+    Ptr<MotionFilterBase> motionFilter_;
+};
+
+class CV_EXPORTS TwoPassStabilizer : public StabilizerBase, public IFrameSource
+{
+public:
+    TwoPassStabilizer();
+
+    void setMotionStabilizer(Ptr<IMotionStabilizer> val) { motionStabilizer_ = val; }
+    Ptr<IMotionStabilizer> motionStabilizer() const { return motionStabilizer_; }
+
+    void setEstimateTrimRatio(bool val) { mustEstTrimRatio_ = val; }
+    bool mustEstimateTrimaRatio() const { return mustEstTrimRatio_; }
+
+    virtual void reset() { resetImpl(); }
+    virtual Mat nextFrame();
+
+private:
+    void resetImpl();
+    void runPrePassIfNecessary();
+
+    virtual void setUp(Mat &firstFrame);
+    virtual void estimateMotion() { /* do nothing as motion was estimation in pre-pass */ }
+    virtual void stabilizeFrame();
+
+    Ptr<IMotionStabilizer> motionStabilizer_;
+    bool mustEstTrimRatio_;
+
+    int frameCount_;
+    bool isPrePassDone_;
 };
 
 } // namespace videostab

@@ -50,130 +50,23 @@ namespace cv
 namespace videostab
 {
 
-Stabilizer::Stabilizer()
+StabilizerBase::StabilizerBase()
 {
+    setLog(new NullLog());
     setFrameSource(new NullFrameSource());
     setMotionEstimator(new PyrLkRobustMotionEstimator());
-    setMotionFilter(new GaussianMotionFilter(15, sqrt(15.f)));
     setDeblurer(new NullDeblurer());
     setInpainter(new NullInpainter());
-    setEstimateTrimRatio(true);
+    setRadius(15);
     setTrimRatio(0);
-    setInclusionConstraint(false);
+    setCorrectionForInclusion(false);
     setBorderMode(BORDER_REPLICATE);
-    setLog(new NullLog());
 }
 
 
-void Stabilizer::reset()
+void StabilizerBase::setUp(int cacheSize, const Mat &frame)
 {
-    radius_ = 0;
-    curPos_ = -1;
-    curStabilizedPos_ = -1;
-    auxPassWasDone_ = false;
-    frames_.clear();
-    motions_.clear();
-    stabilizedFrames_.clear();
-    stabilizationMotions_.clear();
-    doDeblurring_ = false;
-    doInpainting_ = false;
-}
-
-
-Mat Stabilizer::nextFrame()
-{
-    if (mustEstimateTrimRatio_ && !auxPassWasDone_)
-    {
-        estimateMotionsAndTrimRatio();
-        auxPassWasDone_ = true;
-        frameSource_->reset();
-    }
-
-    if (curStabilizedPos_ == curPos_ && curStabilizedPos_ != -1)
-        return Mat(); // we've processed all frames already
-
-    bool processed;
-    do {
-        processed = processNextFrame();
-    } while (processed && curStabilizedPos_ == -1);
-
-    if (curStabilizedPos_ == -1)
-        return Mat(); // frame source is empty
-
-    const Mat &stabilizedFrame = at(curStabilizedPos_, stabilizedFrames_);
-    int dx = static_cast<int>(floor(trimRatio_ * stabilizedFrame.cols));
-    int dy = static_cast<int>(floor(trimRatio_ * stabilizedFrame.rows));
-    return stabilizedFrame(Rect(dx, dy, stabilizedFrame.cols - 2*dx, stabilizedFrame.rows - 2*dy));
-}
-
-
-void Stabilizer::estimateMotionsAndTrimRatio()
-{
-    log_->print("estimating motions and trim ratio");
-
-    Size size;
-    Mat prevFrame, frame;
-    int frameCount = 0;
-
-    while (!(frame = frameSource_->nextFrame()).empty())
-    {
-        if (frameCount > 0)
-            motions_.push_back(motionEstimator_->estimate(prevFrame, frame));
-        else
-            size = frame.size();
-        prevFrame = frame;
-        frameCount++;
-
-        log_->print(".");
-    }
-
-    radius_ = motionFilter_->radius();
-    for (int i = 0; i < radius_; ++i)
-        motions_.push_back(Mat::eye(3, 3, CV_32F));
-    log_->print("\n");
-
-    trimRatio_ = 0;
-    for (int i = 0; i < frameCount; ++i)
-    {
-        Mat S = motionFilter_->apply(i, motions_);
-        trimRatio_ = std::max(trimRatio_, estimateOptimalTrimRatio(S, size));
-        stabilizationMotions_.push_back(S);
-    }
-
-    log_->print("estimated trim ratio: %f\n", static_cast<double>(trimRatio_));
-}
-
-
-void Stabilizer::processFirstFrame(Mat &frame)
-{
-    log_->print("processing frames");
-
-    frameSize_ = frame.size();
-    frameMask_.create(frameSize_, CV_8U);
-    frameMask_.setTo(255);
-
-    radius_ = motionFilter_->radius();
-    int cacheSize = 2*radius_ + 1;
-
-    frames_.resize(cacheSize);
-    stabilizedFrames_.resize(cacheSize);
-    stabilizedMasks_.resize(cacheSize);
-
-    if (!auxPassWasDone_)
-    {
-        motions_.resize(cacheSize);
-        stabilizationMotions_.resize(cacheSize);
-    }
-
-    for (int i = -radius_; i < 0; ++i)
-    {
-        at(i, motions_) = Mat::eye(3, 3, CV_32F);
-        at(i, frames_) = frame;
-    }
-
-    at(0, frames_) = frame;
-
-    IInpainter *inpainter = static_cast<IInpainter*>(inpainter_);
+    InpainterBase *inpainter = static_cast<InpainterBase*>(inpainter_);
     doInpainting_ = dynamic_cast<NullInpainter*>(inpainter) == 0;
     if (doInpainting_)
     {
@@ -182,9 +75,10 @@ void Stabilizer::processFirstFrame(Mat &frame)
         inpainter_->setMotions(motions_);
         inpainter_->setStabilizedFrames(stabilizedFrames_);
         inpainter_->setStabilizationMotions(stabilizationMotions_);
+        inpainter_->update();
     }
 
-    IDeblurer *deblurer = static_cast<IDeblurer*>(deblurer_);
+    DeblurerBase *deblurer = static_cast<DeblurerBase*>(deblurer_);
     doDeblurring_ = dynamic_cast<NullDeblurer*>(deblurer) == 0;
     if (doDeblurring_)
     {
@@ -196,11 +90,33 @@ void Stabilizer::processFirstFrame(Mat &frame)
         deblurer_->setFrames(frames_);
         deblurer_->setMotions(motions_);
         deblurer_->setBlurrinessRates(blurrinessRates_);
+        deblurer_->update();
     }
+
+    log_->print("processing frames");
 }
 
 
-bool Stabilizer::processNextFrame()
+Mat StabilizerBase::nextStabilizedFrame()
+{
+    if (curStabilizedPos_ == curPos_ && curStabilizedPos_ != -1)
+        return Mat(); // we've processed all frames already
+
+    bool processed;
+    do processed = doOneIteration();
+    while (processed && curStabilizedPos_ == -1);
+
+    if (curStabilizedPos_ == -1)
+        return Mat(); // frame source is empty
+
+    const Mat &stabilizedFrame = at(curStabilizedPos_, stabilizedFrames_);
+    int dx = static_cast<int>(floor(trimRatio_ * stabilizedFrame.cols));
+    int dy = static_cast<int>(floor(trimRatio_ * stabilizedFrame.rows));
+    return stabilizedFrame(Rect(dx, dy, stabilizedFrame.cols - 2*dx, stabilizedFrame.rows - 2*dy));
+}
+
+
+bool StabilizerBase::doOneIteration()
 {
     Mat frame = frameSource_->nextFrame();
     if (!frame.empty())
@@ -214,21 +130,16 @@ bool Stabilizer::processNextFrame()
             if (doDeblurring_)
                 at(curPos_, blurrinessRates_) = calcBlurriness(frame);
 
-            if (!auxPassWasDone_)
-            {
-                Mat motionPrevToCur = motionEstimator_->estimate(
-                        at(curPos_ - 1, frames_), at(curPos_, frames_));
-                at(curPos_ - 1, motions_) = motionPrevToCur;
-            }
+            estimateMotion();
 
             if (curPos_ >= radius_)
             {
                 curStabilizedPos_ = curPos_ - radius_;
-                stabilizeFrame(curStabilizedPos_);
+                stabilizeFrame();
             }
         }
         else
-            processFirstFrame(frame);
+            setUp(frame);
 
         log_->print(".");
         return true;
@@ -239,7 +150,7 @@ bool Stabilizer::processNextFrame()
         curStabilizedPos_++;
         at(curStabilizedPos_ + radius_, frames_) = at(curPos_, frames_);
         at(curStabilizedPos_ + radius_ - 1, motions_) = at(curPos_ - 1, motions_);
-        stabilizeFrame(curStabilizedPos_);
+        stabilizeFrame();
 
         log_->print(".");
         return true;
@@ -249,41 +160,214 @@ bool Stabilizer::processNextFrame()
 }
 
 
-void Stabilizer::stabilizeFrame(int idx)
+void StabilizerBase::stabilizeFrame(const Mat &stabilizationMotion)
 {
-    Mat stabMotion;
-    if (!auxPassWasDone_)
-        stabMotion = motionFilter_->apply(idx, motions_);
+    Mat stabilizationMotion_;
+    if (doCorrectionForInclusion_)
+        stabilizationMotion_ = ensureInclusionConstraint(stabilizationMotion, frameSize_, trimRatio_);
     else
-        stabMotion = at(idx, stabilizationMotions_);
+        stabilizationMotion_ = stabilizationMotion.clone();
 
-    if (inclusionConstraint_ && !mustEstimateTrimRatio_)
-        stabMotion = ensureInclusionConstraint(stabMotion, frameSize_, trimRatio_);
-
-    at(idx, stabilizationMotions_) = stabMotion;
+    at(curStabilizedPos_, stabilizationMotions_) = stabilizationMotion_;
 
     if (doDeblurring_)
     {
-        at(idx, frames_).copyTo(preProcessedFrame_);
-        deblurer_->deblur(idx, preProcessedFrame_);
+        at(curStabilizedPos_, frames_).copyTo(preProcessedFrame_);
+        deblurer_->deblur(curStabilizedPos_, preProcessedFrame_);
     }
     else
-        preProcessedFrame_ = at(idx, frames_);
+        preProcessedFrame_ = at(curStabilizedPos_, frames_);
 
     // apply stabilization transformation
     warpAffine(
-            preProcessedFrame_, at(idx, stabilizedFrames_), stabMotion(Rect(0,0,3,2)),
-            frameSize_, INTER_LINEAR, borderMode_);
+            preProcessedFrame_, at(curStabilizedPos_, stabilizedFrames_),
+            stabilizationMotion_(Rect(0,0,3,2)), frameSize_, INTER_LINEAR, borderMode_);
 
     if (doInpainting_)
     {
         warpAffine(
-                frameMask_, at(idx, stabilizedMasks_), stabMotion(Rect(0,0,3,2)), frameSize_,
-                INTER_NEAREST);
-        erode(at(idx, stabilizedMasks_), at(idx, stabilizedMasks_), Mat());
-        at(idx, stabilizedMasks_).copyTo(inpaintingMask_);
-        inpainter_->inpaint(idx, at(idx, stabilizedFrames_), inpaintingMask_);
+                frameMask_, at(curStabilizedPos_, stabilizedMasks_),
+                stabilizationMotion_(Rect(0,0,3,2)), frameSize_, INTER_NEAREST);
+
+        erode(at(curStabilizedPos_, stabilizedMasks_), at(curStabilizedPos_, stabilizedMasks_),
+              Mat());
+
+        at(curStabilizedPos_, stabilizedMasks_).copyTo(inpaintingMask_);
+
+        inpainter_->inpaint(
+            curStabilizedPos_, at(curStabilizedPos_, stabilizedFrames_), inpaintingMask_);
     }
+}
+
+
+OnePassStabilizer::OnePassStabilizer()
+{
+    setMotionFilter(new GaussianMotionFilter());
+    resetImpl();
+}
+
+
+void OnePassStabilizer::resetImpl()
+{
+    curPos_ = -1;
+    curStabilizedPos_ = -1;
+    frames_.clear();
+    motions_.clear();
+    stabilizedFrames_.clear();
+    stabilizationMotions_.clear();
+    doDeblurring_ = false;
+    doInpainting_ = false;
+}
+
+
+void OnePassStabilizer::setUp(Mat &firstFrame)
+{
+    frameSize_ = firstFrame.size();
+    frameMask_.create(frameSize_, CV_8U);
+    frameMask_.setTo(255);
+
+    int cacheSize = 2*radius_ + 1;
+
+    frames_.resize(cacheSize);
+    stabilizedFrames_.resize(cacheSize);
+    stabilizedMasks_.resize(cacheSize);
+    motions_.resize(cacheSize);
+    stabilizationMotions_.resize(cacheSize);
+
+    for (int i = -radius_; i < 0; ++i)
+    {
+        at(i, motions_) = Mat::eye(3, 3, CV_32F);
+        at(i, frames_) = firstFrame;
+    }
+
+    at(0, frames_) = firstFrame;
+
+    motionFilter_->setRadius(radius_);
+    motionFilter_->update();
+
+    StabilizerBase::setUp(cacheSize, firstFrame);
+}
+
+
+void OnePassStabilizer::estimateMotion()
+{
+    at(curPos_ - 1, motions_) = motionEstimator_->estimate(
+            at(curPos_ - 1, frames_), at(curPos_, frames_));
+}
+
+
+void OnePassStabilizer::stabilizeFrame()
+{
+    Mat stabilizationMotion = motionFilter_->stabilize(curStabilizedPos_, &motions_[0], motions_.size());
+    StabilizerBase::stabilizeFrame(stabilizationMotion);
+}
+
+
+TwoPassStabilizer::TwoPassStabilizer()
+{
+    setMotionStabilizer(new GaussianMotionFilter());
+    setEstimateTrimRatio(true);
+    resetImpl();
+}
+
+
+Mat TwoPassStabilizer::nextFrame()
+{
+    runPrePassIfNecessary();
+    return StabilizerBase::nextStabilizedFrame();
+}
+
+
+void TwoPassStabilizer::resetImpl()
+{
+    isPrePassDone_ = false;
+    frameCount_ = 0;
+    curPos_ = -1;
+    curStabilizedPos_ = -1;
+    frames_.clear();
+    motions_.clear();
+    stabilizedFrames_.clear();
+    stabilizationMotions_.clear();
+    doDeblurring_ = false;
+    doInpainting_ = false;
+}
+
+
+void TwoPassStabilizer::runPrePassIfNecessary()
+{
+    if (!isPrePassDone_)
+    {
+        log_->print("first pass: estimating motions");
+
+        Mat prevFrame, frame;
+
+        while (!(frame = frameSource_->nextFrame()).empty())
+        {
+            if (frameCount_ > 0)
+                motions_.push_back(motionEstimator_->estimate(prevFrame, frame));
+            else
+            {
+                frameSize_ = frame.size();
+                frameMask_.create(frameSize_, CV_8U);
+                frameMask_.setTo(255);
+            }
+
+            prevFrame = frame;
+            frameCount_++;
+
+            log_->print(".");
+        }
+
+        for (int i = 0; i < radius_; ++i)
+            motions_.push_back(Mat::eye(3, 3, CV_32F));
+        log_->print("\n");
+
+        IMotionStabilizer *motionStabilizer = static_cast<IMotionStabilizer*>(motionStabilizer_);
+        MotionFilterBase *motionFilterBase = dynamic_cast<MotionFilterBase*>(motionStabilizer);
+        if (motionFilterBase)
+        {
+            motionFilterBase->setRadius(radius_);
+            motionFilterBase->update();
+        }
+
+        stabilizationMotions_.resize(frameCount_);
+        motionStabilizer_->stabilize(&motions_[0], frameCount_, &stabilizationMotions_[0]);
+
+        if (mustEstTrimRatio_)
+        {
+            trimRatio_ = 0;
+            for (int i = 0; i < frameCount_; ++i)
+            {
+                Mat S = stabilizationMotions_[i];
+                trimRatio_ = std::max(trimRatio_, estimateOptimalTrimRatio(S, frameSize_));
+            }
+            log_->print("estimated trim ratio: %f\n", static_cast<double>(trimRatio_));
+        }
+
+        isPrePassDone_ = true;
+        frameSource_->reset();
+    }
+}
+
+
+void TwoPassStabilizer::setUp(Mat &firstFrame)
+{
+    int cacheSize = 2*radius_ + 1;
+
+    frames_.resize(cacheSize);
+    stabilizedFrames_.resize(cacheSize);
+    stabilizedMasks_.resize(cacheSize);
+
+    for (int i = -radius_; i <= 0; ++i)
+        at(i, frames_) = firstFrame;
+
+    StabilizerBase::setUp(cacheSize, firstFrame);
+}
+
+
+void TwoPassStabilizer::stabilizeFrame()
+{
+    StabilizerBase::stabilizeFrame(stabilizationMotions_[curStabilizedPos_]);
 }
 
 } // namespace videostab

@@ -57,7 +57,7 @@ void InpaintingPipeline::setRadius(int val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setRadius(val);
-    IInpainter::setRadius(val);
+    InpainterBase::setRadius(val);
 }
 
 
@@ -65,7 +65,7 @@ void InpaintingPipeline::setFrames(const vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setFrames(val);
-    IInpainter::setFrames(val);
+    InpainterBase::setFrames(val);
 }
 
 
@@ -73,7 +73,7 @@ void InpaintingPipeline::setMotions(const vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setMotions(val);
-    IInpainter::setMotions(val);
+    InpainterBase::setMotions(val);
 }
 
 
@@ -81,7 +81,7 @@ void InpaintingPipeline::setStabilizedFrames(const vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setStabilizedFrames(val);
-    IInpainter::setStabilizedFrames(val);
+    InpainterBase::setStabilizedFrames(val);
 }
 
 
@@ -89,7 +89,15 @@ void InpaintingPipeline::setStabilizationMotions(const vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setStabilizationMotions(val);
-    IInpainter::setStabilizationMotions(val);
+    InpainterBase::setStabilizationMotions(val);
+}
+
+
+void InpaintingPipeline::update()
+{
+    for (size_t i = 0; i < inpainters_.size(); ++i)
+        inpainters_[i]->update();
+    InpainterBase::update();
 }
 
 
