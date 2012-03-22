@@ -633,9 +633,6 @@ void CV_SpecificImageTest::run(int)
 
 void CV_VideoTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const char codecs[][4] = { {'I', 'Y', 'U', 'V'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'P', 'G', '2'},
@@ -649,16 +646,10 @@ void CV_VideoTest::run(int)
     {
         VideoTest(ts->get_data_path(), CV_FOURCC(codecs[i][0], codecs[i][1], codecs[i][2], codecs[i][3]));
     }
-
-#endif
-#endif
 }
 
 void CV_SpecificVideoFileTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const char codecs[][4] = { {'M', 'P', 'G', '2'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'J', 'P', 'G'},
@@ -670,16 +661,10 @@ void CV_SpecificVideoFileTest::run(int)
     {
         SpecificVideoFileTest(ts->get_data_path(), codecs[i]);
     }
-
-#endif
-#endif
 }
 
 void CV_SpecificVideoCameraTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const char codecs[][4] = { {'M', 'P', 'G', '2'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'J', 'P', 'G'},
@@ -691,9 +676,6 @@ void CV_SpecificVideoCameraTest::run(int)
     {
         SpecificVideoCameraTest(ts->get_data_path(), codecs[i]);
     }
-
-#endif
-#endif
 }
 
 TEST(Highgui_Image, regression) { CV_ImageTest test; test.safe_run(); }
