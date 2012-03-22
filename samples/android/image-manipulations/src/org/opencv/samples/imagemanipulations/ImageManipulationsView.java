@@ -107,7 +107,7 @@ class ImageManipulationsView extends SampleCvViewBase {
                 CreateAuxiliaryMats();
 
             Imgproc.Sobel(mGrayInnerWindow, mIntermediateMat, CvType.CV_8U, 1, 1);
-            Core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 10);
+            Core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 10, 0);
             Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
 

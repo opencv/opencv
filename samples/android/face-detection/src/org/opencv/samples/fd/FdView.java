@@ -83,7 +83,7 @@ class FdView extends SampleCvViewBase {
             int faceSize = Math.round(height * FdActivity.minFaceSize);
             List<Rect> faces = new LinkedList<Rect>();
             mCascade.detectMultiScale(mGray, faces, 1.1, 2, 2 // TODO: objdetect.CV_HAAR_SCALE_IMAGE
-                    , new Size(faceSize, faceSize));
+                    , new Size(faceSize, faceSize), new Size());
 
             for (Rect r : faces)
                 Core.rectangle(mRgba, r.tl(), r.br(), new Scalar(0, 255, 0, 255), 3);
