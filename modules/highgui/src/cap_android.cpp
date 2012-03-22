@@ -491,7 +491,7 @@ bool CvCapture_Android::convertYUV2BGR(int width, int height, const unsigned cha
     if (m_frameFormat == yuv420sp)
         cv::cvtColor(src, resmat, inRGBorder ? CV_YUV420sp2RGB : CV_YUV420sp2BGR, withAlpha ? 4 : 3);
     else if (m_frameFormat == yvu420sp)
-        cv::cvtColor(src, resmat, inRGBorder ? CV_YUV2RGB_NV12 : CV_YUV2BGR_NV12, withAlpha ? 4 : 3);
+        cv::cvtColor(src, resmat, inRGBorder ? CV_YUV2RGB_NV21 : CV_YUV2BGR_NV12, withAlpha ? 4 : 3);
 
     return !resmat.empty();
 }
