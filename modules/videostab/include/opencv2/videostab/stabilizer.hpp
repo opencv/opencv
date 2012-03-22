@@ -163,6 +163,9 @@ public:
     virtual void reset() { resetImpl(); }
     virtual Mat nextFrame();
 
+    // available after pre-pass, before it's empty
+    std::vector<Mat> motions() const;
+
 private:
     void resetImpl();
     void runPrePassIfNecessary();
