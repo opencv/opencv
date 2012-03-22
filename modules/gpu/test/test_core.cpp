@@ -848,7 +848,7 @@ TEST_P(Sqrt, Accuracy)
     cv::Mat dst_gold;
     sqrtGold(src, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Sqrt, testing::Combine(

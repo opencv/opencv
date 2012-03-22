@@ -408,6 +408,21 @@ TEST_P(Laplacian, Color)
     EXPECT_MAT_NEAR(getInnerROI(dst_gold, cv::Size(3, 3)), getInnerROI(dst, cv::Size(3, 3)), 0.0);
 }
 
+TEST_P(Laplacian, Gray_32FC1)
+{
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2GRAY);
+    src.convertTo(src, CV_32F, 1.0 / 255.0);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::Laplacian(loadMat(src, useRoi), dst, -1, ksize.width);
+
+    cv::Mat dst_gold;
+    cv::Laplacian(src, dst_gold, -1, ksize.width);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Laplacian, testing::Combine(
     ALL_DEVICES,
     testing::Values(KSize(1, 1), KSize(3, 3)),
