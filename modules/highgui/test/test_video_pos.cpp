@@ -53,50 +53,47 @@ using namespace std;
 class CV_PositioningTest : public cvtest::BaseTest
 {
 public:
-    void CreateTestVideo(const string& format, int codec);
+    void CreateTestVideo(const string& format, int codec, int framecount = 125);
     void run(int);
 };
 
-void CV_PositioningTest::CreateTestVideo(const string& format, int codec)
+void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int framecount)
 {
- const size_t frame_count = 2500;
-
  stringstream s; s << codec;
 
- cv::VideoWriter writer(ts->get_data_path()+"video/test_video_"+s.str()+format, codec, 25, cv::Size(640, 480), false);
+ cv::VideoWriter writer(ts->get_data_path()+"video/test_video_"+s.str()+"."+format, codec, 25, cv::Size(640, 480), false);
 
- for (size_t i = 0; i < frame_count; ++i)
+ for (int i = 0; i < framecount; ++i)
  {
    cv::Mat mat(480, 640, CV_8UC1);
    size_t n = 32, tmp = i;
+
    vector<char> tmp_code; tmp_code.clear();
 
-    while ( tmp > 1 )
-    {
-        tmp_code.push_back(tmp%2);
-        tmp /= 2;
-    }
-    tmp_code.push_back(1);
+   while ( tmp > 1 )
+   {
+       tmp_code.push_back(tmp%2);
+       tmp /= 2;
+   }
+   tmp_code.push_back(tmp);
 
-    vector<char> i_code(n);
-    for (size_t j = 0; j < n; ++j)
-    {
-    char val = j < n - tmp_code.size() ? 0 : tmp_code.at(j+tmp_code.size()-n);
+   vector<char> i_code;
+
+   for (size_t j = 0; j < n; ++j)
+   {
+    char val = j < n - tmp_code.size() ? 0 : tmp_code.at(n-1-j);
     i_code.push_back(val);
-    }
+   }
 
-    const size_t w = 480/n;
+   const size_t w = 480/n;
 
-    for (size_t j = 0; j < n; ++j)
-    {
-        for (size_t k = w*j; k < w*(j+1); ++k)
-        mat.row(k) = i_code[j] ? 255*cv::Mat::ones(1, 640, CV_8UC1) : cv::Mat::zeros(1, 640, CV_8UC1);
-    }
+   for (size_t j = 0; j < n; ++j)
+   {
+       cv::Scalar color = i_code[j] ? 255 : 0;
+       rectangle(mat, Rect(0, w*j, 640, w), color, -1);
+   }
 
-    writer << mat;
-
-    //imshow("test image", mat); waitKey();
-
+   writer << mat;
  }
 
  writer.~VideoWriter();
@@ -104,62 +101,122 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec)
 
 void CV_PositioningTest::run(int)
 {
-    const size_t n_codec = sizeof(codec_bmp_tags)/sizeof(codec_bmp_tags[0]);
+#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
-    const string format[] =  {"avi", "mov", "mp4", "mpg", "wmv"};
-    const size_t n_format = sizeof(format)/sizeof(format[0]);
+    const string format[] =  {"avi", "mov", "mp4", "mpg", "wmv", "3gp"};
+
+    const char codec[][4] = { {'X', 'V', 'I', 'D'},
+                              {'M', 'P', 'G', '2'},
+                              {'M', 'J', 'P', 'G'} };
+
+    size_t n_format = sizeof(format)/sizeof(format[0]),
+           n_codec = sizeof(codec)/sizeof(codec[0]);
 
     for (size_t i = 0; i < n_format; ++i)
     for (size_t j = 0; j < n_codec; ++j)
     {
-     CreateTestVideo(format[i], codec_bmp_tags[j].tag);
+      CreateTestVideo(format[i], CV_FOURCC(codec[j][0], codec[j][1], codec[j][2], codec[j][3]), 125);
 
-     stringstream s; s << codec_bmp_tags[j].tag;
-	
-    cv::VideoCapture cap(ts->get_data_path()+"video/test_video_"+s.str()+format[i]);
-	cap.set(CV_CAP_PROP_POS_FRAMES, 0.0);
+      stringstream s; s << CV_FOURCC(codec[j][0], codec[j][1], codec[j][2], codec[j][3]); //codec_bmp_tags[j].tag;
 
-	int N = cap.get(CV_CAP_PROP_FRAME_COUNT);
+      const string file_path = ts->get_data_path()+"video/test_video_"+s.str()+"."+format[i];
 
-	vector <int> idx;
+      bool error = false; int failed = 0;
 
-	RNG rng(N);
-	idx.clear();
-	for( int i = 0; i < N-1; i++ )
-	idx.push_back(rng.uniform(0, N));
-    idx.push_back(N-1);
-	swap(idx.at(rng.uniform(0, N-1)), idx.at(N-1));
+      cv::VideoCapture cap(file_path);
 
-    for (int i = 0; i < N; ++i)
-	{
-		cap.set(CV_CAP_PROP_POS_FRAMES, (double)idx[i]);
+      if (!cap.isOpened())
+      {
+        ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+        ts->printf(ts->LOG, "\nVideo codec: %s\n", string(&codec[j][0], 4).c_str());
+        ts->printf(ts->LOG, "\nError: cannot read video file.\n");
+        ts->set_failed_test_info(ts->FAIL_INVALID_TEST_DATA);
+        error = true;
+      }
 
-		cv::Mat img;  cap.retrieve(img);
+      cap.set(CV_CAP_PROP_POS_FRAMES, 0);
 
-		const double thresh = 128.0;
+      int N = cap.get(CV_CAP_PROP_FRAME_COUNT);
 
-		const size_t n = 32, w = img.rows/n;
+      if (N != 125)
+      {
+        if (!error)
+        {
+            ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+            ts->printf(ts->LOG, "\nVideo codec: %s\n", string(&codec[j][0], 4).c_str());
+            error = true;
+        }
+        ts->printf(ts->LOG, "\nError: returned frame count in clip is incorrect.\n");
+        ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+      }
 
-		int index = 0, deg = n-1;
+      vector <int> idx;
 
-		for (size_t j = 0; j < n; ++j)
-		{
-			cv::Mat mat = img.rowRange(w*j, w*(j+1)-1);
-			Scalar mat_mean = cv::mean(mat);
-			if (mat_mean[0] > thresh)
-			{
-				index += (2<<deg);
-			}
+      RNG rng(N);
+      idx.clear();
+      for( int k = 0; k < N-1; k++ )
+      idx.push_back(rng.uniform(0, N));
+      idx.push_back(N-1);
+      std::swap(idx.at(rng.uniform(0, N-1)), idx.at(N-1));
 
-			deg--;
-		}
+      for (int k = 0; k < N; ++k)
+      {
+        cap.set(CV_CAP_PROP_POS_FRAMES, (double)idx[k]);
 
-		if (index != idx[i])
-		{
-            ts->printf(ts->LOG, "Required position: %d   Returned position: %d\n   FAILED", idx[i], index);
-		}
-	}
+        cv::Mat img; cap.retrieve(img);
+
+        if (img.empty())
+        {
+            if (!error)
+            {
+                ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+                ts->printf(ts->LOG, "\nVideo codec: %s\n", string(&codec[j][0], 4).c_str());
+                error = true;
+            }
+            ts->printf(ts->LOG, "\nError: cannot read a frame in position %d.\n", idx[k]);
+            ts->set_failed_test_info(ts->FAIL_EXCEPTION);
+        }
+
+        const double thresh = 100;
+
+        const size_t n = 32, w = img.rows/n;
+
+        int index = 0, deg = n-1;
+
+        for (size_t l = 0; l < n; ++l)
+        {
+            cv::Mat mat = img.rowRange(w*l, w*(l+1)-1);
+
+            Scalar mat_mean = cv::mean(mat);
+
+            if (mat_mean[0] > thresh) index += (int)std::pow(2.0, 1.0*deg);
+
+            deg--;
+        }
+
+        if (index != idx[k])
+        {
+            if (!error)
+            {
+                ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+                ts->printf(ts->LOG, "\nVideo codec: %s\n\n", string(&codec[j][0], 4).c_str());
+                error = true;
+            }
+            ts->printf(ts->LOG, "Required position: %d   Returned position: %d FAILED\n", idx[k], index);
+            ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+            failed++;
+        }
+      }
+
+      if (!error) ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+
+      ts->printf(ts->LOG, "\nSuccessfull iterations: %d(%d%%)   Failed iterations: %d(%d%%)\n", N-failed, (N-failed)*100/N, failed, failed*100/N);
+      ts->printf(ts->LOG, "\n----------\n");
     }
+
+#endif
+#endif
 }
 
 TEST(Highgui_Positioning, regression) { CV_PositioningTest test; test.safe_run(); }
