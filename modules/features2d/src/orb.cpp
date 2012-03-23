@@ -932,7 +932,12 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
         // Compute the descriptors
         if (do_descriptors)
         {
-            Mat desc = descriptors.rowRange(offset, offset + nkeypoints);
+            Mat desc;
+            if (!descriptors.empty()) 
+            {
+                desc = descriptors.rowRange(offset, offset + nkeypoints);
+            } 
+
             offset += nkeypoints;
             // preprocess the resized image
             Mat& workingMat = imagePyramid[level];
