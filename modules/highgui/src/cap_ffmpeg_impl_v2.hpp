@@ -41,7 +41,6 @@
 //M*/
 
 #include "cap_ffmpeg_api.hpp"
-#include "ffmpeg_codecs.hpp"
 #include <assert.h>
 #include <algorithm>
 
@@ -65,6 +64,8 @@ extern "C" {
 #endif
 #include <errno.h>
 #endif
+
+#include "ffmpeg_codecs.hpp"
 
 #ifdef WIN32
   #define HAVE_FFMPEG_SWSCALE 1
