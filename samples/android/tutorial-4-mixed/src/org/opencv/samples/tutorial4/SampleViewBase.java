@@ -128,4 +128,8 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
             }
         }
     }
+
+    static {
+        System.loadLibrary("opencv_java");
+    }
 }

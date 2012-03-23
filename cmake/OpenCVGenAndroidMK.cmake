@@ -12,6 +12,13 @@ if(ANDROID)
     set(OPENCV_LIBTYPE_CONFIGMAKE "STATIC")
   endif()
 
+  if(BUILD_FAT_JAVA_LIB)
+    set(OPENCV_LIBTYPE_CONFIGMAKE "SHARED")
+    set(OPENCV_STATIC_LIBTYPE_CONFIGMAKE "STATIC")
+  else()
+    set(OPENCV_STATIC_LIBTYPE_CONFIGMAKE ${OPENCV_LIBTYPE_CONFIGMAKE})
+  endif()
+
   # setup lists of camera libs
   foreach(abi ARMEABI ARMEABI_V7A X86)
     ANDROID_GET_ABI_RAWNAME(${abi} ndkabi)
@@ -63,6 +70,12 @@ if(ANDROID)
     string(REPLACE ";" " " ${lst} "${${lst}}")
   endforeach()
   string(REPLACE "opencv_" "" OPENCV_MODULES_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
+
+  if(BUILD_FAT_JAVA_LIB)
+    set(OPENCV_LIBS_CONFIGMAKE java)
+  else()
+    set(OPENCV_LIBS_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
+  endif()
 
   # -------------------------------------------------------------------------------------------
   #  Part 1/2: ${BIN_DIR}/OpenCV.mk              -> For use *without* "make install"

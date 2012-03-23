@@ -1,8 +1,12 @@
 # creates target "${_target}_android_project" for building standard Android project
 macro(add_android_project _target _path)
-    SET (android_dependencies opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core)
+    SET(android_dependencies opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core)
     if(NOT BUILD_SHARED_LIBS)
+      if(BUILD_FAT_JAVA_LIB)
+        SET(android_dependencies opencv_java)
+      else()
         LIST(APPEND android_dependencies opencv_androidcamera)
+      endif()
     endif()
 
     if (ANDROID AND CAN_BUILD_ANDROID_PROJECTS)
@@ -49,32 +53,32 @@ macro(add_android_project _target _path)
             list(APPEND ${_target}_project_files "${build_path}/${f}")
         endforeach()
 
-        # process default.properties
-        file(STRINGS "${_path}/default.properties" default_properties REGEX "^android\\.library\\.reference\\.1=.+$")
-        if (default_properties)
+        # process project.properties
+        file(STRINGS "${_path}/project.properties" project_properties REGEX "^android\\.library\\.reference\\.1=.+$")
+        if (project_properties)
             # has opencv dependency
             file(RELATIVE_PATH OPENCV_REFERENCE_PATH "${build_path}" "${CMAKE_BINARY_DIR}")
             add_custom_command(
-                OUTPUT "${build_path}/default.properties"
+                OUTPUT "${build_path}/project.properties"
                 OUTPUT "${build_path}/build.xml"
                 OUTPUT "${build_path}/local.properties"
                 OUTPUT "${build_path}/proguard.cfg"
-                COMMAND ${CMAKE_COMMAND} -E echo "" > "default.properties"
+                COMMAND ${CMAKE_COMMAND} -E echo "" > "project.properties"
                 COMMAND ${ANDROID_EXECUTABLE} update project --name "${_target}" --target "${ANDROID_SDK_TARGET}" --library "${OPENCV_REFERENCE_PATH}" --path .
                 WORKING_DIRECTORY ${build_path}
                 DEPENDS ${${_target}_project_files}
-                DEPENDS "${CMAKE_BINARY_DIR}/default.properties"
+                DEPENDS "${CMAKE_BINARY_DIR}/project.properties"
                 DEPENDS "${CMAKE_BINARY_DIR}/AndroidManifest.xml"
                 COMMENT "Updating android project - ${_target}"
                 )
         else()
             # has no opencv dependency
             add_custom_command(
-                OUTPUT "${build_path}/default.properties"
+                OUTPUT "${build_path}/project.properties"
                 OUTPUT "${build_path}/build.xml"
                 OUTPUT "${build_path}/local.properties"
                 OUTPUT "${build_path}/proguard.cfg"
-                COMMAND ${CMAKE_COMMAND} -E echo "" > "default.properties"
+                COMMAND ${CMAKE_COMMAND} -E echo "" > "project.properties"
                 COMMAND ${ANDROID_EXECUTABLE} update project --name "${_target}" --target "${ANDROID_SDK_TARGET}" --path .
                 WORKING_DIRECTORY ${build_path}
                 DEPENDS ${${_target}_project_files}
@@ -83,11 +87,11 @@ macro(add_android_project _target _path)
         endif()
 
         if("${build_path}" STREQUAL "${_path}")
-            #in case of in-source build default.properties file is not generated (it is just overwritten :)
-            SET_SOURCE_FILES_PROPERTIES("${build_path}/default.properties" PROPERTIES GENERATED FALSE)
+            #in case of in-source build project.properties file is not generated (it is just overwritten :)
+            SET_SOURCE_FILES_PROPERTIES("${build_path}/project.properties" PROPERTIES GENERATED FALSE)
         endif()
 
-        list(APPEND ${_target}_project_files "${build_path}/default.properties" "${build_path}/build.xml" "${build_path}/local.properties" "${build_path}/proguard.cfg")
+        list(APPEND ${_target}_project_files "${build_path}/project.properties" "${build_path}/build.xml" "${build_path}/local.properties" "${build_path}/proguard.cfg")
 
         # build native part of android project
         if(jni_files)
@@ -112,7 +116,7 @@ macro(add_android_project _target _path)
             ADD_CUSTOM_COMMAND(
                 TARGET ${JNI_LIB_NAME}
                 POST_BUILD
-                COMMAND ${CMAKE_STRIP} "${build_path}/libs/${ANDROID_NDK_ABI_NAME}/*.so"
+                COMMAND ${CMAKE_STRIP} --strip-unneeded "${build_path}/libs/${ANDROID_NDK_ABI_NAME}/*.so"
                 )
         else()
             SET(JNI_LIB_NAME)

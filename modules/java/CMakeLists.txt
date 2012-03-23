@@ -160,7 +160,20 @@ add_custom_target(${api_target} DEPENDS ${java_files})
 
 # add opencv_java library
 add_library(${target} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources})
-target_link_libraries(${target} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+if(BUILD_FAT_JAVA_LIB)
+  set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
+  list(REMOVE_ITEM __deps ${the_module})
+  ocv_list_unique(__deps)
+  set(__extradeps ${__deps})
+  ocv_list_filterout(__extradeps "^opencv_")
+  if(__extradeps)
+    list(REMOVE_ITEM __deps ${__extradeps})
+  endif()
+
+  target_link_libraries(${target} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive ${__extradeps} ${OPENCV_LINKER_LIBS})
+else()
+  target_link_libraries(${target} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+endif()
 add_dependencies(${target} ${api_target})
 
 # Additional target properties
@@ -169,6 +182,7 @@ set_target_properties(${target} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR ${OPENCV_LIB_INSTALL_PATH}
+    LINK_INTERFACE_LIBRARIES ""
     )
 
 install(TARGETS ${target} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
@@ -181,7 +195,7 @@ if(ANDROID)
   add_custom_command(
         TARGET ${target}
         POST_BUILD
-        COMMAND ${CMAKE_STRIP} "${LIBRARY_OUTPUT_PATH}/lib${target}.so"
+        COMMAND ${CMAKE_STRIP} --strip-unneeded "${LIBRARY_OUTPUT_PATH}/lib${target}.so"
         )
 
   set(lib_proj_files "")

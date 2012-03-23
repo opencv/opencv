@@ -24,6 +24,10 @@ class Sample3View extends SampleViewBase {
     public native void FindFeatures(int width, int height, byte yuv[], int[] rgba);
 
     static {
+	try {
+            System.loadLibrary("opencv_java");
+        } catch(Exception e) {
+        }
         System.loadLibrary("native_sample");
     }
 }

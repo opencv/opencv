@@ -2,6 +2,9 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+OPENCV_LIB_TYPE:=STATIC
+OPENCV_INSTALL_MODULES:=on
+
 include ../includeOpenCV.mk
 ifeq ("$(wildcard $(OPENCV_MK_PATH))","")
 	#try to load OpenCV.mk from default install location
