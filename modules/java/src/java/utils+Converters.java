@@ -547,6 +547,22 @@ public class Converters {
         return res;
     }
 
+    public static void Mat_to_vector_double(Mat m, List<Double> ds) {
+        if (ds == null)
+            throw new java.lang.IllegalArgumentException("ds == null");
+        int count = m.rows();
+        if (CvType.CV_64FC1 != m.type() || m.cols() != 1)
+            throw new java.lang.IllegalArgumentException(
+                    "CvType.CV_64FC1 != m.type() ||  m.cols()!=1\n" + m);
+
+        ds.clear();
+        double[] buff = new double[count];
+        m.get(0, 0, buff);
+        for (int i = 0; i < count; i++) {
+            ds.add(buff[i]);
+        }
+    }
+
     public static Mat vector_DMatch_to_Mat(List<DMatch> matches) {
         Mat res;
         int count = (matches != null) ? matches.size() : 0;

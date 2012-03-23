@@ -141,17 +141,23 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testApproxPolyDP() {
-        Mat curve = new Mat(1, 5, CvType.CV_32FC2);
-        curve.put(0, 0, 1, 3, 2, 4, 3, 5, 4, 4, 5, 3);
+    	List<Point> curve = new ArrayList<Point>(5);
+    	curve.add(new Point(1, 3));
+    	curve.add(new Point(2, 4));
+    	curve.add(new Point(3, 5));
+    	curve.add(new Point(4, 4));
+    	curve.add(new Point(5, 3));
+    	
+    	List<Point> approxCurve = new ArrayList<Point>();
 
-        Imgproc.approxPolyDP(curve, dst, EPS, true);
+        Imgproc.approxPolyDP(curve, approxCurve, EPS, true);
 
-        Mat approxCurve = new Mat(3, 1, CvType.CV_32FC2) {
-            {
-                put(0, 0, 1, 3, 3, 5, 5, 3);
-            }
-        };
-        assertMatEqual(approxCurve, dst, EPS);
+        List<Point> approxCurveGold =  new ArrayList<Point>(3);
+        approxCurveGold.add(new Point(1, 3));
+        approxCurveGold.add(new Point(3, 5));
+        approxCurveGold.add(new Point(5, 3));
+
+        assertListPointEquals(approxCurve, approxCurveGold, EPS);
     }
 
     public void testArcLength() {

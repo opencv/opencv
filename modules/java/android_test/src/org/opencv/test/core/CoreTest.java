@@ -1190,23 +1190,18 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testMeanStdDevMatMatMat() {
-        Mat mean = new Mat();
-        Mat stddev = new Mat();
+        List<Double> mean   = new ArrayList<Double>();
+        List<Double> stddev = new ArrayList<Double>();
 
         Core.meanStdDev(rgbLena, mean, stddev);
 
-        Mat expectedMean = new Mat(3, 1, CvType.CV_64F) {
-            {
-                put(0, 0, 105.3989906311035, 99.56269836425781, 179.7303047180176);
-            }
-        };
-        Mat expectedDev = new Mat(3, 1, CvType.CV_64F) {
-            {
-                put(0, 0, 33.74205485167219, 52.8734582803278, 49.01569488056406);
-            }
-        };
-        assertMatEqual(expectedMean, mean, EPS);
-        assertMatEqual(expectedDev, stddev, EPS);
+        List<Double> expectedMean = Arrays.asList( new Double[]
+        	{105.3989906311035, 99.56269836425781, 179.7303047180176} );
+        List<Double> expectedDev = Arrays.asList( new Double[]
+            {33.74205485167219, 52.8734582803278, 49.01569488056406} );
+        
+        assertListEquals(expectedMean, mean, EPS);
+        assertListEquals(expectedDev, stddev, EPS);
     }
 
     public void testMeanStdDevMatMatMatMat() {
@@ -1215,15 +1210,16 @@ public class CoreTest extends OpenCVTestCase {
         Mat mask = gray0.clone();
         submat = mask.submat(0, mask.rows() / 2, 0, mask.cols() / 2);
         submat.setTo(new Scalar(1));
-        Mat mean = new Mat();
-        Mat stddev = new Mat();
+        List<Double> mean   = new ArrayList<Double>();
+        List<Double> stddev = new ArrayList<Double>();
 
         Core.meanStdDev(grayRnd, mean, stddev, mask);
 
-        Mat expectedMean = new Mat(1, 1, CvType.CV_64F, new Scalar(33));
-        Mat expectedDev = new Mat(1, 1, CvType.CV_64F, new Scalar(0));
-        assertMatEqual(expectedMean, mean, EPS);
-        assertMatEqual(expectedDev, stddev, EPS);
+        List<Double> expectedMean = Arrays.asList( new Double[] {33d} );
+        List<Double> expectedDev = Arrays.asList( new Double[] {0d} );
+                
+        assertListEquals(expectedMean, mean, EPS);
+        assertListEquals(expectedDev, stddev, EPS);
     }
 
     public void testMerge() {

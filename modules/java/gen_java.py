@@ -508,7 +508,7 @@ func_arg_fix = {
         'polylines' : { 'pts' : 'vector_vector_Point', },
         'fillConvexPoly' : { 'points' : 'vector_Point', },
         'boundingRect' : { 'points' : 'vector_Point', },
-        #'approxPolyDP' : { 'curve' : 'vector_Point2f', 'CV_OUT approxCurve' : 'vector_Point2f', },
+        'approxPolyDP' : { 'curve' : 'vector_Point2f', 'approxCurve' : 'vector_Point2f', },
         'arcLength' : { 'curve' : 'vector_Point2f', },
         'isContourConvex' : { 'contour' : 'vector_Point2f', },
         'pointPolygonTest' : { 'contour' : 'vector_Point2f', },
@@ -518,7 +518,7 @@ func_arg_fix = {
         'vconcat' : { 'src' : 'vector_Mat', },
         'undistortPoints' : { 'src' : 'vector_Point2d', 'dst' : 'vector_Point2d' },
         'checkRange' : {'pos' : '*'},
-        #'meanStdDev' : {'mean' : 'Scalar', 'stddev' : 'Scalar'},
+        'meanStdDev' : {'mean' : 'vector_double', 'stddev' : 'vector_double'},
     }, # '', i.e. no class
 } # func_arg_fix
 
