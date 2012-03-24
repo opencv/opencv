@@ -29,6 +29,24 @@ void on_trackbar(int pos)
     cvReleaseImage( &cnt_img );
 }
 
+static void findCComp( IplImage* img )
+{
+    int x, y, cidx = 1;
+    IplImage* mask = cvCreateImage( cvSize(img->width+2, img->height+2), 8, 1 );
+    cvZero(mask);
+    cvRectangle( mask, cvPoint(0, 0), cvPoint(mask->width-1, mask->height-1),
+                 cvScalarAll(1), 1, 8, 0 );
+    
+    for( y = 0; y < img->height; y++ )
+        for( x = 0; x < img->width; x++ )
+        {
+            if( CV_IMAGE_ELEM(mask, uchar, y+1, x+1) != 0 )
+                continue;
+            cvFloodFill(img, cvPoint(x,y), cvScalarAll(cidx),
+                        cvScalarAll(0), cvScalarAll(0), 0, 4, mask);
+            cidx++;
+        }
+}
 
 
 int main( int argc, char** argv )
@@ -36,6 +54,9 @@ int main( int argc, char** argv )
     int i, j;
     CvMemStorage* storage = cvCreateMemStorage(0);
     IplImage* img = cvCreateImage( cvSize(w,w), 8, 1 );
+    IplImage* img32f = cvCreateImage( cvSize(w,w), IPL_DEPTH_32F, 1 );
+    IplImage* img32s = cvCreateImage( cvSize(w,w), IPL_DEPTH_32S, 1 );
+    IplImage* img3 = cvCreateImage( cvSize(w,w), 8, 3 );
     help();
     cvZero( img );
 
@@ -54,7 +75,7 @@ int main( int argc, char** argv )
                 cvLine(img, cvPoint(cvRound(dx+100+j*10-80*cos(angle)),
                     cvRound(dy+100-90*sin(angle))),
                     cvPoint(cvRound(dx+100+j*10-30*cos(angle)),
-                    cvRound(dy+100-30*sin(angle))), white, 1, 8, 0);
+                    cvRound(dy+100-30*sin(angle))), white, 3, 8, 0);
             }
         }
 
@@ -73,9 +94,16 @@ int main( int argc, char** argv )
 
     cvNamedWindow( "image", 1 );
     cvShowImage( "image", img );
+    cvConvert( img, img32f );
+    findCComp( img32f );
+    cvConvert( img32f, img32s );
 
-    cvFindContours( img, storage, &contours, sizeof(CvContour),
-                    CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
+    cvFindContours( img32s, storage, &contours, sizeof(CvContour),
+                    CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
+    
+    //cvFindContours( img, storage, &contours, sizeof(CvContour),
+    //                CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
+    
     
     {
     const char* attrs[] = {"recursive", "1", 0};
@@ -89,11 +117,43 @@ int main( int argc, char** argv )
     cvNamedWindow( "contours", 1 );
     cvCreateTrackbar( "levels+3", "contours", &levels, 7, on_trackbar );
 
+    {
+        CvRNG rng = cvRNG(-1);
+        
+        CvSeq* tcontours = contours;
+        cvCvtColor( img, img3, CV_GRAY2BGR );
+        while( tcontours->h_next )
+            tcontours = tcontours->h_next;
+
+        for( ; tcontours != 0; tcontours = tcontours->h_prev )
+        {
+            CvScalar color;
+            color.val[0] = cvRandInt(&rng) % 256;
+            color.val[1] = cvRandInt(&rng) % 256;
+            color.val[2] = cvRandInt(&rng) % 256;
+            color.val[3] = cvRandInt(&rng) % 256;
+            cvDrawContours(img3, tcontours, color, color, 0, -1, 8, cvPoint(0,0));
+            if( tcontours->v_next )
+            {
+                color.val[0] = cvRandInt(&rng) % 256;
+                color.val[1] = cvRandInt(&rng) % 256;
+                color.val[2] = cvRandInt(&rng) % 256;
+                color.val[3] = cvRandInt(&rng) % 256;
+                cvDrawContours(img3, tcontours->v_next, color, color, 1, -1, 8, cvPoint(0,0));
+            }
+        }
+        
+    }
+    
+    cvShowImage( "colored", img3 );
     on_trackbar(0);
     cvWaitKey(0);
     cvReleaseMemStorage( &storage );
     cvReleaseImage( &img );
-
+    cvReleaseImage( &img32f );
+    cvReleaseImage( &img32s );
+    cvReleaseImage( &img3 );
+    
     return 0;
 }
 
