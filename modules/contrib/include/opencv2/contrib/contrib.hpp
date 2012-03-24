@@ -845,6 +845,131 @@ namespace cv
         bool get_uv(double x, double y, int&u, int&v);
         void create_map(int M, int N, int R, int S, double ro0, double smin);
     };
+    
+    CV_EXPORTS Mat subspaceProject(InputArray W, InputArray mean, InputArray src);
+    CV_EXPORTS Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
+    
+    class CV_EXPORTS LDA
+    {
+    public:
+        // Initializes a LDA with num_components (default 0) and specifies how
+        // samples are aligned (default dataAsRow=true).
+        LDA(int num_components = 0) :
+            _num_components(num_components) {};
+
+        // Initializes and performs a Discriminant Analysis with Fisher's
+        // Optimization Criterion on given data in src and corresponding labels
+        // in labels. If 0 (or less) number of components are given, they are
+        // automatically determined for given data in computation.
+        LDA(const Mat& src, vector<int> labels,
+                int num_components = 0) :
+                    _num_components(num_components)
+        {
+            this->compute(src, labels); //! compute eigenvectors and eigenvalues
+        }
+
+        // Initializes and performs a Discriminant Analysis with Fisher's
+        // Optimization Criterion on given data in src and corresponding labels
+        // in labels. If 0 (or less) number of components are given, they are
+        // automatically determined for given data in computation.
+        LDA(InputArray src, InputArray labels,
+                int num_components = 0) :
+                    _num_components(num_components)
+        {
+            this->compute(src, labels); //! compute eigenvectors and eigenvalues
+        }
+
+        // Serializes this object to a given filename.
+        void save(const string& filename) const;
+
+        // Deserializes this object from a given filename.
+        void load(const string& filename);
+
+        // Serializes this object to a given cv::FileStorage.
+        void save(FileStorage& fs) const;
+
+            // Deserializes this object from a given cv::FileStorage.
+        void load(const FileStorage& node);
+
+        // Destructor.
+        ~LDA() {}
+
+        //! Compute the discriminants for data in src and labels.
+        void compute(InputArray src, InputArray labels);
+
+        // Projects samples into the LDA subspace.
+        Mat project(InputArray src);
+
+        // Reconstructs projections from the LDA subspace.
+        Mat reconstruct(InputArray src);
+
+        // Returns the eigenvectors of this LDA.
+        Mat eigenvectors() const { return _eigenvectors; };
+
+        // Returns the eigenvalues of this LDA.
+        Mat eigenvalues() const { return _eigenvalues; }
+        
+    protected:
+        bool _dataAsRow;
+        int _num_components;
+        Mat _eigenvectors;
+        Mat _eigenvalues;
+
+        void lda(InputArray src, InputArray labels);
+    };
+    
+    class CV_EXPORTS FaceRecognizer
+    {
+    public:
+        //! virtual destructor
+        virtual ~FaceRecognizer() {}
+
+        // Trains a FaceRecognizer.
+        virtual void train(InputArray src, InputArray labels) = 0;
+
+        // Gets a prediction from a FaceRecognizer.
+        virtual int predict(InputArray src) const = 0;
+
+        // Serializes this object to a given filename.
+        virtual void save(const string& filename) const;
+
+        // Deserializes this object from a given filename.
+        virtual void load(const string& filename);
+
+        // Serializes this object to a given cv::FileStorage.
+        virtual void save(FileStorage& fs) const = 0;
+
+        // Deserializes this object from a given cv::FileStorage.
+        virtual void load(const FileStorage& fs) = 0;
+        
+        // Returns eigenvectors (if any)
+        virtual Mat eigenvectors() const { return Mat(); }
+    };
+    
+    CV_EXPORTS Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0);
+    CV_EXPORTS Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0);
+    CV_EXPORTS Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8,
+                                                            int grid_x=8, int grid_y=8);
+    
+    enum
+    {
+        COLORMAP_AUTUMN = 0,
+        COLORMAP_BONE = 1,
+        COLORMAP_JET = 2,
+        COLORMAP_WINTER = 3,
+        COLORMAP_RAINBOW = 4,
+        COLORMAP_OCEAN = 5,
+        COLORMAP_SUMMER = 6,
+        COLORMAP_SPRING = 7,
+        COLORMAP_COOL = 8,
+        COLORMAP_HSV = 9,
+        COLORMAP_PINK = 10,
+        COLORMAP_HOT = 11,
+        COLORMAP_MKPJ1 = 12,
+        COLORMAP_MKPJ2 = 13
+    };
+    
+    CV_EXPORTS void applyColorMap(InputArray src, OutputArray dst, int colormap);
 }
 
 
