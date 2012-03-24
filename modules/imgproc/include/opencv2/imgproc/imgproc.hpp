@@ -971,7 +971,8 @@ enum
     RETR_EXTERNAL=CV_RETR_EXTERNAL, //!< retrieve only the most external (top-level) contours
     RETR_LIST=CV_RETR_LIST, //!< retrieve all the contours without any hierarchical information
     RETR_CCOMP=CV_RETR_CCOMP, //!< retrieve the connected components (that can possibly be nested)
-    RETR_TREE=CV_RETR_TREE //!< retrieve all the contours and the whole hierarchy
+    RETR_TREE=CV_RETR_TREE, //!< retrieve all the contours and the whole hierarchy
+    RETR_FLOODFILL=CV_RETR_FLOODFILL
 };
 
 //! the contour approximation algorithm

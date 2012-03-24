@@ -309,7 +309,8 @@ enum
     CV_RETR_EXTERNAL=0,
     CV_RETR_LIST=1,
     CV_RETR_CCOMP=2,
-    CV_RETR_TREE=3
+    CV_RETR_TREE=3,
+    CV_RETR_FLOODFILL=4
 };
 
 /* Contour approximation methods */
