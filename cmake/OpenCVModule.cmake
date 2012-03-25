@@ -76,20 +76,20 @@ macro(ocv_add_dependencies full_modname)
   endif()
   set(OPENCV_MODULE_${full_modname}_REQ_DEPS ${OPENCV_MODULE_${full_modname}_REQ_DEPS} CACHE INTERNAL "Required dependencies of ${full_modname} module")
   set(OPENCV_MODULE_${full_modname}_OPT_DEPS ${OPENCV_MODULE_${full_modname}_OPT_DEPS} CACHE INTERNAL "Optional dependencies of ${full_modname} module")
-  
+
   unset(__depsvar)
 endmacro()
 
 # declare new OpenCV module in current folder
 # Usage:
-#   ocv_add_module(<name> [INTERNAL|BINDINGS] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>]) 
+#   ocv_add_module(<name> [INTERNAL|BINDINGS] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 # Example:
 #   ocv_add_module(yaom INTERNAL opencv_core opencv_highgui NOLINK opencv_flann OPTIONAL opencv_gpu)
 macro(ocv_add_module _name)
   string(TOLOWER "${_name}" name)
   string(REGEX REPLACE "^opencv_" "" ${name} "${name}")
   set(the_module opencv_${name})
-  
+
   # the first pass - collect modules info, the second pass - create targets
   if(OPENCV_INITIAL_PASS)
     #guard agains redefinition
@@ -108,7 +108,7 @@ macro(ocv_add_module _name)
     set(OPENCV_MODULE_${the_module}_LOCATION    "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Location of ${the_module} module sources")
     unset(OPENCV_MODULE_${the_module}_REQ_DEPS CACHE)
     unset(OPENCV_MODULE_${the_module}_OPT_DEPS CACHE)
-    
+
     #create option to enable/disable this module
     option(BUILD_${the_module} "Include ${the_module} module into the OpenCV build" ON)
 
@@ -129,7 +129,7 @@ macro(ocv_add_module _name)
     else()
       set(OPENCV_MODULES_DISABLED_USER ${OPENCV_MODULES_DISABLED_USER} "${the_module}" CACHE INTERNAL "List of OpenCV modules explicitly disabled by user")
     endif()
-    
+
     #TODO: add submodules if any
 
     #stop processing of current file
@@ -170,7 +170,7 @@ macro(__ocv_flatten_module_required_dependencies the_module)
   set(__flattened_deps "")
   set(__resolved_deps "")
   set(__req_depends ${OPENCV_MODULE_${the_module}_REQ_DEPS})
-  
+
   while(__req_depends)
     list(GET __req_depends 0 __dep)
     list(REMOVE_AT __req_depends 0)
@@ -206,7 +206,7 @@ macro(__ocv_flatten_module_required_dependencies the_module)
   else()
     set(OPENCV_MODULE_${the_module}_DEPS "")
   endif()
-  
+
   unset(__resolved_deps)
   unset(__flattened_deps)
   unset(__req_depends)
@@ -217,7 +217,7 @@ macro(__ocv_flatten_module_optional_dependencies the_module)
   set(__flattened_deps ${OPENCV_MODULE_${the_module}_DEPS})
   set(__resolved_deps ${OPENCV_MODULE_${the_module}_DEPS})
   set(__opt_depends ${OPENCV_MODULE_${the_module}_OPT_DEPS})
-  
+
   while(__opt_depends)
     list(GET __opt_depends 0 __dep)
     list(REMOVE_AT __opt_depends 0)
@@ -244,7 +244,7 @@ macro(__ocv_flatten_module_optional_dependencies the_module)
   else()
     set(OPENCV_MODULE_${the_module}_DEPS "")
   endif()
-  
+
   unset(__resolved_deps)
   unset(__flattened_deps)
   unset(__opt_depends)
@@ -259,10 +259,10 @@ macro(__ocv_flatten_module_dependencies)
     set(HAVE_${m} ON CACHE INTERNAL "Module ${m} will not be built in current configuration")
     __ocv_flatten_module_required_dependencies(${m})
   endforeach()
-  
+
   foreach(m ${OPENCV_MODULES_BUILD})
     __ocv_flatten_module_optional_dependencies(${m})
-    
+
     #dependencies from other modules
     set(OPENCV_MODULE_${m}_DEPS ${OPENCV_MODULE_${m}_DEPS} CACHE INTERNAL "Flattened dependencies of ${m} module")
     #extra dependencies
@@ -273,7 +273,7 @@ macro(__ocv_flatten_module_dependencies)
     ocv_list_filterout(OPENCV_MODULE_${m}_DEPS_EXT "^opencv_[^ ]+$")
     set(OPENCV_MODULE_${m}_DEPS_EXT ${OPENCV_MODULE_${m}_DEPS_EXT} CACHE INTERNAL "Extra dependencies of ${m} module")
   endforeach()
-  
+
   set(OPENCV_MODULES_PUBLIC        ${OPENCV_MODULES_PUBLIC}        CACHE INTERNAL "List of OpenCV modules marked for export")
   set(OPENCV_MODULES_BUILD         ${OPENCV_MODULES_BUILD}         CACHE INTERNAL "List of OpenCV modules included into the build")
   set(OPENCV_MODULES_DISABLED_AUTO ${OPENCV_MODULES_DISABLED_AUTO} CACHE INTERNAL "List of OpenCV modules implicitly disabled due to dependencies")
@@ -322,7 +322,7 @@ macro(ocv_glob_modules)
 
   #resolve dependencies
   __ocv_flatten_module_dependencies()
-  
+
   #order modules by dependencies
   set(OPENCV_MODULES_BUILD_ "")
   foreach(m ${OPENCV_MODULES_BUILD})
@@ -373,7 +373,7 @@ endmacro()
 macro(ocv_set_module_sources)
   set(OPENCV_MODULE_${the_module}_HEADERS "")
   set(OPENCV_MODULE_${the_module}_SOURCES "")
-  
+
   foreach(f "HEADERS" ${ARGN})
     if(f STREQUAL "HEADERS" OR f STREQUAL "SOURCES")
       set(__filesvar "OPENCV_MODULE_${the_module}_${f}")
@@ -381,11 +381,14 @@ macro(ocv_set_module_sources)
       list(APPEND ${__filesvar} "${f}")
     endif()
   endforeach()
-  
+
   # the hacky way to embeed any files into the OpenCV without modification of its build system
   if(COMMAND ocv_get_module_external_sources)
     ocv_get_module_external_sources()
   endif()
+
+  # use full paths for module to be independent from the module location
+  ocv_to_full_paths(OPENCV_MODULE_${the_module}_HEADERS)
 
   set(OPENCV_MODULE_${the_module}_HEADERS ${OPENCV_MODULE_${the_module}_HEADERS} CACHE INTERNAL "List of header files for ${the_module}")
   set(OPENCV_MODULE_${the_module}_SOURCES ${OPENCV_MODULE_${the_module}_SOURCES} CACHE INTERNAL "List of source files for ${the_module}")
@@ -415,11 +418,11 @@ macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES})
   target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
   add_dependencies(opencv_modules ${the_module})
-  
+
   if(ENABLE_SOLUTION_FOLDERS)
     set_target_properties(${the_module} PROPERTIES FOLDER "modules")
   endif()
-  
+
   set_target_properties(${the_module} PROPERTIES
     OUTPUT_NAME "${the_module}${OPENCV_DLLVERSION}"
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
@@ -427,7 +430,7 @@ macro(ocv_create_module)
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR lib
   )
-  
+
   # For dynamic link numbering convenions
   if(NOT ANDROID)
     # Android SDK build scripts can include only .so files into final .apk
@@ -483,7 +486,7 @@ macro(ocv_add_precompiled_headers the_target)
         SET(pch_path "src/")
     endif()
     set(pch_header "${CMAKE_CURRENT_SOURCE_DIR}/${pch_path}precomp.hpp")
-    
+
     if(PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS AND EXISTS "${pch_header}")
         if(CMAKE_GENERATOR MATCHES Visual)
             set(${the_target}_pch "${CMAKE_CURRENT_SOURCE_DIR}/${pch_path}precomp.cpp")
@@ -568,7 +571,7 @@ macro(ocv_add_perf_tests)
     if(OCV_DEPENDENCIES_FOUND)
       set(the_target "opencv_perf_${name}")
       #project(${the_target})
-    
+
       ocv_module_include_directories(${perf_deps} "${perf_path}")
 
       if(NOT OPENCV_PERF_${the_module}_SOURCES)
@@ -619,7 +622,7 @@ macro(ocv_add_accuracy_tests)
     if(OCV_DEPENDENCIES_FOUND)
       set(the_target "opencv_test_${name}")
       #project(${the_target})
-    
+
       ocv_module_include_directories(${test_deps} "${test_path}")
 
       if(NOT OPENCV_TEST_${the_module}_SOURCES)
@@ -629,7 +632,7 @@ macro(ocv_add_accuracy_tests)
         source_group("Include" FILES ${test_hdrs})
         set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
       endif()
-    
+
       add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
@@ -643,7 +646,7 @@ macro(ocv_add_accuracy_tests)
       if(ENABLE_SOLUTION_FOLDERS)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests accuracy")
       endif()
-        
+
       enable_testing()
       get_target_property(LOC ${the_target} LOCATION)
       add_test(${the_target} "${LOC}")
@@ -698,7 +701,7 @@ macro(__ocv_track_module_link_dependencies the_module optkind)
        # get_target_property(__dep_location "${__dep}" LOCATION)
       endif()
     endwhile()
-   
+
     ocv_list_unique(${the_module}_MODULE_DEPS_${optkind})
     #ocv_list_reverse(${the_module}_MODULE_DEPS_${optkind})
     ocv_list_unique(${the_module}_EXTRA_DEPS_${optkind})

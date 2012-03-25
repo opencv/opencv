@@ -847,9 +847,9 @@ endif()
 # samples and tests
 status("")
 status("  Tests and samples:")
-status("    Tests:"             BUILD_TESTS       THEN YES ELSE NO)
-status("    Performance tests:" BUILD_PERF_TESTS  THEN YES ELSE NO)
-status("    Examples:"          BUILD_EXAMPLES    THEN YES ELSE NO)
+status("    Tests:"             BUILD_TESTS AND HAVE_opencv_ts       THEN YES ELSE NO)
+status("    Performance tests:" BUILD_PERF_TESTS AND HAVE_opencv_ts  THEN YES ELSE NO)
+status("    Examples:"          BUILD_EXAMPLES                       THEN YES ELSE NO)
 
 if(ANDROID)
   status("    Android tests:"    BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)

@@ -216,6 +216,28 @@ macro(ocv_list_sort __lst)
 endmacro()
 
 
+# add prefix to each item in the list
+macro(ocv_list_add_prefix LST PREFIX)
+  set(__tmp "")
+  foreach(item ${${LST}})
+    list(APPEND __tmp "${PREFIX}${item}")
+  endforeach()
+  set(${LST} ${__tmp})
+  unset(__tmp)
+endmacro()
+
+
+# add suffix to each item in the list
+macro(ocv_list_add_suffix LST SUFFIX)
+  set(__tmp "")
+  foreach(item ${${LST}})
+    list(APPEND __tmp "${item}${SUFFIX}")
+  endforeach()
+  set(${LST} ${__tmp})
+  unset(__tmp)
+endmacro()
+
+
 # simple regex escaping routine (does not cover all cases!!!)
 macro(ocv_regex_escape var regex)
   string(REGEX REPLACE "([+.*^$])" "\\\\1" ${var} "${regex}")
@@ -228,5 +250,19 @@ macro(ocv_get_real_path VAR PATHSTR)
     get_filename_component(${VAR} "${PATHSTR}" ABSOLUTE)
   else()
     get_filename_component(${VAR} "${PATHSTR}" REALPATH)
+  endif()
+endmacro()
+
+
+# convert list of paths to full paths
+macro(ocv_to_full_paths VAR)
+  if(${VAR})
+    set(__tmp "")
+    foreach(path ${${VAR}})
+      get_filename_component(${VAR} "${path}" ABSOLUTE)
+      list(APPEND __tmp "${${VAR}}")
+    endforeach()
+    set(${VAR} ${__tmp})
+    unset(__tmp)
   endif()
 endmacro()

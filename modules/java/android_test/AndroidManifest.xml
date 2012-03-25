@@ -3,16 +3,26 @@
       package="org.opencv.test"
       android:versionCode="1"
       android:versionName="1.0">
-      
-    <uses-sdk android:minSdkVersion="8" />
-    <instrumentation android:targetPackage="org.opencv.test" android:name="OpenCVTestRunner"></instrumentation>
     
-    <application android:icon="@drawable/icon" android:label="@string/app_name">
+	<uses-sdk android:minSdkVersion="8" />
+
+    <!-- We add an application tag here just so that we can indicate that
+         this package needs to link against the android.test library,
+         which is needed when building test cases. -->
+    <application>
         <uses-library android:name="android.test.runner" />
     </application>
+    <!--
+    This declares that this application uses the instrumentation test runner targeting
+    the package of org.opencv.  To run the tests use the command:
+    "adb shell am instrument -w org.opencv.test/android.test.InstrumentationTestRunner"
+    -->
+    <instrumentation android:name="android.test.InstrumentationTestRunner"
+                     android:targetPackage="org.opencv"
+                     android:label="Tests for org.opencv"/>
     
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 </manifest>
