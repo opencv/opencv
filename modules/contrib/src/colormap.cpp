@@ -18,13 +18,17 @@
 #include "precomp.hpp"
 #include <iostream>
 
+#if defined _MSC_VER && _MSC_VER >= 1400
+#pragma warning( disable: 4305 )
+#endif
+
 namespace cv
 {
 
 static Mat linspace(float x0, float x1, int n)
 {
     Mat pts(n, 1, CV_32FC1);
-    float step = (x1-x0)/floor(n-1);
+    float step = (x1-x0)/(n-1);
     for(int i = 0; i < n; i++)
         pts.at<float>(i,0) = x0+i*step;
     return pts;

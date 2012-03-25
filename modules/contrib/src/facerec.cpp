@@ -57,7 +57,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     if(n == 0)
         return Mat();
     // dimensionality of samples
-    int d = src.getMat(0).total();
+    int d = (int)src.getMat(0).total();
     // create data matrix
     Mat data(n, d, rtype);
     // copy data
@@ -588,8 +588,8 @@ static Mat spatial_histogram(InputArray _src, int numPatterns,
 {
     Mat src = _src.getMat();
     // calculate LBP patch size
-    int width = static_cast<int>(floor(src.cols/grid_x));
-    int height = static_cast<int>(floor(src.rows/grid_y));
+    int width = src.cols/grid_x;
+    int height = src.rows/grid_y;
     // allocate memory for the spatial histogram
     Mat result = Mat::zeros(grid_x * grid_y, numPatterns, CV_32FC1);
     // return matrix with zeros if no data was given
