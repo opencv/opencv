@@ -1080,6 +1080,7 @@ class AreaTests(OpenCVTests):
 
     def test_remap(self):
         rng = cv.RNG(0)
+        maxError = 1e-6
         raw = cv.CreateImage((640, 480), cv.IPL_DEPTH_8U, 1)
         for x in range(0, 640, 20):
             cv.Line(raw, (x,0), (x,480), 255, 1)
@@ -1118,6 +1119,7 @@ class AreaTests(OpenCVTests):
             cv.Undistort2(p, up, intrinsic_mat, distortion_coeffs)
 
         fptypes = [cv.CV_32FC1, cv.CV_64FC1]
+        pointsCount = 7
         for t0 in fptypes:
             for t1 in fptypes:
                 for t2 in fptypes:
@@ -1126,15 +1128,17 @@ class AreaTests(OpenCVTests):
                         translation_vector = cv.CreateMat(1, 3, t1)
                         cv.RandArr(rng, rotation_vector, cv.CV_RAND_UNI, -1.0, 1.0)
                         cv.RandArr(rng, translation_vector, cv.CV_RAND_UNI, -1.0, 1.0)
-                        object_points = cv.CreateMat(7, 3, t2)
-                        image_points = cv.CreateMat(7, 2, t3)
+                        object_points = cv.CreateMat(pointsCount, 3, t2)
+                        image_points = cv.CreateMat(pointsCount, 2, t3)
                         cv.RandArr(rng, object_points, cv.CV_RAND_UNI, -100.0, 100.0)
                         cv.ProjectPoints2(object_points, rotation_vector, translation_vector, intrinsic_mat, distortion_coeffs, image_points)
 
-                        object_points = cv.CreateMat(3, 7, t2)
-                        image_points = cv.CreateMat(2, 7, t3)
-                        cv.RandArr(rng, object_points, cv.CV_RAND_UNI, -100.0, 100.0)
-                        cv.ProjectPoints2(object_points, rotation_vector, translation_vector, intrinsic_mat, distortion_coeffs, image_points)
+                        reshaped_object_points = cv.Reshape(object_points, 1, 3)
+                        reshaped_image_points = cv.CreateMat(2, pointsCount, t3)
+                        cv.ProjectPoints2(object_points, rotation_vector, translation_vector, intrinsic_mat, distortion_coeffs, reshaped_image_points)
+
+                        error = cv.Norm(reshaped_image_points, cv.Reshape(image_points, 1, 2))
+                        self.assert_(error < maxError)
 
     def test_arithmetic(self):
         a = cv.CreateMat(4, 4, cv.CV_8UC1)
