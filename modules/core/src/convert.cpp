@@ -1190,9 +1190,10 @@ cvSplit( const void* srcarr, void* dstarr0, void* dstarr1, void* dstarr2, void* 
         if( dptrs[i] != 0 )
         {
             dvec[j] = cv::cvarrToMat(dptrs[i]);
-            CV_Assert( dvec[j].size() == src.size() &&
-                dvec[j].depth() == src.depth() &&
-                dvec[j].channels() == 1 && i < src.channels() );
+            CV_Assert( dvec[j].size() == src.size() );
+            CV_Assert( dvec[j].depth() == src.depth() );
+            CV_Assert( dvec[j].channels() == 1 );
+            CV_Assert( i < src.channels() );
             pairs[j*2] = i;
             pairs[j*2+1] = j;
             j++;
