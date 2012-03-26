@@ -77,8 +77,8 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
 
     CvSize velSize =
     {
-        (srcA->width - blockSize.width)/shiftSize.width,
-        (srcA->height - blockSize.height)/shiftSize.height
+        (srcA->width - blockSize.width + shiftSize.width)/shiftSize.width,
+        (srcA->height - blockSize.height + shiftSize.height)/shiftSize.height
     };
 
     if( !CV_ARE_SIZES_EQ( srcA, srcB ) ||
