@@ -253,7 +253,7 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
     if( !tempMask.empty() )
         cvSet( tempMask, cvScalarAll(1.) );
 
-    CvHomographyEstimator estimator( MIN(count, 4) );
+    CvHomographyEstimator estimator(4);
     if( count == 4 )
         method = 0;
     if( method == CV_LMEDS )
