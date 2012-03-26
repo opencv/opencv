@@ -59,10 +59,6 @@ inline float abs<float>(float x) { return fabsf(x); }
 template<>
 inline double abs<double>(double x) { return fabs(x); }
 
-template<>
-inline long double abs<long double>(long double x) { return fabsl(x); }
-
-
 template<typename T>
 struct Accumulator { typedef T Type; };
 template<>

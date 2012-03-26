@@ -325,8 +325,8 @@ _TIFFUInt64ToFloat(uint64 ui64)
 	if (i.part.high >= 0) {
 		return (float)i.value;
 	} else {
-		long double df;
-		df = (long double)i.value;
+		double df;
+		df = (double)i.value;
 		df += 18446744073709551616.0; /* adding 2**64 */
 		return (float)df;
 	}
@@ -341,8 +341,8 @@ _TIFFUInt64ToDouble(uint64 ui64)
 	if (i.part.high >= 0) {
 		return (double)i.value;
 	} else {
-		long double df;
-		df = (long double)i.value;
+		double df;
+		df = (double)i.value;
 		df += 18446744073709551616.0; /* adding 2**64 */
 		return (double)df;
 	}
