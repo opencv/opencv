@@ -52,6 +52,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <climits>
+#include <ctype.h>
 
 #include "highgui.h"
 
@@ -1230,8 +1231,8 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, CvSize winsize 
             if( !fgets( imgfilename, PATH_MAX - (int)(imgfilename - full) - 1, input ))
                 break;
             len = (int)strlen( imgfilename );
-			if( len > 0 && imgfilename[len-1] == '\n' )
-				imgfilename[len-1] = 0, len--;
+            for( ; len > 0 && isspace(imgfilename[len-1]); len-- )
+                imgfilename[len-1] = '\0';
             if( len > 0 )
             {
                 if( (*imgfilename) == '#' ) continue; /* comment */
