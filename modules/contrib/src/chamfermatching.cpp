@@ -952,20 +952,18 @@ void ChamferMatcher::Matching::computeDistanceTransform(Mat& edges_img, Mat& dis
     // set distance to the edge pixels to 0 and put them in the queue
     std::queue<std::pair<int,int> > q;
 
-
-
     for (int y=0;y<h;++y) {
         for (int x=0;x<w;++x) {
-
-            unsigned char edge_val = edges_img.at<uchar>(y,x);
-            if ( (edge_val!=0) ) {
+            // initialize
+            if (&annotate_img!=NULL) {
+                annotate_img.at<Vec2i>(y,x)[0]=x;
+                annotate_img.at<Vec2i>(y,x)[1]=y;
+            }
+            
+            uchar edge_val = edges_img.at<uchar>(y,x);
+            if( (edge_val!=0) ) {
                 q.push(std::make_pair(x,y));
                 dist_img.at<float>(y,x)= 0;
-
-                if (&annotate_img!=NULL) {
-                    annotate_img.at<Vec2i>(y,x)[0]=x;
-                    annotate_img.at<Vec2i>(y,x)[1]=y;
-                }
             }
             else {
                 dist_img.at<float>(y,x)=-1;
