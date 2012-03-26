@@ -488,10 +488,28 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T, typename D> struct Multiply : binary_function<T, T, D>
     {
-        Multiply(double scale_) : scale(scale_) {}
+        Multiply(float scale_) : scale(scale_) {}
         __device__ __forceinline__ D operator ()(T a, T b) const
         {
             return saturate_cast<D>(scale * a * b);
+        }
+        const float scale;
+    };
+    template <typename T> struct Multiply<T, double> : binary_function<T, T, double>
+    {
+        Multiply(double scale_) : scale(scale_) {}
+        __device__ __forceinline__ double operator ()(T a, T b) const
+        {
+            return scale * a * b;
+        }
+        const double scale;
+    };
+    template <> struct Multiply<int, int> : binary_function<int, int, int>
+    {
+        Multiply(double scale_) : scale(scale_) {}
+        __device__ __forceinline__ int operator ()(int a, int b) const
+        {
+            return saturate_cast<int>(scale * a * b);
         }
         const double scale;
     };
@@ -517,11 +535,36 @@ namespace cv { namespace gpu { namespace device
         enum { smart_shift = 4 };
     };
 
+    template <typename T, typename D> struct MultiplyCaller
+    {
+        static void call(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream)
+        {
+            Multiply<T, D> op(static_cast<float>(scale));
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
+        }
+    };
+    template <typename T> struct MultiplyCaller<T, double>
+    {
+        static void call(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream)
+        {
+            cudaSafeCall( cudaSetDoubleForDevice(&scale) );
+            Multiply<T, double> op(scale);
+            cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<double>)dst, op, WithOutMask(), stream);
+        }
+    };
+    template <> struct MultiplyCaller<int, int>
+    {
+        static void call(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream)
+        {
+            cudaSafeCall( cudaSetDoubleForDevice(&scale) );
+            Multiply<int, int> op(scale);
+            cv::gpu::device::transform((DevMem2D_<int>)src1, (DevMem2D_<int>)src2, (DevMem2D_<int>)dst, op, WithOutMask(), stream);
+        }
+    };
+
     template <typename T, typename D> void multiply_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream)
     {
-        cudaSafeCall( cudaSetDoubleForDevice(&scale) );
-        Multiply<T, D> op(scale);
-        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
+        MultiplyCaller<T, D>::call(src1, src2, dst, scale, stream);
     }
 
     template void multiply_gpu<uchar, uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, double scale, cudaStream_t stream);
@@ -729,7 +772,7 @@ namespace cv { namespace gpu { namespace device
         Divide(double scale_) : scale(scale_) {}
         __device__ __forceinline__ D operator ()(T a, T b) const
         {
-            return b != 0 ? saturate_cast<D>(scale * a / b) : 0;
+            return b != 0 ? saturate_cast<D>(a * scale / b) : 0;
         }
         const double scale;
     };

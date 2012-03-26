@@ -55,7 +55,7 @@ void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, 
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace stereobm
     {
@@ -65,10 +65,13 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-const float defaultAvgTexThreshold = 3;
+namespace
+{
+    const float defaultAvgTexThreshold = 3;
+}
 
 cv::gpu::StereoBM_GPU::StereoBM_GPU()
-    : preset(BASIC_PRESET), ndisp(DEFAULT_NDISP), winSize(DEFAULT_WINSZ), avergeTexThreshold(defaultAvgTexThreshold)  
+    : preset(BASIC_PRESET), ndisp(DEFAULT_NDISP), winSize(DEFAULT_WINSZ), avergeTexThreshold(defaultAvgTexThreshold)
 {
 }
 
@@ -100,9 +103,9 @@ namespace
     {
         using namespace ::cv::gpu::device::stereobm;
 
-        CV_DbgAssert(left.rows == right.rows && left.cols == right.cols);
-        CV_DbgAssert(left.type() == CV_8UC1);
-        CV_DbgAssert(right.type() == CV_8UC1);
+        CV_Assert(left.rows == right.rows && left.cols == right.cols);
+        CV_Assert(left.type() == CV_8UC1);
+        CV_Assert(right.type() == CV_8UC1);
 
         disparity.create(left.size(), CV_8U);
         minSSD.create(left.size(), CV_32S);
@@ -115,7 +118,7 @@ namespace
             leBuf.create( left.size(),  left.type());
             riBuf.create(right.size(), right.type());
 
-		    prefilter_xsobel( left, leBuf, 31, stream);
+            prefilter_xsobel( left, leBuf, 31, stream);
             prefilter_xsobel(right, riBuf, 31, stream);
 
             le_for_bm = leBuf;

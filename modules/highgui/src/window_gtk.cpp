@@ -254,7 +254,7 @@ static void cvImageWidget_set_size(GtkWidget * widget, int max_width, int max_he
 }
 
 static void
-cvImageWidget_size_allocate (GtkWidget     *widget,  
+cvImageWidget_size_allocate (GtkWidget     *widget,
                         GtkAllocation *allocation)
 {
   CvImageWidget *image_widget;
@@ -719,7 +719,7 @@ namespace
         void generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const;
 
         bool isGlContextInitialized() const;
-        
+
         PFNGLGENBUFFERSPROC    glGenBuffersExt;
         PFNGLDELETEBUFFERSPROC glDeleteBuffersExt;
 
@@ -866,22 +866,22 @@ namespace
 
         CV_FUNCNAME( "GlFuncTab_GTK::generateBitmapFont" );
 
-        __BEGIN__;        
-        
+        __BEGIN__;
+
         fontDecr = pango_font_description_new();
-        
+
         pango_font_description_set_size(fontDecr, height);
-        
+
         pango_font_description_set_family_static(fontDecr, family.c_str());
-        
+
         pango_font_description_set_weight(fontDecr, static_cast<PangoWeight>(weight));
-        
+
         pango_font_description_set_style(fontDecr, italic ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL);
-                
+
         pangoFont = gdk_gl_font_use_pango_font(fontDecr, start, count, base);
-        
+
         pango_font_description_free(fontDecr);
-        
+
         if (!pangoFont)
             CV_ERROR(CV_OpenGlApiCallError, "Can't create font");
 
@@ -960,13 +960,13 @@ namespace
 
     void releaseGlContext(CvWindow* window)
     {
-        CV_FUNCNAME( "releaseGlContext" );
+        //CV_FUNCNAME( "releaseGlContext" );
 
-        __BEGIN__;
+        //__BEGIN__;
 
         window->useGl = false;
 
-        __END__;
+        //__END__;
     }
 
     void drawGl(CvWindow* window)
