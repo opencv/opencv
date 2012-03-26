@@ -44,6 +44,15 @@
 extern "C" {
 #endif
 
+#if !defined INT64_C || !defined UINT64_C
+#define INT64_C
+#define UINT64_C
+ #define __STDC_CONSTANT_MACROS
+// force re-inclusion of stdint.h to get INT64_C macro
+#undef _STDINT_H
+#include <stdint.h>
+#endif
+
 #ifdef WIN32
   #include <libavformat/avformat.h>
 #else
