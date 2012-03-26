@@ -437,7 +437,7 @@ TEST_P(Multiply_Array, WithScale)
         cv::Mat dst_gold;
         cv::multiply(mat1, mat2, dst_gold, scale, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
     }
 }
 
@@ -2715,7 +2715,7 @@ TEST_P(Sum, Sqr)
 
     cv::Scalar val_gold = sqrSumGold(src);
 
-    EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 10);
+    EXPECT_SCALAR_NEAR(val_gold, val, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.5);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Sum, testing::Combine(

@@ -117,7 +117,7 @@ namespace cv { namespace gpu { namespace device
         template <int N> __device__ float icvCalcHaarPatternSum(const float src[][5], int oldSize, int newSize, int y, int x)
         {
         #if __CUDA_ARCH__ >= 200
-            typedef double real_t;        
+            typedef double real_t;
         #else
             typedef float  real_t;
         #endif
@@ -248,7 +248,7 @@ namespace cv { namespace gpu { namespace device
         template <typename Mask>
         __global__ void icvFindMaximaInLayer(const PtrStepf det, const PtrStepf trace, int4* maxPosBuffer, unsigned int* maxCounter)
         {
-            #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+            #if __CUDA_ARCH__ >= 110
 
             extern __shared__ float N9[];
 
@@ -368,10 +368,10 @@ namespace cv { namespace gpu { namespace device
         // INTERPOLATION
 
         __global__ void icvInterpolateKeypoint(const PtrStepf det, const int4* maxPosBuffer,
-            float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian,
+            float* featureX, float* featureY, int* featureLaplacian, int* featureOctave, float* featureSize, float* featureHessian,
             unsigned int* featureCounter)
         {
-            #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
+            #if __CUDA_ARCH__ >= 110
 
             const int4 maxPos = maxPosBuffer[blockIdx.x];
 
@@ -459,6 +459,7 @@ namespace cv { namespace gpu { namespace device
                                 featureX[ind] = px;
                                 featureY[ind] = py;
                                 featureLaplacian[ind] = maxPos.w;
+                                featureOctave[ind] = c_octave;
                                 featureSize[ind] = psize;
                                 featureHessian[ind] = N9[1][1][1];
                             }
@@ -471,7 +472,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter, 
-            float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian, 
+            float* featureX, float* featureY, int* featureLaplacian, int* featureOctave, float* featureSize, float* featureHessian, 
             unsigned int* featureCounter)
         {
             dim3 threads;
@@ -482,7 +483,7 @@ namespace cv { namespace gpu { namespace device
             dim3 grid;
             grid.x = maxCounter;
 
-            icvInterpolateKeypoint<<<grid, threads>>>(det, maxPosBuffer, featureX, featureY, featureLaplacian, featureSize, featureHessian, featureCounter);
+            icvInterpolateKeypoint<<<grid, threads>>>(det, maxPosBuffer, featureX, featureY, featureLaplacian, featureOctave, featureSize, featureHessian, featureCounter);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );

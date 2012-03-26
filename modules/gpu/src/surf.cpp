@@ -80,7 +80,7 @@ namespace cv { namespace gpu { namespace device
             int img_rows, int img_cols, int octave, bool use_mask, int nLayers);
 
         void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter,
-            float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian,
+            float* featureX, float* featureY, int* featureLaplacian, int* featureOctave, float* featureSize, float* featureHessian,
             unsigned int* featureCounter);
 
         void icvCalcOrientation_gpu(const float* featureX, const float* featureY, const float* featureSize, float* featureDir, int nFeatures);
@@ -161,7 +161,7 @@ namespace
             ensureSizeIsEnough(img_rows * (surf_.nOctaveLayers + 2), img_cols, CV_32FC1, surf_.trace);
 
             ensureSizeIsEnough(1, maxCandidates, CV_32SC4, surf_.maxPosBuffer);
-            ensureSizeIsEnough(SURF_GPU::SF_FEATURE_STRIDE, maxFeatures, CV_32FC1, keypoints);
+            ensureSizeIsEnough(SURF_GPU::ROWS_COUNT, maxFeatures, CV_32FC1, keypoints);
             keypoints.setTo(Scalar::all(0));
 
             for (int octave = 0; octave < surf_.nOctaves; ++octave)
@@ -183,9 +183,10 @@ namespace
                 if (maxCounter > 0)
                 {
                     icvInterpolateKeypoint_gpu(surf_.det, surf_.maxPosBuffer.ptr<int4>(), maxCounter,
-                        keypoints.ptr<float>(SURF_GPU::SF_X), keypoints.ptr<float>(SURF_GPU::SF_Y),
-                        keypoints.ptr<int>(SURF_GPU::SF_LAPLACIAN), keypoints.ptr<float>(SURF_GPU::SF_SIZE),
-                        keypoints.ptr<float>(SURF_GPU::SF_HESSIAN), counters.ptr<unsigned int>());
+                        keypoints.ptr<float>(SURF_GPU::X_ROW), keypoints.ptr<float>(SURF_GPU::Y_ROW),
+                        keypoints.ptr<int>(SURF_GPU::LAPLACIAN_ROW), keypoints.ptr<int>(SURF_GPU::OCTAVE_ROW), 
+                        keypoints.ptr<float>(SURF_GPU::SIZE_ROW), keypoints.ptr<float>(SURF_GPU::HESSIAN_ROW), 
+                        counters.ptr<unsigned int>());
                 }
             }
             unsigned int featureCounter;
@@ -195,7 +196,7 @@ namespace
             keypoints.cols = featureCounter;
 
             if (surf_.upright)
-                keypoints.row(SURF_GPU::SF_DIR).setTo(Scalar::all(90.0));
+                keypoints.row(SURF_GPU::ANGLE_ROW).setTo(Scalar::all(90.0));
             else
                 findOrientation(keypoints);
         }
@@ -205,8 +206,8 @@ namespace
             const int nFeatures = keypoints.cols;
             if (nFeatures > 0)
             {
-                icvCalcOrientation_gpu(keypoints.ptr<float>(SURF_GPU::SF_X), keypoints.ptr<float>(SURF_GPU::SF_Y),
-                    keypoints.ptr<float>(SURF_GPU::SF_SIZE), keypoints.ptr<float>(SURF_GPU::SF_DIR), nFeatures);
+                icvCalcOrientation_gpu(keypoints.ptr<float>(SURF_GPU::X_ROW), keypoints.ptr<float>(SURF_GPU::Y_ROW),
+                    keypoints.ptr<float>(SURF_GPU::SIZE_ROW), keypoints.ptr<float>(SURF_GPU::ANGLE_ROW), nFeatures);
             }
         }
 
@@ -216,8 +217,8 @@ namespace
             if (nFeatures > 0)
             {
                 ensureSizeIsEnough(nFeatures, descriptorSize, CV_32F, descriptors);
-                compute_descriptors_gpu(descriptors, keypoints.ptr<float>(SURF_GPU::SF_X), keypoints.ptr<float>(SURF_GPU::SF_Y),
-                    keypoints.ptr<float>(SURF_GPU::SF_SIZE), keypoints.ptr<float>(SURF_GPU::SF_DIR), nFeatures);
+                compute_descriptors_gpu(descriptors, keypoints.ptr<float>(SURF_GPU::X_ROW), keypoints.ptr<float>(SURF_GPU::Y_ROW),
+                    keypoints.ptr<float>(SURF_GPU::SIZE_ROW), keypoints.ptr<float>(SURF_GPU::ANGLE_ROW), nFeatures);
             }
         }
 
@@ -266,20 +267,22 @@ void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMa
         keypointsGPU.release();
     else
     {
-        Mat keypointsCPU(SURF_GPU::SF_FEATURE_STRIDE, static_cast<int>(keypoints.size()), CV_32FC1);
+        Mat keypointsCPU(SURF_GPU::ROWS_COUNT, static_cast<int>(keypoints.size()), CV_32FC1);
 
-        float* kp_x = keypointsCPU.ptr<float>(SURF_GPU::SF_X);
-        float* kp_y = keypointsCPU.ptr<float>(SURF_GPU::SF_Y);
-        int* kp_laplacian = keypointsCPU.ptr<int>(SURF_GPU::SF_LAPLACIAN);
-        float* kp_size = keypointsCPU.ptr<float>(SURF_GPU::SF_SIZE);
-        float* kp_dir = keypointsCPU.ptr<float>(SURF_GPU::SF_DIR);
-        float* kp_hessian = keypointsCPU.ptr<float>(SURF_GPU::SF_HESSIAN);
+        float* kp_x = keypointsCPU.ptr<float>(SURF_GPU::X_ROW);
+        float* kp_y = keypointsCPU.ptr<float>(SURF_GPU::Y_ROW);
+        int* kp_laplacian = keypointsCPU.ptr<int>(SURF_GPU::LAPLACIAN_ROW);
+        int* kp_octave = keypointsCPU.ptr<int>(SURF_GPU::OCTAVE_ROW);
+        float* kp_size = keypointsCPU.ptr<float>(SURF_GPU::SIZE_ROW);
+        float* kp_dir = keypointsCPU.ptr<float>(SURF_GPU::ANGLE_ROW);
+        float* kp_hessian = keypointsCPU.ptr<float>(SURF_GPU::HESSIAN_ROW);
 
         for (size_t i = 0, size = keypoints.size(); i < size; ++i)
         {
             const KeyPoint& kp = keypoints[i];
             kp_x[i] = kp.pt.x;
             kp_y[i] = kp.pt.y;
+            kp_octave[i] = kp.octave;
             kp_size[i] = kp.size;
             kp_dir[i] = kp.angle;
             kp_hessian[i] = kp.response;
@@ -287,30 +290,6 @@ void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMa
         }
 
         keypointsGPU.upload(keypointsCPU);
-    }
-}
-
-namespace
-{
-    int getPointOctave(float size, const SURF_GPU& params)
-    {
-        int best_octave = 0;
-        float min_diff = numeric_limits<float>::max();
-        for (int octave = 1; octave < params.nOctaves; ++octave)
-        {
-            for (int layer = 0; layer < params.nOctaveLayers; ++layer)
-            {
-                float diff = std::abs(size - (float)calcSize(octave, layer));
-                if (min_diff > diff)
-                {
-                    min_diff = diff;
-                    best_octave = octave;
-                    if (min_diff == 0)
-                        return best_octave;
-                }
-            }
-        }
-        return best_octave;
     }
 }
 
@@ -322,18 +301,19 @@ void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, vector<Key
         keypoints.clear();
     else
     {
-        CV_Assert(keypointsGPU.type() == CV_32FC1 && keypointsGPU.rows == SF_FEATURE_STRIDE);
+        CV_Assert(keypointsGPU.type() == CV_32FC1 && keypointsGPU.rows == ROWS_COUNT);
 
         Mat keypointsCPU(keypointsGPU);
 
         keypoints.resize(nFeatures);
-
-        float* kp_x = keypointsCPU.ptr<float>(SF_X);
-        float* kp_y = keypointsCPU.ptr<float>(SF_Y);
-        int* kp_laplacian = keypointsCPU.ptr<int>(SF_LAPLACIAN);
-        float* kp_size = keypointsCPU.ptr<float>(SF_SIZE);
-        float* kp_dir = keypointsCPU.ptr<float>(SF_DIR);
-        float* kp_hessian = keypointsCPU.ptr<float>(SF_HESSIAN);
+        
+        float* kp_x = keypointsCPU.ptr<float>(SURF_GPU::X_ROW);
+        float* kp_y = keypointsCPU.ptr<float>(SURF_GPU::Y_ROW);
+        int* kp_laplacian = keypointsCPU.ptr<int>(SURF_GPU::LAPLACIAN_ROW);
+        int* kp_octave = keypointsCPU.ptr<int>(SURF_GPU::OCTAVE_ROW);
+        float* kp_size = keypointsCPU.ptr<float>(SURF_GPU::SIZE_ROW);
+        float* kp_dir = keypointsCPU.ptr<float>(SURF_GPU::ANGLE_ROW);
+        float* kp_hessian = keypointsCPU.ptr<float>(SURF_GPU::HESSIAN_ROW);
 
         for (int i = 0; i < nFeatures; ++i)
         {
@@ -341,10 +321,10 @@ void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, vector<Key
             kp.pt.x = kp_x[i];
             kp.pt.y = kp_y[i];
             kp.class_id = kp_laplacian[i];
+            kp.octave = kp_octave[i];
             kp.size = kp_size[i];
             kp.angle = kp_dir[i];
             kp.response = kp_hessian[i];
-            kp.octave = getPointOctave(kp.size, *this);
         }
     }
 }

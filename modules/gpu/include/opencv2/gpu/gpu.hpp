@@ -1516,13 +1516,14 @@ class CV_EXPORTS SURF_GPU
 public:
     enum KeypointLayout
     {
-        SF_X = 0,
-        SF_Y,
-        SF_LAPLACIAN,
-        SF_SIZE,
-        SF_DIR,
-        SF_HESSIAN,
-        SF_FEATURE_STRIDE
+        X_ROW = 0,
+        Y_ROW,
+        LAPLACIAN_ROW,
+        OCTAVE_ROW,
+        SIZE_ROW,
+        ANGLE_ROW,
+        HESSIAN_ROW,
+        ROWS_COUNT
     };
 
     //! the default constructor

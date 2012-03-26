@@ -85,7 +85,7 @@ testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char
     std::sort(actual.begin(), actual.end(), KeyPointLess());
     std::sort(gold.begin(), gold.end(), KeyPointLess());
 
-    for (size_t i; i < gold.size(); ++i)
+    for (size_t i = 0; i < gold.size(); ++i)
     {
         const cv::KeyPoint& p1 = gold[i];
         const cv::KeyPoint& p2 = actual[i];

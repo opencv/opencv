@@ -948,7 +948,9 @@ namespace
         {
             DeviceInfo devInfo;
             int cc = devInfo.majorVersion() * 10 + devInfo.minorVersion();
-            CV_Assert(cc >= 20 || ksize <= 16);
+            if (ksize > 16 && cc < 20)
+                CV_Error(CV_StsNotImplemented, "column linear filter doesn't implemented for kernel size > 16 for device with compute capabilities less than 2.0");
+
             func(src, dst, kernel.ptr<float>(), ksize, anchor, brd_type, cc, StreamAccessor::getStream(s));
         }
 
