@@ -216,7 +216,7 @@ namespace cv { namespace gpu { namespace device
         // Prepared_SQDIFF
 
         template <int cn>
-        __global__ void matchTemplatePreparedKernel_SQDIFF_8U(int w, int h, const PtrStep<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result)
+        __global__ void matchTemplatePreparedKernel_SQDIFF_8U(int w, int h, const PtrStep<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -232,7 +232,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int cn>
-        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, cudaStream_t stream)
+        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result, cudaStream_t stream)
         {
             const dim3 threads(32, 8);
             const dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
@@ -244,10 +244,10 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, int cn, 
+        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result, int cn,
                                              cudaStream_t stream)
         {
-            typedef void (*caller_t)(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, cudaStream_t stream);
+            typedef void (*caller_t)(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result, cudaStream_t stream);
 
             static const caller_t callers[] = 
             {
@@ -284,7 +284,9 @@ namespace cv { namespace gpu { namespace device
 
 
         template <int cn>
-        __global__ void matchTemplatePreparedKernel_SQDIFF_NORMED_8U(int w, int h, const PtrStep<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result)
+        __global__ void matchTemplatePreparedKernel_SQDIFF_NORMED_8U(
+                int w, int h, const PtrStep<unsigned long long> image_sqsum,
+                unsigned long long templ_sqsum, DevMem2Df result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -301,7 +303,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int cn>
-        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, 
+        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum,
                                                     DevMem2Df result, cudaStream_t stream)
         {
             const dim3 threads(32, 8);
@@ -315,10 +317,10 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, 
+        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum,
                                                     DevMem2Df result, int cn, cudaStream_t stream)
         {
-            typedef void (*caller_t)(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, cudaStream_t stream);
+            typedef void (*caller_t)(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result, cudaStream_t stream);
             static const caller_t callers[] = 
             {
                 0, matchTemplatePrepared_SQDIFF_NORMED_8U<1>, matchTemplatePrepared_SQDIFF_NORMED_8U<2>, matchTemplatePrepared_SQDIFF_NORMED_8U<3>, matchTemplatePrepared_SQDIFF_NORMED_8U<4>

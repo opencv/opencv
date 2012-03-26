@@ -62,10 +62,10 @@ namespace cv { namespace gpu { namespace device
         void matchTemplateNaive_SQDIFF_8U(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
         void matchTemplateNaive_SQDIFF_32F(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, 
+        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result,
             int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned int templ_sqsum, DevMem2Df result, 
+        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result,
             int cn, cudaStream_t stream);
 
         void matchTemplatePrepared_CCOFF_8U(int w, int h, const DevMem2D_<unsigned int> image_sum, unsigned int templ_sum, DevMem2Df result, cudaStream_t stream);
@@ -248,7 +248,7 @@ namespace
         GpuMat img_sqsum;
         sqrIntegral(image.reshape(1), img_sqsum, stream);
 
-        unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
         matchTemplate_CCORR_8U(image, templ, result, stream);
         matchTemplatePrepared_SQDIFF_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
@@ -260,7 +260,7 @@ namespace
         GpuMat img_sqsum;
         sqrIntegral(image.reshape(1), img_sqsum, stream);
 
-        unsigned int templ_sqsum = (unsigned int)sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
         matchTemplate_CCORR_8U(image, templ, result, stream);
         matchTemplatePrepared_SQDIFF_NORMED_8U(templ.cols, templ.rows, img_sqsum, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));

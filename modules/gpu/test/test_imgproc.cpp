@@ -2775,6 +2775,52 @@ INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED, Combine(
                         ALL_DEVICES,
                         Values(std::make_pair(std::string("matchtemplate/source-0.png"), std::string("matchtemplate/target-0.png")))));
 
+
+class MatchTemplate_CanFindBigTemplate : public TestWithParam<cv::gpu::DeviceInfo>
+{
+    virtual void SetUp()
+    {
+        cv::gpu::setDevice(GetParam().deviceID());
+    }
+};
+
+TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
+{
+    cv::Mat scene = readImage("matchtemplate/scene.jpg");
+    cv::Mat templ = readImage("matchtemplate/template.jpg");
+
+    cv::gpu::GpuMat d_scene(scene), d_templ(templ), d_result;
+    cv::gpu::matchTemplate(d_scene, d_templ, d_result, CV_TM_SQDIFF_NORMED);
+
+    double minVal;
+    cv::Point minLoc;
+    cv::gpu::minMaxLoc(d_result, &minVal, 0, &minLoc, 0);
+
+    ASSERT_GE(minVal, 0);
+    ASSERT_LT(minVal, 1e-3);
+    ASSERT_EQ(344, minLoc.x);
+    ASSERT_EQ(0, minLoc.y);
+}
+
+TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
+{
+    cv::Mat scene = readImage("matchtemplate/scene.jpg");
+    cv::Mat templ = readImage("matchtemplate/template.jpg");
+
+    cv::gpu::GpuMat d_scene(scene), d_templ(templ), d_result;
+    cv::gpu::matchTemplate(d_scene, d_templ, d_result, CV_TM_SQDIFF);
+
+    double minVal;
+    cv::Point minLoc;
+    cv::gpu::minMaxLoc(d_result, &minVal, 0, &minLoc, 0);
+
+    ASSERT_GE(minVal, 0);
+    ASSERT_EQ(344, minLoc.x);
+    ASSERT_EQ(0, minLoc.y);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CanFindBigTemplate, ALL_DEVICES);
+
 ////////////////////////////////////////////////////////////////////////////
 // MulSpectrums
 

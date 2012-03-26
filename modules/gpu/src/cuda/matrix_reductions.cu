@@ -1739,7 +1739,7 @@ namespace cv { namespace gpu { namespace device
             template <typename T>
             void sqrSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
             {
-                typedef typename SumType<T>::R R;
+                typedef double R;
 
                 dim3 threads, grid;
                 estimateThreadCfg(src.cols, src.rows, threads, grid);
