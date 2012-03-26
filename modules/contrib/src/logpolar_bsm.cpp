@@ -99,7 +99,7 @@ LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int R, double ro0
         int jc=M/2-1, ic=N/2-1;
         int romax=min(ic, jc);
         double a=exp(log((double)(romax/2-1)/(double)ro0)/(double)R);
-        S=(int) floor(2*M_PI/(a-1)+0.5);
+        S=(int) floor(2*CV_PI/(a-1)+0.5);
     }
 
     this->interp=interp;
@@ -118,7 +118,7 @@ void LogPolar_Interp::create_map(int M, int N, int R, int S, double ro0)
     int jc=N/2-1, ic=M/2-1;
     romax=min(ic, jc);
     a=exp(log((double)romax/(double)ro0)/(double)R);
-    q=((double)S)/(2*M_PI);
+    q=((double)S)/(2*CV_PI);
 
     Rsri = Mat::zeros(S,R,CV_32FC1);
     Csri = Mat::zeros(S,R,CV_32FC1);
@@ -142,10 +142,10 @@ void LogPolar_Interp::create_map(int M, int N, int R, int S, double ro0)
             if(i>=ic)
                 theta=atan((double)(j-jc)/(double)(i-ic));
             else
-                theta=atan((double)(j-jc)/(double)(i-ic))+M_PI;
+                theta=atan((double)(j-jc)/(double)(i-ic))+CV_PI;
 
             if(theta<0)
-                theta+=2*M_PI;
+                theta+=2*CV_PI;
 
             ETAyx.at<float>(j,i)=(float)(q*theta);
 
@@ -246,7 +246,7 @@ LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int R, 
         int jc=M/2-1, ic=N/2-1;
         int romax=min(ic, jc);
         double a=exp(log((double)(romax/2-1)/(double)ro0)/(double)R);
-        S=(int) floor(2*M_PI/(a-1)+0.5);
+        S=(int) floor(2*CV_PI/(a-1)+0.5);
     }
 
     create_map(M, N, R, S, ro0);
@@ -263,7 +263,7 @@ void LogPolar_Overlapping::create_map(int M, int N, int R, int S, double ro0)
     int jc=N/2-1, ic=M/2-1;
     romax=min(ic, jc);
     a=exp(log((double)romax/(double)ro0)/(double)R);
-    q=((double)S)/(2*M_PI);
+    q=((double)S)/(2*CV_PI);
     ind1=0;
 
     Rsri=Mat::zeros(S,R,CV_32FC1);
@@ -306,10 +306,10 @@ void LogPolar_Overlapping::create_map(int M, int N, int R, int S, double ro0)
             if(i>=ic)
                 theta=atan((double)(j-jc)/(double)(i-ic));
             else
-                theta=atan((double)(j-jc)/(double)(i-ic))+M_PI;
+                theta=atan((double)(j-jc)/(double)(i-ic))+CV_PI;
 
             if(theta<0)
-                theta+=2*M_PI;
+                theta+=2*CV_PI;
 
             ETAyx.at<float>(j,i)=(float)(q*theta);
             
@@ -470,7 +470,7 @@ LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int R, double
         int jc=M/2-1, ic=N/2-1;
         int romax=min(ic, jc);
         double a=exp(log((double)(romax/2-1)/(double)ro0)/(double)R);
-        S=(int) floor(2*M_PI/(a-1)+0.5);
+        S=(int) floor(2*CV_PI/(a-1)+0.5);
     }
 
     create_map(M, N, R, S, ro0, smin);
@@ -487,7 +487,7 @@ void LogPolar_Adjacent::create_map(int M, int N, int R, int S, double ro0, doubl
     romax=min(M/2.0, N/2.0);
 
     a=exp(log(romax/ro0)/(double)R);
-    q=S/(2*M_PI);
+    q=S/(2*CV_PI);
 
     A.resize(R*S);
     L.resize(M*N);
@@ -625,7 +625,7 @@ bool LogPolar_Adjacent::get_uv(double x, double y, int&u, int&v)
     if(x>0)
         theta=atan(y/x);
     else
-        theta=atan(y/x)+M_PI;
+        theta=atan(y/x)+CV_PI;
 
     if(ro<ro0||ro>romax)
     {
@@ -639,7 +639,7 @@ bool LogPolar_Adjacent::get_uv(double x, double y, int&u, int&v)
         if(theta>=0)
             v= (int) floor(q*theta);
         else
-            v= (int) floor(q*(theta+2*M_PI));
+            v= (int) floor(q*(theta+2*CV_PI));
         return true;
     }   
 }
