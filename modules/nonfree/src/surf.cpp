@@ -418,7 +418,7 @@ struct SURFFindInvoker
         for( int i=range.begin(); i<range.end(); i++ )
         {
             int layer = (*middleIndices)[i];
-            int octave = i % nOctaveLayers;
+            int octave = i / nOctaveLayers;
             findMaximaInLayer( *sum, *mask_sum, *dets, *traces, *sizes, 
                                *keypoints, octave, layer, hessianThreshold,
                                (*sampleSteps)[layer] );
