@@ -1078,6 +1078,64 @@ class AreaTests(OpenCVTests):
         for meth,expected in [(cv.CV_COMP_CORREL, 1.0), (cv.CV_COMP_CHISQR, 0.0), (cv.CV_COMP_INTERSECT, 1.0), (cv.CV_COMP_BHATTACHARYYA, 0.0)]:
             self.assertEqual(cv.CompareHist(h, h, meth), expected)
 
+    def test_remap(self):
+        rng = cv.RNG(0)
+        raw = cv.CreateImage((640, 480), cv.IPL_DEPTH_8U, 1)
+        for x in range(0, 640, 20):
+            cv.Line(raw, (x,0), (x,480), 255, 1)
+        for y in range(0, 480, 20):
+            cv.Line(raw, (0,y), (640,y), 255, 1)
+        intrinsic_mat = cv.CreateMat(3, 3, cv.CV_32FC1)
+        distortion_coeffs = cv.CreateMat(1, 4, cv.CV_32FC1)
+
+        cv.SetZero(intrinsic_mat)
+        intrinsic_mat[0,2] = 320.0
+        intrinsic_mat[1,2] = 240.0
+        intrinsic_mat[0,0] = 320.0
+        intrinsic_mat[1,1] = 320.0
+        intrinsic_mat[2,2] = 1.0
+        cv.SetZero(distortion_coeffs)
+        distortion_coeffs[0,0] = 1e-1
+        mapx = cv.CreateImage((640, 480), cv.IPL_DEPTH_32F, 1)
+        mapy = cv.CreateImage((640, 480), cv.IPL_DEPTH_32F, 1)
+        cv.SetZero(mapx)
+        cv.SetZero(mapy)
+        cv.InitUndistortMap(intrinsic_mat, distortion_coeffs, mapx, mapy)
+        rect = cv.CreateImage((640, 480), cv.IPL_DEPTH_8U, 1)
+
+        (w,h) = (640,480)
+        rMapxy = cv.CreateMat(h, w, cv.CV_16SC2)
+        rMapa  = cv.CreateMat(h, w, cv.CV_16UC1)
+        cv.ConvertMaps(mapx,mapy,rMapxy,rMapa)
+
+        cv.Remap(raw, rect, mapx, mapy)
+        cv.Remap(raw, rect, rMapxy, rMapa)
+        cv.Undistort2(raw, rect, intrinsic_mat, distortion_coeffs)
+
+        for w in [1, 4, 4095, 4096, 4097, 4100]:
+            p = cv.CreateImage((w,256), 8, 1)
+            up = cv.CreateImage((w,256), 8, 1)
+            cv.Undistort2(p, up, intrinsic_mat, distortion_coeffs)
+
+        fptypes = [cv.CV_32FC1, cv.CV_64FC1]
+        for t0 in fptypes:
+            for t1 in fptypes:
+                for t2 in fptypes:
+                    for t3 in fptypes:
+                        rotation_vector = cv.CreateMat(1, 3, t0)
+                        translation_vector = cv.CreateMat(1, 3, t1)
+                        cv.RandArr(rng, rotation_vector, cv.CV_RAND_UNI, -1.0, 1.0)
+                        cv.RandArr(rng, translation_vector, cv.CV_RAND_UNI, -1.0, 1.0)
+                        object_points = cv.CreateMat(7, 3, t2)
+                        image_points = cv.CreateMat(7, 2, t3)
+                        cv.RandArr(rng, object_points, cv.CV_RAND_UNI, -100.0, 100.0)
+                        cv.ProjectPoints2(object_points, rotation_vector, translation_vector, intrinsic_mat, distortion_coeffs, image_points)
+
+                        object_points = cv.CreateMat(3, 7, t2)
+                        image_points = cv.CreateMat(2, 7, t3)
+                        cv.RandArr(rng, object_points, cv.CV_RAND_UNI, -100.0, 100.0)
+                        cv.ProjectPoints2(object_points, rotation_vector, translation_vector, intrinsic_mat, distortion_coeffs, image_points)
+
     def test_arithmetic(self):
         a = cv.CreateMat(4, 4, cv.CV_8UC1)
         a[0,0] = 50.0
