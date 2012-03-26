@@ -1290,7 +1290,8 @@ Smoothes an image and downsamples it.
 .. ocv:pyfunction:: cv2.pyrDown(src[, dst[, dstsize]]) -> dst
 
 .. ocv:cfunction:: void cvPyrDown( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
-.. ocv:pyoldfunction:: cv.PyrDown(src, dst, filter=CV_GAUSSIAN_5X5)-> None
+
+.. ocv:pyoldfunction:: cv.PyrDown(src, dst, filter=CV_GAUSSIAN_5X5) -> None
 
     :param src: Source image.
 
@@ -1320,6 +1321,10 @@ Upsamples an image and then smoothes it.
 .. ocv:function:: void pyrUp( InputArray src, OutputArray dst, const Size& dstsize=Size())
 
 .. ocv:pyfunction:: cv2.pyrUp(src[, dst[, dstsize]]) -> dst
+
+.. ocv:cfunction:: cvPyrUp( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
+
+.. ocv:pyoldfunction:: cv.PyrUp(src, dst, filter=CV_GAUSSIAN_5X5) -> None
 
     :param src: Source image.
 
