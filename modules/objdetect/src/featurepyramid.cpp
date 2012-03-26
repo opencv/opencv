@@ -284,7 +284,7 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
                 partOfNorm[(i    )*(sizeX + 2) + (j    )] +
                 partOfNorm[(i    )*(sizeX + 2) + (j + 1)] +
                 partOfNorm[(i + 1)*(sizeX + 2) + (j    )] +
-                partOfNorm[(i + 1)*(sizeX + 2) + (j + 1)]);
+                partOfNorm[(i + 1)*(sizeX + 2) + (j + 1)]) + FLT_EPSILON;
             pos1 = (i  ) * (sizeX + 2) * xp + (j  ) * xp;
             pos2 = (i-1) * (sizeX    ) * pp + (j-1) * pp;
             for(ii = 0; ii < p; ii++)
@@ -299,7 +299,7 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
                 partOfNorm[(i    )*(sizeX + 2) + (j    )] +
                 partOfNorm[(i    )*(sizeX + 2) + (j + 1)] +
                 partOfNorm[(i - 1)*(sizeX + 2) + (j    )] +
-                partOfNorm[(i - 1)*(sizeX + 2) + (j + 1)]);
+                partOfNorm[(i - 1)*(sizeX + 2) + (j + 1)]) + FLT_EPSILON;
             for(ii = 0; ii < p; ii++)
             {
                 newData[pos2 + ii + p    ] = map->map[pos1 + ii    ] / valOfNorm;
@@ -312,7 +312,7 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
                 partOfNorm[(i    )*(sizeX + 2) + (j    )] +
                 partOfNorm[(i    )*(sizeX + 2) + (j - 1)] +
                 partOfNorm[(i + 1)*(sizeX + 2) + (j    )] +
-                partOfNorm[(i + 1)*(sizeX + 2) + (j - 1)]);
+                partOfNorm[(i + 1)*(sizeX + 2) + (j - 1)]) + FLT_EPSILON;
             for(ii = 0; ii < p; ii++)
             {
                 newData[pos2 + ii + p * 2] = map->map[pos1 + ii    ] / valOfNorm;
@@ -325,7 +325,7 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
                 partOfNorm[(i    )*(sizeX + 2) + (j    )] +
                 partOfNorm[(i    )*(sizeX + 2) + (j - 1)] +
                 partOfNorm[(i - 1)*(sizeX + 2) + (j    )] +
-                partOfNorm[(i - 1)*(sizeX + 2) + (j - 1)]);
+                partOfNorm[(i - 1)*(sizeX + 2) + (j - 1)]) + FLT_EPSILON;
             for(ii = 0; ii < p; ii++)
             {
                 newData[pos2 + ii + p * 3 ] = map->map[pos1 + ii    ] / valOfNorm;
