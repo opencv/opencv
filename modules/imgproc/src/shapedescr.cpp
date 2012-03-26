@@ -371,9 +371,11 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
     for( k = 0; k < max_iters; k++ )
     {
         double min_delta = 0, delta;
-        CvPoint2D32f ptfl;
-        
-        icvFindEnslosingCicle4pts_32f( pts, &center, &radius );
+		CvPoint2D32f ptfl, farAway = { 0, 0};
+		/*only for first iteration because the alg is repared at the loop's foot*/
+		if(k==0)
+			icvFindEnslosingCicle4pts_32f( pts, &center, &radius );
+
         cvStartReadSeq( sequence, &reader, 0 );
 
         for( i = 0; i < count; i++ )
@@ -393,12 +395,29 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
             if( delta < min_delta )
             {
                 min_delta = delta;
-                pts[3] = ptfl;
+                farAway = ptfl;
             }
         }
         result = min_delta >= 0;
         if( result )
             break;
+
+		CvPoint2D32f ptsCopy[4];
+		/* find good replacement partner for the point which is at most far away, 
+		starting with the one that lays in the actual circle (i=3) */
+		for(int i = 3; i >=0; i-- )
+		{
+			for(int j = 0; j < 4; j++ )
+			{
+				ptsCopy[j]=(i != j)? pts[j]: farAway;
+			}
+
+			icvFindEnslosingCicle4pts_32f(ptsCopy, &center, &radius );
+			if( icvIsPtInCircle( pts[i], center, radius )>=0){ // replaced one again in the new circle?
+				pts[i] = farAway;
+				break;
+			}
+		}
     }
 
     if( !result )
