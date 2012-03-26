@@ -1548,6 +1548,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
             flags |= CV_CALIB_FIX_K3;
         flags |= CV_CALIB_FIX_K4 | CV_CALIB_FIX_K5 | CV_CALIB_FIX_K6;
     }
+    const double minValidAspectRatio = 0.01;
+    const double maxValidAspectRatio = 100.0;
 
     // 1. initialize intrinsic parameters & LM solver
     if( flags & CV_CALIB_USE_INTRINSIC_GUESS )
@@ -1568,7 +1570,13 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         A[8] = 1.;
 
         if( flags & CV_CALIB_FIX_ASPECT_RATIO )
+        {
             aspectRatio = A[0]/A[4];
+
+            if( aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio )
+                CV_Error( CV_StsOutOfRange,
+                    "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect" );
+        }
         cvConvert( distCoeffs, &_k );
     }
     else
@@ -1585,9 +1593,9 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         {
             aspectRatio = cvmGet(cameraMatrix,0,0);
             aspectRatio /= cvmGet(cameraMatrix,1,1);
-            if( aspectRatio < 0.01 || aspectRatio > 100 )
+            if( aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio )
                 CV_Error( CV_StsOutOfRange,
-                    "The specified aspect ratio (=A[0][0]/A[1][1]) is incorrect" );
+                    "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect" );
         }
         cvInitIntrinsicParams2D( matM, _m, npoints, imageSize, &matA, aspectRatio );
     }
