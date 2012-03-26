@@ -1009,8 +1009,8 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             double v0 = ptr0[i], v1 = ptr1[i];
             result0[CV_COMP_CORREL] += v0*v1;
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
-            if( fabs(v0 + v1) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/(v0 + v1);
+            if( fabs(v0) > DBL_EPSILON )
+                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
             s0 += v0;
             s1 += v1;
             sq0 += v0*v0;
@@ -1031,11 +1031,11 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             const int* idx = CV_NODE_IDX(sparse0, node);
             double v0 = *(float*)CV_NODE_VAL(sparse0, node);
             double v1 = (float)cvGetRealND(sparse1, idx);
-
+            
             result0[CV_COMP_CORREL] += v0*v1;
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
-            if( fabs(v0 + v1) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/(v0 + v1);
+            if( fabs(v0) > DBL_EPSILON )
+                result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
@@ -1044,12 +1044,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
         for( node = cvInitSparseMatIterator( sparse1, &iterator );
              node != 0; node = cvGetNextSparseNode( &iterator ) )
         {
-            const int* idx = CV_NODE_IDX(sparse1, node);
             double v1 = *(float*)CV_NODE_VAL(sparse1, node);
-            double v0 = (float)cvGetRealND(sparse0, idx);
-
-            if( fabs(v0) < DBL_EPSILON )
-                result0[CV_COMP_CHISQR] += v1;
             s1 += v1;
             sq1 += v1*v1;
         }

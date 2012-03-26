@@ -45,7 +45,7 @@ Theory
     
         .. math::
     
-           d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)+H_2(I)} 
+           d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)} 
      
     
      c. **Intersection ( method=CV\_COMP\_INTERSECT )**
