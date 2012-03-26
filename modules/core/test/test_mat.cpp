@@ -822,3 +822,26 @@ TEST(Core_Reduce, accuracy) { Core_ReduceTest test; test.safe_run(); }
 TEST(Core_Array, basic_operations) { Core_ArrayOpTest test; test.safe_run(); }
 
 
+TEST(Core_IOArray, submat_assignment)
+{
+    Mat1f A = Mat1f::zeros(2,2);
+    Mat1f B = Mat1f::ones(1,3);
+
+    EXPECT_THROW( B.colRange(0,3).copyTo(A.row(0)), cv::Exception );
+
+    EXPECT_NO_THROW( B.colRange(0,2).copyTo(A.row(0)) );
+
+    EXPECT_EQ( 1.0f, A(0,0) );
+    EXPECT_EQ( 1.0f, A(0,1) );
+}
+
+void OutputArray_create1(OutputArray m) { m.create(1, 2, CV_32S); }
+void OutputArray_create2(OutputArray m) { m.create(1, 3, CV_32F); }
+
+TEST(Core_IOArray, submat_create)
+{
+    Mat1f A = Mat1f::zeros(2,2);
+
+    EXPECT_THROW( OutputArray_create1(A.row(0)), cv::Exception );
+    EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
+}

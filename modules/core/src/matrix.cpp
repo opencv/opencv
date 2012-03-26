@@ -888,10 +888,10 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 _InputArray::_InputArray() : flags(0), obj(0) {}
 _InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
 _InputArray::_InputArray(const vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
-_InputArray::_InputArray(const double& val) : flags(MATX+CV_64F), obj((void*)&val), sz(Size(1,1)) {}
-_InputArray::_InputArray(const MatExpr& expr) : flags(EXPR), obj((void*)&expr) {}
-_InputArray::_InputArray(const GlBuffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
-_InputArray::_InputArray(const GlTexture& tex) : flags(OPENGL_TEXTURE), obj((void*)&tex) {}
+_InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F), obj((void*)&val), sz(Size(1,1)) {}
+_InputArray::_InputArray(const MatExpr& expr) : flags(FIXED_TYPE + FIXED_SIZE + EXPR), obj((void*)&expr) {}
+_InputArray::_InputArray(const GlBuffer& buf) : flags(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER), obj((void*)&buf) {}
+_InputArray::_InputArray(const GlTexture& tex) : flags(FIXED_TYPE + FIXED_SIZE + OPENGL_TEXTURE), obj((void*)&tex) {}
 _InputArray::_InputArray(const gpu::GpuMat& d_mat) : flags(GPU_MAT), obj((void*)&d_mat) {}
  
 Mat _InputArray::getMat(int i) const
@@ -1070,7 +1070,7 @@ gpu::GpuMat _InputArray::getGpuMat() const
     
 int _InputArray::kind() const
 {
-    return flags & -(1 << KIND_SHIFT);
+    return flags & KIND_MASK;
 }
     
 Size _InputArray::size(int i) const
@@ -1251,17 +1251,19 @@ bool _InputArray::empty() const
 _OutputArray::_OutputArray() {}
 _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
 _OutputArray::_OutputArray(vector<Mat>& vec) : _InputArray(vec) {}
+
+_OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
+_OutputArray::_OutputArray(const vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
+
     
 bool _OutputArray::fixedSize() const
 {
-    int k = kind();
-    return k == MATX;
+    return (flags & FIXED_SIZE) == FIXED_SIZE;
 }
 
 bool _OutputArray::fixedType() const
 {
-    int k = kind();
-    return k != MAT && k != STD_VECTOR_MAT;
+    return (flags & FIXED_TYPE) == FIXED_TYPE;
 }
     
 void _OutputArray::create(Size _sz, int type, int i, bool allowTransposed, int fixedDepthMask) const
@@ -1269,6 +1271,8 @@ void _OutputArray::create(Size _sz, int type, int i, bool allowTransposed, int f
     int k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
+        CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == _sz);
+        CV_Assert(!fixedType() || ((Mat*)obj)->type() == type);
         ((Mat*)obj)->create(_sz, type);
         return;
     }
@@ -1281,6 +1285,8 @@ void _OutputArray::create(int rows, int cols, int type, int i, bool allowTranspo
     int k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
+        CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((Mat*)obj)->type() == type);
         ((Mat*)obj)->create(rows, cols, type);
         return;
     }
@@ -1288,7 +1294,7 @@ void _OutputArray::create(int rows, int cols, int type, int i, bool allowTranspo
     create(2, sz, type, i, allowTransposed, fixedDepthMask);
 }
     
-void _OutputArray::create(int dims, const int* size, int type, int i, bool allocateVector, int fixedDepthMask) const
+void _OutputArray::create(int dims, const int* size, int type, int i, bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
     type = CV_MAT_TYPE(type);
@@ -1297,14 +1303,31 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool alloc
     {
         CV_Assert( i < 0 );
         Mat& m = *(Mat*)obj;
-        if( allocateVector )
+        if( allowTransposed )
         {
             if( !m.isContinuous() )
+            {
+                CV_Assert(!fixedType() && !fixedSize());
                 m.release();
+            }
             
             if( dims == 2 && m.dims == 2 && m.data &&
                 m.type() == type && m.rows == size[1] && m.cols == size[0] )
                 return;
+        }
+
+        if(fixedType())
+        {
+            if(CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+                type = m.type();
+            else
+                CV_Assert(!fixedType() || (CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0));
+        }
+        if(fixedSize())
+        {
+            CV_Assert(m.dims == dims);
+            for(int j = 0; j < dims; ++j)
+                CV_Assert(m.size[j] == size[j]);
         }
         m.create(dims, size, type);
         return;
@@ -1316,7 +1339,7 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool alloc
         int type0 = CV_MAT_TYPE(flags);
         CV_Assert( type == type0 || (CV_MAT_CN(type) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
         CV_Assert( dims == 2 && ((size[0] == sz.height && size[1] == sz.width) ||
-                                 (allocateVector && size[0] == sz.width && size[1] == sz.height)));
+                                 (allowTransposed && size[0] == sz.width && size[1] == sz.height)));
         return;
     }
     
@@ -1331,6 +1354,7 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool alloc
             vector<vector<uchar> >& vv = *(vector<vector<uchar> >*)obj;
             if( i < 0 )
             {
+                CV_Assert(!fixedSize() || len == vv.size());
                 vv.resize(len);
                 return;
             }
@@ -1344,6 +1368,7 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool alloc
         CV_Assert( type == type0 || (CV_MAT_CN(type) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
         
         int esz = CV_ELEM_SIZE(type0);
+        CV_Assert(!fixedSize() || len == ((vector<uchar>*)v)->size() / esz);
         switch( esz )
         {
         case 1:
@@ -1416,6 +1441,7 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool alloc
             CV_Assert( dims == 2 && (size[0] == 1 || size[1] == 1 || size[0]*size[1] == 0) );
             size_t len = size[0]*size[1] > 0 ? size[0] + size[1] - 1 : 0;
             
+            CV_Assert(!fixedSize() || len == v.size());
             v.resize(len);
             return;
         }
@@ -1423,21 +1449,41 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool alloc
         CV_Assert( i < (int)v.size() );
         Mat& m = v[i];
         
-        if( allocateVector )
+        if( allowTransposed )
         {
             if( !m.isContinuous() )
+            {
+                CV_Assert(!fixedType() && !fixedSize());
                 m.release();
+            }
             
             if( dims == 2 && m.dims == 2 && m.data &&
                 m.type() == type && m.rows == size[1] && m.cols == size[0] )
                 return;
         }
+
+        if(fixedType())
+        {
+            if(CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+                type = m.type();
+            else
+                CV_Assert(!fixedType() || (CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0));
+        }
+        if(fixedSize())
+        {
+            CV_Assert(m.dims == dims);
+            for(int j = 0; j < dims; ++j)
+                CV_Assert(m.size[j] == size[j]);
+        }
+
         m.create(dims, size, type);
     }
 }
     
 void _OutputArray::release() const
 {
+    CV_Assert(!fixedSize());
+
     int k = kind();
     
     if( k == MAT )
@@ -1474,6 +1520,7 @@ void _OutputArray::clear() const
     
     if( k == MAT )
     {
+        CV_Assert(!fixedSize());
         ((Mat*)obj)->resize(0);
         return;
     }

@@ -1282,7 +1282,11 @@ class CV_EXPORTS _InputArray
 {
 public:
     enum { 
-        KIND_SHIFT = 16, 
+        KIND_SHIFT = 16,
+        FIXED_TYPE = 0x8000 << KIND_SHIFT,
+        FIXED_SIZE = 0x4000 << KIND_SHIFT,
+        KIND_MASK = ~(FIXED_TYPE|FIXED_SIZE) - (1 << KIND_SHIFT) + 1,
+
         NONE              = 0 << KIND_SHIFT, 
         MAT               = 1 << KIND_SHIFT,
         MATX              = 2 << KIND_SHIFT, 
@@ -1301,6 +1305,7 @@ public:
     template<typename _Tp> _InputArray(const vector<_Tp>& vec);
     template<typename _Tp> _InputArray(const vector<vector<_Tp> >& vec);
     _InputArray(const vector<Mat>& vec);
+    template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const Scalar& s);
     _InputArray(const double& val);
@@ -1350,17 +1355,28 @@ class CV_EXPORTS _OutputArray : public _InputArray
 {
 public:
     _OutputArray();
+
     _OutputArray(Mat& m);
     template<typename _Tp> _OutputArray(vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(vector<vector<_Tp> >& vec);
     _OutputArray(vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
+
+    _OutputArray(const Mat& m);
+    template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
+    template<typename _Tp> _OutputArray(const vector<vector<_Tp> >& vec);
+    _OutputArray(const vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
+    template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
+    template<typename _Tp> _OutputArray(const _Tp* vec, int n);
+
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
-    virtual void create(Size sz, int type, int i=-1, bool allocateVector=false, int fixedDepthMask=0) const;
+    virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void release() const;
