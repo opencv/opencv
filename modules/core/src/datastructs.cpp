@@ -523,13 +523,9 @@ cvSliceLength( CvSlice slice, const CvSeq* seq )
         length = slice.end_index - slice.start_index;
     }
 
-    if( length < 0 )
-    {
+    while( length < 0 )
         length += total;
-        /*if( length < 0 )
-            length += total;*/
-    }
-    else if( length > total )
+    if( length > total )
         length = total;
 
     return length;

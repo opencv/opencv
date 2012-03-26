@@ -108,6 +108,10 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
 
             reader.prev_elem = reader.ptr;
             CV_NEXT_SEQ_ELEM( contour->elem_size, reader );
+            // Bugfix by Axel at rubico.com 2010-03-22, affects closed slices only
+            // wraparound not handled by CV_NEXT_SEQ_ELEM
+            if( is_closed && i == count - 2 )				
+                cvSetSeqReaderPos( &reader, slice.start_index );
 
             buffer.data.fl[j] = dx * dx + dy * dy;
             if( ++j == N || i == count - 1 )

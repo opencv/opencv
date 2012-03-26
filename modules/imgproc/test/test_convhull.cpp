@@ -939,12 +939,12 @@ int CV_PerimeterTest::validate_test_results( int test_case_idx )
         len += total;
 
     len = MIN( len, total );
-    len -= !is_closed && len == total;
+    //len -= !is_closed && len == total;
 
     ptr = (CvPoint2D32f*)points2->data.fl;
-    prev_pt = ptr[slice.start_index % total];
+    prev_pt = ptr[(is_closed ? slice.start_index+len-1 : slice.start_index) % total];
 
-    for( i = 1; i <= len; i++ )
+    for( i = 0; i < len + (len < total && (!is_closed || len==1)); i++ )
     {
         pt = ptr[(i + slice.start_index) % total];
         double dx = pt.x - prev_pt.x, dy = pt.y - prev_pt.y;
@@ -1575,6 +1575,87 @@ int CV_ContourMomentsTest::validate_test_results( int test_case_idx )
 }
 
 
+////////////////////////////////////// Perimeter/Area/Slice test ///////////////////////////////////
+
+class CV_PerimeterAreaSliceTest : public cvtest::BaseTest
+{
+public:
+    CV_PerimeterAreaSliceTest();
+    ~CV_PerimeterAreaSliceTest();    
+protected:    
+    void run(int);
+};
+
+CV_PerimeterAreaSliceTest::CV_PerimeterAreaSliceTest()
+{
+}
+CV_PerimeterAreaSliceTest::~CV_PerimeterAreaSliceTest() {}
+
+void CV_PerimeterAreaSliceTest::run( int )
+{
+    Ptr<CvMemStorage> storage = cvCreateMemStorage();
+    RNG& rng = theRNG();
+    const double min_r = 90, max_r = 120;
+    
+    for( int i = 0; i < 100; i++ )
+    {
+        ts->update_context( this, i, true );
+        int n = rng.uniform(3, 30);
+        cvClearMemStorage(storage);
+        CvSeq* contour = cvCreateSeq(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(CvPoint), storage);
+        double dphi = CV_PI*2/n;
+        CvPoint center;
+        center.x = rng.uniform(cvCeil(max_r), cvFloor(640-max_r));
+        center.y = rng.uniform(cvCeil(max_r), cvFloor(480-max_r));
+        
+        for( int j = 0; j < n; j++ )
+        {
+            CvPoint pt;
+            double r = rng.uniform(min_r, max_r);
+            double phi = j*dphi;
+            pt.x = cvRound(center.x + r*cos(phi));
+            pt.y = cvRound(center.y - r*sin(phi));
+            cvSeqPush(contour, &pt);
+        }
+        
+        CvSlice slice;
+        for(;;)
+        {
+            slice.start_index = rng.uniform(-n/2, 3*n/2);
+            slice.end_index = rng.uniform(-n/2, 3*n/2);
+            int len = cvSliceLength(slice, contour);
+            if( len > 2 )
+                break;
+        }
+        CvSeq *cslice = cvSeqSlice(contour, slice);
+        /*printf( "%d. (%d, %d) of %d, length = %d, length1 = %d\n",
+               i, slice.start_index, slice.end_index,
+               contour->total, cvSliceLength(slice, contour), cslice->total );
+        
+        double area0 = cvContourArea(cslice);
+        double area1 = cvContourArea(contour, slice); 
+        if( area0 != area1 )
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The contour area slice is computed differently (%g vs %g)\n", area0, area1 );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );       
+            return;
+        }*/
+
+        double len0 = cvArcLength(cslice, CV_WHOLE_SEQ, 1);
+        double len1 = cvArcLength(contour, slice, 1);
+        if( len0 != len1 )
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "The contour arc length is computed differently (%g vs %g)\n", len0, len1 );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );       
+            return;
+        }
+    }
+    ts->set_failed_test_info(cvtest::TS::OK);
+}
+
+
 TEST(Imgproc_ConvexHull, accuracy) { CV_ConvHullTest test; test.safe_run(); }
 TEST(Imgproc_MinAreaRect, accuracy) { CV_MinAreaRectTest test; test.safe_run(); }
 TEST(Imgproc_MinCircle, accuracy) { CV_MinCircleTest test; test.safe_run(); }
@@ -1582,6 +1663,7 @@ TEST(Imgproc_ContourPerimeter, accuracy) { CV_PerimeterTest test; test.safe_run(
 TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
 TEST(Imgproc_FitLine, accuracy) { CV_FitLineTest test; test.safe_run(); }
 TEST(Imgproc_ContourMoments, accuracy) { CV_ContourMomentsTest test; test.safe_run(); }
+TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; test.safe_run(); }
 
 /* End of file. */
 
