@@ -69,16 +69,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 {
 #ifndef HAVE_CUBLAS
 
-    OPENCV_GPU_UNUSED(src1);
-    OPENCV_GPU_UNUSED(src2);
-    OPENCV_GPU_UNUSED(alpha);
-    OPENCV_GPU_UNUSED(src3);
-    OPENCV_GPU_UNUSED(beta);
-    OPENCV_GPU_UNUSED(dst);
-    OPENCV_GPU_UNUSED(flags);
-    OPENCV_GPU_UNUSED(stream);
-
-    throw_nogpu();
+    CV_Error(CV_StsNotImplemented, "The library was build without CUBLAS");
 
 #else
 
@@ -86,6 +77,12 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
 
     CV_Assert(src1.type() == CV_32FC1 || src1.type() == CV_32FC2 || src1.type() == CV_64FC1 || src1.type() == CV_64FC2);
     CV_Assert(src2.type() == src1.type() && (src3.empty() || src3.type() == src1.type()));
+
+    if (src1.depth() == CV_64F)
+    {
+        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+    }
 
     bool tr1 = (flags & GEMM_1_T) != 0;
     bool tr2 = (flags & GEMM_2_T) != 0;
@@ -230,6 +227,9 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
     }
     else // if (src.elemSize() == 8)
     {
+        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+
         NppStStreamHandler h(stream);
 
         NcvSize32u sz;
@@ -290,7 +290,6 @@ namespace
 void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int flipCode, cudaStream_t stream);
-
     static const func_t funcs[6][4] =
     {
         {NppMirror<CV_8U, nppiMirror_8u_C1R>::call, 0, NppMirror<CV_8U, nppiMirror_8u_C3R>::call, NppMirror<CV_8U, nppiMirror_8u_C4R>::call},
@@ -403,12 +402,12 @@ namespace
 
 void cv::gpu::magnitude(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    ::npp_magnitude(src, dst, nppiMagnitude_32fc32f_C1R, StreamAccessor::getStream(stream));
+    npp_magnitude(src, dst, nppiMagnitude_32fc32f_C1R, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::magnitudeSqr(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    ::npp_magnitude(src, dst, nppiMagnitudeSqr_32fc32f_C1R, StreamAccessor::getStream(stream));
+    npp_magnitude(src, dst, nppiMagnitudeSqr_32fc32f_C1R, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -429,7 +428,7 @@ namespace
     {
         using namespace ::cv::gpu::device::mathfunc;
 
-        CV_DbgAssert(x.size() == y.size() && x.type() == y.type());
+        CV_Assert(x.size() == y.size() && x.type() == y.type());
         CV_Assert(x.depth() == CV_32F);
 
         if (mag)
@@ -449,7 +448,7 @@ namespace
     {
         using namespace ::cv::gpu::device::mathfunc;
 
-        CV_DbgAssert((mag.empty() || mag.size() == angle.size()) && mag.type() == angle.type());
+        CV_Assert((mag.empty() || mag.size() == angle.size()) && mag.type() == angle.type());
         CV_Assert(mag.depth() == CV_32F);
 
         x.create(mag.size(), mag.type());

@@ -995,13 +995,28 @@ TEST_P(AbsDiff, Array)
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
 
-    cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
-    cv::gpu::absdiff(loadMat(src1, useRoi), loadMat(src2, useRoi), dst);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::absdiff(loadMat(src1), loadMat(src2), dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::absdiff(loadMat(src1, useRoi), loadMat(src2, useRoi), dst);
 
-    cv::Mat dst_gold;
-    cv::absdiff(src1, src2, dst_gold);
+        cv::Mat dst_gold;
+        cv::absdiff(src1, src2, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
 }
 
 TEST_P(AbsDiff, Scalar)
@@ -1009,13 +1024,28 @@ TEST_P(AbsDiff, Scalar)
     cv::Mat src = randomMat(size, depth);
     cv::Scalar val = randomScalar(0.0, 255.0);
 
-    cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
-    cv::gpu::absdiff(loadMat(src, useRoi), val, dst);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::absdiff(loadMat(src), val, dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::absdiff(loadMat(src, useRoi), val, dst);
 
-    cv::Mat dst_gold;
-    cv::absdiff(src, val, dst_gold);
+        cv::Mat dst_gold;
+        cv::absdiff(src, val, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth <= CV_32F ? 1.0 : 1e-5);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth <= CV_32F ? 1.0 : 1e-5);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, AbsDiff, testing::Combine(
@@ -1243,6 +1273,40 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Log, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Exp
 
+template <typename T> void expImpl(const cv::Mat& src, cv::Mat& dst)
+{
+    dst.create(src.size(), src.type());
+
+    for (int y = 0; y < src.rows; ++y)
+    {
+        for (int x = 0; x < src.cols; ++x)
+            dst.at<T>(y, x) = cv::saturate_cast<T>(static_cast<int>(std::exp(static_cast<float>(src.at<T>(y, x)))));
+    }
+}
+void expImpl_float(const cv::Mat& src, cv::Mat& dst)
+{
+    dst.create(src.size(), src.type());
+
+    for (int y = 0; y < src.rows; ++y)
+    {
+        for (int x = 0; x < src.cols; ++x)
+            dst.at<float>(y, x) = std::exp(static_cast<float>(src.at<float>(y, x)));
+    }
+}
+
+void expGold(const cv::Mat& src, cv::Mat& dst)
+{
+    typedef void (*func_t)(const cv::Mat& src, cv::Mat& dst);
+
+    const func_t funcs[] =
+    {
+        expImpl<uchar>, expImpl<schar>, expImpl<ushort>, expImpl<short>,
+        expImpl<int>, expImpl_float
+    };
+
+    funcs[src.depth()](src, dst);
+}
+
 PARAM_TEST_CASE(Exp, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
@@ -1269,7 +1333,7 @@ TEST_P(Exp, Accuracy)
     cv::gpu::exp(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
-    cv::exp(src, dst_gold);
+    expGold(src, dst_gold);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-2);
 }
@@ -1277,7 +1341,10 @@ TEST_P(Exp, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Exp, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_32FC1)),
+    testing::Values(MatType(CV_8UC1),
+                    MatType(CV_16UC1),
+                    MatType(CV_16SC1),
+                    MatType(CV_32FC1)),
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1311,13 +1378,28 @@ TEST_P(Compare, Accuracy)
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
 
-    cv::gpu::GpuMat dst = createMat(size, CV_8UC1, useRoi);
-    cv::gpu::compare(loadMat(src1, useRoi), loadMat(src2, useRoi), dst, cmp_code);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::compare(loadMat(src1), loadMat(src2), dst, cmp_code);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, CV_8UC1, useRoi);
+        cv::gpu::compare(loadMat(src1, useRoi), loadMat(src2, useRoi), dst, cmp_code);
 
-    cv::Mat dst_gold;
-    cv::compare(src1, src2, dst_gold, cmp_code);
+        cv::Mat dst_gold;
+        cv::compare(src1, src2, dst_gold, cmp_code);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Compare, testing::Combine(
@@ -1635,17 +1717,60 @@ PARAM_TEST_CASE(Min, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-TEST_P(Min, Accuracy)
+TEST_P(Min, Array)
 {
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
 
-    cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
-    cv::gpu::min(loadMat(src1, useRoi), loadMat(src2, useRoi), dst);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::min(loadMat(src1), loadMat(src2), dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::min(loadMat(src1, useRoi), loadMat(src2, useRoi), dst);
 
-    cv::Mat dst_gold = cv::min(src1, src2);
+        cv::Mat dst_gold = cv::min(src1, src2);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
+}
+
+TEST_P(Min, Scalar)
+{
+    cv::Mat src = randomMat(size, depth);
+    double val = randomDouble(0.0, 255.0);
+
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::min(loadMat(src), val, dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::min(loadMat(src, useRoi), val, dst);
+
+        cv::Mat dst_gold = cv::min(src, val);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Min, testing::Combine(
@@ -1675,17 +1800,60 @@ PARAM_TEST_CASE(Max, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-TEST_P(Max, Accuracy)
+TEST_P(Max, Array)
 {
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
 
-    cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
-    cv::gpu::max(loadMat(src1, useRoi), loadMat(src2, useRoi), dst);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::max(loadMat(src1), loadMat(src2), dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::max(loadMat(src1, useRoi), loadMat(src2, useRoi), dst);
 
-    cv::Mat dst_gold = cv::max(src1, src2);
+        cv::Mat dst_gold = cv::max(src1, src2);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
+}
+
+TEST_P(Max, Scalar)
+{
+    cv::Mat src = randomMat(size, depth);
+    double val = randomDouble(0.0, 255.0);
+
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::max(loadMat(src), val, dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::max(loadMat(src, useRoi), val, dst);
+
+        cv::Mat dst_gold = cv::max(src, val);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Max, testing::Combine(
@@ -1723,13 +1891,28 @@ TEST_P(Pow, Accuracy)
     if (src.depth() < CV_32F)
         power = static_cast<int>(power);
 
-    cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
-    cv::gpu::pow(loadMat(src, useRoi), power, dst);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::pow(loadMat(src), power, dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, depth, useRoi);
+        cv::gpu::pow(loadMat(src, useRoi), power, dst);
 
-    cv::Mat dst_gold;
-    cv::pow(src, power, dst_gold);
+        cv::Mat dst_gold;
+        cv::pow(src, power, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 0.0 : 1e-1);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 0.0 : 1e-1);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Pow, testing::Combine(
@@ -1749,7 +1932,6 @@ PARAM_TEST_CASE(AddWeighted, cv::gpu::DeviceInfo, cv::Size, MatDepth, MatDepth, 
     int depth2;
     int dst_depth;
     bool useRoi;
-
 
     virtual void SetUp()
     {
@@ -1772,13 +1954,28 @@ TEST_P(AddWeighted, Accuracy)
     double beta = randomDouble(-10.0, 10.0);
     double gamma = randomDouble(-10.0, 10.0);
 
-    cv::gpu::GpuMat dst = createMat(size, dst_depth, useRoi);
-    cv::gpu::addWeighted(loadMat(src1, useRoi), alpha, loadMat(src2, useRoi), beta, gamma, dst, dst_depth);
+    if ((depth1 == CV_64F || depth2 == CV_64F || dst_depth == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::addWeighted(loadMat(src1), alpha, loadMat(src2), beta, gamma, dst, dst_depth);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, dst_depth, useRoi);
+        cv::gpu::addWeighted(loadMat(src1, useRoi), alpha, loadMat(src2, useRoi), beta, gamma, dst, dst_depth);
 
-    cv::Mat dst_gold;
-    cv::addWeighted(src1, alpha, src2, beta, gamma, dst_gold, dst_depth);
+        cv::Mat dst_gold;
+        cv::addWeighted(src1, alpha, src2, beta, gamma, dst_gold, dst_depth);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 1.0 : 1e-12);
+        EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 1.0 : 1e-12);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, AddWeighted, testing::Combine(
@@ -1823,13 +2020,52 @@ TEST_P(GEMM, Accuracy)
     double alpha = randomDouble(-10.0, 10.0);
     double beta = randomDouble(-10.0, 10.0);
 
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::gemm(loadMat(src1, useRoi), loadMat(src2, useRoi), alpha, loadMat(src3, useRoi), beta, dst, flags);
+#ifndef HAVE_CUBLAS
+    try
+    {
+        cv::gpu::GpuMat dst;
+        cv::gpu::gemm(loadMat(src1), loadMat(src2), alpha, loadMat(src3), beta, dst, flags);
+    }
+    catch (const cv::Exception& e)
+    {
+        ASSERT_EQ(CV_StsNotImplemented, e.code);
+    }
+#else
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::gemm(loadMat(src1), loadMat(src2), alpha, loadMat(src3), beta, dst, flags);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else if (type == CV_64FC2 && flags != 0)
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::gemm(loadMat(src1), loadMat(src2), alpha, loadMat(src3), beta, dst, flags);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+        cv::gpu::gemm(loadMat(src1, useRoi), loadMat(src2, useRoi), alpha, loadMat(src3, useRoi), beta, dst, flags);
 
-    cv::Mat dst_gold;
-    cv::gemm(src1, src2, alpha, src3, beta, dst_gold, flags);
+        cv::Mat dst_gold;
+        cv::gemm(src1, src2, alpha, src3, beta, dst_gold, flags);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) == CV_32F ? 1e-1 : 1e-10);
+        EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) == CV_32F ? 1e-1 : 1e-10);
+    }
+#endif
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, GEMM, testing::Combine(
@@ -1864,13 +2100,28 @@ TEST_P(Transpose, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(size.height, size.width), type, useRoi);
-    cv::gpu::transpose(loadMat(src, useRoi), dst);
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::transpose(loadMat(src), dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(cv::Size(size.height, size.width), type, useRoi);
+        cv::gpu::transpose(loadMat(src, useRoi), dst);
 
-    cv::Mat dst_gold;
-    cv::transpose(src, dst_gold);
+        cv::Mat dst_gold;
+        cv::transpose(src, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Transpose, testing::Combine(
@@ -2498,14 +2749,29 @@ TEST_P(MinMax, WithoutMask)
 {
     cv::Mat src = randomMat(size, depth);
 
-    double minVal, maxVal;
-    cv::gpu::minMax(loadMat(src, useRoi), &minVal, &maxVal);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            double minVal, maxVal;
+            cv::gpu::minMax(loadMat(src), &minVal, &maxVal);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        double minVal, maxVal;
+        cv::gpu::minMax(loadMat(src, useRoi), &minVal, &maxVal);
 
-    double minVal_gold, maxVal_gold;
-    minMaxLocGold(src, &minVal_gold, &maxVal_gold);
+        double minVal_gold, maxVal_gold;
+        minMaxLocGold(src, &minVal_gold, &maxVal_gold);
 
-    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
-    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+        EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+    }
 }
 
 TEST_P(MinMax, WithMask)
@@ -2513,21 +2779,60 @@ TEST_P(MinMax, WithMask)
     cv::Mat src = randomMat(size, depth);
     cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
 
-    double minVal, maxVal;
-    cv::gpu::minMax(loadMat(src, useRoi), &minVal, &maxVal, loadMat(mask, useRoi));
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            double minVal, maxVal;
+            cv::gpu::minMax(loadMat(src), &minVal, &maxVal, loadMat(mask));
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        double minVal, maxVal;
+        cv::gpu::minMax(loadMat(src, useRoi), &minVal, &maxVal, loadMat(mask, useRoi));
 
-    double minVal_gold, maxVal_gold;
-    minMaxLocGold(src, &minVal_gold, &maxVal_gold, 0, 0, mask);
+        double minVal_gold, maxVal_gold;
+        minMaxLocGold(src, &minVal_gold, &maxVal_gold, 0, 0, mask);
 
-    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
-    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+        EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+    }
 }
 
 TEST_P(MinMax, NullPtr)
 {
     cv::Mat src = randomMat(size, depth);
 
-    cv::gpu::minMax(loadMat(src, useRoi), 0, 0);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            double minVal, maxVal;
+            cv::gpu::minMax(loadMat(src), &minVal, 0);
+            cv::gpu::minMax(loadMat(src), 0, &maxVal);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        double minVal, maxVal;
+        cv::gpu::minMax(loadMat(src, useRoi), &minVal, 0);
+        cv::gpu::minMax(loadMat(src, useRoi), 0, &maxVal);
+
+        double minVal_gold, maxVal_gold;
+        minMaxLocGold(src, &minVal_gold, &maxVal_gold, 0, 0);
+
+        EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, MinMax, testing::Combine(
@@ -2585,19 +2890,35 @@ TEST_P(MinMaxLoc, WithoutMask)
 {
     cv::Mat src = randomMat(size, depth);
 
-    double minVal, maxVal;
-    cv::Point minLoc, maxLoc;
-    cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            double minVal, maxVal;
+            cv::Point minLoc, maxLoc;
+            cv::gpu::minMaxLoc(loadMat(src), &minVal, &maxVal, &minLoc, &maxLoc);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+        cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc);
 
-    double minVal_gold, maxVal_gold;
-    cv::Point minLoc_gold, maxLoc_gold;
-    minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold);
+        double minVal_gold, maxVal_gold;
+        cv::Point minLoc_gold, maxLoc_gold;
+        minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold);
 
-    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
-    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+        EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
 
-    expectEqual(src, minLoc_gold, minLoc);
-    expectEqual(src, maxLoc_gold, maxLoc);
+        expectEqual(src, minLoc_gold, minLoc);
+        expectEqual(src, maxLoc_gold, maxLoc);
+    }
 }
 
 TEST_P(MinMaxLoc, WithMask)
@@ -2605,26 +2926,76 @@ TEST_P(MinMaxLoc, WithMask)
     cv::Mat src = randomMat(size, depth);
     cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
 
-    double minVal, maxVal;
-    cv::Point minLoc, maxLoc;
-    cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask, useRoi));
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            double minVal, maxVal;
+            cv::Point minLoc, maxLoc;
+            cv::gpu::minMaxLoc(loadMat(src), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask));
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+        cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask, useRoi));
 
-    double minVal_gold, maxVal_gold;
-    cv::Point minLoc_gold, maxLoc_gold;
-    minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold, mask);
+        double minVal_gold, maxVal_gold;
+        cv::Point minLoc_gold, maxLoc_gold;
+        minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold, mask);
 
-    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
-    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+        EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
 
-    expectEqual(src, minLoc_gold, minLoc);
-    expectEqual(src, maxLoc_gold, maxLoc);
+        expectEqual(src, minLoc_gold, minLoc);
+        expectEqual(src, maxLoc_gold, maxLoc);
+    }
 }
 
 TEST_P(MinMaxLoc, NullPtr)
 {
     cv::Mat src = randomMat(size, depth);
 
-    cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, 0, 0);
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            double minVal, maxVal;
+            cv::Point minLoc, maxLoc;
+            cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, 0, 0, 0);
+            cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, &maxVal, 0, 0);
+            cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, &minLoc, 0);
+            cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, 0, &maxLoc);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+        cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, 0, 0, 0);
+        cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, &maxVal, 0, 0);
+        cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, &minLoc, 0);
+        cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, 0, &maxLoc);
+
+        double minVal_gold, maxVal_gold;
+        cv::Point minLoc_gold, maxLoc_gold;
+        minMaxLocGold(src, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold);
+
+        EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+        EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+
+        expectEqual(src, minLoc_gold, minLoc);
+        expectEqual(src, maxLoc_gold, maxLoc);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, MinMaxLoc, testing::Combine(
@@ -2661,12 +3032,25 @@ TEST_P(CountNonZero, Accuracy)
     cv::Mat src;
     srcBase.convertTo(src, depth);
 
-    int val = cv::gpu::countNonZero(loadMat(src, useRoi));
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::countNonZero(loadMat(src));
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        int val = cv::gpu::countNonZero(loadMat(src, useRoi));
 
-    int val_gold = cv::countNonZero(src);
+        int val_gold = cv::countNonZero(src);
 
-
-    ASSERT_EQ(val_gold, val);
+        ASSERT_EQ(val_gold, val);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, CountNonZero, testing::Combine(

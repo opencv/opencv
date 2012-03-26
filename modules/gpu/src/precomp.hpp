@@ -74,7 +74,7 @@
     #include "cuda.h"
     #include "cuda_runtime_api.h"
     #include "npp.h"
-    
+
     #ifdef HAVE_CUFFT
         #include "cufft.h"
     #endif
@@ -85,7 +85,7 @@
 
     #include "internal_shared.hpp"
     #include "opencv2/gpu/stream_accessor.hpp"
-    
+
     #include "nvidia/core/NCV.hpp"
     #include "nvidia/NPP_staging/NPP_staging.hpp"
     #include "nvidia/NCVHaarObjectDetection.hpp"
@@ -106,7 +106,7 @@
         #error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
     #endif
 
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The called functionality is disabled for current build or platform"); }
+    static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
 #else /* defined(HAVE_CUDA) */
 

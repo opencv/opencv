@@ -1096,18 +1096,18 @@ namespace cv { namespace gpu { namespace device
         enum { smart_shift = 4 };
     };
 
-    template <typename T> void absdiff_gpu(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
+    template <typename T> void absdiff_gpu(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
         cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, Absdiff<T>(), WithOutMask(), stream);
     }
 
-    template void absdiff_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<schar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<ushort>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<short >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<int   >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<float >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<double>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    //template void absdiff_gpu<uchar >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<schar >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    //template void absdiff_gpu<ushort>(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<short >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<int   >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    //template void absdiff_gpu<float >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<double>(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
 
     template <typename T> struct AbsdiffScalar : unary_function<T, T>
     {
@@ -1140,20 +1140,20 @@ namespace cv { namespace gpu { namespace device
         enum { smart_shift = 4 };
     };
 
-    template <typename T> void absdiff_gpu(const DevMem2Db& src1, double val, const DevMem2Db& dst, cudaStream_t stream)
+    template <typename T> void absdiff_gpu(const DevMem2Db src1, double val, DevMem2Db dst, cudaStream_t stream)
     {
         cudaSafeCall( cudaSetDoubleForDevice(&val) );
         AbsdiffScalar<T> op(val);
         cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)dst, op, WithOutMask(), stream);
     }
 
-    //template void absdiff_gpu<uchar >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<schar >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    //template void absdiff_gpu<ushort>(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<short >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<int   >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    //template void absdiff_gpu<float >(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void absdiff_gpu<double>(const DevMem2Db& src1, double src2, const DevMem2Db& dst, cudaStream_t stream);
+    //template void absdiff_gpu<uchar >(const DevMem2Db src1, double src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<schar >(const DevMem2Db src1, double src2, DevMem2Db dst, cudaStream_t stream);
+    //template void absdiff_gpu<ushort>(const DevMem2Db src1, double src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<short >(const DevMem2Db src1, double src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<int   >(const DevMem2Db src1, double src2, DevMem2Db dst, cudaStream_t stream);
+    //template void absdiff_gpu<float >(const DevMem2Db src1, double src2, DevMem2Db dst, cudaStream_t stream);
+    template void absdiff_gpu<double>(const DevMem2Db src1, double src2, DevMem2Db dst, cudaStream_t stream);
 
     //////////////////////////////////////////////////////////////////////////////////////
     // Compare
@@ -1587,60 +1587,60 @@ namespace cv { namespace gpu { namespace device
     };
 
     template <typename T>
-    void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    void min_gpu(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, src2, dst, minimum<T>(), WithOutMask(), stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, minimum<T>(), WithOutMask(), stream);
     }
 
-    template void min_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void min_gpu<schar >(const DevMem2D_<schar>& src1, const DevMem2D_<schar>& src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
-    template void min_gpu<ushort>(const DevMem2D_<ushort>& src1, const DevMem2D_<ushort>& src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
-    template void min_gpu<short >(const DevMem2D_<short>& src1, const DevMem2D_<short>& src2, const DevMem2D_<short>& dst, cudaStream_t stream);
-    template void min_gpu<int   >(const DevMem2D_<int>& src1, const DevMem2D_<int>& src2, const DevMem2D_<int>& dst, cudaStream_t stream);
-    template void min_gpu<float >(const DevMem2D_<float>& src1, const DevMem2D_<float>& src2, const DevMem2D_<float>& dst, cudaStream_t stream);
-    template void min_gpu<double>(const DevMem2D_<double>& src1, const DevMem2D_<double>& src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+    template void min_gpu<uchar >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<schar >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<ushort>(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<short >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<int   >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<float >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<double>(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
 
     template <typename T>
-    void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    void max_gpu(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, src2, dst, maximum<T>(), WithOutMask(), stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, maximum<T>(), WithOutMask(), stream);
     }
 
-    template void max_gpu<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void max_gpu<schar >(const DevMem2D_<schar>& src1, const DevMem2D_<schar>& src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
-    template void max_gpu<ushort>(const DevMem2D_<ushort>& src1, const DevMem2D_<ushort>& src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
-    template void max_gpu<short >(const DevMem2D_<short>& src1, const DevMem2D_<short>& src2, const DevMem2D_<short>& dst, cudaStream_t stream);
-    template void max_gpu<int   >(const DevMem2D_<int>& src1, const DevMem2D_<int>& src2, const DevMem2D_<int>& dst, cudaStream_t stream);
-    template void max_gpu<float >(const DevMem2D_<float>& src1, const DevMem2D_<float>& src2, const DevMem2D_<float>& dst, cudaStream_t stream);
-    template void max_gpu<double>(const DevMem2D_<double>& src1, const DevMem2D_<double>& src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+    template void max_gpu<uchar >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<schar >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<ushort>(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<short >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<int   >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<float >(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<double>(const DevMem2Db src1, const DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
 
     template <typename T>
-    void min_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    void min_gpu(const DevMem2Db src, T val, DevMem2Db dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, dst, device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, device::bind2nd(minimum<T>(), val), WithOutMask(), stream);
     }
 
-    template void min_gpu<uchar >(const DevMem2Db& src1, uchar src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void min_gpu<schar >(const DevMem2D_<schar>& src1, schar src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
-    template void min_gpu<ushort>(const DevMem2D_<ushort>& src1, ushort src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
-    template void min_gpu<short >(const DevMem2D_<short>& src1, short src2, const DevMem2D_<short>& dst, cudaStream_t stream);
-    template void min_gpu<int   >(const DevMem2D_<int>& src1, int src2, const DevMem2D_<int>& dst, cudaStream_t stream);
-    template void min_gpu<float >(const DevMem2D_<float>& src1, float src2, const DevMem2D_<float>& dst, cudaStream_t stream);
-    template void min_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+    template void min_gpu<uchar >(const DevMem2Db src, uchar  val, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<schar >(const DevMem2Db src, schar  val, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<ushort>(const DevMem2Db src, ushort val, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<short >(const DevMem2Db src, short  val, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<int   >(const DevMem2Db src, int    val, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<float >(const DevMem2Db src, float  val, DevMem2Db dst, cudaStream_t stream);
+    template void min_gpu<double>(const DevMem2Db src, double val, DevMem2Db dst, cudaStream_t stream);
 
     template <typename T>
-    void max_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
+    void max_gpu(const DevMem2Db src, T val, DevMem2Db dst, cudaStream_t stream)
     {
-        cv::gpu::device::transform(src1, dst, device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
+        cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, device::bind2nd(maximum<T>(), val), WithOutMask(), stream);
     }
 
-    template void max_gpu<uchar >(const DevMem2Db& src1, uchar src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void max_gpu<schar >(const DevMem2D_<schar>& src1, schar src2, const DevMem2D_<schar>& dst, cudaStream_t stream);
-    template void max_gpu<ushort>(const DevMem2D_<ushort>& src1, ushort src2, const DevMem2D_<ushort>& dst, cudaStream_t stream);
-    template void max_gpu<short >(const DevMem2D_<short>& src1, short src2, const DevMem2D_<short>& dst, cudaStream_t stream);
-    template void max_gpu<int   >(const DevMem2D_<int>& src1, int src2, const DevMem2D_<int>& dst, cudaStream_t stream);
-    template void max_gpu<float >(const DevMem2D_<float>& src1, float src2, const DevMem2D_<float>& dst, cudaStream_t stream);
-    template void max_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
+    template void max_gpu<uchar >(const DevMem2Db src, uchar  val, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<schar >(const DevMem2Db src, schar  val, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<ushort>(const DevMem2Db src, ushort val, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<short >(const DevMem2Db src, short  val, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<int   >(const DevMem2Db src, int    val, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<float >(const DevMem2Db src, float  val, DevMem2Db dst, cudaStream_t stream);
+    template void max_gpu<double>(const DevMem2Db src, double val, DevMem2Db dst, cudaStream_t stream);
 
     //////////////////////////////////////////////////////////////////////////
     // threshold
@@ -1805,18 +1805,63 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////////////////////////////////////////////////
     // addWeighted
 
-    template <typename T1, typename T2, typename D> struct AddWeighted : binary_function<T1, T2, D>
+    namespace detail
     {
-        __host__ __device__ __forceinline__ AddWeighted(double alpha_, double beta_, double gamma_) : alpha(alpha_), beta(beta_), gamma(gamma_) {}
-
-        __device__ __forceinline__ D operator ()(typename TypeTraits<T1>::ParameterType a, typename TypeTraits<T2>::ParameterType b) const
+        template <typename T> struct UseDouble
         {
-            return saturate_cast<D>(alpha * a + beta * b + gamma);
-        }
+            enum {value = 0};
+        };
+        template <> struct UseDouble<int>
+        {
+            enum {value = 1};
+        };
+        template <> struct UseDouble<float>
+        {
+            enum {value = 1};
+        };
+        template <> struct UseDouble<double>
+        {
+            enum {value = 1};
+        };
+    }
+    template <typename T1, typename T2, typename D> struct UseDouble
+    {
+        enum {value = (detail::UseDouble<T1>::value || detail::UseDouble<T2>::value || detail::UseDouble<D>::value)};
+    };
 
-        const double alpha;
-        const double beta;
-        const double gamma;
+    namespace detail
+    {
+        template <typename T1, typename T2, typename D, bool useDouble> struct AddWeighted;
+        template <typename T1, typename T2, typename D> struct AddWeighted<T1, T2, D, false> : binary_function<T1, T2, D>
+        {
+            AddWeighted(double alpha_, double beta_, double gamma_) : alpha(static_cast<float>(alpha_)), beta(static_cast<float>(beta_)), gamma(static_cast<float>(gamma_)) {}
+
+            __device__ __forceinline__ D operator ()(T1 a, T2 b) const
+            {
+                return saturate_cast<D>(a * alpha + b * beta + gamma);
+            }
+
+            const float alpha;
+            const float beta;
+            const float gamma;
+        };
+        template <typename T1, typename T2, typename D> struct AddWeighted<T1, T2, D, true> : binary_function<T1, T2, D>
+        {
+            AddWeighted(double alpha_, double beta_, double gamma_) : alpha(alpha_), beta(beta_), gamma(gamma_) {}
+
+            __device__ __forceinline__ D operator ()(T1 a, T2 b) const
+            {
+                return saturate_cast<D>(a * alpha + b * beta + gamma);
+            }
+
+            const double alpha;
+            const double beta;
+            const double gamma;
+        };
+    }
+    template <typename T1, typename T2, typename D> struct AddWeighted : detail::AddWeighted<T1, T2, D, UseDouble<T1, T2, D>::value>
+    {
+        AddWeighted(double alpha_, double beta_, double gamma_) : detail::AddWeighted<T1, T2, D, UseDouble<T1, T2, D>::value>(alpha_, beta_, gamma_) {}
     };
 
     template <> struct TransformFunctorTraits< AddWeighted<ushort, ushort, ushort> > : DefaultTransformFunctorTraits< AddWeighted<ushort, ushort, ushort> >
@@ -1878,9 +1923,12 @@ namespace cv { namespace gpu { namespace device
     template <typename T1, typename T2, typename D>
     void addWeighted_gpu(const DevMem2Db& src1, double alpha, const DevMem2Db& src2, double beta, double gamma, const DevMem2Db& dst, cudaStream_t stream)
     {
-        cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
-        cudaSafeCall( cudaSetDoubleForDevice(&beta) );
-        cudaSafeCall( cudaSetDoubleForDevice(&gamma) );
+        if (UseDouble<T1, T2, D>::value)
+        {
+            cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
+            cudaSafeCall( cudaSetDoubleForDevice(&beta) );
+            cudaSafeCall( cudaSetDoubleForDevice(&gamma) );
+        }
 
         AddWeighted<T1, T2, D> op(alpha, beta, gamma);
 
