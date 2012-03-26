@@ -1126,7 +1126,7 @@ CvBoost::update_weights( CvBoostTree* tree )
     int *sample_idx_buf;
     const int* sample_idx = 0;
     cv::AutoBuffer<uchar> inn_buf;
-    int _buf_size = (params.boost_type == LOGIT) || (params.boost_type == GENTLE) ? data->sample_count*sizeof(int) : 0;
+    size_t _buf_size = (params.boost_type == LOGIT) || (params.boost_type == GENTLE) ? data->sample_count*sizeof(int) : 0;
     if( !tree )
         _buf_size += n*sizeof(int);
     else
