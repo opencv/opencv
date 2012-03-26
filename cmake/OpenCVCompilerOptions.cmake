@@ -25,6 +25,7 @@ if(MSVC)
 
     # Remove unreferenced functions: function level linking
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Gy")
+    set(OPENCV_EXTRA_C_FLAGS_DEBUG "${OPENCV_EXTRA_C_FLAGS_DEBUG} /bigobj")
     if(BUILD_WITH_DEBUG_INFO)
        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Zi")
     endif()
