@@ -2416,8 +2416,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
 {
     static RemapNNFunc nn_tab[] =
     {
-        remapNearest<uchar>, remapNearest<uchar>, remapNearest<ushort>, remapNearest<ushort>,
-        remapNearest<int>, remapNearest<int>, remapNearest<double>, 0
+        remapNearest<uchar>, remapNearest<schar>, remapNearest<ushort>, remapNearest<short>,
+        remapNearest<int>, remapNearest<float>, remapNearest<double>, 0
     };
 
     static RemapFunc linear_tab[] =
