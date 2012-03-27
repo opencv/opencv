@@ -1536,7 +1536,7 @@ void CV_StereoCalibrationTest::run( int )
         Mat reprojectedPoints;
         perspectiveTransform(sparsePoints, reprojectedPoints, Q);
 
-        if (norm(triangulatedPoints - reprojectedPoints) / sqrt(pointsCount) > requiredAccuracy)
+        if (norm(triangulatedPoints - reprojectedPoints) / sqrt((double)pointsCount) > requiredAccuracy)
         {
 			ts->printf( cvtest::TS::LOG, "Points reprojected with a matrix Q and points reconstructed by triangulation are different, testcase %d\n", testcase);
 			ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
