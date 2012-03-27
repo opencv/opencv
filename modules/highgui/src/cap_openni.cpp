@@ -414,7 +414,7 @@ public:
 #else
     static const int DEFAULT_MAX_BUFFER_SIZE = 2;
 #endif
-    static const int DEFAULT_IS_CIRCLE_BUFFER = 1;
+    static const int DEFAULT_IS_CIRCLE_BUFFER = 0;
     static const int DEFAULT_MAX_TIME_DURATION = 20;
 
     CvCapture_OpenNI(int index=0);
