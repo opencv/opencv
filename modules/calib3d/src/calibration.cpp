@@ -2524,7 +2524,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
             1, 0, 0, -cc_new[0].x,
             0, 1, 0, -cc_new[0].y,
             0, 0, 0, fc_new,
-            0, 0, 1./_t[idx],
+            0, 0, -1./_t[idx],
             (idx == 0 ? cc_new[0].x - cc_new[1].x : cc_new[0].y - cc_new[1].y)/_t[idx]
         };
         CvMat Q = cvMat(4, 4, CV_64F, q);
