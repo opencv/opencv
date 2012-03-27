@@ -461,18 +461,11 @@ if((NOT DEFINED BUILD_opencv_java OR BUILD_opencv_java) AND PYTHON_EXECUTABLE)
   endif()
   include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
 
-  if(ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_SDK_TARGET_LEVEL GREATER 7))
+  if(ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
     SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
   else()
     SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
   endif()
-endif()
-
-if(BUILD_ANDROID_EXAMPLES AND NOT CAN_BUILD_ANDROID_PROJECTS)
-  if(HAVE_opencv_java)
-    message(WARNING "Android examples are chosen for build, but required SDK tools are not found.")
-  endif()
-  unset(BUILD_ANDROID_EXAMPLES CACHE)
 endif()
 
 ############################### QT ################################

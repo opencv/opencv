@@ -21,7 +21,6 @@ set(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
 set(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 set(GEN_JAVADOC "${CMAKE_CURRENT_SOURCE_DIR}/gen_javadoc.py")
 set(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
-set(CHECK_TEST_COVERAGE "${CMAKE_CURRENT_SOURCE_DIR}/check-tests.py")
 
 # add dependencies to cmake (we should rerun cmake if any of these scripts is modified)
 configure_file("${GEN_JAVA}" "${OpenCV_BINARY_DIR}/junk/gen_java.junk" COPYONLY)
@@ -260,12 +259,4 @@ endif(ANDROID)
 #android test project
 if(ANDROID AND BUILD_TESTS)
   add_subdirectory(android_test)
- # add_android_project(opencv_test_java "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
-
-#  if(PYTHON_EXECUTABLE)
- #   add_custom_command(
-  #      TARGET opencv_test_java_android_project POST_BUILD
-   #     COMMAND ${PYTHON_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/android_test/src" "${OpenCV_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
-    #    )
- # endif()
 endif()

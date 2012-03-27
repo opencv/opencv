@@ -57,3 +57,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E
 
 add_dependencies(opencv_tests ${PROJECT_NAME})
 
+if(PYTHON_EXECUTABLE)
+  set(CHECK_TEST_COVERAGE "${OPENCV_MODULE_opencv_java_LOCATION}/check-tests.py")
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+      COMMAND ${PYTHON_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/src" "${OpenCV_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
+      )
+endif()
