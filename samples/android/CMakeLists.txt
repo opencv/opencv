@@ -2,30 +2,22 @@
 #  CMake file for Android samples. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
-SET(OPENCV_ANDROID_SAMPLES_REQUIRED_DEPS opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core)
+add_custom_target(opencv_android_examples)
 
-ocv_check_dependencies(${OPENCV_ANDROID_SAMPLES_REQUIRED_DEPS} opencv_java)
+add_subdirectory(15-puzzle)
+add_subdirectory(face-detection)
+add_subdirectory(image-manipulations)
+add_subdirectory(tutorial-0-androidcamera)
+add_subdirectory(tutorial-1-addopencv)
+add_subdirectory(tutorial-2-opencvcamera)
+add_subdirectory(tutorial-3-native)
+add_subdirectory(tutorial-4-mixed)
 
-if(BUILD_ANDROID_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
-  project(android_samples)
-
-  ocv_include_modules(${OPENCV_ANDROID_SAMPLES_REQUIRED_DEPS})
-  
-  file(GLOB android_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
-  list(REMOVE_ITEM android_samples hello-android)
-  list(SORT android_samples)
-    
-  foreach(sample ${android_samples})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${sample}/AndroidManifest.xml")
-      add_android_project("${sample}" "${CMAKE_CURRENT_SOURCE_DIR}/${sample}" INSTALL)
-    endif()
-  endforeach()
-
-  #hello-android sample
-  ADD_EXECUTABLE(hello-android hello-android/main.cpp)
-  TARGET_LINK_LIBRARIES(hello-android ${OPENCV_LINKER_LIBS} ${OPENCV_ANDROID_SAMPLES_REQUIRED_DEPS})
+#hello-android sample
+if(HAVE_opencv_highgui)
+  ocv_include_modules_recurse(opencv_highgui opencv_core)
+  add_executable(hello-android hello-android/main.cpp)
+  target_link_libraries(hello-android ${OPENCV_LINKER_LIBS} opencv_highgui opencv_core)
   set_target_properties(hello-android PROPERTIES OUTPUT_NAME hello-android RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}")
-  if(INSTALL_ANDROID_EXAMPLES)
-    install(TARGETS hello-android DESTINATION bin COMPONENT main)
-  endif()
+  add_dependencies(opencv_android_examples hello-android)
 endif()

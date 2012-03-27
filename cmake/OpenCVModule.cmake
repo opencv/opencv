@@ -355,6 +355,22 @@ macro(ocv_include_modules)
   endforeach()
 endmacro()
 
+# setup include paths for the list of passed modules and recursively add dependent modules
+macro(ocv_include_modules_recurse)
+  foreach(d ${ARGN})
+    if(d MATCHES "^opencv_" AND HAVE_${d})
+      if (EXISTS "${OPENCV_MODULE_${d}_LOCATION}/include")
+        ocv_include_directories("${OPENCV_MODULE_${d}_LOCATION}/include")
+      endif()
+      if(OPENCV_MODULE_${d}_DEPS)
+        ocv_include_modules_recurse(${OPENCV_MODULE_${d}_DEPS})
+      endif()
+    elseif(EXISTS "${d}")
+      ocv_include_directories("${d}")
+    endif()
+  endforeach()
+endmacro()
+
 # setup include path for OpenCV headers for specified module
 # ocv_module_include_directories(<extra include directories/extra include modules>)
 macro(ocv_module_include_directories)

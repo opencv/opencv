@@ -24,8 +24,8 @@ set(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
 set(CHECK_TEST_COVERAGE "${CMAKE_CURRENT_SOURCE_DIR}/check-tests.py")
 
 # add dependencies to cmake (we should rerun cmake if any of these scripts is modified)
-configure_file("${GEN_JAVA}" "${CMAKE_BINARY_DIR}/junk/gen_java.junk" COPYONLY)
-configure_file("${HDR_PARSER}" "${CMAKE_BINARY_DIR}/junk/hdr_parser.junk" COPYONLY)
+configure_file("${GEN_JAVA}" "${OpenCV_BINARY_DIR}/junk/gen_java.junk" COPYONLY)
+configure_file("${HDR_PARSER}" "${OpenCV_BINARY_DIR}/junk/hdr_parser.junk" COPYONLY)
 
 set(java_hdr_deps "")
 set(generated_cpp_sources "")
@@ -53,7 +53,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # add dependencies to cmake (we should rerun cmake if any of these headers is modified)
   foreach(header ${module_headers})
     get_filename_component(header_name "${header}" NAME_WE)
-    configure_file("${header}" "${CMAKE_BINARY_DIR}/junk/${header_name}.junk" COPYONLY)
+    configure_file("${header}" "${OpenCV_BINARY_DIR}/junk/${header_name}.junk" COPYONLY)
   endforeach()
 
   # first run (to get list of generated files)
@@ -125,17 +125,17 @@ foreach(java_file ${documented_java_files})
   string(REPLACE "+" "/" java_file_name "${java_file_name}")
 
   add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
-        COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
+        OUTPUT "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
+        COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
         MAIN_DEPENDENCY "${java_file}"
         DEPENDS ${java_documented_headers_deps}
         COMMENT "Generating ${JAVA_OUTPUT_DIR}/${java_file_name}"
         )
-  list(APPEND java_files "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}")
+  list(APPEND java_files "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}")
 
   if(ANDROID)
     get_filename_component(install_subdir "${java_file_name}" PATH)
-    install(FILES "${CMAKE_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
+    install(FILES "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
   endif()
 endforeach()
 
@@ -178,10 +178,7 @@ if(ANDROID)
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
   get_target_property(__opencv_java_location ${the_module} LOCATION)
-  add_custom_command(
-        TARGET ${the_module} POST_BUILD
-        COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}"
-        )
+  add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}")
 
   set(lib_proj_files "")
 
@@ -190,16 +187,16 @@ if(ANDROID)
   foreach(f ${android_lib_project_files})
     if(NOT f MATCHES "\\.svn")
       add_custom_command(
-                OUTPUT "${CMAKE_BINARY_DIR}/${f}"
-                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/android/${f}" "${CMAKE_BINARY_DIR}/${f}"
+                OUTPUT "${OpenCV_BINARY_DIR}/${f}"
+                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/android/${f}" "${OpenCV_BINARY_DIR}/${f}"
                 DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/android/${f}"
                 COMMENT "Generating ${f}"
                 )
 
-      list(APPEND lib_proj_files "${CMAKE_BINARY_DIR}/${f}")
+      list(APPEND lib_proj_files "${OpenCV_BINARY_DIR}/${f}")
 
       if(NOT f MATCHES "jni/.+")
-        install(FILES "${CMAKE_BINARY_DIR}/${f}" DESTINATION . COMPONENT main)
+        install(FILES "${OpenCV_BINARY_DIR}/${f}" DESTINATION . COMPONENT main)
       endif()
     endif()
   endforeach()
@@ -208,13 +205,12 @@ if(ANDROID)
   foreach(jni_file ${handwrittren_cpp_sources} ${handwrittren_h_sources} ${generated_cpp_sources})
     get_filename_component(jni_file_name "${jni_file}" NAME)
     add_custom_command(
-            OUTPUT "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
-            COMMAND ${CMAKE_COMMAND} -E copy "${jni_file}" "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
-            COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
+            OUTPUT "${OpenCV_BINARY_DIR}/jni/${jni_file_name}"
+            COMMAND ${CMAKE_COMMAND} -E copy "${jni_file}" "${OpenCV_BINARY_DIR}/jni/${jni_file_name}"
             DEPENDS "${jni_file}" ${java_hdr_deps}
             COMMENT "Generating jni/${jni_file_name}"
             )
-    list(APPEND lib_proj_files "${CMAKE_BINARY_DIR}/jni/${jni_file_name}")
+    list(APPEND lib_proj_files "${OpenCV_BINARY_DIR}/jni/${jni_file_name}")
   endforeach()
 
   # create Android library project in build folder
@@ -222,32 +218,34 @@ if(ANDROID)
     set(lib_target ${the_module}_android_library)
 
     set(lib_target_files ${ANDROID_LIB_PROJECT_FILES})
-    ocv_list_add_prefix(lib_target_files "${CMAKE_BINARY_DIR}/")
+    ocv_list_add_prefix(lib_target_files "${OpenCV_BINARY_DIR}/")
 
-    android_get_compatible_target(lib_target_sdk_target 8)
+    android_get_compatible_target(lib_target_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET})
 
     add_custom_command(
         OUTPUT ${lib_target_files}
         COMMAND ${CMAKE_COMMAND} -E remove ${lib_target_files}
-        COMMAND ${ANDROID_EXECUTABLE} --silent create lib-project --path \"${CMAKE_BINARY_DIR}\" --target \"${lib_target_sdk_target}\" --name OpenCV --package org.opencv 2>\"${CMAKE_CURRENT_BINARY_DIR}/create_lib_project.log\"
-        MAIN_DEPENDENCY "${CMAKE_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
+        COMMAND ${ANDROID_EXECUTABLE} --silent create lib-project --path \"${OpenCV_BINARY_DIR}\" --target \"${lib_target_sdk_target}\" --name OpenCV --package org.opencv 2>\"${CMAKE_CURRENT_BINARY_DIR}/create_lib_project.log\"
+        MAIN_DEPENDENCY "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
         DEPENDS ${lib_proj_files}
         COMMENT "Generating OpenCV Android library project. SDK target: ${lib_target_sdk_target}"
         )
-    install(FILES "${CMAKE_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION . COMPONENT main)
+    install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION . COMPONENT main)
 
     if(ANT_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
       # build the library project
       # normally we should do this after a native part, but for a library project we can build the java part first
       add_custom_command(
-        OUTPUT "${CMAKE_BINARY_DIR}/bin/classes.jar"
+        OUTPUT "${OpenCV_BINARY_DIR}/bin/classes.jar"
         COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
-        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${OpenCV_BINARY_DIR}/bin/classes.jar" # needed because ant does not update the timestamp of updated jar
+        WORKING_DIRECTORY "${OpenCV_BINARY_DIR}"
         DEPENDS ${lib_proj_files} ${lib_target_files} ${java_files}
         COMMENT "Building OpenCV Android library project"
         )
-      install(FILES "${CMAKE_BINARY_DIR}/bin/classes.jar" DESTINATION bin COMPONENT main)
-      list(APPEND lib_target_files "${CMAKE_BINARY_DIR}/bin/classes.jar")
+      install(FILES "${OpenCV_BINARY_DIR}/bin/classes.jar" "${OpenCV_BINARY_DIR}/bin/jarlist.cache" "${OpenCV_BINARY_DIR}/bin/build.prop" DESTINATION bin COMPONENT main)
+      install(DIRECTORY "${OpenCV_BINARY_DIR}/bin/res" "${OpenCV_BINARY_DIR}/bin/classes" DESTINATION bin COMPONENT main)
+      list(APPEND lib_target_files "${OpenCV_BINARY_DIR}/bin/classes.jar")
     endif()
 
     add_custom_target(${lib_target}
@@ -260,14 +258,14 @@ if(ANDROID)
 endif(ANDROID)
 
 #android test project
-ocv_check_dependencies(${OPENCV_MODULE_${the_module}_OPT_DEPS})
-if(BUILD_TESTS AND OCV_DEPENDENCIES_FOUND)
-  add_android_project(opencv_test_java "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
+if(ANDROID AND BUILD_TESTS)
+  add_subdirectory(android_test)
+ # add_android_project(opencv_test_java "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
 
-  if(PYTHON_EXECUTABLE)
-    add_custom_command(
-        TARGET opencv_test_java_android_project POST_BUILD
-        COMMAND ${PYTHON_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/android_test/src" "${CMAKE_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
-        )
-  endif()
+#  if(PYTHON_EXECUTABLE)
+ #   add_custom_command(
+  #      TARGET opencv_test_java_android_project POST_BUILD
+   #     COMMAND ${PYTHON_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/android_test/src" "${OpenCV_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
+    #    )
+ # endif()
 endif()

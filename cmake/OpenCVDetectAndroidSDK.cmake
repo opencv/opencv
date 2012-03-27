@@ -85,7 +85,7 @@ if(ANDROID_EXECUTABLE)
 
   set(ANDROID_MANIFEST_FILE AndroidManifest.xml)
   set(ANDROID_LIB_PROJECT_FILES build.xml local.properties proguard-project.txt ${ANDROID_PROJECT_PROPERTIES_FILE})
-  set(ANDROID_PROJECT_FILES ${ANDROID_ANT_PROPERTIES_FILE} ${ANDROID_LIB_PROJECT_FILES})
+  set(ANDROID_PROJECT_FILES ${ANDROID_LIB_PROJECT_FILES})
 
   #get installed targets
   if(ANDROID_TOOLS_Pkg_Revision GREATER 11)
@@ -120,31 +120,14 @@ if(ANDROID_EXECUTABLE)
     set(ANDROID_EXECUTABLE "ANDROID_EXECUTABLE-NOTFOUND")
   endif()
 
-  # detect ANDROID_SDK_TARGET if no target is provided by user
-  #TODO: remove this block
+  # clear ANDROID_SDK_TARGET if no target is provided by user
   if(NOT ANDROID_SDK_TARGET)
-    set(desired_android_target_level ${ANDROID_NATIVE_API_LEVEL})
-    if(desired_android_target_level LESS 11)
-      set(desired_android_target_level 11)
-    endif()
-    if(ANDROID_PROCESS EQUAL 0)
-      math(EXPR desired_android_target_level_1 "${desired_android_target_level}-1")
+    set(ANDROID_SDK_TARGET "" CACHE STRING "Android SDK target for the OpenCV Java API and samples")
+  endif()
+  if(ANDROID_SDK_TARGETS AND CMAKE_VERSION VERSION_GREATER "2.8")
+    set_property( CACHE ANDROID_SDK_TARGET PROPERTY STRINGS ${ANDROID_SDK_TARGETS} )
+  endif()
 
-      foreach(target ${ANDROID_SDK_TARGETS})
-        string(REGEX MATCH "[0-9]+$" target_level "${target}")
-        if(target_level GREATER desired_android_target_level_1)
-          set(ANDROID_SDK_TARGET "${target}")
-          break()
-        endif()
-      endforeach()
-    else()
-      set(ANDROID_SDK_TARGET android-${desired_android_target_level})
-      message(WARNING "Could not retrieve list of installed Android targets. Will try to use \"${ANDROID_SDK_TARGET}\" target")
-    endif()
-  endif(NOT ANDROID_SDK_TARGET)
-
-  SET(ANDROID_SDK_TARGET "${ANDROID_SDK_TARGET}" CACHE STRING "SDK target for Android tests and samples")
-  string(REGEX MATCH "[0-9]+$" ANDROID_SDK_TARGET_LEVEL "${ANDROID_SDK_TARGET}")
 endif(ANDROID_EXECUTABLE)
 
 # finds minimal installed SDK target compatible with provided names or API levels
