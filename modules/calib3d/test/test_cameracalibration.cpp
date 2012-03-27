@@ -1496,6 +1496,53 @@ void CV_StereoCalibrationTest::run( int )
 			ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
         }
 
+        //check that Q reprojects the same points as reconstructed by triangulation
+        const float minCoord = -300.0f;
+        const float maxCoord = 300.0f;
+        const float minDisparity = 0.1f;
+        const float maxDisparity = 600.0f;
+        const int pointsCount = 500;
+        const float requiredAccuracy = 1e-3;
+        RNG& rng = ts->get_rng();
+
+        Mat projectedPoints_1(2, pointsCount, CV_32FC1);
+        Mat projectedPoints_2(2, pointsCount, CV_32FC1);
+        Mat disparities(1, pointsCount, CV_32FC1);
+
+        rng.fill(projectedPoints_1, RNG::UNIFORM, minCoord, maxCoord);
+        rng.fill(disparities, RNG::UNIFORM, minDisparity, maxDisparity);
+        projectedPoints_2.row(0) = projectedPoints_1.row(0) - disparities;
+        Mat ys_2 = projectedPoints_2.row(1);
+        projectedPoints_1.row(1).copyTo(ys_2);
+
+        const int dimension = 4;
+        Mat points4d(dimension, pointsCount, CV_32FC1);
+        CvMat cvPoints4d = points4d;
+        CvMat cvP1 = P1;
+        CvMat cvP2 = P2;
+        CvMat cvPoints1 = projectedPoints_1;
+        CvMat cvPoints2 = projectedPoints_2;
+        cvTriangulatePoints(&cvP1, &cvP2, &cvPoints1, &cvPoints2, &cvPoints4d);
+        Mat homogeneousPoints4d = points4d.t();
+        homogeneousPoints4d = homogeneousPoints4d.reshape(dimension);
+        Mat triangulatedPoints;
+        convertPointsFromHomogeneous(homogeneousPoints4d, triangulatedPoints);
+
+        Mat sparsePoints;
+        sparsePoints.push_back(projectedPoints_1);
+        sparsePoints.push_back(disparities);
+        sparsePoints = sparsePoints.t();
+        sparsePoints = sparsePoints.reshape(3);
+        Mat reprojectedPoints;
+        perspectiveTransform(sparsePoints, reprojectedPoints, Q);
+
+        if (norm(triangulatedPoints - reprojectedPoints) / sqrt(pointsCount) > requiredAccuracy)
+        {
+			ts->printf( cvtest::TS::LOG, "Points reprojected with a matrix Q and points reconstructed by triangulation are different, testcase %d\n", testcase);
+			ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+        }
+        
+
 		// rectifyUncalibrated
 		CV_Assert( imgpt1.size() == imgpt2.size() );
 		Mat _imgpt1( total, 1, CV_32FC2 ), _imgpt2( total, 1, CV_32FC2 );
