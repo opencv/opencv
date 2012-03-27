@@ -8,7 +8,7 @@ using namespace std;
 
 void help()
 {
-        cout << "\nThis program demonstrates usage of depth sensors(Kinect,XtionPRO,...).\n"
+        cout << "\nThis program demonstrates usage of depth sensors (Kinect, XtionPRO,...).\n"
                         "The user gets some of the supported output images.\n"
             "\nAll supported output map types:\n"
             "1.) Data given from depth generator\n"
