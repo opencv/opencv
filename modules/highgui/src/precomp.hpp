@@ -48,20 +48,15 @@
 
 #include "cvconfig.h"
 
-#if defined WIN32 || defined _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#undef min
-#undef max
-
-void  FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin );
-#endif
-
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/internal.hpp"
+
+#if defined WIN32 || defined _WIN32
+//required windows.h has to be included by the opencv2/core/internal.hpp
+void  FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin );
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
