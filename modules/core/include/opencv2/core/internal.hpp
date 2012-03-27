@@ -69,7 +69,6 @@
 #undef max
 #else
 #include <pthread.h>
-#include <sys/mman.h>
 #endif
 
 #ifdef __BORLANDC__

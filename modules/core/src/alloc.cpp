@@ -78,7 +78,7 @@ void fastFree(void* ptr)
     }
 }
 
-#else
+#else //CV_USE_SYSTEM_MALLOC
 
 #if 0
 #define SANITY_CHECK(block) \
@@ -113,7 +113,10 @@ void SystemFree(void* ptr, size_t)
 {
     free(ptr);
 }
-#else
+#else //WIN32
+
+#include <sys/mman.h>
+
 struct CriticalSection
 {
     CriticalSection() { pthread_mutex_init(&mutex, 0); }
@@ -139,7 +142,7 @@ void SystemFree(void* ptr, size_t size)
 {
     munmap(ptr, size);
 }
-#endif
+#endif //WIN32
 
 struct AutoLock
 {
@@ -386,7 +389,7 @@ struct ThreadData
 #ifdef WIN32
 #ifdef WINCE
 #	define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
-#endif
+#endif //WINCE
 
     static DWORD tlsKey;
     static ThreadData* get()
@@ -402,7 +405,7 @@ struct ThreadData
         }
         return data;
     }
-#else
+#else //WIN32
     static void deleteData(void* data)
     {
         delete (ThreadData*)data;
@@ -422,7 +425,7 @@ struct ThreadData
         }
         return data;
     }
-#endif
+#endif //WIN32
 };
 
 #ifdef WIN32
@@ -434,9 +437,9 @@ void deleteThreadAllocData()
         delete (ThreadData*)TlsGetValue( ThreadData::tlsKey );
 }
 
-#else
+#else //WIN32
 pthread_key_t ThreadData::tlsKey = 0;
-#endif
+#endif //WIN32
 
 #if 0
 static void checkList(ThreadData* tls, int idx)
@@ -674,7 +677,7 @@ void fastFree( void* ptr )
     }
 }
 
-#endif
+#endif //CV_USE_SYSTEM_MALLOC
 
 }
 
