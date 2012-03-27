@@ -80,7 +80,7 @@ void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, OutputArra
     vector<int> indices = _indices.getMat();
     _dst.create(src.rows, src.cols, src.type());
     Mat dst = _dst.getMat();
-    for(int idx = 0; idx < indices.size(); idx++) {
+    for(size_t idx = 0; idx < indices.size(); idx++) {
         Mat originalCol = src.col(indices[idx]);
         Mat sortedCol = dst.col(idx);
         originalCol.copyTo(sortedCol);
@@ -169,7 +169,7 @@ Mat subspaceProject(InputArray _W, InputArray _mean, InputArray _src)
     int n = X.rows;
     int d = X.cols;
     // center the data if correct aligned sample mean is given
-    if(mean.total() == d)
+    if(mean.total() == (size_t)d)
         subtract(X, repeat(mean.reshape(1,1), n, 1), X);
     // finally calculate projection as Y = (X-mean)*W
     gemm(X, W, 1.0, Mat(), 0.0, Y);
@@ -196,8 +196,8 @@ Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     gemm(Y,
             W,
             1.0,
-            (d == mean.total()) ? repeat(mean.reshape(1,1), n, 1) : Mat(),
-            (d == mean.total()) ? 1.0 : 0.0,
+            ((size_t)d == mean.total()) ? repeat(mean.reshape(1,1), n, 1) : Mat(),
+            ((size_t)d == mean.total()) ? 1.0 : 0.0,
             X,
             GEMM_2_T);
     return X;
@@ -296,7 +296,7 @@ private:
         
         double norm = 0.0;
         for (int i = 0; i < nn; i++) {
-            if (i < low | i > high) {
+            if (i < low || i > high) {
                 d[i] = H[i][i];
                 e[i] = 0.0;
             }
@@ -658,7 +658,7 @@ private:
                             y = H[i + 1][i];
                             vr = (d[i] - p) * (d[i] - p) + e[i] * e[i] - q * q;
                             vi = (d[i] - p) * 2.0 * q;
-                            if (vr == 0.0 & vi == 0.0) {
+                            if (vr == 0.0 && vi == 0.0) {
                                 vr = eps * norm * (std::abs(w) + std::abs(q) + std::abs(x)
                                                    + std::abs(y) + std::abs(z));
                             }
@@ -696,7 +696,7 @@ private:
         // Vectors of isolated roots
         
         for (int i = 0; i < nn; i++) {
-            if (i < low | i > high) {
+            if (i < low || i > high) {
                 for (int j = i; j < nn; j++) {
                     V[i][j] = H[i][j];
                 }
@@ -946,9 +946,9 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     vector<int> mapped_labels(labels.size());
     vector<int> num2label = remove_dups(labels);
     map<int, int> label2num;
-    for (int i = 0; i < num2label.size(); i++)
+    for (size_t i = 0; i < num2label.size(); i++)
         label2num[num2label[i]] = i;
-    for (int i = 0; i < labels.size(); i++)
+    for (size_t i = 0; i < labels.size(); i++)
         mapped_labels[i] = label2num[labels[i]];
     // get sample size, dimension
     int N = data.rows;
@@ -956,7 +956,7 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     // number of unique labels
     int C = num2label.size();
     // throw error if less labels, than samples
-    if (labels.size() != N)
+    if (labels.size() != (size_t)N)
         CV_Error(CV_StsBadArg, "Error: The number of samples must equal the number of labels.");
     // warn if within-classes scatter matrix becomes singular
     if (N < D)

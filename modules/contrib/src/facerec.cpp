@@ -310,7 +310,7 @@ void Eigenfaces::train(InputArray src, InputArray _lbls) {
     // dimensionality of data
     //int d = data.cols;
     // assert there are as much samples as labels
-    if(n != labels.size())
+    if((size_t)n != labels.size())
         CV_Error(CV_StsBadArg, "The number of samples must equal the number of labels!");
     // clip number of components to be valid
     if((_num_components <= 0) || (_num_components > n))
@@ -336,7 +336,7 @@ int Eigenfaces::predict(InputArray _src) const {
     Mat q = subspaceProject(_eigenvectors, _mean, src.reshape(1,1));
     double minDist = DBL_MAX;
     int minClass = -1;
-    for(int sampleIdx = 0; sampleIdx < _projections.size(); sampleIdx++) {
+    for(size_t sampleIdx = 0; sampleIdx < _projections.size(); sampleIdx++) {
         double dist = norm(_projections[sampleIdx], q, NORM_L2);
         if(dist < minDist) {
             minDist = dist;
@@ -381,7 +381,7 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
     int N = data.rows; // number of samples
     //int D = data.cols; // dimension of samples
     // assert correct data alignment
-    if(labels.size() != N)
+    if(labels.size() != (size_t)N)
         CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
     // compute the Fisherfaces
     int C = remove_dups(labels).size(); // number of unique classes
@@ -415,7 +415,7 @@ int Fisherfaces::predict(InputArray _src) const {
     // find 1-nearest neighbor
     double minDist = DBL_MAX;
     int minClass = -1;
-    for(int sampleIdx = 0; sampleIdx < _projections.size(); sampleIdx++) {
+    for(size_t sampleIdx = 0; sampleIdx < _projections.size(); sampleIdx++) {
         double dist = norm(_projections[sampleIdx], q, NORM_L2);
         if(dist < minDist) {
             minDist = dist;
@@ -657,7 +657,7 @@ void LBPH::train(InputArray _src, InputArray _lbls) {
     // store given labels
     _labels = labels;
     // store the spatial histograms of the original data
-    for(int sampleIdx = 0; sampleIdx < src.size(); sampleIdx++) {
+    for(size_t sampleIdx = 0; sampleIdx < src.size(); sampleIdx++) {
         // calculate lbp image
         Mat lbp_image = elbp(src[sampleIdx], _radius, _neighbors);
         // get spatial histogram from this lbp image
@@ -686,7 +686,7 @@ int LBPH::predict(InputArray _src) const {
     // find 1-nearest neighbor
     double minDist = DBL_MAX;
     int minClass = -1;
-    for(int sampleIdx = 0; sampleIdx < _histograms.size(); sampleIdx++) {
+    for(size_t sampleIdx = 0; sampleIdx < _histograms.size(); sampleIdx++) {
         double dist = compareHist(_histograms[sampleIdx], query, CV_COMP_CHISQR);
         if(dist < minDist) {
             minDist = dist;

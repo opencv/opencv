@@ -45,7 +45,7 @@ static void sortMatrixRowsByIndices(InputArray _src, InputArray _indices, Output
     vector<int> indices = _indices.getMat();
     _dst.create(src.rows, src.cols, src.type());
     Mat dst = _dst.getMat();
-    for(int idx = 0; idx < indices.size(); idx++) {
+    for(size_t idx = 0; idx < indices.size(); idx++) {
         Mat originalRow = src.row(indices[idx]);
         Mat sortedRow = dst.row(idx);
         originalRow.copyTo(sortedRow);
