@@ -2294,7 +2294,7 @@ inline SparseMatConstIterator::SparseMatConstIterator(const SparseMatConstIterat
 }
 
 static inline bool operator == (const SparseMatConstIterator& it1, const SparseMatConstIterator& it2)
-{ return it1.m == it2.m && it1.hashidx == it2.hashidx && it1.ptr == it2.ptr; }
+{ return it1.m == it2.m && it1.ptr == it2.ptr; }
 
 static inline bool operator != (const SparseMatConstIterator& it1, const SparseMatConstIterator& it2)
 { return !(it1 == it2); }
@@ -2527,7 +2527,9 @@ SparseMatConstIterator_<_Tp>::SparseMatConstIterator_(const SparseMatConstIterat
 
 template<typename _Tp> inline SparseMatConstIterator_<_Tp>&
 SparseMatConstIterator_<_Tp>::operator = (const SparseMatConstIterator_<_Tp>& it)
-{ return ((SparseMatConstIterator&)*this = it); }
+{ return reinterpret_cast<SparseMatConstIterator_<_Tp>&>
+    (*reinterpret_cast<SparseMatConstIterator*>(this) =
+     reinterpret_cast<const SparseMatConstIterator&>(it)); }
 
 template<typename _Tp> inline const _Tp&
 SparseMatConstIterator_<_Tp>::operator *() const
@@ -2564,7 +2566,9 @@ SparseMatIterator_<_Tp>::SparseMatIterator_(const SparseMatIterator_<_Tp>& it)
 
 template<typename _Tp> inline SparseMatIterator_<_Tp>&
 SparseMatIterator_<_Tp>::operator = (const SparseMatIterator_<_Tp>& it)
-{ return ((SparseMatIterator&)*this = it); }
+{ return reinterpret_cast<SparseMatIterator_<_Tp>&>
+    (*reinterpret_cast<SparseMatConstIterator*>(this) =
+     reinterpret_cast<const SparseMatConstIterator&>(it)); }
 
 template<typename _Tp> inline _Tp&
 SparseMatIterator_<_Tp>::operator *() const

@@ -885,3 +885,92 @@ void CV_OperationsTest::run( int /* start_from */)
 }
 
 TEST(Core_Array, expressions) { CV_OperationsTest test; test.safe_run(); }
+
+class CV_SparseMatTest : public cvtest::BaseTest
+{
+public:
+    CV_SparseMatTest() {}
+    ~CV_SparseMatTest() {}   
+protected:
+    void run(int)
+    {
+        try
+        {
+            RNG& rng = theRNG();
+            const int MAX_DIM=3;
+            int sizes[MAX_DIM], idx[MAX_DIM];
+            for( int iter = 0; iter < 100; iter++ )
+            {
+                ts->printf(cvtest::TS::LOG, ".");
+                ts->update_context(this, iter, true);
+                int k, dims = rng.uniform(1, MAX_DIM+1), p = 1;
+                for( k = 0; k < dims; k++ )
+                {
+                    sizes[k] = rng.uniform(1, 30);
+                    p *= sizes[k];
+                }
+                int j, nz = rng.uniform(0, (p+2)/2), nz0 = 0;
+                SparseMat_<int> v(dims,sizes);
+                
+                CV_Assert( (int)v.nzcount() == 0 );
+                
+                SparseMatIterator_<int> it = v.begin();
+                SparseMatIterator_<int> it_end = v.end();
+                
+                for( k = 0; it != it_end; ++it, ++k )
+                    ;
+                CV_Assert( k == 0 );
+                
+                int sum0 = 0, sum = 0;
+                for( j = 0; j < nz; j++ )
+                {
+                    int val = rng.uniform(1, 100);
+                    for( k = 0; k < dims; k++ )
+                        idx[k] = rng.uniform(0, sizes[k]);
+                    if( dims == 1 )
+                    {
+                        CV_Assert( v.ref(idx[0]) == v(idx[0]) );
+                    }
+                    else if( dims == 2 )
+                    {
+                        CV_Assert( v.ref(idx[0], idx[1]) == v(idx[0], idx[1]) );
+                    }
+                    else if( dims == 3 )
+                    {
+                        CV_Assert( v.ref(idx[0], idx[1], idx[2]) == v(idx[0], idx[1], idx[2]) );
+                    }
+                    CV_Assert( v.ref(idx) == v(idx) );
+                    v.ref(idx) += val;
+                    if( v(idx) == val )
+                        nz0++;
+                    sum0 += val;
+                }
+            
+                CV_Assert( (int)v.nzcount() == nz0 );
+                
+                it = v.begin();
+                it_end = v.end();
+                
+                for( k = 0; it != it_end; ++it, ++k )
+                    sum += *it;
+                CV_Assert( k == nz0 && sum == sum0 );
+                
+                v.clear();
+                CV_Assert( (int)v.nzcount() == 0 );
+                
+                it = v.begin();
+                it_end = v.end();
+                
+                for( k = 0; it != it_end; ++it, ++k )
+                    ;
+                CV_Assert( k == 0 );
+            }
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Core_SparseMat, iterations) { CV_SparseMatTest test; test.safe_run(); }

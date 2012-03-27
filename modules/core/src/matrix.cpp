@@ -3506,6 +3506,28 @@ SparseMat::operator CvSparseMat*() const
     return m;
 }
 
+uchar* SparseMat::ptr(int i0, bool createMissing, size_t* hashval)
+{
+    CV_Assert( hdr && hdr->dims == 1 );
+    size_t h = hashval ? *hashval : hash(i0);
+    size_t hidx = h & (hdr->hashtab.size() - 1), nidx = hdr->hashtab[hidx];
+    uchar* pool = &hdr->pool[0];
+    while( nidx != 0 )
+    {
+        Node* elem = (Node*)(pool + nidx);
+        if( elem->hashval == h && elem->idx[0] == i0 )
+            return &value<uchar>(elem);
+        nidx = elem->next;
+    }
+    
+    if( createMissing )
+    {
+        int idx[] = { i0 };
+        return newNode( idx, h );
+    }
+    return 0;
+}
+    
 uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval)
 {
     CV_Assert( hdr && hdr->dims == 2 );
