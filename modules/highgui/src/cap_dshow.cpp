@@ -384,7 +384,7 @@ typedef _AMMediaType AM_MEDIA_TYPE;
 
 //keeps track of how many instances of VI are being used
 //don't touch
-static int comInitCount = 0;
+//static int comInitCount = 0;
 
 
 ////////////////////////////////////////   VIDEO DEVICE   ///////////////////////////////////
@@ -1915,7 +1915,7 @@ videoInput::~videoInput(){
 // ---------------------------------------------------------------------- 
 
 bool videoInput::comInit(){
-	HRESULT hr = NOERROR;
+	/*HRESULT hr = NOERROR;
 
 	//no need for us to start com more than once
 	if(comInitCount == 0 ){
@@ -1935,7 +1935,7 @@ bool videoInput::comInit(){
 		}
 	}
 
-	comInitCount++; 
+	comInitCount++;*/
 	return true;
 }
 
@@ -1946,14 +1946,15 @@ bool videoInput::comInit(){
 // ---------------------------------------------------------------------- 
 
 bool videoInput::comUnInit(){
-	if(comInitCount > 0)comInitCount--;		//decrease the count of instances using com
+	/*if(comInitCount > 0)comInitCount--;		//decrease the count of instances using com
 
    	if(comInitCount == 0){
    		CoUninitialize();	//if there are no instances left - uninitialize com
 		return true;	
 	}
 	
-	return false;
+	return false;*/
+    return true;
 }
 
 
@@ -2912,7 +2913,7 @@ class CvCaptureCAM_DShow : public CvCapture
 {
 public:
     CvCaptureCAM_DShow();
-    virtual ~CvCaptureCAM_DShow() { close(); }
+    virtual ~CvCaptureCAM_DShow();
 
     virtual bool open( int index );
     virtual void close();
@@ -2944,6 +2945,13 @@ CvCaptureCAM_DShow::CvCaptureCAM_DShow()
     index = -1;
     frame = 0;
     width = height = -1;
+    CoInitialize(0);
+}
+
+CvCaptureCAM_DShow::~CvCaptureCAM_DShow()
+{
+    close();
+    CoUninitialize();
 }
 
 void CvCaptureCAM_DShow::close()
