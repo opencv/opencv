@@ -1478,6 +1478,16 @@ void CV_StereoCalibrationTest::run( int )
 			return;
 		}
 
+        //check that Q reprojects points before the camera
+        double testPoint[4] = {0.0, 0.0, 100.0, 1.0};
+        Mat reprojectedTestPoint = Q * Mat_<double>(4, 1, testPoint);
+        CV_Assert(reprojectedTestPoint.type() == CV_64FC1);
+        if( reprojectedTestPoint.at<double>(2) / reprojectedTestPoint.at<double>(3) < 0 )
+        {
+			ts->printf( cvtest::TS::LOG, "A point after rectification is reprojected behind the camera, testcase %d\n", testcase);
+			ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+        }
+
 		// rectifyUncalibrated
 		CV_Assert( imgpt1.size() == imgpt2.size() );
 		Mat _imgpt1( total, 1, CV_32FC2 ), _imgpt2( total, 1, CV_32FC2 );
