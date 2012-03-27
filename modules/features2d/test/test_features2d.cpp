@@ -669,7 +669,7 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
             int badCount = 0;
             for( size_t i = 0; i < matches.size(); i++ )
             {
-                DMatch match = matches[i];
+                DMatch& match = matches[i];
                 if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0) )
                     badCount++;
             }
@@ -678,6 +678,33 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
                 ts->printf( cvtest::TS::LOG, "%f - too large bad matches part while test match() function (1).\n",
                             (float)badCount/(float)queryDescCount );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+            }
+        }
+    }
+
+    // test const version of match() for the same query and test descriptors
+    {
+        vector<DMatch> matches;
+        dmatcher->match( query, query, matches );
+
+        if( (int)matches.size() != query.rows )
+        {
+            ts->printf(cvtest::TS::LOG, "Incorrect matches count while test match() function for the same query and test descriptors (1).\n");
+            ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+        }
+        else
+        {
+            for( size_t i = 0; i < matches.size(); i++ )
+            {
+                DMatch& match = matches[i];
+                std::cout << match.distance << std::endl;
+
+                if( match.queryIdx != (int)i || match.trainIdx != (int)i || std::abs(match.distance) > FLT_EPSILON )
+                {
+                    ts->printf( cvtest::TS::LOG, "Bad match (i=%d, queryIdx=%d, trainIdx=%d, distance=%f) while test match() function for the same query and test descriptors (1).\n",
+                                i, match.queryIdx, match.trainIdx, match.distance );
+                    ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+                }
             }
         }
     }
@@ -709,7 +736,7 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
             int badCount = 0;
             for( size_t i = 0; i < matches.size(); i++ )
             {
-                DMatch match = matches[i];
+                DMatch& match = matches[i];
                 int shift = dmatcher->isMaskSupported() ? 1 : 0;
                 {
                     if( i < queryDescCount/2 )
@@ -762,7 +789,7 @@ void CV_DescriptorMatcherTest::knnMatchTest( const Mat& query, const Mat& train 
                     int localBadCount = 0;
                     for( int k = 0; k < knn; k++ )
                     {
-                        DMatch match = matches[i][k];
+                        DMatch& match = matches[i][k];
                         if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor+k) || (match.imgIdx != 0) )
                             localBadCount++;
                     }
@@ -814,7 +841,7 @@ void CV_DescriptorMatcherTest::knnMatchTest( const Mat& query, const Mat& train 
                     int localBadCount = 0;
                     for( int k = 0; k < knn; k++ )
                     {
-                        DMatch match = matches[i][k];
+                        DMatch& match = matches[i][k];
                         {
                             if( i < queryDescCount/2 )
                             {
@@ -866,7 +893,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
                     badCount++;
                 else
                 {
-                    DMatch match = matches[i][0];
+                    DMatch& match = matches[i][0];
                     if( (match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0) )
                         badCount++;
                 }
@@ -918,7 +945,7 @@ void CV_DescriptorMatcherTest::radiusMatchTest( const Mat& query, const Mat& tra
                 int localBadCount = 0;
                 for( int k = 0; k < needMatchCount; k++ )
                 {
-                    DMatch match = matches[i][k];
+                    DMatch& match = matches[i][k];
                     {
                         if( i < queryDescCount/2 )
                         {
