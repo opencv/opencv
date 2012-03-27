@@ -69,6 +69,7 @@ The function ``absdiff`` computes:
 
     where  ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
 
+.. note:: Saturation is not applied when the arrays have the depth ``CV_32S``. You may even get a negative value in the case of overflow.
 
 .. seealso:: :ocv:func:`abs`
 
@@ -129,6 +130,8 @@ The first function in the list above can be replaced with matrix expressions: ::
 
 The input arrays and the destination array can all have the same or different depths. For example, you can add a 16-bit unsigned array to a 8-bit signed array and store the sum as a 32-bit floating-point array. Depth of the output array is determined by the ``dtype`` parameter. In the second and third cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case, the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
 
+.. note:: Saturation is not applied when the output array has the depth ``CV_32S``. You may even get result of an incorrect sign in the case of overflow.
+
 .. seealso::
    
     :ocv:func:`subtract`,
@@ -176,6 +179,7 @@ The function can be replaced with a matrix expression: ::
 
     dst = src1*alpha + src2*beta + gamma;
 
+.. note:: Saturation is not applied when the output array has the depth ``CV_32S``. You may even get result of an incorrect sign in the case of overflow.
 
 .. seealso::
 
@@ -997,6 +1001,8 @@ or a scalar by an array when there is no ``src1`` :
     \texttt{dst(I) = saturate(scale/src2(I))}
 
 When ``src2(I)`` is zero, ``dst(I)`` will also be zero. Different channels of multi-channel arrays are processed independently.
+
+.. note:: Saturation is not applied when the output array has the depth ``CV_32S``. You may even get result of an incorrect sign in the case of overflow.
 
 .. seealso::
 
@@ -1954,6 +1960,8 @@ There is also a
 
 For a not-per-element matrix product, see
 :ocv:func:`gemm` .
+
+.. note:: Saturation is not applied when the output array has the depth ``CV_32S``. You may even get result of an incorrect sign in the case of overflow.
 
 .. seealso::
 
@@ -3096,6 +3104,8 @@ The first function in the list above can be replaced with matrix expressions: ::
     dst -= src1; // equivalent to subtract(dst, src1, dst);
 
 The input arrays and the destination array can all have the same or different depths. For example, you can subtract to 8-bit unsigned arrays and store the difference in a 16-bit signed array. Depth of the output array is determined by ``dtype`` parameter. In the second and third cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
+
+.. note:: Saturation is not applied when the output array has the depth ``CV_32S``. You may even get result of an incorrect sign in the case of overflow.
 
 .. seealso::
 

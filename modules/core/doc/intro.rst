@@ -149,6 +149,8 @@ Similar rules are applied to 8-bit signed, 16-bit signed and unsigned types. Thi
 
 where ``cv::uchar`` is an OpenCV 8-bit unsigned integer type. In the optimized SIMD code, such SSE2 instructions as ``paddusb``, ``packuswb``, and so on are used. They help achieve exactly the same behavior as in C++ code.
 
+.. note:: Saturation is not applied when the result is 32-bit integer.
+
 Fixed Pixel Types. Limited Use of Templates
 -------------------------------------------
 
