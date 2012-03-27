@@ -802,7 +802,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
                          int canny_threshold, int acc_threshold,
                          CvSeq* circles, int circles_max )
 {
-    const int SHIFT = 10, ONE = 1 << SHIFT, R_THRESH = 30;
+    const int SHIFT = 10, ONE = 1 << SHIFT;
     cv::Ptr<CvMat> dx, dy;
     cv::Ptr<CvMat> edges, accum, dist_buf;
     std::vector<int> sort_buf;
@@ -842,7 +842,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     acols = accum->cols - 2;
     adata = accum->data.i;
     astep = accum->step/sizeof(adata[0]);
-
+	// Accumulate circle evidence for each edge pixel
     for( y = 0; y < rows; y++ )
     {
         const uchar* edges_row = edges->data.ptr + y*edges->step;
@@ -868,7 +868,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 
             x0 = cvRound((x*idp)*ONE);
             y0 = cvRound((y*idp)*ONE);
-
+			// Step from min_radius to max_radius in both directions of the gradient
             for( k = 0; k < 2; k++ )
             {
                 x1 = x0 + min_radius * sx;
@@ -894,7 +894,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     nz_count = nz->total;
     if( !nz_count )
         return;
-
+	//Find possible circle centers
     for( y = 1; y < arows - 1; y++ )
     {
         for( x = 1; x < acols - 1; x++ )
@@ -924,17 +924,19 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     dr = dp;
     min_dist = MAX( min_dist, dp );
     min_dist *= min_dist;
-
+	// For each found possible center
+	// Estimate radius and check support
     for( i = 0; i < centers->total; i++ )
     {
         int ofs = *(int*)cvGetSeqElem( centers, i );
-        y = ofs/(acols+2) - 1;
-        x = ofs - (y+1)*(acols+2) - 1;
-        float cx = (float)(x*dp), cy = (float)(y*dp);
+        y = ofs/(acols+2);
+        x = ofs - (y)*(acols+2);
+		//Calculate circle's center in pixels
+        float cx = (float)((x + 0.5f)*dp), cy = (float)(( y + 0.5f )*dp);
         float start_dist, dist_sum;
         float r_best = 0, c[3];
-        int max_count = R_THRESH;
-
+        int max_count = 0;
+		// Check distance with previously detected circles
         for( j = 0; j < circles->total; j++ )
         {
             float* c = (float*)cvGetSeqElem( circles, j );
@@ -944,7 +946,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 
         if( j < circles->total )
             continue;
-
+		// Estimate best radius
         cvStartReadSeq( nz, &reader );
         for( j = k = 0; j < nz_count; j++ )
         {
@@ -991,8 +993,8 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             }
             dist_sum += d;
         }
-
-        if( max_count > R_THRESH )
+		// Check if the circle has enough support
+        if( max_count > acc_threshold )
         {
             c[0] = cx;
             c[1] = cy;
