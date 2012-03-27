@@ -1478,6 +1478,14 @@ void CV_StereoCalibrationTest::run( int )
 			return;
 		}
 
+        //check that Tx after rectification is equal to distance between cameras
+        double tx = fabs(P2.at<double>(0, 3) / P2.at<double>(0, 0));
+        if (fabs(tx - norm(T)) > 1e-5)
+        {
+			ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+			return;
+        }
+
         //check that Q reprojects points before the camera
         double testPoint[4] = {0.0, 0.0, 100.0, 1.0};
         Mat reprojectedTestPoint = Q * Mat_<double>(4, 1, testPoint);
