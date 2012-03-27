@@ -44,6 +44,138 @@
 namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
+// Merge
+
+PARAM_TEST_CASE(Merge, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int depth;
+    int channels;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        depth = GET_PARAM(2);
+        channels = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(Merge, Accuracy)
+{
+    std::vector<cv::Mat> src;
+    src.reserve(channels);
+    for (int i = 0; i < channels; ++i)
+        src.push_back(cv::Mat(size, depth, cv::Scalar::all(i)));
+
+    std::vector<cv::gpu::GpuMat> d_src;
+    for (int i = 0; i < channels; ++i)
+        d_src.push_back(loadMat(src[i], useRoi));
+
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::merge(d_src, dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst;
+        cv::gpu::merge(d_src, dst);
+
+        cv::Mat dst_gold;
+        cv::merge(src, dst_gold);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Core, Merge, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    ALL_DEPTH,
+    testing::Values(1, 2, 3, 4),
+    WHOLE_SUBMAT));
+
+////////////////////////////////////////////////////////////////////////////////
+// Split
+
+PARAM_TEST_CASE(Split, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int depth;
+    int channels;
+    bool useRoi;
+
+    int type;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        depth = GET_PARAM(2);
+        channels = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        type = CV_MAKE_TYPE(depth, channels);
+    }
+};
+
+TEST_P(Split, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+
+    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            std::vector<cv::gpu::GpuMat> dst;
+            cv::gpu::split(loadMat(src), dst);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        std::vector<cv::gpu::GpuMat> dst;
+        cv::gpu::split(loadMat(src, useRoi), dst);
+
+        std::vector<cv::Mat> dst_gold;
+        cv::split(src, dst_gold);
+
+        ASSERT_EQ(dst_gold.size(), dst.size());
+
+        for (size_t i = 0; i < dst_gold.size(); ++i)
+        {
+            EXPECT_MAT_NEAR(dst_gold[i], dst[i], 0.0);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Core, Split, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    ALL_DEPTH,
+    testing::Values(1, 2, 3, 4),
+    WHOLE_SUBMAT));
+
+////////////////////////////////////////////////////////////////////////////////
 // Add_Array
 
 PARAM_TEST_CASE(Add_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDepth, MatDepth>, Channels, UseRoi)
@@ -1974,7 +2106,7 @@ TEST_P(AddWeighted, Accuracy)
         cv::Mat dst_gold;
         cv::addWeighted(src1, alpha, src2, beta, gamma, dst_gold, dst_depth);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 1.0 : 1e-12);
+        EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 1.0 : 1e-3);
     }
 }
 
@@ -2487,16 +2619,32 @@ TEST_P(MeanStdDev, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
-    cv::Scalar mean;
-    cv::Scalar stddev;
-    cv::gpu::meanStdDev(loadMat(src, useRoi), mean, stddev);
+    if (!supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_13))
+    {
+        try
+        {
+            cv::Scalar mean;
+            cv::Scalar stddev;
+            cv::gpu::meanStdDev(loadMat(src, useRoi), mean, stddev);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        cv::Scalar mean;
+        cv::Scalar stddev;
+        cv::gpu::meanStdDev(loadMat(src, useRoi), mean, stddev);
 
-    cv::Scalar mean_gold;
-    cv::Scalar stddev_gold;
-    cv::meanStdDev(src, mean_gold, stddev_gold);
+        cv::Scalar mean_gold;
+        cv::Scalar stddev_gold;
+        cv::meanStdDev(src, mean_gold, stddev_gold);
 
-    EXPECT_SCALAR_NEAR(mean_gold, mean, 1e-5);
-    EXPECT_SCALAR_NEAR(stddev_gold, stddev, 1e-5);
+        EXPECT_SCALAR_NEAR(mean_gold, mean, 1e-5);
+        EXPECT_SCALAR_NEAR(stddev_gold, stddev, 1e-5);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, MeanStdDev, testing::Combine(

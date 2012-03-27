@@ -118,6 +118,9 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
 {
     CV_Assert(src.type() == CV_8UC1);
 
+    if (!TargetArchs::builtWith(FEATURE_SET_COMPUTE_13) || !DeviceInfo().supports(FEATURE_SET_COMPUTE_13))
+        CV_Error(CV_StsNotImplemented, "Not sufficient compute capebility");
+
     NppiSize sz;
     sz.width  = src.cols;
     sz.height = src.rows;

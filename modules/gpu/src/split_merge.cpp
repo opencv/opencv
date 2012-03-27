@@ -55,10 +55,10 @@ void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, Stream& /*st
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace split_merge 
-    {    
+    namespace split_merge
+    {
         void merge_caller(const DevMem2Db* src, DevMem2Db& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
         void split_caller(const DevMem2Db& src, DevMem2Db* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
     }
@@ -66,7 +66,7 @@ namespace cv { namespace gpu { namespace device
 
 namespace
 {
-    void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream) 
+    void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream)
     {
         using namespace ::cv::gpu::device::split_merge;
 
@@ -75,6 +75,12 @@ namespace
 
         int depth = src[0].depth();
         Size size = src[0].size();
+
+        if (depth == CV_64F)
+        {
+            if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+                CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+        }
 
         bool single_channel_only = true;
         int total_channels = 0;
@@ -90,9 +96,9 @@ namespace
         CV_Assert(single_channel_only);
         CV_Assert(total_channels <= 4);
 
-        if (total_channels == 1)  
+        if (total_channels == 1)
             src[0].copyTo(dst);
-        else 
+        else
         {
             dst.create(size, CV_MAKETYPE(depth, total_channels));
 
@@ -102,10 +108,10 @@ namespace
 
             DevMem2Db dst_as_devmem(dst);
             merge_caller(src_as_devmem, dst_as_devmem, total_channels, CV_ELEM_SIZE(depth), stream);
-        }   
+        }
     }
 
-    void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream) 
+    void split(const GpuMat& src, GpuMat* dst, const cudaStream_t& stream)
     {
         using namespace ::cv::gpu::device::split_merge;
 
@@ -114,6 +120,12 @@ namespace
         int depth = src.depth();
         int num_channels = src.channels();
         Size size = src.size();
+
+        if (depth == CV_64F)
+        {
+            if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+                CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+        }
 
         if (num_channels == 1)
         {
@@ -135,23 +147,23 @@ namespace
     }
 }
 
-void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream) 
-{ 
+void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream)
+{
     ::merge(src, n, dst, StreamAccessor::getStream(stream));
 }
 
 
-void cv::gpu::merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream) 
+void cv::gpu::merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream)
 {
     ::merge(&src[0], src.size(), dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream) 
+void cv::gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream)
 {
     ::split(src, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream) 
+void cv::gpu::split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream)
 {
     dst.resize(src.channels());
     if(src.channels() > 0)
