@@ -470,6 +470,13 @@ enum
     CV_DIST_MASK_PRECISE =0
 };
 
+/* Content of output label array: connected components or pixels */
+enum
+{
+  CV_DIST_LABEL_CCOMP = 0,
+  CV_DIST_LABEL_PIXEL = 1
+};
+
 /* Distance types for Distance Transform and M-estimators */
 enum
 {

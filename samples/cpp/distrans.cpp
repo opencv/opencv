@@ -6,7 +6,7 @@
 using namespace cv;
 
 int maskSize0 = CV_DIST_MASK_5;
-bool buildVoronoi = false;
+int voronoiType = -1;
 int edgeThresh = 100;
 int distType0 = CV_DIST_L1;
 
@@ -29,17 +29,17 @@ void onTrackbar( int, void* )
         Scalar(255,0,255)
     };
 
-    int maskSize = buildVoronoi ? CV_DIST_MASK_5 : maskSize0;
-    int distType = buildVoronoi ? CV_DIST_L2 : distType0;
+    int maskSize = voronoiType >= 0 ? CV_DIST_MASK_5 : maskSize0;
+    int distType = voronoiType >= 0 ? CV_DIST_L2 : distType0;
 
     Mat edge = gray >= edgeThresh, dist, labels, dist8u;
 
-    if( !buildVoronoi )
+    if( voronoiType < 0 )
         distanceTransform( edge, dist, distType, maskSize );
     else
-        distanceTransform( edge, dist, labels, distType, maskSize );
+        distanceTransform( edge, dist, labels, distType, maskSize, voronoiType );
 
-    if( !buildVoronoi )
+    if( voronoiType < 0 )
     {
         // begin "painting" the distance transform result
         dist *= 5000;
@@ -70,9 +70,10 @@ void onTrackbar( int, void* )
             for( int j = 0; j < labels.cols; j++ )
             {
                 int idx = ll[j] == 0 || dd[j] == 0 ? 0 : (ll[j]-1)%8 + 1;
-                int b = cvRound(colors[idx][0]);
-                int g = cvRound(colors[idx][1]);
-                int r = cvRound(colors[idx][2]);
+                float scale = 1.f/(1 + dd[j]*dd[j]*0.0004f);
+                int b = cvRound(colors[idx][0]*scale);
+                int g = cvRound(colors[idx][1]*scale);
+                int r = cvRound(colors[idx][2]*scale);
                 d[j*3] = (uchar)b;
                 d[j*3+1] = (uchar)g;
                 d[j*3+2] = (uchar)r;
@@ -96,7 +97,8 @@ void help()
 			"\t3 - use 3x3 mask\n"
 			"\t5 - use 5x5 mask\n"
 			"\t0 - use precise distance transform\n"
-			"\tv - switch Voronoi diagram mode on/off\n"
+			"\tv - switch to Voronoi diagram mode\n"
+            "\tp - switch to pixel-based Voronoi diagram mode\n"
 			"\tSPACE - loop through all the modes\n\n");
 }
 
@@ -126,30 +128,38 @@ int main( int argc, const char** argv )
         // Call to update the view
         onTrackbar(0, 0);
 
-        int c = cvWaitKey(0);
+        int c = cvWaitKey(0) & 255;
 
-        if( (char)c == 27 )
+        if( c == 27 )
             break;
 
-        if( (char)c == 'c' || (char)c == 'C' )
+        if( c == 'c' || c == 'C' || c == '1' || c == '2' ||
+            c == '3' || c == '5' || c == '0' )
+            voronoiType = -1;
+        
+        if( c == 'c' || c == 'C' )
             distType0 = CV_DIST_C;
-        else if( (char)c == '1' )
+        else if( c == '1' )
             distType0 = CV_DIST_L1;
-        else if( (char)c == '2' )
+        else if( c == '2' )
             distType0 = CV_DIST_L2;
-        else if( (char)c == '3' )
+        else if( c == '3' )
             maskSize0 = CV_DIST_MASK_3;
-        else if( (char)c == '5' )
+        else if( c == '5' )
             maskSize0 = CV_DIST_MASK_5;
-        else if( (char)c == '0' )
+        else if( c == '0' )
             maskSize0 = CV_DIST_MASK_PRECISE;
-        else if( (char)c == 'v' )
-            buildVoronoi = !buildVoronoi;
-        else if( (char)c == ' ' )
+        else if( c == 'v' )
+            voronoiType = 0;
+        else if( c == 'p' )
+            voronoiType = 1;
+        else if( c == ' ' )
         {
-            if( buildVoronoi )
+            if( voronoiType == 0 )
+                voronoiType = 1;
+            else if( voronoiType == 1 )
             {
-                buildVoronoi = false;
+                voronoiType = -1;
                 maskSize0 = CV_DIST_MASK_3;
                 distType0 = CV_DIST_C;
             }
@@ -162,7 +172,7 @@ int main( int argc, const char** argv )
             else if( maskSize0 == CV_DIST_MASK_5 )
                 maskSize0 = CV_DIST_MASK_PRECISE;
             else if( maskSize0 == CV_DIST_MASK_PRECISE )
-                buildVoronoi = true;
+                voronoiType = 0;
         }
     }
 

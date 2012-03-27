@@ -620,7 +620,8 @@ CVAPI(void)  cvDistTransform( const CvArr* src, CvArr* dst,
                               int distance_type CV_DEFAULT(CV_DIST_L2),
                               int mask_size CV_DEFAULT(3),
                               const float* mask CV_DEFAULT(NULL),
-                              CvArr* labels CV_DEFAULT(NULL));
+                              CvArr* labels CV_DEFAULT(NULL),
+                              int labelType CV_DEFAULT(CV_DIST_LABEL_CCOMP));
 
 
 /* Applies fixed-level threshold to grayscale image.

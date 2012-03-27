@@ -412,11 +412,11 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 
 .. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize )
 
-.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize )
+.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize, int labelType=DIST_LABEL_CCOMP )
 
-.. ocv:pyfunction:: cv2.distanceTransform(src, distanceType, maskSize[, dst[, labels]]) -> dst, labels
+.. ocv:pyfunction:: cv2.distanceTransform(src, distanceType, maskSize[, dst[, labels[, labelType=cv2.DIST_LABEL_CCOMP]]]) -> dst, labels
 
-.. ocv:cfunction:: void cvDistTransform( const CvArr* src, CvArr* dst, int distanceType=CV_DIST_L2, int maskSize=3, const float* mask=NULL, CvArr* labels=NULL )
+.. ocv:cfunction:: void cvDistTransform( const CvArr* src, CvArr* dst, int distanceType=CV_DIST_L2, int maskSize=3, const float* mask=NULL, CvArr* labels=NULL, int labelType=CV_DIST_LABEL_CCOMP )
 
 .. ocv:pyoldfunction:: cv.DistTransform(src, dst, distanceType=CV_DIST_L2, maskSize=3, mask=None, labels=None)-> None
 
@@ -429,6 +429,8 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
     :param maskSize: Size of the distance transform mask. It can be 3, 5, or  ``CV_DIST_MASK_PRECISE``  (the latter option is only supported by the first function). In case of the ``CV_DIST_L1``  or  ``CV_DIST_C``  distance type, the parameter is forced to 3 because a  :math:`3\times 3`  mask gives the same result as  :math:`5\times 5`  or any larger aperture.
 
     :param labels: Optional output 2D array of labels (the discrete Voronoi diagram). It has the type  ``CV_32SC1``  and the same size as  ``src`` . See the details below.
+    
+    :param labelType: Type of the label array to build. If ``labelType==DIST_LABEL_CCOMP`` then each connected component of zeros in ``src`` (as well as all the non-zero pixels closest to the connected component) will be assigned the same label. If ``labelType==DIST_LABEL_PIXEL`` then each zero pixel (and all the non-zero pixels closest to it) gets its own label.
 
 The functions ``distanceTransform`` calculate the approximate or precise
 distance from every binary image pixel to the nearest zero pixel.
@@ -469,17 +471,13 @@ Note that both the precise and the approximate algorithms are linear on the numb
 
 The second variant of the function does not only compute the minimum distance for each pixel
 :math:`(x, y)` but also identifies the nearest connected
-component consisting of zero pixels. Index of the component is stored in
+component consisting of zero pixels (``labelType==DIST_LABEL_CCOMP``) or the nearest zero pixel (``labelType==DIST_LABEL_PIXEL``). Index of the component/pixel is stored in
 :math:`\texttt{labels}(x, y)` .
-The connected components of zero pixels are also found and marked by the function.
+When ``labelType==DIST_LABEL_CCOMP``, the function automatically finds connected components of zero pixels in the input image and marks them with distinct labels. When ``labelType==DIST_LABEL_CCOMP``, the function scans through the input image and marks all the zero pixels with distinct labels.
 
 In this mode, the complexity is still linear.
 That is, the function provides a very fast way to compute the Voronoi diagram for a binary image.
-Currently, the second variant can use only the approximate distance transform algorithm.
-
-
-
-
+Currently, the second variant can use only the approximate distance transform algorithm, i.e. ``maskSize=CV_DIST_MASK_PRECISE`` is not supported yet.
 
 floodFill
 -------------

@@ -751,9 +751,16 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
                            InputOutputArray bgdModel, InputOutputArray fgdModel,
                            int iterCount, int mode = GC_EVAL );
 
+enum
+{
+    DIST_LABEL_CCOMP = 0,
+    DIST_LABEL_PIXEL = 1
+};
+    
 //! builds the discrete Voronoi diagram
 CV_EXPORTS_AS(distanceTransformWithLabels) void distanceTransform( InputArray src, OutputArray dst,
-                                     OutputArray labels, int distanceType, int maskSize );
+                                     OutputArray labels, int distanceType, int maskSize,
+                                     int labelType=DIST_LABEL_CCOMP );
 
 //! computes the distance transform map
 CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
