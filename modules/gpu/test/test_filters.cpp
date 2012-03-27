@@ -258,13 +258,28 @@ TEST_P(GaussianBlur, Accuracy)
     double sigma1 = randomDouble(0.1, 1.0);
     double sigma2 = randomDouble(0.1, 1.0);
 
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::GaussianBlur(loadMat(src, useRoi), dst, ksize, sigma1, sigma2, borderType);
+    if (ksize.height > 16 && !supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_20))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::GaussianBlur(loadMat(src), dst, ksize, sigma1, sigma2, borderType);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+        cv::gpu::GaussianBlur(loadMat(src, useRoi), dst, ksize, sigma1, sigma2, borderType);
 
-    cv::Mat dst_gold;
-    cv::GaussianBlur(src, dst_gold, ksize, sigma1, sigma2, borderType);
+        cv::Mat dst_gold;
+        cv::GaussianBlur(src, dst_gold, ksize, sigma1, sigma2, borderType);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 4.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 4.0);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(

@@ -108,6 +108,25 @@ testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char
 
 #define ASSERT_KEYPOINTS_EQ(gold, actual) EXPECT_PRED_FORMAT2(assertKeyPointsEquals, gold, actual);
 
+int getMatchedPointsCount(std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
+{
+    std::sort(actual.begin(), actual.end(), KeyPointLess());
+    std::sort(gold.begin(), gold.end(), KeyPointLess());
+
+    int validCount = 0;
+
+    for (size_t i = 0; i < gold.size(); ++i)
+    {
+        const cv::KeyPoint& p1 = gold[i];
+        const cv::KeyPoint& p2 = actual[i];
+
+        if (keyPointsEquals(p1, p2))
+            ++validCount;
+    }
+
+    return validCount;
+}
+
 int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const std::vector<cv::DMatch>& matches)
 {
     int validCount = 0;
@@ -170,20 +189,39 @@ TEST_P(SURF, Detector)
     surf.upright = upright;
     surf.keypointsRatio = 0.05f;
 
-    std::vector<cv::KeyPoint> keypoints;
-    surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
+    {
+        try
+        {
+            std::vector<cv::KeyPoint> keypoints;
+            surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        std::vector<cv::KeyPoint> keypoints;
+        surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
 
-    cv::SURF surf_gold;
-    surf_gold.hessianThreshold = hessianThreshold;
-    surf_gold.nOctaves = nOctaves;
-    surf_gold.nOctaveLayers = nOctaveLayers;
-    surf_gold.extended = extended;
-    surf_gold.upright = upright;
+        cv::SURF surf_gold;
+        surf_gold.hessianThreshold = hessianThreshold;
+        surf_gold.nOctaves = nOctaves;
+        surf_gold.nOctaveLayers = nOctaveLayers;
+        surf_gold.extended = extended;
+        surf_gold.upright = upright;
 
-    std::vector<cv::KeyPoint> keypoints_gold;
-    surf_gold(image, cv::noArray(), keypoints_gold);
+        std::vector<cv::KeyPoint> keypoints_gold;
+        surf_gold(image, cv::noArray(), keypoints_gold);
 
-    ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
+        ASSERT_EQ(keypoints_gold.size(), keypoints.size());
+        int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints);
+        double matchedRatio = static_cast<double>(matchedCount) / keypoints_gold.size();
+
+        EXPECT_GT(matchedRatio, 0.95);
+    }
 }
 
 TEST_P(SURF, Detector_Masked)
@@ -202,20 +240,39 @@ TEST_P(SURF, Detector_Masked)
     surf.upright = upright;
     surf.keypointsRatio = 0.05f;
 
-    std::vector<cv::KeyPoint> keypoints;
-    surf(loadMat(image), loadMat(mask), keypoints);
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
+    {
+        try
+        {
+            std::vector<cv::KeyPoint> keypoints;
+            surf(loadMat(image), loadMat(mask), keypoints);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        std::vector<cv::KeyPoint> keypoints;
+        surf(loadMat(image), loadMat(mask), keypoints);
 
-    cv::SURF surf_gold;
-    surf_gold.hessianThreshold = hessianThreshold;
-    surf_gold.nOctaves = nOctaves;
-    surf_gold.nOctaveLayers = nOctaveLayers;
-    surf_gold.extended = extended;
-    surf_gold.upright = upright;
+        cv::SURF surf_gold;
+        surf_gold.hessianThreshold = hessianThreshold;
+        surf_gold.nOctaves = nOctaves;
+        surf_gold.nOctaveLayers = nOctaveLayers;
+        surf_gold.extended = extended;
+        surf_gold.upright = upright;
 
-    std::vector<cv::KeyPoint> keypoints_gold;
-    surf_gold(image, mask, keypoints_gold);
+        std::vector<cv::KeyPoint> keypoints_gold;
+        surf_gold(image, mask, keypoints_gold);
 
-    ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
+        ASSERT_EQ(keypoints_gold.size(), keypoints.size());
+        int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints);
+        double matchedRatio = static_cast<double>(matchedCount) / keypoints_gold.size();
+
+        EXPECT_GT(matchedRatio, 0.95);
+    }
 }
 
 TEST_P(SURF, Descriptor)
@@ -238,23 +295,39 @@ TEST_P(SURF, Descriptor)
     surf_gold.extended = extended;
     surf_gold.upright = upright;
 
-    std::vector<cv::KeyPoint> keypoints;
-    surf_gold(image, cv::noArray(), keypoints);
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
+    {
+        try
+        {
+            std::vector<cv::KeyPoint> keypoints;
+            cv::gpu::GpuMat descriptors;
+            surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        std::vector<cv::KeyPoint> keypoints;
+        surf_gold(image, cv::noArray(), keypoints);
 
-    cv::gpu::GpuMat descriptors;
-    surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors, true);
+        cv::gpu::GpuMat descriptors;
+        surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors, true);
 
-    cv::Mat descriptors_gold;
-    surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);
+        cv::Mat descriptors_gold;
+        surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);
 
-    cv::BFMatcher matcher(cv::NORM_L2);
-    std::vector<cv::DMatch> matches;
-    matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
+        cv::BFMatcher matcher(cv::NORM_L2);
+        std::vector<cv::DMatch> matches;
+        matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
 
-    int matchedCount = getMatchedPointsCount(keypoints, keypoints, matches);
-    double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
+        int matchedCount = getMatchedPointsCount(keypoints, keypoints, matches);
+        double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
 
-    EXPECT_GT(matchedRatio, 0.35);
+        EXPECT_GT(matchedRatio, 0.35);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
@@ -295,13 +368,28 @@ TEST_P(FAST, Accuracy)
     cv::gpu::FAST_GPU fast(threshold);
     fast.nonmaxSupression = nonmaxSupression;
 
-    std::vector<cv::KeyPoint> keypoints;
-    fast(loadMat(image), cv::gpu::GpuMat(), keypoints);
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
+    {
+        try
+        {
+            std::vector<cv::KeyPoint> keypoints;
+            fast(loadMat(image), cv::gpu::GpuMat(), keypoints);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        std::vector<cv::KeyPoint> keypoints;
+        fast(loadMat(image), cv::gpu::GpuMat(), keypoints);
 
-    std::vector<cv::KeyPoint> keypoints_gold;
-    cv::FAST(image, keypoints_gold, threshold, nonmaxSupression);
+        std::vector<cv::KeyPoint> keypoints_gold;
+        cv::FAST(image, keypoints_gold, threshold, nonmaxSupression);
 
-    ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
+        ASSERT_KEYPOINTS_EQ(keypoints_gold, keypoints);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, FAST, testing::Combine(
@@ -364,24 +452,40 @@ TEST_P(ORB, Accuracy)
     cv::gpu::ORB_GPU orb(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
     orb.blurForDescriptor = blurForDescriptor;
 
-    std::vector<cv::KeyPoint> keypoints;
-    cv::gpu::GpuMat descriptors;
-    orb(loadMat(image), loadMat(mask), keypoints, descriptors);
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
+    {
+        try
+        {
+            std::vector<cv::KeyPoint> keypoints;
+            cv::gpu::GpuMat descriptors;
+            orb(loadMat(image), loadMat(mask), keypoints, descriptors);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
+    }
+    else
+    {
+        std::vector<cv::KeyPoint> keypoints;
+        cv::gpu::GpuMat descriptors;
+        orb(loadMat(image), loadMat(mask), keypoints, descriptors);
 
-    cv::ORB orb_gold(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
+        cv::ORB orb_gold(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
 
-    std::vector<cv::KeyPoint> keypoints_gold;
-    cv::Mat descriptors_gold;
-    orb_gold(image, mask, keypoints_gold, descriptors_gold);
+        std::vector<cv::KeyPoint> keypoints_gold;
+        cv::Mat descriptors_gold;
+        orb_gold(image, mask, keypoints_gold, descriptors_gold);
 
-    cv::BFMatcher matcher(cv::NORM_HAMMING);
-    std::vector<cv::DMatch> matches;
-    matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
+        cv::BFMatcher matcher(cv::NORM_HAMMING);
+        std::vector<cv::DMatch> matches;
+        matcher.match(descriptors_gold, cv::Mat(descriptors), matches);
 
-    int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints, matches);
-    double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
+        int matchedCount = getMatchedPointsCount(keypoints_gold, keypoints, matches);
+        double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
 
-    EXPECT_GT(matchedRatio, 0.35);
+        EXPECT_GT(matchedRatio, 0.35);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, ORB,  testing::Combine(
@@ -713,25 +817,40 @@ TEST_P(BruteForceMatcher, RadiusMatch)
 
     cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
-    std::vector< std::vector<cv::DMatch> > matches;
-    matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius);
-
-    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
-
-    int badCount = 0;
-    for (size_t i = 0; i < matches.size(); i++)
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
     {
-        if ((int)matches[i].size() != 1)
-            badCount++;
-        else
+        try
         {
-            cv::DMatch match = matches[i][0];
-            if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0))
-                badCount++;
+            std::vector< std::vector<cv::DMatch> > matches;
+            matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
         }
     }
+    else
+    {
+        std::vector< std::vector<cv::DMatch> > matches;
+        matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius);
 
-    ASSERT_EQ(0, badCount);
+        ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
+
+        int badCount = 0;
+        for (size_t i = 0; i < matches.size(); i++)
+        {
+            if ((int)matches[i].size() != 1)
+                badCount++;
+            else
+            {
+                cv::DMatch match = matches[i][0];
+                if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i*countFactor) || (match.imgIdx != 0))
+                    badCount++;
+            }
+        }
+
+        ASSERT_EQ(0, badCount);
+    }
 }
 
 TEST_P(BruteForceMatcher, RadiusMatchAdd)
@@ -756,42 +875,57 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
             masks[mi].col(di * countFactor).setTo(cv::Scalar::all(0));
     }
 
-    std::vector< std::vector<cv::DMatch> > matches;
-    matcher.radiusMatch(cv::gpu::GpuMat(query), matches, radius, masks);
-
-    ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
-
-    int badCount = 0;
-    int shift = matcher.isMaskSupported() ? 1 : 0;
-    int needMatchCount = matcher.isMaskSupported() ? n-1 : n;
-    for (size_t i = 0; i < matches.size(); i++)
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
     {
-        if ((int)matches[i].size() != needMatchCount)
-            badCount++;
-        else
+        try
         {
-            int localBadCount = 0;
-            for (int k = 0; k < needMatchCount; k++)
-            {
-                cv::DMatch match = matches[i][k];
-                {
-                    if ((int)i < queryDescCount / 2)
-                    {
-                        if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + k + shift) || (match.imgIdx != 0) )
-                            localBadCount++;
-                    }
-                    else
-                    {
-                        if ((match.queryIdx != (int)i) || (match.trainIdx != ((int)i - queryDescCount / 2) * countFactor + k + shift) || (match.imgIdx != 1) )
-                            localBadCount++;
-                    }
-                }
-            }
-            badCount += localBadCount > 0 ? 1 : 0;
+            std::vector< std::vector<cv::DMatch> > matches;
+            matcher.radiusMatch(cv::gpu::GpuMat(query), matches, radius, masks);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
         }
     }
+    else
+    {
+        std::vector< std::vector<cv::DMatch> > matches;
+        matcher.radiusMatch(cv::gpu::GpuMat(query), matches, radius, masks);
 
-    ASSERT_EQ(0, badCount);
+        ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
+
+        int badCount = 0;
+        int shift = matcher.isMaskSupported() ? 1 : 0;
+        int needMatchCount = matcher.isMaskSupported() ? n-1 : n;
+        for (size_t i = 0; i < matches.size(); i++)
+        {
+            if ((int)matches[i].size() != needMatchCount)
+                badCount++;
+            else
+            {
+                int localBadCount = 0;
+                for (int k = 0; k < needMatchCount; k++)
+                {
+                    cv::DMatch match = matches[i][k];
+                    {
+                        if ((int)i < queryDescCount / 2)
+                        {
+                            if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + k + shift) || (match.imgIdx != 0) )
+                                localBadCount++;
+                        }
+                        else
+                        {
+                            if ((match.queryIdx != (int)i) || (match.trainIdx != ((int)i - queryDescCount / 2) * countFactor + k + shift) || (match.imgIdx != 1) )
+                                localBadCount++;
+                        }
+                    }
+                }
+                badCount += localBadCount > 0 ? 1 : 0;
+            }
+        }
+
+        ASSERT_EQ(0, badCount);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(

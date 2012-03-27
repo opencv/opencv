@@ -120,7 +120,9 @@ namespace
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
             CV_Assert(surf_.nOctaves > 0 && surf_.nOctaveLayers > 0);
-            CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
+
+            if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
+                CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
 
             const int min_size = calcSize(surf_.nOctaves - 1, 0);
             CV_Assert(img_rows - min_size >= 0);
@@ -184,8 +186,8 @@ namespace
                 {
                     icvInterpolateKeypoint_gpu(surf_.det, surf_.maxPosBuffer.ptr<int4>(), maxCounter,
                         keypoints.ptr<float>(SURF_GPU::X_ROW), keypoints.ptr<float>(SURF_GPU::Y_ROW),
-                        keypoints.ptr<int>(SURF_GPU::LAPLACIAN_ROW), keypoints.ptr<int>(SURF_GPU::OCTAVE_ROW), 
-                        keypoints.ptr<float>(SURF_GPU::SIZE_ROW), keypoints.ptr<float>(SURF_GPU::HESSIAN_ROW), 
+                        keypoints.ptr<int>(SURF_GPU::LAPLACIAN_ROW), keypoints.ptr<int>(SURF_GPU::OCTAVE_ROW),
+                        keypoints.ptr<float>(SURF_GPU::SIZE_ROW), keypoints.ptr<float>(SURF_GPU::HESSIAN_ROW),
                         counters.ptr<unsigned int>());
                 }
             }
@@ -306,7 +308,7 @@ void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, vector<Key
         Mat keypointsCPU(keypointsGPU);
 
         keypoints.resize(nFeatures);
-        
+
         float* kp_x = keypointsCPU.ptr<float>(SURF_GPU::X_ROW);
         float* kp_y = keypointsCPU.ptr<float>(SURF_GPU::Y_ROW);
         int* kp_laplacian = keypointsCPU.ptr<int>(SURF_GPU::LAPLACIAN_ROW);

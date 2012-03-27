@@ -59,7 +59,7 @@ int cv::gpu::FAST_GPU::getKeyPoints(GpuMat&) { throw_nogpu(); return 0; }
 
 #else /* !defined (HAVE_CUDA) */
 
-cv::gpu::FAST_GPU::FAST_GPU(int _threshold, bool _nonmaxSupression, double _keypointsRatio) : 
+cv::gpu::FAST_GPU::FAST_GPU(int _threshold, bool _nonmaxSupression, double _keypointsRatio) :
     nonmaxSupression(_nonmaxSupression), threshold(_threshold), keypointsRatio(_keypointsRatio), count_(0)
 {
 }
@@ -109,9 +109,9 @@ void cv::gpu::FAST_GPU::operator ()(const GpuMat& img, const GpuMat& mask, GpuMa
     keypoints.cols = getKeyPoints(keypoints);
 }
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace fast 
+    namespace fast
     {
         int calcKeypoints_gpu(DevMem2Db img, DevMem2Db mask, short2* kpLoc, int maxKeypoints, DevMem2Di score, int threshold);
         int nonmaxSupression_gpu(const short2* kpLoc, int count, DevMem2Di score, short2* loc, float* response);
@@ -124,7 +124,9 @@ int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& ma
 
     CV_Assert(img.type() == CV_8UC1);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == img.size()));
-    CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
+
+    if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
+        CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
 
     int maxKeypoints = static_cast<int>(keypointsRatio * img.size().area());
 
@@ -146,7 +148,8 @@ int cv::gpu::FAST_GPU::getKeyPoints(GpuMat& keypoints)
 {
     using namespace cv::gpu::device::fast;
 
-    CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
+    if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
+        CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
 
     if (count_ == 0)
         return 0;
@@ -160,7 +163,7 @@ int cv::gpu::FAST_GPU::getKeyPoints(GpuMat& keypoints)
     kpLoc_.colRange(0, count_).copyTo(locRow);
     keypoints.row(1).setTo(Scalar::all(0));
 
-    return count_;    
+    return count_;
 }
 
 void cv::gpu::FAST_GPU::release()
