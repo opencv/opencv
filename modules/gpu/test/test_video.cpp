@@ -41,233 +41,104 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_CUDA
-
-using namespace cvtest;
-using namespace testing;
+namespace {
 
 //#define DUMP
-
-#define OPTICAL_FLOW_DUMP_FILE            "opticalflow/opticalflow_gold.bin"
-#define OPTICAL_FLOW_DUMP_FILE_CC20       "opticalflow/opticalflow_gold_cc20.bin"
-#define INTERPOLATE_FRAMES_DUMP_FILE      "opticalflow/interpolate_frames_gold.bin"
-#define INTERPOLATE_FRAMES_DUMP_FILE_CC20 "opticalflow/interpolate_frames_gold_cc20.bin"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // BroxOpticalFlow
 
-struct BroxOpticalFlow : TestWithParam<cv::gpu::DeviceInfo>
+#define BROX_OPTICAL_FLOW_DUMP_FILE            "opticalflow/brox_optical_flow.bin"
+#define BROX_OPTICAL_FLOW_DUMP_FILE_CC20       "opticalflow/brox_optical_flow_cc20.bin"
+
+struct BroxOpticalFlow : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
-    
-    cv::Mat frame0;
-    cv::Mat frame1;
-
-    cv::Mat u_gold;
-    cv::Mat v_gold;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
-        frame0 = readImage("opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame0.empty());
-        frame0.convertTo(frame0, CV_32F, 1.0 / 255.0);
-        
-        frame1 = readImage("opticalflow/frame1.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame1.empty());
-        frame1.convertTo(frame1, CV_32F, 1.0 / 255.0);
-
-#ifndef DUMP
-
-        std::string fname(cvtest::TS::ptr()->get_data_path());
-        if (devInfo.majorVersion() >= 2)
-            fname += OPTICAL_FLOW_DUMP_FILE_CC20;
-        else
-            fname += OPTICAL_FLOW_DUMP_FILE;
-
-        std::ifstream f(fname.c_str(), std::ios_base::binary);
-
-        int rows, cols;
-
-        f.read((char*)&rows, sizeof(rows));
-        f.read((char*)&cols, sizeof(cols));
-
-        u_gold.create(rows, cols, CV_32FC1);
-
-        for (int i = 0; i < u_gold.rows; ++i)
-            f.read((char*)u_gold.ptr(i), u_gold.cols * sizeof(float));
-
-        v_gold.create(rows, cols, CV_32FC1);
-
-        for (int i = 0; i < v_gold.rows; ++i)
-            f.read((char*)v_gold.ptr(i), v_gold.cols * sizeof(float));
-
-#endif
     }
 };
 
 TEST_P(BroxOpticalFlow, Regression)
 {
-    cv::Mat u;
-    cv::Mat v;
+    cv::Mat frame0 = readImageType("opticalflow/frame0.png", CV_32FC1);
+    ASSERT_FALSE(frame0.empty());
 
-    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
-                                    10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+    cv::Mat frame1 = readImageType("opticalflow/frame1.png", CV_32FC1);
+    ASSERT_FALSE(frame1.empty());
 
-    cv::gpu::GpuMat d_u; 
-    cv::gpu::GpuMat d_v;
+    cv::gpu::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+                                  10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    d_flow(cv::gpu::GpuMat(frame0), cv::gpu::GpuMat(frame1), d_u, d_v);
-
-    d_u.download(u);
-    d_v.download(v);
+    cv::gpu::GpuMat u;
+    cv::gpu::GpuMat v;
+    brox(loadMat(frame0), loadMat(frame1), u, v);
 
 #ifndef DUMP
+    std::string fname(cvtest::TS::ptr()->get_data_path());
+    if (devInfo.majorVersion() >= 2)
+        fname += BROX_OPTICAL_FLOW_DUMP_FILE_CC20;
+    else
+        fname += BROX_OPTICAL_FLOW_DUMP_FILE;
+
+    std::ifstream f(fname.c_str(), std::ios_base::binary);
+
+    int rows, cols;
+
+    f.read((char*)&rows, sizeof(rows));
+    f.read((char*)&cols, sizeof(cols));
+
+    cv::Mat u_gold(rows, cols, CV_32FC1);
+
+    for (int i = 0; i < u_gold.rows; ++i)
+        f.read(u_gold.ptr<char>(i), u_gold.cols * sizeof(float));
+
+    cv::Mat v_gold(rows, cols, CV_32FC1);
+
+    for (int i = 0; i < v_gold.rows; ++i)
+        f.read(v_gold.ptr<char>(i), v_gold.cols * sizeof(float));
 
     EXPECT_MAT_NEAR(u_gold, u, 0);
     EXPECT_MAT_NEAR(v_gold, v, 0);
-
 #else
-
     std::string fname(cvtest::TS::ptr()->get_data_path());
     if (devInfo.majorVersion() >= 2)
-        fname += OPTICAL_FLOW_DUMP_FILE_CC20;
+        fname += BROX_OPTICAL_FLOW_DUMP_FILE_CC20;
     else
-        fname += OPTICAL_FLOW_DUMP_FILE;
+        fname += BROX_OPTICAL_FLOW_DUMP_FILE;
 
     std::ofstream f(fname.c_str(), std::ios_base::binary);
 
     f.write((char*)&u.rows, sizeof(u.rows));
     f.write((char*)&u.cols, sizeof(u.cols));
 
+    cv::Mat h_u(u);
+    cv::Mat h_v(v);
+
     for (int i = 0; i < u.rows; ++i)
-        f.write((char*)u.ptr(i), u.cols * sizeof(float));
+        f.write(h_u.ptr<char>(i), u.cols * sizeof(float));
 
     for (int i = 0; i < v.rows; ++i)
-        f.write((char*)v.ptr(i), v.cols * sizeof(float));
+        f.write(h_v.ptr<char>(i), v.cols * sizeof(float));
 
 #endif
 }
 
-INSTANTIATE_TEST_CASE_P(Video, BroxOpticalFlow, ALL_DEVICES);
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// InterpolateFrames
-
-struct InterpolateFrames : TestWithParam<cv::gpu::DeviceInfo>
-{
-    cv::gpu::DeviceInfo devInfo;
-    
-    cv::Mat frame0;
-    cv::Mat frame1;
-
-    cv::Mat newFrame_gold;
-
-    virtual void SetUp()
-    {
-        devInfo = GetParam();
-
-        cv::gpu::setDevice(devInfo.deviceID());
-        
-        frame0 = readImage("opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame0.empty());
-        frame0.convertTo(frame0, CV_32F, 1.0 / 255.0);
-        
-        frame1 = readImage("opticalflow/frame1.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame1.empty());
-        frame1.convertTo(frame1, CV_32F, 1.0 / 255.0);
-
-#ifndef DUMP
-
-        std::string fname(cvtest::TS::ptr()->get_data_path());
-        if (devInfo.majorVersion() >= 2)
-            fname += INTERPOLATE_FRAMES_DUMP_FILE_CC20;
-        else
-            fname += INTERPOLATE_FRAMES_DUMP_FILE;
-
-        std::ifstream f(fname.c_str(), std::ios_base::binary);
-
-        int rows, cols;
-
-        f.read((char*)&rows, sizeof(rows));
-        f.read((char*)&cols, sizeof(cols));
-
-        newFrame_gold.create(rows, cols, CV_32FC1);
-
-        for (int i = 0; i < newFrame_gold.rows; ++i)
-            f.read((char*)newFrame_gold.ptr(i), newFrame_gold.cols * sizeof(float));
-
-#endif
-    }
-};
-
-TEST_P(InterpolateFrames, Regression)
-{
-    cv::Mat newFrame;
-
-    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
-                                    10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-
-    cv::gpu::GpuMat d_frame0(frame0);
-    cv::gpu::GpuMat d_frame1(frame1);
-
-    cv::gpu::GpuMat d_fu; 
-    cv::gpu::GpuMat d_fv;
-    cv::gpu::GpuMat d_bu; 
-    cv::gpu::GpuMat d_bv;
-
-    d_flow(d_frame0, d_frame1, d_fu, d_fv);
-    d_flow(d_frame1, d_frame0, d_bu, d_bv);
-
-    cv::gpu::GpuMat d_newFrame;
-    cv::gpu::GpuMat d_buf;
-
-    cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
-
-    d_newFrame.download(newFrame);
-
-#ifndef DUMP
-
-    EXPECT_MAT_NEAR(newFrame_gold, newFrame, 1e-3);
-
-#else
-
-    std::string fname(cvtest::TS::ptr()->get_data_path());
-    if (devInfo.majorVersion() >= 2)
-        fname += INTERPOLATE_FRAMES_DUMP_FILE_CC20;
-    else
-        fname += INTERPOLATE_FRAMES_DUMP_FILE;
-
-    std::ofstream f(fname.c_str(), std::ios_base::binary);
-
-    f.write((char*)&newFrame.rows, sizeof(newFrame.rows));
-    f.write((char*)&newFrame.cols, sizeof(newFrame.cols));
-
-    for (int i = 0; i < newFrame.rows; ++i)
-        f.write((char*)newFrame.ptr(i), newFrame.cols * sizeof(float));
-
-#endif
-}
-
-INSTANTIATE_TEST_CASE_P(Video, InterpolateFrames, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Video, BroxOpticalFlow, ALL_DEVICES);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // GoodFeaturesToTrack
 
-PARAM_TEST_CASE(GoodFeaturesToTrack, cv::gpu::DeviceInfo, double)
+IMPLEMENT_PARAM_CLASS(MinDistance, double)
+
+PARAM_TEST_CASE(GoodFeaturesToTrack, cv::gpu::DeviceInfo, MinDistance)
 {
     cv::gpu::DeviceInfo devInfo;
-    
-    cv::Mat image;
-
-    int maxCorners;
-    double qualityLevel;
     double minDistance;
-
-    std::vector<cv::Point2f> pts_gold;
 
     virtual void SetUp()
     {
@@ -275,106 +146,113 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, cv::gpu::DeviceInfo, double)
         minDistance = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
-        image = readImage("opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(image.empty());
-
-        maxCorners = 1000;
-        qualityLevel= 0.01;
-
-        cv::goodFeaturesToTrack(image, pts_gold, maxCorners, qualityLevel, minDistance);
     }
 };
 
 TEST_P(GoodFeaturesToTrack, Accuracy)
 {
+    cv::Mat image = readImage("opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
+
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
     cv::gpu::GoodFeaturesToTrackDetector_GPU detector(maxCorners, qualityLevel, minDistance);
 
-    cv::gpu::GpuMat d_pts;
-
-    detector(loadMat(image), d_pts);
-
-    std::vector<cv::Point2f> pts(d_pts.cols);
-    cv::Mat pts_mat(1, d_pts.cols, CV_32FC2, (void*)&pts[0]);
-    d_pts.download(pts_mat);
-
-    ASSERT_EQ(pts_gold.size(), pts.size());
-
-    size_t mistmatch = 0;
-
-    for (size_t i = 0; i < pts.size(); ++i)
+    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
     {
-        cv::Point2i a = pts_gold[i];
-        cv::Point2i b = pts[i];
-
-        bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
-
-        if (!eq)
-            ++mistmatch;
+        try
+        {
+            cv::gpu::GpuMat d_pts;
+            detector(loadMat(image), d_pts);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsNotImplemented, e.code);
+        }
     }
+    else
+    {
+        cv::gpu::GpuMat d_pts;
+        detector(loadMat(image), d_pts);
 
-    double bad_ratio = static_cast<double>(mistmatch) / pts.size();
+        std::vector<cv::Point2f> pts(d_pts.cols);
+        cv::Mat pts_mat(1, d_pts.cols, CV_32FC2, (void*)&pts[0]);
+        d_pts.download(pts_mat);
 
-    ASSERT_LE(bad_ratio, 0.01);
+        std::vector<cv::Point2f> pts_gold;
+        cv::goodFeaturesToTrack(image, pts_gold, maxCorners, qualityLevel, minDistance);
+
+        ASSERT_EQ(pts_gold.size(), pts.size());
+
+        size_t mistmatch = 0;
+        for (size_t i = 0; i < pts.size(); ++i)
+        {
+            cv::Point2i a = pts_gold[i];
+            cv::Point2i b = pts[i];
+
+            bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
+
+            if (!eq)
+                ++mistmatch;
+        }
+
+        double bad_ratio = static_cast<double>(mistmatch) / pts.size();
+
+        ASSERT_LE(bad_ratio, 0.01);
+    }
 }
 
-INSTANTIATE_TEST_CASE_P(Video, GoodFeaturesToTrack, Combine(ALL_DEVICES, Values(0.0, 3.0)));
+INSTANTIATE_TEST_CASE_P(GPU_Video, GoodFeaturesToTrack, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(MinDistance(0.0), MinDistance(3.0))));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // PyrLKOpticalFlow
 
-PARAM_TEST_CASE(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, bool)
+IMPLEMENT_PARAM_CLASS(UseGray, bool)
+
+PARAM_TEST_CASE(PyrLKOpticalFlow, cv::gpu::DeviceInfo, UseGray)
 {
     cv::gpu::DeviceInfo devInfo;
-    
-    cv::Mat frame0;
-    cv::Mat frame1;
-
-    std::vector<cv::Point2f> pts;
-
-    std::vector<cv::Point2f> nextPts_gold;
-    std::vector<unsigned char> status_gold;
-    std::vector<float> err_gold;
+    bool useGray;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        bool useGray = GET_PARAM(1);
+        useGray = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
-        
-        frame0 = readImage("opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
-        ASSERT_FALSE(frame0.empty());
-        
-        frame1 = readImage("opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
-        ASSERT_FALSE(frame1.empty());
-
-        cv::Mat gray_frame;
-        if (useGray)
-            gray_frame = frame0;
-        else
-            cv::cvtColor(frame0, gray_frame, cv::COLOR_BGR2GRAY);
-
-        cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
-
-        cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, err_gold, cv::Size(21, 21), 3, 
-            cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01), 0.5);
     }
 };
 
-TEST_P(PyrLKOpticalFlowSparse, Accuracy)
+TEST_P(PyrLKOpticalFlow, Sparse)
 {
-    cv::gpu::PyrLKOpticalFlow d_pyrLK;
+    cv::Mat frame0 = readImage("opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage("opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::Mat gray_frame;
+    if (useGray)
+        gray_frame = frame0;
+    else
+        cv::cvtColor(frame0, gray_frame, cv::COLOR_BGR2GRAY);
+
+    std::vector<cv::Point2f> pts;
+    cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
 
     cv::gpu::GpuMat d_pts;
     cv::Mat pts_mat(1, pts.size(), CV_32FC2, (void*)&pts[0]);
     d_pts.upload(pts_mat);
 
+    cv::gpu::PyrLKOpticalFlow pyrLK;
+
     cv::gpu::GpuMat d_nextPts;
     cv::gpu::GpuMat d_status;
     cv::gpu::GpuMat d_err;
-
-    d_pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status, &d_err);
+    pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status, &d_err);
 
     std::vector<cv::Point2f> nextPts(d_nextPts.cols);
     cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*)&nextPts[0]);
@@ -388,12 +266,16 @@ TEST_P(PyrLKOpticalFlowSparse, Accuracy)
     cv::Mat err_mat(1, d_err.cols, CV_32FC1, (void*)&err[0]);
     d_err.download(err_mat);
 
+    std::vector<cv::Point2f> nextPts_gold;
+    std::vector<unsigned char> status_gold;
+    std::vector<float> err_gold;
+    cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, err_gold);
+
     ASSERT_EQ(nextPts_gold.size(), nextPts.size());
     ASSERT_EQ(status_gold.size(), status.size());
     ASSERT_EQ(err_gold.size(), err.size());
 
     size_t mistmatch = 0;
-
     for (size_t i = 0; i < nextPts.size(); ++i)
     {
         if (status[i] != status_gold[i])
@@ -420,77 +302,86 @@ TEST_P(PyrLKOpticalFlowSparse, Accuracy)
     ASSERT_LE(bad_ratio, 0.01);
 }
 
-INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, Combine(ALL_DEVICES, Bool()));
+INSTANTIATE_TEST_CASE_P(GPU_Video, PyrLKOpticalFlow, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(UseGray(true), UseGray(false))));
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// FarnebackOpticalFlow
 
-PARAM_TEST_CASE(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo, double, int, int, bool)
+IMPLEMENT_PARAM_CLASS(PyrScale, double)
+IMPLEMENT_PARAM_CLASS(PolyN, int)
+CV_FLAGS(FarnebackOptFlowFlags, 0, cv::OPTFLOW_FARNEBACK_GAUSSIAN)
+IMPLEMENT_PARAM_CLASS(UseInitFlow, bool)
+
+PARAM_TEST_CASE(FarnebackOpticalFlow, cv::gpu::DeviceInfo, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
 {
-    cv::Mat frame0, frame1;
-
+    cv::gpu::DeviceInfo devInfo;
     double pyrScale;
     int polyN;
-    double polySigma;
     int flags;
     bool useInitFlow;
 
     virtual void SetUp()
     {
-        frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
-        frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame0.empty()); ASSERT_FALSE(frame1.empty());
-
-        cv::gpu::setDevice(GET_PARAM(0).deviceID());
-
+        devInfo = GET_PARAM(0);
         pyrScale = GET_PARAM(1);
         polyN = GET_PARAM(2);
-        polySigma = polyN <= 5 ? 1.1 : 1.5;
         flags = GET_PARAM(3);
         useInitFlow = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
     }
 };
 
-TEST_P(FarnebackOpticalFlowTest, Accuracy)
+TEST_P(FarnebackOpticalFlow, Accuracy)
 {
-    using namespace cv;
+    cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
 
-    gpu::FarnebackOpticalFlow calc;
+    cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    double polySigma = polyN <= 5 ? 1.1 : 1.5;
+
+    cv::gpu::FarnebackOpticalFlow calc;
     calc.pyrScale = pyrScale;
     calc.polyN = polyN;
     calc.polySigma = polySigma;
     calc.flags = flags;
 
-    gpu::GpuMat d_flowx, d_flowy;
-    calc(gpu::GpuMat(frame0), gpu::GpuMat(frame1), d_flowx, d_flowy);
+    cv::gpu::GpuMat d_flowx, d_flowy;
+    calc(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
 
-    Mat flow;
+    cv::Mat flow;
     if (useInitFlow)
     {
-        Mat flowxy[] = {(Mat)d_flowx, (Mat)d_flowy};
-        merge(flowxy, 2, flow);
+        cv::Mat flowxy[] = {cv::Mat(d_flowx), cv::Mat(d_flowy)};
+        cv::merge(flowxy, 2, flow);
     }
 
     if (useInitFlow)
     {
-        calc.flags |= OPTFLOW_USE_INITIAL_FLOW;
-        calc(gpu::GpuMat(frame0), gpu::GpuMat(frame1), d_flowx, d_flowy);
+        calc.flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
+        calc(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
     }
 
-    calcOpticalFlowFarneback(
-                frame0, frame1, flow, calc.pyrScale, calc.numLevels, calc.winSize,
-                calc.numIters,  calc.polyN, calc.polySigma, calc.flags);
+    cv::calcOpticalFlowFarneback(
+        frame0, frame1, flow, calc.pyrScale, calc.numLevels, calc.winSize,
+        calc.numIters,  calc.polyN, calc.polySigma, calc.flags);
 
-    std::vector<Mat> flowxy; split(flow, flowxy);
-    /*std::cout << checkSimilarity(flowxy[0], (Mat)d_flowx) << " "
-              << checkSimilarity(flowxy[1], (Mat)d_flowy) << std::endl;*/
-    EXPECT_LT(checkSimilarity(flowxy[0], (Mat)d_flowx), 0.1);
-    EXPECT_LT(checkSimilarity(flowxy[1], (Mat)d_flowy), 0.1);
+    std::vector<cv::Mat> flowxy;
+    cv::split(flow, flowxy);
+
+    EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
+    EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
 }
 
-INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlowTest,
-                        Combine(ALL_DEVICES,
-                                Values(0.3, 0.5, 0.8),
-                                Values(5, 7),
-                                Values(0, (int)cv::OPTFLOW_FARNEBACK_GAUSSIAN),
-                                Values(false, true)));
+INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(PyrScale(0.3), PyrScale(0.5), PyrScale(0.8)),
+    testing::Values(PolyN(5), PolyN(7)),
+    testing::Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN)),
+    testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
-#endif // HAVE_CUDA
+} // namespace

@@ -122,7 +122,7 @@ Mat readImageType(const string& fname, int type)
         cvtColor(src, temp, cv::COLOR_BGR2BGRA);
         swap(src, temp);
     }
-    src.convertTo(src, CV_MAT_DEPTH(type));
+    src.convertTo(src, CV_MAT_DEPTH(type), CV_MAT_DEPTH(type) == CV_32F ? 1.0 / 255.0 : 1.0);
     return src;
 }
 

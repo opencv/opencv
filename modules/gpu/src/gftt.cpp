@@ -52,9 +52,9 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat&, GpuMat
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace gfft 
+    namespace gfft
     {
         int findCorners_gpu(DevMem2Df eig, float threshold, DevMem2Db mask, float2* corners, int max_count);
         void sortCorners_gpu(DevMem2Df eig, float2* corners, int count);
@@ -67,7 +67,9 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
 
     CV_Assert(qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()));
-    CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
+
+    if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
+        CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
 
     ensureSizeIsEnough(image.size(), CV_32F, eig_);
 
@@ -106,7 +108,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
         {
             Point2f p = tmp[i];
 
-	        bool good = true;
+            bool good = true;
 
             int x_cell = static_cast<int>(p.x / cell_size);
             int y_cell = static_cast<int>(p.y / cell_size);
@@ -125,7 +127,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
             for (int yy = y1; yy <= y2; yy++)
             {
                 for (int xx = x1; xx <= x2; xx++)
-                {   
+                {
                     vector<Point2f>& m = grid[yy * grid_width + xx];
 
                     if (!m.empty())
@@ -141,7 +143,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
                                 goto break_out;
                             }
                         }
-                    }                
+                    }
                 }
             }
 
