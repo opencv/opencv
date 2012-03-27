@@ -55,10 +55,14 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/core_c.h"
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/core/internal.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_HIGHGUI
+#  include "opencv2/highgui/highgui.hpp"
+#endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/objdetect/objdetect_tegra.hpp"
