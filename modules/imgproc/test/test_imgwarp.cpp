@@ -1372,6 +1372,18 @@ void CV_GetQuadSubPixTest::prepare_to_validation( int /*test_case_idx*/ )
         dst.convertTo(dst0, dst0.depth());
 }
 
+TEST(Imgproc_cvWarpAffine, regression)
+{
+    IplImage* src = cvCreateImage(cvSize(100, 100), IPL_DEPTH_8U, 1);
+    IplImage* dst = cvCreateImage(cvSize(100, 100), IPL_DEPTH_8U, 1);
+
+    float m[6];
+    CvMat M = cvMat( 2, 3, CV_32F, m );
+    int w = src->width;
+    int h = src->height;
+    cv2DRotationMatrix(cvPoint2D32f(w*0.5f, h*0.5f), 45.0, 1.0, &M);
+    cvWarpAffine(src, dst, &M);
+}
 
 //////////////////////////////////////////////////////////////////////////
 
