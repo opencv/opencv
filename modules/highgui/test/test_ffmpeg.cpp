@@ -70,7 +70,7 @@ public:
         {
         stringstream s; s << codec_bmp_tags[j].tag;
 
-        const string filename = ts->get_data_path() + "../../../../output_"+s.str()+".avi";
+        const string filename = "output_"+s.str()+".avi";
 
         Mat img(img_r, img_c, CV_8UC3, Scalar::all(0));
         try
