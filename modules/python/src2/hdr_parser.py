@@ -11,7 +11,8 @@ opencv_hdr_list = [
 "../../video/include/opencv2/video/tracking.hpp",
 "../../video/include/opencv2/video/background_segm.hpp",
 "../../objdetect/include/opencv2/objdetect/objdetect.hpp",
-"../../highgui/include/opencv2/highgui/highgui.hpp"
+"../../highgui/include/opencv2/highgui/highgui.hpp",
+"../../stitching/include/opencv2/stitching/detail/seam_finders.hpp"
 ]
 
 """
