@@ -309,6 +309,34 @@ Wrapping class for feature detection using the
     protected:
         ...
     };
+    
+
+DenseFeatureDetector
+--------------------
+.. ocv:class:: DenseFeatureDetector
+
+Class for generation of image features which are distributed densely and regularly over the image. ::
+
+	class DenseFeatureDetector : public FeatureDetector
+	{
+	public:
+		DenseFeatureDetector( float initFeatureScale=1.f, int featureScaleLevels=1,
+                              float featureScaleMul=0.1f,
+                              int initXyStep=6, int initImgBound=0,
+                              bool varyXyStepWithScale=true,
+                              bool varyImgBoundWithScale=false );
+	protected:
+        ...
+    };
+    
+The detector generates several levels (in the amount of ``featureScaleLevels``) of features. Features of each level are located in the nodes of a regular grid over the image (excluding the image boundary of given size). The level parameters (a feature scale, a node size, a size of boundary) are multiplied by ``featureScaleMul`` with level index growing depending on input flags, viz.:
+
+* Feature scale is multiplied always.
+
+* The grid node size is multiplied if ``varyXyStepWithScale`` is ``true``.
+
+* Size of image boundary is multiplied if ``varyImgBoundWithScale`` is ``true``.
+
 
 SimpleBlobDetector
 -------------------
