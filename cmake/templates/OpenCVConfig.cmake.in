@@ -53,7 +53,11 @@ set(OpenCV_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE@)
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
 
 # Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
-get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../.." REALPATH)
+if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_LESS 2.8)
+  get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../.." ABSOLUTE)
+else()
+  get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../.." REALPATH)
+endif()
 
 # Presence of Android native camera wrappers
 set(OpenCV_HAVE_ANDROID_CAMERA @HAVE_opencv_androidcamera@)
