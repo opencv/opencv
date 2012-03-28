@@ -2569,7 +2569,7 @@ double cv::kmeans( InputArray _data, int K,
                     //   2. find the farthest from the center point in the biggest cluster
                     //   3. exclude the farthest point from the biggest cluster and form a new 1-point cluster.
                     int max_k = 0;
-                    for( int k1 = 1; k1 < K; k++ )
+                    for( int k1 = 1; k1 < K; k1++ )
                     {
                         if( counters[max_k] < counters[k1] )
                             max_k = k1;
