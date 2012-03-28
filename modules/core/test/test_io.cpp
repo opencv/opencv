@@ -376,3 +376,32 @@ protected:
 };
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
+
+/*class CV_BigMatrixIOTest : public cvtest::BaseTest
+{
+public:
+    CV_BigMatrixIOTest() {}
+    ~CV_BigMatrixIOTest() {}   
+protected:
+    void run(int)
+    {
+        try
+        {
+            RNG& rng = theRNG();
+            int N = 1000, M = 1200000;
+            Mat mat(M, N, CV_32F);
+            rng.fill(mat, RNG::UNIFORM, 0, 1);
+            FileStorage fs("test.xml", FileStorage::WRITE);
+            fs << "mat" << mat;
+            fs.release();
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
+*/
+

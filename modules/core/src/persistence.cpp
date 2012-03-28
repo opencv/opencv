@@ -3410,7 +3410,7 @@ icvWriteMat( CvFileStorage* fs, const char* name,
         }
 
         for( y = 0; y < size.height; y++ )
-            cvWriteRawData( fs, mat->data.ptr + y*mat->step, size.width, dt );
+            cvWriteRawData( fs, mat->data.ptr + (size_t)y*mat->step, size.width, dt );
     }
     cvEndWriteStruct( fs );
     cvEndWriteStruct( fs );
