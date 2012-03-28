@@ -151,6 +151,12 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
                 break;
             }
 
+            run_batch("negative_list.dat");
+            if (ts.get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+
             run_batch("chessboard_list.dat");
             if (ts.get_err_code() != cvtest::TS::OK)
             {
@@ -224,17 +230,13 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         }
 
         string filename = folder + (string)board_list[idx * 2 + 1];
+        bool doesContatinChessboard;
         Mat expected;
         {
-            CvMat *u = (CvMat*)cvLoad( filename.c_str() );
-            if(!u )
-            {                
-                ts.printf( cvtest::TS::LOG, "one of chessboard corner files can't be read: %s\n", filename.c_str() ); 
-                ts.set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
-                continue;                
-            }
-            expected = Mat(u, true);
-            cvReleaseMat( &u );
+            FileStorage fs(filename, FileStorage::READ);
+            fs["corners"] >> expected;
+            fs["isFound"] >> doesContatinChessboard;
+            fs.release();
         }                
         size_t count_exp = static_cast<size_t>(expected.cols * expected.rows);                
         Size pattern_size = expected.size();
@@ -254,49 +256,57 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
                 break;
         }
         show_points( gray, Mat(), v, pattern_size, result );
-        if( !result || v.size() != count_exp )
+        
+        if( result ^ doesContatinChessboard || v.size() != count_exp )
         {
-            ts.printf( cvtest::TS::LOG, "chessboard is not found in %s\n", img_file.c_str() );
+            ts.printf( cvtest::TS::LOG, "chessboard is detected incorrectly in %s\n", img_file.c_str() );
             ts.set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
             return;
         }
 
-#ifndef WRITE_POINTS
-        double err = calcError(v, expected);
-#if 0
-        if( err > rough_success_error_level )
+        if( result )
         {
-            ts.printf( cvtest::TS::LOG, "bad accuracy of corner guesses\n" );
-            ts.set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            continue;
-        }
-#endif
-        max_rough_error = MAX( max_rough_error, err );
-#endif
-        if( pattern == CHESSBOARD )
-            cornerSubPix( gray, v, Size(5, 5), Size(-1,-1), TermCriteria(TermCriteria::EPS|TermCriteria::MAX_ITER, 30, 0.1));
-        //find4QuadCornerSubpix(gray, v, Size(5, 5));
-        show_points( gray, expected, v, pattern_size, result  );
 
 #ifndef WRITE_POINTS
-//        printf("called find4QuadCornerSubpix\n");
-        err = calcError(v, expected);
-        sum_error += err;
-        count++;
-#if 1
-        if( err > precise_success_error_level )
-        {
-            ts.printf( cvtest::TS::LOG, "Image %s: bad accuracy of adjusted corners %f\n", img_file.c_str(), err ); 
-            ts.set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }
+            double err = calcError(v, expected);
+#if 0
+            if( err > rough_success_error_level )
+            {
+                ts.printf( cvtest::TS::LOG, "bad accuracy of corner guesses\n" );
+                ts.set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+                continue;
+            }
 #endif
-        ts.printf(cvtest::TS::LOG, "Error on %s is %f\n", img_file.c_str(), err);
-        max_precise_error = MAX( max_precise_error, err );
-#else
+            max_rough_error = MAX( max_rough_error, err );
+#endif
+            if( pattern == CHESSBOARD )
+                cornerSubPix( gray, v, Size(5, 5), Size(-1,-1), TermCriteria(TermCriteria::EPS|TermCriteria::MAX_ITER, 30, 0.1));
+            //find4QuadCornerSubpix(gray, v, Size(5, 5));
+            show_points( gray, expected, v, pattern_size, result  );
+#ifndef WRITE_POINTS
+    //        printf("called find4QuadCornerSubpix\n");
+            err = calcError(v, expected);
+            sum_error += err;
+            count++;
+#if 1
+            if( err > precise_success_error_level )
+            {
+                ts.printf( cvtest::TS::LOG, "Image %s: bad accuracy of adjusted corners %f\n", img_file.c_str(), err ); 
+                ts.set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+                return;
+            }
+#endif
+            ts.printf(cvtest::TS::LOG, "Error on %s is %f\n", img_file.c_str(), err);
+            max_precise_error = MAX( max_precise_error, err );
+#endif            
+        }
+
+#ifdef WRITE_POINTS
         Mat mat_v(pattern_size, CV_32FC2, (void*)&v[0]);
-        CvMat cvmat_v = mat_v;
-        cvSave( filename.c_str(), &cvmat_v );
+        FileStorage fs(filename, FileStorage::WRITE);
+        fs << "isFound" << result;
+        fs << "corners" << mat_v;
+        fs.release();
 #endif
         progress = update_progress( progress, idx, max_idx, 0 );
     }    
