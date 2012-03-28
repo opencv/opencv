@@ -61,7 +61,7 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int fr
 {
  stringstream s; s << codec;
 
- cv::VideoWriter writer(ts->get_data_path()+"video/test_video_"+s.str()+"."+format, codec, 25, cv::Size(640, 480), false);
+ cv::VideoWriter writer(ts->get_data_path()+"../../../../test_video_"+s.str()+"."+format, codec, 25, cv::Size(640, 480), false);
 
  for (int i = 0; i < framecount; ++i)
  {
@@ -122,7 +122,7 @@ void CV_PositioningTest::run(int)
 
       stringstream s; s << CV_FOURCC(codec[j][0], codec[j][1], codec[j][2], codec[j][3]); //codec_bmp_tags[j].tag;
 
-      const string file_path = ts->get_data_path()+"video/test_video_"+s.str()+"."+format[i];
+      const string file_path = ts->get_data_path()+"../../../../test_video_"+s.str()+"."+format[i];
 
       bool error = false; int failed = 0;
 

@@ -147,7 +147,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
     for(size_t i = 0; i < ext_num; ++i)
     {
         string ext = exts[i];
-        string full_name = dir + "img." + ext;
+        string full_name = dir + "../../../../img." + ext;
         ts->printf(ts->LOG, " full_name : %s\n", full_name.c_str());
 
         imwrite(full_name, image);
@@ -216,7 +216,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
 void CV_HighGuiTest::VideoTest(const string& dir, int fourcc)
 {	
     string src_file = dir + "../cv/shared/video_for_test.avi";
-    string tmp_name = dir + "video.avi";
+    string tmp_name = dir + "../../../../video.avi";
 
     ts->printf(ts->LOG, "reading video : %s\n", src_file.c_str());
 
@@ -310,7 +310,7 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
 
         stringstream s_digit; s_digit << i;
 
-        string full_name = dir + "img_"+s_digit.str()+".bmp";
+        string full_name = dir + "../../../../img_"+s_digit.str()+".bmp";
         ts->printf(ts->LOG, " full_name : %s\n", full_name.c_str());
 
         imwrite(full_name, image);
@@ -387,7 +387,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
 		if (((ext[j]!="mov")||(string(&codecchars[0], 4)=="XVID"))&&(ext[j]!="mp4"))
 	#endif
     {
-        const string video_file = dir + "video_" + string(&codecchars[0], 4) + "." + ext[j];
+        const string video_file = dir + "../../../../video_" + string(&codecchars[0], 4) + "." + ext[j];
 
         VideoWriter writer = cv::VideoWriter(video_file, CV_FOURCC(codecchars[0], codecchars[1], codecchars[2], codecchars[3]), 25, cv::Size(968, 757), true);
 
@@ -428,7 +428,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
                         img.at<Vec3b>(k, l) = Vec3b(0, 255, 0);
             else img.at<Vec3b>(k, l) = Vec3b(0, 0, 255);
 
-            imwrite(dir+"QCIF_"+s_digit.str()+".bmp", img);
+            imwrite(dir+"../../../../QCIF_"+s_digit.str()+".bmp", img);
 
             writer << img;
         }
@@ -456,7 +456,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             cv::Mat frame; cap >> frame;
             if (frame.empty())
             {
-                ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
+                ts->printf(ts->LOG, "\nVideo file directory: %s\n", (dir+"../../../../").c_str());
                 ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
                 ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
 				ts->printf(ts->LOG, "Error: cannot read the next frame with index %d.\n", i+1);
@@ -468,11 +468,11 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             if (i+1 < 10) {s_digit << "0"; s_digit << i+1;}
             else s_digit << i+1;
 
-            cv::Mat img = imread(dir+"QCIF_"+s_digit.str()+".bmp", CV_LOAD_IMAGE_COLOR);
+            cv::Mat img = imread(dir+"../../../../QCIF_"+s_digit.str()+".bmp", CV_LOAD_IMAGE_COLOR);
 
             if (img.empty())
             {
-				ts->printf(ts->LOG, "\nError: cannot read an image from %s.\n", (dir+"QCIF_"+s_digit.str()+".bmp").c_str());
+                ts->printf(ts->LOG, "\nError: cannot read an image from %s.\n", (dir+"../../../../QCIF_"+s_digit.str()+".bmp").c_str());
                 ts->set_failed_test_info(ts->FAIL_MISMATCH);
                 continue;
             }
@@ -525,11 +525,11 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
 
         std::vector <cv::Mat> tmp_img(IMAGE_COUNT);
 
-        writer.open(dir+"video_"+string(&codecchars[0], 4)+"."+ext[i], CV_FOURCC(codecchars[0], codecchars[1], codecchars[2], codecchars[3]), 25, Size(968, 757), true);
+        writer.open(dir+"../../../../video_"+string(&codecchars[0], 4)+"."+ext[i], CV_FOURCC(codecchars[0], codecchars[1], codecchars[2], codecchars[3]), 25, Size(968, 757), true);
 
         if (!writer.isOpened())
         {
-            ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
+            ts->printf(ts->LOG, "\nVideo file directory: %s\n", (dir+"../../../../").c_str());
             ts->printf(ts->LOG, "Video codec: %s\n", std::string(&codecchars[0], 4).c_str());
             ts->printf(ts->LOG, "Error: cannot create VideoWriter object for video_%s.%s.\n", string(&codecchars[0]).c_str(), ext[i].c_str());
             ts->set_failed_test_info(ts->FAIL_EXCEPTION);
@@ -542,7 +542,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
 
             if (frame.empty())
             {
-                ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
+                ts->printf(ts->LOG, "\nVideo file directory: %s\n", (dir+"../../../../").c_str());
                 ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
                 ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
 				ts->printf(ts->LOG, "Error: cannot read next frame with index %d from the device.\n", framecount);
@@ -563,7 +563,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
 
         if (!vcap.isOpened())
         {
-            ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
+            ts->printf(ts->LOG, "\nVideo file directory: %s\n", (dir+"../../../../").c_str());
             ts->printf(ts->LOG, "File name: video_%s.%s\n",  string(&codecchars[0], 4).c_str(), ext[i].c_str());
             ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
             ts->printf(ts->LOG, "Error: cannot open video file.\n");
@@ -575,7 +575,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
         if (FRAME_COUNT != IMAGE_COUNT)
         {
             ts->printf(ts->LOG, "\nChecking frame count...\n");
-            ts->printf(ts->LOG, "Video file directory: %s\n", dir.c_str());
+            ts->printf(ts->LOG, "Video file directory: %s\n", (dir+"../../../../").c_str());
             ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
             ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
             ts->printf(ts->LOG, "Required frame count: %d  Returned frame count: %d\n", IMAGE_COUNT, FRAME_COUNT);
@@ -593,7 +593,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
 
             if (img.empty())
             {
-                ts->printf(ts->LOG, "\nVideo file directory: %s\n", dir.c_str());
+                ts->printf(ts->LOG, "\nVideo file directory: %s\n", (dir+"../../../../").c_str());
                 ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
                 ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
                 ts->printf(ts->LOG, "Error: cannot read frame with index %d from the video.\n", framecount);
