@@ -2821,7 +2821,14 @@ cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
     if( _centers )
     {
         centers = cv::cvarrToMat(_centers);
+
         centers = centers.reshape(1);
+        data = data.reshape(1);
+
+        CV_Assert( !centers.empty() );
+        CV_Assert( centers.rows == cluster_count );
+        CV_Assert( centers.cols == data.cols );
+        CV_Assert( centers.depth() == data.depth() );
     }
     CV_Assert( labels.isContinuous() && labels.type() == CV_32S &&
         (labels.cols == 1 || labels.rows == 1) &&
