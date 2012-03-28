@@ -191,8 +191,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
  *		new_points2' * F * new_points1 = 0.
  *
  *		F_			:	3x3 fundamental matrix
- *		points1_	:	2xN matrix containing the first set of points
- *		points2_	:	2xN matrix containing the second set of points
+ *		points1_	:	1xN matrix containing the first set of points
+ *		points2_	:	1xN matrix containing the second set of points
  *		new_points1	:	the optimized points1_. if this is NULL, the corrected points are placed back in points1_
  *		new_points2	:	the optimized points2_. if this is NULL, the corrected points are placed back in points2_
  */
@@ -218,7 +218,7 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
     if (!(((F_->type & CV_MAT_TYPE_MASK) >> 3) == 0 ))
         CV_Error( CV_StsUnsupportedFormat, "The fundamental matrix must be a single-channel matrix" );
     if (!(points1_->rows == 1 && points2_->rows == 1 && points1_->cols == points2_->cols))
-        CV_Error( CV_StsUnmatchedSizes, "The point-matrices must have two rows, and an equal number of columns" );
+        CV_Error( CV_StsUnmatchedSizes, "The point-matrices must have one row, and an equal number of columns" );
     if (((points1_->type & CV_MAT_TYPE_MASK) >> 3) != 1 )
         CV_Error( CV_StsUnmatchedSizes, "The first set of points must contain two channels; one for x and one for y" );
     if (((points2_->type & CV_MAT_TYPE_MASK) >> 3) != 1 )
