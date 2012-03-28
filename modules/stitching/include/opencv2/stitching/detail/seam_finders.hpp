@@ -49,11 +49,11 @@
 namespace cv {
 namespace detail {
 
-class CV_EXPORTS_AS(SeamFinder) SeamFinder
+class CV_EXPORTS SeamFinder
 {
 public:
     virtual ~SeamFinder() {}
-    CV_WRAP virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
                       std::vector<Mat> &masks) = 0;
 };
 
@@ -99,10 +99,10 @@ public:
 };
 
 
-class CV_EXPORTS_AS(GraphCutSeamFinder) GraphCutSeamFinder : public SeamFinder, public GraphCutSeamFinderBase
+class CV_EXPORTS GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
 {
 public:
-    CV_WRAP GraphCutSeamFinder(int cost_type = GraphCutSeamFinder::COST_COLOR_GRAD, float terminal_cost = 10000.f,
+    GraphCutSeamFinder(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);
 
     ~GraphCutSeamFinder();

@@ -10,7 +10,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_USE_NUMPY)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_nonfree opencv_objdetect opencv_legacy opencv_contrib opencv_stitching)
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_nonfree opencv_objdetect opencv_legacy opencv_contrib)
 
 ocv_include_directories(${PYTHON_INCLUDE_PATH})
 ocv_include_directories(
@@ -29,7 +29,6 @@ ocv_include_directories(
     "${OpenCV_SOURCE_DIR}/modules/nonfree/include"
     "${OpenCV_SOURCE_DIR}/modules/legacy/include"
     "${OpenCV_SOURCE_DIR}/modules/contrib/include"
-    "${OpenCV_SOURCE_DIR}/modules/stitching/include"
     )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -45,8 +44,7 @@ set(opencv_hdrs "${OpenCV_SOURCE_DIR}/modules/core/include/opencv2/core/core.hpp
     "${OpenCV_SOURCE_DIR}/modules/features2d/include/opencv2/features2d/features2d.hpp"
     "${OpenCV_SOURCE_DIR}/modules/nonfree/include/opencv2/nonfree/features2d.hpp"
     "${OpenCV_SOURCE_DIR}/modules/calib3d/include/opencv2/calib3d/calib3d.hpp"
-    "${OpenCV_SOURCE_DIR}/modules/objdetect/include/opencv2/objdetect/objdetect.hpp"
-    "${OpenCV_SOURCE_DIR}/modules/stitching/include/opencv2/stitching/detail/seam_finders.hpp")
+    "${OpenCV_SOURCE_DIR}/modules/objdetect/include/opencv2/objdetect/objdetect.hpp")
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
@@ -77,7 +75,7 @@ add_custom_command(
 
 set(cv2_target "opencv_python")
 add_library(${cv2_target} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i ${cv2_generated_hdrs} src2/cv2.cv.hpp)
-target_link_libraries(${cv2_target} ${PYTHON_LIBRARIES} opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib opencv_photo opencv_stitching)
+target_link_libraries(${cv2_target} ${PYTHON_LIBRARIES} opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib opencv_photo)
     
 set_target_properties(${cv2_target} PROPERTIES PREFIX "")
 set_target_properties(${cv2_target} PROPERTIES OUTPUT_NAME "cv2")

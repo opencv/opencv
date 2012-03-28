@@ -20,11 +20,9 @@
 #include "opencv2/photo/photo.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/stitching/stitcher.hpp"
 
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;
-using cv::detail::GraphCutSeamFinder;
 
 static PyObject* opencv_error = 0;
 
