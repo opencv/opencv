@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 
+namespace {
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cvtColor
 
@@ -1652,3 +1654,5 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, SwapChannels, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
+
+} // namespace

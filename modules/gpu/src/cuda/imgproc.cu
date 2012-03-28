@@ -316,62 +316,51 @@ namespace cv { namespace gpu { namespace device
 
         __constant__ float cq[16];
 
-        template <typename T>
-        __global__ void reprojectImageTo3D(const T* disp, size_t disp_step, float* xyzw, size_t xyzw_step, int rows, int cols)
+        template <typename T, typename D>
+        __global__ void reprojectImageTo3D(const DevMem2D_<T> disp, PtrStep<D> xyz)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (y < rows && x < cols)
-            {
+            if (y >= disp.rows || x >= disp.cols)
+                return;
 
-                float qx = cq[1] * y + cq[3], qy = cq[5] * y + cq[7];
-                float qz = cq[9] * y + cq[11], qw = cq[13] * y + cq[15];
+            const float qx = x * cq[ 0] + y * cq[ 1] + cq[ 3];
+            const float qy = x * cq[ 4] + y * cq[ 5] + cq[ 7];
+            const float qz = x * cq[ 8] + y * cq[ 9] + cq[11];
+            const float qw = x * cq[12] + y * cq[13] + cq[15];
 
-                qx += x * cq[0];
-                qy += x * cq[4];
-                qz += x * cq[8];
-                qw += x * cq[12];
+            const T d = disp(y, x);
 
-                T d = *(disp + disp_step * y + x);
+            const float iW = 1.f / (qw + cq[14] * d);
 
-                float iW = 1.f / (qw + cq[14] * d);
-                float4 v;
-                v.x = (qx + cq[2] * d) * iW;
-                v.y = (qy + cq[6] * d) * iW;
-                v.z = (qz + cq[10] * d) * iW;
-                v.w = 1.f;
+            D v = VecTraits<D>::all(1.0f);
+            v.x = (qx + cq[2] * d) * iW;
+            v.y = (qy + cq[6] * d) * iW;
+            v.z = (qz + cq[10] * d) * iW;
 
-                *(float4*)(xyzw + xyzw_step * y + (x * 4)) = v;
-            }
+            xyz(y, x) = v;
         }
 
-        template <typename T>
-        inline void reprojectImageTo3D_caller(const DevMem2D_<T>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
+        template <typename T, typename D>
+        void reprojectImageTo3D_gpu(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream)
         {
-            dim3 threads(32, 8, 1);
-            dim3 grid(1, 1, 1);
-            grid.x = divUp(disp.cols, threads.x);
-            grid.y = divUp(disp.rows, threads.y);
+            dim3 block(32, 8);
+            dim3 grid(divUp(disp.cols, block.x), divUp(disp.rows, block.y));
 
             cudaSafeCall( cudaMemcpyToSymbol(cq, q, 16 * sizeof(float)) );
 
-            reprojectImageTo3D<<<grid, threads, 0, stream>>>(disp.data, disp.step / sizeof(T), xyzw.data, xyzw.step / sizeof(float), disp.rows, disp.cols);
+            reprojectImageTo3D<T, D><<<grid, block, 0, stream>>>((DevMem2D_<T>)disp, (DevMem2D_<D>)xyz);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void reprojectImageTo3D_gpu(const DevMem2Db& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
-        {
-            reprojectImageTo3D_caller(disp, xyzw, q, stream);
-        }
-
-        void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
-        {
-            reprojectImageTo3D_caller(disp, xyzw, q, stream);
-        }
+        template void reprojectImageTo3D_gpu<uchar, float3>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
+        template void reprojectImageTo3D_gpu<uchar, float4>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
+        template void reprojectImageTo3D_gpu<short, float3>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
+        template void reprojectImageTo3D_gpu<short, float4>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
 
         /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
 

@@ -265,7 +265,7 @@ void PrintTo(const Inverse& useRoi, std::ostream* os);
     }; \
     inline void PrintTo( name param, std::ostream* os) \
     { \
-        *os << #name <<  "(" << static_cast< type >(param) << ")"; \
+        *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
     }
 
 IMPLEMENT_PARAM_CLASS(Channels, int)

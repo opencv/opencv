@@ -301,4 +301,45 @@ TEST_P(SolvePnPRansac, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(GPU_Calib3D, SolvePnPRansac, ALL_DEVICES);
 
+////////////////////////////////////////////////////////////////////////////////
+// reprojectImageTo3D
+
+PARAM_TEST_CASE(ReprojectImageTo3D, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int depth;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        depth = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(ReprojectImageTo3D, Accuracy)
+{
+    cv::Mat disp = randomMat(size, depth, 5.0, 30.0);
+    cv::Mat Q = randomMat(cv::Size(4, 4), CV_32FC1, 0.1, 1.0);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::reprojectImageTo3D(loadMat(disp, useRoi), dst, Q, 3);
+    
+    cv::Mat dst_gold;
+    cv::reprojectImageTo3D(disp, dst_gold, Q, false);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Calib3D, ReprojectImageTo3D, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16S)),
+    WHOLE_SUBMAT));
+
 } // namespace

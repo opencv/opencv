@@ -605,10 +605,10 @@ CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndis
 
 //! Reprojects disparity image to 3D space.
 //! Supports CV_8U and CV_16S types of input disparity.
-//! The output is a 4-channel floating-point (CV_32FC4) matrix.
+//! The output is a 3- or 4-channel floating-point matrix.
 //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
 //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
-CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, Stream& stream = Stream::Null());
+CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, int dst_cn = 4, Stream& stream = Stream::Null());
 
 //! converts image from one color space to another
 CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null());

@@ -41,15 +41,9 @@
 
 #include "precomp.hpp"
 
-struct KSize : cv::Size
-{
-    KSize() {}
-    KSize(int width, int height) : cv::Size(width, height) {}
-};
-void PrintTo(KSize ksize, std::ostream* os)
-{
-    *os << "kernel size " << ksize.width << "x" << ksize.height;
-}
+namespace {
+
+IMPLEMENT_PARAM_CLASS(KSize, cv::Size)
 
 cv::Mat getInnerROI(cv::InputArray m_, cv::Size ksize)
 {
@@ -107,7 +101,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Blur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
-    testing::Values(KSize(3, 3), KSize(5, 5), KSize(7, 7)),
+    testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     WHOLE_SUBMAT));
 
@@ -163,7 +157,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
-    testing::Values(KSize(3, 3), KSize(5, 5), KSize(7, 7)),
+    testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
     testing::Values(Deriv_X(0), Deriv_X(1), Deriv_X(2)),
     testing::Values(Deriv_Y(0), Deriv_Y(1), Deriv_Y(2)),
     testing::Values(BorderType(cv::BORDER_REFLECT101),
@@ -286,21 +280,21 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
-    testing::Values(KSize(3, 3),
-                    KSize(5, 5),
-                    KSize(7, 7),
-                    KSize(9, 9),
-                    KSize(11, 11),
-                    KSize(13, 13),
-                    KSize(15, 15),
-                    KSize(17, 17),
-                    KSize(19, 19),
-                    KSize(21, 21),
-                    KSize(23, 23),
-                    KSize(25, 25),
-                    KSize(27, 27),
-                    KSize(29, 29),
-                    KSize(31, 31)),
+    testing::Values(KSize(cv::Size(3, 3)),
+                    KSize(cv::Size(5, 5)),
+                    KSize(cv::Size(7, 7)),
+                    KSize(cv::Size(9, 9)),
+                    KSize(cv::Size(11, 11)),
+                    KSize(cv::Size(13, 13)),
+                    KSize(cv::Size(15, 15)),
+                    KSize(cv::Size(17, 17)),
+                    KSize(cv::Size(19, 19)),
+                    KSize(cv::Size(21, 21)),
+                    KSize(cv::Size(23, 23)),
+                    KSize(cv::Size(25, 25)),
+                    KSize(cv::Size(27, 27)),
+                    KSize(cv::Size(29, 29)),
+                    KSize(cv::Size(31, 31))),
     testing::Values(BorderType(cv::BORDER_REFLECT101),
                     BorderType(cv::BORDER_REPLICATE),
                     BorderType(cv::BORDER_CONSTANT),
@@ -350,7 +344,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Laplacian, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
-    testing::Values(KSize(1, 1), KSize(3, 3)),
+    testing::Values(KSize(cv::Size(1, 1)), KSize(cv::Size(3, 3))),
     WHOLE_SUBMAT));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -557,6 +551,8 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Filter2D, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
-    testing::Values(KSize(3, 3), KSize(5, 5), KSize(7, 7), KSize(11, 11), KSize(13, 13), KSize(15, 15)),
+    testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7)), KSize(cv::Size(11, 11)), KSize(cv::Size(13, 13)), KSize(cv::Size(15, 15))),
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
     WHOLE_SUBMAT));
+
+} // namespace

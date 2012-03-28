@@ -50,7 +50,7 @@ using namespace cv::gpu;
 void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_nogpu(); }
 void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
-void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, Stream&) { throw_nogpu(); }
+void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_nogpu(); }
 void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -213,33 +213,29 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void reprojectImageTo3D_gpu(const DevMem2Db& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
-        void reprojectImageTo3D_gpu(const DevMem2D_<short>& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream);
+        template <typename T, typename D>
+        void reprojectImageTo3D_gpu(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
     }
 }}}
 
-namespace
+void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, int dst_cn, Stream& stream)
 {
-    template <typename T>
-    void reprojectImageTo3D_caller(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream)
+    using namespace cv::gpu::device::imgproc;
+
+    typedef void (*func_t)(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
+    static const func_t funcs[2][4] = 
     {
-        using namespace ::cv::gpu::device::imgproc;
+        {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>},
+        {reprojectImageTo3D_gpu<uchar, float4>, 0, 0, reprojectImageTo3D_gpu<short, float4>}
+    };
 
-        xyzw.create(disp.rows, disp.cols, CV_32FC4);
+    CV_Assert(disp.type() == CV_8U || disp.type() == CV_16S);
+    CV_Assert(Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4 && Q.isContinuous());
+    CV_Assert(dst_cn == 3 || dst_cn == 4);
 
-        reprojectImageTo3D_gpu((DevMem2D_<T>)disp, xyzw, Q.ptr<float>(), stream);
-    }
+    xyz.create(disp.size(), CV_MAKE_TYPE(CV_32F, dst_cn));
 
-    typedef void (*reprojectImageTo3D_caller_t)(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, const cudaStream_t& stream);
-
-    const reprojectImageTo3D_caller_t reprojectImageTo3D_callers[] = {reprojectImageTo3D_caller<unsigned char>, 0, 0, reprojectImageTo3D_caller<short>, 0, 0, 0, 0};
-}
-
-void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, Stream& stream)
-{
-    CV_Assert((disp.type() == CV_8U || disp.type() == CV_16S) && Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4);
-
-    reprojectImageTo3D_callers[disp.type()](disp, xyzw, Q, StreamAccessor::getStream(stream));
+    funcs[dst_cn == 4][disp.type()](disp, xyz, Q.ptr<float>(), StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1513,8 +1509,10 @@ void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_th
 {
     using namespace ::cv::gpu::device::canny;
 
-    CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
     CV_Assert(src.type() == CV_8UC1);
+
+    if (!TargetArchs::builtWith(SHARED_ATOMICS) || !DeviceInfo().supports(SHARED_ATOMICS))
+        CV_Error(CV_StsNotImplemented, "The device doesn't support shared atomics");
 
     if( low_thresh > high_thresh )
         std::swap( low_thresh, high_thresh);
