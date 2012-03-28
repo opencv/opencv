@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     TS::ptr()->init("gpu");
     InitGoogleTest(&argc, argv);
 
-    const char* keys ="{ nvtest_output_level | nvtest_output_level | none | NVidia test verbosity level }";
+    const char* keys ="{ nvtest_output_level | nvtest_output_level | compact | NVidia test verbosity level }";
 
     CommandLineParser parser(argc, (const char**)argv, keys);
 

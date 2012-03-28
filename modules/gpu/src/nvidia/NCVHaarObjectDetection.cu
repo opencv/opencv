@@ -77,110 +77,52 @@ NCV_CT_ASSERT(K_WARP_SIZE == 32); //this is required for the manual unroll of th
 
 //Almost the same as naive scan1Inclusive, but doesn't need __syncthreads()
 //assuming size <= WARP_SIZE and size is power of 2
-//template <class T>
-//inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
-//{
-//    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
-//    s_Data[pos] = 0;
-//    pos += K_WARP_SIZE;
-//    s_Data[pos] = idata;
-//
-//    s_Data[pos] += s_Data[pos - 1];
-//    s_Data[pos] += s_Data[pos - 2];
-//    s_Data[pos] += s_Data[pos - 4];
-//    s_Data[pos] += s_Data[pos - 8];
-//    s_Data[pos] += s_Data[pos - 16];
-//
-//    return s_Data[pos];
-//}
-
-
-//template <class T>
-//inline __device__ T warpScanExclusive(T idata, volatile T *s_Data)
-//{
-//    return warpScanInclusive(idata, s_Data) - idata;
-//}
-//
-//
-//template <class T, Ncv32u tiNumScanThreads>
-//inline __device__ T blockScanInclusive(T idata, volatile T *s_Data)
-//{
-//    if (tiNumScanThreads > K_WARP_SIZE)
-//    {
-//        //Bottom-level inclusive warp scan
-//        T warpResult = warpScanInclusive(idata, s_Data);
-//
-//        //Save top elements of each warp for exclusive warp scan
-//        //sync to wait for warp scans to complete (because s_Data is being overwritten)
-//        __syncthreads();
-//        if( (threadIdx.x & (K_WARP_SIZE - 1)) == (K_WARP_SIZE - 1) )
-//        {
-//            s_Data[threadIdx.x >> K_LOG2_WARP_SIZE] = warpResult;
-//        }
-//
-//        //wait for warp scans to complete
-//        __syncthreads();
-//
-//        if( threadIdx.x < (tiNumScanThreads / K_WARP_SIZE) )
-//        {
-//            //grab top warp elements
-//            T val = s_Data[threadIdx.x];
-//            //calculate exclusive scan and write back to shared memory
-//            s_Data[threadIdx.x] = warpScanExclusive(val, s_Data);
-//        }
-//
-//        //return updated warp scans with exclusive scan results
-//        __syncthreads();
-//        return warpResult + s_Data[threadIdx.x >> K_LOG2_WARP_SIZE];
-//    }
-//    else
-//    {
-//        return warpScanInclusive(idata, s_Data);
-//    }
-//}
-
-template <Ncv32u size>
-__device__ Ncv32u warpScanInclusive(Ncv32u idata, volatile Ncv32u* s_Data)
+__device__ Ncv32u warpScanInclusive(Ncv32u idata, volatile Ncv32u *s_Data)
 {
-    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (size - 1));
+    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
     s_Data[pos] = 0;
-    pos += size;
+    pos += K_WARP_SIZE;
     s_Data[pos] = idata;
 
-    for(Ncv32u offset = 1; offset < size; offset <<= 1)
-        s_Data[pos] += s_Data[pos - offset];
+    s_Data[pos] += s_Data[pos - 1];
+    s_Data[pos] += s_Data[pos - 2];
+    s_Data[pos] += s_Data[pos - 4];
+    s_Data[pos] += s_Data[pos - 8];
+    s_Data[pos] += s_Data[pos - 16];
 
     return s_Data[pos];
 }
 
-template <Ncv32u size>
-__forceinline__ __device__ Ncv32u warpScanExclusive(Ncv32u idata, volatile Ncv32u *s_Data)
+__device__ __forceinline__ Ncv32u warpScanExclusive(Ncv32u idata, volatile Ncv32u *s_Data)
 {
-    return warpScanInclusive<size>(idata, s_Data) - idata;
+    return warpScanInclusive(idata, s_Data) - idata;
 }
 
-template <Ncv32u size, Ncv32u tiNumScanThreads>
+template <Ncv32u tiNumScanThreads>
 __device__ Ncv32u scan1Inclusive(Ncv32u idata, volatile Ncv32u *s_Data)
 {
-    if(size > K_WARP_SIZE)
+    if (tiNumScanThreads > K_WARP_SIZE)
     {
         //Bottom-level inclusive warp scan
-        Ncv32u warpResult = warpScanInclusive<K_WARP_SIZE>(idata, s_Data);
+        Ncv32u warpResult = warpScanInclusive(idata, s_Data);
 
         //Save top elements of each warp for exclusive warp scan
         //sync to wait for warp scans to complete (because s_Data is being overwritten)
         __syncthreads();
         if( (threadIdx.x & (K_WARP_SIZE - 1)) == (K_WARP_SIZE - 1) )
+        {
             s_Data[threadIdx.x >> K_LOG2_WARP_SIZE] = warpResult;
+        }
 
         //wait for warp scans to complete
         __syncthreads();
+
         if( threadIdx.x < (tiNumScanThreads / K_WARP_SIZE) )
         {
             //grab top warp elements
             Ncv32u val = s_Data[threadIdx.x];
-            //calculate exclsive scan and write back to shared memory
-            s_Data[threadIdx.x] = warpScanExclusive<(size >> K_LOG2_WARP_SIZE)>(val, s_Data);
+            //calculate exclusive scan and write back to shared memory
+            s_Data[threadIdx.x] = warpScanExclusive(val, s_Data);
         }
 
         //return updated warp scans with exclusive scan results
@@ -189,7 +131,7 @@ __device__ Ncv32u scan1Inclusive(Ncv32u idata, volatile Ncv32u *s_Data)
     }
     else
     {
-        return warpScanInclusive<size>(idata, s_Data);
+        return warpScanInclusive(idata, s_Data);
     }
 }
 
@@ -295,7 +237,7 @@ __device__ void compactBlockWriteOutAnchorParallel(Ncv32u threadPassFlag, Ncv32u
     __shared__ Ncv32u numPassed;
     __shared__ Ncv32u outMaskOffset;
 
-    Ncv32u incScan = scan1Inclusive<NUM_THREADS_ANCHORSPARALLEL, NUM_THREADS_ANCHORSPARALLEL>(threadPassFlag, shmem);
+    Ncv32u incScan = scan1Inclusive<NUM_THREADS_ANCHORSPARALLEL>(threadPassFlag, shmem);
     __syncthreads();
 
     if (threadIdx.x == NUM_THREADS_ANCHORSPARALLEL-1)
@@ -391,11 +333,14 @@ __global__ void applyHaarClassifierAnchorParallel(Ncv32u *d_IImg, Ncv32u IImgStr
 
     NcvBool bPass = true;
 
-    if (!tbDoAtomicCompaction || tbDoAtomicCompaction && !bInactiveThread)
+    if (!tbDoAtomicCompaction || tbDoAtomicCompaction)
     {
-        Ncv32f pixelStdDev = d_weights[y_offs * weightsStride + x_offs];
+        Ncv32f pixelStdDev = 0.0f;
 
-        for (Ncv32u iStage = startStageInc; iStage<endStageExc; iStage++)
+        if (!bInactiveThread)
+            pixelStdDev = d_weights[y_offs * weightsStride + x_offs];
+
+        for (Ncv32u iStage = startStageInc; iStage < endStageExc; iStage++)
         {
             Ncv32f curStageSum = 0.0f;
 
@@ -409,67 +354,70 @@ __global__ void applyHaarClassifierAnchorParallel(Ncv32u *d_IImg, Ncv32u IImgStr
                 NcvBool bMoreNodesToTraverse = true;
                 Ncv32u iNode = curRootNodeOffset;
 
-                while (bMoreNodesToTraverse)
+                if (bPass && !bInactiveThread)
                 {
-                    HaarClassifierNode128 curNode = getClassifierNode<tbCacheTextureCascade>(iNode, d_ClassifierNodes);
-                    HaarFeatureDescriptor32 featuresDesc = curNode.getFeatureDesc();
-                    Ncv32u curNodeFeaturesNum = featuresDesc.getNumFeatures();
-                    Ncv32u iFeature = featuresDesc.getFeaturesOffset();
-
-                    Ncv32f curNodeVal = 0.0f;
-
-                    for (Ncv32u iRect=0; iRect<curNodeFeaturesNum; iRect++)
+                    while (bMoreNodesToTraverse)
                     {
-                        Ncv32f rectWeight;
-                        Ncv32u rectX, rectY, rectWidth, rectHeight;
-                        getFeature<tbCacheTextureCascade>
-                            (iFeature + iRect, d_Features,
-                            &rectWeight, &rectX, &rectY, &rectWidth, &rectHeight);
+                        HaarClassifierNode128 curNode = getClassifierNode<tbCacheTextureCascade>(iNode, d_ClassifierNodes);
+                        HaarFeatureDescriptor32 featuresDesc = curNode.getFeatureDesc();
+                        Ncv32u curNodeFeaturesNum = featuresDesc.getNumFeatures();
+                        Ncv32u iFeature = featuresDesc.getFeaturesOffset();
 
-                        Ncv32u iioffsTL = (y_offs + rectY) * IImgStride + (x_offs + rectX);
-                        Ncv32u iioffsTR = iioffsTL + rectWidth;
-                        Ncv32u iioffsBL = iioffsTL + rectHeight * IImgStride;
-                        Ncv32u iioffsBR = iioffsBL + rectWidth;
+                        Ncv32f curNodeVal = 0.0f;
 
-                        Ncv32u rectSum = getElemIImg<tbCacheTextureIImg>(iioffsBR, d_IImg) -
-                                         getElemIImg<tbCacheTextureIImg>(iioffsBL, d_IImg) +
-                                         getElemIImg<tbCacheTextureIImg>(iioffsTL, d_IImg) -
-                                         getElemIImg<tbCacheTextureIImg>(iioffsTR, d_IImg);
+                        for (Ncv32u iRect=0; iRect<curNodeFeaturesNum; iRect++)
+                        {
+                            Ncv32f rectWeight;
+                            Ncv32u rectX, rectY, rectWidth, rectHeight;
+                            getFeature<tbCacheTextureCascade>
+                                (iFeature + iRect, d_Features,
+                                &rectWeight, &rectX, &rectY, &rectWidth, &rectHeight);
 
-#if defined CPU_FP_COMPLIANCE || defined DISABLE_MAD_SELECTIVELY
-                    curNodeVal += __fmul_rn((Ncv32f)rectSum, rectWeight);
-#else
-                    curNodeVal += (Ncv32f)rectSum * rectWeight;
-#endif
-                    }
+                            Ncv32u iioffsTL = (y_offs + rectY) * IImgStride + (x_offs + rectX);
+                            Ncv32u iioffsTR = iioffsTL + rectWidth;
+                            Ncv32u iioffsBL = iioffsTL + rectHeight * IImgStride;
+                            Ncv32u iioffsBR = iioffsBL + rectWidth;
 
-                    HaarClassifierNodeDescriptor32 nodeLeft = curNode.getLeftNodeDesc();
-                    HaarClassifierNodeDescriptor32 nodeRight = curNode.getRightNodeDesc();
-                    Ncv32f nodeThreshold = curNode.getThreshold();
+                            Ncv32u rectSum = getElemIImg<tbCacheTextureIImg>(iioffsBR, d_IImg) -
+                                             getElemIImg<tbCacheTextureIImg>(iioffsBL, d_IImg) +
+                                             getElemIImg<tbCacheTextureIImg>(iioffsTL, d_IImg) -
+                                             getElemIImg<tbCacheTextureIImg>(iioffsTR, d_IImg);
 
-                    HaarClassifierNodeDescriptor32 nextNodeDescriptor;
-                    NcvBool nextNodeIsLeaf;
+    #if defined CPU_FP_COMPLIANCE || defined DISABLE_MAD_SELECTIVELY
+                        curNodeVal += __fmul_rn((Ncv32f)rectSum, rectWeight);
+    #else
+                        curNodeVal += (Ncv32f)rectSum * rectWeight;
+    #endif
+                        }
 
-                    if (curNodeVal < scaleArea * pixelStdDev * nodeThreshold)
-                    {
-                        nextNodeDescriptor = nodeLeft;
-                        nextNodeIsLeaf = featuresDesc.isLeftNodeLeaf();
-                    }
-                    else
-                    {
-                        nextNodeDescriptor = nodeRight;
-                        nextNodeIsLeaf = featuresDesc.isRightNodeLeaf();
-                    }
+                        HaarClassifierNodeDescriptor32 nodeLeft = curNode.getLeftNodeDesc();
+                        HaarClassifierNodeDescriptor32 nodeRight = curNode.getRightNodeDesc();
+                        Ncv32f nodeThreshold = curNode.getThreshold();
 
-                    if (nextNodeIsLeaf)
-                    {
-                        Ncv32f tmpLeafValue = nextNodeDescriptor.getLeafValue();
-                        curStageSum += tmpLeafValue;
-                        bMoreNodesToTraverse = false;
-                    }
-                    else
-                    {
-                        iNode = nextNodeDescriptor.getNextNodeOffset();
+                        HaarClassifierNodeDescriptor32 nextNodeDescriptor;
+                        NcvBool nextNodeIsLeaf;
+
+                        if (curNodeVal < scaleArea * pixelStdDev * nodeThreshold)
+                        {
+                            nextNodeDescriptor = nodeLeft;
+                            nextNodeIsLeaf = featuresDesc.isLeftNodeLeaf();
+                        }
+                        else
+                        {
+                            nextNodeDescriptor = nodeRight;
+                            nextNodeIsLeaf = featuresDesc.isRightNodeLeaf();
+                        }
+
+                        if (nextNodeIsLeaf)
+                        {
+                            Ncv32f tmpLeafValue = nextNodeDescriptor.getLeafValue();
+                            curStageSum += tmpLeafValue;
+                            bMoreNodesToTraverse = false;
+                        }
+                        else
+                        {
+                            iNode = nextNodeDescriptor.getNextNodeOffset();
+                        }
                     }
                 }
 
@@ -481,7 +429,6 @@ __global__ void applyHaarClassifierAnchorParallel(Ncv32u *d_IImg, Ncv32u IImgStr
             {
                 bPass = false;
                 outMaskVal = OBJDET_MASK_ELEMENT_INVALID_32U;
-                break;
             }
         }
     }
@@ -1100,7 +1047,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
 
     NcvBool bTexCacheCascade = devProp.major < 2;
     NcvBool bTexCacheIImg = true; //this works better even on Fermi so far
-    NcvBool bDoAtomicCompaction = false;// devProp.major >= 2 || (devProp.major == 1 && devProp.minor >= 3);
+    NcvBool bDoAtomicCompaction = devProp.major >= 2 || (devProp.major == 1 && devProp.minor >= 3);
 
     NCVVector<Ncv32u> *d_ptrNowData = &d_vecPixelMask;
     NCVVector<Ncv32u> *d_ptrNowTmp = &d_vecPixelMaskTmp;

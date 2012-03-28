@@ -84,7 +84,7 @@ struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 struct NPPST : NVidiaTest {};
 struct NCV : NVidiaTest {};
 
-OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
+OutputLevel nvidiaTestOutputLevel = OutputLevelCompact;
 
 TEST_P(NPPST, Integral)
 {
