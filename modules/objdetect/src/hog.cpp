@@ -109,6 +109,7 @@ bool HOGDescriptor::read(FileNode& obj)
     obj["histogramNormType"] >> histogramNormType;
     obj["L2HysThreshold"] >> L2HysThreshold;
     obj["gammaCorrection"] >> gammaCorrection;
+    obj["nlevels"] >> nlevels;
     
     FileNode vecNode = obj["SVMDetector"];
     if( vecNode.isSeq() )
@@ -134,7 +135,8 @@ void HOGDescriptor::write(FileStorage& fs, const String& objName) const
     << "winSigma" << getWinSigma()
     << "histogramNormType" << histogramNormType
     << "L2HysThreshold" << L2HysThreshold
-    << "gammaCorrection" << gammaCorrection;
+    << "gammaCorrection" << gammaCorrection
+    << "nlevels" << nlevels;
     if( !svmDetector.empty() )
         fs << "SVMDetector" << "[:" << svmDetector << "]";
     fs << "}";
@@ -166,6 +168,7 @@ void HOGDescriptor::copyTo(HOGDescriptor& c) const
     c.L2HysThreshold = L2HysThreshold;
     c.gammaCorrection = gammaCorrection;
     c.svmDetector = svmDetector;
+    c.nlevels = nlevels;
 }
 
 void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
