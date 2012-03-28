@@ -1996,19 +1996,98 @@ void sqrt(InputArray a, OutputArray b)
 
 /************************** CheckArray for NaN's, Inf's *********************************/
 
-bool checkRange(InputArray _src, bool quiet, Point* pt,
-                double minVal, double maxVal)
+template<int cv_mat_type> struct mat_type_assotiations{};
+
+template<> struct mat_type_assotiations<CV_8U>
+{
+    typedef unsigned char type;
+    static const type min_allowable = 0x0;
+    static const type max_allowable = 0xFF;
+};
+
+template<> struct mat_type_assotiations<CV_8S>
+{
+    typedef signed char type;
+    static const type min_allowable = SCHAR_MIN;
+    static const type max_allowable = SCHAR_MAX;
+};
+
+template<> struct mat_type_assotiations<CV_16U>
+{
+    typedef unsigned short type;
+    static const type min_allowable = 0x0;
+    static const type max_allowable = USHRT_MAX;
+};
+template<> struct mat_type_assotiations<CV_16S>
+{
+    typedef signed short type;
+    static const type min_allowable = SHRT_MIN;
+    static const type max_allowable = SHRT_MAX;
+};
+
+template<> struct mat_type_assotiations<CV_32S>
+{
+    typedef int type;
+    static const type min_allowable = (-INT_MAX - 1);
+    static const type max_allowable = INT_MAX;
+};
+
+template<int depth>
+bool chackIntegerRang(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value)
+{
+    typedef mat_type_assotiations<depth> type_ass; 
+    
+    if (minVal < type_ass::min_allowable && maxVal > type_ass::max_allowable)
+    {
+        return true;
+    }
+    else if (minVal >= type_ass::max_allowable || maxVal <= type_ass::min_allowable || maxVal <= minVal)
+    {
+        bad_pt = cv::Point(0,0);
+        return false;
+    }
+    cv::Mat as_one_channel = src.reshape(1,0);
+
+    for (int j = 0; j < as_one_channel.rows; ++j)
+        for (int i = 0; i < as_one_channel.cols; ++i)
+        {    
+            if (as_one_channel.at<typename type_ass::type>(j ,i) <= minVal || as_one_channel.at<typename type_ass::type>(j ,i) >= maxVal)
+            {            
+                bad_pt.y = j ; 
+                bad_pt.x = i % src.channels();
+                bad_value = as_one_channel.at<typename type_ass::type>(j ,i);
+                return false;
+            }
+        }
+    bad_value = 0.0;
+    
+    return true;
+}
+
+typedef bool (*check_pange_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value); 
+
+check_pange_function check_range_functions[] = 
+{
+    &chackIntegerRang<CV_8U>,
+    &chackIntegerRang<CV_8S>,
+    &chackIntegerRang<CV_16U>,
+    &chackIntegerRang<CV_16S>,
+    &chackIntegerRang<CV_32S>
+};
+
+bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double maxVal)
 {
     Mat src = _src.getMat();
-    if( src.dims > 2 )
+
+    if ( src.dims > 2 )
     {
         const Mat* arrays[] = {&src, 0};
         Mat planes[1];
         NAryMatIterator it(arrays, planes);
         
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        for ( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if( !checkRange( it.planes[0], quiet, pt, minVal, maxVal ))
+            if (!checkRange( it.planes[0], quiet, pt, minVal, maxVal ))
             {
                 // todo: set index properly
                 return false;
@@ -2021,21 +2100,12 @@ bool checkRange(InputArray _src, bool quiet, Point* pt,
     Point badPt(-1, -1);
     double badValue = 0;
 
-    if( depth < CV_32F )
+    if (depth < CV_32F)
     {
-        double m = 0, M = 0;
-        Point mp, MP;
-        minMaxLoc(src.reshape(1,0), &m, &M, &mp, &MP);
-        if( M >= maxVal )
-        {
-            badPt = MP;
-            badValue = M;
-        }
-        else if( m < minVal )
-        {
-            badPt = mp;
-            badValue = m;
-        }
+        int minVali = cvFloor(minVal);
+        int maxVali = cvCeil(maxVal);
+
+        (check_range_functions[depth])(src, badPt, minVali, maxVali, badValue);
     }
     else
     {

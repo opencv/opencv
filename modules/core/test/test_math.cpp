@@ -2347,6 +2347,93 @@ void Core_SolvePolyTest::run( int )
     }
 }
 
+template <typename T> class Core_CheckRange : public testing::Test {};
+
+template<typename type> struct depth_for_type{};
+
+template<> struct depth_for_type<unsigned char>
+{
+    static const int depth = CV_8U;
+};
+
+template<> struct depth_for_type<signed char>
+{
+    static const int depth = CV_8S;
+};
+
+template<> struct depth_for_type<unsigned short>
+{
+    static const int depth = CV_16U;
+};
+
+template<> struct depth_for_type<signed short>
+{
+    static const int depth = CV_16S;
+};
+
+template<> struct depth_for_type<signed int>
+{
+    static const int depth = CV_32S;
+};
+
+
+TYPED_TEST_CASE_P(Core_CheckRange);
+
+TYPED_TEST_P(Core_CheckRange, Negative)
+{
+    double min_bound = 4.5;
+    double max_bound = 16.0;
+
+    TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
+    cv::Mat src = cv::Mat(3,3, depth_for_type<TypeParam>::depth, data);
+
+    cv::Point* bad_pt = new cv::Point(0, 0);  
+
+    ASSERT_FALSE(checkRange(src, true, bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt->x,0);
+    ASSERT_EQ(bad_pt->y,1);
+
+    delete bad_pt;
+}
+
+TYPED_TEST_P(Core_CheckRange, Positive)
+{
+    double min_bound = -1;
+    double max_bound = 16.0;
+
+    TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
+    cv::Mat src = cv::Mat(3,3, depth_for_type<TypeParam>::depth, data);
+
+    cv::Point* bad_pt = new cv::Point(0, 0);  
+
+    ASSERT_TRUE(checkRange(src, true, bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt->x,0);
+    ASSERT_EQ(bad_pt->y,0);
+
+    delete bad_pt;
+}
+
+TYPED_TEST_P(Core_CheckRange, Bounds)
+{
+    double min_bound = 24.5;
+    double max_bound = 1.0;
+
+    TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
+    cv::Mat src = cv::Mat(3,3, depth_for_type<TypeParam>::depth, data);
+
+    cv::Point* bad_pt = new cv::Point(0, 0);    
+
+    ASSERT_FALSE(checkRange(src, true, bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt->x,0);
+    ASSERT_EQ(bad_pt->y,0);
+
+    delete bad_pt;
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds);
+
+typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
+INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
