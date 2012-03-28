@@ -39,6 +39,13 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         return mFrameHeight;
     }
 
+    public void setPreview() throws IOException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
+            mCamera.setPreviewTexture( new SurfaceTexture(10) );
+        else
+        	mCamera.setPreviewDisplay(null);
+	}
+    
     public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
         Log.i(TAG, "surfaceCreated");
         if (mCamera != null) {
@@ -61,15 +68,11 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
             params.setPreviewSize(getFrameWidth(), getFrameHeight());
             mCamera.setParameters(params);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            	mCamera.setPreviewTexture( new SurfaceTexture(10) );
-            } else {
-	            try {
-					mCamera.setPreviewDisplay(null);
-				} catch (IOException e) {
-					Log.e(TAG, "mCamera.setPreviewDisplay fails: " + e);
-				}
-            }
+            try {
+            	setPreview();
+			} catch (IOException e) {
+				Log.e(TAG, "mCamera.setPreviewDisplay/setPreviewTexture fails: " + e);
+			}
             mCamera.startPreview();
         }
     }
