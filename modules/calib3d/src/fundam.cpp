@@ -680,7 +680,13 @@ CV_IMPL void cvComputeCorrespondEpilines( const CvMat* points, int pointImageID,
     if( (depth != CV_32F && depth != CV_64F) || (cn != 1 && cn != 2 && cn != 3) )
         CV_Error( CV_StsUnsupportedFormat, "The format of point matrix is unsupported" );
 
-    if( points->rows > points->cols )
+    if( cn > 1 )
+    {
+        dims = cn;
+        CV_Assert( points->rows == 1 || points->cols == 1 );
+        count = points->rows * points->cols;
+    }
+    else if( points->rows > points->cols )
     {
         dims = cn*points->cols;
         count = points->rows;
@@ -689,7 +695,7 @@ CV_IMPL void cvComputeCorrespondEpilines( const CvMat* points, int pointImageID,
     {
         if( (points->rows > 1 && cn > 1) || (points->rows == 1 && cn == 1) )
             CV_Error( CV_StsBadSize, "The point matrix does not have a proper layout (2xn, 3xn, nx2 or nx3)" );
-        dims = cn * points->rows;
+        dims = points->rows;
         count = points->cols;
     }
 
@@ -713,7 +719,13 @@ CV_IMPL void cvComputeCorrespondEpilines( const CvMat* points, int pointImageID,
     if( (abc_depth != CV_32F && abc_depth != CV_64F) || (abc_cn != 1 && abc_cn != 3) )
         CV_Error( CV_StsUnsupportedFormat, "The format of the matrix of lines is unsupported" );
 
-    if( lines->rows > lines->cols )
+    if( abc_cn > 1 )
+    {
+        abc_dims = abc_cn;
+        CV_Assert( lines->rows == 1 || lines->cols == 1 );
+        abc_count = lines->rows * lines->cols;
+    }
+    else if( lines->rows > lines->cols )
     {
         abc_dims = abc_cn*lines->cols;
         abc_count = lines->rows;
@@ -722,7 +734,7 @@ CV_IMPL void cvComputeCorrespondEpilines( const CvMat* points, int pointImageID,
     {
         if( (lines->rows > 1 && abc_cn > 1) || (lines->rows == 1 && abc_cn == 1) )
             CV_Error( CV_StsBadSize, "The lines matrix does not have a proper layout (3xn or nx3)" );
-        abc_dims = abc_cn * lines->rows;
+        abc_dims = lines->rows;
         abc_count = lines->cols;
     }
 
@@ -735,7 +747,7 @@ CV_IMPL void cvComputeCorrespondEpilines( const CvMat* points, int pointImageID,
     elem_size = CV_ELEM_SIZE(depth);
     abc_elem_size = CV_ELEM_SIZE(abc_depth);
 
-    if( points->rows == dims )
+    if( cn == 1 && points->rows == dims )
     {
         plane_stride = points->step;
         stride = elem_size;
@@ -746,7 +758,7 @@ CV_IMPL void cvComputeCorrespondEpilines( const CvMat* points, int pointImageID,
         stride = points->rows == 1 ? dims*elem_size : points->step;
     }
 
-    if( lines->rows == 3 )
+    if( abc_cn == 1 && lines->rows == 3 )
     {
         abc_plane_stride = lines->step;
         abc_stride = abc_elem_size;

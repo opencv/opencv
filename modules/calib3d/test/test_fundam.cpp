@@ -1246,23 +1246,24 @@ void CV_ComputeEpilinesTest::get_test_array_types_and_sizes( int /*test_case_idx
     int fm_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
     int pt_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
     int ln_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
-    double pt_count_exp = cvtest::randReal(rng)*6 + 1;
+    double pt_count_exp = cvtest::randReal(rng)*6;
 
     which_image = 1 + (cvtest::randInt(rng) % 2);
 
     pt_count = cvRound(exp(pt_count_exp));
-    pt_count = MAX( pt_count, 5 );
+    pt_count = MAX( pt_count, 1 );
+    bool few_points = pt_count < 5;
 
     dims = 2 + (cvtest::randInt(rng) % 2);
 
     types[INPUT][0] = CV_MAKETYPE(pt_depth, 1);
 
-    if( cvtest::randInt(rng) % 2 )
+    if( cvtest::randInt(rng) % 2 && !few_points )
         sizes[INPUT][0] = cvSize(pt_count, dims);
     else
     {
         sizes[INPUT][0] = cvSize(dims, pt_count);
-        if( cvtest::randInt(rng) % 2 )
+        if( cvtest::randInt(rng) % 2 || few_points )
         {
             types[INPUT][0] = CV_MAKETYPE(pt_depth, dims);
             if( cvtest::randInt(rng) % 2 )
@@ -1277,12 +1278,12 @@ void CV_ComputeEpilinesTest::get_test_array_types_and_sizes( int /*test_case_idx
 
     types[OUTPUT][0] = CV_MAKETYPE(ln_depth, 1);
 
-    if( cvtest::randInt(rng) % 2 )
+    if( cvtest::randInt(rng) % 2 && !few_points )
         sizes[OUTPUT][0] = cvSize(pt_count, 3);
     else
     {
         sizes[OUTPUT][0] = cvSize(3, pt_count);
-        if( cvtest::randInt(rng) % 2 )
+        if( cvtest::randInt(rng) % 2 || few_points )
         {
             types[OUTPUT][0] = CV_MAKETYPE(ln_depth, 3);
             if( cvtest::randInt(rng) % 2 )
@@ -1354,10 +1355,10 @@ void CV_ComputeEpilinesTest::prepare_to_validation( int /*test_case_idx*/ )
     test_convertHomogeneous( lines, test_mat[REF_OUTPUT][0] );
 }
 
-
 TEST(Calib3d_Rodrigues, accuracy) { CV_RodriguesTest test; test.safe_run(); }
 TEST(Calib3d_FindFundamentalMat, accuracy) { CV_FundamentalMatTest test; test.safe_run(); }
 TEST(Calib3d_ConvertHomogeneoous, accuracy) { CV_ConvertHomogeneousTest test; test.safe_run(); }
 TEST(Calib3d_ComputeEpilines, accuracy) { CV_ComputeEpilinesTest test; test.safe_run(); }
+
 
 /* End of file. */
