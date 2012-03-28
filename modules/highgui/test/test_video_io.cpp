@@ -457,7 +457,7 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             if (frame.empty())
             {
                 ts->printf(ts->LOG, "\nVideo file directory: %s\n", (dir+"../../../../").c_str());
-                ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[i].c_str());
+                ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[j].c_str());
                 ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
 				ts->printf(ts->LOG, "Error: cannot read the next frame with index %d.\n", i+1);
                 ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
