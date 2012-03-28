@@ -297,7 +297,7 @@ void CV_DetectorsTest::run( int /*start_from*/ )
     if (exp.empty())
         return;
 
-    if (!testDetector(to_test, SurfNoMaskWrap(SURF(1536+512+512, true, false, 2)), exp))
+    if (!testDetector(to_test, SurfNoMaskWrap(SURF(1536+512+512, 2)), exp))
         return;
     
     LoadExpected(string(ts->get_data_path()) + "detectors/star.xml", exp);

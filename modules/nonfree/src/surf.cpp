@@ -819,7 +819,7 @@ SURF::SURF()
     nOctaveLayers = 2;
 }
 
-SURF::SURF(double _threshold, bool _extended, bool _upright, int _nOctaves, int _nOctaveLayers)
+SURF::SURF(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, bool _upright)
 {
     hessianThreshold = _threshold;
     extended = _extended;

@@ -111,8 +111,8 @@ public:
     SURF();
     //! the full constructor taking all the necessary parameters
     explicit SURF(double _hessianThreshold,
-                  bool _extended=true, bool _upright=false,
-                  int _nOctaves=4, int _nOctaveLayers=2);
+                  int _nOctaves=4, int _nOctaveLayers=2,
+                  bool _extended=true, bool _upright=false);
 
     //! returns the descriptor size in float's (64 or 128)
     int descriptorSize() const;
