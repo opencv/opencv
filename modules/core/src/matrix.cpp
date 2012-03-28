@@ -2434,6 +2434,7 @@ double cv::kmeans( InputArray _data, int K,
 
     attempts = std::max(attempts, 1);
     CV_Assert( data.dims <= 2 && type == CV_32F && K > 0 );
+    CV_Assert( N >= K );
 
     _bestLabels.create(N, 1, CV_32S, -1, true);
     
@@ -2557,18 +2558,61 @@ double cv::kmeans( InputArray _data, int K,
 
                 if( iter > 0 )
                     max_center_shift = 0;
+                
+                for( k = 0; k < K; k++ )
+                {
+                    if( counters[k] != 0 )
+                        continue;
+
+                    // if some cluster appeared to be empty then:
+                    //   1. find the biggest cluster
+                    //   2. find the farthest from the center point in the biggest cluster
+                    //   3. exclude the farthest point from the biggest cluster and form a new 1-point cluster.
+                    int max_k = 0;
+                    for( int k1 = 1; k1 < K; k++ )
+                    {
+                        if( counters[max_k] < counters[k1] )
+                            max_k = k1;
+                    }
+                    
+                    double max_dist = 0;                        
+                    int farthest_i = -1;
+                    float* new_center = centers.ptr<float>(k);
+                    float* old_center = centers.ptr<float>(max_k);
+                    
+                    for( i = 0; i < N; i++ )
+                    {
+                        if( labels[i] != max_k )
+                            continue;
+                        sample = data.ptr<float>(i);
+                        double dist = normL2Sqr_(sample, old_center, dims);
+                            
+                        if( max_dist <= dist )
+                        {
+                            max_dist = dist;
+                            farthest_i = i;
+                        }
+                    }
+                    
+                    counters[max_k]--;
+                    counters[k]++;
+                    sample = data.ptr<float>(farthest_i);
+                    
+                    for( j = 0; j < dims; j++ )
+                    {
+                        old_center[j] -= sample[j];
+                        new_center[j] += sample[j];
+                    }
+                }
 
                 for( k = 0; k < K; k++ )
                 {
                     float* center = centers.ptr<float>(k);
-                    if( counters[k] != 0 )
-                    {
-                        float scale = 1.f/counters[k];
-                        for( j = 0; j < dims; j++ )
-                            center[j] *= scale;
-                    }
-                    else
-                        generateRandomCenter(_box, center, rng);
+                    CV_Assert( counters[k] != 0 );
+
+                    float scale = 1.f/counters[k];
+                    for( j = 0; j < dims; j++ )
+                        center[j] *= scale;
                     
                     if( iter > 0 )
                     {
