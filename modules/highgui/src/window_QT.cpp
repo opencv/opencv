@@ -256,77 +256,77 @@ CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 
 CV_IMPL int cvWaitKey(int delay)
 {
-	int result = -1;
+    int result = -1;
 
-	if (!guiMainThread)
-		return result;
+    if (!guiMainThread)
+        return result;
 
     unsigned long delayms = delay <= 0 ? ULONG_MAX : delay; //in milliseconds
 
-	if (multiThreads)
-	{
-		mutexKey.lock();
-		if (key_pressed.wait(&mutexKey, delayms)) //false if timeout
-		{
-			result = last_key;
-		}
-		last_key = -1;
-		mutexKey.unlock();
-	}
+    if (multiThreads)
+    {
+        mutexKey.lock();
+        if (key_pressed.wait(&mutexKey, delayms)) //false if timeout
+        {
+            result = last_key;
+        }
+        last_key = -1;
+        mutexKey.unlock();
+    }
     else
     {
-		//cannot use wait here because events will not be distributed before processEvents (the main eventLoop is broken)
-		//so I create a Thread for the QTimer
+        //cannot use wait here because events will not be distributed before processEvents (the main eventLoop is broken)
+        //so I create a Thread for the QTimer
 
-		if (delay > 0)
-			guiMainThread->timer->start(delay);
+        if (delay > 0)
+            guiMainThread->timer->start(delay);
 
-		//QMutex dummy;
+        //QMutex dummy;
 
-		while (!guiMainThread->bTimeOut)
-		{
-			qApp->processEvents(QEventLoop::AllEvents);
+        while (!guiMainThread->bTimeOut)
+        {
+            qApp->processEvents(QEventLoop::AllEvents);
 
-			if (!guiMainThread)//when all the windows are deleted
-				return result;
+            if (!guiMainThread)//when all the windows are deleted
+                return result;
 
-			mutexKey.lock();
-			if (last_key != -1)
-			{
-				result = last_key;
-				last_key = -1;
-				guiMainThread->timer->stop();
-				//printf("keypressed\n");
-			}
-			mutexKey.unlock();
+            mutexKey.lock();
+            if (last_key != -1)
+            {
+                result = last_key;
+                last_key = -1;
+                guiMainThread->timer->stop();
+                //printf("keypressed\n");
+            }
+            mutexKey.unlock();
 
-			if (result!=-1)
-			{
-				break;
-			}
-			else
-			{
-				/*
-				* //will not work, I broke the event loop !!!!
-				dummy.lock();
-				QWaitCondition waitCondition;
-				waitCondition.wait(&dummy, 2);
-				*/
+            if (result!=-1)
+            {
+                break;
+            }
+            else
+            {
+                /*
+    * //will not work, I broke the event loop !!!!
+    dummy.lock();
+    QWaitCondition waitCondition;
+    waitCondition.wait(&dummy, 2);
+    */
 
-				//to decrease CPU usage
-				//sleep 1 millisecond
+                //to decrease CPU usage
+                //sleep 1 millisecond
 #if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
-				Sleep(1);
+                Sleep(1);
 #else
-				usleep(1000);
+                usleep(1000);
 #endif
-			}
-		}
+            }
+        }
 
-		guiMainThread->bTimeOut = false;
-	}
+        guiMainThread->bTimeOut = false;
+    }
 
-	return result;
+    return result;
 }
 
 
@@ -1553,7 +1553,9 @@ CvWindow::CvWindow(QString name, int arg2)
 	//setAttribute(Qt::WA_DeleteOnClose); //in other case, does not release memory
 	setContentsMargins(0, 0, 0, 0);
 	setWindowTitle(name);
-	setObjectName(name);
+        setObjectName(name);
+
+        setFocus( Qt::PopupFocusReason ); //#1695 arrow keys are not recieved without the explicit focus
 
 	resize(400, 300);
 	setMinimumSize(1, 1);
@@ -2060,22 +2062,18 @@ void CvWindow::keyPressEvent(QKeyEvent *event)
 	//see http://doc.trolltech.com/4.6/qt.html#Key-enum
 	int key = event->key();
 
-	//bool goodKey = false;
-	bool goodKey = true;
-
-	Qt::Key qtkey = static_cast<Qt::Key>(key);
-	char asciiCode = QTest::keyToAscii(qtkey);
-	if (asciiCode != 0)
-	{
-		key = static_cast<int>(asciiCode);
-	}
+        Qt::Key qtkey = static_cast<Qt::Key>(key);
+        char asciiCode = QTest::keyToAscii(qtkey);
+        if (asciiCode != 0)
+            key = static_cast<int>(asciiCode);
+        else
+            key = event->nativeVirtualKey(); //same codes as returned by GTK-based backend
 
 	//control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions
-	if (event->modifiers() != Qt::ControlModifier && goodKey)
-	{
+        if (event->modifiers() != Qt::ControlModifier)
+        {
 		mutexKey.lock();
 		last_key = key;
-		//last_key = event->nativeVirtualKey ();
 		mutexKey.unlock();
 		key_pressed.wakeAll();
 		//event->accept();
@@ -2813,41 +2811,41 @@ void DefaultViewPort::scaleView(qreal factor,QPointF center)
 //up, down, dclick, move
 void DefaultViewPort::icvmouseHandler(QMouseEvent *event, type_mouse_event category, int &cv_event, int &flags)
 {
-	Qt::KeyboardModifiers modifiers = event->modifiers();
+    Qt::KeyboardModifiers modifiers = event->modifiers();
     Qt::MouseButtons buttons = event->buttons();
     
     flags = 0;
     if(modifiers & Qt::ShiftModifier)
-		flags |= CV_EVENT_FLAG_SHIFTKEY;
-	if(modifiers & Qt::ControlModifier)
-		flags |= CV_EVENT_FLAG_CTRLKEY;
-	if(modifiers & Qt::AltModifier)
-		flags |= CV_EVENT_FLAG_ALTKEY;
+        flags |= CV_EVENT_FLAG_SHIFTKEY;
+    if(modifiers & Qt::ControlModifier)
+        flags |= CV_EVENT_FLAG_CTRLKEY;
+    if(modifiers & Qt::AltModifier)
+        flags |= CV_EVENT_FLAG_ALTKEY;
 
     if(buttons & Qt::LeftButton)
-		flags |= CV_EVENT_FLAG_LBUTTON;
-	if(buttons & Qt::RightButton)
-		flags |= CV_EVENT_FLAG_RBUTTON;
+        flags |= CV_EVENT_FLAG_LBUTTON;
+    if(buttons & Qt::RightButton)
+        flags |= CV_EVENT_FLAG_RBUTTON;
     if(buttons & Qt::MidButton)
-		flags |= CV_EVENT_FLAG_MBUTTON;
+        flags |= CV_EVENT_FLAG_MBUTTON;
 
     cv_event = CV_EVENT_MOUSEMOVE;
-	switch(event->button())
-	{
-	case Qt::LeftButton:
-		cv_event = tableMouseButtons[category][0];
-		flags |= CV_EVENT_FLAG_LBUTTON;
-		break;
-	case Qt::RightButton:
-		cv_event = tableMouseButtons[category][1];
-		flags |= CV_EVENT_FLAG_RBUTTON;
-		break;
-	case Qt::MidButton:
-		cv_event = tableMouseButtons[category][2];
-		flags |= CV_EVENT_FLAG_MBUTTON;
-		break;
-	default:;
-	}
+    switch(event->button())
+    {
+    case Qt::LeftButton:
+        cv_event = tableMouseButtons[category][0];
+        flags |= CV_EVENT_FLAG_LBUTTON;
+        break;
+    case Qt::RightButton:
+        cv_event = tableMouseButtons[category][1];
+        flags |= CV_EVENT_FLAG_RBUTTON;
+        break;
+    case Qt::MidButton:
+        cv_event = tableMouseButtons[category][2];
+        flags |= CV_EVENT_FLAG_MBUTTON;
+        break;
+    default:;
+    }
 }
 
 
