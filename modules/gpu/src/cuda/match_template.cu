@@ -559,7 +559,7 @@ namespace cv { namespace gpu { namespace device
         void matchTemplatePrepared_CCOFF_NORMED_8U(
                     int w, int h, const DevMem2D_<unsigned int> image_sum, 
                     const DevMem2D_<unsigned long long> image_sqsum,
-                    unsigned int templ_sum, unsigned int templ_sqsum,
+                    unsigned int templ_sum, unsigned long long templ_sqsum,
                     DevMem2Df result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -618,8 +618,8 @@ namespace cv { namespace gpu { namespace device
                     int w, int h, 
                     const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
                     const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
-                    unsigned int templ_sum_r, unsigned int templ_sqsum_r,
-                    unsigned int templ_sum_g, unsigned int templ_sqsum_g,
+                    unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
+                    unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
                     DevMem2Df result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -694,9 +694,9 @@ namespace cv { namespace gpu { namespace device
                     const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
                     const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
                     const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
-                    unsigned int templ_sum_r, unsigned int templ_sqsum_r,
-                    unsigned int templ_sum_g, unsigned int templ_sqsum_g,
-                    unsigned int templ_sum_b, unsigned int templ_sqsum_b,
+                    unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
+                    unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
+                    unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
                     DevMem2Df result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -782,10 +782,10 @@ namespace cv { namespace gpu { namespace device
                     const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
                     const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
                     const DevMem2D_<unsigned int> image_sum_a, const DevMem2D_<unsigned long long> image_sqsum_a,
-                    unsigned int templ_sum_r, unsigned int templ_sqsum_r,
-                    unsigned int templ_sum_g, unsigned int templ_sqsum_g,
-                    unsigned int templ_sum_b, unsigned int templ_sqsum_b,
-                    unsigned int templ_sum_a, unsigned int templ_sqsum_a,
+                    unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
+                    unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
+                    unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
+                    unsigned int templ_sum_a, unsigned long long templ_sqsum_a,
                     DevMem2Df result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -822,7 +822,7 @@ namespace cv { namespace gpu { namespace device
         template <int cn>
         __global__ void normalizeKernel_8U(
                 int w, int h, const PtrStep<unsigned long long> image_sqsum, 
-                unsigned int templ_sqsum, DevMem2Df result)
+                unsigned long long templ_sqsum, DevMem2Df result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -837,7 +837,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
-                          unsigned int templ_sqsum, DevMem2Df result, int cn, cudaStream_t stream)
+                          unsigned long long templ_sqsum, DevMem2Df result, int cn, cudaStream_t stream)
         {
             dim3 threads(32, 8);
             dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));

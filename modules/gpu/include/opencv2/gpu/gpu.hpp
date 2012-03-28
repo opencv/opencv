@@ -716,36 +716,42 @@ CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c
 //! For complex-to-real transform it is assumed that the source matrix is packed in CUFFT's format.
 CV_EXPORTS void dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0, Stream& stream = Stream::Null());
 
-//! computes convolution (or cross-correlation) of two images using discrete Fourier transform
-//! supports source images of 32FC1 type only
-//! result matrix will have 32FC1 type
-struct CV_EXPORTS ConvolveBuf;
-CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr = false);
-CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null());
-
 struct CV_EXPORTS ConvolveBuf
 {
-    ConvolveBuf() {}
-    ConvolveBuf(Size image_size, Size templ_size)
-        { create(image_size, templ_size); }
-    void create(Size image_size, Size templ_size);
-    void create(Size image_size, Size templ_size, Size block_size);
-
-private:
-    static Size estimateBlockSize(Size result_size, Size templ_size);
-    friend void convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&, Stream& stream);
-
     Size result_size;
     Size block_size;
+    Size user_block_size;
     Size dft_size;
     int spect_len;
 
     GpuMat image_spect, templ_spect, result_spect;
     GpuMat image_block, templ_block, result_data;
+
+    void create(Size image_size, Size templ_size);
+    static Size estimateBlockSize(Size result_size, Size templ_size);
+};
+
+
+//! computes convolution (or cross-correlation) of two images using discrete Fourier transform
+//! supports source images of 32FC1 type only
+//! result matrix will have 32FC1 type
+CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr = false);
+CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null());
+
+struct CV_EXPORTS MatchTemplateBuf
+{
+    Size user_block_size;
+    GpuMat imagef, templf;
+    std::vector<GpuMat> images;
+    std::vector<GpuMat> image_sums;
+    std::vector<GpuMat> image_sqsums;
 };
 
 //! computes the proximity map for the raster template and the image where the template is searched for
-CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream& stream = Stream::Null());
+CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream &stream = Stream::Null());
+
+//! computes the proximity map for the raster template and the image where the template is searched for
+CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, MatchTemplateBuf &buf, Stream& stream = Stream::Null());
 
 //! smoothes the source image and downsamples it
 CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());

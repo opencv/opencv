@@ -1293,21 +1293,25 @@ void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
 {
     result_size = Size(image_size.width - templ_size.width + 1,
                        image_size.height - templ_size.height + 1);
-    create(image_size, templ_size, estimateBlockSize(result_size, templ_size));
-}
 
-
-void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size, Size block_size)
-{
-    result_size = Size(image_size.width - templ_size.width + 1,
-                       image_size.height - templ_size.height + 1);
-
-    this->block_size = block_size;
+    block_size = user_block_size;
+    if (user_block_size.width == 0 || user_block_size.height == 0)
+        block_size = estimateBlockSize(result_size, templ_size);
 
     dft_size.width = 1 << int(ceil(std::log(block_size.width + templ_size.width - 1.) / std::log(2.)));
     dft_size.height = 1 << int(ceil(std::log(block_size.height + templ_size.height - 1.) / std::log(2.)));
-    if (dft_size.width < 512) dft_size.width = 512;
-    if (dft_size.height < 512) dft_size.height = 512;
+
+    // CUFFT has hard-coded kernels for power-of-2 sizes (up to 8192),
+    // see CUDA Toolkit 4.1 CUFFT Library Programming Guide
+    if (dft_size.width > 8192)
+        dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1.);
+    if (dft_size.height > 8192)
+        dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1.);
+
+    // To avoid wasting time doing small DFTs
+    dft_size.width = std::max(dft_size.width, 512);
+    dft_size.height = std::max(dft_size.height, 512);
+
     createContinuous(dft_size, CV_32F, image_block);
     createContinuous(dft_size, CV_32F, templ_block);
     createContinuous(dft_size, CV_32F, result_data);
@@ -1317,17 +1321,18 @@ void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size, Size block_s
     createContinuous(1, spect_len, CV_32FC2, templ_spect);
     createContinuous(1, spect_len, CV_32FC2, result_spect);
 
-    this->block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
-    this->block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
+    // Use maximum result matrix block size for the estimated DFT block size
+    block_size.width = std::min(dft_size.width - templ_size.width + 1, result_size.width);
+    block_size.height = std::min(dft_size.height - templ_size.height + 1, result_size.height);
 }
 
 
-Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size templ_size)
+Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size*/)
 {
     int width = (result_size.width + 2) / 3;
     int height = (result_size.height + 2) / 3;
     width = std::min(width, result_size.width);
-    height = std::min(height, result_size.height);
+    height = std::min(height, result_size.height);    
     return Size(width, height);
 }
 
@@ -1367,7 +1372,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
     cufftHandle planR2C, planC2R;
     cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
-    cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
+    cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));   
 
     cufftSafeCall( cufftSetStream(planR2C, StreamAccessor::getStream(stream)) );
     cufftSafeCall( cufftSetStream(planC2R, StreamAccessor::getStream(stream)) );

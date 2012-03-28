@@ -234,6 +234,35 @@ The source matrix should be continuous, otherwise reallocation and data copying 
 .. seealso:: :ocv:func:`dft`
 
 
+gpu::ConvolveBuf
+----------------
+.. ocv:class:: gpu::ConvolveBuf
+
+Class providing a memory buffer for :ocv:func:`gpu::convolve` function, plus it allows to adjust some specific parameters. ::
+
+    struct CV_EXPORTS ConvolveBuf
+    {
+        Size result_size;
+        Size block_size;
+        Size user_block_size;
+        Size dft_size;
+        int spect_len;
+
+        GpuMat image_spect, templ_spect, result_spect;
+        GpuMat image_block, templ_block, result_data;
+
+        void create(Size image_size, Size templ_size);
+        static Size estimateBlockSize(Size result_size, Size templ_size);
+    };
+    
+You can use field `user_block_size` to set specific block size for :ocv:func:`gpu::convolve` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
+
+gpu::ConvolveBuf::create
+------------------------
+.. ocv:function:: ConvolveBuf::create(Size image_size, Size templ_size)
+
+Constructs a buffer for :ocv:func:`gpu::convolve` function with respective arguments.
+
 
 gpu::convolve
 -----------------
@@ -241,7 +270,7 @@ Computes a convolution (or cross-correlation) of two images.
 
 .. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
 
-.. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf)
+.. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream &stream = Stream::Null())
 
     :param image: Source image. Only  ``CV_32FC1`` images are supported for now.
 
@@ -251,50 +280,36 @@ Computes a convolution (or cross-correlation) of two images.
 
     :param ccorr: Flags to evaluate cross-correlation instead of convolution.
 
-    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:class:`gpu::ConvolveBuf`.
+   
+    :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`gpu::filter2D`
 
+gpu::MatchTemplateBuf
+---------------------
+.. ocv:class:: gpu::MatchTemplateBuf
 
+Class providing memory buffers for :ocv:func:`gpu::matchTemplate` function, plus it allows to adjust some specific parameters. ::
 
-gpu::ConvolveBuf
-----------------
-.. ocv:class:: gpu::ConvolveBuf
-
-Class providing a memory buffer for the :ocv:func:`gpu::convolve` function. ::
-
-    struct CV_EXPORTS ConvolveBuf
+    struct CV_EXPORTS MatchTemplateBuf
     {
-        ConvolveBuf() {}
-        ConvolveBuf(Size image_size, Size templ_size)
-            { create(image_size, templ_size); }
-        void create(Size image_size, Size templ_size);
-
-    private:
-        // Hidden
+        Size user_block_size;
+        GpuMat imagef, templf;
+        std::vector<GpuMat> images;
+        std::vector<GpuMat> image_sums;
+        std::vector<GpuMat> image_sqsums;
     };
 
-
-
-gpu::ConvolveBuf::ConvolveBuf
----------------------------------
-The constructors.
-
-.. ocv:function:: ConvolveBuf::ConvolveBuf()
-
-Constructs an empty buffer that is properly resized after the first call of the :ocv:func:`gpu::convolve` function.
-
-.. ocv:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
-
-Constructs a buffer for the :ocv:func:`gpu::convolve` function with respective arguments.
-
-
+You can use field `user_block_size` to set specific block size for :ocv:func:`gpu::matchTemplate` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
 
 gpu::matchTemplate
 ----------------------
 Computes a proximity map for a raster template and an image where the template is searched for.
 
-.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
+.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream &stream = Stream::Null())
+
+.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, MatchTemplateBuf &buf, Stream& stream = Stream::Null())
 
     :param image: Source image.  ``CV_32F`` and  ``CV_8U`` depth images (1..4 channels) are supported for now.
 
@@ -303,6 +318,10 @@ Computes a proximity map for a raster template and an image where the template i
     :param result: Map containing comparison results ( ``CV_32FC1`` ). If  ``image`` is  *W x H*  and ``templ`` is  *w x h*, then  ``result`` must be *W-w+1 x H-h+1*.
 
     :param method: Specifies the way to compare the template with the image.
+    
+    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:class:`gpu::MatchTemplateBuf`.
+    
+    :param stream: Stream for the asynchronous version.
 
     The following methods are supported for the ``CV_8U`` depth images for now:
 
@@ -319,7 +338,6 @@ Computes a proximity map for a raster template and an image where the template i
     * ``CV_TM_CCORR``
 
 .. seealso:: :ocv:func:`matchTemplate`
-
 
 
 gpu::remap
