@@ -2349,34 +2349,6 @@ void Core_SolvePolyTest::run( int )
 
 template <typename T> class Core_CheckRange : public testing::Test {};
 
-template<typename type> struct depth_for_type{};
-
-template<> struct depth_for_type<unsigned char>
-{
-    static const int depth = CV_8U;
-};
-
-template<> struct depth_for_type<signed char>
-{
-    static const int depth = CV_8S;
-};
-
-template<> struct depth_for_type<unsigned short>
-{
-    static const int depth = CV_16U;
-};
-
-template<> struct depth_for_type<signed short>
-{
-    static const int depth = CV_16S;
-};
-
-template<> struct depth_for_type<signed int>
-{
-    static const int depth = CV_32S;
-};
-
-
 TYPED_TEST_CASE_P(Core_CheckRange);
 
 TYPED_TEST_P(Core_CheckRange, Negative)
@@ -2385,7 +2357,7 @@ TYPED_TEST_P(Core_CheckRange, Negative)
     double max_bound = 16.0;
 
     TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
-    cv::Mat src = cv::Mat(3,3, depth_for_type<TypeParam>::depth, data);
+    cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
     cv::Point* bad_pt = new cv::Point(0, 0);  
 
@@ -2402,7 +2374,7 @@ TYPED_TEST_P(Core_CheckRange, Positive)
     double max_bound = 16.0;
 
     TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
-    cv::Mat src = cv::Mat(3,3, depth_for_type<TypeParam>::depth, data);
+    cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
     cv::Point* bad_pt = new cv::Point(0, 0);  
 
@@ -2419,7 +2391,7 @@ TYPED_TEST_P(Core_CheckRange, Bounds)
     double max_bound = 1.0;
 
     TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
-    cv::Mat src = cv::Mat(3,3, depth_for_type<TypeParam>::depth, data);
+    cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
     cv::Point* bad_pt = new cv::Point(0, 0);    
 
