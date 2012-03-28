@@ -1402,4 +1402,90 @@ INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWise
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new cvtest::CartToPolarToCartOp)));
 
 
+class CV_ArithmMaskTest : public cvtest::BaseTest
+{
+public:
+    CV_ArithmMaskTest() {}
+    ~CV_ArithmMaskTest() {}   
+protected:
+    void run(int)
+    {
+        try
+        {
+            RNG& rng = theRNG();
+            const int MAX_DIM=3;
+            int sizes[MAX_DIM];
+            for( int iter = 0; iter < 100; iter++ )
+            {
+                //ts->printf(cvtest::TS::LOG, ".");
+                
+                ts->update_context(this, iter, true);
+                int k, dims = rng.uniform(1, MAX_DIM+1), p = 1;
+                int depth = rng.uniform(CV_8U, CV_64F+1);
+                int cn = rng.uniform(1, 6);
+                int type = CV_MAKETYPE(depth, cn);
+                int op = rng.uniform(0, 5);
+                int depth1 = op <= 1 ? CV_64F : depth;
+                for( k = 0; k < dims; k++ )
+                {
+                    sizes[k] = rng.uniform(1, 30);
+                    p *= sizes[k];
+                }
+                Mat a(dims, sizes, type), a1;
+                Mat b(dims, sizes, type), b1;
+                Mat mask(dims, sizes, CV_8U);
+                Mat mask1;
+                Mat c, d;
+                
+                // [-2,2) range means that the each generated random number
+                // will be one of -2, -1, 0, 1. Saturated to [0,255], it will become
+                // 0, 0, 0, 1 => the mask will be filled by ~25%.
+                rng.fill(mask, RNG::UNIFORM, -2, 2);
+                
+                a.convertTo(a1, depth1);
+                b.convertTo(b1, depth1);
+                // invert the mask
+                compare(mask, 0, mask1, CMP_EQ);
+                a1.setTo(0, mask1);
+                b1.setTo(0, mask1);
+                
+                if( op == 0 )
+                {
+                    add(a, b, c, mask);
+                    add(a1, b1, d);
+                }
+                else if( op == 1 )
+                {
+                    subtract(a, b, c, mask);
+                    subtract(a1, b1, d);
+                }
+                else if( op == 2 )
+                {
+                    bitwise_and(a, b, c, mask);
+                    bitwise_and(a1, b1, d);
+                }
+                else if( op == 3 )
+                {
+                    bitwise_or(a, b, c, mask);
+                    bitwise_or(a1, b1, d);
+                }
+                else if( op == 4 )
+                {
+                    bitwise_xor(a, b, c, mask);
+                    bitwise_xor(a1, b1, d);
+                }
+                Mat d1;
+                d.convertTo(d1, depth);
+                CV_Assert( norm(c, d1, CV_C) == 0 );
+            }
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Core_ArithmMask, uninitialized) { CV_ArithmMaskTest test; test.safe_run(); }
+
 

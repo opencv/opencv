@@ -1027,6 +1027,7 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int cn = src1.channels();
     BinaryFunc copymask = 0;
     Mat mask;
+    bool reallocate = false;
 
     if( haveMask )
     {
@@ -1034,6 +1035,8 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         CV_Assert( (mask.type() == CV_8UC1 || mask.type() == CV_8SC1) );
         CV_Assert( mask.size == src1.size );
         copymask = getCopyMaskFunc(esz);
+        Mat tdst = _dst.getMat();
+        reallocate = tdst.size != src1.size || tdst.type() != src1.type();
     }
 
     AutoBuffer<uchar> _buf;
@@ -1041,6 +1044,11 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     _dst.create(src1.dims, src1.size, src1.type());
     Mat dst = _dst.getMat();
+    
+    // if this is mask operation and dst has been reallocated,
+    // we have to 
+    if( haveMask && reallocate )
+        dst = Scalar::all(0);
 
     if( bitwise )
     {
@@ -1214,6 +1222,7 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     bool haveMask = !_mask.empty();
+    bool reallocate = false;
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 &&
         src1.size() == src2.size() && src1.type() == src2.type() &&
@@ -1302,6 +1311,8 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         CV_Assert( (mask.type() == CV_8UC1 || mask.type() == CV_8SC1) );
         CV_Assert( mask.size == src1.size );
         copymask = getCopyMaskFunc(dsz);
+        Mat tdst = _dst.getMat();
+        reallocate = tdst.size != src1.size || tdst.type() != dtype;
     }
 
     AutoBuffer<uchar> _buf;
@@ -1310,6 +1321,10 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     _dst.create(src1.dims, src1.size, dtype);
     Mat dst = _dst.getMat();
+    
+    if( haveMask && reallocate )
+        dst = Scalar::all(0);
+    
     BinaryFunc func = tab[CV_MAT_DEPTH(wtype)];
 
     if( !haveScalar )
