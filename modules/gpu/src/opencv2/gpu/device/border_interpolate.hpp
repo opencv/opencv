@@ -414,8 +414,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         __device__ __forceinline__ int idx_col(int x) const
-        {
-            return idx_col_low(idx_col_high(x));
+        {  
+            return idx_col_high(::abs(x) - (x < 0));
         }
 
         template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const 
@@ -455,7 +455,7 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_row(int y) const
         {
-            return idx_row_low(idx_row_high(y));
+            return idx_row_high(::abs(y) - (y < 0));
         }
 
         template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const 
