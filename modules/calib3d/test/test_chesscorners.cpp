@@ -137,13 +137,26 @@ const double precise_success_error_level = 2;
 /* ///////////////////// chess_corner_test ///////////////////////// */
 void CV_ChessboardDetectorTest::run( int /*start_from */)
 {
+    cvtest::TS& ts = *this->ts;
+    ts.set_failed_test_info( cvtest::TS::OK );
+
     /*if (!checkByGenerator())
         return;*/
     switch( pattern )
     {
         case CHESSBOARD:
             checkByGenerator();
+            if (ts.get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+
             run_batch("chessboard_list.dat");
+            if (ts.get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+            
             run_batch("chessboard_list_subpixel.dat");
             break;
         case CIRCLES_GRID:
@@ -158,7 +171,6 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
 void CV_ChessboardDetectorTest::run_batch( const string& filename )
 {
     cvtest::TS& ts = *this->ts;
-    ts.set_failed_test_info( cvtest::TS::OK );
 
     ts.printf(cvtest::TS::LOG, "\nRunning batch %s\n", filename.c_str());
 //#define WRITE_POINTS 1
@@ -208,7 +220,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         {
             ts.printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", img_file.c_str() );
             ts.set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
-            continue;
+            return;
         }
 
         string filename = folder + (string)board_list[idx * 2 + 1];
@@ -246,7 +258,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         {
             ts.printf( cvtest::TS::LOG, "chessboard is not found in %s\n", img_file.c_str() );
             ts.set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
-            continue;
+            return;
         }
 
 #ifndef WRITE_POINTS
@@ -276,7 +288,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         {
             ts.printf( cvtest::TS::LOG, "Image %s: bad accuracy of adjusted corners %f\n", img_file.c_str(), err ); 
             ts.set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            continue;
+            return;
         }
 #endif
         ts.printf(cvtest::TS::LOG, "Error on %s is %f\n", img_file.c_str(), err);
@@ -392,7 +404,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
             ts->printf( cvtest::TS::LOG, "Chess board corners not found\n" );
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             res = false;
-            continue;          
+            return res; 
         }
 
         double err = calcErrorMinError(cbg.cornersSize(), corners_found, corners_generated);            
@@ -401,7 +413,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
             ts->printf( cvtest::TS::LOG, "bad accuracy of corner guesses" );
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             res = false;
-            continue;
+            return res;
         }        
     }  
 
