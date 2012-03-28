@@ -1350,7 +1350,18 @@ void cv::calcBackProject( InputArrayOfArrays images, const vector<int>& channels
                           const vector<float>& ranges,
                           double scale )
 {
-    Mat H = hist.getMat();
+    Mat H0 = hist.getMat(), H;
+    int hcn = H0.channels();
+    if( hcn > 1 )
+    {
+        CV_Assert( H0.isContinuous() );
+        int hsz[CV_CN_MAX+1];
+        memcpy(hsz, &H0.size[0], H0.dims*sizeof(hsz[0]));
+        hsz[H0.dims] = hcn;
+        H = Mat(H0.dims+1, hsz, H0.depth(), H0.data);
+    }
+    else
+        H = H0;
     bool _1d = H.rows == 1 || H.cols == 1;
     int i, dims = H.dims, rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
