@@ -147,7 +147,7 @@ namespace cv { namespace gpu { namespace device
     namespace color_detail
     {
         template <int green_bits, int bidx> struct RGB2RGB5x5Converter;
-        template<int bidx> struct RGB2RGB5x5Converter<6, bidx> 
+        template<int bidx> struct RGB2RGB5x5Converter<6, bidx>
         {
             static __device__ __forceinline__ ushort cvt(const uchar3& src)
             {
@@ -161,7 +161,7 @@ namespace cv { namespace gpu { namespace device
                 return (ushort)((b >> 3) | ((g & ~3) << 3) | ((r & ~7) << 8));
             }
         };
-        template<int bidx> struct RGB2RGB5x5Converter<5, bidx> 
+        template<int bidx> struct RGB2RGB5x5Converter<5, bidx>
         {
             static __device__ __forceinline__ ushort cvt(const uchar3& src)
             {
@@ -206,17 +206,17 @@ namespace cv { namespace gpu { namespace device
 
     namespace color_detail
     {
-        template <int green_bits, int bidx> struct RGB5x52RGBConverter;    
+        template <int green_bits, int bidx> struct RGB5x52RGBConverter;
         template <int bidx> struct RGB5x52RGBConverter<5, bidx>
         {
             static __device__ __forceinline__ void cvt(uint src, uchar3& dst)
-            {            
+            {
                 (&dst.x)[bidx] = src << 3;
                 dst.y = (src >> 2) & ~7;
                 (&dst.x)[bidx ^ 2] = (src >> 7) & ~7;
             }
             static __device__ __forceinline__ void cvt(uint src, uint& dst)
-            {   
+            {
                 dst = 0;
 
                 dst |= (0xffu & (src << 3)) << (bidx * 8);
@@ -228,13 +228,13 @@ namespace cv { namespace gpu { namespace device
         template <int bidx> struct RGB5x52RGBConverter<6, bidx>
         {
             static __device__ __forceinline__ void cvt(uint src, uchar3& dst)
-            {            
+            {
                 (&dst.x)[bidx] = src << 3;
                 dst.y = (src >> 3) & ~3;
                 (&dst.x)[bidx ^ 2] = (src >> 8) & ~7;
             }
             static __device__ __forceinline__ void cvt(uint src, uint& dst)
-            {           
+            {
                 dst = 0xffu << 24;
 
                 dst |= (0xffu & (src << 3)) << (bidx * 8);
@@ -284,7 +284,7 @@ namespace cv { namespace gpu { namespace device
             {
                 typename TypeVec<T, dcn>::vec_type dst;
 
-                dst.z = dst.y = dst.x = src;            
+                dst.z = dst.y = dst.x = src;
                 setAlpha(dst, ColorChannel<T>::max());
 
                 return dst;
@@ -318,14 +318,14 @@ namespace cv { namespace gpu { namespace device
     namespace color_detail
     {
         template <int green_bits> struct Gray2RGB5x5Converter;
-        template<> struct Gray2RGB5x5Converter<6> 
+        template<> struct Gray2RGB5x5Converter<6>
         {
             static __device__ __forceinline__ ushort cvt(uint t)
             {
                 return (ushort)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
             }
         };
-        template<> struct Gray2RGB5x5Converter<5> 
+        template<> struct Gray2RGB5x5Converter<5>
         {
             static __device__ __forceinline__ ushort cvt(uint t)
             {
@@ -358,20 +358,20 @@ namespace cv { namespace gpu { namespace device
     namespace color_detail
     {
         template <int green_bits> struct RGB5x52GrayConverter;
-        template <> struct RGB5x52GrayConverter<6> 
+        template <> struct RGB5x52GrayConverter<6>
         {
             static __device__ __forceinline__ uchar cvt(uint t)
             {
                 return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 3) & 0xfc) * G2Y + ((t >> 8) & 0xf8) * R2Y, yuv_shift);
             }
         };
-        template <> struct RGB5x52GrayConverter<5> 
+        template <> struct RGB5x52GrayConverter<5>
         {
             static __device__ __forceinline__ uchar cvt(uint t)
             {
                 return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 2) & 0xf8) * G2Y + ((t >> 7) & 0xf8) * R2Y, yuv_shift);
             }
-        };   
+        };
 
         template<int green_bits> struct RGB5x52Gray : unary_function<ushort, uchar>
         {
@@ -455,22 +455,7 @@ namespace cv { namespace gpu { namespace device
             dst.y = saturate_cast<T>(Cr);
             dst.z = saturate_cast<T>(Cb);
         }
-        template <int bidx> static __device__ uint RGB2YUVConvert(uint src)
-        {
-            const uint delta = ColorChannel<uchar>::half() * (1 << yuv_shift);
 
-            const uint Y = CV_DESCALE((0xffu & src) * c_RGB2YUVCoeffs_i[bidx^2] + (0xffu & (src >> 8)) * c_RGB2YUVCoeffs_i[1] + (0xffu & (src >> 16)) * c_RGB2YUVCoeffs_i[bidx], yuv_shift);
-            const uint Cr = CV_DESCALE(((0xffu & (src >> ((bidx ^ 2) * 8))) - Y) * c_RGB2YUVCoeffs_i[3] + delta, yuv_shift);
-            const uint Cb = CV_DESCALE(((0xffu & (src >> (bidx * 8))) - Y) * c_RGB2YUVCoeffs_i[4] + delta, yuv_shift);
-
-            uint dst = 0;
-
-            dst |= saturate_cast<uchar>(Y);
-            dst |= saturate_cast<uchar>(Cr) << 8;
-            dst |= saturate_cast<uchar>(Cb) << 16;
-
-            return dst;
-        }
         template <int bidx, typename D> static __device__ __forceinline__ void RGB2YUVConvert(const float* src, D& dst)
         {
             dst.x = src[0] * c_RGB2YUVCoeffs_f[bidx^2] + src[1] * c_RGB2YUVCoeffs_f[1] + src[2] * c_RGB2YUVCoeffs_f[bidx];
@@ -485,13 +470,6 @@ namespace cv { namespace gpu { namespace device
                 typename TypeVec<T, dcn>::vec_type dst;
                 RGB2YUVConvert<bidx>(&src.x, dst);
                 return dst;
-            }
-        };
-        template <int bidx> struct RGB2YUV<uchar, 4, 4, bidx> : unary_function<uint, uint>
-        {
-            __device__ __forceinline__ uint operator ()(uint src) const
-            {
-                return RGB2YUVConvert<bidx>(src);
             }
         };
     }
@@ -509,7 +487,7 @@ namespace cv { namespace gpu { namespace device
     namespace color_detail
     {
         __constant__ float c_YUV2RGBCoeffs_f[5] = { 2.032f, -0.395f, -0.581f, 1.140f };
-        __constant__ int   c_YUV2RGBCoeffs_i[5] = { 33292, -6472, -9519, 18678 }; 
+        __constant__ int   c_YUV2RGBCoeffs_i[5] = { 33292, -6472, -9519, 18678 };
 
         template <int bidx, typename T, typename D> static __device__ void YUV2RGBConvert(const T& src, D* dst)
         {
@@ -526,10 +504,10 @@ namespace cv { namespace gpu { namespace device
             const int x = 0xff & (src);
             const int y = 0xff & (src >> 8);
             const int z = 0xff & (src >> 16);
-            
-            const uint b = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[3], yuv_shift);
-            const uint g = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[2] + (y - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[1], yuv_shift);
-            const uint r = x + CV_DESCALE((y - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[0], yuv_shift);
+
+            const int b = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[3], yuv_shift);
+            const int g = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[2] + (y - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[1], yuv_shift);
+            const int r = x + CV_DESCALE((y - ColorChannel<uchar>::half()) * c_YUV2RGBCoeffs_i[0], yuv_shift);
 
             uint dst = 0xffu << 24;
 
@@ -578,7 +556,7 @@ namespace cv { namespace gpu { namespace device
     };
 
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
-    
+
     namespace color_detail
     {
         __constant__ float c_RGB2YCrCbCoeffs_f[5] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
@@ -600,9 +578,9 @@ namespace cv { namespace gpu { namespace device
         {
             const int delta = ColorChannel<uchar>::half() * (1 << yuv_shift);
 
-            const uint Y = CV_DESCALE((0xffu & src) * c_RGB2YCrCbCoeffs_i[bidx^2] + (0xffu & (src >> 8)) * c_RGB2YCrCbCoeffs_i[1] + (0xffu & (src >> 16)) * c_RGB2YCrCbCoeffs_i[bidx], yuv_shift);
-            const uint Cr = CV_DESCALE(((0xffu & (src >> ((bidx ^ 2) * 8))) - Y) * c_RGB2YCrCbCoeffs_i[3] + delta, yuv_shift);
-            const uint Cb = CV_DESCALE(((0xffu & (src >> (bidx * 8))) - Y) * c_RGB2YCrCbCoeffs_i[4] + delta, yuv_shift);
+            const int Y = CV_DESCALE((0xffu & src) * c_RGB2YCrCbCoeffs_i[bidx^2] + (0xffu & (src >> 8)) * c_RGB2YCrCbCoeffs_i[1] + (0xffu & (src >> 16)) * c_RGB2YCrCbCoeffs_i[bidx], yuv_shift);
+            const int Cr = CV_DESCALE(((0xffu & (src >> ((bidx ^ 2) * 8))) - Y) * c_RGB2YCrCbCoeffs_i[3] + delta, yuv_shift);
+            const int Cb = CV_DESCALE(((0xffu & (src >> (bidx * 8))) - Y) * c_RGB2YCrCbCoeffs_i[4] + delta, yuv_shift);
 
             uint dst = 0;
 
@@ -667,10 +645,10 @@ namespace cv { namespace gpu { namespace device
             const int x = 0xff & (src);
             const int y = 0xff & (src >> 8);
             const int z = 0xff & (src >> 16);
-            
-            const uint b = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[3], yuv_shift);
-            const uint g = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[2] + (y - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[1], yuv_shift);
-            const uint r = x + CV_DESCALE((y - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[0], yuv_shift);
+
+            const int b = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[3], yuv_shift);
+            const int g = x + CV_DESCALE((z - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[2] + (y - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[1], yuv_shift);
+            const int r = x + CV_DESCALE((y - ColorChannel<uchar>::half()) * c_YCrCb2RGBCoeffs_i[0], yuv_shift);
 
             uint dst = 0xffu << 24;
 
@@ -897,7 +875,7 @@ namespace cv { namespace gpu { namespace device
             const int b = 0xff & (src >> (bidx * 8));
             const int g = 0xff & (src >> 8);
             const int r = 0xff & (src >> ((bidx ^ 2) * 8));
-            
+
             int h, s, v = b;
             int vmin = b, diff;
             int vr, vg;
@@ -1014,7 +992,7 @@ namespace cv { namespace gpu { namespace device
         template <int bidx, int hr, typename T> static __device__ void HSV2RGBConvert(const T& src, float* dst)
         {
             const float hscale = 6.f / hr;
-            
+
             float h = src.x, s = src.y, v = src.z;
             float b = v, g = v, r = v;
 
