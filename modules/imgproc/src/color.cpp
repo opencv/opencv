@@ -2234,7 +2234,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
         bool greenCell = greenCell0;
         
         i = 2;
-#if CV_SSE2        
+#if CV_SSE2
         int limit = !haveSSE ? N-2 : greenCell ? std::min(3, N-2) : 2;
 #else
         int limit = N - 2;
@@ -2401,201 +2401,217 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 dstrow[blueIdx^2] = CV_CAST_8U(R);
                 greenCell = !greenCell;
             }
-            
+
 #if CV_SSE2
             if( !haveSSE )
                 break;
             
-            __m128i emask = _mm_set1_epi32(0x0000ffff),
-                omask = _mm_set1_epi32(0xffff0000),
-                all_ones = _mm_set1_epi16(1),
-                z = _mm_setzero_si128();
-            __m128 _0_5 = _mm_set1_ps(0.5f);
+            __m128i emask    = _mm_set1_epi32(0x0000ffff),
+                    omask    = _mm_set1_epi32(0xffff0000),
+                    z        = _mm_setzero_si128();
+            __m128 _0_5      = _mm_set1_ps(0.5f);
             
-            #define _mm_merge_epi16(a, b) \
-                _mm_or_si128(_mm_and_si128(a, emask), _mm_and_si128(b, omask))
-            #define _mm_cvtloepi16_ps(a) _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(a,a), 16))
-            #define _mm_cvthiepi16_ps(a) _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(a,a), 16))
+            #define _mm_merge_epi16(a, b) _mm_or_si128(_mm_and_si128(a, emask), _mm_and_si128(b, omask)) //(aA_aA_aA_aA) * (bB_bB_bB_bB) => (bA_bA_bA_bA)
+            #define _mm_cvtloepi16_ps(a)  _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(a,a), 16))   //(1,2,3,4,5,6,7,8) => (1f,2f,3f,4f)
+            #define _mm_cvthiepi16_ps(a)  _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(a,a), 16))   //(1,2,3,4,5,6,7,8) => (5f,6f,7f,8f)
+            #define _mm_loadl_u8_s16(ptr, offset) _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)((ptr) + (offset))), z) //load 8 uchars to 8 shorts
             
             // process 8 pixels at once
             for( ; i <= N - 10; i += 8, srow += 8, brow0 += 8, brow1 += 8, brow2 += 8 )
             {
-                __m128i gradN, gradS, gradW, gradE, gradNE, gradSW, gradNW, gradSE;
-                gradN = _mm_adds_epu16(_mm_loadu_si128((__m128i*)brow0),
-                                       _mm_loadu_si128((__m128i*)brow1));
-                gradS = _mm_adds_epu16(_mm_loadu_si128((__m128i*)brow1),
-                                       _mm_loadu_si128((__m128i*)brow2));
-                gradW = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N-1)),
-                                       _mm_loadu_si128((__m128i*)(brow1+N)));
-                gradE = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N+1)),
-                                       _mm_loadu_si128((__m128i*)(brow1+N)));
+                //int gradN = brow0[0] + brow1[0];
+                __m128i gradN = _mm_adds_epi16(_mm_loadu_si128((__m128i*)brow0), _mm_loadu_si128((__m128i*)brow1));
+
+                //int gradS = brow1[0] + brow2[0];
+                __m128i gradS = _mm_adds_epi16(_mm_loadu_si128((__m128i*)brow1), _mm_loadu_si128((__m128i*)brow2));
+
+                //int gradW = brow1[N-1] + brow1[N];
+                __m128i gradW = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N-1)), _mm_loadu_si128((__m128i*)(brow1+N)));
+
+                //int gradE = brow1[N+1] + brow1[N];
+                __m128i gradE = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N+1)), _mm_loadu_si128((__m128i*)(brow1+N)));
                 
-                __m128i minGrad, maxGrad, T;
-                minGrad = _mm_min_epi16(_mm_min_epi16(_mm_min_epi16(gradN, gradS), gradW), gradE);
-                maxGrad = _mm_max_epi16(_mm_max_epi16(_mm_max_epi16(gradN, gradS), gradW), gradE);
+                //int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
+                //int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
+                __m128i minGrad = _mm_min_epi16(_mm_min_epi16(gradN, gradS), _mm_min_epi16(gradW, gradE));
+                __m128i maxGrad = _mm_max_epi16(_mm_max_epi16(gradN, gradS), _mm_max_epi16(gradW, gradE));
                 
                 __m128i grad0, grad1;
                 
-                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N4+1)),
-                                       _mm_loadu_si128((__m128i*)(brow1+N4)));
-                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N2)),
-                                                      _mm_loadu_si128((__m128i*)(brow0+N2+1))),
-                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N2)),
-                                                      _mm_loadu_si128((__m128i*)(brow1+N2+1))));
-                gradNE = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
+                //int gradNE = brow0[N4+1] + brow1[N4];
+                //int gradNE = brow0[N2] + brow0[N2+1] + brow1[N2] + brow1[N2+1];
+                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N4+1)), _mm_loadu_si128((__m128i*)(brow1+N4)));
+                grad1 = _mm_adds_epi16( _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N2)), _mm_loadu_si128((__m128i*)(brow0+N2+1))),
+                                        _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N2)), _mm_loadu_si128((__m128i*)(brow1+N2+1))));
+                __m128i gradNE = _mm_merge_epi16(grad0, grad1);
                 
-                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N4-1)),
-                                       _mm_loadu_si128((__m128i*)(brow1+N4)));
-                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N2)),
-                                                      _mm_loadu_si128((__m128i*)(brow2+N2-1))),
-                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N2)),
-                                                      _mm_loadu_si128((__m128i*)(brow1+N2-1))));
-                gradSW = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
+                //int gradSW = brow1[N4] + brow2[N4-1];
+                //int gradSW = brow1[N2] + brow1[N2-1] + brow2[N2] + brow2[N2-1];
+                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N4-1)), _mm_loadu_si128((__m128i*)(brow1+N4)));
+                grad1 = _mm_adds_epi16(_mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N2)), _mm_loadu_si128((__m128i*)(brow2+N2-1))),
+                                       _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N2)), _mm_loadu_si128((__m128i*)(brow1+N2-1))));
+                __m128i gradSW = _mm_merge_epi16(grad0, grad1);
                 
                 minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNE), gradSW);
                 maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNE), gradSW);
+
+                //int gradNW = brow0[N5-1] + brow1[N5];
+                //int gradNW = brow0[N3] + brow0[N3-1] + brow1[N3] + brow1[N3-1];
+                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N5-1)), _mm_loadu_si128((__m128i*)(brow1+N5)));
+                grad1 = _mm_adds_epi16(_mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N3)), _mm_loadu_si128((__m128i*)(brow0+N3-1))),
+                                       _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N3)), _mm_loadu_si128((__m128i*)(brow1+N3-1))));
+                __m128i gradNW = _mm_merge_epi16(grad0, grad1);
                 
-                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N5-1)),
-                                       _mm_loadu_si128((__m128i*)(brow1+N5)));
-                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow0+N3)),
-                                                      _mm_loadu_si128((__m128i*)(brow0+N3-1))),
-                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N3)),
-                                                      _mm_loadu_si128((__m128i*)(brow1+N3-1))));
-                gradNW = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
-                
-                grad0 = _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N5+1)),
-                                       _mm_loadu_si128((__m128i*)(brow1+N5)));
-                grad1 = _mm_adds_epu16(_mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow2+N3)),
-                                                      _mm_loadu_si128((__m128i*)(brow2+N3+1))),
-                                       _mm_adds_epu16(_mm_loadu_si128((__m128i*)(brow1+N3)),
-                                                      _mm_loadu_si128((__m128i*)(brow1+N3+1))));
-                gradSE = _mm_srli_epi16(_mm_merge_epi16(grad0, grad1), 1);
+                //int gradSE = brow1[N5] + brow2[N5+1];
+                //int gradSE = brow1[N3] + brow1[N3+1] + brow2[N3] + brow2[N3+1];
+                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N5+1)), _mm_loadu_si128((__m128i*)(brow1+N5)));
+                grad1 = _mm_adds_epi16(_mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N3)), _mm_loadu_si128((__m128i*)(brow2+N3+1))),
+                                       _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N3)), _mm_loadu_si128((__m128i*)(brow1+N3+1))));
+                __m128i gradSE = _mm_merge_epi16(grad0, grad1);
                 
                 minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNW), gradSE);
                 maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNW), gradSE);
                 
-                T = _mm_add_epi16(_mm_srli_epi16(maxGrad, 1), minGrad);
-                __m128i RGs = z, GRs = z, Bs = z, ng = z, mask;
+                //int T = minGrad + maxGrad/2;
+                __m128i T = _mm_adds_epi16(_mm_srli_epi16(maxGrad, 1), minGrad);
+
+                __m128i RGs = z, GRs = z, Bs = z, ng = z;
                 
-                __m128i t0, t1, x0, x1, x2, x3, x4, x5, x6, x7, x8,
-                x9, x10, x11, x12, x13, x14, x15, x16;
+                __m128i x0  = _mm_loadl_u8_s16(srow, +0          );
+                __m128i x1  = _mm_loadl_u8_s16(srow, -1 - bstep  );
+                __m128i x2  = _mm_loadl_u8_s16(srow, -1 - bstep*2);
+                __m128i x3  = _mm_loadl_u8_s16(srow,    - bstep  );
+                __m128i x4  = _mm_loadl_u8_s16(srow, +1 - bstep*2);
+                __m128i x5  = _mm_loadl_u8_s16(srow, +1 - bstep  );
+                __m128i x6  = _mm_loadl_u8_s16(srow, +2 - bstep  );
+                __m128i x7  = _mm_loadl_u8_s16(srow, +1          );
+                __m128i x8  = _mm_loadl_u8_s16(srow, +2 + bstep  );
+                __m128i x9  = _mm_loadl_u8_s16(srow, +1 + bstep  );
+                __m128i x10 = _mm_loadl_u8_s16(srow, +1 + bstep*2);
+                __m128i x11 = _mm_loadl_u8_s16(srow,    + bstep  );
+                __m128i x12 = _mm_loadl_u8_s16(srow, -1 + bstep*2);
+                __m128i x13 = _mm_loadl_u8_s16(srow, -1 + bstep  );
+                __m128i x14 = _mm_loadl_u8_s16(srow, -2 + bstep  );
+                __m128i x15 = _mm_loadl_u8_s16(srow, -1          );
+                __m128i x16 = _mm_loadl_u8_s16(srow, -2 - bstep  );
+
+                __m128i t0, t1, mask;
                 
-                x0 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)srow), z);
+                // gradN ***********************************************
+                mask = _mm_cmpgt_epi16(T, gradN); // mask = T>gradN
+                ng = _mm_sub_epi16(ng, mask);     // ng += (T>gradN)
                 
-                x1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep-1)), z);
-                x2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2-1)), z);
-                x3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep)), z);
-                x4 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2+1)), z);
-                x5 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep+1)), z);
-                x6 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep+2)), z);
-                x7 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1)), z);
-                x8 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep+2)), z);
-                x9 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep+1)), z);
-                x10 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2+1)), z);
-                x11 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep)), z);
-                x12 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2-1)), z);
-                x13 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep-1)), z);
-                x14 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep-2)), z);
-                x15 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1)), z);
-                x16 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep-2)), z);
+                t0 = _mm_slli_epi16(x3, 1);                                 // srow[-bstep]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, -bstep*2), x0);  // srow[-bstep*2] + srow[0]
                 
-                // gradN
-                mask = _mm_cmpgt_epi16(T, gradN);
-                ng = _mm_sub_epi16(ng, mask);
+                // RGs += (srow[-bstep*2] + srow[0]) * (T>gradN)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
+                // GRs += {srow[-bstep]*2; (srow[-bstep*2-1] + srow[-bstep*2+1])} * (T>gradN)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epi16(x2,x4)), mask));
+                // Bs  += {(srow[-bstep-1]+srow[-bstep+1]); srow[-bstep]*2 } * (T>gradN)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x1,x5), t0), mask));
                 
-                t0 = _mm_slli_epi16(x3, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2)), z), x0);
+                // gradNE **********************************************
+                mask = _mm_cmpgt_epi16(T, gradNE); // mask = T>gradNE
+                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradNE)
+
+                t0 = _mm_slli_epi16(x5, 1);                                    // srow[-bstep+1]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, -bstep*2+2), x0);   // srow[-bstep*2+2] + srow[0]
                 
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x2,x4)), mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x1,x5), t0), mask));
+                // RGs += {(srow[-bstep*2+2] + srow[0]); srow[-bstep+1]*2} * (T>gradNE)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                // GRs += {brow0[N6+1]; (srow[-bstep*2+1] + srow[1])} * (T>gradNE)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6+1)), _mm_adds_epi16(x4,x7)), mask));
+                // Bs  += {srow[-bstep+1]*2; (srow[-bstep] + srow[-bstep+2])}  * (T>gradNE)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epi16(x3,x6)), mask));
                 
-                // gradNE
-                mask = _mm_cmpgt_epi16(T, gradNE);
-                ng = _mm_sub_epi16(ng, mask);
+                // gradE ***********************************************
+                mask = _mm_cmpgt_epi16(T, gradE);  // mask = T>gradE
+                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradE)
                 
-                t0 = _mm_slli_epi16(x5, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2+2)), z), x0);
+                t0 = _mm_slli_epi16(x7, 1);                         // srow[1]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, 2), x0); // srow[2] + srow[0]
+
+                // RGs += (srow[2] + srow[0]) * (T>gradE)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
+                // GRs += (srow[1]*2) * (T>gradE)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(t0, mask));
+                // Bs  += {(srow[-bstep+1]+srow[bstep+1]); (srow[-bstep+2]+srow[bstep+2])} * (T>gradE)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x5,x9), _mm_adds_epi16(x6,x8)), mask));
                 
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6+1)),
-                                                                        _mm_adds_epu16(x4,x7)), mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x3,x6)), mask));
+                // gradSE **********************************************
+                mask = _mm_cmpgt_epi16(T, gradSE);  // mask = T>gradSE
+                ng = _mm_sub_epi16(ng, mask);       // ng += (T>gradSE)
                 
-                // gradE
-                mask = _mm_cmpgt_epi16(T, gradE);
-                ng = _mm_sub_epi16(ng, mask);
+                t0 = _mm_slli_epi16(x9, 1);                                 // srow[bstep+1]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, bstep*2+2), x0); // srow[bstep*2+2] + srow[0]
+
+                // RGs += {(srow[bstep*2+2] + srow[0]); srow[bstep+1]*2} * (T>gradSE)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                // GRs += {brow2[N6+1]; (srow[1]+srow[bstep*2+1])} * (T>gradSE)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6+1)), _mm_adds_epi16(x7,x10)), mask));
+                // Bs  += {srow[-bstep+1]*2; (srow[bstep+2]+srow[bstep])} * (T>gradSE)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1), _mm_adds_epi16(x8,x11)), mask));
                 
-                t0 = _mm_slli_epi16(x7, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+2)), z), x0);
+                // gradS ***********************************************
+                mask = _mm_cmpgt_epi16(T, gradS);  // mask = T>gradS
+                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradS)
                 
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(t0, mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x5,x9),
-                                                                      _mm_adds_epu16(x6,x8)), mask));
+                t0 = _mm_slli_epi16(x11, 1);                             // srow[bstep]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow,bstep*2), x0); // srow[bstep*2]+srow[0]
+
+                // RGs += (srow[bstep*2]+srow[0]) * (T>gradS)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
+                // GRs += {srow[bstep]*2; (srow[bstep*2+1]+srow[bstep*2-1])} * (T>gradS)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epi16(x10,x12)), mask));
+                // Bs  += {(srow[bstep+1]+srow[bstep-1]); srow[bstep]*2} * (T>gradS)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x9,x13), t0), mask));
                 
-                // gradSE
-                mask = _mm_cmpgt_epi16(T, gradSE);
-                ng = _mm_sub_epi16(ng, mask);
+                // gradSW **********************************************
+                mask = _mm_cmpgt_epi16(T, gradSW);  // mask = T>gradSW
+                ng = _mm_sub_epi16(ng, mask);       // ng += (T>gradSW)
                 
-                t0 = _mm_slli_epi16(x9, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2+2)), z), x0);
+                t0 = _mm_slli_epi16(x13, 1);                                // srow[bstep-1]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, bstep*2-2), x0); // srow[bstep*2-2]+srow[0]
+
+                // RGs += {(srow[bstep*2-2]+srow[0]); srow[bstep-1]*2} * (T>gradSW)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                // GRs += {brow2[N6-1]; (srow[bstep*2-1]+srow[-1])} * (T>gradSW)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6-1)), _mm_adds_epi16(x12,x15)), mask));
+                // Bs  += {srow[bstep-1]*2; (srow[bstep]+srow[bstep-2])} * (T>gradSW)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epi16(x11,x14)), mask));
                 
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6+1)),
-                                                                        _mm_adds_epu16(x7,x10)), mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x8,x11)), mask));
+                // gradW ***********************************************
+                mask = _mm_cmpgt_epi16(T, gradW);  // mask = T>gradW
+                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradW)
                 
-                // gradS
-                mask = _mm_cmpgt_epi16(T, gradS);
-                ng = _mm_sub_epi16(ng, mask);
+                t0 = _mm_slli_epi16(x15, 1);                         // srow[-1]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, -2), x0); // srow[-2]+srow[0]
+
+                // RGs += (srow[-2]+srow[0]) * (T>gradW)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
+                // GRs += (srow[-1]*2) * (T>gradW)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(t0, mask));
+                // Bs  += {(srow[-bstep-1]+srow[bstep-1]); (srow[bstep-2]+srow[-bstep-2])} * (T>gradW)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x1,x13), _mm_adds_epi16(x14,x16)), mask));
                 
-                t0 = _mm_slli_epi16(x11, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2)), z), x0);
+                // gradNW **********************************************
+                mask = _mm_cmpgt_epi16(T, gradNW);  // mask = T>gradNW
+                ng = _mm_sub_epi16(ng, mask);       // ng += (T>gradNW)
                 
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epu16(x10,x12)), mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x9,x13), t0), mask));
-                
-                // gradSW
-                mask = _mm_cmpgt_epi16(T, gradSW);
-                ng = _mm_sub_epi16(ng, mask);
-                
-                t0 = _mm_slli_epi16(x13, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep*2-2)), z), x0);
-                
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6-1)),
-                                                                        _mm_adds_epu16(x12,x15)), mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x11,x14)), mask));
-                
-                // gradW
-                mask = _mm_cmpgt_epi16(T, gradW);
-                ng = _mm_sub_epi16(ng, mask);
-                
-                t0 = _mm_slli_epi16(x15, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-2)), z), x0);
-                
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(t1, mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(t0, mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epu16(x1,x13),
-                                                                      _mm_adds_epu16(x14,x16)), mask));
-                
-                // gradNW
-                mask = _mm_cmpgt_epi16(T, gradNW);
-                ng = _mm_max_epi16(_mm_sub_epi16(ng, mask), all_ones);
-                
+                t0 = _mm_slli_epi16(x1, 1);                                 // srow[-bstep-1]*2
+                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow,-bstep*2-2), x0); // srow[-bstep*2-2]+srow[0]
+
+                // RGs += {(srow[-bstep*2-2]+srow[0]); srow[-bstep-1]*2} * (T>gradNW)
+                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
+                // GRs += {brow0[N6-1]; (srow[-bstep*2-1]+srow[-1])} * (T>gradNW)
+                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6-1)), _mm_adds_epi16(x2,x15)), mask));
+                // Bs  += {srow[-bstep-1]*2; (srow[-bstep]+srow[-bstep-2])} * (T>gradNW)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1),_mm_adds_epi16(x3,x16)), mask));
+
                 __m128 ngf0, ngf1;
                 ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
                 ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
-                
-                t0 = _mm_slli_epi16(x1, 1);
-                t1 = _mm_adds_epu16(_mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep*2-2)), z), x0);
-                
-                RGs = _mm_adds_epu16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                GRs = _mm_adds_epu16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6-1)),
-                                                                        _mm_adds_epu16(x2,x15)), mask));
-                Bs = _mm_adds_epu16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epu16(x3,x16)), mask));
                 
                 // now interpolate r, g & b
                 t0 = _mm_sub_epi16(GRs, RGs);

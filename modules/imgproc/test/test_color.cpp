@@ -1658,6 +1658,7 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
         CV_Error(CV_StsUnsupportedFormat, "");
 }
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Imgproc_ColorGray, accuracy) { CV_ColorGrayTest test; test.safe_run(); }
@@ -1669,3 +1670,24 @@ TEST(Imgproc_ColorLab, accuracy) { CV_ColorLabTest test; test.safe_run(); }
 TEST(Imgproc_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
 TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
 TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
+
+
+TEST(Imgproc_ColorBayerVNG, accuracy)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    Mat given = imread(ts.get_data_path() + "/cvtcolor/bayerVNG_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat gold = imread(ts.get_data_path() + "/cvtcolor/bayerVNG_gold.png", CV_LOAD_IMAGE_UNCHANGED);
+    Mat result;
+
+    cvtColor(given, result, CV_BayerBG2BGR_VNG, 3);
+
+    EXPECT_EQ(gold.type(), result.type());
+    EXPECT_EQ(gold.cols, result.cols);
+    EXPECT_EQ(gold.rows, result.rows);
+
+    Mat diff;
+    absdiff(gold, result, diff);
+
+    EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+}
