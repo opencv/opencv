@@ -2427,15 +2427,22 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h) {
   if (V4L2_SUPPORT == 1)
   {
 
-    CLEAR (capture->crop);
-    capture->crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    capture->crop.c.left       = 0;
-    capture->crop.c.top        = 0;
-    capture->crop.c.height     = h*24;
-    capture->crop.c.width      = w*24;
+    CLEAR (capture->cropcap);
+    capture->cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    /* set the crop area, but don't exit if the device don't support croping */
-    xioctl (capture->deviceHandle, VIDIOC_S_CROP, &capture->crop);
+    if (xioctl (capture->deviceHandle, VIDIOC_CROPCAP, &capture->cropcap) < 0) {
+        fprintf(stderr, "HIGHGUI ERROR: V4L/V4L2: VIDIOC_CROPCAP\n");
+    } else {
+
+        CLEAR (capture->crop);
+        capture->crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        capture->crop.c= capture->cropcap.defrect;
+
+        /* set the crop area, but don't exit if the device don't support croping */
+        if (xioctl (capture->deviceHandle, VIDIOC_S_CROP, &capture->crop) < 0) {
+            fprintf(stderr, "HIGHGUI ERROR: V4L/V4L2: VIDIOC_S_CROP\n");
+        }
+    }
 
     CLEAR (capture->form);
     capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
