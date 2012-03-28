@@ -66,7 +66,7 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int fr
  for (int i = 0; i < framecount; ++i)
  {
    cv::Mat mat(480, 640, CV_8UC1);
-   size_t n = 32, tmp = i;
+   size_t n = 8, tmp = i;
 
    vector<char> tmp_code; tmp_code.clear();
 
@@ -113,10 +113,12 @@ void CV_PositioningTest::run(int)
     size_t n_format = sizeof(format)/sizeof(format[0]),
            n_codec = sizeof(codec)/sizeof(codec[0]);
 
+    int n_frames = 256;
+
     for (size_t i = 0; i < n_format; ++i)
     for (size_t j = 0; j < n_codec; ++j)
     {
-      CreateTestVideo(format[i], CV_FOURCC(codec[j][0], codec[j][1], codec[j][2], codec[j][3]), 125);
+      CreateTestVideo(format[i], CV_FOURCC(codec[j][0], codec[j][1], codec[j][2], codec[j][3]), n_frames);
 
       stringstream s; s << CV_FOURCC(codec[j][0], codec[j][1], codec[j][2], codec[j][3]); //codec_bmp_tags[j].tag;
 
@@ -128,9 +130,9 @@ void CV_PositioningTest::run(int)
 
       if (!cap.isOpened())
       {
-        ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+        ts->printf(ts->LOG, "\n\nFile: %s\n", file_path.c_str());
         ts->printf(ts->LOG, "\nVideo codec: %s\n", string(&codec[j][0], 4).c_str());
-        ts->printf(ts->LOG, "\nError: cannot read video file.\n");
+        ts->printf(ts->LOG, "\nError: cannot read video file.");
         ts->set_failed_test_info(ts->FAIL_INVALID_TEST_DATA);
         error = true;
       }
@@ -139,11 +141,11 @@ void CV_PositioningTest::run(int)
 
       int N = cap.get(CV_CAP_PROP_FRAME_COUNT);
 
-      if (N != 125)
+      if (N != n_frames)
       {
         if (!error)
         {
-            ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+            ts->printf(ts->LOG, "\n\nFile: %s\n", file_path.c_str());
             ts->printf(ts->LOG, "\nVideo codec: %s\n", string(&codec[j][0], 4).c_str());
             error = true;
         }
@@ -170,17 +172,17 @@ void CV_PositioningTest::run(int)
         {
             if (!error)
             {
-                ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+                ts->printf(ts->LOG, "\n\nFile: %s\n", file_path.c_str());
                 ts->printf(ts->LOG, "\nVideo codec: %s\n", string(&codec[j][0], 4).c_str());
                 error = true;
             }
             ts->printf(ts->LOG, "\nError: cannot read a frame in position %d.\n", idx[k]);
-            ts->set_failed_test_info(ts->FAIL_EXCEPTION);
+            ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
         }
 
         const double thresh = 100;
 
-        const size_t n = 32, w = img.rows/n;
+        const size_t n = 8, w = img.rows/n;
 
         int index = 0, deg = n-1;
 
@@ -199,20 +201,22 @@ void CV_PositioningTest::run(int)
         {
             if (!error)
             {
-                ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+                ts->printf(ts->LOG, "\n\nFile: %s\n", file_path.c_str());
                 ts->printf(ts->LOG, "\nVideo codec: %s\n\n", string(&codec[j][0], 4).c_str());
                 error = true;
             }
-            ts->printf(ts->LOG, "Required position: %d   Returned position: %d FAILED\n", idx[k], index);
+            ts->printf(ts->LOG, "Required position: %d   Returned position: %d\n", idx[k], index);
             ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
             failed++;
         }
       }
 
-      if (!error) ts->printf(ts->LOG, "\nFile: %s\n", file_path.c_str());
+      if (!error) { ts->printf(ts->LOG, "\n\nFile: %s\n", file_path.c_str());
+                    ts->printf(ts->LOG, "\nVideo codec: %s\n", string(&codec[j][0], 4).c_str()); }
 
-      ts->printf(ts->LOG, "\nSuccessfull iterations: %d(%d%%)   Failed iterations: %d(%d%%)\n", N-failed, (N-failed)*100/N, failed, failed*100/N);
-      ts->printf(ts->LOG, "\n----------\n");
+      const string status = failed ? "FAILED" : "OK";
+      ts->printf(ts->LOG, "\nSuccessfull iterations: %d(%d%%)   Failed iterations: %d(%d%%)   %s\n", N-failed, (N-failed)*100/N, failed, failed*100/N, status.c_str());
+      if( i < n_format-1 || j < n_codec-1 ) ts->printf(ts->LOG, "\n----------");
     }
 
 #endif
