@@ -502,7 +502,7 @@ public:
     
     //! solve linear system
     template<int l> Matx<_Tp, n, l> solve(const Matx<_Tp, m, l>& rhs, int flags=DECOMP_LU) const;
-    Matx<_Tp, n, 1> solve(const Matx<_Tp, m, 1>& rhs, int method) const;
+    Vec<_Tp, n> solve(const Vec<_Tp, m>& rhs, int method) const;
     
     //! multiply two matrices element-wise
     Matx<_Tp, m, n> mul(const Matx<_Tp, m, n>& a) const;

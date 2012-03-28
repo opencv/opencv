@@ -228,9 +228,9 @@ static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
 static int
 interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
 {
-    Matx31f b(-(N9[1][5]-N9[1][3])/2,  // Negative 1st deriv with respect to x
-              -(N9[1][7]-N9[1][1])/2,  // Negative 1st deriv with respect to y
-              -(N9[2][4]-N9[0][4])/2); // Negative 1st deriv with respect to s
+    Vec3f b(-(N9[1][5]-N9[1][3])/2,  // Negative 1st deriv with respect to x
+            -(N9[1][7]-N9[1][1])/2,  // Negative 1st deriv with respect to y
+            -(N9[2][4]-N9[0][4])/2); // Negative 1st deriv with respect to s
 
     Matx33f A(
         N9[1][3]-2*N9[1][4]+N9[1][5],            // 2nd deriv x, x
@@ -243,16 +243,16 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
         (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])/4, // 2nd deriv y, s
         N9[0][4]-2*N9[1][4]+N9[2][4]);           // 2nd deriv s, s
 
-    Matx31f x = A.solve<1>(b, DECOMP_LU);
+    Vec3f x = A.solve(b, DECOMP_LU);
     
-    bool ok = (x(0,0) != 0 || x(1,0) != 0 || x(2,0) != 0) &&
-        std::abs(x(0,0)) <= 1 && std::abs(x(1,0)) <= 1 && std::abs(x(2,0)) <= 1;
+    bool ok = (x[0] != 0 || x[1] != 0 || x[2] != 0) &&
+        std::abs(x[0]) <= 1 && std::abs(x[1]) <= 1 && std::abs(x[2]) <= 1;
     
     if( ok )
     {
-        kpt.pt.x += x(0,0)*dx;
-        kpt.pt.y += x(1,0)*dy;
-        kpt.size = (float)cvRound( kpt.size + x(2,0)*ds );
+        kpt.pt.x += x[0]*dx;
+        kpt.pt.y += x[1]*dy;
+        kpt.size = (float)cvRound( kpt.size + x[2]*ds );
     }
     return ok;
 }

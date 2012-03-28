@@ -343,9 +343,9 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
         
-        Matx31f dD((img.at<short>(r, c+1) - img.at<short>(r, c-1))*deriv_scale,
-                   (img.at<short>(r+1, c) - img.at<short>(r-1, c))*deriv_scale,
-                   (next.at<short>(r, c) - prev.at<short>(r, c))*deriv_scale);
+        Vec3f dD((img.at<short>(r, c+1) - img.at<short>(r, c-1))*deriv_scale,
+                 (img.at<short>(r+1, c) - img.at<short>(r-1, c))*deriv_scale,
+                 (next.at<short>(r, c) - prev.at<short>(r, c))*deriv_scale);
         
         float v2 = (float)img.at<short>(r, c)*2;
         float dxx = (img.at<short>(r, c+1) + img.at<short>(r, c-1) - v2)*second_deriv_scale;
@@ -362,11 +362,11 @@ static bool adjustLocalExtrema( const vector<Mat>& dog_pyr, KeyPoint& kpt, int o
                   dxy, dyy, dys,
                   dxs, dys, dss);
         
-        Matx31f X = H.solve<1>(dD, DECOMP_LU);
+        Vec3f X = H.solve(dD, DECOMP_LU);
         
-        xi = -X(2, 0);
-        xr = -X(1, 0);
-        xc = -X(0, 0);
+        xi = -X[2];
+        xr = -X[1];
+        xc = -X[0];
         
         if( std::abs( xi ) < 0.5f  &&  std::abs( xr ) < 0.5f  &&  std::abs( xc ) < 0.5f )
             break;
