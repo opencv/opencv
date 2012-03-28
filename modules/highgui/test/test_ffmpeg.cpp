@@ -64,28 +64,45 @@ public:
 
         const size_t n = sizeof(codec_bmp_tags)/sizeof(codec_bmp_tags[0]);
 
+        bool created = false;
+
         for (size_t j = 0; j < n; ++j)
         {
         stringstream s; s << codec_bmp_tags[j].tag;
 
+        const string filename = ts->get_data_path() + "../../../../output_"+s.str()+".avi";
+
         Mat img(img_r, img_c, CV_8UC3, Scalar::all(0));
         try
         {
-            VideoWriter writer(string(ts->get_data_path()) + "video/output_"+s.str()+".avi", codec_bmp_tags[j].tag, fps, frame_s);
+            VideoWriter writer(filename, codec_bmp_tags[j].tag, fps, frame_s);
 
-            if (writer.isOpened() == false) ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
-
-            for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
+            if (writer.isOpened() == false)
             {
-                //circle(img, Point2i(img_c / 2, img_r / 2), cv::min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
-                rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
-                          Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1);
-                writer << img;
+                ts->printf(ts->LOG, "\n\nFile name: %s\n", filename.c_str());
+                ts->printf(ts->LOG, "Codec id: %d   Codec tag: %d\n", j, codec_bmp_tags[j].tag);
+                ts->printf(ts->LOG, "Error: cannot create video file.");
+                ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+            }
+
+            else
+
+            {
+                for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
+                {
+                    //circle(img, Point2i(img_c / 2, img_r / 2), cv::min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
+                    rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
+                              Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1);
+                    writer << img;
+                }
+
+                if (!created) created = true;
+                else remove(filename.c_str());
             }
         }
         catch(...)
         {
-            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+            ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
         }
         ts->set_failed_test_info(cvtest::TS::OK);
 
