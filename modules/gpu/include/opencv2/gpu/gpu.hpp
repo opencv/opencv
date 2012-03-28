@@ -1885,11 +1885,6 @@ CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, Gpu
 
 } // namespace gpu
 
-//! Speckle filtering - filters small connected components on diparity image.
-//! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize.
-//! Threshold for border between CC is diffThreshold;
-CV_EXPORTS void filterSpeckles(Mat& img, uchar newVal, int maxSpeckleSize, uchar diffThreshold, Mat& buf);
-
 } // namespace cv
 
 #endif /* __OPENCV_GPU_HPP__ */
