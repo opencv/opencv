@@ -354,6 +354,31 @@ The function converts 2D or 3D points from/to homogeneous coordinates by calling
 .. note:: The function is obsolete. Use one of the previous two functions instead.
 
 
+
+correctMatches
+--------------
+Refines coordinates of corresponding points.
+
+.. ocv:function:: void correctMatches( InputArray F, InputArray points1, InputArray points2, OutputArray newPoints1, OutputArray newPoints2 )
+
+.. ocv:pyfunction:: cv2.correctMatches(F, points1, points2[, newPoints1[, newPoints2]]) -> newPoints1, newPoints2
+
+.. ocv:cfunction:: void cvCorrectMatches( CvMat* F, CvMat* points1, CvMat* points2, CvMat* new_points1, CvMat* new_points2 )
+
+    :param F: 3x3 fundamental matrix.
+
+    :param points1: 1xN array containing the first set of points.
+
+    :param points2: 1xN array containing the second set of points.
+
+    :param newPoints1: The optimized points1.
+
+    :param newPoints2: The optimized points2.
+
+The function implements the Optimal Triangulation Method (see Multiple View Geometry for details). For each given point correspondence points1[i] <-> points2[i], and a fundamental matrix F, it computes the corrected correspondences newPoints1[i] <-> newPoints2[i] that minimize the geometric error  :math:`d(points1[i], newPoints1[i])^2 + d(points2[i],newPoints2[i])^2`  (where  :math:`d(a,b)`  is the geometric distance between points  :math:`a`  and  :math:`b` ) subject to the epipolar constraint  :math:`newPoints2^T * F * newPoints1 = 0` .
+
+
+
 decomposeProjectionMatrix
 --------------------------
 Decomposes a projection matrix into a rotation matrix and a camera matrix.
