@@ -181,5 +181,27 @@ public:
     }
 };
 
+class CV_GrfmtReadBMPRLE8Test : public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            Mat rle = imread(string(ts->get_data_path()) + "readwrite/rle8.bmp");
+            Mat bmp = imread(string(ts->get_data_path()) + "readwrite/ordinary.bmp");
+            if (norm(rle-bmp)>1.e-10)
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+        }
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+};
+
 TEST(Highgui_Grfmt_WriteBigImage,         regression) { CV_GrfmtWriteBigImageTest      test; test.safe_run(); }
 TEST(Highgui_Grfmt_WriteSequenceImage,    regression) { CV_GrfmtWriteSequenceImageTest test; test.safe_run(); }
+TEST(GrfmtReadBMPRLE8,    regression) { CV_GrfmtReadBMPRLE8Test test; test.safe_run(); }
+

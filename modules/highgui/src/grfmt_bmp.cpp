@@ -411,6 +411,8 @@ decode_rle4_bad: ;
                         }
 
                         line_end_flag = 0;
+                        if( y >= m_height )
+                            break;
                     }
                 }
 
