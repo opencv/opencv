@@ -246,7 +246,9 @@ CVAPI(double) cvCalibrateCamera2( const CvMat* object_points,
                                 CvMat* distortion_coeffs,
                                 CvMat* rotation_vectors CV_DEFAULT(NULL),
                                 CvMat* translation_vectors CV_DEFAULT(NULL),
-                                int flags CV_DEFAULT(0) );
+                                int flags CV_DEFAULT(0),
+                                CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
+                                    CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)) );
 
 /* Computes various useful characteristics of the camera from the data computed by
    cvCalibrateCamera2 */
@@ -579,7 +581,8 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      CV_OUT InputOutputArray cameraMatrix,
                                      CV_OUT InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
-                                     int flags=0 );
+                                     int flags=0, TermCriteria criteria = TermCriteria(
+                                         TermCriteria::COUNT+TermCriteria::EPS, 30, DBL_EPSILON) );
 
 //! computes several useful camera characteristics from the camera matrix, camera frame resolution and the physical sensor size.
 CV_EXPORTS_W void calibrationMatrixValues( InputArray cameraMatrix,

@@ -1452,7 +1452,7 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
 CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                     const CvMat* imagePoints, const CvMat* npoints,
                     CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
-                    CvMat* rvecs, CvMat* tvecs, int flags )
+                    CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
 {
     const int NINTRINSIC = 12;
     Ptr<CvMat> matM, _m, _Ji, _Je, _err;
@@ -1600,7 +1600,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         cvInitIntrinsicParams2D( matM, _m, npoints, imageSize, &matA, aspectRatio );
     }
 
-    solver.init( nparams, 0, cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON) );
+    solver.init( nparams, 0, termCrit );
 
     {
     double* param = solver.param->data.db;
@@ -3396,7 +3396,7 @@ cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,
 double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
                             InputArrayOfArrays _imagePoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
-                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags )
+                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags, TermCriteria criteria )
 {
     int rtype = CV_64F;
     Mat cameraMatrix = _cameraMatrix.getMat();
@@ -3418,7 +3418,7 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
 
     double reprojErr = cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
                                           &c_cameraMatrix, &c_distCoeffs, &c_rvecM,
-                                          &c_tvecM, flags );
+                                          &c_tvecM, flags, criteria );
 
     bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
 
