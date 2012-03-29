@@ -4,6 +4,12 @@
       android:versionCode="1"
       android:versionName="1.0">
 
+    <supports-screens android:resizeable="true"
+                      android:smallScreens="true" 
+                      android:normalScreens="true" 
+                      android:largeScreens="true" 
+                      android:anyDensity="true" />
+    
     <application android:icon="@drawable/icon" android:label="@string/app_name">
         <activity android:name=".puzzle15Activity"
                   android:label="@string/app_name"
