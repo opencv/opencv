@@ -1029,6 +1029,8 @@ CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
 //! computes convex hull for a set of 2D points.
 CV_EXPORTS_W void convexHull( InputArray points, OutputArray hull,
                               bool clockwise=false, bool returnPoints=true );
+//! computes the contour convexity defects
+CV_EXPORTS_W void convexityDefects( InputArray points, InputArray hull, OutputArray defects );
 
 //! returns true iff the contour is convex. Does not support contours with self-intersection
 CV_EXPORTS_W bool isContourConvex( InputArray contour );

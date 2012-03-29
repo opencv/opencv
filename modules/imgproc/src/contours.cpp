@@ -1961,6 +1961,46 @@ void cv::convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool
     shull.copyTo(dhull);
 }
 
+
+void cv::convexityDefects( InputArray _points, InputArray _hull, OutputArray _defects )
+{
+    Mat points = _points.getMat();
+    CV_Assert( points.isContinuous() && points.type() == CV_32SC2 );
+    Mat hull = _hull.getMat();
+    Ptr<CvMemStorage> storage = cvCreateMemStorage();
+    
+    CvMat c_points = points, c_hull = hull;
+    CvSeq* seq = cvConvexityDefects(&c_points, &c_hull);
+    int i, n = seq->total;
+    
+    if( n == 0 )
+    {
+        _defects.release();
+        return;
+    }
+    
+    _defects.create(n, 1, CV_32SC4);
+    Mat defects = _defects.getMat();
+    
+    SeqIterator<CvConvexityDefect> it = Seq<CvConvexityDefect>(seq).begin();
+    CvPoint* ptorg = (CvPoint*)points.data;
+    
+    for( i = 0; i < n; i++, ++it )
+    {
+        CvConvexityDefect& d = *it;
+        int idx0 = (int)(d.start - ptorg);
+        int idx1 = (int)(d.end - ptorg);
+        int idx2 = (int)(d.depth_point - ptorg);
+        CV_Assert( 0 <= idx0 && idx0 < n );
+        CV_Assert( 0 <= idx1 && idx1 < n );
+        CV_Assert( 0 <= idx2 && idx2 < n );
+        CV_Assert( d.depth >= 0 );
+        int idepth = cvRound(d.depth*256);
+        defects.at<Vec4i>(i) = Vec4i(idx0, idx1, idx2, idepth);
+    }
+}
+
+
 bool cv::isContourConvex( InputArray _contour )
 {
     Mat contour = _contour.getMat();
@@ -1992,7 +2032,6 @@ void cv::fitLine( InputArray _points, OutputArray _line, int distType,
     CvMat _cpoints = points.reshape(2 + is3d);
     float line[6];
     cvFitLine(&_cpoints, distType, param, reps, aeps, &line[0]);
-
     
     int out_size = (is2d)?( (is3d)? (points.channels() * points.rows * 2) : 4 ): 6;
   
