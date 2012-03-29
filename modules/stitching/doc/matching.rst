@@ -245,4 +245,4 @@ Constructs a "best of 2 nearest" matcher.
 
     :param num_matches_thresh1: Minimum number of matches required for the 2D projective transform estimation used in the inliers classification step
 
-    :param num_matches_thresh1: Minimum number of matches required for the 2D projective transform re-estimation on inliers
+    :param num_matches_thresh2: Minimum number of matches required for the 2D projective transform re-estimation on inliers

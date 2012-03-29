@@ -78,12 +78,10 @@ Computes a matrix-matrix or matrix-scalar per-element product.
 
 
 gpu::divide
----------------
+-----------
 Computes a matrix-matrix or matrix-scalar division.
 
 .. ocv:function:: void gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
-
-.. ocv:function:: void gpu::divide(const GpuMat& src1, const Scalar& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
 
 .. ocv:function:: void gpu::divide(double src1, const GpuMat& src2, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null())
 
@@ -104,9 +102,8 @@ This function, in contrast to :ocv:func:`divide`, uses a round-down rounding mod
 .. seealso:: :ocv:func:`divide`
 
 
-
-addWeighted
----------------
+gpu::addWeighted
+----------------
 Computes the weighted sum of two arrays.
 
 .. ocv:function:: void gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null())

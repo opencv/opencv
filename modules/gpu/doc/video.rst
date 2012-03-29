@@ -47,6 +47,7 @@ Class computing the optical flow for two images using Brox et al Optical Flow al
 
 gpu::GoodFeaturesToTrackDetector_GPU
 ------------------------------------
+.. ocv:class:: gpu::GoodFeaturesToTrackDetector_GPU
 
 Class used for strong corners detection on an image. ::
 
@@ -120,6 +121,8 @@ Releases inner buffers memory.
 
 gpu::FarnebackOpticalFlow
 -------------------------
+.. ocv:class:: gpu::FarnebackOpticalFlow
+
 Class computing a dense optical flow using the Gunnar Farneback’s algorithm. ::
 
     class CV_EXPORTS FarnebackOpticalFlow
@@ -179,6 +182,7 @@ Releases unused auxiliary memory buffers.
 
 gpu::PyrLKOpticalFlow
 ---------------------
+.. ocv:class:: gpu::PyrLKOpticalFlow
 
 Class used for calculating an optical flow. ::
 

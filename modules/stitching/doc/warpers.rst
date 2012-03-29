@@ -101,7 +101,7 @@ Projects the image backward.
 
     :param dst_size: Backward-projected image size
 
-    :param dst_size: Backward-projected image
+    :param dst: Backward-projected image
 
 detail::RotationWarper::warpRoi
 -------------------------------

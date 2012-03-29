@@ -211,7 +211,7 @@ gpu::FAST_GPU::calcKeyPointsLocation
 -------------------------------------
 Find keypoints and compute it's response if ``nonmaxSupression`` is true.
 
-.. int gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask)
+.. ocv:function:: int gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask)
 
     :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
 

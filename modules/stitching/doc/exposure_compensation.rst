@@ -29,15 +29,6 @@ detail::ExposureCompensation::feed
 
 .. ocv:function:: void detail::ExposureCompensation::feed(const std::vector<Point> &corners, const std::vector<Mat> &images, const std::vector<Mat> &masks)
 
-    :param corners: Source image top-left corners
-
-    :param images: Source images
-
-    :param masks: Image masks to update
-
-detail::ExposureCompensation::feed
-----------------------------------
-
 .. ocv:function:: void detail::ExposureCompensation::feed(const std::vector<Point> &corners, const std::vector<Mat> &images, const std::vector<std::pair<Mat,uchar> > &masks)
 
     :param corners: Source image top-left corners

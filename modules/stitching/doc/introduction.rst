@@ -10,7 +10,7 @@ The implemented stitching pipeline is very similar to the one proposed in [BL07]
 .. image:: StitchingPipeline.jpg
 
 References
-----------
+==========
 
 .. [BL07] M. Brown and D. Lowe. Automatic Panoramic Image Stitching using Invariant Features. International Journal of Computer Vision, 74(1), pages 59-73, 2007.
 

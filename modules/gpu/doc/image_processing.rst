@@ -769,7 +769,7 @@ Performs linear blending of two images.
 
     :param img1: First image. Supports only ``CV_8U`` and ``CV_32F`` depth.
 
-    :param img1: Second image. Must have the same size and the same type as ``img1`` .
+    :param img2: Second image. Must have the same size and the same type as ``img1`` .
 
     :param weights1: Weights for first image. Must have tha same size as ``img1`` . Supports only ``CV_32F`` type.
 
@@ -789,7 +789,7 @@ Composites two images using alpha opacity values contained in each image.
 
     :param img1: First image. Supports ``CV_8UC4`` , ``CV_16UC4`` , ``CV_32SC4`` and ``CV_32FC4`` types.
 
-    :param img1: Second image. Must have the same size and the same type as ``img1`` .
+    :param img2: Second image. Must have the same size and the same type as ``img1`` .
 
     :param dst: Destination image.
 

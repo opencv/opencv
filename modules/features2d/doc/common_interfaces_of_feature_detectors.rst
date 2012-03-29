@@ -15,27 +15,27 @@ KeyPoint
 Data structure for salient point detectors.
 
     .. ocv:member:: Point2f pt
-    
+
         coordinates of the keypoint
-        
+
     .. ocv:member:: float size
-    
+
          diameter of the meaningful keypoint neighborhood
-         
+
     .. ocv:member:: float angle
-    
+
         computed orientation of the keypoint (-1 if not applicable)
-        
+
     .. ocv:member:: float response
-    
+
         the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
-        
+
     .. ocv:member:: int octave
-    
+
         octave (pyramid layer) from which the keypoint has been extracted
-        
+
     .. ocv:member:: int class_id
-    
+
         object id that can be used to clustered keypoints by an object they belong to
 
 KeyPoint::KeyPoint
@@ -51,19 +51,19 @@ The keypoint constructors
 .. ocv:pyfunction:: cv2.KeyPoint(x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]) -> <KeyPoint object>
 
     :param x: x-coordinate of the keypoint
-    
+
     :param y: y-coordinate of the keypoint
-    
+
     :param _pt: x & y coordinates of the keypoint
-    
+
     :param _size: keypoint diameter
-    
+
     :param _angle: keypoint orientation
-    
+
     :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
-    
+
     :param _octave: pyramid octave in which the keypoint has been detected
-    
+
     :param _class_id: object id
 
 
@@ -309,7 +309,7 @@ Wrapping class for feature detection using the
     protected:
         ...
     };
-    
+
 
 DenseFeatureDetector
 --------------------
@@ -317,18 +317,18 @@ DenseFeatureDetector
 
 Class for generation of image features which are distributed densely and regularly over the image. ::
 
-	class DenseFeatureDetector : public FeatureDetector
-	{
-	public:
-		DenseFeatureDetector( float initFeatureScale=1.f, int featureScaleLevels=1,
+        class DenseFeatureDetector : public FeatureDetector
+        {
+        public:
+                DenseFeatureDetector( float initFeatureScale=1.f, int featureScaleLevels=1,
                               float featureScaleMul=0.1f,
                               int initXyStep=6, int initImgBound=0,
                               bool varyXyStepWithScale=true,
                               bool varyImgBoundWithScale=false );
-	protected:
+        protected:
         ...
     };
-    
+
 The detector generates several levels (in the amount of ``featureScaleLevels``) of features. Features of each level are located in the nodes of a regular grid over the image (excluding the image boundary of given size). The level parameters (a feature scale, a node size, a size of boundary) are multiplied by ``featureScaleMul`` with level index growing depending on input flags, viz.:
 
 * Feature scale is multiplied always.
@@ -380,11 +380,11 @@ Class for extracting blobs from an image. ::
 
 The class implements a simple algorithm for extracting blobs from an image:
 
-#. Convert the source image to binary images by applying thresholding with several thresholds from ``minThreshold`` (inclusive) to ``maxThreshold`` (exclusive) with distance ``thresholdStep`` between neighboring thresholds. 
+#. Convert the source image to binary images by applying thresholding with several thresholds from ``minThreshold`` (inclusive) to ``maxThreshold`` (exclusive) with distance ``thresholdStep`` between neighboring thresholds.
 
-#. Extract connected components from every binary image by  :ocv:func:`findContours`  and calculate their centers. 
+#. Extract connected components from every binary image by  :ocv:func:`findContours`  and calculate their centers.
 
-#. Group centers from several binary images by their coordinates. Close centers form one group that corresponds to one blob, which is controlled by the ``minDistBetweenBlobs`` parameter. 
+#. Group centers from several binary images by their coordinates. Close centers form one group that corresponds to one blob, which is controlled by the ``minDistBetweenBlobs`` parameter.
 
 #. From the groups, estimate final centers of blobs and their radiuses and return as locations and sizes of keypoints.
 
@@ -468,7 +468,7 @@ panorama series.
 ``DynamicAdaptedFeatureDetector``  uses another detector, such as FAST or SURF, to do the dirty work,
 with the help of ``AdjusterAdapter`` .
 If the detected number of features is not large enough,
-``AdjusterAdapter`` adjusts the detection parameters so that the next detection 
+``AdjusterAdapter`` adjusts the detection parameters so that the next detection
 results in a bigger or smaller number of features.  This is repeated until either the number of desired features are found
 or the parameters are maxed out.
 
@@ -500,14 +500,14 @@ The constructor
 
     :param max_features: Maximum desired number of features.
 
-    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For :ocv:class:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf``  many iterations can be time-comsuming.  At each iteration the detector is rerun. 
+    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For :ocv:class:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf``  many iterations can be time-comsuming.  At each iteration the detector is rerun.
 
 AdjusterAdapter
 ---------------
 .. ocv:class:: AdjusterAdapter
 
 Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ocv:class:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ocv:class:`FeatureDetector` that enables adjusting parameters after feature detection. ::
-  
+
      class AdjusterAdapter: public FeatureDetector
      {
      public:
@@ -562,7 +562,7 @@ Example: ::
 
 AdjusterAdapter::good
 -------------------------
-Returns false if the detector parameters cannot be adjusted any more. 
+Returns false if the detector parameters cannot be adjusted any more.
 
 .. ocv:function:: bool AdjusterAdapter::good() const
 

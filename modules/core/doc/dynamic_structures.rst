@@ -1,5 +1,5 @@
 Dynamic Structures
-================== 
+==================
 
 .. highlight:: c
 
@@ -13,36 +13,36 @@ CvMemStorage
 A storage for various OpenCV dynamic data structures, such as ``CvSeq``, ``CvSet`` etc.
 
     .. ocv:member:: CvMemBlock* bottom
-    
+
         the first memory block in the double-linked list of blocks
-    
+
     .. ocv:member:: CvMemBlock* top
-        
+
         the current partially allocated memory block in the list of blocks
-    
+
     .. ocv:member:: CvMemStorage* parent
-    
+
         the parent storage (if any) from which the new memory blocks are borrowed.
-        
+
     .. ocv:member:: int free_space
-    
+
         number of free bytes in the ``top`` block
-        
+
     .. ocv:member:: int block_size
-    
+
         the total size of the memory blocks
 
-Memory storage is a low-level structure used to store dynamically growing data structures such as sequences, contours, graphs, subdivisions, etc. It is organized as a list of memory blocks of equal size - 
+Memory storage is a low-level structure used to store dynamically growing data structures such as sequences, contours, graphs, subdivisions, etc. It is organized as a list of memory blocks of equal size -
 ``bottom`` field is the beginning of the list of blocks and ``top`` is the currently used block, but not necessarily the last block of the list. All blocks between ``bottom`` and ``top``, not including the
 latter, are considered fully occupied; all blocks between ``top`` and the last block, not including  ``top``, are considered free and ``top`` itself is partly ocupied - ``free_space`` contains the number of free bytes left in the end of ``top``.
 
-A new memory buffer that may be allocated explicitly by :ocv:cfunc:`MemStorageAlloc` function or implicitly by higher-level functions, such as :ocv:cfunc:`SeqPush`,  :ocv:cfunc:`GraphAddEdge` etc. 
+A new memory buffer that may be allocated explicitly by :ocv:cfunc:`MemStorageAlloc` function or implicitly by higher-level functions, such as :ocv:cfunc:`SeqPush`,  :ocv:cfunc:`GraphAddEdge` etc.
 
-The buffer is put in the end of already allocated space in the ``top`` memory block, if there is enough free space. After allocation, ``free_space`` is decreased by the size of the allocated buffer plus some padding to keep the proper alignment. When the allocated buffer does not fit into the available portion of 
+The buffer is put in the end of already allocated space in the ``top`` memory block, if there is enough free space. After allocation, ``free_space`` is decreased by the size of the allocated buffer plus some padding to keep the proper alignment. When the allocated buffer does not fit into the available portion of
 ``top``, the next storage block from the list is taken as ``top`` and  ``free_space`` is reset to the whole block size prior to the allocation.
 
 If there are no more free blocks, a new block is allocated (or borrowed from the parent, see :ocv:cfunc:`CreateChildMemStorage`) and added to the end of list. Thus, the storage behaves as a stack with ``bottom`` indicating bottom of the stack and the pair (``top``, ``free_space``)
-indicating top of the stack. The stack top may be saved via :ocv:cfunc:`SaveMemStoragePos`, restored via 
+indicating top of the stack. The stack top may be saved via :ocv:cfunc:`SaveMemStoragePos`, restored via
 :ocv:cfunc:`RestoreMemStoragePos`, or reset via :ocv:cfunc:`ClearMemStorage`.
 
 CvMemBlock
@@ -67,37 +67,37 @@ CvSeq
 Dynamically growing sequence.
 
     .. ocv:member:: int flags
-    
+
         sequence flags, including the sequence signature (CV_SEQ_MAGIC_VAL or CV_SET_MAGIC_VAL), type of the elements and some other information about the sequence.
-        
+
     .. ocv:member:: int header_size
-    
+
         size of the sequence header. It should be sizeof(CvSeq) at minimum. See :ocv:cfunc:`CreateSeq`.
-        
+
     .. ocv:member:: CvSeq* h_prev
     .. ocv:member:: CvSeq* h_next
     .. ocv:member:: CvSeq* v_prev
     .. ocv:member:: CvSeq* v_next
-    
+
         pointers to another sequences in a sequence tree. Sequence trees are used to store hierarchical contour structures, retrieved by :ocv:cfunc:`FindContours`
 
     .. ocv:member:: int total
-    
+
         the number of sequence elements
-        
+
     .. ocv:member:: int elem_size
-    
+
         size of each sequence element in bytes
-        
+
     .. ocv:member:: CvMemStorage* storage
-    
+
         memory storage where the sequence resides. It can be a NULL pointer.
-        
+
     .. ocv:member:: CvSeqBlock* first
-    
+
         pointer to the first data block
 
-The structure ``CvSeq`` is a base for all of OpenCV dynamic data structures.        
+The structure ``CvSeq`` is a base for all of OpenCV dynamic data structures.
 There are two types of sequences - dense and sparse. The base type for dense
 sequences is  :ocv:struct:`CvSeq` and such sequences are used to represent
 growable 1d arrays - vectors, stacks, queues, and deques. They have no gaps
@@ -115,13 +115,13 @@ CvSlice
   A sequence slice. In C++ interface the class :ocv:class:`Range` should be used instead.
 
   .. ocv:member:: int start_index
-    
+
     inclusive start index of the sequence slice
-        
+
   .. ocv:member:: int end_index
-    
+
     exclusive end index of the sequence slice
-	
+
 There are helper functions to construct the slice and to compute its length:
 
 .. ocv:cfunction:: CvSlice cvSlice( int start, int end )
@@ -165,7 +165,7 @@ CvGraph
 -------
 .. ocv:struct:: CvGraph
 
-The structure ``CvGraph`` is a base for graphs used in OpenCV 1.x. It inherits from 
+The structure ``CvGraph`` is a base for graphs used in OpenCV 1.x. It inherits from
 :ocv:struct:`CvSet`, that is, it is considered as a set of vertices. Besides, it contains another set as a member, a set of graph edges. Graphs in OpenCV are represented using adjacency lists format.
 
 
@@ -324,7 +324,7 @@ CreateGraphScanner
 Creates structure for depth-first graph traversal.
 
 .. ocv:cfunction:: CvGraphScanner*  cvCreateGraphScanner(  CvGraph* graph, CvGraphVtx* vtx=NULL, int mask=CV_GRAPH_ALL_ITEMS )
-    
+
 
     :param graph: Graph
 
@@ -332,23 +332,23 @@ Creates structure for depth-first graph traversal.
 
     :param mask: Event mask indicating which events are of interest to the user (where  :ocv:cfunc:`NextGraphItem`  function returns control to the user) It can be  ``CV_GRAPH_ALL_ITEMS``  (all events are of interest) or a combination of the following flags:
 
-            * **CV_GRAPH_VERTEX** stop at the graph vertices visited for the first time 
-            
-            * **CV_GRAPH_TREE_EDGE** stop at tree edges ( ``tree edge``  is the edge connecting the last visited vertex and the vertex to be visited next) 
-            
-            * **CV_GRAPH_BACK_EDGE** stop at back edges ( ``back edge``  is an edge connecting the last visited vertex with some of its ancestors in the search tree) 
-            
-            * **CV_GRAPH_FORWARD_EDGE** stop at forward edges ( ``forward edge``  is an edge conecting the last visited vertex with some of its descendants in the search tree. The forward edges are only possible during oriented graph traversal) 
-            
-            * **CV_GRAPH_CROSS_EDGE** stop at cross edges ( ``cross edge``  is an edge connecting different search trees or branches of the same tree. The  ``cross edges``  are only possible during oriented graph traversal) 
-            
-            * **CV_GRAPH_ANY_EDGE** stop at any edge ( ``tree, back, forward`` , and  ``cross edges`` ) 
-            
-            * **CV_GRAPH_NEW_TREE** stop in the beginning of every new search tree. When the traversal procedure visits all vertices and edges reachable from the initial vertex (the visited vertices together with tree edges make up a tree), it searches for some unvisited vertex in the graph and resumes the traversal process from that vertex. Before starting a new tree (including the very first tree when  ``cvNextGraphItem``  is called for the first time) it generates a  ``CV_GRAPH_NEW_TREE``  event. For unoriented graphs, each search tree corresponds to a connected component of the graph. 
-            
+            * **CV_GRAPH_VERTEX** stop at the graph vertices visited for the first time
+
+            * **CV_GRAPH_TREE_EDGE** stop at tree edges ( ``tree edge``  is the edge connecting the last visited vertex and the vertex to be visited next)
+
+            * **CV_GRAPH_BACK_EDGE** stop at back edges ( ``back edge``  is an edge connecting the last visited vertex with some of its ancestors in the search tree)
+
+            * **CV_GRAPH_FORWARD_EDGE** stop at forward edges ( ``forward edge``  is an edge conecting the last visited vertex with some of its descendants in the search tree. The forward edges are only possible during oriented graph traversal)
+
+            * **CV_GRAPH_CROSS_EDGE** stop at cross edges ( ``cross edge``  is an edge connecting different search trees or branches of the same tree. The  ``cross edges``  are only possible during oriented graph traversal)
+
+            * **CV_GRAPH_ANY_EDGE** stop at any edge ( ``tree, back, forward`` , and  ``cross edges`` )
+
+            * **CV_GRAPH_NEW_TREE** stop in the beginning of every new search tree. When the traversal procedure visits all vertices and edges reachable from the initial vertex (the visited vertices together with tree edges make up a tree), it searches for some unvisited vertex in the graph and resumes the traversal process from that vertex. Before starting a new tree (including the very first tree when  ``cvNextGraphItem``  is called for the first time) it generates a  ``CV_GRAPH_NEW_TREE``  event. For unoriented graphs, each search tree corresponds to a connected component of the graph.
+
             * **CV_GRAPH_BACKTRACKING** stop at every already visited vertex during backtracking - returning to already visited vertexes of the traversal tree.
 
-The function creates a structure for depth-first graph traversal/search. The initialized structure is used in the 
+The function creates a structure for depth-first graph traversal/search. The initialized structure is used in the
 :ocv:cfunc:`NextGraphItem`
 function - the incremental traversal procedure.
 
@@ -358,11 +358,11 @@ Creates memory storage.
 
 .. ocv:cfunction:: CvMemStorage* cvCreateMemStorage( int blockSize=0 )
 .. ocv:pyoldfunction:: cv.CreateMemStorage(blockSize=0) -> memstorage
-    
+
 
     :param blockSize: Size of the storage blocks in bytes. If it is 0, the block size is set to a default value - currently it is  about 64K.
 
-The function creates an empty memory storage. See 
+The function creates an empty memory storage. See
 :ocv:struct:`CvMemStorage`
 description.
 
@@ -371,7 +371,7 @@ CreateSeq
 Creates a sequence.
 
 .. ocv:cfunction:: CvSeq* cvCreateSeq(  int seqFlags, int headerSize, int elemSize, CvMemStorage* storage)
-    
+
 
     :param seqFlags: Flags of the created sequence. If the sequence is not passed to any function working with a specific type of sequences, the sequence value may be set to 0, otherwise the appropriate type must be selected from the list of predefined sequence types.
 
@@ -384,21 +384,21 @@ Creates a sequence.
 The function creates a sequence and returns
 the pointer to it. The function allocates the sequence header in
 the storage block as one continuous chunk and sets the structure
-fields 
+fields
 ``flags``
-, 
+,
 ``elemSize``
-, 
+,
 ``headerSize``
 , and
 ``storage``
-to passed values, sets 
+to passed values, sets
 ``delta_elems``
 to the
-default value (that may be reassigned using the 
+default value (that may be reassigned using the
 :ocv:cfunc:`SetSeqBlockSize`
 function), and clears other header fields, including the space following
-the first 
+the first
 ``sizeof(CvSeq)``
 bytes.
 
@@ -416,7 +416,7 @@ Creates an empty set.
 
     :param storage: Container for the set
 
-The function creates an empty set with a specified header size and element size, and returns the pointer to the set. This function is just a thin layer on top of 
+The function creates an empty set with a specified header size and element size, and returns the pointer to the set. This function is just a thin layer on top of
 :ocv:cfunc:`CreateSeq`.
 
 CvtSeqToArray
@@ -445,9 +445,9 @@ The function finishes the writing process and
 returns the pointer to the written sequence. The function also truncates
 the last incomplete sequence block to return the remaining part of the
 block to memory storage. After that, the sequence can be read and
-modified safely. See 
+modified safely. See
 :ocv:cfunc:`StartWriteSeq`
-and 
+and
 :ocv:cfunc:`StartAppendToSeq`
 
 FindGraphEdge
@@ -461,7 +461,7 @@ Finds an edge in a graph.
     :param start_idx: Index of the starting vertex of the edge
 
     :param end_idx: Index of the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
-	
+
 ::
 
     #define cvGraphFindEdge cvFindGraphEdge
@@ -481,7 +481,7 @@ Finds an edge in a graph by using its pointer.
     :param startVtx: Pointer to the starting vertex of the edge
 
     :param endVtx: Pointer to the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
-	
+
 ::
 
     #define cvGraphFindEdgeByPtr cvFindGraphEdgeByPtr
@@ -528,7 +528,7 @@ Returns a pointer to a sequence element according to its index.
     :param seq: Sequence
 
     :param index: Index of element
-	
+
 ::
 
     #define CV_GET_SEQ_ELEM( TYPE, seq, index )  (TYPE*)cvGetSeqElem( (CvSeq*)(seq), (index) )
@@ -544,22 +544,22 @@ the one before last, etc. If the sequence is most likely to consist of
 a single sequence block or the desired element is likely to be located
 in the first block, then the macro
 ``CV_GET_SEQ_ELEM( elemType, seq, index )``
-should be used, where the parameter 
+should be used, where the parameter
 ``elemType``
 is the
-type of sequence elements ( 
+type of sequence elements (
 :ocv:struct:`CvPoint`
 for example), the parameter
 ``seq``
-is a sequence, and the parameter 
+is a sequence, and the parameter
 ``index``
 is the index
 of the desired element. The macro checks first whether the desired element
 belongs to the first block of the sequence and returns it if it does;
-otherwise the macro calls the main function 
+otherwise the macro calls the main function
 ``GetSeqElem``
 . Negative
-indices always cause the 
+indices always cause the
 :ocv:cfunc:`GetSeqElem`
 call. The function has O(1)
 time complexity assuming that the number of blocks is much smaller than the
@@ -573,7 +573,7 @@ Returns the current reader position.
 
     :param reader: Reader state
 
-The function returns the current reader position (within 0 ... 
+The function returns the current reader position (within 0 ...
 ``reader->seq->total``
 - 1).
 
@@ -587,7 +587,7 @@ Finds a set element by its index.
 
     :param index: Index of the set element within a sequence
 
-The function finds a set element by its index. The function returns the pointer to it or 0 if the index is invalid or the corresponding node is free. The function supports negative indices as it uses 
+The function finds a set element by its index. The function returns the pointer to it or 0 if the index is invalid or the corresponding node is free. The function supports negative indices as it uses
 :ocv:cfunc:`GetSeqElem`
 to locate the node.
 
@@ -736,11 +736,11 @@ The function returns the number of edges incident to the specified vertex, both 
 
 ..
 
-The macro 
+The macro
 ``CV_NEXT_GRAPH_EDGE( edge, vertex )``
-returns the edge incident to 
+returns the edge incident to
 ``vertex``
-that follows after 
+that follows after
 ``edge``
 .
 
@@ -851,7 +851,7 @@ Allocates a text string in a storage block.
     :param ptr: The string
 
     :param len: Length of the string (not counting the ending  ``NUL`` ) . If the parameter is negative, the function computes the length.
-	
+
 ::
 
     typedef struct CvString
@@ -877,34 +877,34 @@ Executes one or more steps of the graph traversal procedure.
 
 The function traverses through the graph
 until an event of interest to the user (that is, an event, specified
-in the 
+in the
 ``mask``
-in the 
+in the
 :ocv:cfunc:`CreateGraphScanner`
 call) is met or the
 traversal is completed. In the first case, it returns one of the events
-listed in the description of the 
+listed in the description of the
 ``mask``
 parameter above and with
 the next call it resumes the traversal. In the latter case, it returns
 ``CV_GRAPH_OVER``
-(-1). When the event is 
+(-1). When the event is
 ``CV_GRAPH_VERTEX``
 ,
 ``CV_GRAPH_BACKTRACKING``
-, or 
+, or
 ``CV_GRAPH_NEW_TREE``
 ,
-the currently observed vertex is stored in 
+the currently observed vertex is stored in
 ``scanner-:math:`>`vtx``
 . And if the
-event is edge-related, the edge itself is stored at 
+event is edge-related, the edge itself is stored at
 ``scanner-:math:`>`edge``
 ,
-the previously visited vertex - at 
+the previously visited vertex - at
 ``scanner-:math:`>`vtx``
 and the other ending
-vertex of the edge - at 
+vertex of the edge - at
 ``scanner-:math:`>`dst``
 .
 
@@ -918,7 +918,7 @@ Returns the currently observed node and moves the iterator toward the next node.
 
 The function returns the currently observed node and then updates the
 iterator - moving it toward the next node. In other words, the function
-behavior is similar to the 
+behavior is similar to the
 ``*p++``
 expression on a typical C
 pointer or C++ collection iterator. The function returns NULL if there
@@ -934,7 +934,7 @@ Returns the currently observed node and moves the iterator toward the previous n
 
 The function returns the currently observed node and then updates
 the iterator - moving it toward the previous node. In other words,
-the function behavior is similar to the 
+the function behavior is similar to the
 ``*p--``
 expression on a
 typical C pointer or C++ collection iterator. The function returns NULL
@@ -960,8 +960,8 @@ Releases memory storage.
 
 The function deallocates all storage memory
 blocks or returns them to the parent, if any. Then it deallocates the
-storage header and clears the pointer to the storage. All child storage 
-associated with a given parent storage block must be released before the 
+storage header and clears the pointer to the storage. All child storage
+associated with a given parent storage block must be released before the
 parent storage block is released.
 
 RestoreMemStoragePos
@@ -974,9 +974,9 @@ Restores memory storage position.
 
     :param pos: New storage top position
 
-The function restores the position of the storage top from the parameter 
+The function restores the position of the storage top from the parameter
 ``pos``
-. This function and the function 
+. This function and the function
 ``cvClearMemStorage``
 are the only methods to release memory occupied in memory blocks. Note again that there is no way to free memory in the middle of an occupied portion of a storage block.
 
@@ -991,7 +991,7 @@ Saves memory storage position.
     :param pos: The output position of the storage top
 
 The function saves the current position
-of the storage top to the parameter 
+of the storage top to the parameter
 ``pos``
 . The function
 ``cvRestoreMemStoragePos``
@@ -1023,7 +1023,7 @@ Inserts an element in the middle of a sequence.
 
     :param element: Inserted element
 
-The function shifts the sequence elements from the inserted position to the nearest end of the sequence and copies the 
+The function shifts the sequence elements from the inserted position to the nearest end of the sequence and copies the
 ``element``
 content there if the pointer is not NULL. The function returns a pointer to the inserted element.
 
@@ -1033,13 +1033,13 @@ Inserts an array in the middle of a sequence.
 
 .. ocv:cfunction:: void cvSeqInsertSlice(  CvSeq* seq, int beforeIndex, const CvArr* fromArr )
 
-    :param seq: Sequence 
-    
+    :param seq: Sequence
+
     :param beforeIndex: Index before which the array is inserted
-    
+
     :param fromArr: The array to take elements from
 
-The function inserts all 
+The function inserts all
 ``fromArr``
 array elements at the specified position of the sequence. The array
 ``fromArr``
@@ -1050,9 +1050,9 @@ SeqInvert
 Reverses the order of sequence elements.
 
 .. ocv:cfunction:: void cvSeqInvert( CvSeq* seq )
-    
-    :param seq: Sequence 
-    
+
+    :param seq: Sequence
+
 The function reverses the sequence in-place - the first element becomes the last one, the last element becomes the first one and so forth.
 
 SeqPop
@@ -1060,11 +1060,11 @@ SeqPop
 Removes an element from the end of a sequence.
 
 .. ocv:cfunction:: void cvSeqPop(  CvSeq* seq, void* element=NULL )
-    
-    :param seq: Sequence 
-    
-    :param element: Optional parameter . If the pointer is not zero, the function copies the removed element to this location. 
-    
+
+    :param seq: Sequence
+
+    :param element: Optional parameter . If the pointer is not zero, the function copies the removed element to this location.
+
 The function removes an element from a sequence. The function reports an error if the sequence is already empty. The function has O(1) complexity.
 
 SeqPopFront
@@ -1091,10 +1091,10 @@ Removes several elements from either end of a sequence.
 
     :param count: Number of elements to pop
 
-    :param in_front: The flags specifying which end of the modified sequence. 
-         
-            * **CV_BACK** the elements are added to the end of the sequence 
-            
+    :param in_front: The flags specifying which end of the modified sequence.
+
+            * **CV_BACK** the elements are added to the end of the sequence
+
             * **CV_FRONT** the elements are added to the beginning of the sequence
 
 The function removes several elements from either end of the sequence. If the number of the elements to be removed exceeds the total number of elements in the sequence, the function removes as many elements as possible.
@@ -1109,7 +1109,7 @@ Adds an element to the end of a sequence.
 
     :param element: Added element
 
-The function adds an element to the end of a sequence and returns a pointer to the allocated element. If the input 
+The function adds an element to the end of a sequence and returns a pointer to the allocated element. If the input
 ``element``
 is NULL, the function simply allocates a space for one more element.
 
@@ -1128,14 +1128,14 @@ The following code demonstrates how to create a new sequence using this function
         int* added = (int*)cvSeqPush( seq, &i );
         printf( "
     }
-    
+
     ...
     /* release memory storage in the end */
     cvReleaseMemStorage( &storage );
 
 ..
 
-The function has O(1) complexity, but there is a faster method for writing large sequences (see 
+The function has O(1) complexity, but there is a faster method for writing large sequences (see
 :ocv:cfunc:`StartWriteSeq`
 and related functions).
 
@@ -1149,7 +1149,7 @@ Adds an element to the beginning of a sequence.
 
     :param element: Added element
 
-The function is similar to 
+The function is similar to
 :ocv:cfunc:`SeqPush`
 but it adds the new element to the beginning of the sequence. The function has O(1) complexity.
 
@@ -1165,10 +1165,10 @@ Pushes several elements to either end of a sequence.
 
     :param count: Number of elements to push
 
-    :param in_front: The flags specifying which end of the modified sequence. 
-         
-            * **CV_BACK** the elements are added to the end of the sequence 
-            
+    :param in_front: The flags specifying which end of the modified sequence.
+
+            * **CV_BACK** the elements are added to the end of the sequence
+
             * **CV_FRONT** the elements are added to the beginning of the sequence
 
 The function adds several elements to either
@@ -1266,7 +1266,7 @@ Sorts sequence element using the specified comparison function.
     :param func: The comparison function that returns a negative, zero, or positive value depending on the relationships among the elements (see the above declaration and the example below) - a similar function is used by  ``qsort``  from C runline except that in the latter,  ``userdata``  is not used
 
     :param userdata: The user parameter passed to the compasion function; helps to avoid global variables in some cases
-	
+
 ::
 
     /* a < b ? -1 : a > b ? 1 : 0 */
@@ -1287,30 +1287,30 @@ The function sorts the sequence in-place using the specified criteria. Below is 
         int x_diff = a->x - b->x;
         return y_diff ? y_diff : x_diff;
     }
-    
+
     ...
-    
+
     CvMemStorage* storage = cvCreateMemStorage(0);
     CvSeq* seq = cvCreateSeq( CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), storage );
     int i;
-    
+
     for( i = 0; i < 10; i++ )
     {
         CvPoint pt;
-        pt.x = rand() 
-        pt.y = rand() 
+        pt.x = rand()
+        pt.y = rand()
         cvSeqPush( seq, &pt );
     }
-    
+
     cvSeqSort( seq, cmp_func, 0 /* userdata is not used here */ );
-    
+
     /* print out the sorted sequence */
     for( i = 0; i < seq->total; i++ )
     {
         CvPoint* pt = (CvPoint*)cvSeqElem( seq, i );
         printf( "(
     }
-    
+
     cvReleaseMemStorage( &storage );
 
 ..
@@ -1329,10 +1329,10 @@ Occupies a node in the set.
 
 The function allocates a new node, optionally copies
 input element data to it, and returns the pointer and the index to the
-node. The index value is taken from the lower bits of the 
+node. The index value is taken from the lower bits of the
 ``flags``
 field of the node. The function has O(1) complexity; however, there exists
-a faster function for allocating set nodes (see 
+a faster function for allocating set nodes (see
 :ocv:cfunc:`SetNew`
 ).
 
@@ -1344,7 +1344,7 @@ Adds an element to a set (fast variant).
 
     :param setHeader: Set
 
-The function is an inline lightweight variant of 
+The function is an inline lightweight variant of
 :ocv:cfunc:`SetAdd`
 . It occupies a new node and returns a pointer to it rather than an index.
 
@@ -1375,7 +1375,7 @@ Removes a set element based on its pointer.
 
     :param elem: Removed element
 
-The function is an inline lightweight variant of 
+The function is an inline lightweight variant of
 :ocv:cfunc:`SetRemove`
 that requires an element pointer. The function does not check whether the node is occupied or not - the user should take care of that.
 
@@ -1391,14 +1391,14 @@ Sets up sequence block size.
 
 The function affects memory allocation
 granularity. When the free space in the sequence buffers has run out,
-the function allocates the space for 
+the function allocates the space for
 ``deltaElems``
 sequence
 elements. If this block immediately follows the one previously allocated,
 the two blocks are concatenated; otherwise, a new sequence block is
 created. Therefore, the bigger the parameter is, the lower the possible
 sequence fragmentation, but the more space in the storage block is wasted. When
-the sequence is created, the parameter 
+the sequence is created, the parameter
 ``deltaElems``
 is set to
 the default value of about 1K. The function can be called any time after
@@ -1459,19 +1459,19 @@ can be read by subsequent calls of the macro
 in the case of forward reading and by using
 ``CV_REV_READ_SEQ_ELEM( read_elem, reader )``
 in the case of reverse
-reading. Both macros put the sequence element to 
+reading. Both macros put the sequence element to
 ``read_elem``
 and
 move the reading pointer toward the next element. A circular structure
 of sequence blocks is used for the reading process, that is, after the
-last element has been read by the macro 
+last element has been read by the macro
 ``CV_READ_SEQ_ELEM``
 , the
 first element is read when the macro is called again. The same applies to
 ``CV_REV_READ_SEQ_ELEM``
 . There is no function to finish the reading
 process, since it neither changes the sequence nor creates any temporary
-buffers. The reader field 
+buffers. The reader field
 ``ptr``
 points to the current element of
 the sequence that is to be read next. The code below demonstrates how
@@ -1484,7 +1484,7 @@ to use the sequence writer and reader.
     CvSeqWriter writer;
     CvSeqReader reader;
     int i;
-    
+
     cvStartAppendToSeq( seq, &writer );
     for( i = 0; i < 10; i++ )
     {
@@ -1493,7 +1493,7 @@ to use the sequence writer and reader.
         printf("
     }
     cvEndWriteSeq( &writer );
-    
+
     cvStartReadSeq( seq, &reader, 0 );
     for( i = 0; i < seq->total; i++ )
     {
@@ -1508,7 +1508,7 @@ to use the sequence writer and reader.
     #endif
     }
     ...
-    
+
     cvReleaseStorage( &storage );
 
 ..
@@ -1531,7 +1531,7 @@ Creates a new sequence and initializes a writer for it.
 
 The function is a combination of
 :ocv:cfunc:`CreateSeq`
-and 
+and
 :ocv:cfunc:`StartAppendToSeq`
 . The pointer to the
 created sequence is stored at

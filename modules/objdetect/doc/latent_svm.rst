@@ -76,7 +76,8 @@ Description of the filter, which corresponds to the part of the object.
         vector describes penalty function (d_i in the paper)
         pf[0] * x + pf[1] * y + pf[2] * x^2 + pf[3] * y^2
         
-    .. ocv:member:: int sizeX, sizeY
+    .. ocv:member:: int sizeX
+    .. ocv:member:: int sizeY
         
         Rectangular map (sizeX x sizeY),
         every cell stores feature vector (dimension = p)

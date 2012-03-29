@@ -204,6 +204,7 @@ Implementation of the camera parameters refinement algorithm which minimizes sum
 
 detail::BundleAdjusterRay
 -------------------------
+.. ocv:class:: detail::BundleAdjusterRay
 
 Implementation of the camera parameters refinement algorithm which minimizes sum of the distances between the rays passing through the camera center and a feature. ::
 
