@@ -408,3 +408,37 @@ int CV_DrawingTest_C::checkLineIterator( Mat& _img )
 
 TEST(Highgui_Drawing_CPP,    regression) { CV_DrawingTest_CPP test; test.safe_run(); }
 TEST(Highgui_Drawing_C,      regression) { CV_DrawingTest_C   test; test.safe_run(); }
+
+class CV_FillConvexPolyTest : public cvtest::BaseTest
+{
+public:
+    CV_FillConvexPolyTest() {}
+    ~CV_FillConvexPolyTest() {}   
+protected:
+    void run(int)
+    {
+        vector<Point> line1;
+        vector<Point> line2;
+        
+        line1.push_back(Point(1, 1));
+        line1.push_back(Point(5, 1));
+        line1.push_back(Point(5, 8));
+        line1.push_back(Point(1, 8));
+        
+        line2.push_back(Point(2, 2));
+        line2.push_back(Point(10, 2));
+        line2.push_back(Point(10, 16));
+        line2.push_back(Point(2, 16));
+        
+        Mat gray0(10,10,CV_8U, Scalar(0));
+        fillConvexPoly(gray0, line1, Scalar(255), 8, 0);
+        int nz1 = countNonZero(gray0);
+        
+        fillConvexPoly(gray0, line2, Scalar(0), 8, 1);
+        int nz2 = countNonZero(gray0)/255;
+        
+        CV_Assert( nz1 == 40 && nz2 == 0 );
+    }
+};
+
+TEST(Highgui_Drawing_FillConvexPoly, clipping) { CV_FillConvexPolyTest test; test.safe_run(); }

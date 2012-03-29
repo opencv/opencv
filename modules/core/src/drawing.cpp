@@ -552,7 +552,7 @@ Line2( Mat& img, Point pt1, Point pt2, const void* color )
     int dx, dy;
     int ecount;
     int ax, ay;
-    int i, j;
+    int i, j, x, y;
     int x_step, y_step;
     int cb = ((uchar*)color)[0];
     int cg = ((uchar*)color)[1];
@@ -560,20 +560,11 @@ Line2( Mat& img, Point pt1, Point pt2, const void* color )
     int pix_size = (int)img.elemSize();
     uchar *ptr = img.data, *tptr;
     size_t step = img.step;
-    Size size = img.size();
+    Size size = img.size(), sizeScaled(size.width*XY_ONE, size.height*XY_ONE);
 
     //assert( img && (nch == 1 || nch == 3) && img.depth() == CV_8U );
 
-    pt1.x -= XY_ONE*2;
-    pt1.y -= XY_ONE*2;
-    pt2.x -= XY_ONE*2;
-    pt2.y -= XY_ONE*2;
-    ptr += img.step*2 + 2*pix_size;
-
-    size.width = ((size.width - 5) << XY_SHIFT) + 1;
-    size.height = ((size.height - 5) << XY_SHIFT) + 1;
-
-    if( !clipLine( size, pt1, pt2 ))
+    if( !clipLine( sizeScaled, pt1, pt2 ))
         return;
 
     dx = pt2.x - pt1.x;
@@ -620,40 +611,41 @@ Line2( Mat& img, Point pt1, Point pt2, const void* color )
 
     if( pix_size == 3 )
     {
-        #define  ICV_PUT_POINT()    \
-        {                           \
-            tptr[0] = (uchar)cb;    \
-            tptr[1] = (uchar)cg;    \
-            tptr[2] = (uchar)cr;    \
+        #define  ICV_PUT_POINT(_x,_y)   \
+        x = (_x); y = (_y);             \
+        if( 0 <= x && x < size.width && \
+            0 <= y && y < size.height ) \
+        {                               \
+            tptr = ptr + y*step + x*3;  \
+            tptr[0] = (uchar)cb;        \
+            tptr[1] = (uchar)cg;        \
+            tptr[2] = (uchar)cr;        \
         }
         
-        tptr = ptr + ((pt2.x + (XY_ONE >> 1))>> XY_SHIFT)*3 +
-            ((pt2.y + (XY_ONE >> 1)) >> XY_SHIFT)*step;
-        ICV_PUT_POINT();
+        ICV_PUT_POINT((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT,
+                      (pt2.y + (XY_ONE >> 1)) >> XY_SHIFT); 
         
         if( ax > ay )
         {
-            ptr += (pt1.x >> XY_SHIFT) * 3;
+            pt1.x >>= XY_SHIFT;
 
             while( ecount >= 0 )
             {
-                tptr = ptr + (pt1.y >> XY_SHIFT) * step;
-                ICV_PUT_POINT();
+                ICV_PUT_POINT(pt1.x, pt1.y >> XY_SHIFT);
+                pt1.x++;
                 pt1.y += y_step;
-                ptr += 3;
                 ecount--;
             }
         }
         else
         {
-            ptr += (pt1.y >> XY_SHIFT) * step;
-
+            pt1.y >>= XY_SHIFT;
+            
             while( ecount >= 0 )
             {
-                tptr = ptr + (pt1.x >> XY_SHIFT) * 3;
-                ICV_PUT_POINT();
+                ICV_PUT_POINT(pt1.x >> XY_SHIFT, pt1.y);
                 pt1.x += x_step;
-                ptr += step;
+                pt1.y++;
                 ecount--;
             }
         }
@@ -662,80 +654,85 @@ Line2( Mat& img, Point pt1, Point pt2, const void* color )
     }
     else if( pix_size == 1 )
     {
-        #define  ICV_PUT_POINT()            \
-        {                                   \
-            tptr[0] = (uchar)cb;            \
+        #define  ICV_PUT_POINT(_x,_y) \
+        x = (_x); y = (_y);           \
+        if( 0 <= x && x < size.width && \
+            0 <= y && y < size.height ) \
+        {                           \
+            tptr = ptr + y*step + x;\
+            tptr[0] = (uchar)cb;    \
         }
 
-        tptr = ptr + ((pt2.x + (XY_ONE >> 1))>> XY_SHIFT) +
-            ((pt2.y + (XY_ONE >> 1)) >> XY_SHIFT)*step;
-        ICV_PUT_POINT();
-
+        ICV_PUT_POINT((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT,
+                      (pt2.y + (XY_ONE >> 1)) >> XY_SHIFT); 
+                       
         if( ax > ay )
         {
-            ptr += (pt1.x >> XY_SHIFT);
+            pt1.x >>= XY_SHIFT;
 
             while( ecount >= 0 )
             {
-                tptr = ptr + (pt1.y >> XY_SHIFT) * step;
-                ICV_PUT_POINT();
+                ICV_PUT_POINT(pt1.x, pt1.y >> XY_SHIFT);
+                pt1.x++;
                 pt1.y += y_step;
-                ptr++;
                 ecount--;
             }
         }
         else
         {
-            ptr += (pt1.y >> XY_SHIFT) * step;
-
+            pt1.y >>= XY_SHIFT;
+            
             while( ecount >= 0 )
             {
-                tptr = ptr + (pt1.x >> XY_SHIFT);
-                ICV_PUT_POINT();
+                ICV_PUT_POINT(pt1.x >> XY_SHIFT, pt1.y);
                 pt1.x += x_step;
-                ptr += step;
+                pt1.y++;
                 ecount--;
             }
         }
+                       
         #undef ICV_PUT_POINT
     }
     else
     {
-        #define  ICV_PUT_POINT()                \
-            for( j = 0; j < pix_size; j++ )     \
-                tptr[j] = ((uchar*)color)[j];
+        #define  ICV_PUT_POINT(_x,_y)   \
+        x = (_x); y = (_y);             \
+        if( 0 <= x && x < size.width && \
+            0 <= y && y < size.height ) \
+        {                               \
+            tptr = ptr + y*step + x*pix_size;\
+            for( j = 0; j < pix_size; j++ ) \
+                tptr[j] = ((uchar*)color)[j]; \
+        }
 
-        tptr = ptr + ((pt2.x + (XY_ONE >> 1))>> XY_SHIFT)*pix_size +
-            ((pt2.y + (XY_ONE >> 1)) >> XY_SHIFT)*step;
-        ICV_PUT_POINT();
-        
+        ICV_PUT_POINT((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT,
+                      (pt2.y + (XY_ONE >> 1)) >> XY_SHIFT); 
+                       
         if( ax > ay )
         {
-            ptr += (pt1.x >> XY_SHIFT) * pix_size;
-
+            pt1.x >>= XY_SHIFT;
+           
             while( ecount >= 0 )
             {
-                tptr = ptr + (pt1.y >> XY_SHIFT) * step;
-                ICV_PUT_POINT();
+                ICV_PUT_POINT(pt1.x, pt1.y >> XY_SHIFT);
+                pt1.x++;
                 pt1.y += y_step;
-                ptr += pix_size;
                 ecount--;
             }
         }
         else
         {
-            ptr += (pt1.y >> XY_SHIFT) * step;
-
+            pt1.y >>= XY_SHIFT;
+            
             while( ecount >= 0 )
             {
-                tptr = ptr + (pt1.x >> XY_SHIFT) * pix_size;
-                ICV_PUT_POINT();
+                ICV_PUT_POINT(pt1.x >> XY_SHIFT, pt1.y);
                 pt1.x += x_step;
-                ptr += step;
+                pt1.y++;
                 ecount--;
             }
         }
-
+                       
         #undef ICV_PUT_POINT
     }
 }
@@ -1013,7 +1010,7 @@ FillConvexPoly( Mat& img, const Point* v, int npts, const void* color, int line_
             LineAA( img, p0, p, color );
         p0 = p;
     }
-
+    
     xmin = (xmin + delta) >> shift;
     xmax = (xmax + delta) >> shift;
     ymin = (ymin + delta) >> shift;
