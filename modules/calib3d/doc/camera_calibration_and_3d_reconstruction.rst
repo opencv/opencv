@@ -1532,3 +1532,31 @@ The function computes the rectification transformations without knowing intrinsi
 .. [Hartley99] Hartley, R.I., Theory and Practice of Projective Rectification. IJCV 35 2, pp 115-127 (1999)
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
+
+
+
+triangulatePoints
+-----------------
+Reconstructs points by triangulation.
+
+.. ocv:function:: void triangulatePoints( InputArray projMatr1, InputArray projMatr2, InputArray projPoints1, InputArray projPoints2, OutputArray points4D )
+
+.. ocv:pyfunction:: cv2.triangulatePoints(projMatr1, projMatr2, projPoints1, projPoints2[, points4D]) -> points4D
+
+.. ocv:cfunction:: void cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMat* projPoints2, CvMat* points4D)
+
+    :param projMatr1: 3x4 projection matrix of the first camera.
+
+    :param projMatr2: 3x4 projection matrix of the second camera.
+
+    :param projPoints1: 2xN array of feature points in the first image.
+
+    :param projPoints2: 2xN array of corresponding points in the second image.
+
+    :param points4D: 4xN array of reconstructed points in homogeneous coordinates.
+
+The function reconstructs 3-dimensional points (in homogeneous coordinates) by using their observations with a stereo camera. Projections matrices can be obtained from :ocv:func:`stereoRectify`. 
+
+.. seealso::
+
+    :ocv:func:`reprojectImageTo3D`
