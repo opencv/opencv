@@ -18,7 +18,7 @@
     "adb shell am instrument -w org.opencv.test/android.test.InstrumentationTestRunner"
     -->
     <instrumentation android:name="android.test.InstrumentationTestRunner"
-                     android:targetPackage="org.opencv"
+                     android:targetPackage="org.opencv.test"
                      android:label="Tests for org.opencv"/>
     
     <uses-permission android:name="android.permission.CAMERA"/>
