@@ -1984,17 +1984,22 @@ void cv::fitLine( InputArray _points, OutputArray _line, int distType,
                   double param, double reps, double aeps )
 {
     Mat points = _points.getMat();
-    bool is3d = points.checkVector(3) >= 0, is2d = is3d ? false : points.checkVector(2) >= 0;
-    
-    CV_Assert((is2d || is3d) && (points.depth() == CV_32F || points.depth() == CV_32S));
-    CvMat _cpoints = points;
+
+    bool is3d = points.checkVector(3) >= 0;
+    bool is2d = points.checkVector(2) >= 0;
+
+    CV_Assert( (is2d || is3d) && (points.depth() == CV_32F || points.depth() == CV_32S) );
+    CvMat _cpoints = points.reshape(2 + is3d);
     float line[6];
     cvFitLine(&_cpoints, distType, param, reps, aeps, &line[0]);
+
     
-    _line.create(is2d ? 4 : 6, 1, CV_32F, -1, true);
+    int out_size = (is2d)?( (is3d)? (points.channels() * points.rows * 2) : 4 ): 6;
+  
+    _line.create(out_size, 1, CV_32F, -1, true);
     Mat l = _line.getMat();
     CV_Assert( l.isContinuous() );
-    memcpy( l.data, line, (is2d ? 4 : 6)*sizeof(line[0]) );
+    memcpy( l.data, line, out_size * sizeof(line[0]) );
 }
 
 
