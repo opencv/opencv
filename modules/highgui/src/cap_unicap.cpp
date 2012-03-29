@@ -149,12 +149,15 @@ bool CvCapture_Unicap::initDevice() {
   }
 
   int i;
-  for (i = format.size_count - 1; i > 0; i--)
-    if (format.sizes[i].width == desired_size.width &&
-	format.sizes[i].height == desired_size.height)
-      break;
-  format.size.width = format.sizes[i].width;
-  format.size.height = format.sizes[i].height;
+  if (format.sizes)
+  {
+      for (i = format.size_count - 1; i > 0; i--)
+        if (format.sizes[i].width == desired_size.width &&
+        format.sizes[i].height == desired_size.height)
+          break;
+      format.size.width = format.sizes[i].width;
+      format.size.height = format.sizes[i].height;
+  }
 
   if (!SUCCESS(unicap_set_format(handle, &format))) {
     shutdownDevice();
