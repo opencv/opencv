@@ -257,10 +257,14 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
     return ok;
 }
 
+#ifdef HAVE_TBB
+static tbb::mutex findMaximaInLayer_m;
+#endif
+
 /*
- * Find the maxima in the determinant of the Hessian in a layer of the 
+ * Find the maxima in the determinant of the Hessian in a layer of the
  * scale-space pyramid
- */ 
+ */
 static void
 findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                    const vector<Mat>& dets, const vector<Mat>& traces,
@@ -279,13 +283,13 @@ findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
     int layer_cols = (sum.cols-1)/sampleStep;
 
     // Ignore pixels without a 3x3x3 neighbourhood in the layer above
-    int margin = (sizes[layer+1]/2)/sampleStep+1; 
+    int margin = (sizes[layer+1]/2)/sampleStep+1;
 
     if( !mask_sum.empty() )
        resizeHaarPattern( dm, &Dm, NM, 9, size, mask_sum.cols );
 
     int step = (int)(dets[layer].step/dets[layer].elemSize());
-    
+
     for( int i = margin; i < layer_rows - margin; i++ )
     {
         const float* det_ptr = dets[layer].ptr<float>(i);
@@ -295,15 +299,15 @@ findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
             float val0 = det_ptr[j];
             if( val0 > hessianThreshold )
             {
-                /* Coordinates for the start of the wavelet in the sum image. There   
+                /* Coordinates for the start of the wavelet in the sum image. There
                    is some integer division involved, so don't try to simplify this
                    (cancel out sampleStep) without checking the result is the same */
                 int sum_i = sampleStep*(i-(size/2)/sampleStep);
                 int sum_j = sampleStep*(j-(size/2)/sampleStep);
 
-                /* The 3x3x3 neighbouring samples around the maxima. 
+                /* The 3x3x3 neighbouring samples around the maxima.
                    The maxima is included at N9[1][4] */
-                
+
                 const float *det1 = &dets[layer-1].at<float>(i, j);
                 const float *det2 = &dets[layer].at<float>(i, j);
                 const float *det3 = &dets[layer+1].at<float>(i, j);
@@ -352,10 +356,9 @@ findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                     if( interp_ok  )
                     {
                         /*printf( "KeyPoint %f %f %d\n", point.pt.x, point.pt.y, point.size );*/
-                    #ifdef HAVE_TBB
-                        static tbb::mutex m;
-                        tbb::mutex::scoped_lock lock(m);
-                    #endif
+#ifdef HAVE_TBB
+                        tbb::mutex::scoped_lock lock(findMaximaInLayer_m);
+#endif
                         keypoints.push_back(kpt);
                     }
                 }
@@ -411,6 +414,11 @@ struct SURFFindInvoker
         keypoints = &_keypoints;
         nOctaveLayers = _nOctaveLayers;
         hessianThreshold = _hessianThreshold;
+
+#ifdef HAVE_TBB
+        //touch the mutex to ensure that it's initialization is finished
+        CV_Assert(&findMaximaInLayer_m > 0);
+#endif
     }
 
     void operator()(const BlockedRange& range) const
