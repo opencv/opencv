@@ -312,17 +312,17 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
             }
         }
     }
-
+#if !defined(ANDROID_r2_2_0)
     const char* available_focus_modes = handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
     if (available_focus_modes != 0)
     {
-        // find auto focus mode
-        if (strstr(available_focus_modes, "auto") != NULL)
+        // find continuous focus mode
+        if (strstr(available_focus_modes, "continuous-picture") != NULL)
         {
-            handler->params.set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_AUTO);
-            camera->autoFocus();
+            handler->params.set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO);
         }
     }
+#endif
 
     status_t pdstatus;
 #if defined(ANDROID_r2_2_0)
