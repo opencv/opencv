@@ -423,3 +423,18 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
 
     cvTriangulatePoints(&cvMatr1, &cvMatr2, &cvPoints1, &cvPoints2, &cvPoints4D);
 }
+
+void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2,
+                         OutputArray _newPoints1, OutputArray _newPoints2 )
+{
+    Mat F = _F.getMat();
+    Mat points1 = _points1.getMat(), points2 = _points2.getMat();
+    CvMat cvPoints1 = points1, cvPoints2 = points2;
+    CvMat cvF = F;
+
+    _newPoints1.create(points1.size(), points1.type());
+    _newPoints2.create(points2.size(), points2.type());
+    CvMat cvNewPoints1 = _newPoints1.getMat(), cvNewPoints2 = _newPoints2.getMat();
+
+    cvCorrectMatches(&cvF, &cvPoints1, &cvPoints2, &cvNewPoints1, &cvNewPoints2);
+}

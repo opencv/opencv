@@ -678,6 +678,9 @@ CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
                                      InputArray projPoints1, InputArray projPoints2,
                                      OutputArray points4D );
 
+CV_EXPORTS_W void correctMatches( InputArray F, InputArray points1, InputArray points2,
+                                  OutputArray newPoints1, OutputArray newPoints2 );
+
 template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
 
 /*!
