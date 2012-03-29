@@ -396,15 +396,21 @@ ConvexityDefects
 ----------------
 Finds the convexity defects of a contour.
 
+.. ocv:function:: void convexityDefects( InputArray points, InputArray convexhull, OutputArray convexityDefects )
+
+.. ocv:pyfunction:: cv2.ConvexityDefects(contour, convexhull)-> convexityDefects
+
 .. ocv:cfunction:: CvSeq* cvConvexityDefects(  const CvArr* contour, const CvArr* convexhull, CvMemStorage* storage=NULL )
 
 .. ocv:pyoldfunction:: cv.ConvexityDefects(contour, convexhull, storage)-> convexityDefects
 
     :param contour: Input contour. 
     
-    :param convexhull: Convex hull obtained using  :ocv:cfunc:`ConvexHull2`  that should contain pointers or indices to the contour points, not the hull points themselves (the  ``returnPoints``  parameter in  :ocv:cfunc:`ConvexHull2`  should be zero). 
+    :param convexhull: Convex hull obtained using  :ocv:func:`convexHull`  that should contain indices of the contour points that make the hull. 
+
+    :param convexityDefects: The output vector of convexity defects. In C++ and the new Python/Java interface each convexity defect is represented as 4-element integer vector (a.k.a. ``cv::Vec4i``): ``(start_index, end_index, farthest_pt_index, fixpt_depth)``, where indices are 0-based indices in the original contour of the convexity defect beginning, end and the farthest point, and ``fixpt_depth`` is fixed-point approximation (with 8 fractional bits) of the distance between the farthest contour point and the hull. That is, to get the floating-point value of the depth will be ``fixpt_depth/256.0``. In C interface convexity defect is represented by ``CvConvexityDefect`` structure - see below.
     
-    :param storage: Container for the output sequence of convexity defects. If it is NULL, the contour or hull (in that order) storage is used. 
+    :param storage: Container for the output sequence of convexity defects. If it is NULL, the contour or hull (in that order) storage is used.
     
 The function finds all convexity defects of the input contour and returns a sequence of the ``CvConvexityDefect`` structures, where ``CvConvexityDetect`` is defined as: ::
 
