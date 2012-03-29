@@ -139,3 +139,34 @@ void CV_GrabcutTest::run( int /* start_from */)
 
 TEST(Imgproc_GrabCut, regression) { CV_GrabcutTest test; test.safe_run(); }
 
+TEST(Imgproc_GrabCut, repeatability)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    Mat image_1 = imread(ts.get_data_path() + "grabcut/image1652.ppm", CV_LOAD_IMAGE_COLOR);
+    Mat mask_1 = imread(ts.get_data_path() + "grabcut/mask1652.ppm", CV_LOAD_IMAGE_GRAYSCALE);
+    Rect roi_1(0, 0, 150, 150);
+
+    Mat image_2 = image_1.clone();
+    Mat mask_2 = mask_1.clone();
+    Rect roi_2 = roi_1;
+
+    Mat image_3 = image_1.clone();
+    Mat mask_3 = mask_1.clone();
+    Rect roi_3 = roi_1;
+
+    Mat bgdModel_1, fgdModel_1;
+    Mat bgdModel_2, fgdModel_2;
+    Mat bgdModel_3, fgdModel_3;
+
+    theRNG().state = 12378213;
+    grabCut(image_1, mask_1, roi_1, bgdModel_1, fgdModel_1, 1, GC_INIT_WITH_MASK);
+    theRNG().state = 12378213;
+    grabCut(image_2, mask_2, roi_2, bgdModel_2, fgdModel_2, 1, GC_INIT_WITH_MASK);
+    theRNG().state = 12378213;
+    grabCut(image_3, mask_3, roi_3, bgdModel_3, fgdModel_3, 1, GC_INIT_WITH_MASK);
+
+    EXPECT_EQ(0, countNonZero(mask_1 != mask_2));
+    EXPECT_EQ(0, countNonZero(mask_1 != mask_3));
+    EXPECT_EQ(0, countNonZero(mask_2 != mask_3));
+}
