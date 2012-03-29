@@ -1282,6 +1282,9 @@ protected:
 	virtual bool rectifyUncalibrated( const Mat& points1,
 		const Mat& points2, const Mat& F, Size imgSize,
 		Mat& H1, Mat& H2, double threshold=5 ) = 0;
+	virtual void triangulate( const Mat& P1, const Mat& P2,
+        const Mat &points1, const Mat &points2,
+        Mat &points4D ) = 0;
 
 	void run(int);
 };
@@ -1515,15 +1518,10 @@ void CV_StereoCalibrationTest::run( int )
         Mat ys_2 = projectedPoints_2.row(1);
         projectedPoints_1.row(1).copyTo(ys_2);
 
-        const int dimension = 4;
-        Mat points4d(dimension, pointsCount, CV_32FC1);
-        CvMat cvPoints4d = points4d;
-        CvMat cvP1 = P1;
-        CvMat cvP2 = P2;
-        CvMat cvPoints1 = projectedPoints_1;
-        CvMat cvPoints2 = projectedPoints_2;
-        cvTriangulatePoints(&cvP1, &cvP2, &cvPoints1, &cvPoints2, &cvPoints4d);
+        Mat points4d;
+        triangulate(P1, P2, projectedPoints_1, projectedPoints_2, points4d);
         Mat homogeneousPoints4d = points4d.t();
+        const int dimension = 4;
         homogeneousPoints4d = homogeneousPoints4d.reshape(dimension);
         Mat triangulatedPoints;
         convertPointsFromHomogeneous(homogeneousPoints4d, triangulatedPoints);
@@ -1635,6 +1633,9 @@ protected:
 	virtual bool rectifyUncalibrated( const Mat& points1,
 		const Mat& points2, const Mat& F, Size imgSize,
 		Mat& H1, Mat& H2, double threshold=5 );
+	virtual void triangulate( const Mat& P1, const Mat& P2,
+        const Mat &points1, const Mat &points2,
+        Mat &points4D );
 };
 
 double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
@@ -1718,6 +1719,15 @@ bool CV_StereoCalibrationTest_C::rectifyUncalibrated( const Mat& points1,
 	return cvStereoRectifyUncalibrated(&_pt1, &_pt2, pF, imgSize, &_H1, &_H2, threshold) > 0;
 }
 
+void CV_StereoCalibrationTest_C::triangulate( const Mat& P1, const Mat& P2,
+        const Mat &points1, const Mat &points2,
+        Mat &points4D )
+{
+    CvMat _P1 = P1, _P2 = P2, _points1 = points1, _points2 = points2;
+    points4D.create(4, points1.cols, points1.type());
+    CvMat _points4D = points4D;
+    cvTriangulatePoints(&_P1, &_P2, &_points1, &_points2, &_points4D);
+}
 
 //-------------------------------- CV_StereoCalibrationTest_CPP ------------------------------
 
@@ -1742,6 +1752,9 @@ protected:
 	virtual bool rectifyUncalibrated( const Mat& points1,
 		const Mat& points2, const Mat& F, Size imgSize,
 		Mat& H1, Mat& H2, double threshold=5 );
+	virtual void triangulate( const Mat& P1, const Mat& P2,
+        const Mat &points1, const Mat &points2,
+        Mat &points4D );
 };
 
 double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
@@ -1772,6 +1785,13 @@ bool CV_StereoCalibrationTest_CPP::rectifyUncalibrated( const Mat& points1,
 					   const Mat& points2, const Mat& F, Size imgSize, Mat& H1, Mat& H2, double threshold )
 {
 	return stereoRectifyUncalibrated( points1, points2, F, imgSize, H1, H2, threshold );
+}
+
+void CV_StereoCalibrationTest_CPP::triangulate( const Mat& P1, const Mat& P2,
+        const Mat &points1, const Mat &points2,
+        Mat &points4D )
+{
+    triangulatePoints(P1, P2, points1, points2, points4D);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
