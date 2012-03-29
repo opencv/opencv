@@ -91,7 +91,7 @@ CalcOpticalFlowBM
 -----------------
 Calculates the optical flow for two images by using the block matching method.
 
-.. ocv::cfunction:: void cvCalcOpticalFlowBM( const CvArr* prev, const CvArr* curr, CvSize blockSize, CvSize shiftSize, CvSize maxRange, int usePrevious, CvArr* velx, CvArr* vely )
+.. ocv:cfunction:: void cvCalcOpticalFlowBM( const CvArr* prev, const CvArr* curr, CvSize blockSize, CvSize shiftSize, CvSize maxRange, int usePrevious, CvArr* velx, CvArr* vely )
 
 .. ocv:pyoldfunction:: cv.CalcOpticalFlowBM(prev, curr, blockSize, shiftSize, maxRange, usePrevious, velx, vely)-> None
 
@@ -126,7 +126,7 @@ CalcOpticalFlowHS
 -----------------
 Calculates the optical flow for two images using Horn-Schunck algorithm.
 
-.. ocv::cfunction:: void cvCalcOpticalFlowHS(  const CvArr* prev, const CvArr* curr, int usePrevious, CvArr* velx, CvArr* vely, double lambda, CvTermCriteria criteria )
+.. ocv:cfunction:: void cvCalcOpticalFlowHS(const CvArr* prev, const CvArr* curr, int usePrevious, CvArr* velx, CvArr* vely, double lambda, CvTermCriteria criteria)
 
 .. ocv:pyoldfunction:: cv.CalcOpticalFlowHS(prev, curr, usePrevious, velx, vely, lambda, criteria)-> None
 
@@ -474,9 +474,10 @@ Updates the predicted state from the measurement.
 .. ocv:pyfunction:: cv2.KalmanFilter.correct(measurement) -> retval
 
 .. ocv:cfunction:: const CvMat* cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement )
+
 .. ocv:pyoldfunction:: cv.KalmanCorrect(kalman, measurement) -> cvmat
 
-    :param control: The measured system parameters
+    :param measurement: The measured system parameters
 
 
 BackgroundSubtractor

@@ -232,7 +232,9 @@ Predicts the response for input sample(s).
 
 .. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
 
-    :param sample(s): Input sample(s) for prediction.
+    :param sample: Input sample for prediction.
+
+    :param samples: Input samples for prediction.
 
     :param returnDFVal: Specifies a type of the return value. If ``true`` and the problem is 2-class classification then the method returns the decision function value that is signed distance to the margin, else the function returns a class label (classification) or estimated function value (regression).
 

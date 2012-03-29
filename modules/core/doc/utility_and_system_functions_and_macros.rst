@@ -177,18 +177,18 @@ The macros ``CV_Assert`` (and ``CV_DbgAssert``) evaluate the specified expressio
 
 
 error
----------
+-----
 Signals an error and raises an exception.
 
 .. ocv:function:: void error( const Exception& exc )
 
-.. ocv:cfunction:: int cvError( int status, const char* funcName, const char* errMsg, const char* filename, int line )
+.. ocv:cfunction:: int cvError( int status, const char* funcName, const char* err_msg, const char* filename, int line )
 
     :param exc: Exception to throw.
 
-    :param code: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .   
+    :param status: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .   
     
-    :param msg: Text of the error message.
+    :param err_msg: Text of the error message.
 
     :param args: ``printf`` -like formatted error message in parentheses.
 

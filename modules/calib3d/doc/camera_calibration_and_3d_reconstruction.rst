@@ -833,7 +833,7 @@ Finds an initial camera matrix from 3D-2D point correspondences.
     
     :param imagePoints: Vector of vectors of the projections of the calibration pattern points. In the old interface all the per-view vectors are concatenated. 
     
-    :param npoints: The integer vector of point counters for each view.
+    :param pointCounts: The integer vector of point counters for each view.
     
     :param imageSize: Image size in pixels used to initialize the principal point.
 
@@ -919,6 +919,7 @@ Reprojects a disparity image to 3D space.
 .. ocv:pyfunction:: cv2.reprojectImageTo3D(disparity, Q[, _3dImage[, handleMissingValues[, ddepth]]]) -> _3dImage
 
 .. ocv:cfunction:: void cvReprojectImageTo3D( const CvArr* disparity, CvArr* _3dImage, const CvMat* Q, int handleMissingValues=0)
+
 .. ocv:pyoldfunction:: cv.ReprojectImageTo3D(disparity, _3dImage, Q, handleMissingValues=0) -> None
 
     :param disparity: Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit floating-point disparity image.

@@ -213,7 +213,7 @@ Predicts a response for an input sample.
     in the same position in the ``sample`` vector. If there are no missing values
     in the feature vector, an empty matrix can be passed instead of the missing mask.
     
-   :param weak_responses: Matrix used to obtain predictions of all the trees.
+   :param weakResponses: Matrix used to obtain predictions of all the trees.
     The matrix has :math:`K` rows,
     where :math:`K` is the count of output classes (1 for the regression case).
     The matrix has as many columns as the ``slice`` length.

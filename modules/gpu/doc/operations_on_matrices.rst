@@ -191,7 +191,7 @@ Computes polar angles of complex matrix elements.
 
     :param angle: Destionation matrix of angles ( ``CV_32FC1`` ).
 
-    :param angleInDegress: Flag for angles that must be evaluated in degress.
+    :param angleInDegrees: Flag for angles that must be evaluated in degress.
 
     :param stream: Stream for the asynchronous version.
 
@@ -213,7 +213,7 @@ Converts Cartesian coordinates into polar.
 
     :param angle: Destionation matrix of angles ( ``CV_32FC1`` ).
 
-    :param angleInDegress: Flag for angles that must be evaluated in degress.
+    :param angleInDegrees: Flag for angles that must be evaluated in degress.
 
     :param stream: Stream for the asynchronous version.
 
@@ -235,7 +235,7 @@ Converts polar coordinates into Cartesian.
 
     :param y: Destination matrix of imaginary components ( ``CV_32FC1`` ).
 
-    :param angleInDegress: Flag that indicates angles in degress.
+    :param angleInDegrees: Flag that indicates angles in degress.
 
     :param stream: Stream for the asynchronous version.
 

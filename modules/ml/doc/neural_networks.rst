@@ -202,7 +202,9 @@ Constructs MLP with the specified topology.
 
     :param activateFunc: Parameter specifying the activation function for each neuron: one of  ``CvANN_MLP::IDENTITY``, ``CvANN_MLP::SIGMOID_SYM``, and ``CvANN_MLP::GAUSSIAN``.
 
-    :param fparam1/fparam2: Free parameters of the activation function, :math:`\alpha` and :math:`\beta`, respectively. See the formulas in the introduction section.
+    :param fparam1: Free parameter of the activation function, :math:`\alpha`. See the formulas in the introduction section.
+    
+    :param fparam2: Free parameter of the activation function, :math:`\beta`. See the formulas in the introduction section.
 
 The method creates an MLP network with the specified topology and assigns the same activation function to all the neurons.
 

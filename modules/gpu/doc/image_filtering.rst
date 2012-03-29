@@ -263,7 +263,7 @@ Creates a 2D morphological filter.
 
 .. ocv:function:: Ptr<FilterEngine_GPU> gpu::createMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1)
 
-.. ocv:function:: Ptr<BaseFilter_GPU> getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, Point anchor=Point(-1,-1))
+.. ocv:function:: Ptr<BaseFilter_GPU> gpu::getMorphologyFilter_GPU(int op, int type, const Mat& kernel, const Size& ksize, Point anchor=Point(-1,-1))
 
     :param op: Morphology operation id. Only ``MORPH_ERODE`` and ``MORPH_DILATE`` are supported.
 
@@ -271,7 +271,7 @@ Creates a 2D morphological filter.
 
     :param kernel: 2D 8-bit structuring element for the morphological operation.
 
-    :param size: Size of a horizontal or vertical structuring element used for separable morphological operations.
+    :param ksize: Size of a horizontal or vertical structuring element used for separable morphological operations.
 
     :param anchor: Anchor position within the structuring element. Negative values mean that the anchor is at the center.
 
@@ -607,9 +607,9 @@ Calculates the first x- or y- image derivative using the Scharr operator.
 
     :param ddepth: Destination image depth.  ``CV_8U`` , ``CV_16S`` , ``CV_32S`` , and  ``CV_32F`` are supported.
 
-    :param xorder: Order of the derivative x.
+    :param dx: Order of the derivative x.
 
-    :param yorder: Order of the derivative y.
+    :param dy: Order of the derivative y.
 
     :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :ocv:func:`getDerivKernels`  for details.
 

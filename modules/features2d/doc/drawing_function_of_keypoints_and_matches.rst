@@ -20,7 +20,7 @@ Draws the found matches of keypoints from two images.
 
     :param keypoints2: Keypoints from the second source image.
 
-    :param matches: Matches from the first image to the second one, which means that  ``keypoints1[i]``  has a corresponding point in  ``keypoints2[matches[i]]`` .
+    :param matches1to2: Matches from the first image to the second one, which means that  ``keypoints1[i]``  has a corresponding point in  ``keypoints2[matches[i]]`` .
 
     :param outImg: Output image. Its content depends on the ``flags``  value defining what is drawn in the output image. See possible  ``flags``  bit values below.
 

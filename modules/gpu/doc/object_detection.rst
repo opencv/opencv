@@ -82,7 +82,7 @@ Creates the ``HOG`` descriptor and detector.
 
    :param win_sigma: Gaussian smoothing window parameter.
 
-   :param threshold_L2Hys: L2-Hys normalization method shrinkage.
+   :param threshold_L2hys: L2-Hys normalization method shrinkage.
 
    :param gamma_correction: Flag to specify whether the gamma correction preprocessing is required or not.
 
@@ -275,7 +275,7 @@ Detects objects of different sizes in the input image.
 
     :param image: Matrix of type  ``CV_8U``  containing an image where objects should be detected.
 
-    :param objects: Buffer to store detected objects (rectangles). If it is empty, it is allocated with the default size. If not empty, the function searches not more than N objects, where ``N = sizeof(objectsBufer's data)/sizeof(cv::Rect)``.
+    :param objectsBuf: Buffer to store detected objects (rectangles). If it is empty, it is allocated with the default size. If not empty, the function searches not more than N objects, where ``N = sizeof(objectsBufer's data)/sizeof(cv::Rect)``.
 
     :param scaleFactor: Value to specify how much the image size is reduced at each image scale.
 

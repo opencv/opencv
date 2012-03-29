@@ -137,6 +137,10 @@ Computes the minimum eigen value of a 2x2 derivative covariation matrix at each 
 
 .. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
 
+.. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
+
+.. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType=BORDER_REFLECT101, Stream& stream = Stream::Null())
+
     :param src: Source image. Only  ``CV_8UC1`` and  ``CV_32FC1`` images are supported for now.
 
     :param dst: Destination image containing cornerness values. The size is the same. The type is  ``CV_32FC1`` .
@@ -144,8 +148,6 @@ Computes the minimum eigen value of a 2x2 derivative covariation matrix at each 
     :param blockSize: Neighborhood size.
 
     :param ksize: Aperture parameter for the Sobel operator.
-
-    :param k: Harris detector free parameter.
 
     :param borderType: Pixel extrapolation method. Only ``BORDER_REFLECT101`` and ``BORDER_REPLICATE`` are supported for now.
 
@@ -402,7 +404,7 @@ Exchanges the color channels of an image in-place.
 
 .. ocv:function:: void gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& stream = Stream::Null())
 
-    :param src: Source image. Supports only ``CV_8UC4`` type.
+    :param image: Source image. Supports only ``CV_8UC4`` type.
 
     :param dstOrder: Integer array describing how channel values are permutated. The n-th entry of the array contains the number of the channel that is stored in the n-th channel of the output image. E.g. Given an RGBA image, aDstOrder = [3,2,1,0] converts this to ABGR channel order.
 
@@ -424,9 +426,9 @@ Applies a fixed-level threshold to each array element.
 
     :param thresh: Threshold value.
 
-    :param maxVal: Maximum value to use with  ``THRESH_BINARY`` and  ``THRESH_BINARY_INV`` threshold types.
+    :param maxval: Maximum value to use with  ``THRESH_BINARY`` and  ``THRESH_BINARY_INV`` threshold types.
 
-    :param thresholdType: Threshold type. For details, see  :ocv:func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
+    :param type: Threshold type. For details, see  :ocv:func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
 
     :param stream: Stream for the asynchronous version.
 
@@ -831,11 +833,11 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
     :param edges: Output edge map. It has the same size and type as  ``image`` .
 
-    :param threshold1: First threshold for the hysteresis procedure.
+    :param low_thresh: First threshold for the hysteresis procedure.
 
-    :param threshold2: Second threshold for the hysteresis procedure.
+    :param high_thresh: Second threshold for the hysteresis procedure.
 
-    :param apertureSize: Aperture size for the  :ocv:func:`Sobel`  operator.
+    :param apperture_size: Aperture size for the  :ocv:func:`Sobel`  operator.
 
     :param L2gradient: Flag indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to compute the image gradient magnitude ( ``L2gradient=true`` ), or a faster default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
 

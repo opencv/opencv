@@ -642,7 +642,7 @@ Adds a vertex to a graph.
 
     :param vtx: Optional input argument used to initialize the added vertex (only user-defined fields beyond  ``sizeof(CvGraphVtx)``  are copied)
 
-    :param inserted_vertex: Optional output argument. If not  ``NULL`` , the address of the new vertex is written here.
+    :param inserted_vtx: Optional output argument. If not  ``NULL`` , the address of the new vertex is written here.
 
 The function adds a vertex to the graph and returns the vertex index.
 
@@ -694,7 +694,7 @@ Removes a vertex from a graph.
 
     :param graph: Graph
 
-    :param vtx_idx: Index of the removed vertex
+    :param index: Index of the removed vertex
 
 The function removes a vertex from a graph
 together with all the edges incident to it. The function reports an error

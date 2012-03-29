@@ -673,7 +673,7 @@ Starts writing a new structure.
 
          One and only one of the two above flags must be specified 
 
-    :param CV_NODE_FLOW: the optional flag that makes sense only for YAML streams. It means that the structure is written as a flow (not as a block), which is more compact. It is recommended to use this flag for structures or arrays whose elements are all scalars. 
+            * **CV_NODE_FLOW** the optional flag that makes sense only for YAML streams. It means that the structure is written as a flow (not as a block), which is more compact. It is recommended to use this flag for structures or arrays whose elements are all scalars. 
 
     :param typeName: Optional parameter - the object type name. In
         case of XML it is written as a  ``type_id``  attribute of the
@@ -792,7 +792,7 @@ Writes a file node to another file storage.
     
     :param fs: Destination file storage 
 
-    :param new_file_node: New name of the file node in the destination file storage. To keep the existing name, use  :ocv:cfunc:`cvGetFileNodeName` 
+    :param new_node_name: New name of the file node in the destination file storage. To keep the existing name, use  :ocv:cfunc:`cvGetFileNodeName` 
 
     :param node: The written node 
 

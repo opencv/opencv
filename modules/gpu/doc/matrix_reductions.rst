@@ -128,9 +128,9 @@ Finds global minimum and maximum matrix elements and returns their values with l
 
     :param maxVal: Pointer to the returned maximum value. Use ``NULL``  if not required.
 
-    :param minValLoc: Pointer to the returned minimum location. Use ``NULL``  if not required.
+    :param minLoc: Pointer to the returned minimum location. Use ``NULL``  if not required.
 
-    :param maxValLoc: Pointer to the returned maximum location. Use ``NULL``  if not required.
+    :param maxLoc: Pointer to the returned maximum location. Use ``NULL``  if not required.
 
     :param mask: Optional mask to select a sub-matrix.
 

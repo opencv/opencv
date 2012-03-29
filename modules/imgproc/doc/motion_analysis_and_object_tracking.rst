@@ -143,17 +143,18 @@ The function supports multi-channel images. Each channel is processed independen
 
 
 phaseCorrelate
--------------------------------
+--------------
 The function is used to detect translational shifts that occur between two images. The operation takes advantage of the Fourier shift theorem for detecting the translational shift in the frequency domain. It can be used for fast image registration as well as motion esitimation. For more information please see http://en.wikipedia.org/wiki/Phase\_correlation .
 
-Calculates the cross-power spectrum of two supplied source arrays. The arrays are padded if needed with ``getOptimalDFTSize`` .
+Calculates the cross-power spectrum of two supplied source arrays. The arrays are padded if needed with :ocv:func:`getOptimalDFTSize`.
 
 .. ocv:function:: Point2d phaseCorrelate(InputArray src1, InputArray src2, InputArray window = noArray())
 
     :param src1: Source floating point array (CV_32FC1 or CV_64FC1)
     :param src2: Source floating point array (CV_32FC1 or CV_64FC1)
     :param window: Floating point array with windowing coefficients to reduce edge effects (optional).
-    :param result: Detected phase shift (sub-pixel) between the two arrays.
+
+Return value: detected phase shift (sub-pixel) between the two arrays.
 
 The function performs the following equations
 

@@ -165,9 +165,9 @@ Retrieves the proximity measure between two training samples.
 
 .. ocv:function:: float CvRTrees::get_proximity( const CvMat* sample1, const CvMat* sample2, const CvMat* missing1 = 0, const CvMat* missing2 = 0 ) const
 
-    :param sample_1: The first sample.
+    :param sample1: The first sample.
 
-    :param sample_2: The second sample.
+    :param sample2: The second sample.
 
     :param missing1: Optional missing measurement mask of the first sample.
 

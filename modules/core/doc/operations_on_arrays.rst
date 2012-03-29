@@ -1306,7 +1306,7 @@ idft
 ----
 Computes the inverse Discrete Fourier Transform of a 1D or 2D array.
 
-.. ocv:function:: void idft(InputArray src, OutputArray dst, int flags=0, int outputRows=0)
+.. ocv:function:: void idft(InputArray src, OutputArray dst, int flags=0, int nonzeroRows=0)
 
 .. ocv:pyfunction:: cv2.idft(src[, dst[, flags[, nonzeroRows]]]) -> dst
 
@@ -1380,12 +1380,13 @@ invert
 ------
 Finds the inverse or pseudo-inverse of a matrix.
 
-.. ocv:function:: double invert(InputArray src, OutputArray dst, int method=DECOMP_LU)
+.. ocv:function:: double invert(InputArray src, OutputArray dst, int flags=DECOMP_LU)
 
 .. ocv:pyfunction:: cv2.invert(src[, dst[, flags]]) -> retval, dst
 
-.. ocv:cfunction:: double cvInvert(const CvArr* src, CvArr* dst, int method=CV_LU)
-.. ocv:pyoldfunction:: cv.Invert(src, dst, method=CV_LU)-> double
+.. ocv:cfunction:: double cvInvert(const CvArr* src, CvArr* dst, int flags=CV_LU)
+
+.. ocv:pyoldfunction:: cv.Invert(src, dst, flags=CV_LU)-> double
 
     :param src: Source floating-point  ``M x N``  matrix.
 
@@ -1499,7 +1500,7 @@ Calculates the magnitude of 2D vectors.
 
     :param y: Floating-point array of y-coordinates of the vectors. It must have the same size as  ``x`` .
     
-    :param dst: Destination array of the same size and type as  ``x`` .
+    :param magnitude: Destination array of the same size and type as  ``x`` .
     
 The function ``magnitude`` calculates the magnitude of 2D vectors formed from the corresponding elements of ``x`` and ``y`` arrays:
 
@@ -3142,7 +3143,7 @@ The constructors.
 
 .. ocv:function:: SVD::SVD( InputArray A, int flags=0 )
 
-    :param src: Decomposed matrix.
+    :param A: Decomposed matrix.
 
     :param flags: Operation flags.
 
@@ -3319,7 +3320,7 @@ Returns the trace of a matrix.
 .. ocv:cfunction:: CvScalar cvTrace(const CvArr* mat)
 .. ocv:pyoldfunction:: cv.Trace(mat)-> CvScalar
 
-    :param mtx: Source matrix.
+    :param mat: Source matrix.
 
 The function ``trace`` returns the sum of the diagonal elements of the matrix ``mtx`` .
 

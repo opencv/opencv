@@ -267,7 +267,7 @@ Returns error of the decision tree.
 
 .. ocv:function:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
 
-    :param data: Data for the decision tree.
+    :param trainData: Data for the decision tree.
     
     :param type: Type of error. Possible values are:
 

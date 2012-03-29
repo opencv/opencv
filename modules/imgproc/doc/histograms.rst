@@ -409,13 +409,13 @@ GetHistValue*D
 --------------
 Returns a pointer to the histogram bin.
 
-.. ocv:cfunction:: float cvGetHistValue_1D(hist, idx0)
+.. ocv:cfunction:: float cvGetHistValue_1D(CvHistogram hist, int idx0)
 
-.. ocv:cfunction:: float cvGetHistValue_2D(hist, idx0, idx1)
+.. ocv:cfunction:: float cvGetHistValue_2D(CvHistogram hist, int idx0, int idx1)
 
-.. ocv:cfunction:: float cvGetHistValue_3D(hist, idx0, idx1, idx2)
+.. ocv:cfunction:: float cvGetHistValue_3D(CvHistogram hist, int idx0, int idx1, int idx2)
 
-.. ocv:cfunction:: float cvGetHistValue_nD(hist, idx)
+.. ocv:cfunction:: float cvGetHistValue_nD(CvHistogram hist, int idx)
     
     :param hist: Histogram. 
     

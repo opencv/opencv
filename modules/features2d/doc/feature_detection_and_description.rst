@@ -272,7 +272,7 @@ Writes the current randomized tree to a file or stream.
 
     :param file_name: Name of the file where randomized tree data is stored.
 
-    :param is: Output stream associated with the file where randomized tree data is stored.
+    :param os: Output stream associated with the file where randomized tree data is stored.
 
 
 

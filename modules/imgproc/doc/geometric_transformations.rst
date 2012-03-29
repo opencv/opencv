@@ -581,16 +581,16 @@ where ``cameraMatrix`` can be chosen arbitrarily.
 
 
 getDefaultNewCameraMatrix
------------------------------
+-------------------------
 Returns the default new camera matrix.
 
-.. ocv:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgSize=Size(), bool centerPrincipalPoint=false )
+.. ocv:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgsize=Size(), bool centerPrincipalPoint=false )
 
 .. ocv:pyfunction:: cv2.getDefaultNewCameraMatrix(cameraMatrix[, imgsize[, centerPrincipalPoint]]) -> retval
 
     :param cameraMatrix: Input camera matrix.
 
-    :param imageSize: Camera view image size in pixels.
+    :param imgsize: Camera view image size in pixels.
 
     :param centerPrincipalPoint: Location of the principal point in the new camera matrix. The parameter indicates whether this location should be at the image center or not.
 

@@ -52,7 +52,7 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
     :param apertureSize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
 
-    :param boderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
+    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
 For every pixel
 :math:`p` , the function ``cornerEigenValsAndVecs`` considers a ``blockSize`` :math:`\times` ``blockSize`` neigborhood
@@ -106,7 +106,7 @@ Harris edge detector.
 
     :param k: Harris detector free parameter. See the formula below.
 
-    :param boderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
+    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
 The function runs the Harris edge detector on the image. Similarly to
 :ocv:func:`cornerMinEigenVal` and
@@ -133,6 +133,7 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 .. ocv:pyfunction:: cv2.cornerMinEigenVal(src, blockSize[, dst[, ksize[, borderType]]]) -> dst
 
 .. ocv:cfunction:: void cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval, int blockSize, int apertureSize=3 )
+
 .. ocv:pyoldfunction:: cv.CornerMinEigenVal(image, eigenval, blockSize, apertureSize=3)-> None
 
     :param src: Input single-channel 8-bit or floating-point image.
@@ -143,7 +144,7 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
     :param apertureSize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
 
-    :param boderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
+    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
 The function is similar to
 :ocv:func:`cornerEigenValsAndVecs` but it calculates and stores only the minimal eigenvalue of the covariance matrix of derivatives, that is,
