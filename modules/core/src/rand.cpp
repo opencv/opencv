@@ -443,7 +443,8 @@ static RandnScaleFunc randnScaleTab[] =
     (RandnScaleFunc)randnScale_64f, 0 
 };
     
-void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, InputArray _param2arg )
+void RNG::fill( InputOutputArray _mat, int disttype,
+                InputArray _param1arg, InputArray _param2arg, bool saturateRange )
 {
     Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
     int depth = mat.depth(), cn = mat.channels();
@@ -505,6 +506,13 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
             {
                 double a = min(p1[j], p2[j]);
                 double b = max(p1[j], p2[j]);
+                if( saturateRange )
+                {
+                    a = max(a, depth == CV_8U || depth == CV_16U ? 0. :
+                            depth == CV_8S ? -128. : depth == CV_16S ? -32768. : (double)INT_MIN);
+                    b = min(b, depth == CV_8U ? 256. : depth == CV_16U ? 65536. :
+                            depth == CV_8S ? 128. : depth == CV_16S ? 32768. : (double)INT_MAX);
+                }
                 ip[j][1] = cvCeil(a);
                 int idiff = ip[j][0] = cvFloor(b) - ip[j][1] - 1;
                 double diff = b - a;
@@ -512,6 +520,13 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
                 fast_int_mode &= diff <= 4294967296. && (idiff & (idiff+1)) == 0;
                 if( fast_int_mode )
                     smallFlag &= idiff <= 255;
+                else
+                {
+                    if( diff > INT_MAX )
+                        ip[j][0] = INT_MAX;
+                    if( a < INT_MIN/2 )
+                        ip[j][1] = INT_MIN/2;
+                }
             }
             
             if( !fast_int_mode )
@@ -537,6 +552,7 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
             double scale = depth == CV_64F ?
                 5.4210108624275221700372640043497e-20 : // 2**-64
                 2.3283064365386962890625e-10;           // 2**-32
+            double maxdiff = saturateRange ? (double)FLT_MAX : DBL_MAX;
 
             // for each channel i compute such dparam[0][i] & dparam[1][i],
             // so that a signed 32/64-bit integer X is transformed to
@@ -547,7 +563,7 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
                 fp = (Vec2f*)(parambuf + cn*2);
                 for( j = 0; j < cn; j++ )
                 {
-                    fp[j][0] = (float)((p2[j] - p1[j])*scale);
+                    fp[j][0] = (float)(std::min(maxdiff, p2[j] - p1[j])*scale);
                     fp[j][1] = (float)((p2[j] + p1[j])*0.5);
                 }
             }
@@ -556,7 +572,7 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
                 dp = (Vec2d*)(parambuf + cn*2);
                 for( j = 0; j < cn; j++ )
                 {
-                    dp[j][0] = ((p2[j] - p1[j])*scale);
+                    dp[j][0] = std::min(DBL_MAX, p2[j] - p1[j])*scale;
                     dp[j][1] = ((p2[j] + p1[j])*0.5);
                 }
             }
