@@ -724,6 +724,8 @@ public:
 
     /// @todo read and write for brief
 
+    AlgorithmInfo* info() const;
+
 protected:
     virtual void computeImpl(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
 
