@@ -1448,7 +1448,7 @@ protected:
                 compare(mask, 0, mask1, CMP_EQ);
                 a1.setTo(0, mask1);
                 b1.setTo(0, mask1);
-                
+
                 if( op == 0 )
                 {
                     add(a, b, c, mask);
@@ -1476,12 +1476,12 @@ protected:
                 }
                 Mat d1;
                 d.convertTo(d1, depth);
-                CV_Assert( norm(c, d1, CV_C) == 0 );
+                CV_Assert( norm(c, d1, CV_C) <= DBL_EPSILON );
             }
         }
         catch(...)
         {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+           ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         }
     }
 };

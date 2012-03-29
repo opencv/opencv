@@ -89,7 +89,7 @@ template <typename T> cv::Rect CV_BoundingRectTest::get_bounding_rect(const vect
         max_h = std::max<T>(src.at(i).y, max_h);
     }
 
-    return Rect((int)min_w, (int)min_h, (int)(floor(1.0*(max_w-min_w)) + 1), (int)(floor(1.0*(max_h-min_h)) + 1));
+    return Rect((int)min_w, (int)min_h, (int)max_w-(int)min_w + 1, (int)max_h-(int)min_h + 1);
 }
 
 template <typename T> bool CV_BoundingRectTest::checking_function_work(vector <Point_<T> >& src, int type)
