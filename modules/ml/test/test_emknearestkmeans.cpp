@@ -332,6 +332,82 @@ void CV_EMTest::run( int /*start_from*/ )
     ts->set_failed_test_info( code );
 }
 
+class CV_EMTest_Smoke : public cvtest::BaseTest {
+public:
+    CV_EMTest_Smoke() {}
+protected:
+    virtual void run( int /*start_from*/ )
+    {
+        int code = cvtest::TS::OK;
+        CvEM em;
+
+        Mat samples = Mat(3,2,CV_32F);
+        samples.at<float>(0,0) = 1;
+        samples.at<float>(1,0) = 2;
+        samples.at<float>(2,0) = 3;
+
+        CvEMParams params;
+        params.nclusters = 2;
+
+        Mat labels;
+
+        em.train(samples, Mat(), params, &labels);
+
+        Mat firstResult(samples.rows, 1, CV_32FC1);
+        for( int i = 0; i < samples.rows; i++)
+            firstResult.at<float>(i) = em.predict( samples.row(i) );
+
+        // Write out
+        string filename = tempfile() + ".xml";
+        {
+            FileStorage fs = FileStorage(filename, FileStorage::WRITE);
+
+            try
+            {
+                em.write(fs.fs, "EM");
+            }
+            catch(...)
+            {
+                ts->printf( cvtest::TS::LOG, "Crash in write method.\n" );
+                ts->set_failed_test_info( cvtest::TS::FAIL_EXCEPTION );
+            }
+        }
+
+        em.clear();
+
+        // Read in
+        {
+            FileStorage fs = FileStorage(filename, FileStorage::READ);
+            FileNode fileNode = fs["EM"];
+
+            try
+            {
+                em.read(const_cast<CvFileStorage*>(fileNode.fs), const_cast<CvFileNode*>(fileNode.node));
+            }
+            catch(...)
+            {
+                ts->printf( cvtest::TS::LOG, "Crash in read method.\n" );
+                ts->set_failed_test_info( cvtest::TS::FAIL_EXCEPTION );
+            }
+        }
+
+        remove( filename.c_str() );
+
+        int errCaseCount = 0;
+        for( int i = 0; i < samples.rows; i++)
+            errCaseCount = std::abs(em.predict(samples.row(i)) - firstResult.at<float>(i)) < FLT_EPSILON ? 0 : 1;
+
+        if( errCaseCount > 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "Different prediction results before writeing and after reading (errCaseCount=%d).\n", errCaseCount );
+            code = cvtest::TS::FAIL_BAD_ACCURACY;
+        }
+
+        ts->set_failed_test_info( code );
+    }
+};
+
 TEST(ML_KMeans, accuracy) { CV_KMeansTest test; test.safe_run(); }
 TEST(ML_KNearest, accuracy) { CV_KNearestTest test; test.safe_run(); }
 TEST(ML_EM, accuracy) { CV_EMTest test; test.safe_run(); }
+TEST(ML_EM, smoke) { CV_EMTest_Smoke test; test.safe_run(); }
