@@ -38,7 +38,7 @@ if __name__ == '__main__':
             print 'loading error'
             continue
 
-        found = hog.detectMultiScale(img, winStride=(8,8), padding=(32,32), scale=1.05)
+        found, w = hog.detectMultiScale(img, winStride=(8,8), padding=(32,32), scale=1.05)
         found_filtered = []
         for ri, r in enumerate(found):
             for qi, q in enumerate(found):

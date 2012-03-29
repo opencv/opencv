@@ -546,22 +546,22 @@ public:
                          const vector<Point>& locations=vector<Point>()) const;
 	//with found weights output
     CV_WRAP virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations, 
-						vector<double>& weights,
+						CV_OUT vector<double>& weights,
                         double hitThreshold=0, Size winStride=Size(), 
 						Size padding=Size(),
                         const vector<Point>& searchLocations=vector<Point>()) const;
 	//without found weights output
-    CV_WRAP virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
+    virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
                         double hitThreshold=0, Size winStride=Size(),
                         Size padding=Size(),
                         const vector<Point>& searchLocations=vector<Point>()) const;
 	//with result weights output
     CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations, 
-								  vector<double>& foundWeights, double hitThreshold=0, 
+								  CV_OUT vector<double>& foundWeights, double hitThreshold=0, 
 								  Size winStride=Size(), Size padding=Size(), double scale=1.05, 
 								  double finalThreshold=2.0,bool useMeanshiftGrouping = false) const;
 	//without found weights output
-	CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations, 
+	virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations, 
 								  double hitThreshold=0, Size winStride=Size(),
                                   Size padding=Size(), double scale=1.05, 
 								  double finalThreshold=2.0, bool useMeanshiftGrouping = false) const;
