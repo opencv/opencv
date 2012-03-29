@@ -1285,6 +1285,9 @@ protected:
 	virtual void triangulate( const Mat& P1, const Mat& P2,
         const Mat &points1, const Mat &points2,
         Mat &points4D ) = 0;
+	virtual void correct( const Mat& F,
+        const Mat &points1, const Mat &points2,
+        Mat &newPoints1, Mat &newPoints2 ) = 0;
 
 	void run(int);
 };
@@ -1539,7 +1542,32 @@ void CV_StereoCalibrationTest::run( int )
 			ts->printf( cvtest::TS::LOG, "Points reprojected with a matrix Q and points reconstructed by triangulation are different, testcase %d\n", testcase);
 			ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
         }
-        
+
+        //check correctMatches
+        const float constraintAccuracy = 1e-5;
+        Mat newPoints1, newPoints2;
+        Mat points1 = projectedPoints_1.t();
+        points1 = points1.reshape(2, 1);
+        Mat points2 = projectedPoints_2.t();
+        points2 = points2.reshape(2, 1);
+        correctMatches(F, points1, points2, newPoints1, newPoints2);
+        Mat newHomogeneousPoints1, newHomogeneousPoints2;
+        convertPointsToHomogeneous(newPoints1, newHomogeneousPoints1);
+        convertPointsToHomogeneous(newPoints2, newHomogeneousPoints2);
+        newHomogeneousPoints1 = newHomogeneousPoints1.reshape(1);
+        newHomogeneousPoints2 = newHomogeneousPoints2.reshape(1);
+        Mat typedF;
+        F.convertTo(typedF, newHomogeneousPoints1.type());
+        for (int i = 0; i < newHomogeneousPoints1.rows; ++i)
+        {
+            Mat error = newHomogeneousPoints2.row(i) * typedF * newHomogeneousPoints1.row(i).t();
+            CV_Assert(error.rows == 1 && error.cols == 1);
+            if (norm(error) > constraintAccuracy)
+            {
+                ts->printf( cvtest::TS::LOG, "Epipolar constraint is violated after correctMatches, testcase %d\n", testcase);
+                ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+            }
+        }
 
 		// rectifyUncalibrated
 		CV_Assert( imgpt1.size() == imgpt2.size() );
@@ -1636,6 +1664,9 @@ protected:
 	virtual void triangulate( const Mat& P1, const Mat& P2,
         const Mat &points1, const Mat &points2,
         Mat &points4D );
+	virtual void correct( const Mat& F,
+        const Mat &points1, const Mat &points2,
+        Mat &newPoints1, Mat &newPoints2 );
 };
 
 double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
@@ -1729,6 +1760,17 @@ void CV_StereoCalibrationTest_C::triangulate( const Mat& P1, const Mat& P2,
     cvTriangulatePoints(&_P1, &_P2, &_points1, &_points2, &_points4D);
 }
 
+void CV_StereoCalibrationTest_C::correct( const Mat& F,
+        const Mat &points1, const Mat &points2,
+        Mat &newPoints1, Mat &newPoints2 )
+{
+    CvMat _F = F, _points1 = points1, _points2 = points2;
+    newPoints1.create(1, points1.cols, points1.type());
+    newPoints2.create(1, points2.cols, points2.type());
+    CvMat _newPoints1 = newPoints1, _newPoints2 = _newPoints2;
+    cvCorrectMatches(&_F, &_points1, &_points2, &_newPoints1, &_newPoints2);
+}
+
 //-------------------------------- CV_StereoCalibrationTest_CPP ------------------------------
 
 class CV_StereoCalibrationTest_CPP : public CV_StereoCalibrationTest
@@ -1755,6 +1797,9 @@ protected:
 	virtual void triangulate( const Mat& P1, const Mat& P2,
         const Mat &points1, const Mat &points2,
         Mat &points4D );
+    virtual void correct( const Mat& F,
+        const Mat &points1, const Mat &points2,
+        Mat &newPoints1, Mat &newPoints2 );
 };
 
 double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
@@ -1792,6 +1837,13 @@ void CV_StereoCalibrationTest_CPP::triangulate( const Mat& P1, const Mat& P2,
         Mat &points4D )
 {
     triangulatePoints(P1, P2, points1, points2, points4D);
+}
+
+void CV_StereoCalibrationTest_CPP::correct( const Mat& F,
+        const Mat &points1, const Mat &points2,
+        Mat &newPoints1, Mat &newPoints2 )
+{
+    correctMatches(F, points1, points2, newPoints1, newPoints2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
