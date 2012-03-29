@@ -493,8 +493,11 @@ void CvCaptureCAM_DC1394_v2_CPP::close()
 {
     if (dcCam)
     {
-        if (FD_ISSET(dc1394_capture_get_fileno(dcCam), &dc1394.camFds))
-            FD_CLR(dc1394_capture_get_fileno(dcCam), &dc1394.camFds);
+        // check for fileno valid before using
+        int fileno=dc1394_capture_get_fileno(dcCam);
+
+        if (fileno>=0 && FD_ISSET(fileno, &dc1394.camFds))
+            FD_CLR(fileno, &dc1394.camFds);
         dc1394_video_set_transmission(dcCam, DC1394_OFF);
         dc1394_capture_stop(dcCam);
         dc1394_camera_free(dcCam);
