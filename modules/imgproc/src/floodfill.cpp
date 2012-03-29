@@ -80,60 +80,34 @@ CvFFillSegment;
         head = buffer;                          \
 }
 
-
-#define ICV_EQ_C3( p1, p2 ) \
-    ((p1)[0] == (p2)[0] && (p1)[1] == (p2)[1] && (p1)[2] == (p2)[2])
-
-#define ICV_SET_C3( p, q ) \
-    ((p)[0] = (q)[0], (p)[1] = (q)[1], (p)[2] = (q)[2])
-
 /****************************************************************************************\
 *              Simple Floodfill (repainting single-color connected component)            *
 \****************************************************************************************/
 
+template<typename _Tp>
 static void
-icvFloodFill_8u_CnIR( uchar* pImage, int step, CvSize roi, CvPoint seed,
-                      uchar* _newVal, CvConnectedComp* region, int flags,
-                      CvFFillSegment* buffer, int buffer_size, int cn )
+icvFloodFill_CnIR( uchar* pImage, int step, CvSize roi, CvPoint seed,
+                   _Tp newVal, CvConnectedComp* region, int flags,
+                   CvFFillSegment* buffer, int buffer_size )
 {
-    uchar* img = pImage + step * seed.y;
+    typedef typename cv::DataType<_Tp>::channel_type _CTp;
+    _Tp* img = (_Tp*)(pImage + step * seed.y);
     int i, L, R;
     int area = 0;
-    int val0[] = {0,0,0};
-    uchar newVal[] = {0,0,0};
     int XMin, XMax, YMin = seed.y, YMax = seed.y;
     int _8_connectivity = (flags & 255) == 8;
     CvFFillSegment* buffer_end = buffer + buffer_size, *head = buffer, *tail = buffer;
 
     L = R = XMin = XMax = seed.x;
 
-    if( cn == 1 )
-    {
-        val0[0] = img[L];
-        newVal[0] = _newVal[0];
+    _Tp val0 = img[L];
+    img[L] = newVal;
 
-        img[L] = newVal[0];
+    while( ++R < roi.width && img[R] == val0 )
+        img[R] = newVal;
 
-        while( ++R < roi.width && img[R] == val0[0] )
-            img[R] = newVal[0];
-
-        while( --L >= 0 && img[L] == val0[0] )
-            img[L] = newVal[0];
-    }
-    else
-    {
-        assert( cn == 3 );
-        ICV_SET_C3( val0, img + L*3 );
-        ICV_SET_C3( newVal, _newVal );
-
-        ICV_SET_C3( img + L*3, newVal );
-
-        while( --L >= 0 && ICV_EQ_C3( img + L*3, val0 ))
-            ICV_SET_C3( img + L*3, newVal );
-
-        while( ++R < roi.width && ICV_EQ_C3( img + R*3, val0 ))
-            ICV_SET_C3( img + R*3, newVal );
-    }
+    while( --L >= 0 && img[L] == val0 )
+        img[L] = newVal;
 
     XMax = --R;
     XMin = ++L;
@@ -161,48 +135,31 @@ icvFloodFill_8u_CnIR( uchar* pImage, int step, CvSize roi, CvPoint seed,
             if( YMin > YC ) YMin = YC;
         }
 
-        for( k = 0/*(unsigned)(YC - dir) >= (unsigned)roi.height*/; k < 3; k++ )
+        for( k = 0; k < 3; k++ )
         {
             dir = data[k][0];
-            img = pImage + (YC + dir) * step;
+            img = (_Tp*)(pImage + (YC + dir) * step);
             int left = data[k][1];
             int right = data[k][2];
 
             if( (unsigned)(YC + dir) >= (unsigned)roi.height )
                 continue;
 
-            if( cn == 1 )
-                for( i = left; i <= right; i++ )
+            for( i = left; i <= right; i++ )
+            {
+                if( (unsigned)i < (unsigned)roi.width && img[i] == val0 )
                 {
-                    if( (unsigned)i < (unsigned)roi.width && img[i] == val0[0] )
-                    {
-                        int j = i;
-                        img[i] = newVal[0];
-                        while( --j >= 0 && img[j] == val0[0] )
-                            img[j] = newVal[0];
+                    int j = i;
+                    img[i] = newVal;
+                    while( --j >= 0 && img[j] == val0 )
+                        img[j] = newVal;
 
-                        while( ++i < roi.width && img[i] == val0[0] )
-                            img[i] = newVal[0];
+                    while( ++i < roi.width && img[i] == val0 )
+                        img[i] = newVal;
 
-                        ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                    }
+                    ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
                 }
-            else
-                for( i = left; i <= right; i++ )
-                {
-                    if( (unsigned)i < (unsigned)roi.width && ICV_EQ_C3( img + i*3, val0 ))
-                    {
-                        int j = i;
-                        ICV_SET_C3( img + i*3, newVal );
-                        while( --j >= 0 && ICV_EQ_C3( img + j*3, val0 ))
-                            ICV_SET_C3( img + j*3, newVal );
-
-                        while( ++i < roi.width && ICV_EQ_C3( img + i*3, val0 ))
-                            ICV_SET_C3( img + i*3, newVal );
-
-                        ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                    }
-                }
+            }
         }
     }
 
@@ -213,139 +170,7 @@ icvFloodFill_8u_CnIR( uchar* pImage, int step, CvSize roi, CvPoint seed,
         region->rect.y = YMin;
         region->rect.width = XMax - XMin + 1;
         region->rect.height = YMax - YMin + 1;
-        region->value = cvScalar(newVal[0], newVal[1], newVal[2], 0);
-    }
-}
-
-
-/* because all the operations on floats that are done during non-gradient floodfill
-   are just copying and comparison on equality,
-   we can do the whole op on 32-bit integers instead */
-static void
-icvFloodFill_32f_CnIR( int* pImage, int step, CvSize roi, CvPoint seed,
-                       int* _newVal, CvConnectedComp* region, int flags,
-                       CvFFillSegment* buffer, int buffer_size, int cn )
-{
-    int* img = pImage + (step /= sizeof(pImage[0])) * seed.y;
-    int i, L, R;
-    int area = 0;
-    int val0[] = {0,0,0};
-    int newVal[] = {0,0,0};
-    int XMin, XMax, YMin = seed.y, YMax = seed.y;
-    int _8_connectivity = (flags & 255) == 8;
-    CvFFillSegment* buffer_end = buffer + buffer_size, *head = buffer, *tail = buffer;
-
-    L = R = XMin = XMax = seed.x;
-
-    if( cn == 1 )
-    {
-        val0[0] = img[L];
-        newVal[0] = _newVal[0];
-
-        img[L] = newVal[0];
-
-        while( ++R < roi.width && img[R] == val0[0] )
-            img[R] = newVal[0];
-
-        while( --L >= 0 && img[L] == val0[0] )
-            img[L] = newVal[0];
-    }
-    else
-    {
-        assert( cn == 3 );
-        ICV_SET_C3( val0, img + L*3 );
-        ICV_SET_C3( newVal, _newVal );
-
-        ICV_SET_C3( img + L*3, newVal );
-
-        while( --L >= 0 && ICV_EQ_C3( img + L*3, val0 ))
-            ICV_SET_C3( img + L*3, newVal );
-
-        while( ++R < roi.width && ICV_EQ_C3( img + R*3, val0 ))
-            ICV_SET_C3( img + R*3, newVal );
-    }
-
-    XMax = --R;
-    XMin = ++L;
-    ICV_PUSH( seed.y, L, R, R + 1, R, UP );
-
-    while( head != tail )
-    {
-        int k, YC, PL, PR, dir;
-        ICV_POP( YC, L, R, PL, PR, dir );
-
-        int data[][3] =
-        {
-            {-dir, L - _8_connectivity, R + _8_connectivity},
-            {dir, L - _8_connectivity, PL - 1},
-            {dir, PR + 1, R + _8_connectivity}
-        };
-
-        if( region )
-        {
-            area += R - L + 1;
-
-            if( XMax < R ) XMax = R;
-            if( XMin > L ) XMin = L;
-            if( YMax < YC ) YMax = YC;
-            if( YMin > YC ) YMin = YC;
-        }
-
-        for( k = 0/*(unsigned)(YC - dir) >= (unsigned)roi.height*/; k < 3; k++ )
-        {
-            dir = data[k][0];
-            img = pImage + (YC + dir) * step;
-            int left = data[k][1];
-            int right = data[k][2];
-
-            if( (unsigned)(YC + dir) >= (unsigned)roi.height )
-                continue;
-
-            if( cn == 1 )
-                for( i = left; i <= right; i++ )
-                {
-                    if( (unsigned)i < (unsigned)roi.width && img[i] == val0[0] )
-                    {
-                        int j = i;
-                        img[i] = newVal[0];
-                        while( --j >= 0 && img[j] == val0[0] )
-                            img[j] = newVal[0];
-
-                        while( ++i < roi.width && img[i] == val0[0] )
-                            img[i] = newVal[0];
-
-                        ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                    }
-                }
-            else
-                for( i = left; i <= right; i++ )
-                {
-                    if( (unsigned)i < (unsigned)roi.width && ICV_EQ_C3( img + i*3, val0 ))
-                    {
-                        int j = i;
-                        ICV_SET_C3( img + i*3, newVal );
-                        while( --j >= 0 && ICV_EQ_C3( img + j*3, val0 ))
-                            ICV_SET_C3( img + j*3, newVal );
-
-                        while( ++i < roi.width && ICV_EQ_C3( img + i*3, val0 ))
-                            ICV_SET_C3( img + i*3, newVal );
-
-                        ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                    }
-                }
-        }
-    }
-
-    if( region )
-    {
-        Cv32suf v0, v1, v2;
-        region->area = area;
-        region->rect.x = XMin;
-        region->rect.y = YMin;
-        region->rect.width = XMax - XMin + 1;
-        region->rect.height = YMax - YMin + 1;
-        v0.i = newVal[0]; v1.i = newVal[1]; v2.i = newVal[2];
-        region->value = cvScalar( v0.f, v1.f, v2.f );
+        region->value = cv::Scalar(newVal);
     }
 }
 
@@ -353,336 +178,82 @@ icvFloodFill_32f_CnIR( int* pImage, int step, CvSize roi, CvPoint seed,
 *                                   Gradient Floodfill                                   *
 \****************************************************************************************/
 
-#define DIFF_INT_C1(p1,p2) ((unsigned)((p1)[0] - (p2)[0] + d_lw[0]) <= interval[0])
-
-#define DIFF_INT_C3(p1,p2) ((unsigned)((p1)[0] - (p2)[0] + d_lw[0])<= interval[0] && \
-                            (unsigned)((p1)[1] - (p2)[1] + d_lw[1])<= interval[1] && \
-                            (unsigned)((p1)[2] - (p2)[2] + d_lw[2])<= interval[2])
-
-#define DIFF_FLT_C1(p1,p2) (fabs((p1)[0] - (p2)[0] + d_lw[0]) <= interval[0])
-
-#define DIFF_FLT_C3(p1,p2) (fabs((p1)[0] - (p2)[0] + d_lw[0]) <= interval[0] && \
-                            fabs((p1)[1] - (p2)[1] + d_lw[1]) <= interval[1] && \
-                            fabs((p1)[2] - (p2)[2] + d_lw[2]) <= interval[2])
-
-static void
-icvFloodFillGrad_8u_CnIR( uchar* pImage, int step, uchar* pMask, int maskStep,
-                           CvSize /*roi*/, CvPoint seed, uchar* _newVal, uchar* _d_lw,
-                           uchar* _d_up, CvConnectedComp* region, int flags,
-                           CvFFillSegment* buffer, int buffer_size, int cn )
+struct Diff8uC1
 {
-    uchar* img = pImage + step*seed.y;
-    uchar* mask = (pMask += maskStep + 1) + maskStep*seed.y;
-    int i, L, R;
-    int area = 0;
-    int sum[] = {0,0,0}, val0[] = {0,0,0};
-    uchar newVal[] = {0,0,0};
-    int d_lw[] = {0,0,0};
-    unsigned interval[] = {0,0,0};
-    int XMin, XMax, YMin = seed.y, YMax = seed.y;
-    int _8_connectivity = (flags & 255) == 8;
-    int fixedRange = flags & CV_FLOODFILL_FIXED_RANGE;
-    int fillImage = (flags & CV_FLOODFILL_MASK_ONLY) == 0;
-    uchar newMaskVal = (uchar)(flags & 0xff00 ? flags >> 8 : 1);
-    CvFFillSegment* buffer_end = buffer + buffer_size, *head = buffer, *tail = buffer;
+    Diff8uC1(uchar _lo, uchar _up) : lo(_lo), interval(_lo + _up) {}
+    bool operator()(const uchar* a, const uchar* b) const
+    { return (unsigned)(a[0] - b[0] + lo) <= interval; }
+    unsigned lo, interval;
+};
 
-    L = R = seed.x;
-    if( mask[L] )
-        return;
-
-    mask[L] = newMaskVal;
-
-    for( i = 0; i < cn; i++ )
+struct Diff8uC3
+{
+    Diff8uC3(cv::Vec3b _lo, cv::Vec3b _up)
     {
-        newVal[i] = _newVal[i];
-        d_lw[i] = _d_lw[i];
-        interval[i] = (unsigned)(_d_up[i] + _d_lw[i]);
-        if( fixedRange )
-            val0[i] = img[L*cn+i];
+        for( int k = 0; k < 3; k++ )
+            lo[k] = _lo[k], interval[k] = _lo[k] + _up[k];
     }
-
-    if( cn == 1 )
+    bool operator()(const cv::Vec3b* a, const cv::Vec3b* b) const
     {
-        if( fixedRange )
-        {
-            while( !mask[R + 1] && DIFF_INT_C1( img + (R+1), val0 ))
-                mask[++R] = newMaskVal;
-
-            while( !mask[L - 1] && DIFF_INT_C1( img + (L-1), val0 ))
-                mask[--L] = newMaskVal;
-        }
-        else
-        {
-            while( !mask[R + 1] && DIFF_INT_C1( img + (R+1), img + R ))
-                mask[++R] = newMaskVal;
-
-            while( !mask[L - 1] && DIFF_INT_C1( img + (L-1), img + L ))
-                mask[--L] = newMaskVal;
-        }
+        return (unsigned)(a[0][0] - b[0][0] + lo[0]) <= interval[0] &&
+               (unsigned)(a[0][1] - b[0][1] + lo[1]) <= interval[1] &&
+               (unsigned)(a[0][2] - b[0][2] + lo[2]) <= interval[2];
     }
-    else
+    unsigned lo[3], interval[3];
+};
+
+template<typename _Tp>
+struct DiffC1
+{
+    DiffC1(_Tp _lo, _Tp _up) : lo(-_lo), up(_up) {}
+    bool operator()(const _Tp* a, const _Tp* b) const
     {
-        if( fixedRange )
-        {
-            while( !mask[R + 1] && DIFF_INT_C3( img + (R+1)*3, val0 ))
-                mask[++R] = newMaskVal;
-
-            while( !mask[L - 1] && DIFF_INT_C3( img + (L-1)*3, val0 ))
-                mask[--L] = newMaskVal;
-        }
-        else
-        {
-            while( !mask[R + 1] && DIFF_INT_C3( img + (R+1)*3, img + R*3 ))
-                mask[++R] = newMaskVal;
-
-            while( !mask[L - 1] && DIFF_INT_C3( img + (L-1)*3, img + L*3 ))
-                mask[--L] = newMaskVal;
-        }
+        _Tp d = a[0] - b[0];
+        return lo <= d && d <= up;
     }
+    _Tp lo, up;
+};
 
-    XMax = R;
-    XMin = L;
-    ICV_PUSH( seed.y, L, R, R + 1, R, UP );
-
-    while( head != tail )
+template<typename _Tp>
+struct DiffC3
+{
+    DiffC3(_Tp _lo, _Tp _up) : lo(-_lo), up(_up) {}
+    bool operator()(const _Tp* a, const _Tp* b) const
     {
-        int k, YC, PL, PR, dir, curstep;
-        ICV_POP( YC, L, R, PL, PR, dir );
-
-        int data[][3] =
-        {
-            {-dir, L - _8_connectivity, R + _8_connectivity},
-            {dir, L - _8_connectivity, PL - 1},
-            {dir, PR + 1, R + _8_connectivity}
-        };
-
-        unsigned length = (unsigned)(R-L);
-
-        if( region )
-        {
-            area += (int)length + 1;
-
-            if( XMax < R ) XMax = R;
-            if( XMin > L ) XMin = L;
-            if( YMax < YC ) YMax = YC;
-            if( YMin > YC ) YMin = YC;
-        }
-
-        if( cn == 1 )
-        {
-            for( k = 0; k < 3; k++ )
-            {
-                dir = data[k][0];
-                curstep = dir * step;
-                img = pImage + (YC + dir) * step;
-                mask = pMask + (YC + dir) * maskStep;
-                int left = data[k][1];
-                int right = data[k][2];
-
-                if( fixedRange )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_INT_C1( img + i, val0 ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_INT_C1( img + j, val0 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] && DIFF_INT_C1( img + i, val0 ))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else if( !_8_connectivity )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_INT_C1( img + i, img - curstep + i ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_INT_C1( img + j, img + (j+1) ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   (DIFF_INT_C1( img + i, img + (i-1) ) ||
-                                   (DIFF_INT_C1( img + i, img + i - curstep) && i <= R)))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else
-                    for( i = left; i <= right; i++ )
-                    {
-                        int idx, val[1];
-
-                        if( !mask[i] &&
-                            (((val[0] = img[i],
-                            (unsigned)(idx = i-L-1) <= length) &&
-                            DIFF_INT_C1( val, img - curstep + (i-1))) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_INT_C1( val, img - curstep + i )) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_INT_C1( val, img - curstep + (i+1) ))))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_INT_C1( img + j, img + (j+1) ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   ((val[0] = img[i],
-                                   DIFF_INT_C1( val, img + (i-1) )) ||
-                                   (((unsigned)(idx = i-L-1) <= length &&
-                                   DIFF_INT_C1( val, img - curstep + (i-1) ))) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_INT_C1( val, img - curstep + i )) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_INT_C1( val, img - curstep + (i+1) ))))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-            }
-
-            img = pImage + YC * step;
-            if( fillImage )
-                for( i = L; i <= R; i++ )
-                    img[i] = newVal[0];
-            else if( region )
-                for( i = L; i <= R; i++ )
-                    sum[0] += img[i];
-        }
-        else
-        {
-            for( k = 0; k < 3; k++ )
-            {
-                dir = data[k][0];
-                curstep = dir * step;
-                img = pImage + (YC + dir) * step;
-                mask = pMask + (YC + dir) * maskStep;
-                int left = data[k][1];
-                int right = data[k][2];
-
-                if( fixedRange )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_INT_C3( img + i*3, val0 ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_INT_C3( img + j*3, val0 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] && DIFF_INT_C3( img + i*3, val0 ))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else if( !_8_connectivity )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_INT_C3( img + i*3, img - curstep + i*3 ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_INT_C3( img + j*3, img + (j+1)*3 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   (DIFF_INT_C3( img + i*3, img + (i-1)*3 ) ||
-                                   (DIFF_INT_C3( img + i*3, img + i*3 - curstep) && i <= R)))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else
-                    for( i = left; i <= right; i++ )
-                    {
-                        int idx, val[3];
-
-                        if( !mask[i] &&
-                            (((ICV_SET_C3( val, img+i*3 ),
-                            (unsigned)(idx = i-L-1) <= length) &&
-                            DIFF_INT_C3( val, img - curstep + (i-1)*3 )) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_INT_C3( val, img - curstep + i*3 )) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_INT_C3( val, img - curstep + (i+1)*3 ))))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_INT_C3( img + j*3, img + (j+1)*3 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   ((ICV_SET_C3( val, img + i*3 ),
-                                   DIFF_INT_C3( val, img + (i-1)*3 )) ||
-                                   (((unsigned)(idx = i-L-1) <= length &&
-                                   DIFF_INT_C3( val, img - curstep + (i-1)*3 ))) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_INT_C3( val, img - curstep + i*3 )) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_INT_C3( val, img - curstep + (i+1)*3 ))))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-            }
-
-            img = pImage + YC * step;
-            if( fillImage )
-                for( i = L; i <= R; i++ )
-                    ICV_SET_C3( img + i*3, newVal );
-            else if( region )
-                for( i = L; i <= R; i++ )
-                {
-                    sum[0] += img[i*3];
-                    sum[1] += img[i*3+1];
-                    sum[2] += img[i*3+2];
-                }
-        }
+        _Tp d = *a - *b;
+        return lo[0] <= d[0] && d[0] <= up[0] &&
+               lo[1] <= d[1] && d[1] <= up[1] &&
+               lo[2] <= d[2] && d[2] <= up[2];
     }
+    _Tp lo, up;
+};
 
-    if( region )
-    {
-        region->area = area;
-        region->rect.x = XMin;
-        region->rect.y = YMin;
-        region->rect.width = XMax - XMin + 1;
-        region->rect.height = YMax - YMin + 1;
+typedef DiffC1<int> Diff32sC1;
+typedef DiffC3<cv::Vec3i> Diff32sC3;
+typedef DiffC1<float> Diff32fC1;
+typedef DiffC3<cv::Vec3f> Diff32fC3;
 
-        if( fillImage )
-            region->value = cvScalar(newVal[0], newVal[1], newVal[2]);
-        else
-        {
-            double iarea = area ? 1./area : 0;
-            region->value = cvScalar(sum[0]*iarea, sum[1]*iarea, sum[2]*iarea);
-        }
-    }
+cv::Vec3i& operator += (cv::Vec3i& a, const cv::Vec3b& b)
+{
+    a[0] += b[0];
+    a[1] += b[1];
+    a[2] += b[2];
+    return a;
 }
 
-
+template<typename _Tp, typename _WTp, class Diff>
 static void
-icvFloodFillGrad_32f_CnIR( float* pImage, int step, uchar* pMask, int maskStep,
-                           CvSize /*roi*/, CvPoint seed, float* _newVal, float* _d_lw,
-                           float* _d_up, CvConnectedComp* region, int flags,
-                           CvFFillSegment* buffer, int buffer_size, int cn )
+icvFloodFillGrad_CnIR( uchar* pImage, int step, uchar* pMask, int maskStep,
+                       CvSize /*roi*/, CvPoint seed, _Tp newVal, Diff diff,
+                       CvConnectedComp* region, int flags,
+                       CvFFillSegment* buffer, int buffer_size )
 {
-    float* img = pImage + (step /= sizeof(float))*seed.y;
+    typedef typename cv::DataType<_Tp>::channel_type _CTp;
+    _Tp* img = (_Tp*)(pImage + step*seed.y);
     uchar* mask = (pMask += maskStep + 1) + maskStep*seed.y;
     int i, L, R;
     int area = 0;
-    double sum[] = {0,0,0}, val0[] = {0,0,0};
-    float newVal[] = {0,0,0};
-    float d_lw[] = {0,0,0};
-    float interval[] = {0,0,0};
+    _WTp sum = _WTp((typename cv::DataType<_Tp>::channel_type)0);
     int XMin, XMax, YMin = seed.y, YMax = seed.y;
     int _8_connectivity = (flags & 255) == 8;
     int fixedRange = flags & CV_FLOODFILL_FIXED_RANGE;
@@ -695,53 +266,23 @@ icvFloodFillGrad_32f_CnIR( float* pImage, int step, uchar* pMask, int maskStep,
         return;
 
     mask[L] = newMaskVal;
+    _Tp val0 = img[L];
 
-    for( i = 0; i < cn; i++ )
+    if( fixedRange )
     {
-        newVal[i] = _newVal[i];
-        d_lw[i] = 0.5f*(_d_lw[i] - _d_up[i]);
-        interval[i] = 0.5f*(_d_lw[i] + _d_up[i]);
-        if( fixedRange )
-            val0[i] = img[L*cn+i];
-    }
+        while( !mask[R + 1] && diff( img + (R+1), &val0 ))
+            mask[++R] = newMaskVal;
 
-    if( cn == 1 )
-    {
-        if( fixedRange )
-        {
-            while( !mask[R + 1] && DIFF_FLT_C1( img + (R+1), val0 ))
-                mask[++R] = newMaskVal;
-
-            while( !mask[L - 1] && DIFF_FLT_C1( img + (L-1), val0 ))
-                mask[--L] = newMaskVal;
-        }
-        else
-        {
-            while( !mask[R + 1] && DIFF_FLT_C1( img + (R+1), img + R ))
-                mask[++R] = newMaskVal;
-
-            while( !mask[L - 1] && DIFF_FLT_C1( img + (L-1), img + L ))
-                mask[--L] = newMaskVal;
-        }
+        while( !mask[L - 1] && diff( img + (L-1), &val0 ))
+            mask[--L] = newMaskVal;
     }
     else
     {
-        if( fixedRange )
-        {
-            while( !mask[R + 1] && DIFF_FLT_C3( img + (R+1)*3, val0 ))
-                mask[++R] = newMaskVal;
+        while( !mask[R + 1] && diff( img + (R+1), img + R ))
+            mask[++R] = newMaskVal;
 
-            while( !mask[L - 1] && DIFF_FLT_C3( img + (L-1)*3, val0 ))
-                mask[--L] = newMaskVal;
-        }
-        else
-        {
-            while( !mask[R + 1] && DIFF_FLT_C3( img + (R+1)*3, img + R*3 ))
-                mask[++R] = newMaskVal;
-
-            while( !mask[L - 1] && DIFF_FLT_C3( img + (L-1)*3, img + L*3 ))
-                mask[--L] = newMaskVal;
-        }
+        while( !mask[L - 1] && diff( img + (L-1), img + L ))
+            mask[--L] = newMaskVal;
     }
 
     XMax = R;
@@ -750,7 +291,7 @@ icvFloodFillGrad_32f_CnIR( float* pImage, int step, uchar* pMask, int maskStep,
 
     while( head != tail )
     {
-        int k, YC, PL, PR, dir, curstep;
+        int k, YC, PL, PR, dir;
         ICV_POP( YC, L, R, PL, PR, dir );
 
         int data[][3] =
@@ -772,188 +313,92 @@ icvFloodFillGrad_32f_CnIR( float* pImage, int step, uchar* pMask, int maskStep,
             if( YMin > YC ) YMin = YC;
         }
 
-        if( cn == 1 )
+        for( k = 0; k < 3; k++ )
         {
-            for( k = 0; k < 3; k++ )
-            {
-                dir = data[k][0];
-                curstep = dir * step;
-                img = pImage + (YC + dir) * step;
-                mask = pMask + (YC + dir) * maskStep;
-                int left = data[k][1];
-                int right = data[k][2];
+            dir = data[k][0];
+            img = (_Tp*)(pImage + (YC + dir) * step);
+            _Tp* img1 = (_Tp*)(pImage + YC * step);
+            mask = pMask + (YC + dir) * maskStep;
+            int left = data[k][1];
+            int right = data[k][2];
 
-                if( fixedRange )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_FLT_C1( img + i, val0 ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_FLT_C1( img + j, val0 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] && DIFF_FLT_C1( img + i, val0 ))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else if( !_8_connectivity )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_FLT_C1( img + i, img - curstep + i ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_FLT_C1( img + j, img + (j+1) ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   (DIFF_FLT_C1( img + i, img + (i-1) ) ||
-                                   (DIFF_FLT_C1( img + i, img + i - curstep) && i <= R)))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else
-                    for( i = left; i <= right; i++ )
-                    {
-                        int idx;
-                        float val[1];
-
-                        if( !mask[i] &&
-                            (((val[0] = img[i],
-                            (unsigned)(idx = i-L-1) <= length) &&
-                            DIFF_FLT_C1( val, img - curstep + (i-1) )) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_FLT_C1( val, img - curstep + i )) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_FLT_C1( val, img - curstep + (i+1) ))))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_FLT_C1( img + j, img + (j+1) ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   ((val[0] = img[i],
-                                   DIFF_FLT_C1( val, img + (i-1) )) ||
-                                   (((unsigned)(idx = i-L-1) <= length &&
-                                   DIFF_FLT_C1( val, img - curstep + (i-1) ))) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_FLT_C1( val, img - curstep + i )) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_FLT_C1( val, img - curstep + (i+1) ))))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-            }
-
-            img = pImage + YC * step;
-            if( fillImage )
-                for( i = L; i <= R; i++ )
-                    img[i] = newVal[0];
-            else if( region )
-                for( i = L; i <= R; i++ )
-                    sum[0] += img[i];
-        }
-        else
-        {
-            for( k = 0; k < 3; k++ )
-            {
-                dir = data[k][0];
-                curstep = dir * step;
-                img = pImage + (YC + dir) * step;
-                mask = pMask + (YC + dir) * maskStep;
-                int left = data[k][1];
-                int right = data[k][2];
-
-                if( fixedRange )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_FLT_C3( img + i*3, val0 ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_FLT_C3( img + j*3, val0 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] && DIFF_FLT_C3( img + i*3, val0 ))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else if( !_8_connectivity )
-                    for( i = left; i <= right; i++ )
-                    {
-                        if( !mask[i] && DIFF_FLT_C3( img + i*3, img - curstep + i*3 ))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_FLT_C3( img + j*3, img + (j+1)*3 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   (DIFF_FLT_C3( img + i*3, img + (i-1)*3 ) ||
-                                   (DIFF_FLT_C3( img + i*3, img + i*3 - curstep) && i <= R)))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-                else
-                    for( i = left; i <= right; i++ )
-                    {
-                        int idx;
-                        float val[3];
-
-                        if( !mask[i] &&
-                            (((ICV_SET_C3( val, img+i*3 ),
-                            (unsigned)(idx = i-L-1) <= length) &&
-                            DIFF_FLT_C3( val, img - curstep + (i-1)*3 )) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_FLT_C3( val, img - curstep + i*3 )) ||
-                            ((unsigned)(++idx) <= length &&
-                            DIFF_FLT_C3( val, img - curstep + (i+1)*3 ))))
-                        {
-                            int j = i;
-                            mask[i] = newMaskVal;
-                            while( !mask[--j] && DIFF_FLT_C3( img + j*3, img + (j+1)*3 ))
-                                mask[j] = newMaskVal;
-
-                            while( !mask[++i] &&
-                                   ((ICV_SET_C3( val, img + i*3 ),
-                                   DIFF_FLT_C3( val, img + (i-1)*3 )) ||
-                                   (((unsigned)(idx = i-L-1) <= length &&
-                                   DIFF_FLT_C3( val, img - curstep + (i-1)*3 ))) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_FLT_C3( val, img - curstep + i*3 )) ||
-                                   ((unsigned)(++idx) <= length &&
-                                   DIFF_FLT_C3( val, img - curstep + (i+1)*3 ))))
-                                mask[i] = newMaskVal;
-
-                            ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
-                        }
-                    }
-            }
-
-            img = pImage + YC * step;
-            if( fillImage )
-                for( i = L; i <= R; i++ )
-                    ICV_SET_C3( img + i*3, newVal );
-            else if( region )
-                for( i = L; i <= R; i++ )
+            if( fixedRange )
+                for( i = left; i <= right; i++ )
                 {
-                    sum[0] += img[i*3];
-                    sum[1] += img[i*3+1];
-                    sum[2] += img[i*3+2];
+                    if( !mask[i] && diff( img + i, &val0 ))
+                    {
+                        int j = i;
+                        mask[i] = newMaskVal;
+                        while( !mask[--j] && diff( img + j, &val0 ))
+                            mask[j] = newMaskVal;
+
+                        while( !mask[++i] && diff( img + i, &val0 ))
+                            mask[i] = newMaskVal;
+
+                        ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
+                    }
+                }
+            else if( !_8_connectivity )
+                for( i = left; i <= right; i++ )
+                {
+                    if( !mask[i] && diff( img + i, img1 + i ))
+                    {
+                        int j = i;
+                        mask[i] = newMaskVal;
+                        while( !mask[--j] && diff( img + j, img + (j+1) ))
+                            mask[j] = newMaskVal;
+
+                        while( !mask[++i] &&
+                               (diff( img + i, img + (i-1) ) ||
+                               (diff( img + i, img1 + i) && i <= R)))
+                            mask[i] = newMaskVal;
+
+                        ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
+                    }
+                }
+            else
+                for( i = left; i <= right; i++ )
+                {
+                    int idx;
+                    _Tp val;
+
+                    if( !mask[i] &&
+                        (((val = img[i],
+                        (unsigned)(idx = i-L-1) <= length) &&
+                        diff( &val, img1 + (i-1))) ||
+                        ((unsigned)(++idx) <= length &&
+                        diff( &val, img1 + i )) ||
+                        ((unsigned)(++idx) <= length &&
+                        diff( &val, img1 + (i+1) ))))
+                    {
+                        int j = i;
+                        mask[i] = newMaskVal;
+                        while( !mask[--j] && diff( img + j, img + (j+1) ))
+                            mask[j] = newMaskVal;
+
+                        while( !mask[++i] &&
+                               ((val = img[i],
+                               diff( &val, img + (i-1) )) ||
+                               (((unsigned)(idx = i-L-1) <= length &&
+                               diff( &val, img1 + (i-1) ))) ||
+                               ((unsigned)(++idx) <= length &&
+                               diff( &val, img1 + i )) ||
+                               ((unsigned)(++idx) <= length &&
+                               diff( &val, img1 + (i+1) ))))
+                            mask[i] = newMaskVal;
+
+                        ICV_PUSH( YC + dir, j+1, i-1, L, R, -dir );
+                    }
                 }
         }
+
+        img = (_Tp*)(pImage + YC * step);
+        if( fillImage )
+            for( i = L; i <= R; i++ )
+                img[i] = newVal;
+        else if( region )
+            for( i = L; i <= R; i++ )
+                sum += img[i];
     }
 
     if( region )
@@ -965,11 +410,11 @@ icvFloodFillGrad_32f_CnIR( float* pImage, int step, uchar* pMask, int maskStep,
         region->rect.height = YMax - YMin + 1;
 
         if( fillImage )
-            region->value = cvScalar(newVal[0], newVal[1], newVal[2]);
+            region->value = cv::Scalar(newVal);
         else
         {
             double iarea = area ? 1./area : 0;
-            region->value = cvScalar(sum[0]*iarea, sum[1]*iarea, sum[2]*iarea);
+            region->value = cv::Scalar(sum*iarea);
         }
     }
 }
@@ -1002,7 +447,7 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
     int i, type, depth, cn, is_simple;
     int buffer_size, connectivity = flags & 255;
     double nv_buf[4] = {0,0,0,0};
-    union { uchar b[4]; float f[4]; } ld_buf, ud_buf;
+    struct { cv::Vec3b b; cv::Vec3i i; cv::Vec3f f; } ld_buf, ud_buf;
     CvMat stub, *img = cvGetMat(arr, &stub);
     CvMat maskstub, *mask = (CvMat*)maskarr;
     CvSize size;
@@ -1037,33 +482,41 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
 
     if( is_simple )
     {
-        int elem_size = CV_ELEM_SIZE(type);
+        /*int elem_size = CV_ELEM_SIZE(type);
         const uchar* seed_ptr = img->data.ptr + img->step*seed_point.y + elem_size*seed_point.x;
-        CvFloodFillFunc func =
-            type == CV_8UC1 || type == CV_8UC3 ? (CvFloodFillFunc)icvFloodFill_8u_CnIR :
-            type == CV_32FC1 || type == CV_32FC3 ? (CvFloodFillFunc)icvFloodFill_32f_CnIR : 0;
-        if( !func )
-            CV_Error( CV_StsUnsupportedFormat, "" );
+        
         // check if the new value is different from the current value at the seed point.
         // if they are exactly the same, use the generic version with mask to avoid infinite loops.
         for( i = 0; i < elem_size; i++ )
             if( seed_ptr[i] != ((uchar*)nv_buf)[i] )
                 break;
-        if( i < elem_size )
-        {
-            func( img->data.ptr, img->step, size,
-                  seed_point, &nv_buf, comp, flags,
-                  buffer, buffer_size, cn );
-            return;
-        }
+        
+        if( i == elem_size )
+            return;*/
+        
+        if( type == CV_8UC1 )
+            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, ((uchar*)nv_buf)[0],
+                              comp, flags, buffer, buffer_size);
+        else if( type == CV_8UC3 )
+            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, ((cv::Vec3b*)nv_buf)[0],
+                              comp, flags, buffer, buffer_size);
+        else if( type == CV_32SC1 )
+            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, ((int*)nv_buf)[0],
+                              comp, flags, buffer, buffer_size);
+        else if( type == CV_32FC1 )
+            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, ((float*)nv_buf)[0],
+                              comp, flags, buffer, buffer_size);
+        else if( type == CV_32SC3 )
+            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, ((cv::Vec3i*)nv_buf)[0],
+                              comp, flags, buffer, buffer_size);
+        else if( type == CV_32FC3 )
+            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, ((cv::Vec3f*)nv_buf)[0],
+                              comp, flags, buffer, buffer_size);
+        else
+            CV_Error( CV_StsUnsupportedFormat, "" );
+        return;
     }
 
-    CvFloodFillGradFunc func = 
-        type == CV_8UC1 || type == CV_8UC3 ? (CvFloodFillGradFunc)icvFloodFillGrad_8u_CnIR :
-        type == CV_32FC1 || type == CV_32FC3 ? (CvFloodFillGradFunc)icvFloodFillGrad_32f_CnIR : 0;
-    if( !func )
-        CV_Error( CV_StsUnsupportedFormat, "" );
-    
     if( !mask )
     {
         /* created mask will be 8-byte aligned */
@@ -1101,16 +554,61 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
             t = cvFloor(up_diff.val[i]);
             ud_buf.b[i] = CV_CAST_8U(t);
         }
-    else
+    else if( depth == CV_32S )
+        for( i = 0; i < cn; i++ )
+        {
+            int t = cvFloor(lo_diff.val[i]);
+            ld_buf.i[i] = t;
+            t = cvFloor(up_diff.val[i]);
+            ud_buf.i[i] = t;
+        }
+    else if( depth == CV_32F )
         for( i = 0; i < cn; i++ )
         {
             ld_buf.f[i] = (float)lo_diff.val[i];
             ud_buf.f[i] = (float)up_diff.val[i];
         }
+    else
+        CV_Error( CV_StsUnsupportedFormat, "" );
 
-    func( img->data.ptr, img->step, mask->data.ptr, mask->step,
-          size, seed_point, &nv_buf, ld_buf.f, ud_buf.f,
-          comp, flags, buffer, buffer_size, cn );
+    if( type == CV_8UC1 )
+        icvFloodFillGrad_CnIR<uchar, int, Diff8uC1>(
+                              img->data.ptr, img->step, mask->data.ptr, mask->step,
+                              size, seed_point, ((uchar*)nv_buf)[0],
+                              Diff8uC1(ld_buf.b[0], ud_buf.b[0]),
+                              comp, flags, buffer, buffer_size);
+    else if( type == CV_8UC3 )
+        icvFloodFillGrad_CnIR<cv::Vec3b, cv::Vec3i, Diff8uC3>(
+                              img->data.ptr, img->step, mask->data.ptr, mask->step,
+                              size, seed_point, ((cv::Vec3b*)nv_buf)[0],
+                              Diff8uC3(ld_buf.b, ud_buf.b),
+                              comp, flags, buffer, buffer_size);
+    else if( type == CV_32SC1 )
+        icvFloodFillGrad_CnIR<int, int, Diff32sC1>(
+                              img->data.ptr, img->step, mask->data.ptr, mask->step,
+                              size, seed_point, ((int*)nv_buf)[0],
+                              Diff32sC1(ld_buf.i[0], ud_buf.i[0]),
+                              comp, flags, buffer, buffer_size);
+    else if( type == CV_32SC3 )
+        icvFloodFillGrad_CnIR<cv::Vec3i, cv::Vec3i, Diff32sC3>(
+                              img->data.ptr, img->step, mask->data.ptr, mask->step,
+                              size, seed_point, ((cv::Vec3i*)nv_buf)[0],
+                              Diff32sC3(ld_buf.i, ud_buf.i),
+                              comp, flags, buffer, buffer_size);
+    else if( type == CV_32FC1 )
+        icvFloodFillGrad_CnIR<float, float, Diff32fC1>(
+                              img->data.ptr, img->step, mask->data.ptr, mask->step,
+                              size, seed_point, ((float*)nv_buf)[0],
+                              Diff32fC1(ld_buf.f[0], ud_buf.f[0]),
+                              comp, flags, buffer, buffer_size);
+    else if( type == CV_32FC3 )
+        icvFloodFillGrad_CnIR<cv::Vec3f, cv::Vec3f, Diff32fC3>(
+                              img->data.ptr, img->step, mask->data.ptr, mask->step,
+                              size, seed_point, ((cv::Vec3f*)nv_buf)[0],
+                              Diff32fC3(ld_buf.f, ud_buf.f),
+                              comp, flags, buffer, buffer_size);
+    else
+        CV_Error(CV_StsUnsupportedFormat, "");
 }
 
 

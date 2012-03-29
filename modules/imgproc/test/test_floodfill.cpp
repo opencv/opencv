@@ -97,8 +97,8 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
     double buf[8];
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    depth = cvtest::randInt(rng) % 2;
-    depth = depth == 0 ? CV_8U : CV_32F;
+    depth = cvtest::randInt(rng) % 3;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_32S : CV_32F;
     cn = cvtest::randInt(rng) & 1 ? 3 : 1;
 
     use_mask = (cvtest::randInt(rng) & 1) != 0;
@@ -111,7 +111,7 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
     types[INPUT_OUTPUT][1] = types[REF_INPUT_OUTPUT][1] = CV_8UC1;
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(9,1);
-
+    
     if( !use_mask )
         sizes[INPUT_OUTPUT][1] = sizes[REF_INPUT_OUTPUT][1] = cvSize(0,0);
     else
@@ -256,7 +256,7 @@ cvTsFloodFill( CvMat* _img, CvPoint seed_pt, CvScalar new_val,
     int u0 = 0, u1 = 0, u2 = 0;
     double s0 = 0, s1 = 0, s2 = 0;
     
-    if( CV_MAT_DEPTH(_img->type) == CV_8U )
+    if( CV_MAT_DEPTH(_img->type) == CV_8U || CV_MAT_DEPTH(_img->type) == CV_32S )
     {
         tmp = cvCreateMat( rows, cols, CV_MAKETYPE(CV_32F,CV_MAT_CN(_img->type)) );
         cvTsConvert(_img, tmp);
@@ -428,7 +428,6 @@ cvTsFloodFill( CvMat* _img, CvPoint seed_pt, CvScalar new_val,
         float* ptr = img + i*step;
         ushort* mptr = m + i*mstep;
         uchar* dmptr = _mask ? _mask->data.ptr + (i+1)*_mask->step + 1 : 0;
-        uchar* dptr = tmp != _img ? _img->data.ptr + i*_img->step : 0;
         double area0 = area;
 
         for( j = 0; j < cols; j++ )
@@ -440,26 +439,12 @@ cvTsFloodFill( CvMat* _img, CvPoint seed_pt, CvScalar new_val,
                 if( !mask_only )
                 {
                     if( cn == 1 )
-                    {
-                        if( dptr )
-                            dptr[j] = (uchar)u0;
-                        else
-                            ptr[j] = (float)s0;
-                    }
+                        ptr[j] = (float)s0;
                     else
                     {
-                        if( dptr )
-                        {
-                            dptr[j*3] = (uchar)u0;
-                            dptr[j*3+1] = (uchar)u1;
-                            dptr[j*3+2] = (uchar)u2;
-                        }
-                        else
-                        {
-                            ptr[j*3] = (float)s0;
-                            ptr[j*3+1] = (float)s1;
-                            ptr[j*3+2] = (float)s2;
-                        }
+                        ptr[j*3] = (float)s0;
+                        ptr[j*3+1] = (float)s1;
+                        ptr[j*3+2] = (float)s2;
                     }
                 }
                 else
@@ -494,7 +479,11 @@ cvTsFloodFill( CvMat* _img, CvPoint seed_pt, CvScalar new_val,
 _exit_:
     cvReleaseMat( &mask );
     if( tmp != _img )
+    {
+        if( !mask_only )
+            cvTsConvert(tmp, _img);
         cvReleaseMat( &tmp );
+    }
 
     comp[0] = area;
     comp[1] = r.x;
