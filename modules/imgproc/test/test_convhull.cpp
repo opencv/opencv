@@ -1134,6 +1134,8 @@ int CV_FitEllipseTest::validate_test_results( int test_case_idx )
 _exit_:
 
 #if 0
+    if( code < 0 )
+    {
     cvNamedWindow( "test", 0 );
     IplImage* img = cvCreateImage( cvSize(cvRound(low_high_range*4),
         cvRound(low_high_range*4)), 8, 3 );
@@ -1154,6 +1156,7 @@ _exit_:
     cvShowImage( "test", img );
     cvReleaseImage( &img );
     cvWaitKey(0);
+    }
 #endif
 
     if( code < 0 )
@@ -1163,6 +1166,36 @@ _exit_:
     return code;
 }
 
+
+class CV_FitEllipseSmallTest : public cvtest::BaseTest
+{
+public:
+    CV_FitEllipseSmallTest() {}
+    ~CV_FitEllipseSmallTest() {}   
+protected:
+    void run(int)
+    {
+        Size sz(50, 50);
+        vector<vector<Point> > c;
+        c.push_back(vector<Point>());
+        int scale = 1;
+        Point ofs = Point(0,0);//sz.width/2, sz.height/2) - Point(4,4)*scale;
+        c[0].push_back(Point(2, 0)*scale+ofs);
+        c[0].push_back(Point(0, 2)*scale+ofs);
+        c[0].push_back(Point(0, 6)*scale+ofs);
+        c[0].push_back(Point(2, 8)*scale+ofs);
+        c[0].push_back(Point(6, 8)*scale+ofs);
+        c[0].push_back(Point(8, 6)*scale+ofs);
+        c[0].push_back(Point(8, 2)*scale+ofs);
+        c[0].push_back(Point(6, 0)*scale+ofs);
+        
+        RotatedRect e = fitEllipse(c[0]);
+        CV_Assert( fabs(e.center.x - 4) <= 1. &&
+                   fabs(e.center.y - 4) <= 1. &&
+                   fabs(e.size.width - 9) <= 1. &&
+                   fabs(e.size.height - 9) <= 1. );
+    }
+};
 
 /****************************************************************************************\
 *                                   FitLine Test                                         *
@@ -1664,6 +1697,7 @@ TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
 TEST(Imgproc_FitLine, accuracy) { CV_FitLineTest test; test.safe_run(); }
 TEST(Imgproc_ContourMoments, accuracy) { CV_ContourMomentsTest test; test.safe_run(); }
 TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; test.safe_run(); }
+TEST(Imgproc_FitEllipse, small) { CV_FitEllipseSmallTest test; test.safe_run(); }
 
 /* End of file. */
 
