@@ -674,6 +674,10 @@ CV_EXPORTS void computeCorrespondEpilines( InputArray points1,
                                            int whichImage, InputArray F,
                                            OutputArray lines );
 
+CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
+                                     InputArray projPoints1, InputArray projPoints2,
+                                     OutputArray points4D );
+
 template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
 
 /*!
