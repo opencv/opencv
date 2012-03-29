@@ -387,6 +387,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
                 {
                     bestMode = mode;
                     pref = 1;
+                    break;
                 }
 
                 if (colorCoding == DC1394_COLOR_CODING_MONO8)
