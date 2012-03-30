@@ -1676,8 +1676,8 @@ TEST(Imgproc_ColorBayerVNG, accuracy)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
 
-    Mat given = imread(ts.get_data_path() + "/cvtcolor/bayerVNG_input.png", CV_LOAD_IMAGE_GRAYSCALE);
-    Mat gold = imread(ts.get_data_path() + "/cvtcolor/bayerVNG_gold.png", CV_LOAD_IMAGE_UNCHANGED);
+    Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayerVNG_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat gold = imread(string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png", CV_LOAD_IMAGE_UNCHANGED);
     Mat result;
 
     cvtColor(given, result, CV_BayerBG2BGR_VNG, 3);
