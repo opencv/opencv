@@ -107,6 +107,41 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
 }
 
 
+static Mat estimateGlobMotionLeastSquaresLinearSimilarity(
+        int npoints, const Point2f *points0, const Point2f *points1, float *rmse)
+{
+    Mat_<float> A(2*npoints, 4), b(2*npoints, 1);
+    float *a0, *a1;
+    Point2f p0, p1;
+
+    for (int i = 0; i < npoints; ++i)
+    {
+        a0 = A[2*i];
+        a1 = A[2*i+1];
+        p0 = points0[i];
+        p1 = points1[i];
+        a0[0] = p0.x; a0[1] = p0.y; a0[2] = 1;  a0[3] = 0;
+        a1[0] = p0.y; a1[1] = -p0.x; a1[2] = 0; a1[3] = 1;
+        b(2*i,0) = p1.x;
+        b(2*i+1,0) = p1.y;
+    }
+
+    Mat_<float> sol;
+    solve(A, b, sol, DECOMP_SVD);
+
+    if (rmse)
+        *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / sqrt(static_cast<double>(npoints)));
+
+    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    M(0,0) = M(1,1) = sol(0,0);
+    M(0,1) = sol(1,0);
+    M(1,0) = -sol(1,0);
+    M(0,2) = sol(2,0);
+    M(1,2) = sol(3,0);
+    return M;
+}
+
+
 static Mat estimateGlobMotionLeastSquaresAffine(
         int npoints, const Point2f *points0, const Point2f *points1, float *rmse)
 {
@@ -149,6 +184,7 @@ Mat estimateGlobalMotionLeastSquares(
     typedef Mat (*Impl)(int, const Point2f*, const Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
                             estimateGlobMotionLeastSquaresTranslationAndScale,
+                            estimateGlobMotionLeastSquaresLinearSimilarity,
                             estimateGlobMotionLeastSquaresAffine };
 
     int npoints = static_cast<int>(points0.size());
@@ -165,6 +201,7 @@ Mat estimateGlobalMotionRobust(
     typedef Mat (*Impl)(int, const Point2f*, const Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
                             estimateGlobMotionLeastSquaresTranslationAndScale,
+                            estimateGlobMotionLeastSquaresLinearSimilarity,
                             estimateGlobMotionLeastSquaresAffine };
 
     const int npoints = static_cast<int>(points0.size());

@@ -57,7 +57,8 @@ enum MotionModel
 {
     TRANSLATION = 0,
     TRANSLATION_AND_SCALE = 1,
-    AFFINE = 2
+    LINEAR_SIMILARITY = 2,
+    AFFINE = 3
 };
 
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
@@ -74,9 +75,10 @@ struct CV_EXPORTS RansacParams
     RansacParams(int size, float thresh, float eps, float prob)
         : size(size), thresh(thresh), eps(eps), prob(prob) {}
 
-    static RansacParams affine2dMotionStd() { return RansacParams(6, 0.5f, 0.5f, 0.99f); }
-    static RansacParams translationAndScale2dMotionStd() { return RansacParams(3, 0.5f, 0.5f, 0.99f); }
     static RansacParams translationMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
+    static RansacParams translationAndScale2dMotionStd() { return RansacParams(3, 0.5f, 0.5f, 0.99f); }
+    static RansacParams linearSimilarityMotionStd() { return RansacParams(4, 0.5f, 0.5f, 0.99f); }
+    static RansacParams affine2dMotionStd() { return RansacParams(6, 0.5f, 0.5f, 0.99f); }
 };
 
 CV_EXPORTS Mat estimateGlobalMotionRobust(

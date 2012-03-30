@@ -266,7 +266,7 @@ void OnePassStabilizer::stabilizeFrame()
 TwoPassStabilizer::TwoPassStabilizer()
 {
     setMotionStabilizer(new GaussianMotionFilter());
-    setEstimateTrimRatio(true);
+    setEstimateTrimRatio(false);
     resetImpl();
 }
 

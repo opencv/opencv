@@ -121,7 +121,7 @@ void printHelp()
     cout << "OpenCV video stabilizer.\n"
             "Usage: videostab <file_path> [arguments]\n\n"
             "Arguments:\n"
-            "  -m, --model=(transl|transl_and_scale|affine)\n"
+            "  -m, --model=(transl|transl_and_scale|linear_sim|affine)\n"
             "      Set motion model. The default is affine.\n"
             "  --outlier-ratio=<float_number>\n"
             "      Outliers ratio in motion estimation. The default is 0.5.\n"
@@ -259,6 +259,8 @@ int main(int argc, const char **argv)
             motionEstimator->setMotionModel(TRANSLATION);
         else if (cmd.get<string>("model") == "transl_and_scale")
             motionEstimator->setMotionModel(TRANSLATION_AND_SCALE);
+        else if (cmd.get<string>("model") == "linear_sim")
+            motionEstimator->setMotionModel(LINEAR_SIMILARITY);
         else if (cmd.get<string>("model") == "affine")
             motionEstimator->setMotionModel(AFFINE);
         else if (!cmd.get<string>("model").empty())
