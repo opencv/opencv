@@ -843,7 +843,7 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
 }
 
 //the main function to update the background model
-void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
+static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
                                   CvPBGMMGaussian *pGMM,
                                   unsigned char *pUsedModes,
                                   //CvGaussBGStatModel2Params* pGMMPar,
