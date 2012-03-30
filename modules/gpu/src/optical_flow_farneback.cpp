@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <opencv2/highgui/highgui.hpp>
 
 #define MIN_SIZE 32
 
