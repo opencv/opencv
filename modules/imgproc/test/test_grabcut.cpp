@@ -143,8 +143,8 @@ TEST(Imgproc_GrabCut, repeatability)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
 
-    Mat image_1 = imread(ts.get_data_path() + "grabcut/image1652.ppm", CV_LOAD_IMAGE_COLOR);
-    Mat mask_1 = imread(ts.get_data_path() + "grabcut/mask1652.ppm", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat image_1 = imread(string(ts.get_data_path()) + "grabcut/image1652.ppm", CV_LOAD_IMAGE_COLOR);
+    Mat mask_1 = imread(string(ts.get_data_path()) + "grabcut/mask1652.ppm", CV_LOAD_IMAGE_GRAYSCALE);
     Rect roi_1(0, 0, 150, 150);
 
     Mat image_2 = image_1.clone();
