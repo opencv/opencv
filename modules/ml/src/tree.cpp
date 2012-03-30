@@ -747,7 +747,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
             if( ci >= 0 || vi >= var_count )
             {
                 int num_valid = 0;
-                const int* src = get_cat_var_data( data_root, vi, (int*)(uchar*)inn_buf );
+                const int* src = CvDTreeTrainData::get_cat_var_data( data_root, vi, (int*)(uchar*)inn_buf );
 
                 if (is_buf_16u)
                 {
