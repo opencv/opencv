@@ -188,7 +188,7 @@ int main(int argc, const char **argv)
                 "{ | stdev | | }"
                 "{ | deblur | | }"
                 "{ | deblur-sens | | }"
-                "{ | est-trim | | }"
+                "{ | est-trim | yes | }"
                 "{ t | trim-ratio | | }"
                 "{ | incl-constr | | }"
                 "{ | border-mode | | }"
