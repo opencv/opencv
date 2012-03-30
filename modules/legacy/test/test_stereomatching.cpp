@@ -653,77 +653,27 @@ int CV_StereoMatchingTest::compareErrors( const vector<float>& calcErrors, const
     return ok ? cvtest::TS::OK : cvtest::TS::FAIL_BAD_ACCURACY;
 }
 
-//----------------------------------- StereoBM test -----------------------------------------------------
+//----------------------------------- StereoGC test -----------------------------------------------------
 
-class CV_StereoBMTest : public CV_StereoMatchingTest
+class CV_StereoGCTest : public CV_StereoMatchingTest
 {
 public:
-    CV_StereoBMTest()
+    CV_StereoGCTest()
     {
-        name = "stereobm";
-        fill(rmsEps.begin(), rmsEps.end(), 0.4f);
-        fill(fracEps.begin(), fracEps.end(), 0.022f);
+        name = "stereogc"; 
+        fill(rmsEps.begin(), rmsEps.end(), 3.f);
+        fracEps[0] = 0.05f; // all
+        fracEps[1] = 0.05f; // noOccl
+        fracEps[2] = 0.25f; // occl
+        fracEps[3] = 0.05f; // textured
+        fracEps[4] = 0.10f; // textureless
+        fracEps[5] = 0.10f; // borderedDepthDiscont
     }
-
 protected:
     struct RunParams
     {
         int ndisp;
-        int winSize;
-    };
-    vector<RunParams> caseRunParams;
-
-    virtual int readRunParams( FileStorage& fs )
-    {
-        int code = CV_StereoMatchingTest::readRunParams( fs );
-        FileNode fn = fs.getFirstTopLevelNode();
-        assert(fn.isSeq());
-        for( int i = 0; i < (int)fn.size(); i+=4 )
-        {
-            string caseName = fn[i], datasetName = fn[i+1];
-            RunParams params;
-            string ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            string winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
-            caseNames.push_back( caseName );
-            caseDatasets.push_back( datasetName );
-            caseRunParams.push_back( params );
-        }
-        return code;
-    }
-
-    virtual int runStereoMatchingAlgorithm( const Mat& _leftImg, const Mat& _rightImg,
-                   Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
-    {
-        RunParams params = caseRunParams[caseIdx];
-        assert( params.ndisp%16 == 0 );
-        assert( _leftImg.type() == CV_8UC3 && _rightImg.type() == CV_8UC3 );
-        Mat leftImg; cvtColor( _leftImg, leftImg, CV_BGR2GRAY );
-        Mat rightImg; cvtColor( _rightImg, rightImg, CV_BGR2GRAY );
-
-        StereoBM bm( StereoBM::BASIC_PRESET, params.ndisp, params.winSize );
-        bm( leftImg, rightImg, leftDisp, CV_32F );
-        return params.winSize/2;
-    }
-};
-
-//----------------------------------- StereoSGBM test -----------------------------------------------------
-
-class CV_StereoSGBMTest : public CV_StereoMatchingTest
-{
-public:
-    CV_StereoSGBMTest()
-    {
-        name = "stereosgbm"; 
-        fill(rmsEps.begin(), rmsEps.end(), 0.25f);
-        fill(fracEps.begin(), fracEps.end(), 0.01f);
-    }
-
-protected:
-    struct RunParams
-    {
-        int ndisp;
-        int winSize;
-        bool fullDP;
+        int iterCount;
     };
     vector<RunParams> caseRunParams;
 
@@ -732,13 +682,12 @@ protected:
         int code = CV_StereoMatchingTest::readRunParams(fs);
         FileNode fn = fs.getFirstTopLevelNode();
         assert(fn.isSeq());
-        for( int i = 0; i < (int)fn.size(); i+=5 )
+        for( int i = 0; i < (int)fn.size(); i+=4 )
         {
             string caseName = fn[i], datasetName = fn[i+1];
             RunParams params;
             string ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            string winSize = fn[i+3]; params.winSize = atoi(winSize.c_str());
-            string fullDP = fn[i+4]; params.fullDP = atoi(fullDP.c_str()) == 0 ? false : true;
+            string iterCount = fn[i+3]; params.iterCount = atoi(iterCount.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );
@@ -746,20 +695,28 @@ protected:
         return code;
     }
 
-    virtual int runStereoMatchingAlgorithm( const Mat& leftImg, const Mat& rightImg,
-                   Mat& leftDisp, Mat& /*rightDisp*/, int caseIdx )
+    virtual int runStereoMatchingAlgorithm( const Mat& _leftImg, const Mat& _rightImg,
+                   Mat& leftDisp, Mat& rightDisp, int caseIdx )
     {
         RunParams params = caseRunParams[caseIdx];
-        assert( params.ndisp%16 == 0 );
-        StereoSGBM sgbm( 0, params.ndisp, params.winSize, 10*params.winSize*params.winSize, 40*params.winSize*params.winSize,
-                         1, 63, 10, 100, 32, params.fullDP );
-        sgbm( leftImg, rightImg, leftDisp );
-        assert( leftDisp.type() == CV_16SC1 );
-        leftDisp/=16;
+        assert( _leftImg.type() == CV_8UC3 && _rightImg.type() == CV_8UC3 );
+        Mat leftImg, rightImg, tmp;
+        cvtColor( _leftImg, leftImg, CV_BGR2GRAY );
+        cvtColor( _rightImg, rightImg, CV_BGR2GRAY );
+
+        leftDisp.create( leftImg.size(), CV_16SC1 );
+        rightDisp.create( rightImg.size(), CV_16SC1 );
+
+        CvMat _limg = leftImg, _rimg = rightImg, _ldisp = leftDisp, _rdisp = rightDisp;
+        CvStereoGCState *state = cvCreateStereoGCState( params.ndisp, params.iterCount );
+        cvFindStereoCorrespondenceGC( &_limg, &_rimg, &_ldisp, &_rdisp, state );
+        cvReleaseStereoGCState( &state );
+
+        leftDisp = - leftDisp;
         return 0;
     }
+
 };
 
 
-TEST(Calib3d_StereoBM, regression) { CV_StereoBMTest test; test.safe_run(); }
-TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
+TEST(Calib3d_StereoGC, regression) { CV_StereoGCTest test; test.safe_run(); }

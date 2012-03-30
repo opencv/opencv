@@ -2797,8 +2797,529 @@ protected:
     
 }
 
+// 2009-01-12, Xavier Delacour <xavier.delacour@gmail.com>
 
-//#include "cvvidsurv.hpp"
+struct lsh_hash {
+    int h1, h2;
+};
+
+struct CvLSHOperations
+{
+    virtual ~CvLSHOperations() {}
+    
+    virtual int vector_add(const void* data) = 0;
+    virtual void vector_remove(int i) = 0;
+    virtual const void* vector_lookup(int i) = 0;
+    virtual void vector_reserve(int n) = 0;
+    virtual unsigned int vector_count() = 0;
+    
+    virtual void hash_insert(lsh_hash h, int l, int i) = 0;
+    virtual void hash_remove(lsh_hash h, int l, int i) = 0;
+    virtual int hash_lookup(lsh_hash h, int l, int* ret_i, int ret_i_max) = 0;
+};
+
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Splits color or grayscale image into multiple connected components
+ of nearly the same color/brightness using modification of Burt algorithm.
+ comp with contain a pointer to sequence (CvSeq)
+ of connected components (CvConnectedComp) */
+CVAPI(void) cvPyrSegmentation( IplImage* src, IplImage* dst,
+                              CvMemStorage* storage, CvSeq** comp,
+                              int level, double threshold1,
+                              double threshold2 );
+    
+/****************************************************************************************\
+*                              Planar subdivisions                                       *
+\****************************************************************************************/
+
+/* Initializes Delaunay triangulation */
+CVAPI(void)  cvInitSubdivDelaunay2D( CvSubdiv2D* subdiv, CvRect rect );
+
+/* Creates new subdivision */
+CVAPI(CvSubdiv2D*)  cvCreateSubdiv2D( int subdiv_type, int header_size,
+                                     int vtx_size, int quadedge_size,
+                                     CvMemStorage* storage );
+
+/************************* high-level subdivision functions ***************************/
+
+/* Simplified Delaunay diagram creation */
+CV_INLINE  CvSubdiv2D* cvCreateSubdivDelaunay2D( CvRect rect, CvMemStorage* storage )
+{
+    CvSubdiv2D* subdiv = cvCreateSubdiv2D( CV_SEQ_KIND_SUBDIV2D, sizeof(*subdiv),
+                                          sizeof(CvSubdiv2DPoint), sizeof(CvQuadEdge2D), storage );
+    
+    cvInitSubdivDelaunay2D( subdiv, rect );
+    return subdiv;
+}
+
+
+/* Inserts new point to the Delaunay triangulation */
+CVAPI(CvSubdiv2DPoint*)  cvSubdivDelaunay2DInsert( CvSubdiv2D* subdiv, CvPoint2D32f pt);
+
+/* Locates a point within the Delaunay triangulation (finds the edge
+ the point is left to or belongs to, or the triangulation point the given
+ point coinsides with */
+CVAPI(CvSubdiv2DPointLocation)  cvSubdiv2DLocate(
+                                                 CvSubdiv2D* subdiv, CvPoint2D32f pt,
+                                                 CvSubdiv2DEdge* edge,
+                                                 CvSubdiv2DPoint** vertex CV_DEFAULT(NULL) );
+
+/* Calculates Voronoi tesselation (i.e. coordinates of Voronoi points) */
+CVAPI(void)  cvCalcSubdivVoronoi2D( CvSubdiv2D* subdiv );
+
+
+/* Removes all Voronoi points from the tesselation */
+CVAPI(void)  cvClearSubdivVoronoi2D( CvSubdiv2D* subdiv );
+
+
+/* Finds the nearest to the given point vertex in subdivision. */
+CVAPI(CvSubdiv2DPoint*) cvFindNearestPoint2D( CvSubdiv2D* subdiv, CvPoint2D32f pt );
+
+
+/************ Basic quad-edge navigation and operations ************/
+
+CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DNextEdge( CvSubdiv2DEdge edge )
+{
+    return  CV_SUBDIV2D_NEXT_EDGE(edge);
+}
+
+
+CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DRotateEdge( CvSubdiv2DEdge edge, int rotate )
+{
+    return  (edge & ~3) + ((edge + rotate) & 3);
+}
+
+CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DSymEdge( CvSubdiv2DEdge edge )
+{
+    return edge ^ 2;
+}
+
+CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DGetEdge( CvSubdiv2DEdge edge, CvNextEdgeType type )
+{
+    CvQuadEdge2D* e = (CvQuadEdge2D*)(edge & ~3);
+    edge = e->next[(edge + (int)type) & 3];
+    return  (edge & ~3) + ((edge + ((int)type >> 4)) & 3);
+}
+
+
+CV_INLINE  CvSubdiv2DPoint*  cvSubdiv2DEdgeOrg( CvSubdiv2DEdge edge )
+{
+    CvQuadEdge2D* e = (CvQuadEdge2D*)(edge & ~3);
+    return (CvSubdiv2DPoint*)e->pt[edge & 3];
+}
+
+
+CV_INLINE  CvSubdiv2DPoint*  cvSubdiv2DEdgeDst( CvSubdiv2DEdge edge )
+{
+    CvQuadEdge2D* e = (CvQuadEdge2D*)(edge & ~3);
+    return (CvSubdiv2DPoint*)e->pt[(edge + 2) & 3];
+}
+
+
+CV_INLINE  double  cvTriangleArea( CvPoint2D32f a, CvPoint2D32f b, CvPoint2D32f c )
+{
+    return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
+}    
+
+    
+/* Constructs kd-tree from set of feature descriptors */
+CVAPI(struct CvFeatureTree*) cvCreateKDTree(CvMat* desc);
+
+/* Constructs spill-tree from set of feature descriptors */
+CVAPI(struct CvFeatureTree*) cvCreateSpillTree( const CvMat* raw_data,
+                                               const int naive CV_DEFAULT(50),
+                                               const double rho CV_DEFAULT(.7),
+                                               const double tau CV_DEFAULT(.1) );
+
+/* Release feature tree */
+CVAPI(void) cvReleaseFeatureTree(struct CvFeatureTree* tr);
+
+/* Searches feature tree for k nearest neighbors of given reference points,
+ searching (in case of kd-tree/bbf) at most emax leaves. */
+CVAPI(void) cvFindFeatures(struct CvFeatureTree* tr, const CvMat* query_points,
+                           CvMat* indices, CvMat* dist, int k, int emax CV_DEFAULT(20));
+
+/* Search feature tree for all points that are inlier to given rect region.
+ Only implemented for kd trees */
+CVAPI(int) cvFindFeaturesBoxed(struct CvFeatureTree* tr,
+                               CvMat* bounds_min, CvMat* bounds_max,
+                               CvMat* out_indices);
+
+
+/* Construct a Locality Sensitive Hash (LSH) table, for indexing d-dimensional vectors of
+ given type. Vectors will be hashed L times with k-dimensional p-stable (p=2) functions. */
+CVAPI(struct CvLSH*) cvCreateLSH(struct CvLSHOperations* ops, int d,
+                                 int L CV_DEFAULT(10), int k CV_DEFAULT(10),
+                                 int type CV_DEFAULT(CV_64FC1), double r CV_DEFAULT(4),
+                                 int64 seed CV_DEFAULT(-1));
+
+/* Construct in-memory LSH table, with n bins. */
+CVAPI(struct CvLSH*) cvCreateMemoryLSH(int d, int n, int L CV_DEFAULT(10), int k CV_DEFAULT(10),
+                                       int type CV_DEFAULT(CV_64FC1), double r CV_DEFAULT(4),
+                                       int64 seed CV_DEFAULT(-1));
+
+/* Free the given LSH structure. */
+CVAPI(void) cvReleaseLSH(struct CvLSH** lsh);
+
+/* Return the number of vectors in the LSH. */
+CVAPI(unsigned int) LSHSize(struct CvLSH* lsh);
+
+/* Add vectors to the LSH structure, optionally returning indices. */
+CVAPI(void) cvLSHAdd(struct CvLSH* lsh, const CvMat* data, CvMat* indices CV_DEFAULT(0));
+
+/* Remove vectors from LSH, as addressed by given indices. */
+CVAPI(void) cvLSHRemove(struct CvLSH* lsh, const CvMat* indices);
+
+/* Query the LSH n times for at most k nearest points; data is n x d,
+ indices and dist are n x k. At most emax stored points will be accessed. */
+CVAPI(void) cvLSHQuery(struct CvLSH* lsh, const CvMat* query_points,
+                       CvMat* indices, CvMat* dist, int k, int emax);    
+    
+/* Kolmogorov-Zabin stereo-correspondence algorithm (a.k.a. KZ1) */
+#define CV_STEREO_GC_OCCLUDED  SHRT_MAX
+
+typedef struct CvStereoGCState
+{
+    int Ithreshold;
+    int interactionRadius;
+    float K, lambda, lambda1, lambda2;
+    int occlusionCost;
+    int minDisparity;
+    int numberOfDisparities;
+    int maxIters;
+    
+    CvMat* left;
+    CvMat* right;
+    CvMat* dispLeft;
+    CvMat* dispRight;
+    CvMat* ptrLeft;
+    CvMat* ptrRight;
+    CvMat* vtxBuf;
+    CvMat* edgeBuf;
+} CvStereoGCState;
+
+CVAPI(CvStereoGCState*) cvCreateStereoGCState( int numberOfDisparities, int maxIters );
+CVAPI(void) cvReleaseStereoGCState( CvStereoGCState** state );
+
+CVAPI(void) cvFindStereoCorrespondenceGC( const CvArr* left, const CvArr* right,
+                                         CvArr* disparityLeft, CvArr* disparityRight,
+                                         CvStereoGCState* state,
+                                         int useDisparityGuess CV_DEFAULT(0) );
+
+/* Calculates optical flow for 2 images using classical Lucas & Kanade algorithm */
+CVAPI(void)  cvCalcOpticalFlowLK( const CvArr* prev, const CvArr* curr,
+                                 CvSize win_size, CvArr* velx, CvArr* vely );
+
+/* Calculates optical flow for 2 images using block matching algorithm */
+CVAPI(void)  cvCalcOpticalFlowBM( const CvArr* prev, const CvArr* curr,
+                                 CvSize block_size, CvSize shift_size,
+                                 CvSize max_range, int use_previous,
+                                 CvArr* velx, CvArr* vely );
+
+/* Calculates Optical flow for 2 images using Horn & Schunck algorithm */
+CVAPI(void)  cvCalcOpticalFlowHS( const CvArr* prev, const CvArr* curr,
+                                 int use_previous, CvArr* velx, CvArr* vely,
+                                 double lambda, CvTermCriteria criteria );
+
+    
+/****************************************************************************************\
+*                           Background/foreground segmentation                           *
+\****************************************************************************************/
+    
+/* We discriminate between foreground and background pixels
+ * by building and maintaining a model of the background.
+ * Any pixel which does not fit this model is then deemed
+ * to be foreground.
+ *
+ * At present we support two core background models,
+ * one of which has two variations:
+ *
+ *  o CV_BG_MODEL_FGD: latest and greatest algorithm, described in
+ *    
+ *	 Foreground Object Detection from Videos Containing Complex Background.
+ *	 Liyuan Li, Weimin Huang, Irene Y.H. Gu, and Qi Tian. 
+ *	 ACM MM2003 9p
+ *
+ *  o CV_BG_MODEL_FGD_SIMPLE:
+ *       A code comment describes this as a simplified version of the above,
+ *       but the code is in fact currently identical
+ *
+ *  o CV_BG_MODEL_MOG: "Mixture of Gaussians", older algorithm, described in
+ *
+ *       Moving target classification and tracking from real-time video.
+ *       A Lipton, H Fujijoshi, R Patil
+ *       Proceedings IEEE Workshop on Application of Computer Vision pp 8-14 1998
+ *
+ *       Learning patterns of activity using real-time tracking
+ *       C Stauffer and W Grimson  August 2000
+ *       IEEE Transactions on Pattern Analysis and Machine Intelligence 22(8):747-757
+ */
+    
+    
+#define CV_BG_MODEL_FGD		0
+#define CV_BG_MODEL_MOG		1			/* "Mixture of Gaussians".	*/
+#define CV_BG_MODEL_FGD_SIMPLE	2
+    
+struct CvBGStatModel;
+
+typedef void (CV_CDECL * CvReleaseBGStatModel)( struct CvBGStatModel** bg_model );
+typedef int (CV_CDECL * CvUpdateBGStatModel)( IplImage* curr_frame, struct CvBGStatModel* bg_model,
+                                             double learningRate );
+    
+#define CV_BG_STAT_MODEL_FIELDS()                                               \
+int             type; /*type of BG model*/                                      \
+CvReleaseBGStatModel release;                                                   \
+CvUpdateBGStatModel update;                                                     \
+IplImage*       background;   /*8UC3 reference background image*/               \
+IplImage*       foreground;   /*8UC1 foreground image*/                         \
+IplImage**      layers;       /*8UC3 reference background image, can be null */ \
+int             layer_count;  /* can be zero */                                 \
+CvMemStorage*   storage;      /*storage for foreground_regions*/                \
+CvSeq*          foreground_regions /*foreground object contours*/
+    
+typedef struct CvBGStatModel
+{
+    CV_BG_STAT_MODEL_FIELDS();
+} CvBGStatModel;
+
+// 
+
+// Releases memory used by BGStatModel
+CVAPI(void) cvReleaseBGStatModel( CvBGStatModel** bg_model );
+
+// Updates statistical model and returns number of found foreground regions
+CVAPI(int) cvUpdateBGStatModel( IplImage* current_frame, CvBGStatModel*  bg_model,
+                               double learningRate CV_DEFAULT(-1));
+
+// Performs FG post-processing using segmentation
+// (all pixels of a region will be classified as foreground if majority of pixels of the region are FG).
+// parameters:
+//      segments - pointer to result of segmentation (for example MeanShiftSegmentation)
+//      bg_model - pointer to CvBGStatModel structure
+CVAPI(void) cvRefineForegroundMaskBySegm( CvSeq* segments, CvBGStatModel*  bg_model );
+
+/* Common use change detection function */
+CVAPI(int)  cvChangeDetection( IplImage*  prev_frame,
+                              IplImage*  curr_frame,
+                              IplImage*  change_mask );
+    
+/*
+ Interface of ACM MM2003 algorithm
+ */
+    
+/* Default parameters of foreground detection algorithm: */
+#define  CV_BGFG_FGD_LC              128
+#define  CV_BGFG_FGD_N1C             15
+#define  CV_BGFG_FGD_N2C             25
+    
+#define  CV_BGFG_FGD_LCC             64
+#define  CV_BGFG_FGD_N1CC            25
+#define  CV_BGFG_FGD_N2CC            40
+    
+/* Background reference image update parameter: */
+#define  CV_BGFG_FGD_ALPHA_1         0.1f
+    
+/* stat model update parameter
+ * 0.002f ~ 1K frame(~45sec), 0.005 ~ 18sec (if 25fps and absolutely static BG)
+ */
+#define  CV_BGFG_FGD_ALPHA_2         0.005f
+    
+/* start value for alpha parameter (to fast initiate statistic model) */
+#define  CV_BGFG_FGD_ALPHA_3         0.1f
+    
+#define  CV_BGFG_FGD_DELTA           2
+    
+#define  CV_BGFG_FGD_T               0.9f
+    
+#define  CV_BGFG_FGD_MINAREA         15.f
+    
+#define  CV_BGFG_FGD_BG_UPDATE_TRESH 0.5f
+    
+/* See the above-referenced Li/Huang/Gu/Tian paper
+ * for a full description of these background-model
+ * tuning parameters.
+ *
+ * Nomenclature:  'c'  == "color", a three-component red/green/blue vector.
+ *                         We use histograms of these to model the range of
+ *                         colors we've seen at a given background pixel.
+ *
+ *                'cc' == "color co-occurrence", a six-component vector giving
+ *                         RGB color for both this frame and preceding frame.
+ *                             We use histograms of these to model the range of
+ *                         color CHANGES we've seen at a given background pixel.
+ */
+typedef struct CvFGDStatModelParams
+{
+    int    Lc;			/* Quantized levels per 'color' component. Power of two, typically 32, 64 or 128.				*/
+    int    N1c;			/* Number of color vectors used to model normal background color variation at a given pixel.			*/
+    int    N2c;			/* Number of color vectors retained at given pixel.  Must be > N1c, typically ~ 5/3 of N1c.			*/
+    /* Used to allow the first N1c vectors to adapt over time to changing background.				*/
+    
+    int    Lcc;			/* Quantized levels per 'color co-occurrence' component.  Power of two, typically 16, 32 or 64.			*/
+    int    N1cc;		/* Number of color co-occurrence vectors used to model normal background color variation at a given pixel.	*/
+    int    N2cc;		/* Number of color co-occurrence vectors retained at given pixel.  Must be > N1cc, typically ~ 5/3 of N1cc.	*/
+    /* Used to allow the first N1cc vectors to adapt over time to changing background.				*/
+    
+    int    is_obj_without_holes;/* If TRUE we ignore holes within foreground blobs. Defaults to TRUE.						*/
+    int    perform_morphing;	/* Number of erode-dilate-erode foreground-blob cleanup iterations.						*/
+    /* These erase one-pixel junk blobs and merge almost-touching blobs. Default value is 1.			*/
+    
+    float  alpha1;		/* How quickly we forget old background pixel values seen.  Typically set to 0.1  				*/
+    float  alpha2;		/* "Controls speed of feature learning". Depends on T. Typical value circa 0.005. 				*/
+    float  alpha3;		/* Alternate to alpha2, used (e.g.) for quicker initial convergence. Typical value 0.1.				*/
+    
+    float  delta;		/* Affects color and color co-occurrence quantization, typically set to 2.					*/
+    float  T;			/* "A percentage value which determines when new features can be recognized as new background." (Typically 0.9).*/
+    float  minArea;		/* Discard foreground blobs whose bounding box is smaller than this threshold.					*/
+} CvFGDStatModelParams;
+
+typedef struct CvBGPixelCStatTable
+{
+    float          Pv, Pvb;
+    uchar          v[3];
+} CvBGPixelCStatTable;
+
+typedef struct CvBGPixelCCStatTable
+{
+    float          Pv, Pvb;
+    uchar          v[6];
+} CvBGPixelCCStatTable;
+
+typedef struct CvBGPixelStat
+{
+    float                 Pbc;
+    float                 Pbcc;
+    CvBGPixelCStatTable*  ctable;
+    CvBGPixelCCStatTable* cctable;
+    uchar                 is_trained_st_model;
+    uchar                 is_trained_dyn_model;
+} CvBGPixelStat;
+
+
+typedef struct CvFGDStatModel
+{
+    CV_BG_STAT_MODEL_FIELDS();
+    CvBGPixelStat*         pixel_stat;
+    IplImage*              Ftd;
+    IplImage*              Fbd;
+    IplImage*              prev_frame;
+    CvFGDStatModelParams   params;
+} CvFGDStatModel;
+
+/* Creates FGD model */
+CVAPI(CvBGStatModel*) cvCreateFGDStatModel( IplImage* first_frame,
+                                           CvFGDStatModelParams* parameters CV_DEFAULT(NULL));
+    
+/* 
+ Interface of Gaussian mixture algorithm
+ 
+ "An improved adaptive background mixture model for real-time tracking with shadow detection"
+ P. KadewTraKuPong and R. Bowden,
+ Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001."
+ http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+ */
+    
+/* Note:  "MOG" == "Mixture Of Gaussians": */
+    
+#define CV_BGFG_MOG_MAX_NGAUSSIANS 500
+    
+/* default parameters of gaussian background detection algorithm */
+#define CV_BGFG_MOG_BACKGROUND_THRESHOLD     0.7     /* threshold sum of weights for background test */
+#define CV_BGFG_MOG_STD_THRESHOLD            2.5     /* lambda=2.5 is 99% */
+#define CV_BGFG_MOG_WINDOW_SIZE              200     /* Learning rate; alpha = 1/CV_GBG_WINDOW_SIZE */
+#define CV_BGFG_MOG_NGAUSSIANS               5       /* = K = number of Gaussians in mixture */
+#define CV_BGFG_MOG_WEIGHT_INIT              0.05
+#define CV_BGFG_MOG_SIGMA_INIT               30
+#define CV_BGFG_MOG_MINAREA                  15.f
+    
+    
+#define CV_BGFG_MOG_NCOLORS                  3
+    
+typedef struct CvGaussBGStatModelParams
+{    
+    int     win_size;               /* = 1/alpha */
+    int     n_gauss;
+    double  bg_threshold, std_threshold, minArea;
+    double  weight_init, variance_init;
+}CvGaussBGStatModelParams;
+
+typedef struct CvGaussBGValues
+{
+    int         match_sum;
+    double      weight;
+    double      variance[CV_BGFG_MOG_NCOLORS];
+    double      mean[CV_BGFG_MOG_NCOLORS];
+} CvGaussBGValues;
+
+typedef struct CvGaussBGPoint
+{
+    CvGaussBGValues* g_values;
+} CvGaussBGPoint;
+
+
+typedef struct CvGaussBGModel
+{
+    CV_BG_STAT_MODEL_FIELDS();
+    CvGaussBGStatModelParams   params;    
+    CvGaussBGPoint*            g_point;    
+    int                        countFrames;
+} CvGaussBGModel;
+
+
+/* Creates Gaussian mixture background model */
+CVAPI(CvBGStatModel*) cvCreateGaussianBGModel( IplImage* first_frame,
+                                              CvGaussBGStatModelParams* parameters CV_DEFAULT(NULL));
+
+
+typedef struct CvBGCodeBookElem
+{
+    struct CvBGCodeBookElem* next;
+    int tLastUpdate;
+    int stale;
+    uchar boxMin[3];
+    uchar boxMax[3];
+    uchar learnMin[3];
+    uchar learnMax[3];
+} CvBGCodeBookElem;
+
+typedef struct CvBGCodeBookModel
+{
+    CvSize size;
+    int t;
+    uchar cbBounds[3];
+    uchar modMin[3];
+    uchar modMax[3];
+    CvBGCodeBookElem** cbmap;
+    CvMemStorage* storage;
+    CvBGCodeBookElem* freeList;
+} CvBGCodeBookModel;
+
+CVAPI(CvBGCodeBookModel*) cvCreateBGCodeBookModel();
+CVAPI(void) cvReleaseBGCodeBookModel( CvBGCodeBookModel** model );
+
+CVAPI(void) cvBGCodeBookUpdate( CvBGCodeBookModel* model, const CvArr* image,
+                               CvRect roi CV_DEFAULT(cvRect(0,0,0,0)),
+                               const CvArr* mask CV_DEFAULT(0) );
+
+CVAPI(int) cvBGCodeBookDiff( const CvBGCodeBookModel* model, const CvArr* image,
+                            CvArr* fgmask, CvRect roi CV_DEFAULT(cvRect(0,0,0,0)) );
+
+CVAPI(void) cvBGCodeBookClearStale( CvBGCodeBookModel* model, int staleThresh,
+                                   CvRect roi CV_DEFAULT(cvRect(0,0,0,0)),
+                                   const CvArr* mask CV_DEFAULT(0) );
+
+CVAPI(CvSeq*) cvSegmentFGMask( CvArr *fgmask, int poly1Hull0 CV_DEFAULT(1),
+                              float perimScale CV_DEFAULT(4.f),
+                              CvMemStorage* storage CV_DEFAULT(0),
+                              CvPoint offset CV_DEFAULT(cvPoint(0,0)));
+    
+#ifdef __cplusplus
+}
 #endif
 
 #endif

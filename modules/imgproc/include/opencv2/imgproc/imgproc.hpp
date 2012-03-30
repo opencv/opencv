@@ -1142,27 +1142,6 @@ protected:
 
 }
 
-// 2009-01-12, Xavier Delacour <xavier.delacour@gmail.com>
-
-struct lsh_hash {
-  int h1, h2;
-};
-
-struct CvLSHOperations
-{
-  virtual ~CvLSHOperations() {}
-
-  virtual int vector_add(const void* data) = 0;
-  virtual void vector_remove(int i) = 0;
-  virtual const void* vector_lookup(int i) = 0;
-  virtual void vector_reserve(int n) = 0;
-  virtual unsigned int vector_count() = 0;
-
-  virtual void hash_insert(lsh_hash h, int l, int i) = 0;
-  virtual void hash_remove(lsh_hash h, int l, int i) = 0;
-  virtual int hash_lookup(lsh_hash h, int l, int* ret_i, int ret_i_max) = 0;
-};
-
 #endif /* __cplusplus */
 
 #endif

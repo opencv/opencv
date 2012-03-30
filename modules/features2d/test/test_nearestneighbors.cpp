@@ -156,109 +156,6 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 }
 
 //--------------------------------------------------------------------------------
-class CV_LSHTest : public NearestNeighborTest
-{
-public:
-    CV_LSHTest() {}
-protected:
-    virtual void createModel( const Mat& data );
-    virtual int findNeighbors( Mat& points, Mat& neighbors );
-    virtual void releaseModel();
-    struct CvLSH* lsh;
-    CvMat desc;
-};
-
-void CV_LSHTest::createModel( const Mat& data )
-{
-    desc = data;
-    lsh = cvCreateMemoryLSH( data.cols, data.rows, 70, 20, CV_32FC1 );
-    cvLSHAdd( lsh, &desc );
-}
-
-int CV_LSHTest::findNeighbors( Mat& points, Mat& neighbors )
-{
-    const int emax = 20;
-    Mat dist( points.rows, neighbors.cols, CV_64FC1);
-    CvMat _dist = dist, _points = points, _neighbors = neighbors;
-    cvLSHQuery( lsh, &_points, &_neighbors, &_dist, neighbors.cols, emax );
-    return cvtest::TS::OK;
-}
-
-void CV_LSHTest::releaseModel()
-{
-    cvReleaseLSH( &lsh );
-}
-
-//--------------------------------------------------------------------------------
-class CV_FeatureTreeTest_C : public NearestNeighborTest
-{
-public:
-    CV_FeatureTreeTest_C() {}
-protected:
-    virtual int findNeighbors( Mat& points, Mat& neighbors );
-    virtual void releaseModel();
-    CvFeatureTree* tr;
-    CvMat desc;
-};
-
-int CV_FeatureTreeTest_C::findNeighbors( Mat& points, Mat& neighbors )
-{
-    const int emax = 20;
-    Mat dist( points.rows, neighbors.cols, CV_64FC1);
-    CvMat _dist = dist, _points = points, _neighbors = neighbors;
-    cvFindFeatures( tr, &_points, &_neighbors, &_dist, neighbors.cols, emax );
-    return cvtest::TS::OK;
-}
-
-void CV_FeatureTreeTest_C::releaseModel()
-{
-    cvReleaseFeatureTree( tr );
-}
-
-//--------------------------------------
-class CV_SpillTreeTest_C : public CV_FeatureTreeTest_C
-{
-public:
-    CV_SpillTreeTest_C() {}
-protected:
-    virtual void createModel( const Mat& data );
-};
-
-void CV_SpillTreeTest_C::createModel( const Mat& data )
-{
-    desc = data;
-    tr = cvCreateSpillTree( &desc );
-}
-
-//--------------------------------------
-class CV_KDTreeTest_C : public CV_FeatureTreeTest_C
-{
-public:
-    CV_KDTreeTest_C() {}
-protected:
-    virtual void createModel( const Mat& data );
-    virtual int checkFindBoxed();
-};
-
-void CV_KDTreeTest_C::createModel( const Mat& data )
-{
-    desc = data;
-    tr = cvCreateKDTree( &desc );
-}
-
-int CV_KDTreeTest_C::checkFindBoxed()
-{
-    Mat min(1, dims, CV_32FC1 ), max(1, dims, CV_32FC1 ), indices( 1, 1, CV_32SC1 );
-    float l = minValue, r = maxValue;
-    min.setTo(Scalar(l)), max.setTo(Scalar(r));
-    CvMat _min = min, _max = max, _indices = indices;
-    // TODO check indices
-    if( cvFindFeaturesBoxed( tr, &_min, &_max, &_indices ) != featuresCount )
-        return cvtest::TS::FAIL_BAD_ACCURACY;
-    return cvtest::TS::OK;
-}
-
-//--------------------------------------------------------------------------------
 class CV_KDTreeTest_CPP : public NearestNeighborTest
 {
 public:
@@ -506,9 +403,6 @@ void CV_FlannSavedIndexTest::createModel(const cv::Mat &data)
     remove( filename.c_str() );
 }
 
-TEST(Features2d_LSH, regression) { CV_LSHTest test; test.safe_run(); }
-TEST(Features2d_SpillTree, regression) { CV_SpillTreeTest_C test; test.safe_run(); }
-TEST(Features2d_KDTree_C, regression) { CV_KDTreeTest_C test; test.safe_run(); }
 TEST(Features2d_KDTree_CPP, regression) { CV_KDTreeTest_CPP test; test.safe_run(); }
 TEST(Features2d_FLANN_Linear, regression) { CV_FlannLinearIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_KMeans, regression) { CV_FlannKMeansIndexTest test; test.safe_run(); }

@@ -67,11 +67,12 @@ void BackgroundSubtractor::getBackgroundImage(OutputArray) const
 {
 }
 
-static const int defaultNMixtures = CV_BGFG_MOG_NGAUSSIANS;
-static const int defaultHistory = CV_BGFG_MOG_WINDOW_SIZE;
-static const double defaultBackgroundRatio = CV_BGFG_MOG_BACKGROUND_THRESHOLD;
-static const double defaultVarThreshold = CV_BGFG_MOG_STD_THRESHOLD*CV_BGFG_MOG_STD_THRESHOLD;
-static const double defaultNoiseSigma = CV_BGFG_MOG_SIGMA_INIT*0.5;
+static const int defaultNMixtures = 5;
+static const int defaultHistory = 200;
+static const double defaultBackgroundRatio = 0.7;
+static const double defaultVarThreshold = 2.5*2.5;
+static const double defaultNoiseSigma = 30*0.5;
+static const double defaultInitialWeight = 0.05;
     
 BackgroundSubtractorMOG::BackgroundSubtractorMOG()
 {
@@ -140,9 +141,9 @@ static void process8uC1( BackgroundSubtractorMOG& obj, const Mat& image, Mat& fg
     int K = obj.nmixtures;
     MixData<float>* mptr = (MixData<float>*)obj.bgmodel.data;
     
-    const float w0 = (float)CV_BGFG_MOG_WEIGHT_INIT;
-    const float sk0 = (float)(w0/CV_BGFG_MOG_SIGMA_INIT);
-    const float var0 = (float)(CV_BGFG_MOG_SIGMA_INIT*CV_BGFG_MOG_SIGMA_INIT);
+    const float w0 = (float)defaultInitialWeight;
+    const float sk0 = (float)(w0/(defaultNoiseSigma*2));
+    const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
     const float minVar = (float)(obj.noiseSigma*obj.noiseSigma);
     
     for( y = 0; y < rows; y++ )
@@ -264,9 +265,9 @@ static void process8uC3( BackgroundSubtractorMOG& obj, const Mat& image, Mat& fg
     float alpha = (float)learningRate, T = (float)obj.backgroundRatio, vT = (float)obj.varThreshold;
     int K = obj.nmixtures;
     
-    const float w0 = (float)CV_BGFG_MOG_WEIGHT_INIT;
-    const float sk0 = (float)(w0/(CV_BGFG_MOG_SIGMA_INIT*sqrt(3.)));
-    const float var0 = (float)(CV_BGFG_MOG_SIGMA_INIT*CV_BGFG_MOG_SIGMA_INIT);
+    const float w0 = (float)defaultInitialWeight;
+    const float sk0 = (float)(w0/(defaultNoiseSigma*2*sqrt(3.)));
+    const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
     const float minVar = (float)(obj.noiseSigma*obj.noiseSigma);
     MixData<Vec3f>* mptr = (MixData<Vec3f>*)obj.bgmodel.data;
     
@@ -409,141 +410,6 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
         CV_Error( CV_StsUnsupportedFormat, "Only 1- and 3-channel 8-bit images are supported in BackgroundSubtractorMOG" );
 }
     
-}
-
-
-static void CV_CDECL
-icvReleaseGaussianBGModel( CvGaussBGModel** bg_model )
-{
-    if( !bg_model )
-        CV_Error( CV_StsNullPtr, "" );
-    
-    if( *bg_model )
-    {
-        delete (cv::Mat*)((*bg_model)->g_point);
-        cvReleaseImage( &(*bg_model)->background );
-        cvReleaseImage( &(*bg_model)->foreground );
-        cvReleaseMemStorage(&(*bg_model)->storage);
-        memset( *bg_model, 0, sizeof(**bg_model) );
-        delete *bg_model;
-        *bg_model = 0;
-    }
-}
-
-
-static int CV_CDECL
-icvUpdateGaussianBGModel( IplImage* curr_frame, CvGaussBGModel*  bg_model, double learningRate )
-{
-    int region_count = 0;
-    
-    cv::Mat image = cv::cvarrToMat(curr_frame), mask = cv::cvarrToMat(bg_model->foreground);
-    
-    cv::BackgroundSubtractorMOG mog;
-    mog.bgmodel = *(cv::Mat*)bg_model->g_point;
-    mog.frameSize = mog.bgmodel.data ? cv::Size(cvGetSize(curr_frame)) : cv::Size();
-    mog.frameType = image.type();
-
-    mog.nframes = bg_model->countFrames;
-    mog.history = bg_model->params.win_size;
-    mog.nmixtures = bg_model->params.n_gauss;
-    mog.varThreshold = bg_model->params.std_threshold*bg_model->params.std_threshold;
-    mog.backgroundRatio = bg_model->params.bg_threshold;
-    
-    mog(image, mask, learningRate);
-    
-    bg_model->countFrames = mog.nframes;
-    if( ((cv::Mat*)bg_model->g_point)->data != mog.bgmodel.data )
-        *((cv::Mat*)bg_model->g_point) = mog.bgmodel;
-    
-    //foreground filtering
-    
-    //filter small regions
-    cvClearMemStorage(bg_model->storage);
-    
-    //cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_OPEN, 1 );
-    //cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_CLOSE, 1 );
-    
-    /*
-    CvSeq *first_seq = NULL, *prev_seq = NULL, *seq = NULL;
-    cvFindContours( bg_model->foreground, bg_model->storage, &first_seq, sizeof(CvContour), CV_RETR_LIST );
-    for( seq = first_seq; seq; seq = seq->h_next )
-    {
-        CvContour* cnt = (CvContour*)seq;
-        if( cnt->rect.width * cnt->rect.height < bg_model->params.minArea )
-        {
-            //delete small contour
-            prev_seq = seq->h_prev;
-            if( prev_seq )
-            {
-                prev_seq->h_next = seq->h_next;
-                if( seq->h_next ) seq->h_next->h_prev = prev_seq;
-            }
-            else
-            {
-                first_seq = seq->h_next;
-                if( seq->h_next ) seq->h_next->h_prev = NULL;
-            }
-        }
-        else
-        {
-            region_count++;
-        }
-    }
-    bg_model->foreground_regions = first_seq;
-    cvZero(bg_model->foreground);
-    cvDrawContours(bg_model->foreground, first_seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);*/
-    CvMat _mask = mask;
-    cvCopy(&_mask, bg_model->foreground);
-    
-    return region_count;
-}
-
-CV_IMPL CvBGStatModel*
-cvCreateGaussianBGModel( IplImage* first_frame, CvGaussBGStatModelParams* parameters )
-{
-    CvGaussBGStatModelParams params;
-    
-    CV_Assert( CV_IS_IMAGE(first_frame) );
-    
-    //init parameters
-    if( parameters == NULL )
-    {                        /* These constants are defined in cvaux/include/cvaux.h: */
-        params.win_size      = CV_BGFG_MOG_WINDOW_SIZE;
-        params.bg_threshold  = CV_BGFG_MOG_BACKGROUND_THRESHOLD;
-
-        params.std_threshold = CV_BGFG_MOG_STD_THRESHOLD;
-        params.weight_init   = CV_BGFG_MOG_WEIGHT_INIT;
-
-        params.variance_init = CV_BGFG_MOG_SIGMA_INIT*CV_BGFG_MOG_SIGMA_INIT;
-        params.minArea       = CV_BGFG_MOG_MINAREA;
-        params.n_gauss       = CV_BGFG_MOG_NGAUSSIANS;
-    }
-    else
-        params = *parameters;
-    
-    CvGaussBGModel* bg_model = new CvGaussBGModel;
-    memset( bg_model, 0, sizeof(*bg_model) );
-    bg_model->type = CV_BG_MODEL_MOG;
-    bg_model->release = (CvReleaseBGStatModel)icvReleaseGaussianBGModel;
-    bg_model->update = (CvUpdateBGStatModel)icvUpdateGaussianBGModel;
-    
-    bg_model->params = params;
-    
-    //prepare storages
-    bg_model->g_point = (CvGaussBGPoint*)new cv::Mat();
-    
-    bg_model->background = cvCreateImage(cvSize(first_frame->width,
-        first_frame->height), IPL_DEPTH_8U, first_frame->nChannels);
-    bg_model->foreground = cvCreateImage(cvSize(first_frame->width,
-        first_frame->height), IPL_DEPTH_8U, 1);
-    
-    bg_model->storage = cvCreateMemStorage();
-    
-    bg_model->countFrames = 0;
-    
-    icvUpdateGaussianBGModel( first_frame, bg_model, 1 );
-    
-    return (CvBGStatModel*)bg_model;
 }
 
 /* End of file. */

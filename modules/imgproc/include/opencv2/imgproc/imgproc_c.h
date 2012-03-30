@@ -121,15 +121,6 @@ CVAPI(CvMat**) cvCreatePyramid( const CvArr* img, int extra_layers, double rate,
 CVAPI(void)  cvReleasePyramid( CvMat*** pyramid, int extra_layers );
 
 
-/* Splits color or grayscale image into multiple connected components
-   of nearly the same color/brightness using modification of Burt algorithm.
-   comp with contain a pointer to sequence (CvSeq)
-   of connected components (CvConnectedComp) */
-CVAPI(void) cvPyrSegmentation( IplImage* src, IplImage* dst,
-                              CvMemStorage* storage, CvSeq** comp,
-                              int level, double threshold1,
-                              double threshold2 );
-
 /* Filters image using meanshift algorithm */
 CVAPI(void) cvPyrMeanShiftFiltering( const CvArr* src, CvArr* dst,
     double sp, double sr, int max_level CV_DEFAULT(1),
@@ -350,99 +341,6 @@ CVAPI(void) cvStartReadChainPoints( CvChain* chain, CvChainPtReader* reader );
 
 /* Retrieves the next chain point */
 CVAPI(CvPoint) cvReadChainPoint( CvChainPtReader* reader );
-
-/****************************************************************************************\
-*                              Planar subdivisions                                       *
-\****************************************************************************************/
-
-/* Initializes Delaunay triangulation */
-CVAPI(void)  cvInitSubdivDelaunay2D( CvSubdiv2D* subdiv, CvRect rect );
-
-/* Creates new subdivision */
-CVAPI(CvSubdiv2D*)  cvCreateSubdiv2D( int subdiv_type, int header_size,
-                                      int vtx_size, int quadedge_size,
-                                      CvMemStorage* storage );
-
-/************************* high-level subdivision functions ***************************/
-
-/* Simplified Delaunay diagram creation */
-CV_INLINE  CvSubdiv2D* cvCreateSubdivDelaunay2D( CvRect rect, CvMemStorage* storage )
-{
-    CvSubdiv2D* subdiv = cvCreateSubdiv2D( CV_SEQ_KIND_SUBDIV2D, sizeof(*subdiv),
-                         sizeof(CvSubdiv2DPoint), sizeof(CvQuadEdge2D), storage );
-
-    cvInitSubdivDelaunay2D( subdiv, rect );
-    return subdiv;
-}
-
-
-/* Inserts new point to the Delaunay triangulation */
-CVAPI(CvSubdiv2DPoint*)  cvSubdivDelaunay2DInsert( CvSubdiv2D* subdiv, CvPoint2D32f pt);
-
-/* Locates a point within the Delaunay triangulation (finds the edge
-   the point is left to or belongs to, or the triangulation point the given
-   point coinsides with */
-CVAPI(CvSubdiv2DPointLocation)  cvSubdiv2DLocate(
-                               CvSubdiv2D* subdiv, CvPoint2D32f pt,
-                               CvSubdiv2DEdge* edge,
-                               CvSubdiv2DPoint** vertex CV_DEFAULT(NULL) );
-
-/* Calculates Voronoi tesselation (i.e. coordinates of Voronoi points) */
-CVAPI(void)  cvCalcSubdivVoronoi2D( CvSubdiv2D* subdiv );
-
-
-/* Removes all Voronoi points from the tesselation */
-CVAPI(void)  cvClearSubdivVoronoi2D( CvSubdiv2D* subdiv );
-
-
-/* Finds the nearest to the given point vertex in subdivision. */
-CVAPI(CvSubdiv2DPoint*) cvFindNearestPoint2D( CvSubdiv2D* subdiv, CvPoint2D32f pt );
-
-
-/************ Basic quad-edge navigation and operations ************/
-
-CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DNextEdge( CvSubdiv2DEdge edge )
-{
-    return  CV_SUBDIV2D_NEXT_EDGE(edge);
-}
-
-
-CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DRotateEdge( CvSubdiv2DEdge edge, int rotate )
-{
-    return  (edge & ~3) + ((edge + rotate) & 3);
-}
-
-CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DSymEdge( CvSubdiv2DEdge edge )
-{
-    return edge ^ 2;
-}
-
-CV_INLINE  CvSubdiv2DEdge  cvSubdiv2DGetEdge( CvSubdiv2DEdge edge, CvNextEdgeType type )
-{
-    CvQuadEdge2D* e = (CvQuadEdge2D*)(edge & ~3);
-    edge = e->next[(edge + (int)type) & 3];
-    return  (edge & ~3) + ((edge + ((int)type >> 4)) & 3);
-}
-
-
-CV_INLINE  CvSubdiv2DPoint*  cvSubdiv2DEdgeOrg( CvSubdiv2DEdge edge )
-{
-    CvQuadEdge2D* e = (CvQuadEdge2D*)(edge & ~3);
-    return (CvSubdiv2DPoint*)e->pt[edge & 3];
-}
-
-
-CV_INLINE  CvSubdiv2DPoint*  cvSubdiv2DEdgeDst( CvSubdiv2DEdge edge )
-{
-    CvQuadEdge2D* e = (CvQuadEdge2D*)(edge & ~3);
-    return (CvSubdiv2DPoint*)e->pt[(edge + 2) & 3];
-}
-
-
-CV_INLINE  double  cvTriangleArea( CvPoint2D32f a, CvPoint2D32f b, CvPoint2D32f c )
-{
-    return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
-}
 
 
 /****************************************************************************************\
@@ -717,61 +615,6 @@ CVAPI(CvSeq*) cvHoughCircles( CvArr* image, void* circle_storage,
 /* Fits a line into set of 2d or 3d points in a robust way (M-estimator technique) */
 CVAPI(void)  cvFitLine( const CvArr* points, int dist_type, double param,
                         double reps, double aeps, float* line );
-
-
-/* Constructs kd-tree from set of feature descriptors */
-CVAPI(struct CvFeatureTree*) cvCreateKDTree(CvMat* desc);
-
-/* Constructs spill-tree from set of feature descriptors */
-CVAPI(struct CvFeatureTree*) cvCreateSpillTree( const CvMat* raw_data,
-                                    const int naive CV_DEFAULT(50),
-                                    const double rho CV_DEFAULT(.7),
-                                    const double tau CV_DEFAULT(.1) );
-
-/* Release feature tree */
-CVAPI(void) cvReleaseFeatureTree(struct CvFeatureTree* tr);
-
-/* Searches feature tree for k nearest neighbors of given reference points,
-   searching (in case of kd-tree/bbf) at most emax leaves. */
-CVAPI(void) cvFindFeatures(struct CvFeatureTree* tr, const CvMat* query_points,
-                           CvMat* indices, CvMat* dist, int k, int emax CV_DEFAULT(20));
-
-/* Search feature tree for all points that are inlier to given rect region.
-   Only implemented for kd trees */
-CVAPI(int) cvFindFeaturesBoxed(struct CvFeatureTree* tr,
-                               CvMat* bounds_min, CvMat* bounds_max,
-                               CvMat* out_indices);
-
-
-/* Construct a Locality Sensitive Hash (LSH) table, for indexing d-dimensional vectors of
-   given type. Vectors will be hashed L times with k-dimensional p-stable (p=2) functions. */
-CVAPI(struct CvLSH*) cvCreateLSH(struct CvLSHOperations* ops, int d,
-                                 int L CV_DEFAULT(10), int k CV_DEFAULT(10),
-                                 int type CV_DEFAULT(CV_64FC1), double r CV_DEFAULT(4),
-                                 int64 seed CV_DEFAULT(-1));
-
-/* Construct in-memory LSH table, with n bins. */
-CVAPI(struct CvLSH*) cvCreateMemoryLSH(int d, int n, int L CV_DEFAULT(10), int k CV_DEFAULT(10),
-                                       int type CV_DEFAULT(CV_64FC1), double r CV_DEFAULT(4),
-                                       int64 seed CV_DEFAULT(-1));
-
-/* Free the given LSH structure. */
-CVAPI(void) cvReleaseLSH(struct CvLSH** lsh);
-
-/* Return the number of vectors in the LSH. */
-CVAPI(unsigned int) LSHSize(struct CvLSH* lsh);
-
-/* Add vectors to the LSH structure, optionally returning indices. */
-CVAPI(void) cvLSHAdd(struct CvLSH* lsh, const CvMat* data, CvMat* indices CV_DEFAULT(0));
-
-/* Remove vectors from LSH, as addressed by given indices. */
-CVAPI(void) cvLSHRemove(struct CvLSH* lsh, const CvMat* indices);
-
-/* Query the LSH n times for at most k nearest points; data is n x d,
-   indices and dist are n x k. At most emax stored points will be accessed. */
-CVAPI(void) cvLSHQuery(struct CvLSH* lsh, const CvMat* query_points,
-                       CvMat* indices, CvMat* dist, int k, int emax);
-
 
 #ifdef __cplusplus
 }

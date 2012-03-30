@@ -6,3 +6,5 @@ legacy. Deprecated stuff
 
 .. toctree::
     :maxdepth: 2
+
+    motion_analysis

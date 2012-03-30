@@ -60,21 +60,6 @@ extern "C" {
 
 /************************************ optical flow ***************************************/
 
-/* Calculates optical flow for 2 images using classical Lucas & Kanade algorithm */
-CVAPI(void)  cvCalcOpticalFlowLK( const CvArr* prev, const CvArr* curr,
-                                  CvSize win_size, CvArr* velx, CvArr* vely );
-
-/* Calculates optical flow for 2 images using block matching algorithm */
-CVAPI(void)  cvCalcOpticalFlowBM( const CvArr* prev, const CvArr* curr,
-                                  CvSize block_size, CvSize shift_size,
-                                  CvSize max_range, int use_previous,
-                                  CvArr* velx, CvArr* vely );
-
-/* Calculates Optical flow for 2 images using Horn & Schunck algorithm */
-CVAPI(void)  cvCalcOpticalFlowHS( const CvArr* prev, const CvArr* curr,
-                                  int use_previous, CvArr* velx, CvArr* vely,
-                                  double lambda, CvTermCriteria criteria );
-
 #define  CV_LKFLOW_PYR_A_READY       1
 #define  CV_LKFLOW_PYR_B_READY       2
 #define  CV_LKFLOW_INITIAL_GUESSES   4

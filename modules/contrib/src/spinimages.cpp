@@ -442,6 +442,7 @@ void cv::Mesh3D::clearOctree(){ octree = Octree(); }
 
 float cv::Mesh3D::estimateResolution(float tryRatio)
 {
+    #if 0
     const int neighbors = 3;
     const int minReasonable = 10;
 
@@ -475,7 +476,12 @@ float cv::Mesh3D::estimateResolution(float tryRatio)
     sort(dist, less<double>());
    
     return resolution = (float)dist[ dist.size() / 2 ];
+    #else
+    CV_Error(CV_StsNotImplemented, "");
+    return 1.f;
+    #endif
 }
+
 
 void cv::Mesh3D::computeNormals(float normalRadius, int minNeighbors)
 {

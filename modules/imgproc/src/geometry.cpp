@@ -109,22 +109,6 @@ icvIntersectLines( double x1, double dx1, double y1, double dy1,
 
 
 void
-icvCreateCenterNormalLine( CvSubdiv2DEdge edge, double *_a, double *_b, double *_c )
-{
-    CvPoint2D32f org = cvSubdiv2DEdgeOrg( edge )->pt;
-    CvPoint2D32f dst = cvSubdiv2DEdgeDst( edge )->pt;
-
-    double a = dst.x - org.x;
-    double b = dst.y - org.y;
-    double c = -(a * (dst.x + org.x) + b * (dst.y + org.y));
-
-    *_a = a + a;
-    *_b = b + b;
-    *_c = c;
-}
-
-
-void
 icvIntersectLines3( double *a0, double *b0, double *c0,
                     double *a1, double *b1, double *c1, CvPoint2D32f * point )
 {
