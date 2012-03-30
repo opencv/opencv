@@ -370,6 +370,13 @@ enum
     CV_CAP_PROP_GUID          =29,	
     CV_CAP_PROP_ISO_SPEED     =30,	
     CV_CAP_PROP_MAX_DC1394    =31,
+	CV_CAP_PROP_BACKLIGHT     =32,
+	CV_CAP_PROP_PAN           =33,
+	CV_CAP_PROP_TILT          =34,
+	CV_CAP_PROP_ROLL          =35,
+	CV_CAP_PROP_IRIS          =36,
+    CV_CAP_PROP_SETTINGS      =37,
+
     CV_CAP_PROP_AUTOGRAB      =1024, // property for highgui class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
     CV_CAP_PROP_PREVIEW_FORMAT=1026, // readonly, tricky property, returns cpnst char* indeed

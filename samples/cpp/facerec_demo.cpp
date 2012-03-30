@@ -53,7 +53,7 @@ int main(int argc, const char *argv[]) {
     // read in the data
     try {
         read_csv(fn_csv, images, labels);
-    } catch (exception& e) {
+    } catch (exception&) {
         cerr << "Error opening file \"" << fn_csv << "\"." << endl;
         exit(1);
     }

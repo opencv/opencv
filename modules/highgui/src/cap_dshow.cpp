@@ -2183,25 +2183,13 @@ int videoInput::getFourccFromMediaSubtype(GUID type) {
 GUID *videoInput::getMediaSubtypeFromFourcc(int fourcc){
 
     for (int i=0;i<VI_NUM_TYPES;i++) {
-        if ( fourcc == mediaSubtypes[i].Data1 ) {
+        if ( (unsigned long)fourcc == mediaSubtypes[i].Data1 ) {
             return &mediaSubtypes[i];
         }
     }
 
     return NULL;
 }
-
-// need to add to highgui_c.h
-enum { CV_CAP_PROP_SETTINGS = 28,
-    CV_CAP_PROP_BACKLIGHT,
-    CV_CAP_PROP_PAN,
-    CV_CAP_PROP_TILT,
-    CV_CAP_PROP_ROLL,
-    CV_CAP_PROP_ZOOM_DSHOW,
-    CV_CAP_PROP_IRIS,
-    CV_CAP_PROP_FOCUS_DSHOW
-};
-
 
 
 void videoInput::getVideoPropertyAsString(int prop, char * propertyAsString){
@@ -2273,7 +2261,7 @@ int videoInput::getCameraPropertyFromCV(int cv_property){
         case CV_CAP_PROP_ROLL:
             return CameraControl_Roll;
 
-        case CV_CAP_PROP_ZOOM_DSHOW:
+        case CV_CAP_PROP_ZOOM:
             return CameraControl_Zoom;
 
         case CV_CAP_PROP_EXPOSURE:
@@ -2282,7 +2270,7 @@ int videoInput::getCameraPropertyFromCV(int cv_property){
         case CV_CAP_PROP_IRIS:
             return CameraControl_Iris;
 
-        case CV_CAP_PROP_FOCUS_DSHOW:
+        case CV_CAP_PROP_FOCUS:
             return CameraControl_Focus;
     }
     return -1;
@@ -3272,14 +3260,14 @@ double CvCaptureCAM_DShow::getProperty( int property_id )
     case CV_CAP_PROP_ROLL:
         if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ROLL),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
 
-    case CV_CAP_PROP_ZOOM_DSHOW:
+    case CV_CAP_PROP_ZOOM:
         if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_BACKLIGHT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
 
     case CV_CAP_PROP_IRIS:
         if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_IRIS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
 
-    case CV_CAP_PROP_FOCUS_DSHOW:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS_DSHOW),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
+    case CV_CAP_PROP_FOCUS:
+        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
 
     }
 
@@ -3314,7 +3302,7 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
             break;
 
         case CV_CAP_PROP_FPS:
-            VI.setIdealFramerate(index,value);
+            VI.setIdealFramerate(index,cvRound(value));
             handled = true;
             break;
 
@@ -3391,8 +3379,8 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     case  CV_CAP_PROP_ROLL:
         return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ROLL),(long)value);
 
-    case  CV_CAP_PROP_ZOOM_DSHOW:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ZOOM_DSHOW),(long)value);
+    case  CV_CAP_PROP_ZOOM:
+        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ZOOM),(long)value);
 
     case  CV_CAP_PROP_EXPOSURE:
         return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_EXPOSURE),(long)value);
@@ -3400,8 +3388,8 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     case  CV_CAP_PROP_IRIS:
         return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_IRIS),(long)value);
 
-    case  CV_CAP_PROP_FOCUS_DSHOW:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS_DSHOW),(long)value);
+    case  CV_CAP_PROP_FOCUS:
+        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS),(long)value);
     }
 
 
