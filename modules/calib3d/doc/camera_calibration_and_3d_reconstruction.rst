@@ -115,7 +115,7 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
 
 .. ocv:pyfunction:: cv2.calibrateCamera(objectPoints, imagePoints, imageSize[, cameraMatrix[, distCoeffs[, rvecs[, tvecs[, flags[, criteria]]]]]]) -> retval, cameraMatrix, distCoeffs, rvecs, tvecs
 
-.. ocv:cfunction:: double cvCalibrateCamera2( const CvMat* objectPoints, const CvMat* imagePoints, const CvMat* pointCounts, CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs, CvMat* rvecs=NULL, CvMat* tvecs=NULL, int flags=0, CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)) )
+.. ocv:cfunction:: double cvCalibrateCamera2(const CvMat* objectPoints, const CvMat* imagePoints, const CvMat* pointCounts, CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs, CvMat* rvecs=NULL, CvMat* tvecs=NULL, int flags=0, CvTermCriteria term_crit = cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON) )
 
 .. ocv:pyoldfunction:: cv.CalibrateCamera2(objectPoints, imagePoints, pointCounts, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, flags=0)-> None
 
@@ -153,7 +153,9 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
 
         * **CV_CALIB_RATIONAL_MODEL** Coefficients k4, k5, and k6 are enabled. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the rational model and return 8 coefficients. If the flag is not set, the function computes  and returns  only 5 distortion coefficients.
 
-    :param criteria: Termination criteria for the iterative optimization algorithm. 
+    :param criteria: Termination criteria for the iterative optimization algorithm.
+
+    :param term_crit: same as ``criteria``.
 
 The function estimates the intrinsic camera
 parameters and extrinsic parameters for each of the views. The algorithm is based on [Zhang2000] and [BoughuetMCT]. The coordinates of 3D object points and their corresponding 2D projections

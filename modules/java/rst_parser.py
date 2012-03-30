@@ -4,6 +4,36 @@ verbose = False
 show_warnings = True
 show_errors = True
 
+params_blacklist = {
+    "fromarray" : ("object", "allowND"), # python only function
+    "reprojectImageTo3D" : ("ddepth"),   # python only argument
+    "composeRT" : ("d*d*"),              # wildchards in parameter names are not supported by this parser
+    "CvSVM::train_auto" : ("\*Grid"),    # wildchards in parameter names are not supported by this parser
+    "error" : "args", # parameter of supporting macro
+    "getConvertElem" : ("from", "cn", "to", "beta", "alpha"), # arguments of returned functions
+    "gpu::swapChannels" : ("dstOrder") # parameter is not parsed correctly by the hdr_parser
+}
+
+params_mapping = {
+    "composeRT" : {
+        "dr3dr1" : "d*d*",
+        "dr3dr2" : "d*d*",
+        "dr3dt1" : "d*d*",
+        "dr3dt2" : "d*d*",
+        "dt3dr1" : "d*d*",
+        "dt3dr2" : "d*d*",
+        "dt3dt1" : "d*d*",
+        "dt3dt2" : "d*d*"
+        },
+    "CvSVM::train_auto" : {
+        "coeffGrid" : "\\*Grid",
+        "degreeGrid" : "\\*Grid",
+        "gammaGrid" : "\\*Grid",
+        "nuGrid" : "\\*Grid",
+        "pGrid" : "\\*Grid"
+    }
+}
+
 class DeclarationParser(object):
     def __init__(self, line=None):
         if line is None:
@@ -325,8 +355,10 @@ class RstParser(object):
         params =  func.get("params",{})
         if decl.name in params:
             if show_errors:
-                print >> sys.stderr, "RST parser error: redefinition of parameter \"%s\" in \"%s\" File: %s (line %s)" \
-                    % (decl.name, func["name"], func["file"], func["line"])
+                #check black_list
+                if decl.name not in params_blacklist.get(func["name"], []):
+                    print >> sys.stderr, "RST parser error: redefinition of parameter \"%s\" in \"%s\" File: %s (line %s)" \
+                        % (decl.name, func["name"], func["file"], func["line"])
         else:
             params[decl.name] = decl.comment
             func["params"] = params
@@ -389,13 +421,19 @@ class RstParser(object):
         # 2. only real params are documented
         for p in documentedParams:
             if p not in params and show_warnings:
-                print >> sys.stderr, "RST parser warning: unexisting parameter \"%s\" of \"%s\" is documented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
+                if p not in params_blacklist.get(func["name"], []):
+                    print >> sys.stderr, "RST parser warning: unexisting parameter \"%s\" of \"%s\" is documented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
         return True
 
     def normalize(self, func):
         if not func:
             return func
-        func["name"] = self.normalizeText(func["name"])
+        fnname = func["name"]
+        fnname = self.normalizeText(fnname)
+        fnname = re.sub(r'_\?D$', "_nD", fnname)  # tailing _?D can be mapped to _nD
+        fnname = re.sub(r'\?D$', "ND", fnname)  # tailing ?D can be mapped to ND
+        fnname = re.sub(r'\(s\)$', "s", fnname) # tailing (s) can be mapped to s
+        func["name"] = fnname
         if "method" in func:
             func["method"] = self.normalizeText(func["method"])
         if "class" in func:
@@ -416,6 +454,11 @@ class RstParser(object):
                 cmt = self.normalizeText(comment)
                 if cmt:
                     params[name] = cmt
+            # expand some wellknown params
+            pmap = params_mapping.get(fnname)
+            if pmap:
+                for name, alias in pmap.items():
+                    params[name] = params[alias]
             func["params"] = params
         if "seealso" in func:
             seealso = []
@@ -450,7 +493,7 @@ class RstParser(object):
                 func["name"] = fname[4:]
                 func["method"] = fname[4:]
             elif show_warnings:
-                print >> sys.stderr, "RST parser warning: invalid definition of old C function \"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
+                print >> sys.stderr, "\"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
                 #self.print_info(func)
                 
     def normalizeText(self, s):

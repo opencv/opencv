@@ -405,8 +405,8 @@ Creates a histogram.
 The function creates a histogram of the specified size and returns a pointer to the created histogram. If the array ``ranges`` is 0, the histogram bin ranges must be specified later via the function  :ocv:cfunc:`SetHistBinRanges`. Though :ocv:cfunc:`CalcHist` and :ocv:cfunc:`CalcBackProject` may process 8-bit images without setting bin ranges, they assume they are equally spaced in 0 to 255 bins.
 
 
-GetHistValue*D
---------------
+GetHistValue_?D
+---------------
 Returns a pointer to the histogram bin.
 
 .. ocv:cfunction:: float cvGetHistValue_1D(CvHistogram hist, int idx0)
