@@ -392,11 +392,11 @@ that has
 *O(N logN)* complexity in the current implementation. See the OpenCV sample ``convexhull.cpp`` that demonstrates the usage of different function variants.
 
 
-ConvexityDefects
+convexityDefects
 ----------------
 Finds the convexity defects of a contour.
 
-.. ocv:function:: void convexityDefects( InputArray points, InputArray convexhull, OutputArray convexityDefects )
+.. ocv:function:: void convexityDefects( InputArray contour, InputArray convexhull, OutputArray convexityDefects )
 
 .. ocv:pyfunction:: cv2.ConvexityDefects(contour, convexhull)-> convexityDefects
 
