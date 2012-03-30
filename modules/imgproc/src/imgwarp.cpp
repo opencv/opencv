@@ -65,7 +65,8 @@ static float BilinearTab_f[INTER_TAB_SIZE2][2][2];
 static short BilinearTab_i[INTER_TAB_SIZE2][2][2];
 
 #if CV_SSE2
-static short CV_DECL_ALIGNED(16) BilinearTab_iC4[INTER_TAB_SIZE2][2][8];
+static short BilinearTab_iC4_buf[INTER_TAB_SIZE2+2][2][8];
+static short (*BilinearTab_iC4)[2][8] = (short (*)[2][8])alignPtr(BilinearTab_iC4_buf, 16);
 #endif
 
 static float BicubicTab_f[INTER_TAB_SIZE2][4][4];
