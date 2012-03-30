@@ -492,7 +492,7 @@ public:
     Matx<_Tp, m, 1> col(int i) const;
     
     //! extract the matrix diagonal
-    Matx<_Tp, MIN(m,n), 1> diag() const;
+    diag_type diag() const;
     
     //! transpose the matrix
     Matx<_Tp, n, m> t() const;

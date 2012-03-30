@@ -360,7 +360,7 @@ template<typename _Tp, int m, int n> inline double Matx<_Tp, m, n>::ddot(const M
 
 
 template<typename _Tp, int m, int n> inline
-Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const Matx<_Tp,MIN(m,n),1>& d)
+Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const typename Matx<_Tp,m,n>::diag_type& d)
 {
     Matx<_Tp,m,n> M;
     for(int i = 0; i < MIN(m,n); i++)
@@ -436,7 +436,7 @@ Matx<_Tp, m, 1> Matx<_Tp, m, n>::col(int j) const
 
     
 template<typename _Tp, int m, int n> inline
-Matx<_Tp, MIN(m,n), 1> Matx<_Tp, m, n>::diag() const
+typename Matx<_Tp, m, n>::diag_type Matx<_Tp, m, n>::diag() const
 {
     diag_type d;
     for( int i = 0; i < MIN(m, n); i++ )
