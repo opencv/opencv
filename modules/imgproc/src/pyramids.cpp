@@ -185,7 +185,7 @@ typedef NoVec<float, float> PyrDownVec_32f;
 #endif
 
 template<class CastOp, class VecOp> void
-pyrDown_( const Mat& _src, Mat& _dst )
+pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 {
     const int PD_SZ = 5;
     typedef typename CastOp::type1 WT;
@@ -209,8 +209,8 @@ pyrDown_( const Mat& _src, Mat& _dst )
 
     for( x = 0; x <= PD_SZ+1; x++ )
     {
-        int sx0 = borderInterpolate(x - PD_SZ/2, ssize.width, BORDER_REFLECT_101)*cn;
-        int sx1 = borderInterpolate(x + width0*2 - PD_SZ/2, ssize.width, BORDER_REFLECT_101)*cn;
+        int sx0 = borderInterpolate(x - PD_SZ/2, ssize.width, borderType)*cn;
+        int sx1 = borderInterpolate(x + width0*2 - PD_SZ/2, ssize.width, borderType)*cn;
         for( k = 0; k < cn; k++ )
         {
             tabL[x*cn + k] = sx0 + k;
@@ -234,7 +234,7 @@ pyrDown_( const Mat& _src, Mat& _dst )
         for( ; sy <= y*2 + 2; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
-            int _sy = borderInterpolate(sy, ssize.height, BORDER_REFLECT_101);
+            int _sy = borderInterpolate(sy, ssize.height, borderType);
             const T* src = (const T*)(_src.data + _src.step*_sy);
             int limit = cn;
             const int* tab = tabL;
@@ -308,7 +308,7 @@ pyrDown_( const Mat& _src, Mat& _dst )
 
 
 template<class CastOp, class VecOp> void
-pyrUp_( const Mat& _src, Mat& _dst )
+pyrUp_( const Mat& _src, Mat& _dst, int borderType )
 {
     const int PU_SZ = 3;
     typedef typename CastOp::type1 WT;
@@ -397,11 +397,11 @@ pyrUp_( const Mat& _src, Mat& _dst )
     }
 }
 
-typedef void (*PyrFunc)(const Mat&, Mat&);
+typedef void (*PyrFunc)(const Mat&, Mat&, int);
 
 }
     
-void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz )
+void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
@@ -409,7 +409,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz )
     Mat dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::pyrDown(src, dst))
+    if(borderType == BORDER_DEFAULT && tegra::pyrDown(src, dst))
         return;
 #endif
 
@@ -428,10 +428,10 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz )
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    func( src, dst );
+    func( src, dst, borderType );
 }
 
-void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz )
+void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size(src.cols*2, src.rows*2) : _dsz;
@@ -439,7 +439,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz )
     Mat dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::pyrUp(src, dst))
+    if(borderType == BORDER_DEFAULT && tegra::pyrUp(src, dst))
         return;
 #endif
 
@@ -458,16 +458,16 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz )
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    func( src, dst );
+    func( src, dst, borderType );
 }
 
-void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel )
+void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
     Mat src = _src.getMat();
     _dst.create( maxlevel + 1, 1, 0 );
     _dst.getMatRef(0) = src;
     for( int i = 1; i <= maxlevel; i++ )
-        pyrDown( _dst.getMatRef(i-1), _dst.getMatRef(i) );
+        pyrDown( _dst.getMatRef(i-1), _dst.getMatRef(i), Size(), borderType );
 }
 
 CV_IMPL void cvPyrDown( const void* srcarr, void* dstarr, int _filter )

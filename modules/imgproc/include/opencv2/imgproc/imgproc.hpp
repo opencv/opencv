@@ -620,13 +620,14 @@ CV_EXPORTS_W void adaptiveThreshold( InputArray src, OutputArray dst,
 
 //! smooths and downsamples the image
 CV_EXPORTS_W void pyrDown( InputArray src, OutputArray dst,
-                           const Size& dstsize=Size());
+                           const Size& dstsize=Size(), int borderType=BORDER_DEFAULT );
 //! upsamples and smoothes the image
 CV_EXPORTS_W void pyrUp( InputArray src, OutputArray dst,
-                         const Size& dstsize=Size());
+                         const Size& dstsize=Size(), int borderType=BORDER_DEFAULT );
 
 //! builds the gaussian pyramid using pyrDown() as a basic operation
-CV_EXPORTS void buildPyramid( InputArray src, OutputArrayOfArrays dst, int maxlevel );
+CV_EXPORTS void buildPyramid( InputArray src, OutputArrayOfArrays dst,
+                              int maxlevel, int borderType=BORDER_DEFAULT );
 
 //! corrects lens distortion for the given camera matrix and distortion coefficients
 CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
