@@ -216,6 +216,7 @@ DEFINE_GUID(MEDIASUBTYPE_YUYV,0x56595559,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,
 DEFINE_GUID(MEDIASUBTYPE_YV12,0x32315659,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_YVU9,0x39555659,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_YVYU,0x55595659,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
+DEFINE_GUID(MEDIASUBTYPE_MJPG,0x47504A4D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71); // MGB 
 DEFINE_GUID(MEDIATYPE_Interleaved,0x73766169,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIATYPE_Video,0x73646976,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(PIN_CATEGORY_CAPTURE,0xfb6c4281,0x0353,0x11d1,0x90,0x5f,0x00,0x00,0xc0,0xcc,0x16,0xba);
@@ -338,7 +339,7 @@ static bool verbose = true;
 //videoInput defines
 #define VI_VERSION	 0.1995
 #define VI_MAX_CAMERAS  20
-#define VI_NUM_TYPES    18 //DON'T TOUCH
+#define VI_NUM_TYPES    19 //MGB
 #define VI_NUM_FORMATS  18 //DON'T TOUCH
 
 //defines for setPhyCon - tuner is not as well supported as composite and s-video 
@@ -403,13 +404,15 @@ class videoDevice{
 		int videoSize;
 		int width;
 		int height;
+		
 		int tryWidth;
 		int tryHeight;
-		
+		GUID tryVideoType;
+
 		ICaptureGraphBuilder2 *pCaptureGraph;	// Capture graph builder object
 		IGraphBuilder *pGraph;					// Graph builder object
 	    IMediaControl *pControl;				// Media control object
-		IBaseFilter *pVideoInputFilter;  		// Video Capture filter
+		IBaseFilter *pVideoInputFilter;  		// Video Capture filter		
 		IBaseFilter *pGrabberF;
 		IBaseFilter * pDestFilter;
 		IAMStreamConfig *streamConf;
@@ -479,15 +482,18 @@ class videoInput{
 		//you MUST CALL isFrameNew every app loop for this to have any effect
 		void setAutoReconnectOnFreeze(int deviceNumber, bool doReconnect, int numMissedFramesBeforeReconnect);
 		
-		//Choose one of these four to setup your device
+		//Choose one of these five to setup your device
 		bool setupDevice(int deviceID);
 		bool setupDevice(int deviceID, int w, int h);
+		bool setupDeviceFourcc(int deviceID, int w, int h,int fourcc);
 
 		//These two are only for capture cards
 		//USB and Firewire cameras souldn't specify connection 
 		bool setupDevice(int deviceID, int connection);	
 		bool setupDevice(int deviceID, int w, int h, int connection); 
 		
+		bool setFourcc(int deviceNumber, int fourcc);	
+
 		//If you need to you can set your NTSC/PAL/SECAM
 		//preference here. if it is available it will be used.
 		//see #defines above for available formats - eg VI_NTSC_M or VI_PAL_B
@@ -526,7 +532,9 @@ class videoInput{
 		int  getWidth(int deviceID);
 		int  getHeight(int deviceID);
 		int  getSize(int deviceID);
-		
+		int  getFourcc(int deviceID);
+		double getFPS(int deviceID);
+
 		//completely stops and frees a device
 		void stopDevice(int deviceID);
 		
@@ -535,38 +543,29 @@ class videoInput{
 		
 		//number of devices available
 		int  devicesFound;
-		
-		long propBrightness;
-		long propContrast;
-		long propHue;
-		long propSaturation;
-		long propSharpness;
-		long propGamma;
-		long propColorEnable;
-		long propWhiteBalance;
-		long propBacklightCompensation;
-		long propGain;
+						
+		// mapping from OpenCV CV_CAP_PROP to videoinput/dshow properties
+		int getVideoPropertyFromCV(int cv_property);
+		int getCameraPropertyFromCV(int cv_property);
 
-		long propPan;
-		long propTilt;
-		long propRoll;
-		long propZoom;
-		long propExposure;
-		long propIris;
-		long propFocus;
-				
-		
 	private:		
 		void setPhyCon(int deviceID, int conn);                   
-		void setAttemptCaptureSize(int deviceID, int w, int h);   
+		void setAttemptCaptureSize(int deviceID, int w, int h,GUID mediaType=MEDIASUBTYPE_RGB24);   
 		bool setup(int deviceID);
 		void processPixels(unsigned char * src, unsigned char * dst, int width, int height, bool bRGB, bool bFlip);
 		int  start(int deviceID, videoDevice * VD);                   
 		int  getDeviceCount();
 		void getMediaSubtypeAsString(GUID type, char * typeAsString);
-		
+		GUID *getMediaSubtypeFromFourcc(int fourcc);
+		int	getFourccFromMediaSubtype(GUID type);
+
+		void getVideoPropertyAsString(int prop, char * propertyAsString);
+		void getCameraPropertyAsString(int prop, char * propertyAsString);
+
 		HRESULT getDevice(IBaseFilter **pSrcFilter, int deviceID, WCHAR * wDeviceName, char * nDeviceName);
 		static HRESULT ShowFilterPropertyPages(IBaseFilter *pFilter);
+		static HRESULT ShowStreamPropertyPages(IAMStreamConfig  *pStream);
+		
 		HRESULT SaveGraphFile(IGraphBuilder *pGraph, WCHAR *wszPath);
 		HRESULT routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter **pVidInFilter, int conType, GUID captureMode);
 			
@@ -681,7 +680,7 @@ public:
     
     //This method is meant to have less overhead
 	//------------------------------------------------
-    STDMETHODIMP SampleCB(double, IMediaSample *pSample){
+    STDMETHODIMP SampleCB(double , IMediaSample *pSample){
     	if(WaitForSingleObject(hEvent, 0) == WAIT_OBJECT_0) return S_OK;
  
     	HRESULT hr = pSample->GetPointer(&ptrBuffer);  
@@ -745,7 +744,7 @@ videoDevice::videoDevice(){
 		 //This is our callback class that processes the frame.
 		 sgCallback			= new SampleGrabberCallback();
 		 sgCallback->newFrame = false;
-
+		 
 		 //Default values for capture type
 		 videoType 			= MEDIASUBTYPE_RGB24;
 	     connection     	= PhysConn_Video_Composite;
@@ -754,8 +753,10 @@ videoDevice::videoDevice(){
 		 videoSize 			= 0;
 	     width     			= 0;
 	     height    			= 0;
+		 
 	     tryWidth			= 0;
 	     tryHeight			= 0;
+		 tryVideoType = MEDIASUBTYPE_RGB24;
 		 nFramesForReconnect= 10000;
 		 nFramesRunning     = 0;
 	     myID				= -1;
@@ -847,7 +848,7 @@ void videoDevice::NukeDownstream(IBaseFilter *pBF){
 // ---------------------------------------------------------------------- 
 
 void videoDevice::destroyGraph(){
-	HRESULT hr = NOERROR;
+	HRESULT hr = NULL;
  	//int FuncRetval=0;
  	//int NumFilters=0;
 
@@ -865,8 +866,8 @@ void videoDevice::destroyGraph(){
 		IBaseFilter * pFilter = NULL;
 		if (pEnum->Next(1, &pFilter, &cFetched) == S_OK)
 		{
-			FILTER_INFO FilterInfo;
-            memset(&FilterInfo, 0, sizeof(FilterInfo));
+			FILTER_INFO FilterInfo={0};
+			memset(&FilterInfo, 0, sizeof(FilterInfo));
 			hr = pFilter->QueryFilterInfo(&FilterInfo);
 			FilterInfo.pGraph->Release();
 
@@ -1059,11 +1060,12 @@ videoInput::videoInput(){
 	mediaSubtypes[12] 	= MEDIASUBTYPE_Y41P;
 	mediaSubtypes[13] 	= MEDIASUBTYPE_Y211;
 	mediaSubtypes[14]	= MEDIASUBTYPE_AYUV;
+	mediaSubtypes[15]	= MEDIASUBTYPE_MJPG; // MGB
 
 	//non standard
-	mediaSubtypes[15]	= MEDIASUBTYPE_Y800;
-    mediaSubtypes[16]	= MEDIASUBTYPE_Y8;
-	mediaSubtypes[17]	= MEDIASUBTYPE_GREY;	
+	mediaSubtypes[16]	= MEDIASUBTYPE_Y800;
+    mediaSubtypes[17]	= MEDIASUBTYPE_Y8;
+	mediaSubtypes[18]	= MEDIASUBTYPE_GREY;	
 	
 	//The video formats we support
 	formatTypes[VI_NTSC_M]		= AnalogVideo_NTSC_M;
@@ -1088,25 +1090,7 @@ videoInput::videoInput(){
 	formatTypes[VI_SECAM_L]		= AnalogVideo_SECAM_L;
 	
 	
-	propBrightness				= VideoProcAmp_Brightness;
-	propContrast			   	= VideoProcAmp_Contrast;
-	propHue						= VideoProcAmp_Hue;
-	propSaturation 				= VideoProcAmp_Saturation;
-	propSharpness			 	= VideoProcAmp_Sharpness;
-	propGamma	 				= VideoProcAmp_Gamma;
-	propColorEnable				= VideoProcAmp_ColorEnable;
-	propWhiteBalance 			= VideoProcAmp_WhiteBalance;
-	propBacklightCompensation 	= VideoProcAmp_BacklightCompensation;
-	propGain 					= VideoProcAmp_Gain;
-
-	propPan						= CameraControl_Pan;
-	propTilt					= CameraControl_Tilt;
-	propRoll					= CameraControl_Roll;
-	propZoom					= CameraControl_Zoom;
-	propExposure   				= CameraControl_Exposure;
-	propIris					= CameraControl_Iris;
-	propFocus					= CameraControl_Focus;
-						
+	
 }
 
 
@@ -1189,14 +1173,36 @@ bool videoInput::setupDevice(int deviceNumber, int connection){
 
 
 // ---------------------------------------------------------------------- 
-// Setup a device with the default connection but specify size
+// Setup a device with the default connection but specify size 
 //                                            
 // ---------------------------------------------------------------------- 
 
-bool videoInput::setupDevice(int deviceNumber, int w, int h){
+bool videoInput::setupDevice(int deviceNumber, int w, int h){ 
 	if(deviceNumber >= VI_MAX_CAMERAS || VDList[deviceNumber]->readyToCapture) return false;
 
 	setAttemptCaptureSize(deviceNumber,w,h);
+	if(setup(deviceNumber))return true;
+	return false;
+}
+
+// ---------------------------------------------------------------------- 
+// Setup a device with the default connection but specify size and image format
+// 
+// Note:
+// Need a new name for this since signature clashes with ",int connection)"
+// ---------------------------------------------------------------------- 
+
+bool videoInput::setupDeviceFourcc(int deviceNumber, int w, int h,int fourcc){ 
+	if(deviceNumber >= VI_MAX_CAMERAS || VDList[deviceNumber]->readyToCapture) return false;
+		
+	if ( fourcc > 0 ) {
+		GUID *mediaType = getMediaSubtypeFromFourcc(fourcc);
+		if ( mediaType ) {
+			setAttemptCaptureSize(deviceNumber,w,h,*mediaType);	
+		}
+	} else {
+		setAttemptCaptureSize(deviceNumber,w,h);
+	}
 	if(setup(deviceNumber))return true;
 	return false;
 }
@@ -1242,6 +1248,7 @@ bool videoInput::setFormat(int deviceNumber, int format){
 
 			IAMAnalogVideoDecoder *pVideoDec = NULL;    	
 	   		hr = VDList[deviceNumber]->pCaptureGraph->FindInterface(NULL, &MEDIATYPE_Video, VDList[deviceNumber]->pVideoInputFilter, IID_IAMAnalogVideoDecoder, (void **)&pVideoDec);
+			
 			
 			//in case the settings window some how freed them first
 			if(VDList[deviceNumber]->pVideoInputFilter)VDList[deviceNumber]->pVideoInputFilter->Release();  		
@@ -1412,6 +1419,35 @@ int videoInput::getHeight(int id){
 	
 }
 
+// ---------------------------------------------------------------------- 
+// 
+//                                           
+// ---------------------------------------------------------------------- 
+int videoInput::getFourcc(int id){
+	
+	if(isDeviceSetup(id))
+	{
+		return getFourccFromMediaSubtype(VDList[id]->videoType);
+	}
+	
+	return 0;
+	
+}
+
+double videoInput::getFPS(int id){
+	
+	if(isDeviceSetup(id))
+	{
+		double frameTime= VDList[id]->requestedFrameTime;
+		if (frameTime>0) {
+			return (10000000.0 / frameTime);
+		}		
+	}
+	
+	return 0;
+	
+}
+
 
 // ---------------------------------------------------------------------- 
 // 
@@ -1572,6 +1608,8 @@ void __cdecl videoInput::basicThread(void * objPtr){
 	videoDevice * vd = *( (videoDevice **)(objPtr) );
 	ShowFilterPropertyPages(vd->pVideoInputFilter);	
 
+	
+
 	//now we free the filter and make sure it set to NULL
 	if(vd->pVideoInputFilter)vd->pVideoInputFilter->Release();
 	if(vd->pVideoInputFilter)vd->pVideoInputFilter = NULL;
@@ -1581,8 +1619,7 @@ void __cdecl videoInput::basicThread(void * objPtr){
 
 void videoInput::showSettingsWindow(int id){ 
 
-	if(isDeviceSetup(id)){
-
+	if(isDeviceSetup(id)){		
 		HANDLE myTempThread;
 
 		//we reconnect to the device as we have freed our reference to it
@@ -1621,10 +1658,13 @@ bool videoInput::getVideoSettingFilter(int deviceID, long Property, long &min, l
 		return false;			
 	}
 	
-	if (verbose) printf("Setting video setting %ld.\n", Property);
+	char propStr[16];
+	getVideoPropertyAsString(Property,propStr);
+
+	if (verbose) printf("Setting video setting %s.\n", propStr);
 	
 	pAMVideoProcAmp->GetRange(Property, &min, &max, &SteppingDelta, &defaultValue, &flags);
-	if (verbose) printf("Range for video setting %ld: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", Property, min, max, SteppingDelta, defaultValue, flags);
+	if (verbose) printf("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, min, max, SteppingDelta, defaultValue, flags);
 	pAMVideoProcAmp->Get(Property, &currentValue, &flags);
 	
 	if(pAMVideoProcAmp)pAMVideoProcAmp->Release();
@@ -1665,7 +1705,7 @@ bool videoInput::setVideoSettingFilterPct(int deviceID, long Property, float pct
 		float halfStep 	= (float)stepAmnt * 0.5f;
 		if( mod < halfStep ) rasterValue -= mod;
 		else rasterValue += stepAmnt - mod;	
-		printf("RASTER - pctValue is %f - value is %ld - step is %ld - mod is %ld - rasterValue is %ld\n", pctValue, value, stepAmnt, mod, rasterValue); 
+		printf("RASTER - pctValue is %f - value is %i - step is %i - mod is %i - rasterValue is %i\n", pctValue, value, stepAmnt, mod, rasterValue); 
 	}
 		
 	return setVideoSettingFilter(deviceID, Property, rasterValue, Flags, false);
@@ -1679,6 +1719,9 @@ bool videoInput::setVideoSettingFilter(int deviceID, long Property, long lValue,
 	HRESULT hr;	
 	//bool isSuccessful = false;
 	
+	char propStr[16];
+	getVideoPropertyAsString(Property,propStr);
+
 	videoDevice * VD = VDList[deviceID];
 	
 	hr = getDevice(&VD->pVideoInputFilter, deviceID, VD->wDeviceName, VD->nDeviceName);	
@@ -1697,12 +1740,12 @@ bool videoInput::setVideoSettingFilter(int deviceID, long Property, long lValue,
 		return false;			
 	}
 	
-	if (verbose) printf("Setting video setting %ld.\n", Property);
+	if (verbose) printf("Setting video setting %s.\n", propStr);
 	long CurrVal, Min, Max, SteppingDelta, Default, CapsFlags, AvailableCapsFlags = 0;
 	
 	
 	pAMVideoProcAmp->GetRange(Property, &Min, &Max, &SteppingDelta, &Default, &AvailableCapsFlags);
-	if (verbose) printf("Range for video setting %ld: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", Property, Min, Max, SteppingDelta, Default, AvailableCapsFlags);
+	if (verbose) printf("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, Min, Max, SteppingDelta, Default, AvailableCapsFlags);
 	pAMVideoProcAmp->Get(Property, &CurrVal, &CapsFlags);
 	
 	if (verbose) printf("Current value: %ld Flags %ld (%s)\n", CurrVal, CapsFlags, (CapsFlags == 1 ? "Auto" : (CapsFlags == 2 ? "Manual" : "Unknown")));
@@ -1752,7 +1795,7 @@ bool videoInput::setVideoSettingCameraPct(int deviceID, long Property, float pct
 		float halfStep 	= (float)stepAmnt * 0.5f;
 		if( mod < halfStep ) rasterValue -= mod;
 		else rasterValue += stepAmnt - mod;	
-		printf("RASTER - pctValue is %f - value is %ld - step is %ld - mod is %ld - rasterValue is %ld\n", pctValue, value, stepAmnt, mod, rasterValue); 
+		printf("RASTER - pctValue is %f - value is %i - step is %i - mod is %i - rasterValue is %i\n", pctValue, value, stepAmnt, mod, rasterValue); 
 	}
 	
 	return setVideoSettingCamera(deviceID, Property, rasterValue, Flags, false);
@@ -1766,7 +1809,10 @@ bool videoInput::setVideoSettingCamera(int deviceID, long Property, long lValue,
 		HRESULT hr;
 		hr = getDevice(&VDList[deviceID]->pVideoInputFilter, deviceID, VDList[deviceID]->wDeviceName, VDList[deviceID]->nDeviceName);	
 	
-		if (verbose) printf("Setting video setting %ld.\n", Property);
+		char propStr[16];
+		getVideoPropertyAsString(Property,propStr);
+
+		if (verbose) printf("Setting video setting %s.\n", propStr);
 		hr = VDList[deviceID]->pVideoInputFilter->QueryInterface(IID_IAMCameraControl, (void**)&pIAMCameraControl);
 		if (FAILED(hr)) {
 			printf("Error\n");
@@ -1776,7 +1822,7 @@ bool videoInput::setVideoSettingCamera(int deviceID, long Property, long lValue,
 		{
 			long CurrVal, Min, Max, SteppingDelta, Default, CapsFlags, AvailableCapsFlags;
 			pIAMCameraControl->GetRange(Property, &Min, &Max, &SteppingDelta, &Default, &AvailableCapsFlags);
-			if (verbose) printf("Range for video setting %ld: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", Property, Min, Max, SteppingDelta, Default, AvailableCapsFlags);
+			if (verbose) printf("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, Min, Max, SteppingDelta, Default, AvailableCapsFlags);
 			pIAMCameraControl->Get(Property, &CurrVal, &CapsFlags);
 			if (verbose) printf("Current value: %ld Flags %ld (%s)\n", CurrVal, CapsFlags, (CapsFlags == 1 ? "Auto" : (CapsFlags == 2 ? "Manual" : "Unknown")));
 			if (useDefaultValue) {
@@ -1820,10 +1866,12 @@ bool videoInput::getVideoSettingCamera(int deviceID, long Property, long &min, l
 		return false;			
 	}
 	
-	if (verbose) printf("Setting video setting %ld.\n", Property);
+	char propStr[16];
+	getVideoPropertyAsString(Property,propStr);
+	if (verbose) printf("Setting video setting %s.\n", propStr);
 	
 	pIAMCameraControl->GetRange(Property, &min, &max, &SteppingDelta, &defaultValue, &flags);
-	if (verbose) printf("Range for video setting %ld: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", Property, min, max, SteppingDelta, defaultValue, flags);
+	if (verbose) printf("Range for video setting %s: Min:%ld Max:%ld SteppingDelta:%ld Default:%ld Flags:%ld\n", propStr, min, max, SteppingDelta, defaultValue, flags);
 	pIAMCameraControl->Get(Property, &currentValue, &flags);
 	
 	if(pIAMCameraControl)pIAMCameraControl->Release();
@@ -1867,7 +1915,7 @@ bool videoInput::restartDevice(int id){
 		int nReconnect	= VDList[id]->nFramesForReconnect;
 		bool bReconnect = VDList[id]->autoReconnect;
 
-		long avgFrameTime = VDList[id]->requestedFrameTime;
+		unsigned long avgFrameTime = VDList[id]->requestedFrameTime;
 	
 		stopDevice(id);
 
@@ -1963,14 +2011,14 @@ bool videoInput::comUnInit(){
 //                                            
 // ---------------------------------------------------------------------- 
 
-void videoInput::setAttemptCaptureSize(int id, int w, int h){
+void videoInput::setAttemptCaptureSize(int id, int w, int h,GUID mediaType){
 	
 	VDList[id]->tryWidth    = w;
 	VDList[id]->tryHeight   = h;
-	VDList[id]->tryDiffSize = true;	
+	VDList[id]->tryDiffSize = true;		
+	VDList[id]->tryVideoType = mediaType;
 	
 }
-
 
 // ---------------------------------------------------------------------- 
 // Set the connection type
@@ -2119,6 +2167,7 @@ void videoInput::getMediaSubtypeAsString(GUID type, char * typeAsString){
 	else if(type == MEDIASUBTYPE_Y41P) 	sprintf(tmpStr, "Y41P");
 	else if(type == MEDIASUBTYPE_Y211)  sprintf(tmpStr, "Y211");
 	else if(type == MEDIASUBTYPE_AYUV) 	sprintf(tmpStr, "AYUV");
+	else if(type == MEDIASUBTYPE_MJPG) 	sprintf(tmpStr, "MJPG");
 	else if(type == MEDIASUBTYPE_Y800) 	sprintf(tmpStr, "Y800");  
 	else if(type == MEDIASUBTYPE_Y8)   	sprintf(tmpStr, "Y8");  
 	else if(type == MEDIASUBTYPE_GREY) 	sprintf(tmpStr, "GREY");  
@@ -2126,6 +2175,135 @@ void videoInput::getMediaSubtypeAsString(GUID type, char * typeAsString){
 
 	memcpy(typeAsString, tmpStr, sizeof(char)*8);
 }
+
+int videoInput::getFourccFromMediaSubtype(GUID type) {	
+	return type.Data1;	
+}
+
+GUID *videoInput::getMediaSubtypeFromFourcc(int fourcc){
+
+	for (int i=0;i<VI_NUM_TYPES;i++) {
+		if ( fourcc == mediaSubtypes[i].Data1 ) {
+			return &mediaSubtypes[i];			
+		}
+	}
+
+	return NULL;
+}
+
+// need to add to highgui_c.h
+enum { CV_CAP_PROP_SETTINGS = 28,
+	CV_CAP_PROP_BACKLIGHT,
+	CV_CAP_PROP_PAN,
+	CV_CAP_PROP_TILT,
+	CV_CAP_PROP_ROLL,
+	CV_CAP_PROP_ZOOM,	
+	CV_CAP_PROP_IRIS,
+	CV_CAP_PROP_FOCUS 
+};
+
+
+
+void videoInput::getVideoPropertyAsString(int prop, char * propertyAsString){
+
+	char tmpStr[16];
+	
+	if ( prop==VideoProcAmp_Brightness) sprintf(tmpStr, "Brightness");	
+	else if ( prop==VideoProcAmp_Contrast) sprintf(tmpStr, "Contrast");	
+	else if ( prop==VideoProcAmp_Saturation) sprintf(tmpStr, "Saturation");	
+	else if ( prop==VideoProcAmp_Hue) sprintf(tmpStr, "Hue");	
+	else if ( prop==VideoProcAmp_Gain) sprintf(tmpStr, "Gain");	
+	else if ( prop==VideoProcAmp_Gamma) sprintf(tmpStr, "Gamma");		    	
+	else if ( prop==VideoProcAmp_ColorEnable) sprintf(tmpStr, "ColorEnable");	
+    else if ( prop==VideoProcAmp_Sharpness) sprintf(tmpStr, "Sharpness");	    
+	else sprintf(tmpStr, "%u",prop);
+
+	memcpy(propertyAsString, tmpStr, sizeof(char)*16);
+}
+
+
+int videoInput::getVideoPropertyFromCV(int cv_property){
+
+	// see VideoProcAmpProperty in strmif.h
+	switch (cv_property) {
+		case CV_CAP_PROP_BRIGHTNESS: 
+			return VideoProcAmp_Brightness;
+				
+		case CV_CAP_PROP_CONTRAST:
+			return VideoProcAmp_Contrast;
+
+		case CV_CAP_PROP_HUE:
+			return VideoProcAmp_Hue;					
+
+		case CV_CAP_PROP_SATURATION:
+			return VideoProcAmp_Saturation; 	
+
+		case CV_CAP_PROP_SHARPNESS:
+			return VideoProcAmp_Sharpness;	
+
+		case CV_CAP_PROP_GAMMA:
+			return VideoProcAmp_Gamma;	 	
+	
+		case CV_CAP_PROP_MONOCROME:
+			return VideoProcAmp_ColorEnable;		
+
+		case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+			return VideoProcAmp_WhiteBalance;
+			
+		case  CV_CAP_PROP_BACKLIGHT:
+			return VideoProcAmp_BacklightCompensation;
+
+		case CV_CAP_PROP_GAIN:
+			return 	VideoProcAmp_Gain;
+	}
+	return -1;
+}
+
+int videoInput::getCameraPropertyFromCV(int cv_property){
+
+	// see CameraControlProperty in strmif.h
+	switch (cv_property) {
+
+		case CV_CAP_PROP_PAN: 
+			return CameraControl_Pan;
+
+		case CV_CAP_PROP_TILT:
+			return CameraControl_Tilt;
+
+		case CV_CAP_PROP_ROLL:
+			return CameraControl_Roll;
+
+		case CV_CAP_PROP_ZOOM:
+			return CameraControl_Zoom;
+
+		case CV_CAP_PROP_EXPOSURE:
+			return CameraControl_Exposure;
+
+		case CV_CAP_PROP_IRIS:
+			return CameraControl_Iris;
+
+		case CV_CAP_PROP_FOCUS:
+			return CameraControl_Focus;
+	}
+	return -1;
+}
+
+void videoInput::getCameraPropertyAsString(int prop, char * propertyAsString){
+
+	char tmpStr[16];
+	
+	if ( prop==CameraControl_Pan) sprintf(tmpStr, "Pan");	
+	else if ( prop==CameraControl_Tilt) sprintf(tmpStr, "Tilt");	
+	else if ( prop==CameraControl_Roll) sprintf(tmpStr, "Roll");	
+	else if ( prop==CameraControl_Zoom) sprintf(tmpStr, "Zoom");	
+	else if ( prop==CameraControl_Exposure) sprintf(tmpStr, "Exposure");	
+	else if ( prop==CameraControl_Iris) sprintf(tmpStr, "Iris");		    	
+	else if ( prop==CameraControl_Focus) sprintf(tmpStr, "Focus");	    
+	else sprintf(tmpStr, "%u",prop);
+
+	memcpy(propertyAsString, tmpStr, sizeof(char)*16);
+}
+
 
 //-------------------------------------------------------------------------------------------
 static void findClosestSizeAndSubtype(videoDevice * VD, int widthIn, int heightIn, int &widthOut, int &heightOut, GUID & mediatypeOut){
@@ -2378,23 +2556,35 @@ int videoInput::start(int deviceID, videoDevice *VD){
 	int currentHeight	=  HEADER(pVih)->biHeight;
 
 	bool customSize = VD->tryDiffSize;
+	
 	bool foundSize  = false;
 
 	if(customSize){
 		if(verbose)	printf("SETUP: Default Format is set to %i by %i \n", currentWidth, currentHeight);
 		
 		char guidStr[8];
-		for(int i = 0; i < VI_NUM_TYPES; i++){
-			
-			getMediaSubtypeAsString(mediaSubtypes[i], guidStr);
+			// try specified format and size 		
+			getMediaSubtypeAsString(VD->tryVideoType, guidStr);
+			if(verbose)printf("SETUP: trying specified format %s @ %i by %i\n", guidStr, VD->tryWidth, VD->tryHeight);
 
-			if(verbose)printf("SETUP: trying format %s @ %i by %i\n", guidStr, VD->tryWidth, VD->tryHeight);
-			if( setSizeAndSubtype(VD, VD->tryWidth, VD->tryHeight, mediaSubtypes[i]) ){
+			if( setSizeAndSubtype(VD, VD->tryWidth, VD->tryHeight, VD->tryVideoType) ){
 				VD->setSize(VD->tryWidth, VD->tryHeight);
 				foundSize = true;
-				break;
+			} else {
+				// try specified size with all formats	
+				for(int i = 0; i < VI_NUM_TYPES; i++){
+			
+					getMediaSubtypeAsString(mediaSubtypes[i], guidStr);
+
+					if(verbose)printf("SETUP: trying format %s @ %i by %i\n", guidStr, VD->tryWidth, VD->tryHeight);
+					if( setSizeAndSubtype(VD, VD->tryWidth, VD->tryHeight, mediaSubtypes[i]) ){
+						VD->setSize(VD->tryWidth, VD->tryHeight);
+						foundSize = true;
+						break;
+					}
+				}
 			}
-		}
+		
 		
 		//if we didn't find the requested size - lets try and find the closest matching size
 		if( foundSize == false ){
@@ -2725,6 +2915,7 @@ HRESULT videoInput::getDevice(IBaseFilter** gottaFilter, int deviceId, WCHAR * w
 HRESULT videoInput::ShowFilterPropertyPages(IBaseFilter *pFilter){
 
 	ISpecifyPropertyPages *pProp;
+
 	HRESULT hr = pFilter->QueryInterface(IID_ISpecifyPropertyPages, (void **)&pProp);
 	if (SUCCEEDED(hr)) 
 	{
@@ -2758,6 +2949,11 @@ HRESULT videoInput::ShowFilterPropertyPages(IBaseFilter *pFilter){
 	return hr;
 }
    
+HRESULT videoInput::ShowStreamPropertyPages(IAMStreamConfig  *pStream){
+
+	HRESULT hr 			= NOERROR;
+	return hr;
+}
    
 // ---------------------------------------------------------------------- 
 // This code was also brazenly stolen from the DX9 SDK
@@ -2907,7 +3103,7 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
 	return hr;
 }
 
-/********************* Capturing video from camera via VFW *********************/
+/********************* Capturing video from camera via DirectShow *********************/
 
 class CvCaptureCAM_DShow : public CvCapture
 {
@@ -2921,12 +3117,14 @@ public:
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-	virtual int getCaptureDomain() { return CV_CAP_DSHOW; } // Return the type of the capture object: CV_CAP_VFW, etc...
+	virtual int getCaptureDomain() { return CV_CAP_DSHOW; } // Return the type of the capture object: CV_CAP_VFW, etc...	
+
+	
 
 protected:
     void init();
 
-    int index, width, height;
+    int index, width, height,fourcc;
     IplImage* frame;
     static videoInput VI;
 };
@@ -2944,7 +3142,7 @@ CvCaptureCAM_DShow::CvCaptureCAM_DShow()
 {
     index = -1;
     frame = 0;
-    width = height = -1;
+    width = height = fourcc = -1;
     CoInitialize(0);
 }
 
@@ -3005,43 +3203,209 @@ IplImage* CvCaptureCAM_DShow::retrieveFrame(int)
 
 double CvCaptureCAM_DShow::getProperty( int property_id )
 {
+
+	long min_value,max_value,stepping_delta,current_value,flags,defaultValue;
+	
+	// image format proprrties 
     switch( property_id )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
         return VI.getWidth(index);
+
     case CV_CAP_PROP_FRAME_HEIGHT:
         return VI.getHeight(index);
-    case CV_CAP_PROP_FOURCC:
-        return 0;
+
+    case CV_CAP_PROP_FOURCC:				
+        return VI.getFourcc(index);
+
+	case CV_CAP_PROP_FPS:		
+		return VI.getFPS(index);
+	}
+
+	// video filter properties
+	switch( property_id )
+    {
+	case CV_CAP_PROP_BRIGHTNESS:				
+		if ( VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BRIGHTNESS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+		
+	case CV_CAP_PROP_CONTRAST:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_CONTRAST),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_HUE:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_HUE),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_SATURATION:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SATURATION),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_SHARPNESS:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SHARPNESS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_GAMMA:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAMMA),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_MONOCROME:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_MONOCROME),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:	
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_WHITE_BALANCE_BLUE_U),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case  CV_CAP_PROP_BACKLIGHT:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BACKLIGHT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_GAIN:
+		if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAIN),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+	}
+
+	// camera properties
+	switch( property_id )
+    {
+
+	case CV_CAP_PROP_BACKLIGHT:				
+		if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_BACKLIGHT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+	
+	case CV_CAP_PROP_PAN:				
+		if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_PAN),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_TILT:				
+		if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_TILT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_ROLL:				
+		if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ROLL),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_ZOOM:				
+		if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_BACKLIGHT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_IRIS:				
+		if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_IRIS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
+	case CV_CAP_PROP_FOCUS:				
+		if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value; 
+
     }
-    return 0;
+
+	// unknown parameter or value not available
+    return -1;
 }
 
 bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
 {
+	// image capture properties
+	bool handled = false;
+
     switch( property_id )
     {
-    case CV_CAP_PROP_FRAME_WIDTH:
-        width = cvRound(value);
-        break;
-    case CV_CAP_PROP_FRAME_HEIGHT:
-        height = cvRound(value);
-        break;
-    default:
-        return false;
-    }
+		case CV_CAP_PROP_FRAME_WIDTH:
+			width = cvRound(value);		
+			handled = true;
+			break;
 
-    if( width > 0 && height > 0 )
-    {
-        if( width != VI.getWidth(index) || height != VI.getHeight(index) )
-        {
-            VI.stopDevice(index);
-            VI.setupDevice(index, width, height);
-        }
-        width = height = -1;
-        return VI.isDeviceSetup(index);
-    }
-    return true;
+		case CV_CAP_PROP_FRAME_HEIGHT:
+			height = cvRound(value);		
+			handled = true;
+			break;
+		
+		case CV_CAP_PROP_FOURCC:
+			fourcc = cvRound(value);		
+			if ( fourcc < 0 ) {
+				// following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
+				// TODO - how to create a capture pin dialog
+			}	
+			handled = true;
+			break;
+
+		case CV_CAP_PROP_FPS:
+			VI.setIdealFramerate(index,value);
+			handled = true;
+			break;
+
+	}
+	    
+	if ( handled ) {
+		// a stream setting
+		if( width > 0 && height > 0 )
+			{
+			if( width != VI.getWidth(index) || height != VI.getHeight(index) ) //|| fourcc != VI.getFourcc(index) )
+			{
+				VI.stopDevice(index);
+				VI.setupDeviceFourcc(index, width, height,fourcc);
+			}
+			width = height = fourcc = -1;
+			return VI.isDeviceSetup(index);
+		}
+		return true; 
+	}
+
+	// show video/camera filter dialog
+	if ( property_id == CV_CAP_PROP_SETTINGS ) {
+		VI.showSettingsWindow(index);
+		return true;
+	}
+	
+	//video Filter properties
+	switch( property_id )
+	{
+		
+		case CV_CAP_PROP_BRIGHTNESS:				
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BRIGHTNESS),(long)value);
+		
+		case CV_CAP_PROP_CONTRAST:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_CONTRAST),(long)value);
+
+		case CV_CAP_PROP_HUE:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_HUE),(long)value);
+
+		case CV_CAP_PROP_SATURATION:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SATURATION),(long)value);
+
+		case CV_CAP_PROP_SHARPNESS:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SHARPNESS),(long)value);
+
+		case CV_CAP_PROP_GAMMA:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAMMA),(long)value);
+	
+		case CV_CAP_PROP_MONOCROME:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_MONOCROME),(long)value);
+
+		case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:	
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_WHITE_BALANCE_BLUE_U),(long)value);
+			
+		case  CV_CAP_PROP_BACKLIGHT:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BACKLIGHT),(long)value);
+
+		case CV_CAP_PROP_GAIN:
+			return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAIN),(long)value);
+	
+		default:
+			;
+	}
+
+	//camera properties
+	switch( property_id )
+	{
+	case  CV_CAP_PROP_PAN:
+		return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_PAN),(long)value);
+
+	case  CV_CAP_PROP_TILT:
+		return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_TILT),(long)value);
+
+	case  CV_CAP_PROP_ROLL:
+		return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ROLL),(long)value);
+
+	case  CV_CAP_PROP_ZOOM:
+		return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ZOOM),(long)value);
+
+	case  CV_CAP_PROP_EXPOSURE:
+		return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_EXPOSURE),(long)value);
+
+	case  CV_CAP_PROP_IRIS:
+		return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_IRIS),(long)value);
+
+	case  CV_CAP_PROP_FOCUS:
+		return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS),(long)value);
+	}
+
+
+	return false;
 }
 
 
