@@ -961,7 +961,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     AVCodec *codec;
 
 
-    st = av_new_stream(oc, 0);
+    st = avformat_new_stream(oc, 0);
     if (!st) {
         CV_WARN("Could not allocate stream");
         return NULL;
@@ -1391,13 +1391,10 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     /* set the output parameters (must be done even if no
        parameters). */
 	#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
-		if (av_set_parameters(oc, NULL) < 0)
-	#else
-		if (avformat_write_header(oc, NULL) < 0)
-	#endif
-        {
+        if (av_set_parameters(oc, NULL) < 0) {
         return false;
     }
+    #endif
 
 	#if FF_API_DUMP_FORMAT
 		dump_format(oc, 0, filename, 1);
