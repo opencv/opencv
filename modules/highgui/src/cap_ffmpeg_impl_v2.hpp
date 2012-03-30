@@ -1372,8 +1372,10 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
       bitrate_scale = 128;
       break;
     case CODEC_ID_RAWVIDEO:
-      codec_pix_fmt = input_pix_fmt;
-      break;
+        codec_pix_fmt = input_pix_fmt == PIX_FMT_GRAY8 ||
+                        input_pix_fmt == PIX_FMT_GRAY16LE ||
+                        input_pix_fmt == PIX_FMT_GRAY16BE ? input_pix_fmt : PIX_FMT_YUV420P;
+        break;
     default:
         // good for lossy formats, MPEG, etc.
         codec_pix_fmt = PIX_FMT_YUV420P;
