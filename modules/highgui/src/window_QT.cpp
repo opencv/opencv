@@ -927,7 +927,7 @@ void GuiReceiver::displayInfo(QString name, QString text, int delayms)
 {
 	QPointer<CvWindow> w = icvFindWindowByName(name);
 
-	if (w && delayms > 0)
+	if (w)
 		w->displayInfo(text, delayms);
 }
 
@@ -936,7 +936,7 @@ void GuiReceiver::displayStatusBar(QString name, QString text, int delayms)
 {
 	QPointer<CvWindow> w = icvFindWindowByName(name);
 
-	if (w && delayms > 0)
+	if (w)
 		w->displayStatusBar(text, delayms);
 }
 
@@ -2407,7 +2407,7 @@ void DefaultViewPort::startDisplayInfo(QString text, int delayms)
 		stopDisplayInfo();
 
 	infoText = text;
-	timerDisplay->start(delayms);
+	if (delayms > 0) timerDisplay->start(delayms);
 	drawInfo = true;
 }
 

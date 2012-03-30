@@ -73,8 +73,8 @@ CVAPI(CvFont) cvFontQt(const char* nameFont, int pointSize CV_DEFAULT(-1), CvSca
 
 CVAPI(void) cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont *arg2);
 
-CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delayms);
-CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms);
+CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delayms CV_DEFAULT(0));
+CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms CV_DEFAULT(0));
 
 CVAPI(void) cvSaveWindowParameters(const char* name);
 CVAPI(void) cvLoadWindowParameters(const char* name);

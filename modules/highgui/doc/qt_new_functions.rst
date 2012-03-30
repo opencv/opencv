@@ -195,35 +195,35 @@ displayOverlay
 ------------------
 Displays a  text on a window image as an overlay for a specified duration.  
 
-.. ocv:function:: void displayOverlay(const string& name, const string& text, int delay)
+.. ocv:function:: void displayOverlay(const string& name, const string& text, int delayms CV_DEFAULT(0))
 
-.. ocv:cfunction:: void cvDisplayOverlay(const char* name, const char* text, int delay)
+.. ocv:cfunction:: void cvDisplayOverlay(const char* name, const char* text, int delayms CV_DEFAULT(0))
 
     :param name: Name of the window.
 
     :param text: Overlay text to write on a window image.
 
-    :param delay: The period (in milliseconds), during which the overlay text is displayed. If this function is called before the previous overlay text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears.
+    :param delayms: The period (in milliseconds), during which the overlay text is displayed. If this function is called before the previous overlay text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears. Optional - default 0.
 
-The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time *delay*. The function does not modify the image, displayed in the window, that is, after the specified delay the original content of the window is restored.
+The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time *delayms*. The function does not modify the image, displayed in the window, that is, after the specified delay the original content of the window is restored.
 
 
 displayStatusBar
 --------------------
 Displays a text on the window statusbar during the specified period of time.
 
-.. ocv:function:: void displayStatusBar(const string& name, const string& text, int delay)
+.. ocv:function:: void displayStatusBar(const string& name, const string& text, int delayms CV_DEFAULT(0))
 
-.. ocv:cfunction:: void cvDisplayStatusBar(const char* name, const char* text, int delayms)
+.. ocv:cfunction:: void cvDisplayStatusBar(const char* name, const char* text, int delayms CV_DEFAULT(0))
 
     :param name: Name of the window.
 
     :param text: Text to write on the window statusbar.
 
-    :param delay: Duration (in milliseconds) to display the text. If this function is called before the previous text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears.
+    :param delayms: Duration (in milliseconds) to display the text. If this function is called before the previous text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears. Optional - default 0.
 
 The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time
-*delay*
+*delayms*
 . This information is displayed on the window statubar (the window must be created with the ``CV_GUI_EXPANDED`` flags).
 
 createOpenGLCallback
