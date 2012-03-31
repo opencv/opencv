@@ -3491,7 +3491,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
         case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
         case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
-        case COLOR_YUV2GRAY_UYVY: case COLOR_YUV2GRAY_YUV2:
+        case COLOR_YUV2GRAY_UYVY: case COLOR_YUV2GRAY_YUY2:
             CV_Error(CV_StsUnsupportedFormat, "This format is not supported yet");
             break;
         default:
