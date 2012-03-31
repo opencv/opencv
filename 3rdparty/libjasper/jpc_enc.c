@@ -2102,8 +2102,8 @@ static jpc_enc_tcmpt_t *tcmpt_create(jpc_enc_tcmpt_t *tcmpt, jpc_enc_cp_t *cp,
 
 	tcmpt->numstepsizes = tcmpt->numbands;
 	assert(tcmpt->numstepsizes <= JPC_MAXBANDS);
-	memset(tcmpt->stepsizes, 0, sizeof(tcmpt->numstepsizes *
-	  sizeof(uint_fast16_t)));
+	memset(tcmpt->stepsizes, 0, tcmpt->numstepsizes *
+	  sizeof(uint_fast16_t));
 
 	/* Retrieve information about the various bands. */
 	jpc_tsfb_getbands(tcmpt->tsfb, jas_seq2d_xstart(tcmpt->data),

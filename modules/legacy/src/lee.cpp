@@ -1750,7 +1750,7 @@ static int _cvConvertSameOrientation(CvVoronoiDiagram2D* VoronoiDiagram,
     CvSet *NewSiteSeq = NULL,*CurrNewSiteSeq = NULL, *PrevNewSiteSeq = NULL;;
     CvSeqWriter SiteWriter;
 
-    CvVoronoiSite2D NewSite = {{0,0},{0,0},{0,0}},NewSite_prev;
+    CvVoronoiSite2D NewSite = {{0,0},{0,0},{0,0}},NewSite_prev = {{0,0},{0,0},{0,0}};
     CvVoronoiSite2D *pNewSite, *pNewSite_prev = &NewSite_prev;
     pCvVoronoiSite pSite,pFirstSite;
 
@@ -1940,7 +1940,7 @@ static int _cvConvertChangeOrientation(CvVoronoiDiagram2D* VoronoiDiagram,
     CvSet *NewSiteSeq = NULL,*CurrNewSiteSeq = NULL, *PrevNewSiteSeq = NULL;;
     CvSeqWriter SiteWriter;
 
-    CvVoronoiSite2D NewSite = {{0,0},{0,0},{0,0}},NewSite_prev;
+    CvVoronoiSite2D NewSite = {{0,0},{0,0},{0,0}},NewSite_prev = {{0,0},{0,0},{0,0}};
     CvVoronoiSite2D *pNewSite, *pNewSite_prev = &NewSite_prev;
     pCvVoronoiSite pSite,pFirstSite;
 

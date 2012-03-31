@@ -322,8 +322,12 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 {
     const int cn = 3;
     const int MAX_LEVELS = 8;
-    cv::Mat* src_pyramid = new cv::Mat[MAX_LEVELS+1];
-    cv::Mat* dst_pyramid = new cv::Mat[MAX_LEVELS+1];
+    
+    if( (unsigned)max_level > (unsigned)MAX_LEVELS )
+        CV_Error( CV_StsOutOfRange, "The number of pyramid levels is too large or negative" );
+
+    std::vector<cv::Mat> src_pyramid(max_level+1);
+    std::vector<cv::Mat> dst_pyramid(max_level+1);
     cv::Mat mask0;
     int i, j, level;
     //uchar* submask = 0;
@@ -345,9 +349,6 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 
     if( src0.size() != dst0.size() )
         CV_Error( CV_StsUnmatchedSizes, "The input and output images must have the same size" );
-
-    if( (unsigned)max_level > (unsigned)MAX_LEVELS )
-        CV_Error( CV_StsOutOfRange, "The number of pyramid levels is too large or negative" );
 
     if( !(termcrit.type & CV_TERMCRIT_ITER) )
         termcrit.max_iter = 5;
@@ -523,8 +524,6 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
             }
         }
     }
-    delete[] src_pyramid;
-    delete[] dst_pyramid;
 }
 
 void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,

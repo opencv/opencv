@@ -565,7 +565,7 @@ public:
 
     virtual void    SetFileName(char* DataBaseName)
     {
-        m_DataFileName[0] = 0;
+        m_DataFileName[0] = m_DataFileName[1000] = 0;
         if(DataBaseName)
         {
             strncpy(m_DataFileName,DataBaseName,1000);

@@ -2029,7 +2029,7 @@ void cv::fitLine( InputArray _points, OutputArray _line, int distType,
     bool is2d = points.checkVector(2) >= 0;
 
     CV_Assert( (is2d || is3d) && (points.depth() == CV_32F || points.depth() == CV_32S) );
-    CvMat _cpoints = points.reshape(2 + is3d);
+    CvMat _cpoints = points.reshape(2 + (int)is3d);
     float line[6];
     cvFitLine(&_cpoints, distType, param, reps, aeps, &line[0]);
     

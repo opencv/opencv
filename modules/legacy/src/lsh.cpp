@@ -336,10 +336,18 @@ CvLSH* cvCreateLSH(CvLSHOperations* ops, int d, int L, int k, int type, double r
   if (type != CV_32FC1 && type != CV_64FC1)
     CV_Error(CV_StsUnsupportedFormat, "vectors must be either CV_32FC1 or CV_64FC1");
   lsh = new CvLSH;
-  lsh->type = type;
-  switch (type) {
-  case CV_32FC1: lsh->u.lsh_32f = new lsh_pstable_l2_32f(ops, d, L, k, r, rng); break;
-  case CV_64FC1: lsh->u.lsh_64f = new lsh_pstable_l2_64f(ops, d, L, k, r, rng); break;
+  try
+  {
+      lsh->type = type;
+      switch (type) {
+      case CV_32FC1: lsh->u.lsh_32f = new lsh_pstable_l2_32f(ops, d, L, k, r, rng); break;
+      case CV_64FC1: lsh->u.lsh_64f = new lsh_pstable_l2_64f(ops, d, L, k, r, rng); break;
+      }
+  }
+  catch(...)
+  {
+      delete lsh;
+      throw;
   }
 
   return lsh;

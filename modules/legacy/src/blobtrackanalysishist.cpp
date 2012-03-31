@@ -1048,7 +1048,7 @@ public:
 	virtual void    SetFileName(char* DataBaseName)
 	{
 		if(m_HistMat.m_Volume!=m_HistVolumeSaved)SaveHist();
-		m_DataFileName[0] = 0;
+		m_DataFileName[0] = m_DataFileName[1000] = 0;
 
 		if(DataBaseName)
 		{
@@ -1496,7 +1496,7 @@ public:
 	virtual void    SetFileName(char* DataBaseName)
 	{
 		if(m_pTrainData)SaveStatModel();
-		m_DataFileName[0] = 0;
+		m_DataFileName[0] = m_DataFileName[1000] = 0;
 		if(DataBaseName)
 		{
 			strncpy(m_DataFileName,DataBaseName,1000);

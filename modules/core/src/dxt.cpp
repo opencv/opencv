@@ -1628,7 +1628,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             uchar* tmp_buf = 0;
             int dptr_offset = 0;
             int dst_full_len = len*elem_size;
-            int _flags = inv + (src.channels() != dst.channels() ?
+            int _flags = (int)inv + (src.channels() != dst.channels() ?
                          DFT_COMPLEX_INPUT_OR_OUTPUT : 0);
             if( use_buf )
             {
@@ -2246,7 +2246,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     _dst.create( src.rows, src.cols, type );
     Mat dst = _dst.getMat();
 
-    DCTFunc dct_func = dct_tbl[inv + (depth == CV_64F)*2];
+    DCTFunc dct_func = dct_tbl[(int)inv + (depth == CV_64F)*2];
 
     if( (flags & DFT_ROWS) || src.rows == 1 ||
         (src.cols == 1 && (src.isContinuous() && dst.isContinuous())))

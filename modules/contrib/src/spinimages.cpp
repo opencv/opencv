@@ -499,7 +499,7 @@ void cv::Mesh3D::computeNormals(const vector<int>& subset, float normalRadius, i
     ::computeNormals(octree, vtx, normals, mask, normalRadius, minNeighbors);
 }
 
-void cv::Mesh3D::writeAsVrml(const String& file, const vector<Scalar>& colors) const
+void cv::Mesh3D::writeAsVrml(const String& file, const vector<Scalar>& _colors) const
 {
     ofstream ofs(file.c_str());
 
@@ -515,13 +515,13 @@ void cv::Mesh3D::writeAsVrml(const String& file, const vector<Scalar>& colors) c
 	ofs << "]" << endl; //point[
 	ofs << "}" << endl; //Coordinate{
 
-    if (vtx.size() == colors.size())
+    if (vtx.size() == _colors.size())
     {
         ofs << "color Color" << endl << "{" << endl;
         ofs << "color[" << endl;
     	
-        for(size_t i = 0; i < colors.size(); ++i)
-            ofs << (float)colors[i][2] << " " << (float)colors[i][1] << " " << (float)colors[i][0] << endl;        
+        for(size_t i = 0; i < _colors.size(); ++i)
+            ofs << (float)_colors[i][2] << " " << (float)_colors[i][1] << " " << (float)_colors[i][0] << endl;
       
         ofs << "]" << endl; //color[
 	    ofs << "}" << endl; //color Color{
@@ -1171,7 +1171,7 @@ private:
                 break;
                         
             std::transform(left.begin(), left.end(), buf_beg,  WgcHelper(group, groupingMat));
-            size_t minInd = min_element(buf_beg, buf_beg + left_size) - buf_beg;
+            int minInd = min_element(buf_beg, buf_beg + left_size) - buf_beg;
             
             if (buf[minInd] < model.T_GroupingCorespondances) /* can add corespondance to group */
             {
