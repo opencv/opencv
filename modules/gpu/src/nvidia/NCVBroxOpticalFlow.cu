@@ -551,10 +551,10 @@ template<int isBlack> __global__ void sor_pass(float *new_du,
         return;
 
     const int pos = j * stride + i;
-    const int pos_r = pos + 1;
-    const int pos_u = pos + stride;
-    const int pos_d = pos - stride;
-    const int pos_l = pos - 1;
+    const int pos_r = i < width - 1 ? pos + 1 : pos;
+    const int pos_u = j < height - 1 ? pos + stride : pos;
+    const int pos_d = j > 0 ? pos - stride : pos;
+    const int pos_l = i > 0 ? pos - 1 : pos;
 
     //load smooth term
     float s_up, s_left, s_right, s_down;
