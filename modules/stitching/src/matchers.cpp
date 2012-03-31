@@ -50,6 +50,12 @@ using namespace cv::detail;
 using namespace cv::gpu;
 #endif
 
+#ifdef HAVE_OPENCV_NONFREE
+#include "opencv2/nonfree/nonfree.hpp"
+
+static bool makeUseOfNonfree = initModule_nonfree();
+#endif
+
 namespace {
 
 struct DistIdxPair
