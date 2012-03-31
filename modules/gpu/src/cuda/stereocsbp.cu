@@ -644,8 +644,8 @@ namespace cv { namespace gpu { namespace device
             {
                 const T* u_cur = u_cur_ + ::min(h2-1, y/2 + 1) * cmsg_step2 + x/2;
                 const T* d_cur = d_cur_ + ::max(0, y/2 - 1)    * cmsg_step2 + x/2;
-                const T* l_cur = l_cur_ + y/2                  * cmsg_step2 + ::min(w2-1, x/2 + 1);
-                const T* r_cur = r_cur_ + y/2                  * cmsg_step2 + ::max(0, x/2 - 1);
+                const T* l_cur = l_cur_ + (y/2)                * cmsg_step2 + ::min(w2-1, x/2 + 1);
+                const T* r_cur = r_cur_ + (y/2)                * cmsg_step2 + ::max(0, x/2 - 1);
 
                 T* data_cost_new = (T*)ctemp + y * cmsg_step1 + x;
 
@@ -731,7 +731,7 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T>
         __device__ void message_per_pixel(const T* data, T* msg_dst, const T* msg1, const T* msg2, const T* msg3,
-                                          const T* dst_disp, const T* src_disp, int nr_plane, T* temp)
+                                          const T* dst_disp, const T* src_disp, int nr_plane, volatile T* temp)
         {
             T minimum = numeric_limits<T>::max();
 
@@ -808,11 +808,10 @@ namespace cv { namespace gpu { namespace device
             for(int t = 0; t < iters; ++t)
             {
                 compute_message<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
-                cudaSafeCall( cudaGetLastError() );
-
-                if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                cudaSafeCall( cudaGetLastError() );                
             }
+			if (stream == 0)
+                    cudaSafeCall( cudaDeviceSynchronize() );
         };
 
         template void calc_all_iterations(short* u, short* d, short* l, short* r, const short* data_cost_selected, const short* selected_disp_pyr_cur, size_t msg_step,
@@ -830,12 +829,12 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         __global__ void compute_disp(const T* u_, const T* d_, const T* l_, const T* r_,
                                      const T* data_cost_selected, const T* disp_selected_pyr,
-                                     short* disp, size_t res_step, int cols, int rows, int nr_plane)
+                                     PtrStepSz<short> disp, int nr_plane)
         {
             int x = blockIdx.x * blockDim.x + threadIdx.x;
             int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (y > 0 && y < rows - 1 && x > 0 && x < cols - 1)
+            if (y > 0 && y < disp.rows - 1 && x > 0 && x < disp.cols - 1)
             {
                 const T* data = data_cost_selected + y * cmsg_step1 + x;
                 const T* disp_selected = disp_selected_pyr + y * cmsg_step1 + x;
@@ -858,7 +857,7 @@ namespace cv { namespace gpu { namespace device
                         best = saturate_cast<short>(disp_selected[idx]);
                     }
                 }
-                disp[res_step * y + x] = best;
+				disp(y, x) = best;
             }
         }
 
@@ -876,8 +875,7 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(disp.cols, threads.x);
             grid.y = divUp(disp.rows, threads.y);
 
-            compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected,
-                                                       disp.data, disp.step / disp.elemSize(), disp.cols, disp.rows, nr_plane);
+            compute_disp<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, disp_selected, disp, nr_plane);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
