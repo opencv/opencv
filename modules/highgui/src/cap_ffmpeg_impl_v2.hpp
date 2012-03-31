@@ -351,7 +351,11 @@ bool CvCapture_FFMPEG::reopen()
 
     // reopen video
     avformat_open_input(&ic, filename, NULL, NULL);
-    av_find_stream_info(ic);
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
+        avformat_find_stream_info(ic);
+    #else
+        av_find_stream_info(ic);
+    #endif
 	#if LIBAVFORMAT_BUILD > 4628
 		AVCodecContext *enc = ic->streams[video_stream]->codec;
 	#else
@@ -407,7 +411,12 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         CV_WARN("Error opening file");
         goto exit_func;
     }
-    err = av_find_stream_info(ic);
+    err =
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
+        avformat_find_stream_info(ic);
+    #else
+        av_find_stream_info(ic);
+    #endif
     if (err < 0) {
         CV_WARN("Could not find codec parameters");
         goto exit_func;
@@ -960,8 +969,12 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     int frame_rate, frame_rate_base;
     AVCodec *codec;
 
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 10, 0)
+        st = avformat_new_stream(oc, 0);
+    #else
+        st = av_new_stream(oc, 0);
+    #endif
 
-    st = avformat_new_stream(oc, 0);
     if (!st) {
         CV_WARN("Could not allocate stream");
         return NULL;
@@ -1427,7 +1440,13 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     c->bit_rate_tolerance = c->bit_rate;
 
     /* open the codec */
-    if ( (err=avcodec_open(c, codec)) < 0) {
+    if ((err=
+         #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
+             avcodec_open2(c, codec, NULL)
+         #else
+             avcodec_open(c, codec)
+         #endif
+        ) < 0) {
         char errtext[256];
         sprintf(errtext, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
         return false;
