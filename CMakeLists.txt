@@ -295,11 +295,6 @@ endif()
 include(cmake/OpenCVPCHSupport.cmake REQUIRED)
 include(cmake/OpenCVModule.cmake REQUIRED)
 
-if(ANDROID)
-  include(cmake/OpenCVAndroidProject.cmake REQUIRED)
-endif()
-
-
 # ----------------------------------------------------------------------------
 #  Detect 3rd-party tools and libraries
 # ----------------------------------------------------------------------------
@@ -440,21 +435,19 @@ endif()
 include(cmake/OpenCVDetectPython.cmake REQUIRED)
 
 ########################### Java Support ##########################
-# current implementation of Java wrappers generator requires python at build time
-if((NOT DEFINED BUILD_opencv_java OR BUILD_opencv_java) AND PYTHON_EXECUTABLE)
-  if(ANDROID)
-    include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
-    if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
-      message(WARNING "OpenCV requires Android SDK tool revision 14 or newer. Otherwise tests and samples will no be compiled.")
-    endif()
-  endif()
+if(ANDROID)
   include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
-
-  if(ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
-    SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
-  else()
-    SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
+  include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
+  
+  if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
+    message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
   endif()
+endif()
+
+if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
+  SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
+else()
+  SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
 endif()
 
 ############################### QT ################################
