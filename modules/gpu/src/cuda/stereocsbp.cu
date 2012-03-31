@@ -62,8 +62,7 @@ namespace cv { namespace gpu { namespace device
         __constant__ int cth;
 
         __constant__ size_t cimg_step;
-        __constant__ size_t cmsg_step1;
-        __constant__ size_t cmsg_step2;
+        __constant__ size_t cmsg_step;        
         __constant__ size_t cdisp_step1;
         __constant__ size_t cdisp_step2;
 
@@ -137,9 +136,9 @@ namespace cv { namespace gpu { namespace device
 
             if (y < h && x < w)
             {
-                T* selected_disparity = selected_disp_pyr + y * cmsg_step1 + x;
-                T* data_cost_selected = data_cost_selected_ + y * cmsg_step1 + x;
-                T* data_cost = (T*)ctemp + y * cmsg_step1 + x;
+                T* selected_disparity = selected_disp_pyr + y * cmsg_step + x;
+                T* data_cost_selected = data_cost_selected_ + y * cmsg_step + x;
+                T* data_cost = (T*)ctemp + y * cmsg_step + x;
 
                 for(int i = 0; i < nr_plane; i++)
                 {
@@ -171,9 +170,9 @@ namespace cv { namespace gpu { namespace device
 
             if (y < h && x < w)
             {
-                T* selected_disparity = selected_disp_pyr + y * cmsg_step1 + x;
-                T* data_cost_selected = data_cost_selected_ + y * cmsg_step1 + x;
-                T* data_cost = (T*)ctemp + y * cmsg_step1 + x;
+                T* selected_disparity = selected_disp_pyr + y * cmsg_step + x;
+                T* data_cost_selected = data_cost_selected_ + y * cmsg_step + x;
+                T* data_cost = (T*)ctemp + y * cmsg_step + x;
 
                 int nr_local_minimum = 0;
 
@@ -233,7 +232,7 @@ namespace cv { namespace gpu { namespace device
                 int x0 = x << level;
                 int xt = (x + 1) << level;
 
-                T* data_cost = (T*)ctemp + y * cmsg_step1 + x;
+                T* data_cost = (T*)ctemp + y * cmsg_step + x;
 
                 for(int d = 0; d < cndisp; ++d)
                 {
@@ -314,7 +313,7 @@ namespace cv { namespace gpu { namespace device
                 if (winsz >=  4) if (tid <  2) vdline[tid] += vdline[tid + 2];
                 if (winsz >=  2) if (tid <  1) vdline[tid] += vdline[tid + 1];
 
-                T* data_cost = (T*)ctemp + y_out * cmsg_step1 + x_out;
+                T* data_cost = (T*)ctemp + y_out * cmsg_step + x_out;
 
                 if (tid == 0)
                     data_cost[cdisp_step1 * d] = saturate_cast<T>(dline[0]);
@@ -375,7 +374,7 @@ namespace cv { namespace gpu { namespace device
 
             size_t disp_step = msg_step * h;
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step,  sizeof(size_t)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             init_data_cost_callers[level](rows, cols, h, w, level, ndisp, channels, stream);
             cudaSafeCall( cudaGetLastError() );
@@ -424,8 +423,8 @@ namespace cv { namespace gpu { namespace device
                 int x0 = x << level;
                 int xt = (x + 1) << level;
 
-                const T* selected_disparity = selected_disp_pyr + y/2 * cmsg_step2 + x/2;
-                T* data_cost = data_cost_ + y * cmsg_step1 + x;
+                const T* selected_disparity = selected_disp_pyr + y/2 * cmsg_step + x/2;
+                T* data_cost = data_cost_ + y * cmsg_step + x;
 
                 for(int d = 0; d < nr_plane; d++)
                 {
@@ -462,8 +461,8 @@ namespace cv { namespace gpu { namespace device
 
             int tid = threadIdx.x;
 
-            const T* selected_disparity = selected_disp_pyr + y_out/2 * cmsg_step2 + x_out/2;
-            T* data_cost = data_cost_ + y_out * cmsg_step1 + x_out;
+            const T* selected_disparity = selected_disp_pyr + y_out/2 * cmsg_step + x_out/2;
+            T* data_cost = data_cost_ + y_out * cmsg_step + x_out;
 
             if (d < nr_plane)
             {
@@ -558,7 +557,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template<class T>
-        void compute_data_cost(const T* disp_selected_pyr, T* data_cost, size_t msg_step1, size_t msg_step2,
+        void compute_data_cost(const T* disp_selected_pyr, T* data_cost, size_t msg_step,
                                int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream)
         {
             typedef void (*ComputeDataCostCaller)(const T* disp_selected_pyr, T* data_cost, int rows, int cols,
@@ -571,13 +570,12 @@ namespace cv { namespace gpu { namespace device
                 compute_data_cost_reduce_caller_<T, 64>, compute_data_cost_reduce_caller_<T, 128>, compute_data_cost_reduce_caller_<T, 256>
             };
 
-            size_t disp_step1 = msg_step1 * h;
-            size_t disp_step2 = msg_step2 * h2;
+            size_t disp_step1 = msg_step * h;
+            size_t disp_step2 = msg_step * h2;
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step1,  sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step2,  &msg_step2,  sizeof(size_t)) );
-
+            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
+            
             callers[level](disp_selected_pyr, data_cost, rows, cols, h, w, level, nr_plane, channels, stream);
             cudaSafeCall( cudaGetLastError() );
 
@@ -585,10 +583,10 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void compute_data_cost(const short* disp_selected_pyr, short* data_cost, size_t msg_step1, size_t msg_step2,
+        template void compute_data_cost(const short* disp_selected_pyr, short* data_cost, size_t msg_step,
                                int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
 
-        template void compute_data_cost(const float* disp_selected_pyr, float* data_cost, size_t msg_step1, size_t msg_step2,
+        template void compute_data_cost(const float* disp_selected_pyr, float* data_cost, size_t msg_step,
                                int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
              
 
@@ -642,15 +640,15 @@ namespace cv { namespace gpu { namespace device
 
             if (y < h && x < w)
             {
-                const T* u_cur = u_cur_ + ::min(h2-1, y/2 + 1) * cmsg_step2 + x/2;
-                const T* d_cur = d_cur_ + ::max(0, y/2 - 1)    * cmsg_step2 + x/2;
-                const T* l_cur = l_cur_ + (y/2)                * cmsg_step2 + ::min(w2-1, x/2 + 1);
-                const T* r_cur = r_cur_ + (y/2)                * cmsg_step2 + ::max(0, x/2 - 1);
+                const T* u_cur = u_cur_ + ::min(h2-1, y/2 + 1) * cmsg_step + x/2;
+                const T* d_cur = d_cur_ + ::max(0, y/2 - 1)    * cmsg_step + x/2;
+                const T* l_cur = l_cur_ + (y/2)                * cmsg_step + ::min(w2-1, x/2 + 1);
+                const T* r_cur = r_cur_ + (y/2)                * cmsg_step + ::max(0, x/2 - 1);
 
-                T* data_cost_new = (T*)ctemp + y * cmsg_step1 + x;
+                T* data_cost_new = (T*)ctemp + y * cmsg_step + x;
 
-                const T* disparity_selected_cur = selected_disp_pyr_cur + y/2 * cmsg_step2 + x/2;
-                const T* data_cost = data_cost_ + y * cmsg_step1 + x;
+                const T* disparity_selected_cur = selected_disp_pyr_cur + y/2 * cmsg_step + x/2;
+                const T* data_cost = data_cost_ + y * cmsg_step + x;
 
                 for(int d = 0; d < nr_plane2; d++)
                 {
@@ -660,18 +658,18 @@ namespace cv { namespace gpu { namespace device
                     data_cost_new[d * cdisp_step1] = val;
                 }
 
-                T* data_cost_selected = data_cost_selected_ + y * cmsg_step1 + x;
-                T* disparity_selected_new = selected_disp_pyr_new + y * cmsg_step1 + x;
+                T* data_cost_selected = data_cost_selected_ + y * cmsg_step + x;
+                T* disparity_selected_new = selected_disp_pyr_new + y * cmsg_step + x;
 
-                T* u_new = u_new_ + y * cmsg_step1 + x;
-                T* d_new = d_new_ + y * cmsg_step1 + x;
-                T* l_new = l_new_ + y * cmsg_step1 + x;
-                T* r_new = r_new_ + y * cmsg_step1 + x;
+                T* u_new = u_new_ + y * cmsg_step + x;
+                T* d_new = d_new_ + y * cmsg_step + x;
+                T* l_new = l_new_ + y * cmsg_step + x;
+                T* r_new = r_new_ + y * cmsg_step + x;
 
-                u_cur = u_cur_ + y/2 * cmsg_step2 + x/2;
-                d_cur = d_cur_ + y/2 * cmsg_step2 + x/2;
-                l_cur = l_cur_ + y/2 * cmsg_step2 + x/2;
-                r_cur = r_cur_ + y/2 * cmsg_step2 + x/2;
+                u_cur = u_cur_ + y/2 * cmsg_step + x/2;
+                d_cur = d_cur_ + y/2 * cmsg_step + x/2;
+                l_cur = l_cur_ + y/2 * cmsg_step + x/2;
+                r_cur = r_cur_ + y/2 * cmsg_step + x/2;
 
                 get_first_k_element_increase(u_new, d_new, l_new, r_new, u_cur, d_cur, l_cur, r_cur,
                                              data_cost_selected, disparity_selected_new, data_cost_new,
@@ -684,17 +682,16 @@ namespace cv { namespace gpu { namespace device
         void init_message(T* u_new, T* d_new, T* l_new, T* r_new,
                           const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
                           T* selected_disp_pyr_new, const T* selected_disp_pyr_cur,
-                          T* data_cost_selected, const T* data_cost, size_t msg_step1, size_t msg_step2,
+                          T* data_cost_selected, const T* data_cost, size_t msg_step,
                           int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream)
         {
 
-            size_t disp_step1 = msg_step1 * h;
-            size_t disp_step2 = msg_step2 * h2;
+            size_t disp_step1 = msg_step * h;
+            size_t disp_step2 = msg_step * h2;
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,   &msg_step1, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step2,   &msg_step2, sizeof(size_t)) );
-
+            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,   &msg_step, sizeof(size_t)) );
+            
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
 
@@ -716,13 +713,13 @@ namespace cv { namespace gpu { namespace device
         template void init_message(short* u_new, short* d_new, short* l_new, short* r_new,
                           const short* u_cur, const short* d_cur, const short* l_cur, const short* r_cur,
                           short* selected_disp_pyr_new, const short* selected_disp_pyr_cur,
-                          short* data_cost_selected, const short* data_cost, size_t msg_step1, size_t msg_step2,
+                          short* data_cost_selected, const short* data_cost, size_t msg_step,
                           int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);
 
         template void init_message(float* u_new, float* d_new, float* l_new, float* r_new,
                           const float* u_cur, const float* d_cur, const float* l_cur, const float* r_cur,
                           float* selected_disp_pyr_new, const float* selected_disp_pyr_cur,
-                          float* data_cost_selected, const float* data_cost, size_t msg_step1, size_t msg_step2,
+                          float* data_cost_selected, const float* data_cost, size_t msg_step,
                           int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);        
 
         ///////////////////////////////////////////////////////////////
@@ -772,21 +769,21 @@ namespace cv { namespace gpu { namespace device
 
             if (y > 0 && y < h - 1 && x > 0 && x < w - 1)
             {
-                const T* data = data_cost_selected + y * cmsg_step1 + x;
+                const T* data = data_cost_selected + y * cmsg_step + x;
 
-                T* u = u_ + y * cmsg_step1 + x;
-                T* d = d_ + y * cmsg_step1 + x;
-                T* l = l_ + y * cmsg_step1 + x;
-                T* r = r_ + y * cmsg_step1 + x;
+                T* u = u_ + y * cmsg_step + x;
+                T* d = d_ + y * cmsg_step + x;
+                T* l = l_ + y * cmsg_step + x;
+                T* r = r_ + y * cmsg_step + x;
 
-                const T* disp = selected_disp_pyr_cur + y * cmsg_step1 + x;
+                const T* disp = selected_disp_pyr_cur + y * cmsg_step + x;
 
-                T* temp = (T*)ctemp + y * cmsg_step1 + x;
+                T* temp = (T*)ctemp + y * cmsg_step + x;
 
-                message_per_pixel(data, u, r - 1, u + cmsg_step1, l + 1, disp, disp - cmsg_step1, nr_plane, temp);
-                message_per_pixel(data, d, d - cmsg_step1, r - 1, l + 1, disp, disp + cmsg_step1, nr_plane, temp);
-                message_per_pixel(data, l, u + cmsg_step1, d - cmsg_step1, l + 1, disp, disp - 1, nr_plane, temp);
-                message_per_pixel(data, r, u + cmsg_step1, d - cmsg_step1, r - 1, disp, disp + 1, nr_plane, temp);
+                message_per_pixel(data, u, r - 1, u + cmsg_step, l + 1, disp, disp - cmsg_step, nr_plane, temp);
+                message_per_pixel(data, d, d - cmsg_step, r - 1, l + 1, disp, disp + cmsg_step, nr_plane, temp);
+                message_per_pixel(data, l, u + cmsg_step, d - cmsg_step, l + 1, disp, disp - 1, nr_plane, temp);
+                message_per_pixel(data, r, u + cmsg_step, d - cmsg_step, r - 1, disp, disp + 1, nr_plane, temp);
             }
         }
 
@@ -797,7 +794,7 @@ namespace cv { namespace gpu { namespace device
         {
             size_t disp_step = msg_step * h;
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step,  sizeof(size_t)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -836,13 +833,13 @@ namespace cv { namespace gpu { namespace device
 
             if (y > 0 && y < disp.rows - 1 && x > 0 && x < disp.cols - 1)
             {
-                const T* data = data_cost_selected + y * cmsg_step1 + x;
-                const T* disp_selected = disp_selected_pyr + y * cmsg_step1 + x;
+                const T* data = data_cost_selected + y * cmsg_step + x;
+                const T* disp_selected = disp_selected_pyr + y * cmsg_step + x;
 
-                const T* u = u_ + (y+1) * cmsg_step1 + (x+0);
-                const T* d = d_ + (y-1) * cmsg_step1 + (x+0);
-                const T* l = l_ + (y+0) * cmsg_step1 + (x+1);
-                const T* r = r_ + (y+0) * cmsg_step1 + (x-1);
+                const T* u = u_ + (y+1) * cmsg_step + (x+0);
+                const T* d = d_ + (y-1) * cmsg_step + (x+0);
+                const T* l = l_ + (y+0) * cmsg_step + (x+1);
+                const T* r = r_ + (y+0) * cmsg_step + (x-1);
 
                 int best = 0;
                 T best_val = numeric_limits<T>::max();
@@ -867,7 +864,7 @@ namespace cv { namespace gpu { namespace device
         {
             size_t disp_step = disp.rows * msg_step;
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step, sizeof(size_t)) );
-            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step1,  &msg_step,  sizeof(size_t)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
 
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);

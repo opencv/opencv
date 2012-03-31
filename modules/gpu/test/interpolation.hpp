@@ -85,7 +85,7 @@ template <typename T> struct CubicInterpolator
 {
     static float getValue(float p[4], float x)
     {
-        return p[1] + 0.5 * x * (p[2] - p[0] + x*(2.0*p[0] - 5.0*p[1] + 4.0*p[2] - p[3] + x*(3.0*(p[1] - p[2]) + p[3] - p[0])));
+        return static_cast<float>(p[1] + 0.5 * x * (p[2] - p[0] + x*(2.0*p[0] - 5.0*p[1] + 4.0*p[2] - p[3] + x*(3.0*(p[1] - p[2]) + p[3] - p[0]))));
     }
 
     static float getValue(float p[4][4], float x, float y)
@@ -107,13 +107,13 @@ template <typename T> struct CubicInterpolator
 
         float vals[4][4] =
         {
-            {readVal<T>(src, iy - 2, ix - 2, c, border_type, borderVal), readVal<T>(src, iy - 2, ix - 1, c, border_type, borderVal), readVal<T>(src, iy - 2, ix, c, border_type, borderVal), readVal<T>(src, iy - 2, ix + 1, c, border_type, borderVal)},
-            {readVal<T>(src, iy - 1, ix - 2, c, border_type, borderVal), readVal<T>(src, iy - 1, ix - 1, c, border_type, borderVal), readVal<T>(src, iy - 1, ix, c, border_type, borderVal), readVal<T>(src, iy - 1, ix + 1, c, border_type, borderVal)},
-            {readVal<T>(src, iy    , ix - 2, c, border_type, borderVal), readVal<T>(src, iy    , ix - 1, c, border_type, borderVal), readVal<T>(src, iy    , ix, c, border_type, borderVal), readVal<T>(src, iy    , ix + 1, c, border_type, borderVal)},
-            {readVal<T>(src, iy + 1, ix - 2, c, border_type, borderVal), readVal<T>(src, iy + 1, ix - 1, c, border_type, borderVal), readVal<T>(src, iy + 1, ix, c, border_type, borderVal), readVal<T>(src, iy + 1, ix + 1, c, border_type, borderVal)},
+            {(float)readVal<T>(src, iy - 2, ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy - 2, ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy - 2, ix, c, border_type, borderVal), (float)readVal<T>(src, iy - 2, ix + 1, c, border_type, borderVal)},
+            {(float)readVal<T>(src, iy - 1, ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy - 1, ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy - 1, ix, c, border_type, borderVal), (float)readVal<T>(src, iy - 1, ix + 1, c, border_type, borderVal)},
+            {(float)readVal<T>(src, iy    , ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy    , ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy    , ix, c, border_type, borderVal), (float)readVal<T>(src, iy    , ix + 1, c, border_type, borderVal)},
+            {(float)readVal<T>(src, iy + 1, ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy + 1, ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy + 1, ix, c, border_type, borderVal), (float)readVal<T>(src, iy + 1, ix + 1, c, border_type, borderVal)},
         };
 
-        return cv::saturate_cast<T>(getValue(vals, (x - ix + 2.0) / 4.0, (y - iy + 2.0) / 4.0));
+        return cv::saturate_cast<T>(getValue(vals, static_cast<float>((x - ix + 2.0) / 4.0), static_cast<float>((y - iy + 2.0) / 4.0)));
     }
 };
 

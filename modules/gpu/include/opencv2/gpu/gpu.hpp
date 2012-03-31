@@ -1095,14 +1095,9 @@ public:
 
     bool use_local_init_data_cost;
 private:
-    GpuMat u[2], d[2], l[2], r[2];
-    GpuMat disp_selected_pyr[2];
-
-    GpuMat data_cost;
-    GpuMat data_cost_selected;
-
+	GpuMat messages_buffers;
+        
     GpuMat temp;
-
     GpuMat out;
 };
 
