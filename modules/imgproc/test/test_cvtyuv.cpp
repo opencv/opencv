@@ -471,17 +471,17 @@ TEST_P(Imgproc_ColorYUV, roi_accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(cvt420, Imgproc_ColorYUV,
-    ::testing::Values(CV_YUV2RGB_NV12, CV_YUV2BGR_NV12, CV_YUV2RGB_NV21, CV_YUV2BGR_NV21,
-                      CV_YUV2RGBA_NV12, CV_YUV2BGRA_NV12, CV_YUV2RGBA_NV21, CV_YUV2BGRA_NV21,
-                      CV_YUV2RGB_YV12, CV_YUV2BGR_YV12, CV_YUV2RGB_IYUV, CV_YUV2BGR_IYUV,
-                      CV_YUV2RGBA_YV12, CV_YUV2BGRA_YV12, CV_YUV2RGBA_IYUV, CV_YUV2BGRA_IYUV,
-                      CV_YUV2GRAY_420));
+    ::testing::Values((int)CV_YUV2RGB_NV12, (int)CV_YUV2BGR_NV12, (int)CV_YUV2RGB_NV21, (int)CV_YUV2BGR_NV21,
+                      (int)CV_YUV2RGBA_NV12, (int)CV_YUV2BGRA_NV12, (int)CV_YUV2RGBA_NV21, (int)CV_YUV2BGRA_NV21,
+                      (int)CV_YUV2RGB_YV12, (int)CV_YUV2BGR_YV12, (int)CV_YUV2RGB_IYUV, (int)CV_YUV2BGR_IYUV,
+                      (int)CV_YUV2RGBA_YV12, (int)CV_YUV2BGRA_YV12, (int)CV_YUV2RGBA_IYUV, (int)CV_YUV2BGRA_IYUV,
+                      (int)CV_YUV2GRAY_420));
 
 INSTANTIATE_TEST_CASE_P(DISABLED_cvt888, Imgproc_ColorYUV,
-    ::testing::Values(CV_YUV2BGR, CV_YUV2RGB));
+    ::testing::Values((int)CV_YUV2BGR, (int)CV_YUV2RGB));
 
 INSTANTIATE_TEST_CASE_P(DISABLED_cvt422, Imgproc_ColorYUV,
-    ::testing::Values(CV_YUV2RGB_UYVY, CV_YUV2BGR_UYVY, CV_YUV2RGBA_UYVY, CV_YUV2BGRA_UYVY,
-                      CV_YUV2RGB_YUY2, CV_YUV2BGR_YUY2, CV_YUV2RGB_YVYU, CV_YUV2BGR_YVYU,
-                      CV_YUV2RGBA_YUY2, CV_YUV2BGRA_YUY2, CV_YUV2RGBA_YVYU, CV_YUV2BGRA_YVYU,
-                      CV_YUV2GRAY_UYVY, CV_YUV2GRAY_YUY2));
+    ::testing::Values((int)CV_YUV2RGB_UYVY, (int)CV_YUV2BGR_UYVY, (int)CV_YUV2RGBA_UYVY, (int)CV_YUV2BGRA_UYVY,
+                      (int)CV_YUV2RGB_YUY2, (int)CV_YUV2BGR_YUY2, (int)CV_YUV2RGB_YVYU, (int)CV_YUV2BGR_YVYU,
+                      (int)CV_YUV2RGBA_YUY2, (int)CV_YUV2BGRA_YUY2, (int)CV_YUV2RGBA_YVYU, (int)CV_YUV2BGRA_YVYU,
+                      (int)CV_YUV2GRAY_UYVY, (int)CV_YUV2GRAY_YUY2));
