@@ -754,14 +754,14 @@ videoDevice::videoDevice(){
          width                 = 0;
          height                = 0;
 
-         tryWidth            = 0;
-         tryHeight            = 0;
+         tryWidth            = 640;
+         tryHeight            = 480;
          tryVideoType = MEDIASUBTYPE_RGB24;
          nFramesForReconnect= 10000;
          nFramesRunning     = 0;
          myID                = -1;
 
-         tryDiffSize         = false;
+         tryDiffSize         = true;
          useCrossbar         = false;
          readyToCapture      = false;
          sizeSet            = false;
