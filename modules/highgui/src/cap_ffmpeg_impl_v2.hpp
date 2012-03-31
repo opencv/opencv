@@ -343,7 +343,11 @@ bool CvCapture_FFMPEG::reopen()
     // reopen video
     avformat_open_input(&ic, filename, NULL, NULL);
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
-        avformat_find_stream_info(ic);
+        #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
+            avformat_find_stream_info(ic);
+        #else
+            avformat_find_stream_info(ic, NULL);
+        #endif
     #else
         av_find_stream_info(ic);
     #endif
@@ -404,7 +408,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     }
     err =
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
-        avformat_find_stream_info(ic);
+        #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
+            avformat_find_stream_info(ic);
+        #else
+            avformat_find_stream_info(ic, NULL);
+        #endif
     #else
         av_find_stream_info(ic);
     #endif
