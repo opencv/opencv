@@ -223,17 +223,21 @@ bool TestHaarCascadeApplication::process()
 
     _FPU_SETCW(fpu_oldcw); // restore old cw
 #else
+#ifndef _WIN64
     Ncv32u fpu_oldcw, fpu_cw;
     _controlfp_s(&fpu_cw, 0, 0);
     fpu_oldcw = fpu_cw;
     _controlfp_s(&fpu_cw, _PC_24, _MCW_PC);
+#endif
     ncvStat = ncvApplyHaarClassifierCascade_host(
         h_integralImage, h_rectStdDev, h_pixelMask,
         detectionsOnThisScale_h,
         haar, h_HaarStages, h_HaarNodes, h_HaarFeatures, false,
         searchRoiU, 1, 1.0f);
     ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
+#ifndef _WIN64
     _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
+#endif
 #endif
 	
 #endif
