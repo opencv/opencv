@@ -55,7 +55,6 @@ extern "C" {
 
 #ifdef WIN32
   #define HAVE_FFMPEG_SWSCALE 1
-  #include <libavformat/avformat.h>
   #include <libavcodec/avcodec.h>
   #include <libswscale/swscale.h>
 #else
@@ -65,13 +64,11 @@ extern "C" {
 
 #if defined(HAVE_GENTOO_FFMPEG)
   #define HAVE_LIBAVCODEC_AVCODEC_H 1
-  #define HAVE_LIBAVFORMAT_AVFORMAT_H 1
   #if defined(HAVE_FFMPEG_SWSCALE)
     #define HAVE_LIBSWSCALE_SWSCALE_H 1
   #endif
 #elif defined HAVE_FFMPEG
   #define HAVE_FFMPEG_AVCODEC_H 1
-  #define HAVE_FFMPEG_AVFORMAT_H 1
   #if defined(HAVE_FFMPEG_SWSCALE)
     #define HAVE_FFMPEG_SWSCALE_H 1
   #endif
@@ -82,16 +79,10 @@ extern "C" {
 #if defined(HAVE_FFMPEG_AVCODEC_H)
   #include <ffmpeg/avcodec.h>
 #endif
-#if defined(HAVE_FFMPEG_AVFORMAT_H)
-  #include <ffmpeg/avformat.h>
-#endif
 #if defined(HAVE_FFMPEG_SWSCALE_H)
   #include <ffmpeg/swscale.h>
 #endif
 
-#if defined(HAVE_LIBAVFORMAT_AVFORMAT_H)
-  #include <libavformat/avformat.h>
-#endif
 #if defined(HAVE_LIBAVCODEC_AVCODEC_H)
   #include <libavcodec/avcodec.h>
 #endif
