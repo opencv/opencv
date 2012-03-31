@@ -1486,7 +1486,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 	#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
 			if (url_fopen(&oc->pb, filename, URL_WRONLY) < 0)
 	#else
-				if (avio_open(&oc->pb, filename, 1) < 0)
+                if (avio_open(&oc->pb, filename, AVIO_FLAG_WRITE) < 0)
 	#endif
         {
             return false;
