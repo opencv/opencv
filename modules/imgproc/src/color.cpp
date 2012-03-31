@@ -2829,22 +2829,18 @@ struct YUV420p2RGB888Invoker
     Mat* dst;
     const uchar* my1, *mu, *mv;
     int width, stride;
+    int ustepIdx, vstepIdx;
 
-    YUV420p2RGB888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v)
-        : dst(_dst), my1(_y1), mu(_u), mv(_v), width(_dst->cols), stride(_stride) {}
+    YUV420p2RGB888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
+        : dst(_dst), my1(_y1), mu(_u), mv(_v), width(_dst->cols), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
 
     void operator()(const BlockedRange& range) const
     {
         const int rangeBegin = range.begin() * 2;
         const int rangeEnd = range.end() * 2;
-
-        //R = 1.164(Y - 16) + 1.596(V - 128)
-        //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
-        //B = 1.164(Y - 16)                  + 2.018(U - 128)
-
-        //R = (1220542(Y - 16) + 1673527(V - 128)                  + (1 << 19)) >> 20
-        //G = (1220542(Y - 16) - 852492(V - 128) - 409993(U - 128) + (1 << 19)) >> 20
-        //B = (1220542(Y - 16)                  + 2116026(U - 128) + (1 << 19)) >> 20
+        
+        size_t uvsteps[2] = {width/2, stride - width/2};
+        int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const int cY = 1220542;
         const int cUB = 2116026;
@@ -2854,10 +2850,16 @@ struct YUV420p2RGB888Invoker
         const int YUV420_SHIFT = 20;
 
         const uchar* y1 = my1 + rangeBegin * stride;
-        const uchar* u1 = mu + (range.begin() / 2) * stride + (range.begin() % 2) * width/2;
-        const uchar* v1 = mv + (range.begin() / 2) * stride + (range.begin() % 2) * width/2;
+        const uchar* u1 = mu + (range.begin() / 2) * stride;
+        const uchar* v1 = mv + (range.begin() / 2) * stride;
+        
+        if(range.begin() % 2 == 1)
+        {
+            u1 += uvsteps[(usIdx++) & 1];
+            v1 += uvsteps[(vsIdx++) & 1];
+        }
 
-        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += width / 2, v1 += width / 2)
+        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
         {
             uchar* row1 = dst->ptr<uchar>(j);
             uchar* row2 = dst->ptr<uchar>(j + 1);
@@ -2892,12 +2894,6 @@ struct YUV420p2RGB888Invoker
                 row2[4]      = saturate_cast<uchar>((y11 + guv) >> YUV420_SHIFT);
                 row2[3+bIdx] = saturate_cast<uchar>((y11 + buv) >> YUV420_SHIFT);
             }
-            
-            if(j % 4 == 2)
-            {
-                u1 += stride - width;
-                v1 += stride - width;
-            }
         }
     }
 };
@@ -2908,22 +2904,15 @@ struct YUV420p2RGBA8888Invoker
     Mat* dst;
     const uchar* my1, *mu, *mv;
     int width, stride;
+    int ustepIdx, vstepIdx;
 
-    YUV420p2RGBA8888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v)
-        : dst(_dst), my1(_y1), mu(_u), mv(_v), width(_dst->cols), stride(_stride) {}
+    YUV420p2RGBA8888Invoker(Mat* _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
+        : dst(_dst), my1(_y1), mu(_u), mv(_v), width(_dst->cols), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
 
     void operator()(const BlockedRange& range) const
     {
         int rangeBegin = range.begin() * 2;
         int rangeEnd = range.end() * 2;
-
-        //R = 1.164(Y - 16) + 1.596(V - 128)
-        //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
-        //B = 1.164(Y - 16)                  + 2.018(U - 128)
-
-        //R = (1220542(Y - 16) + 1673527(V - 128)                  + (1 << 19)) >> 20
-        //G = (1220542(Y - 16) - 852492(V - 128) - 409993(U - 128) + (1 << 19)) >> 20
-        //B = (1220542(Y - 16)                  + 2116026(U - 128) + (1 << 19)) >> 20
 
         const int cY = 1220542;
         const int cUB = 2116026;
@@ -2931,12 +2920,21 @@ struct YUV420p2RGBA8888Invoker
         const int cVG = -852492;
         const int cVR = 1673527;
         const int YUV420_SHIFT = 20;
+        
+        size_t uvsteps[2] = {width/2, stride - width/2};
+        int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
-        const uchar* u1 = mu + (range.begin() / 2) * stride + (range.begin() % 2) * width/2;
-        const uchar* v1 = mv + (range.begin() / 2) * stride + (range.begin() % 2) * width/2;
+        const uchar* u1 = mu + (range.begin() / 2) * stride;
+        const uchar* v1 = mv + (range.begin() / 2) * stride;
+        
+        if(range.begin() % 2 == 1)
+        {
+            u1 += uvsteps[(usIdx++) & 1];
+            v1 += uvsteps[(vsIdx++) & 1];
+        }
 
-        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += width / 2, v1 += width / 2)
+        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
         {
             uchar* row1 = dst->ptr<uchar>(j);
             uchar* row2 = dst->ptr<uchar>(j + 1);
@@ -2975,12 +2973,6 @@ struct YUV420p2RGBA8888Invoker
                 row2[4+bIdx] = saturate_cast<uchar>((y11 + buv) >> YUV420_SHIFT);
                 row2[7]      = uchar(0xff);
             }
-            
-            if(j % 4 == 2)
-            {
-                u1 += stride - width;
-                v1 += stride - width;
-            }
         }
     }
 };
@@ -3012,9 +3004,9 @@ inline void cvtYUV420sp2RGBA(Mat& _dst, int _stride, const uchar* _y1, const uch
 }
 
 template<int bIdx>
-inline void cvtYUV420p2RGB(Mat& _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v)
+inline void cvtYUV420p2RGB(Mat& _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
 {
-    YUV420p2RGB888Invoker<bIdx> converter(&_dst, _stride, _y1,  _u, _v);
+    YUV420p2RGB888Invoker<bIdx> converter(&_dst, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
 #ifdef HAVE_TBB
     if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
         parallel_for(BlockedRange(0, _dst.rows/2), converter);
@@ -3024,9 +3016,9 @@ inline void cvtYUV420p2RGB(Mat& _dst, int _stride, const uchar* _y1, const uchar
 }
 
 template<int bIdx>
-inline void cvtYUV420p2RGBA(Mat& _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v)
+inline void cvtYUV420p2RGBA(Mat& _dst, int _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
 {
-    YUV420p2RGBA8888Invoker<bIdx> converter(&_dst, _stride, _y1,  _u, _v);
+    YUV420p2RGBA8888Invoker<bIdx> converter(&_dst, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
 #ifdef HAVE_TBB
     if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
         parallel_for(BlockedRange(0, _dst.rows/2), converter);
@@ -3461,15 +3453,19 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 int srcstep = (int)src.step;
                 const uchar* y = src.ptr();
                 const uchar* u = y + srcstep * dstSz.height;
-                const uchar* v = u + (srcstep * dstSz.height / 4);
-                if(uidx == 1) std::swap(u ,v);
+                const uchar* v = y + srcstep * (dstSz.height + dstSz.height/4) + (dstSz.width/2) * ((dstSz.height % 4)/2);
+                
+                int ustepIdx = 0;
+                int vstepIdx = dstSz.height % 4 == 2 ? 1 : 0;
+                
+                if(uidx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); };
                 
                 switch(dcn*10 + bidx)
                 {
-                    case 30: cvtYUV420p2RGB<0>(dst, srcstep, y, u, v); break;
-                    case 32: cvtYUV420p2RGB<2>(dst, srcstep, y, u, v); break;
-                    case 40: cvtYUV420p2RGBA<0>(dst, srcstep, y, u, v); break;
-                    case 42: cvtYUV420p2RGBA<2>(dst, srcstep, y, u, v); break;
+                    case 30: cvtYUV420p2RGB<0>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
+                    case 32: cvtYUV420p2RGB<2>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
+                    case 40: cvtYUV420p2RGBA<0>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
+                    case 42: cvtYUV420p2RGBA<2>(dst, srcstep, y, u, v, ustepIdx, vstepIdx); break;
                     default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
                 };
             }
