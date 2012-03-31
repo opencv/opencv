@@ -1367,7 +1367,7 @@ void CvForestERTree::split_node_data( CvDTreeNode* node )
         data->get_ord_var_data( node, vi, values_buf, missing_buf, &values, &missing, 0 );
 
         for( i = 0; i < n; i++ )
-            nr1 += (!missing[i] & dir[i]);
+            nr1 += ((!missing[i]) & dir[i]);
         left->set_num_valid(vi, n1 - nr1);
         right->set_num_valid(vi, nr1);                
     }
