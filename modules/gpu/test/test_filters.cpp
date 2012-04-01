@@ -505,13 +505,14 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, MorphEx, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Filter2D
 
-PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, UseRoi)
+PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
     int type;
     cv::Size ksize;
     cv::Point anchor;
+    int borderType;
     bool useRoi;
 
     cv::Mat img;
@@ -524,7 +525,8 @@ PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor,
         type = GET_PARAM(2);
         ksize = GET_PARAM(3);
         anchor = GET_PARAM(4);
-        useRoi = GET_PARAM(5);
+        borderType = GET_PARAM(5);
+        useRoi = GET_PARAM(6);
 
         cv::gpu::setDevice(devInfo.deviceID());
     }
@@ -533,26 +535,24 @@ PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor,
 TEST_P(Filter2D, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
-    cv::Mat kernel = cv::Mat::ones(ksize.height, ksize.width, CV_32FC1);
+    cv::Mat kernel = randomMat(cv::Size(ksize.width, ksize.height), CV_32FC1, 0.0, 1.0);
 
     cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::filter2D(loadMat(src, useRoi), dst, -1, kernel, anchor);
+    cv::gpu::filter2D(loadMat(src, useRoi), dst, -1, kernel, anchor, borderType);
 
     cv::Mat dst_gold;
-    cv::filter2D(src, dst_gold, -1, kernel, anchor, 0, type == CV_32FC1 ? cv::BORDER_DEFAULT : cv::BORDER_CONSTANT);
+    cv::filter2D(src, dst_gold, -1, kernel, anchor, 0, borderType);
 
-    if (type == CV_32FC1)
-        EXPECT_MAT_NEAR(dst_gold, dst, 1e-1);
-    else
-        EXPECT_MAT_NEAR(getInnerROI(dst_gold, ksize), getInnerROI(dst, ksize), 0.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) == CV_32F ? 1e-1 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Filter2D, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC4)),
     testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7)), KSize(cv::Size(11, 11)), KSize(cv::Size(13, 13)), KSize(cv::Size(15, 15))),
     testing::Values(Anchor(cv::Point(-1, -1)), Anchor(cv::Point(0, 0)), Anchor(cv::Point(2, 2))),
+    testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_CONSTANT), BorderType(cv::BORDER_REFLECT)),
     WHOLE_SUBMAT));
 
 } // namespace

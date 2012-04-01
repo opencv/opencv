@@ -284,12 +284,11 @@ CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, co
 
 //! returns 2D filter with the specified kernel
 //! supports CV_8UC1 and CV_8UC4 types
-CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Size& ksize,
-    Point anchor = Point(-1, -1));
+CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
 //! returns the non-separable linear filter engine
 CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel,
-    const Point& anchor = Point(-1,-1));
+    Point anchor = Point(-1,-1), int borderType = BORDER_DEFAULT);
 
 //! returns the primitive row filter with the specified kernel.
 //! supports only CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC2, CV_32SC1, CV_32FC1 source type.
@@ -367,7 +366,7 @@ CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& 
                              Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
 
 //! applies non-separable 2D linear filter to the image
-CV_EXPORTS void filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1), Stream& stream = Stream::Null());
+CV_EXPORTS void filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1), int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 //! applies separable 2D linear filter to the image
 CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY,
