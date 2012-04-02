@@ -5358,7 +5358,13 @@ void write( FileStorage& fs, const string& name, const SparseMat& value )
     Ptr<CvSparseMat> mat = (CvSparseMat*)value;
     cvWrite( *fs, name.size() ? name.c_str() : 0, mat );
 }
-
+    
+void write( FileStorage& fs, const string& name, const vector<Mat>& value )
+{
+    WriteStructContext ws(fs, name, CV_NODE_SEQ);
+    for( size_t i = 0; i < value.size(); i++ )
+        write(fs, string(), value[i]);
+}
 
 WriteStructContext::WriteStructContext(FileStorage& _fs, const string& name,
                    int flags, const string& typeName) : fs(&_fs)
@@ -5405,6 +5411,24 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
     Ptr<CvSparseMat> m = (CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
     CV_Assert(CV_IS_SPARSE_MAT(m));
     SparseMat(m).copyTo(mat);
+}
+    
+void read( const FileNode& node, vector<Mat>& mat_vector, const vector<Mat>& default_mat_vector )
+{
+    if( node.empty() )
+    {
+        mat_vector = default_mat_vector;
+        return;
+    }
+    
+    FileNodeIterator it = node.begin(), it_end = node.end();
+    mat_vector.clear();
+    for( ; it != it_end; ++it )
+    {
+        Mat m;
+        *it >> m;
+        mat_vector.push_back(m);
+    }
 }
 
 }

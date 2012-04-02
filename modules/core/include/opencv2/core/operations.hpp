@@ -2856,7 +2856,8 @@ operator << ( FileStorage& fs, const vector<_Tp>& vec )
 
 CV_EXPORTS_W void write( FileStorage& fs, const string& name, const Mat& value );
 CV_EXPORTS void write( FileStorage& fs, const string& name, const SparseMat& value );
-
+CV_EXPORTS void write( FileStorage& fs, const string& name, const vector<Mat>& value );
+    
 template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, const _Tp& value)
 {
     if( !fs.isOpened() )
@@ -2956,7 +2957,8 @@ static inline void read(const FileNode& node, string& value, const string& defau
 }
 
 CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
-CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );    
+CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );
+CV_EXPORTS void read(const FileNode& node, vector<Mat>& mat, const vector<Mat>& default_mat_vector=vector<Mat>() );
     
 inline FileNode::operator int() const
 {
