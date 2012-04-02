@@ -395,7 +395,7 @@ CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, GpuMat&
 
 //! applies Laplacian operator to the image
 //! supports only ksize = 1 and ksize = 3
-CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, Stream& stream = Stream::Null());
+CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 
 ////////////////////////////// Arithmetics ///////////////////////////////////
@@ -1094,8 +1094,8 @@ public:
 
     bool use_local_init_data_cost;
 private:
-	GpuMat messages_buffers;
-        
+    GpuMat messages_buffers;
+
     GpuMat temp;
     GpuMat out;
 };

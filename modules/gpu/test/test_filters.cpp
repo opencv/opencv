@@ -334,10 +334,7 @@ TEST_P(Laplacian, Accuracy)
     cv::Mat dst_gold;
     cv::Laplacian(src, dst_gold, -1, ksize.width);
 
-    if (type == CV_32FC1)
-        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
-    else
-        EXPECT_MAT_NEAR(getInnerROI(dst_gold, cv::Size(3, 3)), getInnerROI(dst, cv::Size(3, 3)), 0.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Laplacian, testing::Combine(
