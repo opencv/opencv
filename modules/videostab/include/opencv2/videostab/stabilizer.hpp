@@ -160,7 +160,7 @@ public:
     void setEstimateTrimRatio(bool val) { mustEstTrimRatio_ = val; }
     bool mustEstimateTrimaRatio() const { return mustEstTrimRatio_; }
 
-    virtual void reset() { resetImpl(); }
+    virtual void reset();
     virtual Mat nextFrame();
 
     // available after pre-pass, before it's empty

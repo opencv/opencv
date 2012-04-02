@@ -78,8 +78,6 @@ public:
     virtual void setStabilizationMotions(const std::vector<Mat> &val) { stabilizationMotions_ = &val; }
     virtual const std::vector<Mat>& stabilizationMotions() const { return *stabilizationMotions_; }
 
-    virtual void update() {}
-
     virtual void inpaint(int idx, Mat &frame, Mat &mask) = 0;
 
 protected:
@@ -107,8 +105,6 @@ public:
     virtual void setMotions(const std::vector<Mat> &val);
     virtual void setStabilizedFrames(const std::vector<Mat> &val);
     virtual void setStabilizationMotions(const std::vector<Mat> &val);
-
-    virtual void update();
 
     virtual void inpaint(int idx, Mat &frame, Mat &mask);
 

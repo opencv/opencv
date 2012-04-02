@@ -70,12 +70,10 @@ void StabilizerBase::setUp(int cacheSize, const Mat &frame)
     doInpainting_ = dynamic_cast<NullInpainter*>(inpainter) == 0;
     if (doInpainting_)
     {
-        inpainter_->setRadius(radius_);
         inpainter_->setFrames(frames_);
         inpainter_->setMotions(motions_);
         inpainter_->setStabilizedFrames(stabilizedFrames_);
         inpainter_->setStabilizationMotions(stabilizationMotions_);
-        inpainter_->update();
     }
 
     DeblurerBase *deblurer = static_cast<DeblurerBase*>(deblurer_);
@@ -86,11 +84,9 @@ void StabilizerBase::setUp(int cacheSize, const Mat &frame)
         float blurriness = calcBlurriness(frame);
         for (int i  = -radius_; i <= 0; ++i)
             at(i, blurrinessRates_) = blurriness;
-        deblurer_->setRadius(radius_);
         deblurer_->setFrames(frames_);
         deblurer_->setMotions(motions_);
         deblurer_->setBlurrinessRates(blurrinessRates_);
-        deblurer_->update();
     }
 
     log_->print("processing frames");
@@ -242,7 +238,6 @@ void OnePassStabilizer::setUp(Mat &firstFrame)
 
     at(0, frames_) = firstFrame;
 
-    motionFilter_->setRadius(radius_);
     motionFilter_->update();
 
     StabilizerBase::setUp(cacheSize, firstFrame);
@@ -267,7 +262,22 @@ TwoPassStabilizer::TwoPassStabilizer()
 {
     setMotionStabilizer(new GaussianMotionFilter());
     setEstimateTrimRatio(false);
-    resetImpl();
+    reset();
+}
+
+
+void TwoPassStabilizer::reset()
+{
+    isPrePassDone_ = false;
+    frameCount_ = 0;
+    curPos_ = -1;
+    curStabilizedPos_ = -1;
+    frames_.clear();
+    motions_.clear();
+    stabilizedFrames_.clear();
+    stabilizationMotions_.clear();
+    doDeblurring_ = false;
+    doInpainting_ = false;
 }
 
 
@@ -285,21 +295,6 @@ vector<Mat> TwoPassStabilizer::motions() const
     vector<Mat> res(frameCount_ - 1);
     copy(motions_.begin(), motions_.begin() + frameCount_ - 1, res.begin());
     return res;
-}
-
-
-void TwoPassStabilizer::resetImpl()
-{
-    isPrePassDone_ = false;
-    frameCount_ = 0;
-    curPos_ = -1;
-    curStabilizedPos_ = -1;
-    frames_.clear();
-    motions_.clear();
-    stabilizedFrames_.clear();
-    stabilizationMotions_.clear();
-    doDeblurring_ = false;
-    doInpainting_ = false;
 }
 
 
@@ -335,10 +330,7 @@ void TwoPassStabilizer::runPrePassIfNecessary()
         IMotionStabilizer *motionStabilizer = static_cast<IMotionStabilizer*>(motionStabilizer_);
         MotionFilterBase *motionFilterBase = dynamic_cast<MotionFilterBase*>(motionStabilizer);
         if (motionFilterBase)
-        {
-            motionFilterBase->setRadius(radius_);
             motionFilterBase->update();
-        }
 
         stabilizationMotions_.resize(frameCount_);
         motionStabilizer_->stabilize(&motions_[0], frameCount_, &stabilizationMotions_[0]);

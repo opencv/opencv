@@ -72,6 +72,7 @@ struct CV_EXPORTS RansacParams
     float eps; // max outliers ratio
     float prob; // probability of success
 
+    RansacParams() : size(0), thresh(0), eps(0), prob(0) {}
     RansacParams(int size, float thresh, float eps, float prob)
         : size(size), thresh(thresh), eps(eps), prob(prob) {}
 

@@ -72,8 +72,6 @@ public:
     virtual void setBlurrinessRates(const std::vector<float> &val) { blurrinessRates_ = &val; }
     virtual const std::vector<float>& blurrinessRates() const { return *blurrinessRates_; }
 
-    virtual void update() {}
-
     virtual void deblur(int idx, Mat &frame) = 0;
 
 protected:

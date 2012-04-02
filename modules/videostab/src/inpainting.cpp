@@ -93,14 +93,6 @@ void InpaintingPipeline::setStabilizationMotions(const vector<Mat> &val)
 }
 
 
-void InpaintingPipeline::update()
-{
-    for (size_t i = 0; i < inpainters_.size(); ++i)
-        inpainters_[i]->update();
-    InpainterBase::update();
-}
-
-
 void InpaintingPipeline::inpaint(int idx, Mat &frame, Mat &mask)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)

@@ -79,6 +79,12 @@ class CV_EXPORTS GaussianMotionFilter : public MotionFilterBase
 {
 public:
     GaussianMotionFilter() : stdev_(-1.f) {}
+    GaussianMotionFilter(int radius, float stdev = -1.f)
+    {
+        setRadius(radius);
+        setStdev(stdev);
+        update();
+    }
 
     void setStdev(float val) { stdev_ = val; }
     float stdev() const { return stdev_; }

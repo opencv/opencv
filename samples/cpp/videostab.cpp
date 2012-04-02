@@ -9,10 +9,15 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/videostab/videostab.hpp"
 
+#define arg(name) cmd.get<string>(name)
+#define argb(name) cmd.get<bool>(name)
+#define argi(name) cmd.get<int>(name)
+#define argf(name) cmd.get<float>(name)
+#define argd(name) cmd.get<double>(name)
+
 using namespace std;
 using namespace cv;
 using namespace cv::videostab;
-
 
 Ptr<IFrameSource> stabilizedFrames;
 string saveMotionsPath;
@@ -60,6 +65,7 @@ private:
     vector<Mat> motions_;
     size_t pos_;
 };
+
 
 void run()
 {
@@ -128,14 +134,15 @@ void printHelp()
             "  --min-inlier-ratio=<float_number>\n"
             "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1,\n"
             "      but you may want to increase it.\n\n"
-            "  --save-motions=<file_path>\n"
-            "      Save estimated motions into file.\n"
-            "  --load-motions=<file_path>\n"
-            "      Load motions from file.\n\n"
+            "  --save-motions=(<file_path>|no)\n"
+            "      Save estimated motions into file. The default is no.\n"
+            "  --load-motions=(<file_path>|no)\n"
+            "      Load motions from file. The default is no.\n\n"
             "  -r, --radius=<int_number>\n"
-            "      Set smoothing radius. The default is 15.\n"
-            "  --stdev=<float_number>\n"
-            "      Set smoothing weights standard deviation. The default is sqrt(radius).\n\n"
+            "      Set sliding window radius. The default is 15.\n"
+            "  --stdev=(<float_number>|auto)\n"
+            "      Set smoothing weights standard deviation. The default is sqrt(radius),\n"
+            "      i.e. auto.\n\n"
             "  --deblur=(yes|no)\n"
             "      Do deblurring.\n"
             "  --deblur-sens=<float_number>\n"
@@ -160,10 +167,11 @@ void printHelp()
             "  --color-inpaint=(no|average|ns|telea)\n"
             "      Do color inpainting. The defailt is no.\n"
             "  --color-inpaint-radius=<float_number>\n"
-            "      Set color inpainting radius (for ns and telea options only).\n\n"
+            "      Set color inpainting radius (for ns and telea options only).\n"
+            "      The default is 2.0\n\n"
             "  -o, --output=(no|<file_path>)\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
-            "  --fps=<int_number>\n"
+            "  --fps=(<int_number>|auto)\n"
             "      Set output video FPS explicitely. By default the source FPS is used.\n"
             "  -q, --quiet\n"
             "      Don't show output video frames.\n\n"
@@ -179,182 +187,165 @@ int main(int argc, const char **argv)
     {
         const char *keys =
                 "{ 1 | | | | }"
-                "{ m | model | | }"
-                "{ | min-inlier-ratio | | }"
-                "{ | outlier-ratio | | }"
-                "{ | save-motions | | }"
-                "{ | load-motions | | }"
-                "{ r | radius | | }"
-                "{ | stdev | | }"
-                "{ | deblur | | }"
-                "{ | deblur-sens | | }"
+                "{ m | model | affine| }"
+                "{ | min-inlier-ratio | 0.1 | }"
+                "{ | outlier-ratio | 0.5 | }"
+                "{ | save-motions | no | }"
+                "{ | load-motions | no | }"
+                "{ r | radius | 15 | }"
+                "{ | stdev | auto | }"
+                "{ | deblur | no | }"
+                "{ | deblur-sens | 0.1 | }"
                 "{ | est-trim | yes | }"
-                "{ t | trim-ratio | | }"
-                "{ | incl-constr | | }"
-                "{ | border-mode | | }"
-                "{ | mosaic | | }"
-                "{ | mosaic-stdev | | }"
-                "{ | motion-inpaint | | }"
-                "{ | dist-thresh | | }"
+                "{ t | trim-ratio | 0.0 | }"
+                "{ | incl-constr | no | }"
+                "{ | border-mode | replicate | }"
+                "{ | mosaic | no | }"
+                "{ | mosaic-stdev | 10.0 | }"
+                "{ | motion-inpaint | no | }"
+                "{ | dist-thresh | 5.0 | }"
                 "{ | color-inpaint | no | }"
-                "{ | color-inpaint-radius | | }"
+                "{ | color-inpaint-radius | 2 | }"
                 "{ o | output | stabilized.avi | }"
-                "{ | fps | | }"
+                "{ | fps | auto | }"
                 "{ q | quiet | false | }"
                 "{ h | help | false | }";
         CommandLineParser cmd(argc, argv, keys);
 
         // parse command arguments
 
-        if (cmd.get<bool>("help"))
+        if (argb("help"))
         {
             printHelp();
             return 0;
         }               
 
         StabilizerBase *stabilizer;
-        GaussianMotionFilter *motionFilter = 0;
 
-        if (!cmd.get<string>("stdev").empty())
-        {
-            motionFilter = new GaussianMotionFilter();
-            motionFilter->setStdev(cmd.get<float>("stdev"));
-        }
-
-        if (!cmd.get<string>("save-motions").empty())
-            saveMotionsPath = cmd.get<string>("save-motions");
-
-        bool isTwoPass =
-                cmd.get<string>("est-trim") == "yes" ||
-                !cmd.get<string>("save-motions").empty();
-
+        bool isTwoPass = arg("est-trim") == "yes" || arg("save-motions") != "no";
         if (isTwoPass)
         {
             TwoPassStabilizer *twoPassStabilizer = new TwoPassStabilizer();
-            if (!cmd.get<string>("est-trim").empty())
-                twoPassStabilizer->setEstimateTrimRatio(cmd.get<string>("est-trim") == "yes");
-            if (motionFilter)
-                twoPassStabilizer->setMotionStabilizer(motionFilter);
             stabilizer = twoPassStabilizer;
+            twoPassStabilizer->setEstimateTrimRatio(arg("est-trim") == "yes");
+            if (arg("stdev") == "auto")
+                twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius")));
+            else
+                twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius"), argf("stdev")));
         }
         else
         {
-            OnePassStabilizer *onePassStabilizer= new OnePassStabilizer();
-            if (motionFilter)
-                onePassStabilizer->setMotionFilter(motionFilter);
+            OnePassStabilizer *onePassStabilizer = new OnePassStabilizer();
             stabilizer = onePassStabilizer;
+            if (arg("stdev") == "auto")
+                onePassStabilizer->setMotionFilter(new GaussianMotionFilter(argi("radius")));
+            else
+                onePassStabilizer->setMotionFilter(new GaussianMotionFilter(argi("radius"), argf("stdev")));
         }
+        stabilizedFrames = dynamic_cast<IFrameSource*>(stabilizer);
 
-        string inputPath = cmd.get<string>("1");
-        if (inputPath.empty())
-            throw runtime_error("specify video file path");
+        string inputPath = arg("1");
+        if (inputPath.empty()) throw runtime_error("specify video file path");
 
-        VideoFileSource *frameSource = new VideoFileSource(inputPath);
-        outputFps = frameSource->fps();
-        stabilizer->setFrameSource(frameSource);
-        cout << "frame count: " << frameSource->frameCount() << endl;
+        VideoFileSource *source = new VideoFileSource(inputPath);
+        cout << "frame count: " << source->frameCount() << endl;
+        if (arg("fps") == "auto") outputFps = source->fps();  else outputFps = argd("fps");
+        stabilizer->setFrameSource(source);
 
-        PyrLkRobustMotionEstimator *motionEstimator = new PyrLkRobustMotionEstimator();
-        if (cmd.get<string>("model") == "transl")           
-            motionEstimator->setMotionModel(TRANSLATION);
-        else if (cmd.get<string>("model") == "transl_and_scale")
-            motionEstimator->setMotionModel(TRANSLATION_AND_SCALE);
-        else if (cmd.get<string>("model") == "linear_sim")
-            motionEstimator->setMotionModel(LINEAR_SIMILARITY);
-        else if (cmd.get<string>("model") == "affine")
-            motionEstimator->setMotionModel(AFFINE);
-        else if (!cmd.get<string>("model").empty())
-            throw runtime_error("unknow motion mode: " + cmd.get<string>("model"));
-        if (!cmd.get<string>("outlier-ratio").empty())
+        if (arg("load-motions") == "no")
         {
-            RansacParams ransacParams = motionEstimator->ransacParams();
-            ransacParams.eps = cmd.get<float>("outlier-ratio");
-            motionEstimator->setRansacParams(ransacParams);
+            RansacParams ransac;
+            PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator();
+            Ptr<IGlobalMotionEstimator> est_(est);
+            if (arg("model") == "transl")
+            {
+                est->setMotionModel(TRANSLATION);
+                ransac = RansacParams::translationMotionStd();
+            }
+            else if (arg("model") == "transl_and_scale")
+            {
+                est->setMotionModel(TRANSLATION_AND_SCALE);
+                ransac = RansacParams::translationAndScale2dMotionStd();
+            }
+            else if (arg("model") == "linear_sim")
+            {
+                est->setMotionModel(LINEAR_SIMILARITY);
+                ransac = RansacParams::linearSimilarityMotionStd();
+            }
+            else if (arg("model") == "affine")
+            {
+                est->setMotionModel(AFFINE);
+                ransac = RansacParams::affine2dMotionStd();
+            }
+            else
+                throw runtime_error("unknown motion model: " + arg("model"));
+            ransac.eps = argf("outlier-ratio");
+            est->setRansacParams(ransac);
+            est->setMinInlierRatio(argf("min-inlier-ratio"));
+            stabilizer->setMotionEstimator(est_);
         }
-        if (!cmd.get<string>("min-inlier-ratio").empty())
-            motionEstimator->setMinInlierRatio(cmd.get<float>("min-inlier-ratio"));
-        stabilizer->setMotionEstimator(motionEstimator);
-        if (!cmd.get<string>("load-motions").empty())
-            stabilizer->setMotionEstimator(new GlobalMotionReader(cmd.get<string>("load-motions")));
+        else
+            stabilizer->setMotionEstimator(new GlobalMotionReader(arg("load-motions")));
 
-        if (!cmd.get<string>("radius").empty())
-            stabilizer->setRadius(cmd.get<int>("radius"));
+        if (arg("save-motions") != "no")
+            saveMotionsPath = arg("save-motions");
 
-        if (cmd.get<string>("deblur") == "yes")
+        stabilizer->setRadius(argi("radius"));
+        if (arg("deblur") == "yes")
         {
             WeightingDeblurer *deblurer = new WeightingDeblurer();
-            if (!cmd.get<string>("deblur-sens").empty())
-                deblurer->setSensitivity(cmd.get<float>("deblur-sens"));
+            deblurer->setRadius(argi("radius"));
+            deblurer->setSensitivity(argf("deblur-sens"));
             stabilizer->setDeblurer(deblurer);
         }
 
-        if (!cmd.get<string>("trim-ratio").empty())
-            stabilizer->setTrimRatio(cmd.get<float>("trim-ratio"));
+        stabilizer->setTrimRatio(argf("trim-ratio"));
+        stabilizer->setCorrectionForInclusion(arg("incl-constr") == "yes");
 
-        if (!cmd.get<string>("incl-constr").empty())
-            stabilizer->setCorrectionForInclusion(cmd.get<string>("incl-constr") == "yes");
-
-        if (cmd.get<string>("border-mode") == "reflect")
+        if (arg("border-mode") == "reflect")
             stabilizer->setBorderMode(BORDER_REFLECT);
-        else if (cmd.get<string>("border-mode") == "replicate")
+        else if (arg("border-mode") == "replicate")
             stabilizer->setBorderMode(BORDER_REPLICATE);
-        else if (cmd.get<string>("border-mode") == "const")
+        else if (arg("border-mode") == "const")
             stabilizer->setBorderMode(BORDER_CONSTANT);
-        else if (!cmd.get<string>("border-mode").empty())
-            throw runtime_error("unknown border extrapolation mode: " + cmd.get<string>("border-mode"));
+        else
+            throw runtime_error("unknown border extrapolation mode: "
+                                 + cmd.get<string>("border-mode"));
 
         InpaintingPipeline *inpainters = new InpaintingPipeline();
-        if (cmd.get<string>("mosaic") == "yes")
+        Ptr<InpainterBase> inpainters_(inpainters);
+        if (arg("mosaic") == "yes")
         {
-            ConsistentMosaicInpainter *inpainter = new ConsistentMosaicInpainter();
-            if (!cmd.get<string>("mosaic-stdev").empty())
-                inpainter->setStdevThresh(cmd.get<float>("mosaic-stdev"));
-            inpainters->pushBack(inpainter);
+            ConsistentMosaicInpainter *inp = new ConsistentMosaicInpainter();
+            inp->setStdevThresh(argf("mosaic-stdev"));
+            inpainters->pushBack(inp);
         }
-        if (cmd.get<string>("motion-inpaint") == "yes")
+        if (arg("motion-inpaint") == "yes")
         {
-            MotionInpainter *inpainter = new MotionInpainter();
-            if (!cmd.get<string>("dist-thresh").empty())
-                inpainter->setDistThreshold(cmd.get<float>("dist-thresh"));
-            inpainters->pushBack(inpainter);
+            MotionInpainter *inp = new MotionInpainter();
+            inp->setDistThreshold(argf("dist-thresh"));
+            inpainters->pushBack(inp);
         }
-        if (!cmd.get<string>("color-inpaint").empty())
-        {
-            if (cmd.get<string>("color-inpaint") == "average")
-                inpainters->pushBack(new ColorAverageInpainter());
-            else if (!cmd.get<string>("color-inpaint-radius").empty())
-            {
-                float radius = cmd.get<float>("color-inpaint-radius");
-                if (cmd.get<string>("color-inpaint") == "ns")
-                    inpainters->pushBack(new ColorInpainter(INPAINT_NS, radius));
-                else if (cmd.get<string>("color-inpaint") == "telea")
-                    inpainters->pushBack(new ColorInpainter(INPAINT_TELEA, radius));
-                else if (cmd.get<string>("color-inpaint") != "no")
-                    throw runtime_error("unknown color inpainting method: " + cmd.get<string>("color-inpaint"));
-            }
-            else
-            {
-                if (cmd.get<string>("color-inpaint") == "ns")
-                    inpainters->pushBack(new ColorInpainter(INPAINT_NS));
-                else if (cmd.get<string>("color-inpaint") == "telea")
-                    inpainters->pushBack(new ColorInpainter(INPAINT_TELEA));
-                else if (cmd.get<string>("color-inpaint") != "no")
-                    throw runtime_error("unknown color inpainting method: " + cmd.get<string>("color-inpaint"));
-            }
-        }
+        if (arg("color-inpaint") == "average")
+            inpainters->pushBack(new ColorAverageInpainter());
+        else if (arg("color-inpaint") == "ns")
+            inpainters->pushBack(new ColorInpainter(INPAINT_NS, argd("color-inpaint-radius")));
+        else if (arg("color-inpaint") == "telea")
+            inpainters->pushBack(new ColorInpainter(INPAINT_TELEA, argd("color-inpaint-radius")));
+        else if (arg("color-inpaint") != "no")
+            throw runtime_error("unknown color inpainting method: " + arg("color-inpaint"));
         if (!inpainters->empty())
-            stabilizer->setInpainter(inpainters);
+        {
+            inpainters->setRadius(argi("radius"));
+            stabilizer->setInpainter(inpainters_);
+        }
 
         stabilizer->setLog(new LogToStdout());
 
-        outputPath = cmd.get<string>("output") != "no" ? cmd.get<string>("output") : "";
+        if (arg("output") != "no")
+            outputPath = arg("output");
 
-        if (!cmd.get<string>("fps").empty())
-            outputFps = cmd.get<double>("fps");
-
-        quietMode = cmd.get<bool>("quiet");
-
-        stabilizedFrames = dynamic_cast<IFrameSource*>(stabilizer);
+        quietMode = argb("quite");
 
         run();
     }
