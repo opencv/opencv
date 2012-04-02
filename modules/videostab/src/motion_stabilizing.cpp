@@ -58,13 +58,15 @@ void MotionFilterBase::stabilize(const Mat *motions, int size, Mat *stabilizatio
 }
 
 
-void GaussianMotionFilter::update()
+void GaussianMotionFilter::setParams(int radius, float stdev)
 {
-    float sigma = stdev_ > 0.f ? stdev_ : sqrt(static_cast<float>(radius_));
+    radius_ = radius;
+    stdev_ = stdev > 0.f ? stdev : sqrt(static_cast<float>(radius_));
+
     float sum = 0;
     weight_.resize(2*radius_ + 1);
     for (int i = -radius_; i <= radius_; ++i)
-        sum += weight_[radius_ + i] = std::exp(-i*i/(sigma*sigma));
+        sum += weight_[radius_ + i] = std::exp(-i*i/(stdev_*stdev_));
     for (int i = -radius_; i <= radius_; ++i)
         weight_[radius_ + i] /= sum;
 }

@@ -199,11 +199,11 @@ void StabilizerBase::stabilizeFrame(const Mat &stabilizationMotion)
 OnePassStabilizer::OnePassStabilizer()
 {
     setMotionFilter(new GaussianMotionFilter());
-    resetImpl();
+    reset();
 }
 
 
-void OnePassStabilizer::resetImpl()
+void OnePassStabilizer::reset()
 {
     curPos_ = -1;
     curStabilizedPos_ = -1;
@@ -237,8 +237,6 @@ void OnePassStabilizer::setUp(Mat &firstFrame)
     }
 
     at(0, frames_) = firstFrame;
-
-    motionFilter_->update();
 
     StabilizerBase::setUp(cacheSize, firstFrame);
 }
@@ -326,11 +324,6 @@ void TwoPassStabilizer::runPrePassIfNecessary()
         for (int i = 0; i < radius_; ++i)
             motions_.push_back(Mat::eye(3, 3, CV_32F));
         log_->print("\n");
-
-        IMotionStabilizer *motionStabilizer = static_cast<IMotionStabilizer*>(motionStabilizer_);
-        MotionFilterBase *motionFilterBase = dynamic_cast<MotionFilterBase*>(motionStabilizer);
-        if (motionFilterBase)
-            motionFilterBase->update();
 
         stabilizationMotions_.resize(frameCount_);
         motionStabilizer_->stabilize(&motions_[0], frameCount_, &stabilizationMotions_[0]);

@@ -148,7 +148,7 @@ void printHelp()
             "  --deblur-sens=<float_number>\n"
             "      Set deblurring sensitivity (from 0 to +inf). The default is 0.1.\n\n"
             "  -t, --trim-ratio=<float_number>\n"
-            "      Set trimming ratio (from 0 to 0.5). The default is 0.0.\n"
+            "      Set trimming ratio (from 0 to 0.5). The default is 0.1.\n"
             "  --est-trim=(yes|no)\n"
             "      Estimate trim ratio automatically. The default is yes (that leads to two passes,\n"
             "      you can turn it off if you want to use one pass only).\n"
@@ -197,7 +197,7 @@ int main(int argc, const char **argv)
                 "{ | deblur | no | }"
                 "{ | deblur-sens | 0.1 | }"
                 "{ | est-trim | yes | }"
-                "{ t | trim-ratio | 0.0 | }"
+                "{ t | trim-ratio | 0.1 | }"
                 "{ | incl-constr | no | }"
                 "{ | border-mode | replicate | }"
                 "{ | mosaic | no | }"
@@ -248,7 +248,7 @@ int main(int argc, const char **argv)
         if (inputPath.empty()) throw runtime_error("specify video file path");
 
         VideoFileSource *source = new VideoFileSource(inputPath);
-        cout << "frame count: " << source->frameCount() << endl;
+        cout << "frame count: " << source->count() << endl;
         if (arg("fps") == "auto") outputFps = source->fps();  else outputFps = argd("fps");
         stabilizer->setFrameSource(source);
 

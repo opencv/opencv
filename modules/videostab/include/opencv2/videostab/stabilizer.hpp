@@ -136,12 +136,10 @@ public:
     void setMotionFilter(Ptr<MotionFilterBase> val) { motionFilter_ = val; }
     Ptr<MotionFilterBase> motionFilter() const { return motionFilter_; }
 
-    virtual void reset() { resetImpl(); }
+    virtual void reset();
     virtual Mat nextFrame() { return nextStabilizedFrame(); }
 
 private:
-    void resetImpl();
-
     virtual void setUp(Mat &firstFrame);
     virtual void estimateMotion();
     virtual void stabilizeFrame();
