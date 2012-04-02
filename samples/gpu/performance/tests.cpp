@@ -273,7 +273,7 @@ TEST(SURF)
 
     SURF surf;
     vector<KeyPoint> keypoints;
-    vector<float> descriptors;
+    Mat descriptors;
 
     surf(src, Mat(), keypoints, descriptors);
 
@@ -899,7 +899,6 @@ TEST(solvePnPRansac)
     }
 }
 
-
 TEST(GaussianBlur)
 {
     for (int size = 1000; size <= 4000; size += 1000)
@@ -925,6 +924,39 @@ TEST(GaussianBlur)
         GPU_ON;
         gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
         GPU_OFF;
+    }
+}
+
+TEST(filter2D)
+{
+    for (int size = 1000; size <= 4000; size += 1000)
+    {
+        Mat src;
+        gen(src, size, size, CV_8UC4, 0, 256);
+                
+        for (int ksize = 3; ksize <= 16; ksize += 2)
+        {        
+            SUBTEST << "ksize = " << ksize << ", " << size << 'x' << size << ", 8UC4";
+            
+            Mat kernel;
+            gen(kernel, ksize, ksize, CV_32FC1, 0.0, 1.0);
+
+            Mat dst;
+            cv::filter2D(src, dst, -1, kernel);
+
+            CPU_ON;
+            cv::filter2D(src, dst, -1, kernel);
+            CPU_OFF;
+
+            gpu::GpuMat d_src(src);
+            gpu::GpuMat d_dst;
+
+            gpu::filter2D(d_src, d_dst, -1, kernel);
+
+            GPU_ON;
+            gpu::filter2D(d_src, d_dst, -1, kernel);
+            GPU_OFF;
+        }
     }
 }
 
