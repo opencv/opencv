@@ -929,7 +929,7 @@ TEST(GaussianBlur)
 
 TEST(filter2D)
 {
-    for (int size = 1000; size <= 4000; size += 1000)
+    for (int size = 512; size <= 2048; size *= 2)
     {
         Mat src;
         gen(src, size, size, CV_8UC4, 0, 256);
