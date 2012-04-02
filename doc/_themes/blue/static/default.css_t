@@ -313,6 +313,11 @@ dl.pyoldfunction > dt:first-child tt.descname
     color: #8080B0;
 }
 
+dl.pyoldfunction > dt:first-child tt.descclassname
+{
+    color: #8080B0;
+}
+
 dl.jfunction > dt:first-child {
     margin-bottom: 7px;
 }
