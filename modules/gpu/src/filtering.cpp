@@ -87,7 +87,7 @@ void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, double, int, int) { 
 void cv::gpu::Scharr(const GpuMat&, GpuMat&, int, int, int, GpuMat&, double, int, int, Stream&) { throw_nogpu(); }
 void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, double, double, int, int) { throw_nogpu(); }
 void cv::gpu::GaussianBlur(const GpuMat&, GpuMat&, Size, GpuMat&, double, double, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::Laplacian(const GpuMat&, GpuMat&, int, int, double, Stream&) { throw_nogpu(); }
+void cv::gpu::Laplacian(const GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_nogpu(); }
 
 #else
 
@@ -664,8 +664,8 @@ namespace cv { namespace gpu { namespace device
     namespace imgproc
     {
         template <typename T, typename D>
-        void filter2D_gpu(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, 
-                          int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, 
+        void filter2D_gpu(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst,
+                          int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel,
                           int borderMode, const float* borderValue, cudaStream_t stream);
     }
 }}}
@@ -708,14 +708,14 @@ namespace
         nppFilter2D_t func;
     };
 
-    typedef void (*gpuFilter2D_t)(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, 
-                                   int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, 
+    typedef void (*gpuFilter2D_t)(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst,
+                                   int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel,
                                    int borderMode, const float* borderValue, cudaStream_t stream);
 
     struct GpuFilter2D : public BaseFilter_GPU
     {
         GpuFilter2D(Size ksize_, Point anchor_, gpuFilter2D_t func_, const GpuMat& kernel_, int brd_type_) :
-            BaseFilter_GPU(ksize_, anchor_), func(func_), kernel(kernel_), brd_type(brd_type_) 
+            BaseFilter_GPU(ksize_, anchor_), func(func_), kernel(kernel_), brd_type(brd_type_)
         {
         }
 
@@ -1193,7 +1193,7 @@ void cv::gpu::Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy,
     sepFilter2D(src, dst, ddepth, kx, ky, buf, Point(-1,-1), rowBorderType, columnBorderType, stream);
 }
 
-void cv::gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize, double scale, Stream& stream)
+void cv::gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize, double scale, int borderType, Stream& stream)
 {
     CV_Assert(ksize == 1 || ksize == 3);
 
@@ -1206,7 +1206,7 @@ void cv::gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize, d
     if (scale != 1)
         kernel *= scale;
 
-    filter2D(src, dst, ddepth, kernel, Point(-1,-1), stream);
+    filter2D(src, dst, ddepth, kernel, Point(-1,-1), borderType, stream);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
