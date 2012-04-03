@@ -283,7 +283,7 @@ CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, co
     const Point& anchor = Point(-1,-1), int iterations = 1);
 
 //! returns 2D filter with the specified kernel
-//! supports CV_8UC1 and CV_8UC4 types
+//! supports CV_8U, CV_16U and CV_32F one and four channel image
 CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
 //! returns the non-separable linear filter engine
@@ -1458,12 +1458,13 @@ public:
     //! finds the keypoints using fast hessian detector used in SURF
     //! supports CV_8UC1 images
     //! keypoints will have nFeature cols and 6 rows
-    //! keypoints.ptr<float>(SF_X)[i] will contain x coordinate of i'th feature
-    //! keypoints.ptr<float>(SF_Y)[i] will contain y coordinate of i'th feature
-    //! keypoints.ptr<float>(SF_LAPLACIAN)[i] will contain laplacian sign of i'th feature
-    //! keypoints.ptr<float>(SF_SIZE)[i] will contain size of i'th feature
-    //! keypoints.ptr<float>(SF_DIR)[i] will contain orientation of i'th feature
-    //! keypoints.ptr<float>(SF_HESSIAN)[i] will contain response of i'th feature
+    //! keypoints.ptr<float>(X_ROW)[i] will contain x coordinate of i'th feature
+    //! keypoints.ptr<float>(Y_ROW)[i] will contain y coordinate of i'th feature
+    //! keypoints.ptr<float>(LAPLACIAN_ROW)[i] will contain laplacian sign of i'th feature
+    //! keypoints.ptr<float>(OCTAVE_ROW)[i] will contain octave of i'th feature
+    //! keypoints.ptr<float>(SIZE_ROW)[i] will contain size of i'th feature
+    //! keypoints.ptr<float>(ANGLE_ROW)[i] will contain orientation of i'th feature
+    //! keypoints.ptr<float>(HESSIAN_ROW)[i] will contain response of i'th feature
     void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints);
     //! finds the keypoints and computes their descriptors.
     //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction

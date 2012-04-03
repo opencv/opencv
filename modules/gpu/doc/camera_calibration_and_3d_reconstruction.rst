@@ -446,13 +446,15 @@ gpu::reprojectImageTo3D
 ---------------------------
 Reprojects a disparity image to 3D space.
 
-.. ocv:function:: void gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, int dst_cn = 4, Stream& stream = Stream::Null())
 
     :param disp: Input disparity image.  ``CV_8U``  and  ``CV_16S``  types are supported.
 
-    :param xyzw: Output 4-channel floating-point image of the same size as  ``disp`` . Each element of  ``xyzw(x,y)``  contains 3D coordinates  ``(x,y,z,1)``  of the point  ``(x,y)`` , computed from the disparity map.
+    :param xyzw: Output 3- or 4-channel floating-point image of the same size as  ``disp`` . Each element of  ``xyzw(x,y)``  contains 3D coordinates ``(x,y,z)`` or ``(x,y,z,1)``  of the point  ``(x,y)`` , computed from the disparity map.
 
     :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained via  :ocv:func:`stereoRectify` .
+
+    :param dst_cn: The number of channels for output image. Can be 3 or 4.
 
     :param stream: Stream for the asynchronous version.
 

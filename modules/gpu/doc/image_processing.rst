@@ -256,7 +256,7 @@ Class providing a memory buffer for :ocv:func:`gpu::convolve` function, plus it 
         void create(Size image_size, Size templ_size);
         static Size estimateBlockSize(Size result_size, Size templ_size);
     };
-    
+
 You can use field `user_block_size` to set specific block size for :ocv:func:`gpu::convolve` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
 
 gpu::ConvolveBuf::create
@@ -283,7 +283,7 @@ Computes a convolution (or cross-correlation) of two images.
     :param ccorr: Flags to evaluate cross-correlation instead of convolution.
 
     :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:class:`gpu::ConvolveBuf`.
-   
+
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`gpu::filter2D`
@@ -320,9 +320,9 @@ Computes a proximity map for a raster template and an image where the template i
     :param result: Map containing comparison results ( ``CV_32FC1`` ). If  ``image`` is  *W x H*  and ``templ`` is  *w x h*, then  ``result`` must be *W-w+1 x H-h+1*.
 
     :param method: Specifies the way to compare the template with the image.
-    
+
     :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:class:`gpu::MatchTemplateBuf`.
-    
+
     :param stream: Stream for the asynchronous version.
 
     The following methods are supported for the ``CV_8U`` depth images for now:
@@ -355,7 +355,7 @@ Applies a generic geometrical transformation to an image.
     :param xmap: X values. Only  ``CV_32FC1`` type is supported.
 
     :param ymap: Y values. Only  ``CV_32FC1`` type is supported.
-    
+
     :param interpolation: Interpolation method (see  :ocv:func:`resize` ). ``INTER_NEAREST`` , ``INTER_LINEAR`` and ``INTER_CUBIC`` are supported for now.
 
     :param borderMode: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
@@ -495,6 +495,28 @@ Applies an affine transformation to an image.
 
 
 
+gpu::buildWarpAffineMaps
+------------------------
+Builds transformation maps for affine transformation.
+
+.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+
+    :param M: *2x3*  transformation matrix.
+
+    :param inverse: Flag  specifying that  ``M`` is an inverse transformation ( ``dst=>src`` ).
+
+    :param dsize: Size of the destination image.
+
+    :param xmap: X values with  ``CV_32FC1`` type.
+
+    :param ymap: Y values with  ``CV_32FC1`` type.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`gpu::warpAffine` , :ocv:func:`gpu::remap`
+
+
+
 gpu::warpPerspective
 ------------------------
 Applies a perspective transformation to an image.
@@ -514,6 +536,28 @@ Applies a perspective transformation to an image.
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`warpPerspective`
+
+
+
+gpu::buildWarpPerspectiveMaps
+-----------------------------
+Builds transformation maps for perspective transformation.
+
+.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+
+    :param M: *3x3*  transformation matrix.
+
+    :param inverse: Flag  specifying that  ``M`` is an inverse transformation ( ``dst=>src`` ).
+
+    :param dsize: Size of the destination image.
+
+    :param xmap: X values with  ``CV_32FC1`` type.
+
+    :param ymap: Y values with  ``CV_32FC1`` type.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`gpu::warpPerspective` , :ocv:func:`gpu::remap`
 
 
 
@@ -562,7 +606,7 @@ Forms a border around an image.
     :param right: Number of pixels in each direction from the source image rectangle to extrapolate. For example:  ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
 
     :param borderType: Border type. See  :ocv:func:`borderInterpolate` for details. ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
-    
+
     :param value: Border value.
 
     :param stream: Stream for the asynchronous version.
@@ -796,17 +840,17 @@ Composites two images using alpha opacity values contained in each image.
     :param alpha_op: Flag specifying the alpha-blending operation:
 
             * **ALPHA_OVER**
-            * **ALPHA_IN** 
-            * **ALPHA_OUT** 
-            * **ALPHA_ATOP** 
-            * **ALPHA_XOR** 
-            * **ALPHA_PLUS** 
-            * **ALPHA_OVER_PREMUL** 
-            * **ALPHA_IN_PREMUL** 
-            * **ALPHA_OUT_PREMUL** 
-            * **ALPHA_ATOP_PREMUL** 
-            * **ALPHA_XOR_PREMUL** 
-            * **ALPHA_PLUS_PREMUL** 
+            * **ALPHA_IN**
+            * **ALPHA_OUT**
+            * **ALPHA_ATOP**
+            * **ALPHA_XOR**
+            * **ALPHA_PLUS**
+            * **ALPHA_OVER_PREMUL**
+            * **ALPHA_IN_PREMUL**
+            * **ALPHA_OUT_PREMUL**
+            * **ALPHA_ATOP_PREMUL**
+            * **ALPHA_XOR_PREMUL**
+            * **ALPHA_PLUS_PREMUL**
             * **ALPHA_PREMUL**
 
     :param stream: Stream for the asynchronous version.
