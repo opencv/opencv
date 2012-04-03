@@ -2987,9 +2987,6 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
 
     CV_CHECK_OUTPUT_FILE_STORAGE( fs );
 
-    if( !data0 )
-        CV_Error( CV_StsNullPtr, "Null data pointer" );
-
     if( len < 0 )
         CV_Error( CV_StsOutOfRange, "Negative number of elements" );
 
@@ -2997,6 +2994,9 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
 
     if( !len )
         return;
+    
+    if( !data0 )
+        CV_Error( CV_StsNullPtr, "Null data pointer" );
 
     if( fmt_pair_count == 1 )
     {
@@ -5195,7 +5195,7 @@ FileNodeIterator::FileNodeIterator()
 FileNodeIterator::FileNodeIterator(const CvFileStorage* _fs,
                                    const CvFileNode* _node, size_t _ofs)
 {
-    if( _fs && _node )
+    if( _fs && _node && CV_NODE_TYPE(_node->tag) != CV_NODE_NONE )
     {
         int node_type = _node->tag & FileNode::TYPE_MASK;
         fs = _fs;
@@ -5359,12 +5359,6 @@ void write( FileStorage& fs, const string& name, const SparseMat& value )
     cvWrite( *fs, name.size() ? name.c_str() : 0, mat );
 }
     
-void write( FileStorage& fs, const string& name, const vector<Mat>& value )
-{
-    WriteStructContext ws(fs, name, CV_NODE_SEQ);
-    for( size_t i = 0; i < value.size(); i++ )
-        write(fs, string(), value[i]);
-}
 
 WriteStructContext::WriteStructContext(FileStorage& _fs, const string& name,
                    int flags, const string& typeName) : fs(&_fs)
@@ -5411,24 +5405,6 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
     Ptr<CvSparseMat> m = (CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
     CV_Assert(CV_IS_SPARSE_MAT(m));
     SparseMat(m).copyTo(mat);
-}
-    
-void read( const FileNode& node, vector<Mat>& mat_vector, const vector<Mat>& default_mat_vector )
-{
-    if( node.empty() )
-    {
-        mat_vector = default_mat_vector;
-        return;
-    }
-    
-    FileNodeIterator it = node.begin(), it_end = node.end();
-    mat_vector.clear();
-    for( ; it != it_end; ++it )
-    {
-        Mat m;
-        *it >> m;
-        mat_vector.push_back(m);
-    }
 }
 
 }

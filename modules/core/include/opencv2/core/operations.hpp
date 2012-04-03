@@ -2834,11 +2834,10 @@ public:
     {
         int _fmt = DataType<_Tp>::fmt;
         char fmt[] = { (char)((_fmt>>8)+'1'), (char)_fmt, '\0' };
-        fs->writeRaw( string(fmt), (uchar*)&vec[0], vec.size()*sizeof(_Tp) );
+        fs->writeRaw( string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, vec.size()*sizeof(_Tp) );
     }
     FileStorage* fs;
 };
-
 
 template<typename _Tp> static inline void write( FileStorage& fs, const vector<_Tp>& vec )
 {
@@ -2846,17 +2845,15 @@ template<typename _Tp> static inline void write( FileStorage& fs, const vector<_
     w(vec);
 }
 
-template<typename _Tp> static inline FileStorage&
-operator << ( FileStorage& fs, const vector<_Tp>& vec )
+template<typename _Tp> static inline void write( FileStorage& fs, const string& name,
+                                                const vector<_Tp>& vec )
 {
-    VecWriterProxy<_Tp, DataType<_Tp>::generic_type == 0> w(&fs);
-    w(vec);
-    return fs;
-}
-
+    WriteStructContext ws(fs, name, CV_NODE_SEQ+(DataType<_Tp>::fmt != 0 ? CV_NODE_FLOW : 0));
+    write(fs, vec);
+}    
+    
 CV_EXPORTS_W void write( FileStorage& fs, const string& name, const Mat& value );
 CV_EXPORTS void write( FileStorage& fs, const string& name, const SparseMat& value );
-CV_EXPORTS void write( FileStorage& fs, const string& name, const vector<Mat>& value );
     
 template<typename _Tp> static inline FileStorage& operator << (FileStorage& fs, const _Tp& value)
 {
@@ -2894,7 +2891,7 @@ inline size_t FileNode::size() const
 {
     int t = type();
     return t == MAP ? ((CvSet*)node->data.map)->active_count :
-        t == SEQ ? node->data.seq->total : node != 0;
+        t == SEQ ? node->data.seq->total : (size_t)!isNone();
 }
 
 inline CvFileNode* FileNode::operator *() { return (CvFileNode*)node; }
@@ -2958,7 +2955,6 @@ static inline void read(const FileNode& node, string& value, const string& defau
 
 CV_EXPORTS_W void read(const FileNode& node, Mat& mat, const Mat& default_mat=Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat=SparseMat() );
-CV_EXPORTS void read(const FileNode& node, vector<Mat>& mat, const vector<Mat>& default_mat_vector=vector<Mat>() );
     
 inline FileNode::operator int() const
 {
@@ -3029,9 +3025,10 @@ read( FileNodeIterator& it, vector<_Tp>& vec, size_t maxCount=(size_t)INT_MAX )
 }
 
 template<typename _Tp> static inline void
-read( FileNode& node, vector<_Tp>& vec, const vector<_Tp>& default_value=vector<_Tp>() )
+read( const FileNode& node, vector<_Tp>& vec, const vector<_Tp>& default_value=vector<_Tp>() )
 {
-    read( node.begin(), vec );
+    FileNodeIterator it = node.begin();
+    read( it, vec );
 }
     
 inline FileNodeIterator FileNode::begin() const

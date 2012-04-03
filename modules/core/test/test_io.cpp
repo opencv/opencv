@@ -377,6 +377,50 @@ protected:
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
 
+
+class CV_MiscIOTest : public cvtest::BaseTest
+{
+public:
+    CV_MiscIOTest() {}
+    ~CV_MiscIOTest() {}   
+protected:
+    void run(int)
+    {
+        //try
+        {
+            FileStorage fs("test.xml", FileStorage::WRITE);
+            vector<int> mi, mi2, mi3, mi4;
+            vector<Mat> mv, mv2, mv3, mv4;
+            Mat m(10, 9, CV_32F);
+            randu(m, 0, 1);
+            mi3.push_back(5);
+            mv3.push_back(m);
+            fs << "mi" << mi;
+            fs << "mv" << mv;
+            fs << "mi3" << mi3;
+            fs << "mv3" << mv3;
+            fs.release();
+            fs.open("test.xml", FileStorage::READ);
+            fs["mi"] >> mi2;
+            fs["mv"] >> mv2;
+            fs["mi3"] >> mi4;
+            fs["mv3"] >> mv4;
+            CV_Assert( mi2.empty() );
+            CV_Assert( mv2.empty() );
+            CV_Assert( norm(mi3, mi4, CV_C) == 0 );
+            CV_Assert( mv4.size() == 1 );
+            double n = norm(mv3[0], mv4[0], CV_C);
+            CV_Assert( n == 0 );
+        }
+        /*catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }*/
+    }
+};
+
+TEST(Core_InputOutput, misc) { CV_MiscIOTest test; test.safe_run(); }
+
 /*class CV_BigMatrixIOTest : public cvtest::BaseTest
 {
 public:
