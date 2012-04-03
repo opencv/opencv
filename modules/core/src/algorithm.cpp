@@ -329,7 +329,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
     {
         const Param& p = data->params.vec[i].second;
         const string& pname = data->params.vec[i].first;
-        FileNode n = fn[pname];
+        const FileNode n = fn[pname];
         if( n.empty() )
             continue;
         if( p.type == Param::INT )
@@ -343,13 +343,13 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         else if( p.type == Param::MAT )
         {
             Mat m;
-            cv::read(fn, m);
+            cv::read(n, m);
             algo->set(pname, m);
         }
         else if( p.type == Param::MAT_VECTOR )
         {
             vector<Mat> mv;
-            cv::read(fn, mv);
+            cv::read(n, mv);
             algo->set(pname, mv);
         }
         else if( p.type == Param::ALGORITHM )
@@ -537,7 +537,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* name, int argType, vo
     }
     else if( argType == Param::MAT_VECTOR )
     {
-        CV_Assert( p->type == Param::MAT );
+        CV_Assert( p->type == Param::MAT_VECTOR );
         
         *(vector<Mat>*)value = p->getter ? (algo->*f.get_mat_vector)() :
         *(vector<Mat>*)((uchar*)algo + p->offset);
@@ -585,7 +585,8 @@ void AlgorithmInfo::addParam_(Algorithm& algo, const char* name, int argType,
 {
     CV_Assert( argType == Param::INT || argType == Param::BOOLEAN ||
                argType == Param::REAL || argType == Param::STRING ||
-               argType == Param::MAT || argType == Param::ALGORITHM );
+               argType == Param::MAT || argType == Param::MAT_VECTOR ||
+               argType == Param::ALGORITHM );
     data->params.add(string(name), Param(argType, readOnly,
                      (int)((size_t)value - (size_t)(void*)&algo),
                      getter, setter, help));
