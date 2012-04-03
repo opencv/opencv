@@ -89,9 +89,9 @@ Constructor.
     :param minDistance: Minimum possible Euclidean distance between the returned corners.
 
     :param blockSize: Size of an average block for computing a derivative covariation matrix over each pixel neighborhood. See  :ocv:func:`cornerEigenValsAndVecs` .
-    
+
     :param useHarrisDetector: Parameter indicating whether to use a Harris detector (see :ocv:func:`gpu::cornerHarris`) or :ocv:func:`gpu::cornerMinEigenVal`.
-    
+
     :param harrisK: Free parameter of the Harris detector.
 
 
@@ -100,7 +100,7 @@ gpu::GoodFeaturesToTrackDetector_GPU::operator ()
 -------------------------------------------------
 Finds the most prominent corners in the image.
 
-.. ocv:function:: void gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat()) 
+.. ocv:function:: void gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat())
 
     :param image: Input 8-bit, single-channel image.
 
@@ -202,6 +202,7 @@ Class used for calculating an optical flow. ::
         double derivLambda;
         bool useInitialFlow;
         float minEigThreshold;
+        bool getMinEigenVals;
 
         void releaseMemory();
     };
@@ -228,7 +229,7 @@ Calculate an optical flow for a sparse feature set.
 
     :param status: Output status vector (CV_8UC1 type). Each element of the vector is set to 1 if the flow for the corresponding features has been found. Otherwise, it is set to 0.
 
-    :param err: Output vector (CV_32FC1 type) that contains min eigen value. It can be NULL, if not needed.
+    :param err: Output vector (CV_32FC1 type) that contains the difference between patches around the original and moved points or min eigen value if ``getMinEigenVals`` is checked. It can be NULL, if not needed.
 
 .. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
 
@@ -244,11 +245,11 @@ Calculate dense optical flow.
 
     :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
 
-    :param u: Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel 
+    :param u: Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
 
-    :param v: Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel 
+    :param v: Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
 
-    :param err: Output vector (CV_32FC1 type) that contains min eigen value. It can be NULL, if not needed.
+    :param err: Output vector (CV_32FC1 type) that contains the difference between patches around the original and moved points or min eigen value if ``getMinEigenVals`` is checked. It can be NULL, if not needed.
 
 
 

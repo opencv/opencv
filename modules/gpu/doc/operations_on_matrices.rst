@@ -14,13 +14,13 @@ Performs generalized matrix multiplication.
     :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
     :param src2: Second multiplied input matrix of the same type as  ``src1`` .
-    
+
     :param alpha: Weight of the matrix product.
 
     :param src3: Third optional delta matrix added to the matrix product. It should have the same type as  ``src1``  and  ``src2`` .
-    
+
     :param beta: Weight of  ``src3`` .
-    
+
     :param dst: Destination matrix. It has the proper size and the same type as input matrices.
 
     :param flags: Operation flags:
@@ -30,12 +30,14 @@ Performs generalized matrix multiplication.
             * **GEMM_3_T** transpose  ``src3``
 
     :param stream: Stream for the asynchronous version.
-            
+
 The function performs generalized matrix multiplication similar to the ``gemm`` functions in BLAS level 3. For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
 
 .. math::
 
     \texttt{dst} =  \texttt{alpha} \cdot \texttt{src1} ^T  \cdot \texttt{src2} +  \texttt{beta} \cdot \texttt{src3} ^T
+
+.. note:: Transposition operation doesn't support  ``CV_64FC2``  input type.
 
 .. seealso:: :ocv:func:`gemm`
 

@@ -11,18 +11,19 @@ gpu::SURF_GPU
 
 Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 
-    class SURF_GPU : public CvSURFParams
+    class SURF_GPU
     {
     public:
         enum KeypointLayout
         {
-            SF_X = 0,
-            SF_Y,
-            SF_LAPLACIAN,
-            SF_SIZE,
-            SF_DIR,
-            SF_HESSIAN,
-            SF_FEATURE_STRIDE
+            X_ROW = 0,
+            Y_ROW,
+            LAPLACIAN_ROW,
+            OCTAVE_ROW,
+            SIZE_ROW,
+            ANGLE_ROW,
+            HESSIAN_ROW,
+            ROWS_COUNT
         };
 
         //! the default constructor
@@ -69,6 +70,13 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 
         void releaseMemory();
 
+        // SURF parameters
+        double hessianThreshold;
+        int nOctaves;
+        int nOctaveLayers;
+        bool extended;
+        bool upright;
+
         //! max keypoints = keypointsRatio * img.size().area()
         float keypointsRatio;
 
@@ -82,14 +90,15 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 
 The class ``SURF_GPU`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
 
-The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 6` matrix with the ``CV_32FC1`` type.
+The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
 
-* ``keypoints.ptr<float>(SF_X)[i]`` contains x coordinate of the i-th feature.
-* ``keypoints.ptr<float>(SF_Y)[i]`` contains y coordinate of the i-th feature.
-* ``keypoints.ptr<float>(SF_LAPLACIAN)[i]``  contains the laplacian sign of the i-th feature.
-* ``keypoints.ptr<float>(SF_SIZE)[i]`` contains the size of the i-th feature.
-* ``keypoints.ptr<float>(SF_DIR)[i]`` contain orientation of the i-th feature.
-* ``keypoints.ptr<float>(SF_HESSIAN)[i]`` contains the response of the i-th feature.
+* ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i-th feature.
+* ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i-th feature.
+* ``keypoints.ptr<float>(LAPLACIAN_ROW)[i]``  contains the laplacian sign of the i-th feature.
+* ``keypoints.ptr<float>(OCTAVE_ROW)[i]`` contains the octave of the i-th feature.
+* ``keypoints.ptr<float>(SIZE_ROW)[i]`` contains the size of the i-th feature.
+* ``keypoints.ptr<float>(ANGLE_ROW)[i]`` contain orientation of the i-th feature.
+* ``keypoints.ptr<float>(HESSIAN_ROW)[i]`` contains the response of the i-th feature.
 
 The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
 
@@ -118,17 +127,17 @@ Class used for corner detection using the FAST algorithm. ::
         // all features have same size
         static const int FEATURE_SIZE = 7;
 
-        explicit FAST_GPU(int threshold, bool nonmaxSupression = true, 
+        explicit FAST_GPU(int threshold, bool nonmaxSupression = true,
                           double keypointsRatio = 0.05);
 
-        void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);    
-        void operator ()(const GpuMat& image, const GpuMat& mask, 
+        void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
+        void operator ()(const GpuMat& image, const GpuMat& mask,
                          std::vector<KeyPoint>& keypoints);
 
-        void downloadKeypoints(const GpuMat& d_keypoints, 
+        void downloadKeypoints(const GpuMat& d_keypoints,
                                std::vector<KeyPoint>& keypoints);
 
-        void convertKeypoints(const Mat& h_keypoints, 
+        void convertKeypoints(const Mat& h_keypoints,
                               std::vector<KeyPoint>& keypoints);
 
         void release();
@@ -169,7 +178,7 @@ gpu::FAST_GPU::operator ()
 -------------------------------------
 Finds the keypoints using FAST detector.
 
-.. ocv:function:: void gpu::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints) 
+.. ocv:function:: void gpu::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
 .. ocv:function:: void gpu::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
 
     :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
@@ -177,8 +186,8 @@ Finds the keypoints using FAST detector.
     :param mask: Optional input mask that marks the regions where we should detect features.
 
     :param keypoints: The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory:
-    
-            * keypoints.ptr<Vec2s>(LOCATION_ROW)[i] will contain location of i'th point 
+
+            * keypoints.ptr<Vec2s>(LOCATION_ROW)[i] will contain location of i'th point
             * keypoints.ptr<float>(RESPONSE_ROW)[i] will contaion response of i'th point (if non-maximum supression is applied)
 
 
@@ -258,16 +267,18 @@ Class for extracting ORB features and descriptors from an image. ::
             DEFAULT_FAST_THRESHOLD = 20
         };
 
-        explicit ORB_GPU(size_t n_features = 500, 
-                const ORB::CommonParams& detector_params = ORB::CommonParams());
+        explicit ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f,
+                         int nLevels = 8, int edgeThreshold = 31,
+                         int firstLevel = 0, int WTA_K = 2,
+                         int scoreType = 0, int patchSize = 31);
 
-        void operator()(const GpuMat& image, const GpuMat& mask, 
+        void operator()(const GpuMat& image, const GpuMat& mask,
                         std::vector<KeyPoint>& keypoints);
         void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
 
-        void operator()(const GpuMat& image, const GpuMat& mask, 
+        void operator()(const GpuMat& image, const GpuMat& mask,
                         std::vector<KeyPoint>& keypoints, GpuMat& descriptors);
-        void operator()(const GpuMat& image, const GpuMat& mask, 
+        void operator()(const GpuMat& image, const GpuMat& mask,
                         GpuMat& keypoints, GpuMat& descriptors);
 
         void downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
@@ -292,11 +303,17 @@ gpu::ORB_GPU::ORB_GPU
 -------------------------------------
 Constructor.
 
-.. ocv:function:: gpu::ORB_GPU::ORB_GPU(size_t n_features = 500, const ORB::CommonParams& detector_params = ORB::CommonParams())
+.. ocv:function:: gpu::ORB_GPU::ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31, int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31)
 
-    :param n_features: Number of features to detect.
+    :param nFeatures: The number of desired features.
 
-    :param detector_params: ORB detector parameters.
+    :param scaleFactor: Coefficient by which we divide the dimensions from one scale pyramid level to the next.
+
+    :param nLevels: The number of levels in the scale pyramid.
+
+    :param edgeThreshold: How far from the boundary the points should be.
+
+    :param firstLevel: The level at which the image is given. If 1, that means we will also look at the image  `scaleFactor`  times bigger.
 
 
 
@@ -313,9 +330,9 @@ Detects keypoints and computes descriptors for them.
 .. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors)
 
     :param image: Input 8-bit grayscale image.
-    
+
     :param mask: Optional input mask that marks the regions where we should detect features.
-    
+
     :param keypoints: The input/output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory:
 
             * ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i'th feature.
@@ -324,7 +341,7 @@ Detects keypoints and computes descriptors for them.
             * ``keypoints.ptr<float>(ANGLE_ROW)[i]`` contains orientation of the i'th feature.
             * ``keypoints.ptr<float>(OCTAVE_ROW)[i]`` contains the octave of the i'th feature.
             * ``keypoints.ptr<float>(SIZE_ROW)[i]`` contains the size of the i'th feature.
-    
+
     :param descriptors: Computed descriptors. if ``blurForDescriptor`` is true, image will be blurred before descriptors calculation.
 
 
@@ -409,9 +426,9 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
             GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k,
             const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-        static void knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, 
+        static void knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance,
             std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
-        static void knnMatchConvert(const Mat& trainIdx, const Mat& distance, 
+        static void knnMatchConvert(const Mat& trainIdx, const Mat& distance,
             std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
         void knnMatch(const GpuMat& query, const GpuMat& train,

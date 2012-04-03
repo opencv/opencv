@@ -369,21 +369,19 @@ gpu::createLinearFilter_GPU
 -------------------------------
 Creates a non-separable linear filter.
 
-.. ocv:function:: Ptr<FilterEngine_GPU> gpu::createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Point& anchor = Point(-1,-1))
+.. ocv:function:: Ptr<FilterEngine_GPU> gpu::createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor = Point(-1,-1), int borderType = BORDER_DEFAULT)
 
 .. ocv:function:: Ptr<BaseFilter_GPU> gpu::getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Size& ksize, Point anchor = Point(-1, -1))
 
-    :param srcType: Input image type. ``CV_8UC1``  and  ``CV_8UC4`` types are supported.
+    :param srcType: Input image type. Supports  ``CV_8U``  ,  ``CV_16U``  and  ``CV_32F``  one and four channel image.
 
     :param dstType: Output image type. The same type as ``src`` is supported.
 
-    :param kernel: 2D array of filter coefficients. Floating-point coefficients will be converted to fixed-point representation before the actual processing.
-
-    :param ksize: Kernel size. Supports size up to 16. For larger kernels use :ocv:func:`gpu::convolve`.
+    :param kernel: 2D array of filter coefficients. Floating-point coefficients will be converted to fixed-point representation before the actual processing. Supports size up to 16. For larger kernels use :ocv:func:`gpu::convolve`.
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
-.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+    :param borderType: Pixel extrapolation method. For details, see :ocv:func:`borderInterpolate` .
 
 .. seealso:: :ocv:func:`createLinearFilter`
 
@@ -393,9 +391,9 @@ gpu::filter2D
 -----------------
 Applies the non-separable 2D linear filter to an image.
 
-.. ocv:function:: void gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1), int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null())
 
-    :param src: Source image.  ``CV_8UC1`` , ``CV_8UC4`` and ``CV_32FC1``  source types are supported.
+    :param src: Source image. Supports  ``CV_8U``  ,  ``CV_16U``  and  ``CV_32F``  one and four channel image.
 
     :param dst: Destination image. The size and the number of channels is the same as  ``src`` .
 
@@ -405,9 +403,9 @@ Applies the non-separable 2D linear filter to an image.
 
     :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor resides within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.
 
-    :param stream: Stream for the asynchronous version.
+    :param borderType: Pixel extrapolation method. For details, see :ocv:func:`borderInterpolate` .
 
-.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+    :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`filter2D`, :ocv:func:`gpu::convolve`
 
@@ -417,7 +415,7 @@ gpu::Laplacian
 ------------------
 Applies the Laplacian operator to an image.
 
-.. ocv:function:: void gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
@@ -428,6 +426,8 @@ Applies the Laplacian operator to an image.
     :param ksize: Aperture size used to compute the second-derivative filters (see :ocv:func:`getDerivKernels`). It must be positive and odd. Only  ``ksize``  = 1 and  ``ksize``  = 3 are supported.
 
     :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied (see  :ocv:func:`getDerivKernels` ).
+
+    :param borderType: Pixel extrapolation method. For details, see :ocv:func:`borderInterpolate` .
 
     :param stream: Stream for the asynchronous version.
 
