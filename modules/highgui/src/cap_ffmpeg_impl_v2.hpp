@@ -54,6 +54,8 @@ extern "C" {
 
 #include "ffmpeg_codecs.hpp"
 
+#include <libavutil/mathematics.h>
+
 #ifdef WIN32
   #define HAVE_FFMPEG_SWSCALE 1
   #include <libavcodec/avcodec.h>
