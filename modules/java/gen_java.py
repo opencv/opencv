@@ -87,7 +87,7 @@ const_ignore_list = (
     "CV_L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV)\d*2L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV).*",
     "CV_COLORCVT_MAX",
     "CV_.*Bayer.*",
-    "CV_YUV420(i|sp)2.+",
+    "CV_YUV420(i|sp|p)2.+",
     "CV_TM_.+",
     "CV_FLOODFILL_.+",
     "CV_ADAPTIVE_THRESH_.+",
