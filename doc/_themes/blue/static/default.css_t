@@ -16,6 +16,10 @@ body {
     padding: 0;
 }
 
+img.logo {
+    width: 150px;
+}
+
 div.document {
     background-color: {{ theme_sidebarbgcolor }};
 }
@@ -284,10 +288,16 @@ dl.function > dt:first-child {
     margin-bottom: 7px;
 }
 
-dl.c\:function > dt:first-child {
+dl.cfunction > dt:first-child {
     margin-bottom: 7px;
     color: #8080B0;
 }
+
+dl.cfunction > dt:first-child tt.descname
+{
+    color: #8080B0;
+}
+
 
 dl.pyfunction > dt:first-child {
     margin-bottom: 7px;
@@ -295,6 +305,16 @@ dl.pyfunction > dt:first-child {
 
 dl.pyoldfunction > dt:first-child {
     margin-bottom: 7px;
+    color: #8080B0;
+}
+
+dl.pyoldfunction > dt:first-child tt.descname
+{
+    color: #8080B0;
+}
+
+dl.pyoldfunction > dt:first-child tt.descclassname
+{
     color: #8080B0;
 }
 
