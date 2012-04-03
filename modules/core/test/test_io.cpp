@@ -386,7 +386,7 @@ public:
 protected:
     void run(int)
     {
-        //try
+        try
         {
             FileStorage fs("test.xml", FileStorage::WRITE);
             vector<int> mi, mi2, mi3, mi4;
@@ -412,10 +412,10 @@ protected:
             double n = norm(mv3[0], mv4[0], CV_C);
             CV_Assert( n == 0 );
         }
-        /*catch(...)
+        catch(...)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }*/
+        }
     }
 };
 
