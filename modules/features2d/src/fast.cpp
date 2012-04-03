@@ -391,22 +391,4 @@ void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
-    
-static Algorithm* createFAST() { return new FastFeatureDetector; }
-static AlgorithmInfo fast_info("Feature2D.FAST", createFAST);
-    
-AlgorithmInfo* FastFeatureDetector::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        FastFeatureDetector obj;
-        fast_info.addParam(obj, "threshold", obj.threshold);
-        fast_info.addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
-        
-        initialized = true;
-    }
-    return &fast_info;
-}
-    
 }

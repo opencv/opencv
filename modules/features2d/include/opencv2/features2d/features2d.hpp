@@ -51,6 +51,8 @@
 
 namespace cv
 {
+    
+CV_EXPORTS bool initModule_features2d();
 
 /*!
  The Keypoint Class

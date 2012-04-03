@@ -359,5 +359,131 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
     if( !mask.empty() )
         KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
+    
+    
+/////////////////////// AlgorithmInfo for various detector & descriptors ////////////////////////////
 
+/* NOTE!!!
+   All the AlgorithmInfo-related stuff should be in the same file as initModule_features2d().
+   Otherwise, linker may throw away some seemingly unused stuff.
+*/
+    
+static Algorithm* createBRIEF() { return new BriefDescriptorExtractor; }
+static AlgorithmInfo brief_info("Feature2D.BRIEF", createBRIEF);
+
+AlgorithmInfo* BriefDescriptorExtractor::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        BriefDescriptorExtractor brief;
+        brief_info.addParam(brief, "bytes", brief.bytes_);
+        
+        initialized = true;
+    }
+    return &brief_info;
+}
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+static Algorithm* createFAST() { return new FastFeatureDetector; }
+static AlgorithmInfo fast_info("Feature2D.FAST", createFAST);
+
+AlgorithmInfo* FastFeatureDetector::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        FastFeatureDetector obj;
+        fast_info.addParam(obj, "threshold", obj.threshold);
+        fast_info.addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
+        
+        initialized = true;
+    }
+    return &fast_info;
+}
+    
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+static Algorithm* createStarDetector() { return new StarDetector; }
+static AlgorithmInfo star_info("Feature2D.STAR", createStarDetector);
+
+AlgorithmInfo* StarDetector::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        StarDetector obj;
+        star_info.addParam(obj, "maxSize", obj.maxSize);
+        star_info.addParam(obj, "responseThreshold", obj.responseThreshold);
+        star_info.addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
+        star_info.addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
+        star_info.addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize);
+        
+        initialized = true;
+    }
+    return &star_info;
+}    
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+static Algorithm* createMSER() { return new MSER; }
+static AlgorithmInfo mser_info("Feature2D.MSER", createMSER);
+
+AlgorithmInfo* MSER::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        MSER obj;
+        mser_info.addParam(obj, "delta", obj.delta);
+        mser_info.addParam(obj, "minArea", obj.minArea);
+        mser_info.addParam(obj, "maxArea", obj.maxArea);
+        mser_info.addParam(obj, "maxVariation", obj.maxVariation);
+        mser_info.addParam(obj, "minDiversity", obj.minDiversity);
+        mser_info.addParam(obj, "maxEvolution", obj.maxEvolution);
+        mser_info.addParam(obj, "areaThreshold", obj.areaThreshold);
+        mser_info.addParam(obj, "minMargin", obj.minMargin);
+        mser_info.addParam(obj, "edgeBlurSize", obj.edgeBlurSize);
+        
+        initialized = true;
+    }
+    return &mser_info;
+}
+    
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static Algorithm* createORB() { return new ORB; }
+static AlgorithmInfo orb_info("Feature2D.ORB", createORB);
+
+AlgorithmInfo* ORB::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        ORB obj;
+        orb_info.addParam(obj, "nFeatures", obj.nfeatures);
+        orb_info.addParam(obj, "scaleFactor", obj.scaleFactor);
+        orb_info.addParam(obj, "nLevels", obj.nlevels);
+        orb_info.addParam(obj, "firstLevel", obj.firstLevel);
+        orb_info.addParam(obj, "edgeThreshold", obj.edgeThreshold);
+        orb_info.addParam(obj, "patchSize", obj.patchSize);
+        orb_info.addParam(obj, "WTA_K", obj.WTA_K);
+        orb_info.addParam(obj, "scoreType", obj.scoreType);
+        
+        initialized = true;
+    }
+    return &orb_info;
+}
+    
+bool initModule_features2d(void)
+{
+    Ptr<Algorithm> brief = createBRIEF(), orb = createORB(),
+        star = createStarDetector(), fastd = createFAST(), mser = createMSER();
+    return brief->info() != 0 && orb->info() != 0 && star->info() != 0 &&
+        fastd->info() != 0 && mser->info() != 0;
+}
+    
 }

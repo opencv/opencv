@@ -447,25 +447,4 @@ void StarDetector::operator()(const Mat& img, vector<KeyPoint>& keypoints) const
                                     lineThresholdBinarized, suppressNonmaxSize );
 }
     
-    
-static Algorithm* createStarDetector() { return new StarDetector; }
-static AlgorithmInfo star_info("Feature2D.STAR", createStarDetector);
-    
-AlgorithmInfo* StarDetector::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        StarDetector obj;
-        star_info.addParam(obj, "maxSize", obj.maxSize);
-        star_info.addParam(obj, "responseThreshold", obj.responseThreshold);
-        star_info.addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
-        star_info.addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
-        star_info.addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize);
-        
-        initialized = true;
-    }
-    return &star_info;
-}    
-
 }
