@@ -877,16 +877,29 @@ void SURF::operator()(InputArray _img, InputArray _mask,
     if( N > 0 )
     {
         Mat descriptors;
+        bool _1d = false;
+        int dcols = extended ? 128 : 64;
+        size_t dsize = dcols*sizeof(float);
+        
         if( doDescriptors )
         {
-            _descriptors.create((int)keypoints.size(), (extended ? 128 : 64), CV_32F);
-            descriptors = _descriptors.getMat();
+            _1d = _descriptors.kind() == _InputArray::STD_VECTOR && _descriptors.type() == CV_32F;
+            if( _1d )
+            {
+                _descriptors.create(N*dcols, 1, CV_32F);
+                descriptors = _descriptors.getMat().reshape(1, N);
+            }
+            else
+            {
+                _descriptors.create(N, dcols, CV_32F);
+                descriptors = _descriptors.getMat();
+            }
         }
         
+        // we call SURFInvoker in any case, even if we do not need descriptors,
+        // since it computes orientation of each feature.
         parallel_for(BlockedRange(0, N), SURFInvoker(img, sum, keypoints, descriptors, extended, upright) );
         
-        size_t dsize = descriptors.cols*descriptors.elemSize();
-    
         // remove keypoints that were marked for deletion
         for( i = j = 0; i < N; i++ )
         {
@@ -908,6 +921,8 @@ void SURF::operator()(InputArray _img, InputArray _mask,
             if( doDescriptors )
             {
                 Mat d = descriptors.rowRange(0, N);
+                if( _1d )
+                    d = d.reshape(1, N*dcols);
                 d.copyTo(_descriptors);
             }
         }
