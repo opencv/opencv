@@ -179,6 +179,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
 Mat estimateGlobalMotionLeastSquares(
         const vector<Point2f> &points0, const vector<Point2f> &points1, int model, float *rmse)
 {
+    CV_Assert(model <= AFFINE);
     CV_Assert(points0.size() == points1.size());
 
     typedef Mat (*Impl)(int, const Point2f*, const Point2f*, float*);
@@ -196,6 +197,7 @@ Mat estimateGlobalMotionRobust(
         const vector<Point2f> &points0, const vector<Point2f> &points1, int model,
         const RansacParams &params, float *rmse, int *ninliers)
 {
+    CV_Assert(model <= AFFINE);
     CV_Assert(points0.size() == points1.size());
 
     typedef Mat (*Impl)(int, const Point2f*, const Point2f*, float*);
