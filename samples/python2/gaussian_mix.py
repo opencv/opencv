@@ -37,8 +37,7 @@ if __name__ == '__main__':
         print 'EM (opencv) ...'
         em = cv2.EM(points, params = dict( nclusters = cluster_n, cov_mat_type = cv2.EM_COV_MAT_GENERIC) )
         means = em.getMeans()
-        covs = np.zeros((cluster_n, 2, 2), np.float32) 
-        covs = em.getCovs(covs)         # FIXME
+        covs = em.getCovs()
         found_distrs = zip(means, covs)
         print 'ready!\n'
 
