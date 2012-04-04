@@ -4,11 +4,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedList;
-import java.util.List;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
+import org.opencv.core.CvVectorRect;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -81,11 +80,12 @@ class FdView extends SampleCvViewBase {
         if (mCascade != null) {
             int height = mGray.rows();
             int faceSize = Math.round(height * FdActivity.minFaceSize);
-            List<Rect> faces = new LinkedList<Rect>();
+            CvVectorRect faces = new CvVectorRect();
             mCascade.detectMultiScale(mGray, faces, 1.1, 2, 2 // TODO: objdetect.CV_HAAR_SCALE_IMAGE
                     , new Size(faceSize, faceSize), new Size());
 
-            for (Rect r : faces)
+            Rect ra[] = null;
+            for (Rect r : faces.toArray(ra))
                 Core.rectangle(mRgba, r.tl(), r.br(), new Scalar(0, 255, 0, 255), 3);
         }
 
