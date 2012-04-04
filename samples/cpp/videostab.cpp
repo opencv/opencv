@@ -29,7 +29,7 @@ void run();
 void saveMotionsIfNecessary();
 void printHelp();
 
-class GlobalMotionReader : public IGlobalMotionEstimator
+class GlobalMotionReader : public GlobalMotionEstimatorBase
 {
 public:
     GlobalMotionReader(string path)
@@ -256,11 +256,11 @@ int main(int argc, const char **argv)
         {
             RansacParams ransac;
             PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator();
-            Ptr<IGlobalMotionEstimator> est_(est);
+            Ptr<GlobalMotionEstimatorBase> est_(est);
             if (arg("model") == "transl")
             {
                 est->setMotionModel(TRANSLATION);
-                ransac = RansacParams::translationMotionStd();
+                ransac = RansacParams::translation2dMotionStd();
             }
             else if (arg("model") == "transl_and_scale")
             {
@@ -270,13 +270,13 @@ int main(int argc, const char **argv)
             else if (arg("model") == "linear_sim")
             {
                 est->setMotionModel(LINEAR_SIMILARITY);
-                ransac = RansacParams::linearSimilarityMotionStd();
+                ransac = RansacParams::linearSimilarity2dMotionStd();
             }
             else if (arg("model") == "affine")
             {
                 est->setMotionModel(AFFINE);
                 ransac = RansacParams::affine2dMotionStd();
-            }
+            }            
             else
                 throw runtime_error("unknown motion model: " + arg("model"));
             ransac.eps = argf("outlier-ratio");

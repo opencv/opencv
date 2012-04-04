@@ -70,6 +70,14 @@ void InpaintingPipeline::setFrames(const vector<Mat> &val)
 }
 
 
+void InpaintingPipeline::setMotionModel(MotionModel val)
+{
+    for (size_t i = 0; i < inpainters_.size(); ++i)
+        inpainters_[i]->setMotionModel(val);
+    InpainterBase::setMotionModel(val);
+}
+
+
 void InpaintingPipeline::setMotions(const vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
@@ -361,16 +369,33 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 
         Mat motion1to0 = motions[radius_ + neighbor - idx].inv();
 
-        frame1_ = at(neighbor, *frames_);
-        warpAffine(
-                frame1_, transformedFrame1_, motion1to0(Rect(0,0,3,2)), frame1_.size(),
-                INTER_LINEAR, borderMode_);
+        // warp frame
+
+        frame1_ = at(neighbor, *frames_);        
+
+        if (motionModel_ != HOMOGRAPHY)
+            warpAffine(
+                    frame1_, transformedFrame1_, motion1to0(Rect(0,0,3,2)), frame1_.size(),
+                    INTER_LINEAR, borderMode_);
+        else
+            warpPerspective(
+                    frame1_, transformedFrame1_, motion1to0, frame1_.size(), INTER_LINEAR,
+                    borderMode_);
+
         cvtColor(transformedFrame1_, transformedGrayFrame1_, CV_BGR2GRAY);
 
-        warpAffine(
-                mask1_, transformedMask1_, motion1to0(Rect(0,0,3,2)), mask1_.size(),
-                INTER_NEAREST);
+        // warp mask
+
+        if (motionModel_ != HOMOGRAPHY)
+            warpAffine(
+                    mask1_, transformedMask1_, motion1to0(Rect(0,0,3,2)), mask1_.size(),
+                    INTER_NEAREST);
+        else
+            warpPerspective(mask1_, transformedMask1_, motion1to0, mask1_.size(), INTER_NEAREST);
+
         erode(transformedMask1_, transformedMask1_, Mat());
+
+        // update flow
 
         optFlowEstimator_->run(grayFrame_, transformedGrayFrame1_, flowX_, flowY_, flowErrors_);
 

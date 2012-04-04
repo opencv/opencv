@@ -71,6 +71,7 @@ void StabilizerBase::setUp(int cacheSize, const Mat &frame)
     doInpainting_ = dynamic_cast<NullInpainter*>(inpainter) == 0;
     if (doInpainting_)
     {
+        inpainter_->setMotionModel(motionEstimator_->motionModel());
         inpainter_->setFrames(frames_);
         inpainter_->setMotions(motions_);
         inpainter_->setStabilizedFrames(stabilizedFrames_);
@@ -176,15 +177,26 @@ void StabilizerBase::stabilizeFrame(const Mat &stabilizationMotion)
         preProcessedFrame_ = at(curStabilizedPos_, frames_);
 
     // apply stabilization transformation
-    warpAffine(
-            preProcessedFrame_, at(curStabilizedPos_, stabilizedFrames_),
-            stabilizationMotion_(Rect(0,0,3,2)), frameSize_, INTER_LINEAR, borderMode_);
+
+    if (motionEstimator_->motionModel() != HOMOGRAPHY)
+        warpAffine(
+                preProcessedFrame_, at(curStabilizedPos_, stabilizedFrames_),
+                stabilizationMotion_(Rect(0,0,3,2)), frameSize_, INTER_LINEAR, borderMode_);
+    else
+        warpPerspective(
+                preProcessedFrame_, at(curStabilizedPos_, stabilizedFrames_),
+                stabilizationMotion_, frameSize_, INTER_LINEAR, borderMode_);
 
     if (doInpainting_)
     {
-        warpAffine(
-                frameMask_, at(curStabilizedPos_, stabilizedMasks_),
-                stabilizationMotion_(Rect(0,0,3,2)), frameSize_, INTER_NEAREST);
+        if (motionEstimator_->motionModel() != HOMOGRAPHY)
+            warpAffine(
+                    frameMask_, at(curStabilizedPos_, stabilizedMasks_),
+                    stabilizationMotion_(Rect(0,0,3,2)), frameSize_, INTER_NEAREST);
+        else
+            warpPerspective(
+                    frameMask_, at(curStabilizedPos_, stabilizedMasks_),
+                    stabilizationMotion_, frameSize_, INTER_NEAREST);
 
         erode(at(curStabilizedPos_, stabilizedMasks_), at(curStabilizedPos_, stabilizedMasks_),
               Mat());

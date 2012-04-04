@@ -58,7 +58,9 @@ enum MotionModel
     TRANSLATION = 0,
     TRANSLATION_AND_SCALE = 1,
     LINEAR_SIMILARITY = 2,
-    AFFINE = 3
+    AFFINE = 3,
+    HOMOGRAPHY = 4,
+    UNKNOWN = 5
 };
 
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
@@ -76,10 +78,11 @@ struct CV_EXPORTS RansacParams
     RansacParams(int size, float thresh, float eps, float prob)
         : size(size), thresh(thresh), eps(eps), prob(prob) {}
 
-    static RansacParams translationMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
+    static RansacParams translation2dMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
     static RansacParams translationAndScale2dMotionStd() { return RansacParams(3, 0.5f, 0.5f, 0.99f); }
-    static RansacParams linearSimilarityMotionStd() { return RansacParams(4, 0.5f, 0.5f, 0.99f); }
+    static RansacParams linearSimilarity2dMotionStd() { return RansacParams(4, 0.5f, 0.5f, 0.99f); }
     static RansacParams affine2dMotionStd() { return RansacParams(6, 0.5f, 0.5f, 0.99f); }
+    static RansacParams homography2dMotionStd() { return RansacParams(8, 0.5f, 0.5f, 0.99f); }
 };
 
 CV_EXPORTS Mat estimateGlobalMotionRobust(
@@ -87,14 +90,22 @@ CV_EXPORTS Mat estimateGlobalMotionRobust(
         int model = AFFINE, const RansacParams &params = RansacParams::affine2dMotionStd(),
         float *rmse = 0, int *ninliers = 0);
 
-class CV_EXPORTS IGlobalMotionEstimator
+class CV_EXPORTS GlobalMotionEstimatorBase
 {
 public:
-    virtual ~IGlobalMotionEstimator() {}
+    GlobalMotionEstimatorBase() : motionModel_(UNKNOWN) {}
+    virtual ~GlobalMotionEstimatorBase() {}
+
+    virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
+    virtual MotionModel motionModel() const { return motionModel_; }
+
     virtual Mat estimate(const Mat &frame0, const Mat &frame1) = 0;
+
+protected:
+    MotionModel motionModel_;
 };
 
-class CV_EXPORTS PyrLkRobustMotionEstimator : public IGlobalMotionEstimator
+class CV_EXPORTS PyrLkRobustMotionEstimator : public GlobalMotionEstimatorBase
 {
 public:
     PyrLkRobustMotionEstimator();
@@ -104,9 +115,6 @@ public:
 
     void setOptFlowEstimator(Ptr<ISparseOptFlowEstimator> val) { optFlowEstimator_ = val; }
     Ptr<ISparseOptFlowEstimator> optFlowEstimator() const { return optFlowEstimator_; }
-
-    void setMotionModel(MotionModel val) { motionModel_ = val; }
-    MotionModel motionModel() const { return motionModel_; }
 
     void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
     RansacParams ransacParams() const { return ransacParams_; }
@@ -122,7 +130,6 @@ public:
 private:
     Ptr<FeatureDetector> detector_;
     Ptr<ISparseOptFlowEstimator> optFlowEstimator_;
-    MotionModel motionModel_;
     RansacParams ransacParams_;
     std::vector<uchar> status_;
     std::vector<KeyPoint> keypointsPrev_;

@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 
@@ -324,8 +323,38 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1)
 
     float rmse;
     int ninliers;
-    Mat M = estimateGlobalMotionRobust(
-            pointsPrevGood_, pointsGood_, motionModel_, ransacParams_, &rmse, &ninliers);
+    Mat_<float> M;
+
+    if (motionModel_ != HOMOGRAPHY)
+        M = estimateGlobalMotionRobust(
+                pointsPrevGood_, pointsGood_, motionModel_, ransacParams_, &rmse, &ninliers);
+    else
+    {
+        vector<uchar> mask;
+        M = findHomography(pointsPrevGood_, pointsGood_, CV_RANSAC, ransacParams_.thresh, mask);
+
+        ninliers = 0;
+        rmse = 0;
+
+        Point2d p0, p1;
+        float x, y, z;
+
+        for (size_t i  = 0; i < pointsGood_.size(); ++i)
+        {
+            if (mask[i])
+            {
+                p0 = pointsPrevGood_[i]; p1 = pointsGood_[i];
+                x = M(0,0)*p0.x + M(0,1)*p0.y + M(0,2);
+                y = M(1,0)*p0.x + M(1,1)*p0.y + M(1,2);
+                z = M(2,0)*p0.x + M(2,1)*p0.y + M(2,2);
+                x /= z; y /= z;
+                rmse += sqr(x - p1.x) + sqr(y - p1.y);
+                ninliers++;
+            }
+        }
+
+        rmse = sqrt(rmse / static_cast<float>(ninliers));
+    }
 
     if (rmse > maxRmse_ || static_cast<float>(ninliers) / pointsGood_.size() < minInlierRatio_)
         M = Mat::eye(3, 3, CV_32F);

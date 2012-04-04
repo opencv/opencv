@@ -47,6 +47,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
+#include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/photo/photo.hpp"
 
 namespace cv
@@ -66,6 +67,9 @@ public:
     virtual void setRadius(int val) { radius_ = val; }
     virtual int radius() const { return radius_; }
 
+    virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
+    virtual MotionModel motionModel() const { return motionModel_; }
+
     virtual void setFrames(const std::vector<Mat> &val) { frames_ = &val; }
     virtual const std::vector<Mat>& frames() const { return *frames_; }
 
@@ -82,6 +86,7 @@ public:
 
 protected:
     int radius_;
+    MotionModel motionModel_;
     const std::vector<Mat> *frames_;
     const std::vector<Mat> *motions_;
     const std::vector<Mat> *stabilizedFrames_;
@@ -101,6 +106,7 @@ public:
     bool empty() const { return inpainters_.empty(); }
 
     virtual void setRadius(int val);
+    virtual void setMotionModel(MotionModel val);
     virtual void setFrames(const std::vector<Mat> &val);
     virtual void setMotions(const std::vector<Mat> &val);
     virtual void setStabilizedFrames(const std::vector<Mat> &val);
