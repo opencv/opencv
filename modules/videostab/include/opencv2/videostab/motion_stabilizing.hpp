@@ -57,10 +57,24 @@ class CV_EXPORTS IMotionStabilizer
 public:
     virtual ~IMotionStabilizer() {}
 
-    // assumes that [range.first, range.second) is in or equals to [0, size-2]
+    // assumes that [0, size-1) is in or equals to [range.first, range.second)
     virtual void stabilize(
             int size, const std::vector<Mat> &motions, std::pair<int,int> range,
             Mat *stabilizationMotions) const = 0;
+};
+
+class CV_EXPORTS MotionStabilizationPipeline : public IMotionStabilizer
+{
+public:
+    void pushBack(Ptr<IMotionStabilizer> stabilizer) { stabilizers_.push_back(stabilizer); }
+    bool empty() const { return stabilizers_.empty(); }
+
+    virtual void stabilize(
+            int size, const std::vector<Mat> &motions, std::pair<int,int> range,
+            Mat *stabilizationMotions) const;
+
+private:
+    std::vector<Ptr<IMotionStabilizer> > stabilizers_;
 };
 
 class CV_EXPORTS MotionFilterBase : public IMotionStabilizer

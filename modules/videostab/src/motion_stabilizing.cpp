@@ -52,6 +52,33 @@ namespace cv
 namespace videostab
 {
 
+void MotionStabilizationPipeline::stabilize(
+        int size, const vector<Mat> &motions, pair<int,int> range,
+        Mat *stabilizationMotions) const
+{
+    vector<Mat> updatedMotions(motions);
+    vector<Mat> stabilizationMotions_(size);
+
+    for (int i = 0; i < size; ++i)
+        stabilizationMotions[i] = Mat::eye(3, 3, CV_32F);
+
+    for (size_t i = 0; i < stabilizers_.size(); ++i)
+    {
+        stabilizers_[i]->stabilize(size, updatedMotions, range, &stabilizationMotions_[0]);
+
+        for (int i = 0; i < size; ++i)
+            stabilizationMotions[i] = stabilizationMotions_[i] * stabilizationMotions[i];
+
+        for (int j = 0; j + 1 < size; ++j)
+        {
+            Mat S0 = stabilizationMotions[j];
+            Mat S1 = stabilizationMotions[j+1];
+            at(j, updatedMotions) = S1 * at(j, updatedMotions) * S0.inv();
+        }
+    }
+}
+
+
 void MotionFilterBase::stabilize(
         int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions) const
 {
