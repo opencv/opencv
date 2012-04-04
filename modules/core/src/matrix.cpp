@@ -262,10 +262,9 @@ void Mat::deallocate()
 }
 
     
-Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange) : size(&rows)
 {
+    initEmpty();
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
     {
@@ -336,21 +335,19 @@ Mat::Mat(const Mat& m, const Rect& roi)
 }
 
     
-Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL|CV_MAT_TYPE(_type)), dims(0),
-    rows(0), cols(0), data((uchar*)_data), refcount(0),
-    datastart((uchar*)_data), dataend((uchar*)_data), datalimit((uchar*)_data),
-    allocator(0), size(&rows)
+Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps) : size(&rows)
 {
+    initEmpty();
+    flags |= CV_MAT_TYPE(_type);
+    data = datastart = (uchar*)_data;
     setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
 }
     
     
-Mat::Mat(const Mat& m, const Range* ranges)
-    : flags(m.flags), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+Mat::Mat(const Mat& m, const Range* ranges) : size(&rows)
 {
+    initEmpty();
     int i, d = m.dims;
     
     CV_Assert(ranges);
@@ -374,12 +371,13 @@ Mat::Mat(const Mat& m, const Range* ranges)
 }
  
     
-Mat::Mat(const CvMatND* m, bool copyData)
-    : flags(MAGIC_VAL|CV_MAT_TYPE(m->type)), dims(0), rows(0), cols(0),
-    data((uchar*)m->data.ptr), refcount(0),
-    datastart((uchar*)m->data.ptr), allocator(0),
-    size(&rows)
+Mat::Mat(const CvMatND* m, bool copyData) : size(&rows)
 {
+    initEmpty();
+    if( !m )
+        return;
+    data = datastart = m->data.ptr;
+    flags |= CV_MAT_TYPE(m->type);
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
     
@@ -434,12 +432,45 @@ Mat Mat::diag(int d) const
     
     return m;
 }
+
     
-    
-Mat::Mat(const IplImage* img, bool copyData)
-    : flags(MAGIC_VAL), dims(2), rows(0), cols(0),
-    data(0), refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+Mat::Mat(const CvMat* m, bool copyData) : size(&rows)
 {
+    initEmpty();
+    
+    if( !m )
+        return;
+    
+    if( !copyData )
+    {
+        flags = MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG));
+        dims = 2;
+        rows = m->rows;
+        cols = m->cols;
+        data = datastart = m->data.ptr;
+        size_t esz = CV_ELEM_SIZE(m->type), minstep = cols*esz, _step = m->step;
+        if( _step == 0 )
+            _step = minstep;
+        datalimit = datastart + _step*rows;
+        dataend = datalimit - _step + minstep;
+        step[0] = _step; step[1] = esz;
+    }
+    else
+    {
+        data = datastart = dataend = 0;
+        Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(*this);
+    }
+}
+
+    
+Mat::Mat(const IplImage* img, bool copyData) : size(&rows)
+{
+    initEmpty();
+    
+    if( !img )
+        return;
+    
+    dims = 2;
     CV_DbgAssert(CV_IS_IMAGE(img) && img->imageData != 0);
     
     int depth = IPL2CV_DEPTH(img->depth);
