@@ -3457,6 +3457,8 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
         mat = cvCreateMat( rows, cols, elem_type );
         cvReadRawData( fs, data, mat->data.ptr, dt );
     }
+    else if( rows == 0 && cols == 0 )
+        mat = cvCreateMatHeader( 0, 1, elem_type );
     else
         mat = cvCreateMatHeader( rows, cols, elem_type );
 
