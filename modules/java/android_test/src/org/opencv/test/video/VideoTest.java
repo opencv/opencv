@@ -1,27 +1,26 @@
 package org.opencv.test.video;
 
 import org.opencv.core.Core;
+import org.opencv.core.CvVectorByte;
+import org.opencv.core.CvVectorFloat;
+import org.opencv.core.CvVectorPoint2f;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.utils.Converters;
 import org.opencv.video.Video;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class VideoTest extends OpenCVTestCase {
 
-    private List<Float> err = null;
+    private CvVectorFloat err = null;
     private int h;
-    private List<Point> nextPts = null;
-    List<Point> prevPts = null;
+    private CvVectorPoint2f nextPts = null;
+    private CvVectorPoint2f prevPts = null;
 
     private int shift1;
     private int shift2;
 
-    private List<Byte> status = null;
+    private CvVectorByte status = null;
     private Mat subLena1 = null;
     private Mat subLena2 = null;
     private int w;
@@ -38,14 +37,11 @@ public class VideoTest extends OpenCVTestCase {
         subLena1 = rgbLena.submat(shift1, h + shift1, shift1, w + shift1);
         subLena2 = rgbLena.submat(shift2, h + shift2, shift2, w + shift2);
 
-        prevPts = new ArrayList<Point>();
-        prevPts.add(new Point(11.0, 8.0));
-        prevPts.add(new Point(5.0, 5.0));
-        prevPts.add(new Point(10.0, 10.0));
+        prevPts = new CvVectorPoint2f(new Point(11d, 8d), new Point(5d, 5d), new Point(10d, 10d));
 
-        nextPts = new ArrayList<Point>();
-        status = new ArrayList<Byte>();
-        err = new ArrayList<Float>();
+        nextPts = new CvVectorPoint2f();
+        status = new CvVectorByte();
+        err = new CvVectorFloat();
     }
 
     public void testCalcGlobalOrientation() {
@@ -66,13 +62,13 @@ public class VideoTest extends OpenCVTestCase {
 
     public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloat() {
         Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
-        assertEquals(3, Core.countNonZero(Converters.vector_uchar_to_Mat(status)));
+        assertEquals(3, Core.countNonZero(status));
     }
 
     public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSize() {
         Size sz = new Size(3, 3);
         Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz, 3);
-        assertEquals(0, Core.countNonZero(Converters.vector_uchar_to_Mat(status)));
+        assertEquals(0, Core.countNonZero(status));
     }
 
 
