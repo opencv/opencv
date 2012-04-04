@@ -391,3 +391,33 @@ void CV_HuMomentsTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Imgproc_Moments, accuracy) { CV_MomentsTest test; test.safe_run(); }
 TEST(Imgproc_HuMoments, accuracy) { CV_HuMomentsTest test; test.safe_run(); }
+
+class CV_SmallContourMomentTest : public cvtest::BaseTest
+{
+public:
+    CV_SmallContourMomentTest() {}
+    ~CV_SmallContourMomentTest() {}   
+protected:
+    void run(int)
+    {
+        try
+        {
+            vector<Point> points;
+            points.push_back(Point(50, 56));
+            points.push_back(Point(53, 53));
+            points.push_back(Point(46, 54));
+            points.push_back(Point(49, 51));
+            
+            Moments m = moments(points, false);
+            double area = contourArea(points);
+            
+            CV_Assert( m.m00 == 0 && m.m01 == 0 && m.m10 == 0 && area == 0 );
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Imgproc_ContourMoment, small) { CV_SmallContourMomentTest test; test.safe_run(); }

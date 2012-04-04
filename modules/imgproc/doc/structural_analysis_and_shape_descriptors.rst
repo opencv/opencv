@@ -30,6 +30,14 @@ The function computes moments, up to the 3rd order, of a vector shape or a raste
                 double m02, double m30, double m21, double m12, double m03 );
         Moments( const CvMoments& moments );
         operator CvMoments() const;
+        
+        // spatial moments
+        double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
+        // central moments
+        double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
+        // central normalized moments
+        double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
+    }
 
 In case of a raster image, the spatial moments :math:`\texttt{Moments::m}_{ji}` are computed as:
 
@@ -65,6 +73,10 @@ The normalized central moments
     :math:`\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0` , hence the values are not stored.
 
 The moments of a contour are defined in the same way but computed using the Green's formula (see http://en.wikipedia.org/wiki/Green_theorem). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
+
+.. note::
+
+     Since the contour moments are computed using Green formula, you may get seemingly odd results for contours with self-intersections, e.g. a zero area (``m00``) for butterfly-shaped contours.
 
 .. seealso::
 
@@ -342,6 +354,7 @@ The function computes a contour area. Similarly to
 :ocv:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
 :ocv:func:`drawContours` or
 :ocv:func:`fillPoly` , can be different.
+Also, the function will most certainly give a wrong results for contours with self-intersections.
 
 Example: ::
 
