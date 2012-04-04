@@ -585,6 +585,10 @@ The function supports the mode when ``src`` is already in the middle of ``dst`` 
     ...
 
 
+.. note::
+
+    When the source image is a part (ROI) of a bigger image, the function will try to use the pixels outside of the ROI to form a border. To disable this feature and always do extrapolation, as if ``src`` was not a ROI, use ``borderType | BORDER_ISOLATED``.
+
 .. seealso::
 
     :ocv:func:`borderInterpolate`
