@@ -205,6 +205,26 @@ public class OpenCVTestCase extends TestCase {
             assertTrue(Math.abs(list1.get(i).doubleValue() - list2.get(i).doubleValue()) <= epsilon);
     }
 
+    public static <E extends Number> void assertArrayEquals(E[] ar1, E[] ar2, double epsilon) {
+        if (ar1.length != ar2.length) {
+            fail("Arrays have different sizes.");
+        }
+
+        for (int i = 0; i < ar1.length; i++)
+        	assertEquals(ar1[i].doubleValue(), ar2[i].doubleValue(), epsilon);
+            //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
+    }
+
+    public static void assertArrayEquals(double[] ar1, double[] ar2, double epsilon) {
+        if (ar1.length != ar2.length) {
+            fail("Arrays have different sizes.");
+        }
+
+        for (int i = 0; i < ar1.length; i++)
+        	assertEquals(ar1[i], ar2[i], epsilon);
+            //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
+    }
+
     public static void assertListMatEquals(List<Mat> list1, List<Mat> list2, double epsilon) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
@@ -223,6 +243,14 @@ public class OpenCVTestCase extends TestCase {
             assertPointEquals(list1.get(i), list2.get(i), epsilon);
     }
 
+    public static void assertArrayPointsEquals(Point[] vp1, Point[] vp2, double epsilon) {
+        if (vp1.length != vp2.length) {
+            fail("Arrays have different sizes.");
+        }
+
+        for (int i = 0; i < vp1.length; i++)
+            assertPointEquals(vp1[i], vp2[i], epsilon);
+    }
     public static void assertListPoint3Equals(List<Point3> list1, List<Point3> list2, double epsilon) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();

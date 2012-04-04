@@ -15,9 +15,9 @@ public class CvVectorPoint3f extends CvVectorFloat {
         super(_ch, m);
     }
 
-    public CvVectorPoint3f(Point3[] a) {
+    public CvVectorPoint3f(Point3...a) {
         super(_ch);
-        if(a==null)
+        if(a==null || a.length==0)
             return;
         int cnt = a.length;
         create(cnt);

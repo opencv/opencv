@@ -17,9 +17,9 @@ public class CvVectorDMatch extends CvVectorFloat {
         super(_ch, m);
     }
 
-    public CvVectorDMatch(DMatch[] a) {
+    public CvVectorDMatch(DMatch...a) {
         super(_ch);
-        if(a==null)
+        if(a==null || a.length==0)
             return;
         int cnt = a.length;
         create(cnt);

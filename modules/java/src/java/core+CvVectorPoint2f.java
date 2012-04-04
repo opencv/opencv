@@ -15,9 +15,9 @@ public class CvVectorPoint2f extends CvVectorFloat {
         super(_ch, m);
     }
 
-    public CvVectorPoint2f(Point[] a) {
+    public CvVectorPoint2f(Point...a) {
         super(_ch);
-        if(a==null)
+        if(a==null || a.length==0)
             return;
         int cnt = a.length;
         create(cnt);

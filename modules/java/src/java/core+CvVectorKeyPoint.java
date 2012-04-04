@@ -17,9 +17,9 @@ public class CvVectorKeyPoint extends CvVectorFloat {
         super(_ch, m);
     }
 
-    public CvVectorKeyPoint(KeyPoint[] a) {
+    public CvVectorKeyPoint(KeyPoint...a) {
         super(_ch);
-        if(a==null)
+        if(a==null || a.length==0)
             return;
         int cnt = a.length;
         create(cnt);

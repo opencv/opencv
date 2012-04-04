@@ -7,6 +7,10 @@ public class CvVectorFloat extends CvVector {
         super(_d, ch);
     }
 
+    public CvVectorFloat() {
+        super(_d, 1);
+    }
+
     public CvVectorFloat(int ch, long addr) {
         super(_d, ch, addr);
     }

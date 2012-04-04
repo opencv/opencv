@@ -8,6 +8,10 @@ public class CvVectorInt extends CvVector {
         super(_d, ch);
     }
 
+    public CvVectorInt() {
+        super(_d, 1);
+    }
+
     public CvVectorInt(int ch, long addr) {
         super(_d, ch, addr);
     }

@@ -15,9 +15,9 @@ public class CvVectorPoint extends CvVectorInt {
         super(_ch, m);
     }
 
-    public CvVectorPoint(Point[] a) {
+    public CvVectorPoint(Point...a) {
         super(_ch);
-        if(a==null)
+        if(a==null || a.length==0)
             return;
         int cnt = a.length;
         create(cnt);

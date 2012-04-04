@@ -7,6 +7,10 @@ public class CvVectorDouble extends CvVector {
         super(_d, ch);
     }
 
+    public CvVectorDouble() {
+        super(_d, 1);
+    }
+
     public CvVectorDouble(int ch, long addr) {
         super(_d, ch, addr);
     }

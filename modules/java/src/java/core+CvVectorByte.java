@@ -7,6 +7,10 @@ public class CvVectorByte extends CvVector {
         super(_d, ch);
     }
 
+    public CvVectorByte() {
+        super(_d, 1);
+    }
+
     public CvVectorByte(int ch, long addr) {
         super(_d, ch, addr);
     }

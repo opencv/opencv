@@ -16,9 +16,9 @@ public class CvVectorRect extends CvVectorInt {
         super(_ch, m);
     }
 
-    public CvVectorRect(Rect[] a) {
+    public CvVectorRect(Rect...a) {
         super(_ch);
-        if(a==null)
+        if(a==null || a.length==0)
             return;
         int cnt = a.length;
         create(cnt);
