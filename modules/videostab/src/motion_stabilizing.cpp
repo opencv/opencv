@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "opencv2/videostab/motion_stabilizing.hpp"
 #include "opencv2/videostab/global_motion.hpp"
+#include "opencv2/videostab/ring_buffer.hpp"
 
 using namespace std;
 
@@ -51,17 +52,18 @@ namespace cv
 namespace videostab
 {
 
-void MotionFilterBase::stabilize(const Mat *motions, int size, Mat *stabilizationMotions) const
+void MotionFilterBase::stabilize(
+        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions) const
 {
     for (int i = 0; i < size; ++i)
-        stabilizationMotions[i] = stabilize(i, motions, size);
+        stabilizationMotions[i] = stabilize(i, motions, range);
 }
 
 
 void GaussianMotionFilter::setParams(int radius, float stdev)
 {
     radius_ = radius;
-    stdev_ = stdev > 0.f ? stdev : sqrt(static_cast<float>(radius_));
+    stdev_ = stdev > 0.f ? stdev : sqrt(static_cast<float>(radius));
 
     float sum = 0;
     weight_.resize(2*radius_ + 1);
@@ -72,17 +74,19 @@ void GaussianMotionFilter::setParams(int radius, float stdev)
 }
 
 
-Mat GaussianMotionFilter::stabilize(int index, const Mat *motions, int size) const
+Mat GaussianMotionFilter::stabilize(int idx, const vector<Mat> &motions, pair<int,int> range) const
 {
-    const Mat &cur = at(index, motions, size);
+    const Mat &cur = at(idx, motions);
     Mat res = Mat::zeros(cur.size(), cur.type());
     float sum = 0.f;
-    for (int i = std::max(index - radius_, 0); i <= index + radius_; ++i)
+    int iMin = std::max(idx - radius_, range.first);
+    int iMax = std::min(idx + radius_, range.second);
+    for (int i = iMin; i <= iMax; ++i)
     {
-        res += weight_[radius_ + i - index] * getMotion(index, i, motions, size);
-        sum += weight_[radius_ + i - index];
+        res += weight_[radius_ + i - idx] * getMotion(idx, i, motions);
+        sum += weight_[radius_ + i - idx];
     }
-    return res / sum;
+    return sum > 0.f ? res / sum : Mat::eye(cur.size(), cur.type());
 }
 
 

@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/videostab/stabilizer.hpp"
+#include "opencv2/videostab/ring_buffer.hpp"
 
 using namespace std;
 
@@ -145,7 +146,7 @@ bool StabilizerBase::doOneIteration()
     {
         curStabilizedPos_++;
         at(curStabilizedPos_ + radius_, frames_) = at(curPos_, frames_);
-        at(curStabilizedPos_ + radius_ - 1, motions_) = at(curPos_ - 1, motions_);
+        at(curStabilizedPos_ + radius_ - 1, motions_) = Mat::eye(3, 3, CV_32F);
         stabilizeFrame();
 
         log_->print(".");
@@ -212,7 +213,7 @@ void OnePassStabilizer::reset()
     stabilizedFrames_.clear();
     stabilizationMotions_.clear();
     doDeblurring_ = false;
-    doInpainting_ = false;
+    doInpainting_ = false;    
 }
 
 
@@ -251,7 +252,7 @@ void OnePassStabilizer::estimateMotion()
 
 void OnePassStabilizer::stabilizeFrame()
 {
-    Mat stabilizationMotion = motionFilter_->stabilize(curStabilizedPos_, &motions_[0], motions_.size());
+    Mat stabilizationMotion = motionFilter_->stabilize(curStabilizedPos_, motions_, make_pair(0, curPos_));
     StabilizerBase::stabilizeFrame(stabilizationMotion);
 }
 
@@ -326,7 +327,9 @@ void TwoPassStabilizer::runPrePassIfNecessary()
         log_->print("\n");
 
         stabilizationMotions_.resize(frameCount_);
-        motionStabilizer_->stabilize(&motions_[0], frameCount_, &stabilizationMotions_[0]);
+
+        motionStabilizer_->stabilize(
+            frameCount_, motions_, make_pair(0, frameCount_ - 1), &stabilizationMotions_[0]);
 
         if (mustEstTrimRatio_)
         {

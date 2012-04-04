@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/videostab/global_motion.hpp"
+#include "opencv2/videostab/ring_buffer.hpp"
 
 using namespace std;
 
@@ -333,27 +334,21 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1)
 }
 
 
-Mat getMotion(int from, int to, const Mat *motions, int size)
+Mat getMotion(int from, int to, const vector<Mat> &motions)
 {
     Mat M = Mat::eye(3, 3, CV_32F);
     if (to > from)
     {
         for (int i = from; i < to; ++i)
-            M = at(i, motions, size) * M;
+            M = at(i, motions) * M;
     }
     else if (from > to)
     {
         for (int i = to; i < from; ++i)
-            M = at(i, motions, size) * M;
+            M = at(i, motions) * M;
         M = M.inv();
     }
     return M;
-}
-
-
-Mat getMotion(int from, int to, const vector<Mat> &motions)
-{
-    return getMotion(from, to, &motions[0], motions.size());
 }
 
 } // namespace videostab

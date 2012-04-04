@@ -132,8 +132,6 @@ private:
     float minInlierRatio_;
 };
 
-CV_EXPORTS Mat getMotion(int from, int to, const Mat *motions, int size);
-
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 
 } // namespace videostab

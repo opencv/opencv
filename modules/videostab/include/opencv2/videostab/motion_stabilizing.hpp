@@ -44,6 +44,7 @@
 #define __OPENCV_VIDEOSTAB_MOTION_STABILIZING_HPP__
 
 #include <vector>
+#include <utility>
 #include "opencv2/core/core.hpp"
 
 namespace cv
@@ -55,15 +56,24 @@ class CV_EXPORTS IMotionStabilizer
 {
 public:
     virtual ~IMotionStabilizer() {}
-    virtual void stabilize(const Mat *motions, int size, Mat *stabilizationMotions) const = 0;
+
+    // assumes that [range.first, range.second) is in or equals to [0, size-2]
+    virtual void stabilize(
+            int size, const std::vector<Mat> &motions, std::pair<int,int> range,
+            Mat *stabilizationMotions) const = 0;
 };
 
 class CV_EXPORTS MotionFilterBase : public IMotionStabilizer
 {
 public:
     virtual ~MotionFilterBase() {}
-    virtual Mat stabilize(int index, const Mat *motions, int size) const = 0;
-    virtual void stabilize(const Mat *motions, int size, Mat *stabilizationMotions) const;
+
+    virtual Mat stabilize(
+            int idx, const std::vector<Mat> &motions, std::pair<int,int> range) const = 0;
+
+    virtual void stabilize(
+            int size, const std::vector<Mat> &motions, std::pair<int,int> range,
+            Mat *stabilizationMotions) const;
 };
 
 class CV_EXPORTS GaussianMotionFilter : public MotionFilterBase
@@ -75,7 +85,8 @@ public:
     int radius() const { return radius_; }
     float stdev() const { return stdev_; }
 
-    virtual Mat stabilize(int index, const Mat *motions, int size) const;
+    virtual Mat stabilize(
+            int idx, const std::vector<Mat> &motions, std::pair<int,int> range) const;
 
 private:
     int radius_;

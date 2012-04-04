@@ -45,6 +45,7 @@
 #include "opencv2/videostab/inpainting.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
+#include "opencv2/videostab/ring_buffer.hpp"
 
 using namespace std;
 

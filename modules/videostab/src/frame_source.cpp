@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/videostab/frame_source.hpp"
+#include "opencv2/videostab/ring_buffer.hpp"
 
 using namespace std;
 
