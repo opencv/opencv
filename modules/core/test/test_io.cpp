@@ -392,6 +392,7 @@ protected:
             vector<int> mi, mi2, mi3, mi4;
             vector<Mat> mv, mv2, mv3, mv4;
             Mat m(10, 9, CV_32F);
+            Mat empty;
             randu(m, 0, 1);
             mi3.push_back(5);
             mv3.push_back(m);
@@ -399,12 +400,14 @@ protected:
             fs << "mv" << mv;
             fs << "mi3" << mi3;
             fs << "mv3" << mv3;
+            fs << "empty" << empty;
             fs.release();
             fs.open("test.xml", FileStorage::READ);
             fs["mi"] >> mi2;
             fs["mv"] >> mv2;
             fs["mi3"] >> mi4;
             fs["mv3"] >> mv4;
+            fs["empty"] >> empty;
             CV_Assert( mi2.empty() );
             CV_Assert( mv2.empty() );
             CV_Assert( norm(mi3, mi4, CV_C) == 0 );
