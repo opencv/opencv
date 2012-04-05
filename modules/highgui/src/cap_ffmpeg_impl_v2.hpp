@@ -550,8 +550,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if( !video_st || !picture->data[0] )
         return false;
 
-    rgb_picture = *avcodec_alloc_frame();
-
     avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], PIX_FMT_RGB24, video_st->codec->width, video_st->codec->height);
 
     frame.width = video_st->codec->width;
