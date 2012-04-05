@@ -2277,7 +2277,7 @@ public:
     { set((_Tp*)&vec.val[0], n, true); }    
     
     Vector(const std::vector<_Tp>& vec, bool _copyData=false)
-    { set((_Tp*)&vec[0], vec.size(), _copyData); }    
+    { set(!vec.empty() ? (_Tp*)&vec[0] : 0, vec.size(), _copyData); }    
     
     Vector(const Vector& d) { *this = d; }
     
@@ -2445,14 +2445,17 @@ dot(const Vector<_Tp>& v1, const Vector<_Tp>& v2)
     assert(v1.size() == v2.size());
 
     _Tw s = 0;
-    const _Tp *ptr1 = &v1[0], *ptr2 = &v2[0];
- #if CV_ENABLE_UNROLLED
-    for(; i <= n - 4; i += 4 )
-        s += (_Tw)ptr1[i]*ptr2[i] + (_Tw)ptr1[i+1]*ptr2[i+1] +
-            (_Tw)ptr1[i+2]*ptr2[i+2] + (_Tw)ptr1[i+3]*ptr2[i+3];
-#endif
-    for( ; i < n; i++ )
-        s += (_Tw)ptr1[i]*ptr2[i];
+    if( n > 0 )
+    {
+        const _Tp *ptr1 = &v1[0], *ptr2 = &v2[0];
+     #if CV_ENABLE_UNROLLED
+        for(; i <= n - 4; i += 4 )
+            s += (_Tw)ptr1[i]*ptr2[i] + (_Tw)ptr1[i+1]*ptr2[i+1] +
+                (_Tw)ptr1[i+2]*ptr2[i+2] + (_Tw)ptr1[i+3]*ptr2[i+3];
+    #endif
+        for( ; i < n; i++ )
+            s += (_Tw)ptr1[i]*ptr2[i];
+    }
     return s;
 }
     
@@ -3012,7 +3015,7 @@ public:
 		size_t remaining1 = remaining/cn;
 		count = count < remaining1 ? count : remaining1;
         vec.resize(count);
-        it->readRaw( string(fmt), (uchar*)&vec[0], count*sizeof(_Tp) );
+        it->readRaw( string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp) );
     }
     FileNodeIterator* it;
 };
