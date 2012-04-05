@@ -507,7 +507,7 @@ public class CoreTest extends OpenCVTestCase {
                 new Point(4, 6),
                 new Point(4, 6)
         };
-        assertArrayPointsEquals(truth, pts.toArray(new Point[0]), EPS);
+        assertArrayPointsEquals(truth, pts.toArray(null), EPS);
     }
 
     public void testEllipseMatPointSizeDoubleDoubleDoubleScalar() {
@@ -1204,8 +1204,8 @@ public class CoreTest extends OpenCVTestCase {
         double expectedDev[] = new double[]
             {33.74205485167219, 52.8734582803278, 49.01569488056406};
         
-        assertArrayEquals(expectedMean, mean.toArray(null), EPS);
-        assertArrayEquals(expectedDev, stddev.toArray(null), EPS);
+        assertArrayEquals(expectedMean, mean.toPrimitiveArray(null), EPS);
+        assertArrayEquals(expectedDev, stddev.toPrimitiveArray(null), EPS);
     }
 
     public void testMeanStdDevMatMatMatMat() {
@@ -1222,8 +1222,8 @@ public class CoreTest extends OpenCVTestCase {
         double expectedMean[] = new double[] {33d};
         double expectedDev[]  = new double[] {0d};
                 
-        assertArrayEquals(expectedMean, mean.toArray(null), EPS);
-        assertArrayEquals(expectedDev, stddev.toArray(null), EPS);
+        assertArrayEquals(expectedMean, mean.toPrimitiveArray(null), EPS);
+        assertArrayEquals(expectedDev, stddev.toPrimitiveArray(null), EPS);
     }
 
     public void testMerge() {

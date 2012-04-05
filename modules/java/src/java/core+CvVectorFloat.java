@@ -8,7 +8,7 @@ public class CvVectorFloat extends CvVector {
     }
 
     public CvVectorFloat() {
-        super(_d, 1);
+        this(1);
     }
 
     public CvVectorFloat(int ch, long addr) {
@@ -32,7 +32,7 @@ public class CvVectorFloat extends CvVector {
         }
     }
 
-    public float[] toArray(float[] a) {
+    public float[] toPrimitiveArray(float[] a) {
         int cnt = (int) total() * channels;
         if(cnt == 0)
             return new float[0];//null;

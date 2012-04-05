@@ -25,7 +25,7 @@ public class CvVectorDMatch extends CvVectorFloat {
         create(cnt);
         float buff[] = new float[_ch * cnt];
         for(int i=0; i<cnt; i++) {
-        	DMatch m = a[i];
+            DMatch m = a[i];
             buff[_ch*i+0] = m.queryIdx;
             buff[_ch*i+1] = m.trainIdx;
             buff[_ch*i+2] = m.imgIdx;
@@ -35,7 +35,7 @@ public class CvVectorDMatch extends CvVectorFloat {
     }
 
     public DMatch[] toArray(DMatch[] a) {
-    	float buff[] = super.toArray(null);
+        float buff[] = super.toPrimitiveArray(null);
         if(buff.length == 0)
             return new DMatch[0]; //null;
         int cnt = buff.length / _ch;

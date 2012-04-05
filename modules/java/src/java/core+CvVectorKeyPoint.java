@@ -25,7 +25,7 @@ public class CvVectorKeyPoint extends CvVectorFloat {
         create(cnt);
         float buff[] = new float[_ch * cnt];
         for(int i=0; i<cnt; i++) {
-        	KeyPoint kp = a[i];
+            KeyPoint kp = a[i];
             buff[_ch*i+0] = (float) kp.pt.x;
             buff[_ch*i+1] = (float) kp.pt.y;
             buff[_ch*i+2] = kp.size;
@@ -38,7 +38,7 @@ public class CvVectorKeyPoint extends CvVectorFloat {
     }
 
     public KeyPoint[] toArray(KeyPoint[] a) {
-    	float buff[] = super.toArray(null);
+        float buff[] = super.toPrimitiveArray(null);
         if(buff.length == 0)
             return new KeyPoint[0]; //null;
         int cnt = buff.length / _ch;
@@ -47,7 +47,7 @@ public class CvVectorKeyPoint extends CvVectorFloat {
             res = new KeyPoint[cnt];
         for(int i=0; i<cnt; i++)
             res[i] = new KeyPoint( buff[_ch*i+0], buff[_ch*i+1], buff[_ch*i+2], buff[_ch*i+3],
-                    			   buff[_ch*i+4], (int) buff[_ch*i+5], (int) buff[_ch*i+6] );
+                                   buff[_ch*i+4], (int) buff[_ch*i+5], (int) buff[_ch*i+6] );
         return res;
     }
 }

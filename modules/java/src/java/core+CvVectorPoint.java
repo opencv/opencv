@@ -23,7 +23,7 @@ public class CvVectorPoint extends CvVectorInt {
         create(cnt);
         int buff[] = new int[_ch * cnt];
         for(int i=0; i<cnt; i++) {
-        	Point p = a[i];
+            Point p = a[i];
             buff[_ch*i+0] = (int) p.x;
             buff[_ch*i+1] = (int) p.y;
         }
@@ -31,7 +31,7 @@ public class CvVectorPoint extends CvVectorInt {
     }
 
     public Point[] toArray(Point[] a) {
-        int buff[] = super.toArray(null);
+        int buff[] = super.toPrimitiveArray(null);
         if(buff.length == 0)
             return new Point[0]; //null;
         int cnt = buff.length / _ch;

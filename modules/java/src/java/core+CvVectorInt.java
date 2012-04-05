@@ -2,14 +2,14 @@ package org.opencv.core;
 
 
 public class CvVectorInt extends CvVector {
-	private static final int _d = CvType.CV_32S;
-	
+    private static final int _d = CvType.CV_32S;
+
     public CvVectorInt(int ch) {
         super(_d, ch);
     }
 
     public CvVectorInt() {
-        super(_d, 1);
+        this(1);
     }
 
     public CvVectorInt(int ch, long addr) {
@@ -23,13 +23,13 @@ public class CvVectorInt extends CvVector {
     public CvVectorInt(int ch, int[] a) {
         super(_d, ch);
         if(a!=null) {
-        	int cnt = a.length / ch;
-        	create(cnt);
-        	put(0, 0, a);
+            int cnt = a.length / ch;
+            create(cnt);
+            put(0, 0, a);
         }
     }
 
-    public int[] toArray(int[] a) {
+    public int[] toPrimitiveArray(int[] a) {
         int cnt = (int) total() * channels;
         if(cnt == 0)
             return new int[0];//null;

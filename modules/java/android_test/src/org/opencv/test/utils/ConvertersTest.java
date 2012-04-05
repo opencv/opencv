@@ -44,7 +44,8 @@ public class ConvertersTest extends OpenCVTestCase {
         truth.add(new DMatch(2, 3, 5, 6));
         truth.add(new DMatch(3, 1, 8, 12));
         truth.add(new DMatch(4, 9, 5, 15));
-        assertListDMatchEquals(truth, matches, EPS);
+        //assertListDMatchEquals(truth, matches, EPS);
+        fail("Not yet implemented");
     }
 
     public void testMat_to_vector_float() {

@@ -23,7 +23,7 @@ public class CvVectorPoint3f extends CvVectorFloat {
         create(cnt);
         float buff[] = new float[_ch * cnt];
         for(int i=0; i<cnt; i++) {
-        	Point3 p = a[i];
+            Point3 p = a[i];
             buff[_ch*i]   = (float) p.x;
             buff[_ch*i+1] = (float) p.y;
             buff[_ch*i+2] = (float) p.z;
@@ -32,7 +32,7 @@ public class CvVectorPoint3f extends CvVectorFloat {
     }
 
     public Point3[] toArray(Point3[] a) {
-        float buff[] = super.toArray(null);
+        float buff[] = super.toPrimitiveArray(null);
         if(buff.length == 0)
             return new Point3[0]; //null;
         int cnt = buff.length / _ch;

@@ -24,7 +24,7 @@ public class CvVectorRect extends CvVectorInt {
         create(cnt);
         int buff[] = new int[_ch * cnt];
         for(int i=0; i<cnt; i++) {
-        	Rect r = a[i];
+            Rect r = a[i];
             buff[_ch*i]   = r.x;
             buff[_ch*i+1] = r.y;
             buff[_ch*i+2] = r.width;
@@ -34,7 +34,7 @@ public class CvVectorRect extends CvVectorInt {
     }
 
     public Rect[] toArray(Rect[] a) {
-        int buff[] = super.toArray(null);
+        int buff[] = super.toPrimitiveArray(null);
         if(buff.length == 0)
             return new Rect[0]; //null;
         int cnt = buff.length / _ch;

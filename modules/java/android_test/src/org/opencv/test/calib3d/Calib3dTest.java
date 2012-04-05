@@ -236,7 +236,8 @@ public class Calib3dTest extends OpenCVTestCase {
         int minFundamentalMatPoints = 8;
 
         CvVectorPoint2f pts1 = new CvVectorPoint2f();
-    	CvVectorPoint2f pts2 = new CvVectorPoint2f(minFundamentalMatPoints);
+    	CvVectorPoint2f pts2 = new CvVectorPoint2f();
+    	pts2.alloc(minFundamentalMatPoints);
 
         for (int i = 0; i < minFundamentalMatPoints; i++) {
             double x = Math.random() * 100 - 50;
@@ -271,8 +272,10 @@ public class Calib3dTest extends OpenCVTestCase {
     public void testFindHomographyListOfPointListOfPoint() {
     	final int NUM = 20;
     	
-    	CvVectorPoint2f originalPoints = new CvVectorPoint2f(NUM);
-    	CvVectorPoint2f transformedPoints = new CvVectorPoint2f(NUM);
+    	CvVectorPoint2f originalPoints = new CvVectorPoint2f();
+    	originalPoints.alloc(NUM);
+    	CvVectorPoint2f transformedPoints = new CvVectorPoint2f();
+    	transformedPoints.alloc(NUM);
 
         for (int i = 0; i < NUM; i++) {
             double x = Math.random() * 100 - 50;
@@ -500,8 +503,10 @@ public class Calib3dTest extends OpenCVTestCase {
 
         final int minPnpPointsNum = 4;
         
-        CvVectorPoint3f points3d = new CvVectorPoint3f(minPnpPointsNum);
-        CvVectorPoint2f points2d = new CvVectorPoint2f(minPnpPointsNum);
+        CvVectorPoint3f points3d = new CvVectorPoint3f();
+        points3d.alloc(minPnpPointsNum);
+        CvVectorPoint2f points2d = new CvVectorPoint2f();
+        points2d.alloc(minPnpPointsNum);
 
         for (int i = 0; i < minPnpPointsNum; i++) {
             double x = Math.random() * 100 - 50;

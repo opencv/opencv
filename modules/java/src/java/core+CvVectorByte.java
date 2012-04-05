@@ -8,7 +8,7 @@ public class CvVectorByte extends CvVector {
     }
 
     public CvVectorByte() {
-        super(_d, 1);
+        this(1);
     }
 
     public CvVectorByte(int ch, long addr) {
@@ -32,7 +32,7 @@ public class CvVectorByte extends CvVector {
         }
     }
 
-    public byte[] toArray(byte[] a) {
+    public byte[] toPrimitiveArray(byte[] a) {
         int cnt = (int) total() * channels;
         if(cnt == 0)
             return new byte[0];//null;

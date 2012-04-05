@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
+import org.opencv.core.CvVectorPoint2f;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
@@ -141,7 +142,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testApproxPolyDP() {
-    	List<Point> curve = new ArrayList<Point>(5);
+    	CvVectorPoint2f curve = new CvVectorPoint2f(5);
     	curve.add(new Point(1, 3));
     	curve.add(new Point(2, 4));
     	curve.add(new Point(3, 5));
