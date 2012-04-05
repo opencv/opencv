@@ -90,9 +90,9 @@ public:
              Distance d = Distance()) :
         dataset_(input_data), index_params_(params), distance_(d)
     {
-        table_number_ = get_param<int>(index_params_,"table_number",12);
-        key_size_ = get_param<int>(index_params_,"key_size",20);
-        multi_probe_level_ = get_param<int>(index_params_,"multi_probe_level",2);
+        table_number_ = get_param<unsigned int>(index_params_,"table_number",12);
+        key_size_ = get_param<unsigned int>(index_params_,"key_size",20);
+        multi_probe_level_ = get_param<unsigned int>(index_params_,"multi_probe_level",2);
 
         feature_size_ = (unsigned)dataset_.cols;
         fill_xor_mask(0, key_size_, multi_probe_level_, xor_masks_);
