@@ -55,8 +55,8 @@ class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 public:
     void run(int)
     {
-        const int img_r = 4096;
-        const int img_c = 4096;
+        const int img_r = 480;
+        const int img_c = 640;
         Size frame_s = Size(img_c, img_r);
         const double fps = 30;
         const double time_sec = 2;
@@ -69,25 +69,57 @@ public:
         for (size_t j = 0; j < n; ++j)
         {
         stringstream s; s << codec_bmp_tags[j].tag;
+        int tag = codec_bmp_tags[j].tag;
+            
+        if( tag != MKTAG('H', '2', '6', '3') &&
+            tag != MKTAG('H', '2', '6', '1') &&
+            tag != MKTAG('D', 'I', 'V', 'X') &&
+            tag != MKTAG('D', 'X', '5', '0') &&
+            tag != MKTAG('X', 'V', 'I', 'D') &&
+            tag != MKTAG('m', 'p', '4', 'v') &&
+            tag != MKTAG('D', 'I', 'V', '3') &&
+            tag != MKTAG('W', 'M', 'V', '1') &&
+            tag != MKTAG('W', 'M', 'V', '1') &&
+            tag != MKTAG('m', 'p', 'g', '1') &&
+            tag != MKTAG('W', 'M', 'V', '1') &&
+            tag != MKTAG('W', 'M', 'V', '2') &&
+            tag != MKTAG('m', 'p', 'g', '1') &&
+            tag != MKTAG('m', 'p', 'g', '2') &&
+            tag != MKTAG('M', 'P', 'E', 'G') &&
+            tag != MKTAG('M', 'J', 'P', 'G') &&
+            tag != MKTAG('L', 'J', 'P', 'G') &&
+            tag != MKTAG('j', 'p', 'e', 'g') &&
+            tag != 0 &&
+            tag != MKTAG('I', '4', '2', '0') &&
+            tag != MKTAG('Y', 'U', 'Y', '2') &&
+            tag != MKTAG('F', 'L', 'V', '1') )
+            continue;
 
         const string filename = "output_"+s.str()+".avi";
 
-        Mat img(img_r, img_c, CV_8UC3, Scalar::all(0));
         try
         {
-            VideoWriter writer(filename, codec_bmp_tags[j].tag, fps, frame_s);
+            
+            frame_s = Size(img_c, img_r);
+            if( tag == CV_FOURCC('H', '2', '6', '1') )
+                frame_s = Size(352, 288);
+            else if( tag == CV_FOURCC('H', '2', '6', '3') )
+                frame_s = Size(704, 576);
+            
+            VideoWriter writer(filename, tag, fps, frame_s);
 
             if (writer.isOpened() == false)
             {
                 ts->printf(ts->LOG, "\n\nFile name: %s\n", filename.c_str());
-                ts->printf(ts->LOG, "Codec id: %d   Codec tag: %d\n", j, codec_bmp_tags[j].tag);
+                ts->printf(ts->LOG, "Codec id: %d   Codec tag: %c%c%c%c\n", j,
+                           tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
                 ts->printf(ts->LOG, "Error: cannot create video file.");
                 ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
             }
-
             else
-
             {
+                Mat img(frame_s, CV_8UC3, Scalar::all(0));
+
                 for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
                 {
                     //circle(img, Point2i(img_c / 2, img_r / 2), cv::min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);

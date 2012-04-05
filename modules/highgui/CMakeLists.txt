@@ -59,6 +59,8 @@ set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
     src/cap_ffmpeg_v2.cpp
+    src/cap_ffmpeg_impl_v2.hpp
+    src/cap_ffmpeg_impl.hpp
     src/loadsave.cpp
     src/precomp.cpp
     src/utils.cpp
@@ -69,6 +71,8 @@ set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
+    src/cap_ffmpeg_impl_v2.hpp
+    src/cap_ffmpeg_impl.hpp
     src/loadsave.cpp
     src/precomp.cpp
     src/utils.cpp
@@ -196,6 +200,10 @@ if(APPLE)
 		else()
             set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
         endif()
+    endif()
+    
+    if(HAVE_FFMPEG)
+        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} "-framework VideoDecodeAcceleration")
     endif()
 endif(APPLE)
 

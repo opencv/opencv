@@ -383,9 +383,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     /* register all codecs, demux and protocols */
     av_register_all();
 
-    #ifndef _DEBUG
-        // av_log_level = AV_LOG_QUIET;
-    #endif
+    //av_log_set_level(AV_LOG_ERROR);
 
     int err = avformat_open_input(&ic, _filename, NULL, NULL);
     if (err < 0) {
@@ -1392,11 +1390,13 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
     #endif
 
+    #if 0
 	#if FF_API_DUMP_FORMAT
 		dump_format(oc, 0, filename, 1);
 	#else
 		av_dump_format(oc, 0, filename, 1);
 	#endif
+    #endif
 
     /* now that all the parameters are set, we can open the audio and
        video codecs and allocate the necessary encode buffers */
