@@ -369,7 +369,13 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
 */
     
 static Algorithm* createBRIEF() { return new BriefDescriptorExtractor; }
-static AlgorithmInfo brief_info("Feature2D.BRIEF", createBRIEF);
+static AlgorithmInfo& brief_info()
+{
+    static AlgorithmInfo brief_info_var("Feature2D.BRIEF", createBRIEF);
+    return brief_info_var;
+}
+
+static AlgorithmInfo& brief_info_auto = brief_info();
 
 AlgorithmInfo* BriefDescriptorExtractor::info() const
 {
@@ -377,17 +383,23 @@ AlgorithmInfo* BriefDescriptorExtractor::info() const
     if( !initialized )
     {
         BriefDescriptorExtractor brief;
-        brief_info.addParam(brief, "bytes", brief.bytes_);
+        brief_info().addParam(brief, "bytes", brief.bytes_);
         
         initialized = true;
     }
-    return &brief_info;
+    return &brief_info();
 }
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     
 static Algorithm* createFAST() { return new FastFeatureDetector; }
-static AlgorithmInfo fast_info("Feature2D.FAST", createFAST);
+static AlgorithmInfo& fast_info()
+{
+    static AlgorithmInfo fast_info_var("Feature2D.FAST", createFAST);
+    return fast_info_var;
+}
+
+static AlgorithmInfo& fast_info_auto = fast_info();
 
 AlgorithmInfo* FastFeatureDetector::info() const
 {
@@ -395,19 +407,25 @@ AlgorithmInfo* FastFeatureDetector::info() const
     if( !initialized )
     {
         FastFeatureDetector obj;
-        fast_info.addParam(obj, "threshold", obj.threshold);
-        fast_info.addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
+        fast_info().addParam(obj, "threshold", obj.threshold);
+        fast_info().addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
         
         initialized = true;
     }
-    return &fast_info;
+    return &fast_info();
 }
     
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     
 static Algorithm* createStarDetector() { return new StarDetector; }
-static AlgorithmInfo star_info("Feature2D.STAR", createStarDetector);
+static AlgorithmInfo& star_info()
+{
+    static AlgorithmInfo star_info_var("Feature2D.STAR", createStarDetector);
+    return star_info_var;
+}
+
+static AlgorithmInfo& star_info_auto = star_info();
 
 AlgorithmInfo* StarDetector::info() const
 {
@@ -415,21 +433,27 @@ AlgorithmInfo* StarDetector::info() const
     if( !initialized )
     {
         StarDetector obj;
-        star_info.addParam(obj, "maxSize", obj.maxSize);
-        star_info.addParam(obj, "responseThreshold", obj.responseThreshold);
-        star_info.addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
-        star_info.addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
-        star_info.addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize);
+        star_info().addParam(obj, "maxSize", obj.maxSize);
+        star_info().addParam(obj, "responseThreshold", obj.responseThreshold);
+        star_info().addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
+        star_info().addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
+        star_info().addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize);
         
         initialized = true;
     }
-    return &star_info;
+    return &star_info();
 }    
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     
 static Algorithm* createMSER() { return new MSER; }
-static AlgorithmInfo mser_info("Feature2D.MSER", createMSER);
+static AlgorithmInfo& mser_info()
+{
+    static AlgorithmInfo mser_info_var("Feature2D.MSER", createMSER);
+    return mser_info_var;
+}
+
+static AlgorithmInfo& mser_info_auto = mser_info();
 
 AlgorithmInfo* MSER::info() const
 {
@@ -437,26 +461,32 @@ AlgorithmInfo* MSER::info() const
     if( !initialized )
     {
         MSER obj;
-        mser_info.addParam(obj, "delta", obj.delta);
-        mser_info.addParam(obj, "minArea", obj.minArea);
-        mser_info.addParam(obj, "maxArea", obj.maxArea);
-        mser_info.addParam(obj, "maxVariation", obj.maxVariation);
-        mser_info.addParam(obj, "minDiversity", obj.minDiversity);
-        mser_info.addParam(obj, "maxEvolution", obj.maxEvolution);
-        mser_info.addParam(obj, "areaThreshold", obj.areaThreshold);
-        mser_info.addParam(obj, "minMargin", obj.minMargin);
-        mser_info.addParam(obj, "edgeBlurSize", obj.edgeBlurSize);
+        mser_info().addParam(obj, "delta", obj.delta);
+        mser_info().addParam(obj, "minArea", obj.minArea);
+        mser_info().addParam(obj, "maxArea", obj.maxArea);
+        mser_info().addParam(obj, "maxVariation", obj.maxVariation);
+        mser_info().addParam(obj, "minDiversity", obj.minDiversity);
+        mser_info().addParam(obj, "maxEvolution", obj.maxEvolution);
+        mser_info().addParam(obj, "areaThreshold", obj.areaThreshold);
+        mser_info().addParam(obj, "minMargin", obj.minMargin);
+        mser_info().addParam(obj, "edgeBlurSize", obj.edgeBlurSize);
         
         initialized = true;
     }
-    return &mser_info;
+    return &mser_info();
 }
     
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static Algorithm* createORB() { return new ORB; }
-static AlgorithmInfo orb_info("Feature2D.ORB", createORB);
+static AlgorithmInfo& orb_info()
+{
+    static AlgorithmInfo orb_info_var("Feature2D.ORB", createORB);
+    return orb_info_var;
+}
+
+static AlgorithmInfo& orb_info_auto = orb_info();
 
 AlgorithmInfo* ORB::info() const
 {
@@ -464,18 +494,18 @@ AlgorithmInfo* ORB::info() const
     if( !initialized )
     {
         ORB obj;
-        orb_info.addParam(obj, "nFeatures", obj.nfeatures);
-        orb_info.addParam(obj, "scaleFactor", obj.scaleFactor);
-        orb_info.addParam(obj, "nLevels", obj.nlevels);
-        orb_info.addParam(obj, "firstLevel", obj.firstLevel);
-        orb_info.addParam(obj, "edgeThreshold", obj.edgeThreshold);
-        orb_info.addParam(obj, "patchSize", obj.patchSize);
-        orb_info.addParam(obj, "WTA_K", obj.WTA_K);
-        orb_info.addParam(obj, "scoreType", obj.scoreType);
+        orb_info().addParam(obj, "nFeatures", obj.nfeatures);
+        orb_info().addParam(obj, "scaleFactor", obj.scaleFactor);
+        orb_info().addParam(obj, "nLevels", obj.nlevels);
+        orb_info().addParam(obj, "firstLevel", obj.firstLevel);
+        orb_info().addParam(obj, "edgeThreshold", obj.edgeThreshold);
+        orb_info().addParam(obj, "patchSize", obj.patchSize);
+        orb_info().addParam(obj, "WTA_K", obj.WTA_K);
+        orb_info().addParam(obj, "scoreType", obj.scoreType);
         
         initialized = true;
     }
-    return &orb_info;
+    return &orb_info();
 }
     
 bool initModule_features2d(void)

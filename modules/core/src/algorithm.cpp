@@ -149,17 +149,21 @@ struct CV_EXPORTS AlgorithmInfoData
 };
 
     
-static sorted_vector<string, Algorithm::Constructor> alglist;
+static sorted_vector<string, Algorithm::Constructor>& alglist()
+{
+    static sorted_vector<string, Algorithm::Constructor> alglist_var;
+    return alglist_var;
+}
 
 void Algorithm::getList(vector<string>& algorithms)
 {
-    alglist.get_keys(algorithms);
+    alglist().get_keys(algorithms);
 }
 
 Ptr<Algorithm> Algorithm::_create(const string& name)
 {
     Algorithm::Constructor c = 0;
-    if( !alglist.find(name, c) )
+    if( !alglist().find(name, c) )
         return Ptr<Algorithm>();
     return c();
 }
@@ -282,7 +286,7 @@ AlgorithmInfo::AlgorithmInfo(const string& _name, Algorithm::Constructor create)
 {
     data = new AlgorithmInfoData;
     data->_name = _name;
-    alglist.add(_name, create);
+    alglist().add(_name, create);
 }
 
 AlgorithmInfo::~AlgorithmInfo()

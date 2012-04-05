@@ -947,7 +947,14 @@ static Algorithm* createSURF()
 {
     return new SURF;
 }
-static AlgorithmInfo surf_info("Feature2D.SURF", createSURF);
+
+static AlgorithmInfo& surf_info()
+{
+    static AlgorithmInfo surf_info_var("Feature2D.SURF", createSURF);
+    return surf_info_var;
+}
+
+static AlgorithmInfo& surf_info_auto = surf_info();
 
 AlgorithmInfo* SURF::info() const
 {
@@ -955,24 +962,28 @@ AlgorithmInfo* SURF::info() const
     if( !initialized )
     {
         SURF obj;
-        surf_info.addParam(obj, "hessianThreshold", obj.hessianThreshold);
-        surf_info.addParam(obj, "nOctaves", obj.nOctaves);
-        surf_info.addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        surf_info.addParam(obj, "extended", obj.extended);
-        surf_info.addParam(obj, "upright", obj.upright);
+        surf_info().addParam(obj, "hessianThreshold", obj.hessianThreshold);
+        surf_info().addParam(obj, "nOctaves", obj.nOctaves);
+        surf_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+        surf_info().addParam(obj, "extended", obj.extended);
+        surf_info().addParam(obj, "upright", obj.upright);
         
         initialized = true;
     }
-    return &surf_info;
+    return &surf_info();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static Algorithm* createSIFT()
+static Algorithm* createSIFT() { return new SIFT; }
+
+static AlgorithmInfo& sift_info()
 {
-    return new SIFT;
+    static AlgorithmInfo sift_info_var("Feature2D.SIFT", createSIFT);
+    return sift_info_var;
 }
-static AlgorithmInfo sift_info("Feature2D.SIFT", createSIFT);
+
+static AlgorithmInfo& sift_info_auto = sift_info();
 
 AlgorithmInfo* SIFT::info() const
 {
@@ -980,15 +991,15 @@ AlgorithmInfo* SIFT::info() const
     if( !initialized )
     {
         SIFT obj;
-        sift_info.addParam(obj, "nFeatures", obj.nfeatures);
-        sift_info.addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        sift_info.addParam(obj, "contrastThreshold", obj.contrastThreshold);
-        sift_info.addParam(obj, "edgeThreshold", obj.edgeThreshold);
-        sift_info.addParam(obj, "sigma", obj.sigma);
+        sift_info().addParam(obj, "nFeatures", obj.nfeatures);
+        sift_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+        sift_info().addParam(obj, "contrastThreshold", obj.contrastThreshold);
+        sift_info().addParam(obj, "edgeThreshold", obj.edgeThreshold);
+        sift_info().addParam(obj, "sigma", obj.sigma);
         
         initialized = true;
     }
-    return &sift_info;
+    return &sift_info();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////    
