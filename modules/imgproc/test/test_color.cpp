@@ -1688,8 +1688,6 @@ TEST(Imgproc_ColorBayer, regression)
 
     Mat diff;
     absdiff(gold, result, diff);
-    //imshow("diff", diff);
-    //waitKey();
 
     EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
 }

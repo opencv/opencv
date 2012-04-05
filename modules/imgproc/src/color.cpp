@@ -2667,6 +2667,13 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
 ///////////////////////////////////// YUV420 -> RGB /////////////////////////////////////
 
+const int ITUR_BT_601_CY = 1220542;
+const int ITUR_BT_601_CUB = 2116026;
+const int ITUR_BT_601_CUG = -409993;
+const int ITUR_BT_601_CVG = -852492;
+const int ITUR_BT_601_CVR = 1673527;
+const int ITUR_BT_601_SHIFT = 20;
+
 template<int bIdx, int uIdx>
 struct YUV420sp2RGB888Invoker
 {
@@ -2690,13 +2697,6 @@ struct YUV420sp2RGB888Invoker
         //G = (1220542(Y - 16) - 852492(V - 128) - 409993(U - 128) + (1 << 19)) >> 20
         //B = (1220542(Y - 16)                  + 2116026(U - 128) + (1 << 19)) >> 20
 
-        const int cY = 1220542;
-        const int cUB = 2116026;
-        const int cUG = -409993;
-        const int cVG = -852492;
-        const int cVR = 1673527;
-        const int YUV420_SHIFT = 20;
-
         const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -2715,29 +2715,29 @@ struct YUV420sp2RGB888Invoker
                 int u = int(uv[i + 0 + uIdx]) - 128;
                 int v = int(uv[i + 1 - uIdx]) - 128;
 
-                int ruv = (1 << (YUV420_SHIFT - 1)) + cVR * v;
-                int guv = (1 << (YUV420_SHIFT - 1)) + cVG * v + cUG * u;
-                int buv = (1 << (YUV420_SHIFT - 1)) + cUB * u;
+                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
+                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
+                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
 
-                int y00 = std::max(0, int(y1[i]) - 16) * cY;
-                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> YUV420_SHIFT);
-                row1[1]      = saturate_cast<uchar>((y00 + guv) >> YUV420_SHIFT);
-                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> YUV420_SHIFT);
+                int y00 = std::max(0, int(y1[i]) - 16) * ITUR_BT_601_CY;
+                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
+                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
 
-                int y01 = std::max(0, int(y1[i + 1]) - 16) * cY;
-                row1[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> YUV420_SHIFT);
-                row1[4]      = saturate_cast<uchar>((y01 + guv) >> YUV420_SHIFT);
-                row1[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> YUV420_SHIFT);
+                int y01 = std::max(0, int(y1[i + 1]) - 16) * ITUR_BT_601_CY;
+                row1[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[4]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row1[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
 
-                int y10 = std::max(0, int(y2[i]) - 16) * cY;
-                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> YUV420_SHIFT);
-                row2[1]      = saturate_cast<uchar>((y10 + guv) >> YUV420_SHIFT);
-                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> YUV420_SHIFT);
+                int y10 = std::max(0, int(y2[i]) - 16) * ITUR_BT_601_CY;
+                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
+                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
 
-                int y11 = std::max(0, int(y2[i + 1]) - 16) * cY;
-                row2[5-bIdx] = saturate_cast<uchar>((y11 + ruv) >> YUV420_SHIFT);
-                row2[4]      = saturate_cast<uchar>((y11 + guv) >> YUV420_SHIFT);
-                row2[3+bIdx] = saturate_cast<uchar>((y11 + buv) >> YUV420_SHIFT);
+                int y11 = std::max(0, int(y2[i + 1]) - 16) * ITUR_BT_601_CY;
+                row2[5-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[4]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
+                row2[3+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
             }
         }
     }
@@ -2766,13 +2766,6 @@ struct YUV420sp2RGBA8888Invoker
         //G = (1220542(Y - 16) - 852492(V - 128) - 409993(U - 128) + (1 << 19)) >> 20
         //B = (1220542(Y - 16)                  + 2116026(U - 128) + (1 << 19)) >> 20
 
-        const int cY = 1220542;
-        const int cUB = 2116026;
-        const int cUG = -409993;
-        const int cVG = -852492;
-        const int cVR = 1673527;
-        const int YUV420_SHIFT = 20;
-
         const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -2791,32 +2784,32 @@ struct YUV420sp2RGBA8888Invoker
                 int u = int(uv[i + 0 + uIdx]) - 128;
                 int v = int(uv[i + 1 - uIdx]) - 128;
 
-                int ruv = (1 << (YUV420_SHIFT - 1)) + cVR * v;
-                int guv = (1 << (YUV420_SHIFT - 1)) + cVG * v + cUG * u;
-                int buv = (1 << (YUV420_SHIFT - 1)) + cUB * u;
+                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
+                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
+                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
 
-                int y00 = std::max(0, int(y1[i]) - 16) * cY;
-                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> YUV420_SHIFT);
-                row1[1]      = saturate_cast<uchar>((y00 + guv) >> YUV420_SHIFT);
-                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> YUV420_SHIFT);
+                int y00 = std::max(0, int(y1[i]) - 16) * ITUR_BT_601_CY;
+                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
+                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
                 row1[3]      = uchar(0xff);
 
-                int y01 = std::max(0, int(y1[i + 1]) - 16) * cY;
-                row1[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> YUV420_SHIFT);
-                row1[5]      = saturate_cast<uchar>((y01 + guv) >> YUV420_SHIFT);
-                row1[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> YUV420_SHIFT);
+                int y01 = std::max(0, int(y1[i + 1]) - 16) * ITUR_BT_601_CY;
+                row1[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[5]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row1[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
                 row1[7]      = uchar(0xff);
 
-                int y10 = std::max(0, int(y2[i]) - 16) * cY;
-                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> YUV420_SHIFT);
-                row2[1]      = saturate_cast<uchar>((y10 + guv) >> YUV420_SHIFT);
-                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> YUV420_SHIFT);
+                int y10 = std::max(0, int(y2[i]) - 16) * ITUR_BT_601_CY;
+                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
+                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
                 row2[3]      = uchar(0xff);
 
-                int y11 = std::max(0, int(y2[i + 1]) - 16) * cY;
-                row2[6-bIdx] = saturate_cast<uchar>((y11 + ruv) >> YUV420_SHIFT);
-                row2[5]      = saturate_cast<uchar>((y11 + guv) >> YUV420_SHIFT);
-                row2[4+bIdx] = saturate_cast<uchar>((y11 + buv) >> YUV420_SHIFT);
+                int y11 = std::max(0, int(y2[i + 1]) - 16) * ITUR_BT_601_CY;
+                row2[6-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[5]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
+                row2[4+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
                 row2[7]      = uchar(0xff);
             }
         }
@@ -2842,13 +2835,6 @@ struct YUV420p2RGB888Invoker
         size_t uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
-        const int cY = 1220542;
-        const int cUB = 2116026;
-        const int cUG = -409993;
-        const int cVG = -852492;
-        const int cVR = 1673527;
-        const int YUV420_SHIFT = 20;
-
         const uchar* y1 = my1 + rangeBegin * stride;
         const uchar* u1 = mu + (range.begin() / 2) * stride;
         const uchar* v1 = mv + (range.begin() / 2) * stride;
@@ -2870,29 +2856,29 @@ struct YUV420p2RGB888Invoker
                 int u = int(u1[i]) - 128;
                 int v = int(v1[i]) - 128;
 
-                int ruv = (1 << (YUV420_SHIFT - 1)) + cVR * v;
-                int guv = (1 << (YUV420_SHIFT - 1)) + cVG * v + cUG * u;
-                int buv = (1 << (YUV420_SHIFT - 1)) + cUB * u;
+                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
+                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
+                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
 
-                int y00 = std::max(0, int(y1[2 * i]) - 16) * cY;
-                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> YUV420_SHIFT);
-                row1[1]      = saturate_cast<uchar>((y00 + guv) >> YUV420_SHIFT);
-                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> YUV420_SHIFT);
+                int y00 = std::max(0, int(y1[2 * i]) - 16) * ITUR_BT_601_CY;
+                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
+                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
 
-                int y01 = std::max(0, int(y1[2 * i + 1]) - 16) * cY;
-                row1[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> YUV420_SHIFT);
-                row1[4]      = saturate_cast<uchar>((y01 + guv) >> YUV420_SHIFT);
-                row1[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> YUV420_SHIFT);
+                int y01 = std::max(0, int(y1[2 * i + 1]) - 16) * ITUR_BT_601_CY;
+                row1[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[4]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row1[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
 
-                int y10 = std::max(0, int(y2[2 * i]) - 16) * cY;
-                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> YUV420_SHIFT);
-                row2[1]      = saturate_cast<uchar>((y10 + guv) >> YUV420_SHIFT);
-                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> YUV420_SHIFT);
+                int y10 = std::max(0, int(y2[2 * i]) - 16) * ITUR_BT_601_CY;
+                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
+                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
 
-                int y11 = std::max(0, int(y2[2 * i + 1]) - 16) * cY;
-                row2[5-bIdx] = saturate_cast<uchar>((y11 + ruv) >> YUV420_SHIFT);
-                row2[4]      = saturate_cast<uchar>((y11 + guv) >> YUV420_SHIFT);
-                row2[3+bIdx] = saturate_cast<uchar>((y11 + buv) >> YUV420_SHIFT);
+                int y11 = std::max(0, int(y2[2 * i + 1]) - 16) * ITUR_BT_601_CY;
+                row2[5-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[4]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
+                row2[3+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
             }
         }
     }
@@ -2914,13 +2900,6 @@ struct YUV420p2RGBA8888Invoker
         int rangeBegin = range.begin() * 2;
         int rangeEnd = range.end() * 2;
 
-        const int cY = 1220542;
-        const int cUB = 2116026;
-        const int cUG = -409993;
-        const int cVG = -852492;
-        const int cVR = 1673527;
-        const int YUV420_SHIFT = 20;
-        
         size_t uvsteps[2] = {width/2, stride - width/2};
         int usIdx = ustepIdx, vsIdx = vstepIdx;
 
@@ -2945,32 +2924,32 @@ struct YUV420p2RGBA8888Invoker
                 int u = int(u1[i]) - 128;
                 int v = int(v1[i]) - 128;
 
-                int ruv = (1 << (YUV420_SHIFT - 1)) + cVR * v;
-                int guv = (1 << (YUV420_SHIFT - 1)) + cVG * v + cUG * u;
-                int buv = (1 << (YUV420_SHIFT - 1)) + cUB * u;
+                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
+                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
+                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
 
-                int y00 = std::max(0, int(y1[2 * i]) - 16) * cY;
-                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> YUV420_SHIFT);
-                row1[1]      = saturate_cast<uchar>((y00 + guv) >> YUV420_SHIFT);
-                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> YUV420_SHIFT);
+                int y00 = std::max(0, int(y1[2 * i]) - 16) * ITUR_BT_601_CY;
+                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
+                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
                 row1[3]      = uchar(0xff);
 
-                int y01 = std::max(0, int(y1[2 * i + 1]) - 16) * cY;
-                row1[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> YUV420_SHIFT);
-                row1[5]      = saturate_cast<uchar>((y01 + guv) >> YUV420_SHIFT);
-                row1[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> YUV420_SHIFT);
+                int y01 = std::max(0, int(y1[2 * i + 1]) - 16) * ITUR_BT_601_CY;
+                row1[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[5]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row1[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
                 row1[7]      = uchar(0xff);
 
-                int y10 = std::max(0, int(y2[2 * i]) - 16) * cY;
-                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> YUV420_SHIFT);
-                row2[1]      = saturate_cast<uchar>((y10 + guv) >> YUV420_SHIFT);
-                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> YUV420_SHIFT);
+                int y10 = std::max(0, int(y2[2 * i]) - 16) * ITUR_BT_601_CY;
+                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
+                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
                 row2[3]      = uchar(0xff);
 
-                int y11 = std::max(0, int(y2[2 * i + 1]) - 16) * cY;
-                row2[6-bIdx] = saturate_cast<uchar>((y11 + ruv) >> YUV420_SHIFT);
-                row2[5]      = saturate_cast<uchar>((y11 + guv) >> YUV420_SHIFT);
-                row2[4+bIdx] = saturate_cast<uchar>((y11 + buv) >> YUV420_SHIFT);
+                int y11 = std::max(0, int(y2[2 * i + 1]) - 16) * ITUR_BT_601_CY;
+                row2[6-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[5]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
+                row2[4+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
                 row2[7]      = uchar(0xff);
             }
         }
@@ -3025,6 +3004,128 @@ inline void cvtYUV420p2RGBA(Mat& _dst, int _stride, const uchar* _y1, const ucha
     else
 #endif
         converter(BlockedRange(0, _dst.rows/2));
+}
+
+///////////////////////////////////// YUV422 -> RGB /////////////////////////////////////
+
+template<int bIdx, int uIdx, int yIdx>
+struct YUV422toRGB888Invoker
+{
+    Mat* dst;
+    const uchar* src;
+    int width, stride;
+
+    YUV422toRGB888Invoker(Mat* _dst, int _stride, const uchar* _yuv)
+        : dst(_dst), src(_yuv), width(_dst->cols), stride(_stride) {}
+
+    void operator()(const BlockedRange& range) const
+    {
+        int rangeBegin = range.begin();
+        int rangeEnd = range.end();
+
+        const int uidx = 1 - yIdx + uIdx * 2;
+        const int vidx = (2 + uidx) % 4;
+        const uchar* yuv_src = src + rangeBegin * stride;
+
+        for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += stride)
+        {
+            uchar* row = dst->ptr<uchar>(j);
+
+            for (int i = 0; i < 2 * width; i += 4, row += 6)
+            {
+                int u = int(yuv_src[i + uidx]) - 128;
+                int v = int(yuv_src[i + vidx]) - 128;
+
+                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
+                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
+                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
+
+                int y00 = std::max(0, int(yuv_src[i + yIdx]) - 16) * ITUR_BT_601_CY;
+                row[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
+                row[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
+                row[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
+
+                int y01 = std::max(0, int(yuv_src[i + yIdx + 2]) - 16) * ITUR_BT_601_CY;
+                row[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row[4]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
+            }
+        }
+    }
+};
+
+template<int bIdx, int uIdx, int yIdx>
+struct YUV422toRGBA8888Invoker
+{
+    Mat* dst;
+    const uchar* src;
+    int width, stride;
+
+    YUV422toRGBA8888Invoker(Mat* _dst, int _stride, const uchar* _yuv)
+        : dst(_dst), src(_yuv), width(_dst->cols), stride(_stride) {}
+
+    void operator()(const BlockedRange& range) const
+    {
+        int rangeBegin = range.begin();
+        int rangeEnd = range.end();
+
+        const int uidx = 1 - yIdx + uIdx * 2;
+        const int vidx = (2 + uidx) % 4;
+        const uchar* yuv_src = src + rangeBegin * stride;
+
+        for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += stride)
+        {
+            uchar* row = dst->ptr<uchar>(j);
+
+            for (int i = 0; i < 2 * width; i += 4, row += 8)
+            {
+                int u = int(yuv_src[i + uidx]) - 128;
+                int v = int(yuv_src[i + vidx]) - 128;
+
+                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
+                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
+                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
+
+                int y00 = std::max(0, int(yuv_src[i + yIdx]) - 16) * ITUR_BT_601_CY;
+                row[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
+                row[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
+                row[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
+                row[3]      = uchar(0xff);
+
+                int y01 = std::max(0, int(yuv_src[i + yIdx + 2]) - 16) * ITUR_BT_601_CY;
+                row[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row[5]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
+                row[7]      = uchar(0xff);
+            }
+        }
+    }
+};
+
+#define MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION (320*240)
+
+template<int bIdx, int uIdx, int yIdx>
+inline void cvtYUV422toRGB(Mat& _dst, int _stride, const uchar* _yuv)
+{
+    YUV422toRGB888Invoker<bIdx, uIdx, yIdx> converter(&_dst, _stride, _yuv);
+#ifdef HAVE_TBB
+    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
+        parallel_for(BlockedRange(0, _dst.rows), converter);
+    else
+#endif
+        converter(BlockedRange(0, _dst.rows));
+}
+
+template<int bIdx, int uIdx, int yIdx>
+inline void cvtYUV422toRGBA(Mat& _dst, int _stride, const uchar* _yuv)
+{
+    YUV422toRGBA8888Invoker<bIdx, uIdx, yIdx> converter(&_dst, _stride, _yuv);
+#ifdef HAVE_TBB
+    if (_dst.total() >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
+        parallel_for(BlockedRange(0, _dst.rows), converter);
+    else
+#endif
+        converter(BlockedRange(0, _dst.rows));
 }
 
 }//namespace cv
@@ -3484,11 +3585,56 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 src(Range(0, dstSz.height), Range::all()).copyTo(dst);
             }
             break;
-        case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
-        case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
-        case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
-        case COLOR_YUV2GRAY_UYVY: case COLOR_YUV2GRAY_YUY2:
-            CV_Error(CV_StsUnsupportedFormat, "This format is not supported yet");
+        case CV_YUV2RGB_UYVY: case CV_YUV2BGR_UYVY: case CV_YUV2RGBA_UYVY: case CV_YUV2BGRA_UYVY:
+        case CV_YUV2RGB_YUY2: case CV_YUV2BGR_YUY2: case CV_YUV2RGB_YVYU: case CV_YUV2BGR_YVYU:
+        case CV_YUV2RGBA_YUY2: case CV_YUV2BGRA_YUY2: case CV_YUV2RGBA_YVYU: case CV_YUV2BGRA_YVYU:
+            {
+                //http://www.fourcc.org/yuv.php#UYVY
+                //http://www.fourcc.org/yuv.php#YUY2
+                //http://www.fourcc.org/yuv.php#YVYU 
+                
+                if (dcn <= 0) dcn = (code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY || code==CV_YUV2RGBA_YUY2 || code==CV_YUV2BGRA_YUY2 || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 4 : 3;
+                const int bidx = (code==CV_YUV2BGR_UYVY || code==CV_YUV2BGRA_UYVY || code==CV_YUV2BGR_YUY2 || code==CV_YUV2BGRA_YUY2 || code==CV_YUV2BGR_YVYU || code==CV_YUV2BGRA_YVYU) ? 0 : 2;
+                const int ycn = (code==CV_YUV2RGB_UYVY || code==CV_YUV2BGR_UYVY || code==CV_YUV2RGBA_UYVY || code==CV_YUV2BGRA_UYVY) ? 1 : 0;
+                const int uidx = (code==CV_YUV2RGB_YVYU || code==CV_YUV2BGR_YVYU || code==CV_YUV2RGBA_YVYU || code==CV_YUV2BGRA_YVYU) ? 1 : 0;
+                
+                CV_Assert( dcn == 3 || dcn == 4 );
+                CV_Assert( scn == 2 && depth == CV_8U );
+
+                _dst.create(sz, CV_8UC(dcn));
+                dst = _dst.getMat();
+                
+                switch(dcn*1000 + bidx*100 + uidx*10 + ycn)
+                {
+                    case 3000: cvtYUV422toRGB<0,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 3001: cvtYUV422toRGB<0,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 3010: cvtYUV422toRGB<0,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 3011: cvtYUV422toRGB<0,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 3200: cvtYUV422toRGB<2,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 3201: cvtYUV422toRGB<2,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 3210: cvtYUV422toRGB<2,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 3211: cvtYUV422toRGB<2,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4000: cvtYUV422toRGBA<0,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4001: cvtYUV422toRGBA<0,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4010: cvtYUV422toRGBA<0,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4011: cvtYUV422toRGBA<0,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4200: cvtYUV422toRGBA<2,0,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4201: cvtYUV422toRGBA<2,0,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4210: cvtYUV422toRGBA<2,1,0>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    case 4211: cvtYUV422toRGBA<2,1,1>(dst, (int)src.step, src.ptr<uchar>()); break;
+                    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+                };
+            }
+            break;
+        case CV_YUV2GRAY_UYVY: case CV_YUV2GRAY_YUY2:
+            {
+                if (dcn <= 0) dcn = 1;
+                
+                CV_Assert( dcn == 1 );
+                CV_Assert( scn == 2 && depth == CV_8U );
+
+                extractChannel(_src, _dst, code == CV_YUV2GRAY_UYVY ? 1 : 0);
+            }
             break;
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
