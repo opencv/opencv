@@ -1672,11 +1672,33 @@ TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
 TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
 
 
-TEST(Imgproc_ColorBayerVNG, accuracy)
+TEST(Imgproc_ColorBayer, regression)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
 
-    Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayerVNG_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat gold = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_gold.png", CV_LOAD_IMAGE_UNCHANGED);
+    Mat result;
+
+    cvtColor(given, result, CV_BayerBG2GRAY);
+
+    EXPECT_EQ(gold.type(), result.type());
+    EXPECT_EQ(gold.cols, result.cols);
+    EXPECT_EQ(gold.rows, result.rows);
+
+    Mat diff;
+    absdiff(gold, result, diff);
+    //imshow("diff", diff);
+    //waitKey();
+
+    EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+}
+
+TEST(Imgproc_ColorBayerVNG, regression)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
     Mat gold = imread(string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png", CV_LOAD_IMAGE_UNCHANGED);
     Mat result;
 

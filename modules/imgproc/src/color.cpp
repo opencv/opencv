@@ -1767,26 +1767,26 @@ public:
             __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
             __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
             
-            __m128i b1 = _mm_add_epi16(_mm_srli_epi16(_mm_slli_epi16(r0, 8), 8),
-                                       _mm_srli_epi16(_mm_slli_epi16(r2, 8), 8));
+            __m128i b1 = _mm_add_epi16(_mm_srli_epi16(_mm_slli_epi16(r0, 8), 7),
+                                       _mm_srli_epi16(_mm_slli_epi16(r2, 8), 7));
             __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
             b1 = _mm_slli_epi16(_mm_srli_si128(b1, 2), 1);
             
-            __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 8), _mm_srli_epi16(r2, 8));
-            __m128i g1 = _mm_srli_epi16(_mm_slli_epi16(r1, 8), 8);
+            __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 7), _mm_srli_epi16(r2, 7));
+            __m128i g1 = _mm_srli_epi16(_mm_slli_epi16(r1, 8), 7);
             g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
             g1 = _mm_slli_epi16(_mm_srli_si128(g1, 2), 2);
             
             r0 = _mm_srli_epi16(r1, 8);
-            r1 = _mm_slli_epi16(_mm_add_epi16(r0, _mm_srli_si128(r0, 2)), 1);
-            r0 = _mm_slli_epi16(r0, 2);
-            
+            r1 = _mm_slli_epi16(_mm_add_epi16(r0, _mm_srli_si128(r0, 2)), 2);
+            r0 = _mm_slli_epi16(r0, 3);
+
             g0 = _mm_add_epi16(_mm_mulhi_epi16(b0, _b2y), _mm_mulhi_epi16(g0, _g2y));
             g1 = _mm_add_epi16(_mm_mulhi_epi16(b1, _b2y), _mm_mulhi_epi16(g1, _g2y));
             g0 = _mm_add_epi16(g0, _mm_mulhi_epi16(r0, _r2y));
             g1 = _mm_add_epi16(g1, _mm_mulhi_epi16(r1, _r2y));
-            g0 = _mm_srli_epi16(g0, 1);
-            g1 = _mm_srli_epi16(g1, 1);
+            g0 = _mm_srli_epi16(g0, 2);
+            g1 = _mm_srli_epi16(g1, 2);
             g0 = _mm_packus_epi16(g0, g0);
             g1 = _mm_packus_epi16(g1, g1);
             g0 = _mm_unpacklo_epi8(g0, g1);
