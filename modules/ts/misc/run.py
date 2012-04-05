@@ -4,7 +4,6 @@ from subprocess import Popen, PIPE
 
 hostos = os.name # 'nt', 'posix'
 hostmachine = platform.machine() # 'x86', 'AMD64', 'x86_64'
-nameprefix = "opencv_perf_"
 
 SIMD_DETECTION_PROGRAM="""
 #if __SSE5__
@@ -51,6 +50,7 @@ SIMD_DETECTION_PROGRAM="""
 
 parse_patterns = (
   {'name': "has_perf_tests",           'default': "OFF",      'pattern': re.compile("^BUILD_PERF_TESTS:BOOL=(ON)$")},
+  {'name': "has_accuracy_tests",       'default': "OFF",      'pattern': re.compile("^BUILD_TESTS:BOOL=(ON)$")},
   {'name': "cmake_home",               'default': None,       'pattern': re.compile("^CMAKE_HOME_DIRECTORY:INTERNAL=(.+)$")},
   {'name': "opencv_home",              'default': None,       'pattern': re.compile("^OpenCV_SOURCE_DIR:STATIC=(.+)$")},
   {'name': "tests_dir",                'default': None,       'pattern': re.compile("^EXECUTABLE_OUTPUT_PATH:PATH=(.+)$")},
@@ -201,6 +201,7 @@ class RunInfo(object):
         self.options = options
         self.path = path
         self.error = None
+        self.nameprefix = "opencv_" + options.mode + "_"
         for p in parse_patterns:
             setattr(self, p["name"], p["default"])
         cachefile = open(os.path.join(path, "CMakeCache.txt"), "rt")
@@ -268,6 +269,7 @@ class RunInfo(object):
 
         # fix has_perf_tests param
         self.has_perf_tests = self.has_perf_tests == "ON"
+        self.has_accuracy_tests = self.has_accuracy_tests == "ON"
         # fix is_x64 flag
         self.is_x64 = self.is_x64 == "ON"
         if not self.is_x64 and ("X64" in "%s %s %s" % (self.cxx_flags, self.cxx_flags_release, self.cxx_flags_debug) or "Win64" in self.cmake_generator):
@@ -376,7 +378,7 @@ class RunInfo(object):
                 
     def getAvailableTestApps(self):
         if self.tests_dir and os.path.isdir(self.tests_dir):
-            files = glob.glob(os.path.join(self.tests_dir, nameprefix + "*"))
+            files = glob.glob(os.path.join(self.tests_dir, self.nameprefix + "*"))
             if self.targetos == hostos:
                 files = [f for f in files if self.isTest(f)]
             return files
@@ -386,8 +388,8 @@ class RunInfo(object):
         app = os.path.basename(app)
         if app.endswith(".exe"):
             app = app[:-4]
-        if app.startswith(nameprefix):
-            app = app[len(nameprefix):]
+        if app.startswith(self.nameprefix):
+            app = app[len(self.nameprefix):]
 
         if self.cmake_home_svn:
             if self.cmake_home_svn == self.opencv_home_svn:
@@ -518,8 +520,8 @@ class RunInfo(object):
                 fname = fname[:-4]
             if fname == name:
                 return t
-            if fname.startswith(nameprefix):
-                fname = fname[len(nameprefix):]
+            if fname.startswith(self.nameprefix):
+                fname = fname[len(self.nameprefix):]
             if fname == name:
                 return t
         return None
@@ -579,7 +581,7 @@ class RunInfo(object):
         if self.targetos == "android":
             hostlogpath = ""
             try:
-                andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_perf/"
+                andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_" + self.options.mode +"/"
                 exename = os.path.basename(exe)
                 androidexe = andoidcwd + exename
                 #upload
@@ -656,6 +658,7 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
+    parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
     parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
     parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
     parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
@@ -663,6 +666,11 @@ if __name__ == "__main__":
     parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
     
     (options, args) = parser.parse_args(argv)
+
+    if options.accuracy:
+        options.mode = "test"
+    else:
+        options.mode = "perf"
     
     run_args = []
     
