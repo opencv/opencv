@@ -2428,5 +2428,57 @@ TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
 
 // TODO: eigenvv, invsqrt, cbrt, fastarctan, (round, floor, ceil(?)),
 
+
+class CV_KMeansSingularTest : public cvtest::BaseTest
+{
+public:
+    CV_KMeansSingularTest() {}
+    ~CV_KMeansSingularTest() {}   
+protected:
+    void run(int)
+    {
+        try
+        {
+            RNG& rng = theRNG();
+            const int MAX_DIM=5;
+            int MAX_POINTS = 100;
+            for( int iter = 0; iter < 100; iter++ )
+            {
+                ts->update_context(this, iter, true);
+                int dims = rng.uniform(1, MAX_DIM+1);
+                int N = rng.uniform(1, MAX_POINTS+1);
+                int N0 = rng.uniform(1, N/10+1);
+                int K = rng.uniform(1, N+1);
+                
+                Mat data0(N0, dims, CV_32F), labels;
+                rng.fill(data0, RNG::UNIFORM, -1, 1);
+                
+                Mat data(N, dims, CV_32F);
+                for( int i = 0; i < N; i++ )
+                    data0.row(rng.uniform(0, N0)).copyTo(data.row(i));
+                
+                kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
+                       5, KMEANS_PP_CENTERS);
+                
+                Mat hist(K, 1, CV_32S, Scalar(0));
+                for( int i = 0; i < N; i++ )
+                {
+                    int l = labels.at<int>(i);
+                    CV_Assert( 0 <= l && l < K );
+                    hist.at<int>(l)++;
+                }
+                for( int i = 0; i < K; i++ )
+                    CV_Assert( hist.at<int>(i) != 0 );
+            }
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Core_KMeans, singular) { CV_KMeansSingularTest test; test.safe_run(); }
+
 /* End of file. */
 

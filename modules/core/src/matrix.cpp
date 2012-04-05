@@ -2489,7 +2489,7 @@ double cv::kmeans( InputArray _data, int K,
     }
     int* labels = _labels.ptr<int>();
 
-    Mat centers(K, dims, type), old_centers(K, dims, type);
+    Mat centers(K, dims, type), old_centers(K, dims, type), temp(1, dims, type);
     vector<int> counters(K);
     vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
@@ -2533,7 +2533,7 @@ double cv::kmeans( InputArray _data, int K,
     for( a = 0; a < attempts; a++ )
     {
         double max_center_shift = DBL_MAX;
-        for( iter = 0; iter < criteria.maxCount && max_center_shift > criteria.epsilon; iter++ )
+        for( iter = 0;; )
         {
             swap(centers, old_centers);
 
@@ -2609,7 +2609,11 @@ double cv::kmeans( InputArray _data, int K,
                     double max_dist = 0;                        
                     int farthest_i = -1;
                     float* new_center = centers.ptr<float>(k);
-                    float* old_center = centers.ptr<float>(max_k);
+                    float* _old_center = centers.ptr<float>(max_k);
+                    float* old_center = temp.ptr<float>();
+                    float scale = 1.f/counters[max_k];
+                    for( j = 0; j < dims; j++ )
+                        old_center[j] = _old_center[j]*scale;
                     
                     for( i = 0; i < N; i++ )
                     {
@@ -2627,6 +2631,7 @@ double cv::kmeans( InputArray _data, int K,
                     
                     counters[max_k]--;
                     counters[k]++;
+                    labels[farthest_i] = k;
                     sample = data.ptr<float>(farthest_i);
                     
                     for( j = 0; j < dims; j++ )
@@ -2658,6 +2663,9 @@ double cv::kmeans( InputArray _data, int K,
                     }
                 }
             }
+            
+            if( ++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
+                break;
 
             // assign labels
             compactness = 0;
