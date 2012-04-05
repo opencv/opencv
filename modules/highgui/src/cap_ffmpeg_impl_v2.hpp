@@ -218,7 +218,6 @@ struct CvCapture_FFMPEG
     double  dts_to_sec(int64_t dts);
 
     AVFormatContext * ic;
-    AVCodecContext  * avcodec_context;
     AVCodec         * avcodec;
     int               video_stream;
     AVStream        * video_st;
@@ -260,7 +259,6 @@ void CvCapture_FFMPEG::init()
 		img_convert_ctx = 0;
 	#endif
 
-    avcodec_context = 0;
     avcodec = 0;
     frame_number = 0;
     eps_zero = 0.000025;
@@ -282,18 +280,6 @@ void CvCapture_FFMPEG::close()
 
         #endif
                 video_st = NULL;
-    }
-
-    if ( avcodec_context )
-    {
-        #if LIBAVFORMAT_BUILD > 4628
-                avcodec_close( avcodec_context );
-
-        #else
-                avcodec_close( &avcodec_context );
-
-        #endif
-                avcodec_context = NULL;
     }
 
     if( ic )
@@ -331,10 +317,8 @@ bool CvCapture_FFMPEG::reopen()
 
 	#if LIBAVFORMAT_BUILD > 4628
 		avcodec_close( video_st->codec );
-		avcodec_close( avcodec_context );
 	#else
 		avcodec_close( &video_st->codec );
-		avcodec_close( &avcodec_context );
 	#endif
     #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
         av_close_input_file(ic);
