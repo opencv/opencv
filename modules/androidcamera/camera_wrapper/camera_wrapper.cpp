@@ -273,6 +273,28 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
         LOGD("Supported Antibanding Options: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_ANTIBANDING));
         LOGD("Supported Flash Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FLASH_MODES));
 
+#if !defined(ANDROID_r2_2_0)
+        // Set focus mode to continuous-video if supported
+        const char* available_focus_modes = handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
+        if (available_focus_modes != 0)
+        {
+	    if (strstr(available_focus_modes, "continuous-video") != NULL)
+	    {
+		handler->params.set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO);
+
+		status_t resParams = handler->camera->setParameters(handler->params.flatten());
+
+                if (resParams != 0)
+                {
+                    LOGE("initCameraConnect: failed to set autofocus mode to \"continuous-video\"");
+                }
+                else
+                {
+                    LOGD("initCameraConnect: autofocus is set to mode \"continuous-video\"");
+                }
+	    }
+	}
+#endif
 
         //check if yuv420sp format available. Set this format as preview format.
         const char* available_formats = handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS);
@@ -312,17 +334,6 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
             }
         }
     }
-#if !defined(ANDROID_r2_2_0)
-    const char* available_focus_modes = handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
-    if (available_focus_modes != 0)
-    {
-        // find continuous focus mode
-        if (strstr(available_focus_modes, "continuous-picture") != NULL)
-        {
-            handler->params.set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO);
-        }
-    }
-#endif
 
     status_t pdstatus;
 #if defined(ANDROID_r2_2_0)
