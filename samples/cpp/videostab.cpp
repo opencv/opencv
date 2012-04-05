@@ -29,43 +29,6 @@ void run();
 void saveMotionsIfNecessary();
 void printHelp();
 
-class GlobalMotionReader : public GlobalMotionEstimatorBase
-{
-public:
-    GlobalMotionReader(string path)
-    {
-        ifstream f(path.c_str());
-        if (!f.is_open())
-            throw runtime_error("can't open motions file: " + path);
-        int size; f >> size;
-        motions_.resize(size);
-        for (int i = 0; i < size; ++i)
-        {
-            Mat_<float> M(3, 3);
-            for (int l = 0; l < 3; ++l)
-                for (int s = 0; s < 3; ++s)
-                    f >> M(l,s);
-            motions_[i] = M;
-        }
-        pos_ = 0;
-    }
-
-    virtual Mat estimate(const Mat &/*frame0*/, const Mat &/*frame1*/)
-    {
-        if (pos_ >= motions_.size())
-        {
-            stringstream text;
-            text << "can't load motion between frames " << pos_ << " and " << pos_+1;
-            throw runtime_error(text.str());
-        }
-        return motions_[pos_++];
-    }
-
-private:
-    vector<Mat> motions_;
-    size_t pos_;
-};
-
 
 void run()
 {
@@ -76,8 +39,6 @@ void run()
     while (!(stabilizedFrame = stabilizedFrames->nextFrame()).empty())
     {
         nframes++;
-        if (!saveMotionsPath.empty())
-            saveMotionsIfNecessary();
         if (!outputPath.empty())
         {
             if (!writer.isOpened())
@@ -96,33 +57,6 @@ void run()
     cout << endl
          << "processed frames: " << nframes << endl
          << "finished\n";
-}
-
-
-void saveMotionsIfNecessary()
-{
-    static bool areMotionsSaved = false;
-    if (!areMotionsSaved)
-    {
-        IFrameSource *frameSource = static_cast<IFrameSource*>(stabilizedFrames);
-        TwoPassStabilizer *twoPassStabilizer = dynamic_cast<TwoPassStabilizer*>(frameSource);
-        if (twoPassStabilizer)
-        {
-            ofstream f(saveMotionsPath.c_str());
-            const vector<Mat> &motions = twoPassStabilizer->motions();
-            f << motions.size() << endl;
-            for (size_t i = 0; i < motions.size(); ++i)
-            {
-                Mat_<float> M = motions[i];
-                for (int l = 0, k = 0; l < 3; ++l)
-                    for (int s = 0; s < 3; ++s, ++k)
-                        f << M(l,s) << " ";
-                f << endl;
-            }
-        }
-        areMotionsSaved = true;
-        cout << "motions are saved";
-    }
 }
 
 
@@ -173,6 +107,8 @@ void printHelp()
             "  --color-inpaint-radius=<float_number>\n"
             "      Set color inpainting radius (for ns and telea options only).\n"
             "      The default is 2.0\n\n"
+            "  --wobble-suppress=(yes|no)\n"
+            "      Perform wobble suppression. The default is no.\n\n"
             "  -o, --output=(no|<file_path>)\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
             "  --fps=(<int_number>|auto)\n"
@@ -210,6 +146,7 @@ int main(int argc, const char **argv)
                 "{ | dist-thresh | 5.0 | }"
                 "{ | color-inpaint | no | }"
                 "{ | color-inpaint-radius | 2 | }"
+                "{ | wobble-suppress | no | }"
                 "{ o | output | stabilized.avi | }"
                 "{ | fps | auto | }"
                 "{ q | quiet | false | }"
@@ -226,7 +163,9 @@ int main(int argc, const char **argv)
 
         StabilizerBase *stabilizer;
 
-        bool isTwoPass = arg("est-trim") == "yes" || arg("save-motions") != "no";
+        bool isTwoPass =
+                arg("est-trim") == "yes" || arg("wobble-suppress") == "yes";
+
         if (isTwoPass)
         {
             TwoPassStabilizer *twoPassStabilizer = new TwoPassStabilizer();
@@ -236,6 +175,19 @@ int main(int argc, const char **argv)
                 twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius")));
             else
                 twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius"), argf("stdev")));
+            if (arg("wobble-suppress") == "yes")
+            {
+                twoPassStabilizer->setWobbleSuppressor(new MoreAccurateMotionWobbleSuppressor());
+                if (arg("load-motions") != "no")
+                    twoPassStabilizer->wobbleSuppressor()->setMotionEstimator(
+                            new FromFileMotionReader("motions2." + arg("load-motions")));
+                if (arg("save-motions") != "no")
+                {
+                    Ptr<GlobalMotionEstimatorBase> est = twoPassStabilizer->wobbleSuppressor()->motionEstimator();
+                    twoPassStabilizer->wobbleSuppressor()->setMotionEstimator(
+                            new ToFileMotionWriter("motions2." + arg("save-motions"), est));
+                }
+             }
         }
         else
         {
@@ -289,10 +241,11 @@ int main(int argc, const char **argv)
             stabilizer->setMotionEstimator(est_);
         }
         else
-            stabilizer->setMotionEstimator(new GlobalMotionReader(arg("load-motions")));
+            stabilizer->setMotionEstimator(new FromFileMotionReader("motions." + arg("load-motions")));
 
         if (arg("save-motions") != "no")
-            saveMotionsPath = arg("save-motions");
+            stabilizer->setMotionEstimator(
+                    new ToFileMotionWriter("motions." + arg("save-motions"), stabilizer->motionEstimator()));
 
         stabilizer->setRadius(argi("radius"));
         if (arg("deblur") == "yes")
@@ -342,9 +295,7 @@ int main(int argc, const char **argv)
         {
             inpainters->setRadius(argi("radius"));
             stabilizer->setInpainter(inpainters_);
-        }
-
-        stabilizer->setLog(new LogToStdout());
+        }       
 
         if (arg("output") != "no")
             outputPath = arg("output");

@@ -59,7 +59,7 @@ class CV_EXPORTS InpainterBase
 {
 public:
     InpainterBase()
-        : radius_(0), frames_(0), motions_(0),
+        : radius_(0), motionModel_(UNKNOWN), frames_(0), motions_(0),
           stabilizedFrames_(0), stabilizationMotions_(0) {}
 
     virtual ~InpainterBase() {}
@@ -69,6 +69,11 @@ public:
 
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
     virtual MotionModel motionModel() const { return motionModel_; }
+
+    virtual void inpaint(int idx, Mat &frame, Mat &mask) = 0;
+
+
+    // data from stabilizer
 
     virtual void setFrames(const std::vector<Mat> &val) { frames_ = &val; }
     virtual const std::vector<Mat>& frames() const { return *frames_; }
@@ -81,8 +86,6 @@ public:
 
     virtual void setStabilizationMotions(const std::vector<Mat> &val) { stabilizationMotions_ = &val; }
     virtual const std::vector<Mat>& stabilizationMotions() const { return *stabilizationMotions_; }
-
-    virtual void inpaint(int idx, Mat &frame, Mat &mask) = 0;
 
 protected:
     int radius_;

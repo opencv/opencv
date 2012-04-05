@@ -56,12 +56,17 @@ CV_EXPORTS float calcBlurriness(const Mat &frame);
 class CV_EXPORTS DeblurerBase
 {
 public:
-    DeblurerBase() : radius_(0), frames_(0), motions_(0) {}
+    DeblurerBase() : radius_(0), frames_(0), motions_(0), blurrinessRates_(0) {}
 
     virtual ~DeblurerBase() {}
 
     virtual void setRadius(int val) { radius_ = val; }
     virtual int radius() const { return radius_; }
+
+    virtual void deblur(int idx, Mat &frame) = 0;
+
+
+    // data from stabilizer
 
     virtual void setFrames(const std::vector<Mat> &val) { frames_ = &val; }
     virtual const std::vector<Mat>& frames() const { return *frames_; }
@@ -71,8 +76,6 @@ public:
 
     virtual void setBlurrinessRates(const std::vector<float> &val) { blurrinessRates_ = &val; }
     virtual const std::vector<float>& blurrinessRates() const { return *blurrinessRates_; }
-
-    virtual void deblur(int idx, Mat &frame) = 0;
 
 protected:
     int radius_;

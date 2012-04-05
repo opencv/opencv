@@ -51,9 +51,30 @@ namespace cv
 namespace videostab
 {
 
-void NullWobbleSuppressor::suppress(int idx, Mat &result)
+WobbleSuppressorBase::WobbleSuppressorBase()
+    : motions_(0), stabilizationMotions_(0)
 {
-    result = at(idx, *stabilizedFrames_);
+    PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator();
+    est->setMotionModel(HOMOGRAPHY);
+    est->setRansacParams(RansacParams::homography2dMotionStd());
+    setMotionEstimator(est);
+}
+
+
+void NullWobbleSuppressor::suppress(int /*idx*/, const Mat &frame, Mat &result)
+{
+    result = frame;
+}
+
+
+void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat &result)
+{
+    CV_Assert(motions_ && stabilizationMotions_);
+
+    // TODO implement
+    CV_Error(CV_StsNotImplemented, "MoreAccurateMotionWobbleSuppressor");
+
+    result = frame;
 }
 
 } // namespace videostab

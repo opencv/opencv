@@ -288,6 +288,41 @@ Mat estimateGlobalMotionRobust(
 }
 
 
+FromFileMotionReader::FromFileMotionReader(const string &path)
+{
+    file_.open(path.c_str());
+    CV_Assert(file_.is_open());
+}
+
+
+Mat FromFileMotionReader::estimate(const Mat &/*frame0*/, const Mat &/*frame1*/)
+{
+    Mat_<float> M(3, 3);
+    file_ >> M(0,0) >> M(0,1) >> M(0,2)
+          >> M(1,0) >> M(1,1) >> M(1,2)
+          >> M(2,0) >> M(2,1) >> M(2,2);
+    return M;
+}
+
+
+ToFileMotionWriter::ToFileMotionWriter(const string &path, Ptr<GlobalMotionEstimatorBase> estimator)
+{
+    file_.open(path.c_str());
+    CV_Assert(file_.is_open());
+    estimator_ = estimator;
+}
+
+
+Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1)
+{
+    Mat_<float> M = estimator_->estimate(frame0, frame1);
+    file_ << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
+          << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
+          << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+    return M;
+}
+
+
 PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator()
     : ransacParams_(RansacParams::affine2dMotionStd())
 {

@@ -184,6 +184,8 @@ private:
 
     int frameCount_;
     bool isPrePassDone_;
+    bool doWobbleSuppression_;
+    std::vector<Mat> motions2_;
     Mat suppressedFrame_;
 };
 

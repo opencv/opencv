@@ -53,7 +53,7 @@ namespace videostab
 
 StabilizerBase::StabilizerBase()
 {
-    setLog(new NullLog());
+    setLog(new LogToStdout());
     setFrameSource(new NullFrameSource());
     setMotionEstimator(new PyrLkRobustMotionEstimator());
     setDeblurer(new NullDeblurer());
@@ -304,6 +304,8 @@ void TwoPassStabilizer::reset()
     StabilizerBase::reset();
     frameCount_ = 0;
     isPrePassDone_ = false;
+    doWobbleSuppression_ = false;
+    motions2_.clear();
     suppressedFrame_ = Mat();
 }
 
@@ -333,10 +335,20 @@ void TwoPassStabilizer::runPrePassIfNecessary()
 
         Mat prevFrame, frame;
 
+        WobbleSuppressorBase *wobbleSuppressor = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
+        doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobbleSuppressor) == 0;
+
         while (!(frame = frameSource_->nextFrame()).empty())
         {
             if (frameCount_ > 0)
+            {
                 motions_.push_back(motionEstimator_->estimate(prevFrame, frame));
+                if (doWobbleSuppression_)
+                {
+                    motions2_.push_back(
+                            wobbleSuppressor_->motionEstimator()->estimate(prevFrame, frame));
+                }
+            }
             else
             {
                 frameSize_ = frame.size();
@@ -386,10 +398,15 @@ void TwoPassStabilizer::setUp(const Mat &firstFrame)
     for (int i = -radius_; i <= 0; ++i)
         at(i, frames_) = firstFrame;
 
-    wobbleSuppressor_->setFrames(frames_);
-    wobbleSuppressor_->setMotions(motions_);
-    wobbleSuppressor_->setStabilizedFrames(stabilizedFrames_);
-    wobbleSuppressor_->setStabilizationMotions(stabilizationMotions_);
+    WobbleSuppressorBase *wobbleSuppressor = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
+    doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobbleSuppressor) == 0;
+    if (doWobbleSuppression_)
+    {
+        wobbleSuppressor_->setFrameCount(frameCount_);
+        wobbleSuppressor_->setMotions(motions_);
+        wobbleSuppressor_->setMotions2(motions2_);
+        wobbleSuppressor_->setStabilizationMotions(stabilizationMotions_);
+    }
 
     StabilizerBase::setUp(firstFrame);
 }
@@ -407,9 +424,9 @@ Mat TwoPassStabilizer::estimateStabilizationMotion()
 }
 
 
-Mat TwoPassStabilizer::postProcessFrame(const Mat &/*frame*/)
+Mat TwoPassStabilizer::postProcessFrame(const Mat &frame)
 {
-    wobbleSuppressor_->suppress(curStabilizedPos_, suppressedFrame_);
+    wobbleSuppressor_->suppress(curStabilizedPos_, frame, suppressedFrame_);
     return StabilizerBase::postProcessFrame(suppressedFrame_);
 }
 

@@ -44,6 +44,8 @@
 #define __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
 
 #include <vector>
+#include <string>
+#include <fstream>
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
@@ -105,13 +107,25 @@ protected:
     MotionModel motionModel_;
 };
 
-class CV_EXPORTS EyeMotionEstimator : public GlobalMotionEstimatorBase
+class CV_EXPORTS FromFileMotionReader : public GlobalMotionEstimatorBase
 {
 public:
-    virtual Mat estimate(const Mat &/*frame0*/, const Mat &/*frame1*/)
-    {
-        return Mat::eye(3, 3, CV_32F);
-    }
+    FromFileMotionReader(const std::string &path);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1);
+
+private:
+    std::ifstream file_;
+};
+
+class CV_EXPORTS ToFileMotionWriter : public GlobalMotionEstimatorBase
+{
+public:
+    ToFileMotionWriter(const std::string &path, Ptr<GlobalMotionEstimatorBase> estimator);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1);
+
+private:
+    std::ofstream file_;
+    Ptr<GlobalMotionEstimatorBase> estimator_;
 };
 
 class CV_EXPORTS PyrLkRobustMotionEstimator : public GlobalMotionEstimatorBase

@@ -46,6 +46,7 @@
 #include <vector>
 #include "opencv2/core/core.hpp"
 #include "opencv2/videostab/global_motion.hpp"
+#include "opencv2/videostab/log.hpp"
 
 namespace cv
 {
@@ -55,33 +56,48 @@ namespace videostab
 class CV_EXPORTS WobbleSuppressorBase
 {
 public:
+    WobbleSuppressorBase();
+
     virtual ~WobbleSuppressorBase() {}
 
-    virtual void setFrames(const std::vector<Mat> &val) { frames_ = &val; }
-    virtual const std::vector<Mat>& frames() const { return *frames_; }
+    void setMotionEstimator(Ptr<GlobalMotionEstimatorBase> val) { motionEstimator_ = val; }
+    Ptr<GlobalMotionEstimatorBase> motionEstimator() const { return motionEstimator_; }
+
+    virtual void suppress(int idx, const Mat &frame, Mat &result) = 0;
+
+
+    // data from stabilizer
+
+    virtual void setFrameCount(int val) { frameCount_ = val; }
+    virtual int frameCount() const { return frameCount_; }
 
     virtual void setMotions(const std::vector<Mat> &val) { motions_ = &val; }
     virtual const std::vector<Mat>& motions() const { return *motions_; }
 
-    virtual void setStabilizedFrames(const std::vector<Mat> &val) { stabilizedFrames_ = &val; }
-    virtual const std::vector<Mat>& stabilizedFrames() const { return *stabilizedFrames_; }
+    virtual void setMotions2(const std::vector<Mat> &val) { motions2_ = &val; }
+    virtual const std::vector<Mat>& motions2() const { return *motions2_; }
 
     virtual void setStabilizationMotions(const std::vector<Mat> &val) { stabilizationMotions_ = &val; }
     virtual const std::vector<Mat>& stabilizationMotions() const { return *stabilizationMotions_; }
 
-    virtual void suppress(int idx, Mat &frame) = 0;
-
 protected:
-    const std::vector<Mat> *frames_;
+    Ptr<GlobalMotionEstimatorBase> motionEstimator_;
+    int frameCount_;
     const std::vector<Mat> *motions_;
-    const std::vector<Mat> *stabilizedFrames_;
+    const std::vector<Mat> *motions2_;
     const std::vector<Mat> *stabilizationMotions_;
 };
 
 class CV_EXPORTS NullWobbleSuppressor : public WobbleSuppressorBase
 {
 public:
-    virtual void suppress(int idx, Mat &result);
+    virtual void suppress(int idx, const Mat &frame, Mat &result);
+};
+
+class CV_EXPORTS MoreAccurateMotionWobbleSuppressor : public WobbleSuppressorBase
+{
+public:
+    virtual void suppress(int idx, const Mat &frame, Mat &result);
 };
 
 } // namespace videostab
