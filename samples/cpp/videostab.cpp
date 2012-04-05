@@ -71,9 +71,11 @@ void run()
 {
     VideoWriter writer;
     Mat stabilizedFrame;
+    int nframes = 0;
 
     while (!(stabilizedFrame = stabilizedFrames->nextFrame()).empty())
     {
+        nframes++;
         if (!saveMotionsPath.empty())
             saveMotionsIfNecessary();
         if (!outputPath.empty())
@@ -91,7 +93,9 @@ void run()
         }
     }
 
-    cout << "\nfinished\n";
+    cout << endl
+         << "processed frames: " << nframes << endl
+         << "finished\n";
 }
 
 
@@ -248,7 +252,7 @@ int main(int argc, const char **argv)
         if (inputPath.empty()) throw runtime_error("specify video file path");
 
         VideoFileSource *source = new VideoFileSource(inputPath);
-        cout << "frame count: " << source->count() << endl;
+        cout << "frame count (rough): " << source->count() << endl;
         if (arg("fps") == "auto") outputFps = source->fps();  else outputFps = argd("fps");
         stabilizer->setFrameSource(source);
 

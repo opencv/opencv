@@ -52,6 +52,7 @@
 #include "opencv2/videostab/log.hpp"
 #include "opencv2/videostab/inpainting.hpp"
 #include "opencv2/videostab/deblurring.hpp"
+#include "opencv2/videostab/wobble_suppression.hpp"
 
 namespace cv
 {
@@ -93,14 +94,14 @@ public:
 protected:
     StabilizerBase();
 
-    void setUp(int cacheSize, const Mat &frame);
+    void reset();
     Mat nextStabilizedFrame();
     bool doOneIteration();
-    void stabilizeFrame(const Mat &stabilizationMotion);
-
-    virtual void setUp(Mat &firstFrame) = 0;
-    virtual void stabilizeFrame() = 0;
-    virtual void estimateMotion() = 0;
+    virtual void setUp(const Mat &firstFrame);
+    virtual Mat estimateMotion() = 0;
+    virtual Mat estimateStabilizationMotion() = 0;
+    void stabilizeFrame();
+    virtual Mat postProcessFrame(const Mat &frame);
 
     Ptr<ILog> log_;
     Ptr<IFrameSource> frameSource_;
@@ -120,6 +121,7 @@ protected:
     Mat preProcessedFrame_;
     bool doInpainting_;
     Mat inpaintingMask_;
+    Mat finalFrame_;
     std::vector<Mat> frames_;
     std::vector<Mat> motions_; // motions_[i] is the motion from i-th to i+1-th frame
     std::vector<float> blurrinessRates_;
@@ -140,9 +142,10 @@ public:
     virtual Mat nextFrame() { return nextStabilizedFrame(); }
 
 private:
-    virtual void setUp(Mat &firstFrame);
-    virtual void estimateMotion();
-    virtual void stabilizeFrame();
+    virtual void setUp(const Mat &firstFrame);
+    virtual Mat estimateMotion();
+    virtual Mat estimateStabilizationMotion();
+    virtual Mat postProcessFrame(const Mat &frame);
 
     Ptr<MotionFilterBase> motionFilter_;
 };
@@ -153,7 +156,10 @@ public:
     TwoPassStabilizer();
 
     void setMotionStabilizer(Ptr<IMotionStabilizer> val) { motionStabilizer_ = val; }
-    Ptr<IMotionStabilizer> motionStabilizer() const { return motionStabilizer_; }
+    Ptr<IMotionStabilizer> motionStabilizer() const { return motionStabilizer_; }    
+
+    void setWobbleSuppressor(Ptr<WobbleSuppressorBase> val) { wobbleSuppressor_ = val; }
+    Ptr<WobbleSuppressorBase> wobbleSuppressor() const { return wobbleSuppressor_; }
 
     void setEstimateTrimRatio(bool val) { mustEstTrimRatio_ = val; }
     bool mustEstimateTrimaRatio() const { return mustEstTrimRatio_; }
@@ -165,18 +171,20 @@ public:
     std::vector<Mat> motions() const;
 
 private:
-    void resetImpl();
     void runPrePassIfNecessary();
 
-    virtual void setUp(Mat &firstFrame);
-    virtual void estimateMotion() { /* do nothing as motion was estimation in pre-pass */ }
-    virtual void stabilizeFrame();
+    virtual void setUp(const Mat &firstFrame);
+    virtual Mat estimateMotion();
+    virtual Mat estimateStabilizationMotion();
+    virtual Mat postProcessFrame(const Mat &frame);
 
     Ptr<IMotionStabilizer> motionStabilizer_;
+    Ptr<WobbleSuppressorBase> wobbleSuppressor_;
     bool mustEstTrimRatio_;
 
     int frameCount_;
     bool isPrePassDone_;
+    Mat suppressedFrame_;
 };
 
 } // namespace videostab

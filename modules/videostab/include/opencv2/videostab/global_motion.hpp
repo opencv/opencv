@@ -105,6 +105,15 @@ protected:
     MotionModel motionModel_;
 };
 
+class CV_EXPORTS EyeMotionEstimator : public GlobalMotionEstimatorBase
+{
+public:
+    virtual Mat estimate(const Mat &/*frame0*/, const Mat &/*frame1*/)
+    {
+        return Mat::eye(3, 3, CV_32F);
+    }
+};
+
 class CV_EXPORTS PyrLkRobustMotionEstimator : public GlobalMotionEstimatorBase
 {
 public:
