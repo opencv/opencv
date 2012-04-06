@@ -1,10 +1,10 @@
 package org.opencv.test.video;
 
 import org.opencv.core.Core;
-import org.opencv.core.CvVectorByte;
-import org.opencv.core.CvVectorFloat;
-import org.opencv.core.CvVectorPoint2f;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
@@ -12,15 +12,15 @@ import org.opencv.video.Video;
 
 public class VideoTest extends OpenCVTestCase {
 
-    private CvVectorFloat err = null;
+    private MatOfFloat err = null;
     private int h;
-    private CvVectorPoint2f nextPts = null;
-    private CvVectorPoint2f prevPts = null;
+    private MatOfPoint2f nextPts = null;
+    private MatOfPoint2f prevPts = null;
 
     private int shift1;
     private int shift2;
 
-    private CvVectorByte status = null;
+    private MatOfByte status = null;
     private Mat subLena1 = null;
     private Mat subLena2 = null;
     private int w;
@@ -37,11 +37,11 @@ public class VideoTest extends OpenCVTestCase {
         subLena1 = rgbLena.submat(shift1, h + shift1, shift1, w + shift1);
         subLena2 = rgbLena.submat(shift2, h + shift2, shift2, w + shift2);
 
-        prevPts = new CvVectorPoint2f(new Point(11d, 8d), new Point(5d, 5d), new Point(10d, 10d));
+        prevPts = new MatOfPoint2f(new Point(11d, 8d), new Point(5d, 5d), new Point(10d, 10d));
 
-        nextPts = new CvVectorPoint2f();
-        status = new CvVectorByte();
-        err = new CvVectorFloat();
+        nextPts = new MatOfPoint2f();
+        status = new MatOfByte();
+        err = new MatOfFloat();
     }
 
     public void testCalcGlobalOrientation() {

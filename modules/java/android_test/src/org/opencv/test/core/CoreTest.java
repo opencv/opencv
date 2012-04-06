@@ -1,13 +1,17 @@
 package org.opencv.test.core;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.Core.MinMaxLocResult;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
-import org.opencv.core.CvVectorDouble;
-import org.opencv.core.CvVectorInt;
-import org.opencv.core.CvVectorPoint;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
@@ -15,10 +19,6 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.test.OpenCVTestCase;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class CoreTest extends OpenCVTestCase {
 
@@ -485,7 +485,7 @@ public class CoreTest extends OpenCVTestCase {
         int arcStart = 30;
         int arcEnd = 60;
         int delta = 2;
-        CvVectorPoint pts = new CvVectorPoint();
+        MatOfPoint pts = new MatOfPoint();
 
         Core.ellipse2Poly(center, axes, angle, arcStart, arcEnd, delta, pts);
 
@@ -507,7 +507,7 @@ public class CoreTest extends OpenCVTestCase {
                 new Point(4, 6),
                 new Point(4, 6)
         };
-        assertArrayPointsEquals(truth, pts.toArray(null), EPS);
+        assertArrayPointsEquals(truth, pts.toArray(), EPS);
     }
 
     public void testEllipseMatPointSizeDoubleDoubleDoubleScalar() {
@@ -621,7 +621,7 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testFillConvexPolyMatListOfPointScalar() {
-        CvVectorPoint polyline = new CvVectorPoint(new Point[]{new Point(1, 1), new Point(5, 0), new Point(6, 8), new Point(0, 9)});
+        MatOfPoint polyline = new MatOfPoint(new Point[]{new Point(1, 1), new Point(5, 0), new Point(6, 8), new Point(0, 9)});
 
         Core.fillConvexPoly(gray0, polyline, new Scalar(150));
 
@@ -630,8 +630,8 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testFillConvexPolyMatListOfPointScalarIntInt() {
-        CvVectorPoint polyline1 = new CvVectorPoint(new Point(2, 1), new Point(5, 1), new Point(5, 7), new Point(2, 7));
-        CvVectorPoint polyline2 = new CvVectorPoint(new Point(4, 2), new Point(10, 2), new Point(10, 14), new Point(4, 14));
+        MatOfPoint polyline1 = new MatOfPoint(new Point(2, 1), new Point(5, 1), new Point(5, 7), new Point(2, 7));
+        MatOfPoint polyline2 = new MatOfPoint(new Point(4, 2), new Point(10, 2), new Point(10, 14), new Point(4, 14));
 
         // current implementation of fixed-point version of fillConvexPoly
         // requires image to be at least 2-pixel wider in each direction than
@@ -649,8 +649,8 @@ public class CoreTest extends OpenCVTestCase {
     public void testFillPolyMatListOfListOfPointScalar() {
         int matSize = 10;
         Mat gray0 = Mat.zeros(matSize, matSize, CvType.CV_8U);
-        CvVectorPoint polyline = new CvVectorPoint(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
-        List<CvVectorPoint> polylines = new ArrayList<CvVectorPoint>();
+        MatOfPoint polyline = new MatOfPoint(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
+        List<MatOfPoint> polylines = new ArrayList<MatOfPoint>();
         polylines.add(polyline);
 
         Core.fillPoly(gray0, polylines, new Scalar(1));
@@ -675,13 +675,13 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testFillPolyMatListOfListOfPointScalarIntIntPoint() {
-    	CvVectorPoint polyline1 = new CvVectorPoint(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
-    	CvVectorPoint polyline2 = new CvVectorPoint(new Point(0, 3), new Point(0, 7), new Point(3, 0), new Point(6, 7), new Point(6, 3));
+    	MatOfPoint polyline1 = new MatOfPoint(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
+    	MatOfPoint polyline2 = new MatOfPoint(new Point(0, 3), new Point(0, 7), new Point(3, 0), new Point(6, 7), new Point(6, 3));
 
-        List<CvVectorPoint> polylines1 = new ArrayList<CvVectorPoint>();
+        List<MatOfPoint> polylines1 = new ArrayList<MatOfPoint>();
         polylines1.add(polyline1);
 
-        List<CvVectorPoint> polylines2 = new ArrayList<CvVectorPoint>();
+        List<MatOfPoint> polylines2 = new ArrayList<MatOfPoint>();
         polylines2.add(polyline2);
 
         Core.fillPoly(gray0, polylines1, new Scalar(1), Core.LINE_8, 0, new Point(0, 0));
@@ -1194,8 +1194,8 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testMeanStdDevMatMatMat() {
-    	CvVectorDouble mean   = new CvVectorDouble();
-    	CvVectorDouble stddev = new CvVectorDouble();
+    	MatOfDouble mean   = new MatOfDouble();
+    	MatOfDouble stddev = new MatOfDouble();
 
         Core.meanStdDev(rgbLena, mean, stddev);
 
@@ -1204,8 +1204,8 @@ public class CoreTest extends OpenCVTestCase {
         double expectedDev[] = new double[]
             {33.74205485167219, 52.8734582803278, 49.01569488056406};
         
-        assertArrayEquals(expectedMean, mean.toPrimitiveArray(null), EPS);
-        assertArrayEquals(expectedDev, stddev.toPrimitiveArray(null), EPS);
+        assertArrayEquals(expectedMean, mean.toArray(), EPS);
+        assertArrayEquals(expectedDev, stddev.toArray(), EPS);
     }
 
     public void testMeanStdDevMatMatMatMat() {
@@ -1214,16 +1214,16 @@ public class CoreTest extends OpenCVTestCase {
         Mat mask = gray0.clone();
         submat = mask.submat(0, mask.rows() / 2, 0, mask.cols() / 2);
         submat.setTo(new Scalar(1));
-    	CvVectorDouble mean   = new CvVectorDouble();
-    	CvVectorDouble stddev = new CvVectorDouble();
+    	MatOfDouble mean   = new MatOfDouble();
+    	MatOfDouble stddev = new MatOfDouble();
 
         Core.meanStdDev(grayRnd, mean, stddev, mask);
 
         double expectedMean[] = new double[] {33d};
         double expectedDev[]  = new double[] {0d};
                 
-        assertArrayEquals(expectedMean, mean.toPrimitiveArray(null), EPS);
-        assertArrayEquals(expectedDev, stddev.toPrimitiveArray(null), EPS);
+        assertArrayEquals(expectedMean, mean.toArray(), EPS);
+        assertArrayEquals(expectedDev, stddev.toArray(), EPS);
     }
 
     public void testMerge() {
@@ -1284,7 +1284,7 @@ public class CoreTest extends OpenCVTestCase {
         rgba0.setTo(new Scalar(10, 20, 30, 40));
         List<Mat> src = Arrays.asList(rgba0);
         List<Mat> dst = Arrays.asList(gray3, gray2, gray1, gray0, getMat(CvType.CV_8UC3, 0, 0, 0));
-        CvVectorInt fromTo = new CvVectorInt(1, new int[]
+        MatOfInt fromTo = new MatOfInt(1, new int[]
         	  { 3, 0,
                 3, 1,
                 2, 2,
@@ -1745,8 +1745,8 @@ public class CoreTest extends OpenCVTestCase {
 
     public void testPolylinesMatListOfListOfPointBooleanScalar() {
         Mat img = gray0;
-        List<CvVectorPoint> polyline = new ArrayList<CvVectorPoint>();
-        polyline.add(new CvVectorPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
+        List<MatOfPoint> polyline = new ArrayList<MatOfPoint>();
+        polyline.add(new MatOfPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
 
         Core.polylines(img, polyline, true, new Scalar(100));
 
@@ -1759,8 +1759,8 @@ public class CoreTest extends OpenCVTestCase {
 
     public void testPolylinesMatListOfListOfPointBooleanScalarInt() {
         Mat img = gray0;
-        List<CvVectorPoint> polyline = new ArrayList<CvVectorPoint>();
-        polyline.add(new CvVectorPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
+        List<MatOfPoint> polyline = new ArrayList<MatOfPoint>();
+        polyline.add(new MatOfPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
 
         Core.polylines(img, polyline, true, new Scalar(100), 2);
 
@@ -1769,10 +1769,10 @@ public class CoreTest extends OpenCVTestCase {
 
     public void testPolylinesMatListOfListOfPointBooleanScalarIntIntInt() {
         Mat img = gray0;
-        List<CvVectorPoint> polyline1 = new ArrayList<CvVectorPoint>();
-        polyline1.add(new CvVectorPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
-        List<CvVectorPoint> polyline2 = new ArrayList<CvVectorPoint>();
-        polyline2.add(new CvVectorPoint(new Point(2, 2), new Point(14, 2), new Point(14, 12), new Point(2, 12)));
+        List<MatOfPoint> polyline1 = new ArrayList<MatOfPoint>();
+        polyline1.add(new MatOfPoint(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
+        List<MatOfPoint> polyline2 = new ArrayList<MatOfPoint>();
+        polyline2.add(new MatOfPoint(new Point(2, 2), new Point(14, 2), new Point(14, 12), new Point(2, 12)));
 
         Core.polylines(img, polyline1, true, new Scalar(100), 2, Core.LINE_8, 0);
 

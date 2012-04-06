@@ -1,6 +1,6 @@
 package org.opencv.test.objdetect;
 
-import org.opencv.core.CvVectorRect;
+import org.opencv.core.MatOfRect;
 import org.opencv.objdetect.Objdetect;
 import org.opencv.test.OpenCVTestCase;
 
@@ -9,7 +9,8 @@ public class ObjdetectTest extends OpenCVTestCase {
     public void testGroupRectanglesListOfRectListOfIntegerInt() {
         fail("Not yet implemented");
         final int NUM = 10;
-        CvVectorRect rects = new CvVectorRect(NUM);
+        MatOfRect rects = new MatOfRect();
+        rects.alloc(NUM);
 
         for (int i = 0; i < NUM; i++)
             rects.put(i, 0, 10, 10, 20, 20);
@@ -22,7 +23,8 @@ public class ObjdetectTest extends OpenCVTestCase {
     public void testGroupRectanglesListOfRectListOfIntegerIntDouble() {
         fail("Not yet implemented");
         final int NUM = 10;
-        CvVectorRect rects = new CvVectorRect(NUM);
+        MatOfRect rects = new MatOfRect();
+        rects.alloc(NUM);
 
         for (int i = 0; i < NUM; i++)
             rects.put(i, 0, 10, 10, 20, 20);

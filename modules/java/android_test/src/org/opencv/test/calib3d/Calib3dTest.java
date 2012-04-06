@@ -3,9 +3,9 @@ package org.opencv.test.calib3d;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
-import org.opencv.core.CvVectorPoint2f;
-import org.opencv.core.CvVectorPoint3f;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -235,14 +235,14 @@ public class Calib3dTest extends OpenCVTestCase {
     public void testFindFundamentalMatListOfPointListOfPoint() {
         int minFundamentalMatPoints = 8;
 
-        CvVectorPoint2f pts1 = new CvVectorPoint2f();
-    	CvVectorPoint2f pts2 = new CvVectorPoint2f();
+        MatOfPoint2f pts1 = new MatOfPoint2f();
+    	MatOfPoint2f pts2 = new MatOfPoint2f();
     	pts2.alloc(minFundamentalMatPoints);
 
         for (int i = 0; i < minFundamentalMatPoints; i++) {
             double x = Math.random() * 100 - 50;
             double y = Math.random() * 100 - 50;
-            pts1.push_back(new CvVectorPoint2f(new Point(x, y))); //add(new Point(x, y));
+            pts1.push_back(new MatOfPoint2f(new Point(x, y))); //add(new Point(x, y));
             pts2.put(i, 0, x, y); //add(new Point(x, y));
         }
 
@@ -272,9 +272,9 @@ public class Calib3dTest extends OpenCVTestCase {
     public void testFindHomographyListOfPointListOfPoint() {
     	final int NUM = 20;
     	
-    	CvVectorPoint2f originalPoints = new CvVectorPoint2f();
+    	MatOfPoint2f originalPoints = new MatOfPoint2f();
     	originalPoints.alloc(NUM);
-    	CvVectorPoint2f transformedPoints = new CvVectorPoint2f();
+    	MatOfPoint2f transformedPoints = new MatOfPoint2f();
     	transformedPoints.alloc(NUM);
 
         for (int i = 0; i < NUM; i++) {
@@ -503,9 +503,9 @@ public class Calib3dTest extends OpenCVTestCase {
 
         final int minPnpPointsNum = 4;
         
-        CvVectorPoint3f points3d = new CvVectorPoint3f();
+        MatOfPoint3f points3d = new MatOfPoint3f();
         points3d.alloc(minPnpPointsNum);
-        CvVectorPoint2f points2d = new CvVectorPoint2f();
+        MatOfPoint2f points2d = new MatOfPoint2f();
         points2d.alloc(minPnpPointsNum);
 
         for (int i = 0; i < minPnpPointsNum; i++) {

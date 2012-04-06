@@ -1,7 +1,7 @@
 package org.opencv.test.objdetect;
 
-import org.opencv.core.CvVectorRect;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
@@ -32,7 +32,7 @@ public class CascadeClassifierTest extends OpenCVTestCase {
 
     public void testDetectMultiScaleMatListOfRect() {
         CascadeClassifier cc = new CascadeClassifier(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH);
-        CvVectorRect faces = new CvVectorRect();
+        MatOfRect faces = new MatOfRect();
 
         Mat greyLena = new Mat();
         Imgproc.cvtColor(rgbLena, greyLena, Imgproc.COLOR_RGB2GRAY);

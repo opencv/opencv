@@ -1,6 +1,6 @@
 package org.opencv.test.highgui;
 
-import org.opencv.core.CvVectorByte;
+import org.opencv.core.MatOfByte;
 import org.opencv.highgui.Highgui;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -12,7 +12,7 @@ public class HighguiTest extends OpenCVTestCase {
     }
 
     public void testImencodeStringMatListOfByte() {
-        CvVectorByte buff = new CvVectorByte();
+        MatOfByte buff = new MatOfByte();
         assertEquals(0, buff.size());
         assertTrue( Highgui.imencode(".jpg", gray127, buff) );
         assertFalse(0 == buff.total());
