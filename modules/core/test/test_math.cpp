@@ -2437,42 +2437,48 @@ public:
 protected:
     void run(int)
     {
+        int i, iter = 0, N = 0, N0 = 0, K = 0, dims = 0;
+        Mat labels;
         try
         {
             RNG& rng = theRNG();
             const int MAX_DIM=5;
-            int MAX_POINTS = 100;
-            for( int iter = 0; iter < 100; iter++ )
+            int MAX_POINTS = 100, maxIter = 100;
+            for( iter = 0; iter < maxIter; iter++ )
             {
                 ts->update_context(this, iter, true);
-                int dims = rng.uniform(1, MAX_DIM+1);
-                int N = rng.uniform(1, MAX_POINTS+1);
-                int N0 = rng.uniform(1, N/10+1);
-                int K = rng.uniform(1, N+1);
+                dims = rng.uniform(1, MAX_DIM+1);
+                N = rng.uniform(1, MAX_POINTS+1);
+                N0 = rng.uniform(1, MAX(N/10, 2));
+                K = rng.uniform(1, N+1);
                 
-                Mat data0(N0, dims, CV_32F), labels;
+                Mat data0(N0, dims, CV_32F);
                 rng.fill(data0, RNG::UNIFORM, -1, 1);
                 
                 Mat data(N, dims, CV_32F);
-                for( int i = 0; i < N; i++ )
+                for( i = 0; i < N; i++ )
                     data0.row(rng.uniform(0, N0)).copyTo(data.row(i));
                 
                 kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
                        5, KMEANS_PP_CENTERS);
                 
                 Mat hist(K, 1, CV_32S, Scalar(0));
-                for( int i = 0; i < N; i++ )
+                for( i = 0; i < N; i++ )
                 {
                     int l = labels.at<int>(i);
-                    CV_Assert( 0 <= l && l < K );
+                    CV_Assert(0 <= l && l < K);
                     hist.at<int>(l)++;
                 }
-                for( int i = 0; i < K; i++ )
+                for( i = 0; i < K; i++ )
                     CV_Assert( hist.at<int>(i) != 0 );
             }
         }
         catch(...)
         {
+            ts->printf(cvtest::TS::LOG,
+                       "context: iteration=%d, N=%d, N0=%d, K=%d\n",
+                       iter, N, N0, K);
+            std::cout << labels << std::endl;
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         }
     }

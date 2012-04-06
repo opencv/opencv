@@ -2459,8 +2459,9 @@ double cv::kmeans( InputArray _data, int K,
 {
     const int SPP_TRIALS = 3;
     Mat data = _data.getMat();
-    int N = data.rows > 1 ? data.rows : data.cols;
-    int dims = (data.rows > 1 ? data.cols : 1)*data.channels();
+    bool isrow = data.rows == 1 && data.channels() > 1;
+    int N = !isrow ? data.rows : data.cols;
+    int dims = (!isrow ? data.cols : 1)*data.channels();
     int type = data.depth();
 
     attempts = std::max(attempts, 1);
