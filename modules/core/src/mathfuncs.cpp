@@ -2487,7 +2487,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         for( i = 0; i < n; i++ )
         {
             p = roots[i];
-            C num = coeffs[n], denom = 1;
+            C num = coeffs[n], denom = coeffs[n];
             for( j = 0; j < n; j++ )
             {
                 num = num*p + coeffs[n-j-1];
