@@ -371,19 +371,20 @@ protected:
     virtual void run( int /*start_from*/ )
     {
         int code = cvtest::TS::OK;
-        cv::EM em;
 
         Mat samples = Mat(3,1,CV_32F);
         samples.at<float>(0,0) = 1;
         samples.at<float>(1,0) = 2;
         samples.at<float>(2,0) = 3;
+        
+        Mat labels(samples.rows, 1, CV_32S);
 
-        cv::EM::Params params;
+        CvEMParams params;
         params.nclusters = 2;
 
-        Mat labels;
+        CvMat samples_c = samples, labels_c = labels;
 
-        em.train(samples, Mat(), params, &labels);
+        CvEM em(&samples_c, 0, params, &labels_c);
 
         Mat firstResult(samples.rows, 1, CV_32FC1);
         for( int i = 0; i < samples.rows; i++)
@@ -396,9 +397,7 @@ protected:
             FileStorage fs = FileStorage(filename, FileStorage::WRITE);
             try
             {
-                fs << "em" << "{";
-                em.write(fs);
-                fs << "}";
+                em.write(fs.fs, "em");
             }
             catch(...)
             {
@@ -416,7 +415,7 @@ protected:
             FileNode fn = fs["em"];
             try
             {
-                em.read(fn);
+                em.read(fs.fs, (CvFileNode*)fn.node);
             }
             catch(...)
             {

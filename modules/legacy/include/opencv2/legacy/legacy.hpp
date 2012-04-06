@@ -1821,10 +1821,10 @@ public:
     CV_WRAP virtual double calcLikelihood( const cv::Mat &sample ) const;
 
     CV_WRAP int getNClusters() const;
-    CV_WRAP const cv::Mat& getMeans() const;
+    CV_WRAP cv::Mat getMeans() const;
     CV_WRAP void getCovs(CV_OUT std::vector<cv::Mat>& covs) const;
-    CV_WRAP const cv::Mat& getWeights() const;
-    CV_WRAP const cv::Mat& getProbs() const;
+    CV_WRAP cv::Mat getWeights() const;
+    CV_WRAP cv::Mat getProbs() const;
 
     CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? likelihood : DBL_MAX; }
 #endif
