@@ -485,6 +485,7 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, float* 
     exp(L, expL);
     float partExpSum = 0, // sum_j!=q (exp(L_jk)
            factor;         // 1/(1 + sum_j!=q (exp(L_jk))
+    float prevL = expL.at<float>(label);
     for(int clusterIndex = 0; clusterIndex < nclusters; clusterIndex++)
     {
         if(clusterIndex != label)
@@ -504,7 +505,7 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, float* 
     if(likelihood)
     {
         // note likelihood = log (sum_j exp(L_ij)) - 0.5 * dims * ln2Pi
-        *likelihood = std::log(partExpSum + expL.at<float>(label)) - (float)(0.5 * dim * CV_LOG2PI);
+        *likelihood = std::log(prevL + partExpSum) - (float)(0.5 * dim * CV_LOG2PI);
     }
 }
 
