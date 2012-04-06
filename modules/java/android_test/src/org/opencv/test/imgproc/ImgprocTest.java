@@ -6,8 +6,11 @@ import java.util.List;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
-import org.opencv.core.CvVectorPoint2f;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
@@ -142,14 +145,9 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testApproxPolyDP() {
-    	CvVectorPoint2f curve = new CvVectorPoint2f(5);
-    	curve.add(new Point(1, 3));
-    	curve.add(new Point(2, 4));
-    	curve.add(new Point(3, 5));
-    	curve.add(new Point(4, 4));
-    	curve.add(new Point(5, 3));
+    	MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
     	
-    	List<Point> approxCurve = new ArrayList<Point>();
+    	MatOfPoint2f approxCurve = new MatOfPoint2f();
 
         Imgproc.approxPolyDP(curve, approxCurve, EPS, true);
 
@@ -158,11 +156,11 @@ public class ImgprocTest extends OpenCVTestCase {
         approxCurveGold.add(new Point(3, 5));
         approxCurveGold.add(new Point(5, 3));
 
-        assertListPointEquals(approxCurve, approxCurveGold, EPS);
+        assertListPointEquals(approxCurve.toList(), approxCurveGold, EPS);
     }
 
     public void testArcLength() {
-        List<Point> curve = Arrays.asList(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
+        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
 
         double arcLength = Imgproc.arcLength(curve, false);
 
@@ -213,7 +211,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testBoundingRect() {
-        List<Point> points = Arrays.asList(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
+        MatOfPoint points = new MatOfPoint(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
         Point p1 = new Point(1, 1);
         Point p2 = new Point(-5, -2);
 
@@ -244,9 +242,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcBackProject() {
         List<Mat> images = Arrays.asList(grayChess);
-        List<Integer> channels = Arrays.asList(0);
-        List<Integer> histSize = Arrays.asList(10);
-        List<Float> ranges = Arrays.asList(0f, 256f);
+        MatOfInt channels = new MatOfInt(1, 0);
+        MatOfInt histSize = new MatOfInt(1, 10);
+        MatOfFloat ranges =  new MatOfFloat(1, 0f, 256f);
 
         Mat hist = new Mat();
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -261,9 +259,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat() {
         List<Mat> images = Arrays.asList(gray128);
-        List<Integer> channels = Arrays.asList(0);
-        List<Integer> histSize = Arrays.asList(10);
-        List<Float> ranges = Arrays.asList(0f, 256f);
+        MatOfInt channels = new MatOfInt(1, 0);
+        MatOfInt histSize = new MatOfInt(1, 10);
+        MatOfFloat ranges =  new MatOfFloat(1, 0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -278,9 +276,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2d() {
         List<Mat> images = Arrays.asList(gray255, gray128);
-        List<Integer> channels = Arrays.asList(0, 1);
-        List<Integer> histSize = Arrays.asList(10, 10);
-        List<Float> ranges = Arrays.asList(0f, 256f, 0f, 256f);
+        MatOfInt channels = new MatOfInt(1, 0, 1);
+        MatOfInt histSize = new MatOfInt(1, 10, 10);
+        MatOfFloat ranges =  new MatOfFloat(1, 0f, 256f, 0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
