@@ -323,12 +323,21 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1)
 }
 
 
-PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator()
-    : ransacParams_(RansacParams::affine2dMotionStd())
+PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
 {
     setDetector(new GoodFeaturesToTrackDetector());
     setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());
-    setMotionModel(AFFINE);
+    setMotionModel(model);
+    if (model == TRANSLATION)
+        setRansacParams(RansacParams::translation2dMotionStd());
+    else if (model == TRANSLATION_AND_SCALE)
+        setRansacParams(RansacParams::translationAndScale2dMotionStd());
+    else if (model == LINEAR_SIMILARITY)
+        setRansacParams(RansacParams::linearSimilarity2dMotionStd());
+    else if (model == AFFINE)
+        setRansacParams(RansacParams::affine2dMotionStd());
+    else if (model == HOMOGRAPHY)
+        setRansacParams(RansacParams::homography2dMotionStd());
     setMaxRmse(0.5f);
     setMinInlierRatio(0.1f);
 }

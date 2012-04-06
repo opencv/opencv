@@ -97,7 +97,16 @@ public:
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressor : public WobbleSuppressorBase
 {
 public:
+    MoreAccurateMotionWobbleSuppressor();
+
+    void setPeriod(int val) { period_ = val; }
+    int period() const { return period_; }
+
     virtual void suppress(int idx, const Mat &frame, Mat &result);
+
+private:
+    int period_;
+    Mat_<float> mapx_, mapy_;
 };
 
 } // namespace videostab

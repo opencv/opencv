@@ -72,52 +72,60 @@ void printHelp()
             "  --min-inlier-ratio=<float_number>\n"
             "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1,\n"
             "      but you may want to increase it.\n\n"
-            "  --save-motions=(<file_path>|no)\n"
+            "  -sm, --save-motions=(<file_path>|no)\n"
             "      Save estimated motions into file. The default is no.\n"
-            "  --load-motions=(<file_path>|no)\n"
+            "  -lm, --load-motions=(<file_path>|no)\n"
             "      Load motions from file. The default is no.\n\n"
             "  -r, --radius=<int_number>\n"
             "      Set sliding window radius. The default is 15.\n"
             "  --stdev=(<float_number>|auto)\n"
-            "      Set smoothing weights standard deviation. The default is sqrt(radius),\n"
-            "      i.e. auto.\n\n"
+            "      Set smoothing weights standard deviation. The default is auto\n"
+            "      (i.e. sqrt(radius)).\n"
             "  --deblur=(yes|no)\n"
             "      Do deblurring.\n"
             "  --deblur-sens=<float_number>\n"
             "      Set deblurring sensitivity (from 0 to +inf). The default is 0.1.\n\n"
             "  -t, --trim-ratio=<float_number>\n"
             "      Set trimming ratio (from 0 to 0.5). The default is 0.1.\n"
-            "  --est-trim=(yes|no)\n"
-            "      Estimate trim ratio automatically. The default is yes (that leads to two passes,\n"
-            "      you can turn it off if you want to use one pass only).\n"
-            "  --incl-constr=(yes|no)\n"
+            "  -et, --est-trim=(yes|no)\n"
+            "      Estimate trim ratio automatically. The default is yes.\n"
+            "  -ic, --incl-constr=(yes|no)\n"
             "      Ensure the inclusion constraint is always satisfied. The default is no.\n\n"
-            "  --border-mode=(replicate|reflect|const)\n"
+            "  -bm, --border-mode=(replicate|reflect|const)\n"
             "      Set border extrapolation mode. The default is replicate.\n\n"
             "  --mosaic=(yes|no)\n"
             "      Do consistent mosaicing. The default is no.\n"
             "  --mosaic-stdev=<float_number>\n"
             "      Consistent mosaicing stdev threshold. The default is 10.0.\n\n"
-            "  --motion-inpaint=(yes|no)\n"
+            "  -mi, --motion-inpaint=(yes|no)\n"
             "      Do motion inpainting (requires GPU support). The default is no.\n"
-            "  --dist-thresh=<float_number>\n"
+            "  --mi-dist-thresh=<float_number>\n"
             "      Estimated flow distance threshold for motion inpainting. The default is 5.0.\n\n"
-            "  --color-inpaint=(no|average|ns|telea)\n"
+            "  -ci, --color-inpaint=(no|average|ns|telea)\n"
             "      Do color inpainting. The defailt is no.\n"
-            "  --color-inpaint-radius=<float_number>\n"
+            "  --ci-radius=<float_number>\n"
             "      Set color inpainting radius (for ns and telea options only).\n"
             "      The default is 2.0\n\n"
-            "  --wobble-suppress=(yes|no)\n"
-            "      Perform wobble suppression. The default is no.\n\n"
+            "  -ws, --wobble-suppress=(yes|no)\n"
+            "      Perform wobble suppression. The default is no.\n"
+            "  --ws-period=<int_number>\n"
+            "      Set wobble suppression period. The default is 30.\n"
+            "  --ws-model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
+            "      Set wobble suppression motion model (must have more DOF than motion \n"
+            "      estimation model). The default is homography.\n"
+            "  -sm2, --save-motions2=(<file_path>|no)\n"
+            "      Save motions estimated for wobble suppression. The default is no.\n"
+            "  -lm2, --load-motions2=(<file_path>|no)\n"
+            "      Load motions for wobble suppression from file. The default is no.\n\n"
             "  -o, --output=(no|<file_path>)\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
-            "  --fps=(<int_number>|auto)\n"
-            "      Set output video FPS explicitely. By default the source FPS is used.\n"
+            "  --fps=(<float_number>|auto)\n"
+            "      Set output video FPS explicitely. By default the source FPS is used (auto).\n"
             "  -q, --quiet\n"
             "      Don't show output video frames.\n\n"
             "  -h, --help\n"
-            "      Print help.\n"
-            "\n";
+            "      Print help.\n\n"
+            "Note: some argument configurations lead to two passes, some to single pass.\n\n";
 }
 
 
@@ -130,23 +138,27 @@ int main(int argc, const char **argv)
                 "{ m | model | affine| }"
                 "{ | min-inlier-ratio | 0.1 | }"
                 "{ | outlier-ratio | 0.5 | }"
-                "{ | save-motions | no | }"
-                "{ | load-motions | no | }"
+                "{ sm | save-motions | no | }"
+                "{ lm | load-motions | no | }"
                 "{ r | radius | 15 | }"
                 "{ | stdev | auto | }"
                 "{ | deblur | no | }"
                 "{ | deblur-sens | 0.1 | }"
-                "{ | est-trim | yes | }"
+                "{ et | est-trim | yes | }"
                 "{ t | trim-ratio | 0.1 | }"
-                "{ | incl-constr | no | }"
-                "{ | border-mode | replicate | }"
+                "{ ic | incl-constr | no | }"
+                "{ bm | border-mode | replicate | }"
                 "{ | mosaic | no | }"
-                "{ | mosaic-stdev | 10.0 | }"
-                "{ | motion-inpaint | no | }"
-                "{ | dist-thresh | 5.0 | }"
-                "{ | color-inpaint | no | }"
-                "{ | color-inpaint-radius | 2 | }"
-                "{ | wobble-suppress | no | }"
+                "{ ms | mosaic-stdev | 10.0 | }"
+                "{ mi | motion-inpaint | no | }"
+                "{ | mi-dist-thresh | 5.0 | }"
+                "{ ci | color-inpaint | no | }"
+                "{ | ci-radius | 2 | }"
+                "{ ws | wobble-suppress | no | }"
+                "{ | ws-period | 30 | }"
+                "{ | ws-model | homography | }"
+                "{ sm2 | save-motions2 | no | }"
+                "{ lm2 | load-motions2 | no | }"
                 "{ o | output | stabilized.avi | }"
                 "{ | fps | auto | }"
                 "{ q | quiet | false | }"
@@ -177,15 +189,27 @@ int main(int argc, const char **argv)
                 twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius"), argf("stdev")));
             if (arg("wobble-suppress") == "yes")
             {
-                twoPassStabilizer->setWobbleSuppressor(new MoreAccurateMotionWobbleSuppressor());
-                if (arg("load-motions") != "no")
-                    twoPassStabilizer->wobbleSuppressor()->setMotionEstimator(
-                            new FromFileMotionReader("motions2." + arg("load-motions")));
-                if (arg("save-motions") != "no")
+                MoreAccurateMotionWobbleSuppressor *ws = new MoreAccurateMotionWobbleSuppressor();
+                twoPassStabilizer->setWobbleSuppressor(ws);
+                ws->setPeriod(argi("ws-period"));
+                if (arg("ws-model") == "transl")
+                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(TRANSLATION));
+                else if (arg("ws-model") == "transl_and_scale")
+                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE));
+                else if (arg("ws-model") == "linear_sim")
+                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY));
+                else if (arg("ws-model") == "affine")
+                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(AFFINE));
+                else if (arg("ws-model") == "homography")
+                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(HOMOGRAPHY));
+                else
+                    throw runtime_error("unknown wobble suppression motion model: " + arg("ws-model"));
+                if (arg("load-motions2") != "no")
+                    ws->setMotionEstimator(new FromFileMotionReader(arg("load-motions2")));
+                if (arg("save-motions2") != "no")
                 {
-                    Ptr<GlobalMotionEstimatorBase> est = twoPassStabilizer->wobbleSuppressor()->motionEstimator();
-                    twoPassStabilizer->wobbleSuppressor()->setMotionEstimator(
-                            new ToFileMotionWriter("motions2." + arg("save-motions"), est));
+                    Ptr<GlobalMotionEstimatorBase> est = ws->motionEstimator();
+                    ws->setMotionEstimator(new ToFileMotionWriter(arg("save-motions2"), est));
                 }
              }
         }
@@ -209,43 +233,33 @@ int main(int argc, const char **argv)
         stabilizer->setFrameSource(source);
 
         if (arg("load-motions") == "no")
-        {
-            RansacParams ransac;
-            PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator();
-            Ptr<GlobalMotionEstimatorBase> est_(est);
+        {            
+            PyrLkRobustMotionEstimator *est = 0;
             if (arg("model") == "transl")
-            {
-                est->setMotionModel(TRANSLATION);
-                ransac = RansacParams::translation2dMotionStd();
-            }
+                est = new PyrLkRobustMotionEstimator(TRANSLATION);
             else if (arg("model") == "transl_and_scale")
-            {
-                est->setMotionModel(TRANSLATION_AND_SCALE);
-                ransac = RansacParams::translationAndScale2dMotionStd();
-            }
+                est = new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE);
             else if (arg("model") == "linear_sim")
-            {
-                est->setMotionModel(LINEAR_SIMILARITY);
-                ransac = RansacParams::linearSimilarity2dMotionStd();
-            }
+                est = new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY);
             else if (arg("model") == "affine")
-            {
-                est->setMotionModel(AFFINE);
-                ransac = RansacParams::affine2dMotionStd();
-            }            
+                est = new PyrLkRobustMotionEstimator(AFFINE);
             else
+            {
+                delete est;
                 throw runtime_error("unknown motion model: " + arg("model"));
+            }
+            RansacParams ransac = est->ransacParams();
             ransac.eps = argf("outlier-ratio");
             est->setRansacParams(ransac);
             est->setMinInlierRatio(argf("min-inlier-ratio"));
-            stabilizer->setMotionEstimator(est_);
+            stabilizer->setMotionEstimator(est);
         }
         else
-            stabilizer->setMotionEstimator(new FromFileMotionReader("motions." + arg("load-motions")));
+            stabilizer->setMotionEstimator(new FromFileMotionReader(arg("load-motions")));
 
         if (arg("save-motions") != "no")
             stabilizer->setMotionEstimator(
-                    new ToFileMotionWriter("motions." + arg("save-motions"), stabilizer->motionEstimator()));
+                    new ToFileMotionWriter(arg("save-motions"), stabilizer->motionEstimator()));
 
         stabilizer->setRadius(argi("radius"));
         if (arg("deblur") == "yes")
@@ -280,15 +294,15 @@ int main(int argc, const char **argv)
         if (arg("motion-inpaint") == "yes")
         {
             MotionInpainter *inp = new MotionInpainter();
-            inp->setDistThreshold(argf("dist-thresh"));
+            inp->setDistThreshold(argf("mi-dist-thresh"));
             inpainters->pushBack(inp);
         }
         if (arg("color-inpaint") == "average")
             inpainters->pushBack(new ColorAverageInpainter());
         else if (arg("color-inpaint") == "ns")
-            inpainters->pushBack(new ColorInpainter(INPAINT_NS, argd("color-inpaint-radius")));
+            inpainters->pushBack(new ColorInpainter(INPAINT_NS, argd("ci-radius")));
         else if (arg("color-inpaint") == "telea")
-            inpainters->pushBack(new ColorInpainter(INPAINT_TELEA, argd("color-inpaint-radius")));
+            inpainters->pushBack(new ColorInpainter(INPAINT_TELEA, argd("ci-radius")));
         else if (arg("color-inpaint") != "no")
             throw runtime_error("unknown color inpainting method: " + arg("color-inpaint"));
         if (!inpainters->empty())

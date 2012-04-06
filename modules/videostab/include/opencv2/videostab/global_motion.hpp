@@ -131,7 +131,7 @@ private:
 class CV_EXPORTS PyrLkRobustMotionEstimator : public GlobalMotionEstimatorBase
 {
 public:
-    PyrLkRobustMotionEstimator();
+    PyrLkRobustMotionEstimator(MotionModel model = AFFINE);
 
     void setDetector(Ptr<FeatureDetector> val) { detector_ = val; }
     Ptr<FeatureDetector> detector() const { return detector_; }
