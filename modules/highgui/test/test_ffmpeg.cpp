@@ -55,11 +55,11 @@ class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 public:
     void run(int)
     {
-        const int img_r = 480;
-        const int img_c = 640;
+        const int img_r = 4096;
+        const int img_c = 4096;
         Size frame_s = Size(img_c, img_r);
-        const double fps = 30;
-        const double time_sec = 2;
+        const double fps = 15;
+        const double time_sec = 1;
         const int coeff = static_cast<int>(static_cast<double>(cv::min(img_c, img_r)) / (fps * time_sec));
 
         const size_t n = sizeof(codec_bmp_tags)/sizeof(codec_bmp_tags[0]);
@@ -79,15 +79,9 @@ public:
             tag != MKTAG('m', 'p', '4', 'v') &&
             tag != MKTAG('D', 'I', 'V', '3') &&
             tag != MKTAG('W', 'M', 'V', '1') &&
-            tag != MKTAG('W', 'M', 'V', '1') &&
-            tag != MKTAG('m', 'p', 'g', '1') &&
-            tag != MKTAG('W', 'M', 'V', '1') &&
             tag != MKTAG('W', 'M', 'V', '2') &&
-            tag != MKTAG('m', 'p', 'g', '1') &&
-            tag != MKTAG('m', 'p', 'g', '2') &&
             tag != MKTAG('M', 'P', 'E', 'G') &&
             tag != MKTAG('M', 'J', 'P', 'G') &&
-            tag != MKTAG('L', 'J', 'P', 'G') &&
             tag != MKTAG('j', 'p', 'e', 'g') &&
             tag != 0 &&
             tag != MKTAG('I', '4', '2', '0') &&
