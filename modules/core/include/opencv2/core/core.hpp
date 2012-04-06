@@ -218,6 +218,8 @@ CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
+CV_EXPORTS_W const std::string& getBuildInformation();
+
 //! Returns the number of ticks.
 
 /*!

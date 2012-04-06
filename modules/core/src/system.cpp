@@ -410,6 +410,14 @@ int getNumberOfCPUs(void)
 #endif
 }
 
+const std::string& getBuildInformation()
+{
+    static std::string build_info =
+#include "version_string.inc"
+    ;
+    return build_info;
+}
+
 string format( const char* fmt, ... )
 {
     char buf[1 << 16];
