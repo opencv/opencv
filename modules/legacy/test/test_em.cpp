@@ -207,133 +207,20 @@ bool calcErr( const Mat& labels, const Mat& origLabels, const vector<int>& sizes
     return true;
 }
 
-//--------------------------------------------------------------------------------------------
-class CV_KMeansTest : public cvtest::BaseTest {
-public:
-    CV_KMeansTest() {}
-protected:
-    virtual void run( int start_from );
-};
-
-void CV_KMeansTest::run( int /*start_from*/ )
-{
-    const int iters = 100;
-    int sizesArr[] = { 5000, 7000, 8000 };
-    int pointsCount = sizesArr[0]+ sizesArr[1] + sizesArr[2];
-    
-    Mat data( pointsCount, 2, CV_32FC1 ), labels;
-    vector<int> sizes( sizesArr, sizesArr + sizeof(sizesArr) / sizeof(sizesArr[0]) );
-    Mat means;
-    vector<Mat> covs;
-    defaultDistribs( means, covs );
-    generateData( data, labels, sizes, means, covs, CV_32SC1 );
-    
-    int code = cvtest::TS::OK;
-    float err;
-    Mat bestLabels;
-    // 1. flag==KMEANS_PP_CENTERS
-    kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, KMEANS_PP_CENTERS, noArray() );
-    if( !calcErr( bestLabels, labels, sizes, err , false ) )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad output labels if flag==KMEANS_PP_CENTERS.\n" );
-        code = cvtest::TS::FAIL_INVALID_OUTPUT;
-    }
-    else if( err > 0.01f )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) if flag==KMEANS_PP_CENTERS.\n", err );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-    }
-
-    // 2. flag==KMEANS_RANDOM_CENTERS
-    kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, KMEANS_RANDOM_CENTERS, noArray() );
-    if( !calcErr( bestLabels, labels, sizes, err, false ) )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad output labels if flag==KMEANS_RANDOM_CENTERS.\n" );
-        code = cvtest::TS::FAIL_INVALID_OUTPUT;
-    }
-    else if( err > 0.01f )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) if flag==KMEANS_RANDOM_CENTERS.\n", err );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-    }
-
-    // 3. flag==KMEANS_USE_INITIAL_LABELS
-    labels.copyTo( bestLabels );
-    RNG rng;
-    for( int i = 0; i < 0.5f * pointsCount; i++ )
-        bestLabels.at<int>( rng.next() % pointsCount, 0 ) = rng.next() % 3;
-    kmeans( data, 3, bestLabels, TermCriteria( TermCriteria::COUNT, iters, 0.0), 0, KMEANS_USE_INITIAL_LABELS, noArray() );
-    if( !calcErr( bestLabels, labels, sizes, err, false ) )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad output labels if flag==KMEANS_USE_INITIAL_LABELS.\n" );
-        code = cvtest::TS::FAIL_INVALID_OUTPUT;
-    }
-    else if( err > 0.01f )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) if flag==KMEANS_USE_INITIAL_LABELS.\n", err );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-    }
-
-    ts->set_failed_test_info( code );
-}
-
-//--------------------------------------------------------------------------------------------
-class CV_KNearestTest : public cvtest::BaseTest {
-public:
-    CV_KNearestTest() {}
-protected:
-    virtual void run( int start_from );
-};
-
-void CV_KNearestTest::run( int /*start_from*/ )
-{
-    int sizesArr[] = { 500, 700, 800 };
-    int pointsCount = sizesArr[0]+ sizesArr[1] + sizesArr[2];
-
-    // train data
-    Mat trainData( pointsCount, 2, CV_32FC1 ), trainLabels;
-    vector<int> sizes( sizesArr, sizesArr + sizeof(sizesArr) / sizeof(sizesArr[0]) );
-    Mat means;
-    vector<Mat> covs;
-    defaultDistribs( means, covs );
-    generateData( trainData, trainLabels, sizes, means, covs, CV_32FC1 );
-
-    // test data
-    Mat testData( pointsCount, 2, CV_32FC1 ), testLabels, bestLabels;
-    generateData( testData, testLabels, sizes, means, covs, CV_32FC1 );
-
-    int code = cvtest::TS::OK;
-    KNearest knearest;
-    knearest.train( trainData, trainLabels );
-    knearest.find_nearest( testData, 4, &bestLabels );
-    float err;
-    if( !calcErr( bestLabels, testLabels, sizes, err, true ) )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad output labels.\n" );
-        code = cvtest::TS::FAIL_INVALID_OUTPUT;
-    }
-    else if( err > 0.01f )
-    {
-        ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) on test data.\n", err );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-    }
-    ts->set_failed_test_info( code );
-}
-
-//--------------------------------------------------------------------------------------------
-class CV_EMTest : public cvtest::BaseTest
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class CV_CvEMTest : public cvtest::BaseTest
 {
 public:
-    CV_EMTest() {}
+    CV_CvEMTest() {}
 protected:
     virtual void run( int start_from );
-    int runCase( int caseIndex, const cv::EM::Params& params,
+    int runCase( int caseIndex, const CvEMParams& params,
                   const cv::Mat& trainData, const cv::Mat& trainLabels,
                   const cv::Mat& testData, const cv::Mat& testLabels,
                   const vector<int>& sizes);
 };
 
-int CV_EMTest::runCase( int caseIndex, const cv::EM::Params& params,
+int CV_CvEMTest::runCase( int caseIndex, const CvEMParams& params,
                         const cv::Mat& trainData, const cv::Mat& trainLabels,
                         const cv::Mat& testData, const cv::Mat& testLabels,
                         const vector<int>& sizes )
@@ -343,7 +230,7 @@ int CV_EMTest::runCase( int caseIndex, const cv::EM::Params& params,
     cv::Mat labels;
     float err;
 
-    cv::EM em;
+    CvEM em;
     em.train( trainData, Mat(), params, &labels );
 
     // check train error
@@ -379,7 +266,7 @@ int CV_EMTest::runCase( int caseIndex, const cv::EM::Params& params,
     return code;
 }
 
-void CV_EMTest::run( int /*start_from*/ )
+void CV_CvEMTest::run( int /*start_from*/ )
 {
     int sizesArr[] = { 500, 700, 800 };
     int pointsCount = sizesArr[0]+ sizesArr[1] + sizesArr[2];
@@ -398,68 +285,78 @@ void CV_EMTest::run( int /*start_from*/ )
     Mat testData( pointsCount, 2, CV_32FC1 ), testLabels;
     generateData( testData, testLabels, sizes, means, covs, CV_32SC1 );
 
-    cv::EM::Params params;
+    CvEMParams params;
     params.nclusters = 3;
     Mat probs(trainData.rows, params.nclusters, CV_32FC1, cv::Scalar(1));
-    params.probs = &probs;
+    CvMat probsHdr = probs;
+    params.probs = &probsHdr;
     Mat weights(1, params.nclusters, CV_32FC1, cv::Scalar(1));
-    params.weights = &weights;
-    params.means = &means;
-    params.covs = &covs;
+    CvMat weightsHdr = weights;
+    params.weights = &weightsHdr;
+    CvMat meansHdr = means;
+    params.means = &meansHdr;
+    std::vector<CvMat> covsHdrs(params.nclusters);
+    std::vector<const CvMat*> covsPtrs(params.nclusters);
+    for(int i = 0; i < params.nclusters; i++)
+    {
+        covsHdrs[i] = covs[i];
+        covsPtrs[i] = &covsHdrs[i];
+    }
+    params.covs = &covsPtrs[0];
 
     int code = cvtest::TS::OK;
     int caseIndex = 0;
     {
-        params.startStep = cv::EM::START_AUTO_STEP;
-        params.covMatType = cv::EM::COV_MAT_GENERIC;
+        params.start_step = cv::EM::START_AUTO_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_GENERIC;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_AUTO_STEP;
-        params.covMatType = cv::EM::COV_MAT_DIAGONAL;
+        params.start_step = cv::EM::START_AUTO_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_DIAGONAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_AUTO_STEP;
-        params.covMatType = cv::EM::COV_MAT_SPHERICAL;
+        params.start_step = cv::EM::START_AUTO_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_SPHERICAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_M_STEP;
-        params.covMatType = cv::EM::COV_MAT_GENERIC;
+        params.start_step = cv::EM::START_M_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_GENERIC;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_M_STEP;
-        params.covMatType = cv::EM::COV_MAT_DIAGONAL;
+        params.start_step = cv::EM::START_M_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_DIAGONAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_M_STEP;
-        params.covMatType = cv::EM::COV_MAT_SPHERICAL;
+        params.start_step = cv::EM::START_M_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_SPHERICAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_E_STEP;
-        params.covMatType = cv::EM::COV_MAT_GENERIC;
+        params.start_step = cv::EM::START_E_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_GENERIC;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_E_STEP;
-        params.covMatType = cv::EM::COV_MAT_DIAGONAL;
+        params.start_step = cv::EM::START_E_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_DIAGONAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_E_STEP;
-        params.covMatType = cv::EM::COV_MAT_SPHERICAL;
+        params.start_step = cv::EM::START_E_STEP;
+        params.cov_mat_type = cv::EM::COV_MAT_SPHERICAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
@@ -467,9 +364,9 @@ void CV_EMTest::run( int /*start_from*/ )
     ts->set_failed_test_info( code );
 }
 
-class CV_EMTest_SaveLoad : public cvtest::BaseTest {
+class CV_CvEMTest_SaveLoad : public cvtest::BaseTest {
 public:
-    CV_EMTest_SaveLoad() {}
+    CV_CvEMTest_SaveLoad() {}
 protected:
     virtual void run( int /*start_from*/ )
     {
@@ -493,6 +390,7 @@ protected:
             firstResult.at<float>(i) = em.predict( samples.row(i) );
 
         // Write out
+
         string filename = tempfile() + ".xml";
         {
             FileStorage fs = FileStorage(filename, FileStorage::WRITE);
@@ -543,7 +441,5 @@ protected:
     }
 };
 
-TEST(ML_KMeans, accuracy) { CV_KMeansTest test; test.safe_run(); }
-TEST(ML_KNearest, accuracy) { CV_KNearestTest test; test.safe_run(); }
-TEST(ML_EM, accuracy) { CV_EMTest test; test.safe_run(); }
-TEST(ML_EM, save_load) { CV_EMTest_SaveLoad test; test.safe_run(); }
+TEST(ML_CvEM, accuracy) { CV_CvEMTest test; test.safe_run(); }
+TEST(ML_CvEM, save_load) { CV_CvEMTest_SaveLoad test; test.safe_run(); }

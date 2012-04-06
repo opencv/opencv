@@ -46,6 +46,7 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/ml/ml.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1761,9 +1762,105 @@ protected:
     IplImage*  m_mask;
 };
 
+/****************************************************************************************\
+*                              Expectation - Maximization                                *
+\****************************************************************************************/
+struct CV_EXPORTS_W_MAP CvEMParams
+{
+    CvEMParams();
+    CvEMParams( int nclusters, int cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/,
+                int start_step=0/*CvEM::START_AUTO_STEP*/,
+                CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON),
+                const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 );
+
+    CV_PROP_RW int nclusters;
+    CV_PROP_RW int cov_mat_type;
+    CV_PROP_RW int start_step;
+    const CvMat* probs;
+    const CvMat* weights;
+    const CvMat* means;
+    const CvMat** covs;
+    CV_PROP_RW CvTermCriteria term_crit;
+};
+
+
+class CV_EXPORTS_W CvEM : public CvStatModel
+{
+public:
+    // Type of covariation matrices
+    enum { COV_MAT_SPHERICAL=cv::EM::COV_MAT_SPHERICAL,
+           COV_MAT_DIAGONAL =cv::EM::COV_MAT_DIAGONAL,
+           COV_MAT_GENERIC  =cv::EM::COV_MAT_GENERIC };
+
+    // The initial step
+    enum { START_E_STEP=cv::EM::START_E_STEP,
+           START_M_STEP=cv::EM::START_M_STEP,
+           START_AUTO_STEP=cv::EM::START_AUTO_STEP };
+
+    CV_WRAP CvEM();
+    CvEM( const CvMat* samples, const CvMat* sampleIdx=0,
+          CvEMParams params=CvEMParams(), CvMat* labels=0 );
+
+    virtual ~CvEM();
+
+    virtual bool train( const CvMat* samples, const CvMat* sampleIdx=0,
+                        CvEMParams params=CvEMParams(), CvMat* labels=0 );
+
+    virtual float predict( const CvMat* sample, CV_OUT CvMat* probs, bool isNormalize=true ) const;
+
+#ifndef SWIG
+    CV_WRAP CvEM( const cv::Mat& samples, const cv::Mat& sampleIdx=cv::Mat(),
+                  CvEMParams params=CvEMParams() );
+
+    CV_WRAP virtual bool train( const cv::Mat& samples,
+                                const cv::Mat& sampleIdx=cv::Mat(),
+                                CvEMParams params=CvEMParams(),
+                                CV_OUT cv::Mat* labels=0 );
+
+    CV_WRAP virtual float predict( const cv::Mat& sample, CV_OUT cv::Mat* probs=0, bool isNormalize=true ) const;
+    CV_WRAP virtual double calcLikelihood( const cv::Mat &sample ) const;
+
+    CV_WRAP int getNClusters() const;
+    CV_WRAP const cv::Mat& getMeans() const;
+    CV_WRAP void getCovs(CV_OUT std::vector<cv::Mat>& covs) const;
+    CV_WRAP const cv::Mat& getWeights() const;
+    CV_WRAP const cv::Mat& getProbs() const;
+
+    CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? likelihood : DBL_MAX; }
+#endif
+
+    CV_WRAP virtual void clear();
+
+    int get_nclusters() const;
+    const CvMat* get_means() const;
+    const CvMat** get_covs() const;
+    const CvMat* get_weights() const;
+    const CvMat* get_probs() const;
+
+    inline double get_log_likelihood() const { return getLikelihood(); }
+
+    virtual void read( CvFileStorage* fs, CvFileNode* node );
+    virtual void write( CvFileStorage* fs, const char* name ) const;
+
+protected:
+    void set_mat_hdrs();
+
+    cv::EM emObj;
+    cv::Mat probs;
+    double likelihood;
+
+    CvMat meansHdr;
+    std::vector<CvMat> covsHdrs;
+    std::vector<CvMat*> covsPtrs;
+    CvMat weightsHdr;
+    CvMat probsHdr;
+};
 
 namespace cv
 {
+
+typedef CvEMParams EMParams;
+typedef CvEM ExpectationMaximization;
 
 /*!
  The Patch Generator class 

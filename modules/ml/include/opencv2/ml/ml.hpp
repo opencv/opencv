@@ -46,6 +46,10 @@
 
 #ifdef __cplusplus
 
+#include <map>
+#include <string>
+#include <iostream>
+
 // Apple defines a check() macro somewhere in the debug headers
 // that interferes with a method definiton in this header
 #undef check
@@ -549,114 +553,93 @@ protected:
 /****************************************************************************************\
 *                              Expectation - Maximization                                *
 \****************************************************************************************/
-
-struct CV_EXPORTS_W_MAP CvEMParams
+namespace cv
 {
-    CvEMParams();
-    CvEMParams( int nclusters, int cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/,
-                int start_step=0/*CvEM::START_AUTO_STEP*/,
-                CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON),
-                const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 );
-
-    CV_PROP_RW int nclusters;
-    CV_PROP_RW int cov_mat_type;
-    CV_PROP_RW int start_step;
-    const CvMat* probs;
-    const CvMat* weights;
-    const CvMat* means;
-    const CvMat** covs;
-    CV_PROP_RW CvTermCriteria term_crit;
-};
-
-
-class CV_EXPORTS_W CvEM : public CvStatModel
+class CV_EXPORTS_W EM : public Algorithm
 {
 public:
     // Type of covariation matrices
-    enum { COV_MAT_SPHERICAL=0, COV_MAT_DIAGONAL=1, COV_MAT_GENERIC=2 };
+    enum {COV_MAT_SPHERICAL=0, COV_MAT_DIAGONAL=1, COV_MAT_GENERIC=2};
 
     // The initial step
-    enum { START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0 };
+    enum {START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0};
 
-    CV_WRAP CvEM();
-    CvEM( const CvMat* samples, const CvMat* sampleIdx=0,
-          CvEMParams params=CvEMParams(), CvMat* labels=0 );
-    //CvEM (CvEMParams params, CvMat * means, CvMat ** covs, CvMat * weights,
-    // CvMat * probs, CvMat * log_weight_div_det, CvMat * inv_eigen_values, CvMat** cov_rotate_mats);
+    class CV_EXPORTS_W Params
+    {
+    public:
+        Params(int nclusters=10, int covMatType=EM::COV_MAT_DIAGONAL, int startStep=EM::START_AUTO_STEP,
+            const cv::TermCriteria& termCrit=cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 100, FLT_EPSILON),
+            const cv::Mat* probs=0, const cv::Mat* weights=0,
+            const cv::Mat* means=0, const std::vector<cv::Mat>* covs=0);
 
-    virtual ~CvEM();
+        int nclusters;
+        int covMatType;
+        int startStep;
 
-    virtual bool train( const CvMat* samples, const CvMat* sampleIdx=0,
-                        CvEMParams params=CvEMParams(), CvMat* labels=0 );
+        // all 4 following matrices should have type CV_32FC1
+        const cv::Mat* probs;
+        const cv::Mat* weights;
+        const cv::Mat* means;
+        const std::vector<cv::Mat>* covs;
 
-    virtual float predict( const CvMat* sample, CV_OUT CvMat* probs ) const;
+        cv::TermCriteria termCrit;
+    };
 
-#ifndef SWIG
-    CV_WRAP CvEM( const cv::Mat& samples, const cv::Mat& sampleIdx=cv::Mat(),
-                  CvEMParams params=CvEMParams() );
-    
-    CV_WRAP virtual bool train( const cv::Mat& samples,
-                                const cv::Mat& sampleIdx=cv::Mat(),
-                                CvEMParams params=CvEMParams(),
-                                CV_OUT cv::Mat* labels=0 );
-    
-    CV_WRAP virtual float predict( const cv::Mat& sample, CV_OUT cv::Mat* probs=0 ) const;
-    CV_WRAP virtual double calcLikelihood( const cv::Mat &sample ) const;
-    
-    CV_WRAP int  getNClusters() const;
-    CV_WRAP cv::Mat  getMeans()     const;
-    CV_WRAP void getCovs(CV_OUT std::vector<cv::Mat>& covs)      const;
-    CV_WRAP cv::Mat  getWeights()   const;
-    CV_WRAP cv::Mat  getProbs()     const;
-    
-    CV_WRAP inline double getLikelihood() const { return log_likelihood; }
-    CV_WRAP inline double getLikelihoodDelta() const { return log_likelihood_delta; }
-#endif
-    
-    CV_WRAP virtual void clear();
+    EM();
+    EM(const cv::Mat& samples, const cv::Mat samplesMask=cv::Mat(),
+       const EM::Params& params=EM::Params(), cv::Mat* labels=0, cv::Mat* probs=0, cv::Mat* likelihoods=0);
+    virtual ~EM();
+    virtual void clear();
 
-    int           get_nclusters() const;
-    const CvMat*  get_means()     const;
-    const CvMat** get_covs()      const;
-    const CvMat*  get_weights()   const;
-    const CvMat*  get_probs()     const;
+    virtual bool train(const cv::Mat& samples, const cv::Mat& samplesMask=cv::Mat(),
+        const EM::Params& params=EM::Params(), cv::Mat* labels=0, cv::Mat* probs=0, cv::Mat* likelihoods=0);
+    int predict(const cv::Mat& sample, cv::Mat* probs=0, double* likelihood=0) const;
 
-    inline double get_log_likelihood() const { return log_likelihood; }
-    inline double get_log_likelihood_delta() const { return log_likelihood_delta; }
-    
-//    inline const CvMat *  get_log_weight_div_det () const { return log_weight_div_det; };
-//    inline const CvMat *  get_inv_eigen_values   () const { return inv_eigen_values;   };
-//    inline const CvMat ** get_cov_rotate_mats    () const { return cov_rotate_mats;    };
+    bool isTrained() const;
+    int getNClusters() const;
+    int getCovMatType() const;
 
-    virtual void read( CvFileStorage* fs, CvFileNode* node );
-    virtual void write( CvFileStorage* fs, const char* name ) const;
+    const cv::Mat& getWeights() const;
+    const cv::Mat& getMeans() const;
+    const std::vector<cv::Mat>& getCovs() const;
 
-    virtual void write_params( CvFileStorage* fs ) const;
-    virtual void read_params( CvFileStorage* fs, CvFileNode* node );
+    AlgorithmInfo* info() const;
+    virtual void read(const FileNode& fn);
 
 protected:
+    virtual void setTrainData(const cv::Mat& samples, const cv::Mat& samplesMask, const EM::Params& params);
 
-    virtual void set_params( const CvEMParams& params,
-                             const CvVectors& train_data );
-    virtual void init_em( const CvVectors& train_data );
-    virtual double run_em( const CvVectors& train_data );
-    virtual void init_auto( const CvVectors& samples );
-    virtual void kmeans( const CvVectors& train_data, int nclusters,
-                         CvMat* labels, CvTermCriteria criteria,
-                         const CvMat* means );
-    CvEMParams params;
-    double log_likelihood;
-    double log_likelihood_delta;
+    bool doTrain(const cv::TermCriteria& termCrit);
+    virtual void eStep();
+    virtual void mStep();
 
-    CvMat* means;
-    CvMat** covs;
-    CvMat* weights;
-    CvMat* probs;
+    void clusterTrainSamples();
+    void decomposeCovs();
+    void computeLogWeightDivDet();
 
-    CvMat* log_weight_div_det;
-    CvMat* inv_eigen_values;
-    CvMat** cov_rotate_mats;
+    void computeProbabilities(const cv::Mat& sample, int& label, cv::Mat* probs, float* likelihood) const;
+
+    // all inner matrices have type CV_32FC1
+    int nclusters;
+    int covMatType;
+    int startStep;
+
+    cv::Mat trainSamples;
+    cv::Mat trainProbs;
+    cv::Mat trainLikelihoods;
+    cv::Mat trainLabels;
+    cv::Mat trainCounts;
+
+    cv::Mat weights;
+    cv::Mat means;
+    std::vector<cv::Mat> covs;
+
+    std::vector<cv::Mat> covsEigenValues;
+    std::vector<cv::Mat> covsRotateMats;
+    std::vector<cv::Mat> invCovsEigenValues;
+    cv::Mat logWeightDivDet;
 };
+} // namespace cv
 
 /****************************************************************************************\
 *                                      Decision Tree                                     *
@@ -2012,16 +1995,9 @@ CVAPI(void) cvCreateTestSet( int type, CvMat** samples,
                  CvMat** responses,
                  int num_classes, ... );
 
-
-#endif
-
 /****************************************************************************************\
 *                                      Data                                             *
 \****************************************************************************************/
-
-#include <map>
-#include <string>
-#include <iostream>
 
 #define CV_COUNT     0
 #define CV_PORTION   1
@@ -2133,8 +2109,6 @@ typedef CvSVMParams SVMParams;
 typedef CvSVMKernel SVMKernel;
 typedef CvSVMSolver SVMSolver;
 typedef CvSVM SVM;
-typedef CvEMParams EMParams;
-typedef CvEM ExpectationMaximization;
 typedef CvDTreeParams DTreeParams;
 typedef CvMLData TrainData;
 typedef CvDTree DecisionTree;
@@ -2156,5 +2130,7 @@ template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
     
 }
 
-#endif
+#endif // __cplusplus
+#endif // __OPENCV_ML_HPP__
+
 /* End of file. */

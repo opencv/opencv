@@ -451,7 +451,6 @@ CV_MLBaseTest::CV_MLBaseTest(const char* _modelName)
     nbayes = 0;
     knearest = 0;
     svm = 0;
-    em = 0;
     ann = 0;
     dtree = 0;
     boost = 0;
@@ -463,8 +462,6 @@ CV_MLBaseTest::CV_MLBaseTest(const char* _modelName)
         knearest = new CvKNearest;
     else if( !modelName.compare(CV_SVM) )
         svm = new CvSVM;
-    else if( !modelName.compare(CV_EM) )
-        em = new CvEM;
     else if( !modelName.compare(CV_ANN) )
         ann = new CvANN_MLP;
     else if( !modelName.compare(CV_DTREE) )
@@ -487,8 +484,6 @@ CV_MLBaseTest::~CV_MLBaseTest()
         delete knearest;
     if( svm )
         delete svm;
-    if( em )
-        delete em;
     if( ann )
         delete ann;
     if( dtree )
@@ -756,8 +751,6 @@ void CV_MLBaseTest::save( const char* filename )
         knearest->save( filename );
     else if( !modelName.compare(CV_SVM) )
         svm->save( filename );
-    else if( !modelName.compare(CV_EM) )
-        em->save( filename );
     else if( !modelName.compare(CV_ANN) )
         ann->save( filename );
     else if( !modelName.compare(CV_DTREE) )
@@ -778,8 +771,6 @@ void CV_MLBaseTest::load( const char* filename )
         knearest->load( filename );
     else if( !modelName.compare(CV_SVM) )
         svm->load( filename );
-    else if( !modelName.compare(CV_EM) )
-        em->load( filename );
     else if( !modelName.compare(CV_ANN) )
         ann->load( filename );
     else if( !modelName.compare(CV_DTREE) )

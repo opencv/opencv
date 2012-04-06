@@ -1,1 +1,1 @@
-ocv_define_module(legacy opencv_calib3d opencv_highgui opencv_video)
+ocv_define_module(legacy opencv_calib3d opencv_highgui opencv_video opencv_ml)

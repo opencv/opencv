@@ -44,7 +44,6 @@ protected:
     CvNormalBayesClassifier* nbayes;
     CvKNearest* knearest;
     CvSVM* svm;
-    CvEM* em;
     CvANN_MLP* ann;
     CvDTree* dtree;
     CvBoost* boost;
