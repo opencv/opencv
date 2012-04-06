@@ -109,6 +109,10 @@ void Core_RandTest::run( int )
         int dist_type = cvtest::randInt(rng) % (CV_RAND_NORMAL+1);
         int i, k, SZ = N/cn;
         Scalar A, B;
+
+        double eps = 1.e-4;
+        if (depth == CV_64F)
+            eps = 1.e-7;
         
         bool do_sphere_test = dist_type == CV_RAND_UNI;
         Mat arr[2], hist[4];
@@ -170,7 +174,7 @@ void Core_RandTest::run( int )
             }
         }
         
-        if( maxk >= 1 && norm(arr[0], arr[1], NORM_INF) != 0 )
+        if( maxk >= 1 && norm(arr[0], arr[1], NORM_INF) > eps)
         {
             ts->printf( cvtest::TS::LOG, "RNG output depends on the array lengths (some generated numbers get lost?)" );
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
