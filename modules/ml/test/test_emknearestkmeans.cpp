@@ -490,7 +490,7 @@ protected:
 
         Mat firstResult(samples.rows, 1, CV_32FC1);
         for( int i = 0; i < samples.rows; i++)
-            firstResult.at<float>(i) = em.predict( samples.row(i) );
+            firstResult.at<float>(i) = (float)em.predict( samples.row(i) );
 
         // Write out
         string filename = tempfile() + ".xml";

@@ -44,7 +44,7 @@
 namespace cv
 {
 
-const float minEigenValue = 1.e-3;
+const float minEigenValue = 1.e-3f;
 
 EM::Params::Params( int nclusters, int covMatType, int startStep, const cv::TermCriteria& termCrit,
                    const cv::Mat* probs, const cv::Mat* weights,
@@ -124,7 +124,7 @@ int EM::predict(const cv::Mat& sample, cv::Mat* _probs, double* _likelihood) con
     CV_Assert(sample.type() == CV_32FC1);
 
     int label;
-    float likelihood;
+    float likelihood = 0.f;
     computeProbabilities(sample, label, _probs, _likelihood ? &likelihood : 0);
     if(_likelihood)
         *_likelihood = static_cast<double>(likelihood);
@@ -254,7 +254,7 @@ void preprocessProbability(cv::Mat& probs)
 {
     cv::max(probs, 0., probs);
 
-    const float uniformProbability = 1./probs.cols;
+    const float uniformProbability = (float)(1./probs.cols);
     for(int y = 0; y < probs.rows; y++)
     {
         cv::Mat sampleProbs = probs.row(y);
@@ -395,7 +395,7 @@ void EM::computeLogWeightDivDet()
         for(int di = 0; di < covsEigenValues[clusterIndex].cols; di++)
             logDetCov += std::log(covsEigenValues[clusterIndex].at<float>(covMatType != EM::COV_MAT_SPHERICAL ? di : 0));
 
-        logWeightDivDet.at<float>(clusterIndex) = logWeights.at<float>(clusterIndex) - 0.5 * logDetCov;
+        logWeightDivDet.at<float>(clusterIndex) = logWeights.at<float>(clusterIndex) - 0.5f * logDetCov;
     }
 }
 
@@ -421,7 +421,7 @@ bool EM::doTrain(const cv::TermCriteria& termCrit)
     if(startStep == EM::START_M_STEP)
         mStep();
 
-    double trainLikelihood, prevTrainLikelihood;
+    double trainLikelihood, prevTrainLikelihood = 0.;
     for(int iter = 0; ; iter++)
     {
         eStep();
@@ -489,7 +489,7 @@ void EM::computeProbabilities(const cv::Mat& sample, int& label, cv::Mat* probs,
             Lval += w * val * val;
         }
         CV_DbgAssert(!logWeightDivDet.empty());
-        Lval = logWeightDivDet.at<float>(clusterIndex) - 0.5 * Lval;
+        Lval = logWeightDivDet.at<float>(clusterIndex) - 0.5f * Lval;
         L.at<float>(clusterIndex) = Lval;
 
         if(Lval > L.at<float>(label))
@@ -508,7 +508,7 @@ void EM::computeProbabilities(const cv::Mat& sample, int& label, cv::Mat* probs,
         if(clusterIndex != label)
             partExpSum += expL.at<float>(clusterIndex);
     }
-    factor = 1./(1 + partExpSum);
+    factor = 1.f/(1 + partExpSum);
 
     cv::exp(L - L.at<float>(label), expL);
 
@@ -522,7 +522,7 @@ void EM::computeProbabilities(const cv::Mat& sample, int& label, cv::Mat* probs,
     if(likelihood)
     {
         // note likelihood = log (sum_j exp(L_ij)) - 0.5 * dims * ln2Pi
-        *likelihood = std::log(partExpSum + expL.at<float>(label)) - 0.5 * dim * CV_LOG2PI;
+        *likelihood = std::log(partExpSum + expL.at<float>(label)) - (float)(0.5 * dim * CV_LOG2PI);
     }
 }
 
