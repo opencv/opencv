@@ -448,7 +448,7 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, float* 
     // q = arg(max_k(L_ik))
     // probs_ik = exp(L_ik - L_iq) / (1 + sum_j!=q (exp(L_jk))
 
-    CV_DbgAssert(sample.rows == 1);
+    CV_Assert(sample.rows == 1);
 
     int dim = sample.cols;
 
