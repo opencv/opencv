@@ -5,8 +5,8 @@ import java.util.List;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
-import org.opencv.core.CvVectorPoint;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.highgui.Highgui;
@@ -71,7 +71,7 @@ class Sample2View extends SampleCvViewBase {
         	Core.inRange(mIntermediateMat, lo, hi, mIntermediateMat2); // green
         	Imgproc.dilate(mIntermediateMat2, mIntermediateMat2, mEmpty);
         	//
-        	List<CvVectorPoint> contours = new ArrayList<CvVectorPoint>();
+        	List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         	Mat hierarchy = new Mat();
         	Imgproc.findContours(mIntermediateMat2, contours, hierarchy,Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         	Log.d("processFrame", "contours.size()" + contours.size());
