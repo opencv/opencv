@@ -2,6 +2,55 @@
 
 using namespace perf;
 
+int64 TestBase::timeLimitDefault = 0;
+unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
+int64 TestBase::_timeadjustment = 0;
+
+const char *command_line_keys =
+{
+    "{   |perf_max_outliers   |8        |percent of allowed outliers}"
+    "{   |perf_min_samples    |10       |minimal required numer of samples}"
+    "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
+    "{   |perf_seed           |809564   |seed for random numbers generator}"
+    "{   |perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
+    "{   |perf_write_sanity   |false    |allow to create new records for sanity checks}"
+    #if ANDROID
+    "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
+    "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
+    #else
+    "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
+    #endif
+    "{   |perf_max_deviation  |1.0      |}"
+    "{h  |help                |false    |}"
+};
+
+static double       param_max_outliers;
+static double       param_max_deviation;
+static unsigned int param_min_samples;
+static unsigned int param_force_samples;
+static uint64       param_seed;
+static double       param_time_limit;
+static int          param_tbb_nthreads;
+static bool         param_write_sanity;
+#if ANDROID
+static int          param_affinity_mask;
+
+#include <sys/syscall.h>
+#include <pthread.h>
+static void setCurrentThreadAffinityMask(int mask)
+{
+    pid_t pid=gettid();
+    int syscallres=syscall(__NR_sched_setaffinity, pid, sizeof(mask), &mask);
+    if (syscallres)
+    {
+        int err=errno;
+        err=err;//to avoid warnings about unused variables
+        LOGE("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
+    }
+}
+
+#endif
+
 void randu(cv::Mat& m)
 {
     const int bigValue = 0x00000FFF;
@@ -82,14 +131,22 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         storageOutPath = testSuitName;
     }
 
-    if (storageIn.open(storageInPath, cv::FileStorage::READ))
+    try
     {
-        rootIn = storageIn.root();
-        if (storageInPath.length() > 3 && storageInPath.substr(storageInPath.length()-3) == ".gz")
-            storageOutPath += "_new";
-        storageOutPath += ext;
+        if (storageIn.open(storageInPath, cv::FileStorage::READ))
+        {
+            rootIn = storageIn.root();
+            if (storageInPath.length() > 3 && storageInPath.substr(storageInPath.length()-3) == ".gz")
+                storageOutPath += "_new";
+            storageOutPath += ext;
+        }
     }
-    else
+    catch(cv::Exception& ex)
+    {
+        LOGE("Failed to open sanity data for reading: %s", storageInPath.c_str());
+    }
+    
+    if(!storageIn.isOpened())
         storageOutPath = storageInPath;
 }
 
@@ -408,17 +465,20 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
     cv::FileNode n = rootIn[nodename];
     if(n.isNone())
     {
-        if (nodename != currentTestNodeName)
+        if(param_write_sanity)
         {
-            if (!currentTestNodeName.empty())
-                write() << "}";
-            currentTestNodeName = nodename;
+            if (nodename != currentTestNodeName)
+            {
+                if (!currentTestNodeName.empty())
+                    write() << "}";
+                currentTestNodeName = nodename;
 
-            write() << nodename << "{";
+                write() << nodename << "{";
+            }
+            write() << name << "{";
+            write(array);
+            write() << "}";
         }
-        write() << name << "{";
-        write(array);
-        write() << "}";
     }
     else
     {
@@ -455,53 +515,6 @@ performance_metrics::performance_metrics()
 /*****************************************************************************************\
 *                                   ::perf::TestBase
 \*****************************************************************************************/
-int64 TestBase::timeLimitDefault = 0;
-unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
-int64 TestBase::_timeadjustment = 0;
-
-const char *command_line_keys =
-{
-    "{   |perf_max_outliers   |8        |percent of allowed outliers}"
-    "{   |perf_min_samples    |10       |minimal required numer of samples}"
-    "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
-    "{   |perf_seed           |809564   |seed for random numbers generator}"
-    "{   |perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
-    #if ANDROID
-    "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
-    "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
-    #else
-    "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
-    #endif
-    "{   |perf_max_deviation  |1.0      |}"
-    "{h  |help                |false    |}"
-};
-
-double       param_max_outliers;
-double       param_max_deviation;
-unsigned int param_min_samples;
-unsigned int perf_force_samples;
-uint64       param_seed;
-double       param_time_limit;
-int          param_tbb_nthreads;
-#if ANDROID
-int          param_affinity_mask;
-
-#include <sys/syscall.h>
-#include <pthread.h>
-static void setCurrentThreadAffinityMask(int mask)
-{
-    pid_t pid=gettid();
-    int syscallres=syscall(__NR_sched_setaffinity, pid, sizeof(mask), &mask);
-    if (syscallres)
-    {
-        int err=errno;
-        err=err;//to avoid warnings about unused variables
-        LOGE("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
-    }
-}
-
-#endif
-
 void TestBase::Init(int argc, const char* const argv[])
 {
     cv::CommandLineParser args(argc, argv, command_line_keys);
@@ -510,7 +523,8 @@ void TestBase::Init(int argc, const char* const argv[])
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
     param_seed = args.get<uint64>("perf_seed");
     param_time_limit = std::max(0., args.get<double>("perf_time_limit"));
-    perf_force_samples = args.get<unsigned int>("perf_force_samples");
+    param_force_samples = args.get<unsigned int>("perf_force_samples");
+    param_write_sanity = args.get<bool>("perf_write_sanity");
 
     param_tbb_nthreads  = args.get<int>("perf_tbb_nthreads");
 #if ANDROID
@@ -525,7 +539,7 @@ void TestBase::Init(int argc, const char* const argv[])
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
-    iterationsLimitDefault = perf_force_samples == 0 ? (unsigned)(-1) : perf_force_samples;
+    iterationsLimitDefault = param_force_samples == 0 ? (unsigned)(-1) : param_force_samples;
     _timeadjustment = _calibrate();
 }
 
