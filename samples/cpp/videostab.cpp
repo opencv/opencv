@@ -65,7 +65,7 @@ void printHelp()
     cout << "OpenCV video stabilizer.\n"
             "Usage: videostab <file_path> [arguments]\n\n"
             "Arguments:\n"
-            "  -m, --model=(transl|transl_and_scale|linear_sim|affine)\n"
+            "  -m, --model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
             "      Set motion model. The default is affine.\n"
             "  --outlier-ratio=<float_number>\n"
             "      Outliers ratio in motion estimation. The default is 0.5.\n"
@@ -232,30 +232,34 @@ int main(int argc, const char **argv)
         if (arg("fps") == "auto") outputFps = source->fps();  else outputFps = argd("fps");
         stabilizer->setFrameSource(source);
 
-        if (arg("load-motions") == "no")
-        {            
-            PyrLkRobustMotionEstimator *est = 0;
-            if (arg("model") == "transl")
-                est = new PyrLkRobustMotionEstimator(TRANSLATION);
-            else if (arg("model") == "transl_and_scale")
-                est = new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE);
-            else if (arg("model") == "linear_sim")
-                est = new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY);
-            else if (arg("model") == "affine")
-                est = new PyrLkRobustMotionEstimator(AFFINE);
-            else
-            {
-                delete est;
-                throw runtime_error("unknown motion model: " + arg("model"));
-            }
-            RansacParams ransac = est->ransacParams();
-            ransac.eps = argf("outlier-ratio");
-            est->setRansacParams(ransac);
-            est->setMinInlierRatio(argf("min-inlier-ratio"));
-            stabilizer->setMotionEstimator(est);
-        }
+        PyrLkRobustMotionEstimator *est = 0;
+        if (arg("model") == "transl")
+            est = new PyrLkRobustMotionEstimator(TRANSLATION);
+        else if (arg("model") == "transl_and_scale")
+            est = new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE);
+        else if (arg("model") == "linear_sim")
+            est = new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY);
+        else if (arg("model") == "affine")
+            est = new PyrLkRobustMotionEstimator(AFFINE);
+        else if (arg("model") == "homography")
+            est = new PyrLkRobustMotionEstimator(HOMOGRAPHY);
         else
+        {
+            delete est;
+            throw runtime_error("unknown motion model: " + arg("model"));
+        }
+        RansacParams ransac = est->ransacParams();
+        ransac.eps = argf("outlier-ratio");
+        est->setRansacParams(ransac);
+        est->setMinInlierRatio(argf("min-inlier-ratio"));
+        stabilizer->setMotionEstimator(est);
+
+        if (arg("load-motions") != "no")
+        {
+            MotionModel model = stabilizer->motionEstimator()->motionModel();
             stabilizer->setMotionEstimator(new FromFileMotionReader(arg("load-motions")));
+            stabilizer->motionEstimator()->setMotionModel(model);
+        }
 
         if (arg("save-motions") != "no")
             stabilizer->setMotionEstimator(
