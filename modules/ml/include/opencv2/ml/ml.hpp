@@ -555,7 +555,7 @@ protected:
 \****************************************************************************************/
 namespace cv
 {
-class CV_EXPORTS_W EM : public Algorithm
+class CV_EXPORTS EM : public Algorithm
 {
 public:
     // Type of covariation matrices
@@ -564,7 +564,7 @@ public:
     // The initial step
     enum {START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0};
 
-    class CV_EXPORTS_W Params
+    class CV_EXPORTS Params
     {
     public:
         Params(int nclusters=10, int covMatType=EM::COV_MAT_DIAGONAL, int startStep=EM::START_AUTO_STEP,
