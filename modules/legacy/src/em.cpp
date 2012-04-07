@@ -105,7 +105,7 @@ float
 CvEM::predict( const CvMat* _sample, CvMat* _probs, bool isNormalize ) const
 {
     Mat prbs0 = cvarrToMat(_probs), prbs = prbs0, sample = cvarrToMat(_sample);
-    int cls = emObj.predict(sample, _probs ? _OutputArray(prbs) : _OutputArray::_OutputArray());
+	int cls = emObj.predict(sample, _probs ? _OutputArray(prbs) : cv::noArray());
     if(_probs)
     {
         if(isNormalize)
@@ -212,15 +212,15 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
     emObj = EM(_params.nclusters, _params.cov_mat_type, _params.term_crit);
     bool isOk = false;
     if( _params.start_step == EM::START_AUTO_STEP )
-        isOk = emObj.train(_samples, _labels ? _OutputArray(*_labels) : _OutputArray::_OutputArray(),
+		isOk = emObj.train(_samples, _labels ? _OutputArray(*_labels) : cv::noArray(),
                     probs, likelihoods);
     else if( _params.start_step == EM::START_E_STEP )
         isOk = emObj.trainE(_samples, means, covsHdrs, weights,
-                     _labels ? _OutputArray(*_labels) : _OutputArray::_OutputArray(),
+					 _labels ? _OutputArray(*_labels) : cv::noArray(),
                      probs, likelihoods);
     else if( _params.start_step == EM::START_M_STEP )
         isOk = emObj.trainM(_samples, prbs,
-                    _labels ? _OutputArray(*_labels) : _OutputArray::_OutputArray(),
+					_labels ? _OutputArray(*_labels) : cv::noArray(),
                     probs, likelihoods);
     else
         CV_Error(CV_StsBadArg, "Bad start type of EM algorithm");
@@ -237,7 +237,7 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
 float
 CvEM::predict( const Mat& _sample, Mat* _probs, bool isNormalize ) const
 {
-    int cls = emObj.predict(_sample, _probs ? _OutputArray(*_probs) : _OutputArray::_OutputArray());
+	int cls = emObj.predict(_sample, _probs ? _OutputArray(*_probs) : cv::noArray());
     if(_probs && isNormalize)
         normalize(*_probs, *_probs, 1, 0, NORM_L1);
 
