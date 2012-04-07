@@ -1508,7 +1508,7 @@ void CV_StereoCalibrationTest::run( int )
         const float minDisparity = 0.1f;
         const float maxDisparity = 600.0f;
         const int pointsCount = 500;
-        const float requiredAccuracy = 1e-3;
+        const float requiredAccuracy = 1e-3f;
         RNG& rng = ts->get_rng();
 
         Mat projectedPoints_1(2, pointsCount, CV_32FC1);
@@ -1544,7 +1544,7 @@ void CV_StereoCalibrationTest::run( int )
         }
 
         //check correctMatches
-        const float constraintAccuracy = 1e-5;
+        const float constraintAccuracy = 1e-5f;
         Mat newPoints1, newPoints2;
         Mat points1 = projectedPoints_1.t();
         points1 = points1.reshape(2, 1);
@@ -1767,7 +1767,7 @@ void CV_StereoCalibrationTest_C::correct( const Mat& F,
     CvMat _F = F, _points1 = points1, _points2 = points2;
     newPoints1.create(1, points1.cols, points1.type());
     newPoints2.create(1, points2.cols, points2.type());
-    CvMat _newPoints1 = newPoints1, _newPoints2 = _newPoints2;
+    CvMat _newPoints1 = newPoints1, _newPoints2 = newPoints2;
     cvCorrectMatches(&_F, &_points1, &_points2, &_newPoints1, &_newPoints2);
 }
 
