@@ -1,5 +1,9 @@
 #include "precomp.hpp"
 
+#if ANDROID
+# include <sys/time.h>
+#endif
+
 using namespace perf;
 
 int64 TestBase::timeLimitDefault = 0;
@@ -17,6 +21,7 @@ const char *command_line_keys =
     #if ANDROID
     "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
+    "{   |perf_log_power_checkpoints  |false    |additional xml logging for power measurement}"
     #else
     "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
     #endif
@@ -34,6 +39,7 @@ static int          param_tbb_nthreads;
 static bool         param_write_sanity;
 #if ANDROID
 static int          param_affinity_mask;
+static bool         log_power_checkpoints;
 
 #include <sys/syscall.h>
 #include <pthread.h>
@@ -515,6 +521,8 @@ performance_metrics::performance_metrics()
 /*****************************************************************************************\
 *                                   ::perf::TestBase
 \*****************************************************************************************/
+
+
 void TestBase::Init(int argc, const char* const argv[])
 {
     cv::CommandLineParser args(argc, argv, command_line_keys);
@@ -525,10 +533,10 @@ void TestBase::Init(int argc, const char* const argv[])
     param_time_limit = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
     param_write_sanity = args.get<bool>("perf_write_sanity");
-
     param_tbb_nthreads  = args.get<int>("perf_tbb_nthreads");
 #if ANDROID
     param_affinity_mask = args.get<int>("perf_affinity_mask");
+    log_power_checkpoints = args.get<bool>("perf_log_power_checkpoints");
 #endif
 
     if (args.get<bool>("help"))
@@ -627,7 +635,19 @@ cv::Size TestBase::getSize(cv::InputArray a)
 
 bool TestBase::next()
 {
-    return ++currentIter < nIters && totalTime < timeLimit;
+    bool has_next = ++currentIter < nIters && totalTime < timeLimit;
+#if ANDROID
+    if (log_power_checkpoints)
+    {
+        timeval tim;
+        gettimeofday(&tim, NULL);
+        unsigned long long t1 = tim.tv_sec * 1000LLU + (unsigned long long)(tim.tv_usec / 1000.f);
+        
+        if (currentIter == 1) RecordProperty("test_start", cv::format("%llu",t1).c_str());
+        if (!has_next) RecordProperty("test_complete", cv::format("%llu",t1).c_str());
+    }
+#endif    
+    return has_next;
 }
 
 void TestBase::warmup_impl(cv::Mat m, int wtype)
@@ -999,7 +1019,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::tbb_threads(int n)
     if (n > 0)
         test->p_tbb_initializer=new tbb::task_scheduler_init(n);
 #endif
-	(void)n;
+    (void)n;
     return *this;
 }
 

@@ -197,10 +197,15 @@ def getRunningProcessExePathByName(name):
         return None
         
 class RunInfo(object):
+    def setCallback(self, name, callback):
+        setattr(self, name, callback)
+
     def __init__(self, path, options):
         self.options = options
         self.path = path
         self.error = None
+        self.setUp = None
+        self.tearDown = None
         self.nameprefix = "opencv_" + options.mode + "_"
         for p in parse_patterns:
             setattr(self, p["name"], p["default"])
@@ -602,7 +607,11 @@ class RunInfo(object):
                 else:
                     command = exename + " " + " ".join(args)
                 print >> _stderr, "Running:", command
+                if self.setUp is not None:
+                    self.setUp()
                 Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
+                if self.tearDown is not None:
+                    self.tearDown()
                 # try get log
                 if not self.options.help:
                     print >> _stderr, "Pulling", logfile, "from device..."
@@ -651,12 +660,27 @@ class RunInfo(object):
                 print >> _stderr, "Error: Test \"%s\" is not found in %s" % (test, self.tests_dir)
         return logs
 
+def getRunArgs(args):
+    run_args = []
+    for path in args:
+        path = os.path.abspath(path)
+        while (True):
+            if os.path.isdir(path) and os.path.isfile(os.path.join(path, "CMakeCache.txt")):
+                run_args.append(path)
+                break
+            npath = os.path.dirname(path)
+            if npath == path:
+                break
+            path = npath
+    return run_args
+
 if __name__ == "__main__":
     test_args = [a for a in sys.argv if a.startswith("--perf_") or a.startswith("--gtest_")]
     argv =      [a for a in sys.argv if not(a.startswith("--perf_") or a.startswith("--gtest_"))]
     
     parser = OptionParser()
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
+    
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
     parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
     parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
@@ -672,18 +696,7 @@ if __name__ == "__main__":
     else:
         options.mode = "perf"
     
-    run_args = []
-    
-    for path in args:
-        path = os.path.abspath(path)
-        while (True):
-            if os.path.isdir(path) and os.path.isfile(os.path.join(path, "CMakeCache.txt")):
-                run_args.append(path)
-                break
-            npath = os.path.dirname(path)
-            if npath == path:
-                break
-            path = npath
+    run_args = getRunArgs(args)
     
     if len(run_args) == 0:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<build_path>"
