@@ -3321,9 +3321,9 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
         {
             if( width != VI.getWidth(index) || height != VI.getHeight(index) )//|| fourcc != VI.getFourcc(index) )
             {
-				int fps = VI.getFPS(index);
+                int fps = static_cast<int>(VI.getFPS(index));
                 VI.stopDevice(index);
-				VI.setIdealFramerate(index,fps);
+                VI.setIdealFramerate(index, fps);
                 VI.setupDeviceFourcc(index, width, height, fourcc);
             }
             width = height = fourcc = -1;

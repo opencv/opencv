@@ -166,7 +166,7 @@ namespace colormap
         static Mat linear_colormap(InputArray X,
                 InputArray r, InputArray g, InputArray b,
                 float begin, float end, float n) {
-            return linear_colormap(X,r,g,b,linspace(begin,end,n));
+            return linear_colormap(X,r,g,b,linspace(begin,end, cvRound(n)));
         }
 
         // Interpolates from a base colormap.

@@ -195,7 +195,7 @@ DenseFeatureDetector::DenseFeatureDetector( float _initFeatureScale, int _featur
 
 void DenseFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
-    float curScale = initFeatureScale;
+    float curScale = static_cast<float>(initFeatureScale);
     int curStep = initXyStep;
     int curBound = initImgBound;
     for( int curLevel = 0; curLevel < featureScaleLevels; curLevel++ )
@@ -208,7 +208,7 @@ void DenseFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypo
             }
         }
 
-        curScale = curScale * featureScaleMul;
+        curScale = static_cast<float>(curScale * featureScaleMul);
         if( varyXyStepWithScale ) curStep = static_cast<int>( curStep * featureScaleMul + 0.5f );
         if( varyImgBoundWithScale ) curBound = static_cast<int>( curBound * featureScaleMul + 0.5f );
     }

@@ -3012,8 +3012,8 @@ public:
         size_t remaining = it->remaining, cn = DataType<_Tp>::channels;
         int _fmt = DataType<_Tp>::fmt;
         char fmt[] = { (char)((_fmt>>8)+'1'), (char)_fmt, '\0' };
-		size_t remaining1 = remaining/cn;
-		count = count < remaining1 ? count : remaining1;
+        size_t remaining1 = remaining/cn;
+        count = count < remaining1 ? count : remaining1;
         vec.resize(count);
         it->readRaw( string(fmt), !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp) );
     }
@@ -3030,8 +3030,13 @@ read( FileNodeIterator& it, vector<_Tp>& vec, size_t maxCount=(size_t)INT_MAX )
 template<typename _Tp> static inline void
 read( const FileNode& node, vector<_Tp>& vec, const vector<_Tp>& default_value=vector<_Tp>() )
 {
-    FileNodeIterator it = node.begin();
-    read( it, vec );
+    if(!node.node)
+        vec = default_value;
+    else
+    {
+        FileNodeIterator it = node.begin();
+        read( it, vec );
+    }
 }
     
 inline FileNodeIterator FileNode::begin() const

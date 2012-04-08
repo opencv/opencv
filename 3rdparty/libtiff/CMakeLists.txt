@@ -82,8 +82,7 @@ set(lib_srcs
 
 if(UNIX)
   list(APPEND lib_srcs tif_unix.c)
-  if(CMAKE_COMPILER_IS_GNUCXX)
-    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-strict-aliasing -Wno-int-to-pointer-cast")
+  if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set_source_files_properties(tif_unix.c PROPERTIES COMPILE_FLAGS "-w")
   endif()
 endif()
@@ -92,7 +91,7 @@ if(WIN32)
   list(APPEND lib_srcs tif_win32.c)
 endif(WIN32)
 
-if(MSVC)
+if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
   string(REPLACE "/W4" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
   string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()

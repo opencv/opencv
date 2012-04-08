@@ -308,7 +308,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 
 
 template<class CastOp, class VecOp> void
-pyrUp_( const Mat& _src, Mat& _dst, int borderType )
+pyrUp_( const Mat& _src, Mat& _dst, int)
 {
     const int PU_SZ = 3;
     typedef typename CastOp::type1 WT;

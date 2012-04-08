@@ -82,7 +82,7 @@ if(UNIX)
   endif()
 endif()
 
-if(MSVC)
+if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4013")
 endif()
 

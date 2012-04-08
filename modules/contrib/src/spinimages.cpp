@@ -442,7 +442,7 @@ void cv::Mesh3D::clearOctree(){ octree = Octree(); }
 
 float cv::Mesh3D::estimateResolution(float tryRatio)
 {
-    #if 0
+#if 0
     const int neighbors = 3;
     const int minReasonable = 10;
 
@@ -476,10 +476,10 @@ float cv::Mesh3D::estimateResolution(float tryRatio)
     sort(dist, less<double>());
    
     return resolution = (float)dist[ dist.size() / 2 ];
-    #else
+#else
     CV_Error(CV_StsNotImplemented, "");
     return 1.f;
-    #endif
+#endif
 }
 
 
@@ -1182,14 +1182,14 @@ private:
                 left.erase(pos);
             }
             else
-                break;            
+                break;
         }
 
         if (group.size() >= 4)
-            groups.push_back(group);      
+            groups.push_back(group);
     }
 
-    /* converting the data to final result */    
+    /* converting the data to final result */
     for(size_t i = 0; i < groups.size(); ++i)
     {
         const group_t& group = groups[i];
@@ -1197,7 +1197,7 @@ private:
         vector< Vec2i > outgrp;
         for(citer pos = group.begin(); pos != group.end(); ++pos)
         {
-            const Match& m = allMatches[*pos];            
+            const Match& m = allMatches[*pos];
             outgrp.push_back(Vec2i(subset[m.modelInd], scene.subset[m.sceneInd]));
         }        
         result.push_back(outgrp);

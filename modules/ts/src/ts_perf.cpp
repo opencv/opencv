@@ -147,7 +147,7 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
             storageOutPath += ext;
         }
     }
-    catch(cv::Exception& ex)
+    catch(cv::Exception&)
     {
         LOGE("Failed to open sanity data for reading: %s", storageInPath.c_str());
     }

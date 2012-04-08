@@ -33,18 +33,20 @@ if (HAVE_CUDA)
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
     
-  foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
-    string(REPLACE "/W4" "/W3" ${var} "${${var}}")
-  endforeach()
-
   if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408 /wd4251")
+    if(NOT ENABLE_NOISY_WARNINGS)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408")
+      
+      foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+        string(REPLACE "/W4" "/W3" ${var} "${${var}}")
+      endforeach()
+    
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
+    endif()
 
     foreach(var CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       string(REPLACE "/EHsc-" "/EHs" ${var} "${${var}}")
     endforeach()
-    
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
   endif()
 
   OCV_CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
