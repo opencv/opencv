@@ -13,6 +13,8 @@ class_ignore_list = (
     "VideoWriter", "VideoCapture",
     #features2d
     #"KeyPoint", "MSER", "StarDetector", "SURF", "DMatch",
+    #ml
+    "EM",
 )
 
 const_ignore_list = (
