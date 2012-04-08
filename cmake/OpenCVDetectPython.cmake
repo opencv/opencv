@@ -1,7 +1,18 @@
+if(MSVC AND NOT PYTHON_EXECUTABLE)
+  # search for executable with the same bitness as resulting binaries
+  # standard FindPythonInterp always prefers executable from system path
+  foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} 2.7 2.6 2.5 2.4 2.3 2.2 2.1 2.0 1.6 1.5)
+    find_host_program(PYTHON_EXECUTABLE
+      NAMES python${_CURRENT_VERSION} python
+      PATHS [HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Python\\\\PythonCore\\\\${_CURRENT_VERSION}\\\\InstallPath]
+      NO_SYSTEM_ENVIRONMENT_PATH
+    )
+  endforeach()
+endif()
 find_host_package(PythonInterp)
 
-set(PYTHON_USE_NUMPY 0)
-set(HAVE_SPHINX 0)
+unset(PYTHON_USE_NUMPY CACHE)
+unset(HAVE_SPHINX CACHE)
 
 if(PYTHON_EXECUTABLE)
   if(NOT ANDROID AND NOT IOS)
@@ -14,9 +25,10 @@ if(PYTHON_EXECUTABLE)
 
   execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
     ERROR_VARIABLE PYTHON_VERSION_FULL
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    ERROR_STRIP_TRAILING_WHITESPACE)
 
   string(REGEX MATCH "[0-9]+.[0-9]+" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
+  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" PYTHON_VERSION_FULL "${PYTHON_VERSION_FULL}")
 
   if(NOT ANDROID AND NOT IOS)
     if(CMAKE_HOST_UNIX)
@@ -46,18 +58,25 @@ if(PYTHON_EXECUTABLE)
       set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
     endif()
 
-    # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
-                    RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-                    OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-    if(PYTHON_NUMPY_PROCESS EQUAL 0)
-      set(PYTHON_USE_NUMPY 1)
-      add_definitions(-DPYTHON_USE_NUMPY=1)
-      file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIRS}" PYTHON_NUMPY_INCLUDE_DIRS)
-      ocv_include_directories(${PYTHON_NUMPY_INCLUDE_DIRS})
-      message(STATUS "    Use NumPy headers from: ${PYTHON_NUMPY_INCLUDE_DIRS}")
+    if(NOT PYTHON_NUMPY_INCLUDE_DIR)
+      # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
+      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
+                      RESULT_VARIABLE PYTHON_NUMPY_PROCESS
+                      OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIR
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+                      
+      if(PYTHON_NUMPY_PROCESS EQUAL 0)
+        file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIR}" PYTHON_NUMPY_INCLUDE_DIR)
+        set(PYTHON_NUMPY_INCLUDE_DIR ${PYTHON_NUMPY_INCLUDE_DIR} CACHE PATH "Path to numpy headers")
+      endif()
+    endif()
+    
+    if(PYTHON_NUMPY_INCLUDE_DIR)
+      set(PYTHON_USE_NUMPY TRUE)
+      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.version.version"
+                        RESULT_VARIABLE PYTHON_NUMPY_PROCESS
+                        OUTPUT_VARIABLE PYTHON_NUMPY_VERSION
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
     endif()
   endif(NOT ANDROID AND NOT IOS)
 
@@ -73,7 +92,7 @@ if(PYTHON_EXECUTABLE)
       find_host_program(SPHINX_BUILD sphinx-build)
       if(SPHINX_BUILD)
         set(HAVE_SPHINX 1)
-        message(STATUS "    Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
+        message(STATUS "  Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
       endif()
     endif()
   endif(BUILD_DOCS)
