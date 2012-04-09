@@ -40,6 +40,9 @@
 /* FFMpeg video library */
 #cmakedefine  HAVE_FFMPEG
 
+/* FFMpeg version flag */
+#cmakedefine  NEW_FFMPEG
+
 /* ffmpeg's libswscale */
 #cmakedefine  HAVE_FFMPEG_SWSCALE
 
