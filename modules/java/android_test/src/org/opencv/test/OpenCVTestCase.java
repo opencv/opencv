@@ -340,6 +340,12 @@ public class OpenCVTestCase extends TestCase {
             assertDMatchEqual(expected[i], actual[i], epsilon);
     }
 
+    public static void assertListDMatchEquals(List<DMatch> expected, List<DMatch> actual, double epsilon) {
+    	DMatch expectedArray[] = expected.toArray(new DMatch[0]);
+    	DMatch actualArray[]   = actual.toArray(new DMatch[0]);
+    	assertArrayDMatchEquals(expectedArray, actualArray, epsilon);
+    }
+
     public static void assertPointEquals(Point expected, Point actual, double eps) {
         String msg = "expected:<" + expected + "> but was:<" + actual + ">";
         assertEquals(msg, expected.x, actual.x, eps);

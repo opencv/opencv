@@ -1,8 +1,13 @@
 package org.opencv.test.features2d;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDMatch;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DMatch;
@@ -12,10 +17,6 @@ import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
 
@@ -37,7 +38,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getQueryDescriptors() {
         Mat img = getQueryImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
         FeatureDetector detector = FeatureDetector.create(FeatureDetector.SURF);
@@ -63,7 +64,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getTrainDescriptors() {
         Mat img = getTrainImg();
-        List<KeyPoint> keypoints = Arrays.asList(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
+        MatOfKeyPoint keypoints = new MatOfKeyPoint(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
         Mat descriptors = new Mat();
 
         DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
@@ -181,34 +182,34 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
     public void testMatchMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches);
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
     public void testMatchMatListOfDMatchListOfMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches, Arrays.asList(mask));
 
-        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches, EPS);
+        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
     public void testMatchMatMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches);
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
 
         // OpenCVTestRunner.Log("matches found: " + matches.size());
         // for (DMatch m : matches)
@@ -219,11 +220,11 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches, mask);
 
-        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches, EPS);
+        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloat() {

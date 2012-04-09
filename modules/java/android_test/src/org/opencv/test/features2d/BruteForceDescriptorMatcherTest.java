@@ -6,9 +6,9 @@ import java.util.List;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
-import org.opencv.core.CvVectorDMatch;
-import org.opencv.core.CvVectorKeyPoint;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDMatch;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DMatch;
@@ -35,7 +35,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getQueryDescriptors() {
         Mat img = getQueryImg();
-        CvVectorKeyPoint keypoints = new CvVectorKeyPoint();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
         FeatureDetector detector = FeatureDetector.create(FeatureDetector.SURF);
@@ -61,7 +61,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getTrainDescriptors() {
         Mat img = getTrainImg();
-        CvVectorKeyPoint keypoints = new CvVectorKeyPoint(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
+        MatOfKeyPoint keypoints = new MatOfKeyPoint(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
         Mat descriptors = new Mat();
 
         DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
@@ -168,7 +168,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
     	final int k = 3; 
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        List<CvVectorDMatch> matches = new ArrayList<CvVectorDMatch>();
+        List<MatOfDMatch> matches = new ArrayList<MatOfDMatch>();
         matcher.knnMatch(query, train, matches, k);
         /*
         matcher.add(Arrays.asList(train));
@@ -177,9 +177,9 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         assertEquals(query.rows(), matches.size());
         for(int i = 0; i<matches.size(); i++)
         {
-        	CvVectorDMatch vdm = matches.get(i); 
+        	MatOfDMatch vdm = matches.get(i); 
             assertEquals(Math.min(k, train.rows()), vdm.total());
-            for(DMatch dm : vdm.toArray(null))
+            for(DMatch dm : vdm.toArray())
             {
             	assertEquals(dm.queryIdx, i);
             }
@@ -197,34 +197,34 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
     public void testMatchMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        CvVectorDMatch matches = new CvVectorDMatch();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches);
 
-        assertArrayDMatchEquals(truth, matches.toArray(null), EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
     public void testMatchMatListOfDMatchListOfMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        CvVectorDMatch matches = new CvVectorDMatch();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches, Arrays.asList(mask));
 
-        assertArrayDMatchEquals(Arrays.copyOfRange(truth, 0, 2), matches.toArray(null), EPS);
+        assertArrayDMatchEquals(Arrays.copyOfRange(truth, 0, 2), matches.toArray(), EPS);
     }
 
     public void testMatchMatMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        CvVectorDMatch matches = new CvVectorDMatch();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches);
 
-        assertArrayDMatchEquals(truth, matches.toArray(null), EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
 
         // OpenCVTestRunner.Log("matches found: " + matches.size());
         // for (DMatch m : matches)
@@ -235,11 +235,11 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        CvVectorDMatch matches = new CvVectorDMatch();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches, mask);
 
-        assertArrayDMatchEquals(Arrays.copyOfRange(truth, 0, 2), matches.toArray(null), EPS);
+        assertArrayDMatchEquals(Arrays.copyOfRange(truth, 0, 2), matches.toArray(), EPS);
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloat() {
