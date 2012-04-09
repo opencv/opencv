@@ -6,6 +6,7 @@ import java.util.List;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
@@ -23,6 +24,8 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
     private int                 mFrameHeight;
     private byte[]              mFrame;
     private boolean             mThreadRun;
+    private byte[]              mBuffer;
+
 
     public SampleViewBase(Context context) {
         super(context);
@@ -45,7 +48,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         else
         	mCamera.setPreviewDisplay(null);
 	}
-    
+
     public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
         Log.i(TAG, "surfaceCreated");
         if (mCamera != null) {
@@ -56,7 +59,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
             // selecting optimal camera preview size
             {
-                double minDiff = Double.MAX_VALUE;
+                int  minDiff = Integer.MAX_VALUE;
                 for (Camera.Size size : sizes) {
                     if (Math.abs(size.height - height) < minDiff) {
                         mFrameWidth = size.width;
@@ -67,12 +70,28 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
             }
 
             params.setPreviewSize(getFrameWidth(), getFrameHeight());
+            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
             mCamera.setParameters(params);
-            try {
-            	setPreview();
+
+            /* Now allocate the buffer */
+            params = mCamera.getParameters();
+            int size = params.getPreviewSize().width * params.getPreviewSize().height;
+            size  = size * ImageFormat.getBitsPerPixel(params.getPreviewFormat()) / 8;
+            mBuffer = new byte[size];
+            /* The buffer where the current frame will be coppied */
+            mFrame = new byte [size];
+            mCamera.addCallbackBuffer(mBuffer);
+
+			try {
+				setPreview();
 			} catch (IOException e) {
 				Log.e(TAG, "mCamera.setPreviewDisplay/setPreviewTexture fails: " + e);
 			}
+
+            /* Notify that the preview is about to be started and deliver preview size */
+            onPreviewStared(params.getPreviewSize().width, params.getPreviewSize().height);
+
+            /* Now we can start a preview */
             mCamera.startPreview();
         }
     }
@@ -80,14 +99,17 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
     public void surfaceCreated(SurfaceHolder holder) {
         Log.i(TAG, "surfaceCreated");
         mCamera = Camera.open();
-        mCamera.setPreviewCallback(new PreviewCallback() {
+
+        mCamera.setPreviewCallbackWithBuffer(new PreviewCallback() {
             public void onPreviewFrame(byte[] data, Camera camera) {
                 synchronized (SampleViewBase.this) {
-                    mFrame = data;
-                    SampleViewBase.this.notify();
+                    System.arraycopy(data, 0, mFrame, 0, data.length);
+                    SampleViewBase.this.notify(); 
                 }
+                camera.addCallbackBuffer(mBuffer);
             }
         });
+                    
         (new Thread(this)).start();
     }
 
@@ -102,9 +124,26 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
                 mCamera = null;
             }
         }
+        onPreviewStopped();
     }
 
+    /* The bitmap returned by this method shall be owned by the child and released in onPreviewStopped() */
     protected abstract Bitmap processFrame(byte[] data);
+
+    /**
+     * This method is called when the preview process is beeing started. It is called before the first frame delivered and processFrame is called
+     * It is called with the width and height parameters of the preview process. It can be used to prepare the data needed during the frame processing.
+     * @param previewWidth - the width of the preview frames that will be delivered via processFrame
+     * @param previewHeight - the height of the preview frames that will be delivered via processFrame
+     */
+    protected abstract void onPreviewStared(int previewWidtd, int previewHeight);
+
+    /**
+     * This method is called when preview is stopped. When this method is called the preview stopped and all the processing of frames already completed.
+     * If the Bitmap object returned via processFrame is cached - it is a good time to recycle it.
+     * Any other resourcses used during the preview can be released.
+     */
+    protected abstract void onPreviewStopped();
 
     public void run() {
         mThreadRun = true;
@@ -127,7 +166,6 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
                     canvas.drawBitmap(bmp, (canvas.getWidth() - getFrameWidth()) / 2, (canvas.getHeight() - getFrameHeight()) / 2, null);
                     mHolder.unlockCanvasAndPost(canvas);
                 }
-                bmp.recycle();
             }
         }
     }
