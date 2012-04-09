@@ -52,33 +52,21 @@ set(grfmt_srcs src/bitstrm.cpp ${grfmt_srcs})
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
-set(highgui_hdrs src/precomp.hpp src/utils.hpp)
-
 if(NEW_FFMPEG)
-set(highgui_srcs
-    src/cap.cpp
-    src/cap_images.cpp
-    src/cap_ffmpeg_v2.cpp
-    src/cap_ffmpeg_impl_v2.hpp
-    src/cap_ffmpeg_impl.hpp
-    src/loadsave.cpp
-    src/precomp.cpp
-    src/utils.cpp
-    src/window.cpp
-    )
+set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl_v2.hpp)
 else()
+set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl.hpp)
+endif()
+
 set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
-    src/cap_ffmpeg_impl_v2.hpp
-    src/cap_ffmpeg_impl.hpp
     src/loadsave.cpp
     src/precomp.cpp
     src/utils.cpp
     src/window.cpp
     )
-endif()
 
 file(GLOB highgui_ext_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
