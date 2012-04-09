@@ -56,7 +56,10 @@ void MotionStabilizationPipeline::stabilize(
         int size, const vector<Mat> &motions, pair<int,int> range,
         Mat *stabilizationMotions) const
 {
-    vector<Mat> updatedMotions(motions);
+    vector<Mat> updatedMotions(motions.size());
+    for (size_t i = 0; i < motions.size(); ++i)
+        updatedMotions[i] = motions[i].clone();
+
     vector<Mat> stabilizationMotions_(size);
 
     for (int i = 0; i < size; ++i)

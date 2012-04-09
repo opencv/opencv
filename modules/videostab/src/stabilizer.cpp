@@ -371,6 +371,31 @@ void TwoPassStabilizer::runPrePassIfNecessary()
         motionStabilizer_->stabilize(
             frameCount_, motions_, make_pair(0, frameCount_ - 1), &stabilizationMotions_[0]);
 
+        /*ofstream fm("log_motions.csv");
+        for (int i = 0; i < frameCount_ - 1; ++i)
+        {
+            Mat_<float> M = at(i, motions_);
+            fm << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
+               << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
+               << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+        }
+        ofstream fo("log_orig.csv");
+        for (int i = 0; i < frameCount_; ++i)
+        {
+            Mat_<float> M = getMotion(0, i, motions_);
+            fo << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
+               << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
+               << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+        }
+        ofstream fs("log_stab.csv");
+        for (int i = 0; i < frameCount_; ++i)
+        {
+            Mat_<float> M = stabilizationMotions_[i] * getMotion(0, i, motions_);
+            fs << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
+               << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
+               << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+        }*/
+
         if (mustEstTrimRatio_)
         {
             trimRatio_ = 0;
