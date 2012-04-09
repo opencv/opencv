@@ -1085,6 +1085,7 @@ int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_
             av_init_packet(&pkt);
 
 	#if LIBAVFORMAT_BUILD > 4752
+                if(c->coded_frame->pts != (int64_t)AV_NOPTS_VALUE)
 				pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
 	#else
 				pkt.pts = c->coded_frame->pts;
