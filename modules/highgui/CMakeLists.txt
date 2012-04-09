@@ -53,9 +53,9 @@ set(grfmt_srcs src/bitstrm.cpp ${grfmt_srcs})
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
 if(NEW_FFMPEG)
-set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl_v2.hpp)
+  set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl_v2.hpp)
 else()
-set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl.hpp)
+  set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl.hpp)
 endif()
 
 set(highgui_srcs
@@ -230,14 +230,13 @@ if(IOS)
 endif()
 
 if(WIN32)
-  link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
-  include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include") #for directshow
+  link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib")
+  include_directories(AFTER "${OpenCV_SOURCE_DIR}/3rdparty/include") #for directshow
 endif()
 
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
-
 ocv_module_include_directories()
 
 ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
@@ -259,7 +258,7 @@ if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 endif()
 
-if(WIN32)
+if(WIN32 AND WITH_FFMPEG)
   #copy ffmpeg dll to the output folder
   if(MSVC64 OR MINGW64)
     set(FFMPEG_SUFFIX _64)
