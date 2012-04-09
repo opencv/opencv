@@ -356,7 +356,7 @@ Opens file storage for reading or writing data.
 
             * **CV_STORAGE_WRITE** the storage is open for writing 
 
-The function opens file storage for reading or writing data. In the latter case, a new file is created or an existing file is rewritten. The type of the read or written file is determined by the filename extension:  ``.xml`` for  ``XML`` and  ``.yml`` or  ``.yaml`` for  ``YAML``. The function returns a pointer to the :ocv:struct:`CvFileStorage` structure.
+The function opens file storage for reading or writing data. In the latter case, a new file is created or an existing file is rewritten. The type of the read or written file is determined by the filename extension:  ``.xml`` for  ``XML`` and  ``.yml`` or  ``.yaml`` for  ``YAML``. The function returns a pointer to the :ocv:struct:`CvFileStorage` structure. If the file cannot be opened then the function returns ``NULL``.
 
 Read
 ----
