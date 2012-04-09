@@ -2423,6 +2423,8 @@ So, for a non-integer power exponent, the absolute values of input array element
 
 For some values of ``p`` , such as integer values, 0.5 and -0.5, specialized faster algorithms are used.
 
+Special values (NaN, Inf) are not handled.
+
 .. seealso::
 
     :ocv:func:`sqrt`,
