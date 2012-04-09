@@ -573,7 +573,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
             );
 
     if (img_convert_ctx == NULL)
-        CV_Error(0, "Cannot initialize the conversion context!");
+        return false;//CV_Error(0, "Cannot initialize the conversion context!");
 
     sws_scale(
             img_convert_ctx,
