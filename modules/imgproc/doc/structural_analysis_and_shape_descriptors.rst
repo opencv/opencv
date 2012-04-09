@@ -194,6 +194,12 @@ Draws contours outlines or filled contours.
 
     :param offset: Optional contour shift parameter. Shift all the drawn contours by the specified  :math:`\texttt{offset}=(dx,dy)` .
 
+    :param contour: Pointer to the first contour.
+
+    :param externalColor: Color of external contours.
+
+    :param holeColor: Color of internal contours (holes).
+
 The function draws contour outlines in the image if
 :math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
 :math:`\texttt{thickness}<0` . The example below shows how to retrieve connected components from the binary image and label them: ::
