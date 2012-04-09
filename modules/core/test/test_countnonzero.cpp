@@ -252,4 +252,4 @@ void CV_CountNonZeroTest::run(int)
     }
 }
 
-// TEST (Core_CountNonZero, accuracy) { CV_CountNonZeroTest test; test.safe_run(); }
+TEST (Core_CountNonZero, accuracy) { CV_CountNonZeroTest test; test.safe_run(); }
