@@ -1,8 +1,15 @@
 package org.opencv.test.features2d;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDMatch;
+import org.opencv.core.MatOfKeyPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Range;
 import org.opencv.features2d.DMatch;
@@ -14,10 +21,6 @@ import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class Features2dTest extends OpenCVTestCase {
 
@@ -93,8 +96,8 @@ public class Features2dTest extends OpenCVTestCase {
         Mat imgTrain = Highgui.imread(OpenCVTestRunner.LENA_PATH, Highgui.CV_LOAD_IMAGE_GRAYSCALE);
         Mat imgQuery = imgTrain.submat(new Range(0, imgTrain.rows() - 100), Range.all());
 
-        List<KeyPoint> trainKeypoints = new ArrayList<KeyPoint>();
-        List<KeyPoint> queryKeypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint trainKeypoints = new MatOfKeyPoint();
+        MatOfKeyPoint queryKeypoints = new MatOfKeyPoint();
 
         detector.detect(imgTrain, trainKeypoints);
         detector.detect(imgQuery, queryKeypoints);
@@ -108,21 +111,26 @@ public class Features2dTest extends OpenCVTestCase {
         extractor.compute(imgTrain, trainKeypoints, trainDescriptors);
         extractor.compute(imgQuery, queryKeypoints, queryDescriptors);
 
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.add(Arrays.asList(trainDescriptors));
         matcher.match(queryDescriptors, matches);
 
         // OpenCVTestRunner.Log("Matches found: " + matches.size());
 
-        List<Point> points1 = new ArrayList<Point>();
-        List<Point> points2 = new ArrayList<Point>();
-
-        for (int i = 0; i < matches.size(); i++) {
-            DMatch match = matches.get(i);
-            points1.add(trainKeypoints.get(match.trainIdx).pt);
-            points2.add(queryKeypoints.get(match.queryIdx).pt);
+        DMatch adm[] = matches.toArray();
+        List<Point> lp1 = new ArrayList<Point>(adm.length);
+        List<Point> lp2 = new ArrayList<Point>(adm.length);
+        KeyPoint tkp[] = trainKeypoints.toArray();
+        KeyPoint qkp[] = queryKeypoints.toArray();
+        for (int i = 0; i < adm.length; i++) {
+            DMatch dm = adm[i];
+            lp1.add(tkp[dm.trainIdx].pt);
+            lp2.add(qkp[dm.queryIdx].pt);
         }
+
+        MatOfPoint2f points1 = new MatOfPoint2f(lp1.toArray(new Point[0]));
+        MatOfPoint2f points2 = new MatOfPoint2f(lp2.toArray(new Point[0]));
 
         Mat hmg = Calib3d.findHomography(points1, points2, Calib3d.RANSAC, 3);
 
