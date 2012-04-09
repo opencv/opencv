@@ -214,7 +214,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
         matcher.match(query, matches, Arrays.asList(mask));
 
-        assertArrayDMatchEquals(Arrays.copyOfRange(truth, 0, 2), matches.toArray(), EPS);
+        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
     public void testMatchMatMatListOfDMatch() {
@@ -239,7 +239,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
         matcher.match(query, train, matches, mask);
 
-        assertArrayDMatchEquals(Arrays.copyOfRange(truth, 0, 2), matches.toArray(), EPS);
+        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloat() {
