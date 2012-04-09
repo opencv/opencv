@@ -554,10 +554,22 @@ double CvCapture_FFMPEG::getProperty( int property_id )
         if(video_st->cur_dts != AV_NOPTS_VALUE_ && video_st->duration != AV_NOPTS_VALUE_)
             return(((video_st->cur_dts-video_st->first_dts)+(1.0/frameScale)) / (double)video_st->duration);
         break;
-	case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
-	    if(video_st->duration != AV_NOPTS_VALUE_)
-            return (double)ceil(ic->duration * av_q2d(video_st->r_frame_rate) / AV_TIME_BASE);
-	    break;
+    case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
+        {
+         int64_t nbf = ic->streams[video_stream]->nb_frames;
+         double eps = 0.000025;
+         if (nbf == 0)
+         {
+            double fps = static_cast<double>(ic->streams[video_stream]->r_frame_rate.num) / static_cast<double>(ic->streams[video_stream]->r_frame_rate.den);
+            if (fps < eps)
+            {
+                fps = 1.0 / (static_cast<double>(ic->streams[video_stream]->codec->time_base.num) / static_cast<double>(ic->streams[video_stream]->codec->time_base.den));
+            }
+            nbf = static_cast<int64_t>(round(ic->duration * fps) / AV_TIME_BASE);
+         }
+         return nbf;
+        }
+        break;
     case CV_FFMPEG_CAP_PROP_FRAME_WIDTH:
         return (double)frame.width;
     break;
