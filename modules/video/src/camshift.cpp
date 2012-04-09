@@ -52,9 +52,8 @@
 //      windowOut   - Location, height and width of converged CAMSHIFT window
 //      len         - If != NULL, return equivalent len
 //      width       - If != NULL, return equivalent width
-//      itersUsed   - Returns number of iterations CAMSHIFT took to converge
 //    Returns:
-//      The function itself returns the area found
+//      Number of iterations CAMSHIFT took to converge
 //    Notes:
 //F*/
 CV_IMPL int
@@ -155,9 +154,8 @@ cvMeanShift( const void* imgProb, CvRect windowIn,
 //      len         - If != NULL, return equivalent len
 //      width       - If != NULL, return equivalent width
 //      area        - sum of all elements in result window
-//      itersUsed   - Returns number of iterations CAMSHIFT took to converge
 //    Returns:
-//      The function itself returns the area found
+//      Number of iterations CAMSHIFT took to converge
 //    Notes:
 //F*/
 CV_IMPL int
