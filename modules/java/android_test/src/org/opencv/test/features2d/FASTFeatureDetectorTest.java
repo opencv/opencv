@@ -1,18 +1,17 @@
 package org.opencv.test.features2d;
 
+import java.util.Arrays;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
@@ -56,11 +55,11 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
     public void testDetectMatListOfKeyPoint() {
         Mat img = getTestImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
 
         detector.detect(img, keypoints);
 
-        assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
+        assertListKeyPointEquals(Arrays.asList(truth), keypoints.toList(), EPS);
 
         // OpenCVTestRunner.Log("points found: " + keypoints.size());
         // for (KeyPoint kp : keypoints)
@@ -70,11 +69,11 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
     public void testDetectMatListOfKeyPointMat() {
         Mat img = getTestImg();
         Mat mask = getMaskImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
 
         detector.detect(img, keypoints, mask);
 
-        assertListKeyPointEquals(Arrays.asList(truth[0], truth[1]), keypoints, EPS);
+        assertListKeyPointEquals(Arrays.asList(truth[0], truth[1]), keypoints.toList(), EPS);
     }
 
     public void testEmpty() {
@@ -87,18 +86,18 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         writeFile(filename, "%YAML:1.0\nthreshold: 130\nnonmaxSuppression: 1\n");
         detector.read(filename);
 
-        List<KeyPoint> keypoints1 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints1 = new MatOfKeyPoint();
 
         detector.detect(grayChess, keypoints1);
 
         writeFile(filename, "%YAML:1.0\nthreshold: 150\nnonmaxSuppression: 1\n");
         detector.read(filename);
 
-        List<KeyPoint> keypoints2 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints2 = new MatOfKeyPoint();
 
         detector.detect(grayChess, keypoints2);
 
-        assertTrue(keypoints2.size() <= keypoints1.size());
+        assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
     public void testReadYml() {
@@ -108,7 +107,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
                 "<?xml version=\"1.0\"?>\n<opencv_storage>\n<threshold>130</threshold>\n<nonmaxSuppression>1</nonmaxSuppression>\n</opencv_storage>\n");
         detector.read(filename);
 
-        List<KeyPoint> keypoints1 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints1 = new MatOfKeyPoint();
 
         detector.detect(grayChess, keypoints1);
 
@@ -116,11 +115,11 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
                 "<?xml version=\"1.0\"?>\n<opencv_storage>\n<threshold>150</threshold>\n<nonmaxSuppression>1</nonmaxSuppression>\n</opencv_storage>\n");
         detector.read(filename);
 
-        List<KeyPoint> keypoints2 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints2 = new MatOfKeyPoint();
 
         detector.detect(grayChess, keypoints2);
 
-        assertTrue(keypoints2.size() <= keypoints1.size());
+        assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
     public void testWrite() {

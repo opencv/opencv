@@ -1,20 +1,21 @@
 package org.opencv.test.features2d;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
@@ -72,7 +73,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         writeFile(filename, "%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
         detector.read(filename);
 
-        List<List<KeyPoint>> keypoints = new ArrayList<List<KeyPoint>>();
+        List<MatOfKeyPoint> keypoints = new ArrayList<MatOfKeyPoint>();
         Mat cross = getTestImg();
         List<Mat> crosses = new ArrayList<Mat>(3);
         crosses.add(cross);
@@ -83,7 +84,8 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         assertEquals(3, keypoints.size());
 
-        for (List<KeyPoint> lkp : keypoints) {
+        for (MatOfKeyPoint mkp : keypoints) {
+        	List<KeyPoint> lkp = mkp.toList();
             order(lkp);
             assertListKeyPointEquals(Arrays.asList(truth), lkp, EPS);
         }
@@ -98,13 +100,14 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         writeFile(filename, "%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
         detector.read(filename);
 
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat cross = getTestImg();
 
         detector.detect(cross, keypoints);
 
-        order(keypoints);
-        assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
+        List<KeyPoint> lkp = keypoints.toList();
+        order(lkp);
+        assertListKeyPointEquals(Arrays.asList(truth), lkp, EPS);
     }
 
     public void testDetectMatListOfKeyPointMat() {
@@ -114,12 +117,13 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         Mat img = getTestImg();
         Mat mask = getMaskImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
 
         detector.detect(img, keypoints, mask);
 
-        order(keypoints);
-        assertListKeyPointEquals(Arrays.asList(truth[1], truth[2]), keypoints, EPS);
+        List<KeyPoint> lkp = keypoints.toList();
+        order(lkp);
+        assertListKeyPointEquals(Arrays.asList(truth[1], truth[2]), lkp, EPS);
     }
 
     public void testEmpty() {
@@ -129,17 +133,17 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
     public void testRead() {
         Mat cross = getTestImg();
 
-        List<KeyPoint> keypoints1 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints1 = new MatOfKeyPoint();
         detector.detect(cross, keypoints1);
 
         String filename = OpenCVTestRunner.getTempFileName("yml");
         writeFile(filename, "%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
         detector.read(filename);
 
-        List<KeyPoint> keypoints2 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints2 = new MatOfKeyPoint();
         detector.detect(cross, keypoints2);
 
-        assertTrue(keypoints2.size() <= keypoints1.size());
+        assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
     public void testWrite() {

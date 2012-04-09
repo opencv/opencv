@@ -3,15 +3,13 @@ package org.opencv.test.features2d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
@@ -50,7 +48,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testComputeMatListOfKeyPointMat() {
-        List<KeyPoint> keypoints = Arrays.asList(keypoint);
+        MatOfKeyPoint keypoints = new MatOfKeyPoint(keypoint);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 
@@ -76,7 +74,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        List<KeyPoint> keypoints = Arrays.asList(keypoint);
+        MatOfKeyPoint keypoints =new MatOfKeyPoint(keypoint);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 

@@ -1,18 +1,17 @@
 package org.opencv.test.features2d;
 
+import java.util.Arrays;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class STARFeatureDetectorTest extends OpenCVTestCase {
 
@@ -75,21 +74,21 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
 
     public void testDetectMatListOfKeyPoint() {
         Mat img = getTestImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
 
         detector.detect(img, keypoints);
 
-        assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
+        assertListKeyPointEquals(Arrays.asList(truth), keypoints.toList(), EPS);
     }
 
     public void testDetectMatListOfKeyPointMat() {
         Mat img = getTestImg();
         Mat mask = getMaskImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
 
         detector.detect(img, keypoints, mask);
 
-        assertListKeyPointEquals(Arrays.asList(truth[0], truth[2], truth[5], truth[7]), keypoints, EPS);
+        assertListKeyPointEquals(Arrays.asList(truth[0], truth[2], truth[5], truth[7]), keypoints.toList(), EPS);
     }
 
     public void testEmpty() {
@@ -99,17 +98,17 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
     public void testRead() {
         Mat img = getTestImg();
 
-        List<KeyPoint> keypoints1 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints1 = new MatOfKeyPoint();
         detector.detect(img, keypoints1);
 
         String filename = OpenCVTestRunner.getTempFileName("yml");
         writeFile(filename, "%YAML:1.0\nmaxSize: 45\nresponseThreshold: 150\nlineThresholdProjected: 10\nlineThresholdBinarized: 8\nsuppressNonmaxSize: 5\n");
         detector.read(filename);
 
-        List<KeyPoint> keypoints2 = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints2 = new MatOfKeyPoint();
         detector.detect(img, keypoints2);
 
-        assertTrue(keypoints2.size() <= keypoints1.size());
+        assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
     public void testWrite() {
