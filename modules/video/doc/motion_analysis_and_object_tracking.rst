@@ -279,6 +279,8 @@ Finds an object center, size, and orientation.
 
     :param criteria: Stop criteria for the underlying  :ocv:func:`meanShift` .
 
+    :returns: (in old interfaces) Number of iterations CAMSHIFT took to converge 
+
 The function implements the CAMSHIFT object tracking algrorithm
 [Bradski98]_.
 First, it finds an object center using
@@ -304,6 +306,8 @@ Finds an object on a back projection image.
     :param window: Initial search window.
 
     :param criteria: Stop criteria for the iterative search algorithm.
+
+    :returns: Number of iterations CAMSHIFT took to converge.
 
 The function implements the iterative object search algorithm. It takes the input back projection of an object and the initial position. The mass center in ``window`` of the back projection image is computed and the search window center shifts to the mass center. The procedure is repeated until the specified number of iterations ``criteria.maxCount`` is done or until the window center shifts by less than ``criteria.epsilon`` . The algorithm is used inside
 :ocv:func:`CamShift` and, unlike
