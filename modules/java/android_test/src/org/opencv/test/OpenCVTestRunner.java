@@ -11,6 +11,8 @@ import org.opencv.core.Mat;
 import java.io.File;
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 /**
  * This only class is Android specific.
  * 
@@ -53,7 +55,9 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     @Override
     public void onStart() {
+    	Log.e("OpenCVTestRunner", "onStart()");
         context = getContext();
+        Assert.assertTrue("Context can't be 'null'", context != null);
         LENA_PATH = Utils.exportResource(context, R.drawable.lena);
         CHESS_PATH = Utils.exportResource(context, R.drawable.chessboard);
         LBPCASCADE_FRONTALFACE_PATH = Utils.exportResource(context, R.raw.lbpcascade_frontalface);

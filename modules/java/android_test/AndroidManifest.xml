@@ -17,8 +17,8 @@
     the package of org.opencv.  To run the tests use the command:
     "adb shell am instrument -w org.opencv.test/android.test.InstrumentationTestRunner"
     -->
-    <instrumentation android:name="android.test.InstrumentationTestRunner"
-                     android:targetPackage="org.opencv"
+    <instrumentation android:name="org.opencv.test.OpenCVTestRunner"
+                     android:targetPackage="org.opencv.test"
                      android:label="Tests for org.opencv"/>
     
     <uses-permission android:name="android.permission.CAMERA"/>
