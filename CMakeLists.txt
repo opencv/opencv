@@ -670,7 +670,7 @@ endif()
 status("")
 status("  C++:")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
-status("    C++ Compiler:"           ${CMAKE_CXX_COMPILER})
+status("    C++ Compiler:"           CMAKE_COMPILER_IS_GNUCXX THEN "${CMAKE_CXX_COMPILER} (ver ${CMAKE_GCC_REGEX_VERSION})" ELSE "${CMAKE_CXX_COMPILER}" )
 status("    C++ flags (Release):"    ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE})
 status("    C++ flags (Debug):"      ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG})
 status("    C Compiler:"             ${CMAKE_C_COMPILER})
@@ -728,8 +728,8 @@ status("")
 status("  GUI: ")
 
 if (HAVE_QT)
-  status("    QT 4.x:"            HAVE_QT        THEN YES ELSE NO)
-  status("    QT OpenGL support:" HAVE_QT_OPENGL THEN YES ELSE NO)
+  status("    QT 4.x:"            HAVE_QT        THEN "YES (ver ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH} ${QT_EDITION})" ELSE NO)
+  status("    QT OpenGL support:" HAVE_QT_OPENGL THEN "YES (${QT_QTOPENGL_LIBRARY})" ELSE NO)
 else()
   if(WIN32)
     status("    Win32 UI:" YES)
@@ -748,7 +748,7 @@ else()
   endif()
 endif()
 
-status("    OpenGL support:" HAVE_OPENGL THEN YES ELSE NO)
+status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE NO)
 
 # media
 status("")
@@ -776,7 +776,7 @@ else()
   status("    JPEG 2000:"  "NO")
 endif()
 
-status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN ${OPENEXR_LIBRARIES} ELSE NO)
+status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE NO)
 status("    OpenNI:"    HAVE_OPENNI                        THEN YES             ELSE NO)
 status("    OpenNI PrimeSensor Modules:"
                         HAVE_OPENNI_PRIME_SENSOR_MODULE    THEN YES             ELSE NO)
@@ -835,8 +835,19 @@ else()
 endif()
 
 status("    Use TBB:"   HAVE_TBB   THEN "YES (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})" ELSE NO)
-status("    Use Cuda:"  HAVE_CUDA  THEN YES ELSE NO)
+status("    Use Cuda:"  HAVE_CUDA  THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
 status("    Use Eigen:" HAVE_EIGEN THEN YES ELSE NO)
+
+if(HAVE_CUDA)
+  status("")
+  status("  NVIDIA CUDA:")
+
+  status("    Use CUFFT:"            HAVE_CUFFT  THEN YES ELSE NO)
+  status("    Use CUBLAS:"           HAVE_CUBLAS THEN YES ELSE NO)
+  status("    NVIDIA GPU arch:"      OPENCV_CUDA_ARCH_BIN)
+  status("    NVIDIA PTX archs:"     OPENCV_CUDA_ARCH_BIN)
+  status("    NVIDIA GPU features":  OPENCV_CUDA_ARCH_FEATURES)
+endif()
 
 # interfaces to other languages
 status("")

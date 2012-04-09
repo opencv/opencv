@@ -277,7 +277,7 @@ macro(ocv_to_full_paths VAR)
 endmacro()
 
 
-# read set of defines from the header file
+# read set of version defines from the header file
 macro(ocv_parse_header FILENAME FILE_VAR)
   set(vars_regex "")
   set(__parnet_scope OFF)
@@ -318,6 +318,7 @@ macro(ocv_parse_header FILENAME FILE_VAR)
   endforeach()
 endmacro()
 
+# read single version define from the header file
 macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME SCOPE)
   set(${LIBNAME}_H "")
   if(EXISTS "${HDR_PATH}")
