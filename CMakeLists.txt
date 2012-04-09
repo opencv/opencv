@@ -655,7 +655,7 @@ include(cmake/OpenCVGenConfig.cmake REQUIRED)
 status("")
 status("General configuration for OpenCV ${OPENCV_VERSION} =====================================")
 if(OPENCV_SVNVERSION)
-  status("svn:" "${OPENCV_SVNVERSION}")
+  status("Version control:" ${OPENCV_SVNVERSION})
 endif()
 
 #build platform

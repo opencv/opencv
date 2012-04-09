@@ -127,7 +127,6 @@ if(ANDROID_EXECUTABLE)
   if(ANDROID_SDK_TARGETS AND CMAKE_VERSION VERSION_GREATER "2.8")
     set_property( CACHE ANDROID_SDK_TARGET PROPERTY STRINGS ${ANDROID_SDK_TARGETS} )
   endif()
-
 endif(ANDROID_EXECUTABLE)
 
 # finds minimal installed SDK target compatible with provided names or API levels
@@ -136,7 +135,7 @@ endif(ANDROID_EXECUTABLE)
 macro(android_get_compatible_target VAR)
   set(${VAR} "${VAR}-NOTFOUND")
   if(ANDROID_SDK_TARGETS)
-    list(GET ANDROID_SDK_TARGETS 1 __lvl)
+    list(GET ANDROID_SDK_TARGETS 0 __lvl)
     string(REGEX MATCH "[0-9]+$" __lvl "${__lvl}")
 
     #find minimal level mathing to all provided levels
