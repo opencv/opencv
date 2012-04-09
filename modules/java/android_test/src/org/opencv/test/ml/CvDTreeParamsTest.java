@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvDTreeParams;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvDTreeParamsTest extends TestCase {
+public class CvDTreeParamsTest extends OpenCVTestCase {
 
     public void testCvDTreeParams() {
         new CvDTreeParams();

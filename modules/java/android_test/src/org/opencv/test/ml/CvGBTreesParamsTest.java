@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvGBTreesParams;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvGBTreesParamsTest extends TestCase {
+public class CvGBTreesParamsTest extends OpenCVTestCase {
 
     public void testCvGBTreesParams() {
         new CvGBTreesParams();

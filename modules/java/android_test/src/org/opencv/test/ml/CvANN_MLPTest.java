@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvANN_MLP;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvANN_MLPTest extends TestCase {
+public class CvANN_MLPTest extends OpenCVTestCase {
 
     public void testClear() {
         fail("Not yet implemented");

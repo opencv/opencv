@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvRTParams;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvRTParamsTest extends TestCase {
+public class CvRTParamsTest extends OpenCVTestCase {
 
     public void testCvRTParams() {
         new CvRTParams();

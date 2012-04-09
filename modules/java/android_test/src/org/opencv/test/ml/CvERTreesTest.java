@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvERTrees;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvERTreesTest extends TestCase {
+public class CvERTreesTest extends OpenCVTestCase {
 
     public void testCvERTrees() {
         new CvERTrees();

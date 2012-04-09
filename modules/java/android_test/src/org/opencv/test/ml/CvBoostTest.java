@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvBoost;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvBoostTest extends TestCase {
+public class CvBoostTest extends OpenCVTestCase {
 
     public void testClear() {
         fail("Not yet implemented");
