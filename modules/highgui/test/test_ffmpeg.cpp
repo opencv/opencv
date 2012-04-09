@@ -57,11 +57,9 @@ public:
     {
         const int img_r = 4096;
         const int img_c = 4096;
-        Size frame_s = Size(img_c, img_r);
-        const double fps = 15;
+        const double fps0 = 15;
         const double time_sec = 1;
-        const int coeff = static_cast<int>(static_cast<double>(cv::min(img_c, img_r)) / (fps * time_sec));
-
+        
         const size_t n = sizeof(codec_bmp_tags)/sizeof(codec_bmp_tags[0]);
 
         bool created = false;
@@ -70,7 +68,7 @@ public:
         {
         stringstream s; s << codec_bmp_tags[j].tag;
         int tag = codec_bmp_tags[j].tag;
-            
+        
         if( tag != MKTAG('H', '2', '6', '3') &&
             tag != MKTAG('H', '2', '6', '1') &&
             tag != MKTAG('D', 'I', 'V', 'X') &&
@@ -93,12 +91,19 @@ public:
 
         try
         {
+            double fps = fps0;
+            Size frame_s = Size(img_c, img_r);
             
-            frame_s = Size(img_c, img_r);
             if( tag == CV_FOURCC('H', '2', '6', '1') )
                 frame_s = Size(352, 288);
             else if( tag == CV_FOURCC('H', '2', '6', '3') )
                 frame_s = Size(704, 576);
+            /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
+                     tag == CV_FOURCC('j', 'p', 'e', 'g') )
+                frame_s = Size(1920, 1080);*/
+            
+            if( tag == CV_FOURCC('M', 'P', 'E', 'G') )
+                fps = 25;
             
             VideoWriter writer(filename, tag, fps, frame_s);
 
@@ -113,6 +118,7 @@ public:
             else
             {
                 Mat img(frame_s, CV_8UC3, Scalar::all(0));
+                const int coeff = cvRound(cv::min(frame_s.width, frame_s.height)/(fps0 * time_sec));
 
                 for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
                 {

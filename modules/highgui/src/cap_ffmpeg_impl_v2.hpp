@@ -383,7 +383,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     /* register all codecs, demux and protocols */
     av_register_all();
 
-    //av_log_set_level(AV_LOG_ERROR);
+    av_log_set_level(AV_LOG_ERROR);
 
     int err = avformat_open_input(&ic, _filename, NULL, NULL);
     if (err < 0) {
@@ -711,7 +711,7 @@ int64_t CvCapture_FFMPEG::get_total_frames()
 
     if (nbf == 0)
     {
-        nbf = static_cast<int64_t>(get_duration_sec() * get_fps());
+        nbf = (int64_t)floor(get_duration_sec() * get_fps() + 0.5);
     }
     return nbf;
 }
@@ -829,6 +829,7 @@ struct CvVideoWriter_FFMPEG
     AVStream        * video_st;
     int               input_pix_fmt;
     Image_FFMPEG      temp_image;
+    int               frame_width, frame_height;
     bool              ok;
 #if defined(HAVE_FFMPEG_SWSCALE)
     struct SwsContext *img_convert_ctx;
@@ -909,6 +910,7 @@ void CvVideoWriter_FFMPEG::init()
 #if defined(HAVE_FFMPEG_SWSCALE)
     img_convert_ctx = 0;
 #endif
+    frame_width = frame_height = 0;
     ok = false;
 }
 
@@ -986,6 +988,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
     /* put sample parameters */
     c->bit_rate = bitrate;
+    // took advice from
+    // http://ffmpeg-users.933282.n4.nabble.com/warning-clipping-1-dct-coefficients-to-127-127-td934297.html
+    c->qmin = 3;
 
     /* resolution must be a multiple of two */
     c->width = w;
@@ -1050,6 +1055,8 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     return st;
 }
 
+static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
+
 int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_t * outbuf, uint32_t outbuf_size, AVFrame * picture )
 {
 #if LIBAVFORMAT_BUILD > 4628
@@ -1058,7 +1065,7 @@ int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_
     AVCodecContext * c = &(video_st->codec);
 #endif
     int out_size;
-    int ret;
+    int ret = 0;
 
     if (oc->oformat->flags & AVFMT_RAWPICTURE) {
         /* raw video case. The API will change slightly in the near
@@ -1099,18 +1106,21 @@ int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_
             /* write the compressed frame in the media file */
             ret = av_write_frame(oc, &pkt);
         } else {
-            ret = 0;
+            ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
         }
     }
-    if (ret != 0) return -1;
-
-    return 0;
+    return ret;
 }
 
 /// write a frame with FFMPEG
 bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin )
 {
     bool ret = false;
+    
+    if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
+        return false;
+    width = frame_width;
+    height = frame_height;
 
     // typecast from opaque data type to implemented struct
 #if LIBAVFORMAT_BUILD > 4628
@@ -1232,7 +1242,18 @@ void CvVideoWriter_FFMPEG::close()
 
     /* write the trailer, if any */
     if(ok && oc)
+    {
+        if (!(oc->oformat->flags & AVFMT_RAWPICTURE))
+        {
+            for(;;)
+            {
+                int ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, NULL);
+                if( ret == OPENCV_NO_FRAMES_WRITTEN_CODE || ret < 0 )
+                    break;
+            }
+        }
         av_write_trailer(oc);
+    }
 
     // free pictures
 #if LIBAVFORMAT_BUILD > 4628
@@ -1297,17 +1318,28 @@ void CvVideoWriter_FFMPEG::close()
                                      double fps, int width, int height, bool is_color )
     {
         CodecID codec_id = CODEC_ID_NONE;
-        int err, codec_pix_fmt, bitrate_scale=64;
+        int err, codec_pix_fmt;
+        double bitrate_scale = 1;
 
         close();
 
         // check arguments
-        assert (filename);
-        assert (fps > 0);
-        assert (width > 0  &&  height > 0);
+        if( !filename )
+            return false;
+        if(fps <= 0)
+            return false;
+        
+        // we allow frames of odd width or height, but in this case we truncate
+        // the rightmost column/the bottom row. Probably, this should be handled more elegantly,
+        // but some internal functions inside FFMPEG swscale require even width/height.
+        width &= -2;
+        height &= -2;
+        if( width <= 0 || height <= 0 )
+            return false;
 
         // tell FFMPEG to register codecs
-        av_register_all ();
+        av_register_all();
+        av_log_set_level(AV_LOG_ERROR);
 
         /* auto detect the output format from the name and fourcc code. */
 
@@ -1367,7 +1399,7 @@ void CvVideoWriter_FFMPEG::close()
         case CODEC_ID_MJPEG:
         case CODEC_ID_LJPEG:
             codec_pix_fmt = PIX_FMT_YUVJ420P;
-            bitrate_scale = 128;
+            bitrate_scale = 3;
             break;
         case CODEC_ID_RAWVIDEO:
             codec_pix_fmt = input_pix_fmt == PIX_FMT_GRAY8 ||
@@ -1379,12 +1411,13 @@ void CvVideoWriter_FFMPEG::close()
             codec_pix_fmt = PIX_FMT_YUV420P;
             break;
         }
+        
+        double bitrate = MIN(bitrate_scale*fps*width*height, (double)INT_MAX/2);
 
         // TODO -- safe to ignore output audio stream?
         video_st = icv_add_video_stream_FFMPEG(oc, codec_id,
-                                               width, height, width*height*bitrate_scale,
+                                               width, height, cvRound(bitrate),
                                                fps, codec_pix_fmt);
-
 
         /* set the output parameters (must be done even if no
        parameters). */
@@ -1488,6 +1521,8 @@ void CvVideoWriter_FFMPEG::close()
             remove(filename);
             return false;
         }
+        frame_width = width;
+        frame_height = height;
         ok = true;
         return true;
     }
@@ -1535,8 +1570,6 @@ void CvVideoWriter_FFMPEG::close()
     {
         return capture->retrieveFrame(0, data, step, width, height, cn);
     }
-
-
 
     CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,
                                                       int width, int height, int isColor )

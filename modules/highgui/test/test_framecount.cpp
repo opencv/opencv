@@ -55,7 +55,7 @@ public:
 
 void CV_FramecountTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
     const int time_sec = 5, fps = 25;
