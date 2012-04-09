@@ -19,12 +19,34 @@
 #ifndef AVDEVICE_AVDEVICE_H
 #define AVDEVICE_AVDEVICE_H
 
+/**
+ * @file
+ * @ingroup lavd
+ * Main libavdevice API header
+ */
+
+/**
+ * @defgroup lavd Special devices muxing/demuxing library
+ * @{
+ * Libavdevice is a complementary library to @ref libavf "libavformat". It
+ * provides various "special" platform-specific muxers and demuxers, e.g. for
+ * grabbing devices, audio capture and playback etc. As a consequence, the
+ * (de)muxers in libavdevice are of the AVFMT_NOFILE type (they use their own
+ * I/O functions). The filename passed to avformat_open_input() often does not
+ * refer to an actually existing file, but has some special device-specific
+ * meaning - e.g. for the x11grab device it is the display name.
+ *
+ * To use libavdevice, simply call avdevice_register_all() to register all
+ * compiled muxers and demuxers. They all use standard libavformat API.
+ * @}
+ */
+
 #include "libavutil/avutil.h"
 #include "libavformat/avformat.h"
 
 #define LIBAVDEVICE_VERSION_MAJOR 53
-#define LIBAVDEVICE_VERSION_MINOR  1
-#define LIBAVDEVICE_VERSION_MICRO  1
+#define LIBAVDEVICE_VERSION_MINOR  4
+#define LIBAVDEVICE_VERSION_MICRO 100
 
 #define LIBAVDEVICE_VERSION_INT AV_VERSION_INT(LIBAVDEVICE_VERSION_MAJOR, \
                                                LIBAVDEVICE_VERSION_MINOR, \
@@ -33,10 +55,6 @@
                                            LIBAVDEVICE_VERSION_MINOR, \
                                            LIBAVDEVICE_VERSION_MICRO)
 #define LIBAVDEVICE_BUILD       LIBAVDEVICE_VERSION_INT
-
-#ifndef FF_API_V4L
-#define FF_API_V4L              (LIBAVDEVICE_VERSION_MAJOR < 54)
-#endif
 
 /**
  * Return the LIBAVDEVICE_VERSION_INT constant.

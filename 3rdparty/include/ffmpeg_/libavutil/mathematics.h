@@ -57,6 +57,12 @@
 #define INFINITY       (1.0/0.0)
 #endif
 
+/**
+ * @addtogroup lavu_math
+ * @{
+ */
+
+
 enum AVRounding {
     AV_ROUND_ZERO     = 0, ///< Round toward zero.
     AV_ROUND_INF      = 1, ///< Round away from zero.
@@ -108,5 +114,9 @@ int av_compare_ts(int64_t ts_a, AVRational tb_a, int64_t ts_b, AVRational tb_b);
  *         0                if a equals          b
  */
 int64_t av_compare_mod(uint64_t a, uint64_t b, uint64_t mod);
+
+/**
+ * @}
+ */
 
 #endif /* AVUTIL_MATHEMATICS_H */

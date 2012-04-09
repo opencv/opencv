@@ -24,6 +24,13 @@
 #include <stdint.h>
 
 /**
+ * @defgroup lavu_base64 Base64
+ * @ingroup lavu_crypto
+ * @{
+ */
+
+
+/**
  * Decode a base64-encoded string.
  *
  * @param out      buffer for decoded data
@@ -50,5 +57,9 @@ char *av_base64_encode(char *out, int out_size, const uint8_t *in, int in_size);
  * Calculate the output size needed to base64-encode x bytes.
  */
 #define AV_BASE64_SIZE(x)  (((x)+2) / 3 * 4 + 1)
+
+ /**
+  * @}
+  */
 
 #endif /* AVUTIL_BASE64_H */

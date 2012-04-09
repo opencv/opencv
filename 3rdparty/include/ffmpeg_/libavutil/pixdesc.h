@@ -87,6 +87,8 @@ typedef struct AVPixFmtDescriptor{
 #define PIX_FMT_PAL       2 ///< Pixel format has a palette in data[1], values are indexes in this palette.
 #define PIX_FMT_BITSTREAM 4 ///< All values of a component are bit-wise packed end to end.
 #define PIX_FMT_HWACCEL   8 ///< Pixel format is an HW accelerated format.
+#define PIX_FMT_PLANAR   16 ///< At least one pixel component is not in the first data plane
+#define PIX_FMT_RGB      32 ///< The pixel format contains RGB-like data (as opposed to YUV/grayscale)
 
 /**
  * The array of all the pixel format descriptors.

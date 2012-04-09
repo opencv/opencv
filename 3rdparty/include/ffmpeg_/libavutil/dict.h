@@ -20,15 +20,56 @@
 /**
  * @file
  * Public dictionary API.
+ * @deprecated
+ *  AVDictionary is provided for compatibility with libav. It is both in
+ *  implementation as well as API inefficient. It does not scale and is
+ *  extremely slow with large dictionaries.
+ *  It is recommended that new code uses our tree container from tree.c/h
+ *  where applicable, which uses AVL trees to achieve O(log n) performance.
  */
 
 #ifndef AVUTIL_DICT_H
 #define AVUTIL_DICT_H
 
+/**
+ * @addtogroup lavu_dict AVDictionary
+ * @ingroup lavu_data
+ *
+ * @brief Simple key:value store
+ *
+ * @{
+ * Dictionaries are used for storing key:value pairs. To create
+ * an AVDictionary, simply pass an address of a NULL pointer to
+ * av_dict_set(). NULL can be used as an empty dictionary wherever
+ * a pointer to an AVDictionary is required.
+ * Use av_dict_get() to retrieve an entry or iterate over all
+ * entries and finally av_dict_free() to free the dictionary
+ * and all its contents.
+ *
+ * @code
+ * AVDictionary *d = NULL;                // "create" an empty dictionary
+ * av_dict_set(&d, "foo", "bar", 0);      // add an entry
+ *
+ * char *k = av_strdup("key");            // if your strings are already allocated,
+ * char *v = av_strdup("value");          // you can avoid copying them like this
+ * av_dict_set(&d, k, v, AV_DICT_DONT_STRDUP_KEY | AV_DICT_DONT_STRDUP_VAL);
+ *
+ * AVDictionaryEntry *t = NULL;
+ * while (t = av_dict_get(d, "", t, AV_DICT_IGNORE_SUFFIX)) {
+ *     <....>                             // iterate over all entries in d
+ * }
+ *
+ * av_dict_free(&d);
+ * @endcode
+ *
+ */
+
 #define AV_DICT_MATCH_CASE      1
 #define AV_DICT_IGNORE_SUFFIX   2
-#define AV_DICT_DONT_STRDUP_KEY 4
-#define AV_DICT_DONT_STRDUP_VAL 8
+#define AV_DICT_DONT_STRDUP_KEY 4   /**< Take ownership of a key that's been
+                                         allocated with av_malloc() and children. */
+#define AV_DICT_DONT_STRDUP_VAL 8   /**< Take ownership of a value that's been
+                                         allocated with av_malloc() and chilren. */
 #define AV_DICT_DONT_OVERWRITE 16   ///< Don't overwrite existing entries.
 #define AV_DICT_APPEND         32   /**< If the entry already exists, append to it.  Note that no
                                       delimiter is added, the strings are simply concatenated. */
@@ -74,8 +115,13 @@ int av_dict_set(AVDictionary **pm, const char *key, const char *value, int flags
 void av_dict_copy(AVDictionary **dst, AVDictionary *src, int flags);
 
 /**
- * Free all the memory allocated for an AVDictionary struct.
+ * Free all the memory allocated for an AVDictionary struct
+ * and all keys and values.
  */
 void av_dict_free(AVDictionary **m);
+
+/**
+ * @}
+ */
 
 #endif // AVUTIL_DICT_H
