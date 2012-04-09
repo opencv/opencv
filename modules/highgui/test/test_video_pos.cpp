@@ -61,6 +61,9 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int fr
 {
  stringstream s; s << codec;
 
+ if( format == "mov" && codec == CV_FOURCC('M', 'P', 'G', '2'))
+     putchar('$');
+
  cv::VideoWriter writer("test_video_"+s.str()+"."+format, codec, 25, cv::Size(640, 480), false);
 
  for (int i = 0; i < framecount; ++i)
@@ -95,8 +98,6 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int fr
 
    writer << mat;
  }
-
- writer.~VideoWriter();
 }
 
 void CV_PositioningTest::run(int)

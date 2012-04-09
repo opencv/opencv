@@ -433,8 +433,6 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             writer << img;
         }
 
-        writer.~VideoWriter();
-
         cv::VideoCapture cap(video_file);
 
         size_t FRAME_COUNT = (size_t)cap.get(CV_CAP_PROP_FRAME_COUNT);
@@ -492,8 +490,6 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             }
 
         }
-
-        cap.~VideoCapture();
     }
 }
 
@@ -556,9 +552,6 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
             if (framecount == IMAGE_COUNT) break;
         }
 
-        frame.~Mat();
-        writer.~VideoWriter();
-
         cv::VideoCapture vcap(dir+"video_"+string(&codecchars[0], 4)+"."+ext[i]);
 
         if (!vcap.isOpened())
@@ -613,12 +606,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
                 continue;
             }
         }
-
-        img.~Mat();
-        vcap.~VideoCapture();
     }
-
-    cap.~VideoCapture();
 }
 
 void CV_ImageTest::run(int)

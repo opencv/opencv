@@ -313,7 +313,7 @@ void CvCapture_FFMPEG::close()
 */
 bool CvCapture_FFMPEG::reopen()
 {
-    if ( filename==NULL ) return false;
+    /*if ( filename==NULL ) return false;
 
 	#if LIBAVFORMAT_BUILD > 4628
 		avcodec_close( video_st->codec );
@@ -322,12 +322,12 @@ bool CvCapture_FFMPEG::reopen()
 	#endif
     #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
         av_close_input_file(ic);
+        av_open_input_file(&ic, filename, )
     #else
         avformat_close_input(&ic);
+        avformat_open_input(&ic, filename, NULL, NULL);
     #endif
 
-    // reopen video
-    avformat_open_input(&ic, filename, NULL, NULL);
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
         #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
             avformat_find_stream_info(ic);
@@ -357,7 +357,7 @@ bool CvCapture_FFMPEG::reopen()
 
 	// reset framenumber to zero
 	frame_number = 0;
-    picture_pts=0;
+    picture_pts=0;*/
 
     return true;
 }
@@ -454,7 +454,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     if(video_stream >= 0) valid = true;
 
     // perform check if source is seekable via ffmpeg's seek function av_seek_frame(...)
-    err = av_seek_frame(ic, video_stream, 10, 0);
+    /*err = av_seek_frame(ic, video_stream, 10, 0);
     if (err < 0)
     {
         filename=(char*)malloc(strlen(_filename)+1);
@@ -470,7 +470,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         int64_t ts    = video_st->first_dts;
         int     flags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
         av_seek_frame(ic, video_stream, ts, flags);
-    }
+    }*/
 exit_func:
 
     if( !valid )
@@ -611,8 +611,8 @@ double CvCapture_FFMPEG::getProperty( int property_id )
     if( !video_st ) return 0;
 
     // double frameScale = av_q2d (video_st->time_base) * av_q2d (video_st->r_frame_rate);
-    int64_t timestamp;
-    timestamp = picture_pts;
+    //int64_t timestamp;
+    //timestamp = picture_pts;
 
     switch( property_id )
     {
@@ -829,6 +829,7 @@ struct CvVideoWriter_FFMPEG
     AVStream        * video_st;
     int               input_pix_fmt;
     Image_FFMPEG      temp_image;
+    bool              ok;
 #if defined(HAVE_FFMPEG_SWSCALE)
     struct SwsContext *img_convert_ctx;
 #endif
@@ -908,6 +909,7 @@ void CvVideoWriter_FFMPEG::init()
 	#if defined(HAVE_FFMPEG_SWSCALE)
 		img_convert_ctx = 0;
 	#endif
+    ok = false;
 }
 
 /**
@@ -1228,7 +1230,8 @@ void CvVideoWriter_FFMPEG::close()
     // TODO -- do we need to account for latency here?
 
     /* write the trailer, if any */
-    av_write_trailer(oc);
+    if(ok && oc)
+        av_write_trailer(oc);
 
     // free pictures
 	#if LIBAVFORMAT_BUILD > 4628
@@ -1477,8 +1480,14 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     /* write the stream header, if any */
-    avformat_write_header(oc, NULL);
-
+    err=avformat_write_header(oc, NULL);
+    if(err < 0)
+    {
+        close();
+        remove(filename);
+        return false;
+    }
+    ok = true;
     return true;
 }
 
