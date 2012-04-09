@@ -205,6 +205,7 @@ CvEM::CvEM( const Mat& samples, const Mat& sample_idx, CvEMParams params )
 bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
                  CvEMParams _params, Mat* _labels )
 {
+    CV_Assert(_sample_idx.empty());
     Mat prbs, weights, means, likelihoods;
     std::vector<Mat> covsHdrs;
     init_params(_params, prbs, weights, means, covsHdrs);

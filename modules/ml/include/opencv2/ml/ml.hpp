@@ -578,7 +578,7 @@ public:
     CV_WRAP virtual bool train(InputArray samples,
                        OutputArray labels=noArray(),
                        OutputArray probs=noArray(),
-                       OutputArray likelihoods=noArray());
+                       OutputArray logLikelihoods=noArray());
     
     CV_WRAP virtual bool trainE(InputArray samples,
                         InputArray means0,
@@ -586,17 +586,17 @@ public:
                         InputArray weights0=noArray(),
                         OutputArray labels=noArray(),
                         OutputArray probs=noArray(),
-                        OutputArray likelihoods=noArray());
+                        OutputArray logLikelihoods=noArray());
     
     CV_WRAP virtual bool trainM(InputArray samples,
                         InputArray probs0,
                         OutputArray labels=noArray(),
                         OutputArray probs=noArray(),
-                        OutputArray likelihoods=noArray());
+                        OutputArray logLikelihoods=noArray());
     
     CV_WRAP int predict(InputArray sample,
                 OutputArray probs=noArray(),
-                CV_OUT double* likelihood=0) const;
+                CV_OUT double* logLikelihood=0) const;
 
     CV_WRAP bool isTrained() const;
 
@@ -614,7 +614,7 @@ protected:
     bool doTrain(int startStep,
                  OutputArray labels,
                  OutputArray probs,
-                 OutputArray likelihoods);
+                 OutputArray logLikelihoods);
     virtual void eStep();
     virtual void mStep();
 
@@ -622,9 +622,9 @@ protected:
     void decomposeCovs();
     void computeLogWeightDivDet();
 
-    void computeProbabilities(const Mat& sample, int& label, Mat* probs, float* likelihood) const;
+    void computeProbabilities(const Mat& sample, int& label, Mat* probs, double* logLikelihood) const;
 
-    // all inner matrices have type CV_32FC1
+    // all inner matrices have type CV_64FC1
     CV_PROP_RW int nclusters;
     CV_PROP_RW int covMatType;
     CV_PROP_RW int maxIters;
@@ -632,7 +632,7 @@ protected:
 
     Mat trainSamples;
     Mat trainProbs;
-    Mat trainLikelihoods;
+    Mat trainLogLikelihoods;
     Mat trainLabels;
     Mat trainCounts;
 
