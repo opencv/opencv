@@ -530,7 +530,7 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, double*
 
     if(logLikelihood)
     {
-        double logWeightProbs = std::log(std::max(DBL_MIN, sum(*sampleProbs)[0]));
+        double logWeightProbs = std::log(weights.dot(*sampleProbs));
         *logLikelihood = logWeightProbs;
     }
 }
