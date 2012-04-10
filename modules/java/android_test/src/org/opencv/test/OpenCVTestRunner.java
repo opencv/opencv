@@ -1,17 +1,17 @@
 package org.opencv.test;
 
-import android.content.Context;
-import android.test.AndroidTestRunner;
-import android.test.InstrumentationTestRunner;
-import android.util.Log;
-
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-
 import java.io.File;
 import java.io.IOException;
 
 import junit.framework.Assert;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+
+import android.content.Context;
+import android.test.AndroidTestRunner;
+import android.test.InstrumentationTestRunner;
+import android.util.Log;
 
 /**
  * This only class is Android specific.
@@ -55,7 +55,6 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     @Override
     public void onStart() {
-    	Log.e("OpenCVTestRunner", "onStart()");
         context = getContext();
         Assert.assertTrue("Context can't be 'null'", context != null);
         LENA_PATH = Utils.exportResource(context, R.drawable.lena);

@@ -235,21 +235,19 @@ public class Calib3dTest extends OpenCVTestCase {
     public void testFindFundamentalMatListOfPointListOfPoint() {
         int minFundamentalMatPoints = 8;
 
-        MatOfPoint2f pts1 = new MatOfPoint2f();
-    	MatOfPoint2f pts2 = new MatOfPoint2f();
-    	pts2.alloc(minFundamentalMatPoints);
+    	MatOfPoint2f pts = new MatOfPoint2f();
+    	pts.alloc(minFundamentalMatPoints);
 
         for (int i = 0; i < minFundamentalMatPoints; i++) {
             double x = Math.random() * 100 - 50;
             double y = Math.random() * 100 - 50;
-            pts1.push_back(new MatOfPoint2f(new Point(x, y))); //add(new Point(x, y));
-            pts2.put(i, 0, x, y); //add(new Point(x, y));
+            pts.put(i, 0, x, y); //add(new Point(x, y));
         }
 
-        Mat fm = Calib3d.findFundamentalMat(pts1, pts2);
+        Mat fm = Calib3d.findFundamentalMat(pts, pts);
 
         truth = new Mat(3, 3, CvType.CV_64F);
-        truth.put(0, 0, 0, -0.5, -0.5, 0.5, 0, 0, 0.5, 0, 0);
+        truth.put(0, 0, 0, -0.577, 0.288, 0.577, 0, 0.288, -0.288, -0.288, 0);
         assertMatEqual(truth, fm, EPS);
     }
 
@@ -280,8 +278,8 @@ public class Calib3dTest extends OpenCVTestCase {
         for (int i = 0; i < NUM; i++) {
             double x = Math.random() * 100 - 50;
             double y = Math.random() * 100 - 50;
-            originalPoints.put(i, 0, x, y); //add(new Point(x, y));
-            transformedPoints.put(i, 0, x, y); //add(new Point(y, x));
+            originalPoints.put(i, 0, x, y);
+            transformedPoints.put(i, 0, y, x);
         }
 
         Mat hmg = Calib3d.findHomography(originalPoints, transformedPoints);

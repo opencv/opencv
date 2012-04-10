@@ -197,10 +197,10 @@ type_dict = {
 
     "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
     "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2f> %(n)s", "suffix" : "J" },
-    "vector_Point2d"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2d> %(n)s", "suffix" : "J" },
+    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2d> %(n)s", "suffix" : "J" },
     "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3i> %(n)s", "suffix" : "J" },
     "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3f> %(n)s", "suffix" : "J" },
-    "vector_Point3d"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
+    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
     "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
     "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<DMatch> %(n)s", "suffix" : "J" },
     "vector_Rect"     : { "j_type" : "MatOfRect", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
@@ -499,7 +499,7 @@ func_arg_fix = {
         'randn'    : { 'mean'    : 'double', 'stddev' : 'double', },
         'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
         'goodFeaturesToTrack' : { 'corners' : 'vector_Point', },
-        'findFundamentalMat' : { 'points1' : 'vector_Point2d', 'points2' : 'vector_Point2d', },
+        'findFundamentalMat' : { 'points1' : 'vector_Point2f', 'points2' : 'vector_Point2f', },
         'cornerSubPix' : { 'corners' : 'vector_Point2f', },
         'minEnclosingCircle' : { 'points' : 'vector_Point2f', },
         'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
@@ -519,7 +519,7 @@ func_arg_fix = {
         'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
         'hconcat' : { 'src' : 'vector_Mat', },
         'vconcat' : { 'src' : 'vector_Mat', },
-        'undistortPoints' : { 'src' : 'vector_Point2d', 'dst' : 'vector_Point2d' },
+        'undistortPoints' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f' },
         'checkRange' : {'pos' : '*'},
         'meanStdDev' : {'mean' : 'vector_double', 'stddev' : 'vector_double'},
         'drawContours' : {'contours' : 'vector_vector_Point'},
@@ -572,6 +572,10 @@ class ArgInfo(object):
         if ctype.endswith("*"):
             ctype = ctype[:-1]
             self.pointer = True
+        if ctype == 'vector_Point2d':
+            ctype = 'vector_Point2f'
+        elif ctype == 'vector_Point3d':
+            ctype = 'vector_Point3f'
         self.ctype = ctype
         self.name = arg_tuple[1]
         self.defval = arg_tuple[2]

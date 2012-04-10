@@ -13,7 +13,7 @@ public class HighguiTest extends OpenCVTestCase {
 
     public void testImencodeStringMatListOfByte() {
         MatOfByte buff = new MatOfByte();
-        assertEquals(0, buff.size());
+        assertEquals(0, buff.total());
         assertTrue( Highgui.imencode(".jpg", gray127, buff) );
         assertFalse(0 == buff.total());
     }

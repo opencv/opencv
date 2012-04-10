@@ -178,7 +178,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         for(int i = 0; i<matches.size(); i++)
         {
         	MatOfDMatch vdm = matches.get(i); 
-            assertEquals(Math.min(k, train.rows()), vdm.total());
+            assertEquals(Math.min(k, train.total()), vdm.total());
             for(DMatch dm : vdm.toArray())
             {
             	assertEquals(dm.queryIdx, i);

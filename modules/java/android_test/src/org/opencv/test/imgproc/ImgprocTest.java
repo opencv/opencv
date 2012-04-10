@@ -242,8 +242,8 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcBackProject() {
         List<Mat> images = Arrays.asList(grayChess);
-        MatOfInt channels = new MatOfInt(1, 0);
-        MatOfInt histSize = new MatOfInt(1, 10);
+        MatOfInt channels = new MatOfInt(1, new int[]{0});
+        MatOfInt histSize = new MatOfInt(1, new int[]{10});
         MatOfFloat ranges = new MatOfFloat(1, 0f, 256f);
 
         Mat hist = new Mat();
@@ -259,8 +259,8 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat() {
         List<Mat> images = Arrays.asList(gray128);
-        MatOfInt channels = new MatOfInt(1, 0);
-        MatOfInt histSize = new MatOfInt(1, 10);
+        MatOfInt channels = new MatOfInt(1, new int[]{0});
+        MatOfInt histSize = new MatOfInt(1, new int[]{10});
         MatOfFloat ranges = new MatOfFloat(1, 0f, 256f);
         Mat hist = new Mat();
 
@@ -754,8 +754,8 @@ public class ImgprocTest extends OpenCVTestCase {
         rrect = Imgproc.fitEllipse(points);
 
         assertPointEquals(new Point(0, 0), rrect.center, EPS);
-        assertEquals(2.53, rrect.size.width, EPS);
-        assertEquals(2.53, rrect.size.height, EPS);
+        assertEquals(2.828, rrect.size.width, EPS);
+        assertEquals(2.828, rrect.size.height, EPS);
     }
 
     public void testFitLine() {
@@ -981,7 +981,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3);
 
-        assertEquals(4, lp.size());
+        assertEquals(4, lp.total());
     }
 
     public void testGoodFeaturesToTrackMatListOfPointIntDoubleDoubleMatIntBooleanDouble() {
@@ -991,7 +991,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, true, 0);
 
-        assertEquals(4, lp.size());
+        assertEquals(4, lp.total());
     }
 
     public void testGrabCutMatMatRectMatMatInt() {
@@ -1759,7 +1759,9 @@ public class ImgprocTest extends OpenCVTestCase {
     	MatOfPoint2f dst = new MatOfPoint2f();
         Mat cameraMatrix = Mat.eye(3, 3, CvType.CV_64FC1);
         Mat distCoeffs = new Mat(8, 1, CvType.CV_64FC1, new Scalar(0));
+
         Imgproc.undistortPoints(src, dst, cameraMatrix, distCoeffs);
+        
         assertEquals(src.size(), dst.size());
         for(int i=0; i<src.toList().size(); i++) {
         	//Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
