@@ -320,7 +320,8 @@ inline Mat Mat::colRange(const Range& r) const
 inline Mat Mat::diag(const Mat& d)
 {
     CV_Assert( d.cols == 1 || d.rows == 1 );
-    Mat m(d.total(), d.total(), d.type(), Scalar(0)), md = m.diag();
+    int len = d.rows + d.cols - 1;
+    Mat m(len, len, d.type(), Scalar(0)), md = m.diag();
     d.copyTo(md);
     return m;
 }
