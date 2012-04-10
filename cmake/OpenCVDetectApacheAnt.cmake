@@ -1,10 +1,18 @@
 file(TO_CMAKE_PATH "$ENV{ANT_DIR}" ANT_DIR_ENV_PATH)
 file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)
 
-find_host_program(ANT_EXECUTABLE NAMES ant.bat ant
-  PATHS "${ANT_DIR_ENV_PATH}/bin"
-        "${ProgramFiles_ENV_PATH}/apache-ant/bin"
+if(WIN32)
+  set(ANT_NAME ant.bat)
+else()
+  set(ANT_NAME ant)
+endif()
+
+find_host_program(ANT_EXECUTABLE NAMES ${ANT_NAME}
+  PATHS "${ANT_DIR_ENV_PATH}/bin" "${ProgramFiles_ENV_PATH}/apache-ant/bin"
+  NO_DEFAULT_PATH
   )
+
+find_host_program(ANT_EXECUTABLE NAMES ${ANT_NAME})
 
 if(ANT_EXECUTABLE)
   execute_process(COMMAND ${ANT_EXECUTABLE} -version
