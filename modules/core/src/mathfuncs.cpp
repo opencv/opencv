@@ -2051,7 +2051,7 @@ bool chackIntegerRang(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double
     for (int j = 0; j < as_one_channel.rows; ++j)
         for (int i = 0; i < as_one_channel.cols; ++i)
         {    
-            if (as_one_channel.at<typename type_ass::type>(j ,i) <= minVal || as_one_channel.at<typename type_ass::type>(j ,i) >= maxVal)
+            if (as_one_channel.at<typename type_ass::type>(j ,i) < minVal || as_one_channel.at<typename type_ass::type>(j ,i) >= maxVal)
             {            
                 bad_pt.y = j ; 
                 bad_pt.x = i % src.channels();

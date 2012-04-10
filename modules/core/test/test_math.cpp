@@ -2402,7 +2402,17 @@ TYPED_TEST_P(Core_CheckRange, Bounds)
     delete bad_pt;
 }
 
-REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds);
+TYPED_TEST_P(Core_CheckRange, Zero)
+{
+    double min_bound = 0.0;
+    double max_bound = 0.1;
+
+    cv::Mat src = cv::Mat::zeros(3,3, cv::DataDepth<TypeParam>::value);
+
+    ASSERT_TRUE( checkRange(src, true, NULL, min_bound, max_bound) );
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds, Zero);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
