@@ -1416,7 +1416,7 @@ void CvVideoWriter_FFMPEG::close()
 
         // TODO -- safe to ignore output audio stream?
         video_st = icv_add_video_stream_FFMPEG(oc, codec_id,
-                                               width, height, cvRound(bitrate),
+                                               width, height, (int)(bitrate + 0.5),
                                                fps, codec_pix_fmt);
 
         /* set the output parameters (must be done even if no
