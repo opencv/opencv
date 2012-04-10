@@ -46,8 +46,8 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
-                put(0, 0, 20, 51, 88, 22, 14, 181, 78, 111, 36, 144, 62, 0, 188, 196, 4, 8, 133, 80, 96, 18, 64, 29, 0,
-                        254, 230, 247, 12, 2, 78, 129, 70, 145);
+                put(0, 0,
+                		6, 74, 6, 129, 2, 130, 56, 0, 36, 132, 66, 165, 172, 6, 3, 72, 102, 61, 163, 214, 0, 144, 65, 232, 4, 32, 138, 129, 4, 21, 37, 88);
             }
         };
         assertMatEqual(truth, descriptors);
@@ -83,8 +83,8 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
-                put(0, 0, 20, 55, 88, 20, 14, 49, 70, 111, 148, 144, 30, 16, 252, 133, 0, 8, 5, 85, 32, 0, 74, 25, 0,
-                        252, 119, 191, 4, 2, 66, 1, 66, 145);
+                put(0, 0,
+                		6, 10, 22, 5, 2, 130, 56, 0, 44, 164, 66, 165, 140, 6, 1, 72, 38, 61, 163, 210, 0, 208, 1, 104, 4, 32, 10, 131, 0, 37, 37, 67);
             }
         };
         assertMatEqual(truth, descriptors);
@@ -95,7 +95,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<scaleFactor>1.2000000476837158e+00</scaleFactor>\n<nLevels>3</nLevels>\n<firstLevel>0</firstLevel>\n<edgeThreshold>31</edgeThreshold>\n<patchSize>31</patchSize>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.ORB</name>\n<WTA_K>2</WTA_K>\n<edgeThreshold>31</edgeThreshold>\n<firstLevel>0</firstLevel>\n<nFeatures>500</nFeatures>\n<nLevels>8</nLevels>\n<patchSize>31</patchSize>\n<scaleFactor>1.2000000476837158e+00</scaleFactor>\n<scoreType>0</scoreType>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -104,7 +104,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML:1.0\nscaleFactor: 1.2000000476837158e+00\nnLevels: 3\nfirstLevel: 0\nedgeThreshold: 31\npatchSize: 31\n";
+        String truth = "%YAML:1.0\nname: \"Feature2D.ORB\"\nWTA_K: 2\nedgeThreshold: 31\nfirstLevel: 0\nnFeatures: 500\nnLevels: 8\npatchSize: 31\nscaleFactor: 1.2000000476837158e+00\nscoreType: 0\n";
         assertEquals(truth, readFile(filename));
     }
 

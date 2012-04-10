@@ -1,13 +1,6 @@
 package org.opencv.test.video;
 
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.highgui.Highgui;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.video.BackgroundSubtractorMOG;
 
 public class BackgroundSubtractorMOGTest extends OpenCVTestCase {
 
