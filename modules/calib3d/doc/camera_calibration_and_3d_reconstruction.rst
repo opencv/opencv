@@ -158,7 +158,7 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
     :param term_crit: same as ``criteria``.
 
 The function estimates the intrinsic camera
-parameters and extrinsic parameters for each of the views. The algorithm is based on [Zhang2000] and [BoughuetMCT]. The coordinates of 3D object points and their corresponding 2D projections
+parameters and extrinsic parameters for each of the views. The algorithm is based on [Zhang2000]_ and [BouguetMCT]_. The coordinates of 3D object points and their corresponding 2D projections
 in each view must be specified. That may be achieved by using an
 object with a known geometry and easily detectable feature points.
 Such an object is called a calibration rig or calibration pattern,
@@ -1165,13 +1165,13 @@ Class for computing stereo correspondence using the semi-global block matching a
         ...
     };
 
-The class implements the modified H. Hirschmuller algorithm HH08 that differs from the original one as follows:
+The class implements the modified H. Hirschmuller algorithm [HH08]_ that differs from the original one as follows:
 
  * By default, the algorithm is single-pass, which means that you consider only 5 directions instead of 8. Set ``fullDP=true`` to run the full variant of the algorithm but beware that it may consume a lot of memory.
 
  * The algorithm matches blocks, not individual pixels. Though, setting ``SADWindowSize=1`` reduces the blocks to single pixels.
 
- * Mutual information cost function is not implemented. Instead, a simpler Birchfield-Tomasi sub-pixel metric from BT96 is used. Though, the color images are supported as well.
+ * Mutual information cost function is not implemented. Instead, a simpler Birchfield-Tomasi sub-pixel metric from [BT98]_ is used. Though, the color images are supported as well.
 
  * Some pre- and post- processing steps from K. Konolige algorithm :ocv:funcx:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
@@ -1556,13 +1556,6 @@ The function computes the rectification transformations without knowing intrinsi
 
     While the algorithm does not need to know the intrinsic parameters of the cameras, it heavily depends on the epipolar geometry. Therefore, if the camera lenses have a significant distortion, it would be better to correct it before computing the fundamental matrix and calling this function. For example, distortion coefficients can be estimated for each head of stereo camera separately by using :ocv:func:`calibrateCamera` . Then, the images can be corrected using :ocv:func:`undistort` , or just the point coordinates can be corrected with :ocv:func:`undistortPoints` .
 
-.. [BouguetMCT] J.Y.Bouguet. MATLAB calibration tool. http://www.vision.caltech.edu/bouguetj/calib_doc/
-
-.. [Hartley99] Hartley, R.I., Theory and Practice of Projective Rectification. IJCV 35 2, pp 115-127 (1999)
-
-.. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
-
-
 
 triangulatePoints
 -----------------
@@ -1589,3 +1582,14 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 .. seealso::
 
     :ocv:func:`reprojectImageTo3D`
+
+
+.. [BT98] Birchfield, S. and Tomasi, C. A pixel dissimilarity measure that is insensitive to image sampling. IEEE Transactions on Pattern Analysis and Machine Intelligence. 1998.
+
+.. [BouguetMCT] J.Y.Bouguet. MATLAB calibration tool. http://www.vision.caltech.edu/bouguetj/calib_doc/
+
+.. [Hartley99] Hartley, R.I., Theory and Practice of Projective Rectification. IJCV 35 2, pp 115-127 (1999)
+
+.. [HH08] Hirschmuller, H. Stereo Processing by Semiglobal Matching and Mutual Information, PAMI(30), No. 2, February 2008, pp. 328-341.
+
+.. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
