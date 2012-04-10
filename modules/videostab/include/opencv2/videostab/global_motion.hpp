@@ -101,7 +101,7 @@ public:
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
     virtual MotionModel motionModel() const { return motionModel_; }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1) = 0;
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) = 0;
 
 protected:
     MotionModel motionModel_;
@@ -111,7 +111,7 @@ class CV_EXPORTS FromFileMotionReader : public GlobalMotionEstimatorBase
 {
 public:
     FromFileMotionReader(const std::string &path);
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
 private:
     std::ifstream file_;
@@ -121,7 +121,7 @@ class CV_EXPORTS ToFileMotionWriter : public GlobalMotionEstimatorBase
 {
 public:
     ToFileMotionWriter(const std::string &path, Ptr<GlobalMotionEstimatorBase> estimator);
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
 private:
     std::ofstream file_;
@@ -148,7 +148,7 @@ public:
     void setMinInlierRatio(float val) { minInlierRatio_ = val; }
     float minInlierRatio() const { return minInlierRatio_; }
 
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1);
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
 private:
     Ptr<FeatureDetector> detector_;

@@ -68,10 +68,9 @@ void printHelp()
             "  -m, --model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
             "      Set motion model. The default is affine.\n"
             "  --outlier-ratio=<float_number>\n"
-            "      Outliers ratio in motion estimation. The default is 0.5.\n"
+            "      Motion estimation outlier ratio hypothesis. The default is 0.5."
             "  --min-inlier-ratio=<float_number>\n"
-            "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1,\n"
-            "      but you may want to increase it.\n\n"
+            "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n\n"
             "  -sm, --save-motions=(<file_path>|no)\n"
             "      Save estimated motions into file. The default is no.\n"
             "  -lm, --load-motions=(<file_path>|no)\n"
@@ -113,6 +112,10 @@ void printHelp()
             "  --ws-model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
             "      Set wobble suppression motion model (must have more DOF than motion \n"
             "      estimation model). The default is homography.\n"
+            "  --ws-min-inlier-ratio=<float_number>\n"
+            "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n"
+            "  --ws-outlier-ratio=<float_number>\n"
+            "      Motion estimation outlier ratio hypothesis. The default is 0.5.\n"
             "  -sm2, --save-motions2=(<file_path>|no)\n"
             "      Save motions estimated for wobble suppression. The default is no.\n"
             "  -lm2, --load-motions2=(<file_path>|no)\n"
@@ -157,6 +160,8 @@ int main(int argc, const char **argv)
                 "{ ws | wobble-suppress | no | }"
                 "{ | ws-period | 30 | }"
                 "{ | ws-model | homography | }"
+                "{ | ws-min-inlier-ratio | 0.1 | }"
+                "{ | ws-outlier-ratio | 0.5 | }"
                 "{ sm2 | save-motions2 | no | }"
                 "{ lm2 | load-motions2 | no | }"
                 "{ o | output | stabilized.avi | }"
@@ -192,24 +197,41 @@ int main(int argc, const char **argv)
                 MoreAccurateMotionWobbleSuppressor *ws = new MoreAccurateMotionWobbleSuppressor();
                 twoPassStabilizer->setWobbleSuppressor(ws);
                 ws->setPeriod(argi("ws-period"));
+
+                PyrLkRobustMotionEstimator *est = 0;
+
                 if (arg("ws-model") == "transl")
-                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(TRANSLATION));
+                    est = new PyrLkRobustMotionEstimator(TRANSLATION);
                 else if (arg("ws-model") == "transl_and_scale")
-                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE));
+                    est = new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE);
                 else if (arg("ws-model") == "linear_sim")
-                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY));
+                    est = new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY);
                 else if (arg("ws-model") == "affine")
-                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(AFFINE));
+                    est = new PyrLkRobustMotionEstimator(AFFINE);
                 else if (arg("ws-model") == "homography")
-                    ws->setMotionEstimator(new PyrLkRobustMotionEstimator(HOMOGRAPHY));
+                    est = new PyrLkRobustMotionEstimator(HOMOGRAPHY);
                 else
+                {
+                    delete est;
                     throw runtime_error("unknown wobble suppression motion model: " + arg("ws-model"));
+                }
+
+                RansacParams ransac = est->ransacParams();
+                ransac.eps = argf("ws-outlier-ratio");
+                est->setRansacParams(ransac);
+                est->setMinInlierRatio(argf("ws-min-inlier-ratio"));
+                ws->setMotionEstimator(est);
+
+                MotionModel model = est->motionModel();
                 if (arg("load-motions2") != "no")
+                {
                     ws->setMotionEstimator(new FromFileMotionReader(arg("load-motions2")));
+                    ws->motionEstimator()->setMotionModel(model);
+                }
                 if (arg("save-motions2") != "no")
                 {
-                    Ptr<GlobalMotionEstimatorBase> est = ws->motionEstimator();
-                    ws->setMotionEstimator(new ToFileMotionWriter(arg("save-motions2"), est));
+                    ws->setMotionEstimator(new ToFileMotionWriter(arg("save-motions2"), ws->motionEstimator()));
+                    ws->motionEstimator()->setMotionModel(model);
                 }
              }
         }
@@ -233,6 +255,7 @@ int main(int argc, const char **argv)
         stabilizer->setFrameSource(source);
 
         PyrLkRobustMotionEstimator *est = 0;
+
         if (arg("model") == "transl")
             est = new PyrLkRobustMotionEstimator(TRANSLATION);
         else if (arg("model") == "transl_and_scale")
@@ -248,24 +271,22 @@ int main(int argc, const char **argv)
             delete est;
             throw runtime_error("unknown motion model: " + arg("model"));
         }
+
         RansacParams ransac = est->ransacParams();
         ransac.eps = argf("outlier-ratio");
         est->setRansacParams(ransac);
         est->setMinInlierRatio(argf("min-inlier-ratio"));
         stabilizer->setMotionEstimator(est);
 
+        MotionModel model = stabilizer->motionEstimator()->motionModel();
         if (arg("load-motions") != "no")
         {
-            MotionModel model = stabilizer->motionEstimator()->motionModel();
             stabilizer->setMotionEstimator(new FromFileMotionReader(arg("load-motions")));
             stabilizer->motionEstimator()->setMotionModel(model);
         }
-
         if (arg("save-motions") != "no")
         {
-            MotionModel model = stabilizer->motionEstimator()->motionModel();
-            stabilizer->setMotionEstimator(
-                    new ToFileMotionWriter(arg("save-motions"), stabilizer->motionEstimator()));
+            stabilizer->setMotionEstimator(new ToFileMotionWriter(arg("save-motions"), stabilizer->motionEstimator()));
             stabilizer->motionEstimator()->setMotionModel(model);
         }
 

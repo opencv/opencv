@@ -295,12 +295,14 @@ FromFileMotionReader::FromFileMotionReader(const string &path)
 }
 
 
-Mat FromFileMotionReader::estimate(const Mat &/*frame0*/, const Mat &/*frame1*/)
+Mat FromFileMotionReader::estimate(const Mat &/*frame0*/, const Mat &/*frame1*/, bool *ok)
 {
     Mat_<float> M(3, 3);
+    bool ok_;
     file_ >> M(0,0) >> M(0,1) >> M(0,2)
           >> M(1,0) >> M(1,1) >> M(1,2)
-          >> M(2,0) >> M(2,1) >> M(2,2);
+          >> M(2,0) >> M(2,1) >> M(2,2) >> ok_;
+    if (ok) *ok = ok_;
     return M;
 }
 
@@ -313,12 +315,14 @@ ToFileMotionWriter::ToFileMotionWriter(const string &path, Ptr<GlobalMotionEstim
 }
 
 
-Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1)
+Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 {
-    Mat_<float> M = estimator_->estimate(frame0, frame1);
+    bool ok_;
+    Mat_<float> M = estimator_->estimate(frame0, frame1, &ok_);
     file_ << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
           << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
-          << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+          << M(2,0) << " " << M(2,1) << " " << M(2,2) << " " << ok_ << endl;
+    if (ok) *ok = ok_;
     return M;
 }
 
@@ -343,7 +347,7 @@ PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
 }
 
 
-Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1)
+Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 {
     detector_->detect(frame0, keypointsPrev_);
 
@@ -402,8 +406,12 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1)
         rmse = sqrt(rmse / static_cast<float>(ninliers));
     }
 
+    if (ok) *ok = true;
     if (rmse > maxRmse_ || static_cast<float>(ninliers) / pointsGood_.size() < minInlierRatio_)
+    {
         M = Mat::eye(3, 3, CV_32F);
+        if (ok) *ok = false;
+    }
 
     return M;
 }
