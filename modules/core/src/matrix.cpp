@@ -2610,18 +2610,18 @@ double cv::kmeans( InputArray _data, int K,
                     double max_dist = 0;                        
                     int farthest_i = -1;
                     float* new_center = centers.ptr<float>(k);
-                    float* _old_center = centers.ptr<float>(max_k);
-                    float* old_center = temp.ptr<float>();
+                    float* old_center = centers.ptr<float>(max_k);
+                    float* _old_center = temp.ptr<float>(); // normalized
                     float scale = 1.f/counters[max_k];
                     for( j = 0; j < dims; j++ )
-                        old_center[j] = _old_center[j]*scale;
+                        _old_center[j] = old_center[j]*scale;
                     
                     for( i = 0; i < N; i++ )
                     {
                         if( labels[i] != max_k )
                             continue;
                         sample = data.ptr<float>(i);
-                        double dist = normL2Sqr_(sample, old_center, dims);
+                        double dist = normL2Sqr_(sample, _old_center, dims);
                             
                         if( max_dist <= dist )
                         {
