@@ -2804,6 +2804,8 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
     if( sdepth == CV_32F && ddepth == CV_32F )
         return Ptr<BaseRowFilter>(new RowFilter<float, float, RowVec_32f>
             (kernel, anchor, RowVec_32f(kernel)));
+    if( sdepth == CV_32F && ddepth == CV_64F )
+        return Ptr<BaseRowFilter>(new RowFilter<float, double, RowNoVec>(kernel, anchor));
     if( sdepth == CV_64F && ddepth == CV_64F )
         return Ptr<BaseRowFilter>(new RowFilter<double, double, RowNoVec>(kernel, anchor));
 

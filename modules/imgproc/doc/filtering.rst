@@ -1497,7 +1497,13 @@ Calculates the first, second, third, or mixed image derivatives using an extende
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
     
-    :param ddepth: Destination image depth.
+    :param ddepth: Destination image depth. The following combination of ``src.depth()`` and ``ddepth`` are supported:
+         * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
+        
+        when ``ddepth=-1``, the destination image will have the same depth as the source. In the case of 8-bit input images it will result in truncated derivatives.
 
     :param xorder: Order of the derivative x.
 
@@ -1572,9 +1578,9 @@ Calculates the first x- or y- image derivative using Scharr operator.
 
     :param src: Source image.
 
-    :param dst: Destination image of the same size and the same number of channels as  ``src`` .
+    :param dst: Destination image of the same size and the same number of channels as ``src``.
     
-    :param ddepth: Destination image depth.
+    :param ddepth: Destination image depth. See :ocv:func:`Sobel` for the list of supported combination of ``src.depth()`` and ``ddepth``.
 
     :param xorder: Order of the derivative x.
 
@@ -1582,7 +1588,7 @@ Calculates the first x- or y- image derivative using Scharr operator.
 
     :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :ocv:func:`getDerivKernels` for details.
 
-    :param delta: Optional delta value that is added to the results prior to storing them in  ``dst`` .
+    :param delta: Optional delta value that is added to the results prior to storing them in  ``dst``.
     
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
     
