@@ -2347,6 +2347,41 @@ void Core_SolvePolyTest::run( int )
     }
 }
 
+class Core_CheckRange_Empty : public cvtest::BaseTest
+{
+public:
+    Core_CheckRange_Empty(){}
+    ~Core_CheckRange_Empty(){}
+protected:
+    virtual void run( int start_from );
+};
+
+void Core_CheckRange_Empty::run( int )
+{
+    cv::Mat m;
+    ASSERT_TRUE( cv::checkRange(m) );
+}
+
+TEST(Core_CheckRange_Empty, accuracy) { Core_CheckRange_Empty test; test.safe_run(); }
+
+class Core_CheckRange_INT_MAX : public cvtest::BaseTest
+{
+public:
+    Core_CheckRange_INT_MAX(){}
+    ~Core_CheckRange_INT_MAX(){}
+protected:
+    virtual void run( int start_from );
+};
+
+void Core_CheckRange_INT_MAX::run( int )
+{
+    cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
+    ASSERT_FALSE( cv::checkRange(m, true, 0, 0, INT_MAX) );
+    ASSERT_TRUE( cv::checkRange(m) );
+}
+
+TEST(Core_CheckRange_INT_MAX, accuracy) { Core_CheckRange_INT_MAX test; test.safe_run(); }
+
 template <typename T> class Core_CheckRange : public testing::Test {};
 
 TYPED_TEST_CASE_P(Core_CheckRange);

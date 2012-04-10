@@ -2032,8 +2032,9 @@ template<> struct mat_type_assotiations<CV_32S>
     static const type max_allowable = INT_MAX;
 };
 
+// inclusive maxVal !!!
 template<int depth>
-bool chackIntegerRang(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value)
+bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value)
 {
     typedef mat_type_assotiations<depth> type_ass; 
     
@@ -2041,7 +2042,7 @@ bool chackIntegerRang(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double
     {
         return true;
     }
-    else if (minVal >= type_ass::max_allowable || maxVal <= type_ass::min_allowable || maxVal <= minVal)
+    else if (minVal > type_ass::max_allowable || maxVal < type_ass::min_allowable || maxVal < minVal)
     {
         bad_pt = cv::Point(0,0);
         return false;
@@ -2051,7 +2052,7 @@ bool chackIntegerRang(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double
     for (int j = 0; j < as_one_channel.rows; ++j)
         for (int i = 0; i < as_one_channel.cols; ++i)
         {    
-            if (as_one_channel.at<typename type_ass::type>(j ,i) < minVal || as_one_channel.at<typename type_ass::type>(j ,i) >= maxVal)
+            if (as_one_channel.at<typename type_ass::type>(j ,i) < minVal || as_one_channel.at<typename type_ass::type>(j ,i) > maxVal)
             {            
                 bad_pt.y = j ; 
                 bad_pt.x = i % src.channels();
@@ -2064,15 +2065,15 @@ bool chackIntegerRang(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double
     return true;
 }
 
-typedef bool (*check_pange_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value); 
+typedef bool (*check_range_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value); 
 
-check_pange_function check_range_functions[] = 
+check_range_function check_range_functions[] = 
 {
-    &chackIntegerRang<CV_8U>,
-    &chackIntegerRang<CV_8S>,
-    &chackIntegerRang<CV_16U>,
-    &chackIntegerRang<CV_16S>,
-    &chackIntegerRang<CV_32S>
+    &checkIntegerRange<CV_8U>,
+    &checkIntegerRange<CV_8S>,
+    &checkIntegerRange<CV_16U>,
+    &checkIntegerRange<CV_16S>,
+    &checkIntegerRange<CV_32S>
 };
 
 bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double maxVal)
@@ -2102,8 +2103,9 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
     if (depth < CV_32F)
     {
-        int minVali = cvFloor(minVal);
-        int maxVali = cvCeil(maxVal);
+        // see "Bug #1784"
+        int minVali = minVal<(-INT_MAX - 1) ? (-INT_MAX - 1) : cvFloor(minVal);
+        int maxVali = maxVal>INT_MAX ? INT_MAX : cvCeil(maxVal) - 1; // checkIntegerRang() use inclusive maxVal
 
         (check_range_functions[depth])(src, badPt, minVali, maxVali, badValue);
     }
