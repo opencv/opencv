@@ -83,7 +83,7 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
     
     labels.create( data.rows, 1, labelType );
 
-    randn( data, Scalar::all(0.0), Scalar::all(1.0) );
+    randn( data, Scalar::all(-1.0), Scalar::all(1.0) );
     vector<Mat> means(sizes.size());
     for(int i = 0; i < _means.rows; i++)
         means[i] = _means.row(i);
@@ -381,7 +381,7 @@ int CV_EMTest::runCase( int caseIndex, const EM_Params& params,
         ts->printf( cvtest::TS::LOG, "Case index %i : Bad output labels.\n", caseIndex );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
     }
-    else if( err > 0.006f )
+    else if( err > 0.008f )
     {
         ts->printf( cvtest::TS::LOG, "Case index %i : Bad accuracy (%f) on train data.\n", caseIndex, err );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -401,7 +401,7 @@ int CV_EMTest::runCase( int caseIndex, const EM_Params& params,
         ts->printf( cvtest::TS::LOG, "Case index %i : Bad output labels.\n", caseIndex );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
     }
-    else if( err > 0.006f )
+    else if( err > 0.008f )
     {
         ts->printf( cvtest::TS::LOG, "Case index %i : Bad accuracy (%f) on test data.\n", caseIndex, err );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -505,7 +505,8 @@ protected:
     virtual void run( int /*start_from*/ )
     {
         int code = cvtest::TS::OK;
-        cv::EM em(2);
+        const int nclusters = 2;
+        cv::EM em(nclusters);
 
         Mat samples = Mat(3,1,CV_64FC1);
         samples.at<double>(0,0) = 1;
