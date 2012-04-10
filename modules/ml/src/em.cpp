@@ -503,8 +503,11 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, double*
         return;
 
     Mat buf, *sampleProbs = probs ? probs : &buf;
-    Mat expL_Lmax;
-    exp(L - L.at<double>(label), expL_Lmax);
+    Mat expL_Lmax(L.size(), CV_64FC1);
+    double maxLVal = L.at<double>(label);
+    for(int i = 0; i < L.cols; i++)
+        expL_Lmax.at<double>(i) = std::exp(L.at<double>(i) - maxLVal);
+
     double partSum = 0, // sum_j!=q (exp(L_ij - L_iq))
            factor;      // 1/(1 + partExpSum)
     for(int clusterIndex = 0; clusterIndex < nclusters; clusterIndex++)
