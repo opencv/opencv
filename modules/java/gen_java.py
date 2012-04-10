@@ -488,6 +488,8 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "setTrackbarPos"    : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "imshow"            : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "waitKey"           : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "moveWindow"        : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "resizeWindow"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
 
 }

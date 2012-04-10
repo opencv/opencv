@@ -32,9 +32,11 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         };
     }
     
+    /*
     private float sqr(float val){
         return val * val;
     }
+    */
 
     private Mat getQueryDescriptors() {
         Mat img = getQueryImg();
@@ -87,11 +89,19 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
+        		/*
                 new DMatch(0, 0, 0, sqr(0.643284f)),
                 new DMatch(1, 1, 0, sqr(0.92945856f)),
                 new DMatch(2, 1, 0, sqr(0.2841479f)),
                 new DMatch(3, 1, 0, sqr(0.9194034f)),
-                new DMatch(4, 1, 0, sqr(0.3006621f)) };
+                new DMatch(4, 1, 0, sqr(0.3006621f))
+                */
+        		new DMatch(0, 0, 0, 1.1018577f), 
+        		new DMatch(1, 0, 0, 1.1746116f), 
+        		new DMatch(2, 1, 0, 0.23459719f), 
+        		new DMatch(3, 0, 0, 1.2069331f), 
+        		new DMatch(4, 1, 0, 0.2446168f)
+                };
 
         super.setUp();
     }

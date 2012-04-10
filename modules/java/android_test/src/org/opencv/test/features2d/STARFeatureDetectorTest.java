@@ -47,6 +47,7 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
         matSize = 200;
 
         truth = new KeyPoint[] {
+        		/*
                 new KeyPoint(95, 80, 22, -1, 31.595734f, 0, -1),
                 new KeyPoint(105, 80, 22, -1, 31.595734f, 0, -1),
                 new KeyPoint(80, 95, 22, -1, 31.595734f, 0, -1),
@@ -55,7 +56,18 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
                 new KeyPoint(80, 105, 22, -1, 31.595734f, 0, -1),
                 new KeyPoint(120, 105, 22, -1, 31.595734f, 0, -1),
                 new KeyPoint(95, 120, 22, -1, 31.595734f, 0, -1),
-                new KeyPoint(105, 120, 22, -1, 31.595734f, 0, -1) };
+                new KeyPoint(105, 120, 22, -1, 31.595734f, 0, -1)
+                */
+        		new KeyPoint( 95,  80, 22, -1, 31.5957f, 0, -1), 
+        		new KeyPoint(105,  80, 22, -1, 31.5957f, 0, -1), 
+        		new KeyPoint( 80,  95, 22, -1, 31.5957f, 0, -1), 
+        		new KeyPoint(120,  95, 22, -1, 31.5957f, 0, -1), 
+        		new KeyPoint(100, 100,  8, -1, 30.f,     0, -1), 
+        		new KeyPoint( 80, 105, 22, -1, 31.5957f, 0, -1), 
+        		new KeyPoint(120, 105, 22, -1, 31.5957f, 0, -1), 
+        		new KeyPoint( 95, 120, 22, -1, 31.5957f, 0, -1), 
+        		new KeyPoint(105, 120, 22, -1, 31.5957f, 0, -1)
+            };
 
         super.setUp();
     }
@@ -116,7 +128,7 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<maxSize>45</maxSize>\n<responseThreshold>30</responseThreshold>\n<lineThresholdProjected>10</lineThresholdProjected>\n<lineThresholdBinarized>8</lineThresholdBinarized>\n<suppressNonmaxSize>5</suppressNonmaxSize>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.STAR</name>\n<lineThresholdBinarized>8</lineThresholdBinarized>\n<lineThresholdProjected>10</lineThresholdProjected>\n<maxSize>45</maxSize>\n<responseThreshold>30</responseThreshold>\n<suppressNonmaxSize>5</suppressNonmaxSize>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -125,7 +137,7 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "%YAML:1.0\nmaxSize: 45\nresponseThreshold: 30\nlineThresholdProjected: 10\nlineThresholdBinarized: 8\nsuppressNonmaxSize: 5\n";
+        String truth = "%YAML:1.0\nname: \"Feature2D.STAR\"\nlineThresholdBinarized: 8\nlineThresholdProjected: 10\nmaxSize: 45\nresponseThreshold: 30\nsuppressNonmaxSize: 5\n";
         assertEquals(truth, readFile(filename));
     }
 

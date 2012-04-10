@@ -56,10 +56,18 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         matSize = 100;
 
-        truth = new KeyPoint[] { new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1),
+        truth = new KeyPoint[] {
+        		/*
+        		new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1),
                 new KeyPoint(44.224422454833984f, 44.224422454833984f, 16, 99.75463f, 8617.863f, 1, -1),
                 new KeyPoint(44.224422454833984f, 55.775577545166016f, 16, 189.7546f, 8617.863f, 1, -1),
-                new KeyPoint(55.775577545166016f, 55.775577545166016f, 16, 279.75464f, 8617.863f, 1, -1) };
+                new KeyPoint(55.775577545166016f, 55.775577545166016f, 16, 279.75464f, 8617.863f, 1, -1)
+                */
+        		new KeyPoint(55.7755f, 44.2244f, 16,   9.754f, 8617.863f, 0, -1), 
+        		new KeyPoint(44.2244f, 44.2244f, 16,  99.754f, 8617.863f, 0, -1), 
+        		new KeyPoint(44.2244f, 55.7755f, 16, 189.754f, 8617.863f, 0, -1), 
+        		new KeyPoint(55.7755f, 55.7755f, 16, 279.754f, 8617.863f, 0, -1)
+        	};
 
         super.setUp();
     }
@@ -151,7 +159,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<hessianThreshold>400.</hessianThreshold>\n<octaves>3</octaves>\n<octaveLayers>4</octaveLayers>\n<upright>0</upright>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.SURF</name>\n<extended>1</extended>\n<hessianThreshold>100.</hessianThreshold>\n<nOctaveLayers>2</nOctaveLayers>\n<nOctaves>4</nOctaves>\n<upright>0</upright>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -160,7 +168,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "%YAML:1.0\nhessianThreshold: 400.\noctaves: 3\noctaveLayers: 4\nupright: 0\n";
+        String truth = "%YAML:1.0\nname: \"Feature2D.SURF\"\nextended: 1\nhessianThreshold: 100.\nnOctaveLayers: 2\nnOctaves: 4\nupright: 0\n";
         assertEquals(truth, readFile(filename));
     }
 
