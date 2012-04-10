@@ -19,4 +19,6 @@ OpenCV API Reference
    photo/doc/photo.rst
    stitching/doc/stitching.rst
    nonfree/doc/nonfree.rst
+   contrib/doc/contrib.rst
+   legacy/doc/legacy.rst
 
