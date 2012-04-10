@@ -33,7 +33,7 @@ where:
    * :math:`(u, v)` are the coordinates of the projection point in pixels
    * :math:`A` is a camera matrix, or a matrix of intrinsic parameters
    * :math:`(cx, cy)` is a principal point that is usually at the image center
-   * :math:`fx, fy` are the focal lengths expressed in pixel-related units
+   * :math:`fx, fy` are the focal lengths expressed in pixel units.
 
 
 Thus, if an image from the camera is
