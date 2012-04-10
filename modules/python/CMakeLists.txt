@@ -72,8 +72,8 @@ set_target_properties(${the_module} PROPERTIES
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})
 
-if(MSVC AND NOT BUILD_SHARED_LIBS)
-  set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
 endif()
 
 if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
@@ -81,6 +81,10 @@ if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4127") #conditional expression is constant
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4505") #unreferenced local function has been removed 
   string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
+
+if(MSVC AND NOT BUILD_SHARED_LIBS)
+  set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
 endif()
 
 if(MSVC)
