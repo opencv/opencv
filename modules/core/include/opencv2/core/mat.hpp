@@ -950,9 +950,6 @@ template<typename _Tp> inline int Mat_<_Tp>::channels() const
 template<typename _Tp> inline size_t Mat_<_Tp>::stepT(int i) const { return step.p[i]/elemSize(); }
 template<typename _Tp> inline size_t Mat_<_Tp>::step1(int i) const { return step.p[i]/elemSize1(); }
 
-template<typename _Tp> inline Mat_<_Tp> Mat_<_Tp>::reshape(int _rows) const
-{ return Mat_<_Tp>(Mat::reshape(0,_rows)); }
-
 template<typename _Tp> inline Mat_<_Tp>& Mat_<_Tp>::adjustROI( int dtop, int dbottom, int dleft, int dright )
 { return (Mat_<_Tp>&)(Mat::adjustROI(dtop, dbottom, dleft, dright));  }
 
