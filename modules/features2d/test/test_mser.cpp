@@ -75,7 +75,8 @@ int CV_MserTest::LoadBoxes(const char* path, vector<CvBox2D>& boxes)
     while (!feof(f))
     {
         CvBox2D box;
-        fscanf(f,"%f,%f,%f,%f,%f\n",&box.angle,&box.center.x,&box.center.y,&box.size.width,&box.size.height);
+        int values_read = fscanf(f,"%f,%f,%f,%f,%f\n",&box.angle,&box.center.x,&box.center.y,&box.size.width,&box.size.height);
+        CV_Assert(values_read == 5);
         boxes.push_back(box);
     }
     fclose(f);

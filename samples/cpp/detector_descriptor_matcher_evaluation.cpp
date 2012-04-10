@@ -273,7 +273,8 @@ int main(int argc, char** argv)
     if( dir[dir.size()-1] != '\\' && dir[dir.size()-1] != '/' )
         dir += "/";
     
-    system(("mkdir " + dir).c_str());
+    int result = system(("mkdir " + dir).c_str());
+    CV_Assert(result == 0);
     
     for( int i = 0; ddms[i*4] != 0; i++ )
     {

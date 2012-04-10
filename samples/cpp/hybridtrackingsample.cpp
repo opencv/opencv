@@ -82,7 +82,8 @@ int main(int argc, char** argv)
 		sprintf(test_file, "%s", argv[1]);
 		f = fopen(test_file, "r");
 		char vid[20];
-		fscanf(f, "%s\n", vid);
+ 		int values_read = fscanf(f, "%s\n", vid);
+		CV_Assert(values_read == 1);
 		cout << "Benchmarking against " << vid << endl;
 		live = 0;
 	}
@@ -133,7 +134,8 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			fscanf(f, "%d %f %f %f %f\n", &i, &w[0], &w[1], &w[2], &w[3]);
+			int values_read = fscanf(f, "%d %f %f %f %f\n", &i, &w[0], &w[1], &w[2], &w[3]);
+			CV_Assert(values_read == 5);
 			sprintf(img_file, "seqG/%04d.png", i);
 			image = imread(img_file, CV_LOAD_IMAGE_COLOR);
             if (image.empty())
