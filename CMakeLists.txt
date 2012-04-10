@@ -822,7 +822,7 @@ if(UNIX AND NOT APPLE)
   else()
     set(HAVE_CAMV4L2_STR "NO")
   endif()
-  status("    V4L/V4L2:"       HAVE_LIBV4L         THEN "Using libv4l (ver ${ALIASOF_libv4l1_VERSION})" ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR} (ver ${ALIASOF_libv4l1_VERSION})")
+  status("    V4L/V4L2:"       HAVE_LIBV4L         THEN "Using libv4l (ver ${ALIASOF_libv4l1_VERSION})" ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR}")
   status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION}"           ELSE NO)
 
   if(ANDROID)
