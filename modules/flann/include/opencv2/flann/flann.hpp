@@ -225,7 +225,7 @@ int GenericIndex<Distance>::radiusSearch(const Mat& query, Mat& indices, Mat& di
  * @deprecated Use GenericIndex class instead
  */
 template <typename T>
-class FLANN_DEPRECATED Index_ {
+class Index_ {
 public:
         typedef typename L2<T>::ElementType ElementType;
         typedef typename L2<T>::ResultType DistanceType;
@@ -277,6 +277,8 @@ private:
         ::cvflann::Index< L1<ElementType> >* nnIndex_L1;
 };
 
+template <typename T>
+class FLANN_DEPRECATED Index_;
 
 template <typename T>
 Index_<T>::Index_(const Mat& dataset, const ::cvflann::IndexParams& params)
