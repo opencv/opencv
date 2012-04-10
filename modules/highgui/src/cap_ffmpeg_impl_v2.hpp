@@ -125,6 +125,10 @@ extern "C" {
     #include <sys/sysctl.h>
 #endif
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 int get_number_of_cpus(void)
 {
 #if defined WIN32 || defined _WIN32
