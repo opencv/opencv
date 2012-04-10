@@ -511,26 +511,27 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, double*
     if(!probs && !logLikelihood)
         return;
 
-    Mat buf, *sampleProbs = probs ? probs : &buf;
     Mat expL_Lmax(L.size(), CV_64FC1);
     double maxLVal = L.at<double>(label);
     for(int i = 0; i < L.cols; i++)
         expL_Lmax.at<double>(i) = std::exp(L.at<double>(i) - maxLVal);
 
-    double partSum = 0, // sum_j!=q (exp(L_ij - L_iq))
-           factor;      // 1/(1 + partExpSum)
+    double partSum = 0; // sum_j!=q (exp(L_ij - L_iq))
     for(int clusterIndex = 0; clusterIndex < nclusters; clusterIndex++)
         if(clusterIndex != label)
             partSum += expL_Lmax.at<double>(clusterIndex);
-    factor = 1./(1 + partSum);
 
-    sampleProbs->create(1, nclusters, CV_64FC1);
-    expL_Lmax *= factor;
-    expL_Lmax.copyTo(*sampleProbs);
+    if(probs)
+    {
+        probs->create(1, nclusters, CV_64FC1);
+        double factor = 1./(1 + partSum);
+        expL_Lmax *= factor;
+        expL_Lmax.copyTo(*probs);
+    }
 
     if(logLikelihood)
     {
-        double logWeightProbs = std::log(weights.dot(*sampleProbs));
+        double logWeightProbs = std::log((1 + partSum) * std::exp(maxLVal)) - 0.5 * dim * CV_LOG2PI;
         *logLikelihood = logWeightProbs;
     }
 }
