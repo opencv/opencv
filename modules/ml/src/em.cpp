@@ -450,7 +450,9 @@ bool EM::doTrain(int startStep, OutputArray labels, OutputArray probs, OutputArr
             setIdentity(covs[clusterIndex], Scalar(covsEigenValues[clusterIndex].at<double>(0)));
         }
         else if(covMatType == EM::COV_MAT_DIAGONAL)
-            covs[clusterIndex] = Mat::diag(covsEigenValues[clusterIndex].t());
+        {
+            covs[clusterIndex] = Mat::diag(covsEigenValues[clusterIndex]);
+        }
     }
     
     if(labels.needed())
