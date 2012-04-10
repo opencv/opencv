@@ -71,7 +71,13 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
             }
 
             params.setPreviewSize(getFrameWidth(), getFrameHeight());
-            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+
+            List<String> FocusModes = params.getSupportedFocusModes();
+            if (FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
+            {
+            	params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+            }
+            
             mCamera.setParameters(params);
 
             /* Now allocate the buffer */
