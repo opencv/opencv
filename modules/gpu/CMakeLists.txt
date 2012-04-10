@@ -43,10 +43,6 @@ if (HAVE_CUDA)
     
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
     endif()
-
-    foreach(var CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
-      string(REPLACE "/EHsc-" "/EHs" ${var} "${${var}}")
-    endforeach()
   endif()
 
   OCV_CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})

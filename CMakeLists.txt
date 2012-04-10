@@ -242,15 +242,6 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 
 
 # ----------------------------------------------------------------------------
-# Use statically or dynamically linked CRT?
-# Default: dynamic
-# ----------------------------------------------------------------------------
-if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake REQUIRED)
-endif(MSVC)
-
-
-# ----------------------------------------------------------------------------
 #  Autodetect if we are in a SVN repository
 # ----------------------------------------------------------------------------
 find_host_program(SVNVERSION_PATH svnversion)
@@ -282,6 +273,15 @@ include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 if(CMAKE_GENERATOR MATCHES "Makefiles" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Release)
 endif()
+
+
+# ----------------------------------------------------------------------------
+# Use statically or dynamically linked CRT?
+# Default: dynamic
+# ----------------------------------------------------------------------------
+if(MSVC)
+  include(cmake/OpenCVCRTLinkage.cmake REQUIRED)
+endif(MSVC)
 
 
 # ----------------------------------------------------------------------------

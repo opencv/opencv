@@ -96,7 +96,7 @@ void FastMarchingMethod::heapUp(int idx)
 void FastMarchingMethod::heapDown(int idx)
 {
     int l, r, smallest;
-    while (true)
+    for(;;)
     {
         l = 2*idx+1;
         r = 2*idx+2;

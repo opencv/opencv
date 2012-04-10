@@ -113,7 +113,7 @@ public:
 private:
     // To avoid GCGraph dependency
     class Impl;
-    Ptr<Impl> impl_;
+    Ptr<PairwiseSeamFinder> impl_;
 };
 
 
