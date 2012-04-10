@@ -630,7 +630,7 @@ bool CV_OperationsTest::TestTemplateMat()
 
         Mat_<uchar> matFromData(1, 4, uchar_data);
         const Mat_<uchar> mat2 = matFromData.clone();
-        CHECK_DIFF(matFromData, eye.reshape(1));
+        CHECK_DIFF(matFromData, eye.reshape(1, 1));
         if (matFromData(Point(0,0)) != uchar_data[0])throw test_excep();
         if (mat2(Point(0,0)) != uchar_data[0]) throw test_excep();
 
