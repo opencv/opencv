@@ -1500,7 +1500,8 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
         fseek( f, 0, SEEK_END );
         size = ftell( f );
         fseek( f, 0, SEEK_SET );
-        fread( ptr, 1, size, f );
+        size_t elements_read = fread( ptr, 1, size, f );
+        CV_Assert(elements_read == (size_t)(size));
         fclose(f);
         input_cascade[i] = ptr;
         ptr += size;

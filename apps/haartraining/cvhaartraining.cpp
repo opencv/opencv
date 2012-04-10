@@ -1854,9 +1854,11 @@ int icvGetHaarTraininDataFromVecCallback( CvMat* img, void* userdata )
 
     assert( img->rows * img->cols == ((CvVecFile*) userdata)->vecsize );
     
-    fread( &tmp, sizeof( tmp ), 1, ((CvVecFile*) userdata)->input );
-    fread( ((CvVecFile*) userdata)->vector, sizeof( short ),
+    size_t elements_read = fread( &tmp, sizeof( tmp ), 1, ((CvVecFile*) userdata)->input );
+    CV_Assert(elements_read == 1);
+    elements_read = fread( ((CvVecFile*) userdata)->vector, sizeof( short ),
            ((CvVecFile*) userdata)->vecsize, ((CvVecFile*) userdata)->input );
+    CV_Assert(elements_read == (size_t)((CvVecFile*) userdata)->vecsize);
     
     if( feof( ((CvVecFile*) userdata)->input ) || 
         (((CvVecFile*) userdata)->last)++ >= ((CvVecFile*) userdata)->count )
@@ -1919,10 +1921,12 @@ int icvGetHaarTrainingDataFromVec( CvHaarTrainingData* data, int first, int coun
 
     if( file.input != NULL )
     {
-        fread( &file.count, sizeof( file.count ), 1, file.input );
-        fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
-        fread( &tmp, sizeof( tmp ), 1, file.input );
-        fread( &tmp, sizeof( tmp ), 1, file.input );
+        size_t elements_read1 = fread( &file.count, sizeof( file.count ), 1, file.input );
+        size_t elements_read2 = fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
+        size_t elements_read3 = fread( &tmp, sizeof( tmp ), 1, file.input );
+        size_t elements_read4 = fread( &tmp, sizeof( tmp ), 1, file.input );
+        CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
+
         if( !feof( file.input ) )
         {
             if( file.vecsize != data->winsize.width * data->winsize.height )
@@ -1970,10 +1974,11 @@ int icvGetHaarTrainingDataFromBG( CvHaarTrainingData* data, int first, int count
 
         if( file.input != NULL )
         {
-            fread( &file.count, sizeof( file.count ), 1, file.input );
-            fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
-            fread( &tmp, sizeof( tmp ), 1, file.input );
-            fread( &tmp, sizeof( tmp ), 1, file.input );
+            size_t elements_read1 = fread( &file.count, sizeof( file.count ), 1, file.input );
+            size_t elements_read2 = fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
+            size_t elements_read3 = fread( &tmp, sizeof( tmp ), 1, file.input );
+            size_t elements_read4 = fread( &tmp, sizeof( tmp ), 1, file.input );
+            CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
             if( !feof( file.input ) )
             {
                 if( file.vecsize != data->winsize.width * data->winsize.height )

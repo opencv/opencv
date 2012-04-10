@@ -150,8 +150,10 @@ bool CvCascadeImageReader::PosReader::get( Mat &_img )
 {
     CV_Assert( _img.rows * _img.cols == vecSize );
     uchar tmp = 0;
-    fread( &tmp, sizeof( tmp ), 1, file );
-    fread( vec, sizeof( vec[0] ), vecSize, file );
+    size_t elements_read = fread( &tmp, sizeof( tmp ), 1, file );
+    CV_Assert(elements_read == 1);
+    elements_read = fread( vec, sizeof( vec[0] ), vecSize, file );
+    CV_Assert(elements_read == (size_t)(vecSize));
 
     if( feof( file ) || last++ >= count )
         return false;

@@ -884,10 +884,11 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight,
 
     if( file.input != NULL )
     {
-        fread( &file.count, sizeof( file.count ), 1, file.input );
-        fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
-        fread( &tmp, sizeof( tmp ), 1, file.input );
-        fread( &tmp, sizeof( tmp ), 1, file.input );
+        size_t elements_read1 = fread( &file.count, sizeof( file.count ), 1, file.input );
+        size_t elements_read2 = fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
+        size_t elements_read3 = fread( &tmp, sizeof( tmp ), 1, file.input );
+        size_t elements_read4 = fread( &tmp, sizeof( tmp ), 1, file.input );
+        CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
         if( file.vecsize != winwidth * winheight )
         {
