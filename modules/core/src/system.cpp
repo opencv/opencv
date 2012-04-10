@@ -374,6 +374,46 @@ int getThreadNum(void)
 #endif
 }
 
+#if ANDROID
+static inline int getNumberOfCPUsImpl()
+{
+   FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
+   if(!cpuPossible)
+       return 1;
+
+   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
+   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
+   fclose(cpuPossible);
+   if(!pbuf)
+      return 1;
+
+   //parse string of form "0-1,3,5-7,10,13-15"
+   int cpusAvailable = 0;
+
+   while(*pbuf)
+   {
+      const char* pos = pbuf;
+      bool range = false;
+      while(*pbuf && *pbuf != ',')
+      {
+          if(*pbuf == '-') range = true;
+          ++pbuf;
+      }
+      if(*pbuf) *pbuf++ = 0;
+      if(!range)
+        ++cpusAvailable;
+      else
+      {
+          int rstart = 0, rend = 0;
+          sscanf(pos, "%d-%d", &rstart, &rend);
+          cpusAvailable += rend - rstart + 1;
+      }
+      
+   }
+   return cpusAvailable ? cpusAvailable : 1;
+}
+#endif
+
 int getNumberOfCPUs(void)
 {
 #if defined WIN32 || defined _WIN32
@@ -381,6 +421,10 @@ int getNumberOfCPUs(void)
     GetSystemInfo( &sysinfo );
     
     return (int)sysinfo.dwNumberOfProcessors;
+#elif ANDROID
+    static int ncpus = getNumberOfCPUsImpl();
+    printf("CPUS= %d\n", ncpus);
+    return ncpus;
 #elif defined __linux__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
