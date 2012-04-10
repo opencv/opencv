@@ -377,7 +377,7 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1)
     else
     {
         vector<uchar> mask;
-        M = findHomography(pointsPrevGood_, pointsGood_, CV_RANSAC, ransacParams_.thresh, mask);
+        M = findHomography(pointsPrevGood_, pointsGood_, mask, CV_RANSAC, ransacParams_.thresh);
 
         ninliers = 0;
         rmse = 0;

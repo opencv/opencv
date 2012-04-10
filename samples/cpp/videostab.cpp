@@ -262,8 +262,12 @@ int main(int argc, const char **argv)
         }
 
         if (arg("save-motions") != "no")
+        {
+            MotionModel model = stabilizer->motionEstimator()->motionModel();
             stabilizer->setMotionEstimator(
                     new ToFileMotionWriter(arg("save-motions"), stabilizer->motionEstimator()));
+            stabilizer->motionEstimator()->setMotionModel(model);
+        }
 
         stabilizer->setRadius(argi("radius"));
         if (arg("deblur") == "yes")

@@ -80,11 +80,11 @@ struct CV_EXPORTS RansacParams
     RansacParams(int size, float thresh, float eps, float prob)
         : size(size), thresh(thresh), eps(eps), prob(prob) {}
 
-    static RansacParams translation2dMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
-    static RansacParams translationAndScale2dMotionStd() { return RansacParams(3, 0.5f, 0.5f, 0.99f); }
-    static RansacParams linearSimilarity2dMotionStd() { return RansacParams(4, 0.5f, 0.5f, 0.99f); }
-    static RansacParams affine2dMotionStd() { return RansacParams(6, 0.5f, 0.5f, 0.99f); }
-    static RansacParams homography2dMotionStd() { return RansacParams(8, 0.5f, 0.5f, 0.99f); }
+    static RansacParams translation2dMotionStd() { return RansacParams(1, 0.5f, 0.5f, 0.99f); }
+    static RansacParams translationAndScale2dMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
+    static RansacParams linearSimilarity2dMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
+    static RansacParams affine2dMotionStd() { return RansacParams(3, 0.5f, 0.5f, 0.99f); }
+    static RansacParams homography2dMotionStd() { return RansacParams(4, 0.5f, 0.5f, 0.99f); }
 };
 
 CV_EXPORTS Mat estimateGlobalMotionRobust(
