@@ -66,8 +66,7 @@ enum MotionModel
 };
 
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
-        const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
-        int model = AFFINE, float *rmse = 0);
+        int npoints, Point2f *points0, Point2f *points1, int model = AFFINE, float *rmse = 0);
 
 struct CV_EXPORTS RansacParams
 {
@@ -80,16 +79,24 @@ struct CV_EXPORTS RansacParams
     RansacParams(int size, float thresh, float eps, float prob)
         : size(size), thresh(thresh), eps(eps), prob(prob) {}
 
-    static RansacParams translation2dMotionStd() { return RansacParams(1, 0.5f, 0.5f, 0.99f); }
-    static RansacParams translationAndScale2dMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
-    static RansacParams linearSimilarity2dMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
-    static RansacParams affine2dMotionStd() { return RansacParams(3, 0.5f, 0.5f, 0.99f); }
-    static RansacParams homography2dMotionStd() { return RansacParams(4, 0.5f, 0.5f, 0.99f); }
+    static RansacParams default2dMotion(MotionModel model)
+    {
+        CV_Assert(model < UNKNOWN);
+        if (model == TRANSLATION)
+            return RansacParams(1, 0.5f, 0.5f, 0.99f);
+        if (model == TRANSLATION_AND_SCALE)
+            return RansacParams(2, 0.5f, 0.5f, 0.99f);
+        if (model == LINEAR_SIMILARITY)
+            return RansacParams(2, 0.5f, 0.5f, 0.99f);
+        if (model == AFFINE)
+            return RansacParams(3, 0.5f, 0.5f, 0.99f);
+        return RansacParams(4, 0.5f, 0.5f, 0.99f);
+    }
 };
 
 CV_EXPORTS Mat estimateGlobalMotionRobust(
         const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
-        int model = AFFINE, const RansacParams &params = RansacParams::affine2dMotionStd(),
+        int model = AFFINE, const RansacParams &params = RansacParams::default2dMotion(AFFINE),
         float *rmse = 0, int *ninliers = 0);
 
 class CV_EXPORTS GlobalMotionEstimatorBase

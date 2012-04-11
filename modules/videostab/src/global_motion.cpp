@@ -51,8 +51,44 @@ namespace cv
 namespace videostab
 {
 
+// does isotropic normalization
+static Mat normalizePoints(int npoints, Point2f *points)
+{
+    float cx = 0.f, cy = 0.f;
+    for (int i = 0; i < npoints; ++i)
+    {
+        cx += points[i].x;
+        cy += points[i].y;
+    }
+    cx /= npoints;
+    cy /= npoints;
+
+    float d = 0.f;
+    for (int i = 0; i < npoints; ++i)
+    {
+        points[i].x -= cx;
+        points[i].y -= cy;
+        d += sqrt(sqr(points[i].x) + sqr(points[i].y));
+    }
+    d /= npoints;
+
+    float s = sqrt(2.f) / d;
+    for (int i = 0; i < npoints; ++i)
+    {
+        points[i].x *= s;
+        points[i].y *= s;
+    }
+
+    Mat_<float> T = Mat::eye(3, 3, CV_32F);
+    T(0,0) = T(1,1) = s;
+    T(0,2) = -cx*s;
+    T(1,2) = -cy*s;
+    return T;
+}
+
+
 static Mat estimateGlobMotionLeastSquaresTranslation(
-        int npoints, const Point2f *points0, const Point2f *points1, float *rmse)
+        int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
     Mat_<float> M = Mat::eye(3, 3, CV_32F);
     for (int i = 0; i < npoints; ++i)
@@ -62,6 +98,7 @@ static Mat estimateGlobMotionLeastSquaresTranslation(
     }
     M(0,2) /= npoints;
     M(1,2) /= npoints;
+
     if (rmse)
     {
         *rmse = 0;
@@ -70,13 +107,17 @@ static Mat estimateGlobMotionLeastSquaresTranslation(
                      sqr(points1[i].y - points0[i].y - M(1,2));
         *rmse = sqrt(*rmse / npoints);
     }
+
     return M;
 }
 
 
 static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
-        int npoints, const Point2f *points0, const Point2f *points1, float *rmse)
+        int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
+    Mat_<float> T0 = normalizePoints(npoints, points0);
+    Mat_<float> T1 = normalizePoints(npoints, points1);
+
     Mat_<float> A(2*npoints, 3), b(2*npoints, 1);
     float *a0, *a1;
     Point2f p0, p1;
@@ -103,13 +144,17 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
     M(0,0) = M(1,1) = sol(0,0);
     M(0,2) = sol(1,0);
     M(1,2) = sol(2,0);
-    return M;
+
+    return T1.inv() * M * T0;
 }
 
 
 static Mat estimateGlobMotionLeastSquaresLinearSimilarity(
-        int npoints, const Point2f *points0, const Point2f *points1, float *rmse)
+        int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
+    Mat_<float> T0 = normalizePoints(npoints, points0);
+    Mat_<float> T1 = normalizePoints(npoints, points1);
+
     Mat_<float> A(2*npoints, 4), b(2*npoints, 1);
     float *a0, *a1;
     Point2f p0, p1;
@@ -138,13 +183,17 @@ static Mat estimateGlobMotionLeastSquaresLinearSimilarity(
     M(1,0) = -sol(1,0);
     M(0,2) = sol(2,0);
     M(1,2) = sol(3,0);
-    return M;
+
+    return T1.inv() * M * T0;
 }
 
 
 static Mat estimateGlobMotionLeastSquaresAffine(
-        int npoints, const Point2f *points0, const Point2f *points1, float *rmse)
+        int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
+    Mat_<float> T0 = normalizePoints(npoints, points0);
+    Mat_<float> T1 = normalizePoints(npoints, points1);
+
     Mat_<float> A(2*npoints, 6), b(2*npoints, 1);
     float *a0, *a1;
     Point2f p0, p1;
@@ -172,24 +221,22 @@ static Mat estimateGlobMotionLeastSquaresAffine(
         for (int j = 0; j < 3; ++j, ++k)
             M(i,j) = sol(k,0);
 
-    return M;
+    return T1.inv() * M * T0;
 }
 
 
 Mat estimateGlobalMotionLeastSquares(
-        const vector<Point2f> &points0, const vector<Point2f> &points1, int model, float *rmse)
+        int npoints, Point2f *points0, Point2f *points1, int model, float *rmse)
 {
     CV_Assert(model <= AFFINE);
-    CV_Assert(points0.size() == points1.size());
 
-    typedef Mat (*Impl)(int, const Point2f*, const Point2f*, float*);
+    typedef Mat (*Impl)(int, Point2f*, Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
                             estimateGlobMotionLeastSquaresTranslationAndScale,
                             estimateGlobMotionLeastSquaresLinearSimilarity,
                             estimateGlobMotionLeastSquaresAffine };
 
-    int npoints = static_cast<int>(points0.size());
-    return impls[model](npoints, &points0[0], &points1[0], rmse);
+    return impls[model](npoints, points0, points1, rmse);
 }
 
 
@@ -200,22 +247,22 @@ Mat estimateGlobalMotionRobust(
     CV_Assert(model <= AFFINE);
     CV_Assert(points0.size() == points1.size());
 
-    typedef Mat (*Impl)(int, const Point2f*, const Point2f*, float*);
-    static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
-                            estimateGlobMotionLeastSquaresTranslationAndScale,
-                            estimateGlobMotionLeastSquaresLinearSimilarity,
-                            estimateGlobMotionLeastSquaresAffine };
-
     const int npoints = static_cast<int>(points0.size());
     const int niters = static_cast<int>(ceil(log(1 - params.prob) /
                                              log(1 - pow(1 - params.eps, params.size))));
 
-    RNG rng(0);
+    // current hypothesis
     vector<int> indices(params.size);
-    vector<Point2f> subset0(params.size), subset1(params.size);
-    vector<Point2f> subset0best(params.size), subset1best(params.size);
+    vector<Point2f> subset0(params.size);
+    vector<Point2f> subset1(params.size);
+
+    // best hypothesis
+    vector<Point2f> subset0best(params.size);
+    vector<Point2f> subset1best(params.size);
     Mat_<float> bestM;
     int ninliersMax = -1;
+
+    RNG rng(0);
     Point2f p0, p1;
     float x, y;
 
@@ -239,7 +286,8 @@ Mat estimateGlobalMotionRobust(
             subset1[i] = points1[indices[i]];
         }
 
-        Mat_<float> M = impls[model](params.size, &subset0[0], &subset1[0], 0);
+        Mat_<float> M = estimateGlobalMotionLeastSquares(
+                params.size, &subset0[0], &subset1[0], model, 0);
 
         int ninliers = 0;
         for (int i = 0; i < npoints; ++i)
@@ -260,8 +308,9 @@ Mat estimateGlobalMotionRobust(
     }
 
     if (ninliersMax < params.size)
-        // compute rmse
-        bestM = impls[model](params.size, &subset0best[0], &subset1best[0], rmse);
+        // compute RMSE
+        bestM = estimateGlobalMotionLeastSquares(
+                params.size, &subset0best[0], &subset1best[0], model, rmse);
     else
     {
         subset0.resize(ninliersMax);
@@ -278,7 +327,8 @@ Mat estimateGlobalMotionRobust(
                 j++;
             }
         }
-        bestM = impls[model](ninliersMax, &subset0[0], &subset1[0], rmse);
+        bestM = estimateGlobalMotionLeastSquares(
+                ninliersMax, &subset0[0], &subset1[0], model, rmse);
     }
 
     if (ninliers)
@@ -332,16 +382,11 @@ PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
     setDetector(new GoodFeaturesToTrackDetector());
     setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());
     setMotionModel(model);
-    if (model == TRANSLATION)
-        setRansacParams(RansacParams::translation2dMotionStd());
-    else if (model == TRANSLATION_AND_SCALE)
-        setRansacParams(RansacParams::translationAndScale2dMotionStd());
-    else if (model == LINEAR_SIMILARITY)
-        setRansacParams(RansacParams::linearSimilarity2dMotionStd());
-    else if (model == AFFINE)
-        setRansacParams(RansacParams::affine2dMotionStd());
-    else if (model == HOMOGRAPHY)
-        setRansacParams(RansacParams::homography2dMotionStd());
+
+    RansacParams ransac = RansacParams::default2dMotion(model);
+    ransac.size *= 2; // we use more points than needed, but result looks better
+    setRansacParams(ransac);
+
     setMaxRmse(0.5f);
     setMinInlierRatio(0.1f);
     setGridSize(Size(0,0));
@@ -362,6 +407,7 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
                 keypointsPrev_.push_back(KeyPoint((x+1)*dx, (y+1)*dy, 0.f));
     }
 
+    // draw keypoints
     /*Mat img;
     drawKeypoints(frame0, keypointsPrev_, img);
     imshow("frame0_keypoints", img);
@@ -374,10 +420,9 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
     optFlowEstimator_->run(frame0, frame1, pointsPrev_, points_, status_, noArray());
 
     size_t npoints = points_.size();
-    pointsPrevGood_.clear();
-    pointsPrevGood_.reserve(npoints);
-    pointsGood_.clear();
-    pointsGood_.reserve(npoints);
+    pointsPrevGood_.clear(); pointsPrevGood_.reserve(npoints);
+    pointsGood_.clear(); pointsGood_.reserve(npoints);
+
     for (size_t i = 0; i < npoints; ++i)
     {
         if (status_[i])

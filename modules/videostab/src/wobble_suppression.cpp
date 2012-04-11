@@ -55,7 +55,7 @@ WobbleSuppressorBase::WobbleSuppressorBase() : motions_(0), stabilizationMotions
 {
     PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator();
     est->setMotionModel(HOMOGRAPHY);
-    est->setRansacParams(RansacParams::homography2dMotionStd());
+    est->setRansacParams(RansacParams::default2dMotion(HOMOGRAPHY));
     setMotionEstimator(est);
 }
 

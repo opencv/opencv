@@ -338,16 +338,18 @@ void TwoPassStabilizer::runPrePassIfNecessary()
         WobbleSuppressorBase *wobbleSuppressor = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
         doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobbleSuppressor) == 0;
 
-        bool okEst;
+        bool ok = true, ok2 = true;
+
         while (!(frame = frameSource_->nextFrame()).empty())
         {
             if (frameCount_ > 0)
             {
-                motions_.push_back(motionEstimator_->estimate(prevFrame, frame));
+                motions_.push_back(motionEstimator_->estimate(prevFrame, frame, &ok));
+
                 if (doWobbleSuppression_)
                 {
-                    Mat M = wobbleSuppressor_->motionEstimator()->estimate(prevFrame, frame, &okEst);
-                    if (okEst)
+                    Mat M = wobbleSuppressor_->motionEstimator()->estimate(prevFrame, frame, &ok2);
+                    if (ok2)
                         motions2_.push_back(M);
                     else
                         motions2_.push_back(motions_.back());
@@ -363,7 +365,12 @@ void TwoPassStabilizer::runPrePassIfNecessary()
             prevFrame = frame;
             frameCount_++;
 
-            log_->print(".");
+            if (ok)
+            {
+                if (ok2) log_->print(".");
+                else log_->print("?");
+            }
+            else log_->print("x");
         }
 
         for (int i = 0; i < radius_; ++i)

@@ -67,6 +67,8 @@ void printHelp()
             "Arguments:\n"
             "  -m, --model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
             "      Set motion model. The default is affine.\n"
+            "  --subset=(<int_number>|auto)\n"
+            "      Number of random samples per one motion hypothesis. The default is auto.\n"
             "  --outlier-ratio=<float_number>\n"
             "      Motion estimation outlier ratio hypothesis. The default is 0.5.\n"
             "  --min-inlier-ratio=<float_number>\n"
@@ -116,10 +118,12 @@ void printHelp()
             "  --ws-model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
             "      Set wobble suppression motion model (must have more DOF than motion \n"
             "      estimation model). The default is homography.\n"
-            "  --ws-min-inlier-ratio=<float_number>\n"
-            "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n"
+            "  --ws-subset=(<int_number>|auto)\n"
+            "      Number of random samples per one motion hypothesis. The default is auto.\n"
             "  --ws-outlier-ratio=<float_number>\n"
             "      Motion estimation outlier ratio hypothesis. The default is 0.5.\n"
+            "  --ws-min-inlier-ratio=<float_number>\n"
+            "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n"
             "  --ws-nkps=<int_number>\n"
             "      Number of keypoints to find in each frame. The default is 1000.\n"
             "  --ws-extra-kps=<int_number>\n"
@@ -147,8 +151,9 @@ int main(int argc, const char **argv)
         const char *keys =
                 "{ 1 | | | | }"
                 "{ m | model | affine| }"
-                "{ | min-inlier-ratio | 0.1 | }"
+                "{ | subset | auto | }"
                 "{ | outlier-ratio | 0.5 | }"
+                "{ | min-inlier-ratio | 0.1 | }"
                 "{ | nkps | 1000 | }"
                 "{ | extra-kps | 0 | }"
                 "{ sm | save-motions | no | }"
@@ -170,8 +175,9 @@ int main(int argc, const char **argv)
                 "{ ws | wobble-suppress | no | }"
                 "{ | ws-period | 30 | }"
                 "{ | ws-model | homography | }"
-                "{ | ws-min-inlier-ratio | 0.1 | }"
+                "{ | ws-subset | auto | }"
                 "{ | ws-outlier-ratio | 0.5 | }"
+                "{ | ws-min-inlier-ratio | 0.1 | }"
                 "{ | ws-nkps | 1000 | }"
                 "{ | ws-extra-kps | 0 | }"
                 "{ sm2 | save-motions2 | no | }"
@@ -230,6 +236,8 @@ int main(int argc, const char **argv)
 
                 est->setDetector(new GoodFeaturesToTrackDetector(argi("ws-nkps")));
                 RansacParams ransac = est->ransacParams();
+                if (arg("ws-subset") != "auto")
+                    ransac.size = argi("ws-subset");
                 ransac.eps = argf("ws-outlier-ratio");
                 est->setRansacParams(ransac);
                 est->setMinInlierRatio(argf("ws-min-inlier-ratio"));
@@ -288,6 +296,8 @@ int main(int argc, const char **argv)
 
         est->setDetector(new GoodFeaturesToTrackDetector(argi("nkps")));
         RansacParams ransac = est->ransacParams();
+        if (arg("subset") != "auto")
+            ransac.size = argi("subset");
         ransac.eps = argf("outlier-ratio");
         est->setRansacParams(ransac);
         est->setMinInlierRatio(argf("min-inlier-ratio"));
