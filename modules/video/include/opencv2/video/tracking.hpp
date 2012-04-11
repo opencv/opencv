@@ -296,8 +296,12 @@ public:
     Mat temp5;
 };
 
-
-enum { OPTFLOW_USE_INITIAL_FLOW=4, OPTFLOW_FARNEBACK_GAUSSIAN=256 };
+enum
+{
+    OPTFLOW_USE_INITIAL_FLOW = CV_LKFLOW_INITIAL_GUESSES,
+    OPTFLOW_LK_GET_MIN_EIGENVALS = CV_LKFLOW_GET_MIN_EIGENVALS,
+    OPTFLOW_FARNEBACK_GAUSSIAN = 256
+};
 
 //! computes sparse optical flow using multi-scale Lucas-Kanade algorithm
 CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
