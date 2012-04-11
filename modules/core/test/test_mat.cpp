@@ -10,7 +10,7 @@ public:
     Core_ReduceTest() {};
 protected:
     void run( int);
-    int checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim, double eps );
+    int checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim );
     int checkCase( int srcType, int dstType, int dim, Size sz );
     int checkDim( int dim, Size sz );
     int checkSize( Size sz );
@@ -80,7 +80,7 @@ void getMatTypeStr( int type, string& str)
     type == CV_64FC1 ? "CV_64FC1" : "unsupported matrix type";
 }
 
-int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim, double eps )
+int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim )
 {
     int srcType = src.type();
     bool support = false;
@@ -117,12 +117,30 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     }
     if( !support )
         return cvtest::TS::OK;
+
+    double eps = 0.0;
+    if ( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
+    {
+        if ( dstType == CV_32F )
+            eps = 1.e-5;
+        else if( dstType == CV_64F )
+            eps = 1.e-8;
+        else if ( dstType == CV_32S )
+            eps = 0.6;
+    }
     
     assert( opRes.type() == CV_64FC1 );
-    Mat _dst, dst;
+    Mat _dst, dst, diff;
     reduce( src, _dst, dim, opType, dstType );
     _dst.convertTo( dst, CV_64FC1 );
-    if( norm( opRes, dst, NORM_INF ) > eps )
+
+    absdiff( opRes,dst,diff );
+    bool check = false;
+    if (dstType == CV_32F || dstType == CV_64F)
+        check = countNonZero(diff>eps*dst) > 0;
+    else
+        check = countNonZero(diff>eps) > 0;
+    if( check )
     {
         char msg[100];
         const char* opTypeStr = opType == CV_REDUCE_SUM ? "CV_REDUCE_SUM" :
@@ -168,21 +186,19 @@ int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
         assert( 0 );
     
     // 1. sum
-    tempCode = checkOp( src, dstType, CV_REDUCE_SUM, sum, dim, 
-                       srcType == CV_32FC1 && dstType == CV_32FC1 ? 0.05 : FLT_EPSILON );
+    tempCode = checkOp( src, dstType, CV_REDUCE_SUM, sum, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
     
     // 2. avg
-    tempCode = checkOp( src, dstType, CV_REDUCE_AVG, avg, dim, 
-                       dstType == CV_32SC1 ? 0.6 : 0.00007 );
+    tempCode = checkOp( src, dstType, CV_REDUCE_AVG, avg, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
     
     // 3. max
-    tempCode = checkOp( src, dstType, CV_REDUCE_MAX, max, dim, FLT_EPSILON );
+    tempCode = checkOp( src, dstType, CV_REDUCE_MAX, max, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
     
     // 4. min
-    tempCode = checkOp( src, dstType, CV_REDUCE_MIN, min, dim, FLT_EPSILON );
+    tempCode = checkOp( src, dstType, CV_REDUCE_MIN, min, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
     
     return code;
