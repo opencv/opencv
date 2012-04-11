@@ -68,9 +68,13 @@ void printHelp()
             "  -m, --model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
             "      Set motion model. The default is affine.\n"
             "  --outlier-ratio=<float_number>\n"
-            "      Motion estimation outlier ratio hypothesis. The default is 0.5."
+            "      Motion estimation outlier ratio hypothesis. The default is 0.5.\n"
             "  --min-inlier-ratio=<float_number>\n"
-            "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n\n"
+            "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n"
+            "  --nkps=<int_number>\n"
+            "      Number of keypoints to find in each frame. The default is 1000.\n"
+            "  --extra-kps=<int_number>\n"
+            "      Extra keypoint grid size for motion estimation. The default is 0.\n\n"
             "  -sm, --save-motions=(<file_path>|no)\n"
             "      Save estimated motions into file. The default is no.\n"
             "  -lm, --load-motions=(<file_path>|no)\n"
@@ -116,6 +120,10 @@ void printHelp()
             "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n"
             "  --ws-outlier-ratio=<float_number>\n"
             "      Motion estimation outlier ratio hypothesis. The default is 0.5.\n"
+            "  --ws-nkps=<int_number>\n"
+            "      Number of keypoints to find in each frame. The default is 1000.\n"
+            "  --ws-extra-kps=<int_number>\n"
+            "      Extra keypoint grid size for motion estimation. The default is 0.\n\n"
             "  -sm2, --save-motions2=(<file_path>|no)\n"
             "      Save motions estimated for wobble suppression. The default is no.\n"
             "  -lm2, --load-motions2=(<file_path>|no)\n"
@@ -141,6 +149,8 @@ int main(int argc, const char **argv)
                 "{ m | model | affine| }"
                 "{ | min-inlier-ratio | 0.1 | }"
                 "{ | outlier-ratio | 0.5 | }"
+                "{ | nkps | 1000 | }"
+                "{ | extra-kps | 0 | }"
                 "{ sm | save-motions | no | }"
                 "{ lm | load-motions | no | }"
                 "{ r | radius | 15 | }"
@@ -162,6 +172,8 @@ int main(int argc, const char **argv)
                 "{ | ws-model | homography | }"
                 "{ | ws-min-inlier-ratio | 0.1 | }"
                 "{ | ws-outlier-ratio | 0.5 | }"
+                "{ | ws-nkps | 1000 | }"
+                "{ | ws-extra-kps | 0 | }"
                 "{ sm2 | save-motions2 | no | }"
                 "{ lm2 | load-motions2 | no | }"
                 "{ o | output | stabilized.avi | }"
@@ -216,11 +228,13 @@ int main(int argc, const char **argv)
                     throw runtime_error("unknown wobble suppression motion model: " + arg("ws-model"));
                 }
 
+                est->setDetector(new GoodFeaturesToTrackDetector(argi("ws-nkps")));
                 RansacParams ransac = est->ransacParams();
                 ransac.eps = argf("ws-outlier-ratio");
                 est->setRansacParams(ransac);
                 est->setMinInlierRatio(argf("ws-min-inlier-ratio"));
-                ws->setMotionEstimator(est);
+                est->setGridSize(Size(argi("ws-extra-kps"), argi("ws-extra-kps")));
+                ws->setMotionEstimator(est);                
 
                 MotionModel model = est->motionModel();
                 if (arg("load-motions2") != "no")
@@ -272,10 +286,12 @@ int main(int argc, const char **argv)
             throw runtime_error("unknown motion model: " + arg("model"));
         }
 
+        est->setDetector(new GoodFeaturesToTrackDetector(argi("nkps")));
         RansacParams ransac = est->ransacParams();
         ransac.eps = argf("outlier-ratio");
         est->setRansacParams(ransac);
         est->setMinInlierRatio(argf("min-inlier-ratio"));
+        est->setGridSize(Size(argi("extra-kps"), argi("extra-kps")));
         stabilizer->setMotionEstimator(est);
 
         MotionModel model = stabilizer->motionEstimator()->motionModel();

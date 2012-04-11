@@ -375,6 +375,7 @@ void TwoPassStabilizer::runPrePassIfNecessary()
         motionStabilizer_->stabilize(
             frameCount_, motions_, make_pair(0, frameCount_ - 1), &stabilizationMotions_[0]);
 
+        // save motions
         /*ofstream fm("log_motions.csv");
         for (int i = 0; i < frameCount_ - 1; ++i)
         {

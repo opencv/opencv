@@ -344,12 +344,28 @@ PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
         setRansacParams(RansacParams::homography2dMotionStd());
     setMaxRmse(0.5f);
     setMinInlierRatio(0.1f);
+    setGridSize(Size(0,0));
 }
 
 
 Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 {
     detector_->detect(frame0, keypointsPrev_);
+
+    // add extra keypoints
+    if (gridSize_.width > 0 && gridSize_.height > 0)
+    {
+        float dx = (float)frame0.cols / (gridSize_.width + 1);
+        float dy = (float)frame0.rows / (gridSize_.height + 1);
+        for (int x = 0; x < gridSize_.width; ++x)
+            for (int y = 0; y < gridSize_.height; ++y)
+                keypointsPrev_.push_back(KeyPoint((x+1)*dx, (y+1)*dy, 0.f));
+    }
+
+    /*Mat img;
+    drawKeypoints(frame0, keypointsPrev_, img);
+    imshow("frame0_keypoints", img);
+    waitKey(3);*/
 
     pointsPrev_.resize(keypointsPrev_.size());
     for (size_t i = 0; i < keypointsPrev_.size(); ++i)

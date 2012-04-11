@@ -148,6 +148,9 @@ public:
     void setMinInlierRatio(float val) { minInlierRatio_ = val; }
     float minInlierRatio() const { return minInlierRatio_; }
 
+    void setGridSize(Size val) { gridSize_ = val; }
+    Size gridSize() const { return gridSize_; }
+
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
 private:
@@ -160,6 +163,7 @@ private:
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
     float maxRmse_;
     float minInlierRatio_;
+    Size gridSize_;
 };
 
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
