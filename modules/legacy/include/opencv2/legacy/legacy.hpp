@@ -1806,7 +1806,7 @@ public:
     virtual bool train( const CvMat* samples, const CvMat* sampleIdx=0,
                         CvEMParams params=CvEMParams(), CvMat* labels=0 );
 
-    virtual float predict( const CvMat* sample, CV_OUT CvMat* probs, bool isNormalize=true ) const;
+    virtual float predict( const CvMat* sample, CV_OUT CvMat* probs ) const;
 
 #ifndef SWIG
     CV_WRAP CvEM( const cv::Mat& samples, const cv::Mat& sampleIdx=cv::Mat(),
@@ -1817,7 +1817,7 @@ public:
                                 CvEMParams params=CvEMParams(),
                                 CV_OUT cv::Mat* labels=0 );
 
-    CV_WRAP virtual float predict( const cv::Mat& sample, CV_OUT cv::Mat* probs=0, bool isNormalize=true ) const;
+    CV_WRAP virtual float predict( const cv::Mat& sample, CV_OUT cv::Mat* probs=0 ) const;
     CV_WRAP virtual double calcLikelihood( const cv::Mat &sample ) const;
 
     CV_WRAP int getNClusters() const;

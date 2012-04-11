@@ -102,15 +102,12 @@ double CvEM::calcLikelihood( const Mat &input_sample ) const
 }
 
 float
-CvEM::predict( const CvMat* _sample, CvMat* _probs, bool isNormalize ) const
+CvEM::predict( const CvMat* _sample, CvMat* _probs ) const
 {
     Mat prbs0 = cvarrToMat(_probs), prbs = prbs0, sample = cvarrToMat(_sample);
 	int cls = emObj.predict(sample, _probs ? _OutputArray(prbs) : cv::noArray());
     if(_probs)
     {
-        if(isNormalize)
-            normalize(prbs, prbs, 1, 0, NORM_L1);
-        
         if( prbs.data != prbs0.data )
         {
             CV_Assert( prbs.size == prbs0.size );
@@ -236,12 +233,9 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
 }
 
 float
-CvEM::predict( const Mat& _sample, Mat* _probs, bool isNormalize ) const
+CvEM::predict( const Mat& _sample, Mat* _probs ) const
 {
 	int cls = emObj.predict(_sample, _probs ? _OutputArray(*_probs) : cv::noArray());
-    if(_probs && isNormalize)
-        normalize(*_probs, *_probs, 1, 0, NORM_L1);
-
     return (float)cls;
 }
 
