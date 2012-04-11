@@ -87,6 +87,7 @@ div.sphinxsidebar {
     word-wrap: break-word;
     {%- if theme_stickysidebar|tobool %}
     top: 30px;
+    width: 240px;
     margin: 0;
     position: fixed;
     overflow: auto;
