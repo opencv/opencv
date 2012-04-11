@@ -2,7 +2,9 @@ package org.opencv.test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 
+import junit.framework.TestCase;
 import junit.framework.Assert;
 
 import org.opencv.android.Utils;
@@ -65,8 +67,19 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
          * The original idea about test order randomization is from
          * marek.defecinski blog.
          */
-        // List<TestCase> testCases = androidTestRunner.getTestCases();
-        // Collections.shuffle(testCases); //shuffle the tests order
+        //List<TestCase> testCases = androidTestRunner.getTestCases();
+        //Collections.shuffle(testCases); //shuffle the tests order
+
+        if(OpenCVTestCase.passNYI) {
+            // turn off problematic camera tests
+            Iterator<TestCase> it = androidTestRunner.getTestCases().iterator();
+            while (it.hasNext()) {
+                String name = it.next().toString();
+                if (name.contains("VideoCaptureTest"))
+                    it.remove();
+            }
+        }
+
 
         super.onStart();
     }

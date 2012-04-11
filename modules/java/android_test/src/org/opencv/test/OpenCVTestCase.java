@@ -26,7 +26,7 @@ import org.opencv.highgui.Highgui;
 public class OpenCVTestCase extends TestCase {
 
 	//change to 'true' to unblock fail on fail("Not yet implemented")
-	protected static final boolean passNYI = true;
+	public static final boolean passNYI = true;
     
 	protected static final int matSize = 10;
     protected static final double EPS = 0.001;
