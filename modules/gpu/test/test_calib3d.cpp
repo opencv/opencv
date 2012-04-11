@@ -249,7 +249,7 @@ TEST_P(ProjectPoints, Accuracy)
 
     for (size_t i = 0; i < dst_gold.size(); ++i)
     {
-        cv::Point2f res = h_dst.at<cv::Point2f>(0, i);
+        cv::Point2f res = h_dst.at<cv::Point2f>(0, (int)i);
         cv::Point2f res_gold = dst_gold[i];
 
         ASSERT_LE(cv::norm(res_gold - res) / cv::norm(res_gold), 1e-3f);
@@ -291,7 +291,7 @@ TEST_P(SolvePnPRansac, Accuracy)
 
     cv::Mat rvec, tvec;
     std::vector<int> inliers;
-    cv::gpu::solvePnPRansac(object, cv::Mat(1, image_vec.size(), CV_32FC2, &image_vec[0]),
+    cv::gpu::solvePnPRansac(object, cv::Mat(1, (int)image_vec.size(), CV_32FC2, &image_vec[0]),
                             camera_mat, cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)),
                             rvec, tvec, false, 200, 2.f, 100, &inliers);
 

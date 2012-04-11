@@ -353,7 +353,7 @@ Mat getMotion(int from, int to, const Mat *motions, int size)
 
 Mat getMotion(int from, int to, const vector<Mat> &motions)
 {
-    return getMotion(from, to, &motions[0], motions.size());
+    return getMotion(from, to, &motions[0], (int)motions.size());
 }
 
 } // namespace videostab

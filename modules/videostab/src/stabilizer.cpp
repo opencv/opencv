@@ -258,7 +258,7 @@ void OnePassStabilizer::estimateMotion()
 
 void OnePassStabilizer::stabilizeFrame()
 {
-    Mat stabilizationMotion = motionFilter_->stabilize(curStabilizedPos_, &motions_[0], motions_.size());
+    Mat stabilizationMotion = motionFilter_->stabilize(curStabilizedPos_, &motions_[0], (int)motions_.size());
     StabilizerBase::stabilizeFrame(stabilizationMotion);
 }
 

@@ -384,7 +384,7 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
     if(labels.size() != (size_t)N)
         CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
     // compute the Fisherfaces
-    int C = remove_dups(labels).size(); // number of unique classes
+    int C = (int)remove_dups(labels).size(); // number of unique classes
     // clip number of components to be a valid number
     if((_num_components <= 0) || (_num_components > (C-1)))
         _num_components = (C-1);
@@ -549,7 +549,7 @@ histc_(const Mat& src, int minVal=0, int maxVal=255, bool normed=false)
     calcHist(&src, 1, 0, Mat(), result, 1, &histSize, &histRange, true, false);
     // normalize
     if(normed) {
-        result /= src.total();
+        result /= (int)src.total();
     }
     return result.reshape(1,1);
 }

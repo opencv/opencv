@@ -47,7 +47,7 @@ static void sortMatrixRowsByIndices(InputArray _src, InputArray _indices, Output
     Mat dst = _dst.getMat();
     for(size_t idx = 0; idx < indices.size(); idx++) {
         Mat originalRow = src.row(indices[idx]);
-        Mat sortedRow = dst.row(idx);
+        Mat sortedRow = dst.row((int)idx);
         originalRow.copyTo(sortedRow);
     }
 }
@@ -127,8 +127,9 @@ static Mat interp1(InputArray _x, InputArray _Y, InputArray _xi)
         case CV_32SC1: return interp1_<int>(x,Y,xi); break;
         case CV_32FC1: return interp1_<float>(x,Y,xi); break;
         case CV_64FC1: return interp1_<double>(x,Y,xi); break;
-        default: CV_Error(CV_StsUnsupportedFormat, ""); return Mat();
+        default: CV_Error(CV_StsUnsupportedFormat, ""); break;
     }
+    return Mat();
 }
     
 namespace colormap

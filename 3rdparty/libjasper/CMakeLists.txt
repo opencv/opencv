@@ -29,6 +29,10 @@ if(MSVC)
   add_definitions(-DJAS_WIN_MSVC_BUILD)
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-uninitialized")
+endif()
+
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")

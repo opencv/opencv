@@ -62,7 +62,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     if(n == 0)
         return Mat();
     // dimensionality of samples
-    int d = src.getMat(0).total();
+    int d = (int)src.getMat(0).total();
     // create data matrix
     Mat data(n, d, rtype);
     // copy data
@@ -82,7 +82,7 @@ void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, OutputArra
     Mat dst = _dst.getMat();
     for(size_t idx = 0; idx < indices.size(); idx++) {
         Mat originalCol = src.col(indices[idx]);
-        Mat sortedCol = dst.col(idx);
+        Mat sortedCol = dst.col((int)idx);
         originalCol.copyTo(sortedCol);
     }
 }
@@ -947,14 +947,14 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     vector<int> num2label = remove_dups(labels);
     map<int, int> label2num;
     for (size_t i = 0; i < num2label.size(); i++)
-        label2num[num2label[i]] = i;
+        label2num[num2label[i]] = (int)i;
     for (size_t i = 0; i < labels.size(); i++)
         mapped_labels[i] = label2num[labels[i]];
     // get sample size, dimension
     int N = data.rows;
     int D = data.cols;
     // number of unique labels
-    int C = num2label.size();
+    int C = (int)num2label.size();
     // throw error if less labels, than samples
     if (labels.size() != (size_t)N)
         CV_Error(CV_StsBadArg, "Error: The number of samples must equal the number of labels.");

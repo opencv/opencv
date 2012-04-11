@@ -376,8 +376,9 @@ static bool pyopencv_to(PyObject* obj, uchar& value, const char* name = "<unknow
 {
     if(!obj || obj == Py_None)
         return true;
-    value = (int)PyInt_AsLong(obj);
-    return value != -1 || !PyErr_Occurred();
+    int ivalue = (int)PyInt_AsLong(obj);
+    value = cv::saturate_cast<uchar>(ivalue);
+    return ivalue != -1 || !PyErr_Occurred();
 }
 
 static PyObject* pyopencv_from(double value)

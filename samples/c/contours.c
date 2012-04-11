@@ -49,7 +49,7 @@ static void findCComp( IplImage* img )
 }
 
 
-int main( int argc, char** argv )
+int main()
 {
     int i, j;
     CvMemStorage* storage = cvCreateMemStorage(0);

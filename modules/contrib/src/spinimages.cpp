@@ -1171,7 +1171,7 @@ private:
                 break;
                         
             std::transform(left.begin(), left.end(), buf_beg,  WgcHelper(group, groupingMat));
-            int minInd = min_element(buf_beg, buf_beg + left_size) - buf_beg;
+            size_t minInd = min_element(buf_beg, buf_beg + left_size) - buf_beg;
             
             if (buf[minInd] < model.T_GroupingCorespondances) /* can add corespondance to group */
             {
