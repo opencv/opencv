@@ -790,10 +790,10 @@ else()
   status("    JPEG 2000:"  "NO")
 endif()
 
-status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE NO)
-status("    OpenNI:"    HAVE_OPENNI                        THEN YES             ELSE NO)
+status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})"                     ELSE NO)
+status("    OpenNI:"    HAVE_OPENNI                        THEN "YES (ver ${OPENNI_VERSION_STRING}, build ${OPENNI_VERSION_BUILD})" ELSE NO)
 status("    OpenNI PrimeSensor Modules:"
-                        HAVE_OPENNI_PRIME_SENSOR_MODULE    THEN YES             ELSE NO)
+                        HAVE_OPENNI_PRIME_SENSOR_MODULE    THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"                               ELSE NO)
 if(WIN32)
   status("    XIMEA:"     HAVE_XIMEA  THEN YES ELSE NO)
 endif()
