@@ -87,7 +87,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "   -\n"
             + "      name: eps\n"
             + "      type: 5\n"
-            + "      value: 0.\n"
+            + "      value: 4.\n"// this line is changed!
             + "   -\n"
             + "      name: sorted\n"
             + "      type: 15\n"
@@ -98,39 +98,6 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     int matSize;
 
     DMatch[] truth;
-
-    private Mat getBriefQueryDescriptors() {
-        return getBriefTestDescriptors(getBriefQueryImg());
-    }
-
-    private Mat getBriefQueryImg() {
-        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(40, matSize - 40), new Point(matSize - 50, 50), new Scalar(0), 8);
-        return img;
-    }
-
-    private Mat getBriefTestDescriptors(Mat img) {
-        MatOfKeyPoint keypoints = new MatOfKeyPoint();
-        Mat descriptors = new Mat();
-
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.FAST);
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.BRIEF);
-
-        detector.detect(img, keypoints);
-        extractor.compute(img, keypoints, descriptors);
-
-        return descriptors;
-    }
-
-    private Mat getBriefTrainDescriptors() {
-        return getBriefTestDescriptors(getBriefTrainImg());
-    }
-
-    private Mat getBriefTrainImg() {
-        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(40, 40), new Point(matSize - 40, matSize - 40), new Scalar(0), 8);
-        return img;
-    }
 
     private Mat getMaskImg() {
         return new Mat(5, 2, CvType.CV_8U, new Scalar(0)) {
@@ -364,28 +331,14 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, ymlParamsModified);
+        String filenameR = OpenCVTestRunner.getTempFileName("yml");
+        String filenameW = OpenCVTestRunner.getTempFileName("yml");
+        writeFile(filenameR, ymlParamsModified);
 
-        matcher.read(filename);
-
-        Mat train = getBriefTrainDescriptors();
-        Mat query = getBriefQueryDescriptors();
-        MatOfDMatch matches = new MatOfDMatch();
-
-        matcher.match(query, train, matches);
-
-        assertArrayDMatchEquals(new DMatch[]{
-        		/*
-        		new DMatch(0, 0, 0, 0),
-                new DMatch(1, 2, 0, 0),
-                new DMatch(2, 1, 0, 0),
-                new DMatch(3, 3, 0, 0)
-                */
-        		new DMatch(1, 2, 0, 42), 
-        		new DMatch(2, 1, 0, 40), 
-        		new DMatch(3, 3, 0, 53)
-                }, matches.toArray(), EPS);
+        matcher.read(filenameR);
+        matcher.write(filenameW);
+        
+        assertEquals(ymlParamsModified, readFile(filenameW));
     }
 
     public void testTrain() {

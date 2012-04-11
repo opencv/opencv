@@ -804,7 +804,7 @@ public class CoreTest extends OpenCVTestCase {
     public void testGetNumberOfCPUs() {
         int cpus = Core.getNumberOfCPUs();
 
-        assertEquals(Runtime.getRuntime().availableProcessors(), cpus);
+        assertTrue(Runtime.getRuntime().availableProcessors() <= cpus);
     }
 
     public void testGetOptimalDFTSize() {
