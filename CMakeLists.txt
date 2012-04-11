@@ -124,6 +124,7 @@ OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON 
 OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON   IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF WIN32 )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF  IF (NOT ANDROID AND NOT IOS) )
 
 # OpenCV build components
 # ===================================================
@@ -527,6 +528,22 @@ if(WITH_EIGEN)
   endif()
 endif()
 
+########################## Clp #####################################
+set(HAVE_CLP FALSE)
+
+if(WITH_CLP)
+  find_path(CLP_INCLUDE_PATH "coin"
+            PATHS "/usr/local/include" "/usr/include" "/opt/include"
+            DOC "The path to Clp headers")
+  if(CLP_INCLUDE_PATH)
+    ocv_include_directories(${CLP_INCLUDE_PATH})
+    set(CLP_LIBRARY_DIR "${CLP_INCLUDE_PATH}/../lib" CACHE PATH "Full path of Clp library directory")
+    link_directories(${CLP_LIBRARY_DIR})
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} Clp OsiClp CoinUtils)
+    set(HAVE_CLP TRUE)
+  endif()
+endif()
+
 ################## Extra HighGUI libs on Windows ###################
 if(WIN32)
   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32)
@@ -799,6 +816,7 @@ endif()
 status("    Use TBB:"   HAVE_TBB   THEN YES ELSE NO)
 status("    Use Cuda:"  HAVE_CUDA  THEN YES ELSE NO)
 status("    Use Eigen:" HAVE_EIGEN THEN YES ELSE NO)
+status("    Use Clp:"   HAVE_CLP   THEN YES ELSE NO)
 
 status("")
 status("  Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_MAJOR_MINOR})" ELSE NO)

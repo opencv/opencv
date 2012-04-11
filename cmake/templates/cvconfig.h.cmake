@@ -195,3 +195,6 @@
 
 /* OpenGL support*/
 #cmakedefine HAVE_OPENGL
+
+/* Clp support */
+#cmakedefine HAVE_CLP

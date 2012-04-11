@@ -45,6 +45,10 @@
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 
+#ifdef HAVE_CLP
+#include "coin/ClpSimplex.hpp"
+#endif
+
 using namespace std;
 
 namespace cv
@@ -253,6 +257,28 @@ float estimateOptimalTrimRatio(const Mat &M, Size size)
 
     return r;
 }
+
+
+LpMotionStabilizer::LpMotionStabilizer(MotionModel model)
+{
+    setMotionModel(model);
+}
+
+
+#ifndef HAVE_CLP
+void LpMotionStabilizer::stabilize(int, const vector<Mat>&, pair<int,int>, Mat*) const
+{
+    CV_Error(CV_StsError, "The library is built without Clp support");
+}
+#else
+void LpMotionStabilizer::stabilize(
+        int size, const vector<Mat> &motions, pair<int,int> range,
+        Mat *stabilizationMotions) const
+{
+    // TODO implement
+    CV_Error(CV_StsNotImplemented, "LpMotionStabilizer::stabilize");
+}
+#endif
 
 } // namespace videostab
 } // namespace cv

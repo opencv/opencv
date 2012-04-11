@@ -46,6 +46,7 @@
 #include <vector>
 #include <utility>
 #include "opencv2/core/core.hpp"
+#include "opencv2/videostab/global_motion.hpp"
 
 namespace cv
 {
@@ -106,6 +107,22 @@ private:
     int radius_;
     float stdev_;
     std::vector<float> weight_;
+};
+
+class CV_EXPORTS LpMotionStabilizer : public IMotionStabilizer
+{
+public:
+    LpMotionStabilizer(MotionModel model = LINEAR_SIMILARITY);
+
+    void setMotionModel(MotionModel val) { model_ = val; }
+    MotionModel motionModel() const { return model_; }
+
+    virtual void stabilize(
+            int size, const std::vector<Mat> &motions, std::pair<int,int> range,
+            Mat *stabilizationMotions) const;
+
+private:
+    MotionModel model_;
 };
 
 CV_EXPORTS Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio);
