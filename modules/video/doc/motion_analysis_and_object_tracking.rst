@@ -37,7 +37,7 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
             * **OPTFLOW_USE_INITIAL_FLOW** Use initial estimations stored in  ``nextPts`` . If the flag is not set, then ``prevPts`` is copied to ``nextPts`` and is considered as the initial estimate.
 
-            * **OPTFLOW_LK_GET_MIN_EIGENVALS** Use minimum eigen values as a error measure (see ``minEigThreshold`` description). If the flag is not set, then L1 norm between patches around the original and a moved point divided by number of pixels in a window is used as a error measure.
+            * **OPTFLOW_LK_GET_MIN_EIGENVALS** Use minimum eigen values as a error measure (see ``minEigThreshold`` description). If the flag is not set, then L1 distance between patches around the original and a moved point divided by number of pixels in a window is used as a error measure.
 
     :param minEigThreshold: The algorithm computes a minimum eigen value of a 2x2 normal matrix of optical flow equations (this matrix is called a spatial gradient matrix in [Bouguet00]_) divided by number of pixels in a window. If this value is less then ``minEigThreshold`` then a corresponding feature is filtered out and its flow is not computed. So it allows to remove bad points earlier and speed up the computation.
             
