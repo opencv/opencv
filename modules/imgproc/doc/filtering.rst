@@ -418,7 +418,7 @@ Smoothes an image using the normalized box filter.
 
 .. ocv:pyfunction:: cv2.blur(src, ksize[, dst[, anchor[, borderType]]]) -> dst
 
-    :param src: Source image.
+    :param src: Source image. The image can have any number of channels, which are processed independently. The depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -507,9 +507,7 @@ where
 
     \alpha = \fork{\frac{1}{\texttt{ksize.width*ksize.height}}}{when \texttt{normalize=true}}{1}{otherwise}
 
-Unnormalized box filter is useful for computing various integral characteristics over each pixel neighborhood, such as covariance matrices of image derivatives (used in dense optical flow algorithms,
-and so on). If you need to compute pixel sums over variable-size windows, use
-:ocv:func:`integral` .
+Unnormalized box filter is useful for computing various integral characteristics over each pixel neighborhood, such as covariance matrices of image derivatives (used in dense optical flow algorithms, and so on). If you need to compute pixel sums over variable-size windows, use :ocv:func:`integral` .
 
 .. seealso::
 
@@ -741,17 +739,17 @@ Creates an engine for non-separable morphological operations.
 
 .. ocv:function:: Ptr<FilterEngine> createMorphologyFilter(int op, int type,    InputArray element, Point anchor=Point(-1,-1), int rowBorderType=BORDER_CONSTANT, int columnBorderType=-1, const Scalar& borderValue=morphologyDefaultBorderValue())
 
-.. ocv:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray element,                                    Point anchor=Point(-1,-1))
+.. ocv:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray element, Point anchor=Point(-1,-1))
 
-.. ocv:function:: Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type,                                          int esize, int anchor=-1)
+.. ocv:function:: Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int esize, int anchor=-1)
 
-.. ocv:function:: Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type,                                                int esize, int anchor=-1)
+.. ocv:function:: Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int esize, int anchor=-1)
 
 .. ocv:function:: Scalar morphologyDefaultBorderValue()
 
     :param op: Morphology operation ID,  ``MORPH_ERODE``  or  ``MORPH_DILATE`` .
-    
-    :param type: Input/output image type. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
+
+    :param type: Input/output image type. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
     :param element: 2D 8-bit structuring element for a morphological operation. Non-zero elements indicate the pixels that belong to the element.
 
@@ -840,7 +838,7 @@ Dilates an image by using a specific structuring element.
 .. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
 .. ocv:pyoldfunction:: cv.Dilate(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
+    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -880,9 +878,9 @@ Erodes an image by using a specific structuring element.
 .. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
 .. ocv:pyoldfunction:: cv.Erode(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
+    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
-    :param dst: Destination image of the same size and type as  ``src`` .
+    :param dst: Destination image of the same size and type as ``src``.
     
     :param element: Structuring element used for erosion. If  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
 
@@ -925,7 +923,13 @@ Convolves an image with the kernel.
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
     
-    :param ddepth: Desired depth of the destination image. If it is negative, it will be the same as  ``src.depth()`` .
+    :param ddepth: Desired depth of the destination image. If it is negative, it will be the same as  ``src.depth()`` . The following combination of ``src.depth()`` and ``ddepth`` are supported:
+         * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
+        
+        when ``ddepth=-1``, the destination image will have the same depth as the source.
     
     :param kernel: Convolution kernel (or rather a correlation kernel), a single-channel floating point matrix. If you want to apply different kernels to different channels, split the image into separate color planes using  :ocv:func:`split`  and process them individually.
 
@@ -965,7 +969,7 @@ Smoothes an image using a Gaussian filter.
 
 .. ocv:pyfunction:: cv2.GaussianBlur(src, ksize, sigma1[, dst[, sigma2[, borderType]]]) -> dst
 
-    :param src: Source image.
+    :param src: Source image. The image can have any number of channels, which are processed independently. The depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -1173,7 +1177,7 @@ Performs advanced morphological transformations.
 .. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
 .. ocv:pyoldfunction:: cv.MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
 
-    :param src: Source image. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
+    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -1406,7 +1410,13 @@ Applies a separable linear filter to an image.
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
     
-    :param ddepth: Destination image depth.
+    :param ddepth: Destination image depth. The following combination of ``src.depth()`` and ``ddepth`` are supported:
+         * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
+        
+        when ``ddepth=-1``, the destination image will have the same depth as the source.
 
     :param rowKernel: Coefficients for filtering each row.
 

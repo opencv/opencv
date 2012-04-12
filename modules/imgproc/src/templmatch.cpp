@@ -58,7 +58,6 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     int cdepth = CV_MAT_DEPTH(ctype), ccn = CV_MAT_CN(ctype);
     
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
-    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F );
     
     if( depth != tdepth && tdepth != std::max(CV_32F, depth) )
     {
@@ -74,7 +73,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     
     corr.create(corrsize, ctype);
 
-    int maxDepth = depth > CV_8U ? CV_64F : std::max(std::max(CV_32F, tdepth), cdepth);
+    int maxDepth = depth > CV_8S ? CV_64F : std::max(std::max(CV_32F, tdepth), cdepth);
     Size blocksize, dftsize;
     
     blocksize.width = cvRound(templ.cols*blockScale);
@@ -227,14 +226,6 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
         }
     }
 }
-
-/*void
-cv::crossCorr( const Mat& img, const Mat& templ, Mat& corr,
-           Point anchor, double delta, int borderType )
-{
-    CvMat _img = img, _templ = templ, _corr = corr;
-    icvCrossCorr( &_img, &_templ, &_corr, anchor, delta, borderType );
-}*/
 
 }
 

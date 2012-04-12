@@ -185,7 +185,8 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     if( rowBorderType == BORDER_CONSTANT || columnBorderType == BORDER_CONSTANT )
     {
         constBorderValue.resize(srcElemSize*borderLength);
-        scalarToRawData(_borderValue, &constBorderValue[0], srcType,
+        int srcType1 = CV_MAKETYPE(CV_MAT_DEPTH(srcType), MIN(CV_MAT_CN(srcType), 4));
+        scalarToRawData(_borderValue, &constBorderValue[0], srcType1,
                         borderLength*CV_MAT_CN(srcType));
     }
 

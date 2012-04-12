@@ -1775,3 +1775,107 @@ TEST(Imgproc_MinEigenVal, accuracy) { CV_MinEigenValTest test; test.safe_run(); 
 TEST(Imgproc_EigenValsVecs, accuracy) { CV_EigenValVecTest test; test.safe_run(); }
 TEST(Imgproc_PreCornerDetect, accuracy) { CV_PreCornerDetectTest test; test.safe_run(); }
 TEST(Imgproc_Integral, accuracy) { CV_IntegralTest test; test.safe_run(); }
+
+//////////////////////////////////////////////////////////////////////////////////
+
+class CV_FilterSupportedFormatsTest : public cvtest::BaseTest
+{
+public:
+    CV_FilterSupportedFormatsTest() {}
+    ~CV_FilterSupportedFormatsTest() {}   
+protected:
+    void run(int)
+    {
+        const int depths[][2] = 
+        {
+            {CV_8U, CV_8U},
+            {CV_8U, CV_16U},
+            {CV_8U, CV_16S},
+            {CV_8U, CV_32F},
+            {CV_8U, CV_64F},
+            {CV_16U, CV_16U},
+            {CV_16U, CV_32F},
+            {CV_16U, CV_64F},
+            {CV_16S, CV_16S},
+            {CV_16S, CV_32F},
+            {CV_16S, CV_64F},
+            {CV_32F, CV_32F},
+            {CV_64F, CV_64F},
+            {-1, -1}
+        };
+        
+        int i = 0;
+        volatile int fidx = -1;
+        try
+        {
+            // use some "odd" size to do yet another smoke
+            // testing of the non-SIMD loop tails
+            Size sz(163, 117);
+            Mat small_kernel(5, 5, CV_32F), big_kernel(21, 21, CV_32F);
+            Mat kernelX(11, 1, CV_32F), kernelY(7, 1, CV_32F);
+            Mat symkernelX(11, 1, CV_32F), symkernelY(7, 1, CV_32F);
+            randu(small_kernel, -10, 10);
+            randu(big_kernel, -1, 1);
+            randu(kernelX, -1, 1);
+            randu(kernelY, -1, 1);
+            flip(kernelX, symkernelX, 0);
+            symkernelX += kernelX;
+            flip(kernelY, symkernelY, 0);
+            symkernelY += kernelY;
+            
+            Mat elem_ellipse = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+            Mat elem_rect = getStructuringElement(MORPH_RECT, Size(7, 7));
+            
+            for( i = 0; depths[i][0] >= 0; i++ )
+            {
+                int sdepth = depths[i][0];
+                int ddepth = depths[i][1];
+                Mat src(sz, CV_MAKETYPE(sdepth, 5)), dst;
+                randu(src, 0, 100);
+                // non-separable filtering with a small kernel
+                fidx = 0;
+                filter2D(src, dst, ddepth, small_kernel);
+                fidx++;
+                filter2D(src, dst, ddepth, big_kernel);
+                fidx++;
+                sepFilter2D(src, dst, ddepth, kernelX, kernelY);
+                fidx++;
+                sepFilter2D(src, dst, ddepth, symkernelX, symkernelY);
+                fidx++;
+                Sobel(src, dst, ddepth, 2, 0, 5);
+                fidx++;
+                Scharr(src, dst, ddepth, 0, 1);
+                if( sdepth != ddepth )
+                    continue;
+                fidx++;
+                GaussianBlur(src, dst, Size(5, 5), 1.2, 1.2);
+                fidx++;
+                blur(src, dst, Size(11, 11));
+                fidx++;
+                morphologyEx(src, dst, MORPH_GRADIENT, elem_ellipse);
+                fidx++;
+                morphologyEx(src, dst, MORPH_GRADIENT, elem_rect);
+            }
+        }
+        catch(...)
+        {
+            ts->printf(cvtest::TS::LOG, "Combination of depths %d => %d in %s is not supported (yet it should be)",
+                       depths[i][0], depths[i][1],
+                       fidx == 0 ? "filter2D (small kernel)" :
+                       fidx == 1 ? "filter2D (large kernel)" :
+                       fidx == 2 ? "sepFilter2D" :
+                       fidx == 3 ? "sepFilter2D (symmetrical/asymmetrical kernel)" :
+                       fidx == 4 ? "Sobel" :
+                       fidx == 5 ? "Scharr" :
+                       fidx == 6 ? "GaussianBlur" :
+                       fidx == 7 ? "blur" :
+                       fidx == 8 || fidx == 9 ? "morphologyEx" :
+                       "unknown???");
+                       
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Imgproc_Filtering, supportedFormats) { CV_FilterSupportedFormatsTest test; test.safe_run(); }
+
