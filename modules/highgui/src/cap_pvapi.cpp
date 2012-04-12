@@ -358,6 +358,8 @@ CvCapture* cvCreateCameraCapture_PvAPI( int index )
 {
     CvCaptureCAM_PvAPI* capture = new CvCaptureCAM_PvAPI;
 
+    memset(&capture->Camera, 0, sizeof(tCamera));
+
     if ( capture->open( index ))
         return capture;
 
