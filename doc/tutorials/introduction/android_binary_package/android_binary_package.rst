@@ -100,7 +100,7 @@ You need the following tools to be installed:
 
    Check the `Android SDK System Requirements
    <http://developer.android.com/sdk/requirements.html>`_ document for a list of Eclipse versions that are compatible with the Android SDK. 
-   For OpenCV 2.4.1 we recommend Eclipse 3.6 (Helios) or later versions. They work well for OpenCV under both Windows and Linux.
+   For OpenCV 2.4.0 we recommend Eclipse 3.6 (Helios) or later versions. They work well for OpenCV under both Windows and Linux.
    
    If you have no Eclipse installed, you can download it from this location:
     
