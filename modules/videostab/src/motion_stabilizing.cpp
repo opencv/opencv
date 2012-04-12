@@ -214,7 +214,6 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
         else
             l = t;
         t = r;
-        relaxMotion(srcM, r, curM);
     }
 
     return (1 - r) * M + r * Mat::eye(3, 3, CV_32F);
