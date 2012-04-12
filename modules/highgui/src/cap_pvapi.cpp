@@ -109,6 +109,7 @@ protected:
 CvCaptureCAM_PvAPI::CvCaptureCAM_PvAPI()
 {
 	monocrome=false;
+    memset(&this->Camera, 0, sizeof(this->tCamera));
 }
 void CvCaptureCAM_PvAPI::Sleep(unsigned int time)
 {
@@ -357,8 +358,6 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
 CvCapture* cvCreateCameraCapture_PvAPI( int index )
 {
     CvCaptureCAM_PvAPI* capture = new CvCaptureCAM_PvAPI;
-
-    memset(&capture->Camera, 0, sizeof(tCamera));
 
     if ( capture->open( index ))
         return capture;
