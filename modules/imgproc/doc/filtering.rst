@@ -751,7 +751,7 @@ Creates an engine for non-separable morphological operations.
 
     :param op: Morphology operation ID,  ``MORPH_ERODE``  or  ``MORPH_DILATE`` .
     
-    :param type: Input/output image type.
+    :param type: Input/output image type. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
 
     :param element: 2D 8-bit structuring element for a morphological operation. Non-zero elements indicate the pixels that belong to the element.
 
@@ -840,7 +840,7 @@ Dilates an image by using a specific structuring element.
 .. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
 .. ocv:pyoldfunction:: cv.Dilate(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image.
+    :param src: Source image. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -880,7 +880,7 @@ Erodes an image by using a specific structuring element.
 .. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
 .. ocv:pyoldfunction:: cv.Erode(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image.
+    :param src: Source image. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -1173,7 +1173,7 @@ Performs advanced morphological transformations.
 .. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
 .. ocv:pyoldfunction:: cv.MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
 
-    :param src: Source image.
+    :param src: Source image. The image must have 1-4 channels and valid image depths are ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -1229,7 +1229,7 @@ Morphological gradient:
 
     \texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}
 
-Any of the operations can be done in-place.
+Any of the operations can be done in-place. In case of multi-channel images, each channel is processed independently.
 
 .. seealso::
 
