@@ -383,7 +383,7 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
         vector<DMatch>& mq = matches.back();
         mq.reserve(knn);
         
-        for( int k = 0; k < knn; k++ )
+        for( int k = 0; k < nidx.cols; k++ )
         {
             if( nidxptr[k] < 0 )
                 break;

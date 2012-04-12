@@ -1605,25 +1605,20 @@ struct BatchDistInvoker
                 // we handle both CV_32S and CV_32F cases with a single branch
                 int* distptr = (int*)dist->ptr(i);
                 
-                int k, k0, k0_, j;
-                for( k0 = 0; k0 < K; k0++ )
-                    if( nidxptr[k0] < 0 )
-                        break;
-                k0_ = std::max(k0, 1);
+                int j, k;
                 
                 for( j = 0; j < src2->rows; j++ )
                 {
                     int d = bufptr[j];
-                    if( d < distptr[k0_-1] )
+                    if( d < distptr[K-1] )
                     {
-                        for( k = std::min(k0-1, K-2); k >= 0 && distptr[k] > d; k-- )
+                        for( k = K-2; k >= 0 && distptr[k] > d; k-- )
                         {
                             nidxptr[k+1] = nidxptr[k];
                             distptr[k+1] = distptr[k];
                         }
                         nidxptr[k+1] = j + update;
                         distptr[k+1] = d;
-                        k0_ = k0 = std::min(k0 + 1, K);
                     }
                 }
             }
