@@ -85,9 +85,9 @@ div.related a {
 
 div.sphinxsidebar {
     word-wrap: break-word;
+    width: 240px;
     {%- if theme_stickysidebar|tobool %}
     top: 30px;
-    width: 240px;
     margin: 0;
     position: fixed;
     overflow: auto;
