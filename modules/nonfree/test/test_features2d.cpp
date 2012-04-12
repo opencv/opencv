@@ -1067,14 +1067,14 @@ TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
 
     //cout << "\nBest " << k << " matches to " << descT.rows << " train desc-s." << endl;
     ASSERT_EQ(descQ.rows, matches.size());
-    for(int i = 0; i<matches.size(); i++)
+    for(size_t i = 0; i<matches.size(); i++)
     {
         //cout << "\nmatches[" << i << "].size()==" << matches[i].size() << endl;
-        ASSERT_TRUE(min(k, descT.rows) >= matches[i].size());
-        for(int j = 0; j<matches[i].size(); j++)
+        ASSERT_GT(min(k, descT.rows), static_cast<int>(matches[i].size()));
+        for(size_t j = 0; j<matches[i].size(); j++)
         {
             //cout << "\t" << matches[i][j].queryIdx << " -> " << matches[i][j].trainIdx << endl;
-            ASSERT_EQ(matches[i][j].queryIdx, i);
+            ASSERT_EQ(matches[i][j].queryIdx, static_cast<int>(i));
         }
     }
 }

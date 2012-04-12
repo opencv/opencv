@@ -279,9 +279,6 @@ The function can be used to initialize a point-based tracker of an object.
     :ocv:func:`cornerHarris`, 
     :ocv:func:`calcOpticalFlowPyrLK`, 
     :ocv:func:`estimateRigidTransform`,
-    :ocv:class:`PlanarObjectDetector`, 
-    :ocv:class:`OneWayDescriptor`
-
 
 
 HoughCircles

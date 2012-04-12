@@ -499,7 +499,7 @@ gpu::buildWarpAffineMaps
 ------------------------
 Builds transformation maps for affine transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
 
     :param M: *2x3*  transformation matrix.
 
@@ -543,7 +543,7 @@ gpu::buildWarpPerspectiveMaps
 -----------------------------
 Builds transformation maps for perspective transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
 
     :param M: *3x3*  transformation matrix.
 
