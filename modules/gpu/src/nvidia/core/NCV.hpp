@@ -134,15 +134,24 @@ typedef      unsigned char Ncv8u;
 typedef              float Ncv32f;
 typedef             double Ncv64f;
 
-
-struct NcvRect8u
+struct NcvRect8u__
 {
     Ncv8u x;
     Ncv8u y;
     Ncv8u width;
     Ncv8u height;
-    __host__ __device__ NcvRect8u() : x(0), y(0), width(0), height(0) {};
-    __host__ __device__ NcvRect8u(Ncv8u x, Ncv8u y, Ncv8u width, Ncv8u height) : x(x), y(y), width(width), height(height) {}
+};
+
+struct NcvRect8u : NcvRect8u__
+{
+    __host__ __device__ NcvRect8u() {}
+    __host__ __device__ NcvRect8u(Ncv8u x, Ncv8u y, Ncv8u width, Ncv8u height)
+    {
+        x = x;
+        y = y;
+        width = width;
+        height = height;
+    }
 };
 
 

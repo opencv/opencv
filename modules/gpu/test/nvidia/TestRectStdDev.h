@@ -33,9 +33,9 @@ private:
 	TestRectStdDev& operator=(const TestRectStdDev&);	
 
     NCVTestSourceProvider<Ncv8u> &src;
-    NcvRect32u rect;
     Ncv32u width;
     Ncv32u height;
+    NcvRect32u rect;
     Ncv32f scaleFactor;
 
     NcvBool bTextureCache;
