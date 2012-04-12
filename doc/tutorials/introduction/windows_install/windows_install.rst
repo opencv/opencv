@@ -16,7 +16,7 @@ Installation by using the pre-built libraries
 
 1. Open up a web browser and go to: http://sourceforge.net/projects/opencvlibrary/files/opencv-win/
 
-#. Open the folder for the latest version (currently this is 2.3).
+#. Open the folder for the latest version (currently this is 2.4).
 
 #. Choose a build you want to use and download it. The naming conventions used will show what kind of support they offer. For example:
    
@@ -60,7 +60,7 @@ If you are building your own libraries you can take either the source files from
 
    .. container:: enumeratevisibleitemswithsquare
 
-      + stable and tested build - http://code.opencv.org/svn/opencv/branches/2.3 (the number at the end will change with every new realease, so change it to that)
+      + stable and tested build - http://code.opencv.org/svn/opencv/branches/2.4 (the number at the end will change with every new realease, so change it to that)
       + development build - http://code.opencv.org/svn/opencv/trunk/
 
 While the later one may contain a couple of new and experimental algorithms, performance increases and interface improvements, be aware, that it may also contain many-many bugs. Using the first one is recommended in most of the cases. That is unless you are extending the OpenCV library itself or really need to most up to date version of it. 
