@@ -125,6 +125,7 @@ CV_INLINE CvParamLattice cvDefaultParamLattice( void )
 #define CV_TYPE_NAME_ML_ANN_MLP     "opencv-ml-ann-mlp"
 #define CV_TYPE_NAME_ML_CNN         "opencv-ml-cnn"
 #define CV_TYPE_NAME_ML_RTREES      "opencv-ml-random-trees"
+#define CV_TYPE_NAME_ML_ERTREES     "opencv-ml-extremely-randomized-trees"
 #define CV_TYPE_NAME_ML_GBT         "opencv-ml-gradient-boosting-trees"
 
 #define CV_TRAIN_ERROR  0
@@ -1041,6 +1042,7 @@ public:
     CvForestTree* get_tree(int i) const;
 
 protected:
+    virtual std::string getName() const;
 
     virtual bool grow_forest( const CvTermCriteria term_crit );
 
@@ -1114,6 +1116,7 @@ public:
 #endif
     virtual bool train( CvMLData* data, CvRTParams params=CvRTParams() );
 protected:
+    virtual std::string getName() const;
     virtual bool grow_forest( const CvTermCriteria term_crit );
 };
 
