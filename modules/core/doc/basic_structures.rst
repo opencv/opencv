@@ -1347,7 +1347,7 @@ Locates the matrix header within a parent matrix.
 
 .. ocv:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
 
-    :param wholeSize: Output parameter that contains the size of the whole matrix containing ``*this`` is a part.
+    :param wholeSize: Output parameter that contains the size of the whole matrix containing ``*this`` as a part.
 
     :param ofs: Output parameter that contains an offset of  ``*this``  inside the whole matrix.
 
