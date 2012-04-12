@@ -476,13 +476,13 @@ macro(ocv_create_module)
     RUNTIME DESTINATION bin COMPONENT main
     LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
     ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-
     )
 
   # only "public" headers need to be installed
   if(OPENCV_MODULE_${the_module}_HEADERS AND OPENCV_MODULES_PUBLIC MATCHES "(^|;)${the_module}(;|$)")
     foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
-      if(hdr MATCHES "(opencv2/.*)/[^/]+.h(..)?$")
+      string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr "${hdr}")
+      if(hdr MATCHES "^(opencv2/.*)/[^/]+.h(..)?$")
         install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_PREFIX}/${CMAKE_MATCH_1}" COMPONENT main)
       endif()
     endforeach()
