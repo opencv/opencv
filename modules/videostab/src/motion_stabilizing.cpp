@@ -213,7 +213,6 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
             r = t;
         else
             l = t;
-        t = r;
     }
 
     return (1 - r) * M + r * Mat::eye(3, 3, CV_32F);
