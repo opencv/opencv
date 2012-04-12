@@ -983,13 +983,14 @@ cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, InputArr
             borderValue == morphologyDefaultBorderValue() )
     {
         int depth = CV_MAT_DEPTH(type);
-        CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
+        CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F );
         if( op == MORPH_ERODE )
             borderValue = Scalar::all( depth == CV_8U ? (double)UCHAR_MAX :
-                                                        depth == CV_16U ? (double)USHRT_MAX : (double)FLT_MAX );
+                                                        depth == CV_16U ? (double)USHRT_MAX :
+                                                        depth == CV_16S ? (double)SHRT_MAX : (double)FLT_MAX );
         else
-            borderValue = Scalar::all( depth == CV_8U || depth == CV_16U ?
-                                           0. : (double)-FLT_MAX );
+            borderValue = Scalar::all( depth == CV_8U || depth == CV_16U ? 0. :
+                                                         depth == CV_16S ? (double)SHRT_MIN : (double)-FLT_MAX );
     }
 
     return Ptr<FilterEngine>(new FilterEngine(filter2D, rowFilter, columnFilter,
