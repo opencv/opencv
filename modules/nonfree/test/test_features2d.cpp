@@ -1028,3 +1028,53 @@ TEST( Features2d_DescriptorExtractor_Calonder_float, regression )
     test.safe_run();
 }
 #endif*/ // CV_SSE2
+
+TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
+{
+    const int sz = 100;
+    const int k = 3;
+
+    Ptr<DescriptorExtractor> ext = DescriptorExtractor::create("SURF");
+    ASSERT_TRUE(ext != NULL);
+
+    Ptr<FeatureDetector> det = FeatureDetector::create("SURF");
+    //"%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n"
+    ASSERT_TRUE(det != NULL);
+
+    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
+    ASSERT_TRUE(matcher != NULL);
+
+    Mat imgT(sz, sz, CV_8U, Scalar(255));
+    line(imgT, Point(20, sz/2), Point(sz-21, sz/2), Scalar(100), 2);
+    line(imgT, Point(sz/2, 20), Point(sz/2, sz-21), Scalar(100), 2);
+    vector<KeyPoint> kpT;
+    kpT.push_back( KeyPoint(50, 50, 16, 0, 20000, 1, -1) );
+    kpT.push_back( KeyPoint(42, 42, 16, 160, 10000, 1, -1) );
+    Mat descT;
+    ext->compute(imgT, kpT, descT);
+
+    Mat imgQ(sz, sz, CV_8U, Scalar(255));
+    line(imgQ, Point(30, sz/2), Point(sz-31, sz/2), Scalar(100), 3);
+    line(imgQ, Point(sz/2, 30), Point(sz/2, sz-31), Scalar(100), 3);
+    vector<KeyPoint> kpQ;
+    det->detect(imgQ, kpQ);
+    Mat descQ;
+    ext->compute(imgQ, kpQ, descQ);
+
+    vector<vector<DMatch> > matches;
+
+    matcher->knnMatch(descQ, descT, matches, k);
+
+    //cout << "\nBest " << k << " matches to " << descT.rows << " train desc-s." << endl;
+    ASSERT_EQ(descQ.rows, matches.size());
+    for(int i = 0; i<matches.size(); i++)
+    {
+        //cout << "\nmatches[" << i << "].size()==" << matches[i].size() << endl;
+        ASSERT_TRUE(min(k, descT.rows) >= matches[i].size());
+        for(int j = 0; j<matches[i].size(); j++)
+        {
+            //cout << "\t" << matches[i][j].queryIdx << " -> " << matches[i][j].trainIdx << endl;
+            ASSERT_EQ(matches[i][j].queryIdx, i);
+        }
+    }
+}
