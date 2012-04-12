@@ -440,7 +440,7 @@ cv::Mesh3D::~Mesh3D() {}
 void cv::Mesh3D::buildOctree() { if (octree.getNodes().empty()) octree.buildTree(vtx); }
 void cv::Mesh3D::clearOctree(){ octree = Octree(); }
 
-float cv::Mesh3D::estimateResolution(float tryRatio)
+float cv::Mesh3D::estimateResolution(float /*tryRatio*/)
 {
 #if 0
     const int neighbors = 3;

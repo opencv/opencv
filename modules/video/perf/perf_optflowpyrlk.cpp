@@ -22,7 +22,7 @@ void FormTrackingPointsArray(vector<Point2f>& points, int width, int height, int
     {
         for( int y = stepY / 2; y < height; y += stepY )
         {
-            Point2f pt(x,y);
+            Point2f pt(static_cast<float>(x), static_cast<float>(y));
             points.push_back(pt);
         }
     }

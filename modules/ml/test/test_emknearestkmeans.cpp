@@ -77,9 +77,9 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
     int total = 0;
     for( ; sit != sizes.end(); ++sit )
         total += *sit;
-    assert( _means.rows == (int)sizes.size() && covs.size() == sizes.size() );
-    assert( !data.empty() && data.rows == total );
-    assert( data.type() == dataType );
+    CV_Assert( _means.rows == (int)sizes.size() && covs.size() == sizes.size() );
+    CV_Assert( !data.empty() && data.rows == total );
+    CV_Assert( data.type() == dataType );
     
     labels.create( data.rows, 1, labelType );
 

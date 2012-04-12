@@ -74,12 +74,12 @@ template <typename T> inline const T& at(int index, const T *items, int size)
 
 template <typename T> inline T& at(int index, std::vector<T> &items)
 {
-    return at(index, &items[0], items.size());
+    return at(index, &items[0], static_cast<int>(items.size()));
 }
 
 template <typename T> inline const T& at(int index, const std::vector<T> &items)
 {
-    return items[cv::borderInterpolate(index, items.size(), cv::BORDER_WRAP)];
+    return items[cv::borderInterpolate(index, static_cast<int>(items.size()), cv::BORDER_WRAP)];
 }
 
 #endif

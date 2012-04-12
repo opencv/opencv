@@ -2148,7 +2148,7 @@ void cv::calcCovarMatrix( InputArray _data, OutputArray _covar, InputOutputArray
 
         ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
 
-        Mat _data(src.size(), size.area(), type);
+        Mat _data(static_cast<int>(src.size()), size.area(), type);
 
         int i = 0;
         for(vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )

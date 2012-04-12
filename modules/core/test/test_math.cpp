@@ -2544,7 +2544,7 @@ TEST(CovariationMatrixVectorOfMat, accuracy)
     std::vector<cv::Mat> srcVec;
     for(size_t i = 0; i < vector_size; i++)
     {
-        srcVec.push_back(src.row(i).reshape(0,col_problem_size));
+        srcVec.push_back(src.row(static_cast<int>(i)).reshape(0,col_problem_size));
     }
 
     cv::Mat actual;
@@ -2579,7 +2579,7 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     std::vector<cv::Mat> srcVec;
     for(size_t i = 0; i < vector_size; i++)
     {
-        srcVec.push_back(src.row(i).reshape(0,col_problem_size));
+        srcVec.push_back(src.row(static_cast<int>(i)).reshape(0,col_problem_size));
     }
 
     cv::Mat actual;
