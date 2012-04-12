@@ -1124,6 +1124,37 @@ To extract a channel from a new-style matrix, use
 .. seealso::  :ocv:func:`mixChannels` , :ocv:func:`split` , :ocv:func:`merge` , :ocv:func:`cvarrToMat` , :ocv:cfunc:`cvSetImageCOI` , :ocv:cfunc:`cvGetImageCOI`
 
 
+insertImageCOI
+---------------
+Copies the selected image channel from a new-style C++ matrix to the old-style C array.
+
+.. ocv:function:: void insertImageCOI(InputArray src, CvArr* dst, int coi=-1)
+
+    :param src: Source array with a single channel and the same size and depth as ``dst``.
+
+    :param dst: Destination array, it should be a pointer to  ``CvMat``  or  ``IplImage``.
+
+    :param coi: If the parameter is  ``>=0`` , it specifies the channel to insert. If it is  ``<0`` and ``dst``  is a pointer to  ``IplImage``  with a  valid COI set, the selected COI is extracted.
+
+The function ``insertImageCOI`` is used to extract an image COI from a new-style C++ matrix and put the result to the old-style array.
+
+The sample below illustrates how to use the function:
+::
+
+    Mat temp(240, 320, CV_8UC1, Scalar(255));
+    IplImage* img = cvCreateImage(cvSize(320,240), IPL_DEPTH_8U, 3);
+    insertImageCOI(temp, img, 1); //insert to the first channel
+    cvNamedWindow("window",1);
+    cvShowImage("window", img); //you should see green image, because channel number 1 is green (BGR)
+    cvWaitKey(0);
+    cvDestroyAllWindows();
+    cvReleaseImage(&img);
+
+To insert a channel to a new-style matrix, use
+:ocv:func:`merge` .
+
+.. seealso::  :ocv:func:`mixChannels` , :ocv:func:`split` , :ocv:func:`merge` , :ocv:func:`cvarrToMat` , :ocv:cfunc:`cvSetImageCOI` , :ocv:cfunc:`cvGetImageCOI`
+
 
 flip
 --------
