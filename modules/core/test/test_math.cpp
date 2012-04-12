@@ -2531,5 +2531,71 @@ protected:
 
 TEST(Core_KMeans, singular) { CV_KMeansSingularTest test; test.safe_run(); }
 
+TEST(CovariationMatrixVectorOfMat, accuracy)
+{
+    unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;
+    cv::Mat src(vector_size, col_problem_size * row_problem_size, CV_32F);
+    int singleMatFlags = CV_COVAR_ROWS;
+
+    cv::Mat gold;
+    cv::Mat goldMean;
+    cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
+    cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
+    std::vector<cv::Mat> srcVec;
+    for(size_t i = 0; i < vector_size; i++)
+    {
+        srcVec.push_back(src.row(i).reshape(0,col_problem_size));
+    }
+
+    cv::Mat actual;
+    cv::Mat actualMean;
+    cv::calcCovarMatrix(srcVec, actual, actualMean,singleMatFlags,CV_32F);
+
+    cv::Mat diff;
+    cv::absdiff(gold, actual, diff);
+    cv::Scalar s = cv::sum(diff);
+    ASSERT_EQ(s.dot(s), 0.0);
+
+    cv::Mat meanDiff;
+    cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
+    cv::Scalar sDiff = cv::sum(meanDiff);
+    ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
+
+TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
+{
+    unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;
+    cv::Mat src(vector_size, col_problem_size * row_problem_size, CV_32F);
+    int singleMatFlags = CV_COVAR_ROWS | CV_COVAR_USE_AVG;
+
+    cv::Mat gold;
+    cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
+    cv::Mat goldMean;
+
+    cv::reduce(src,goldMean,0 ,CV_REDUCE_AVG, CV_32F);
+
+    cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
+
+    std::vector<cv::Mat> srcVec;
+    for(size_t i = 0; i < vector_size; i++)
+    {
+        srcVec.push_back(src.row(i).reshape(0,col_problem_size));
+    }
+
+    cv::Mat actual;
+    cv::Mat actualMean = goldMean.reshape(0, row_problem_size);
+    cv::calcCovarMatrix(srcVec, actual, actualMean,singleMatFlags,CV_32F);
+
+    cv::Mat diff;
+    cv::absdiff(gold, actual, diff);
+    cv::Scalar s = cv::sum(diff);
+    ASSERT_EQ(s.dot(s), 0.0);
+
+    cv::Mat meanDiff;
+    cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
+    cv::Scalar sDiff = cv::sum(meanDiff);
+    ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
+
 /* End of file. */
 

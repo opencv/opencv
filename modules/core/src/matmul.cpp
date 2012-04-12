@@ -2098,7 +2098,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
 {
     CV_Assert( data && nsamples > 0 );
     Size size = data[0].size();
-    int sz = size.width*size.height, esz = (int)data[0].elemSize();
+    int sz = size.width * size.height, esz = (int)data[0].elemSize();
     int type = data[0].type();
     Mat mean;
     ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
@@ -2116,6 +2116,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
     }
 
     Mat _data(nsamples, sz, type);
+
     for( int i = 0; i < nsamples; i++ )
     {
         CV_Assert( data[i].size() == size && data[i].type() == type );
@@ -2135,6 +2136,55 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
 
 void cv::calcCovarMatrix( InputArray _data, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
 {
+    if(_data.kind() == _InputArray::STD_VECTOR_MAT)
+    {
+        std::vector<cv::Mat> src;
+        _data.getMatVector(src);
+
+        CV_Assert( src.size() > 0 );
+
+        Size size = src[0].size();
+        int type = src[0].type();
+
+        ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
+
+        Mat _data(src.size(), size.area(), type);
+
+        int i = 0;
+        for(vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )
+        {
+            CV_Assert( (*each).size() == size && (*each).type() == type );
+            Mat dataRow(size.height, size.width, type, _data.ptr(i));
+            (*each).copyTo(dataRow);
+        }
+
+        Mat mean;
+        if( (flags & CV_COVAR_USE_AVG) != 0 )
+        {
+            CV_Assert( _mean.size() == size );
+
+            if( mean.type() != ctype )
+            {
+                mean = _mean.getMat();
+                _mean.create(mean.size(), ctype);
+                Mat tmp = _mean.getMat();
+                mean.convertTo(tmp, ctype);
+                mean = tmp;
+            }
+
+            mean = _mean.getMat().reshape(1, 1);
+        }
+
+        calcCovarMatrix( _data, _covar, mean, (flags & ~(CV_COVAR_ROWS|CV_COVAR_COLS)) | CV_COVAR_ROWS, ctype );
+
+        if( (flags & CV_COVAR_USE_AVG) == 0 )
+        {
+            mean = mean.reshape(1, size.height);
+            mean.copyTo(_mean);
+        }
+        return;
+    }
+
     Mat data = _data.getMat(), mean;
     CV_Assert( ((flags & CV_COVAR_ROWS) != 0) ^ ((flags & CV_COVAR_COLS) != 0) );
     bool takeRows = (flags & CV_COVAR_ROWS) != 0;
