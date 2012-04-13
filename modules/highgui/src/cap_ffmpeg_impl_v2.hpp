@@ -986,7 +986,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
     lbit_rate += (bitrate / 4);
     lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
-    c->bit_rate = static_cast<int>(lbit_rate);
+    c->bit_rate = bitrate;
 
     // took advice from
     // http://ffmpeg-users.933282.n4.nabble.com/warning-clipping-1-dct-coefficients-to-127-127-td934297.html
@@ -1457,7 +1457,10 @@ void CvVideoWriter_FFMPEG::close()
             return false;
         }
 
-        c->bit_rate_tolerance = c->bit_rate;
+        unsigned long long lbit_rate = static_cast<unsigned long long>(c->bit_rate);
+        lbit_rate += (bitrate / 4);
+        lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
+        c->bit_rate_tolerance = static_cast<int>(lbit_rate);
 
         /* open the codec */
         if ((err=
