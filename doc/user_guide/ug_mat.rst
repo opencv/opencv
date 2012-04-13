@@ -35,25 +35,29 @@ Accessing pixel intensity values
 
 In order to get pixel intensity value, you have to know the type of an image and the number of channels. Here is an example for a single channel grey scale image (type 8UC1) and pixel coordinates x and y: ::
 
-    Scalar intensity = img.at<uchar>(x, y);
+    Scalar intensity = img.at<uchar>(y, x);
 
-``intensity.val[0]`` contains a value from 0 to 255. Now let us consider a 3 channel image with ``BGR`` color ordering (the default format returned by ``imread``): ::
+``intensity.val[0]`` contains a value from 0 to 255. Note the ordering of ``x`` and ``y``. Since in OpenCV images are represented by the same structure as matrices, we use the same convention for both cases - the 0-based row index (or y-coordinate) goes first and the 0-based column index (or x-coordinate) follows it. Alternatively, you can use the following notation: ::
 
-    Vec3b intensity = img.at<Vec3b>(x, y);
+    Scalar intensity = img.at<uchar>(Point(x, y));
+
+Now let us consider a 3 channel image with ``BGR`` color ordering (the default format returned by ``imread``): ::
+
+    Vec3b intensity = img.at<Vec3b>(y, x);
     uchar blue = intensity.val[0];
     uchar green = intensity.val[1];
     uchar red = intensity.val[2];
 
 You can use the same method for floating-point images (for example, you can get such an image by running Sobel on a 3 channel image): ::
 
-    Vec3f intensity = img.at<Vec3f>(x, y);
+    Vec3f intensity = img.at<Vec3f>(y, x);
     float blue = intensity.val[0];
     float green = intensity.val[1];
     float red = intensity.val[2];
 
 The same method can be used to change pixel intensities: ::
 
-    img.at<uchar>(x, y) = 128;
+    img.at<uchar>(y, x) = 128;
 
 There are functions in OpenCV, especially from calib3d module, such as ``projectPoints``, that take an array of 2D or 3D points in the form of ``Mat``. Matrix should contain exactly one column, each row corresponds to a point, matrix type should be 32FC2 or 32FC3 correspondingly. Such a matrix can be easily constructed from ``std::vector``: ::
 

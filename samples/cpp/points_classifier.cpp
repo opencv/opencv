@@ -11,7 +11,6 @@ const Scalar WHITE_COLOR = CV_RGB(255,255,255);
 const string winName = "points";
 const int testStep = 5;
 
-
 Mat img, imgDst;
 RNG rng;
 
@@ -19,16 +18,16 @@ vector<Point>  trainedPoints;
 vector<int>    trainedPointsMarkers;
 vector<Scalar> classColors;
 
-#define NBC 0 // normal Bayessian classifier
-#define KNN 0 // k nearest neighbors classifier
-#define SVM 0 // support vectors machine
-#define DT  1 // decision tree
-#define BT  0 // ADA Boost
-#define GBT 0 // gradient boosted trees
-#define RF  0 // random forest
-#define ERT 0 // extremely randomized trees
-#define ANN 0 // artificial neural networks
-#define EM  0 // expectation-maximization
+#define _NBC_ 0 // normal Bayessian classifier
+#define _KNN_ 0 // k nearest neighbors classifier
+#define _SVM_ 0 // support vectors machine
+#define _DT_  1 // decision tree
+#define _BT_  0 // ADA Boost
+#define _GBT_ 0 // gradient boosted trees
+#define _RF_  0 // random forest
+#define _ERT_ 0 // extremely randomized trees
+#define _ANN_ 0 // artificial neural networks
+#define _EM_  0 // expectation-maximization
 
 void on_mouse( int event, int x, int y, int /*flags*/, void* )
 {
@@ -48,13 +47,13 @@ void on_mouse( int event, int x, int y, int /*flags*/, void* )
     }
     else if( event == CV_EVENT_RBUTTONUP )
     {
-#if BT
+#if _BT_
         if( classColors.size() < 2 )
         {
 #endif
             classColors.push_back( Scalar((uchar)rng(256), (uchar)rng(256), (uchar)rng(256)) );
             updateFlag = true;
-#if BT
+#if _BT_
         }
         else
             cout << "New class can not be added, because CvBoost can only be used for 2-class classification" << endl;
@@ -98,7 +97,7 @@ void prepare_train_data( Mat& samples, Mat& classes )
     samples.convertTo( samples, CV_32FC1 );
 }
 
-#if NBC
+#if _NBC_
 void find_decision_boundary_NBC()
 {
     img.copyTo( imgDst );
@@ -125,7 +124,7 @@ void find_decision_boundary_NBC()
 #endif
 
 
-#if KNN
+#if _KNN_
 void find_decision_boundary_KNN( int K )
 {
     img.copyTo( imgDst );
@@ -151,7 +150,7 @@ void find_decision_boundary_KNN( int K )
 }
 #endif
 
-#if SVM
+#if _SVM_
 void find_decision_boundary_SVM( CvSVMParams params )
 {
     img.copyTo( imgDst );
@@ -185,7 +184,7 @@ void find_decision_boundary_SVM( CvSVMParams params )
 }
 #endif
 
-#if DT
+#if _DT_
 void find_decision_boundary_DT()
 {
     img.copyTo( imgDst );
@@ -225,7 +224,7 @@ void find_decision_boundary_DT()
 }
 #endif
 
-#if BT
+#if _BT_
 void find_decision_boundary_BT()
 {
     img.copyTo( imgDst );
@@ -265,7 +264,7 @@ void find_decision_boundary_BT()
 
 #endif
 
-#if GBT
+#if _GBT_
 void find_decision_boundary_GBT()
 {
     img.copyTo( imgDst );
@@ -305,7 +304,7 @@ void find_decision_boundary_GBT()
 
 #endif
 
-#if RF
+#if _RF_
 void find_decision_boundary_RF()
 {
     img.copyTo( imgDst );
@@ -346,7 +345,7 @@ void find_decision_boundary_RF()
 
 #endif
 
-#if ERT
+#if _ERT_
 void find_decision_boundary_ERT()
 {
     img.copyTo( imgDst );
@@ -390,7 +389,7 @@ void find_decision_boundary_ERT()
 }
 #endif
 
-#if ANN
+#if _ANN_
 void find_decision_boundary_ANN( const Mat&  layer_sizes )
 {
     img.copyTo( imgDst );
@@ -435,7 +434,7 @@ void find_decision_boundary_ANN( const Mat&  layer_sizes )
 }
 #endif
 
-#if EM
+#if _EM_
 void find_decision_boundary_EM()
 {
     img.copyTo( imgDst );
@@ -443,19 +442,12 @@ void find_decision_boundary_EM()
     Mat trainSamples, trainClasses;
     prepare_train_data( trainSamples, trainClasses );
 
-    CvEM em;
-    CvEMParams params;
-    params.covs      = NULL;
-    params.means     = NULL;
-    params.weights   = NULL;
-    params.probs     = NULL;
+    cv::EM em;
+    cv::EM::Params params;
     params.nclusters = classColors.size();
-    params.cov_mat_type       = CvEM::COV_MAT_GENERIC;
-    params.start_step         = CvEM::START_AUTO_STEP;
-    params.term_crit.max_iter = 10;
-    params.term_crit.epsilon  = 0.1;
-    params.term_crit.type     = CV_TERMCRIT_ITER | CV_TERMCRIT_EPS;
-
+    params.covMatType = cv::EM::COV_MAT_GENERIC;
+    params.startStep = cv::EM::START_AUTO_STEP;
+    params.termCrit = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::COUNT, 10, 0.1);
 
     // learn classifier
     em.train( trainSamples, Mat(), params, &trainClasses );
@@ -509,12 +501,12 @@ int main()
 
         if( key == 'r' ) // run
         {
-#if NBC
+#if _NBC_
             find_decision_boundary_NBC();
             cvNamedWindow( "NormalBayesClassifier", WINDOW_AUTOSIZE );
             imshow( "NormalBayesClassifier", imgDst );
 #endif
-#if KNN
+#if _KNN_
             int K = 3;
             find_decision_boundary_KNN( K );
             namedWindow( "kNN", WINDOW_AUTOSIZE );
@@ -526,7 +518,7 @@ int main()
             imshow( "kNN2", imgDst );
 #endif
 
-#if SVM
+#if _SVM_
             //(1)-(2)separable and not sets
             CvSVMParams params;
             params.svm_type = CvSVM::C_SVC;
@@ -549,37 +541,37 @@ int main()
             imshow( "classificationSVM2", imgDst );
 #endif
 
-#if DT
+#if _DT_
             find_decision_boundary_DT();
             namedWindow( "DT", WINDOW_AUTOSIZE );
             imshow( "DT", imgDst );
 #endif
 
-#if BT
+#if _BT_
             find_decision_boundary_BT();
             namedWindow( "BT", WINDOW_AUTOSIZE );
             imshow( "BT", imgDst);
 #endif
 
-#if GBT
+#if _GBT_
             find_decision_boundary_GBT();
             namedWindow( "GBT", WINDOW_AUTOSIZE );
             imshow( "GBT", imgDst);
 #endif
 
-#if RF
+#if _RF_
             find_decision_boundary_RF();
             namedWindow( "RF", WINDOW_AUTOSIZE );
             imshow( "RF", imgDst);
 #endif
 
-#if ERT
+#if _ERT_
             find_decision_boundary_ERT();
             namedWindow( "ERT", WINDOW_AUTOSIZE );
             imshow( "ERT", imgDst);
 #endif
 
-#if ANN
+#if _ANN_
             Mat layer_sizes1( 1, 3, CV_32SC1 );
             layer_sizes1.at<int>(0) = 2;
             layer_sizes1.at<int>(1) = 5;
@@ -589,7 +581,7 @@ int main()
             imshow( "ANN", imgDst );
 #endif
 
-#if EM
+#if _EM_
             find_decision_boundary_EM();
             namedWindow( "EM", WINDOW_AUTOSIZE );
             imshow( "EM", imgDst );

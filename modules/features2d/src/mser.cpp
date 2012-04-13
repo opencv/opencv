@@ -1299,28 +1299,4 @@ void MserFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
     }
 }
     
-static Algorithm* createMSER() { return new MSER; }
-static AlgorithmInfo mser_info("Feature2D.MSER", createMSER);
-    
-AlgorithmInfo* MSER::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        MSER obj;
-        mser_info.addParam(obj, "delta", obj.delta);
-        mser_info.addParam(obj, "minArea", obj.minArea);
-        mser_info.addParam(obj, "maxArea", obj.maxArea);
-        mser_info.addParam(obj, "maxVariation", obj.maxVariation);
-        mser_info.addParam(obj, "minDiversity", obj.minDiversity);
-        mser_info.addParam(obj, "maxEvolution", obj.maxEvolution);
-        mser_info.addParam(obj, "areaThreshold", obj.areaThreshold);
-        mser_info.addParam(obj, "minMargin", obj.minMargin);
-        mser_info.addParam(obj, "edgeBlurSize", obj.edgeBlurSize);
-        
-        initialized = true;
-    }
-    return &mser_info;
-}    
-
 }

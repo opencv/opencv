@@ -1,8 +1,13 @@
 package org.opencv.test.features2d;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDMatch;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DMatch;
@@ -12,10 +17,6 @@ import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
 
@@ -33,14 +34,15 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getQueryDescriptors() {
         Mat img = getQueryImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
         FeatureDetector detector = FeatureDetector.create(FeatureDetector.SURF);
         DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
 
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
+        //writeFile(filename, "%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
+        writeFile(filename, "%YAML:1.0\nname: \"Feature2D.SURF\"\nextended: 1\nhessianThreshold: 8000.\nnOctaveLayers: 2\nnOctaves: 3\nupright: 0\n");
         detector.read(filename);
 
         detector.detect(img, keypoints);
@@ -59,7 +61,7 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getTrainDescriptors() {
         Mat img = getTrainImg();
-        List<KeyPoint> keypoints = Arrays.asList(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
+        MatOfKeyPoint keypoints = new MatOfKeyPoint(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
         Mat descriptors = new Mat();
 
         DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
@@ -82,11 +84,19 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
+        		/*
                 new DMatch(0, 0, 0, 3.175296f),
                 new DMatch(1, 1, 0, 3.5954158f),
                 new DMatch(2, 1, 0, 1.2537984f),
                 new DMatch(3, 1, 0, 3.5761614f),
-                new DMatch(4, 1, 0, 1.3250958f) };
+                new DMatch(4, 1, 0, 1.3250958f)
+                */
+        		new DMatch(0, 1, 0, 6.920234f), 
+        		new DMatch(1, 0, 0, 6.1294847f), 
+        		new DMatch(2, 1, 0, 2.6545324f), 
+        		new DMatch(3, 1, 0, 6.1675916f), 
+        		new DMatch(4, 1, 0, 2.679859f)
+                };
         super.setUp();
     }
 
@@ -176,45 +186,45 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
     public void testMatchMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches);
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
     public void testMatchMatListOfDMatchListOfMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches, Arrays.asList(mask));
 
-        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches, EPS);
+        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
     public void testMatchMatMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches);
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
     public void testMatchMatMatListOfDMatchMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches, mask);
 
-        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches, EPS);
+        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloat() {

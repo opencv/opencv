@@ -233,7 +233,7 @@ Wave correction kind. ::
 
 detail::waveCorrect
 -------------------
-Tries to make panorama more horizontal (or verical).
+Tries to make panorama more horizontal (or vertical).
 
 .. ocv:function:: void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 

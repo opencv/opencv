@@ -29,5 +29,5 @@ PERF_TEST_P( Size_Depth_Channels, split,
 
     TEST_CYCLE() split(m, (vector<Mat>&)mv);
 
-    SANITY_CHECK(mv);
+    SANITY_CHECK(mv, 1e-12);
 }

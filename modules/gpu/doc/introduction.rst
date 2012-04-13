@@ -43,7 +43,7 @@ Utilizing Multiple GPUs
 -----------------------
 
 In the current version, each of the OpenCV GPU algorithms can use only a single GPU. So, to utilize multiple GPUs, you have to manually distribute the work between GPUs. 
-Switching active devie can be done using :ocv:func:`gpu::setDevice()' function.  For more details please read Cuda C Programing Guid.
+Switching active devie can be done using :ocv:func:`gpu::setDevice()` function.  For more details please read Cuda C Programing Guide.
 
 While developing algorithms for multiple GPUs, note a data passing overhead. For primitive functions and small images, it can be significant, which may eliminate all the advantages of having multiple GPUs. But for high-level algorithms, consider using multi-GPU acceleration. For example, the Stereo Block Matching algorithm has been successfully parallelized using the following algorithm:
 

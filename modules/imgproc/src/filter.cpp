@@ -185,7 +185,8 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     if( rowBorderType == BORDER_CONSTANT || columnBorderType == BORDER_CONSTANT )
     {
         constBorderValue.resize(srcElemSize*borderLength);
-        scalarToRawData(_borderValue, &constBorderValue[0], srcType,
+        int srcType1 = CV_MAKETYPE(CV_MAT_DEPTH(srcType), MIN(CV_MAT_CN(srcType), 4));
+        scalarToRawData(_borderValue, &constBorderValue[0], srcType1,
                         borderLength*CV_MAT_CN(srcType));
     }
 
@@ -2804,6 +2805,8 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
     if( sdepth == CV_32F && ddepth == CV_32F )
         return Ptr<BaseRowFilter>(new RowFilter<float, float, RowVec_32f>
             (kernel, anchor, RowVec_32f(kernel)));
+    if( sdepth == CV_32F && ddepth == CV_64F )
+        return Ptr<BaseRowFilter>(new RowFilter<float, double, RowNoVec>(kernel, anchor));
     if( sdepth == CV_64F && ddepth == CV_64F )
         return Ptr<BaseRowFilter>(new RowFilter<double, double, RowNoVec>(kernel, anchor));
 

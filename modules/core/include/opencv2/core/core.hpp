@@ -218,6 +218,8 @@ CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
+CV_EXPORTS_W const std::string& getBuildInformation();
+
 //! Returns the number of ticks.
 
 /*!
@@ -1944,6 +1946,9 @@ public:
     
     MSize size;
     MStep step;
+    
+protected:
+    void initEmpty();
 };
 
 
@@ -2727,7 +2732,6 @@ public:
     static MatExpr eye(Size size);
 
     //! some more overriden methods
-    Mat_ reshape(int _rows) const;
     Mat_& adjustROI( int dtop, int dbottom, int dleft, int dright );
     Mat_ operator()( const Range& rowRange, const Range& colRange ) const;
     Mat_ operator()( const Rect& roi ) const;
@@ -4273,6 +4277,7 @@ public:
     void set(const string& name, bool value);
     void set(const string& name, const string& value);
     void set(const string& name, const Mat& value);
+    void set(const string& name, const vector<Mat>& value);
     void set(const string& name, const Ptr<Algorithm>& value);
     
     void set(const char* name, int value);
@@ -4280,6 +4285,7 @@ public:
     void set(const char* name, bool value);
     void set(const char* name, const string& value);
     void set(const char* name, const Mat& value);
+    void set(const char* name, const vector<Mat>& value);
     void set(const char* name, const Ptr<Algorithm>& value);
     
     string paramHelp(const string& name) const;
@@ -4348,6 +4354,11 @@ public:
                   void (Algorithm::*setter)(const Mat&)=0,
                   const string& help=string());
     void addParam(Algorithm& algo, const char* name,
+                  vector<Mat>& value, bool readOnly=false, 
+                  vector<Mat> (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const vector<Mat>&)=0,
+                  const string& help=string());
+    void addParam(Algorithm& algo, const char* name,
                   Ptr<Algorithm>& value, bool readOnly=false, 
                   Ptr<Algorithm> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<Algorithm>&)=0,
@@ -4359,7 +4370,7 @@ protected:
 
 struct CV_EXPORTS Param
 {
-    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, ALGORITHM=5 };
+    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6 };
     
     Param();
     Param(int _type, bool _readonly, int _offset,
@@ -4412,6 +4423,14 @@ template<> struct ParamType<Mat>
     typedef Mat member_type;
     
     enum { type = Param::MAT };
+};
+
+template<> struct ParamType<vector<Mat> >
+{
+    typedef const vector<Mat>& const_param_type;
+    typedef vector<Mat> member_type;
+    
+    enum { type = Param::MAT_VECTOR };
 };
 
 template<> struct ParamType<Algorithm>

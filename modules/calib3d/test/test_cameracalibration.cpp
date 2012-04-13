@@ -333,6 +333,7 @@ void CV_CameraCalibrationTest::run( int start_from )
     goodTransVects  = 0;
     goodRotMatrs    = 0;
     int progress = 0;
+    int values_read = -1;
 
     sprintf( filepath, "%scameracalibration/", ts->get_data_path().c_str() );
     sprintf( filename, "%sdatafiles.txt", filepath );
@@ -344,11 +345,13 @@ void CV_CameraCalibrationTest::run( int start_from )
         goto _exit_;
     }
 
-    fscanf(datafile,"%d",&numTests);
+    values_read = fscanf(datafile,"%d",&numTests);
+    CV_Assert(values_read == 1);
 
     for( currTest = start_from; currTest < numTests; currTest++ )
     {
-        fscanf(datafile,"%s",i_dat_file);
+        values_read = fscanf(datafile,"%s",i_dat_file);
+        CV_Assert(values_read == 1);
         sprintf(filename, "%s%s", filepath, i_dat_file);
         file = fopen(filename,"r");
 
@@ -366,7 +369,8 @@ void CV_CameraCalibrationTest::run( int start_from )
             continue; // if there is more than one test, just skip the test
         }
 
-        fscanf(file,"%d %d\n",&(imageSize.width),&(imageSize.height));
+        values_read = fscanf(file,"%d %d\n",&(imageSize.width),&(imageSize.height));
+        CV_Assert(values_read == 2);
         if( imageSize.width <= 0 || imageSize.height <= 0 )
         {
             ts->printf( cvtest::TS::LOG, "Image size in test file is incorrect\n" );
@@ -375,7 +379,8 @@ void CV_CameraCalibrationTest::run( int start_from )
         }
 
         /* Read etalon size */
-        fscanf(file,"%d %d\n",&(etalonSize.width),&(etalonSize.height));
+        values_read = fscanf(file,"%d %d\n",&(etalonSize.width),&(etalonSize.height));
+        CV_Assert(values_read == 2);
         if( etalonSize.width <= 0 || etalonSize.height <= 0 )
         {
             ts->printf( cvtest::TS::LOG, "Pattern size in test file is incorrect\n" );
@@ -386,7 +391,8 @@ void CV_CameraCalibrationTest::run( int start_from )
         numPoints = etalonSize.width * etalonSize.height;
 
         /* Read number of images */
-        fscanf(file,"%d\n",&numImages);
+        values_read = fscanf(file,"%d\n",&numImages);
+        CV_Assert(values_read == 1);
         if( numImages <=0 )
         {
             ts->printf( cvtest::TS::LOG, "Number of images in test file is incorrect\n");
@@ -427,7 +433,8 @@ void CV_CameraCalibrationTest::run( int start_from )
             for( currPoint = 0; currPoint < numPoints; currPoint++ )
             {
                 double x,y,z;
-                fscanf(file,"%lf %lf %lf\n",&x,&y,&z);
+                values_read = fscanf(file,"%lf %lf %lf\n",&x,&y,&z);
+                CV_Assert(values_read == 3);
 
                 (objectPoints+i)->x = x;
                 (objectPoints+i)->y = y;
@@ -443,7 +450,8 @@ void CV_CameraCalibrationTest::run( int start_from )
             for( currPoint = 0; currPoint < numPoints; currPoint++ )
             {
                 double x,y;
-                fscanf(file,"%lf %lf\n",&x,&y);
+                values_read = fscanf(file,"%lf %lf\n",&x,&y);
+                CV_Assert(values_read == 2);
 
                 (imagePoints+i)->x = x;
                 (imagePoints+i)->y = y;
@@ -455,32 +463,40 @@ void CV_CameraCalibrationTest::run( int start_from )
 
         /* Focal lengths */
         double goodFcx,goodFcy;
-        fscanf(file,"%lf %lf",&goodFcx,&goodFcy);
+        values_read = fscanf(file,"%lf %lf",&goodFcx,&goodFcy);
+        CV_Assert(values_read == 2);
 
         /* Principal points */
         double goodCx,goodCy;
-        fscanf(file,"%lf %lf",&goodCx,&goodCy);
+        values_read = fscanf(file,"%lf %lf",&goodCx,&goodCy);
+        CV_Assert(values_read == 2);
 
         /* Read distortion */
 
-        fscanf(file,"%lf",goodDistortion+0);
-        fscanf(file,"%lf",goodDistortion+1);
-        fscanf(file,"%lf",goodDistortion+2);
-        fscanf(file,"%lf",goodDistortion+3);
+        values_read = fscanf(file,"%lf",goodDistortion+0); CV_Assert(values_read == 1);
+        values_read = fscanf(file,"%lf",goodDistortion+1); CV_Assert(values_read == 1);
+        values_read = fscanf(file,"%lf",goodDistortion+2); CV_Assert(values_read == 1);
+        values_read = fscanf(file,"%lf",goodDistortion+3); CV_Assert(values_read == 1);
 
         /* Read good Rot matrixes */
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             for( i = 0; i < 3; i++ )
                 for( j = 0; j < 3; j++ )
-                    fscanf(file, "%lf", goodRotMatrs + currImage * 9 + j * 3 + i);
+                {
+                    values_read = fscanf(file, "%lf", goodRotMatrs + currImage * 9 + j * 3 + i);
+                    CV_Assert(values_read == 1);
+                }
         }
 
         /* Read good Trans vectors */
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             for( i = 0; i < 3; i++ )
-                fscanf(file, "%lf", goodTransVects + currImage * 3 + i);
+            {
+                values_read = fscanf(file, "%lf", goodTransVects + currImage * 3 + i);
+                CV_Assert(values_read == 1);
+            }
         }
 
         calibFlags = 0
@@ -1508,7 +1524,7 @@ void CV_StereoCalibrationTest::run( int )
         const float minDisparity = 0.1f;
         const float maxDisparity = 600.0f;
         const int pointsCount = 500;
-        const float requiredAccuracy = 1e-3;
+        const float requiredAccuracy = 1e-3f;
         RNG& rng = ts->get_rng();
 
         Mat projectedPoints_1(2, pointsCount, CV_32FC1);
@@ -1544,7 +1560,7 @@ void CV_StereoCalibrationTest::run( int )
         }
 
         //check correctMatches
-        const float constraintAccuracy = 1e-5;
+        const float constraintAccuracy = 1e-5f;
         Mat newPoints1, newPoints2;
         Mat points1 = projectedPoints_1.t();
         points1 = points1.reshape(2, 1);
@@ -1767,7 +1783,7 @@ void CV_StereoCalibrationTest_C::correct( const Mat& F,
     CvMat _F = F, _points1 = points1, _points2 = points2;
     newPoints1.create(1, points1.cols, points1.type());
     newPoints2.create(1, points2.cols, points2.type());
-    CvMat _newPoints1 = newPoints1, _newPoints2 = _newPoints2;
+    CvMat _newPoints1 = newPoints1, _newPoints2 = newPoints2;
     cvCorrectMatches(&_F, &_points1, &_points2, &_newPoints1, &_newPoints2);
 }
 

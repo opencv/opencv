@@ -750,7 +750,7 @@ or:
 
 DotProduct
 ----------
-Calculates the dot product of two arrays in Euclidian metrics.
+Calculates the dot product of two arrays in Euclidean metrics.
 
 .. ocv:cfunction:: double cvDotProduct(const CvArr* src1, const CvArr* src2)
 .. ocv:pyoldfunction:: cv.DotProduct(src1, src2)-> double
@@ -937,7 +937,7 @@ The function provides an easy way to handle both types of arrays - ``IplImage`` 
 
 .. seealso:: :ocv:cfunc:`GetImage`, :ocv:func:`cvarrToMat`.
 
-.. note:: If the input array is ``IplImage`` with planar data layout and COI set, the function returns the pointer to the selected plane and ``COI == 0``. This feature allows user to process ``IplImage`` strctures with planar data layout, even though OpenCV does not support such images.
+.. note:: If the input array is ``IplImage`` with planar data layout and COI set, the function returns the pointer to the selected plane and ``COI == 0``. This feature allows user to process ``IplImage`` structures with planar data layout, even though OpenCV does not support such images.
 
 GetNextSparseNode
 -----------------

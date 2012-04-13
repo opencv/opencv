@@ -12,7 +12,7 @@ ocv_check_dependencies(${OPENCV_C_SAMPLES_REQUIRED_DEPS})
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   project(c_samples)
 
-  if(CMAKE_COMPILER_IS_GNUCXX)
+  if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
     

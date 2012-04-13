@@ -1,8 +1,8 @@
 package org.opencv.test.features2d;
 
-import junit.framework.TestCase;
+import org.opencv.test.OpenCVTestCase;
 
-public class DynamicMSERFeatureDetectorTest extends TestCase {
+public class DynamicMSERFeatureDetectorTest extends OpenCVTestCase {
 
     public void testCreate() {
         fail("Not yet implemented");

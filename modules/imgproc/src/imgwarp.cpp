@@ -2454,7 +2454,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
     
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
-    CV_Assert(dst.data != src.data);
+    if( dst.data == src.data )
+        src = src.clone();
 
     int depth = src.depth(), map_depth = map1.depth();
     RemapNNFunc nnfunc = 0;
@@ -2823,7 +2824,9 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
-    CV_Assert( dst.data != src.data && src.cols > 0 && src.rows > 0 );
+    CV_Assert( src.cols > 0 && src.rows > 0 );
+    if( dst.data == src.data )
+        src = src.clone();
 
     const int BLOCK_SZ = 64;
     short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
@@ -2966,7 +2969,9 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
     
-    CV_Assert( dst.data != src.data && src.cols > 0 && src.rows > 0 );
+    CV_Assert( src.cols > 0 && src.rows > 0 );
+    if( dst.data == src.data )
+        src = src.clone();
 
     const int BLOCK_SZ = 32;
     short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];

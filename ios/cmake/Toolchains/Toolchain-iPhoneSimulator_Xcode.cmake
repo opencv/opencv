@@ -11,6 +11,13 @@ include (CMakeForceCompiler)
 CMAKE_FORCE_C_COMPILER (gcc gcc)
 CMAKE_FORCE_CXX_COMPILER (g++ g++)
 
+set (CMAKE_C_SIZEOF_DATA_PTR 4)
+set (CMAKE_C_HAS_ISYSROOT 1)
+set (CMAKE_C_COMPILER_ABI ELF)
+set (CMAKE_CXX_SIZEOF_DATA_PTR 4)
+set (CMAKE_CXX_HAS_ISYSROOT 1)
+set (CMAKE_CXX_COMPILER_ABI ELF)
+
 # Skip the platform compiler checks for cross compiling
 set (CMAKE_CXX_COMPILER_WORKS TRUE)
 set (CMAKE_C_COMPILER_WORKS TRUE)

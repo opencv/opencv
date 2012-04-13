@@ -4,7 +4,6 @@ from subprocess import Popen, PIPE
 
 hostos = os.name # 'nt', 'posix'
 hostmachine = platform.machine() # 'x86', 'AMD64', 'x86_64'
-nameprefix = "opencv_perf_"
 
 SIMD_DETECTION_PROGRAM="""
 #if __SSE5__
@@ -51,6 +50,7 @@ SIMD_DETECTION_PROGRAM="""
 
 parse_patterns = (
   {'name': "has_perf_tests",           'default': "OFF",      'pattern': re.compile("^BUILD_PERF_TESTS:BOOL=(ON)$")},
+  {'name': "has_accuracy_tests",       'default': "OFF",      'pattern': re.compile("^BUILD_TESTS:BOOL=(ON)$")},
   {'name': "cmake_home",               'default': None,       'pattern': re.compile("^CMAKE_HOME_DIRECTORY:INTERNAL=(.+)$")},
   {'name': "opencv_home",              'default': None,       'pattern': re.compile("^OpenCV_SOURCE_DIR:STATIC=(.+)$")},
   {'name': "tests_dir",                'default': None,       'pattern': re.compile("^EXECUTABLE_OUTPUT_PATH:PATH=(.+)$")},
@@ -197,10 +197,16 @@ def getRunningProcessExePathByName(name):
         return None
         
 class RunInfo(object):
+    def setCallback(self, name, callback):
+        setattr(self, name, callback)
+
     def __init__(self, path, options):
         self.options = options
         self.path = path
         self.error = None
+        self.setUp = None
+        self.tearDown = None
+        self.nameprefix = "opencv_" + options.mode + "_"
         for p in parse_patterns:
             setattr(self, p["name"], p["default"])
         cachefile = open(os.path.join(path, "CMakeCache.txt"), "rt")
@@ -266,8 +272,13 @@ class RunInfo(object):
                         self.adb = self.adb + ["-s", adb_serial]
             print "adb command:", " ".join(self.adb)
 
+        if self.adb:
+            #construct name for aapt tool
+            self.aapt = [os.path.join(os.path.dirname(self.adb[0]), ("aapt","aapt.exe")[hostos == 'nt'])]
+
         # fix has_perf_tests param
         self.has_perf_tests = self.has_perf_tests == "ON"
+        self.has_accuracy_tests = self.has_accuracy_tests == "ON"
         # fix is_x64 flag
         self.is_x64 = self.is_x64 == "ON"
         if not self.is_x64 and ("X64" in "%s %s %s" % (self.cxx_flags, self.cxx_flags_release, self.cxx_flags_debug) or "Win64" in self.cmake_generator):
@@ -372,13 +383,14 @@ class RunInfo(object):
             return False
         if hostos == self.targetos:
             return os.access(fullpath, os.X_OK)
+        if self.targetos == "android" and fullpath.endswith(".apk"):
+            return True
         return True
                 
     def getAvailableTestApps(self):
         if self.tests_dir and os.path.isdir(self.tests_dir):
-            files = glob.glob(os.path.join(self.tests_dir, nameprefix + "*"))
-            if self.targetos == hostos:
-                files = [f for f in files if self.isTest(f)]
+            files = glob.glob(os.path.join(self.tests_dir, self.nameprefix + "*"))
+            files = [f for f in files if self.isTest(f)]
             return files
         return []
     
@@ -386,8 +398,8 @@ class RunInfo(object):
         app = os.path.basename(app)
         if app.endswith(".exe"):
             app = app[:-4]
-        if app.startswith(nameprefix):
-            app = app[len(nameprefix):]
+        if app.startswith(self.nameprefix):
+            app = app[len(self.nameprefix):]
 
         if self.cmake_home_svn:
             if self.cmake_home_svn == self.opencv_home_svn:
@@ -506,6 +518,10 @@ class RunInfo(object):
         fullname += ".exe"
         if self.isTest(fullname):
             return fullname
+        if self.targetos == "android":
+            fullname += ".apk"
+            if self.isTest(fullname):
+                return fullname
         
         # short name for OpenCV tests
         for t in self.tests:
@@ -514,12 +530,12 @@ class RunInfo(object):
             fname = os.path.basename(t)
             if fname == name:
                 return t
-            if fname.endswith(".exe"):
+            if fname.endswith(".exe") or (self.targetos == "android" and fname.endswith(".apk")):
                 fname = fname[:-4]
             if fname == name:
                 return t
-            if fname.startswith(nameprefix):
-                fname = fname[len(nameprefix):]
+            if fname.startswith(self.nameprefix):
+                fname = fname[len(self.nameprefix):]
             if fname == name:
                 return t
         return None
@@ -576,10 +592,60 @@ class RunInfo(object):
         else:
             logfile = userlog[0][userlog[0].find(":")+1:]
         
-        if self.targetos == "android":
+        if self.targetos == "android" and exe.endswith(".apk"):
+            print "running", exe
+            try:
+                # get package info
+                output = Popen(self.aapt + ["dump", "xmltree", exe, "AndroidManifest.xml"], stdout=PIPE, stderr=_stderr).communicate()
+                if not output[0]:
+                    print >> _stderr, "failed to get manifest info from", exe
+                    return
+                tags = re.split(r"[ ]+E: ", output[0])
+                #get package name
+                manifest_tag = [t for t in tags if t.startswith("manifest ")]
+                if not manifest_tag:
+                    print >> _stderr, "failed to get manifest info from", exe
+                    return
+                pkg_name =  re.search(r"^[ ]+A: package=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)$", manifest_tag[0], flags=re.MULTILINE).group("pkg")
+                #get test instrumentation info
+                instrumentation_tag = [t for t in tags if t.startswith("instrumentation ")]
+                if not instrumentation_tag:
+                    print >> _stderr, "can not find instrumentation detials in", exe
+                    return
+                pkg_runner = re.search(r"^[ ]+A: android:name\(0x[0-9a-f]{8}\)=\"(?P<runner>.*?)\" \(Raw: \"(?P=runner)\"\)$", instrumentation_tag[0], flags=re.MULTILINE).group("runner")
+                pkg_target =  re.search(r"^[ ]+A: android:targetPackage\(0x[0-9a-f]{8}\)=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)$", instrumentation_tag[0], flags=re.MULTILINE).group("pkg")
+                if not pkg_name or not pkg_runner or not pkg_target:
+                    print >> _stderr, "can not find instrumentation detials in", exe
+                    return
+                if self.options.junit_package:
+                    if self.options.junit_package.startswith("."):
+                        pkg_target += self.options.junit_package
+                    else:
+                        pkg_target = self.options.junit_package
+                #uninstall already installed package
+                print >> _stderr, "Uninstalling old", pkg_name, "from device..."
+                output = Popen(self.adb + ["uninstall", pkg_name], stdout=_stdout, stderr=_stderr).wait()
+                if output != 0:
+                    print >> _stderr, "failed to uninstall", pkg_name, "from device"
+                    return
+                print >> _stderr, "Installing new", exe, "to device..."
+                output = Popen(self.adb + ["install", exe], stdout=_stdout, stderr=_stderr).wait()
+                if output != 0:
+                    print >> _stderr, "failed to install", exe, "to device"
+                    return
+                print >> _stderr, "Running jUnit tests for ", pkg_target
+                if self.setUp is not None:
+                    self.setUp()
+                Popen(self.adb + ["shell", "am instrument -w -e package " + pkg_target + " " + pkg_name + "/" + pkg_runner], stdout=_stdout, stderr=_stderr).wait()
+                if self.tearDown is not None:
+                    self.tearDown()
+            except OSError:
+                pass
+            return
+        elif self.targetos == "android":
             hostlogpath = ""
             try:
-                andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_perf/"
+                andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_" + self.options.mode +"/"
                 exename = os.path.basename(exe)
                 androidexe = andoidcwd + exename
                 #upload
@@ -600,7 +666,11 @@ class RunInfo(object):
                 else:
                     command = exename + " " + " ".join(args)
                 print >> _stderr, "Running:", command
+                if self.setUp is not None:
+                    self.setUp()
                 Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
+                if self.tearDown is not None:
+                    self.tearDown()
                 # try get log
                 if not self.options.help:
                     print >> _stderr, "Pulling", logfile, "from device..."
@@ -649,23 +719,8 @@ class RunInfo(object):
                 print >> _stderr, "Error: Test \"%s\" is not found in %s" % (test, self.tests_dir)
         return logs
 
-if __name__ == "__main__":
-    test_args = [a for a in sys.argv if a.startswith("--perf_") or a.startswith("--gtest_")]
-    argv =      [a for a in sys.argv if not(a.startswith("--perf_") or a.startswith("--gtest_"))]
-    
-    parser = OptionParser()
-    parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
-    parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
-    parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
-    parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
-    parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
-    parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
-    parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
-    
-    (options, args) = parser.parse_args(argv)
-    
+def getRunArgs(args):
     run_args = []
-    
     for path in args:
         path = os.path.abspath(path)
         while (True):
@@ -676,6 +731,32 @@ if __name__ == "__main__":
             if npath == path:
                 break
             path = npath
+    return run_args
+
+if __name__ == "__main__":
+    test_args = [a for a in sys.argv if a.startswith("--perf_") or a.startswith("--gtest_")]
+    argv =      [a for a in sys.argv if not(a.startswith("--perf_") or a.startswith("--gtest_"))]
+    
+    parser = OptionParser()
+    parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
+    
+    parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
+    parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
+    parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
+    parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
+    parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
+    parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
+    parser.add_option("", "--package", dest="junit_package", help="Android: run jUnit tests for specified package", metavar="package", default="")
+    parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
+    
+    (options, args) = parser.parse_args(argv)
+
+    if options.accuracy:
+        options.mode = "test"
+    else:
+        options.mode = "perf"
+    
+    run_args = getRunArgs(args)
     
     if len(run_args) == 0:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<build_path>"

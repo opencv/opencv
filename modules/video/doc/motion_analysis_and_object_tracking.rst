@@ -8,9 +8,9 @@ calcOpticalFlowPyrLK
 ------------------------
 Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids.
 
-.. ocv:function:: void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg, InputArray prevPts, InputOutputArray nextPts, OutputArray status, OutputArray err, Size winSize=Size(15,15), int maxLevel=3,        TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01), double derivLambda=0.5, int flags=0 )
+.. ocv:function:: void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg, InputArray prevPts, InputOutputArray nextPts, OutputArray status, OutputArray err, Size winSize=Size(15,15), int maxLevel=3, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01), int flags=0, double minEigThreshold=1e-4)
 
-.. ocv:pyfunction:: cv2.calcOpticalFlowPyrLK(prevImg, nextImg, prevPts[, nextPts[, status[, err[, winSize[, maxLevel[, criteria[, derivLambda[, flags]]]]]]]]) -> nextPts, status, err
+.. ocv:pyfunction:: cv2.calcOpticalFlowPyrLK(prevImg, nextImg, prevPts[, nextPts[, status[, err[, winSize[, maxLevel[, criteria[, flags[, minEigThreshold]]]]]]]]) -> nextPts, status, err
 
 .. ocv:cfunction:: void cvCalcOpticalFlowPyrLK( const CvArr* prev, const CvArr* curr, CvArr* prevPyr, CvArr* currPyr, const CvPoint2D32f* prevFeatures, CvPoint2D32f* currFeatures, int count, CvSize winSize, int level, char* status, float* trackError, CvTermCriteria criteria, int flags )
 .. ocv:pyoldfunction:: cv.CalcOpticalFlowPyrLK( prev, curr, prevPyr, currPyr, prevFeatures, winSize, level, criteria, flags, guesses=None) -> (currFeatures, status, trackError)
@@ -25,7 +25,7 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
     :param status: Output status vector. Each element of the vector is set to 1 if the flow for the corresponding features has been found. Otherwise, it is set to 0.
 
-    :param err: Output vector that contains the difference between patches around the original and moved points.
+    :param err: Output vector of errors. Each element of the vector is set to a error for the corresponding feature. A type of the error measure can be set in ``flags`` parameter. If the flow wasn't found then the error is not defined (use the ``status`` parameter to find such cases).
 
     :param winSize: Size of the search window at each pyramid level.
 
@@ -33,14 +33,15 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
     :param criteria: Parameter specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations  ``criteria.maxCount``  or when the search window moves by less than  ``criteria.epsilon`` .
     
-    :param derivLambda: Not used.
-
     :param flags: Operation flags:
 
             * **OPTFLOW_USE_INITIAL_FLOW** Use initial estimations stored in  ``nextPts`` . If the flag is not set, then ``prevPts`` is copied to ``nextPts`` and is considered as the initial estimate.
+
+            * **OPTFLOW_LK_GET_MIN_EIGENVALS** Use minimum eigen values as a error measure (see ``minEigThreshold`` description). If the flag is not set, then L1 distance between patches around the original and a moved point divided by number of pixels in a window is used as a error measure.
+
+    :param minEigThreshold: The algorithm computes a minimum eigen value of a 2x2 normal matrix of optical flow equations (this matrix is called a spatial gradient matrix in [Bouguet00]_) divided by number of pixels in a window. If this value is less then ``minEigThreshold`` then a corresponding feature is filtered out and its flow is not computed. So it allows to remove bad points earlier and speed up the computation.
             
-The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See
-[Bouguet00]_.
+The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See [Bouguet00]_. The function is parallelized with the TBB library.
 
 
 
@@ -78,7 +79,7 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
             * **OPTFLOW_FARNEBACK_GAUSSIAN** Use the Gaussian  :math:`\texttt{winsize}\times\texttt{winsize}`  filter instead of a box filter of the same size for optical flow estimation. Usually, this option gives z more accurate flow than with a box filter, at the cost of lower speed. Normally,  ``winsize``  for a Gaussian window should be set to a larger value to achieve the same level of robustness.
 
-The function finds an optical flow for each ``prevImg`` pixel using the [Farneback2003]_ alorithm so that
+The function finds an optical flow for each ``prevImg`` pixel using the [Farneback2003]_ algorithm so that
 
 .. math::
 
@@ -97,7 +98,7 @@ Computes an optimal affine transformation between two 2D point sets.
 
     :param dst: Second input 2D point set of the same size and the same type as ``A``, or another image.
 
-    :param fullAffine: If true, the function finds an optimal affine transformation with no additional resrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
+    :param fullAffine: If true, the function finds an optimal affine transformation with no additional restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
 
 The function finds an optimal affine transform *[A|b]* (a ``2 x 3`` floating-point matrix) that approximates best the affine transformation between:
 
@@ -181,9 +182,9 @@ Calculates a gradient orientation of a motion history image.
 
     :param orientation: Output motion gradient orientation image that has the same type and the same size as  ``mhi`` . Each pixel of the image is a motion orientation, from 0 to 360 degrees.
 
-    :param delta1: Minimal (or maximal) allowed difference between  ``mhi``  values within a pixel neighorhood.
+    :param delta1: Minimal (or maximal) allowed difference between  ``mhi``  values within a pixel neighborhood.
     
-    :param delta2: Maximal (or minimal) allowed difference between  ``mhi``  values within a pixel neighorhood. That is, the function finds the minimum ( :math:`m(x,y)` ) and maximum ( :math:`M(x,y)` )  ``mhi``  values over  :math:`3 \times 3`  neighborhood of each pixel and marks the motion orientation at  :math:`(x, y)`  as valid only if
+    :param delta2: Maximal (or minimal) allowed difference between  ``mhi``  values within a pixel neighborhood. That is, the function finds the minimum ( :math:`m(x,y)` ) and maximum ( :math:`M(x,y)` )  ``mhi``  values over  :math:`3 \times 3`  neighborhood of each pixel and marks the motion orientation at  :math:`(x, y)`  as valid only if
 
         .. math::
 
@@ -279,7 +280,9 @@ Finds an object center, size, and orientation.
 
     :param criteria: Stop criteria for the underlying  :ocv:func:`meanShift` .
 
-The function implements the CAMSHIFT object tracking algrorithm
+    :returns: (in old interfaces) Number of iterations CAMSHIFT took to converge 
+
+The function implements the CAMSHIFT object tracking algorithm
 [Bradski98]_.
 First, it finds an object center using
 :ocv:func:`meanShift` and then adjusts the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size, and orientation. The next position of the search window can be obtained with ``RotatedRect::boundingRect()`` .
@@ -304,6 +307,8 @@ Finds an object on a back projection image.
     :param window: Initial search window.
 
     :param criteria: Stop criteria for the iterative search algorithm.
+
+    :returns: Number of iterations CAMSHIFT took to converge.
 
 The function implements the iterative object search algorithm. It takes the input back projection of an object and the initial position. The mass center in ``window`` of the back projection image is computed and the search window center shifts to the mass center. The procedure is repeated until the specified number of iterations ``criteria.maxCount`` is done or until the window center shifts by less than ``criteria.epsilon`` . The algorithm is used inside
 :ocv:func:`CamShift` and, unlike
@@ -443,16 +448,16 @@ BackgroundSubtractorMOG
 
 .. ocv:class:: BackgroundSubtractorMOG : public BackgroundSubtractor
 
-Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
-The class implements the algorithm described in P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+The class implements the algorithm described in P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
 
 
 
 
 BackgroundSubtractorMOG::BackgroundSubtractorMOG
 ------------------------------------------------
-The contructors
+The constructors.
 
 .. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG()
 
@@ -484,7 +489,7 @@ Parameters are the same as in :ocv:funcx:`BackgroundSubtractor::operator()`
 
 BackgroundSubtractorMOG2
 ------------------------
-Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
 .. ocv:class:: BackgroundSubtractorMOG2 : public BackgroundSubtractor
 
@@ -492,7 +497,7 @@ Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
     .. ocv:member:: int nmixtures
     
-        Maximum allowed number of mixture comonents. Actual number is determined dynamically per pixel.
+        Maximum allowed number of mixture components. Actual number is determined dynamically per pixel.
 
     .. ocv:member:: float backgroundRatio
     

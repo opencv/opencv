@@ -119,3 +119,7 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   install(TARGETS tbb ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()
+
+# get TBB version
+ocv_parse_header("${tbb_src_dir}/include/tbb/tbb_stddef.h" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION CACHE)
+

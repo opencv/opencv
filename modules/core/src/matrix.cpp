@@ -262,10 +262,9 @@ void Mat::deallocate()
 }
 
     
-Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange) : size(&rows)
 {
+    initEmpty();
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
     {
@@ -336,21 +335,19 @@ Mat::Mat(const Mat& m, const Rect& roi)
 }
 
     
-Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL|CV_MAT_TYPE(_type)), dims(0),
-    rows(0), cols(0), data((uchar*)_data), refcount(0),
-    datastart((uchar*)_data), dataend((uchar*)_data), datalimit((uchar*)_data),
-    allocator(0), size(&rows)
+Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps) : size(&rows)
 {
+    initEmpty();
+    flags |= CV_MAT_TYPE(_type);
+    data = datastart = (uchar*)_data;
     setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
 }
     
     
-Mat::Mat(const Mat& m, const Range* ranges)
-    : flags(m.flags), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+Mat::Mat(const Mat& m, const Range* ranges) : size(&rows)
 {
+    initEmpty();
     int i, d = m.dims;
     
     CV_Assert(ranges);
@@ -374,12 +371,13 @@ Mat::Mat(const Mat& m, const Range* ranges)
 }
  
     
-Mat::Mat(const CvMatND* m, bool copyData)
-    : flags(MAGIC_VAL|CV_MAT_TYPE(m->type)), dims(0), rows(0), cols(0),
-    data((uchar*)m->data.ptr), refcount(0),
-    datastart((uchar*)m->data.ptr), allocator(0),
-    size(&rows)
+Mat::Mat(const CvMatND* m, bool copyData) : size(&rows)
 {
+    initEmpty();
+    if( !m )
+        return;
+    data = datastart = m->data.ptr;
+    flags |= CV_MAT_TYPE(m->type);
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
     
@@ -434,12 +432,45 @@ Mat Mat::diag(int d) const
     
     return m;
 }
+
     
-    
-Mat::Mat(const IplImage* img, bool copyData)
-    : flags(MAGIC_VAL), dims(2), rows(0), cols(0),
-    data(0), refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+Mat::Mat(const CvMat* m, bool copyData) : size(&rows)
 {
+    initEmpty();
+    
+    if( !m )
+        return;
+    
+    if( !copyData )
+    {
+        flags = MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG));
+        dims = 2;
+        rows = m->rows;
+        cols = m->cols;
+        data = datastart = m->data.ptr;
+        size_t esz = CV_ELEM_SIZE(m->type), minstep = cols*esz, _step = m->step;
+        if( _step == 0 )
+            _step = minstep;
+        datalimit = datastart + _step*rows;
+        dataend = datalimit - _step + minstep;
+        step[0] = _step; step[1] = esz;
+    }
+    else
+    {
+        data = datastart = dataend = 0;
+        Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(*this);
+    }
+}
+
+    
+Mat::Mat(const IplImage* img, bool copyData) : size(&rows)
+{
+    initEmpty();
+    
+    if( !img )
+        return;
+    
+    dims = 2;
     CV_DbgAssert(CV_IS_IMAGE(img) && img->imageData != 0);
     
     int depth = IPL2CV_DEPTH(img->depth);
@@ -2428,8 +2459,9 @@ double cv::kmeans( InputArray _data, int K,
 {
     const int SPP_TRIALS = 3;
     Mat data = _data.getMat();
-    int N = data.rows > 1 ? data.rows : data.cols;
-    int dims = (data.rows > 1 ? data.cols : 1)*data.channels();
+    bool isrow = data.rows == 1 && data.channels() > 1;
+    int N = !isrow ? data.rows : data.cols;
+    int dims = (!isrow ? data.cols : 1)*data.channels();
     int type = data.depth();
 
     attempts = std::max(attempts, 1);
@@ -2458,7 +2490,7 @@ double cv::kmeans( InputArray _data, int K,
     }
     int* labels = _labels.ptr<int>();
 
-    Mat centers(K, dims, type), old_centers(K, dims, type);
+    Mat centers(K, dims, type), old_centers(K, dims, type), temp(1, dims, type);
     vector<int> counters(K);
     vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
@@ -2502,7 +2534,7 @@ double cv::kmeans( InputArray _data, int K,
     for( a = 0; a < attempts; a++ )
     {
         double max_center_shift = DBL_MAX;
-        for( iter = 0; iter < criteria.maxCount && max_center_shift > criteria.epsilon; iter++ )
+        for( iter = 0;; )
         {
             swap(centers, old_centers);
 
@@ -2579,13 +2611,17 @@ double cv::kmeans( InputArray _data, int K,
                     int farthest_i = -1;
                     float* new_center = centers.ptr<float>(k);
                     float* old_center = centers.ptr<float>(max_k);
+                    float* _old_center = temp.ptr<float>(); // normalized
+                    float scale = 1.f/counters[max_k];
+                    for( j = 0; j < dims; j++ )
+                        _old_center[j] = old_center[j]*scale;
                     
                     for( i = 0; i < N; i++ )
                     {
                         if( labels[i] != max_k )
                             continue;
                         sample = data.ptr<float>(i);
-                        double dist = normL2Sqr_(sample, old_center, dims);
+                        double dist = normL2Sqr_(sample, _old_center, dims);
                             
                         if( max_dist <= dist )
                         {
@@ -2596,6 +2632,7 @@ double cv::kmeans( InputArray _data, int K,
                     
                     counters[max_k]--;
                     counters[k]++;
+                    labels[farthest_i] = k;
                     sample = data.ptr<float>(farthest_i);
                     
                     for( j = 0; j < dims; j++ )
@@ -2627,6 +2664,9 @@ double cv::kmeans( InputArray _data, int K,
                     }
                 }
             }
+            
+            if( ++iter == MAX(criteria.maxCount, 2) || max_center_shift <= criteria.epsilon )
+                break;
 
             // assign labels
             compactness = 0;

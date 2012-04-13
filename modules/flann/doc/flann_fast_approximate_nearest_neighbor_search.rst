@@ -71,7 +71,7 @@ The method constructs a fast search structure from a set of features using the s
     
            * **centers_init** The algorithm to use for selecting the initial centers when performing a k-means clustering step. The possible values are  ``CENTERS_RANDOM``  (picks the initial cluster centers randomly),  ``CENTERS_GONZALES``  (picks the initial centers using Gonzales' algorithm) and  ``CENTERS_KMEANSPP``  (picks the initial centers using the algorithm suggested in  arthur_kmeanspp_2007 ) 
     
-           * **cb_index** This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When  ``cb_index``  is zero the next kmeans domain to be explored is choosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain. 
+           * **cb_index** This parameter (cluster boundary index) influences the way exploration is performed in the hierarchical kmeans tree. When  ``cb_index``  is zero the next kmeans domain to be explored is chosen to be the one with the closest center. A value greater then zero also takes into account the size of the domain. 
 
     *
        **CompositeIndexParams** When using a parameters object of this type the index created combines the randomized kd-trees  and the hierarchical k-means tree. ::
@@ -205,7 +205,7 @@ Saves the index to a file.
 
 flann::Index_<T>::getIndexParameters
 --------------------------------------------
-Returns the index paramreters.
+Returns the index parameters.
 
 .. ocv:function:: const IndexParams* flann::Index_<T>::getIndexParameters()
 

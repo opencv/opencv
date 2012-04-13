@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -64,18 +64,18 @@
 /// \brief Model and solver parameters
 struct NCVBroxOpticalFlowDescriptor
 {
-	/// flow smoothness
-	Ncv32f alpha;
-	/// gradient constancy importance
-	Ncv32f gamma;
-	/// pyramid scale factor
-	Ncv32f scale_factor;
-	/// number of lagged non-linearity iterations (inner loop)
-	Ncv32u number_of_inner_iterations;
-	/// number of warping iterations (number of pyramid levels)
-	Ncv32u number_of_outer_iterations;
-	/// number of linear system solver iterations
-	Ncv32u number_of_solver_iterations;
+    /// flow smoothness
+    Ncv32f alpha;
+    /// gradient constancy importance
+    Ncv32f gamma;
+    /// pyramid scale factor
+    Ncv32f scale_factor;
+    /// number of lagged non-linearity iterations (inner loop)
+    Ncv32u number_of_inner_iterations;
+    /// number of warping iterations (number of pyramid levels)
+    Ncv32u number_of_outer_iterations;
+    /// number of linear system solver iterations
+    Ncv32u number_of_solver_iterations;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -93,11 +93,11 @@ struct NCVBroxOpticalFlowDescriptor
 
 NCV_EXPORTS
 NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
-							 INCVMemAllocator &gpu_mem_allocator,
-							 const NCVMatrix<Ncv32f> &frame0,
-							 const NCVMatrix<Ncv32f> &frame1,
-							 NCVMatrix<Ncv32f> &u,
-							 NCVMatrix<Ncv32f> &v,
-							 cudaStream_t stream);
+                             INCVMemAllocator &gpu_mem_allocator,
+                             const NCVMatrix<Ncv32f> &frame0,
+                             const NCVMatrix<Ncv32f> &frame1,
+                             NCVMatrix<Ncv32f> &u,
+                             NCVMatrix<Ncv32f> &v,
+                             cudaStream_t stream);
 
 #endif

@@ -27,8 +27,8 @@
 #include <stdint.h>
 
 /**
- * \defgroup VAAPI_Decoding VA API Decoding
- * \ingroup Decoder
+ * @defgroup VAAPI_Decoding VA API Decoding
+ * @ingroup Decoder
  * @{
  */
 

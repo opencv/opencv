@@ -109,7 +109,7 @@ Point of an original or dual subdivision.
 ..
 
 * id
-    This integer can be used to index auxillary data associated with each vertex of the planar subdivision.
+    This integer can be used to index auxiliary data associated with each vertex of the planar subdivision.
 
 CalcSubdivVoronoi2D
 -------------------
@@ -254,7 +254,7 @@ Returns the location of a point within a Delaunay triangulation.
 
     :param edge: Output edge that the point belongs to or is located to the right of it.
 
-    :param vertex: Optional output vertex double pointer the input point coinsides with.
+    :param vertex: Optional output vertex double pointer the input point coincides with.
 
 The function locates the input point within the subdivision. There are five cases:
 
@@ -280,7 +280,7 @@ The function locates the input point within the subdivision. There are five case
     will contain a pointer to the vertex.
 
 *
-    The point is outside the subdivsion reference rectangle. The function returns 
+    The point is outside the subdivision reference rectangle. The function returns 
     ``CV_PTLOC_OUTSIDE_RECT``
     and no pointers are filled.
 

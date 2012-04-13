@@ -29,10 +29,18 @@ epnp::epnp(const cv::Mat& cameraMatrix, const cv::Mat& opoints, const cv::Mat& i
 
   alphas.resize(4 * number_of_correspondences); 
   pcs.resize(3 * number_of_correspondences);
+
+  max_nr = 0;
+  A1 = NULL;
+  A2 = NULL;
 }
 
 epnp::~epnp()
 {
+    if (A1)
+        delete[] A1;
+    if (A2)
+        delete[] A2;
 }
 
 void epnp::choose_control_points(void)
@@ -513,9 +521,6 @@ void epnp::gauss_newton(const CvMat * L_6x10, const CvMat * Rho,
 
 void epnp::qr_solve(CvMat * A, CvMat * b, CvMat * X)
 {
-  static int max_nr = 0;
-  static double * A1, * A2;
-
   const int nr = A->rows;
   const int nc = A->cols;
 

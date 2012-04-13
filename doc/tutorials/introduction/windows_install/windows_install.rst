@@ -16,7 +16,7 @@ Installation by using the pre-built libraries
 
 1. Open up a web browser and go to: http://sourceforge.net/projects/opencvlibrary/files/opencv-win/
 
-#. Open the folder for the latest version (currently this is 2.3).
+#. Open the folder for the latest version (currently this is 2.4).
 
 #. Choose a build you want to use and download it. The naming conventions used will show what kind of support they offer. For example:
    
@@ -60,7 +60,7 @@ If you are building your own libraries you can take either the source files from
 
    .. container:: enumeratevisibleitemswithsquare
 
-      + stable and tested build - http://code.opencv.org/svn/opencv/branches/2.3 (the number at the end will change with every new realease, so change it to that)
+      + stable and tested build - http://code.opencv.org/svn/opencv/branches/2.4 (the number at the end will change with every new realease, so change it to that)
       + development build - http://code.opencv.org/svn/opencv/trunk/
 
 While the later one may contain a couple of new and experimental algorithms, performance increases and interface improvements, be aware, that it may also contain many-many bugs. Using the first one is recommended in most of the cases. That is unless you are extending the OpenCV library itself or really need to most up to date version of it. 
@@ -347,7 +347,7 @@ Set the OpenCV enviroment variable and add it to the systems path
 
 First we set an enviroment variable to make easier our work. This will hold the install directory of our OpenCV library that we use in our projects. Start up a command window and enter:
 
-.. code-block:: bash
+::
 
    setx -m OPENCV_DIR D:\OpenCV\Build\Install
 
@@ -355,7 +355,7 @@ Here the directory is where you have your OpenCV binaries (*installed* or *built
 
 If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path.This is cause you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this he needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
 
-.. code-block:: bash
+::
 
    %OPENCV_DIR%\bin
 

@@ -1,8 +1,8 @@
 package org.opencv.test.features2d;
 
-import junit.framework.TestCase;
+import org.opencv.test.OpenCVTestCase;
 
-public class GridSIFTFeatureDetectorTest extends TestCase {
+public class GridSIFTFeatureDetectorTest extends OpenCVTestCase {
 
     public void testCreate() {
         fail("Not yet implemented");

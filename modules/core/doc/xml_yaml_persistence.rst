@@ -148,17 +148,545 @@ FileStorage
 -----------
 .. ocv:class:: FileStorage
 
-XML/YAML file storage class that incapsulates all the information necessary for writing or reading data to/from file.
+XML/YAML file storage class that encapsulates all the information necessary for writing or reading data to/from a file.
+
+FileStorage::FileStorage
+------------------------
+The constructors.
+
+.. ocv:function:: FileStorage::FileStorage()
+
+.. ocv:function:: FileStorage::FileStorage(const string& filename, int flags, const string& encoding=string())
+
+    :param filename: Name of the file to open. Extension of the file (``.xml`` or ``.yml``/``.yaml``) determines its format (XML or YAML respectively). Also you can append ``.gz`` to work with compressed files, for example ``myHugeMatrix.xml.gz``.
+
+    :param flags: Mode of operation. Possible values are:
+
+        * **FileStorage::READ** Open the file for reading.
+
+        * **FileStorage::WRITE** Open the file for writing.
+
+        * **FileStorage::APPEND** Open the file for appending.
+
+    :param encoding: Encoding of the file. Note that UTF-16 XML encoding is not supported currently and you should use 8-bit encoding instead of it.
+
+The full constructor opens the file. Alternatively you can use the default constructor and then call :ocv:func:`FileStorage::open`.
+
+
+FileStorage::open
+-----------------
+Opens a file.
+
+.. ocv:function:: bool FileStorage::open(const string& filename, int flags, const string& encoding=string())
+
+See description of parameters in :ocv:func:`FileStorage::FileStorage`. The method calls :ocv:func:`FileStorage::release` before opening the file.
+
+
+FileStorage::isOpened
+---------------------
+Checks whether the file is opened.
+
+.. ocv:function:: bool FileStorage::isOpened() const
+
+    :returns: ``true`` if the object is associated with the current file and ``false`` otherwise.
+   
+It is a good practice to call this method after you tried to open a file.
+
+
+FileStorage::release
+--------------------
+Closes the file and releases all the memory buffers.
+
+.. ocv:function:: void FileStorage::release()
+
+Call this method after all I/O operations with the storage are finished.
+
+
+FileStorage::getFirstTopLevelNode
+---------------------------------
+Returns the first element of the top-level mapping.
+
+.. ocv:function:: FileNode FileStorage::getFirstTopLevelNode() const
+
+    :returns: The first element of the top-level mapping.
+
+
+FileStorage::root
+-----------------
+Returns the top-level mapping
+
+.. ocv:function:: FileNode FileStorage::root(int streamidx=0) const
+
+    :param streamidx: Zero-based index of the stream. In most cases there is only one stream in the file. However, YAML supports multiple streams and so there can be several.
+
+    :returns: The top-level mapping.
+
+
+FileStorage::operator[]
+-----------------------
+Returns the specified element of the top-level mapping.
+
+.. ocv:function:: FileNode FileStorage::operator[](const string& nodename) const
+
+.. ocv:function:: FileNode FileStorage::operator[](const char* nodename) const
+
+    :param nodename: Name of the file node.
+
+    :returns: Node with the given name.
+
+
+FileStorage::operator*
+----------------------
+Returns the obsolete C FileStorage structure.
+
+.. ocv:function:: CvFileStorage* FileStorage::operator *()
+
+.. ocv:function:: const CvFileStorage* FileStorage::operator *() const
+
+    :returns: Pointer to the underlying C FileStorage structure
+
+
+FileStorage::writeRaw
+---------------------
+Writes multiple numbers.
+
+.. ocv:function:: void FileStorage::writeRaw( const string& fmt, const uchar* vec, size_t len )
+
+     :param fmt: Specification of each array element that has the following format  ``([count]{'u'|'c'|'w'|'s'|'i'|'f'|'d'})...`` where the characters correspond to fundamental C++ types:
+
+            * **u** 8-bit unsigned number 
+
+            * **c** 8-bit signed number 
+
+            * **w** 16-bit unsigned number 
+
+            * **s** 16-bit signed number 
+
+            * **i** 32-bit signed number 
+
+            * **f** single precision floating-point number 
+
+            * **d** double precision floating-point number 
+
+            * **r** pointer, 32 lower bits of which are written as a signed integer. The type can be used to store structures with links between the elements. 
+            
+            ``count``  is the optional counter of values of a given type. For example,  ``2if``  means that each array element is a structure of 2 integers, followed by a single-precision floating-point number. The equivalent notations of the above specification are ' ``iif`` ', ' ``2i1f`` ' and so forth. Other examples:  ``u``  means that the array consists of bytes, and  ``2d``  means the array consists of pairs  of doubles.
+
+     :param vec: Pointer to the written array.
+
+     :param len: Number of the ``uchar`` elements to write.
+
+Writes one or more numbers of the specified format to the currently written structure. Usually it is more convenient to use :ocv:func:`operator <<` instead of this method.
+
+FileStorage::writeObj
+---------------------
+Writes the registered C structure (CvMat, CvMatND, CvSeq).
+
+.. ocv:function:: void FileStorage::writeObj( const string& name, const void* obj )
+
+    :param name: Name of the written object.
+
+    :param obj: Pointer to the object.
+
+See :ocv:cfunc:`Write` for details.
+
+
+FileStorage::getDefaultObjectName
+---------------------------------
+Returns the normalized object name for the specified name of a file.
+
+.. ocv:function:: static string FileStorage::getDefaultObjectName(const string& filename)
+
+   :param filename: Name of a file
+
+   :returns: The normalized object name.
+
+
+operator <<
+-----------
+Writes data to a file storage.
+
+.. ocv:function:: template<typename _Tp> FileStorage& operator << (FileStorage& fs, const _Tp& value)
+
+.. ocv:function:: template<typename _Tp> FileStorage& operator << ( FileStorage& fs, const vector<_Tp>& vec )
+
+    :param fs: Opened file storage to write data.
+
+    :param value: Value to be written to the file storage.
+
+    :param vec: Vector of values to be written to the file storage.
+
+It is the main function to write data to a file storage. See an example of its usage at the beginning of the section.
+
+
+operator >>
+-----------
+Reads data from a file storage.
+
+.. ocv:function:: template<typename _Tp> void operator >> (const FileNode& n, _Tp& value)
+
+.. ocv:function:: template<typename _Tp> void operator >> (const FileNode& n, vector<_Tp>& vec)
+
+.. ocv:function:: template<typename _Tp> FileNodeIterator& operator >> (FileNodeIterator& it, _Tp& value)
+
+.. ocv:function:: template<typename _Tp> FileNodeIterator& operator >> (FileNodeIterator& it, vector<_Tp>& vec)
+
+    :param n: Node from which data will be read.
+
+    :param it: Iterator from which data will be read.
+
+    :param value: Value to be read from the file storage.
+
+    :param vec: Vector of values to be read from the file storage.
+
+It is the main function to read data from a file storage. See an example of its usage at the beginning of the section.
 
 
 FileNode
 --------
 .. ocv:class:: FileNode
 
-The class ``FileNode`` represents each element of the file storage, be it a matrix, a matrix element or a top-level node, containing all the file content. That is, a file node may contain either a singe value (integer, floating-point value or a text string), or it can be a sequence of other file nodes, or it can be a mapping. Type of the file node can be determined using :ocv:func:`FileNode::type` method.
+File Storage Node class. The node is used to store each and every element of the file storage opened for reading. When XML/YAML file is read, it is first parsed and stored in the memory as a hierarchical collection of nodes. Each node can be a “leaf” that is contain a single number or a string, or be a collection of other nodes. There can be named collections (mappings) where each element has a name and it is accessed by a name, and ordered collections (sequences) where elements do not have names but rather accessed by index. Type of the file node can be determined using :ocv:func:`FileNode::type` method.
+
+Note that file nodes are only used for navigating file storages opened for reading. When a file storage is opened for writing, no data is stored in memory after it is written.
+
+
+FileNode::FileNode
+------------------
+The constructors.
+
+.. ocv:function:: FileNode::FileNode()
+
+.. ocv:function:: FileNode::FileNode(const CvFileStorage* fs, const CvFileNode* node)
+
+.. ocv:function:: FileNode::FileNode(const FileNode& node)
+
+    :param fs: Pointer to the obsolete file storage structure.
+
+    :param node: File node to be used as initialization for the created file node.
+
+These constructors are used to create a default file node, construct it from obsolete structures or from the another file node.
+
+
+FileNode::operator[]
+--------------------
+Returns element of a mapping node or a sequence node.
+
+.. ocv:function:: FileNode FileNode::operator[](const string& nodename) const
+
+.. ocv:function:: FileNode FileNode::operator[](const char* nodename) const
+
+.. ocv:function:: FileNode FileNode::operator[](int i) const
+
+    :param nodename: Name of an element in the mapping node.
+
+    :param i: Index of an element in the sequence node.
+
+    :returns: Returns the element with the given identifier.
+
+
+FileNode::type
+--------------
+Returns type of the node.
+
+.. ocv:function:: int FileNode::type() const
+
+    :returns: Type of the node. Possible values are:
+
+        * **FileNode::NONE** Empty node.
+
+        * **FileNode::INT** Integer.
+
+        * **FileNode::REAL** Floating-point number.
+
+        * **FileNode::FLOAT** Synonym or ``REAL``.
+
+        * **FileNode::STR** Text string in UTF-8 encoding.
+
+        * **FileNode::STRING** Synonym for ``STR``.
+
+        * **FileNode::REF** Integer of type ``size_t``. Typically used for storing complex dynamic structures where some elements reference the others.
+
+        * **FileNode::SEQ** Sequence.
+
+        * **FileNode::MAP** Mapping.
+
+        * **FileNode::FLOW** Compact representation of a sequence or mapping. Used only by the YAML writer.
+
+        * **FileNode::USER** Registered object (e.g. a matrix).
+
+        * **FileNode::EMPTY** Empty structure (sequence or mapping).
+
+        * **FileNode::NAMED** The node has a name (i.e. it is an element of a mapping).
+
+
+FileNode::empty
+---------------
+Checks whether the node is empty.
+
+.. ocv:function:: bool FileNode::empty() const
+
+    :returns: ``true`` if the node is empty.
+
+
+FileNode::isNone
+----------------
+Checks whether the node is a "none" object 
+
+.. ocv:function:: bool FileNode::isNone() const
+
+    :returns: ``true`` if the node is a "none" object.
+
+
+FileNode::isSeq
+---------------
+Checks whether the node is a sequence.
+
+.. ocv:function:: bool FileNode::isSeq() const
+
+    :returns: ``true`` if the node is a sequence.
+
+
+FileNode::isMap
+---------------
+Checks whether the node is a mapping.
+
+.. ocv:function:: bool FileNode::isMap() const
+
+    :returns: ``true`` if the node is a mapping.
+
+
+FileNode::isInt
+---------------
+Checks whether the node is an integer.
+    
+.. ocv:function:: bool FileNode::isInt() const
+
+    :returns: ``true`` if the node is an integer.
+
+
+FileNode::isReal
+----------------
+Checks whether the node is a floating-point number.
+
+.. ocv:function:: bool FileNode::isReal() const
+
+    :returns: ``true`` if the node is a floating-point number.
+
+
+FileNode::isString
+------------------
+Checks whether the node is a text string.
+
+.. ocv:function:: bool FileNode::isString() const
+
+    :returns: ``true`` if the node is a text string.
+
+
+FileNode::isNamed
+-----------------
+Checks whether the node has a name.
+
+.. ocv:function:: bool FileNode::isNamed() const
+
+    :returns: ``true`` if the node has a name.
+
+
+FileNode::name
+--------------
+Returns the node name.
+
+.. ocv:function:: string FileNode::name() const
+
+    :returns: The node name or an empty string if the node is nameless.
+
+
+FileNode::size
+--------------
+Returns the number of elements in the node.
+
+.. ocv:function:: size_t FileNode::size() const
+
+    :returns: The number of elements in the node, if it is a sequence or mapping, or 1 otherwise.
+
+
+FileNode::operator int
+----------------------
+Returns the node content as an integer.
+
+.. ocv:function:: FileNode::operator int() const
+
+    :returns: The node content as an integer. If the node stores a floating-point number, it is rounded.
+
+
+FileNode::operator float
+------------------------
+Returns the node content as float.
+
+.. ocv:function:: FileNode::operator float() const
+
+    :returns: The node content as float.
+
+
+FileNode::operator double
+-------------------------
+Returns the node content as double.
+
+.. ocv:function:: FileNode::operator double() const
+
+    :returns: The node content as double.
+
+
+FileNode::operator string
+-------------------------
+Returns the node content as text string.
+
+.. ocv:function:: FileNode::operator string() const
+
+    :returns: The node content as a text string.
+        
+
+FileNode::operator*
+-------------------
+Returns pointer to the underlying obsolete file node structure.
+
+.. ocv:function:: CvFileNode* FileNode::operator *()
+
+    :returns: Pointer to the underlying obsolete file node structure.
+
+
+FileNode::begin
+---------------
+Returns the iterator pointing to the first node element.
+
+.. ocv:function:: FileNodeIterator FileNode::begin() const
+
+   :returns: Iterator pointing to the first node element.
+
+
+FileNode::end
+-------------
+Returns the iterator pointing to the element following the last node element.
+
+.. ocv:function:: FileNodeIterator FileNode::end() const
+
+    :returns: Iterator pointing to the element following the last node element.
+
+
+FileNode::readRaw
+-----------------
+Reads node elements to the buffer with the specified format.
+
+.. ocv:function:: void FileNode::readRaw( const string& fmt, uchar* vec, size_t len ) const
+
+    :param fmt: Specification of each array element. It has the same format as in :ocv:func:`FileStorage::writeRaw`.
+
+    :param vec: Pointer to the destination array.
+
+    :param len: Number of elements to read. If it is greater than number of remaining elements then all of them will be read.
+
+Usually it is more convenient to use :ocv:func:`operator >>` instead of this method.
+
+FileNode::readObj
+-----------------
+Reads the registered object.
+
+.. ocv:function:: void* FileNode::readObj() const
+
+    :returns: Pointer to the read object.
+
+See :ocv:cfunc:`Read` for details.
 
 FileNodeIterator
 ----------------
 .. ocv:class:: FileNodeIterator
 
 The class ``FileNodeIterator`` is used to iterate through sequences and mappings. A standard STL notation, with ``node.begin()``, ``node.end()`` denoting the beginning and the end of a sequence, stored in ``node``.  See the data reading sample in the beginning of the section.
+
+
+FileNodeIterator::FileNodeIterator
+----------------------------------
+The constructors.
+
+.. ocv:function:: FileNodeIterator::FileNodeIterator()
+
+.. ocv:function:: FileNodeIterator::FileNodeIterator(const CvFileStorage* fs, const CvFileNode* node, size_t ofs=0)
+
+.. ocv:function:: FileNodeIterator::FileNodeIterator(const FileNodeIterator& it)
+
+    :param fs: File storage for the iterator.
+
+    :param node: File node for the iterator.
+
+    :param ofs: Index of the element in the node. The created iterator will point to this element.
+
+    :param it: Iterator to be used as initialization for the created iterator.
+
+These constructors are used to create a default iterator, set it to specific element in a file node or construct it from another iterator.
+
+
+FileNodeIterator::operator*
+---------------------------
+Returns the currently observed element.
+
+.. ocv:function:: FileNode FileNodeIterator::operator *() const
+
+    :returns: Currently observed element.
+
+
+FileNodeIterator::operator->
+----------------------------
+Accesses methods of the currently observed element.
+
+.. ocv:function:: FileNode FileNodeIterator::operator ->() const
+
+
+FileNodeIterator::operator ++
+-----------------------------
+Moves iterator to the next node.
+
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator ++ ()
+
+.. ocv:function:: FileNodeIterator FileNodeIterator::operator ++ (int)
+
+
+FileNodeIterator::operator --
+-----------------------------
+Moves iterator to the previous node.
+
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator -- ()
+
+.. ocv:function:: FileNodeIterator FileNodeIterator::operator -- (int)
+
+
+FileNodeIterator::operator +=
+-----------------------------
+Moves iterator forward by the specified offset.
+
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator += (int ofs)
+
+    :param ofs: Offset (possibly negative) to move the iterator.
+
+
+FileNodeIterator::operator -=
+-----------------------------
+Moves iterator backward by the specified offset (possibly negative).
+
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator -= (int ofs)
+
+    :param ofs: Offset (possibly negative) to move the iterator.
+
+
+FileNodeIterator::readRaw
+-------------------------
+Reads node elements to the buffer with the specified format.
+
+.. ocv:function:: FileNodeIterator& FileNodeIterator::readRaw( const string& fmt, uchar* vec, size_t maxCount=(size_t)INT_MAX )
+
+    :param fmt: Specification of each array element. It has the same format as in :ocv:func:`FileStorage::writeRaw`.
+
+    :param vec: Pointer to the destination array.
+
+    :param maxCount: Number of elements to read. If it is greater than number of remaining elements then all of them will be read.
+
+Usually it is more convenient to use :ocv:func:`operator >>` instead of this method.

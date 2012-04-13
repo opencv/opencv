@@ -100,7 +100,7 @@ You need the following tools to be installed:
 
    Check the `Android SDK System Requirements
    <http://developer.android.com/sdk/requirements.html>`_ document for a list of Eclipse versions that are compatible with the Android SDK. 
-   For OpenCV 2.3.1 we recommend Eclipse 3.7 (Indigo) or Eclipse 3.6 (Helios). They work well for OpenCV under both Windows and Linux.
+   For OpenCV 2.4.0 we recommend Eclipse 3.6 (Helios) or later versions. They work well for OpenCV under both Windows and Linux.
    
    If you have no Eclipse installed, you can download it from this location:
     
@@ -154,12 +154,12 @@ Get the OpenCV package for Android development
    
    .. code-block:: bash
 
-      tar -jxvf ~/Downloads/OpenCV-2.3.1-android-bin.tar.bz2
+      tar -jxvf ~/Downloads/OpenCV-2.4.0-android-bin.tar.bz2
       
    For this tutorial I have unpacked OpenCV to the :file:`C:\\Work\\android-opencv\\` directory.
 
-.. |opencv_android_bin_pack| replace:: OpenCV-2.3.1-android-bin.tar.bz2
-.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.3.1/OpenCV-2.3.1-android-bin.tar.bz2/download
+.. |opencv_android_bin_pack| replace:: OpenCV-2.4.0-android-bin.tar.bz2
+.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.0/OpenCV-2.4.0-android-bin.tar.bz2/download
 .. |opencv_android_bin_pack_url| replace:: |opencv_android_bin_pack|
 .. |seven_zip| replace:: 7-Zip
 .. _seven_zip: http://www.7-zip.org/

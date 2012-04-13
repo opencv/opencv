@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvDTree;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvDTreeTest extends TestCase {
+public class CvDTreeTest extends OpenCVTestCase {
 
     public void testClear() {
         fail("Not yet implemented");

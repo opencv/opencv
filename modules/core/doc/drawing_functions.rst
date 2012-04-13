@@ -190,7 +190,7 @@ Fills the area bounded by one or more polygons.
 
 .. ocv:pyfunction:: cv2.fillPoly(img, pts, color[, lineType[, shift[, offset]]]) -> None
 
-.. ocv:cfunction:: void cvFillPoly( CvArr* img, CvPoint** pts, int* npts, int contours, CvScalar color, int lineType=8, int shift=0 )
+.. ocv:cfunction:: void cvFillPoly( CvArr* img, CvPoint** pts, int* npts, int ncontours, CvScalar color, int lineType=8, int shift=0 )
 .. ocv:pyoldfunction:: cv.FillPoly(img, polys, color, lineType=8, shift=0)-> None
 
     :param img: Image.
@@ -207,8 +207,10 @@ Fills the area bounded by one or more polygons.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
+    :param offset: Optional offset of all points of the contours.
+
 The function ``fillPoly`` fills an area bounded by several polygonal contours. The function can fill complex areas, for example,
-areas with holes, contours with self-intersections (some of thier parts), and so forth.
+areas with holes, contours with self-intersections (some of their parts), and so forth.
 
 
 
@@ -413,7 +415,7 @@ Draws a simple, thick, or filled up-right rectangle.
 
     :param pt1: Vertex of the rectangle.
 
-    :param pt2: Vertex of the recangle opposite to  ``pt1`` .
+    :param pt2: Vertex of the rectangle opposite to  ``pt1`` .
     
     :param r: Alternative specification of the drawn rectangle.
 

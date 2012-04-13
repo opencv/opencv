@@ -34,7 +34,7 @@ A storage for various OpenCV dynamic data structures, such as ``CvSeq``, ``CvSet
 
 Memory storage is a low-level structure used to store dynamically growing data structures such as sequences, contours, graphs, subdivisions, etc. It is organized as a list of memory blocks of equal size -
 ``bottom`` field is the beginning of the list of blocks and ``top`` is the currently used block, but not necessarily the last block of the list. All blocks between ``bottom`` and ``top``, not including the
-latter, are considered fully occupied; all blocks between ``top`` and the last block, not including  ``top``, are considered free and ``top`` itself is partly ocupied - ``free_space`` contains the number of free bytes left in the end of ``top``.
+latter, are considered fully occupied; all blocks between ``top`` and the last block, not including  ``top``, are considered free and ``top`` itself is partly occupied - ``free_space`` contains the number of free bytes left in the end of ``top``.
 
 A new memory buffer that may be allocated explicitly by :ocv:cfunc:`MemStorageAlloc` function or implicitly by higher-level functions, such as :ocv:cfunc:`SeqPush`,  :ocv:cfunc:`GraphAddEdge` etc.
 
@@ -126,16 +126,22 @@ There are helper functions to construct the slice and to compute its length:
 
 .. ocv:cfunction:: CvSlice cvSlice( int start, int end )
 
+    :param start: Inclusive left boundary.
+
+    :param end: Exclusive right boundary.
+
 ::
 
     #define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
     #define CV_WHOLE_SEQ  cvSlice(0, CV_WHOLE_SEQ_END_INDEX)
 
-..
-
 .. ocv:cfunction:: int cvSliceLength( CvSlice slice, const CvSeq* seq )
 
-  Calculates the sequence slice length
+    :param slice: The slice of sequence.
+
+    :param seq: Source sequence.
+
+Calculates the sequence slice length.
 
 Some of functions that operate on sequences take a ``CvSlice slice`` parameter that is often set to the whole sequence (CV_WHOLE_SEQ) by default. Either of the ``start_index`` and  ``end_index`` may be negative or exceed the sequence length. If they are equal, the slice is considered empty (i.e., contains no elements). Because sequences are treated as circular structures, the slice may select a
 few elements in the end of a sequence followed by a few elements at the beginning of the sequence. For example,  ``cvSlice(-2, 3)`` in the case of a 10-element sequence will select a 5-element slice, containing the pre-last (8th), last (9th), the very first (0th), second (1th) and third (2nd)
@@ -338,7 +344,7 @@ Creates structure for depth-first graph traversal.
 
             * **CV_GRAPH_BACK_EDGE** stop at back edges ( ``back edge``  is an edge connecting the last visited vertex with some of its ancestors in the search tree)
 
-            * **CV_GRAPH_FORWARD_EDGE** stop at forward edges ( ``forward edge``  is an edge conecting the last visited vertex with some of its descendants in the search tree. The forward edges are only possible during oriented graph traversal)
+            * **CV_GRAPH_FORWARD_EDGE** stop at forward edges ( ``forward edge``  is an edge connecting the last visited vertex with some of its descendants in the search tree. The forward edges are only possible during oriented graph traversal)
 
             * **CV_GRAPH_CROSS_EDGE** stop at cross edges ( ``cross edge``  is an edge connecting different search trees or branches of the same tree. The  ``cross edges``  are only possible during oriented graph traversal)
 
@@ -715,7 +721,7 @@ The function removes a vertex from the graph by using its pointer together with 
 
 GraphVtxDegree
 --------------
-Counts the number of edges indicent to the vertex.
+Counts the number of edges incident to the vertex.
 
 .. ocv:cfunction:: int cvGraphVtxDegree( const CvGraph* graph, int vtxIdx )
 
@@ -1222,7 +1228,7 @@ Searches for an element in a sequence.
 
     :param elem_idx: Output parameter; index of the found element
 
-    :param userdata: The user parameter passed to the compasion function; helps to avoid global variables in some cases
+    :param userdata: The user parameter passed to the comparison function; helps to avoid global variables in some cases
 
 ::
 
@@ -1265,7 +1271,7 @@ Sorts sequence element using the specified comparison function.
 
     :param func: The comparison function that returns a negative, zero, or positive value depending on the relationships among the elements (see the above declaration and the example below) - a similar function is used by  ``qsort``  from C runline except that in the latter,  ``userdata``  is not used
 
-    :param userdata: The user parameter passed to the compasion function; helps to avoid global variables in some cases
+    :param userdata: The user parameter passed to the comparison function; helps to avoid global variables in some cases
 
 ::
 
@@ -1552,5 +1558,5 @@ Gathers all node pointers to a single sequence.
 
     :param storage: Container for the sequence
 
-The function puts pointers of all nodes reacheable from  ``first`` into a single sequence. The pointers are written sequentially in the depth-first order.
+The function puts pointers of all nodes reachable from  ``first`` into a single sequence. The pointers are written sequentially in the depth-first order.
 

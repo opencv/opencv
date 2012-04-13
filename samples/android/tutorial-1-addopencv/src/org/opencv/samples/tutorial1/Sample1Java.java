@@ -8,17 +8,12 @@ import android.view.MenuItem;
 import android.view.Window;
 
 public class Sample1Java extends Activity {
-    private static final String TAG             = "Sample::Activity";
-
-    public static final int     VIEW_MODE_RGBA  = 0;
-    public static final int     VIEW_MODE_GRAY  = 1;
-    public static final int     VIEW_MODE_CANNY = 2;
+    private static final String TAG = "Sample::Activity";
 
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewGray;
     private MenuItem            mItemPreviewCanny;
-
-    public static int           viewMode        = VIEW_MODE_RGBA;
+    private Sample1View         mView;
 
     public Sample1Java() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -30,7 +25,8 @@ public class Sample1Java extends Activity {
         Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(new Sample1View(this));
+        mView = new Sample1View(this);
+        setContentView(mView);
     }
 
     @Override
@@ -45,12 +41,13 @@ public class Sample1Java extends Activity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "Menu Item selected " + item);
-        if (item == mItemPreviewRGBA)
-            viewMode = VIEW_MODE_RGBA;
-        else if (item == mItemPreviewGray)
-            viewMode = VIEW_MODE_GRAY;
-        else if (item == mItemPreviewCanny)
-            viewMode = VIEW_MODE_CANNY;
+        if (item == mItemPreviewRGBA) {
+        	mView.setViewMode(Sample1View.VIEW_MODE_RGBA);
+        } else if (item == mItemPreviewGray) {
+        	mView.setViewMode(Sample1View.VIEW_MODE_GRAY);
+        } else if (item == mItemPreviewCanny) {
+        	mView.setViewMode(Sample1View.VIEW_MODE_CANNY);
+        }
         return true;
     }
 }

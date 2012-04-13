@@ -1437,6 +1437,9 @@ protected:
                 Mat mask1;
                 Mat c, d;
                 
+                rng.fill(a, RNG::UNIFORM, 0, 100);
+                rng.fill(b, RNG::UNIFORM, 0, 100);
+                
                 // [-2,2) range means that the each generated random number
                 // will be one of -2, -1, 0, 1. Saturated to [0,255], it will become
                 // 0, 0, 0, 1 => the mask will be filled by ~25%.

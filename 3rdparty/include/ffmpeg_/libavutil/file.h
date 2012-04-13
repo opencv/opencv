@@ -49,4 +49,13 @@ int av_file_map(const char *filename, uint8_t **bufptr, size_t *size,
  */
 void av_file_unmap(uint8_t *bufptr, size_t size);
 
+/**
+ * Wrapper to work around the lack of mkstemp() on mingw.
+ * Also, tries to create file in /tmp first, if possible.
+ * *prefix can be a character constant; *filename will be allocated internally.
+ * @return file descriptor of opened file (or -1 on error)
+ * and opened file name in **filename.
+ */
+int av_tempfile(const char *prefix, char **filename, int log_offset, void *log_ctx);
+
 #endif /* AVUTIL_FILE_H */

@@ -246,6 +246,10 @@ CvRTrees::~CvRTrees()
     clear();
 }
 
+std::string CvRTrees::getName() const
+{
+    return CV_TYPE_NAME_ML_RTREES;
+}
 
 CvMat* CvRTrees::get_active_var_mask()
 {
@@ -726,7 +730,8 @@ void CvRTrees::write( CvFileStorage* fs, const char* name ) const
     if( ntrees < 1 || !trees || nsamples < 1 )
         CV_Error( CV_StsBadArg, "Invalid CvRTrees object" );
 
-    cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_RTREES );
+    std::string modelNodeName = this->getName();
+    cvStartWriteStruct( fs, name, CV_NODE_MAP, modelNodeName.c_str() );
 
     cvWriteInt( fs, "nclasses", nclasses );
     cvWriteInt( fs, "nsamples", nsamples );

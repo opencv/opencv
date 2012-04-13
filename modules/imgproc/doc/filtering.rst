@@ -418,7 +418,7 @@ Smoothes an image using the normalized box filter.
 
 .. ocv:pyfunction:: cv2.blur(src, ksize[, dst[, anchor[, borderType]]]) -> dst
 
-    :param src: Source image.
+    :param src: Source image. The image can have any number of channels, which are processed independently. The depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -507,9 +507,7 @@ where
 
     \alpha = \fork{\frac{1}{\texttt{ksize.width*ksize.height}}}{when \texttt{normalize=true}}{1}{otherwise}
 
-Unnormalized box filter is useful for computing various integral characteristics over each pixel neighborhood, such as covariance matrices of image derivatives (used in dense optical flow algorithms,
-and so on). If you need to compute pixel sums over variable-size windows, use
-:ocv:func:`integral` .
+Unnormalized box filter is useful for computing various integral characteristics over each pixel neighborhood, such as covariance matrices of image derivatives (used in dense optical flow algorithms, and so on). If you need to compute pixel sums over variable-size windows, use :ocv:func:`integral` .
 
 .. seealso::
 
@@ -584,6 +582,10 @@ The function supports the mode when ``src`` is already in the middle of ``dst`` 
     // now do some custom filtering ...
     ...
 
+
+.. note::
+
+    When the source image is a part (ROI) of a bigger image, the function will try to use the pixels outside of the ROI to form a border. To disable this feature and always do extrapolation, as if ``src`` was not a ROI, use ``borderType | BORDER_ISOLATED``.
 
 .. seealso::
 
@@ -713,13 +715,13 @@ Creates a non-separable linear filter engine.
 
     :param delta: Value added to the filtered results before storing them.
 
-    :param bits: Number of the fractional bits. the parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
+    :param bits: Number of the fractional bits. The parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
 
     :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
     
     :param columnBorderType: Pixel extrapolation method in the horizontal direction.
     
-    :param borderValue: Border vaule used in case of a constant border.
+    :param borderValue: Border value used in case of a constant border.
 
 The function returns a pointer to a 2D linear filter for the specified kernel, the source array type, and the destination array type. The function is a higher-level function that calls ``getLinearFilter`` and passes the retrieved 2D filter to the
 :ocv:class:`FilterEngine` constructor.
@@ -737,17 +739,17 @@ Creates an engine for non-separable morphological operations.
 
 .. ocv:function:: Ptr<FilterEngine> createMorphologyFilter(int op, int type,    InputArray element, Point anchor=Point(-1,-1), int rowBorderType=BORDER_CONSTANT, int columnBorderType=-1, const Scalar& borderValue=morphologyDefaultBorderValue())
 
-.. ocv:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray element,                                    Point anchor=Point(-1,-1))
+.. ocv:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray element, Point anchor=Point(-1,-1))
 
-.. ocv:function:: Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type,                                          int esize, int anchor=-1)
+.. ocv:function:: Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int esize, int anchor=-1)
 
-.. ocv:function:: Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type,                                                int esize, int anchor=-1)
+.. ocv:function:: Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int esize, int anchor=-1)
 
 .. ocv:function:: Scalar morphologyDefaultBorderValue()
 
     :param op: Morphology operation ID,  ``MORPH_ERODE``  or  ``MORPH_DILATE`` .
-    
-    :param type: Input/output image type.
+
+    :param type: Input/output image type. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
     :param element: 2D 8-bit structuring element for a morphological operation. Non-zero elements indicate the pixels that belong to the element.
 
@@ -836,7 +838,7 @@ Dilates an image by using a specific structuring element.
 .. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
 .. ocv:pyoldfunction:: cv.Dilate(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image.
+    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -876,9 +878,9 @@ Erodes an image by using a specific structuring element.
 .. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
 .. ocv:pyoldfunction:: cv.Erode(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image.
+    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
-    :param dst: Destination image of the same size and type as  ``src`` .
+    :param dst: Destination image of the same size and type as ``src``.
     
     :param element: Structuring element used for erosion. If  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
 
@@ -921,7 +923,13 @@ Convolves an image with the kernel.
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
     
-    :param ddepth: Desired depth of the destination image. If it is negative, it will be the same as  ``src.depth()`` .
+    :param ddepth: Desired depth of the destination image. If it is negative, it will be the same as  ``src.depth()`` . The following combination of ``src.depth()`` and ``ddepth`` are supported:
+         * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
+        
+        when ``ddepth=-1``, the destination image will have the same depth as the source.
     
     :param kernel: Convolution kernel (or rather a correlation kernel), a single-channel floating point matrix. If you want to apply different kernels to different channels, split the image into separate color planes using  :ocv:func:`split`  and process them individually.
 
@@ -961,7 +969,7 @@ Smoothes an image using a Gaussian filter.
 
 .. ocv:pyfunction:: cv2.GaussianBlur(src, ksize, sigma1[, dst[, sigma2[, borderType]]]) -> dst
 
-    :param src: Source image.
+    :param src: Source image. The image can have any number of channels, which are processed independently. The depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -1169,7 +1177,7 @@ Performs advanced morphological transformations.
 .. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
 .. ocv:pyoldfunction:: cv.MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
 
-    :param src: Source image.
+    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
@@ -1225,7 +1233,7 @@ Morphological gradient:
 
     \texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}
 
-Any of the operations can be done in-place.
+Any of the operations can be done in-place. In case of multi-channel images, each channel is processed independently.
 
 .. seealso::
 
@@ -1402,7 +1410,13 @@ Applies a separable linear filter to an image.
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
     
-    :param ddepth: Destination image depth.
+    :param ddepth: Destination image depth. The following combination of ``src.depth()`` and ``ddepth`` are supported:
+         * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
+        
+        when ``ddepth=-1``, the destination image will have the same depth as the source.
 
     :param rowKernel: Coefficients for filtering each row.
 
@@ -1493,7 +1507,13 @@ Calculates the first, second, third, or mixed image derivatives using an extende
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .
     
-    :param ddepth: Destination image depth.
+    :param ddepth: Destination image depth. The following combination of ``src.depth()`` and ``ddepth`` are supported:
+         * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
+         * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
+        
+        when ``ddepth=-1``, the destination image will have the same depth as the source. In the case of 8-bit input images it will result in truncated derivatives.
 
     :param xorder: Order of the derivative x.
 
@@ -1568,9 +1588,9 @@ Calculates the first x- or y- image derivative using Scharr operator.
 
     :param src: Source image.
 
-    :param dst: Destination image of the same size and the same number of channels as  ``src`` .
+    :param dst: Destination image of the same size and the same number of channels as ``src``.
     
-    :param ddepth: Destination image depth.
+    :param ddepth: Destination image depth. See :ocv:func:`Sobel` for the list of supported combination of ``src.depth()`` and ``ddepth``.
 
     :param xorder: Order of the derivative x.
 
@@ -1578,7 +1598,7 @@ Calculates the first x- or y- image derivative using Scharr operator.
 
     :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :ocv:func:`getDerivKernels` for details.
 
-    :param delta: Optional delta value that is added to the results prior to storing them in  ``dst`` .
+    :param delta: Optional delta value that is added to the results prior to storing them in  ``dst``.
     
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
     

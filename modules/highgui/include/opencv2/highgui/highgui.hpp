@@ -232,8 +232,9 @@ public:
     
     virtual ~VideoWriter();
     CV_WRAP virtual bool open(const string& filename, int fourcc, double fps,
-                      Size frameSize, bool isColor=true);
+                      Size frameSize, bool isColor=true);    
     CV_WRAP virtual bool isOpened() const;
+    CV_WRAP virtual void release();
     virtual VideoWriter& operator << (const Mat& image);
     CV_WRAP virtual void write(const Mat& image);
     

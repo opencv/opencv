@@ -25,7 +25,7 @@
 #define AVCODEC_VDPAU_H
 
 /**
- * \defgroup Decoder VDPAU Decoder and Renderer
+ * @defgroup Decoder VDPAU Decoder and Renderer
  *
  * VDPAU hardware acceleration has two modules
  * - VDPAU decoding
@@ -38,25 +38,25 @@
  * and rendering (API calls) are done as part of the VDPAU
  * presentation (vo_vdpau.c) module.
  *
- * \defgroup  VDPAU_Decoding VDPAU Decoding
- * \ingroup Decoder
+ * @defgroup  VDPAU_Decoding VDPAU Decoding
+ * @ingroup Decoder
  * @{
  */
 
 #include <vdpau/vdpau.h>
 #include <vdpau/vdpau_x11.h>
 
-/** \brief The videoSurface is used for rendering. */
+/** @brief The videoSurface is used for rendering. */
 #define FF_VDPAU_STATE_USED_FOR_RENDER 1
 
 /**
- * \brief The videoSurface is needed for reference/prediction.
+ * @brief The videoSurface is needed for reference/prediction.
  * The codec manipulates this.
  */
 #define FF_VDPAU_STATE_USED_FOR_REFERENCE 2
 
 /**
- * \brief This structure is used as a callback between the FFmpeg
+ * @brief This structure is used as a callback between the FFmpeg
  * decoder (vd_) and presentation (vo_) module.
  * This is used for defining a video frame containing surface,
  * picture parameter, bitstream information etc which are passed

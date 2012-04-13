@@ -3,15 +3,13 @@ package org.opencv.test.features2d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
@@ -35,10 +33,12 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         matSize = 100;
         truth = new Mat(1, 128, CvType.CV_32FC1) {
             {
-                put(0, 0, 123, 0, 0, 1, 123, 0, 0, 1, 123, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 123, 0, 0, 2, 123, 0, 0, 2, 123, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 123, 30,
-                        7, 31, 123, 0, 0, 0, 123, 52, 88, 0, 0, 0, 0, 0, 0, 2, 123, 0, 0, 0, 0, 0, 0, 1, 110, 0, 0, 0, 0, 0, 18, 37, 18, 34, 16,
-                        21, 12, 23, 12, 50, 123, 0, 0, 0, 90, 26, 0, 3, 123, 0, 0, 1, 122, 0, 0, 2, 123, 0, 0, 1, 93, 0);
+                put(0, 0,
+                		0, 0, 0, 0, 0, 0, 0, 0, 16, 12, 17, 28, 26, 0, 0, 2, 23, 14, 12, 9, 6, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                		14, 88, 23, 17, 24, 29, 0, 117, 54, 117, 116, 117, 22, 29, 27, 117, 59, 76, 19, 30, 2, 9, 26, 2, 7, 6, 0, 0,
+                		0, 0, 0, 0, 8, 50, 16, 30, 58, 89, 0, 117, 49, 95, 75, 117, 112, 117, 93, 81, 86, 117, 5, 5, 39, 117, 71, 20,
+                		20, 12, 0, 0, 1, 20, 19, 0, 0, 0, 2, 14, 4, 1, 0, 69, 0, 0, 14, 90, 31, 35, 56, 25, 0, 0, 0, 0, 2, 12, 16, 0,
+                		0, 0, 0, 0, 0, 2, 1);
             }
         };
 
@@ -50,7 +50,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testComputeMatListOfKeyPointMat() {
-        List<KeyPoint> keypoints = Arrays.asList(keypoint);
+        MatOfKeyPoint keypoints = new MatOfKeyPoint(keypoint);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 
@@ -76,7 +76,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        List<KeyPoint> keypoints = Arrays.asList(keypoint);
+        MatOfKeyPoint keypoints =new MatOfKeyPoint(keypoint);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 
@@ -95,7 +95,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<magnification>3.</magnification>\n<isNormalize>1</isNormalize>\n<recalculateAngles>1</recalculateAngles>\n<nOctaves>4</nOctaves>\n<nOctaveLayers>3</nOctaveLayers>\n<firstOctave>-1</firstOctave>\n<angleMode>0</angleMode>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.SIFT</name>\n<contrastThreshold>4.0000000000000001e-02</contrastThreshold>\n<edgeThreshold>10.</edgeThreshold>\n<nFeatures>0</nFeatures>\n<nOctaveLayers>3</nOctaveLayers>\n<sigma>1.6000000000000001e+00</sigma>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -104,7 +104,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML:1.0\nmagnification: 3.\nisNormalize: 1\nrecalculateAngles: 1\nnOctaves: 4\nnOctaveLayers: 3\nfirstOctave: -1\nangleMode: 0\n";
+        String truth = "%YAML:1.0\nname: \"Feature2D.SIFT\"\ncontrastThreshold: 4.0000000000000001e-02\nedgeThreshold: 10.\nnFeatures: 0\nnOctaveLayers: 3\nsigma: 1.6000000000000001e+00\n";
         assertEquals(truth, readFile(filename));
     }
 

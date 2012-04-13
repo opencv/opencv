@@ -55,53 +55,55 @@ namespace cv
 
 //////////////////////////////// Mat ////////////////////////////////
 
-inline Mat::Mat()
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+inline void Mat::initEmpty()
 {
+    flags = MAGIC_VAL;
+    dims = rows = cols = 0;
+    data = datastart = dataend = datalimit = 0;
+    refcount = 0;
+    allocator = 0;
+}
+    
+inline Mat::Mat() : size(&rows)
+{
+    initEmpty();
 }
 
-inline Mat::Mat(int _rows, int _cols, int _type)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+inline Mat::Mat(int _rows, int _cols, int _type) : size(&rows)
 {
+    initEmpty();
     create(_rows, _cols, _type);
 }
 
-inline Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+inline Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s) : size(&rows)
 {
+    initEmpty();
     create(_rows, _cols, _type);
     *this = _s;
 }
 
-inline Mat::Mat(Size _sz, int _type)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+inline Mat::Mat(Size _sz, int _type) : size(&rows)
 {
+    initEmpty();
     create( _sz.height, _sz.width, _type );
 }
     
-inline Mat::Mat(Size _sz, int _type, const Scalar& _s)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+inline Mat::Mat(Size _sz, int _type, const Scalar& _s) : size(&rows)
 {
+    initEmpty();
     create(_sz.height, _sz.width, _type);
     *this = _s;
 }
     
-inline Mat::Mat(int _dims, const int* _sz, int _type)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+inline Mat::Mat(int _dims, const int* _sz, int _type) : size(&rows)
 {
+    initEmpty();
     create(_dims, _sz, _type);
 }
 
-inline Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
-    : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0),
-    datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
+inline Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s) : size(&rows)
 {
+    initEmpty();
     create(_dims, _sz, _type);
     *this = _s;
 }    
@@ -168,27 +170,6 @@ inline Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     dataend = datalimit - _step + minstep;
 }
 
-
-inline Mat::Mat(const CvMat* m, bool copyData)
-    : flags(MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG))),
-    dims(2), rows(m->rows), cols(m->cols), data(m->data.ptr), refcount(0),
-    datastart(m->data.ptr), allocator(0), size(&rows)
-{
-    if( !copyData )
-    {
-        size_t esz = CV_ELEM_SIZE(m->type), minstep = cols*esz, _step = m->step;
-        if( _step == 0 )
-            _step = minstep;
-        datalimit = datastart + _step*rows;
-        dataend = datalimit - _step + minstep;
-        step[0] = _step; step[1] = esz;
-    }
-    else
-    {
-        data = datastart = dataend = 0;
-        Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(*this);
-    }
-}
 
 template<typename _Tp> inline Mat::Mat(const vector<_Tp>& vec, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG),
@@ -338,8 +319,9 @@ inline Mat Mat::colRange(const Range& r) const
 
 inline Mat Mat::diag(const Mat& d)
 {
-    CV_Assert( d.cols == 1 );
-    Mat m(d.rows, d.rows, d.type(), Scalar(0)), md = m.diag();
+    CV_Assert( d.cols == 1 || d.rows == 1 );
+    int len = d.rows + d.cols - 1;
+    Mat m(len, len, d.type(), Scalar(0)), md = m.diag();
     d.copyTo(md);
     return m;
 }
@@ -968,9 +950,6 @@ template<typename _Tp> inline int Mat_<_Tp>::channels() const
 }
 template<typename _Tp> inline size_t Mat_<_Tp>::stepT(int i) const { return step.p[i]/elemSize(); }
 template<typename _Tp> inline size_t Mat_<_Tp>::step1(int i) const { return step.p[i]/elemSize1(); }
-
-template<typename _Tp> inline Mat_<_Tp> Mat_<_Tp>::reshape(int _rows) const
-{ return Mat_<_Tp>(Mat::reshape(0,_rows)); }
 
 template<typename _Tp> inline Mat_<_Tp>& Mat_<_Tp>::adjustROI( int dtop, int dbottom, int dleft, int dright )
 { return (Mat_<_Tp>&)(Mat::adjustROI(dtop, dbottom, dleft, dright));  }

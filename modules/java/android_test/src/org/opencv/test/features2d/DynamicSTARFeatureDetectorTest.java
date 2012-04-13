@@ -1,8 +1,8 @@
 package org.opencv.test.features2d;
 
-import junit.framework.TestCase;
+import org.opencv.test.OpenCVTestCase;
 
-public class DynamicSTARFeatureDetectorTest extends TestCase {
+public class DynamicSTARFeatureDetectorTest extends OpenCVTestCase {
 
     public void testCreate() {
         fail("Not yet implemented");

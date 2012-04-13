@@ -109,6 +109,7 @@ protected:
 CvCaptureCAM_PvAPI::CvCaptureCAM_PvAPI()
 {
 	monocrome=false;
+    memset(&this->Camera, 0, sizeof(this->Camera));
 }
 void CvCaptureCAM_PvAPI::Sleep(unsigned int time)
 {

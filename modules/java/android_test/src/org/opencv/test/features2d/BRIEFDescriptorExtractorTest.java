@@ -3,15 +3,13 @@ package org.opencv.test.features2d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
@@ -40,7 +38,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
     public void testComputeMatListOfKeyPointMat() {
         KeyPoint point = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
-        List<KeyPoint> keypoints = Arrays.asList(point);
+        MatOfKeyPoint keypoints = new MatOfKeyPoint(point);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 
@@ -48,8 +46,10 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
-                put(0, 0, 96, 0, 76, 24, 47, 182, 68, 137, 149, 195, 67, 16, 187, 224, 74, 8, 82, 169, 87, 70, 44, 4, 192, 56, 13, 128, 44, 106, 146, 72, 194,
-                        245);
+                put(0, 0, 96, 0, 76, 24, 47, 182, 68, 137, 
+                		  149, 195, 67, 16, 187, 224, 74, 8, 
+                		  82, 169, 87, 70, 44, 4, 192, 56, 
+                		  13, 128, 44, 106, 146, 72, 194, 245);
             }
         };
 

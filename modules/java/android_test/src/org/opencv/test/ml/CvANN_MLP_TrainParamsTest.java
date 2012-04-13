@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvANN_MLP_TrainParams;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvANN_MLP_TrainParamsTest extends TestCase {
+public class CvANN_MLP_TrainParamsTest extends OpenCVTestCase {
 
     public void testCvANN_MLP_TrainParams() {
         new CvANN_MLP_TrainParams();

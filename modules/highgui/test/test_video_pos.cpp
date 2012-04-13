@@ -61,6 +61,9 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int fr
 {
  stringstream s; s << codec;
 
+ //if( format == "mov" && codec == CV_FOURCC('m', 'p', 'e', 'g')
+ //    putchar('$');
+
  cv::VideoWriter writer("test_video_"+s.str()+"."+format, codec, 25, cv::Size(640, 480), false);
 
  for (int i = 0; i < framecount; ++i)
@@ -95,19 +98,17 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int fr
 
    writer << mat;
  }
-
- writer.~VideoWriter();
 }
 
 void CV_PositioningTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
     const string format[] =  {"avi", "mov", "mp4", "mpg", "wmv", "3gp"};
 
     const char codec[][4] = { {'X', 'V', 'I', 'D'},
-                              {'M', 'P', 'G', '2'},
+                              {'m', 'p', 'e', 'g'},
                               {'M', 'J', 'P', 'G'} };
 
     size_t n_format = sizeof(format)/sizeof(format[0]),

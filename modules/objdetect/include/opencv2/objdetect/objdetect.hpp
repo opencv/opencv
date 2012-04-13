@@ -44,7 +44,6 @@
 #define __OPENCV_OBJDETECT_HPP__
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
 
 #ifdef __cplusplus
 #include <map>

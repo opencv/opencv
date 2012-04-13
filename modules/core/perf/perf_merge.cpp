@@ -32,5 +32,5 @@ PERF_TEST_P( Size_SrcDepth_DstChannels, merge,
     Mat dst;
     TEST_CYCLE() merge( (vector<Mat> &)mv, dst );
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-12);
 }

@@ -491,7 +491,8 @@ int main(int argc, char** argv)
         if( outbarename )
         {
             cmd[6 + outbarename - outprefix] = '\0';
-            system(cmd);
+            int result = system(cmd);
+            CV_Assert(result == 0);
             outbarename++;
         }
         else

@@ -244,7 +244,7 @@ TEST_P(PyrLKOpticalFlow, Sparse)
     cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
 
     cv::gpu::GpuMat d_pts;
-    cv::Mat pts_mat(1, pts.size(), CV_32FC2, (void*)&pts[0]);
+    cv::Mat pts_mat(1, (int)pts.size(), CV_32FC2, (void*)&pts[0]);
     d_pts.upload(pts_mat);
 
     cv::gpu::PyrLKOpticalFlow pyrLK;

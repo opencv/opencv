@@ -117,7 +117,7 @@ public:
     void train(InputArray src, InputArray labels);
 
     // Predicts the label of a query image in src.
-    int predict(const InputArray src) const;
+    int predict(InputArray src) const;
 
     // See FaceRecognizer::load.
     void load(const FileStorage& fs);
@@ -384,7 +384,7 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
     if(labels.size() != (size_t)N)
         CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
     // compute the Fisherfaces
-    int C = remove_dups(labels).size(); // number of unique classes
+    int C = (int)remove_dups(labels).size(); // number of unique classes
     // clip number of components to be a valid number
     if((_num_components <= 0) || (_num_components > (C-1)))
         _num_components = (C-1);
@@ -495,8 +495,8 @@ inline void elbp_(InputArray _src, OutputArray _dst, int radius, int neighbors) 
     dst.setTo(0);
     for(int n=0; n<neighbors; n++) {
         // sample points
-        float x = static_cast<float>(-radius) * sin(2.0*CV_PI*n/static_cast<float>(neighbors));
-        float y = static_cast<float>(radius) * cos(2.0*CV_PI*n/static_cast<float>(neighbors));
+        float x = static_cast<float>(-radius * sin(2.0*CV_PI*n/static_cast<float>(neighbors)));
+        float y = static_cast<float>(radius * cos(2.0*CV_PI*n/static_cast<float>(neighbors)));
         // relative indices
         int fx = static_cast<int>(floor(x));
         int fy = static_cast<int>(floor(y));
@@ -514,7 +514,7 @@ inline void elbp_(InputArray _src, OutputArray _dst, int radius, int neighbors) 
         for(int i=radius; i < src.rows-radius;i++) {
             for(int j=radius;j < src.cols-radius;j++) {
                 // calculate interpolated value
-                float t = w1*src.at<_Tp>(i+fy,j+fx) + w2*src.at<_Tp>(i+fy,j+cx) + w3*src.at<_Tp>(i+cy,j+fx) + w4*src.at<_Tp>(i+cy,j+cx);
+                float t = static_cast<float>(w1*src.at<_Tp>(i+fy,j+fx) + w2*src.at<_Tp>(i+fy,j+cx) + w3*src.at<_Tp>(i+cy,j+fx) + w4*src.at<_Tp>(i+cy,j+cx));
                 // floating point precision, so check some machine-dependent epsilon
                 dst.at<int>(i-radius,j-radius) += ((t > src.at<_Tp>(i,j)) || (std::abs(t-src.at<_Tp>(i,j)) < std::numeric_limits<float>::epsilon())) << n;
             }
@@ -543,13 +543,13 @@ histc_(const Mat& src, int minVal=0, int maxVal=255, bool normed=false)
     // Establish the number of bins.
     int histSize = maxVal-minVal+1;
     // Set the ranges.
-    float range[] = { minVal, maxVal } ;
+    float range[] = { static_cast<float>(minVal), static_cast<float>(maxVal) };
     const float* histRange = { range };
     // calc histogram
     calcHist(&src, 1, 0, Mat(), result, 1, &histSize, &histRange, true, false);
     // normalize
     if(normed) {
-        result /= src.total();
+        result /= (int)src.total();
     }
     return result.reshape(1,1);
 }

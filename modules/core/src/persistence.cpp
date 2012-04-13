@@ -2987,9 +2987,6 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
 
     CV_CHECK_OUTPUT_FILE_STORAGE( fs );
 
-    if( !data0 )
-        CV_Error( CV_StsNullPtr, "Null data pointer" );
-
     if( len < 0 )
         CV_Error( CV_StsOutOfRange, "Negative number of elements" );
 
@@ -2997,6 +2994,9 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
 
     if( !len )
         return;
+    
+    if( !data0 )
+        CV_Error( CV_StsNullPtr, "Null data pointer" );
 
     if( fmt_pair_count == 1 )
     {
@@ -3457,6 +3457,8 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
         mat = cvCreateMat( rows, cols, elem_type );
         cvReadRawData( fs, data, mat->data.ptr, dt );
     }
+    else if( rows == 0 && cols == 0 )
+        mat = cvCreateMatHeader( 0, 1, elem_type );
     else
         mat = cvCreateMatHeader( rows, cols, elem_type );
 
@@ -5195,7 +5197,7 @@ FileNodeIterator::FileNodeIterator()
 FileNodeIterator::FileNodeIterator(const CvFileStorage* _fs,
                                    const CvFileNode* _node, size_t _ofs)
 {
-    if( _fs && _node )
+    if( _fs && _node && CV_NODE_TYPE(_node->tag) != CV_NODE_NONE )
     {
         int node_type = _node->tag & FileNode::TYPE_MASK;
         fs = _fs;
@@ -5358,7 +5360,7 @@ void write( FileStorage& fs, const string& name, const SparseMat& value )
     Ptr<CvSparseMat> mat = (CvSparseMat*)value;
     cvWrite( *fs, name.size() ? name.c_str() : 0, mat );
 }
-
+    
 
 WriteStructContext::WriteStructContext(FileStorage& _fs, const string& name,
                    int flags, const string& typeName) : fs(&_fs)

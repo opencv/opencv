@@ -195,7 +195,7 @@ Mat getMat(InputArray arr)
     return arr.getMat();
 }
 
-double checkNorm(InputArray m1, const InputArray m2)
+double checkNorm(InputArray m1, InputArray m2)
 {
     return norm(getMat(m1), getMat(m2), NORM_INF);
 }

@@ -132,17 +132,6 @@ void CvHybridTracker::newTracker(Mat image, Rect selection) {
 	mstracker->newTrackingWindow(image, selection);
 	fttracker->newTrackingWindow(image, selection);
 
-	params.em_params.covs = NULL;
-	params.em_params.means = NULL;
-	params.em_params.probs = NULL;
-	params.em_params.nclusters = 1;
-	params.em_params.weights = NULL;
-	params.em_params.cov_mat_type = CvEM::COV_MAT_SPHERICAL;
-	params.em_params.start_step = CvEM::START_AUTO_STEP;
-	params.em_params.term_crit.max_iter = 10000;
-	params.em_params.term_crit.epsilon = 0.001;
-	params.em_params.term_crit.type = CV_TERMCRIT_ITER | CV_TERMCRIT_EPS;
-
 	samples = cvCreateMat(2, 1, CV_32FC1);
 	labels = cvCreateMat(2, 1, CV_32SC1);
 
@@ -221,10 +210,16 @@ void CvHybridTracker::updateTrackerWithEM(Mat image) {
 				count++;
 			}
 
-	em_model.train(samples, 0, params.em_params, labels);
+    cv::Mat lbls;
+    
+    EM em_model(1, EM::COV_MAT_SPHERICAL, TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10000, 0.001));
+    em_model.train(cvarrToMat(samples), lbls);
+    if(labels)
+        lbls.copyTo(cvarrToMat(labels));
 
-	curr_center.x = (float)em_model.getMeans().at<double> (0, 0);
-	curr_center.y = (float)em_model.getMeans().at<double> (0, 1);
+    Mat em_means = em_model.get<Mat>("means");
+	curr_center.x = (float)em_means.at<float>(0, 0);
+	curr_center.y = (float)em_means.at<float>(0, 1);
 }
 
 void CvHybridTracker::updateTrackerWithLowPassFilter(Mat image) {

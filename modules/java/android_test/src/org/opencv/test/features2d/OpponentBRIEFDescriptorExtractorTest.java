@@ -1,8 +1,8 @@
 package org.opencv.test.features2d;
 
-import junit.framework.TestCase;
+import org.opencv.test.OpenCVTestCase;
 
-public class OpponentBRIEFDescriptorExtractorTest extends TestCase {
+public class OpponentBRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
     public void testComputeListOfMatListOfListOfKeyPointListOfMat() {
         fail("Not yet implemented");

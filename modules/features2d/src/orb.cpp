@@ -546,31 +546,6 @@ static void makeRandomPattern(int patchSize, Point* pattern, int npoints)
 }
 
     
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static Algorithm* createORB() { return new ORB; }
-static AlgorithmInfo orb_info("Feature2D.ORB", createORB);
-    
-AlgorithmInfo* ORB::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        ORB obj;
-        orb_info.addParam(obj, "nFeatures", obj.nfeatures);
-        orb_info.addParam(obj, "scaleFactor", obj.scaleFactor);
-        orb_info.addParam(obj, "nLevels", obj.nlevels);
-        orb_info.addParam(obj, "firstLevel", obj.firstLevel);
-        orb_info.addParam(obj, "edgeThreshold", obj.edgeThreshold);
-        orb_info.addParam(obj, "patchSize", obj.patchSize);
-        orb_info.addParam(obj, "WTA_K", obj.WTA_K);
-        orb_info.addParam(obj, "scoreType", obj.scoreType);
-        
-        initialized = true;
-    }
-    return &orb_info;
-}
-    
 static inline float getScale(int level, int firstLevel, double scaleFactor)
 {
     return (float)std::pow(scaleFactor, (double)(level - firstLevel));

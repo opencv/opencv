@@ -52,19 +52,12 @@ set(grfmt_srcs src/bitstrm.cpp ${grfmt_srcs})
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
-set(highgui_hdrs src/precomp.hpp src/utils.hpp)
-
 if(NEW_FFMPEG)
-set(highgui_srcs
-    src/cap.cpp
-    src/cap_images.cpp
-    src/cap_ffmpeg_v2.cpp
-    src/loadsave.cpp
-    src/precomp.cpp
-    src/utils.cpp
-    src/window.cpp
-    )
+  set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl_v2.hpp)
 else()
+  set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl.hpp)
+endif()
+
 set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
@@ -74,129 +67,144 @@ set(highgui_srcs
     src/utils.cpp
     src/window.cpp
     )
-endif()
 
 file(GLOB highgui_ext_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
 #YV
 if (HAVE_QT)
-    if (HAVE_QT_OPENGL)
-        set(QT_USE_QTOPENGL TRUE)
-    endif()
-    INCLUDE(${QT_USE_FILE})
-    
-    SET(_RCCS_FILES src/window_QT.qrc)
-    QT4_ADD_RESOURCES(_RCC_OUTFILES ${_RCCS_FILES})
+  if (HAVE_QT_OPENGL)
+    set(QT_USE_QTOPENGL TRUE)
+  endif()
+  INCLUDE(${QT_USE_FILE})
 
-    SET(_MOC_HEADERS src/window_QT.h )
-    QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
-     
-    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
-    set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
+  SET(_RCCS_FILES src/window_QT.qrc)
+  QT4_ADD_RESOURCES(_RCC_OUTFILES ${_RCCS_FILES})
+
+  SET(_MOC_HEADERS src/window_QT.h )
+  QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
+
+  set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
+  set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
 endif()
     
 if(WIN32)
-    if(NOT HAVE_QT)
-        set(highgui_srcs ${highgui_srcs} src/window_w32.cpp)
-    endif()
-    set(highgui_srcs ${highgui_srcs} src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
-    if(HAVE_MIL)
-        set(highgui_srcs ${highgui_srcs} src/cap_mil.cpp)
-    endif()
+  if(NOT HAVE_QT)
+    set(highgui_srcs ${highgui_srcs} src/window_w32.cpp)
+  endif()
+  set(highgui_srcs ${highgui_srcs} src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
+  if(HAVE_MIL)
+    set(highgui_srcs ${highgui_srcs} src/cap_mil.cpp)
+  endif()
 endif()
 
 if(UNIX)
-    if(NOT HAVE_QT)        
-        if(HAVE_GTK)
-            set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
-        endif()
+  if(NOT HAVE_QT)        
+    if(HAVE_GTK)
+      set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
     endif()
+  endif()
 
-    if(HAVE_XINE)
-        set(highgui_srcs ${highgui_srcs} src/cap_xine.cpp)
-    endif()
+  if(HAVE_XINE)
+    set(highgui_srcs ${highgui_srcs} src/cap_xine.cpp)
+  endif()
 
-    if(HAVE_DC1394_2)
-        set(highgui_srcs ${highgui_srcs} src/cap_dc1394_v2.cpp)
-    endif()
+  if(HAVE_DC1394_2)
+    set(highgui_srcs ${highgui_srcs} src/cap_dc1394_v2.cpp)
+  endif()
 
-    if(HAVE_DC1394)
-        set(highgui_srcs ${highgui_srcs} src/cap_dc1394.cpp)
-    endif()
+  if(HAVE_DC1394)
+    set(highgui_srcs ${highgui_srcs} src/cap_dc1394.cpp)
+  endif()
 
-    if(HAVE_FFMPEG)
-        if(BZIP2_LIBRARIES)
-            set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${BZIP2_LIBRARIES})
-        endif()
+  if(HAVE_FFMPEG)
+    if(BZIP2_LIBRARIES)
+      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${BZIP2_LIBRARIES})
     endif()
+  endif()
     
-    if(HAVE_PVAPI)
-        add_definitions(-DHAVE_PVAPI)
-        set(highgui_srcs src/cap_pvapi.cpp ${highgui_srcs})
-        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} PvAPI)
+  if(HAVE_PVAPI)
+    add_definitions(-DHAVE_PVAPI)
+    ocv_include_directories(${PVAPI_INCLUDE_PATH})
+    if(X86)
+      set(PVAPI_SDK_SUBDIR x86)
+    elseif(X86_64)
+      set(PVAPI_SDK_SUBDIR x64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES arm)
+      set(PVAPI_SDK_SUBDIR arm)
     endif()
-
-    if(HAVE_GSTREAMER)
-        set(highgui_srcs ${highgui_srcs} src/cap_gstreamer.cpp)
+    if(PVAPI_SDK_SUBDIR AND CMAKE_COMPILER_IS_GNUCXX)
+      get_filename_component(PVAPI_EXPECTED_LIB_PATH "${PVAPI_INCLUDE_PATH}/../lib-pc/${PVAPI_SDK_SUBDIR}/${CMAKE_OPENCV_GCC_VERSION_MAJOR}.${CMAKE_OPENCV_GCC_VERSION_MINOR}" ABSOLUTE)
+      link_directories(${PVAPI_EXPECTED_LIB_PATH})
     endif()
+    set(highgui_srcs src/cap_pvapi.cpp ${highgui_srcs})
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} PvAPI)
+  endif()
 
-    if(HAVE_UNICAP)
-        set(highgui_srcs ${highgui_srcs} src/cap_unicap.cpp)
+  if(HAVE_GSTREAMER)
+    set(highgui_srcs ${highgui_srcs} src/cap_gstreamer.cpp)
+  endif()
+
+  if(HAVE_UNICAP)
+    set(highgui_srcs ${highgui_srcs} src/cap_unicap.cpp)
+  endif()
+
+  if(HAVE_LIBV4L)
+    set(highgui_srcs ${highgui_srcs} src/cap_libv4l.cpp)
+  else()
+    if(HAVE_CAMV4L OR HAVE_CAMV4L2)
+      set(highgui_srcs ${highgui_srcs} src/cap_v4l.cpp)
     endif()
+  endif()
 
-    if(HAVE_LIBV4L)
-        set(highgui_srcs ${highgui_srcs} src/cap_libv4l.cpp)
-    else()
-        if(HAVE_CAMV4L OR HAVE_CAMV4L2)
-            set(highgui_srcs ${highgui_srcs} src/cap_v4l.cpp)
-        endif()
-    endif()
+  foreach(P ${HIGHGUI_INCLUDE_DIRS})
+    ocv_include_directories(${P})
+  endforeach()
 
-    foreach(P ${HIGHGUI_INCLUDE_DIRS})
-        ocv_include_directories(${P})
-    endforeach()
-
-    foreach(P ${HIGHGUI_LIBRARY_DIRS})
-        link_directories(${P})
-    endforeach()
+  foreach(P ${HIGHGUI_LIBRARY_DIRS})
+    link_directories(${P})
+  endforeach()
 endif()
 
 #OpenNI
 if(WITH_OPENNI AND HAVE_OPENNI)
-    set(highgui_srcs ${highgui_srcs} src/cap_openni.cpp)
-    ocv_include_directories(${OPENNI_INCLUDE_DIR})
+  set(highgui_srcs ${highgui_srcs} src/cap_openni.cpp)
+  ocv_include_directories(${OPENNI_INCLUDE_DIR})
 endif()
 
 #YV
 if(APPLE)
-	if (NOT IOS)
-        add_definitions(-DHAVE_QUICKTIME=1)
-	endif()
+  if (NOT IOS)
+    add_definitions(-DHAVE_QUICKTIME=1)
+  endif()
 
-    if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
-        add_definitions(-DHAVE_IMAGEIO=1)
-    endif()
+  if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
+    add_definitions(-DHAVE_IMAGEIO=1)
+  endif()
     
-    if (NOT HAVE_QT)
-        if(WITH_CARBON)
-            add_definitions(-DHAVE_CARBON=1)
-            set(highgui_srcs ${highgui_srcs} src/window_carbon.cpp)
-        else()
-            add_definitions(-DHAVE_COCOA=1)
-            set(highgui_srcs ${highgui_srcs} src/window_cocoa.mm)
-        endif()
-    endif()
-    
-    if(WITH_QUICKTIME)
-        set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
+  if (NOT HAVE_QT)
+    if(WITH_CARBON)
+      add_definitions(-DHAVE_CARBON=1)
+      set(highgui_srcs ${highgui_srcs} src/window_carbon.cpp)
     else()
-		if (WITH_AVFOUNDATION)
-			add_definitions(-DHAVE_AVFOUNDATION=1)
-		    set(highgui_srcs ${highgui_srcs} src/cap_avfoundation.mm)
-		else()
-            set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
-        endif()
+      add_definitions(-DHAVE_COCOA=1)
+      set(highgui_srcs ${highgui_srcs} src/window_cocoa.mm)
     endif()
+  endif()
+    
+  if(WITH_QUICKTIME)
+    set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
+  else()
+    if(WITH_AVFOUNDATION)
+      add_definitions(-DHAVE_AVFOUNDATION=1)
+      set(highgui_srcs ${highgui_srcs} src/cap_avfoundation.mm)
+    else()
+      set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
+    endif()
+  endif()
+    
+  if(HAVE_FFMPEG)
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} "-framework VideoDecodeAcceleration")
+  endif()
 endif(APPLE)
 
 if(HAVE_opencv_androidcamera)
@@ -234,14 +242,13 @@ if(IOS)
 endif()
 
 if(WIN32)
-  link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib")
-  include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include") #for directshow
+  link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib")
+  include_directories(AFTER "${OpenCV_SOURCE_DIR}/3rdparty/include") #for directshow
 endif()
 
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
-
 ocv_module_include_directories()
 
 ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
@@ -259,11 +266,11 @@ set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_add_precompiled_headers(${the_module})
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 endif()
 
-if(WIN32)
+if(WIN32 AND WITH_FFMPEG)
   #copy ffmpeg dll to the output folder
   if(MSVC64 OR MINGW64)
     set(FFMPEG_SUFFIX _64)

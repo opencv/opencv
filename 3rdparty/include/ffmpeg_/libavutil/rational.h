@@ -33,6 +33,11 @@
 #include "attributes.h"
 
 /**
+ * @addtogroup lavu_math
+ * @{
+ */
+
+/**
  * rational number numerator/denominator
  */
 typedef struct AVRational{
@@ -131,5 +136,9 @@ int av_nearer_q(AVRational q, AVRational q1, AVRational q2);
  * @return the index of the nearest value found in the array
  */
 int av_find_nearest_q_idx(AVRational q, const AVRational* q_list);
+
+/**
+ * @}
+ */
 
 #endif /* AVUTIL_RATIONAL_H */

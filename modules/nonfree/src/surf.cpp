@@ -109,8 +109,6 @@ Modifications by Ian Mahon
 */
 #include "precomp.hpp"
 
-bool cv::initModule_nonfree(void) { return true; }
-
 namespace cv
 {
 
@@ -879,16 +877,29 @@ void SURF::operator()(InputArray _img, InputArray _mask,
     if( N > 0 )
     {
         Mat descriptors;
+        bool _1d = false;
+        int dcols = extended ? 128 : 64;
+        size_t dsize = dcols*sizeof(float);
+        
         if( doDescriptors )
         {
-            _descriptors.create((int)keypoints.size(), (extended ? 128 : 64), CV_32F);
-            descriptors = _descriptors.getMat();
+            _1d = _descriptors.kind() == _InputArray::STD_VECTOR && _descriptors.type() == CV_32F;
+            if( _1d )
+            {
+                _descriptors.create(N*dcols, 1, CV_32F);
+                descriptors = _descriptors.getMat().reshape(1, N);
+            }
+            else
+            {
+                _descriptors.create(N, dcols, CV_32F);
+                descriptors = _descriptors.getMat();
+            }
         }
         
+        // we call SURFInvoker in any case, even if we do not need descriptors,
+        // since it computes orientation of each feature.
         parallel_for(BlockedRange(0, N), SURFInvoker(img, sum, keypoints, descriptors, extended, upright) );
         
-        size_t dsize = descriptors.cols*descriptors.elemSize();
-    
         // remove keypoints that were marked for deletion
         for( i = j = 0; i < N; i++ )
         {
@@ -910,6 +921,8 @@ void SURF::operator()(InputArray _img, InputArray _mask,
             if( doDescriptors )
             {
                 Mat d = descriptors.rowRange(0, N);
+                if( _1d )
+                    d = d.reshape(1, N*dcols);
                 d.copyTo(_descriptors);
             }
         }
@@ -927,11 +940,21 @@ void SURF::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& desc
     (*this)(image, Mat(), keypoints, descriptors, true);
 }    
 
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
 static Algorithm* createSURF()
 {
     return new SURF;
 }
-static AlgorithmInfo surf_info("Feature2D.SURF", createSURF);
+
+static AlgorithmInfo& surf_info()
+{
+    static AlgorithmInfo surf_info_var("Feature2D.SURF", createSURF);
+    return surf_info_var;
+}
+
+static AlgorithmInfo& surf_info_auto = surf_info();
 
 AlgorithmInfo* SURF::info() const
 {
@@ -939,53 +962,52 @@ AlgorithmInfo* SURF::info() const
     if( !initialized )
     {
         SURF obj;
-        surf_info.addParam(obj, "hessianThreshold", obj.hessianThreshold);
-        surf_info.addParam(obj, "nOctaves", obj.nOctaves);
-        surf_info.addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        surf_info.addParam(obj, "extended", obj.extended);
-        surf_info.addParam(obj, "upright", obj.upright);
+        surf_info().addParam(obj, "hessianThreshold", obj.hessianThreshold);
+        surf_info().addParam(obj, "nOctaves", obj.nOctaves);
+        surf_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+        surf_info().addParam(obj, "extended", obj.extended);
+        surf_info().addParam(obj, "upright", obj.upright);
         
         initialized = true;
     }
-    return &surf_info;
+    return &surf_info();
 }
-    
-/*
- 
- // SurfFeatureDetector
-    SurfFeatureDetector::SurfFeatureDetector( double hessianThreshold, int octaves, int octaveLayers, bool upright )
-    : surf(hessianThreshold, octaves, octaveLayers, false, upright)
-    {}
-    
-    void SurfFeatureDetector::read (const FileNode& fn)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static Algorithm* createSIFT() { return new SIFT; }
+
+static AlgorithmInfo& sift_info()
+{
+    static AlgorithmInfo sift_info_var("Feature2D.SIFT", createSIFT);
+    return sift_info_var;
+}
+
+static AlgorithmInfo& sift_info_auto = sift_info();
+
+AlgorithmInfo* SIFT::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
     {
-        double hessianThreshold = fn["hessianThreshold"];
-        int octaves = fn["octaves"];
-        int octaveLayers = fn["octaveLayers"];
-        bool upright = (int)fn["upright"] != 0;
+        SIFT obj;
+        sift_info().addParam(obj, "nFeatures", obj.nfeatures);
+        sift_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+        sift_info().addParam(obj, "contrastThreshold", obj.contrastThreshold);
+        sift_info().addParam(obj, "edgeThreshold", obj.edgeThreshold);
+        sift_info().addParam(obj, "sigma", obj.sigma);
         
-        surf = SURF( hessianThreshold, octaves, octaveLayers, false, upright );
+        initialized = true;
     }
+    return &sift_info();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////    
     
-    void SurfFeatureDetector::write (FileStorage& fs) const
-    {
-        //fs << "algorithm" << getAlgorithmName ();
-        
-        fs << "hessianThreshold" << surf.hessianThreshold;
-        fs << "octaves" << surf.nOctaves;
-        fs << "octaveLayers" << surf.nOctaveLayers;
-        fs << "upright" << surf.upright;
-    }
-    
-    void SurfFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
-    {
-        Mat grayImage = image;
-        if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
-        
-        surf(grayImage, mask, keypoints);
-    }
-    
-    
- 
-*/
+bool initModule_nonfree(void)
+{
+    Ptr<Algorithm> sift = createSIFT(), surf = createSURF();
+    return sift->info() != 0 && surf->info() != 0;
+}
+
 }

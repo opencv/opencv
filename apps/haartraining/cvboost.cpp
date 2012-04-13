@@ -3390,6 +3390,7 @@ CvClassifier* cvCreateBtClassifierFromFile( const char* filename )
     int num_features;
     int num_classes;
     int type;
+    int values_read = -1;
 
     CV_ASSERT( filename != NULL );
 
@@ -3400,7 +3401,8 @@ CvClassifier* cvCreateBtClassifierFromFile( const char* filename )
         CV_ERROR( CV_StsError, "Unable to open file" );
     }
     
-    fscanf( file, "%d %d %d %d", &type, &num_classes, &num_features, &num_classifiers );
+    values_read = fscanf( file, "%d %d %d %d", &type, &num_classes, &num_features, &num_classifiers );
+    CV_Assert(values_read == 4);
 
     CV_ASSERT( type >= (int) CV_DABCLASS && type <= (int) CV_MREG );
     CV_ASSERT( num_features > 0 );
@@ -3418,7 +3420,8 @@ CvClassifier* cvCreateBtClassifierFromFile( const char* filename )
         int count;
         CvCARTClassifier* tree;
 
-        fscanf( file, "%d", &count );
+        values_read = fscanf( file, "%d", &count );
+        CV_Assert(values_read == 1);
 
         data_size = sizeof( *tree )
             + count * ( sizeof( *(tree->compidx) ) + sizeof( *(tree->threshold) ) +
@@ -3439,14 +3442,16 @@ CvClassifier* cvCreateBtClassifierFromFile( const char* filename )
         tree->count = count;
         for( j = 0; j < tree->count; j++ )
         {
-            fscanf( file, "%d %g %d %d", &(tree->compidx[j]),
+            values_read = fscanf( file, "%d %g %d %d", &(tree->compidx[j]),
                                          &(tree->threshold[j]),
                                          &(tree->left[j]),
                                          &(tree->right[j]) );
+            CV_Assert(values_read == 4);
         }
         for( j = 0; j <= tree->count; j++ )
         {
-            fscanf( file, "%g", &(tree->val[j]) );
+            values_read = fscanf( file, "%g", &(tree->val[j]) );
+            CV_Assert(values_read == 1);
         }
         ptr->trees[i] = tree;
     }
@@ -3553,6 +3558,7 @@ void cvReadTrainData( const char* filename, int flags,
     int m, n;
     int i, j;
     float val;
+    int values_read = -1;
 
     if( filename == NULL )
     {
@@ -3575,7 +3581,8 @@ void cvReadTrainData( const char* filename, int flags,
         CV_ERROR( CV_StsError, "Unable to open file" );
     }
 
-    fscanf( file, "%d %d", &m, &n );
+    values_read = fscanf( file, "%d %d", &m, &n );
+    CV_Assert(values_read == 2);
 
     if( CV_IS_ROW_SAMPLE( flags ) )
     {
@@ -3592,7 +3599,8 @@ void cvReadTrainData( const char* filename, int flags,
     {
         for( j = 0; j < n; j++ )
         {
-            fscanf( file, "%f", &val );
+            values_read = fscanf( file, "%f", &val );
+            CV_Assert(values_read == 1);
             if( CV_IS_ROW_SAMPLE( flags ) )
             {
                 CV_MAT_ELEM( **trainData, float, i, j ) = val;
@@ -3602,7 +3610,8 @@ void cvReadTrainData( const char* filename, int flags,
                 CV_MAT_ELEM( **trainData, float, j, i ) = val;
             }
         }
-        fscanf( file, "%f", &val );
+        values_read = fscanf( file, "%f", &val );
+        CV_Assert(values_read == 2);
         CV_MAT_ELEM( **trainClasses, float, 0, i ) = val;
     }
 

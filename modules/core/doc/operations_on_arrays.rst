@@ -208,7 +208,7 @@ Calculates the per-element bit-wise conjunction of two arrays or an array and a 
 
     :param src2: Second source array or a scalar.
 
-    :param dst: Destination arrayb that has the same size and type as the input array(s).
+    :param dst: Destination array that has the same size and type as the input array(s).
     
     :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
 
@@ -1124,6 +1124,37 @@ To extract a channel from a new-style matrix, use
 .. seealso::  :ocv:func:`mixChannels` , :ocv:func:`split` , :ocv:func:`merge` , :ocv:func:`cvarrToMat` , :ocv:cfunc:`cvSetImageCOI` , :ocv:cfunc:`cvGetImageCOI`
 
 
+insertImageCOI
+---------------
+Copies the selected image channel from a new-style C++ matrix to the old-style C array.
+
+.. ocv:function:: void insertImageCOI(InputArray src, CvArr* dst, int coi=-1)
+
+    :param src: Source array with a single channel and the same size and depth as ``dst``.
+
+    :param dst: Destination array, it should be a pointer to  ``CvMat``  or  ``IplImage``.
+
+    :param coi: If the parameter is  ``>=0`` , it specifies the channel to insert. If it is  ``<0`` and ``dst``  is a pointer to  ``IplImage``  with a  valid COI set, the selected COI is extracted.
+
+The function ``insertImageCOI`` is used to extract an image COI from a new-style C++ matrix and put the result to the old-style array.
+
+The sample below illustrates how to use the function:
+::
+
+    Mat temp(240, 320, CV_8UC1, Scalar(255));
+    IplImage* img = cvCreateImage(cvSize(320,240), IPL_DEPTH_8U, 3);
+    insertImageCOI(temp, img, 1); //insert to the first channel
+    cvNamedWindow("window",1);
+    cvShowImage("window", img); //you should see green image, because channel number 1 is green (BGR)
+    cvWaitKey(0);
+    cvDestroyAllWindows();
+    cvReleaseImage(&img);
+
+To insert a channel to a new-style matrix, use
+:ocv:func:`merge` .
+
+.. seealso::  :ocv:func:`mixChannels` , :ocv:func:`split` , :ocv:func:`merge` , :ocv:func:`cvarrToMat` , :ocv:cfunc:`cvSetImageCOI` , :ocv:cfunc:`cvGetImageCOI`
+
 
 flip
 --------
@@ -1182,7 +1213,7 @@ Performs generalized matrix multiplication.
 .. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, gamma[, dst[, flags]]) -> dst
 
 .. ocv:cfunction:: void cvGEMM( const CvArr* src1, const CvArr* src2, double alpha, const CvArr* src3, double beta, CvArr* dst, int tABC=0)
-.. ocv:pyoldfunction:: cv.GEMM(src1, src2, alphs, src3, beta, dst, tABC=0)-> None
+.. ocv:pyoldfunction:: cv.GEMM(src1, src2, alpha, src3, beta, dst, tABC=0)-> None
 
     :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
@@ -1373,7 +1404,7 @@ The function checks the range as follows:
 
 That is, ``dst`` (I) is set to 255 (all ``1`` -bits) if ``src`` (I) is within the specified 1D, 2D, 3D, ... box and 0 otherwise.
 
-When the lower and/or upper bounary parameters are scalars, the indexes ``(I)`` at ``lowerb`` and ``upperb`` in the above formulas should be omitted.
+When the lower and/or upper boundary parameters are scalars, the indexes ``(I)`` at ``lowerb`` and ``upperb`` in the above formulas should be omitted.
 
 
 invert
@@ -1398,7 +1429,7 @@ Finds the inverse or pseudo-inverse of a matrix.
 
             * **DECOMP_SVD** Singular value decomposition (SVD) method.
 
-            * **DECOMP_CHOLESKY** Cholesky decomposion. The matrix must be symmetrical and positively defined.
+            * **DECOMP_CHOLESKY** Cholesky decomposition. The matrix must be symmetrical and positively defined.
 
 The function ``invert`` inverts the matrix ``src`` and stores the result in ``dst`` .
 When the matrix ``src`` is singular or non-square, the function computes the pseudo-inverse matrix (the ``dst`` matrix) so that ``norm(src*dst - I)`` is minimal, where I is an identity matrix.
@@ -2097,7 +2128,7 @@ Normalizes the norm or value range of an array.
     
     :param alpha: Norm value to normalize to or the lower range boundary in case of the range normalization.
 
-    :param beta: Upper range boundary in case ofthe range normalization. It is not used for the norm normalization.
+    :param beta: Upper range boundary in case of the range normalization. It is not used for the norm normalization.
 
     :param normType: Normalization type. See the details below.
 
@@ -2422,6 +2453,8 @@ So, for a non-integer power exponent, the absolute values of input array element
 
 
 For some values of ``p`` , such as integer values, 0.5 and -0.5, specialized faster algorithms are used.
+
+Special values (NaN, Inf) are not handled.
 
 .. seealso::
 
@@ -3021,7 +3054,7 @@ If you need to extract a single channel or do some other sophisticated channel p
 
 sqrt
 ----
-Calculates a quare root of array elements.
+Calculates a square root of array elements.
 
 .. ocv:function:: void sqrt(InputArray src, OutputArray dst)
 
@@ -3203,7 +3236,7 @@ Performs SVD of a matrix
     
     :param vt: Transposed matrix of right singular values
     
-    :param flags: Opertion flags - see :ocv:func:`SVD::SVD`.
+    :param flags: Operation flags - see :ocv:func:`SVD::SVD`.
 
 The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator()``, they store the results to the user-provided matrices. ::
 

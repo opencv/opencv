@@ -7,6 +7,10 @@ import java.util.List;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
@@ -141,14 +145,9 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testApproxPolyDP() {
-    	List<Point> curve = new ArrayList<Point>(5);
-    	curve.add(new Point(1, 3));
-    	curve.add(new Point(2, 4));
-    	curve.add(new Point(3, 5));
-    	curve.add(new Point(4, 4));
-    	curve.add(new Point(5, 3));
+    	MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
     	
-    	List<Point> approxCurve = new ArrayList<Point>();
+    	MatOfPoint2f approxCurve = new MatOfPoint2f();
 
         Imgproc.approxPolyDP(curve, approxCurve, EPS, true);
 
@@ -157,11 +156,11 @@ public class ImgprocTest extends OpenCVTestCase {
         approxCurveGold.add(new Point(3, 5));
         approxCurveGold.add(new Point(5, 3));
 
-        assertListPointEquals(approxCurve, approxCurveGold, EPS);
+        assertListPointEquals(approxCurve.toList(), approxCurveGold, EPS);
     }
 
     public void testArcLength() {
-        List<Point> curve = Arrays.asList(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
+        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
 
         double arcLength = Imgproc.arcLength(curve, false);
 
@@ -212,7 +211,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testBoundingRect() {
-        List<Point> points = Arrays.asList(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
+        MatOfPoint points = new MatOfPoint(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
         Point p1 = new Point(1, 1);
         Point p2 = new Point(-5, -2);
 
@@ -243,9 +242,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcBackProject() {
         List<Mat> images = Arrays.asList(grayChess);
-        List<Integer> channels = Arrays.asList(0);
-        List<Integer> histSize = Arrays.asList(10);
-        List<Float> ranges = Arrays.asList(0f, 256f);
+        MatOfInt channels = new MatOfInt(1, new int[]{0});
+        MatOfInt histSize = new MatOfInt(1, new int[]{10});
+        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f);
 
         Mat hist = new Mat();
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -260,9 +259,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat() {
         List<Mat> images = Arrays.asList(gray128);
-        List<Integer> channels = Arrays.asList(0);
-        List<Integer> histSize = Arrays.asList(10);
-        List<Float> ranges = Arrays.asList(0f, 256f);
+        MatOfInt channels = new MatOfInt(1, new int[]{0});
+        MatOfInt histSize = new MatOfInt(1, new int[]{10});
+        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -277,9 +276,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2d() {
         List<Mat> images = Arrays.asList(gray255, gray128);
-        List<Integer> channels = Arrays.asList(0, 1);
-        List<Integer> histSize = Arrays.asList(10, 10);
-        List<Float> ranges = Arrays.asList(0f, 256f, 0f, 256f);
+        MatOfInt channels = new MatOfInt(1, 0, 1);
+        MatOfInt histSize = new MatOfInt(1, 10, 10);
+        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f, 0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -294,9 +293,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloatBoolean() {
         List<Mat> images = Arrays.asList(gray255, gray128);
-        List<Integer> channels = Arrays.asList(0, 1);
-        List<Integer> histSize = Arrays.asList(10, 10);
-        List<Float> ranges = Arrays.asList(0f, 256f, 0f, 256f);
+        MatOfInt channels = new MatOfInt(1, 0, 1);
+        MatOfInt histSize = new MatOfInt(1, 10, 10);
+        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f, 0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges, true);
@@ -542,15 +541,14 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Rect r = new Rect(new Point(0, 0), truthPosition);
         Core.rectangle(img, r.tl(), r.br(), new Scalar(0), Core.FILLED);
-        List<Point> corners = new ArrayList<Point>();
-        corners.add(new Point(truthPosition.x + 1, truthPosition.y + 1));
+        MatOfPoint2f corners = new MatOfPoint2f(new Point(truthPosition.x + 1, truthPosition.y + 1));
         Size winSize = new Size(2, 2);
         Size zeroZone = new Size(-1, -1);
         TermCriteria criteria = new TermCriteria(TermCriteria.EPS, 0, 0.01);
 
         Imgproc.cornerSubPix(img, corners, winSize, zeroZone, criteria);
-
-        assertPointEquals(truthPosition, corners.get(0), weakEPS);
+        
+        assertPointEquals(truthPosition, corners.toList().get(0), weakEPS);
     }
 
     public void testCvtColorMatMatInt() {
@@ -602,7 +600,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testDrawContoursMatListOfMatIntScalar() {
         Core.rectangle(gray0, new Point(1, 2), new Point(7, 8), new Scalar(100));
-        List<Mat> contours = new ArrayList<Mat>();
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
         Imgproc.drawContours(gray0, contours, -1, new Scalar(0));
@@ -612,7 +610,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testDrawContoursMatListOfMatIntScalarInt() {
         Core.rectangle(gray0, new Point(1, 2), new Point(7, 8), new Scalar(100));
-        List<Mat> contours = new ArrayList<Mat>();
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
         Imgproc.drawContours(gray0, contours, -1, new Scalar(0), Core.FILLED);
@@ -707,7 +705,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testFindContoursMatListOfMatMatIntInt() {
         Mat img = new Mat(50, 50, CvType.CV_8UC1, new Scalar(0));
-        List<Mat> contours = new ArrayList<Mat>(5);
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>(5);
         Mat hierarchy = new Mat();
 
         Imgproc.findContours(img, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -729,8 +727,8 @@ public class ImgprocTest extends OpenCVTestCase {
     public void testFindContoursMatListOfMatMatIntIntPoint() {
         Mat img = new Mat(50, 50, CvType.CV_8UC1, new Scalar(0));
         Mat img2 = img.submat(5, 50, 3, 50);
-        List<Mat> contours = new ArrayList<Mat>();
-        List<Mat> contours2 = new ArrayList<Mat>();
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        List<MatOfPoint> contours2 = new ArrayList<MatOfPoint>();
         Mat hierarchy = new Mat();
 
         Core.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, Core.LINE_AA, 0);
@@ -750,14 +748,14 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testFitEllipse() {
-        List<Point> points = Arrays.asList(new Point(0, 0), new Point(-1, 1), new Point(1, 1), new Point(1, -1), new Point(-1, -1));
+        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-1, 1), new Point(1, 1), new Point(1, -1), new Point(-1, -1));
         RotatedRect rrect = new RotatedRect();
 
         rrect = Imgproc.fitEllipse(points);
 
         assertPointEquals(new Point(0, 0), rrect.center, EPS);
-        assertEquals(2.53, rrect.size.width, EPS);
-        assertEquals(2.53, rrect.size.height, EPS);
+        assertEquals(2.828, rrect.size.width, EPS);
+        assertEquals(2.828, rrect.size.height, EPS);
     }
 
     public void testFitLine() {
@@ -835,8 +833,8 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testGetAffineTransform() {
-        List<Point> src = Arrays.asList(new Point(2, 3), new Point(3, 1), new Point(1, 4));
-        List<Point> dst = Arrays.asList(new Point(3, 3), new Point(7, 4), new Point(5, 6));
+    	MatOfPoint2f src = new MatOfPoint2f(new Point(2, 3), new Point(3, 1), new Point(1, 4));
+    	MatOfPoint2f dst = new MatOfPoint2f(new Point(3, 3), new Point(7, 4), new Point(5, 6));
 
         Mat transform = Imgproc.getAffineTransform(src, dst);
 
@@ -979,21 +977,21 @@ public class ImgprocTest extends OpenCVTestCase {
     public void testGoodFeaturesToTrackMatListOfPointIntDoubleDouble() {
         Mat src = gray0;
         Core.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
-        List<Point> lp = new ArrayList<Point>();
+        MatOfPoint lp = new MatOfPoint();
 
         Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3);
 
-        assertEquals(4, lp.size());
+        assertEquals(4, lp.total());
     }
 
     public void testGoodFeaturesToTrackMatListOfPointIntDoubleDoubleMatIntBooleanDouble() {
         Mat src = gray0;
         Core.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
-        List<Point> lp = new ArrayList<Point>();
+        MatOfPoint lp = new MatOfPoint();
 
         Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, true, 0);
 
-        assertEquals(4, lp.size());
+        assertEquals(4, lp.total());
     }
 
     public void testGrabCutMatMatRectMatMatInt() {
@@ -1279,11 +1277,11 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testIsContourConvex() {
-        List<Point> contour1 = Arrays.asList(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 4));
+        MatOfPoint2f contour1 = new MatOfPoint2f(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 4));
 
         assertFalse(Imgproc.isContourConvex(contour1));
 
-        List<Point> contour2 = Arrays.asList(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 6));
+        MatOfPoint2f contour2 = new MatOfPoint2f(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 6));
 
         assertTrue(Imgproc.isContourConvex(contour2));
     }
@@ -1355,7 +1353,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testMinAreaRect() {
-        List<Point> points = Arrays.asList(new Point(1, 1), new Point(5, 1), new Point(4, 3), new Point(6, 2));
+        MatOfPoint2f points = new MatOfPoint2f(new Point(1, 1), new Point(5, 1), new Point(4, 3), new Point(6, 2));
 
         RotatedRect rrect = Imgproc.minAreaRect(points);
 
@@ -1365,12 +1363,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testMinEnclosingCircle() {
-        List<Point> points = new ArrayList<Point>();
-        points.add(new Point(0, 0));
-        points.add(new Point(-1, 0));
-        points.add(new Point(0, -1));
-        points.add(new Point(1, 0));
-        points.add(new Point(0, 1));
+        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-1, 0), new Point(0, -1), new Point(1, 0), new Point(0, 1));
         Point actualCenter = new Point();
         float[] radius = new float[1];
 
@@ -1430,8 +1423,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testPointPolygonTest() {
-        List<Point> contour = Arrays.asList(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
-
+    	MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
         double sign1 = Imgproc.pointPolygonTest(contour, new Point(2, 2), false);
         assertEquals(1.0, sign1);
 
@@ -1763,18 +1755,17 @@ public class ImgprocTest extends OpenCVTestCase {
 
     //undistortPoints(List<Point> src, List<Point> dst, Mat cameraMatrix, Mat distCoeffs)
     public void testUndistortPointsListOfPointListOfPointMatMat() {
-        List<Point> src = new ArrayList<Point>(3);
-        src.add( new Point(1, 2) );
-        src.add( new Point(3, 4) );
-        src.add( new Point(-1, -1) );
-        List<Point> dst = new ArrayList<Point>();
+    	MatOfPoint2f src = new MatOfPoint2f(new Point(1, 2), new Point(3, 4), new Point(-1, -1));
+    	MatOfPoint2f dst = new MatOfPoint2f();
         Mat cameraMatrix = Mat.eye(3, 3, CvType.CV_64FC1);
         Mat distCoeffs = new Mat(8, 1, CvType.CV_64FC1, new Scalar(0));
+
         Imgproc.undistortPoints(src, dst, cameraMatrix, distCoeffs);
+        
         assertEquals(src.size(), dst.size());
-        for(int i=0; i<src.size(); i++) {
+        for(int i=0; i<src.toList().size(); i++) {
         	//Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
-        	assertTrue(src.get(i).equals(dst.get(i)));
+        	assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
         }
     }
     

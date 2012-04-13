@@ -734,7 +734,8 @@ bool CvCalibFilter::LoadCameraParams( const char* filename )
     {
         for( j = 0; j < (int)(sizeof(cameraParams[i])/sizeof(float)); j++ )
         {
-            fscanf( f, "%f", &((float*)(cameraParams + i))[j] );
+            int values_read = fscanf( f, "%f", &((float*)(cameraParams + i))[j] );
+            CV_Assert(values_read == 1);
         }
     }
 
@@ -746,8 +747,10 @@ bool CvCalibFilter::LoadCameraParams( const char* filename )
     {
         for( j = 0; j < 4; j++ )
         {
-            fscanf(f, "%f ", &(stereo.quad[i][j].x) );
-            fscanf(f, "%f ", &(stereo.quad[i][j].y) );
+            int values_read = fscanf(f, "%f ", &(stereo.quad[i][j].x) );
+            CV_Assert(values_read == 1);
+            values_read = fscanf(f, "%f ", &(stereo.quad[i][j].y) );
+            CV_Assert(values_read == 1);
         }
     }
 
@@ -756,7 +759,8 @@ bool CvCalibFilter::LoadCameraParams( const char* filename )
     {
         for( j = 0; j < 9; j++ )
         {
-            fscanf(f, "%lf ", &(stereo.coeffs[i][j/3][j%3]) );
+            int values_read = fscanf(f, "%lf ", &(stereo.coeffs[i][j/3][j%3]) );
+            CV_Assert(values_read == 1);
         }
     }
     

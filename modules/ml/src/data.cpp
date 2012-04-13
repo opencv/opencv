@@ -161,8 +161,21 @@ int CvMLData::read_csv(const char* filename)
         fclose(file);
         return -1;
     }
-    for( ptr = buf; *ptr != '\0'; ptr++ )
-        cols_count += (*ptr == delimiter);
+
+    ptr = buf;
+    while( *ptr == ' ' )
+        ptr++;
+    for( ; *ptr != '\0'; )
+    {
+        if(*ptr == delimiter || *ptr == ' ')
+        {
+            cols_count++;
+            ptr++;
+            while( *ptr == ' ' ) ptr++;
+        }
+        else
+            ptr++;
+    }
 
     if ( cols_count == 0)
     {
@@ -606,7 +619,7 @@ void CvMLData::set_train_test_split( const CvTrainTestSplit * spl)
             CV_ERROR( CV_StsBadArg, "train samples count is not correct" );
         train_sample_portion = train_sample_portion <= FLT_EPSILON || 
             1 - train_sample_portion <= FLT_EPSILON ? 1 : train_sample_portion;
-        train_sample_count = cvFloor( train_sample_portion * sample_count );
+        train_sample_count = std::max(1, cvFloor( train_sample_portion * sample_count ));
     }
 
     if ( train_sample_count == sample_count )
@@ -625,8 +638,10 @@ void CvMLData::set_train_test_split( const CvTrainTestSplit * spl)
         for (int i = 0; i < sample_count; i++ )
             sample_idx[i] = i;
         train_sample_idx = cvCreateMatHeader( 1, train_sample_count, CV_32SC1 );
-        test_sample_idx = cvCreateMatHeader( 1, test_sample_count, CV_32SC1 );
         *train_sample_idx = cvMat( 1, train_sample_count, CV_32SC1, &sample_idx[0] );
+
+        CV_Assert(test_sample_count > 0);
+        test_sample_idx = cvCreateMatHeader( 1, test_sample_count, CV_32SC1 );
         *test_sample_idx = cvMat( 1, test_sample_count, CV_32SC1, &sample_idx[train_sample_count] );
     }
     

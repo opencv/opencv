@@ -1,8 +1,6 @@
 package org.opencv.test.highgui;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import org.opencv.core.MatOfByte;
 import org.opencv.highgui.Highgui;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -14,10 +12,10 @@ public class HighguiTest extends OpenCVTestCase {
     }
 
     public void testImencodeStringMatListOfByte() {
-        List<Byte> buf = new ArrayList<Byte>();
-        assertEquals(0, buf.size());
-        assertTrue( Highgui.imencode(".jpg", gray127, buf) );
-        assertFalse(0 == buf.size());
+        MatOfByte buff = new MatOfByte();
+        assertEquals(0, buff.total());
+        assertTrue( Highgui.imencode(".jpg", gray127, buff) );
+        assertFalse(0 == buff.total());
     }
 
     public void testImencodeStringMatListOfByteListOfInteger() {

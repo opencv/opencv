@@ -13,6 +13,8 @@ class_ignore_list = (
     "VideoWriter", "VideoCapture",
     #features2d
     #"KeyPoint", "MSER", "StarDetector", "SURF", "DMatch",
+    #ml
+    "EM",
 )
 
 const_ignore_list = (
@@ -193,34 +195,36 @@ type_dict = {
 
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
 
-    "vector_Point"    : { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
-    "vector_Point2f"  : { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2f> %(n)s", "suffix" : "J" },
-    "vector_Point2d"  : { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2d> %(n)s", "suffix" : "J" },
-    "vector_Point3i"  : { "j_type" : "List<Point3>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3i> %(n)s", "suffix" : "J" },
-    "vector_Point3f"  : { "j_type" : "List<Point3>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3f> %(n)s", "suffix" : "J" },
-    "vector_Point3d"  : { "j_type" : "List<Point3>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
-    "vector_Mat"      : { "j_type" : "List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
-    "vector_KeyPoint" : { "j_type" : "List<KeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
-    "vector_DMatch"   : { "j_type" : "List<DMatch>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<DMatch> %(n)s", "suffix" : "J" },
-    "vector_Rect"     : { "j_type" : "List<Rect>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
-    "vector_uchar"    : { "j_type" : "List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
-    "vector_char"     : { "j_type" : "List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<char> %(n)s", "suffix" : "J" },
-    "vector_int"      : { "j_type" : "List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
-    "vector_float"    : { "j_type" : "List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
-    "vector_double"   : { "j_type" : "List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
-    "vector_Vec4f"    : { "j_type" : "Mat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4f> %(n)s", "suffix" : "J" },
-    "vector_Vec6f"    : { "j_type" : "Mat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec6f> %(n)s", "suffix" : "J" },
+    "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2f> %(n)s", "suffix" : "J" },
+    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2d> %(n)s", "suffix" : "J" },
+    "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3i> %(n)s", "suffix" : "J" },
+    "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3f> %(n)s", "suffix" : "J" },
+    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
+    "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
+    "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<DMatch> %(n)s", "suffix" : "J" },
+    "vector_Rect"     : { "j_type" : "MatOfRect", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_uchar"    : { "j_type" : "MatOfByte", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_char"     : { "j_type" : "MatOfByte", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<char> %(n)s", "suffix" : "J" },
+    "vector_int"      : { "j_type" : "MatOfInt", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
+    "vector_float"    : { "j_type" : "MatOfFloat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
+    "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
+    "vector_Vec4f"    : { "j_type" : "MatOfFloat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4f> %(n)s", "suffix" : "J" },
+    "vector_Vec6f"    : { "j_type" : "MatOfFloat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec6f> %(n)s", "suffix" : "J" },
 
-    "vector_vector_KeyPoint": { "j_type" : "List<List<KeyPoint>>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
-    "vector_vector_DMatch"  : { "j_type" : "List<List<DMatch>>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
-    "vector_vector_char"    : { "j_type" : "List<List<Byte>>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },
-    "vector_vector_Point"   : { "j_type" : "List<List<Point>>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point> > %(n)s" },
-    "vector_vector_Point2f" : { "j_type" : "List<List<Point>>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point2f> > %(n)s" },
+    "vector_Mat"      : { "j_type" : "List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
+
+    "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
+    "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
+    "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },
+    "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point> > %(n)s" },
+    "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point2f> > %(n)s" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
                   "jni_type" : "jlong", #"jni_name" : "*%(n)s",
                   "suffix" : "J" },
+
     "Point"   : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
                   "jni_var" : "Point %(n)s((int)%(n)s_x, (int)%(n)s_y)", "jni_type" : "jdoubleArray",
                   "suffix" : "DD"},
@@ -484,6 +488,8 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "setTrackbarPos"    : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "imshow"            : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "waitKey"           : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "moveWindow"        : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "resizeWindow"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
 
 }
@@ -495,7 +501,7 @@ func_arg_fix = {
         'randn'    : { 'mean'    : 'double', 'stddev' : 'double', },
         'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
         'goodFeaturesToTrack' : { 'corners' : 'vector_Point', },
-        'findFundamentalMat' : { 'points1' : 'vector_Point2d', 'points2' : 'vector_Point2d', },
+        'findFundamentalMat' : { 'points1' : 'vector_Point2f', 'points2' : 'vector_Point2f', },
         'cornerSubPix' : { 'corners' : 'vector_Point2f', },
         'minEnclosingCircle' : { 'points' : 'vector_Point2f', },
         'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
@@ -510,15 +516,18 @@ func_arg_fix = {
         'boundingRect' : { 'points' : 'vector_Point', },
         'approxPolyDP' : { 'curve' : 'vector_Point2f', 'approxCurve' : 'vector_Point2f', },
         'arcLength' : { 'curve' : 'vector_Point2f', },
-        'isContourConvex' : { 'contour' : 'vector_Point2f', },
         'pointPolygonTest' : { 'contour' : 'vector_Point2f', },
         'minAreaRect' : { 'points' : 'vector_Point2f', },
         'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
         'hconcat' : { 'src' : 'vector_Mat', },
         'vconcat' : { 'src' : 'vector_Mat', },
-        'undistortPoints' : { 'src' : 'vector_Point2d', 'dst' : 'vector_Point2d' },
+        'undistortPoints' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f' },
         'checkRange' : {'pos' : '*'},
         'meanStdDev' : {'mean' : 'vector_double', 'stddev' : 'vector_double'},
+        'drawContours' : {'contours' : 'vector_vector_Point'},
+        'findContours' : {'contours' : 'vector_vector_Point'},
+        'convexityDefects' : {'contour' : 'vector_Point'},
+        'isContourConvex' : { 'contour' : 'vector_Point2f', },
     }, # '', i.e. no class
 } # func_arg_fix
 
@@ -565,6 +574,10 @@ class ArgInfo(object):
         if ctype.endswith("*"):
             ctype = ctype[:-1]
             self.pointer = True
+        if ctype == 'vector_Point2d':
+            ctype = 'vector_Point2f'
+        elif ctype == 'vector_Point3d':
+            ctype = 'vector_Point3f'
         self.ctype = ctype
         self.name = arg_tuple[1]
         self.defval = arg_tuple[2]
@@ -891,9 +904,13 @@ extern "C" {
     def get_imports(self, scope_classname, ctype):
         imports = self.classes[scope_classname or self.Module].imports
         if ctype.startswith('vector'):
-            imports.add("java.util.List")
             imports.add("org.opencv.core.Mat")
-            imports.add("org.opencv.utils.Converters")
+            if type_dict[ctype]['j_type'].startswith('MatOf'):
+                imports.add("org.opencv.core." + type_dict[ctype]['j_type'])
+                return #TMP
+            else:
+                imports.add("java.util.List")
+                imports.add("org.opencv.utils.Converters")
             ctype = ctype.replace('vector_', '')
         j_type = ''
         if ctype in type_dict:
@@ -992,15 +1009,18 @@ extern "C" {
                             j_prologue.append( "List<Mat> %(n)s_tmplm = new ArrayList<Mat>((%(n)s != null) ? %(n)s.size() : 0);" % {"n" : a.name } )
                             j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s, %(n)s_tmplm);" % {"n" : a.name, "t" : a.ctype} )
                         else:
-                            j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
+                            if not type_dict[a.ctype]["j_type"].startswith("MatOf"):
+                                j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
+                            else:
+                                j_prologue.append( "Mat %s_mat = %s;" % (a.name, a.name) )
                         c_prologue.append( "Mat_to_%(t)s( %(n)s_mat, %(n)s );" % {"n" : a.name, "t" : a.ctype} )
                     else:
-                        if type_dict[a.ctype]["j_type"] != "Mat":
+                        if not type_dict[a.ctype]["j_type"].startswith("MatOf"):
                             j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
                         else:
                             j_prologue.append( "Mat %s_mat = %s;" % (a.name, a.name) )
                     if "O" in a.out:
-                        if type_dict[a.ctype]["j_type"] != "Mat":
+                        if not type_dict[a.ctype]["j_type"].startswith("MatOf"):
                             j_epilogue.append("Converters.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
                         c_epilogue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
@@ -1060,12 +1080,21 @@ extern "C" {
             tail = ""
             ret = "return retVal;"
             if ret_type.startswith('vector'):
-                ret_val = "Mat retValMat = new Mat("
                 tail = ")"
                 j_type = type_dict[ret_type]["j_type"]
-                j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
-                self.classes[fi.classname or self.Module].imports.add('java.util.ArrayList')
-                j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
+                if j_type.startswith('MatOf'):
+                    ret_val += "new " + j_type + "("
+                    m_t  = re.match('vector_(\w+)', ret_type)
+                    m_ch = re.match('vector_Vec(\d+)', ret_type)
+                    if m_ch:
+                        ret_val += m_ch.group(1) +  ', '
+                    elif m_t.group(1) in ('char', 'uchar', 'int', 'float', 'double'):
+                        ret_val += '1, '
+                else:
+                    ret_val = "Mat retValMat = new Mat("
+                    j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
+                    self.classes[fi.classname or self.Module].imports.add('java.util.ArrayList')
+                    j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
             elif ret_type == "void":
                 ret_val = ""
                 ret = "return;"

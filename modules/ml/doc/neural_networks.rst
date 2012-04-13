@@ -74,7 +74,7 @@ using
 :ocv:funcx:`PCA::operator()` or similar technique, and train a smaller network
 on only essential features.
 
-Another MPL feature is an inability to handle categorical
+Another MLP feature is an inability to handle categorical
 data as is. However, there is a workaround. If a certain feature in the
 input or output (in case of ``n`` -class classifier for
 :math:`n>2` ) layer is categorical and can take
@@ -237,6 +237,9 @@ Trains/updates MLP.
             * **NO_OUTPUT_SCALE** Algorithm does not normalize the output vectors. If the flag is not set, the training algorithm normalizes each output feature independently, by transforming it to the certain range depending on the used activation function.
 
 This method applies the specified training algorithm to computing/adjusting the network weights. It returns the number of done iterations.
+
+The RPROP training algorithm is parallelized with the TBB library.
+
 
 CvANN_MLP::predict
 ------------------

@@ -122,7 +122,7 @@ void CV_VideoPositioningTest::run_test(int method)
 
     ts->printf(cvtest::TS::LOG, "\n\nSource files directory: %s\n", (src_dir+"video/").c_str());
 
-    const string ext[] = {"mov", "avi", "mp4", "mpg", "wmv"};
+    const string ext[] = {"avi", "mp4", "wmv"};
 
     size_t n = sizeof(ext)/sizeof(ext[0]);
 
@@ -209,7 +209,7 @@ void CV_VideoPositioningTest::run_test(int method)
 
 void CV_VideoProgressivePositioningTest::run(int) 
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
 	run_test(PROGRESSIVE);
@@ -220,7 +220,7 @@ void CV_VideoProgressivePositioningTest::run(int)
 
 void CV_VideoRandomPositioningTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
 	run_test(RANDOM);

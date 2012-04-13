@@ -8,19 +8,14 @@ import android.view.MenuItem;
 import android.view.Window;
 
 public class Sample4Mixed extends Activity {
-    private static final String TAG                = "Sample::Activity";
-
-    public static final int     VIEW_MODE_RGBA     = 0;
-    public static final int     VIEW_MODE_GRAY     = 1;
-    public static final int     VIEW_MODE_CANNY    = 2;
-    public static final int     VIEW_MODE_FEATURES = 5;
+    private static final String TAG = "Sample::Activity";
 
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewGray;
     private MenuItem            mItemPreviewCanny;
     private MenuItem            mItemPreviewFeatures;
+    private Sample4View         mView;    
 
-    public static int           viewMode           = VIEW_MODE_RGBA;
 
     public Sample4Mixed() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -32,7 +27,8 @@ public class Sample4Mixed extends Activity {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate");
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(new Sample4View(this));
+        mView = new Sample4View(this);
+        setContentView(mView);
     }
 
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -46,14 +42,15 @@ public class Sample4Mixed extends Activity {
 
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "Menu Item selected " + item);
-        if (item == mItemPreviewRGBA)
-            viewMode = VIEW_MODE_RGBA;
-        else if (item == mItemPreviewGray)
-            viewMode = VIEW_MODE_GRAY;
-        else if (item == mItemPreviewCanny)
-            viewMode = VIEW_MODE_CANNY;
-        else if (item == mItemPreviewFeatures)
-            viewMode = VIEW_MODE_FEATURES;
+        if (item == mItemPreviewRGBA) {
+        	mView.setViewMode(Sample4View.VIEW_MODE_RGBA);
+        } else if (item == mItemPreviewGray) {
+        	mView.setViewMode(Sample4View.VIEW_MODE_GRAY);
+        } else if (item == mItemPreviewCanny) {
+        	mView.setViewMode(Sample4View.VIEW_MODE_CANNY);
+        } else if (item == mItemPreviewFeatures) {
+        	mView.setViewMode(Sample4View.VIEW_MODE_FEATURES);
+        }
         return true;
     }
 }

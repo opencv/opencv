@@ -545,7 +545,7 @@ static PyObject *cvmat_array_struct(cvmat_t *cva)
 
 static PyObject *cvmatnd_array_struct(cvmatnd_t *cva)
 {
-  CvMatND *m;
+  CvMatND *m = 0;
   convert_to_CvMatND((PyObject *)cva, &m, "");
 
   arrayTrack *at = new arrayTrack;
@@ -693,7 +693,7 @@ static size_t cvmatnd_size(CvMatND *m)
 
 static PyObject *cvmatnd_tostring(PyObject *self, PyObject *args)
 {
-  CvMatND *m;
+  CvMatND *m = 0;
   if (!convert_to_CvMatND(self, &m, "self"))
     return NULL;
 

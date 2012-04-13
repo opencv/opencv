@@ -263,11 +263,30 @@ double CvCapture_Android::getProperty( int propIdx )
         return (double)m_activity->getFrameWidth();
     case CV_CAP_PROP_FRAME_HEIGHT:
         return (double)m_activity->getFrameHeight();
-
     case CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING:
-	return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING);
+    return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING);
     case CV_CAP_PROP_PREVIEW_FORMAT:
         return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_PREVIEW_FORMAT_STRING);
+    case CV_CAP_PROP_FPS:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FPS);
+    case CV_CAP_PROP_EXPOSURE:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_EXPOSURE);
+    case CV_CAP_PROP_ANDROID_FLASH_MODE:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FLASH_MODE);
+    case CV_CAP_PROP_ANDROID_FOCUS_MODE:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FOCUS_MODE);
+    case CV_CAP_PROP_ANDROID_WHITE_BALANCE:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_WHITE_BALANCE);
+    case CV_CAP_PROP_ANDROID_ANTIBANDING:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_ANTIBANDING);
+    case CV_CAP_PROP_ANDROID_FOCAL_LENGTH:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FOCAL_LENGTH);
+    case CV_CAP_PROP_ANDROID_FOCUS_DISTANCE_NEAR:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FOCUS_DISTANCE_NEAR);
+    case CV_CAP_PROP_ANDROID_FOCUS_DISTANCE_OPTIMAL:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FOCUS_DISTANCE_OPTIMAL);
+    case CV_CAP_PROP_ANDROID_FOCUS_DISTANCE_FAR:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_FOCUS_DISTANCE_FAR);
     default:
         CV_Error( CV_StsOutOfRange, "Failed attempt to GET unsupported camera property." );
         break;
@@ -288,11 +307,24 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
         case CV_CAP_PROP_FRAME_HEIGHT:
             m_activity->setProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT, propValue);
             break;
-
         case CV_CAP_PROP_AUTOGRAB:
 	    m_shouldAutoGrab=(propValue != 0);
             break;
-
+        case CV_CAP_PROP_EXPOSURE:
+            m_activity->setProperty(ANDROID_CAMERA_PROPERTY_EXPOSURE, propValue);
+            break;
+        case CV_CAP_PROP_ANDROID_FLASH_MODE:
+            m_activity->setProperty(ANDROID_CAMERA_PROPERTY_FLASH_MODE, propValue);
+            break;
+        case CV_CAP_PROP_ANDROID_FOCUS_MODE:
+            m_activity->setProperty(ANDROID_CAMERA_PROPERTY_FOCUS_MODE, propValue);
+            break;
+        case CV_CAP_PROP_ANDROID_WHITE_BALANCE:
+            m_activity->setProperty(ANDROID_CAMERA_PROPERTY_WHITE_BALANCE, propValue);
+            break;
+        case CV_CAP_PROP_ANDROID_ANTIBANDING:
+            m_activity->setProperty(ANDROID_CAMERA_PROPERTY_ANTIBANDING, propValue);
+            break;
         default:
             CV_Error( CV_StsOutOfRange, "Failed attempt to SET unsupported camera property." );
 	    return false;

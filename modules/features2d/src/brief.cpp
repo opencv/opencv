@@ -172,20 +172,4 @@ void BriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoin
     test_fn_(sum, keypoints, descriptors);
 }
 
-static Algorithm* createBRIEF() { return new BriefDescriptorExtractor; }
-static AlgorithmInfo brief_info("Feature2D.BRIEF", createBRIEF);
-
-AlgorithmInfo* BriefDescriptorExtractor::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        BriefDescriptorExtractor brief;
-        brief_info.addParam(brief, "bytes", brief.bytes_);
-
-        initialized = true;
-    }
-    return &brief_info;
-}
-
 } // namespace cv

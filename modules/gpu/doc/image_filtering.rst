@@ -109,7 +109,7 @@ By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary mem
     filter.release();
 
 
-``FilterEngine_GPU`` can process a rectangular sub-region of an image. By default, if ``roi == Rect(0,0,-1,-1)`` , ``FilterEngine_GPU`` processes the inner region of an image ( ``Rect(anchor.x, anchor.y, src_size.width - ksize.width, src_size.height - ksize.height)`` ) because some filters do not check whether indices are outside the image for better perfomance. See below to understand which filters support processing the whole image and which do not and identify image type limitations.
+``FilterEngine_GPU`` can process a rectangular sub-region of an image. By default, if ``roi == Rect(0,0,-1,-1)`` , ``FilterEngine_GPU`` processes the inner region of an image ( ``Rect(anchor.x, anchor.y, src_size.width - ksize.width, src_size.height - ksize.height)`` ) because some filters do not check whether indices are outside the image for better performance. See below to understand which filters support processing the whole image and which do not and identify image type limitations.
 
 .. note:: The GPU filters do not support the in-place mode.
 
@@ -469,7 +469,7 @@ Creates a primitive column filter with the specified kernel.
 
 .. ocv:function:: Ptr<BaseColumnFilter_GPU> gpu::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, int anchor = -1, int borderType = BORDER_CONSTANT)
 
-    :param bufType: Inermediate buffer type with as many channels as  ``dstType`` .
+    :param bufType: Intermediate buffer type with as many channels as  ``dstType`` .
 
     :param dstType: Destination array type. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1`` destination types are supported.
 
@@ -581,7 +581,7 @@ Applies the generalized Sobel operator to an image.
 
     :param dy: Derivative order in respect of y.
 
-    :param ksize: Size of the extended Sobel kernel. Possible valies are 1, 3, 5 or 7.
+    :param ksize: Size of the extended Sobel kernel. Possible values are 1, 3, 5 or 7.
 
     :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. For details, see  :ocv:func:`getDerivKernels` .
 

@@ -60,3 +60,4 @@ Predicts the response for sample(s).
 
 The method estimates the most probable classes for input vectors. Input vectors (one or more) are stored as rows of the matrix ``samples``. In case of multiple input vectors, there should be one output vector ``results``. The predicted class for a single input vector is returned by the method.
 
+The function is parallelized with the TBB library.

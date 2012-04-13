@@ -44,6 +44,10 @@
 
 #ifdef HAVE_OPENNI
 
+#if TBB_INTERFACE_VERSION < 5000
+# undef HAVE_TBB
+#endif
+
 #include <iostream>
 #include <queue>
 #include "XnCppWrapper.h"

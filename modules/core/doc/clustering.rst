@@ -11,9 +11,9 @@ Finds centers of clusters and groups input samples around the clusters.
 
 .. ocv:pyfunction:: cv2.kmeans(data, K, criteria, attempts, flags[, bestLabels[, centers]]) -> retval, bestLabels, centers
 
-.. ocv:cfunction:: int cvKMeans2(const CvArr* samples, int nclusters, CvArr* labels, CvTermCriteria criteria, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)
+.. ocv:cfunction:: int cvKMeans2(const CvArr* samples, int clusterCount, CvArr* labels, CvTermCriteria criteria, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)
 
-.. ocv:pyoldfunction:: cv.KMeans2(samples, nclusters, labels, criteria)-> None
+.. ocv:pyoldfunction:: cv.KMeans2(samples, clusterCount, labels, criteria)-> None
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
@@ -23,7 +23,9 @@ Finds centers of clusters and groups input samples around the clusters.
 
     :param criteria: The algorithm termination criteria, that is, the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``criteria.epsilon``. As soon as each of the cluster centers moves by less than ``criteria.epsilon`` on some iteration, the algorithm stops.
 
-    :param attempts: Flag to specify the number of times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
+    :param attempts: Flag to specify the number of times the algorithm is executed using different initial labellings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
+
+    :param rng: CvRNG state initialized by RNG().
 
     :param flags: Flag that can take the following values:
 
@@ -34,6 +36,8 @@ Finds centers of clusters and groups input samples around the clusters.
             * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
     :param centers: Output matrix of the cluster centers, one row per each cluster center.
+
+    :param compactness: The returned value that is described below.
 
 The function ``kmeans`` implements a k-means algorithm that finds the
 centers of ``clusterCount`` clusters and groups the input samples

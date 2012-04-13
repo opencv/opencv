@@ -10,13 +10,10 @@ import android.view.Window;
 public class Sample0Base extends Activity {
     private static final String TAG            = "Sample::Activity";
 
-    public static final int     VIEW_MODE_RGBA = 0;
-    public static final int     VIEW_MODE_GRAY = 1;
-
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewGray;
+    private Sample0View mView;
 
-    public static int           viewMode       = VIEW_MODE_RGBA;
 
     public Sample0Base() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -28,7 +25,8 @@ public class Sample0Base extends Activity {
         Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(new Sample0View(this));
+        mView = new Sample0View(this);
+        setContentView(mView);
     }
 
     @Override
@@ -43,9 +41,9 @@ public class Sample0Base extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "Menu Item selected " + item);
         if (item == mItemPreviewRGBA)
-            viewMode = VIEW_MODE_RGBA;
+        	mView.setViewMode(Sample0View.VIEW_MODE_RGBA);
         else if (item == mItemPreviewGray)
-            viewMode = VIEW_MODE_GRAY;
+        	mView.setViewMode(Sample0View.VIEW_MODE_GRAY);
         return true;
     }
 }

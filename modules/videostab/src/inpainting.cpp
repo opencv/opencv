@@ -293,7 +293,9 @@ public:
                         }
 
                         Point3_<uchar> cp = frame1(py1,px1), cq = frame1(qy1,qx1);
-                        float distColor = sqr(cp.x-cq.x) + sqr(cp.y-cq.y) + sqr(cp.z-cq.z);
+                        float distColor = sqr(static_cast<float>(cp.x-cq.x))
+                                        + sqr(static_cast<float>(cp.y-cq.y))
+                                        + sqr(static_cast<float>(cp.z-cq.z));
                         float w = 1.f / (sqrt(distColor * (dx*dx + dy*dy)) + eps);
 
                         uEst += w * (flowX(qy0,qx0) - dudx*dx - dudy*dy);

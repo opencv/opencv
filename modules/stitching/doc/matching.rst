@@ -179,6 +179,8 @@ Performs images matching.
 
     :param mask: Mask indicating which image pairs must be matched
 
+The function is parallelized with the TBB library.
+
 .. seealso:: :ocv:struct:`detail::MatchesInfo`
 
 detail::FeaturesMatcher::isThreadSafe

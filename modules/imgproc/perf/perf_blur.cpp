@@ -1,4 +1,5 @@
 #include "perf_precomp.hpp"
+#include "opencv2/core/internal.hpp"
 
 using namespace std;
 using namespace cv;
@@ -62,7 +63,11 @@ PERF_TEST_P(Size_MatType_BorderType3x3, gaussianBlur3x3,
 
     TEST_CYCLE() GaussianBlur(src, dst, Size(3,3), 0, 0, btype);
 
+#if CV_SSE2
+    SANITY_CHECK(dst, 1);
+#else
     SANITY_CHECK(dst);
+#endif
 }
 
 PERF_TEST_P(Size_MatType_BorderType3x3, blur3x3,

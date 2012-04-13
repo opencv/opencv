@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvParamGrid;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvParamGridTest extends TestCase {
+public class CvParamGridTest extends OpenCVTestCase {
 
     public void testCvParamGrid() {
         new CvParamGrid();

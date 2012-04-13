@@ -1,9 +1,7 @@
 package org.opencv.test.objdetect;
 
-import java.util.ArrayList;
-
 import org.opencv.core.Mat;
-import org.opencv.core.Rect;
+import org.opencv.core.MatOfRect;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
@@ -34,14 +32,14 @@ public class CascadeClassifierTest extends OpenCVTestCase {
 
     public void testDetectMultiScaleMatListOfRect() {
         CascadeClassifier cc = new CascadeClassifier(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH);
-        ArrayList<Rect> faces = new ArrayList<Rect>();
+        MatOfRect faces = new MatOfRect();
 
         Mat greyLena = new Mat();
         Imgproc.cvtColor(rgbLena, greyLena, Imgproc.COLOR_RGB2GRAY);
 
         // TODO: doesn't detect with 1.1 scale
         cc.detectMultiScale(greyLena, faces, 1.09, 3, Objdetect.CASCADE_SCALE_IMAGE, new Size(30, 30), new Size());
-        assertEquals(1, faces.size());
+        assertEquals(1, faces.total());
     }
 
     public void testDetectMultiScaleMatListOfRectDouble() {

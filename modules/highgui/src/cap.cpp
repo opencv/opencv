@@ -493,9 +493,14 @@ VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size fr
     open(filename, fourcc, fps, frameSize, isColor);
 }
 
-VideoWriter::~VideoWriter()
+void VideoWriter::release()
 {
     writer.release();
+}    
+    
+VideoWriter::~VideoWriter()
+{
+    release();
 }
     
 bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)

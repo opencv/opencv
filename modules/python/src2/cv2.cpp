@@ -18,8 +18,14 @@
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/photo/photo.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/highgui/highgui.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_NONFREE
+#include "opencv2/nonfree/nonfree.hpp"
+static bool makeUseOfNonfree = cv::initModule_nonfree();
+#endif
+
 
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;
@@ -370,8 +376,9 @@ static bool pyopencv_to(PyObject* obj, uchar& value, const char* name = "<unknow
 {
     if(!obj || obj == Py_None)
         return true;
-    value = (int)PyInt_AsLong(obj);
-    return value != -1 || !PyErr_Occurred();
+    int ivalue = (int)PyInt_AsLong(obj);
+    value = cv::saturate_cast<uchar>(ivalue);
+    return ivalue != -1 || !PyErr_Occurred();
 }
 
 static PyObject* pyopencv_from(double value)

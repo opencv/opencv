@@ -42,7 +42,7 @@ In this declaration, some methods are commented off. These are methods for which
 
 CvStatModel::CvStatModel
 ------------------------
-The default constuctor.
+The default constructor.
 
 .. ocv:function:: CvStatModel::CvStatModel()
 

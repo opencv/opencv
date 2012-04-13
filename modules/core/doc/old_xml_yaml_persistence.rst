@@ -144,7 +144,7 @@ Type information. ::
 
 ..
 
-The structure contains information about one of the standard or user-defined types. Instances of the type may or may not contain a pointer to the corresponding  :ocv:struct:`CvTypeInfo` structure. In any case, there is a way to find the type info structure for a given object using the  :ocv:cfunc:`TypeOf` function. Aternatively, type info can be found by type name using :ocv:cfunc:`FindType`, which is used when an object is read from file storage. The user can register a new type with :ocv:cfunc:`RegisterType`
+The structure contains information about one of the standard or user-defined types. Instances of the type may or may not contain a pointer to the corresponding  :ocv:struct:`CvTypeInfo` structure. In any case, there is a way to find the type info structure for a given object using the  :ocv:cfunc:`TypeOf` function. Alternatively, type info can be found by type name using :ocv:cfunc:`FindType`, which is used when an object is read from file storage. The user can register a new type with :ocv:cfunc:`RegisterType`
 that adds the type information structure into the beginning of the type list. Thus, it is possible to create specialized types from generic standard types and override the basic methods.
 
 Clone
@@ -215,7 +215,7 @@ Finds a node in a map or file storage.
     :param name: The file node name 
 
 The function finds a file node by ``name``. The node is searched either in ``map`` or, if the pointer is NULL, among the top-level file storage nodes. Using this function for maps and  :ocv:cfunc:`GetSeqElem`
-(or sequence reader) for sequences, it is possible to nagivate through the file storage. To speed up multiple queries for a certain key (e.g., in the case of an array of structures) one may use a combination of  :ocv:cfunc:`GetHashedKey` and :ocv:cfunc:`GetFileNode`.
+(or sequence reader) for sequences, it is possible to navigate through the file storage. To speed up multiple queries for a certain key (e.g., in the case of an array of structures) one may use a combination of  :ocv:cfunc:`GetHashedKey` and :ocv:cfunc:`GetFileNode`.
 
 GetFileNodeName
 ---------------
@@ -356,7 +356,7 @@ Opens file storage for reading or writing data.
 
             * **CV_STORAGE_WRITE** the storage is open for writing 
 
-The function opens file storage for reading or writing data. In the latter case, a new file is created or an existing file is rewritten. The type of the read or written file is determined by the filename extension:  ``.xml`` for  ``XML`` and  ``.yml`` or  ``.yaml`` for  ``YAML``. The function returns a pointer to the :ocv:struct:`CvFileStorage` structure.
+The function opens file storage for reading or writing data. In the latter case, a new file is created or an existing file is rewritten. The type of the read or written file is determined by the filename extension:  ``.xml`` for  ``XML`` and  ``.yml`` or  ``.yaml`` for  ``YAML``. The function returns a pointer to the :ocv:struct:`CvFileStorage` structure. If the file cannot be opened then the function returns ``NULL``.
 
 Read
 ----
@@ -629,7 +629,7 @@ The function finishes the currently written stream and starts the next stream. I
     </opencv_storage>
     ...
 
-The a YAML file will look like this: ::
+The YAML file will look like this: ::
 
     %YAML:1.0
     # stream #1 data
@@ -722,7 +722,7 @@ Writes an object to file storage.
 
     :param ptr: Pointer to the object 
 
-    :param attributes: The attributes of the object. They are specific for each particular type (see the dicsussion below).
+    :param attributes: The attributes of the object. They are specific for each particular type (see the discussion below).
 
 The function writes an object to file storage. First, the appropriate type info is found using :ocv:cfunc:`TypeOf`. Then, the ``write`` method associated with the type info is called.
 
@@ -796,7 +796,7 @@ Writes a file node to another file storage.
 
     :param node: The written node 
 
-    :param embed: If the written node is a collection and this parameter is not zero, no extra level of hiararchy is created. Instead, all the elements of  ``node``  are written into the currently written structure. Of course, map elements can only be embedded into another map, and sequence elements can only be embedded into another sequence. 
+    :param embed: If the written node is a collection and this parameter is not zero, no extra level of hierarchy is created. Instead, all the elements of  ``node``  are written into the currently written structure. Of course, map elements can only be embedded into another map, and sequence elements can only be embedded into another sequence. 
 
 The function writes a copy of a file node to file storage. Possible applications of the function are merging several file storages into one and conversion between XML and YAML formats.
 

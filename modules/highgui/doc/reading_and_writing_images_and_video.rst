@@ -128,6 +128,51 @@ The function ``imwrite`` saves the image to the specified file. The image format
 :ocv:func:`Mat::convertTo` , and
 :ocv:func:`cvtColor` to convert it before saving. Or, use the universal XML I/O functions to save the image to XML or YAML format.
 
+It is possible to store PNG images with an alpha channel using this function. To do this, create 8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535. The sample below shows how to create such a BGRA image and store to PNG file. It also demonstrates how to set custom compression parameters ::
+    
+    #include <vector>
+    #include <stdio.h>
+    #include <opencv2/opencv.hpp>
+    
+    using namespace cv;
+    using namespace std;
+
+    void createAlphaMat(Mat &mat)
+    {
+        for (int i = 0; i < mat.rows; ++i) {
+            for (int j = 0; j < mat.cols; ++j) {
+                Vec4b& rgba = mat.at<Vec4b>(i, j);
+                rgba[0] = UCHAR_MAX;
+                rgba[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX);
+                rgba[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX);
+                rgba[3] = saturate_cast<uchar>(0.5 * (rgba[1] + rgba[2]));
+            }
+        }
+    }
+
+    int main(int argv, char **argc)
+    {
+        // Create mat with alpha channel
+        Mat mat(480, 640, CV_8UC4);
+        createAlphaMat(mat);
+
+        vector<int> compression_params;
+        compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+        compression_params.push_back(9);
+
+        try {
+            imwrite("alpha.png", mat, compression_params);
+        }
+        catch (runtime_error& ex) {
+            fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+            return 1;
+        }
+
+        fprintf(stdout, "Saved PNG file with alpha data.\n");
+        return 0;
+    }
+
+
 VideoCapture
 ------------
 .. ocv:class:: VideoCapture
@@ -264,7 +309,7 @@ Decodes and returns the grabbed video frame.
 
 .. ocv:pyoldfunction:: cv.RetrieveFrame(capture) -> iplimage
 
-The methods/functions decode and retruen the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
+The methods/functions decode and return the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
 
 .. note:: OpenCV 1.x functions ``cvRetrieveFrame`` and ``cv.RetrieveFrame`` return image stored inside the video capturing structure. It is not allowed to modify or release the image! You can copy the frame using :ocv:cfunc:`cvCloneImage` and then do whatever you want with the copy.
 
@@ -283,7 +328,7 @@ Grabs, decodes and returns the next video frame.
 
 .. ocv:pyoldfunction:: cv.QueryFrame(capture) -> iplimage
 
-The methods/functions combine :ocv:func:`VideoCapture::grab` and :ocv:func:`VideoCapture::retrieve` in one call. This is the most convenient method for reading video files or capturing data from decode and retruen the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
+The methods/functions combine :ocv:func:`VideoCapture::grab` and :ocv:func:`VideoCapture::retrieve` in one call. This is the most convenient method for reading video files or capturing data from decode and return the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
 
 .. note:: OpenCV 1.x functions ``cvRetrieveFrame`` and ``cv.RetrieveFrame`` return image stored inside the video capturing structure. It is not allowed to modify or release the image! You can copy the frame using :ocv:cfunc:`cvCloneImage` and then do whatever you want with the copy.
 

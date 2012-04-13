@@ -1,9 +1,14 @@
 package org.opencv.test.features2d;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDMatch;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DMatch;
@@ -13,10 +18,6 @@ import org.opencv.features2d.FeatureDetector;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
 
@@ -86,7 +87,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "   -\n"
             + "      name: eps\n"
             + "      type: 5\n"
-            + "      value: 0.\n"
+            + "      value: 4.\n"// this line is changed!
             + "   -\n"
             + "      name: sorted\n"
             + "      type: 15\n"
@@ -98,39 +99,6 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
 
     DMatch[] truth;
 
-    private Mat getBriefQueryDescriptors() {
-        return getBriefTestDescriptors(getBriefQueryImg());
-    }
-
-    private Mat getBriefQueryImg() {
-        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(40, matSize - 40), new Point(matSize - 50, 50), new Scalar(0), 8);
-        return img;
-    }
-
-    private Mat getBriefTestDescriptors(Mat img) {
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
-        Mat descriptors = new Mat();
-
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.FAST);
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.BRIEF);
-
-        detector.detect(img, keypoints);
-        extractor.compute(img, keypoints, descriptors);
-
-        return descriptors;
-    }
-
-    private Mat getBriefTrainDescriptors() {
-        return getBriefTestDescriptors(getBriefTrainImg());
-    }
-
-    private Mat getBriefTrainImg() {
-        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(40, 40), new Point(matSize - 40, matSize - 40), new Scalar(0), 8);
-        return img;
-    }
-
     private Mat getMaskImg() {
         return new Mat(5, 2, CvType.CV_8U, new Scalar(0)) {
             {
@@ -141,7 +109,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getQueryDescriptors() {
         Mat img = getQueryImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
         FeatureDetector detector = FeatureDetector.create(FeatureDetector.SURF);
@@ -167,7 +135,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
 
     private Mat getTrainDescriptors() {
         Mat img = getTrainImg();
-        List<KeyPoint> keypoints = Arrays.asList(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
+        MatOfKeyPoint keypoints = new MatOfKeyPoint(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
         Mat descriptors = new Mat();
 
         DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
@@ -190,11 +158,19 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
+        		/*
                 new DMatch(0, 0, 0, 0.643284f),
                 new DMatch(1, 1, 0, 0.92945856f),
                 new DMatch(2, 1, 0, 0.2841479f),
                 new DMatch(3, 1, 0, 0.9194034f),
-                new DMatch(4, 1, 0, 0.3006621f) };
+                new DMatch(4, 1, 0, 0.3006621f)
+                */
+        		new DMatch(0, 0, 0, 1.049694f), 
+        		new DMatch(1, 0, 0, 1.083795f), 
+        		new DMatch(2, 1, 0, 0.484352f), 
+        		new DMatch(3, 0, 0, 1.098605f), 
+        		new DMatch(4, 1, 0, 0.494587f)
+                };
 
         super.setUp();
     }
@@ -283,36 +259,36 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     public void testMatchMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
         matcher.train();
 
         matcher.match(query, matches);
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
     public void testMatchMatListOfDMatchListOfMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
         matcher.add(Arrays.asList(train));
         matcher.train();
 
         matcher.match(query, matches, Arrays.asList(mask));
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
     public void testMatchMatMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches);
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertArrayDMatchEquals(truth, matches.toArray(), EPS);
 
         // OpenCVTestRunner.Log("matches found: " + matches.size());
         // for (DMatch m : matches)
@@ -323,11 +299,11 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         Mat mask = getMaskImg();
-        List<DMatch> matches = new ArrayList<DMatch>();
+        MatOfDMatch matches = new MatOfDMatch();
 
         matcher.match(query, train, matches, mask);
 
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        assertListDMatchEquals(Arrays.asList(truth), matches.toList(), EPS);
     }
 
     public void testRadiusMatchMatListOfListOfDMatchFloat() {
@@ -355,21 +331,14 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, ymlParamsModified);
+        String filenameR = OpenCVTestRunner.getTempFileName("yml");
+        String filenameW = OpenCVTestRunner.getTempFileName("yml");
+        writeFile(filenameR, ymlParamsModified);
 
-        matcher.read(filename);
-
-        Mat train = getBriefTrainDescriptors();
-        Mat query = getBriefQueryDescriptors();
-        List<DMatch> matches = new ArrayList<DMatch>();
-
-        matcher.match(query, train, matches);
-
-        assertListDMatchEquals(Arrays.asList(new DMatch(0, 0, 0, 0),
-                new DMatch(1, 2, 0, 0),
-                new DMatch(2, 1, 0, 0),
-                new DMatch(3, 3, 0, 0)), matches, EPS);
+        matcher.read(filenameR);
+        matcher.write(filenameW);
+        
+        assertEquals(ymlParamsModified, readFile(filenameW));
     }
 
     public void testTrain() {

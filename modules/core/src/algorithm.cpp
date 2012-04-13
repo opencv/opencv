@@ -149,17 +149,21 @@ struct CV_EXPORTS AlgorithmInfoData
 };
 
     
-static sorted_vector<string, Algorithm::Constructor> alglist;
+static sorted_vector<string, Algorithm::Constructor>& alglist()
+{
+    static sorted_vector<string, Algorithm::Constructor> alglist_var;
+    return alglist_var;
+}
 
 void Algorithm::getList(vector<string>& algorithms)
 {
-    alglist.get_keys(algorithms);
+    alglist().get_keys(algorithms);
 }
 
 Ptr<Algorithm> Algorithm::_create(const string& name)
 {
     Algorithm::Constructor c = 0;
-    if( !alglist.find(name, c) )
+    if( !alglist().find(name, c) )
         return Ptr<Algorithm>();
     return c();
 }
@@ -202,6 +206,11 @@ void Algorithm::set(const string& name, const Mat& value)
     info()->set(this, name.c_str(), ParamType<Mat>::type, &value);
 }
 
+void Algorithm::set(const string& name, const vector<Mat>& value)
+{
+    info()->set(this, name.c_str(), ParamType<vector<Mat> >::type, &value);
+}    
+    
 void Algorithm::set(const string& name, const Ptr<Algorithm>& value)
 {
     info()->set(this, name.c_str(), ParamType<Algorithm>::type, &value);
@@ -232,6 +241,11 @@ void Algorithm::set(const char* name, const Mat& value)
     info()->set(this, name, ParamType<Mat>::type, &value);
 }
 
+void Algorithm::set(const char* name, const vector<Mat>& value)
+{
+    info()->set(this, name, ParamType<vector<Mat> >::type, &value);
+}    
+    
 void Algorithm::set(const char* name, const Ptr<Algorithm>& value)
 {
     info()->set(this, name, ParamType<Algorithm>::type, &value);
@@ -272,7 +286,7 @@ AlgorithmInfo::AlgorithmInfo(const string& _name, Algorithm::Constructor create)
 {
     data = new AlgorithmInfoData;
     data->_name = _name;
-    alglist.add(_name, create);
+    alglist().add(_name, create);
 }
 
 AlgorithmInfo::~AlgorithmInfo()
@@ -298,6 +312,8 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             cv::write(fs, pname, algo->get<string>(pname));
         else if( p.type == Param::MAT )
             cv::write(fs, pname, algo->get<Mat>(pname));
+        else if( p.type == Param::MAT_VECTOR )
+            cv::write(fs, pname, algo->get<vector<Mat> >(pname));
         else if( p.type == Param::ALGORITHM )
         {
             WriteStructContext ws(fs, pname, CV_NODE_MAP);
@@ -317,7 +333,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
     {
         const Param& p = data->params.vec[i].second;
         const string& pname = data->params.vec[i].first;
-        FileNode n = fn[pname];
+        const FileNode n = fn[pname];
         if( n.empty() )
             continue;
         if( p.type == Param::INT )
@@ -331,8 +347,14 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         else if( p.type == Param::MAT )
         {
             Mat m;
-            cv::read(fn, m);
+            cv::read(n, m);
             algo->set(pname, m);
+        }
+        else if( p.type == Param::MAT_VECTOR )
+        {
+            vector<Mat> mv;
+            cv::read(n, mv);
+            algo->set(pname, mv);
         }
         else if( p.type == Param::ALGORITHM )
         {
@@ -358,6 +380,7 @@ union GetSetParam
     double (Algorithm::*get_double)() const;
     string (Algorithm::*get_string)() const;
     Mat (Algorithm::*get_mat)() const;
+    vector<Mat> (Algorithm::*get_mat_vector)() const;
     Ptr<Algorithm> (Algorithm::*get_algo)() const;
     
     void (Algorithm::*set_int)(int);
@@ -365,6 +388,7 @@ union GetSetParam
     void (Algorithm::*set_double)(double);
     void (Algorithm::*set_string)(const string&);
     void (Algorithm::*set_mat)(const Mat&);
+    void (Algorithm::*set_mat_vector)(const vector<Mat>&);
     void (Algorithm::*set_algo)(const Ptr<Algorithm>&);
 };
     
@@ -436,6 +460,16 @@ void AlgorithmInfo::set(Algorithm* algo, const char* name, int argType, const vo
         else
             *(Mat*)((uchar*)algo + p->offset) = val;
     }
+    else if( argType == Param::MAT_VECTOR )
+    {
+        CV_Assert( p->type == Param::MAT_VECTOR );
+        
+        const vector<Mat>& val = *(const vector<Mat>*)value;
+        if( p->setter )
+            (algo->*f.set_mat_vector)(val);
+        else
+            *(vector<Mat>*)((uchar*)algo + p->offset) = val;
+    }
     else if( argType == Param::ALGORITHM )
     {
         CV_Assert( p->type == Param::ALGORITHM );
@@ -505,6 +539,13 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* name, int argType, vo
         *(Mat*)value = p->getter ? (algo->*f.get_mat)() :
             *(Mat*)((uchar*)algo + p->offset);
     }
+    else if( argType == Param::MAT_VECTOR )
+    {
+        CV_Assert( p->type == Param::MAT_VECTOR );
+        
+        *(vector<Mat>*)value = p->getter ? (algo->*f.get_mat_vector)() :
+        *(vector<Mat>*)((uchar*)algo + p->offset);
+    }
     else if( argType == Param::ALGORITHM )
     {
         CV_Assert( p->type == Param::ALGORITHM );
@@ -548,7 +589,8 @@ void AlgorithmInfo::addParam_(Algorithm& algo, const char* name, int argType,
 {
     CV_Assert( argType == Param::INT || argType == Param::BOOLEAN ||
                argType == Param::REAL || argType == Param::STRING ||
-               argType == Param::MAT || argType == Param::ALGORITHM );
+               argType == Param::MAT || argType == Param::MAT_VECTOR ||
+               argType == Param::ALGORITHM );
     data->params.add(string(name), Param(argType, readOnly,
                      (int)((size_t)value - (size_t)(void*)&algo),
                      getter, setter, help));
@@ -604,6 +646,16 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* name,
     addParam_(algo, name, ParamType<Mat>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
+
+void AlgorithmInfo::addParam(Algorithm& algo, const char* name,
+                             vector<Mat>& value, bool readOnly, 
+                             vector<Mat> (Algorithm::*getter)(),
+                             void (Algorithm::*setter)(const vector<Mat>&),
+                             const string& help)
+{
+    addParam_(algo, name, ParamType<vector<Mat> >::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}    
     
 void AlgorithmInfo::addParam(Algorithm& algo, const char* name,
                              Ptr<Algorithm>& value, bool readOnly, 

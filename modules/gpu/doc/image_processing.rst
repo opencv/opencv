@@ -61,7 +61,7 @@ Performs a mean-shift segmentation of the source image and eliminates small segm
 
     :param sr: Color window radius.
 
-    :param minsize: Minimum segment size. Smaller segements are merged.
+    :param minsize: Minimum segment size. Smaller segments are merged.
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
@@ -229,7 +229,7 @@ The source matrix should be continuous, otherwise reallocation and data copying 
 
     * If the source matrix is complex and the output is not specified as real, the destination matrix is complex and has the ``dft_size``    size and ``CV_32FC2``    type. The destination matrix contains a full result of the DFT (forward or inverse).
 
-    * If the source matrix is complex and the output is specified as real, the function assumes that its input is the result of the forward transform (see the next item). The destionation matrix has the ``dft_size`` size and ``CV_32FC1`` type. It contains the result of the inverse DFT.
+    * If the source matrix is complex and the output is specified as real, the function assumes that its input is the result of the forward transform (see the next item). The destination matrix has the ``dft_size`` size and ``CV_32FC1`` type. It contains the result of the inverse DFT.
 
     * If the source matrix is real (its type is ``CV_32FC1`` ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2`` ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1`` . But if the source is a single column, the height is reduced instead of the width.
 
@@ -392,7 +392,7 @@ Converts an image from one color space to another.
 
     :param stream: Stream for the asynchronous version.
 
-3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
+3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better performance.
 
 .. seealso:: :ocv:func:`cvtColor`
 
@@ -499,7 +499,7 @@ gpu::buildWarpAffineMaps
 ------------------------
 Builds transformation maps for affine transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
 
     :param M: *2x3*  transformation matrix.
 
@@ -543,7 +543,7 @@ gpu::buildWarpPerspectiveMaps
 -----------------------------
 Builds transformation maps for perspective transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
 
     :param M: *3x3*  transformation matrix.
 

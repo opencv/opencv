@@ -7,7 +7,7 @@ These steps have been tested for Ubuntu 10.04 but should work with other distros
 Required packages
 ==================
 
-  * GCC 4.x or later. This can be installed with
+  * GCC 4.4.x or later. This can be installed with
 
     .. code-block:: bash
 
@@ -15,13 +15,12 @@ Required packages
  
   * CMake 2.6 or higher
   * Subversion (SVN) client
-  * GTK+2.x or higher, including headers
+  * GTK+2.x or higher, including headers (libgtk2.0-dev)
   * pkgconfig
-  * libpng, zlib, libjpeg, libtiff, libjasper with development files (e.g. libpjeg-dev)
-  * Python 2.3 or later with developer packages (e.g. python-dev)
-  * SWIG 1.3.30 or later (only for versions prior to OpenCV 2.3)
-  * libavcodec
-  * libdc1394 2.x 
+  * Python 2.6 or later and Numpy 1.5 or later with developer packages (python-dev, python-numpy)
+  * ffmpeg or libav development packages: libavcodec-dev, libavformat-dev, libswscale-dev
+  * [optional] libdc1394 2.x 
+  * [optional] libjpeg-dev, libpng-dev, libtiff-dev, libjasper-dev.
 
 All the libraries above can be installed via Terminal or by using Synaptic Manager
 

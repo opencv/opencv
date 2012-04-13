@@ -82,7 +82,7 @@ if(UNIX)
   endif()
 endif()
 
-if(MSVC)
+if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4013")
 endif()
 
@@ -99,3 +99,6 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   install(TARGETS ${ZLIB_LIBRARY} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()
+
+ocv_parse_header2(ZLIB "${CMAKE_CURRENT_SOURCE_DIR}/zlib.h" ZLIB_VERSION PARENT_SCOPE)
+

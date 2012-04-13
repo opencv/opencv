@@ -377,29 +377,40 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
 
 void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecchars[4])
 {
-    const string ext[] = {"avi", "mov", "mp4", "mpg", "wmv"};
-
-    const size_t n = sizeof(ext)/sizeof(ext[0]);
-
+    const string exts[] = {"avi", "mov", "mpg", "wmv"};
+    const size_t n = sizeof(exts)/sizeof(exts[0]);
+    int fourcc0 = CV_FOURCC(codecchars[0], codecchars[1], codecchars[2], codecchars[3]);
+    
     for (size_t j = 0; j < n; ++j)
-        if ((ext[j]!="mp4")||(string(&codecchars[0], 4)!="IYUV"))
-    #if defined WIN32 || defined _WIN32
-        if (((ext[j]!="mov")||(string(&codecchars[0], 4)=="XVID"))&&(ext[j]!="mp4"))
-    #endif
     {
-        const string video_file = "video_" + string(&codecchars[0], 4) + "." + ext[j];
+        string ext = exts[j];
+        int fourcc = fourcc0;
+        
+        if( (ext == "mov" && fourcc != CV_FOURCC('M', 'J', 'P', 'G')) ||
+            (ext == "mpg" && fourcc != CV_FOURCC('m', 'p', 'e', 'g')) ||
+            (ext == "wmv" && fourcc != CV_FOURCC('M', 'J', 'P', 'G')))
+            continue;
+        if( ext == "mov" )
+            fourcc = CV_FOURCC('m', 'p', '4', 'v');
+        
+        string fourcc_str = format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
+        const string video_file = "video_" + fourcc_str + "." + ext;
 
-        VideoWriter writer = cv::VideoWriter(video_file, CV_FOURCC(codecchars[0], codecchars[1], codecchars[2], codecchars[3]), 25, cv::Size(968, 757), true);
+        Size frame_size(968 & -2, 757 & -2);
+        //Size frame_size(968 & -16, 757 & -16);
+        //Size frame_size(640, 480);
+        VideoWriter writer(video_file, fourcc, 25, frame_size, true);
 
         if (!writer.isOpened())
         {
+            VideoWriter writer(video_file, fourcc, 25, frame_size, true);
             ts->printf(ts->LOG, "Creating a video in %s...\n", video_file.c_str());
-            ts->printf(ts->LOG, "Cannot create VideoWriter object with codec %s.\n", string(&codecchars[0], 4).c_str());
+            ts->printf(ts->LOG, "Cannot create VideoWriter object with codec %s.\n", fourcc_str.c_str());
             ts->set_failed_test_info(ts->FAIL_MISMATCH);
             continue;
         }
 
-         const size_t IMAGE_COUNT = 30;
+        const size_t IMAGE_COUNT = 30;
 
         for(size_t i = 0; i < IMAGE_COUNT; ++i)
         {
@@ -417,10 +428,10 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
                 ts->printf(ts->LOG, "Error: cannot read frame from %s.\n", (ts->get_data_path()+"../python/images/QCIF_"+s_digit.str()+".bmp").c_str());
                 ts->printf(ts->LOG, "Continue creating the video file...\n");
                 ts->set_failed_test_info(ts->FAIL_INVALID_TEST_DATA);
-                continue;
+                break;//continue;
             }
 
-            cv::resize(img, img, Size(968, 757), 0.0, 0.0, cv::INTER_CUBIC);
+            cv::resize(img, img, frame_size, 0.0, 0.0, cv::INTER_CUBIC);
 
             for (int k = 0; k < img.rows; ++k)
                 for (int l = 0; l < img.cols; ++l)
@@ -433,32 +444,31 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
             writer << img;
         }
 
-        writer.~VideoWriter();
-
+        writer.release();
         cv::VideoCapture cap(video_file);
 
         size_t FRAME_COUNT = (size_t)cap.get(CV_CAP_PROP_FRAME_COUNT);
 
-        if (FRAME_COUNT != IMAGE_COUNT)
+        if (FRAME_COUNT != IMAGE_COUNT && ext != "mpg" )
         {
-            ts->printf(ts->LOG, "\nFrame count checking for video_%s.%s...\n", string(&codecchars[0], 4).c_str(), ext[j].c_str());
-            ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
+            ts->printf(ts->LOG, "\nFrame count checking for video_%s.%s...\n", fourcc_str.c_str(), ext.c_str());
+            ts->printf(ts->LOG, "Video codec: %s\n", fourcc_str.c_str());
             ts->printf(ts->LOG, "Required frame count: %d; Returned frame count: %d\n", IMAGE_COUNT, FRAME_COUNT);
             ts->printf(ts->LOG, "Error: Incorrect frame count in the video.\n");
             ts->printf(ts->LOG, "Continue checking...\n");
             ts->set_failed_test_info(ts->FAIL_BAD_ACCURACY);
         }
 
-        cap.set(CV_CAP_PROP_POS_FRAMES, -1);
+        //cap.set(CV_CAP_PROP_POS_FRAMES, -1);
 
-        for (int i = -1; i < (int)std::min<size_t>(FRAME_COUNT, IMAGE_COUNT)-1; i++)
+        for (int i = 0; i < (int)std::min<size_t>(FRAME_COUNT, IMAGE_COUNT)-1; i++)
         {
             cv::Mat frame; cap >> frame;
             if (frame.empty())
             {
                 ts->printf(ts->LOG, "\nVideo file directory: %s\n", ".");
-                ts->printf(ts->LOG, "File name: video_%s.%s\n", string(&codecchars[0], 4).c_str(), ext[j].c_str());
-                ts->printf(ts->LOG, "Video codec: %s\n", string(&codecchars[0], 4).c_str());
+                ts->printf(ts->LOG, "File name: video_%s.%s\n", fourcc_str.c_str(), ext.c_str());
+                ts->printf(ts->LOG, "Video codec: %s\n", fourcc_str.c_str());
                 ts->printf(ts->LOG, "Error: cannot read the next frame with index %d.\n", i+1);
                 ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
                 break;
@@ -477,23 +487,20 @@ void CV_HighGuiTest::SpecificVideoFileTest(const string& dir, const char codecch
                 continue;
             }
 
-            const double thresDbell = 20;
+            const double thresDbell = 40;
 
             double psnr = PSNR(img, frame);
 
             if (psnr > thresDbell)
             {
-                ts->printf(ts->LOG, "\nReading frame from the file video_%s.%s...\n", string(&codecchars[0], 4).c_str(), ext[j].c_str());
+                ts->printf(ts->LOG, "\nReading frame from the file video_%s.%s...\n", fourcc_str.c_str(), ext.c_str());
                 ts->printf(ts->LOG, "Frame index: %d\n", i+1);
                 ts->printf(ts->LOG, "Difference between saved and original images: %g\n", psnr);
                 ts->printf(ts->LOG, "Maximum allowed difference: %g\n", thresDbell);
                 ts->printf(ts->LOG, "Error: too big difference between saved and original images.\n");
-                continue;
+                break;
             }
-
         }
-
-        cap.~VideoCapture();
     }
 }
 
@@ -556,9 +563,6 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
             if (framecount == IMAGE_COUNT) break;
         }
 
-        frame.~Mat();
-        writer.~VideoWriter();
-
         cv::VideoCapture vcap(dir+"video_"+string(&codecchars[0], 4)+"."+ext[i]);
 
         if (!vcap.isOpened())
@@ -613,12 +617,7 @@ void CV_HighGuiTest::SpecificVideoCameraTest(const string& dir, const char codec
                 continue;
             }
         }
-
-        img.~Mat();
-        vcap.~VideoCapture();
     }
-
-    cap.~VideoCapture();
 }
 
 void CV_ImageTest::run(int)
@@ -633,12 +632,12 @@ void CV_SpecificImageTest::run(int)
 
 void CV_VideoTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
     const char codecs[][4] = { {'I', 'Y', 'U', 'V'},
                                {'X', 'V', 'I', 'D'},
-                               {'M', 'P', 'G', '2'},
+                               {'m', 'p', 'e', 'g'},
                                {'M', 'J', 'P', 'G'} };
 
     printf("%s", ts->get_data_path().c_str());
@@ -656,10 +655,10 @@ void CV_VideoTest::run(int)
 
 void CV_SpecificVideoFileTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
+#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
-    const char codecs[][4] = { {'M', 'P', 'G', '2'},
+    const char codecs[][4] = { {'m', 'p', 'e', 'g'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'J', 'P', 'G'},
                                {'I', 'Y', 'U', 'V'} };
@@ -680,7 +679,7 @@ void CV_SpecificVideoCameraTest::run(int)
 #if defined WIN32 || (defined __linux__ && !defined ANDROID)
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
 
-    const char codecs[][4] = { {'M', 'P', 'G', '2'},
+    const char codecs[][4] = { {'m', 'p', 'e', 'g'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'J', 'P', 'G'},
                                {'I', 'Y', 'U', 'V'} };

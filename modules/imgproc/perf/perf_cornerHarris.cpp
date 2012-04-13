@@ -35,5 +35,5 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
 
     TEST_CYCLE() cornerHarris(src, dst, blockSize, apertureSize, k, borderType);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 2e-6);
 }

@@ -27,6 +27,13 @@
 #include <errno.h>
 #include "avutil.h"
 
+/**
+ * @addtogroup lavu_error
+ *
+ * @{
+ */
+
+
 /* error handling */
 #if EDOM > 0
 #define AVERROR(e) (-(e))   ///< Returns a negative error code from a POSIX error code, to return from library functions.
@@ -38,6 +45,7 @@
 #endif
 
 #define AVERROR_BSF_NOT_FOUND      (-MKTAG(0xF8,'B','S','F')) ///< Bitstream filter not found
+#define AVERROR_BUG                (-MKTAG( 'B','U','G','!')) ///< Internal bug, also see AVERROR_BUG2
 #define AVERROR_DECODER_NOT_FOUND  (-MKTAG(0xF8,'D','E','C')) ///< Decoder not found
 #define AVERROR_DEMUXER_NOT_FOUND  (-MKTAG(0xF8,'D','E','M')) ///< Demuxer not found
 #define AVERROR_ENCODER_NOT_FOUND  (-MKTAG(0xF8,'E','N','C')) ///< Encoder not found
@@ -52,6 +60,13 @@
 #define AVERROR_STREAM_NOT_FOUND   (-MKTAG(0xF8,'S','T','R')) ///< Stream not found
 
 /**
+ * This is semantically identical to AVERROR_BUG
+ * it has been introduced in Libav after our AVERROR_BUG and with a modified value.
+ */
+#define AVERROR_BUG2               (-MKTAG( 'B','U','G',' '))
+#define AVERROR_UNKNOWN            (-MKTAG( 'U','N','K','N')) ///< Unknown error, typically from an external library
+
+/**
  * Put a description of the AVERROR code errnum in errbuf.
  * In case of failure the global variable errno is set to indicate the
  * error. Even in case of failure av_strerror() will print a generic
@@ -64,5 +79,9 @@
  * cannot be found
  */
 int av_strerror(int errnum, char *errbuf, size_t errbuf_size);
+
+/**
+ * @}
+ */
 
 #endif /* AVUTIL_ERROR_H */

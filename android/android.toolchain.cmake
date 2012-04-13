@@ -170,6 +170,8 @@
 #     [+] improved toolchain loading speed
 #     [+] added assembler language support (.S)
 #     [+] allowed preset search paths and extra search suffixes
+#   - modified April 2012 Andrey Kamaev andrey.kamaev@itseez.com
+#     [+] updated for NDK r7c
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -188,7 +190,7 @@ set( CMAKE_SYSTEM_NAME Linux )
 #this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )
 
-set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
+set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
 if(NOT DEFINED ANDROID_NDK_SEARCH_PATHS)
  if( CMAKE_HOST_WIN32 )
   file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATHS )

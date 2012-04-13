@@ -22,9 +22,15 @@ file(GLOB lib_ext_hdrs jasper/*.h)
 add_library(${JASPER_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
 
 if(MSVC)
-  string(REPLACE "/W3" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-  string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  if(NOT ENABLE_NOISY_WARNINGS)
+    string(REPLACE "/W3" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  endif()
   add_definitions(-DJAS_WIN_MSVC_BUILD)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-uninitialized")
 endif()
 
 if(UNIX)
@@ -33,7 +39,7 @@ if(UNIX)
   endif()
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration -Wno-unused")
 endif()
 

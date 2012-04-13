@@ -272,12 +272,12 @@ void quantizedOrientations(const Mat& src, Mat& magnitude,
 
   // Allocate temporary buffers
   Size size = src.size();
-  Mat_<Vec3s> sobel_3dx(size); // per-channel horizontal derivative
-  Mat_<Vec3s> sobel_3dy(size); // per-channel vertical derivative
-  Mat_<float> sobel_dx(size);      // maximum horizontal derivative
-  Mat_<float> sobel_dy(size);      // maximum vertical derivative
-  Mat_<float> sobel_ag(size);      // final gradient orientation (unquantized)
-  Mat_<Vec3b> smoothed(size);
+  Mat sobel_3dx; // per-channel horizontal derivative
+  Mat sobel_3dy; // per-channel vertical derivative
+  Mat sobel_dx(size, CV_32F);      // maximum horizontal derivative
+  Mat sobel_dy(size, CV_32F);      // maximum vertical derivative
+  Mat sobel_ag;  // final gradient orientation (unquantized)
+  Mat smoothed;
 
   // Compute horizontal and vertical image derivatives on all color channels separately
   static const int KERNEL_SIZE = 7;
@@ -306,27 +306,27 @@ void quantizedOrientations(const Mat& src, Mat& magnitude,
     for (int i = 0; i < length0; i += 3)
     {
       // Use the gradient orientation of the channel whose magnitude is largest
-      unsigned short mag1 = CV_SQR((unsigned short)ptrx[i]) + CV_SQR((unsigned short)ptry[i]);
-      unsigned short mag2 = CV_SQR((unsigned short)ptrx[i + 1]) + CV_SQR((unsigned short)ptry[i + 1]);
-      unsigned short mag3 = CV_SQR((unsigned short)ptrx[i + 2]) + CV_SQR((unsigned short)ptry[i + 2]);
+      int mag1 = CV_SQR(ptrx[i]) + CV_SQR(ptry[i]);
+      int mag2 = CV_SQR(ptrx[i + 1]) + CV_SQR(ptry[i + 1]);
+      int mag3 = CV_SQR(ptrx[i + 2]) + CV_SQR(ptry[i + 2]);
 
       if (mag1 >= mag2 && mag1 >= mag3)
       {
         ptr0x[ind] = ptrx[i];
         ptr0y[ind] = ptry[i];
-        ptrmg[ind] = mag1;
+        ptrmg[ind] = (float)mag1;
       }
       else if (mag2 >= mag1 && mag2 >= mag3)
       {
         ptr0x[ind] = ptrx[i + 1];
         ptr0y[ind] = ptry[i + 1];
-        ptrmg[ind] = mag2;
+        ptrmg[ind] = (float)mag2;
       }
       else
       {
         ptr0x[ind] = ptrx[i + 2];
         ptr0y[ind] = ptry[i + 2];
-        ptrmg[ind] = mag3;
+        ptrmg[ind] = (float)mag3;
       }
       ++ind;
     }

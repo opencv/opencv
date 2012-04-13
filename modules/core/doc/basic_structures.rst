@@ -42,7 +42,7 @@ The main purpose of this class is to convert compilation-time type information t
     cout << B.depth() << ", " << B.channels() << endl;
 
 
-So, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV. For example, the matrix ``B`` intialization above is compiled because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` . This mechanism is also useful (and used in OpenCV this way) for generic algorithms implementations.
+So, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV. For example, the matrix ``B`` initialization above is compiled because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` . This mechanism is also useful (and used in OpenCV this way) for generic algorithms implementations.
 
 
 Point\_
@@ -100,7 +100,7 @@ Size\_
 ------
 .. ocv:class:: Size_
 
-Template class for specfying the size of an image or rectangle. The class includes two members called ``width`` and ``height``. The structure can be converted to and from the old OpenCV structures
+Template class for specifying the size of an image or rectangle. The class includes two members called ``width`` and ``height``. The structure can be converted to and from the old OpenCV structures
 ``CvSize`` and ``CvSize2D32f`` . The same set of arithmetic and comparison operations as for ``Point_`` is available.
 
 OpenCV defines the following ``Size_<>`` aliases: ::
@@ -372,7 +372,7 @@ This class provides the following options:
 *
     Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can store only objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class ``base_class_t*``     instead but then you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``     instead of the raw pointers, you can solve the problem.
 
-The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is incapsulated in the ``Ptr::delete_obj()`` method that is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls ``delete obj;`` .
+The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is encapsulated in the ``Ptr::delete_obj()`` method that is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls ``delete obj;`` .
 However, if the object is deallocated in a different way, the specialized method should be created. For example, if you want to wrap ``FILE`` , the ``delete_obj`` may be implemented as follows: ::
 
     template<> inline void Ptr<FILE>::delete_obj()
@@ -711,7 +711,7 @@ This is a list of implemented matrix operations that can be combined in arbitrar
 *
     ``Mat_<destination_type>()`` constructors to cast the result to the proper type.
 
-.. note:: Comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve a possible ambiguity.
+.. note:: Comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constructor calls to resolve a possible ambiguity.
 
 Here are examples of matrix expressions:
 
@@ -785,6 +785,8 @@ Various Mat constructors
     :param rows: Number of rows in a 2D array.
 
     :param cols: Number of columns in a 2D array.
+
+    :param roi: Region of interest.
 
     :param size: 2D array size:  ``Size(cols, rows)`` . In the  ``Size()``  constructor, the number of rows and the number of columns go in the reverse order.
 
@@ -890,7 +892,7 @@ The method makes a new header for the specified matrix row and returns it. This 
         // works, but looks a bit obscure.
         A.row(i) = A.row(j) + 0;
 
-        // this is a bit longe, but the recommended method.
+        // this is a bit longer, but the recommended method.
         A.row(j).copyTo(A.row(i));
 
 Mat::col
@@ -996,7 +998,7 @@ When the operation mask is specified, and the ``Mat::create`` call shown above r
 
 Mat::convertTo
 ------------------
-Converts an array to another datatype with optional scaling.
+Converts an array to another data type with optional scaling.
 
 .. ocv:function:: void Mat::convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const
 
@@ -1008,7 +1010,7 @@ Converts an array to another datatype with optional scaling.
 
     :param beta: Optional delta added to the scaled values.
 
-The method converts source pixel values to the target datatype. ``saturate_cast<>`` is applied at the end to avoid possible overflows:
+The method converts source pixel values to the target data type. ``saturate_cast<>`` is applied at the end to avoid possible overflows:
 
 .. math::
 
@@ -1347,7 +1349,7 @@ Locates the matrix header within a parent matrix.
 
 .. ocv:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
 
-    :param wholeSize: Output parameter that contains the size of the whole matrix containing ``*this`` is a part.
+    :param wholeSize: Output parameter that contains the size of the whole matrix containing ``*this`` as a part.
 
     :param ofs: Output parameter that contains an offset of  ``*this``  inside the whole matrix.
 
@@ -1380,7 +1382,7 @@ The method is complimentary to
 
 In this example, the matrix size is increased by 4 elements in each direction. The matrix is shifted by 2 elements to the left and 2 elements up, which brings in all the necessary pixels for the filtering with the 5x5 kernel.
 
-It is your responsibility to make sure ``adjustROI`` does not cross the parent matrix boundary. If it does, the function signals an error.
+``adjustROI`` forces the adjusted ROI to be inside of the parent matrix that is boundaries of the adjusted ROI are constrained by boundaries of the parent matrix. For example, if the submatrix ``A`` is located in the first row of a parent matrix and you called ``A.adjustROI(2, 2, 2, 2)`` then ``A`` will not be increased in the upward direction.
 
 The function is used internally by the OpenCV filtering functions, like
 :ocv:func:`filter2D` , morphological operations, and so on.
@@ -1600,7 +1602,7 @@ The method returns a matrix size: ``Size(cols, rows)`` . When the matrix is more
 
 Mat::empty
 --------------
-Returns ``true`` if the array has no elemens.
+Returns ``true`` if the array has no elements.
 
 .. ocv:function:: bool Mat::empty() const
 

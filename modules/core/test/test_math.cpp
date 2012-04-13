@@ -2347,6 +2347,41 @@ void Core_SolvePolyTest::run( int )
     }
 }
 
+class Core_CheckRange_Empty : public cvtest::BaseTest
+{
+public:
+    Core_CheckRange_Empty(){}
+    ~Core_CheckRange_Empty(){}
+protected:
+    virtual void run( int start_from );
+};
+
+void Core_CheckRange_Empty::run( int )
+{
+    cv::Mat m;
+    ASSERT_TRUE( cv::checkRange(m) );
+}
+
+TEST(Core_CheckRange_Empty, accuracy) { Core_CheckRange_Empty test; test.safe_run(); }
+
+class Core_CheckRange_INT_MAX : public cvtest::BaseTest
+{
+public:
+    Core_CheckRange_INT_MAX(){}
+    ~Core_CheckRange_INT_MAX(){}
+protected:
+    virtual void run( int start_from );
+};
+
+void Core_CheckRange_INT_MAX::run( int )
+{
+    cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
+    ASSERT_FALSE( cv::checkRange(m, true, 0, 0, INT_MAX) );
+    ASSERT_TRUE( cv::checkRange(m) );
+}
+
+TEST(Core_CheckRange_INT_MAX, accuracy) { Core_CheckRange_INT_MAX test; test.safe_run(); }
+
 template <typename T> class Core_CheckRange : public testing::Test {};
 
 TYPED_TEST_CASE_P(Core_CheckRange);
@@ -2402,7 +2437,17 @@ TYPED_TEST_P(Core_CheckRange, Bounds)
     delete bad_pt;
 }
 
-REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds);
+TYPED_TEST_P(Core_CheckRange, Zero)
+{
+    double min_bound = 0.0;
+    double max_bound = 0.1;
+
+    cv::Mat src = cv::Mat::zeros(3,3, cv::DataDepth<TypeParam>::value);
+
+    ASSERT_TRUE( checkRange(src, true, NULL, min_bound, max_bound) );
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds, Zero);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
@@ -2427,6 +2472,130 @@ TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
 
 // TODO: eigenvv, invsqrt, cbrt, fastarctan, (round, floor, ceil(?)),
+
+
+class CV_KMeansSingularTest : public cvtest::BaseTest
+{
+public:
+    CV_KMeansSingularTest() {}
+    ~CV_KMeansSingularTest() {}   
+protected:
+    void run(int)
+    {
+        int i, iter = 0, N = 0, N0 = 0, K = 0, dims = 0;
+        Mat labels;
+        try
+        {
+            RNG& rng = theRNG();
+            const int MAX_DIM=5;
+            int MAX_POINTS = 100, maxIter = 100;
+            for( iter = 0; iter < maxIter; iter++ )
+            {
+                ts->update_context(this, iter, true);
+                dims = rng.uniform(1, MAX_DIM+1);
+                N = rng.uniform(1, MAX_POINTS+1);
+                N0 = rng.uniform(1, MAX(N/10, 2));
+                K = rng.uniform(1, N+1);
+                
+                Mat data0(N0, dims, CV_32F);
+                rng.fill(data0, RNG::UNIFORM, -1, 1);
+                
+                Mat data(N, dims, CV_32F);
+                for( i = 0; i < N; i++ )
+                    data0.row(rng.uniform(0, N0)).copyTo(data.row(i));
+                
+                kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
+                       5, KMEANS_PP_CENTERS);
+                
+                Mat hist(K, 1, CV_32S, Scalar(0));
+                for( i = 0; i < N; i++ )
+                {
+                    int l = labels.at<int>(i);
+                    CV_Assert(0 <= l && l < K);
+                    hist.at<int>(l)++;
+                }
+                for( i = 0; i < K; i++ )
+                    CV_Assert( hist.at<int>(i) != 0 );
+            }
+        }
+        catch(...)
+        {
+            ts->printf(cvtest::TS::LOG,
+                       "context: iteration=%d, N=%d, N0=%d, K=%d\n",
+                       iter, N, N0, K);
+            std::cout << labels << std::endl;
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+    }
+};
+
+TEST(Core_KMeans, singular) { CV_KMeansSingularTest test; test.safe_run(); }
+
+TEST(CovariationMatrixVectorOfMat, accuracy)
+{
+    unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;
+    cv::Mat src(vector_size, col_problem_size * row_problem_size, CV_32F);
+    int singleMatFlags = CV_COVAR_ROWS;
+
+    cv::Mat gold;
+    cv::Mat goldMean;
+    cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
+    cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
+    std::vector<cv::Mat> srcVec;
+    for(size_t i = 0; i < vector_size; i++)
+    {
+        srcVec.push_back(src.row(static_cast<int>(i)).reshape(0,col_problem_size));
+    }
+
+    cv::Mat actual;
+    cv::Mat actualMean;
+    cv::calcCovarMatrix(srcVec, actual, actualMean,singleMatFlags,CV_32F);
+
+    cv::Mat diff;
+    cv::absdiff(gold, actual, diff);
+    cv::Scalar s = cv::sum(diff);
+    ASSERT_EQ(s.dot(s), 0.0);
+
+    cv::Mat meanDiff;
+    cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
+    cv::Scalar sDiff = cv::sum(meanDiff);
+    ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
+
+TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
+{
+    unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;
+    cv::Mat src(vector_size, col_problem_size * row_problem_size, CV_32F);
+    int singleMatFlags = CV_COVAR_ROWS | CV_COVAR_USE_AVG;
+
+    cv::Mat gold;
+    cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
+    cv::Mat goldMean;
+
+    cv::reduce(src,goldMean,0 ,CV_REDUCE_AVG, CV_32F);
+
+    cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
+
+    std::vector<cv::Mat> srcVec;
+    for(size_t i = 0; i < vector_size; i++)
+    {
+        srcVec.push_back(src.row(static_cast<int>(i)).reshape(0,col_problem_size));
+    }
+
+    cv::Mat actual;
+    cv::Mat actualMean = goldMean.reshape(0, row_problem_size);
+    cv::calcCovarMatrix(srcVec, actual, actualMean,singleMatFlags,CV_32F);
+
+    cv::Mat diff;
+    cv::absdiff(gold, actual, diff);
+    cv::Scalar s = cv::sum(diff);
+    ASSERT_EQ(s.dot(s), 0.0);
+
+    cv::Mat meanDiff;
+    cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
+    cv::Scalar sDiff = cv::sum(meanDiff);
+    ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
 
 /* End of file. */
 

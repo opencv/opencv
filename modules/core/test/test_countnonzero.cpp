@@ -42,7 +42,7 @@
 
 #include "test_precomp.hpp"
 #include <time.h>
-
+#include <limits>
 using namespace cv;
 using namespace std;
 
@@ -82,7 +82,7 @@ private:
     void print_information(int right, int result);
 };
 
-CV_CountNonZeroTest::CV_CountNonZeroTest(): eps_32(1e-8f), eps_64(1e-16f), src(Mat()), current_type(-1) {}
+CV_CountNonZeroTest::CV_CountNonZeroTest(): eps_32(std::numeric_limits<float>::min()), eps_64(std::numeric_limits<double>::min()), src(Mat()), current_type(-1) {}
 CV_CountNonZeroTest::~CV_CountNonZeroTest() {}
 
 void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type)
@@ -252,4 +252,4 @@ void CV_CountNonZeroTest::run(int)
     }
 }
 
-// TEST (Core_CountNonZero, accuracy) { CV_CountNonZeroTest test; test.safe_run(); }
+TEST (Core_CountNonZero, accuracy) { CV_CountNonZeroTest test; test.safe_run(); }

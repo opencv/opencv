@@ -672,29 +672,6 @@ int SIFT::descriptorType() const
     return CV_32F;
 }
 
-static Algorithm* createSIFT()
-{
-    return new SIFT;
-}
-static AlgorithmInfo sift_info("Feature2D.SIFT", createSIFT);
-    
-AlgorithmInfo* SIFT::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        SIFT obj;
-        sift_info.addParam(obj, "nFeatures", obj.nfeatures);
-        sift_info.addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        sift_info.addParam(obj, "contrastThreshold", obj.contrastThreshold);
-        sift_info.addParam(obj, "edgeThreshold", obj.edgeThreshold);
-        sift_info.addParam(obj, "sigma", obj.sigma);
-        
-        initialized = true;
-    }
-    return &sift_info;
-}
-
 
 void SIFT::operator()(InputArray _image, InputArray _mask,
                       vector<KeyPoint>& keypoints) const

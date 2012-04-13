@@ -168,7 +168,7 @@ Constructor.
 
     :param threshold: Threshold on difference between intensity of the central pixel and pixels on a circle around this pixel.
 
-    :param nonmaxSupression: If it is true, non-maximum supression is applied to detected corners (keypoints).
+    :param nonmaxSupression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
 
     :param keypointsRatio: Inner buffer size for keypoints store is determined as (keypointsRatio * image_width * image_height).
 
@@ -188,7 +188,7 @@ Finds the keypoints using FAST detector.
     :param keypoints: The output vector of keypoints. Can be stored both in CPU and GPU memory. For GPU memory:
 
             * keypoints.ptr<Vec2s>(LOCATION_ROW)[i] will contain location of i'th point
-            * keypoints.ptr<float>(RESPONSE_ROW)[i] will contaion response of i'th point (if non-maximum supression is applied)
+            * keypoints.ptr<float>(RESPONSE_ROW)[i] will contain response of i'th point (if non-maximum suppression is applied)
 
 
 
@@ -238,7 +238,7 @@ Gets final array of keypoints.
 
     :param keypoints: The output vector of keypoints.
 
-The function performs nonmax supression if needed and returns final count of keypoints.
+The function performs non-max suppression if needed and returns final count of keypoints.
 
 
 
@@ -529,7 +529,7 @@ Converts matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::matchSingl
 
 gpu::BruteForceMatcher_GPU::knnMatch
 ----------------------------------------
-Finds the k best matches for each descriptor from a query set with train descriptors.
+Finds the ``k`` best matches for each descriptor from a query set with train descriptors.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, int k, const GpuMat& mask = GpuMat(), bool compactResult = false)
 
@@ -551,7 +551,7 @@ Finds the k best matches for each descriptor from a query set with train descrip
 
     :param stream: Stream for the asynchronous version.
 
-The function returns detected k (or less if not possible) matches in the increasing order by distance.
+The function returns detected ``k`` (or less if not possible) matches in the increasing order by distance.
 
 The third variant of the method stores the results in GPU memory.
 

@@ -1,10 +1,9 @@
 package org.opencv.test.ml;
 
 import org.opencv.ml.CvKNearest;
+import org.opencv.test.OpenCVTestCase;
 
-import junit.framework.TestCase;
-
-public class CvKNearestTest extends TestCase {
+public class CvKNearestTest extends OpenCVTestCase {
 
     public void testCvKNearest() {
         new CvKNearest();

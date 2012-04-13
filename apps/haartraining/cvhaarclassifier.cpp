@@ -285,18 +285,20 @@ void icvLoadHaarFeature( CvTHaarFeature* feature, FILE* file )
     int weight;
 
     nrect = 0;
-    fscanf( file, "%d", &nrect );
+    int values_read = fscanf( file, "%d", &nrect );
+    CV_Assert(values_read == 1);
 
     assert( nrect <= CV_HAAR_FEATURE_MAX );
 
     for( j = 0; j < nrect; j++ )
     {
-        fscanf( file, "%d %d %d %d %d %d",
+        values_read = fscanf( file, "%d %d %d %d %d %d",
             &(feature->rect[j].r.x),
             &(feature->rect[j].r.y),
             &(feature->rect[j].r.width),
             &(feature->rect[j].r.height),
             &tmp, &weight );
+        CV_Assert(values_read == 6);
         feature->rect[j].weight = (float) weight;
     }
     for( j = nrect; j < CV_HAAR_FEATURE_MAX; j++ )
@@ -307,7 +309,8 @@ void icvLoadHaarFeature( CvTHaarFeature* feature, FILE* file )
         feature->rect[j].r.height = 0;
         feature->rect[j].weight = 0.0f;
     }
-    fscanf( file, "%s", &(feature->desc[0]) );
+    values_read = fscanf( file, "%s", &(feature->desc[0]) );
+    CV_Assert(values_read == 1);
     feature->tilted = ( feature->desc[0] == 't' );
 }
 
@@ -342,19 +345,23 @@ CvIntHaarClassifier* icvLoadCARTHaarClassifier( FILE* file, int step )
     int count;
 
     ptr = NULL;
-    fscanf( file, "%d", &count );
+    int values_read = fscanf( file, "%d", &count );
+    CV_Assert(values_read == 1);
+
     if( count > 0 )
     {
         ptr = (CvCARTHaarClassifier*) icvCreateCARTHaarClassifier( count );
         for( i = 0; i < count; i++ )
         {
             icvLoadHaarFeature( &(ptr->feature[i]), file );
-            fscanf( file, "%f %d %d", &(ptr->threshold[i]), &(ptr->left[i]),
+            values_read = fscanf( file, "%f %d %d", &(ptr->threshold[i]), &(ptr->left[i]),
                                       &(ptr->right[i]) );
+            CV_Assert(values_read == 3);
         }
         for( i = 0; i <= count; i++ )
         {
-            fscanf( file, "%f", &(ptr->val[i]) );
+            values_read = fscanf( file, "%f", &(ptr->val[i]) );
+            CV_Assert(values_read == 1);
         }
         icvConvertToFastHaarFeature( ptr->feature, ptr->fastfeature, ptr->count, step );
     }
@@ -402,7 +409,8 @@ CvIntHaarClassifier* icvLoadCARTStageHaarClassifierF( FILE* file, int step )
         float threshold;
 
         count = 0;
-        fscanf( file, "%d", &count );
+        int values_read = fscanf( file, "%d", &count );
+        CV_Assert(values_read == 1);
         if( count > 0 )
         {
             ptr = (CvStageHaarClassifier*) icvCreateStageHaarClassifier( count, 0.0F );
@@ -411,7 +419,8 @@ CvIntHaarClassifier* icvLoadCARTStageHaarClassifierF( FILE* file, int step )
                 ptr->classifier[i] = icvLoadCARTHaarClassifier( file, step );
             }
 
-            fscanf( file, "%f", &threshold );
+            values_read = fscanf( file, "%f", &threshold );
+            CV_Assert(values_read == 1);
 
             ptr->threshold = threshold;
             /* to be compatible with the previous implementation */

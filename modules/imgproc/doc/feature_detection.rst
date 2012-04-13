@@ -55,7 +55,7 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
 For every pixel
-:math:`p` , the function ``cornerEigenValsAndVecs`` considers a ``blockSize`` :math:`\times` ``blockSize`` neigborhood
+:math:`p` , the function ``cornerEigenValsAndVecs`` considers a ``blockSize`` :math:`\times` ``blockSize`` neighborhood
 :math:`S(p)` . It calculates the covariation matrix of derivatives over the neighborhood as:
 
 .. math::
@@ -279,9 +279,6 @@ The function can be used to initialize a point-based tracker of an object.
     :ocv:func:`cornerHarris`, 
     :ocv:func:`calcOpticalFlowPyrLK`, 
     :ocv:func:`estimateRigidTransform`,
-    :ocv:class:`PlanarObjectDetector`, 
-    :ocv:class:`OneWayDescriptor`
-
 
 
 HoughCircles

@@ -207,6 +207,7 @@ DEFINE_GUID(MEDIASUBTYPE_RGB24,0xe436eb7d,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf
 DEFINE_GUID(MEDIASUBTYPE_RGB32,0xe436eb7e,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
 DEFINE_GUID(MEDIASUBTYPE_RGB555,0xe436eb7c,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
 DEFINE_GUID(MEDIASUBTYPE_RGB565,0xe436eb7b,0x524f,0x11ce,0x9f,0x53,0x00,0x20,0xaf,0x0b,0xa7,0x70);
+DEFINE_GUID(MEDIASUBTYPE_I420,0x49343230,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_UYVY,0x59565955,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_Y211,0x31313259,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(MEDIASUBTYPE_Y411,0x31313459,0x0000,0x0010,0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71);
@@ -339,7 +340,7 @@ static bool verbose = true;
 //videoInput defines
 #define VI_VERSION     0.1995
 #define VI_MAX_CAMERAS  20
-#define VI_NUM_TYPES    19 //MGB
+#define VI_NUM_TYPES    20 //MGB
 #define VI_NUM_FORMATS  18 //DON'T TOUCH
 
 //defines for setPhyCon - tuner is not as well supported as composite and s-video
@@ -1066,6 +1067,7 @@ videoInput::videoInput(){
     mediaSubtypes[16]    = MEDIASUBTYPE_Y800;
     mediaSubtypes[17]    = MEDIASUBTYPE_Y8;
     mediaSubtypes[18]    = MEDIASUBTYPE_GREY;
+	mediaSubtypes[19]    = MEDIASUBTYPE_I420;
 
     //The video formats we support
     formatTypes[VI_NTSC_M]        = AnalogVideo_NTSC_M;
@@ -2171,6 +2173,7 @@ void videoInput::getMediaSubtypeAsString(GUID type, char * typeAsString){
     else if(type == MEDIASUBTYPE_Y800)     sprintf(tmpStr, "Y800");
     else if(type == MEDIASUBTYPE_Y8)       sprintf(tmpStr, "Y8");
     else if(type == MEDIASUBTYPE_GREY)     sprintf(tmpStr, "GREY");
+	else if(type == MEDIASUBTYPE_I420)     sprintf(tmpStr, "I420");
     else sprintf(tmpStr, "OTHER");
 
     memcpy(typeAsString, tmpStr, sizeof(char)*8);
@@ -3279,8 +3282,7 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
 {
     // image capture properties
     bool handled = false;
-
-    switch( property_id )
+	switch( property_id )
     {
         case CV_CAP_PROP_FRAME_WIDTH:
             width = cvRound(value);
@@ -3302,8 +3304,13 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
             break;
 
         case CV_CAP_PROP_FPS:
-            VI.setIdealFramerate(index,cvRound(value));
-            handled = true;
+            int fps = cvRound(value);
+			if (fps != VI.getFPS(0))
+			{
+			    VI.stopDevice(index);
+			    VI.setIdealFramerate(index,fps);
+			    VI.setupDevice(index);
+			}
             break;
 
     }
@@ -3311,16 +3318,18 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     if ( handled ) {
         // a stream setting
         if( width > 0 && height > 0 )
+        {
+            if( width != VI.getWidth(index) || height != VI.getHeight(index) )//|| fourcc != VI.getFourcc(index) )
             {
-            if( width != VI.getWidth(index) || height != VI.getHeight(index) ) //|| fourcc != VI.getFourcc(index) )
-            {
+                int fps = static_cast<int>(VI.getFPS(index));
                 VI.stopDevice(index);
-                VI.setupDeviceFourcc(index, width, height,fourcc);
+                VI.setIdealFramerate(index, fps);
+                VI.setupDeviceFourcc(index, width, height, fourcc);
             }
             width = height = fourcc = -1;
             return VI.isDeviceSetup(index);
         }
-        return true;
+		return true;
     }
 
     // show video/camera filter dialog

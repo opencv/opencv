@@ -30,6 +30,14 @@ The function computes moments, up to the 3rd order, of a vector shape or a raste
                 double m02, double m30, double m21, double m12, double m03 );
         Moments( const CvMoments& moments );
         operator CvMoments() const;
+        
+        // spatial moments
+        double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
+        // central moments
+        double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
+        // central normalized moments
+        double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
+    }
 
 In case of a raster image, the spatial moments :math:`\texttt{Moments::m}_{ji}` are computed as:
 
@@ -65,6 +73,10 @@ The normalized central moments
     :math:`\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0` , hence the values are not stored.
 
 The moments of a contour are defined in the same way but computed using the Green's formula (see http://en.wikipedia.org/wiki/Green_theorem). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
+
+.. note::
+
+     Since the contour moments are computed using Green formula, you may get seemingly odd results for contours with self-intersections, e.g. a zero area (``m00``) for butterfly-shaped contours.
 
 .. seealso::
 
@@ -112,6 +124,8 @@ Finds contours in a binary image.
 
 .. ocv:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
 
+.. ocv:pyfunction:: cv2.findContours(image, mode, method[, contours[, hierarchy[, offset]]]) -> contours, hierarchy
+
 .. ocv:cfunction:: int cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** firstContour, int headerSize=sizeof(CvContour), int mode=CV_RETR_LIST, int method=CV_CHAIN_APPROX_SIMPLE, CvPoint offset=cvPoint(0, 0) )
 
 .. ocv:pyoldfunction:: cv.FindContours(image, storage, mode=CV_RETR_LIST, method=CV_CHAIN_APPROX_SIMPLE, offset=(0, 0)) -> cvseq
@@ -122,7 +136,7 @@ Finds contours in a binary image.
 
     :param hierarchy: Optional output vector containing information about the image topology. It has as many elements as the number of contours. For each contour  ``contours[i]`` , the elements  ``hierarchy[i][0]`` ,  ``hiearchy[i][1]`` ,  ``hiearchy[i][2]`` , and  ``hiearchy[i][3]``  are set to 0-based indices in  ``contours``  of the next and previous contours at the same hierarchical level: the first child contour and the parent contour, respectively. If for a contour  ``i``  there are no next, previous, parent, or nested contours, the corresponding elements of  ``hierarchy[i]``  will be negative.
 
-    :param mode: Contour retrieval mode.
+    :param mode: Contour retrieval mode (if you use Python see also a note below).
 
             * **CV_RETR_EXTERNAL** retrieves only the extreme outer contours. It sets  ``hierarchy[i][2]=hierarchy[i][3]=-1``  for all the contours.
 
@@ -132,7 +146,7 @@ Finds contours in a binary image.
 
             * **CV_RETR_TREE** retrieves all of the contours and reconstructs a full hierarchy of nested contours. This full hierarchy is built and shown in the OpenCV  ``contours.c``  demo.
 
-    :param method: Contour approximation method.
+    :param method: Contour approximation method (if you use Python see also a note below).
 
             * **CV_CHAIN_APPROX_NONE** stores absolutely all the contour points. That is, any 2 subsequent points ``(x1,y1)`` and ``(x2,y2)`` of the contour will be either horizontal, vertical or diagonal neighbors, that is, ``max(abs(x1-x2),abs(y2-y1))==1``.
 
@@ -147,6 +161,7 @@ The function retrieves contours from the binary image using the algorithm
 
 .. note:: Source ``image`` is modified by this function.
 
+.. note:: If you use the new Python interface then the ``CV_`` prefix has to be omitted in contour retrieval mode and contour approximation method parameters (for example, use ``cv2.RETR_LIST`` and ``cv2.CHAIN_APPROX_NONE`` parameters). If you use the old Python interface then these parameters have the ``CV_`` prefix (for example, use ``cv.CV_RETR_LIST`` and ``cv.CV_CHAIN_APPROX_NONE``).
 
 drawContours
 ----------------
@@ -178,6 +193,12 @@ Draws contours outlines or filled contours.
         the specified contour is drawn. If it is 1, the function draws the contour(s) and all the nested contours. If it is 2, the function draws the contours, all the nested contours, all the nested-to-nested contours, and so on. This parameter is only taken into account when there is  ``hierarchy``  available.
 
     :param offset: Optional contour shift parameter. Shift all the drawn contours by the specified  :math:`\texttt{offset}=(dx,dy)` .
+
+    :param contour: Pointer to the first contour.
+
+    :param externalColor: Color of external contours.
+
+    :param holeColor: Color of internal contours (holes).
 
 The function draws contour outlines in the image if
 :math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
@@ -342,6 +363,7 @@ The function computes a contour area. Similarly to
 :ocv:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
 :ocv:func:`drawContours` or
 :ocv:func:`fillPoly` , can be different.
+Also, the function will most certainly give a wrong results for contours with self-intersections.
 
 Example: ::
 
@@ -376,7 +398,7 @@ Finds the convex hull of a point set.
 
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
-    :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case, the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case, ``hull`` elements aree the convex hull points themselves.
+    :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case, the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case, ``hull`` elements are the convex hull points themselves.
     
     :param storage: Output memory storage in the old API (``cvConvexHull2`` returns a sequence containing the convex hull points or their indices).
 

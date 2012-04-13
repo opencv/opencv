@@ -97,7 +97,7 @@ void FastMarchingMethod::heapUp(int idx)
 void FastMarchingMethod::heapDown(int idx)
 {
     int l, r, smallest;
-    while (true)
+    for(;;)
     {
         l = 2*idx+1;
         r = 2*idx+2;
@@ -106,7 +106,8 @@ void FastMarchingMethod::heapDown(int idx)
         if (l < size_ && narrowBand_[l] < narrowBand_[smallest]) smallest = l;
         if (r < size_ && narrowBand_[r] < narrowBand_[smallest]) smallest = r;
 
-        if (smallest == idx) break;
+        if (smallest == idx)
+            break;
         else
         {
             std::swap(indexOf(narrowBand_[idx]), indexOf(narrowBand_[smallest]));

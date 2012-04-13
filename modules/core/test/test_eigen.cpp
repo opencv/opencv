@@ -146,7 +146,6 @@ void Core_EigenTest_Scalar_32::run(int)
         float value = cv::randu<float>();
         cv::Mat src(1, 1, CV_32FC1, Scalar::all((float)value));
         test_values(src);
-        src.~Mat();
     }
 }
 
@@ -158,7 +157,6 @@ void Core_EigenTest_Scalar_64::run(int)
         float value = cv::randu<float>();
         cv::Mat src(1, 1, CV_64FC1, Scalar::all((double)value));
         test_values(src);
-        src.~Mat();
     }
 }
 
@@ -401,8 +399,6 @@ bool Core_EigenTest::check_full(int type)
         else	src.at<double>(k, j) = src.at<double>(j, k) = cv::randu<double>();
 
         if (!test_values(src)) return false;
-
-        src.~Mat();
     }
 
     return true;
