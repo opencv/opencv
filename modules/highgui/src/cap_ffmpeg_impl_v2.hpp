@@ -983,7 +983,11 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
     /* put sample parameters */
-    c->bit_rate = bitrate;
+    unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
+    lbit_rate += (bitrate / 4);
+    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
+    c->bit_rate = static_cast<int>(lbit_rate);
+
     // took advice from
     // http://ffmpeg-users.933282.n4.nabble.com/warning-clipping-1-dct-coefficients-to-127-127-td934297.html
     c->qmin = 3;
