@@ -217,7 +217,7 @@ int CvMLData::read_csv(const char* filename)
         str_to_flt_elem( token, el_ptr[cols_count-1], type);
         var_types_ptr[cols_count-1] |= type;
         cvSeqPush( seq, el_ptr );
-        if( !fgets_chomp( buf, M, file ) )
+        if( !fgets_chomp( buf, M, file ) || !strchr( buf, delimiter ) )
             break;
     }
     fclose(file);
