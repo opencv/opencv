@@ -43,6 +43,7 @@
 #include "cap_ffmpeg_api.hpp"
 #include <assert.h>
 #include <algorithm>
+  #include <stdio.h>
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4244 4510 4512 4610 )
@@ -1454,6 +1455,13 @@ void CvVideoWriter_FFMPEG::close()
         /* find the video encoder */
         codec = avcodec_find_encoder(c->codec_id);
         if (!codec) {
+            fprintf(stderr, "Could not find encoder for codec id %d: %s", c->codec_id, icvFFMPEGErrStr(
+            #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
+                    AVERROR_ENCODER_NOT_FOUND
+            #else
+                    -1
+            #endif
+                    ));
             return false;
         }
 
@@ -1470,8 +1478,7 @@ void CvVideoWriter_FFMPEG::close()
              avcodec_open(c, codec)
 #endif
              ) < 0) {
-            char errtext[256];
-            sprintf(errtext, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
+            fprintf(stderr, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
             return false;
         }
 

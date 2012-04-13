@@ -1309,15 +1309,21 @@ void CvVideoWriter_FFMPEG::close()
         /* find the video encoder */
         codec = avcodec_find_encoder(c->codec_id);
         if (!codec) {
+            fprintf(stderr, "Could not find encoder for codec id %d: %s", c->codec_id, icvFFMPEGErrStr(
+            #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
+                    AVERROR_ENCODER_NOT_FOUND
+            #else
+                    -1
+            #endif
+                    ));
             return false;
         }
 
         c->bit_rate_tolerance = c->bit_rate;
 
         /* open the codec */
-        if ( (err=avcodec_open(c, codec)) < 0) {
-            char errtext[256];
-            sprintf(errtext, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
+        if ( (err=avcodec_open(c, codec)) < 0 ) {
+            fprintf(stderr, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
             return false;
         }
 
