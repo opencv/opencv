@@ -43,7 +43,6 @@
 #include "cap_ffmpeg_api.hpp"
 #include <assert.h>
 #include <algorithm>
-  #include <stdio.h>
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4244 4510 4512 4610 )
