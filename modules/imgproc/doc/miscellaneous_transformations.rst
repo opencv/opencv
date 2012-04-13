@@ -708,7 +708,6 @@ value using the Otsu's algorithm and uses it instead of the specified ``thresh``
 The function returns the computed threshold value.
 Currently, the Otsu's method is implemented only for 8-bit images. 
 
-The function is parallelized with the TBB library except the Otsu's method.
 
 .. image:: pics/threshold.png
 
