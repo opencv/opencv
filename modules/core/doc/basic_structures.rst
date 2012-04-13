@@ -786,6 +786,8 @@ Various Mat constructors
 
     :param cols: Number of columns in a 2D array.
 
+    :param roi: Region of interest.
+
     :param size: 2D array size:  ``Size(cols, rows)`` . In the  ``Size()``  constructor, the number of rows and the number of columns go in the reverse order.
 
     :param sizes: Array of integers specifying an n-dimensional array shape.

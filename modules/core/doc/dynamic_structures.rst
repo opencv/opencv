@@ -126,16 +126,22 @@ There are helper functions to construct the slice and to compute its length:
 
 .. ocv:cfunction:: CvSlice cvSlice( int start, int end )
 
+    :param start: Inclusive left boundary.
+
+    :param end: Exclusive right boundary.
+
 ::
 
     #define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
     #define CV_WHOLE_SEQ  cvSlice(0, CV_WHOLE_SEQ_END_INDEX)
 
-..
-
 .. ocv:cfunction:: int cvSliceLength( CvSlice slice, const CvSeq* seq )
 
-  Calculates the sequence slice length
+    :param slice: The slice of sequence.
+
+    :param seq: Source sequence.
+
+Calculates the sequence slice length.
 
 Some of functions that operate on sequences take a ``CvSlice slice`` parameter that is often set to the whole sequence (CV_WHOLE_SEQ) by default. Either of the ``start_index`` and  ``end_index`` may be negative or exceed the sequence length. If they are equal, the slice is considered empty (i.e., contains no elements). Because sequences are treated as circular structures, the slice may select a
 few elements in the end of a sequence followed by a few elements at the beginning of the sequence. For example,  ``cvSlice(-2, 3)`` in the case of a 10-element sequence will select a 5-element slice, containing the pre-last (8th), last (9th), the very first (0th), second (1th) and third (2nd)
