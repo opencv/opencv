@@ -210,7 +210,7 @@ Fills the area bounded by one or more polygons.
     :param offset: Optional offset of all points of the contours.
 
 The function ``fillPoly`` fills an area bounded by several polygonal contours. The function can fill complex areas, for example,
-areas with holes, contours with self-intersections (some of thier parts), and so forth.
+areas with holes, contours with self-intersections (some of their parts), and so forth.
 
 
 
@@ -415,7 +415,7 @@ Draws a simple, thick, or filled up-right rectangle.
 
     :param pt1: Vertex of the rectangle.
 
-    :param pt2: Vertex of the recangle opposite to  ``pt1`` .
+    :param pt2: Vertex of the rectangle opposite to  ``pt1`` .
     
     :param r: Alternative specification of the drawn rectangle.
 

@@ -172,7 +172,7 @@ Ensures that the size of a matrix is big enough and the matrix has a proper type
 
     :param cols: Minimum desired number of columns.
 
-    :param size: Rows and coumns passed as a structure.
+    :param size: Rows and columns passed as a structure.
 
     :param type: Desired matrix type.
 

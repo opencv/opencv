@@ -62,9 +62,9 @@ Reads the data set from a ``.csv``-like ``filename`` file and stores all read va
 
     :param filename: The input file name
 
-While reading the data, the method tries to define the type of variables (predictors and responses): ordered or categorical. If a value of the variable is not numerical (except for the label for a missing value), the type of the variable is set to ``CV_VAR_CATEGORICAL``. If all existing values of the variable are numerical, the type of the variable is set to ``CV_VAR_ORDERED``. So, the default definition of variables types works correctly for all cases except the case of a categorical variable with numerical class labeles. In this case, the type ``CV_VAR_ORDERED`` is set. You should change the type to ``CV_VAR_CATEGORICAL`` using the method :ocv:func:`CvMLData::change_var_type`. For categorical variables, a common map is built to convert a string class label to the numerical class label. Use :ocv:func:`CvMLData::get_class_labels_map` to obtain this map. 
+While reading the data, the method tries to define the type of variables (predictors and responses): ordered or categorical. If a value of the variable is not numerical (except for the label for a missing value), the type of the variable is set to ``CV_VAR_CATEGORICAL``. If all existing values of the variable are numerical, the type of the variable is set to ``CV_VAR_ORDERED``. So, the default definition of variables types works correctly for all cases except the case of a categorical variable with numerical class labels. In this case, the type ``CV_VAR_ORDERED`` is set. You should change the type to ``CV_VAR_CATEGORICAL`` using the method :ocv:func:`CvMLData::change_var_type`. For categorical variables, a common map is built to convert a string class label to the numerical class label. Use :ocv:func:`CvMLData::get_class_labels_map` to obtain this map. 
 
-Also, when reading the data, the method constructs the mask of missing values. For example, values are egual to `'?'`.
+Also, when reading the data, the method constructs the mask of missing values. For example, values are equal to `'?'`.
 
 CvMLData::get_values
 --------------------

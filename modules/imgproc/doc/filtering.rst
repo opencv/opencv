@@ -715,13 +715,13 @@ Creates a non-separable linear filter engine.
 
     :param delta: Value added to the filtered results before storing them.
 
-    :param bits: Number of the fractional bits. the parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
+    :param bits: Number of the fractional bits. The parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
 
     :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
     
     :param columnBorderType: Pixel extrapolation method in the horizontal direction.
     
-    :param borderValue: Border vaule used in case of a constant border.
+    :param borderValue: Border value used in case of a constant border.
 
 The function returns a pointer to a 2D linear filter for the specified kernel, the source array type, and the destination array type. The function is a higher-level function that calls ``getLinearFilter`` and passes the retrieved 2D filter to the
 :ocv:class:`FilterEngine` constructor.

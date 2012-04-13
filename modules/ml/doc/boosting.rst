@@ -83,7 +83,7 @@ The constructors.
 
     :param boost_type: Type of the boosting algorithm. Possible values are:
         
-        * **CvBoost::DISCRETE** Discrete AbaBoost.
+        * **CvBoost::DISCRETE** Discrete AdaBoost.
         * **CvBoost::REAL** Real AdaBoost. It is a technique that utilizes confidence-rated predictions and works well with categorical data.
         * **CvBoost::LOGIT** LogitBoost. It can produce good regression fits.
         * **CvBoost::GENTLE** Gentle AdaBoost. It puts less weight on outlier data points and for that reason is often good with regression data. 

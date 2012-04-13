@@ -144,7 +144,7 @@ The function supports multi-channel images. Each channel is processed independen
 
 phaseCorrelate
 --------------
-The function is used to detect translational shifts that occur between two images. The operation takes advantage of the Fourier shift theorem for detecting the translational shift in the frequency domain. It can be used for fast image registration as well as motion esitimation. For more information please see http://en.wikipedia.org/wiki/Phase\_correlation .
+The function is used to detect translational shifts that occur between two images. The operation takes advantage of the Fourier shift theorem for detecting the translational shift in the frequency domain. It can be used for fast image registration as well as motion estimation. For more information please see http://en.wikipedia.org/wiki/Phase\_correlation .
 
 Calculates the cross-power spectrum of two supplied source arrays. The arrays are padded if needed with :ocv:func:`getOptimalDFTSize`.
 

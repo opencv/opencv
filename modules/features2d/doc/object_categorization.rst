@@ -186,7 +186,7 @@ Computes an image descriptor using the set visual vocabulary.
 
 BOWImgDescriptorExtractor::descriptorSize
 ---------------------------------------------
-Returns an image discriptor size if the vocabulary is set. Otherwise, it returns 0.
+Returns an image descriptor size if the vocabulary is set. Otherwise, it returns 0.
 
 .. ocv:function:: int BOWImgDescriptorExtractor::descriptorSize() const
 

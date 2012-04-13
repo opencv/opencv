@@ -148,7 +148,7 @@ FileStorage
 -----------
 .. ocv:class:: FileStorage
 
-XML/YAML file storage class that incapsulates all the information necessary for writing or reading data to/from a file.
+XML/YAML file storage class that encapsulates all the information necessary for writing or reading data to/from a file.
 
 FileStorage::FileStorage
 ------------------------
@@ -179,7 +179,7 @@ Opens a file.
 
 .. ocv:function:: bool FileStorage::open(const string& filename, int flags, const string& encoding=string())
 
-See description of parameters in :ocv:func:`FileStorage::FileStorage`. The method calls :ocv:func:`FileStorage::release` before openning the file.
+See description of parameters in :ocv:func:`FileStorage::FileStorage`. The method calls :ocv:func:`FileStorage::release` before opening the file.
 
 
 FileStorage::isOpened
@@ -583,7 +583,7 @@ Reads node elements to the buffer with the specified format.
 
     :param vec: Pointer to the destination array.
 
-    :param len: Number of elements to read. If it is greater than number of remaning elements then all of them will be read.
+    :param len: Number of elements to read. If it is greater than number of remaining elements then all of them will be read.
 
 Usually it is more convenient to use :ocv:func:`operator >>` instead of this method.
 
@@ -687,6 +687,6 @@ Reads node elements to the buffer with the specified format.
 
     :param vec: Pointer to the destination array.
 
-    :param maxCount: Number of elements to read. If it is greater than number of remaning elements then all of them will be read.
+    :param maxCount: Number of elements to read. If it is greater than number of remaining elements then all of them will be read.
 
 Usually it is more convenient to use :ocv:func:`operator >>` instead of this method.

@@ -159,9 +159,9 @@ The constructors.
 
     :param max_depth: The maximum possible depth of the tree. That is the training algorithms attempts to split a node while its depth is less than ``max_depth``. The actual depth may be smaller if the other termination criteria are met (see the outline of the training procedure in the beginning of the section), and/or if the tree is pruned. 
     
-    :param min_sample_count: If the number of samples in a node is less than this parameter then the node will not be splitted.
+    :param min_sample_count: If the number of samples in a node is less than this parameter then the node will not be split.
 
-    :param regression_accuracy: Termination criteria for regression trees. If all absolute differences between an estimated value in a node and values of train samples in this node are less than this parameter then the node will not be splitted.
+    :param regression_accuracy: Termination criteria for regression trees. If all absolute differences between an estimated value in a node and values of train samples in this node are less than this parameter then the node will not be split.
  
     :param use_surrogates: If true then surrogate splits will be built. These splits allow to work with missing data and compute variable importance correctly.
 
@@ -275,7 +275,7 @@ Returns error of the decision tree.
 
         * **CV_TRAIN_ERROR** Error on train samples.
 
-        * **CV_TEST_ERROR** Erron on test samples.
+        * **CV_TEST_ERROR** Error on test samples.
 
     :param resp: If it is not null then size of this vector will be set to the number of samples and each element will be set to result of prediction on the corresponding sample.
 

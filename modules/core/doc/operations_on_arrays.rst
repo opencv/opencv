@@ -208,7 +208,7 @@ Calculates the per-element bit-wise conjunction of two arrays or an array and a 
 
     :param src2: Second source array or a scalar.
 
-    :param dst: Destination arrayb that has the same size and type as the input array(s).
+    :param dst: Destination array that has the same size and type as the input array(s).
     
     :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
 
@@ -1213,7 +1213,7 @@ Performs generalized matrix multiplication.
 .. ocv:pyfunction:: cv2.gemm(src1, src2, alpha, src3, gamma[, dst[, flags]]) -> dst
 
 .. ocv:cfunction:: void cvGEMM( const CvArr* src1, const CvArr* src2, double alpha, const CvArr* src3, double beta, CvArr* dst, int tABC=0)
-.. ocv:pyoldfunction:: cv.GEMM(src1, src2, alphs, src3, beta, dst, tABC=0)-> None
+.. ocv:pyoldfunction:: cv.GEMM(src1, src2, alpha, src3, beta, dst, tABC=0)-> None
 
     :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
@@ -1404,7 +1404,7 @@ The function checks the range as follows:
 
 That is, ``dst`` (I) is set to 255 (all ``1`` -bits) if ``src`` (I) is within the specified 1D, 2D, 3D, ... box and 0 otherwise.
 
-When the lower and/or upper bounary parameters are scalars, the indexes ``(I)`` at ``lowerb`` and ``upperb`` in the above formulas should be omitted.
+When the lower and/or upper boundary parameters are scalars, the indexes ``(I)`` at ``lowerb`` and ``upperb`` in the above formulas should be omitted.
 
 
 invert
@@ -1429,7 +1429,7 @@ Finds the inverse or pseudo-inverse of a matrix.
 
             * **DECOMP_SVD** Singular value decomposition (SVD) method.
 
-            * **DECOMP_CHOLESKY** Cholesky decomposion. The matrix must be symmetrical and positively defined.
+            * **DECOMP_CHOLESKY** Cholesky decomposition. The matrix must be symmetrical and positively defined.
 
 The function ``invert`` inverts the matrix ``src`` and stores the result in ``dst`` .
 When the matrix ``src`` is singular or non-square, the function computes the pseudo-inverse matrix (the ``dst`` matrix) so that ``norm(src*dst - I)`` is minimal, where I is an identity matrix.
@@ -2128,7 +2128,7 @@ Normalizes the norm or value range of an array.
     
     :param alpha: Norm value to normalize to or the lower range boundary in case of the range normalization.
 
-    :param beta: Upper range boundary in case ofthe range normalization. It is not used for the norm normalization.
+    :param beta: Upper range boundary in case of the range normalization. It is not used for the norm normalization.
 
     :param normType: Normalization type. See the details below.
 
@@ -3054,7 +3054,7 @@ If you need to extract a single channel or do some other sophisticated channel p
 
 sqrt
 ----
-Calculates a quare root of array elements.
+Calculates a square root of array elements.
 
 .. ocv:function:: void sqrt(InputArray src, OutputArray dst)
 
@@ -3236,7 +3236,7 @@ Performs SVD of a matrix
     
     :param vt: Transposed matrix of right singular values
     
-    :param flags: Opertion flags - see :ocv:func:`SVD::SVD`.
+    :param flags: Operation flags - see :ocv:func:`SVD::SVD`.
 
 The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator()``, they store the results to the user-provided matrices. ::
 

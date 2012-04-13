@@ -279,7 +279,7 @@ Class computing stereo correspondence using the constant space belief propagatio
     };
 
 
-The class implements algorithm described in [Yang2010]_. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algortihms. For more details, see the paper mentioned above. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false`` .
+The class implements algorithm described in [Yang2010]_. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algorithms. For more details, see the paper mentioned above. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false`` .
 
 
 
@@ -323,7 +323,7 @@ Enables the :ocv:class:`gpu::StereoConstantSpaceBP` constructors.
 
 For more details, see [Yang2010]_.
 
-By default, ``StereoConstantSpaceBP`` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better perfomance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
+By default, ``StereoConstantSpaceBP`` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better performance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
 
 .. math::
 
@@ -359,7 +359,7 @@ gpu::DisparityBilateralFilter
 -----------------------------
 .. ocv:class:: gpu::DisparityBilateralFilter
 
-Class refinining a disparity map using joint bilateral filtering. ::
+Class refining a disparity map using joint bilateral filtering. ::
 
     class CV_EXPORTS DisparityBilateralFilter
     {

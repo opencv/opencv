@@ -9,7 +9,7 @@ Random trees have been introduced by Leo Breiman and Adele Cutler:
 http://www.stat.berkeley.edu/users/breiman/RandomForests/
 . The algorithm can deal with both classification and regression problems. Random trees is a collection (ensemble) of tree predictors that is called
 *forest*
-further in this section (the term has been also introduced by L. Breiman). The classification works as follows: the random trees classifier takes the input feature vector, classifies it with every tree in the forest, and outputs the class label that recieved the majority of "votes". In case of a regression, the classifier response is the average of the responses over all the trees in the forest.
+further in this section (the term has been also introduced by L. Breiman). The classification works as follows: the random trees classifier takes the input feature vector, classifies it with every tree in the forest, and outputs the class label that received the majority of "votes". In case of a regression, the classifier response is the average of the responses over all the trees in the forest.
 
 All the trees are trained with the same parameters but on different training sets. These sets are generated from the original training set using the bootstrap procedure: for each training set, you randomly select the same number of vectors as in the original set ( ``=N`` ). The vectors are chosen with replacement. That is, some vectors will occur more than once and some will be absent. At each node of each trained tree,  not all the variables are used to find the best split, but a random subset of them. With each node a new subset is generated. However, its size is fixed for all the nodes and all the trees. It is a training parameter set to
 :math:`\sqrt{number\_of\_variables}` by default. None of the built trees are pruned.
@@ -67,7 +67,7 @@ The constructors.
 
     :param nactive_vars: The size of the randomly selected subset of features at each tree node and that are used to find the best split(s). If you set it to 0 then the size will be set to the square root of the total number of features.
 
-    :param max_num_of_trees_in_the_forest: The maximum number of trees in the forest (suprise, suprise). Typically the more trees you have the better the accuracy. However, the improvement in accuracy generally diminishes and asymptotes pass a certain number of trees. Also to keep in mind, the number of tree increases the prediction time linearly.
+    :param max_num_of_trees_in_the_forest: The maximum number of trees in the forest (surprise, surprise). Typically the more trees you have the better the accuracy. However, the improvement in accuracy generally diminishes and asymptotes pass a certain number of trees. Also to keep in mind, the number of tree increases the prediction time linearly.
 
     :param forest_accuracy: Sufficient accuracy (OOB error).
 
@@ -77,7 +77,7 @@ The constructors.
         
         * **CV_TERMCRIT_EPS** Terminate learning by the ``forest_accuracy``;
 
-        * **CV_TERMCRIT_ITER | CV_TERMCRIT_EPS** Use both termination criterias.
+        * **CV_TERMCRIT_ITER | CV_TERMCRIT_EPS** Use both termination criteria.
 
 For meaning of other parameters see :ocv:func:`CvDTreeParams::CvDTreeParams`.
 

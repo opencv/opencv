@@ -449,7 +449,7 @@ basic distances. Since the distance function should be symmetric,
 all of the horizontal and vertical shifts must have the same cost (denoted as ``a`` ), all the diagonal shifts must have the
 same cost (denoted as ``b`` ), and all knight's moves must have
 the same cost (denoted as ``c`` ). For the ``CV_DIST_C`` and ``CV_DIST_L1`` types, the distance is calculated precisely,
-whereas for ``CV_DIST_L2`` (Euclidian distance) the distance
+whereas for ``CV_DIST_L2`` (Euclidean distance) the distance
 can be calculated only with a relative error (a
 :math:`5\times 5` mask
 gives more accurate results). For ``a``,``b`` , and ``c`` , OpenCV uses the values suggested in the original paper:
@@ -722,7 +722,7 @@ Currently, the Otsu's method is implemented only for 8-bit images.
 
 watershed
 -------------
-Performs a marker-based image segmentation using the watershed algrorithm.
+Performs a marker-based image segmentation using the watershed algorithm.
 
 .. ocv:function:: void watershed( InputArray image, InputOutputArray markers )
 

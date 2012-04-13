@@ -15,7 +15,7 @@ Detects corners using the FAST algorithm
 
     :param threshold: Threshold on difference between intensity of the central pixel and pixels on a circle around this pixel. See the algorithm description below.
 
-    :param nonmaxSupression: If it is true, non-maximum supression is applied to detected corners (keypoints).
+    :param nonmaxSupression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
 
 Detects corners using the FAST algorithm by E. Rosten (*Machine Learning for High-speed Corner Detection*, 2006).
 
@@ -43,7 +43,7 @@ Maximally stable extremal region extractor. ::
     };
 
 The class encapsulates all the parameters of the MSER extraction algorithm (see
-http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for usefull comments and parameters description.
+http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for useful comments and parameters description.
 
 
 StarDetector

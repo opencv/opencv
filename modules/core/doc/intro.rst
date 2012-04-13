@@ -91,7 +91,7 @@ you can use::
 
    Ptr<T> ptr = new T(...);
 
-That is, ``Ptr<T> ptr`` incapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the 
+That is, ``Ptr<T> ptr`` encapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the 
 :ocv:class:`Ptr` 
 description for details.
 

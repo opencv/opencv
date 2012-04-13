@@ -8,7 +8,7 @@ applications and can be used within functionally rich UI frameworks (such as Qt*
 It provides easy interface to:
 
 * Create and manipulate windows that can display images and "remember" their content (no need to handle repaint events from OS).
-* Add trackbars to the windows, handle simple mouse events as well as keyboard commmands.
+* Add trackbars to the windows, handle simple mouse events as well as keyboard commands.
 * Read and write images to/from disk or memory.
 * Read video from camera or file and write video to a file.
 

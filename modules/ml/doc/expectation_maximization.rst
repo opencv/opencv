@@ -61,7 +61,7 @@ At the second step (Maximization step or M-step), the mixture parameter estimate
 Alternatively, the algorithm may start with the M-step when the initial values for
 :math:`p_{i,k}` can be provided. Another alternative when
 :math:`p_{i,k}` are unknown is to use a simpler clustering algorithm to pre-cluster the input samples and thus obtain initial
-:math:`p_{i,k}` . Often (including macnine learning) the
+:math:`p_{i,k}` . Often (including machine learning) the
 :ocv:func:`kmeans` algorithm is used for that purpose.
 
 One of the main problems of the EM algorithm is a large number
@@ -115,7 +115,7 @@ The constructors
     :param start_step: The start step of the EM algorithm: 
 
         * **CvEM::START_E_STEP** Start with Expectation step. You need to provide means :math:`a_k` of mixture components to use this option. Optionally you can pass weights :math:`\pi_k` and covariance matrices :math:`S_k` of mixture components.
-        * **CvEM::START_M_STEP** Start with Maximization step. You need to provide initial probabilites :math:`p_{i,k}` to use this option.
+        * **CvEM::START_M_STEP** Start with Maximization step. You need to provide initial probabilities :math:`p_{i,k}` to use this option.
         * **CvEM::START_AUTO_STEP** Start with Expectation step. You need not provide any parameters because they will be estimated by the k-means algorithm.
 
     :param term_crit: The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``term_crit.max_iter`` (number of M-steps) or when relative change of likelihood logarithm is less than ``term_crit.epsilon``.
@@ -139,7 +139,7 @@ The default constructor represents a rough rule-of-the-thumb:
     }
 
 
-With another contstructor it is possible to override a variety of parameters from a single number of mixtures (the only essential problem-dependent parameter) to initial values for the mixture parameters.
+With another constructor it is possible to override a variety of parameters from a single number of mixtures (the only essential problem-dependent parameter) to initial values for the mixture parameters.
 
 
 CvEM
@@ -250,7 +250,7 @@ Returns vectors of probabilities for each training sample.
 
 .. ocv:pyfunction:: cv2.EM.getProbs() -> probs
 
-For each training sample :math:`i` (that have been passed to the constructor or to :ocv:func:`CvEM::train`) returns probabilites :math:`p_{i,k}` to belong to a mixture component :math:`k`.
+For each training sample :math:`i` (that have been passed to the constructor or to :ocv:func:`CvEM::train`) returns probabilities :math:`p_{i,k}` to belong to a mixture component :math:`k`.
 
 
 CvEM::getLikelihood

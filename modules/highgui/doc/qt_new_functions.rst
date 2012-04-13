@@ -105,7 +105,7 @@ Provides parameters of a window.
 
     :param name: Name of the window.
 
-    :param prop_id: Window property to retrive. The following operation flags are available:
+    :param prop_id: Window property to retrieve. The following operation flags are available:
         
             * **CV_WND_PROP_FULLSCREEN**  Change if the window is fullscreen ( ``CV_WINDOW_NORMAL``  or  ``CV_WINDOW_FULLSCREEN`` ).
             
@@ -224,11 +224,11 @@ Displays a text on the window statusbar during the specified period of time.
 
 The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time
 *delayms*
-. This information is displayed on the window statubar (the window must be created with the ``CV_GUI_EXPANDED`` flags).
+. This information is displayed on the window statusbar (the window must be created with the ``CV_GUI_EXPANDED`` flags).
 
 createOpenGLCallback
 ------------------------
-Creates a callback function called to draw OpenGL on top the the image display by ``windowname``.
+Creates a callback function called to draw OpenGL on top the image display by ``windowname``.
 
 .. ocv:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata =NULL, double angle=-1, double zmin=-1, double zmax=-1)
 

@@ -31,7 +31,7 @@ Aligns a buffer size to the specified number of bytes.
 
     :param n: Alignment size that must be a power of two.
 
-The function returns the minimum number that is greater or equal to ``sz`` and is divisble by ``n`` :
+The function returns the minimum number that is greater or equal to ``sz`` and is divisible by ``n`` :
 
 .. math::
 

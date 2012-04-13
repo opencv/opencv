@@ -34,7 +34,7 @@ Calculates a histogram of a set of arrays.
 
     :param ranges: Array of the ``dims``  arrays of the histogram bin boundaries in each dimension. When the histogram is uniform ( ``uniform`` =true), then for each dimension  ``i``  it is enough to specify the lower (inclusive) boundary  :math:`L_0`  of the 0-th histogram bin and the upper (exclusive) boundary  :math:`U_{\texttt{histSize}[i]-1}`  for the last histogram bin  ``histSize[i]-1`` . That is, in case of a uniform histogram each of  ``ranges[i]``  is an array of 2 elements. When the histogram is not uniform ( ``uniform=false`` ), then each of  ``ranges[i]``  contains  ``histSize[i]+1``  elements:  :math:`L_0, U_0=L_1, U_1=L_2, ..., U_{\texttt{histSize[i]}-2}=L_{\texttt{histSize[i]}-1}, U_{\texttt{histSize[i]}-1}` . The array elements, that are not between  :math:`L_0`  and  :math:`U_{\texttt{histSize[i]}-1}` , are not counted in the histogram.
 
-    :param uniform: Flag indicatinfg whether the histogram is uniform or not (see above).
+    :param uniform: Flag indicating whether the histogram is uniform or not (see above).
 
     :param accumulate: Accumulation flag. If it is set, the histogram is not cleared in the beginning when it is allocated. This feature enables you to compute a single histogram from several sets of arrays, or to update the histogram in time.
 
@@ -123,7 +123,7 @@ Calculates the back projection of a histogram.
 
     :param hist: Input histogram that can be dense or sparse.
 
-    :param backProject: Destination back projection aray that is a single-channel array of the same size and depth as  ``arrays[0]`` .
+    :param backProject: Destination back projection array that is a single-channel array of the same size and depth as  ``arrays[0]`` .
     
     :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :ocv:func:`calcHist` .
     

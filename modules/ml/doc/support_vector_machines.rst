@@ -121,7 +121,7 @@ The constructors.
 
     :param coef0: Parameter ``coef0`` of a kernel function (POLY / SIGMOID).
 
-    :param Cvalue: Parameter ``C`` of a SVM optimiazation problem (C_SVC / EPS_SVR / NU_SVR).
+    :param Cvalue: Parameter ``C`` of a SVM optimization problem (C_SVC / EPS_SVR / NU_SVR).
 
     :param nu: Parameter :math:`\nu` of a SVM optimization problem (NU_SVC / ONE_CLASS / NU_SVR).
 

@@ -74,7 +74,7 @@ using
 :ocv:funcx:`PCA::operator()` or similar technique, and train a smaller network
 on only essential features.
 
-Another MPL feature is an inability to handle categorical
+Another MLP feature is an inability to handle categorical
 data as is. However, there is a workaround. If a certain feature in the
 input or output (in case of ``n`` -class classifier for
 :math:`n>2` ) layer is categorical and can take

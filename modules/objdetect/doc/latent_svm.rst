@@ -248,7 +248,7 @@ and corresponding confidence levels.
     
 LatentSvmDetector::getClassNames
 --------------------------------
-Return the class (model) names that were passed in constructor or method ``load`` or extructed from models filenames in those methods.
+Return the class (model) names that were passed in constructor or method ``load`` or extracted from models filenames in those methods.
 
 .. ocv:function:: const vector<string>& LatentSvmDetector::getClassNames() const
 

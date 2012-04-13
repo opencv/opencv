@@ -24,7 +24,7 @@ Creates a trackbar and attaches it to the specified window.
 
     :param userdata: User data that is passed as is to the callback. It can be used to handle trackbar events without using global variables.
 
-The function ``createTrackbar`` creates a trackbar (a slider or range control) with the specified name and range, assigns a variable ``value`` to be a position syncronized with the trackbar and specifies the callback function ``onChange`` to be called on the trackbar position change. The created trackbar is displayed in the specified window ``winname``.
+The function ``createTrackbar`` creates a trackbar (a slider or range control) with the specified name and range, assigns a variable ``value`` to be a position synchronized with the trackbar and specifies the callback function ``onChange`` to be called on the trackbar position change. The created trackbar is displayed in the specified window ``winname``.
 
 .. note::
     

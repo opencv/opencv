@@ -20,7 +20,7 @@ Restores the selected region in an image using the region neighborhood.
 
     :param dst: Output image with the same size and type as  ``src`` .
     
-    :param inpaintRadius: Radius of a circlular neighborhood of each point inpainted that is considered by the algorithm.
+    :param inpaintRadius: Radius of a circular neighborhood of each point inpainted that is considered by the algorithm.
 
     :param flags: Inpainting method that could be one of the following:
 

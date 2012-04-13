@@ -19,10 +19,10 @@ Training the GBT model
 ----------------------
 
 Gradient Boosted Trees model represents an ensemble of single regression trees
-built in a greedy fashion. Training procedure is an iterative proccess
+built in a greedy fashion. Training procedure is an iterative process
 similar to the numerical optimization via the gradient descent method. Summary loss
 on the training set depends only on the current model predictions for the
-thaining samples,  in other words
+training samples,  in other words
 :math:`\sum^N_{i=1}L(y_i, F(x_i)) \equiv \mathcal{L}(F(x_1), F(x_2), ... , F(x_N))
 \equiv \mathcal{L}(F)`. And the :math:`\mathcal{L}(F)`
 gradient can be computed as follows:
@@ -37,7 +37,7 @@ antigradient vector components. Step length is computed corresponding to the
 loss function and separately for every region determined by the tree leaf. It
 can be eliminated by changing values of the leaves  directly.
 
-See below the main scheme of the training proccess:
+See below the main scheme of the training process:
 
 #.
     Find the best constant model.
@@ -86,7 +86,7 @@ As a result, you get the following model:
 .. math:: f(x) = f_0 + \nu\cdot\sum^M_{i=1}T_i(x) ,
 
 where :math:`f_0` is the initial guess (the best constant model) and :math:`\nu`
-is a regularization parameter from the interval :math:`(0,1]`, futher called
+is a regularization parameter from the interval :math:`(0,1]`, further called
 *shrinkage*.
 
 .. _Predicting with GBT:
@@ -94,7 +94,7 @@ is a regularization parameter from the interval :math:`(0,1]`, futher called
 Predicting with the GBT Model
 -----------------------------
 
-To get the GBT model prediciton, you need to compute the sum of responses of
+To get the GBT model prediction, you need to compute the sum of responses of
 all the trees in the ensemble. For regression problems, it is the answer.
 For classification problems, the result is :math:`\arg\max_{i=1..K}(f_i(x))`.
 
@@ -108,7 +108,7 @@ CvGBTreesParams
 
 GBT training parameters.
 
-The structure contains parameters for each sigle decision tree in the ensemble,
+The structure contains parameters for each single decision tree in the ensemble,
 as well as the whole model characteristics. The structure is derived from
 :ocv:class:`CvDTreeParams` but not all of the decision tree parameters are supported:
 cross-validation, pruning, and class priorities are not used.
@@ -205,10 +205,10 @@ Predicts a response for an input sample.
 .. ocv:pyfunction:: cv2.GBTrees.predict(sample[, missing[, slice[, k]]]) -> retval
 
    :param sample: Input feature vector that has the same format as every training set
-    element. If not all the variables were actualy used during training,
+    element. If not all the variables were actually used during training,
     ``sample`` contains forged values at the appropriate places.
     
-   :param missing: Missing values mask, which is a dimentional matrix of the same size as
+   :param missing: Missing values mask, which is a dimensional matrix of the same size as
     ``sample`` having the ``CV_8U`` type. ``1`` corresponds to the missing value
     in the same position in the ``sample`` vector. If there are no missing values
     in the feature vector, an empty matrix can be passed instead of the missing mask.
@@ -225,7 +225,7 @@ Predicts a response for an input sample.
     
    :param k: Number of tree ensembles built in case of the classification problem
     (see :ref:`Training GBT`). Use this
-    parameter to change the ouput to sum of the trees' predictions in the
+    parameter to change the output to sum of the trees' predictions in the
     ``k``-th ensemble only. To get the total GBT model prediction, ``k`` value
     must be -1. For regression problems, ``k`` is also equal to -1.
  

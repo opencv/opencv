@@ -79,7 +79,7 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
             * **OPTFLOW_FARNEBACK_GAUSSIAN** Use the Gaussian  :math:`\texttt{winsize}\times\texttt{winsize}`  filter instead of a box filter of the same size for optical flow estimation. Usually, this option gives z more accurate flow than with a box filter, at the cost of lower speed. Normally,  ``winsize``  for a Gaussian window should be set to a larger value to achieve the same level of robustness.
 
-The function finds an optical flow for each ``prevImg`` pixel using the [Farneback2003]_ alorithm so that
+The function finds an optical flow for each ``prevImg`` pixel using the [Farneback2003]_ algorithm so that
 
 .. math::
 
@@ -98,7 +98,7 @@ Computes an optimal affine transformation between two 2D point sets.
 
     :param dst: Second input 2D point set of the same size and the same type as ``A``, or another image.
 
-    :param fullAffine: If true, the function finds an optimal affine transformation with no additional resrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
+    :param fullAffine: If true, the function finds an optimal affine transformation with no additional restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
 
 The function finds an optimal affine transform *[A|b]* (a ``2 x 3`` floating-point matrix) that approximates best the affine transformation between:
 
@@ -182,9 +182,9 @@ Calculates a gradient orientation of a motion history image.
 
     :param orientation: Output motion gradient orientation image that has the same type and the same size as  ``mhi`` . Each pixel of the image is a motion orientation, from 0 to 360 degrees.
 
-    :param delta1: Minimal (or maximal) allowed difference between  ``mhi``  values within a pixel neighorhood.
+    :param delta1: Minimal (or maximal) allowed difference between  ``mhi``  values within a pixel neighborhood.
     
-    :param delta2: Maximal (or minimal) allowed difference between  ``mhi``  values within a pixel neighorhood. That is, the function finds the minimum ( :math:`m(x,y)` ) and maximum ( :math:`M(x,y)` )  ``mhi``  values over  :math:`3 \times 3`  neighborhood of each pixel and marks the motion orientation at  :math:`(x, y)`  as valid only if
+    :param delta2: Maximal (or minimal) allowed difference between  ``mhi``  values within a pixel neighborhood. That is, the function finds the minimum ( :math:`m(x,y)` ) and maximum ( :math:`M(x,y)` )  ``mhi``  values over  :math:`3 \times 3`  neighborhood of each pixel and marks the motion orientation at  :math:`(x, y)`  as valid only if
 
         .. math::
 
@@ -282,7 +282,7 @@ Finds an object center, size, and orientation.
 
     :returns: (in old interfaces) Number of iterations CAMSHIFT took to converge 
 
-The function implements the CAMSHIFT object tracking algrorithm
+The function implements the CAMSHIFT object tracking algorithm
 [Bradski98]_.
 First, it finds an object center using
 :ocv:func:`meanShift` and then adjusts the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size, and orientation. The next position of the search window can be obtained with ``RotatedRect::boundingRect()`` .
@@ -448,16 +448,16 @@ BackgroundSubtractorMOG
 
 .. ocv:class:: BackgroundSubtractorMOG : public BackgroundSubtractor
 
-Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
-The class implements the algorithm described in P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+The class implements the algorithm described in P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
 
 
 
 
 BackgroundSubtractorMOG::BackgroundSubtractorMOG
 ------------------------------------------------
-The contructors
+The constructors.
 
 .. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG()
 
@@ -489,7 +489,7 @@ Parameters are the same as in :ocv:funcx:`BackgroundSubtractor::operator()`
 
 BackgroundSubtractorMOG2
 ------------------------
-Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
 .. ocv:class:: BackgroundSubtractorMOG2 : public BackgroundSubtractor
 
@@ -497,7 +497,7 @@ Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
     .. ocv:member:: int nmixtures
     
-        Maximum allowed number of mixture comonents. Actual number is determined dynamically per pixel.
+        Maximum allowed number of mixture components. Actual number is determined dynamically per pixel.
 
     .. ocv:member:: float backgroundRatio
     
