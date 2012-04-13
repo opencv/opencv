@@ -858,7 +858,7 @@ The function dilates the source image using the specified structuring element th
 
     \texttt{dst} (x,y) =  \max _{(x',y'):  \, \texttt{element} (x',y') \ne0 } \texttt{src} (x+x',y+y')
 
-The function supports the in-place mode. Dilation can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
+The function supports the in-place mode. Dilation can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently. The function is parallelized with the TBB library.
 
 .. seealso::
 
@@ -898,7 +898,7 @@ The function erodes the source image using the specified structuring element tha
 
     \texttt{dst} (x,y) =  \min _{(x',y'):  \, \texttt{element} (x',y') \ne0 } \texttt{src} (x+x',y+y')
 
-The function supports the in-place mode. Erosion can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
+The function supports the in-place mode. Erosion can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently. The function is parallelized with the TBB library.
 
 .. seealso::
 
@@ -1233,7 +1233,7 @@ Morphological gradient:
 
     \texttt{dst} = \mathrm{blackhat} ( \texttt{src} , \texttt{element} )= \mathrm{close} ( \texttt{src} , \texttt{element} )- \texttt{src}
 
-Any of the operations can be done in-place. In case of multi-channel images, each channel is processed independently.
+Any of the operations can be done in-place. In case of multi-channel images, each channel is processed independently. The function is parallelized with the TBB library.
 
 .. seealso::
 

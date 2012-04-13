@@ -616,7 +616,7 @@ Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
     :param flags: Method for solving a PnP problem (see  :ocv:func:`solvePnP` ).
 
 The function estimates an object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, that is, the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
-:ocv:func:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers.
+:ocv:func:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers. The function is parallelized with the TBB library.
 
 
 
@@ -1127,8 +1127,7 @@ Computes disparity using the BM algorithm for a rectified stereo pair.
 
     :param state: The pre-initialized ``CvStereoBMState`` structure in the case of the old API.
 
-The method executes the BM algorithm on a rectified stereo pair. See the ``stereo_match.cpp`` OpenCV sample on how to prepare images and call the method. Note that the method is not constant, thus you should not use the same ``StereoBM`` instance from within different threads simultaneously.
-
+The method executes the BM algorithm on a rectified stereo pair. See the ``stereo_match.cpp`` OpenCV sample on how to prepare images and call the method. Note that the method is not constant, thus you should not use the same ``StereoBM`` instance from within different threads simultaneously. The function is parallelized with the TBB library.
 
 
 

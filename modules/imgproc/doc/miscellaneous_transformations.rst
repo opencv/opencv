@@ -436,7 +436,7 @@ The functions ``distanceTransform`` calculate the approximate or precise
 distance from every binary image pixel to the nearest zero pixel.
 For zero image pixels, the distance will obviously be zero.
 
-When ``maskSize == CV_DIST_MASK_PRECISE`` and ``distanceType == CV_DIST_L2`` , the function runs the algorithm described in [Felzenszwalb04]_.
+When ``maskSize == CV_DIST_MASK_PRECISE`` and ``distanceType == CV_DIST_L2`` , the function runs the algorithm described in [Felzenszwalb04]_. This algorithm is parallelized with the TBB library.
 
 In other cases, the algorithm
 [Borgefors86]_
@@ -706,7 +706,9 @@ Also, the special value ``THRESH_OTSU`` may be combined with
 one of the above values. In this case, the function determines the optimal threshold
 value using the Otsu's algorithm and uses it instead of the specified ``thresh`` .
 The function returns the computed threshold value.
-Currently, the Otsu's method is implemented only for 8-bit images.
+Currently, the Otsu's method is implemented only for 8-bit images. 
+
+The function is parallelized with the TBB library except the Otsu's method.
 
 .. image:: pics/threshold.png
 

@@ -238,6 +238,9 @@ Trains/updates MLP.
 
 This method applies the specified training algorithm to computing/adjusting the network weights. It returns the number of done iterations.
 
+The RPROP training algorithm is parallelized with the TBB library.
+
+
 CvANN_MLP::predict
 ------------------
 Predicts responses for input samples.

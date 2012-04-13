@@ -239,6 +239,8 @@ There are four ``train`` methods in :ocv:class:`CvDTree`:
 
 * The **last** method ``train`` is mostly used for building tree ensembles. It takes the pre-constructed :ocv:class:`CvDTreeTrainData` instance and an optional subset of the training set. The indices in ``subsampleIdx`` are counted relatively to the ``_sample_idx`` , passed to the ``CvDTreeTrainData`` constructor. For example, if ``_sample_idx=[1, 5, 7, 100]`` , then ``subsampleIdx=[0,3]`` means that the samples ``[1, 100]`` of the original training set are used.
 
+The function is parallelized with the TBB library.
+
 
 
 CvDTree::predict

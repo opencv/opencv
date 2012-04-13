@@ -79,6 +79,8 @@ In case of C++ interface you can use output pointers to empty matrices and the f
 
 If only a single input vector is passed, all output matrices are optional and the predicted value is returned by the method.
 
+The function is parallelized with the TBB library.
+
 CvKNearest::get_max_k
 ---------------------
 Returns the number of maximum neighbors that may be passed to the method :ocv:func:`CvKNearest::find_nearest`.

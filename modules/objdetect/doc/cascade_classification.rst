@@ -213,6 +213,7 @@ Detects objects of different sizes in the input image. The detected objects are 
 
     :param maxSize: Maximum possible object size. Objects larger than that are ignored.
 
+The function is parallelized with the TBB library.
 
 
 CascadeClassifier::setImage

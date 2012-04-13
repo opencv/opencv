@@ -112,6 +112,8 @@ Trains the Random Trees model.
 
 The method :ocv:func:`CvRTrees::train` is very similar to the method :ocv:func:`CvDTree::train` and follows the generic method :ocv:func:`CvStatModel::train` conventions. All the parameters specific to the algorithm training are passed as a :ocv:class:`CvRTParams` instance. The estimate of the training error (``oob-error``) is stored in the protected class member ``oob_error``.
 
+The function is parallelized with the TBB library.
+
 CvRTrees::predict
 -----------------
 Predicts the output for an input sample.

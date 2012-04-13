@@ -242,6 +242,9 @@ Predicts the response for input sample(s).
 
 If you pass one sample then prediction result is returned. If you want to get responses for several samples then you should pass the ``results`` matrix where prediction results will be stored.
 
+The function is parallelized with the TBB library.
+
+
 CvSVM::get_default_grid
 -----------------------
 Generates a grid for SVM parameters.

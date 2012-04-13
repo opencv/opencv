@@ -41,8 +41,7 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
     :param minEigThreshold: The algorithm computes a minimum eigen value of a 2x2 normal matrix of optical flow equations (this matrix is called a spatial gradient matrix in [Bouguet00]_) divided by number of pixels in a window. If this value is less then ``minEigThreshold`` then a corresponding feature is filtered out and its flow is not computed. So it allows to remove bad points earlier and speed up the computation.
             
-The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See
-[Bouguet00]_.
+The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See [Bouguet00]_. The function is parallelized with the TBB library.
 
 
 
