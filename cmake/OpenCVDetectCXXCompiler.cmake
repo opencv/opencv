@@ -5,6 +5,14 @@ if(CMAKE_CL_64)
     set(MSVC64 1)
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_COMPILER_IS_GNUCXX 1)
+endif()
+
+if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_COMPILER_IS_GNUC 1) 
+endif()
+
 # ----------------------------------------------------------------------------
 # Detect Intel ICC compiler -- for -fPIC in 3rdparty ( UNIX ONLY ):
 #  see  include/opencv/cxtypes.h file for related   ICC & CV_ICC defines.
