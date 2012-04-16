@@ -188,7 +188,7 @@ if(ANDROID)
       add_custom_command(
                 OUTPUT "${OpenCV_BINARY_DIR}/${f}"
                 COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/android/${f}" "${OpenCV_BINARY_DIR}/${f}"
-                DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/android/${f}"
+                MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/android/${f}"
                 COMMENT "Generating ${f}"
                 )
 
@@ -224,7 +224,7 @@ if(ANDROID)
     add_custom_command(
         OUTPUT ${lib_target_files}
         COMMAND ${CMAKE_COMMAND} -E remove ${lib_target_files}
-        COMMAND ${ANDROID_EXECUTABLE} --silent create lib-project --path \"${OpenCV_BINARY_DIR}\" --target \"${lib_target_sdk_target}\" --name OpenCV --package org.opencv 2>\"${CMAKE_CURRENT_BINARY_DIR}/create_lib_project.log\"
+        COMMAND ${ANDROID_EXECUTABLE} --silent update lib-project --path \"${OpenCV_BINARY_DIR}\" --target \"${lib_target_sdk_target}\"
         MAIN_DEPENDENCY "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
         DEPENDS ${lib_proj_files}
         COMMENT "Generating OpenCV Android library project. SDK target: ${lib_target_sdk_target}"

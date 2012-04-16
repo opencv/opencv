@@ -293,7 +293,7 @@ macro(add_android_project target path)
 
     # put the final .apk to the OpenCV's bin folder
     add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")
-    if(INSTALL_ANDROID_EXAMPLES AND target MATCHES "^example-")
+    if(INSTALL_ANDROID_EXAMPLES AND "${target}" MATCHES "^example-")
       install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "bin" COMPONENT main)
     endif()
   endif()
