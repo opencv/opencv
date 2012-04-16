@@ -124,7 +124,7 @@ OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON 
 OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON   IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF WIN32 )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF  IF (UNIX AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF  IF (NOT ANDROID AND NOT IOS) )
 
 # OpenCV build components
 # ===================================================
@@ -572,26 +572,36 @@ endif()
 set(HAVE_CLP FALSE)
 
 if(WITH_CLP)
-  PKG_CHECK_MODULES(CLP clp)
-  if(CLP_FOUND)
-    set(HAVE_CLP TRUE)
-    if(NOT ${CLP_INCLUDE_DIRS} STREQUAL "")
-      ocv_include_directories(${CLP_INCLUDE_DIRS})
+
+  if(UNIX)
+    PKG_CHECK_MODULES(CLP clp)
+    if(CLP_FOUND)
+      set(HAVE_CLP TRUE)
+      if(NOT ${CLP_INCLUDE_DIRS} STREQUAL "")
+        ocv_include_directories(${CLP_INCLUDE_DIRS})
+      endif()
+      link_directories(${CLP_LIBRARY_DIRS})
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CLP_LIBRARIES})
     endif()
-    link_directories(${CLP_LIBRARY_DIRS})
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CLP_LIBRARIES})
-  else()
+  endif()
+  
+  if(NOT CLP_FOUND)
     find_path(CLP_INCLUDE_PATH "coin"
               PATHS "/usr/local/include" "/usr/include" "/opt/include"
               DOC "The path to Clp headers")
     if(CLP_INCLUDE_PATH)
-      ocv_include_directories(${CLP_INCLUDE_PATH})
+      ocv_include_directories(${CLP_INCLUDE_PATH} "${CLP_INCLUDE_PATH}/coin")
       set(CLP_LIBRARY_DIR "${CLP_INCLUDE_PATH}/../lib" CACHE PATH "Full path of Clp library directory")
       link_directories(${CLP_LIBRARY_DIR})
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} Clp CoinUtils bz2 z lapack blas m)
+      if(UNIX)
+        set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} Clp CoinUtils bz2 z lapack blas m)
+      else()
+        set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} libClp libCoinUtils)
+      endif()
       set(HAVE_CLP TRUE)
     endif()  
   endif()
+  
 endif()
 
 ################## Extra HighGUI libs on Windows ###################

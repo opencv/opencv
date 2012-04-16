@@ -46,13 +46,21 @@
 #include "opencv2/videostab/ring_buffer.hpp"
 
 #ifdef HAVE_CLP
-#include "coin/ClpSimplex.hpp"
-#include "coin/ClpPresolve.hpp"
-#include "coin/ClpPrimalColumnSteepest.hpp"
-#include "coin/ClpDualRowSteepest.hpp"
+  #include "ClpSimplex.hpp"
+  #include "ClpPresolve.hpp"
+  #include "ClpPrimalColumnSteepest.hpp"
+  #include "ClpDualRowSteepest.hpp"    
+  #define INF 1e10
 #endif
 
-#define INF 1e10
+// Clp replaces min and max with ?: globally, we can't use std::min and std::max in case 
+// when HAVE_CLP is true, otherwise we create the defines by ourselves
+#ifndef min
+  #define min(a,b) std::min(a,b)
+#endif
+#ifndef max
+  #define max(a,b) std::max(a,b)
+#endif
 
 using namespace std;
 
@@ -62,8 +70,7 @@ namespace videostab
 {
 
 void MotionStabilizationPipeline::stabilize(
-        int size, const vector<Mat> &motions, pair<int,int> range,
-        Mat *stabilizationMotions)
+        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions)
 {
     vector<Mat> updatedMotions(motions.size());
     for (size_t i = 0; i < motions.size(); ++i)
@@ -118,8 +125,8 @@ Mat GaussianMotionFilter::stabilize(int idx, const vector<Mat> &motions, pair<in
     const Mat &cur = at(idx, motions);
     Mat res = Mat::zeros(cur.size(), cur.type());
     float sum = 0.f;
-    int iMin = std::max(idx - radius_, range.first);
-    int iMax = std::min(idx + radius_, range.second);
+    int iMin = max(idx - radius_, range.first);
+    int iMax = min(idx + radius_, range.second);
     for (int i = iMin; i <= iMax; ++i)
     {
         res += weight_[radius_ + i - idx] * getMotion(idx, i, motions);
@@ -266,7 +273,7 @@ LpMotionStabilizer::LpMotionStabilizer(MotionModel model)
 {
     setMotionModel(model);
     setFrameSize(Size(0,0));
-    setTrimRatio(0.1);
+    setTrimRatio(0.1f);
     setWeight1(1);
     setWeight2(10);
     setWeight3(100);
@@ -284,8 +291,7 @@ void LpMotionStabilizer::stabilize(int, const vector<Mat>&, pair<int,int>, Mat*)
 #else
 
 void LpMotionStabilizer::stabilize(
-        int size, const vector<Mat> &motions, pair<int,int> range,
-        Mat *stabilizationMotions)
+        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions)
 {
     CV_Assert(model_ == MM_LINEAR_SIMILARITY);
 
@@ -662,7 +668,7 @@ void LpMotionStabilizer::stabilize(
     CoinPackedMatrix A(true, &rows_[0], &cols_[0], &elems_[0], elems_.size());
     A.setDimensions(nrows, ncols);
 
-    ClpSimplex model;
+    ClpSimplex model(false);
     model.loadProblem(A, &collb_[0], &colub_[0], &obj_[0], &rowlb_[0], &rowub_[0]);
 
     ClpDualRowSteepest dualSteep(1);

@@ -447,7 +447,7 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
         ninliers = 0;
         rmse = 0;
 
-        Point2d p0, p1;
+        Point2f p0, p1;
         float x, y, z;
 
         for (size_t i  = 0; i < pointsGood_.size(); ++i)
