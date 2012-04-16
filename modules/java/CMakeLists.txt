@@ -183,6 +183,7 @@ if(ANDROID)
 
   # manifest, jni, Eclipse project
   file(GLOB_RECURSE android_lib_project_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/android/" "${CMAKE_CURRENT_SOURCE_DIR}/android/*")
+  list(REMOVE_ITEM android_lib_project_files "${ANDROID_MANIFEST_FILE}")
   foreach(f ${android_lib_project_files})
     if(NOT f MATCHES "\\.svn")
       add_custom_command(
@@ -222,10 +223,12 @@ if(ANDROID)
     android_get_compatible_target(lib_target_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET})
 
     add_custom_command(
-        OUTPUT ${lib_target_files}
+        OUTPUT ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
         COMMAND ${CMAKE_COMMAND} -E remove ${lib_target_files}
-        COMMAND ${ANDROID_EXECUTABLE} --silent update lib-project --path \"${OpenCV_BINARY_DIR}\" --target \"${lib_target_sdk_target}\"
-        MAIN_DEPENDENCY "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/android/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
+        COMMAND ${ANDROID_EXECUTABLE} --silent create lib-project --path \"${OpenCV_BINARY_DIR}\" --target \"${lib_target_sdk_target}\" --name OpenCV --package org.opencv 2>\"${CMAKE_CURRENT_BINARY_DIR}/create_lib_project.log\"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/android/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
+        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/android/${ANDROID_MANIFEST_FILE}"
         DEPENDS ${lib_proj_files}
         COMMENT "Generating OpenCV Android library project. SDK target: ${lib_target_sdk_target}"
         )
@@ -247,9 +250,7 @@ if(ANDROID)
       list(APPEND lib_target_files "${OpenCV_BINARY_DIR}/bin/classes.jar")
     endif()
 
-    add_custom_target(${lib_target}
-        SOURCES ${lib_proj_files} ${lib_target_files}
-        )
+    add_custom_target(${lib_target} SOURCES ${lib_proj_files} ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}")
 
     add_dependencies(${lib_target} ${api_target})
     add_dependencies(${the_module} ${lib_target})
