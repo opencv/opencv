@@ -45,45 +45,45 @@ using namespace std;
 using namespace cv;
 
 static
-void defaultDistribs( Mat& means, vector<Mat>& covs )
+void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
 {
     float mp0[] = {0.0f, 0.0f}, cp0[] = {0.67f, 0.0f, 0.0f, 0.67f};
     float mp1[] = {5.0f, 0.0f}, cp1[] = {1.0f, 0.0f, 0.0f, 1.0f};
     float mp2[] = {1.0f, 5.0f}, cp2[] = {1.0f, 0.0f, 0.0f, 1.0f};
-    means.create(3, 2, CV_32FC1);
+    means.create(3, 2, type);
     Mat m0( 1, 2, CV_32FC1, mp0 ), c0( 2, 2, CV_32FC1, cp0 );
     Mat m1( 1, 2, CV_32FC1, mp1 ), c1( 2, 2, CV_32FC1, cp1 );
     Mat m2( 1, 2, CV_32FC1, mp2 ), c2( 2, 2, CV_32FC1, cp2 );
     means.resize(3), covs.resize(3);
 
     Mat mr0 = means.row(0);
-    m0.copyTo(mr0);
-    c0.copyTo(covs[0]);
+    m0.convertTo(mr0, type);
+    c0.convertTo(covs[0], type);
 
     Mat mr1 = means.row(1);
-    m1.copyTo(mr1);
-    c1.copyTo(covs[1]);
+    m1.convertTo(mr1, type);
+    c1.convertTo(covs[1], type);
 
     Mat mr2 = means.row(2);
-    m2.copyTo(mr2);
-    c2.copyTo(covs[2]);
+    m2.convertTo(mr2, type);
+    c2.convertTo(covs[2], type);
 }
 
 // generate points sets by normal distributions
 static
-void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int labelType )
+void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int dataType, int labelType )
 {
     vector<int>::const_iterator sit = sizes.begin();
     int total = 0;
     for( ; sit != sizes.end(); ++sit )
         total += *sit;
-    assert( _means.rows == (int)sizes.size() && covs.size() == sizes.size() );
-    assert( !data.empty() && data.rows == total );
-    assert( data.type() == CV_32FC1 );
-    
+    CV_Assert( _means.rows == (int)sizes.size() && covs.size() == sizes.size() );
+    CV_Assert( !data.empty() && data.rows == total );
+    CV_Assert( data.type() == dataType );
+
     labels.create( data.rows, 1, labelType );
 
-    randn( data, Scalar::all(0.0), Scalar::all(1.0) );
+    randn( data, Scalar::all(-1.0), Scalar::all(1.0) );
     vector<Mat> means(sizes.size());
     for(int i = 0; i < _means.rows; i++)
         means[i] = _means.row(i);
@@ -98,8 +98,8 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
         assert( cit->rows == data.cols && cit->cols == data.cols );
         for( int i = bi; i < ei; i++, p++ )
         {
-            Mat r(1, data.cols, CV_32FC1, data.ptr<float>(i));
-            r =  r * (*cit) + *mit; 
+            Mat r = data.row(i);
+            r =  r * (*cit) + *mit;
             if( labelType == CV_32FC1 )
                 labels.at<float>(p, 0) = (float)l;
             else if( labelType == CV_32SC1 )
@@ -129,7 +129,7 @@ int maxIdx( const vector<int>& count )
 }
 
 static
-bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& labelsMap )
+bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& labelsMap, bool checkClusterUniq=true )
 {
     size_t total = 0, nclusters = sizes.size();
     for(size_t i = 0; i < sizes.size(); i++)
@@ -158,21 +158,25 @@ bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& lab
         startIndex += sizes[clusterIndex];
 
         int cls = maxIdx( count );
-        CV_Assert( !buzy[cls] );
+        CV_Assert( !checkClusterUniq || !buzy[cls] );
 
         labelsMap[clusterIndex] = cls;
 
         buzy[cls] = true;
     }
-    for(size_t i = 0; i < buzy.size(); i++)
-        if(!buzy[i])
-            return false;
+
+    if(checkClusterUniq)
+    {
+        for(size_t i = 0; i < buzy.size(); i++)
+            if(!buzy[i])
+                return false;
+    }
 
     return true;
 }
 
 static
-bool calcErr( const Mat& labels, const Mat& origLabels, const vector<int>& sizes, float& err, bool labelsEquivalent = true )
+bool calcErr( const Mat& labels, const Mat& origLabels, const vector<int>& sizes, float& err, bool labelsEquivalent, bool checkClusterUniq )
 {
     err = 0;
     CV_Assert( !labels.empty() && !origLabels.empty() );
@@ -186,7 +190,7 @@ bool calcErr( const Mat& labels, const Mat& origLabels, const vector<int>& sizes
     bool isFlt = labels.type() == CV_32FC1;
     if( !labelsEquivalent )
     {
-        if( !getLabelsMap( labels, sizes, labelsMap ) )
+        if( !getLabelsMap( labels, sizes, labelsMap, checkClusterUniq ) )
             return false;
 
         for( int i = 0; i < labels.rows; i++ )
@@ -234,7 +238,7 @@ int CV_CvEMTest::runCase( int caseIndex, const CvEMParams& params,
     em.train( trainData, Mat(), params, &labels );
 
     // check train error
-    if( !calcErr( labels, trainLabels, sizes, err , false ) )
+    if( !calcErr( labels, trainLabels, sizes, err , false, false ) )
     {
         ts->printf( cvtest::TS::LOG, "Case index %i : Bad output labels.\n", caseIndex );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
@@ -252,7 +256,7 @@ int CV_CvEMTest::runCase( int caseIndex, const CvEMParams& params,
         Mat sample = testData.row(i);
         labels.at<int>(i,0) = (int)em.predict( sample, 0 );
     }
-    if( !calcErr( labels, testLabels, sizes, err, false ) )
+    if( !calcErr( labels, testLabels, sizes, err, false, false ) )
     {
         ts->printf( cvtest::TS::LOG, "Case index %i : Bad output labels.\n", caseIndex );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
@@ -279,11 +283,11 @@ void CV_CvEMTest::run( int /*start_from*/ )
     // train data
     Mat trainData( pointsCount, 2, CV_32FC1 ), trainLabels;
     vector<int> sizes( sizesArr, sizesArr + sizeof(sizesArr) / sizeof(sizesArr[0]) );
-    generateData( trainData, trainLabels, sizes, means, covs, CV_32SC1 );
+    generateData( trainData, trainLabels, sizes, means, covs, CV_32FC1, CV_32SC1 );
 
     // test data
     Mat testData( pointsCount, 2, CV_32FC1 ), testLabels;
-    generateData( testData, testLabels, sizes, means, covs, CV_32SC1 );
+    generateData( testData, testLabels, sizes, means, covs, CV_32FC1, CV_32SC1 );
 
     CvEMParams params;
     params.nclusters = 3;
