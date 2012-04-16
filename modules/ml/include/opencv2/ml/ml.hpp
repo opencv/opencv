@@ -563,7 +563,7 @@ public:
     enum {COV_MAT_SPHERICAL=0, COV_MAT_DIAGONAL=1, COV_MAT_GENERIC=2, COV_MAT_DEFAULT=COV_MAT_DIAGONAL};
 
     // Default parameters
-    enum {DEFAULT_NCLUSTERS=10, DEFAULT_MAX_ITERS=100};
+    enum {DEFAULT_NCLUSTERS=5, DEFAULT_MAX_ITERS=100};
     
     // The initial step
     enum {START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0};
@@ -635,7 +635,6 @@ protected:
     Mat trainProbs;
     Mat trainLogLikelihoods;
     Mat trainLabels;
-    Mat trainCounts;
 
     CV_PROP Mat weights;
     CV_PROP Mat means;
@@ -2035,7 +2034,7 @@ public:
 
     // returns:
     // 0 - OK  
-    // 1 - file can not be opened or is not correct
+    // -1 - file can not be opened or is not correct
     int read_csv( const char* filename );
 
     const CvMat* get_values() const;
