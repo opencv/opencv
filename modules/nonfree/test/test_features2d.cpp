@@ -1066,7 +1066,7 @@ TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
     matcher->knnMatch(descQ, descT, matches, k);
 
     //cout << "\nBest " << k << " matches to " << descT.rows << " train desc-s." << endl;
-    ASSERT_EQ(descQ.rows, matches.size());
+    ASSERT_EQ(descQ.rows, static_cast<int>(matches.size()));
     for(size_t i = 0; i<matches.size(); i++)
     {
         //cout << "\nmatches[" << i << "].size()==" << matches[i].size() << endl;
