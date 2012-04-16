@@ -1070,7 +1070,7 @@ TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
     for(size_t i = 0; i<matches.size(); i++)
     {
         //cout << "\nmatches[" << i << "].size()==" << matches[i].size() << endl;
-        ASSERT_GT(min(k, descT.rows), static_cast<int>(matches[i].size()));
+        ASSERT_GE(min(k, descT.rows), static_cast<int>(matches[i].size()));
         for(size_t j = 0; j<matches[i].size(); j++)
         {
             //cout << "\t" << matches[i][j].queryIdx << " -> " << matches[i][j].trainIdx << endl;
