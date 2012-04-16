@@ -61,7 +61,7 @@ public:
     // assumes that [0, size-1) is in or equals to [range.first, range.second)
     virtual void stabilize(
             int size, const std::vector<Mat> &motions, std::pair<int,int> range,
-            Mat *stabilizationMotions) const = 0;
+            Mat *stabilizationMotions) = 0;
 };
 
 class CV_EXPORTS MotionStabilizationPipeline : public IMotionStabilizer
@@ -72,7 +72,7 @@ public:
 
     virtual void stabilize(
             int size, const std::vector<Mat> &motions, std::pair<int,int> range,
-            Mat *stabilizationMotions) const;
+            Mat *stabilizationMotions);
 
 private:
     std::vector<Ptr<IMotionStabilizer> > stabilizers_;
@@ -84,11 +84,11 @@ public:
     virtual ~MotionFilterBase() {}
 
     virtual Mat stabilize(
-            int idx, const std::vector<Mat> &motions, std::pair<int,int> range) const = 0;
+            int idx, const std::vector<Mat> &motions, std::pair<int,int> range) = 0;
 
     virtual void stabilize(
             int size, const std::vector<Mat> &motions, std::pair<int,int> range,
-            Mat *stabilizationMotions) const;
+            Mat *stabilizationMotions);
 };
 
 class CV_EXPORTS GaussianMotionFilter : public MotionFilterBase
@@ -101,7 +101,7 @@ public:
     float stdev() const { return stdev_; }
 
     virtual Mat stabilize(
-            int idx, const std::vector<Mat> &motions, std::pair<int,int> range) const;
+            int idx, const std::vector<Mat> &motions, std::pair<int,int> range);
 
 private:
     int radius_;
@@ -112,17 +112,49 @@ private:
 class CV_EXPORTS LpMotionStabilizer : public IMotionStabilizer
 {
 public:
-    LpMotionStabilizer(MotionModel model = LINEAR_SIMILARITY);
+    LpMotionStabilizer(MotionModel model = MM_LINEAR_SIMILARITY);
 
     void setMotionModel(MotionModel val) { model_ = val; }
     MotionModel motionModel() const { return model_; }
 
+    void setFrameSize(Size val) { frameSize_ = val; }
+    Size frameSize() const { return frameSize_; }
+
+    void setTrimRatio(float val) { trimRatio_ = val; }
+    float trimRatio() const { return trimRatio_; }
+
+    void setWeight1(float val) { w1_ = val; }
+    float weight1() const { return w1_; }
+
+    void setWeight2(float val) { w2_ = val; }
+    float weight2() const { return w2_; }
+
+    void setWeight3(float val) { w3_ = val; }
+    float weight3() const { return w3_; }
+
+    void setWeight4(float val) { w4_ = val; }
+    float weight4() const { return w4_; }
+
     virtual void stabilize(
             int size, const std::vector<Mat> &motions, std::pair<int,int> range,
-            Mat *stabilizationMotions) const;
+            Mat *stabilizationMotions);
 
 private:
     MotionModel model_;
+    Size frameSize_;
+    float trimRatio_;
+    float w1_, w2_, w3_, w4_;
+
+    std::vector<double> obj_, collb_, colub_;
+    std::vector<int> rows_, cols_;
+    std::vector<double> elems_, rowlb_, rowub_;
+
+    void set(int row, int col, double coef)
+    {
+        rows_.push_back(row);
+        cols_.push_back(col);
+        elems_.push_back(coef);
+    }
 };
 
 CV_EXPORTS Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio);

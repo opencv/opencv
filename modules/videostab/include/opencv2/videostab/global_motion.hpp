@@ -57,16 +57,16 @@ namespace videostab
 
 enum MotionModel
 {
-    TRANSLATION = 0,
-    TRANSLATION_AND_SCALE = 1,
-    LINEAR_SIMILARITY = 2,
-    AFFINE = 3,
-    HOMOGRAPHY = 4,
-    UNKNOWN = 5
+    MM_TRANSLATION = 0,
+    MM_TRANSLATION_AND_SCALE = 1,
+    MM_LINEAR_SIMILARITY = 2,
+    MM_AFFINE = 3,
+    MM_HOMOGRAPHY = 4,
+    MM_UNKNOWN = 5
 };
 
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
-        int npoints, Point2f *points0, Point2f *points1, int model = AFFINE, float *rmse = 0);
+        int npoints, Point2f *points0, Point2f *points1, int model = MM_AFFINE, float *rmse = 0);
 
 struct CV_EXPORTS RansacParams
 {
@@ -81,14 +81,14 @@ struct CV_EXPORTS RansacParams
 
     static RansacParams default2dMotion(MotionModel model)
     {
-        CV_Assert(model < UNKNOWN);
-        if (model == TRANSLATION)
+        CV_Assert(model < MM_UNKNOWN);
+        if (model == MM_TRANSLATION)
             return RansacParams(1, 0.5f, 0.5f, 0.99f);
-        if (model == TRANSLATION_AND_SCALE)
+        if (model == MM_TRANSLATION_AND_SCALE)
             return RansacParams(2, 0.5f, 0.5f, 0.99f);
-        if (model == LINEAR_SIMILARITY)
+        if (model == MM_LINEAR_SIMILARITY)
             return RansacParams(2, 0.5f, 0.5f, 0.99f);
-        if (model == AFFINE)
+        if (model == MM_AFFINE)
             return RansacParams(3, 0.5f, 0.5f, 0.99f);
         return RansacParams(4, 0.5f, 0.5f, 0.99f);
     }
@@ -96,13 +96,13 @@ struct CV_EXPORTS RansacParams
 
 CV_EXPORTS Mat estimateGlobalMotionRobust(
         const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
-        int model = AFFINE, const RansacParams &params = RansacParams::default2dMotion(AFFINE),
+        int model = MM_AFFINE, const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE),
         float *rmse = 0, int *ninliers = 0);
 
 class CV_EXPORTS GlobalMotionEstimatorBase
 {
 public:
-    GlobalMotionEstimatorBase() : motionModel_(UNKNOWN) {}
+    GlobalMotionEstimatorBase() : motionModel_(MM_UNKNOWN) {}
     virtual ~GlobalMotionEstimatorBase() {}
 
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
@@ -138,7 +138,7 @@ private:
 class CV_EXPORTS PyrLkRobustMotionEstimator : public GlobalMotionEstimatorBase
 {
 public:
-    PyrLkRobustMotionEstimator(MotionModel model = AFFINE);
+    PyrLkRobustMotionEstimator(MotionModel model = MM_AFFINE);
 
     void setDetector(Ptr<FeatureDetector> val) { detector_ = val; }
     Ptr<FeatureDetector> detector() const { return detector_; }

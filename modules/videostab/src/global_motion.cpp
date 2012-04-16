@@ -228,7 +228,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
 Mat estimateGlobalMotionLeastSquares(
         int npoints, Point2f *points0, Point2f *points1, int model, float *rmse)
 {
-    CV_Assert(model <= AFFINE);
+    CV_Assert(model <= MM_AFFINE);
 
     typedef Mat (*Impl)(int, Point2f*, Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
@@ -244,7 +244,7 @@ Mat estimateGlobalMotionRobust(
         const vector<Point2f> &points0, const vector<Point2f> &points1, int model,
         const RansacParams &params, float *rmse, int *ninliers)
 {
-    CV_Assert(model <= AFFINE);
+    CV_Assert(model <= MM_AFFINE);
     CV_Assert(points0.size() == points1.size());
 
     const int npoints = static_cast<int>(points0.size());
@@ -436,7 +436,7 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
     int ninliers;
     Mat_<float> M;
 
-    if (motionModel_ != HOMOGRAPHY)
+    if (motionModel_ != MM_HOMOGRAPHY)
         M = estimateGlobalMotionRobust(
                 pointsPrevGood_, pointsGood_, motionModel_, ransacParams_, &rmse, &ninliers);
     else

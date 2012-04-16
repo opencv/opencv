@@ -375,7 +375,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 
         frame1_ = at(neighbor, *frames_);        
 
-        if (motionModel_ != HOMOGRAPHY)
+        if (motionModel_ != MM_HOMOGRAPHY)
             warpAffine(
                     frame1_, transformedFrame1_, motion1to0(Rect(0,0,3,2)), frame1_.size(),
                     INTER_LINEAR, borderMode_);
@@ -388,7 +388,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 
         // warp mask
 
-        if (motionModel_ != HOMOGRAPHY)
+        if (motionModel_ != MM_HOMOGRAPHY)
             warpAffine(
                     mask1_, transformedMask1_, motion1to0(Rect(0,0,3,2)), mask1_.size(),
                     INTER_NEAREST);

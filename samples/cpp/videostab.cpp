@@ -86,6 +86,18 @@ void printHelp()
             "  --stdev=(<float_number>|auto)\n"
             "      Set smoothing weights standard deviation. The default is auto\n"
             "      (i.e. sqrt(radius)).\n"
+            "  -lp, --lp-stab=(yes|no)\n"
+            "      Turn on/off linear programming based stabilization method.\n"
+            "  --lp-trim-ratio=(<float_number>|auto)\n"
+            "      Trimming ratio used in linear programming based method.\n"
+            "  --lp-w1=(<float_number>|1)\n"
+            "      1st derivative weight. The default is 1.\n"
+            "  --lp-w2=(<float_number>|10)\n"
+            "      2nd derivative weight. The default is 10.\n"
+            "  --lp-w3=(<float_number>|100)\n"
+            "      3rd derivative weight. The default is 100.\n"
+            "  --lp-w4=(<float_number>|100)\n"
+            "      Non-translation motion components weight. The default is 100.\n\n"
             "  --deblur=(yes|no)\n"
             "      Do deblurring.\n"
             "  --deblur-sens=<float_number>\n"
@@ -160,6 +172,12 @@ int main(int argc, const char **argv)
                 "{ lm | load-motions | no | }"
                 "{ r | radius | 15 | }"
                 "{ | stdev | auto | }"
+                "{ lp | lp-stab | no | }"
+                "{ | lp-trim-ratio | auto | }"
+                "{ | lp-w1 | 1 | }"
+                "{ | lp-w2 | 10 | }"
+                "{ | lp-w3 | 100 | }"
+                "{ | lp-w4 | 100 | }"
                 "{ | deblur | no | }"
                 "{ | deblur-sens | 0.1 | }"
                 "{ et | est-trim | yes | }"
@@ -194,19 +212,37 @@ int main(int argc, const char **argv)
         {
             printHelp();
             return 0;
-        }               
+        }
+
+        string inputPath = arg("1");
+        if (inputPath.empty()) throw runtime_error("specify video file path");
+
+        VideoFileSource *source = new VideoFileSource(inputPath);
+        cout << "frame count (rough): " << source->count() << endl;
+        if (arg("fps") == "auto") outputFps = source->fps();  else outputFps = argd("fps");
 
         StabilizerBase *stabilizer;
 
         bool isTwoPass =
-                arg("est-trim") == "yes" || arg("wobble-suppress") == "yes";
+                arg("est-trim") == "yes" || arg("wobble-suppress") == "yes" || arg("lp-stab") == "yes";
 
         if (isTwoPass)
         {
             TwoPassStabilizer *twoPassStabilizer = new TwoPassStabilizer();
             stabilizer = twoPassStabilizer;
             twoPassStabilizer->setEstimateTrimRatio(arg("est-trim") == "yes");
-            if (arg("stdev") == "auto")
+            if (arg("lp-stab") == "yes")
+            {
+                LpMotionStabilizer *stab = new LpMotionStabilizer();
+                stab->setFrameSize(Size(source->width(), source->height()));
+                stab->setTrimRatio(arg("lp-trim-ratio") == "auto" ? argf("trim-ratio") : argf("lp-trim-ratio"));
+                stab->setWeight1(argf("lp-w1"));
+                stab->setWeight2(argf("lp-w2"));
+                stab->setWeight3(argf("lp-w3"));
+                stab->setWeight4(argf("lp-w4"));
+                twoPassStabilizer->setMotionStabilizer(stab);
+            }
+            else if (arg("stdev") == "auto")
                 twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius")));
             else
                 twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius"), argf("stdev")));
@@ -219,15 +255,15 @@ int main(int argc, const char **argv)
                 PyrLkRobustMotionEstimator *est = 0;
 
                 if (arg("ws-model") == "transl")
-                    est = new PyrLkRobustMotionEstimator(TRANSLATION);
+                    est = new PyrLkRobustMotionEstimator(MM_TRANSLATION);
                 else if (arg("ws-model") == "transl_and_scale")
-                    est = new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE);
+                    est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
                 else if (arg("ws-model") == "linear_sim")
-                    est = new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY);
+                    est = new PyrLkRobustMotionEstimator(MM_LINEAR_SIMILARITY);
                 else if (arg("ws-model") == "affine")
-                    est = new PyrLkRobustMotionEstimator(AFFINE);
+                    est = new PyrLkRobustMotionEstimator(MM_AFFINE);
                 else if (arg("ws-model") == "homography")
-                    est = new PyrLkRobustMotionEstimator(HOMOGRAPHY);
+                    est = new PyrLkRobustMotionEstimator(MM_HOMOGRAPHY);
                 else
                 {
                     delete est;
@@ -266,28 +302,22 @@ int main(int argc, const char **argv)
             else
                 onePassStabilizer->setMotionFilter(new GaussianMotionFilter(argi("radius"), argf("stdev")));
         }
-        stabilizedFrames = dynamic_cast<IFrameSource*>(stabilizer);
 
-        string inputPath = arg("1");
-        if (inputPath.empty()) throw runtime_error("specify video file path");
-
-        VideoFileSource *source = new VideoFileSource(inputPath);
-        cout << "frame count (rough): " << source->count() << endl;
-        if (arg("fps") == "auto") outputFps = source->fps();  else outputFps = argd("fps");
         stabilizer->setFrameSource(source);
+        stabilizedFrames = dynamic_cast<IFrameSource*>(stabilizer);
 
         PyrLkRobustMotionEstimator *est = 0;
 
         if (arg("model") == "transl")
-            est = new PyrLkRobustMotionEstimator(TRANSLATION);
+            est = new PyrLkRobustMotionEstimator(MM_TRANSLATION);
         else if (arg("model") == "transl_and_scale")
-            est = new PyrLkRobustMotionEstimator(TRANSLATION_AND_SCALE);
+            est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
         else if (arg("model") == "linear_sim")
-            est = new PyrLkRobustMotionEstimator(LINEAR_SIMILARITY);
+            est = new PyrLkRobustMotionEstimator(MM_LINEAR_SIMILARITY);
         else if (arg("model") == "affine")
-            est = new PyrLkRobustMotionEstimator(AFFINE);
+            est = new PyrLkRobustMotionEstimator(MM_AFFINE);
         else if (arg("model") == "homography")
-            est = new PyrLkRobustMotionEstimator(HOMOGRAPHY);
+            est = new PyrLkRobustMotionEstimator(MM_HOMOGRAPHY);
         else
         {
             delete est;

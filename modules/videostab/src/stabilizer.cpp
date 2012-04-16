@@ -194,7 +194,7 @@ void StabilizerBase::stabilizeFrame()
 
     // apply stabilization transformation
 
-    if (motionEstimator_->motionModel() != HOMOGRAPHY)
+    if (motionEstimator_->motionModel() != MM_HOMOGRAPHY)
         warpAffine(
                 preProcessedFrame_, at(curStabilizedPos_, stabilizedFrames_),
                 stabilizationMotion(Rect(0,0,3,2)), frameSize_, INTER_LINEAR, borderMode_);
@@ -205,7 +205,7 @@ void StabilizerBase::stabilizeFrame()
 
     if (doInpainting_)
     {
-        if (motionEstimator_->motionModel() != HOMOGRAPHY)
+        if (motionEstimator_->motionModel() != MM_HOMOGRAPHY)
             warpAffine(
                     frameMask_, at(curStabilizedPos_, stabilizedMasks_),
                     stabilizationMotion(Rect(0,0,3,2)), frameSize_, INTER_NEAREST);

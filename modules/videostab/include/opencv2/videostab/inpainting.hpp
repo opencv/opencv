@@ -59,7 +59,7 @@ class CV_EXPORTS InpainterBase
 {
 public:
     InpainterBase()
-        : radius_(0), motionModel_(UNKNOWN), frames_(0), motions_(0),
+        : radius_(0), motionModel_(MM_UNKNOWN), frames_(0), motions_(0),
           stabilizedFrames_(0), stabilizationMotions_(0) {}
 
     virtual ~InpainterBase() {}

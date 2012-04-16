@@ -47,7 +47,12 @@
 
 #ifdef HAVE_CLP
 #include "coin/ClpSimplex.hpp"
+#include "coin/ClpPresolve.hpp"
+#include "coin/ClpPrimalColumnSteepest.hpp"
+#include "coin/ClpDualRowSteepest.hpp"
 #endif
+
+#define INF 1e10
 
 using namespace std;
 
@@ -58,7 +63,7 @@ namespace videostab
 
 void MotionStabilizationPipeline::stabilize(
         int size, const vector<Mat> &motions, pair<int,int> range,
-        Mat *stabilizationMotions) const
+        Mat *stabilizationMotions)
 {
     vector<Mat> updatedMotions(motions.size());
     for (size_t i = 0; i < motions.size(); ++i)
@@ -87,7 +92,7 @@ void MotionStabilizationPipeline::stabilize(
 
 
 void MotionFilterBase::stabilize(
-        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions) const
+        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions)
 {
     for (int i = 0; i < size; ++i)
         stabilizationMotions[i] = stabilize(i, motions, range);
@@ -108,7 +113,7 @@ void GaussianMotionFilter::setParams(int radius, float stdev)
 }
 
 
-Mat GaussianMotionFilter::stabilize(int idx, const vector<Mat> &motions, pair<int,int> range) const
+Mat GaussianMotionFilter::stabilize(int idx, const vector<Mat> &motions, pair<int,int> range)
 {
     const Mat &cur = at(idx, motions);
     Mat res = Mat::zeros(cur.size(), cur.type());
@@ -260,23 +265,449 @@ float estimateOptimalTrimRatio(const Mat &M, Size size)
 LpMotionStabilizer::LpMotionStabilizer(MotionModel model)
 {
     setMotionModel(model);
+    setFrameSize(Size(0,0));
+    setTrimRatio(0.1);
+    setWeight1(1);
+    setWeight2(10);
+    setWeight3(100);
+    setWeight4(100);
 }
 
 
 #ifndef HAVE_CLP
+
 void LpMotionStabilizer::stabilize(int, const vector<Mat>&, pair<int,int>, Mat*) const
 {
     CV_Error(CV_StsError, "The library is built without Clp support");
 }
+
 #else
+
 void LpMotionStabilizer::stabilize(
         int size, const vector<Mat> &motions, pair<int,int> range,
-        Mat *stabilizationMotions) const
+        Mat *stabilizationMotions)
 {
-    // TODO implement
-    CV_Error(CV_StsNotImplemented, "LpMotionStabilizer::stabilize");
+    CV_Assert(model_ == MM_LINEAR_SIMILARITY);
+
+    int N = size;
+    const vector<Mat> &M = motions;
+    Mat *S = stabilizationMotions;
+
+    double w = frameSize_.width, h = frameSize_.height;
+    double tw = w * trimRatio_, th = h * trimRatio_;
+
+    int ncols = 4*N + 6*(N-1) + 6*(N-2) + 6*(N-3);
+    int nrows = 8*N + 2*6*(N-1) + 2*6*(N-2) + 2*6*(N-3);
+
+    obj_.assign(ncols, 0);
+    collb_.assign(ncols, -INF);
+    colub_.assign(ncols, INF);
+    int c = 4*N;
+
+    // for each slack variable e[t] (error bound)
+    for (int t = 0; t < N-1; ++t, c += 6)
+    {
+        // e[t](0,0)
+        obj_[c] = w4_*w1_;
+        collb_[c] = 0;
+
+        // e[t](0,1)
+        obj_[c+1] = w4_*w1_;
+        collb_[c+1] = 0;
+
+        // e[t](0,2)
+        obj_[c+2] = w1_;
+        collb_[c+2] = 0;
+
+        // e[t](1,0)
+        obj_[c+3] = w4_*w1_;
+        collb_[c+3] = 0;
+
+        // e[t](1,1)
+        obj_[c+4] = w4_*w1_;
+        collb_[c+4] = 0;
+
+        // e[t](1,2)
+        obj_[c+5] = w1_;
+        collb_[c+5] = 0;
+    }
+    for (int t = 0; t < N-2; ++t, c += 6)
+    {
+        // e[t](0,0)
+        obj_[c] = w4_*w2_;
+        collb_[c] = 0;
+
+        // e[t](0,1)
+        obj_[c+1] = w4_*w2_;
+        collb_[c+1] = 0;
+
+        // e[t](0,2)
+        obj_[c+2] = w2_;
+        collb_[c+2] = 0;
+
+        // e[t](1,0)
+        obj_[c+3] = w4_*w2_;
+        collb_[c+3] = 0;
+
+        // e[t](1,1)
+        obj_[c+4] = w4_*w2_;
+        collb_[c+4] = 0;
+
+        // e[t](1,2)
+        obj_[c+5] = w2_;
+        collb_[c+5] = 0;
+    }
+    for (int t = 0; t < N-3; ++t, c += 6)
+    {
+        // e[t](0,0)
+        obj_[c] = w4_*w3_;
+        collb_[c] = 0;
+
+        // e[t](0,1)
+        obj_[c+1] = w4_*w3_;
+        collb_[c+1] = 0;
+
+        // e[t](0,2)
+        obj_[c+2] = w3_;
+        collb_[c+2] = 0;
+
+        // e[t](1,0)
+        obj_[c+3] = w4_*w3_;
+        collb_[c+3] = 0;
+
+        // e[t](1,1)
+        obj_[c+4] = w4_*w3_;
+        collb_[c+4] = 0;
+
+        // e[t](1,2)
+        obj_[c+5] = w3_;
+        collb_[c+5] = 0;
+    }
+
+    elems_.clear();
+    rowlb_.assign(nrows, -INF);
+    rowub_.assign(nrows, INF);
+
+    vector<CoinShallowPackedVector> packedRows;
+    packedRows.reserve(nrows);
+
+    int r = 0;
+
+    // frame corners
+    const Point2d pt[] = {Point2d(0,0), Point2d(w,0), Point2d(w,h), Point2d(0,h)};
+
+    // for each frame
+    for (int t = 0; t < N; ++t)
+    {
+        c = 4*t;
+
+        // for each frame corner
+        for (int i = 0; i < 4; ++i, r += 2)
+        {
+            set(r, c, pt[i].x); set(r, c+1, pt[i].y); set(r, c+2, 1);
+            set(r+1, c, pt[i].y); set(r+1, c+1, -pt[i].x); set(r+1, c+3, 1);
+            rowlb_[r] = pt[i].x-tw; rowub_[r] = pt[i].x+tw;
+            rowlb_[r+1] = pt[i].y-th; rowub_[r+1] = pt[i].y+th;
+        }
+    }
+
+    // for each S[t+1]M[t] - S[t] - e[t] <= 0 condition
+    for (int t = 0; t < N-1; ++t, r += 6)
+    {
+        Mat_<float> M0 = at(t,M);
+
+        c = 4*t;
+        set(r, c, -1);
+        set(r+1, c+1, -1);
+        set(r+2, c+2, -1);
+        set(r+3, c+1, 1);
+        set(r+4, c, -1);
+        set(r+5, c+3, -1);
+
+        c = 4*(t+1);
+        set(r, c, M0(0,0)); set(r, c+1, M0(1,0));
+        set(r+1, c, M0(0,1)); set(r+1, c+1, M0(1,1));
+        set(r+2, c, M0(0,2)); set(r+2, c+1, M0(1,2)); set(r+2, c+2, 1);
+        set(r+3, c, M0(1,0)); set(r+3, c+1, -M0(0,0));
+        set(r+4, c, M0(1,1)); set(r+4, c+1, -M0(0,1));
+        set(r+5, c, M0(1,2)); set(r+5, c+1, -M0(0,2)); set(r+5, c+3, 1);
+
+        c = 4*N + 6*t;
+        for (int i = 0; i < 6; ++i)
+            set(r+i, c+i, -1);
+
+        rowub_[r] = 0;
+        rowub_[r+1] = 0;
+        rowub_[r+2] = 0;
+        rowub_[r+3] = 0;
+        rowub_[r+4] = 0;
+        rowub_[r+5] = 0;
+    }
+
+    // for each 0 <= S[t+1]M[t] - S[t] + e[t] condition
+    for (int t = 0; t < N-1; ++t, r += 6)
+    {
+        Mat_<float> M0 = at(t,M);
+
+        c = 4*t;
+        set(r, c, -1);
+        set(r+1, c+1, -1);
+        set(r+2, c+2, -1);
+        set(r+3, c+1, 1);
+        set(r+4, c, -1);
+        set(r+5, c+3, -1);
+
+        c = 4*(t+1);
+        set(r, c, M0(0,0)); set(r, c+1, M0(1,0));
+        set(r+1, c, M0(0,1)); set(r+1, c+1, M0(1,1));
+        set(r+2, c, M0(0,2)); set(r+2, c+1, M0(1,2)); set(r+2, c+2, 1);
+        set(r+3, c, M0(1,0)); set(r+3, c+1, -M0(0,0));
+        set(r+4, c, M0(1,1)); set(r+4, c+1, -M0(0,1));
+        set(r+5, c, M0(1,2)); set(r+5, c+1, -M0(0,2)); set(r+5, c+3, 1);
+
+        c = 4*N + 6*t;
+        for (int i = 0; i < 6; ++i)
+            set(r+i, c+i, 1);
+
+        rowlb_[r] = 0;
+        rowlb_[r+1] = 0;
+        rowlb_[r+2] = 0;
+        rowlb_[r+3] = 0;
+        rowlb_[r+4] = 0;
+        rowlb_[r+5] = 0;
+    }
+
+    // for each S[t+2]M[t+1] - S[t+1]*(I+M[t]) + S[t] - e[t] <= 0 condition
+    for (int t = 0; t < N-2; ++t, r += 6)
+    {
+        Mat_<float> M0 = at(t,M), M1 = at(t+1,M);
+
+        c = 4*t;
+        set(r, c, 1);
+        set(r+1, c+1, 1);
+        set(r+2, c+2, 1);
+        set(r+3, c+1, -1);
+        set(r+4, c, 1);
+        set(r+5, c+3, 1);
+
+        c = 4*(t+1);
+        set(r, c, -M0(0,0)-1); set(r, c+1, -M0(1,0));
+        set(r+1, c, -M0(0,1)); set(r+1, c+1, -M0(1,1)-1);
+        set(r+2, c, -M0(0,2)); set(r+2, c+1, -M0(1,2)); set(r+2, c+2, -2);
+        set(r+3, c, -M0(1,0)); set(r+3, c+1, M0(0,0)+1);
+        set(r+4, c, -M0(1,1)-1); set(r+4, c+1, M0(0,1));
+        set(r+5, c, -M0(1,2)); set(r+5, c+1, M0(0,2)); set(r+5, c+3, -2);
+
+        c = 4*(t+2);
+        set(r, c, M1(0,0)); set(r, c+1, M1(1,0));
+        set(r+1, c, M1(0,1)); set(r+1, c+1, M1(1,1));
+        set(r+2, c, M1(0,2)); set(r+2, c+1, M1(1,2)); set(r+2, c+2, 1);
+        set(r+3, c, M1(1,0)); set(r+3, c+1, -M1(0,0));
+        set(r+4, c, M1(1,1)); set(r+4, c+1, -M1(0,1));
+        set(r+5, c, M1(1,2)); set(r+5, c+1, -M1(0,2)); set(r+5, c+3, 1);
+
+        c = 4*N + 6*(N-1) + 6*t;
+        for (int i = 0; i < 6; ++i)
+            set(r+i, c+i, -1);
+
+        rowub_[r] = 0;
+        rowub_[r+1] = 0;
+        rowub_[r+2] = 0;
+        rowub_[r+3] = 0;
+        rowub_[r+4] = 0;
+        rowub_[r+5] = 0;
+    }
+
+    // for each 0 <= S[t+2]M[t+1]] - S[t+1]*(I+M[t]) + S[t] + e[t] condition
+    for (int t = 0; t < N-2; ++t, r += 6)
+    {
+        Mat_<float> M0 = at(t,M), M1 = at(t+1,M);
+
+        c = 4*t;
+        set(r, c, 1);
+        set(r+1, c+1, 1);
+        set(r+2, c+2, 1);
+        set(r+3, c+1, -1);
+        set(r+4, c, 1);
+        set(r+5, c+3, 1);
+
+        c = 4*(t+1);
+        set(r, c, -M0(0,0)-1); set(r, c+1, -M0(1,0));
+        set(r+1, c, -M0(0,1)); set(r+1, c+1, -M0(1,1)-1);
+        set(r+2, c, -M0(0,2)); set(r+2, c+1, -M0(1,2)); set(r+2, c+2, -2);
+        set(r+3, c, -M0(1,0)); set(r+3, c+1, M0(0,0)+1);
+        set(r+4, c, -M0(1,1)-1); set(r+4, c+1, M0(0,1));
+        set(r+5, c, -M0(1,2)); set(r+5, c+1, M0(0,2)); set(r+5, c+3, -2);
+
+        c = 4*(t+2);
+        set(r, c, M1(0,0)); set(r, c+1, M1(1,0));
+        set(r+1, c, M1(0,1)); set(r+1, c+1, M1(1,1));
+        set(r+2, c, M1(0,2)); set(r+2, c+1, M1(1,2)); set(r+2, c+2, 1);
+        set(r+3, c, M1(1,0)); set(r+3, c+1, -M1(0,0));
+        set(r+4, c, M1(1,1)); set(r+4, c+1, -M1(0,1));
+        set(r+5, c, M1(1,2)); set(r+5, c+1, -M1(0,2)); set(r+5, c+3, 1);
+
+        c = 4*N + 6*(N-1) + 6*t;
+        for (int i = 0; i < 6; ++i)
+            set(r+i, c+i, 1);
+
+        rowlb_[r] = 0;
+        rowlb_[r+1] = 0;
+        rowlb_[r+2] = 0;
+        rowlb_[r+3] = 0;
+        rowlb_[r+4] = 0;
+        rowlb_[r+5] = 0;
+    }
+
+    // for each S[t+3]M[t+2] - S[t+2]*(I+2M[t+1]) + S[t+1]*(2*I+M[t]) - S[t] - e[t] <= 0 condition
+    for (int t = 0; t < N-3; ++t, r += 6)
+    {
+        Mat_<float> M0 = at(t,M), M1 = at(t+1,M), M2 = at(t+2,M);
+
+        c = 4*t;
+        set(r, c, -1);
+        set(r+1, c+1, -1);
+        set(r+2, c+2, -1);
+        set(r+3, c+1, 1);
+        set(r+4, c, -1);
+        set(r+5, c+3, -1);
+
+        c = 4*(t+1);
+        set(r, c, M0(0,0)+2); set(r, c+1, M0(1,0));
+        set(r+1, c, M0(0,1)); set(r+1, c+1, M0(1,1)+2);
+        set(r+2, c, M0(0,2)); set(r+2, c+1, M0(1,2)); set(r+2, c+2, 3);
+        set(r+3, c, M0(1,0)); set(r+3, c+1, -M0(0,0)-2);
+        set(r+4, c, M0(1,1)+2); set(r+4, c+1, -M0(0,1));
+        set(r+5, c, M0(1,2)); set(r+5, c+1, -M0(0,2)); set(r+5, c+3, 3);
+
+        c = 4*(t+2);
+        set(r, c, -2*M1(0,0)-1); set(r, c+1, -2*M1(1,0));
+        set(r+1, c, -2*M1(0,1)); set(r+1, c+1, -2*M1(1,1)-1);
+        set(r+2, c, -2*M1(0,2)); set(r+2, c+1, -2*M1(1,2)); set(r+2, c+2, -3);
+        set(r+3, c, -2*M1(1,0)); set(r+3, c+1, 2*M1(0,0)+1);
+        set(r+4, c, -2*M1(1,1)-1); set(r+4, c+1, 2*M1(0,1));
+        set(r+5, c, -2*M1(1,2)); set(r+5, c+1, 2*M1(0,2)); set(r+5, c+3, -3);
+
+        c = 4*(t+3);
+        set(r, c, M2(0,0)); set(r, c+1, M2(1,0));
+        set(r+1, c, M2(0,1)); set(r+1, c+1, M2(1,1));
+        set(r+2, c, M2(0,2)); set(r+2, c+1, M2(1,2)); set(r+2, c+2, 1);
+        set(r+3, c, M2(1,0)); set(r+3, c+1, -M2(0,0));
+        set(r+4, c, M2(1,1)); set(r+4, c+1, -M2(0,1));
+        set(r+5, c, M2(1,2)); set(r+5, c+1, -M2(0,2)); set(r+5, c+3, 1);
+
+        c = 4*N + 6*(N-1) + 6*(N-2) + 6*t;
+        for (int i = 0; i < 6; ++i)
+            set(r+i, c+i, -1);
+
+        rowub_[r] = 0;
+        rowub_[r+1] = 0;
+        rowub_[r+2] = 0;
+        rowub_[r+3] = 0;
+        rowub_[r+4] = 0;
+        rowub_[r+5] = 0;
+    }
+
+    // for each 0 <= S[t+3]M[t+2] - S[t+2]*(I+2M[t+1]) + S[t+1]*(2*I+M[t]) + e[t] condition
+    for (int t = 0; t < N-3; ++t, r += 6)
+    {
+        Mat_<float> M0 = at(t,M), M1 = at(t+1,M), M2 = at(t+2,M);
+
+        c = 4*t;
+        set(r, c, -1);
+        set(r+1, c+1, -1);
+        set(r+2, c+2, -1);
+        set(r+3, c+1, 1);
+        set(r+4, c, -1);
+        set(r+5, c+3, -1);
+
+        c = 4*(t+1);
+        set(r, c, M0(0,0)+2); set(r, c+1, M0(1,0));
+        set(r+1, c, M0(0,1)); set(r+1, c+1, M0(1,1)+2);
+        set(r+2, c, M0(0,2)); set(r+2, c+1, M0(1,2)); set(r+2, c+2, 3);
+        set(r+3, c, M0(1,0)); set(r+3, c+1, -M0(0,0)-2);
+        set(r+4, c, M0(1,1)+2); set(r+4, c+1, -M0(0,1));
+        set(r+5, c, M0(1,2)); set(r+5, c+1, -M0(0,2)); set(r+5, c+3, 3);
+
+        c = 4*(t+2);
+        set(r, c, -2*M1(0,0)-1); set(r, c+1, -2*M1(1,0));
+        set(r+1, c, -2*M1(0,1)); set(r+1, c+1, -2*M1(1,1)-1);
+        set(r+2, c, -2*M1(0,2)); set(r+2, c+1, -2*M1(1,2)); set(r+2, c+2, -3);
+        set(r+3, c, -2*M1(1,0)); set(r+3, c+1, 2*M1(0,0)+1);
+        set(r+4, c, -2*M1(1,1)-1); set(r+4, c+1, 2*M1(0,1));
+        set(r+5, c, -2*M1(1,2)); set(r+5, c+1, 2*M1(0,2)); set(r+5, c+3, -3);
+
+        c = 4*(t+3);
+        set(r, c, M2(0,0)); set(r, c+1, M2(1,0));
+        set(r+1, c, M2(0,1)); set(r+1, c+1, M2(1,1));
+        set(r+2, c, M2(0,2)); set(r+2, c+1, M2(1,2)); set(r+2, c+2, 1);
+        set(r+3, c, M2(1,0)); set(r+3, c+1, -M2(0,0));
+        set(r+4, c, M2(1,1)); set(r+4, c+1, -M2(0,1));
+        set(r+5, c, M2(1,2)); set(r+5, c+1, -M2(0,2)); set(r+5, c+3, 1);
+
+        c = 4*N + 6*(N-1) + 6*(N-2) + 6*t;
+        for (int i = 0; i < 6; ++i)
+            set(r+i, c+i, 1);
+
+        rowlb_[r] = 0;
+        rowlb_[r+1] = 0;
+        rowlb_[r+2] = 0;
+        rowlb_[r+3] = 0;
+        rowlb_[r+4] = 0;
+        rowlb_[r+5] = 0;
+    }
+
+    // solve
+
+    CoinPackedMatrix A(true, &rows_[0], &cols_[0], &elems_[0], elems_.size());
+    A.setDimensions(nrows, ncols);
+
+    ClpSimplex model;
+    model.loadProblem(A, &collb_[0], &colub_[0], &obj_[0], &rowlb_[0], &rowub_[0]);
+
+    ClpDualRowSteepest dualSteep(1);
+    model.setDualRowPivotAlgorithm(dualSteep);
+
+    ClpPrimalColumnSteepest primalSteep(1);
+    model.setPrimalColumnPivotAlgorithm(primalSteep);
+
+    model.scaling(1);
+
+    ClpPresolve presolveInfo;
+    Ptr<ClpSimplex> presolvedModel = presolveInfo.presolvedModel(model);
+
+    if (!presolvedModel.empty())
+    {
+        presolvedModel->dual();
+        presolveInfo.postsolve(true);
+        model.checkSolution();
+        model.primal(1);
+    }
+    else
+    {
+        model.dual();
+        model.checkSolution();
+        model.primal(1);
+    }
+
+    // save results
+
+    const double *sol = model.getColSolution();
+    c = 0;
+
+    for (int t = 0; t < N; ++t, c += 4)
+    {
+        Mat_<float> S0 = Mat::eye(3, 3, CV_32F);
+        S0(1,1) = S0(0,0) = sol[c];
+        S0(0,1) = sol[c+1];
+        S0(1,0) = -sol[c+1];
+        S0(0,2) = sol[c+2];
+        S0(1,2) = sol[c+3];
+        S[t] = S0;
+    }
 }
-#endif
+
+#endif // #ifndef HAVE_CLP
 
 } // namespace videostab
 } // namespace cv

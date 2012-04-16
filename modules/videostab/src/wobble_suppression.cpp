@@ -54,8 +54,8 @@ namespace videostab
 WobbleSuppressorBase::WobbleSuppressorBase() : motions_(0), stabilizationMotions_(0)
 {
     PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator();
-    est->setMotionModel(HOMOGRAPHY);
-    est->setRansacParams(RansacParams::default2dMotion(HOMOGRAPHY));
+    est->setMotionModel(MM_HOMOGRAPHY);
+    est->setRansacParams(RansacParams::default2dMotion(MM_HOMOGRAPHY));
     setMotionEstimator(est);
 }
 
