@@ -30,7 +30,7 @@ div.documentwrapper {
 }
 
 div.bodywrapper {
-    margin: 0 0 0 230px;
+    margin: 0 0 0 270px;
 }
 
 div.body {
@@ -85,7 +85,7 @@ div.related a {
 
 div.sphinxsidebar {
     word-wrap: break-word;
-    width: 240px;
+    width: 270px;
     {%- if theme_stickysidebar|tobool %}
     top: 30px;
     margin: 0;
