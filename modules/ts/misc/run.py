@@ -756,7 +756,7 @@ if __name__ == "__main__":
     else:
         options.mode = "perf"
     
-    run_args = getRunArgs(args)
+    run_args = getRunArgs(args[1:] or ['.'])
     
     if len(run_args) == 0:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<build_path>"
