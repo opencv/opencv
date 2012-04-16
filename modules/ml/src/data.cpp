@@ -743,7 +743,12 @@ const CvMat* CvMLData::get_var_idx()
 
 void CvMLData::chahge_var_idx( int vi, bool state )
 {
-     CV_FUNCNAME( "CvMLData::get_responses_ptr" );
+    change_var_idx( vi, state );
+}
+
+void CvMLData::change_var_idx( int vi, bool state )
+{
+     CV_FUNCNAME( "CvMLData::change_var_idx" );
     __BEGIN__;
 
     int var_count = 0;

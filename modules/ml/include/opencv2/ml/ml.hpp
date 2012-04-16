@@ -2051,7 +2051,9 @@ public:
     void mix_train_and_test_idx();
     
     const CvMat* get_var_idx();
-    void chahge_var_idx( int vi, bool state ); // state == true to set vi-variable as predictor
+    void chahge_var_idx( int vi, bool state ); // misspelled (saved for back compitability),
+                                               // use change_var_idx
+    void change_var_idx( int vi, bool state ); // state == true to set vi-variable as predictor
 
     const CvMat* get_var_types();
     int get_var_type( int var_idx ) const;
