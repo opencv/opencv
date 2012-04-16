@@ -88,7 +88,7 @@ void calcOpticalFlowLK( const Mat& prev, const Mat& curr, Size winSize, Mat& flo
 
 void calcOpticalFlowBM( const Mat& prev, const Mat& curr, Size bSize, Size shiftSize, Size maxRange, int usePrevious, Mat& flow )
 {
-    Size sz((curr.cols - bSize.width)/shiftSize.width, (curr.rows - bSize.height)/shiftSize.height);
+    Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
     Mat velx(sz, CV_32F), vely(sz, CV_32F);    
 
     CvMat cvvelx = velx;    CvMat cvvely = vely;
