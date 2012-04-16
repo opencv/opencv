@@ -399,7 +399,7 @@ int main(int argc, const char **argv)
         if (arg("output") != "no")
             outputPath = arg("output");
 
-        quietMode = argb("quite");
+        quietMode = argb("quiet");
 
         run();
     }
