@@ -158,8 +158,7 @@ bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& lab
         startIndex += sizes[clusterIndex];
 
         int cls = maxIdx( count );
-        if(checkClusterUniq)
-            CV_Assert( !buzy[cls] );
+        CV_Assert( !checkClusterUniq || !buzy[cls] );
 
         labelsMap[clusterIndex] = cls;
 
@@ -611,8 +610,8 @@ protected:
         RNG rng(0);
         for(size_t i = 0; i < trainSamplesMask.size(); i++)
         {
-            int i1 = rng(trainSamplesMask.size());
-            int i2 = rng(trainSamplesMask.size());
+            int i1 = rng(static_cast<unsigned>(trainSamplesMask.size()));
+            int i2 = rng(static_cast<unsigned>(trainSamplesMask.size()));
             std::swap(trainSamplesMask[i1], trainSamplesMask[i2]);
         }
 
