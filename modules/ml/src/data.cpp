@@ -199,10 +199,7 @@ int CvMLData::read_csv(const char* filename)
         int type;
         token = strtok(buf, str_delimiter);
         if (!token) 
-        {
-             fclose(file);
-             return -1;
-        }
+            break;
         for (int i = 0; i < cols_count-1; i++)
         {
             str_to_flt_elem( token, el_ptr[i], type);
@@ -217,7 +214,7 @@ int CvMLData::read_csv(const char* filename)
         str_to_flt_elem( token, el_ptr[cols_count-1], type);
         var_types_ptr[cols_count-1] |= type;
         cvSeqPush( seq, el_ptr );
-        if( !fgets_chomp( buf, M, file ) || !strchr( buf, delimiter ) )
+        if( !fgets_chomp( buf, M, file ) )
             break;
     }
     fclose(file);
