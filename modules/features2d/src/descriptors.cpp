@@ -96,10 +96,11 @@ void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
 
 Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExtractorType)
 {
-    if( descriptorExtractorType.find("Opponent") == 0)
+    if( descriptorExtractorType.find("Opponent") == 0 )
     {
         size_t pos = string("Opponent").size();
-        return DescriptorExtractor::create(descriptorExtractorType.substr(pos));
+        string type = descriptorExtractorType.substr(pos);
+        return new OpponentColorDescriptorExtractor(DescriptorExtractor::create(type));
     }
     
     return Algorithm::create<DescriptorExtractor>("Feature2D." + descriptorExtractorType);
