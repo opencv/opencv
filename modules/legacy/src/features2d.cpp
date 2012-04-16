@@ -95,7 +95,7 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
     {
         if( _keypoints )
         {
-            CvSURFPoint pt = cvSURFPoint(kpt[i].pt, kpt[i].class_id, cvRound(kpt[i].size));
+            CvSURFPoint pt = cvSURFPoint(kpt[i].pt, kpt[i].class_id, cvRound(kpt[i].size), kpt[i].angle, kpt[i].response);
             cvSeqPush(*_keypoints, &pt);
         }
         if( _descriptors )

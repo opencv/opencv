@@ -239,7 +239,7 @@ class FunctionTests(OpenCVTests):
         a = self.get_sample("samples/c/lena.jpg", 0)
         b = self.get_sample("samples/c/lena.jpg", 0)
         (w,h) = cv.GetSize(a)
-        vel_size = (w - 8, h - 8)
+        vel_size = (w - 8 + 1, h - 8 + 1)
         velx = cv.CreateImage(vel_size, cv.IPL_DEPTH_32F, 1)
         vely = cv.CreateImage(vel_size, cv.IPL_DEPTH_32F, 1)
         cv.CalcOpticalFlowBM(a, b, (8,8), (1,1), (8,8), 0, velx, vely)
