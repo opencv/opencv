@@ -39,7 +39,7 @@ find_host_program(ANDROID_EXECUTABLE
 
 if(ANDROID_EXECUTABLE)
   if(NOT ANDROID_SDK_DETECT_QUIET)
-    message(STATUS "    Found android tool: ${ANDROID_EXECUTABLE}")
+    message(STATUS "Found android tool: ${ANDROID_EXECUTABLE}")
   endif()
 
   get_filename_component(ANDROID_SDK_TOOLS_PATH "${ANDROID_EXECUTABLE}" PATH)
