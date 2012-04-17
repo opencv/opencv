@@ -723,9 +723,9 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
     return static_cast<double>(dts - ic->streams[video_stream]->start_time) * r2d(ic->streams[video_stream]->time_base);
 }
 
-void CvCapture_FFMPEG::seek(int64_t frame_number)
+void CvCapture_FFMPEG::seek(int64_t _frame_number)
 {
-    frame_number = std::min(frame_number, get_total_frames());
+    frame_number = std::min(_frame_number, get_total_frames());
     int64_t dts = dts_to_frame_number(ic->streams[video_stream]->cur_dts);
 
     if (abs(dts - 2 - frame_number) > 16)
