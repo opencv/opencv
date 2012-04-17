@@ -716,53 +716,5 @@ float estimateOptimalTrimRatio(const Mat &M, Size size)
     return r;
 }
 
-
-// TODO should process left open and right open segments?
-void interpolateMotions(vector<Mat> &motions, vector<uchar> &mask)
-{
-    CV_Assert(motions.size() == mask.size() && motions.size() > 0);
-
-    enum { INIT, IN_SEGMENT, LEFT_OPEN } state = mask[0] ? INIT : LEFT_OPEN;
-    int left = -1;
-
-    for (int i = 1; i < static_cast<int>(motions.size()); ++i)
-    {
-        if (state == INIT)
-        {
-            if (!mask[i])
-            {
-                state = IN_SEGMENT;
-                left = i - 1;
-            }
-        }
-        else if (state == IN_SEGMENT)
-        {
-            if (mask[i])
-            {
-                for (int j = left; j < i; ++j)
-                {
-                    Mat_<float> M = Mat::eye(3, 3, CV_32F);
-                    Mat_<float> Ml = motions[left];
-                    Mat_<float> Mr = motions[i];
-
-                    float d1 = j - left;
-                    float d2 = i - j;
-
-                    for (int l = 0; l < 3; ++l)
-                        for (int s = 0; s < 3; ++s)
-                            M(l,s) = (d2*Ml(l,s) + d1*Mr(l,s)) / (d1 + d2);
-
-                    motions[i] = M;
-                    mask[i] = 1;
-                }
-            }
-        }
-        else if (state == LEFT_OPEN)
-        {
-            if (mask[i]) state = INIT;
-        }
-    }
-}
-
 } // namespace videostab
 } // namespace cv
