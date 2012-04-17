@@ -1826,7 +1826,7 @@ public:
     CV_WRAP cv::Mat getWeights() const;
     CV_WRAP cv::Mat getProbs() const;
 
-    CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? likelihood : DBL_MAX; }
+    CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? logLikelihood : DBL_MAX; }
 #endif
 
     CV_WRAP virtual void clear();
@@ -1847,7 +1847,7 @@ protected:
 
     cv::EM emObj;
     cv::Mat probs;
-    double likelihood;
+    double logLikelihood;
 
     CvMat meansHdr;
     std::vector<CvMat> covsHdrs;

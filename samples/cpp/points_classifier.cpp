@@ -478,7 +478,7 @@ void find_decision_boundary_EM()
             for(size_t modelIndex = 0; modelIndex < em_models.size(); modelIndex++)
             {
                 if(em_models[modelIndex].isTrained())
-                    em_models[modelIndex].predict( testSample, noArray(), &logLikelihoods.at<double>(modelIndex) );
+                    logLikelihoods.at<double>(modelIndex) = em_models[modelIndex].predict(testSample)[0];
             }
             Point maxLoc;
             minMaxLoc(logLikelihoods, 0, 0, 0, &maxLoc);

@@ -81,22 +81,22 @@ void EM::clear()
 
     
 bool EM::train(InputArray samples,
+               OutputArray logLikelihoods,
                OutputArray labels,
-               OutputArray probs,
-               OutputArray logLikelihoods)
+               OutputArray probs)
 {
     Mat samplesMat = samples.getMat();
     setTrainData(START_AUTO_STEP, samplesMat, 0, 0, 0, 0);
-    return doTrain(START_AUTO_STEP, labels, probs, logLikelihoods);
+    return doTrain(START_AUTO_STEP, logLikelihoods, labels, probs);
 }
 
 bool EM::trainE(InputArray samples,
                 InputArray _means0,
                 InputArray _covs0,
                 InputArray _weights0,
+                OutputArray logLikelihoods,
                 OutputArray labels,
-                OutputArray probs,
-                OutputArray logLikelihoods)
+                OutputArray probs)
 {
     Mat samplesMat = samples.getMat();
     vector<Mat> covs0;
@@ -106,24 +106,24 @@ bool EM::trainE(InputArray samples,
 
     setTrainData(START_E_STEP, samplesMat, 0, !_means0.empty() ? &means0 : 0,
                  !_covs0.empty() ? &covs0 : 0, _weights0.empty() ? &weights0 : 0);
-    return doTrain(START_E_STEP, labels, probs, logLikelihoods);
+    return doTrain(START_E_STEP, logLikelihoods, labels, probs);
 }
 
 bool EM::trainM(InputArray samples,
                 InputArray _probs0,
+                OutputArray logLikelihoods,
                 OutputArray labels,
-                OutputArray probs,
-                OutputArray logLikelihoods)
+                OutputArray probs)
 {
     Mat samplesMat = samples.getMat();
     Mat probs0 = _probs0.getMat();
     
     setTrainData(START_M_STEP, samplesMat, !_probs0.empty() ? &probs0 : 0, 0, 0, 0);
-    return doTrain(START_M_STEP, labels, probs, logLikelihoods);
+    return doTrain(START_M_STEP, logLikelihoods, labels, probs);
 }
 
     
-int EM::predict(InputArray _sample, OutputArray _probs, double* logLikelihood) const
+Vec2d EM::predict(InputArray _sample, OutputArray _probs) const
 {
     Mat sample = _sample.getMat();
     CV_Assert(isTrained());
@@ -136,16 +136,14 @@ int EM::predict(InputArray _sample, OutputArray _probs, double* logLikelihood) c
         sample = tmp;
     }
 
-    int label;
     Mat probs;
     if( _probs.needed() )
     {
         _probs.create(1, nclusters, CV_64FC1);
         probs = _probs.getMat();
     }
-    computeProbabilities(sample, label, !probs.empty() ? &probs : 0, logLikelihood);
 
-    return label;
+    return computeProbabilities(sample, !probs.empty() ? &probs : 0);
 }
 
 bool EM::isTrained() const
@@ -394,7 +392,7 @@ void EM::computeLogWeightDivDet()
     }
 }
 
-bool EM::doTrain(int startStep, OutputArray labels, OutputArray probs, OutputArray logLikelihoods)
+bool EM::doTrain(int startStep, OutputArray logLikelihoods, OutputArray labels, OutputArray probs)
 {
     int dim = trainSamples.cols;
     // Precompute the empty initial train data in the cases of EM::START_E_STEP and START_AUTO_STEP
@@ -472,7 +470,7 @@ bool EM::doTrain(int startStep, OutputArray labels, OutputArray probs, OutputArr
     return true;
 }
 
-void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, double* logLikelihood) const
+Vec2d EM::computeProbabilities(const Mat& sample, Mat* probs) const
 {
     // L_ik = log(weight_k) - 0.5 * log(|det(cov_k)|) - 0.5 *(x_i - mean_k)' cov_k^(-1) (x_i - mean_k)]
     // q = arg(max_k(L_ik))
@@ -488,7 +486,7 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, double*
     int dim = sample.cols;
 
     Mat L(1, nclusters, CV_64FC1);
-    label = 0;
+    int label = 0;
     for(int clusterIndex = 0; clusterIndex < nclusters; clusterIndex++)
     {
         const Mat centeredSample = sample - means.row(clusterIndex);
@@ -511,9 +509,6 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, double*
             label = clusterIndex;
     }
 
-    if(!probs && !logLikelihood)
-        return;
-
     double maxLVal = L.at<double>(label);
     Mat expL_Lmax = L; // exp(L_ij - L_iq)
     for(int i = 0; i < L.cols; i++)
@@ -528,8 +523,11 @@ void EM::computeProbabilities(const Mat& sample, int& label, Mat* probs, double*
         expL_Lmax.copyTo(*probs);
     }
 
-    if(logLikelihood)
-        *logLikelihood = std::log(expDiffSum)  + maxLVal - 0.5 * dim * CV_LOG2PI;
+    Vec2d res;
+    res[0] = std::log(expDiffSum)  + maxLVal - 0.5 * dim * CV_LOG2PI;
+    res[1] = label;
+
+    return res;
 }
 
 void EM::eStep()
@@ -547,8 +545,9 @@ void EM::eStep()
     for(int sampleIndex = 0; sampleIndex < trainSamples.rows; sampleIndex++)
     {
         Mat sampleProbs = trainProbs.row(sampleIndex);
-        computeProbabilities(trainSamples.row(sampleIndex), trainLabels.at<int>(sampleIndex),
-                             &sampleProbs, &trainLogLikelihoods.at<double>(sampleIndex));
+        Vec2d res = computeProbabilities(trainSamples.row(sampleIndex), &sampleProbs);
+        trainLogLikelihoods.at<double>(sampleIndex) = res[0];
+        trainLabels.at<int>(sampleIndex) = static_cast<int>(res[1]);
     }
 }
 

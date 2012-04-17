@@ -577,27 +577,26 @@ public:
     CV_WRAP virtual void clear();
 
     CV_WRAP virtual bool train(InputArray samples,
+                       OutputArray logLikelihoods=noArray(),
                        OutputArray labels=noArray(),
-                       OutputArray probs=noArray(),
-                       OutputArray logLikelihoods=noArray());
+                       OutputArray probs=noArray());
     
     CV_WRAP virtual bool trainE(InputArray samples,
                         InputArray means0,
                         InputArray covs0=noArray(),
                         InputArray weights0=noArray(),
+                        OutputArray logLikelihoods=noArray(),
                         OutputArray labels=noArray(),
-                        OutputArray probs=noArray(),
-                        OutputArray logLikelihoods=noArray());
+                        OutputArray probs=noArray());
     
     CV_WRAP virtual bool trainM(InputArray samples,
                         InputArray probs0,
+                        OutputArray logLikelihoods=noArray(),
                         OutputArray labels=noArray(),
-                        OutputArray probs=noArray(),
-                        OutputArray logLikelihoods=noArray());
+                        OutputArray probs=noArray());
     
-    CV_WRAP int predict(InputArray sample,
-                OutputArray probs=noArray(),
-                CV_OUT double* logLikelihood=0) const;
+    CV_WRAP Vec2d predict(InputArray sample,
+                OutputArray probs=noArray()) const;
 
     CV_WRAP bool isTrained() const;
 
@@ -613,9 +612,9 @@ protected:
                               const Mat* weights0);
 
     bool doTrain(int startStep,
+                 OutputArray logLikelihoods,
                  OutputArray labels,
-                 OutputArray probs,
-                 OutputArray logLikelihoods);
+                 OutputArray probs);
     virtual void eStep();
     virtual void mStep();
 
@@ -623,7 +622,7 @@ protected:
     void decomposeCovs();
     void computeLogWeightDivDet();
 
-    void computeProbabilities(const Mat& sample, int& label, Mat* probs, double* logLikelihood) const;
+    Vec2d computeProbabilities(const Mat& sample, Mat* probs) const;
 
     // all inner matrices have type CV_64FC1
     CV_PROP_RW int nclusters;
