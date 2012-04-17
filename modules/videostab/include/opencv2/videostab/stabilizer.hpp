@@ -167,9 +167,6 @@ public:
     virtual void reset();
     virtual Mat nextFrame();
 
-    // available after pre-pass, before it's empty
-    std::vector<Mat> motions() const;
-
 private:
     void runPrePassIfNecessary();
 

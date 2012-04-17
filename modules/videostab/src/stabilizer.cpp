@@ -317,16 +317,6 @@ Mat TwoPassStabilizer::nextFrame()
 }
 
 
-vector<Mat> TwoPassStabilizer::motions() const
-{
-    if (frameCount_ == 0)
-        return vector<Mat>();
-    vector<Mat> res(frameCount_ - 1);
-    copy(motions_.begin(), motions_.begin() + frameCount_ - 1, res.begin());
-    return res;
-}
-
-
 void TwoPassStabilizer::runPrePassIfNecessary()
 {
     if (!isPrePassDone_)
