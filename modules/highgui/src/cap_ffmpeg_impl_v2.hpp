@@ -1620,9 +1620,9 @@ void CvVideoWriter_FFMPEG::close()
 struct OutputMediaStream_FFMPEG
 {
     bool open(const char* fileName, int width, int height, double fps);
-    void write(unsigned char* data, int size);
-
     void close();
+    
+    void write(unsigned char* data, int size, int keyFrame);
 
     // add a video output stream to the container
     static AVStream* addVideoStream(AVFormatContext *oc, CodecID codec_id, int w, int h, int bitrate, double fps, PixelFormat pixel_format);
@@ -1864,13 +1864,16 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     return true;
 }
 
-void OutputMediaStream_FFMPEG::write(unsigned char* data, int size)
+void OutputMediaStream_FFMPEG::write(unsigned char* data, int size, int keyFrame)
 {
     // if zero size, it means the image was buffered
     if (size > 0) 
     {
         AVPacket pkt;
         av_init_packet(&pkt);
+
+        if (keyFrame)
+            pkt.flags |= PKT_FLAG_KEY;
 
         pkt.stream_index = video_st_->index;
         pkt.data = data;
@@ -1900,7 +1903,7 @@ void release_OutputMediaStream_FFMPEG(struct OutputMediaStream_FFMPEG* stream)
     free(stream);
 }
 
-void write_OutputMediaStream_FFMPEG(struct OutputMediaStream_FFMPEG* stream, unsigned char* data, int size)
+void write_OutputMediaStream_FFMPEG(struct OutputMediaStream_FFMPEG* stream, unsigned char* data, int size, int keyFrame)
 {
-    stream->write(data, size);
+    stream->write(data, size, keyFrame);
 }

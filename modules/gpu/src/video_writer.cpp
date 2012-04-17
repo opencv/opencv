@@ -45,15 +45,15 @@
 #if !defined HAVE_CUDA || !defined WIN32
 
 cv::gpu::VideoWriter_GPU::VideoWriter_GPU() { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double, const EncoderParams&) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double) { throw_nogpu(); }
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
 cv::gpu::VideoWriter_GPU::~VideoWriter_GPU() {}
-void cv::gpu::VideoWriter_GPU::open(const std::string&, cv::Size, double) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::open(const std::string&, cv::Size, double, const EncoderParams&) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double) { throw_nogpu(); }
-void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::open(const std::string&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::open(const std::string&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
+void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }
 bool cv::gpu::VideoWriter_GPU::isOpened() const { return false; }
 void cv::gpu::VideoWriter_GPU::close() {}
 void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat&, bool) { throw_nogpu(); }
@@ -124,8 +124,8 @@ namespace
 class cv::gpu::VideoWriter_GPU::Impl
 {
 public:
-    Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, CodecType codec = H264);
-    Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, const EncoderParams& params, CodecType codec = H264);
+    Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, SurfaceFormat format, CodecType codec = H264);
+    Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format, CodecType codec = H264);
 
     void write(const cv::gpu::GpuMat& image, bool lastFrame);
 
@@ -143,6 +143,7 @@ private:
     cv::Size frameSize_;
 
     CodecType codec_;
+    SurfaceFormat inputFormat_;
     NVVE_SurfaceFormat surfaceFormat_;
 
     NVEncoderWrapper encoder_;
@@ -158,13 +159,15 @@ private:
     static void NVENCAPI HandleOnEndFrame(const NVVE_EndFrameInfo* pefi, void* pUserdata);
 };
 
-cv::gpu::VideoWriter_GPU::Impl::Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, CodecType codec) :
+cv::gpu::VideoWriter_GPU::Impl::Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, SurfaceFormat format, CodecType codec) :
     callback_(callback),
     frameSize_(frameSize),
     codec_(codec),
-    surfaceFormat_(YV12),
+    inputFormat_(format),
     cuCtxLock_(0)
 {
+    surfaceFormat_ = inputFormat_ == SF_BGR ? YV12 : static_cast<NVVE_SurfaceFormat>(inputFormat_);
+
     initEncoder(fps);
 
     initGpuMemory();
@@ -174,13 +177,15 @@ cv::gpu::VideoWriter_GPU::Impl::Impl(const cv::Ptr<EncoderCallBack>& callback, c
     createHWEncoder();
 }
 
-cv::gpu::VideoWriter_GPU::Impl::Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, const EncoderParams& params, CodecType codec) :
+cv::gpu::VideoWriter_GPU::Impl::Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format, CodecType codec) :
     callback_(callback),
     frameSize_(frameSize),
     codec_(codec),
-    surfaceFormat_(YV12),
+    inputFormat_(format),
     cuCtxLock_(0)
 {
+    surfaceFormat_ = inputFormat_ == SF_BGR ? YV12 : static_cast<NVVE_SurfaceFormat>(inputFormat_);
+
     initEncoder(fps);
 
     setEncodeParams(params);
@@ -401,10 +406,153 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
+namespace
+{
+    // UYVY/YUY2 are both 4:2:2 formats (16bpc)
+    // Luma, U, V are interleaved, chroma is subsampled (w/2,h)
+    void copyUYVYorYUY2Frame(cv::Size frameSize, const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst)
+    {
+        CUresult res;
+
+        // Source is YUVY/YUY2 4:2:2, the YUV data in a packed and interleaved
+
+        // YUV Copy setup
+        CUDA_MEMCPY2D stCopyYUV422;
+        memset((void*)&stCopyYUV422, 0, sizeof(stCopyYUV422));
+        stCopyYUV422.srcXInBytes          = 0;
+        stCopyYUV422.srcY                 = 0;
+        stCopyYUV422.srcMemoryType        = CU_MEMORYTYPE_DEVICE;
+        stCopyYUV422.srcHost              = 0;
+        stCopyYUV422.srcDevice            = (CUdeviceptr) src.data;
+        stCopyYUV422.srcArray             = 0;
+        stCopyYUV422.srcPitch             = src.step;
+
+        stCopyYUV422.dstXInBytes          = 0;
+        stCopyYUV422.dstY                 = 0;
+        stCopyYUV422.dstMemoryType        = CU_MEMORYTYPE_DEVICE;
+        stCopyYUV422.dstHost              = 0;
+        stCopyYUV422.dstDevice            = (CUdeviceptr) dst.data;
+        stCopyYUV422.dstArray             = 0;
+        stCopyYUV422.dstPitch             = dst.step;
+
+        stCopyYUV422.WidthInBytes         = frameSize.width * 2;
+        stCopyYUV422.Height               = frameSize.height;
+
+        // DMA Luma/Chroma
+        res = cuMemcpy2D(&stCopyYUV422);
+        CV_Assert( res == CUDA_SUCCESS );
+    }
+
+    // YV12/IYUV are both 4:2:0 planar formats (12bpc)
+    // Luma, U, V chroma planar (12bpc), chroma is subsampled (w/2,h/2)
+    void copyYV12orIYUVFrame(cv::Size frameSize, const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst)
+    {
+        CUresult res;
+
+        // Source is YV12/IYUV, this native format is converted to NV12 format by the video encoder
+
+        // (1) luma copy setup
+        CUDA_MEMCPY2D stCopyLuma;
+        memset((void*)&stCopyLuma, 0, sizeof(stCopyLuma));
+        stCopyLuma.srcXInBytes          = 0;
+        stCopyLuma.srcY                 = 0;
+        stCopyLuma.srcMemoryType        = CU_MEMORYTYPE_DEVICE;
+        stCopyLuma.srcHost              = 0;
+        stCopyLuma.srcDevice            = (CUdeviceptr) src.data;
+        stCopyLuma.srcArray             = 0;
+        stCopyLuma.srcPitch             = src.step;
+
+        stCopyLuma.dstXInBytes          = 0;
+        stCopyLuma.dstY                 = 0;
+        stCopyLuma.dstMemoryType        = CU_MEMORYTYPE_DEVICE;
+        stCopyLuma.dstHost              = 0;
+        stCopyLuma.dstDevice            = (CUdeviceptr) dst.data;
+        stCopyLuma.dstArray             = 0;
+        stCopyLuma.dstPitch             = dst.step;
+
+        stCopyLuma.WidthInBytes         = frameSize.width;
+        stCopyLuma.Height               = frameSize.height;
+
+        // (2) chroma copy setup, U/V can be done together
+        CUDA_MEMCPY2D stCopyChroma;
+        memset((void*)&stCopyChroma, 0, sizeof(stCopyChroma));
+        stCopyChroma.srcXInBytes        = 0;
+        stCopyChroma.srcY               = frameSize.height << 1; // U/V chroma offset
+        stCopyChroma.srcMemoryType      = CU_MEMORYTYPE_DEVICE;
+        stCopyChroma.srcHost            = 0;
+        stCopyChroma.srcDevice          = (CUdeviceptr) src.data;
+        stCopyChroma.srcArray           = 0;
+        stCopyChroma.srcPitch           = src.step >> 1; // chroma is subsampled by 2 (but it has U/V are next to each other)
+
+        stCopyChroma.dstXInBytes        = 0;
+        stCopyChroma.dstY               = frameSize.height << 1; // chroma offset (srcY*srcPitch now points to the chroma planes)
+        stCopyChroma.dstMemoryType      = CU_MEMORYTYPE_DEVICE;
+        stCopyChroma.dstHost            = 0;
+        stCopyChroma.dstDevice          = (CUdeviceptr) dst.data;
+        stCopyChroma.dstArray           = 0;
+        stCopyChroma.dstPitch           = dst.step >> 1;
+
+        stCopyChroma.WidthInBytes       = frameSize.width >> 1;
+        stCopyChroma.Height             = frameSize.height; // U/V are sent together
+
+        // DMA Luma
+        res = cuMemcpy2D(&stCopyLuma);
+        CV_Assert( res == CUDA_SUCCESS );
+
+        // DMA Chroma channels (UV side by side)
+        res = cuMemcpy2D(&stCopyChroma);
+        CV_Assert( res == CUDA_SUCCESS );
+    }
+
+    // NV12 is 4:2:0 format (12bpc)
+    // Luma followed by U/V chroma interleaved (12bpc), chroma is subsampled (w/2,h/2)
+    void copyNV12Frame(cv::Size frameSize, const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst)
+    {
+        CUresult res;
+
+        // Source is NV12 in pitch linear memory
+        // Because we are assume input is NV12 (if we take input in the native format), the encoder handles NV12 as a native format in pitch linear memory
+
+        // Luma/Chroma can be done in a single transfer
+        CUDA_MEMCPY2D stCopyNV12;
+        memset((void*)&stCopyNV12, 0, sizeof(stCopyNV12));
+        stCopyNV12.srcXInBytes          = 0;
+        stCopyNV12.srcY                 = 0;
+        stCopyNV12.srcMemoryType        = CU_MEMORYTYPE_DEVICE;
+        stCopyNV12.srcHost              = 0;
+        stCopyNV12.srcDevice            = (CUdeviceptr) src.data;
+        stCopyNV12.srcArray             = 0;
+        stCopyNV12.srcPitch             = src.step;
+
+        stCopyNV12.dstXInBytes          = 0;
+        stCopyNV12.dstY                 = 0;
+        stCopyNV12.dstMemoryType        = CU_MEMORYTYPE_DEVICE;
+        stCopyNV12.dstHost              = 0;
+        stCopyNV12.dstDevice            = (CUdeviceptr) dst.data;
+        stCopyNV12.dstArray             = 0;
+        stCopyNV12.dstPitch             = dst.step;
+
+        stCopyNV12.WidthInBytes         = frameSize.width;
+        stCopyNV12.Height               =(frameSize.height * 3) >> 1;
+
+        // DMA Luma/Chroma
+        res = cuMemcpy2D(&stCopyNV12);
+        CV_Assert( res == CUDA_SUCCESS );
+    }
+}
+
 void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool lastFrame)
 {
-    CV_Assert( frame.size() == frameSize_ );
-    CV_Assert( frame.type() == CV_8UC1 || frame.type() == CV_8UC3 || frame.type() == CV_8UC4 );
+    if (inputFormat_ == SF_BGR)
+    {
+        CV_Assert( frame.size() == frameSize_ );
+        CV_Assert( frame.type() == CV_8UC1 || frame.type() == CV_8UC3 || frame.type() == CV_8UC4 );
+    }
+    else
+    {
+        CV_Assert( frame.size() == videoFrame_.size() );
+        CV_Assert( frame.type() == videoFrame_.type() );
+    }
 
     NVVE_EncodeFrameParams efparams;
     efparams.Width = frameSize_.width;
@@ -422,8 +570,27 @@ void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool la
     CUresult res = cuvidCtxLock(cuCtxLock_, 0);
     CV_Assert( res == CUDA_SUCCESS );
 
-    if (surfaceFormat_ == YV12)
+    if (inputFormat_ == SF_BGR)
         cv::gpu::device::video_encoding::YV12_gpu(frame, frame.channels(), videoFrame_);
+    else
+    {
+        switch (surfaceFormat_)
+        {
+        case UYVY: // UYVY (4:2:2)
+        case YUY2:	// YUY2 (4:2:2)
+            copyUYVYorYUY2Frame(frameSize_, frame, videoFrame_);
+            break;
+
+        case YV12: // YV12 (4:2:0), Y V U
+        case IYUV: // IYUV (4:2:0), Y U V
+            copyYV12orIYUVFrame(frameSize_, frame, videoFrame_);
+            break;
+
+        case NV12: // NV12 (4:2:0)
+            copyNV12Frame(frameSize_, frame, videoFrame_);
+            break;
+        }
+    }
 
     res = cuvidCtxUnlock(cuCtxLock_, 0);
     CV_Assert( res == CUDA_SUCCESS );
@@ -480,6 +647,7 @@ private:
 
     struct OutputMediaStream_FFMPEG* stream_;
     std::vector<uchar> buf_;
+    bool isKeyFrame_;
 };
 
 namespace
@@ -528,7 +696,7 @@ namespace
 }
 
 EncoderCallBackFFMPEG::EncoderCallBackFFMPEG(const std::string& fileName, cv::Size frameSize, double fps) :
-    stream_(0)
+    stream_(0), isKeyFrame_(false)
 {
     int buf_size = std::max(frameSize.area() * 4, 1024 * 1024);
     buf_.resize(buf_size);
@@ -552,11 +720,12 @@ unsigned char* EncoderCallBackFFMPEG::acquireBitStream(int* bufferSize)
 
 void EncoderCallBackFFMPEG::releaseBitStream(unsigned char* data, int size)
 {
-    write_OutputMediaStream_FFMPEG_p(stream_, data, size);
+    write_OutputMediaStream_FFMPEG_p(stream_, data, size, isKeyFrame_);
 }
 
 void EncoderCallBackFFMPEG::onBeginFrame(int frameNumber, PicType picType)
 {
+    isKeyFrame_ = picType == IFRAME;
 }
 
 void EncoderCallBackFFMPEG::onEndFrame(int frameNumber, PicType picType)
@@ -570,24 +739,24 @@ cv::gpu::VideoWriter_GPU::VideoWriter_GPU()
 {
 }
 
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps)
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format)
 {
-    open(fileName, frameSize, fps);
+    open(fileName, frameSize, fps, format);
 }
 
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params)
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
-    open(fileName, frameSize, fps, params);
+    open(fileName, frameSize, fps, params, format);
 }
 
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps)
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format)
 {
-    open(encoderCallback, frameSize, fps);
+    open(encoderCallback, frameSize, fps, format);
 }
 
-cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params)
+cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
-    open(encoderCallback, frameSize, fps, params);
+    open(encoderCallback, frameSize, fps, params, format);
 }
 
 cv::gpu::VideoWriter_GPU::~VideoWriter_GPU()
@@ -595,30 +764,30 @@ cv::gpu::VideoWriter_GPU::~VideoWriter_GPU()
     close();
 }
 
-void cv::gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps)
+void cv::gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format)
 {
     close();
     cv::Ptr<EncoderCallBack> encoderCallback(new EncoderCallBackFFMPEG(fileName, frameSize, fps));
-    open(encoderCallback, frameSize, fps);
+    open(encoderCallback, frameSize, fps, format);
 }
 
-void cv::gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params)
+void cv::gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
     close();
     cv::Ptr<EncoderCallBack> encoderCallback(new EncoderCallBackFFMPEG(fileName, frameSize, fps));
-    open(encoderCallback, frameSize, fps, params);
+    open(encoderCallback, frameSize, fps, params, format);
 }
 
-void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps)
+void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format)
 {
     close();
-    impl_.reset(new Impl(encoderCallback, frameSize, fps));
+    impl_.reset(new Impl(encoderCallback, frameSize, fps, format));
 }
 
-void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params)
+void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
     close();
-    impl_.reset(new Impl(encoderCallback, frameSize, fps, params));
+    impl_.reset(new Impl(encoderCallback, frameSize, fps, params, format));
 }
 
 bool cv::gpu::VideoWriter_GPU::isOpened() const

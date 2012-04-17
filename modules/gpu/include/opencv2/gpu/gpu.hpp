@@ -1898,18 +1898,29 @@ public:
     // Callbacks for video encoder, use it if you want to work with raw video stream
     class EncoderCallBack;
 
+    enum SurfaceFormat
+    {
+        SF_UYVY = 0,
+        SF_YUY2,
+        SF_YV12,
+        SF_NV12,
+        SF_IYUV,
+        SF_BGR,
+        SF_GRAY = SF_BGR
+    };
+
     VideoWriter_GPU();
-    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps);
-    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params);
-    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps);
-    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params);
+    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
     ~VideoWriter_GPU();
 
     // all methods throws cv::Exception if error occurs
-    void open(const std::string& fileName, cv::Size frameSize, double fps);
-    void open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params);
-    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps);
-    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params);
+    void open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    void open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
 
     bool isOpened() const;
     void close();
