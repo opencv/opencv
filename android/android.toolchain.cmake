@@ -1056,6 +1056,7 @@ endif()
 #   ANDROID_NDK_ABI_NAME : "armeabi", "armeabi-v7a" or "x86" depending on ANDROID_ABI
 #   ANDROID_ARCH_NAME : "arm" or "x86" depending on ANDROID_ABI
 #   TOOL_OS_SUFFIX : "" or ".exe" depending on host platform
+#   ANDROID_SYSROOT : path to the compiler sysroot
 #   ANDROID_SYSTEM_INCLUDE_DIRS
 #   ANDROID_SYSTEM_LIB_DIRS
 # Obsolete:
@@ -1065,7 +1066,6 @@ endif()
 #   ANDROID_COMPILER_VERSION : GCC version used
 #   ANDROID_CXX_FLAGS : C/C++ compiler flags required by Android platform
 #   ANDROID_SUPPORTED_ABIS : list of currently allowed values for ANDROID_ABI
-#   ANDROID_SYSROOT : path to the compiler sysroot
 #   ANDROID_TOOLCHAIN_NAME : "standalone", "arm-linux-androideabi-4.4.3" or "x86-4.4.3" or something similar.
 #   ANDROID_TOOLCHAIN_MACHINE_NAME : "arm-linux-androideabi", "arm-eabi" or "i686-android-linux"
 #   ANDROID_TOOLCHAIN_ROOT : path to the top level of toolchain (standalone or placed inside NDK)

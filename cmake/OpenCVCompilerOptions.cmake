@@ -116,6 +116,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   # Profiling?
   if(ENABLE_PROFILING)
     set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -pg -g")
+    # turn off incompatible options
+    foreach(flags CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG CMAKE_C_FLAGS_DEBUG OPENCV_EXTRA_C_FLAGS_RELEASE)
+      string(REPLACE "-fomit-frame-pointer" "" ${flags} "${${flags}}")
+      string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
+    endforeach()
   elseif(NOT APPLE AND NOT ANDROID)
     # Remove unreferenced functions: function level linking
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -ffunction-sections")
