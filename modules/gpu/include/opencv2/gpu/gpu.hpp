@@ -45,6 +45,7 @@
 
 #ifndef SKIP_INCLUDES
 #include <vector>
+#include <memory>
 #endif
 
 #include "opencv2/core/gpumat.hpp"
@@ -1883,6 +1884,100 @@ CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
                                   Stream& stream = Stream::Null());
 
 CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
+
+
+////////////////////////////////// Video Encoding //////////////////////////////////////////
+
+// Works only under Windows
+// Supports olny H264 video codec and AVI files
+class CV_EXPORTS VideoWriter_GPU
+{
+public:
+    struct EncoderParams;
+
+    // Callbacks for video encoder, use it if you want to work with raw video stream
+    class EncoderCallBack;
+
+    VideoWriter_GPU();
+    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps);
+    VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params);
+    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps);
+    VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params);
+    ~VideoWriter_GPU();
+
+    // all methods throws cv::Exception if error occurs
+    void open(const std::string& fileName, cv::Size frameSize, double fps);
+    void open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params);
+    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps);
+    void open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params);
+
+    bool isOpened() const;
+    void close();
+
+    void write(const cv::gpu::GpuMat& image, bool lastFrame = false);
+
+    struct EncoderParams
+    {
+        int       P_Interval;      //    NVVE_P_INTERVAL,
+        int       IDR_Period;      //    NVVE_IDR_PERIOD,
+        int       DynamicGOP;      //    NVVE_DYNAMIC_GOP,
+        int       RCType;          //    NVVE_RC_TYPE,
+        int       AvgBitrate;      //    NVVE_AVG_BITRATE,
+        int       PeakBitrate;     //    NVVE_PEAK_BITRATE,
+        int       QP_Level_Intra;  //    NVVE_QP_LEVEL_INTRA,
+        int       QP_Level_InterP; //    NVVE_QP_LEVEL_INTER_P,
+        int       QP_Level_InterB; //    NVVE_QP_LEVEL_INTER_B,
+        int       DeblockMode;     //    NVVE_DEBLOCK_MODE,
+        int       ProfileLevel;    //    NVVE_PROFILE_LEVEL,
+        int       ForceIntra;      //    NVVE_FORCE_INTRA,
+        int       ForceIDR;        //    NVVE_FORCE_IDR,
+        int       ClearStat;       //    NVVE_CLEAR_STAT,
+        int       DIMode;          //    NVVE_SET_DEINTERLACE,
+        int       Presets;         //    NVVE_PRESETS,
+        int       DisableCabac;    //    NVVE_DISABLE_CABAC,
+        int       NaluFramingType; //    NVVE_CONFIGURE_NALU_FRAMING_TYPE
+        int       DisableSPSPPS;   //    NVVE_DISABLE_SPS_PPS
+
+        EncoderParams();
+        explicit EncoderParams(const std::string& configFile);
+
+        void load(const std::string& configFile);
+        void save(const std::string& configFile) const;
+    };
+
+    class EncoderCallBack
+    {
+    public:
+        enum PicType
+        {
+            IFRAME = 1,
+            PFRAME = 2,
+            BFRAME = 3
+        };
+
+        virtual ~EncoderCallBack() {}
+
+        // callback function to signal the start of bitstream that is to be encoded
+        // must return pointer to buffer
+        virtual unsigned char* acquireBitStream(int* bufferSize) = 0;
+
+        // callback function to signal that the encoded bitstream is ready to be written to file
+        virtual void releaseBitStream(unsigned char* data, int size) = 0;
+
+        // callback function to signal that the encoding operation on the frame has started
+        virtual void onBeginFrame(int frameNumber, PicType picType) = 0;
+
+        // callback function signals that the encoding operation on the frame has finished
+        virtual void onEndFrame(int frameNumber, PicType picType) = 0;
+    };
+
+private:
+    VideoWriter_GPU(const VideoWriter_GPU&);
+    VideoWriter_GPU& operator=(const VideoWriter_GPU&);
+
+    class Impl;
+    std::auto_ptr<Impl> impl_;
+};
 
 } // namespace gpu
 

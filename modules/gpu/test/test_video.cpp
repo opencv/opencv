@@ -384,4 +384,66 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
     testing::Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN)),
     testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// VideoWriter
+
+PARAM_TEST_CASE(VideoWriter, cv::gpu::DeviceInfo, std::string)
+{
+    cv::gpu::DeviceInfo devInfo;
+    std::string inputFile;
+
+    std::string outputFile;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        inputFile = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
+        outputFile = inputFile.substr(0, inputFile.find('.')) + "_test.avi";
+    }
+};
+
+TEST_P(VideoWriter, Regression)
+{
+    const double FPS = 25.0;
+
+    cv::VideoCapture reader(inputFile);
+    ASSERT_TRUE( reader.isOpened() );
+
+    cv::gpu::VideoWriter_GPU d_writer;
+
+    cv::Mat frame;
+    std::vector<cv::Mat> frames;
+    cv::gpu::GpuMat d_frame;
+
+    for (int i = 1; i < 10; ++i)
+    {
+        reader >> frame;
+
+        if (frame.empty())
+            break;
+
+        frames.push_back(frame.clone());
+        d_frame.upload(frame);
+
+        if (!d_writer.isOpened())
+            d_writer.open(outputFile, frame.size(), FPS);
+
+        d_writer.write(d_frame);
+    }
+
+    reader.release();
+    d_writer.close();
+
+    reader.open(outputFile);
+    ASSERT_TRUE( reader.isOpened() );
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Video, VideoWriter, testing::Combine(
+    ALL_DEVICES,
+    testing::Values("VID00003-20100701-2204.3GP", "big_buck_bunny.mpg")));
+
 } // namespace

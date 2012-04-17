@@ -71,16 +71,22 @@
 
 #ifdef HAVE_CUDA
 
-    #include "cuda.h"
-    #include "cuda_runtime_api.h"
-    #include "npp.h"
+    #include <cuda.h>
+    #include <cuda_runtime.h>
+    #include <npp.h>
 
     #ifdef HAVE_CUFFT
-        #include "cufft.h"
+        #include <cufft.h>
     #endif
 
     #ifdef HAVE_CUBLAS
-        #include "cublas.h"
+        #include <cublas.h>
+    #endif
+
+    #include <nvcuvid.h>
+
+    #ifdef WIN32
+        #include <NVEncoderAPI.h>
     #endif
 
     #include "internal_shared.hpp"

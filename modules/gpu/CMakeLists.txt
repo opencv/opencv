@@ -7,6 +7,8 @@ ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video o
 
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
+
 file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 file(GLOB lib_int_hdrs           "src/*.hpp" "src/*.h")
 file(GLOB lib_cuda_hdrs          "src/cuda/*.hpp" "src/cuda/*.h")
@@ -48,7 +50,19 @@ if (HAVE_CUDA)
   OCV_CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
   #CUDA_BUILD_CLEAN_TARGET()
   
-  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  unset(CUDA_nvcuvid_LIBRARY CACHE)
+  find_cuda_helper_libs(nvcuvid)
+
+  if (WIN32)
+    unset(CUDA_nvcuvenc_LIBRARY CACHE)
+    find_cuda_helper_libs(nvcuvenc)
+  endif()
+  
+  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
+
+  if (WIN32)
+    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
+  endif()
 else()
   set(lib_cuda "")
   set(cuda_objs "")
@@ -61,7 +75,7 @@ ocv_set_module_sources(
   SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
   )
   
-ocv_create_module(${cuda_link_libs})
+ocv_create_module(${cuda_link_libs} ${HIGHGUI_LIBRARIES})
   
 if(HAVE_CUDA)
   if(HAVE_CUFFT)
