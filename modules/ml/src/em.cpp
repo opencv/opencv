@@ -502,10 +502,9 @@ Vec2d EM::computeProbabilities(const Mat& sample, Mat* probs) const
             Lval += w * val * val;
         }
         CV_DbgAssert(!logWeightDivDet.empty());
-        Lval = logWeightDivDet.at<double>(clusterIndex) - 0.5 * Lval;
-        L.at<double>(clusterIndex) = Lval;
+        L.at<double>(clusterIndex) = logWeightDivDet.at<double>(clusterIndex) - 0.5 * Lval;
 
-        if(Lval > L.at<double>(label))
+        if(L.at<double>(clusterIndex) > L.at<double>(label))
             label = clusterIndex;
     }
 
