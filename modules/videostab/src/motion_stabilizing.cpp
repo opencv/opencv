@@ -136,139 +136,6 @@ Mat GaussianMotionFilter::stabilize(int idx, const vector<Mat> &motions, pair<in
 }
 
 
-static inline int areaSign(Point2f a, Point2f b, Point2f c)
-{
-    double area = (b-a).cross(c-a);
-    if (area < -1e-5) return -1;
-    if (area > 1e-5) return 1;
-    return 0;
-}
-
-
-static inline bool segmentsIntersect(Point2f a, Point2f b, Point2f c, Point2f d)
-{
-    return areaSign(a,b,c) * areaSign(a,b,d) < 0 &&
-           areaSign(c,d,a) * areaSign(c,d,b) < 0;
-}
-
-
-// Checks if rect a (with sides parallel to axis) is inside rect b (arbitrary).
-// Rects must be passed in the [(0,0), (w,0), (w,h), (0,h)] order.
-static inline bool isRectInside(const Point2f a[4], const Point2f b[4])
-{
-    for (int i = 0; i < 4; ++i)
-        if (b[i].x > a[0].x && b[i].x < a[2].x && b[i].y > a[0].y && b[i].y < a[2].y)
-            return false;
-    for (int i = 0; i < 4; ++i)
-    for (int j = 0; j < 4; ++j)
-        if (segmentsIntersect(a[i], a[(i+1)%4], b[j], b[(j+1)%4]))
-            return false;
-    return true;
-}
-
-
-static inline bool isGoodMotion(const float M[], float w, float h, float dx, float dy)
-{
-    Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};
-    Point2f Mpt[4];
-
-    for (int i = 0; i < 4; ++i)
-    {
-        Mpt[i].x = M[0]*pt[i].x + M[1]*pt[i].y + M[2];
-        Mpt[i].y = M[3]*pt[i].x + M[4]*pt[i].y + M[5];
-    }
-
-    pt[0] = Point2f(dx, dy);
-    pt[1] = Point2f(w - dx, dy);
-    pt[2] = Point2f(w - dx, h - dy);
-    pt[3] = Point2f(dx, h - dy);
-
-    return isRectInside(pt, Mpt);
-}
-
-
-static inline void relaxMotion(const float M[], float t, float res[])
-{
-    res[0] = M[0]*(1.f-t) + t;
-    res[1] = M[1]*(1.f-t);
-    res[2] = M[2]*(1.f-t);
-    res[3] = M[3]*(1.f-t);
-    res[4] = M[4]*(1.f-t) + t;
-    res[5] = M[5]*(1.f-t);
-}
-
-
-Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
-{
-    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
-
-    const float w = static_cast<float>(size.width);
-    const float h = static_cast<float>(size.height);
-    const float dx = floor(w * trimRatio);
-    const float dy = floor(h * trimRatio);
-    const float srcM[6] =
-            {M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2),
-             M.at<float>(1,0), M.at<float>(1,1), M.at<float>(1,2)};
-
-    float curM[6];
-    float t = 0;
-    relaxMotion(srcM, t, curM);
-    if (isGoodMotion(curM, w, h, dx, dy))
-        return M;
-
-    float l = 0, r = 1;
-    while (r - l > 1e-3f)
-    {
-        t = (l + r) * 0.5f;
-        relaxMotion(srcM, t, curM);
-        if (isGoodMotion(curM, w, h, dx, dy))
-            r = t;
-        else
-            l = t;
-    }
-
-    return (1 - r) * M + r * Mat::eye(3, 3, CV_32F);
-}
-
-
-// TODO can be estimated for O(1) time
-float estimateOptimalTrimRatio(const Mat &M, Size size)
-{
-    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
-
-    const float w = static_cast<float>(size.width);
-    const float h = static_cast<float>(size.height);
-    Mat_<float> M_(M);
-
-    Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};
-    Point2f Mpt[4];
-
-    for (int i = 0; i < 4; ++i)
-    {
-        Mpt[i].x = M_(0,0)*pt[i].x + M_(0,1)*pt[i].y + M_(0,2);
-        Mpt[i].y = M_(1,0)*pt[i].x + M_(1,1)*pt[i].y + M_(1,2);
-    }
-
-    float l = 0, r = 0.5f;
-    while (r - l > 1e-3f)
-    {
-        float t = (l + r) * 0.5f;
-        float dx = floor(w * t);
-        float dy = floor(h * t);
-        pt[0] = Point2f(dx, dy);
-        pt[1] = Point2f(w - dx, dy);
-        pt[2] = Point2f(w - dx, h - dy);
-        pt[3] = Point2f(dx, h - dy);
-        if (isRectInside(pt, Mpt))
-            r = t;
-        else
-            l = t;
-    }
-
-    return r;
-}
-
-
 LpMotionStabilizer::LpMotionStabilizer(MotionModel model)
 {
     setMotionModel(model);
@@ -293,7 +160,7 @@ void LpMotionStabilizer::stabilize(int, const vector<Mat>&, pair<int,int>, Mat*)
 void LpMotionStabilizer::stabilize(
         int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions)
 {
-    CV_Assert(model_ == MM_LINEAR_SIMILARITY);
+    CV_Assert(model_ <= MM_AFFINE);
 
     int N = size;
     const vector<Mat> &M = motions;
@@ -713,7 +580,189 @@ void LpMotionStabilizer::stabilize(
     }
 }
 
+
 #endif // #ifndef HAVE_CLP
+
+
+static inline int areaSign(Point2f a, Point2f b, Point2f c)
+{
+    double area = (b-a).cross(c-a);
+    if (area < -1e-5) return -1;
+    if (area > 1e-5) return 1;
+    return 0;
+}
+
+
+static inline bool segmentsIntersect(Point2f a, Point2f b, Point2f c, Point2f d)
+{
+    return areaSign(a,b,c) * areaSign(a,b,d) < 0 &&
+           areaSign(c,d,a) * areaSign(c,d,b) < 0;
+}
+
+
+// Checks if rect a (with sides parallel to axis) is inside rect b (arbitrary).
+// Rects must be passed in the [(0,0), (w,0), (w,h), (0,h)] order.
+static inline bool isRectInside(const Point2f a[4], const Point2f b[4])
+{
+    for (int i = 0; i < 4; ++i)
+        if (b[i].x > a[0].x && b[i].x < a[2].x && b[i].y > a[0].y && b[i].y < a[2].y)
+            return false;
+    for (int i = 0; i < 4; ++i)
+    for (int j = 0; j < 4; ++j)
+        if (segmentsIntersect(a[i], a[(i+1)%4], b[j], b[(j+1)%4]))
+            return false;
+    return true;
+}
+
+
+static inline bool isGoodMotion(const float M[], float w, float h, float dx, float dy)
+{
+    Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};
+    Point2f Mpt[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        Mpt[i].x = M[0]*pt[i].x + M[1]*pt[i].y + M[2];
+        Mpt[i].y = M[3]*pt[i].x + M[4]*pt[i].y + M[5];
+    }
+
+    pt[0] = Point2f(dx, dy);
+    pt[1] = Point2f(w - dx, dy);
+    pt[2] = Point2f(w - dx, h - dy);
+    pt[3] = Point2f(dx, h - dy);
+
+    return isRectInside(pt, Mpt);
+}
+
+
+static inline void relaxMotion(const float M[], float t, float res[])
+{
+    res[0] = M[0]*(1.f-t) + t;
+    res[1] = M[1]*(1.f-t);
+    res[2] = M[2]*(1.f-t);
+    res[3] = M[3]*(1.f-t);
+    res[4] = M[4]*(1.f-t) + t;
+    res[5] = M[5]*(1.f-t);
+}
+
+
+Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
+{
+    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
+
+    const float w = static_cast<float>(size.width);
+    const float h = static_cast<float>(size.height);
+    const float dx = floor(w * trimRatio);
+    const float dy = floor(h * trimRatio);
+    const float srcM[6] =
+            {M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2),
+             M.at<float>(1,0), M.at<float>(1,1), M.at<float>(1,2)};
+
+    float curM[6];
+    float t = 0;
+    relaxMotion(srcM, t, curM);
+    if (isGoodMotion(curM, w, h, dx, dy))
+        return M;
+
+    float l = 0, r = 1;
+    while (r - l > 1e-3f)
+    {
+        t = (l + r) * 0.5f;
+        relaxMotion(srcM, t, curM);
+        if (isGoodMotion(curM, w, h, dx, dy))
+            r = t;
+        else
+            l = t;
+    }
+
+    return (1 - r) * M + r * Mat::eye(3, 3, CV_32F);
+}
+
+
+// TODO can be estimated for O(1) time
+float estimateOptimalTrimRatio(const Mat &M, Size size)
+{
+    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
+
+    const float w = static_cast<float>(size.width);
+    const float h = static_cast<float>(size.height);
+    Mat_<float> M_(M);
+
+    Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};
+    Point2f Mpt[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        Mpt[i].x = M_(0,0)*pt[i].x + M_(0,1)*pt[i].y + M_(0,2);
+        Mpt[i].y = M_(1,0)*pt[i].x + M_(1,1)*pt[i].y + M_(1,2);
+    }
+
+    float l = 0, r = 0.5f;
+    while (r - l > 1e-3f)
+    {
+        float t = (l + r) * 0.5f;
+        float dx = floor(w * t);
+        float dy = floor(h * t);
+        pt[0] = Point2f(dx, dy);
+        pt[1] = Point2f(w - dx, dy);
+        pt[2] = Point2f(w - dx, h - dy);
+        pt[3] = Point2f(dx, h - dy);
+        if (isRectInside(pt, Mpt))
+            r = t;
+        else
+            l = t;
+    }
+
+    return r;
+}
+
+
+// TODO should process left open and right open segments?
+void interpolateMotions(vector<Mat> &motions, vector<uchar> &mask)
+{
+    CV_Assert(motions.size() == mask.size() && motions.size() > 0);
+
+    enum { INIT, IN_SEGMENT, LEFT_OPEN } state = mask[0] ? INIT : LEFT_OPEN;
+    int left = -1;
+
+    for (int i = 1; i < static_cast<int>(motions.size()); ++i)
+    {
+        if (state == INIT)
+        {
+            if (!mask[i])
+            {
+                state = IN_SEGMENT;
+                left = i - 1;
+            }
+        }
+        else if (state == IN_SEGMENT)
+        {
+            if (mask[i])
+            {
+                for (int j = left; j < i; ++j)
+                {
+                    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+                    Mat_<float> Ml = motions[left];
+                    Mat_<float> Mr = motions[i];
+
+                    float d1 = j - left;
+                    float d2 = i - j;
+
+                    for (int l = 0; l < 3; ++l)
+                        for (int s = 0; s < 3; ++s)
+                            M(l,s) = (d2*Ml(l,s) + d1*Mr(l,s)) / (d1 + d2);
+
+                    motions[i] = M;
+                    mask[i] = 1;
+                }
+            }
+        }
+        else if (state == LEFT_OPEN)
+        {
+            if (mask[i]) state = INIT;
+        }
+    }
+}
 
 } // namespace videostab
 } // namespace cv

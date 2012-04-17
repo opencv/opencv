@@ -149,9 +149,6 @@ public:
     void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
     RansacParams ransacParams() const { return ransacParams_; }
 
-    void setMaxRmse(float val) { maxRmse_ = val; }
-    float maxRmse() const { return maxRmse_; }
-
     void setMinInlierRatio(float val) { minInlierRatio_ = val; }
     float minInlierRatio() const { return minInlierRatio_; }
 
@@ -168,7 +165,6 @@ private:
     std::vector<KeyPoint> keypointsPrev_;
     std::vector<Point2f> pointsPrev_, points_;
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
-    float maxRmse_;
     float minInlierRatio_;
     Size gridSize_;
 };

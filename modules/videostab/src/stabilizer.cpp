@@ -340,6 +340,8 @@ void TwoPassStabilizer::runPrePassIfNecessary()
 
         bool ok = true, ok2 = true;
 
+        // estimate motions
+
         while (!(frame = frameSource_->nextFrame()).empty())
         {
             if (frameCount_ > 0)
@@ -373,16 +375,20 @@ void TwoPassStabilizer::runPrePassIfNecessary()
             else log_->print("x");
         }
 
+        // add aux. motions
+
         for (int i = 0; i < radius_; ++i)
             motions_.push_back(Mat::eye(3, 3, CV_32F));
         log_->print("\n");
 
-        stabilizationMotions_.resize(frameCount_);
+        // stabilize
 
+        stabilizationMotions_.resize(frameCount_);
         motionStabilizer_->stabilize(
             frameCount_, motions_, make_pair(0, frameCount_ - 1), &stabilizationMotions_[0]);
 
         // save motions
+
         /*ofstream fm("log_motions.csv");
         for (int i = 0; i < frameCount_ - 1; ++i)
         {
@@ -407,6 +413,8 @@ void TwoPassStabilizer::runPrePassIfNecessary()
                << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
                << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
         }*/
+
+        // estimate optimal trim ratio if necessary
 
         if (mustEstTrimRatio_)
         {

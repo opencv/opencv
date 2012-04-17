@@ -69,6 +69,8 @@ void printHelp()
             "      Set motion model. The default is affine.\n"
             "  --subset=(<int_number>|auto)\n"
             "      Number of random samples per one motion hypothesis. The default is auto.\n"
+            "  --thresh=(<float_number>|auto)\n"
+            "      Maximum error to classify match as inlier. The default is auto.\n"
             "  --outlier-ratio=<float_number>\n"
             "      Motion estimation outlier ratio hypothesis. The default is 0.5.\n"
             "  --min-inlier-ratio=<float_number>\n"
@@ -132,6 +134,8 @@ void printHelp()
             "      estimation model). The default is homography.\n"
             "  --ws-subset=(<int_number>|auto)\n"
             "      Number of random samples per one motion hypothesis. The default is auto.\n"
+            "  --ws-thresh=(<float_number>|auto)\n"
+            "      Maximum error to classify match as inlier. The default is auto.\n"
             "  --ws-outlier-ratio=<float_number>\n"
             "      Motion estimation outlier ratio hypothesis. The default is 0.5.\n"
             "  --ws-min-inlier-ratio=<float_number>\n"
@@ -164,6 +168,7 @@ int main(int argc, const char **argv)
                 "{ 1 | | | | }"
                 "{ m | model | affine| }"
                 "{ | subset | auto | }"
+                "{ | thresh | auto | }"
                 "{ | outlier-ratio | 0.5 | }"
                 "{ | min-inlier-ratio | 0.1 | }"
                 "{ | nkps | 1000 | }"
@@ -194,6 +199,7 @@ int main(int argc, const char **argv)
                 "{ | ws-period | 30 | }"
                 "{ | ws-model | homography | }"
                 "{ | ws-subset | auto | }"
+                "{ | ws-thresh | auto | }"
                 "{ | ws-outlier-ratio | 0.5 | }"
                 "{ | ws-min-inlier-ratio | 0.1 | }"
                 "{ | ws-nkps | 1000 | }"
@@ -274,6 +280,8 @@ int main(int argc, const char **argv)
                 RansacParams ransac = est->ransacParams();
                 if (arg("ws-subset") != "auto")
                     ransac.size = argi("ws-subset");
+                if (arg("ws-thresh") != "auto")
+                    ransac.thresh = argi("ws-thresh");
                 ransac.eps = argf("ws-outlier-ratio");
                 est->setRansacParams(ransac);
                 est->setMinInlierRatio(argf("ws-min-inlier-ratio"));
@@ -328,6 +336,8 @@ int main(int argc, const char **argv)
         RansacParams ransac = est->ransacParams();
         if (arg("subset") != "auto")
             ransac.size = argi("subset");
+        if (arg("thresh") != "auto")
+            ransac.thresh = argi("thresh");
         ransac.eps = argf("outlier-ratio");
         est->setRansacParams(ransac);
         est->setMinInlierRatio(argf("min-inlier-ratio"));
