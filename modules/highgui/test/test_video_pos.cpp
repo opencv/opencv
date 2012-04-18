@@ -43,10 +43,6 @@
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#ifdef HAVE_FFMPEG
-
-#include "ffmpeg_codecs.hpp"
-
 using namespace cv;
 using namespace std;
 
@@ -102,9 +98,6 @@ void CV_PositioningTest::CreateTestVideo(const string& format, int codec, int fr
 
 void CV_PositioningTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const string format[] =  {"avi", "mov", "mp4", "mpg", "wmv", "3gp"};
 
     const char codec[][4] = { {'X', 'V', 'I', 'D'},
@@ -219,11 +212,8 @@ void CV_PositioningTest::run(int)
       ts->printf(ts->LOG, "\nSuccessfull iterations: %d(%d%%)   Failed iterations: %d(%d%%)   %s\n", N-failed, (N-failed)*100/N, failed, failed*100/N, status.c_str());
       if( i < n_format-1 || j < n_codec-1 ) ts->printf(ts->LOG, "\n----------");
     }
-
-#endif
-#endif
 }
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT
 TEST(Highgui_Positioning, regression) { CV_PositioningTest test; test.safe_run(); }
-
 #endif

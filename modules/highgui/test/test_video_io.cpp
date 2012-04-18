@@ -141,7 +141,26 @@ void CV_HighGuiTest::ImageTest(const string& dir)
         return;
     }
 
-    const string exts[] = {"png", "bmp", "tiff", "jpg", "jp2", "ppm", "ras" };
+    const string exts[] = {
+#ifdef HAVE_PNG
+        "png",
+#endif
+#ifdef HAVE_TIFF
+        "tiff",
+#endif
+#ifdef HAVE_JPEG
+        "jpg",
+#endif
+#ifdef HAVE_JASPER
+        "jp2",
+#endif
+#ifdef HAVE_OPENEXR
+        "exr",
+#endif
+        "bmp",
+        "ppm",
+        "ras"
+        };
     const size_t ext_num = sizeof(exts)/sizeof(exts[0]);
 
     for(size_t i = 0; i < ext_num; ++i)
@@ -632,9 +651,6 @@ void CV_SpecificImageTest::run(int)
 
 void CV_VideoTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const char codecs[][4] = { {'I', 'Y', 'U', 'V'},
                                {'X', 'V', 'I', 'D'},
                                {'m', 'p', 'e', 'g'},
@@ -648,16 +664,10 @@ void CV_VideoTest::run(int)
     {
         VideoTest(ts->get_data_path(), CV_FOURCC(codecs[i][0], codecs[i][1], codecs[i][2], codecs[i][3]));
     }
-
-#endif
-#endif
 }
 
 void CV_SpecificVideoFileTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const char codecs[][4] = { {'m', 'p', 'e', 'g'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'J', 'P', 'G'},
@@ -669,16 +679,10 @@ void CV_SpecificVideoFileTest::run(int)
     {
         SpecificVideoFileTest(ts->get_data_path(), codecs[i]);
     }
-
-#endif
-#endif
 }
 
 void CV_SpecificVideoCameraTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const char codecs[][4] = { {'m', 'p', 'e', 'g'},
                                {'X', 'V', 'I', 'D'},
                                {'M', 'J', 'P', 'G'},
@@ -690,13 +694,19 @@ void CV_SpecificVideoCameraTest::run(int)
     {
         SpecificVideoCameraTest(ts->get_data_path(), codecs[i]);
     }
-
-#endif
-#endif
 }
 
+#ifdef HAVE_JPEG
 TEST(Highgui_Image, regression) { CV_ImageTest test; test.safe_run(); }
+#endif
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT
 TEST(Highgui_Video, regression) { CV_VideoTest test; test.safe_run(); }
-TEST(Highgui_SpecificImage, regression) { CV_SpecificImageTest test; test.safe_run(); }
 TEST(Highgui_SpecificVideoFile, regression) { CV_SpecificVideoFileTest test; test.safe_run(); }
+#endif
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT && BUILD_WITH_CAMERA_SUPPORT
 TEST(Highgui_SpecificVideoCamera, regression) { CV_SpecificVideoCameraTest test; test.safe_run(); }
+#endif
+
+TEST(Highgui_SpecificImage, regression) { CV_SpecificImageTest test; test.safe_run(); }

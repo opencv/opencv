@@ -406,8 +406,10 @@ int CV_DrawingTest_C::checkLineIterator( Mat& _img )
     return 0;
 }
 
+#ifdef HAVE_JPEG
 TEST(Highgui_Drawing_CPP,    regression) { CV_DrawingTest_CPP test; test.safe_run(); }
 TEST(Highgui_Drawing_C,      regression) { CV_DrawingTest_C   test; test.safe_run(); }
+#endif
 
 class CV_FillConvexPolyTest : public cvtest::BaseTest
 {

@@ -55,9 +55,6 @@ public:
 
 void CV_FramecountTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const int time_sec = 5, fps = 25;
 
     const string ext[] = {"avi", "mov", "mp4", "mpg", "wmv"};
@@ -126,9 +123,7 @@ void CV_FramecountTest::run(int)
 
     ts->printf(cvtest::TS::LOG, "\nSuccessfull experiments: %d (%d%%)\n", n-failed, (n - failed)*100/n);
     ts->printf(cvtest::TS::LOG, "Failed experiments: %d (%d%%)\n", failed, failed*100/n);
-
-#endif
-#endif
 }
-
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 TEST(HighguiFramecount, regression) {CV_FramecountTest test; test.safe_run();}
+#endif

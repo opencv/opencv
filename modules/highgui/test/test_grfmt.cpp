@@ -201,7 +201,13 @@ public:
     }
 };
 
+#ifdef HAVE_PNG
 TEST(Highgui_Grfmt_WriteBigImage,         regression) { CV_GrfmtWriteBigImageTest      test; test.safe_run(); }
+#endif
+
+#if defined(HAVE_PNG) && defined(HAVE_TIFF) && defined(HAVE_JPEG)
 TEST(Highgui_Grfmt_WriteSequenceImage,    regression) { CV_GrfmtWriteSequenceImageTest test; test.safe_run(); }
+#endif
+
 TEST(GrfmtReadBMPRLE8,    regression) { CV_GrfmtReadBMPRLE8Test test; test.safe_run(); }
 

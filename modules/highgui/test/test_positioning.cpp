@@ -209,25 +209,15 @@ void CV_VideoPositioningTest::run_test(int method)
 
 void CV_VideoProgressivePositioningTest::run(int) 
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
 	run_test(PROGRESSIVE);
-
-#endif
-#endif
 }
 
 void CV_VideoRandomPositioningTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
 	run_test(RANDOM);
-
-#endif
-#endif
 }
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 TEST (HighguiPositioning, progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
 TEST (HighguiPositioning, random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
+#endif
