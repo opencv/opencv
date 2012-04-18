@@ -247,7 +247,7 @@ static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool 
                 _mm_set_ss(p[i][1]))
                 );
 #else
-        arr[i] += (int)temp*p[i][0] + p[i][1];
+        arr[i] = (int)temp*p[i][0] + p[i][1];
 #endif
     }
 
