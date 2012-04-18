@@ -317,16 +317,19 @@ CV_INLINE  int  cvRound( double value )
 #endif
 }
 
+#if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
+#include "emmintrin.h"
+#endif
 
 CV_INLINE  int  cvFloor( double value )
 {
-#ifdef __GNUC__
-    int i = (int)value;
-    return i - (i > value);
-#elif defined _MSC_VER && defined _M_X64
+#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__)
     __m128d t = _mm_set_sd( value );
     int i = _mm_cvtsd_si32(t);
     return i - _mm_movemask_pd(_mm_cmplt_sd(t, _mm_cvtsi32_sd(t,i)));
+#elif defined __GNUC__
+    int i = (int)value;
+    return i - (i > value);
 #else
     int i = cvRound(value);
     Cv32suf diff;
@@ -338,13 +341,13 @@ CV_INLINE  int  cvFloor( double value )
 
 CV_INLINE  int  cvCeil( double value )
 {
-#ifdef __GNUC__
-    int i = (int)value;
-    return i + (i < value);
-#elif defined _MSC_VER && defined _M_X64
+#if defined _MSC_VER && defined _M_X64 || (defined __GNUC__ && defined __SSE2__)
     __m128d t = _mm_set_sd( value );
     int i = _mm_cvtsd_si32(t);
     return i + _mm_movemask_pd(_mm_cmplt_sd(_mm_cvtsi32_sd(t,i), t));
+#elif defined __GNUC__
+    int i = (int)value;
+    return i + (i < value);
 #else
     int i = cvRound(value);
     Cv32suf diff;

@@ -240,7 +240,6 @@ static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool 
     for( ; i < len; i++ )
     {
         temp = RNG_NEXT(temp);
-        arr[i] = (int)temp*p[i][0] + p[i][1];
 #if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
         _mm_store_ss(arr + i, _mm_add_ss(
                 _mm_mul_ss(_mm_set_ss((float)(int)temp), _mm_set_ss(p[i][0])),
