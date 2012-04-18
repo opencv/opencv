@@ -4312,10 +4312,10 @@ public:
 class CV_EXPORTS AlgorithmInfo
 {
 public:
+    friend class Algorithm;
     AlgorithmInfo(const string& name, Algorithm::Constructor create);
     ~AlgorithmInfo();
     void get(const Algorithm* algo, const char* name, int argType, void* value) const;
-    void set(Algorithm* algo, const char* name, int argType, const void* value) const;
     void addParam_(Algorithm& algo, const char* name, int argType,
                    void* value, bool readOnly, 
                    Algorithm::Getter getter, Algorithm::Setter setter,
@@ -4365,6 +4365,8 @@ public:
                   const string& help=string());
 protected:
     AlgorithmInfoData* data;
+    void set(Algorithm* algo, const char* name, int argType,
+              const void* value, bool force=false) const;
 };
 
 

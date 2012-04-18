@@ -296,9 +296,9 @@ AlgorithmInfo::~AlgorithmInfo()
     
 void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
 {
-    size_t i = 0, n = data->params.vec.size();
+    size_t i = 0, nparams = data->params.vec.size();
     cv::write(fs, "name", algo->name());
-    for( i = 0; i < n; i++ )
+    for( i = 0; i < nparams; i++ )
     {
         const Param& p = data->params.vec[i].second;
         const string& pname = data->params.vec[i].first;
@@ -327,9 +327,10 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
 
 void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
 {
-    size_t i = 0, n = data->params.vec.size();
+    size_t i = 0, nparams = data->params.vec.size();
+    AlgorithmInfo* info = algo->info();
     
-    for( i = 0; i < n; i++ )
+    for( i = 0; i < nparams; i++ )
     {
         const Param& p = data->params.vec[i].second;
         const string& pname = data->params.vec[i].first;
@@ -337,31 +338,43 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         if( n.empty() )
             continue;
         if( p.type == Param::INT )
-            algo->set(pname, (int)n);
+        {
+            int val = (int)n;
+            info->set(algo, pname.c_str(), p.type, &val, true);
+        }
         else if( p.type == Param::BOOLEAN )
-            algo->set(pname, (int)n != 0);
+        {
+            bool val = (int)n != 0;
+            info->set(algo, pname.c_str(), p.type, &val, true);
+        }
         else if( p.type == Param::REAL )
-            algo->set(pname, (double)n);
+        {
+            double val = (double)n;
+            info->set(algo, pname.c_str(), p.type, &val, true);
+        }
         else if( p.type == Param::STRING )
-            algo->set(pname, (string)n);
+        {
+            string val = (string)n;
+            info->set(algo, pname.c_str(), p.type, &val, true);
+        }
         else if( p.type == Param::MAT )
         {
             Mat m;
             cv::read(n, m);
-            algo->set(pname, m);
+            info->set(algo, pname.c_str(), p.type, &m, true);
         }
         else if( p.type == Param::MAT_VECTOR )
         {
             vector<Mat> mv;
             cv::read(n, mv);
-            algo->set(pname, mv);
+            info->set(algo, pname.c_str(), p.type, &mv, true);
         }
         else if( p.type == Param::ALGORITHM )
         {
             Ptr<Algorithm> nestedAlgo = Algorithm::_create((string)n["name"]);
             CV_Assert( !nestedAlgo.empty() );
             nestedAlgo->read(n);
-            algo->set(pname, nestedAlgo);
+            info->set(algo, pname.c_str(), p.type, &nestedAlgo, true);
         }
         else
             CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported parameter type");
@@ -391,24 +404,24 @@ union GetSetParam
     void (Algorithm::*set_mat_vector)(const vector<Mat>&);
     void (Algorithm::*set_algo)(const Ptr<Algorithm>&);
 };
-    
-void AlgorithmInfo::set(Algorithm* algo, const char* name, int argType, const void* value) const
+
+void AlgorithmInfo::set(Algorithm* algo, const char* name, int argType, const void* value, bool force) const
 {
     const Param* p = findstr(data->params, name);
-    
+
     if( !p )
         CV_Error_( CV_StsBadArg, ("No parameter '%s' is found", name ? name : "<NULL>") );
-    
-    if( p->readonly )
+
+    if( !force && p->readonly )
         CV_Error_( CV_StsError, ("Parameter '%s' is readonly", name));
-    
+
     GetSetParam f;
     f.set_int = p->setter;
-    
+
     if( argType == Param::INT || argType == Param::BOOLEAN || argType == Param::REAL )
     {
         CV_Assert( p->type == Param::INT || p->type == Param::REAL || p->type == Param::BOOLEAN );
-        
+
         if( p->type == Param::INT )
         {
             int val = argType == Param::INT ? *(const int*)value :
@@ -443,7 +456,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* name, int argType, const vo
     else if( argType == Param::STRING )
     {
         CV_Assert( p->type == Param::STRING );
-        
+
         const string& val = *(const string*)value;
         if( p->setter )
             (algo->*f.set_string)(val);
@@ -453,7 +466,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* name, int argType, const vo
     else if( argType == Param::MAT )
     {
         CV_Assert( p->type == Param::MAT );
-        
+
         const Mat& val = *(const Mat*)value;
         if( p->setter )
             (algo->*f.set_mat)(val);
@@ -463,7 +476,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* name, int argType, const vo
     else if( argType == Param::MAT_VECTOR )
     {
         CV_Assert( p->type == Param::MAT_VECTOR );
-        
+
         const vector<Mat>& val = *(const vector<Mat>*)value;
         if( p->setter )
             (algo->*f.set_mat_vector)(val);
@@ -473,7 +486,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* name, int argType, const vo
     else if( argType == Param::ALGORITHM )
     {
         CV_Assert( p->type == Param::ALGORITHM );
-        
+
         const Ptr<Algorithm>& val = *(const Ptr<Algorithm>*)value;
         if( p->setter )
             (algo->*f.set_algo)(val);
