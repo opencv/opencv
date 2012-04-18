@@ -40,6 +40,9 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/opencv_modules.hpp"
+
+#if HAVE_OPENCV_NONFREE
 
 using namespace cv;
 using namespace std;
@@ -71,3 +74,5 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     ASSERT_GT(br_rect_count, 0);
     ASSERT_EQ(bad_count, 0);
 }
+
+#endif

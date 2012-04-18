@@ -2,6 +2,7 @@
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/flann/flann.hpp"
+#include "opencv2/opencv_modules.hpp"
 
 using namespace std;
 using namespace cv;
@@ -16,7 +17,13 @@ using std::tr1::get;
 typedef TestBaseWithParam<String> stitch;
 typedef TestBaseWithParam<String> match;
 
-PERF_TEST_P(stitch, a123, testing::Values("surf", "orb"))
+#if HAVE_OPENCV_NONFREE
+#define TEST_DETECTORS testing::Values("surf", "orb")
+#else
+#define TEST_DETECTORS testing::Values<String>("orb")
+#endif
+
+PERF_TEST_P(stitch, a123, TEST_DETECTORS)
 {
     Mat pano;
     
@@ -50,7 +57,7 @@ PERF_TEST_P(stitch, a123, testing::Values("surf", "orb"))
     }
 }
 
-PERF_TEST_P(stitch, b12, testing::Values("surf", "orb"))
+PERF_TEST_P(stitch, b12, TEST_DETECTORS)
 {
     Mat pano;
     
@@ -83,7 +90,7 @@ PERF_TEST_P(stitch, b12, testing::Values("surf", "orb"))
     }
 }
 
-PERF_TEST_P( match, bestOf2Nearest, testing::Values("surf", "orb"))
+PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 {
     Mat img1, img1_full = imread( getDataPath("stitching/b1.jpg") );
     Mat img2, img2_full = imread( getDataPath("stitching/b2.jpg") );
