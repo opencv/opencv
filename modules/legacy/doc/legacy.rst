@@ -8,3 +8,4 @@ legacy. Deprecated stuff
     :maxdepth: 2
 
     motion_analysis
+    expectation_maximization
