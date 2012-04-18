@@ -251,7 +251,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
 #endif
 
-#ifdef HAVE_GSTREAMER && 0
+#if defined(HAVE_GSTREAMER) && 0
             //Re-enable again when gstreamer 1394 support will land in the backend code
             capture = cvCreateCapture_GStreamer(CV_CAP_GSTREAMER_1394, 0);
             if (capture)
