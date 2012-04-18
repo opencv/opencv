@@ -47,7 +47,7 @@ int main(int argc, const char* argv[])
         gpu_times.push_back(tm.getTimeMilli());
 
         cv::imshow("CPU", frame);
-        cv::imshow("GPU", frame);
+        cv::imshow("GPU", d_frame);
 
         if (cv::waitKey(3) > 0)
             break;
