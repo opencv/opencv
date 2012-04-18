@@ -61,6 +61,53 @@ void SparsePyrLkOptFlowEstimator::run(
 
 
 #if HAVE_OPENCV_GPU
+SparsePyrLkOptFlowEstimatorGpu::SparsePyrLkOptFlowEstimatorGpu()
+{
+    CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
+}
+
+
+void SparsePyrLkOptFlowEstimatorGpu::run(
+        InputArray frame0, InputArray frame1, InputArray points0, InputOutputArray points1,
+        OutputArray status, OutputArray errors)
+{
+    frame0_.upload(frame0.getMat());
+    frame1_.upload(frame1.getMat());
+    points0_.upload(points0.getMat());
+
+    if (errors.needed())
+    {
+        run(frame0_, frame1_, points0_, points1_, status_, errors_);
+        errors_.download(errors.getMatRef());
+    }
+    else
+        run(frame0_, frame1_, points0_, points1_, status_);
+
+    points1_.download(points1.getMatRef());
+    status_.download(status.getMatRef());
+}
+
+
+void SparsePyrLkOptFlowEstimatorGpu::run(
+        const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, const gpu::GpuMat &points0,
+        gpu::GpuMat &points1, gpu::GpuMat &status, gpu::GpuMat &errors)
+{
+    optFlowEstimator_.winSize = winSize_;
+    optFlowEstimator_.maxLevel = maxLevel_;
+    optFlowEstimator_.sparse(frame0, frame1, points0, points1, status, &errors);
+}
+
+
+void SparsePyrLkOptFlowEstimatorGpu::run(
+        const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, const gpu::GpuMat &points0,
+        gpu::GpuMat &points1, gpu::GpuMat &status)
+{
+    optFlowEstimator_.winSize = winSize_;
+    optFlowEstimator_.maxLevel = maxLevel_;
+    optFlowEstimator_.sparse(frame0, frame1, points0, points1, status);
+}
+
+
 DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu()
 {
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
@@ -76,6 +123,7 @@ void DensePyrLkOptFlowEstimatorGpu::run(
 
     optFlowEstimator_.winSize = winSize_;
     optFlowEstimator_.maxLevel = maxLevel_;
+
     if (errors.needed())
     {
         optFlowEstimator_.dense(frame0_, frame1_, flowX_, flowY_, &errors_);
@@ -87,8 +135,7 @@ void DensePyrLkOptFlowEstimatorGpu::run(
     flowX_.download(flowX.getMatRef());
     flowY_.download(flowY.getMatRef());
 }
-#endif
-
+#endif // #if HAVE_OPENCV_GPU
 
 } // namespace videostab
 } // namespace cv

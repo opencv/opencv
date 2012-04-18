@@ -47,7 +47,7 @@
 #include "opencv2/opencv_modules.hpp"
 
 #if HAVE_OPENCV_GPU
-#include "opencv2/gpu/gpu.hpp"
+  #include "opencv2/gpu/gpu.hpp"
 #endif
 
 namespace cv
@@ -99,6 +99,27 @@ public:
 };
 
 #if HAVE_OPENCV_GPU
+class CV_EXPORTS SparsePyrLkOptFlowEstimatorGpu
+        : public PyrLkOptFlowEstimatorBase, public ISparseOptFlowEstimator
+{
+public:
+    SparsePyrLkOptFlowEstimatorGpu();
+
+    virtual void run(
+            InputArray frame0, InputArray frame1, InputArray points0, InputOutputArray points1,
+            OutputArray status, OutputArray errors);
+
+    void run(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, const gpu::GpuMat &points0, gpu::GpuMat &points1,
+             gpu::GpuMat &status, gpu::GpuMat &errors);
+
+    void run(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, const gpu::GpuMat &points0, gpu::GpuMat &points1,
+             gpu::GpuMat &status);
+
+private:
+    gpu::PyrLKOpticalFlow optFlowEstimator_;
+    gpu::GpuMat frame0_, frame1_, points0_, points1_, status_, errors_;
+};
+
 class CV_EXPORTS DensePyrLkOptFlowEstimatorGpu
         : public PyrLkOptFlowEstimatorBase, public IDenseOptFlowEstimator
 {
@@ -108,6 +129,7 @@ public:
     virtual void run(
             InputArray frame0, InputArray frame1, InputOutputArray flowX, InputOutputArray flowY,
             OutputArray errors);
+
 private:
     gpu::PyrLKOpticalFlow optFlowEstimator_;
     gpu::GpuMat frame0_, frame1_, flowX_, flowY_, errors_;

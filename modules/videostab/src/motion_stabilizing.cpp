@@ -261,9 +261,6 @@ void LpMotionStabilizer::stabilize(
     rowlb_.assign(nrows, -INF);
     rowub_.assign(nrows, INF);
 
-    vector<CoinShallowPackedVector> packedRows;
-    packedRows.reserve(nrows);
-
     int r = 0;
 
     // frame corners

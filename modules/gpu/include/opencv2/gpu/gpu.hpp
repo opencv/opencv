@@ -2090,6 +2090,10 @@ private:
     std::auto_ptr<Impl> impl_;
 };
 
+
+//! removes points (CV_32FC2, single row matrix) with zero mask value
+CV_EXPORTS void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask);
+
 } // namespace gpu
 
 } // namespace cv

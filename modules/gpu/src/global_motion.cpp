@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other GpuMaterials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
+// any express or bpied warranties, including, but not limited to, the bpied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -40,31 +40,36 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_HPP__
-#define __OPENCV_PRECOMP_HPP__
+#include "precomp.hpp"
 
-#ifdef HAVE_CVCONFIG_H
-  #include "cvconfig.h"
-#endif
+using namespace std;
+using namespace cv;
+using namespace cv::gpu;
 
-#include <stdexcept>
-#include <iostream>
-#include <ctime>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
+#ifndef HAVE_CUDA
 
-// some aux. functions
+void cv::gpu::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
 
-inline float sqr(float x) { return x * x; }
+#else
 
-inline float intensity(const cv::Point3_<uchar> &bgr)
+namespace cv { namespace gpu { namespace device {
+
+    int compactPoints(int N, float *points0, float *points1, const uchar *mask);
+
+}}}
+
+void cv::gpu::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
 {
-    return 0.3f*bgr.x + 0.59f*bgr.y + 0.11f*bgr.z;
+    CV_Assert(points0.rows == 1 && points1.rows == 1 && mask.rows == 1);
+    CV_Assert(points0.type() == CV_32FC2 && points1.type() == CV_32FC2 && mask.type() == CV_8U);
+    CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
+
+    int npoints = points0.cols;
+    int remaining = cv::gpu::device::compactPoints(
+            npoints, (float*)points0.data, (float*)points1.data, mask.data);
+
+    points0 = points0.colRange(0, remaining);
+    points1 = points1.colRange(0, remaining);
 }
 
 #endif
-

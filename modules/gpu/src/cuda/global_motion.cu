@@ -11,7 +11,8 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 1993-2011, NVIDIA Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -28,7 +29,7 @@
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
+// any express or bpied warranties, including, but not limited to, the bpied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -40,31 +41,25 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_HPP__
-#define __OPENCV_PRECOMP_HPP__
+#include "thrust/device_ptr.h"
+#include "thrust/remove.h"
+#include "thrust/functional.h"
+#include "internal_shared.hpp"
 
-#ifdef HAVE_CVCONFIG_H
-  #include "cvconfig.h"
-#endif
+using namespace thrust;
 
-#include <stdexcept>
-#include <iostream>
-#include <ctime>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
+namespace cv { namespace gpu { namespace device {
 
-// some aux. functions
-
-inline float sqr(float x) { return x * x; }
-
-inline float intensity(const cv::Point3_<uchar> &bgr)
+int compactPoints(int N, float *points0, float *points1, const uchar *mask)
 {
-    return 0.3f*bgr.x + 0.59f*bgr.y + 0.11f*bgr.z;
+    thrust::device_ptr<float2> dpoints0((float2*)points0);
+    thrust::device_ptr<float2> dpoints1((float2*)points1);
+    thrust::device_ptr<const uchar> dmask(mask);
+
+    return thrust::remove_if(thrust::make_zip_iterator(thrust::make_tuple(dpoints0, dpoints1)),
+                             thrust::make_zip_iterator(thrust::make_tuple(dpoints0 + N, dpoints1 + N)),
+                             dmask, thrust::not1(thrust::identity<uchar>()))
+           - make_zip_iterator(make_tuple(dpoints0, dpoints1));
 }
 
-#endif
-
+}}}

@@ -241,13 +241,11 @@ Mat estimateGlobalMotionLeastSquares(
 
 
 Mat estimateGlobalMotionRobust(
-        const vector<Point2f> &points0, const vector<Point2f> &points1, int model,
+        int npoints, const Point2f *points0, const Point2f *points1, int model,
         const RansacParams &params, float *rmse, int *ninliers)
 {
     CV_Assert(model <= MM_AFFINE);
-    CV_Assert(points0.size() == points1.size());
 
-    const int npoints = static_cast<int>(points0.size());
     const int niters = static_cast<int>(ceil(log(1 - params.prob) /
                                              log(1 - pow(1 - params.eps, params.size))));
 
@@ -382,11 +380,7 @@ PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
     setDetector(new GoodFeaturesToTrackDetector());
     setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());
     setMotionModel(model);
-
-    RansacParams ransac = RansacParams::default2dMotion(model);
-    ransac.size *= 2; // we use more points than needed, but result looks better
-    setRansacParams(ransac);
-
+    setRansacParams(RansacParams::default2dMotion(model));
     setMinInlierRatio(0.1f);
     setGridSize(Size(0,0));
 }
@@ -394,35 +388,37 @@ PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
 
 Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 {
+    // find keypoints
+
     detector_->detect(frame0, keypointsPrev_);
 
     // add extra keypoints
+
     if (gridSize_.width > 0 && gridSize_.height > 0)
     {
-        float dx = (float)frame0.cols / (gridSize_.width + 1);
-        float dy = (float)frame0.rows / (gridSize_.height + 1);
+        float dx = static_cast<float>(frame0.cols) / (gridSize_.width + 1);
+        float dy = static_cast<float>(frame0.rows) / (gridSize_.height + 1);
         for (int x = 0; x < gridSize_.width; ++x)
             for (int y = 0; y < gridSize_.height; ++y)
                 keypointsPrev_.push_back(KeyPoint((x+1)*dx, (y+1)*dy, 0.f));
     }
 
-    // draw keypoints
-    /*Mat img;
-    drawKeypoints(frame0, keypointsPrev_, img);
-    imshow("frame0_keypoints", img);
-    waitKey(3);*/
+    // extract points from keypoints
 
     pointsPrev_.resize(keypointsPrev_.size());
     for (size_t i = 0; i < keypointsPrev_.size(); ++i)
         pointsPrev_[i] = keypointsPrev_[i].pt;
 
+    // find correspondences
+
     optFlowEstimator_->run(frame0, frame1, pointsPrev_, points_, status_, noArray());
 
-    size_t npoints = points_.size();
-    pointsPrevGood_.clear(); pointsPrevGood_.reserve(npoints);
-    pointsGood_.clear(); pointsGood_.reserve(npoints);
+    // leave good correspondences only
 
-    for (size_t i = 0; i < npoints; ++i)
+    pointsPrevGood_.clear(); pointsPrevGood_.reserve(points_.size());
+    pointsGood_.clear(); pointsGood_.reserve(points_.size());
+
+    for (size_t i = 0; i < points_.size(); ++i)
     {
         if (status_[i])
         {
@@ -431,24 +427,29 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
         }
     }
 
-    int ninliers;
+    size_t npoints = pointsGood_.size();
+
+    // find motion
+
+    int ninliers = 0;
     Mat_<float> M;
 
     if (motionModel_ != MM_HOMOGRAPHY)
         M = estimateGlobalMotionRobust(
-                pointsPrevGood_, pointsGood_, motionModel_, ransacParams_, 0, &ninliers);
+                npoints, &pointsPrevGood_[0], &pointsGood_[0], motionModel_,
+                ransacParams_, 0, &ninliers);
     else
     {
         vector<uchar> mask;
         M = findHomography(pointsPrevGood_, pointsGood_, mask, CV_RANSAC, ransacParams_.thresh);
-
-        ninliers = 0;
-        for (size_t i  = 0; i < pointsGood_.size(); ++i)
+        for (size_t i  = 0; i < npoints; ++i)
             if (mask[i]) ninliers++;
     }
 
+    // check if we're confident enough in estimated motion
+
     if (ok) *ok = true;
-    if (static_cast<float>(ninliers) / pointsGood_.size() < minInlierRatio_)
+    if (static_cast<float>(ninliers) / npoints < minInlierRatio_)
     {
         M = Mat::eye(3, 3, CV_32F);
         if (ok) *ok = false;
@@ -456,6 +457,85 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
 
     return M;
 }
+
+
+#if HAVE_OPENCV_GPU
+PyrLkRobustMotionEstimatorGpu::PyrLkRobustMotionEstimatorGpu(MotionModel model)
+{
+    CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
+    setMotionModel(model);
+    setRansacParams(RansacParams::default2dMotion(model));
+    setMinInlierRatio(0.1f);
+}
+
+
+Mat PyrLkRobustMotionEstimatorGpu::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
+{
+    frame0_.upload(frame0);
+    frame1_.upload(frame1);
+    return estimate(frame0_, frame1_, ok);
+}
+
+
+Mat PyrLkRobustMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok)
+{
+    // convert frame to gray if it's color
+
+    gpu::GpuMat grayFrame0;
+    if (frame0.channels() == 1)
+        grayFrame0 = frame0;
+    else
+    {
+        gpu::cvtColor(frame0_, grayFrame0_, CV_BGR2GRAY);
+        grayFrame0 = grayFrame0_;
+    }
+
+    // find keypoints
+
+    detector_(grayFrame0, pointsPrev_);
+
+    // find correspondences
+
+    optFlowEstimator_.run(frame0, frame1, pointsPrev_, points_, status_);    
+
+    // leave good correspondences only
+
+    gpu::compactPoints(pointsPrev_, points_, status_);
+
+    pointsPrev_.download(hostPointsPrev_);
+    points_.download(hostPoints_);
+
+    int npoints = hostPointsPrev_.cols;
+
+    // find motion
+
+    int ninliers = 0;
+    Mat_<float> M;
+
+    if (motionModel_ != MM_HOMOGRAPHY)
+        M = estimateGlobalMotionRobust(
+                npoints, hostPointsPrev_.ptr<Point2f>(0), hostPoints_.ptr<Point2f>(), motionModel_,
+                ransacParams_, 0, &ninliers);
+    else
+    {
+        vector<uchar> mask;
+        M = findHomography(hostPointsPrev_, hostPoints_, mask, CV_RANSAC, ransacParams_.thresh);
+        for (int i  = 0; i < npoints; ++i)
+            if (mask[i]) ninliers++;
+    }
+
+    // check if we're confident enough in estimated motion
+
+    if (ok) *ok = true;
+    if (static_cast<float>(ninliers) / npoints < minInlierRatio_)
+    {
+        M = Mat::eye(3, 3, CV_32F);
+        if (ok) *ok = false;
+    }
+
+    return M;
+}
+#endif // #if HAVE_OPENCV_GPU
 
 
 Mat getMotion(int from, int to, const vector<Mat> &motions)

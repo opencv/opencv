@@ -50,6 +50,10 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
 
+#if HAVE_OPENCV_GPU
+  #include "opencv2/gpu/gpu.hpp"
+#endif
+
 namespace cv
 {
 namespace videostab
@@ -161,13 +165,42 @@ private:
     Ptr<FeatureDetector> detector_;
     Ptr<ISparseOptFlowEstimator> optFlowEstimator_;
     RansacParams ransacParams_;
+    float minInlierRatio_;
+    Size gridSize_;
+
     std::vector<uchar> status_;
     std::vector<KeyPoint> keypointsPrev_;
     std::vector<Point2f> pointsPrev_, points_;
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
-    float minInlierRatio_;
-    Size gridSize_;
 };
+
+#if HAVE_OPENCV_GPU
+class CV_EXPORTS PyrLkRobustMotionEstimatorGpu : public GlobalMotionEstimatorBase
+{
+public:
+    PyrLkRobustMotionEstimatorGpu(MotionModel model = MM_AFFINE);
+
+    void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
+    RansacParams ransacParams() const { return ransacParams_; }
+
+    void setMinInlierRatio(float val) { minInlierRatio_ = val; }
+    float minInlierRatio() const { return minInlierRatio_; }
+
+    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
+    Mat estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok = 0);
+
+private:
+    gpu::GoodFeaturesToTrackDetector_GPU detector_;
+    SparsePyrLkOptFlowEstimatorGpu optFlowEstimator_;
+    RansacParams ransacParams_;
+    float minInlierRatio_;
+
+    gpu::GpuMat frame0_, grayFrame0_, frame1_;
+    gpu::GpuMat pointsPrev_, points_;
+    Mat hostPointsPrev_, hostPoints_;
+    gpu::GpuMat status_;
+};
+#endif
 
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 

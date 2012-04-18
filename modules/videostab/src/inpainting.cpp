@@ -520,7 +520,6 @@ void completeFrameAccordingToFlow(
     Mat_<uchar> flowMask_(flowMask), mask1_(mask1), mask0_(mask0);
     Mat_<float> flowX_(flowX), flowY_(flowY);
 
-    //int count = 0;
     for (int y0 = 0; y0 < frame0.rows; ++y0)
     {
         for (int x0 = 0; x0 < frame0.cols; ++x0)
@@ -535,12 +534,10 @@ void completeFrameAccordingToFlow(
                 {                    
                     frame0.at<Point3_<uchar> >(y0,x0) = frame1.at<Point3_<uchar> >(y1,x1);
                     mask0_(y0,x0) = 255;
-                    //count++;
                 }
             }
         }
     }
-    //cout << count << endl;
 }
 
 } // namespace videostab

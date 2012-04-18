@@ -321,6 +321,7 @@ void TwoPassStabilizer::runPrePassIfNecessary()
 {
     if (!isPrePassDone_)
     {
+        clock_t startTime = clock();
         log_->print("first pass: estimating motions");
 
         Mat prevFrame, frame;
@@ -346,6 +347,13 @@ void TwoPassStabilizer::runPrePassIfNecessary()
                     else
                         motions2_.push_back(motions_.back());
                 }
+
+                if (ok)
+                {
+                    if (ok2) log_->print(".");
+                    else log_->print("?");
+                }
+                else log_->print("x");
             }
             else
             {
@@ -356,13 +364,6 @@ void TwoPassStabilizer::runPrePassIfNecessary()
 
             prevFrame = frame;
             frameCount_++;
-
-            if (ok)
-            {
-                if (ok2) log_->print(".");
-                else log_->print("?");
-            }
-            else log_->print("x");
         }
 
         // add aux. motions
@@ -419,6 +420,9 @@ void TwoPassStabilizer::runPrePassIfNecessary()
 
         isPrePassDone_ = true;
         frameSource_->reset();
+
+        clock_t elapsedTime = clock() - startTime;
+        log_->print("first pass time: %.3f sec\n", static_cast<double>(elapsedTime) / CLOCKS_PER_SEC);
     }
 }
 

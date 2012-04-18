@@ -7,11 +7,10 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -24,7 +23,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -40,31 +39,49 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_HPP__
-#define __OPENCV_PRECOMP_HPP__
+#include "precomp.hpp"
 
-#ifdef HAVE_CVCONFIG_H
-  #include "cvconfig.h"
-#endif
-
-#include <stdexcept>
 #include <iostream>
-#include <ctime>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
+using namespace std;
 
-// some aux. functions
+using namespace cv;
 
-inline float sqr(float x) { return x * x; }
-
-inline float intensity(const cv::Point3_<uchar> &bgr)
+struct CompactPoints : testing::TestWithParam<gpu::DeviceInfo>
 {
-    return 0.3f*bgr.x + 0.59f*bgr.y + 0.11f*bgr.z;
+    virtual void SetUp() { gpu::setDevice(GetParam().deviceID()); }
+};
+
+TEST_P(CompactPoints, CanCompactizeSmallInput)
+{
+    Mat src0(1, 3, CV_32FC2);
+    src0.at<Point2f>(0,0) = Point2f(0,0);
+    src0.at<Point2f>(0,1) = Point2f(0,1);
+    src0.at<Point2f>(0,2) = Point2f(0,2);
+
+    Mat src1(1, 3, CV_32FC2);
+    src1.at<Point2f>(0,0) = Point2f(1,0);
+    src1.at<Point2f>(0,1) = Point2f(1,1);
+    src1.at<Point2f>(0,2) = Point2f(1,2);
+
+    Mat mask(1, 3, CV_8U);
+    mask.at<uchar>(0,0) = 1;
+    mask.at<uchar>(0,1) = 0;
+    mask.at<uchar>(0,2) = 1;
+
+    gpu::GpuMat dsrc0(src0), dsrc1(src1), dmask(mask);
+    gpu::compactPoints(dsrc0, dsrc1, dmask);
+
+    dsrc0.download(src0);
+    dsrc1.download(src1);
+
+    ASSERT_EQ(2, src0.cols);
+    ASSERT_EQ(2, src1.cols);
+
+    ASSERT_TRUE(src0.at<Point2f>(0,0) == Point2f(0,0));
+    ASSERT_TRUE(src0.at<Point2f>(0,1) == Point2f(0,2));
+
+    ASSERT_TRUE(src1.at<Point2f>(0,0) == Point2f(1,0));
+    ASSERT_TRUE(src1.at<Point2f>(0,1) == Point2f(1,2));
 }
 
-#endif
-
+INSTANTIATE_TEST_CASE_P(GPU_GlobalMotion, CompactPoints, ALL_DEVICES);
