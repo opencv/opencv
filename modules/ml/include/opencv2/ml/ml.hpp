@@ -569,7 +569,7 @@ public:
     enum {START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0};
 
     CV_WRAP EM(int nclusters=EM::DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL,
-       const TermCriteria& termcrit=TermCriteria(TermCriteria::COUNT+
+       const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+
                                                  TermCriteria::EPS,
                                                  EM::DEFAULT_MAX_ITERS, FLT_EPSILON));
     

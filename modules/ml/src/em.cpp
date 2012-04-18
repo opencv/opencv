@@ -48,12 +48,12 @@ const double minEigenValue = DBL_EPSILON;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-EM::EM(int _nclusters, int _covMatType, const TermCriteria& _criteria)
+EM::EM(int _nclusters, int _covMatType, const TermCriteria& _termCrit)
 {
     nclusters = _nclusters;
     covMatType = _covMatType;
-    maxIters = (_criteria.type & TermCriteria::MAX_ITER) ? _criteria.maxCount : DEFAULT_MAX_ITERS;
-    epsilon = (_criteria.type & TermCriteria::EPS) ? _criteria.epsilon : 0;
+    maxIters = (_termCrit.type & TermCriteria::MAX_ITER) ? _termCrit.maxCount : DEFAULT_MAX_ITERS;
+    epsilon = (_termCrit.type & TermCriteria::EPS) ? _termCrit.epsilon : 0;
 }
 
 EM::~EM()
@@ -135,6 +135,7 @@ Vec2d EM::predict(InputArray _sample, OutputArray _probs) const
         sample.convertTo(tmp, CV_64FC1);
         sample = tmp;
     }
+    sample.reshape(1, 1);
 
     Mat probs;
     if( _probs.needed() )
@@ -682,12 +683,12 @@ AlgorithmInfo* EM::info() const
     if( !initialized )
     {
         EM obj;
-        em_info.addParam(obj, "nclusters", obj.nclusters);
-        em_info.addParam(obj, "covMatType", obj.covMatType);
+        em_info.addParam(obj, "nclusters", obj.nclusters, true);
+        em_info.addParam(obj, "covMatType", obj.covMatType, true);
 
-        em_info.addParam(obj, "weights", obj.weights);
-        em_info.addParam(obj, "means", obj.means);
-        em_info.addParam(obj, "covs", obj.covs);
+        em_info.addParam(obj, "weights", obj.weights, true);
+        em_info.addParam(obj, "means", obj.means, true);
+        em_info.addParam(obj, "covs", obj.covs, true);
 
         initialized = true;
     }
