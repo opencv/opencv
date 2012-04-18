@@ -22,3 +22,15 @@ JNI_OnUnload(JavaVM *vm, void *reserved)
 }
 
 } // extern "C"
+
+#include "opencv2/opencv_modules.hpp"
+
+#if HAVE_OPENCV_MODULES_NONFREE
+#include "opencv2/nonfree/nonfree.hpp"
+static bool makeUseOfNonfree = initModule_nonfree();
+#endif
+
+#if HAVE_OPENCV_MODULES_FEATURES2D
+#include "opencv2/features2d/features2d.hpp"
+static bool makeUseOfNonfree = initModule_features2d();
+#endif

@@ -6,7 +6,7 @@ if(NOT ANDROID OR NOT PYTHON_EXECUTABLE OR ANDROID_NATIVE_API_LEVEL LESS 8)
 endif()
 
 set(the_description "The java bindings")
-ocv_add_module(java BINDINGS opencv_core opencv_imgproc OPTIONAL opencv_objdetect opencv_features2d opencv_video opencv_highgui opencv_ml opencv_calib3d opencv_photo)
+ocv_add_module(java BINDINGS opencv_core opencv_imgproc OPTIONAL opencv_objdetect opencv_features2d opencv_video opencv_highgui opencv_ml opencv_calib3d opencv_photo opencv_nonfree)
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cpp")
 
 # get list of modules to wrap
@@ -56,23 +56,25 @@ foreach(module ${OPENCV_JAVA_MODULES})
   endforeach()
 
   # first run (to get list of generated files)
-  file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
-  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_headers}
-                  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
-                  OUTPUT_QUIET ERROR_QUIET)
-  file(GLOB_RECURSE ${module}_generated_java_sources RELATIVE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/" "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/*.java")
-  ocv_list_add_prefix(${module}_generated_java_sources "${CMAKE_CURRENT_BINARY_DIR}/")
+  if(module_headers)
+    file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_headers}
+                    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
+                    OUTPUT_QUIET ERROR_QUIET)
+    file(GLOB_RECURSE ${module}_generated_java_sources RELATIVE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/" "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/*.java")
+    ocv_list_add_prefix(${module}_generated_java_sources "${CMAKE_CURRENT_BINARY_DIR}/")
 
-  # second run (at build time)
-  add_custom_command(OUTPUT ${${module}_generated_java_sources} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
-                     COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_headers}
-                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                     DEPENDS "${GEN_JAVA}" "${HDR_PARSER}" ${module_headers})
+    # second run (at build time)
+    add_custom_command(OUTPUT ${${module}_generated_java_sources} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
+                       COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_headers}
+                       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                       DEPENDS "${GEN_JAVA}" "${HDR_PARSER}" ${module_headers})
 
-  list(APPEND java_hdr_deps ${module_headers})
-  list(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp")
-  list(APPEND generated_java_sources ${${module}_generated_java_sources})
+    list(APPEND java_hdr_deps ${module_headers})
+    list(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp")
+    list(APPEND generated_java_sources ${${module}_generated_java_sources})
+  endif()
 endforeach()
 
 # get handwritten files used for wrappers generation
