@@ -42,6 +42,8 @@
 
 #include "frame_queue.h"
 
+#ifdef HAVE_CUDA
+
 cv::gpu::detail::FrameQueue::FrameQueue() :
     endOfDecode_(0),
     framesInQueue_(0),
@@ -111,3 +113,5 @@ bool cv::gpu::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
 
     return false;
 }
+
+#endif // HAVE_CUDA
