@@ -1741,3 +1741,232 @@ void write_OutputMediaStream_FFMPEG(struct OutputMediaStream_FFMPEG* stream, uns
 {
     stream->write(data, size, keyFrame);
 }
+
+/*
+ * For CUDA decoder
+ */
+
+enum
+{
+    VideoCodec_MPEG1 = 0,
+    VideoCodec_MPEG2,
+    VideoCodec_MPEG4,
+    VideoCodec_VC1,
+    VideoCodec_H264,
+    VideoCodec_JPEG,
+    VideoCodec_H264_SVC,
+    VideoCodec_H264_MVC,
+
+    // Uncompressed YUV
+    VideoCodec_YUV420 = (('I'<<24)|('Y'<<16)|('U'<<8)|('V')),   // Y,U,V (4:2:0)
+    VideoCodec_YV12   = (('Y'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,V,U (4:2:0)
+    VideoCodec_NV12   = (('N'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,UV  (4:2:0)
+    VideoCodec_YUYV   = (('Y'<<24)|('U'<<16)|('Y'<<8)|('V')),   // YUYV/YUY2 (4:2:2)
+    VideoCodec_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y')),   // UYVY (4:2:2)
+};
+
+enum
+{
+    VideoChromaFormat_Monochrome = 0,
+    VideoChromaFormat_YUV420,
+    VideoChromaFormat_YUV422,
+    VideoChromaFormat_YUV444,
+};
+
+struct InputMediaStream_FFMPEG
+{
+public:
+    bool open(const char* fileName, int* codec, int* chroma_format, int* width, int* height);
+    void close();
+
+    bool read(unsigned char** data, int* size, int* endOfFile);
+
+private:
+    InputMediaStream_FFMPEG(const InputMediaStream_FFMPEG&);
+    InputMediaStream_FFMPEG& operator =(const InputMediaStream_FFMPEG&);
+
+    AVFormatContext* ctx_;
+    int video_stream_id_;
+    AVPacket pkt_;
+};
+
+bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma_format, int* width, int* height)
+{
+    int err;
+
+    ctx_ = 0;
+    video_stream_id_ = -1;
+    memset(&pkt_, 0, sizeof(AVPacket));
+
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
+        avformat_network_init();
+    #endif
+
+    // register all codecs, demux and protocols
+    av_register_all();
+
+    av_log_set_level(AV_LOG_ERROR);
+
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
+        err = avformat_open_input(&ctx_, fileName, 0, 0);
+    #else
+        err = av_open_input_file(&ctx_, fileName, 0, 0, 0);
+    #endif
+    if (err < 0)
+        return false;
+
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 3, 0)
+        err = avformat_find_stream_info(ctx_, 0);
+    #else
+        err = av_find_stream_info(ctx_);
+    #endif
+    if (err < 0)
+        return false;
+
+    for (unsigned int i = 0; i < ctx_->nb_streams; ++i)
+    {
+        #if LIBAVFORMAT_BUILD > 4628
+            AVCodecContext *enc = ctx_->streams[i]->codec;
+        #else
+            AVCodecContext *enc = &ctx_->streams[i]->codec;
+        #endif
+
+        if (enc->codec_type == AVMEDIA_TYPE_VIDEO)
+        {
+            video_stream_id_ = static_cast<int>(i);
+
+            switch (enc->codec_id)
+            {
+            case CODEC_ID_MPEG1VIDEO:
+                *codec = ::VideoCodec_MPEG1;
+                break;
+
+            case CODEC_ID_MPEG2VIDEO:
+                *codec = ::VideoCodec_MPEG2;
+                break;
+
+            case CODEC_ID_MPEG4:
+                *codec = ::VideoCodec_MPEG4;
+                break;
+
+            case CODEC_ID_VC1:
+                *codec = ::VideoCodec_VC1;
+                break;
+
+            case CODEC_ID_H264:
+                *codec = ::VideoCodec_H264;
+                break;
+
+            default:
+                return false;
+            };
+
+            switch (enc->pix_fmt)
+            {
+            case PIX_FMT_YUV420P:
+                *chroma_format = ::VideoChromaFormat_YUV420;
+                break;
+
+            case PIX_FMT_YUV422P:
+                *chroma_format = ::VideoChromaFormat_YUV422;
+                break;
+
+            case PIX_FMT_YUV444P:
+                *chroma_format = ::VideoChromaFormat_YUV444;
+                break;
+
+            default:
+                return false;
+            }
+
+            *width = enc->coded_width;
+            *height = enc->coded_height;
+
+            break;
+        }
+    }
+
+    if (video_stream_id_ < 0)
+        return false;
+
+    av_init_packet(&pkt_);
+
+    return true;
+}
+
+void InputMediaStream_FFMPEG::close()
+{
+    if (ctx_)
+    {
+        #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 24, 2)
+            avformat_close_input(&ctx_);
+        #else
+            av_close_input_file(ctx_);
+        #endif
+    }
+
+    // free last packet if exist
+    if (pkt_.data)
+        av_free_packet(&pkt_);
+}
+
+bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFile)
+{
+    // free last packet if exist
+    if (pkt_.data)
+        av_free_packet(&pkt_);
+
+    // get the next frame
+    for (;;)
+    {
+        int ret = av_read_frame(ctx_, &pkt_);
+
+        if (ret == AVERROR(EAGAIN))
+            continue;
+
+        if (ret < 0)
+        {
+            if (ret == AVERROR_EOF)
+                *endOfFile = true;
+            return false;
+        }
+
+        if (pkt_.stream_index != video_stream_id_)
+        {
+            av_free_packet(&pkt_);
+            continue;
+        }
+
+        break;
+    }
+
+    *data = pkt_.data;
+    *size = pkt_.size;
+    *endOfFile = false;
+
+    return true;
+}
+
+InputMediaStream_FFMPEG* create_InputMediaStream_FFMPEG(const char* fileName, int* codec, int* chroma_format, int* width, int* height)
+{
+    InputMediaStream_FFMPEG* stream = (InputMediaStream_FFMPEG*) malloc(sizeof(InputMediaStream_FFMPEG));
+
+    if (stream && stream->open(fileName, codec, chroma_format, width, height))
+        return stream;
+
+    stream->close();
+    free(stream);
+
+    return 0;
+}
+
+void release_InputMediaStream_FFMPEG(InputMediaStream_FFMPEG* stream)
+{
+    stream->close();
+    free(stream);
+}
+
+int read_InputMediaStream_FFMPEG(InputMediaStream_FFMPEG* stream, unsigned char** data, int* size, int* endOfFile)
+{
+    return stream->read(data, size, endOfFile);
+}

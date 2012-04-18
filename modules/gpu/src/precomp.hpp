@@ -51,6 +51,7 @@
     #include "cvconfig.h"
 #endif
 
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -60,6 +61,10 @@
 #include <iterator>
 #include <functional>
 #include <utility>
+#include <deque>
+#include <stdexcept>
+#include <memory>
+#include <string>
 
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/imgproc/imgproc.hpp"

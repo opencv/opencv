@@ -577,7 +577,7 @@ void cv::gpu::VideoWriter_GPU::Impl::write(const cv::gpu::GpuMat& frame, bool la
         switch (surfaceFormat_)
         {
         case UYVY: // UYVY (4:2:2)
-        case YUY2:	// YUY2 (4:2:2)
+        case YUY2: // YUY2 (4:2:2)
             copyUYVYorYUY2Frame(frameSize_, frame, videoFrame_);
             break;
 
@@ -662,33 +662,33 @@ namespace
 
         if (!initialized)
         {
-        #if defined WIN32 || defined _WIN32
-            const char* module_name = "opencv_ffmpeg"
-            #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
-                "_64"
+            #if defined WIN32 || defined _WIN32
+                const char* module_name = "opencv_ffmpeg"
+                #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
+                    "_64"
+                #endif
+                    ".dll";
+
+                static HMODULE cvFFOpenCV = LoadLibrary(module_name);
+
+                if (cvFFOpenCV)
+                {
+                    create_OutputMediaStream_FFMPEG_p =
+                        (Create_OutputMediaStream_FFMPEG_Plugin)GetProcAddress(cvFFOpenCV, "create_OutputMediaStream_FFMPEG");
+                    release_OutputMediaStream_FFMPEG_p =
+                        (Release_OutputMediaStream_FFMPEG_Plugin)GetProcAddress(cvFFOpenCV, "release_OutputMediaStream_FFMPEG");
+                    write_OutputMediaStream_FFMPEG_p =
+                        (Write_OutputMediaStream_FFMPEG_Plugin)GetProcAddress(cvFFOpenCV, "write_OutputMediaStream_FFMPEG");
+
+                    initialized = create_OutputMediaStream_FFMPEG_p != 0 && release_OutputMediaStream_FFMPEG_p != 0 && write_OutputMediaStream_FFMPEG_p != 0;
+                }
+            #elif defined HAVE_FFMPEG
+                create_OutputMediaStream_FFMPEG_p = create_OutputMediaStream_FFMPEG;
+                release_OutputMediaStream_FFMPEG_p = release_OutputMediaStream_FFMPEG;
+                write_OutputMediaStream_FFMPEG_p = write_OutputMediaStream_FFMPEG;
+
+                initialized = true;
             #endif
-                ".dll";
-
-            static HMODULE cvFFOpenCV = LoadLibrary(module_name);
-
-            if (cvFFOpenCV)
-            {
-                create_OutputMediaStream_FFMPEG_p =
-                    (Create_OutputMediaStream_FFMPEG_Plugin)GetProcAddress(cvFFOpenCV, "create_OutputMediaStream_FFMPEG");
-                release_OutputMediaStream_FFMPEG_p =
-                    (Release_OutputMediaStream_FFMPEG_Plugin)GetProcAddress(cvFFOpenCV, "release_OutputMediaStream_FFMPEG");
-                write_OutputMediaStream_FFMPEG_p =
-                    (Write_OutputMediaStream_FFMPEG_Plugin)GetProcAddress(cvFFOpenCV, "write_OutputMediaStream_FFMPEG");
-
-                initialized = create_OutputMediaStream_FFMPEG_p != 0 && release_OutputMediaStream_FFMPEG_p != 0 && write_OutputMediaStream_FFMPEG_p != 0;
-            }
-        #elif defined HAVE_FFMPEG
-            create_OutputMediaStream_FFMPEG_p = create_OutputMediaStream_FFMPEG;
-            release_OutputMediaStream_FFMPEG_p = release_OutputMediaStream_FFMPEG;
-            write_OutputMediaStream_FFMPEG_p = write_OutputMediaStream_FFMPEG;
-
-            initialized = true;
-        #endif
         }
 
         return initialized;

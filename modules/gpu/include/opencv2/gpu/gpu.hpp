@@ -46,6 +46,7 @@
 #ifndef SKIP_INCLUDES
 #include <vector>
 #include <memory>
+#include <iosfwd>
 #endif
 
 #include "opencv2/core/gpumat.hpp"
@@ -1985,6 +1986,105 @@ public:
 private:
     VideoWriter_GPU(const VideoWriter_GPU&);
     VideoWriter_GPU& operator=(const VideoWriter_GPU&);
+
+    class Impl;
+    std::auto_ptr<Impl> impl_;
+};
+
+
+////////////////////////////////// Video Decoding //////////////////////////////////////////
+
+namespace detail
+{
+    class FrameQueue;
+    class VideoParser;
+}
+
+class CV_EXPORTS VideoReader_GPU
+{
+public:
+    enum Codec
+    {
+        MPEG1 = 0,
+        MPEG2,
+        MPEG4,
+        VC1,
+        H264,
+        JPEG,
+        H264_SVC,
+        H264_MVC,
+
+        Uncompressed_YUV420 = (('I'<<24)|('Y'<<16)|('U'<<8)|('V')),   // Y,U,V (4:2:0)
+        Uncompressed_YV12   = (('Y'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,V,U (4:2:0)
+        Uncompressed_NV12   = (('N'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,UV  (4:2:0)
+        Uncompressed_YUYV   = (('Y'<<24)|('U'<<16)|('Y'<<8)|('V')),   // YUYV/YUY2 (4:2:2)
+        Uncompressed_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y')),   // UYVY (4:2:2)
+    };
+
+    enum ChromaFormat
+    {
+        Monochrome=0,
+        YUV420,
+        YUV422,
+        YUV444,
+    };
+
+    struct FormatInfo
+    {
+        Codec codec;
+        ChromaFormat chromaFormat;
+        int width;
+        int height;
+    };
+
+    class VideoSource;
+
+    VideoReader_GPU();
+    explicit VideoReader_GPU(const std::string& filename);
+    explicit VideoReader_GPU(const cv::Ptr<VideoSource>& source);
+
+    ~VideoReader_GPU();
+
+    void open(const std::string& filename);
+    void open(const cv::Ptr<VideoSource>& source);
+    bool isOpened() const;
+
+    void close();
+
+    bool read(GpuMat& image);
+
+    FormatInfo format() const;
+    void dumpFormat(std::ostream& st);
+
+    class VideoSource
+    {
+    public:
+        VideoSource() : frameQueue_(0), videoParser_(0) {}
+        virtual ~VideoSource() {}
+
+        virtual FormatInfo format() const = 0;
+        virtual void start() = 0;
+        virtual void stop() = 0;
+        virtual bool isStarted() const = 0;
+        virtual bool hasError() const = 0;
+
+        void setFrameQueue(detail::FrameQueue* frameQueue) { frameQueue_ = frameQueue; }
+        void setVideoParser(detail::VideoParser* videoParser) { videoParser_ = videoParser; }
+
+    protected:
+        bool parseVideoData(const unsigned char* data, size_t size, bool endOfStream = false);
+
+    private:
+        VideoSource(const VideoSource&);
+        VideoSource& operator =(const VideoSource&);
+
+        detail::FrameQueue* frameQueue_;
+        detail::VideoParser* videoParser_;
+    };
+
+private:
+    VideoReader_GPU(const VideoReader_GPU&);
+    VideoReader_GPU& operator =(const VideoReader_GPU&);
 
     class Impl;
     std::auto_ptr<Impl> impl_;
