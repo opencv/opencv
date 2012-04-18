@@ -48,6 +48,10 @@
 
 #include "precomp.hpp"
 
+#if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
+#include "emmintrin.h"
+#endif
+
 namespace cv
 {
 
@@ -196,33 +200,55 @@ DEF_RANDI_FUNC(8s, schar)
 DEF_RANDI_FUNC(16u, ushort)
 DEF_RANDI_FUNC(16s, short)
 DEF_RANDI_FUNC(32s, int)
-    
+
 static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool )
 {
     uint64 temp = *state;
-    int i;
+    int i = 0;
 
-    for( i = 0; i <= len - 4; i += 4 )
+    for( ; i <= len - 4; i += 4 )
     {
-        float f0, f1;
+        float f[4];
+        f[0] = (float)(int)(temp = RNG_NEXT(temp));
+        f[1] = (float)(int)(temp = RNG_NEXT(temp));
+        f[2] = (float)(int)(temp = RNG_NEXT(temp));
+        f[3] = (float)(int)(temp = RNG_NEXT(temp));
 
-        temp = RNG_NEXT(temp);
-        f0 = (int)temp*p[i][0] + p[i][1];
-        temp = RNG_NEXT(temp);
-        f1 = (int)temp*p[i+1][0] + p[i+1][1];
-        arr[i] = f0; arr[i+1] = f1;
+        // handwritten SSE is required not for performance but for numerical stability!
+        // both 32-bit gcc and MSVC compilers trend to generate double precision SSE
+        // while 64-bit compilers generate single precision SIMD instructions
+        // so manual vectorisation forces all compilers to the single precision
+#if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
+        __m128 q0 = _mm_loadu_ps((const float*)(p + i));
+        __m128 q1 = _mm_loadu_ps((const float*)(p + i + 2));
 
-        temp = RNG_NEXT(temp);
-        f0 = (int)temp*p[i+2][0] + p[i+2][1];
-        temp = RNG_NEXT(temp);
-        f1 = (int)temp*p[i+3][0] + p[i+3][1];
-        arr[i+2] = f0; arr[i+3] = f1;
+        __m128 q01l = _mm_unpacklo_ps(q0, q1);
+        __m128 q01h = _mm_unpackhi_ps(q0, q1);
+
+        __m128 p0 = _mm_unpacklo_ps(q01l, q01h);
+        __m128 p1 = _mm_unpackhi_ps(q01l, q01h);
+
+        _mm_storeu_ps(arr + i, _mm_add_ps(_mm_mul_ps(_mm_loadu_ps(f), p0), p1));
+#else
+        arr[i+0] = f[0]*p[i+0][0] + p[i+0][1];
+        arr[i+1] = f[1]*p[i+1][0] + p[i+1][1];
+        arr[i+2] = f[2]*p[i+2][0] + p[i+2][1];
+        arr[i+3] = f[3]*p[i+3][0] + p[i+3][1];
+#endif
     }
 
     for( ; i < len; i++ )
     {
         temp = RNG_NEXT(temp);
         arr[i] = (int)temp*p[i][0] + p[i][1];
+#if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
+        _mm_store_ss(arr + i, _mm_add_ss(
+                _mm_mul_ss(_mm_set_ss((float)(int)temp), _mm_set_ss(p[i][0])),
+                _mm_set_ss(p[i][1]))
+                );
+#else
+        arr[i] += (int)temp*p[i][0] + p[i][1];
+#endif
     }
 
     *state = temp;
