@@ -112,7 +112,7 @@ private:
 class CV_EXPORTS LpMotionStabilizer : public IMotionStabilizer
 {
 public:
-    LpMotionStabilizer(MotionModel model = MM_LINEAR_SIMILARITY);
+    LpMotionStabilizer(MotionModel model = MM_SIMILARITY);
 
     void setMotionModel(MotionModel val) { model_ = val; }
     MotionModel motionModel() const { return model_; }

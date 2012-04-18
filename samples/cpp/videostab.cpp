@@ -8,6 +8,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/videostab/videostab.hpp"
+#include "opencv2/opencv_modules.hpp"
 
 #define arg(name) cmd.get<string>(name)
 #define argb(name) cmd.get<bool>(name)
@@ -223,7 +224,7 @@ int main(int argc, const char **argv)
             return 0;
         }
 
-#ifdef HAVE_OPENCV_GPU
+#if HAVE_OPENCV_GPU
         if (arg("gpu") == "yes")
         {
             cout << "initializing GPU..."; cout.flush();
@@ -281,7 +282,7 @@ int main(int argc, const char **argv)
                     else if (arg("ws-model") == "transl_and_scale")
                         est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
                     else if (arg("ws-model") == "linear_sim")
-                        est = new PyrLkRobustMotionEstimator(MM_LINEAR_SIMILARITY);
+                        est = new PyrLkRobustMotionEstimator(MM_SIMILARITY);
                     else if (arg("ws-model") == "affine")
                         est = new PyrLkRobustMotionEstimator(MM_AFFINE);
                     else if (arg("ws-model") == "homography")
@@ -306,7 +307,7 @@ int main(int argc, const char **argv)
                 }
                 else if (arg("gpu") == "yes")
                 {
-#ifdef HAVE_OPENCV_GPU
+#if HAVE_OPENCV_GPU
                     PyrLkRobustMotionEstimatorGpu *est = 0;
 
                     if (arg("ws-model") == "transl")
@@ -314,7 +315,7 @@ int main(int argc, const char **argv)
                     else if (arg("ws-model") == "transl_and_scale")
                         est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION_AND_SCALE);
                     else if (arg("ws-model") == "linear_sim")
-                        est = new PyrLkRobustMotionEstimatorGpu(MM_LINEAR_SIMILARITY);
+                        est = new PyrLkRobustMotionEstimatorGpu(MM_SIMILARITY);
                     else if (arg("ws-model") == "affine")
                         est = new PyrLkRobustMotionEstimatorGpu(MM_AFFINE);
                     else if (arg("ws-model") == "homography")
@@ -377,7 +378,7 @@ int main(int argc, const char **argv)
             else if (arg("model") == "transl_and_scale")
                 est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
             else if (arg("model") == "linear_sim")
-                est = new PyrLkRobustMotionEstimator(MM_LINEAR_SIMILARITY);
+                est = new PyrLkRobustMotionEstimator(MM_SIMILARITY);
             else if (arg("model") == "affine")
                 est = new PyrLkRobustMotionEstimator(MM_AFFINE);
             else if (arg("model") == "homography")
@@ -401,7 +402,7 @@ int main(int argc, const char **argv)
         }
         else if (arg("gpu") == "yes")
         {
-#ifdef HAVE_OPENCV_GPU
+#if HAVE_OPENCV_GPU
             PyrLkRobustMotionEstimatorGpu *est = 0;
 
             if (arg("ws-model") == "transl")
@@ -409,7 +410,7 @@ int main(int argc, const char **argv)
             else if (arg("ws-model") == "transl_and_scale")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION_AND_SCALE);
             else if (arg("ws-model") == "linear_sim")
-                est = new PyrLkRobustMotionEstimatorGpu(MM_LINEAR_SIMILARITY);
+                est = new PyrLkRobustMotionEstimatorGpu(MM_SIMILARITY);
             else if (arg("ws-model") == "affine")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_AFFINE);
             else if (arg("ws-model") == "homography")

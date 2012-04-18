@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
+#include "opencv2/opencv_modules.hpp"
 
 using namespace std;
 
@@ -149,7 +150,7 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
 }
 
 
-static Mat estimateGlobMotionLeastSquaresLinearSimilarity(
+static Mat estimateGlobMotionLeastSquaresSimilarity(
         int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
     Mat_<float> T0 = normalizePoints(npoints, points0);
@@ -165,7 +166,7 @@ static Mat estimateGlobMotionLeastSquaresLinearSimilarity(
         a1 = A[2*i+1];
         p0 = points0[i];
         p1 = points1[i];
-        a0[0] = p0.x; a0[1] = p0.y; a0[2] = 1;  a0[3] = 0;
+        a0[0] = p0.x; a0[1] = p0.y; a0[2] = 1; a0[3] = 0;
         a1[0] = p0.y; a1[1] = -p0.x; a1[2] = 0; a1[3] = 1;
         b(2*i,0) = p1.x;
         b(2*i+1,0) = p1.y;
@@ -233,7 +234,7 @@ Mat estimateGlobalMotionLeastSquares(
     typedef Mat (*Impl)(int, Point2f*, Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
                             estimateGlobMotionLeastSquaresTranslationAndScale,
-                            estimateGlobMotionLeastSquaresLinearSimilarity,
+                            estimateGlobMotionLeastSquaresSimilarity,
                             estimateGlobMotionLeastSquaresAffine };
 
     return impls[model](npoints, points0, points1, rmse);

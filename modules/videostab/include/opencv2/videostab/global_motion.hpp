@@ -49,6 +49,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
+#include "opencv2/opencv_modules.hpp"
 
 #if HAVE_OPENCV_GPU
   #include "opencv2/gpu/gpu.hpp"
@@ -63,7 +64,7 @@ enum MotionModel
 {
     MM_TRANSLATION = 0,
     MM_TRANSLATION_AND_SCALE = 1,
-    MM_LINEAR_SIMILARITY = 2,
+    MM_SIMILARITY = 2,
     MM_AFFINE = 3,
     MM_HOMOGRAPHY = 4,
     MM_UNKNOWN = 5
@@ -90,7 +91,7 @@ struct CV_EXPORTS RansacParams
             return RansacParams(1, 0.5f, 0.5f, 0.99f);
         if (model == MM_TRANSLATION_AND_SCALE)
             return RansacParams(2, 0.5f, 0.5f, 0.99f);
-        if (model == MM_LINEAR_SIMILARITY)
+        if (model == MM_SIMILARITY)
             return RansacParams(2, 0.5f, 0.5f, 0.99f);
         if (model == MM_AFFINE)
             return RansacParams(3, 0.5f, 0.5f, 0.99f);
