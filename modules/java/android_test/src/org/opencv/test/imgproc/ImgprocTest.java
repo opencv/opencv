@@ -391,16 +391,15 @@ public class ImgprocTest extends OpenCVTestCase {
     	        new Point(20, 10),
     	        new Point(30, 10)
     	);
+    	
+    	MatOfInt hull = new MatOfInt();
 
-        Imgproc.convexHull(points, dst);
+        Imgproc.convexHull(points, hull);
 
-        MatOfPoint expHull = new MatOfPoint(
-        		new Point(40, 0),
-        		new Point(30, 20),
-        		new Point(0,  20),
-        		new Point(20, 0)
+        MatOfInt expHull = new MatOfInt(
+        		1, 2, 3, 0
         );
-        assertMatEqual(expHull, dst, EPS);
+        assertMatEqual(expHull, hull, EPS);
     }
 
     public void testConvexHullMatMatBooleanBoolean() {
@@ -413,17 +412,14 @@ public class ImgprocTest extends OpenCVTestCase {
     			new Point(3, 1)
 		);
         
+    	MatOfInt hull = new MatOfInt();
 
-        Imgproc.convexHull(points, dst, true, true);
-        // TODO_: write better test (last param == false)
+        Imgproc.convexHull(points, hull, true);
 
-        MatOfPoint expHull = new MatOfPoint(
-        		new Point(0, 2),
-        		new Point(3, 2),
-        		new Point(4, 0),
-        		new Point(2, 0)
+        MatOfInt expHull = new MatOfInt(
+        		3, 2, 1, 0
         );
-        assertMatEqual(expHull, dst, EPS);
+        assertMatEqual(expHull, hull, EPS);
     }
     
     public void testConvexityDefects() {
@@ -436,8 +432,8 @@ public class ImgprocTest extends OpenCVTestCase {
     	        new Point(30, 10)
     	);
 
-        MatOfPoint hull = new MatOfPoint();
-        Imgproc.convexHull(points, hull, false, false);
+        MatOfInt hull = new MatOfInt();
+        Imgproc.convexHull(points, hull);
         
         MatOfInt4 convexityDefects = new MatOfInt4();
         Imgproc.convexityDefects(points, hull, convexityDefects);
