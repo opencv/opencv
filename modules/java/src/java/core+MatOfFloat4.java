@@ -3,34 +3,34 @@ package org.opencv.core;
 import java.util.Arrays;
 import java.util.List;
 
-public class MatOfDouble extends Mat {
-    // 64FC(x)
-    private static final int _depth = CvType.CV_64F;
-    private static final int _channels = 1;
+public class MatOfFloat4 extends Mat {
+    // 32FC4
+    private static final int _depth = CvType.CV_32F;
+    private static final int _channels = 4;
 
-    public MatOfDouble() {
+    public MatOfFloat4() {
         super();
     }
 
-    protected MatOfDouble(long addr) {
+    protected MatOfFloat4(long addr) {
         super(addr);
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
-
-    public static MatOfDouble fromNativeAddr(long addr) {
-		return new MatOfDouble(addr);
+    
+    public static MatOfFloat4 fromNativeAddr(long addr) {
+		return new MatOfFloat4(addr);
 	}
 
-    public MatOfDouble(Mat m) {
+    public MatOfFloat4(Mat m) {
         super(m, Range.all());
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
 
-    public MatOfDouble(double...a) {
+    public MatOfFloat4(float...a) {
         super();
         fromArray(a);
     }
@@ -40,7 +40,7 @@ public class MatOfDouble extends Mat {
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
     }
 
-    public void fromArray(double...a) {
+    public void fromArray(float...a) {
         if(a==null || a.length==0)
             return;
         int num = a.length / _channels;
@@ -48,30 +48,30 @@ public class MatOfDouble extends Mat {
         put(0, 0, a); //TODO: check ret val!
     }
 
-    public double[] toArray() {
+    public float[] toArray() {
         int num = checkVector(_channels, _depth);
         if(num < 0)
         	throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
-        double[] a = new double[num * _channels];
+        float[] a = new float[num * _channels];
         if(num == 0)
             return a;
         get(0, 0, a); //TODO: check ret val!
         return a;
     }
 
-    public void fromList(List<Double> lb) {
+    public void fromList(List<Float> lb) {
         if(lb==null || lb.size()==0)
             return;
-        Double ab[] = lb.toArray(new Double[0]);
-        double a[] = new double[ab.length];
+        Float ab[] = lb.toArray(new Float[0]);
+        float a[] = new float[ab.length];
         for(int i=0; i<ab.length; i++)
             a[i] = ab[i];
         fromArray(a);
     }
 
-    public List<Double> toList() {
-        double[] a = toArray();
-        Double ab[] = new Double[a.length];
+    public List<Float> toList() {
+        float[] a = toArray();
+        Float ab[] = new Float[a.length];
         for(int i=0; i<a.length; i++)
             ab[i] = a[i];
         return Arrays.asList(ab);

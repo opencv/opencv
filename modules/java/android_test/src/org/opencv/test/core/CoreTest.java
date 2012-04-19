@@ -1284,14 +1284,14 @@ public class CoreTest extends OpenCVTestCase {
         rgba0.setTo(new Scalar(10, 20, 30, 40));
         List<Mat> src = Arrays.asList(rgba0);
         List<Mat> dst = Arrays.asList(gray3, gray2, gray1, gray0, getMat(CvType.CV_8UC3, 0, 0, 0));
-        MatOfInt fromTo = new MatOfInt(1, new int[]
-        	  { 3, 0,
+        MatOfInt fromTo = new MatOfInt(
+        		3, 0,
                 3, 1,
                 2, 2,
                 0, 3,
                 2, 4,
                 1, 5,
-                0, 6 }
+                0, 6
         );
 
         Core.mixChannels(src, dst, fromTo);

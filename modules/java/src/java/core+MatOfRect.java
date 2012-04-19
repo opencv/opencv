@@ -5,23 +5,27 @@ import java.util.List;
 
 
 public class MatOfRect extends Mat {
-	// 32SC4
-	private static final int _depth = CvType.CV_32S;
-	private static final int _channels = 4;
+    // 32SC4
+    private static final int _depth = CvType.CV_32S;
+    private static final int _channels = 4;
 
     public MatOfRect() {
         super();
     }
 
-    public MatOfRect(long addr) {
+    protected MatOfRect(long addr) {
         super(addr);
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
 
+    public static MatOfRect fromNativeAddr(long addr) {
+		return new MatOfRect(addr);
+	}
+
     public MatOfRect(Mat m) {
-    	super(m, Range.all());
+        super(m, Range.all());
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
@@ -31,7 +35,7 @@ public class MatOfRect extends Mat {
         super();
         fromArray(a);
     }
-    
+
     public void alloc(int elemNumber) {
         if(elemNumber>0)
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
@@ -44,7 +48,7 @@ public class MatOfRect extends Mat {
         alloc(num);
         int buff[] = new int[num * _channels];
         for(int i=0; i<num; i++) {
-        	Rect r = a[i];
+            Rect r = a[i];
             buff[_channels*i+0] = (int) r.x;
             buff[_channels*i+1] = (int) r.y;
             buff[_channels*i+2] = (int) r.width;
@@ -52,7 +56,7 @@ public class MatOfRect extends Mat {
         }
         put(0, 0, buff); //TODO: check ret val!
     }
-    
+
 
     public Rect[] toArray() {
         int num = (int) total();
@@ -66,12 +70,12 @@ public class MatOfRect extends Mat {
         return a;
     }
     public void fromList(List<Rect> lr) {
-    	Rect ap[] = lr.toArray(null);
-    	fromArray(ap);
+        Rect ap[] = lr.toArray(new Rect[0]);
+        fromArray(ap);
     }
-    
+
     public List<Rect> toList() {
-    	Rect[] ar = toArray();
-    	return Arrays.asList(ar); 
+        Rect[] ar = toArray();
+        return Arrays.asList(ar);
     }
 }

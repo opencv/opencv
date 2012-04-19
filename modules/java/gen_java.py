@@ -203,22 +203,24 @@ type_dict = {
     #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
     "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
     "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<DMatch> %(n)s", "suffix" : "J" },
-    "vector_Rect"     : { "j_type" : "MatOfRect", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
-    "vector_uchar"    : { "j_type" : "MatOfByte", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
-    "vector_char"     : { "j_type" : "MatOfByte", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<char> %(n)s", "suffix" : "J" },
-    "vector_int"      : { "j_type" : "MatOfInt", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
-    "vector_float"    : { "j_type" : "MatOfFloat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
+    "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<char> %(n)s", "suffix" : "J" },
+    "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
+    "vector_float"    : { "j_type" : "MatOfFloat",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
     "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
-    "vector_Vec4f"    : { "j_type" : "MatOfFloat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4f> %(n)s", "suffix" : "J" },
-    "vector_Vec6f"    : { "j_type" : "MatOfFloat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec6f> %(n)s", "suffix" : "J" },
+    "vector_Vec4i"    : { "j_type" : "MatOfInt4",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4i> %(n)s", "suffix" : "J" },
+    "vector_Vec4f"    : { "j_type" : "MatOfFloat4",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4f> %(n)s", "suffix" : "J" },
+    "vector_Vec6f"    : { "j_type" : "MatOfFloat6",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec6f> %(n)s", "suffix" : "J" },
 
-    "vector_Mat"      : { "j_type" : "List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
+    "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
 
     "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
     "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
     "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },
     "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point> > %(n)s" },
     "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point2f> > %(n)s" },
+    "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point3f> > %(n)s" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
@@ -505,8 +507,10 @@ func_arg_fix = {
         'cornerSubPix' : { 'corners' : 'vector_Point2f', },
         'minEnclosingCircle' : { 'points' : 'vector_Point2f', },
         'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
-        'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
-        'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
+        'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
+                       'distCoeffs' : 'vector_double' },
+        'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
+                             'distCoeffs' : 'vector_double' },
         'calcOpticalFlowPyrLK' : { 'prevPts' : 'vector_Point2f', 'nextPts' : 'vector_Point2f',
                                    'status' : 'vector_uchar', 'err' : 'vector_float', },
         'fitEllipse' : { 'points' : 'vector_Point2f', },
@@ -526,8 +530,14 @@ func_arg_fix = {
         'meanStdDev' : {'mean' : 'vector_double', 'stddev' : 'vector_double'},
         'drawContours' : {'contours' : 'vector_vector_Point'},
         'findContours' : {'contours' : 'vector_vector_Point'},
-        'convexityDefects' : {'contour' : 'vector_Point'},
-        'isContourConvex' : { 'contour' : 'vector_Point2f', },
+        'convexityDefects' : {'contour' : 'vector_Point', 'convexityDefects' : 'vector_Vec4i'},
+        'isContourConvex' : { 'contour' : 'vector_Point', },
+        'convexHull' : {'points' : 'vector_Point'},
+        'projectPoints' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
+                            'distCoeffs' : 'vector_double' },
+        'initCameraMatrix2D' : {'objectPoints' : 'vector_vector_Point3f', 'imagePoints' : 'vector_vector_Point2f', },
+        'findChessboardCorners' : { 'corners' : 'vector_Point2f' },
+        'drawChessboardCorners' : { 'corners' : 'vector_Point2f' },
     }, # '', i.e. no class
 } # func_arg_fix
 
@@ -903,15 +913,22 @@ extern "C" {
 
     def get_imports(self, scope_classname, ctype):
         imports = self.classes[scope_classname or self.Module].imports
+        if ctype.startswith('vector_vector'):
+            imports.add("org.opencv.core.Mat")
+            imports.add("java.util.List")
+            imports.add("org.opencv.utils.Converters")
+            self.get_imports(scope_classname, ctype.replace('vector_vector', 'vector'))
+            return
         if ctype.startswith('vector'):
             imports.add("org.opencv.core.Mat")
             if type_dict[ctype]['j_type'].startswith('MatOf'):
                 imports.add("org.opencv.core." + type_dict[ctype]['j_type'])
-                return #TMP
+                return
             else:
                 imports.add("java.util.List")
                 imports.add("org.opencv.utils.Converters")
-            ctype = ctype.replace('vector_', '')
+                self.get_imports(scope_classname, ctype.replace('vector_', ''))
+                return
         j_type = ''
         if ctype in type_dict:
             j_type = type_dict[ctype]['j_type']
@@ -919,6 +936,7 @@ extern "C" {
             imports.add("org.opencv.core." + j_type)
         if j_type == 'String':
             imports.add("java.lang.String")
+        return
 
 
 
@@ -1083,13 +1101,7 @@ extern "C" {
                 tail = ")"
                 j_type = type_dict[ret_type]["j_type"]
                 if j_type.startswith('MatOf'):
-                    ret_val += "new " + j_type + "("
-                    m_t  = re.match('vector_(\w+)', ret_type)
-                    m_ch = re.match('vector_Vec(\d+)', ret_type)
-                    if m_ch:
-                        ret_val += m_ch.group(1) +  ', '
-                    elif m_t.group(1) in ('char', 'uchar', 'int', 'float', 'double'):
-                        ret_val += '1, '
+                    ret_val += j_type + ".fromNativeAddr("
                 else:
                     ret_val = "Mat retValMat = new Mat("
                     j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')

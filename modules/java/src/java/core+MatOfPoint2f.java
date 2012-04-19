@@ -4,23 +4,27 @@ import java.util.Arrays;
 import java.util.List;
 
 public class MatOfPoint2f extends Mat {
-	// 32FC2
-	private static final int _depth = CvType.CV_32F;
-	private static final int _channels = 2;
+    // 32FC2
+    private static final int _depth = CvType.CV_32F;
+    private static final int _channels = 2;
 
     public MatOfPoint2f() {
         super();
     }
 
-    public MatOfPoint2f(long addr) {
+    protected MatOfPoint2f(long addr) {
         super(addr);
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
 
+    public static MatOfPoint2f fromNativeAddr(long addr) {
+		return new MatOfPoint2f(addr);
+	}
+
     public MatOfPoint2f(Mat m) {
-    	super(m, Range.all());
+        super(m, Range.all());
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
@@ -30,7 +34,7 @@ public class MatOfPoint2f extends Mat {
         super();
         fromArray(a);
     }
-    
+
     public void alloc(int elemNumber) {
         if(elemNumber>0)
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
@@ -49,7 +53,7 @@ public class MatOfPoint2f extends Mat {
         }
         put(0, 0, buff); //TODO: check ret val!
     }
-    
+
     public Point[] toArray() {
         int num = (int) total();
         Point[] ap = new Point[num];
@@ -63,12 +67,12 @@ public class MatOfPoint2f extends Mat {
     }
 
     public void fromList(List<Point> lp) {
-    	Point ap[] = lp.toArray(null);
-    	fromArray(ap);
+        Point ap[] = lp.toArray(new Point[0]);
+        fromArray(ap);
     }
-    
+
     public List<Point> toList() {
-    	Point[] ap = toArray();
-    	return Arrays.asList(ap); 
+        Point[] ap = toArray();
+        return Arrays.asList(ap);
     }
 }

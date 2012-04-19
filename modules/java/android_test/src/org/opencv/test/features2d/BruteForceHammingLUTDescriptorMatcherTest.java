@@ -189,9 +189,11 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
 
         matcher.match(query, train, matches);
 
+        /*
         OpenCVTestRunner.Log("matches found: " + matches.size());
         for (DMatch m : matches.toArray())
             OpenCVTestRunner.Log(m.toString());
+        */
 
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }

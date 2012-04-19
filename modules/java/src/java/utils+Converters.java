@@ -10,6 +10,7 @@ import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Rect;
@@ -517,6 +518,50 @@ public class Converters {
             MatOfPoint2f pt = new MatOfPoint2f(mi);
             pts.add(pt);
         }
+    }
+
+    // vector_vector_Point2f
+    public static Mat vector_vector_Point2f_to_Mat(List<MatOfPoint2f> pts, List<Mat> mats) {
+        Mat res;
+        int lCount = (pts != null) ? pts.size() : 0;
+        if (lCount > 0) {
+            for (MatOfPoint2f vpt : pts)
+                mats.add(vpt);
+            res = vector_Mat_to_Mat(mats);
+        } else {
+            res = new Mat();
+        }
+        return res;
+    }
+
+    // vector_vector_Point3f
+    public static void Mat_to_vector_vector_Point3f(Mat m, List<MatOfPoint3f> pts) {
+        if (pts == null)
+            throw new java.lang.IllegalArgumentException("Output List can't be null");
+
+        if (m == null)
+            throw new java.lang.IllegalArgumentException("Input Mat can't be null");
+
+        List<Mat> mats = new ArrayList<Mat>(m.rows());
+        Mat_to_vector_Mat(m, mats);
+        for (Mat mi : mats) {
+            MatOfPoint3f pt = new MatOfPoint3f(mi);
+            pts.add(pt);
+        }
+    }
+
+    // vector_vector_Point3f
+    public static Mat vector_vector_Point3f_to_Mat(List<MatOfPoint3f> pts, List<Mat> mats) {
+        Mat res;
+        int lCount = (pts != null) ? pts.size() : 0;
+        if (lCount > 0) {
+            for (MatOfPoint3f vpt : pts)
+                mats.add(vpt);
+            res = vector_Mat_to_Mat(mats);
+        } else {
+            res = new Mat();
+        }
+        return res;
     }
 
     // vector_vector_KeyPoint

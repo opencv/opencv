@@ -281,6 +281,32 @@ void Mat_to_vector_vector_Point(Mat& mat, vector< vector< Point > >& vv_pt)
     }
 }
 
+void Mat_to_vector_vector_Point2f(Mat& mat, vector< vector< Point2f > >& vv_pt)
+{
+    vector<Mat> vm;
+    vm.reserve( mat.rows );
+    Mat_to_vector_Mat(mat, vm);
+    for(size_t i=0; i<vm.size(); i++)
+    {
+        vector<Point2f> vpt;
+        Mat_to_vector_Point2f(vm[i], vpt);
+        vv_pt.push_back(vpt);
+    }
+}
+
+void Mat_to_vector_vector_Point3f(Mat& mat, vector< vector< Point3f > >& vv_pt)
+{
+    vector<Mat> vm;
+    vm.reserve( mat.rows );
+    Mat_to_vector_Mat(mat, vm);
+    for(size_t i=0; i<vm.size(); i++)
+    {
+        vector<Point3f> vpt;
+        Mat_to_vector_Point3f(vm[i], vpt);
+        vv_pt.push_back(vpt);
+    }
+}
+
 #ifdef HAVE_OPENCV_FEATURES2D
 void Mat_to_vector_vector_KeyPoint(Mat& mat, vector< vector< KeyPoint > >& vv_kp)
 {
@@ -361,6 +387,19 @@ void vector_vector_char_to_Mat(vector< vector< char > >& vv_ch, Mat& mat)
     vector_Mat_to_Mat(vm, mat);
 }
 
+void vector_vector_Point_to_Mat(vector< vector< Point > >& vv_pt, Mat& mat)
+{
+    vector<Mat> vm;
+    vm.reserve( vv_pt.size() );
+    for(size_t i=0; i<vv_pt.size(); i++)
+    {
+        Mat m;
+        vector_Point_to_Mat(vv_pt[i], m);
+        vm.push_back(m);
+    }
+    vector_Mat_to_Mat(vm, mat);
+}
+
 void vector_vector_Point2f_to_Mat(vector< vector< Point2f > >& vv_pt, Mat& mat)
 {
     vector<Mat> vm;
@@ -374,17 +413,22 @@ void vector_vector_Point2f_to_Mat(vector< vector< Point2f > >& vv_pt, Mat& mat)
     vector_Mat_to_Mat(vm, mat);
 }
 
-void vector_vector_Point_to_Mat(vector< vector< Point > >& vv_pt, Mat& mat)
+void vector_vector_Point3f_to_Mat(vector< vector< Point3f > >& vv_pt, Mat& mat)
 {
     vector<Mat> vm;
     vm.reserve( vv_pt.size() );
     for(size_t i=0; i<vv_pt.size(); i++)
     {
         Mat m;
-        vector_Point_to_Mat(vv_pt[i], m);
+        vector_Point3f_to_Mat(vv_pt[i], m);
         vm.push_back(m);
     }
     vector_Mat_to_Mat(vm, mat);
+}
+
+void vector_Vec4i_to_Mat(vector<Vec4i>& v_vec, Mat& mat)
+{
+    mat = Mat(v_vec, true);
 }
 
 void vector_Vec4f_to_Mat(vector<Vec4f>& v_vec, Mat& mat)

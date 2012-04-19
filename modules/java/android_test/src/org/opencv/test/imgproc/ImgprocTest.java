@@ -9,6 +9,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfInt4;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
@@ -242,9 +243,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcBackProject() {
         List<Mat> images = Arrays.asList(grayChess);
-        MatOfInt channels = new MatOfInt(1, new int[]{0});
-        MatOfInt histSize = new MatOfInt(1, new int[]{10});
-        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f);
+        MatOfInt channels = new MatOfInt(0);
+        MatOfInt histSize = new MatOfInt(10);
+        MatOfFloat ranges = new MatOfFloat(0f, 256f);
 
         Mat hist = new Mat();
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -259,9 +260,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat() {
         List<Mat> images = Arrays.asList(gray128);
-        MatOfInt channels = new MatOfInt(1, new int[]{0});
-        MatOfInt histSize = new MatOfInt(1, new int[]{10});
-        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f);
+        MatOfInt channels = new MatOfInt(0);
+        MatOfInt histSize = new MatOfInt(10);
+        MatOfFloat ranges = new MatOfFloat(0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -276,9 +277,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2d() {
         List<Mat> images = Arrays.asList(gray255, gray128);
-        MatOfInt channels = new MatOfInt(1, 0, 1);
-        MatOfInt histSize = new MatOfInt(1, 10, 10);
-        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f, 0f, 256f);
+        MatOfInt channels = new MatOfInt(0, 1);
+        MatOfInt histSize = new MatOfInt(10, 10);
+        MatOfFloat ranges = new MatOfFloat(0f, 256f, 0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
@@ -293,9 +294,9 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloatBoolean() {
         List<Mat> images = Arrays.asList(gray255, gray128);
-        MatOfInt channels = new MatOfInt(1, 0, 1);
-        MatOfInt histSize = new MatOfInt(1, 10, 10);
-        MatOfFloat ranges = new MatOfFloat(1, 0f, 256f, 0f, 256f);
+        MatOfInt channels = new MatOfInt(0, 1);
+        MatOfInt histSize = new MatOfInt(10, 10);
+        MatOfFloat ranges = new MatOfFloat(0f, 256f, 0f, 256f);
         Mat hist = new Mat();
 
         Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges, true);
@@ -382,26 +383,66 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testConvexHullMatMat() {
-        Mat points = new Mat(1, 6, CvType.CV_32FC2);
-        points.put(0, 0, 2, 0, 4, 0, 3, 2, 0, 2, 2, 1, 3, 1);
+    	MatOfPoint points = new MatOfPoint(
+    	        new Point(20, 0), 
+    	        new Point(40, 0),
+    	        new Point(30, 20),
+    	        new Point(0,  20),
+    	        new Point(20, 10),
+    	        new Point(30, 10)
+    	);
 
         Imgproc.convexHull(points, dst);
 
-        Mat expHull = new Mat(4, 1, CvType.CV_32FC2);
-        expHull.put(0, 0, 4, 0, 3, 2, 0, 2, 2, 0);
+        MatOfPoint expHull = new MatOfPoint(
+        		new Point(40, 0),
+        		new Point(30, 20),
+        		new Point(0,  20),
+        		new Point(20, 0)
+        );
         assertMatEqual(expHull, dst, EPS);
     }
 
     public void testConvexHullMatMatBooleanBoolean() {
-        Mat points = new Mat(1, 6, CvType.CV_32FC2);
-        points.put(0, 0, 2, 0, 4, 0, 3, 2, 0, 2, 2, 1, 3, 1);
+    	MatOfPoint points = new MatOfPoint(
+    			new Point(2, 0),
+    			new Point(4, 0),
+    			new Point(3, 2),
+    			new Point(0, 2),
+    			new Point(2, 1),
+    			new Point(3, 1)
+		);
+        
 
         Imgproc.convexHull(points, dst, true, true);
         // TODO_: write better test (last param == false)
 
-        Mat expHull = new Mat(4, 1, CvType.CV_32FC2);
-        expHull.put(0, 0, 0, 2, 3, 2, 4, 0, 2, 0);
+        MatOfPoint expHull = new MatOfPoint(
+        		new Point(0, 2),
+        		new Point(3, 2),
+        		new Point(4, 0),
+        		new Point(2, 0)
+        );
         assertMatEqual(expHull, dst, EPS);
+    }
+    
+    public void testConvexityDefects() {
+    	MatOfPoint points = new MatOfPoint(
+    	        new Point(20, 0), 
+    	        new Point(40, 0),
+    	        new Point(30, 20),
+    	        new Point(0,  20),
+    	        new Point(20, 10),
+    	        new Point(30, 10)
+    	);
+
+        MatOfPoint hull = new MatOfPoint();
+        Imgproc.convexHull(points, hull, false, false);
+        
+        MatOfInt4 convexityDefects = new MatOfInt4();
+        Imgproc.convexityDefects(points, hull, convexityDefects);
+        
+        assertMatEqual(new MatOfInt4(3, 0, 5, 3620), convexityDefects);
     }
 
     public void testCopyMakeBorderMatMatIntIntIntIntInt() {
@@ -1277,11 +1318,11 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testIsContourConvex() {
-        MatOfPoint2f contour1 = new MatOfPoint2f(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 4));
+        MatOfPoint contour1 = new MatOfPoint(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 4));
 
         assertFalse(Imgproc.isContourConvex(contour1));
 
-        MatOfPoint2f contour2 = new MatOfPoint2f(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 6));
+        MatOfPoint contour2 = new MatOfPoint(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 6));
 
         assertTrue(Imgproc.isContourConvex(contour2));
     }
