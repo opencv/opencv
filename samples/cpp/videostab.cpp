@@ -66,7 +66,7 @@ void printHelp()
     cout << "OpenCV video stabilizer.\n"
             "Usage: videostab <file_path> [arguments]\n\n"
             "Arguments:\n"
-            "  -m, --model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
+            "  -m, --model=(transl|transl_and_scale|similarity|affine|homography)\n"
             "      Set motion model. The default is affine.\n"
             "  --subset=(<int_number>|auto)\n"
             "      Number of random samples per one motion hypothesis. The default is auto.\n"
@@ -130,7 +130,7 @@ void printHelp()
             "      Perform wobble suppression. The default is no.\n"
             "  --ws-period=<int_number>\n"
             "      Set wobble suppression period. The default is 30.\n"
-            "  --ws-model=(transl|transl_and_scale|linear_sim|affine|homography)\n"
+            "  --ws-model=(transl|transl_and_scale|similarity|affine|homography)\n"
             "      Set wobble suppression motion model (must have more DOF than motion \n"
             "      estimation model). The default is homography.\n"
             "  --ws-subset=(<int_number>|auto)\n"
@@ -281,7 +281,7 @@ int main(int argc, const char **argv)
                         est = new PyrLkRobustMotionEstimator(MM_TRANSLATION);
                     else if (arg("ws-model") == "transl_and_scale")
                         est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
-                    else if (arg("ws-model") == "linear_sim")
+                    else if (arg("ws-model") == "similarity")
                         est = new PyrLkRobustMotionEstimator(MM_SIMILARITY);
                     else if (arg("ws-model") == "affine")
                         est = new PyrLkRobustMotionEstimator(MM_AFFINE);
@@ -314,7 +314,7 @@ int main(int argc, const char **argv)
                         est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION);
                     else if (arg("ws-model") == "transl_and_scale")
                         est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION_AND_SCALE);
-                    else if (arg("ws-model") == "linear_sim")
+                    else if (arg("ws-model") == "similarity")
                         est = new PyrLkRobustMotionEstimatorGpu(MM_SIMILARITY);
                     else if (arg("ws-model") == "affine")
                         est = new PyrLkRobustMotionEstimatorGpu(MM_AFFINE);
@@ -377,7 +377,7 @@ int main(int argc, const char **argv)
                 est = new PyrLkRobustMotionEstimator(MM_TRANSLATION);
             else if (arg("model") == "transl_and_scale")
                 est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
-            else if (arg("model") == "linear_sim")
+            else if (arg("model") == "similarity")
                 est = new PyrLkRobustMotionEstimator(MM_SIMILARITY);
             else if (arg("model") == "affine")
                 est = new PyrLkRobustMotionEstimator(MM_AFFINE);
@@ -409,7 +409,7 @@ int main(int argc, const char **argv)
                 est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION);
             else if (arg("ws-model") == "transl_and_scale")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION_AND_SCALE);
-            else if (arg("ws-model") == "linear_sim")
+            else if (arg("ws-model") == "similarity")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_SIMILARITY);
             else if (arg("ws-model") == "affine")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_AFFINE);
