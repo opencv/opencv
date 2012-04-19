@@ -120,7 +120,7 @@ void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat
     if (result.data == frame.data)
         result = Mat(frame.size(), frame.type());
 
-    remap(frame, result, mapx_, mapy_, INTER_LANCZOS4, BORDER_REPLICATE);
+    remap(frame, result, mapx_, mapy_, INTER_LINEAR, BORDER_REPLICATE);
 }
 
 } // namespace videostab

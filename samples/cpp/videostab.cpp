@@ -153,7 +153,7 @@ void printHelp()
             "      Save motions estimated for wobble suppression. The default is no.\n"
             "  -lm2, --load-motions2=(<file_path>|no)\n"
             "      Load motions for wobble suppression from file. The default is no.\n\n"
-            "  --gpu=(yes|no)\n"
+            "  -gpu=(yes|no)\n"
             "      Use GPU optimization whenever possible. The default is no.\n\n"
             "  -o, --output=(no|<file_path>)\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
@@ -184,7 +184,7 @@ int main(int argc, const char **argv)
                 "{ lm | load-motions | no | }"
                 "{ r | radius | 15 | }"
                 "{ | stdev | auto | }"
-                "{ lp | lp-stab | no | }"
+                "{ lps | lin-prog-stab | no | }"
                 "{ | lp-trim-ratio | auto | }"
                 "{ | lp-w1 | 1 | }"
                 "{ | lp-w2 | 10 | }"
@@ -213,7 +213,7 @@ int main(int argc, const char **argv)
                 "{ | ws-extra-kps | 0 | }"
                 "{ sm2 | save-motions2 | no | }"
                 "{ lm2 | load-motions2 | no | }"
-                "{ | gpu | no }"
+                "{ gpu | | no }"
                 "{ o | output | stabilized.avi | }"
                 "{ | fps | auto | }"
                 "{ q | quiet | false | }"
@@ -249,14 +249,14 @@ int main(int argc, const char **argv)
         StabilizerBase *stabilizer;
 
         bool isTwoPass =
-                arg("est-trim") == "yes" || arg("wobble-suppress") == "yes" || arg("lp-stab") == "yes";
+                arg("est-trim") == "yes" || arg("wobble-suppress") == "yes" || arg("lin-prog-stab") == "yes";
 
         if (isTwoPass)
         {
             TwoPassStabilizer *twoPassStabilizer = new TwoPassStabilizer();
             stabilizer = twoPassStabilizer;
             twoPassStabilizer->setEstimateTrimRatio(arg("est-trim") == "yes");
-            if (arg("lp-stab") == "yes")
+            if (arg("lin-prog-stab") == "yes")
             {
                 LpMotionStabilizer *stab = new LpMotionStabilizer();
                 stab->setFrameSize(Size(source->width(), source->height()));
