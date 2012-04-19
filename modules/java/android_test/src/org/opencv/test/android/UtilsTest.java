@@ -23,10 +23,12 @@ public class UtilsTest extends OpenCVTestCase {
         Bitmap bmp16 = BitmapFactory.decodeFile(OpenCVTestRunner.LENA_PATH, opt16);
         Mat m16 = new Mat();
         Utils.bitmapToMat(bmp16, m16);
+        assertTrue(m16.rows() == 512 && m16.cols() == 512 && m16.type() == CvType.CV_8UC4);
 
-        BitmapFactory.Options opt32 = new BitmapFactory.Options();
+        /*BitmapFactory.Options opt32 = new BitmapFactory.Options();
         opt32.inPreferredConfig = Bitmap.Config.ARGB_8888;
-        Bitmap bmp32 = BitmapFactory.decodeFile(OpenCVTestRunner.LENA_PATH, opt32);
+        Bitmap bmp32 = BitmapFactory.decodeFile(OpenCVTestRunner.LENA_PATH, opt32);*/
+        Bitmap bmp32 = bmp16.copy(Bitmap.Config.ARGB_8888, false);
         Mat m32 = new Mat();
         Utils.bitmapToMat(bmp32, m32);
         
@@ -34,6 +36,7 @@ public class UtilsTest extends OpenCVTestCase {
         
         double maxDiff = Core.norm(m16, m32, Core.NORM_INF);
         Log.d("Bmp->Mat", "bmp16->Mat vs bmp32->Mat diff = " + maxDiff);
+
         assertTrue(maxDiff <= 8 /* 8 == 2^8 / 2^5 */);
     }
 
