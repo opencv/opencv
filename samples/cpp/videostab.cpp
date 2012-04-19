@@ -37,26 +37,30 @@ void run()
     Mat stabilizedFrame;
     int nframes = 0;
 
+    // for each stabilized frame
     while (!(stabilizedFrame = stabilizedFrames->nextFrame()).empty())
     {
         nframes++;
+
+        // init writer (once) and save stabilized frame
         if (!outputPath.empty())
         {
             if (!writer.isOpened())
-                writer.open(outputPath, CV_FOURCC('X','V','I','D'), outputFps, stabilizedFrame.size());
+                writer.open(outputPath, CV_FOURCC('X','V','I','D'),
+                            outputFps, stabilizedFrame.size());
             writer << stabilizedFrame;
         }
+
+        // show stabilized frame
         if (!quietMode)
         {
             imshow("stabilizedFrame", stabilizedFrame);
             char key = static_cast<char>(waitKey(3));
-            if (key == 27)
-                break;
+            if (key == 27) { cout << endl; break; }
         }
     }
 
-    cout << endl
-         << "processed frames: " << nframes << endl
+    cout << "processed frames: " << nframes << endl
          << "finished\n";
 }
 

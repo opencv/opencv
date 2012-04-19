@@ -44,6 +44,7 @@
 #define __OPENCV_VIDEOSTAB_STABILIZER_HPP__
 
 #include <vector>
+#include <ctime>
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/videostab/global_motion.hpp"
@@ -102,6 +103,7 @@ protected:
     virtual Mat estimateStabilizationMotion() = 0;
     void stabilizeFrame();
     virtual Mat postProcessFrame(const Mat &frame);
+    void logProcessingTime();
 
     Ptr<ILog> log_;
     Ptr<IFrameSource> frameSource_;
@@ -128,6 +130,7 @@ protected:
     std::vector<Mat> stabilizedFrames_;
     std::vector<Mat> stabilizedMasks_;
     std::vector<Mat> stabilizationMotions_;
+    clock_t processingStartTime_;
 };
 
 class CV_EXPORTS OnePassStabilizer : public StabilizerBase, public IFrameSource

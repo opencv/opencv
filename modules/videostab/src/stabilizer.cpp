@@ -44,6 +44,9 @@
 #include "opencv2/videostab/stabilizer.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 
+// for debug purposes
+#define SAVE_MOTIONS 0
+
 using namespace std;
 
 namespace cv
@@ -81,6 +84,7 @@ void StabilizerBase::reset()
     stabilizedFrames_.clear();
     stabilizedMasks_.clear();
     stabilizationMotions_.clear();
+    processingStartTime_ = 0;
 }
 
 
@@ -88,15 +92,21 @@ Mat StabilizerBase::nextStabilizedFrame()
 {
     // check if we've processed all frames already
     if (curStabilizedPos_ == curPos_ && curStabilizedPos_ != -1)
+    {
+        logProcessingTime();
         return Mat();
+    }
 
     bool processed;
     do processed = doOneIteration();
     while (processed && curStabilizedPos_ == -1);
 
-    // check if frame source is empty
+    // check if the frame source is empty
     if (curStabilizedPos_ == -1)
+    {
+        logProcessingTime();
         return Mat();
+    }
 
     return postProcessFrame(at(curStabilizedPos_, stabilizedFrames_));
 }
@@ -173,6 +183,7 @@ void StabilizerBase::setUp(const Mat &firstFrame)
     }
 
     log_->print("processing frames");
+    processingStartTime_ = clock();
 }
 
 
@@ -231,6 +242,13 @@ Mat StabilizerBase::postProcessFrame(const Mat &frame)
     int dx = static_cast<int>(floor(trimRatio_ * frame.cols));
     int dy = static_cast<int>(floor(trimRatio_ * frame.rows));
     return frame(Rect(dx, dy, frame.cols - 2*dx, frame.rows - 2*dy));
+}
+
+
+void StabilizerBase::logProcessingTime()
+{
+    clock_t elapsedTime = clock() - processingStartTime_;
+    log_->print("\nprocessing time: %.3f sec\n", static_cast<double>(elapsedTime) / CLOCKS_PER_SEC);
 }
 
 
@@ -317,21 +335,54 @@ Mat TwoPassStabilizer::nextFrame()
 }
 
 
+#if SAVE_MOTIONS
+static void saveMotions(
+        int frameCount, const vector<Mat> &motions, const vector<Mat> &stabilizationMotions)
+{
+    ofstream fm("log_motions.csv");
+    for (int i = 0; i < frameCount - 1; ++i)
+    {
+        Mat_<float> M = at(i, motions);
+        fm << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
+           << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
+           << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+    }
+    ofstream fo("log_orig.csv");
+    for (int i = 0; i < frameCount; ++i)
+    {
+        Mat_<float> M = getMotion(0, i, motions);
+        fo << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
+           << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
+           << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+    }
+    ofstream fs("log_stab.csv");
+    for (int i = 0; i < frameCount; ++i)
+    {
+        Mat_<float> M = stabilizationMotions[i] * getMotion(0, i, motions);
+        fs << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
+           << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
+           << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
+    }
+}
+#endif
+
+
 void TwoPassStabilizer::runPrePassIfNecessary()
 {
     if (!isPrePassDone_)
-    {
-        clock_t startTime = clock();
-        log_->print("first pass: estimating motions");
-
-        Mat prevFrame, frame;
+    {        
+        // check if we must do wobble suppression
 
         WobbleSuppressorBase *wobbleSuppressor = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
         doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobbleSuppressor) == 0;
 
-        bool ok = true, ok2 = true;
-
         // estimate motions
+
+        clock_t startTime = clock();
+        log_->print("first pass: estimating motions");
+
+        Mat prevFrame, frame;
+        bool ok = true, ok2 = true;
 
         while (!(frame = frameSource_->nextFrame()).empty())
         {
@@ -366,44 +417,26 @@ void TwoPassStabilizer::runPrePassIfNecessary()
             frameCount_++;
         }
 
+        clock_t elapsedTime = clock() - startTime;
+        log_->print("\nmotion estimation time: %.3f sec\n",
+                    static_cast<double>(elapsedTime) / CLOCKS_PER_SEC);
+
         // add aux. motions
 
         for (int i = 0; i < radius_; ++i)
             motions_.push_back(Mat::eye(3, 3, CV_32F));
-        log_->print("\n");
 
         // stabilize
+
+        startTime = clock();
 
         stabilizationMotions_.resize(frameCount_);
         motionStabilizer_->stabilize(
             frameCount_, motions_, make_pair(0, frameCount_ - 1), &stabilizationMotions_[0]);
 
-        // save motions
-
-        /*ofstream fm("log_motions.csv");
-        for (int i = 0; i < frameCount_ - 1; ++i)
-        {
-            Mat_<float> M = at(i, motions_);
-            fm << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
-               << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
-               << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
-        }
-        ofstream fo("log_orig.csv");
-        for (int i = 0; i < frameCount_; ++i)
-        {
-            Mat_<float> M = getMotion(0, i, motions_);
-            fo << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
-               << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
-               << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
-        }
-        ofstream fs("log_stab.csv");
-        for (int i = 0; i < frameCount_; ++i)
-        {
-            Mat_<float> M = stabilizationMotions_[i] * getMotion(0, i, motions_);
-            fs << M(0,0) << " " << M(0,1) << " " << M(0,2) << " "
-               << M(1,0) << " " << M(1,1) << " " << M(1,2) << " "
-               << M(2,0) << " " << M(2,1) << " " << M(2,2) << endl;
-        }*/
+        elapsedTime = clock() - startTime;
+        log_->print("motion stabilization time: %.3f sec\n",
+                    static_cast<double>(elapsedTime) / CLOCKS_PER_SEC);
 
         // estimate optimal trim ratio if necessary
 
@@ -418,11 +451,12 @@ void TwoPassStabilizer::runPrePassIfNecessary()
             log_->print("estimated trim ratio: %f\n", static_cast<double>(trimRatio_));
         }
 
+#if SAVE_MOTIONS
+        saveMotions(frameCount_, motions_, stabilizationMotions_);
+#endif
+
         isPrePassDone_ = true;
         frameSource_->reset();
-
-        clock_t elapsedTime = clock() - startTime;
-        log_->print("first pass time: %.3f sec\n", static_cast<double>(elapsedTime) / CLOCKS_PER_SEC);
     }
 }
 
