@@ -1965,12 +1965,14 @@ void cv::convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool
 void cv::convexityDefects( InputArray _points, InputArray _hull, OutputArray _defects )
 {
     Mat points = _points.getMat();
-    CV_Assert( points.isContinuous() && points.type() == CV_32SC2 );
+    int ptnum = points.checkVector(2, CV_32S);
+    CV_Assert( ptnum > 3 );
     Mat hull = _hull.getMat();
+    CV_Assert( hull.checkVector(1, CV_32S) > 2 );
     Ptr<CvMemStorage> storage = cvCreateMemStorage();
     
     CvMat c_points = points, c_hull = hull;
-    CvSeq* seq = cvConvexityDefects(&c_points, &c_hull);
+    CvSeq* seq = cvConvexityDefects(&c_points, &c_hull, storage);
     int i, n = seq->total;
     
     if( n == 0 )
@@ -1991,9 +1993,9 @@ void cv::convexityDefects( InputArray _points, InputArray _hull, OutputArray _de
         int idx0 = (int)(d.start - ptorg);
         int idx1 = (int)(d.end - ptorg);
         int idx2 = (int)(d.depth_point - ptorg);
-        CV_Assert( 0 <= idx0 && idx0 < n );
-        CV_Assert( 0 <= idx1 && idx1 < n );
-        CV_Assert( 0 <= idx2 && idx2 < n );
+        CV_Assert( 0 <= idx0 && idx0 < ptnum );
+        CV_Assert( 0 <= idx1 && idx1 < ptnum );
+        CV_Assert( 0 <= idx2 && idx2 < ptnum );
         CV_Assert( d.depth >= 0 );
         int idepth = cvRound(d.depth*256);
         defects.at<Vec4i>(i) = Vec4i(idx0, idx1, idx2, idepth);
