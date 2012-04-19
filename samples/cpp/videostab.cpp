@@ -93,7 +93,7 @@ void printHelp()
             "  --stdev=(<float_number>|auto)\n"
             "      Set smoothing weights standard deviation. The default is auto\n"
             "      (i.e. sqrt(radius)).\n"
-            "  -lp, --lp-stab=(yes|no)\n"
+            "  -lps, --lin-prog-stab=(yes|no)\n"
             "      Turn on/off linear programming based stabilization method.\n"
             "  --lp-trim-ratio=(<float_number>|auto)\n"
             "      Trimming ratio used in linear programming based method.\n"
@@ -409,15 +409,15 @@ int main(int argc, const char **argv)
 #if HAVE_OPENCV_GPU
             PyrLkRobustMotionEstimatorGpu *est = 0;
 
-            if (arg("ws-model") == "transl")
+            if (arg("model") == "transl")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION);
-            else if (arg("ws-model") == "transl_and_scale")
+            else if (arg("model") == "transl_and_scale")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION_AND_SCALE);
-            else if (arg("ws-model") == "similarity")
+            else if (arg("model") == "similarity")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_SIMILARITY);
-            else if (arg("ws-model") == "affine")
+            else if (arg("model") == "affine")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_AFFINE);
-            else if (arg("ws-model") == "homography")
+            else if (arg("model") == "homography")
                 est = new PyrLkRobustMotionEstimatorGpu(MM_HOMOGRAPHY);
             else
             {
@@ -426,12 +426,12 @@ int main(int argc, const char **argv)
             }
 
             RansacParams ransac = est->ransacParams();
-            if (arg("ws-subset") != "auto") ransac.size = argi("ws-subset");
-            if (arg("ws-thresh") != "auto") ransac.thresh = argi("ws-thresh");
-            ransac.eps = argf("ws-outlier-ratio");
+            if (arg("subset") != "auto") ransac.size = argi("subset");
+            if (arg("thresh") != "auto") ransac.thresh = argi("thresh");
+            ransac.eps = argf("outlier-ratio");
             est->setRansacParams(ransac);
 
-            est->setMinInlierRatio(argf("ws-min-inlier-ratio"));
+            est->setMinInlierRatio(argf("min-inlier-ratio"));
             stabilizer->setMotionEstimator(est);
 #else
             throw runtime_error("OpenCV is built without GPU support");
