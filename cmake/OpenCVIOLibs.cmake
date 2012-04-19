@@ -98,7 +98,9 @@ if(WITH_JASPER AND NOT JASPER_FOUND)
   set(JASPER_INCLUDE_DIR "${${JASPER_LIBRARY}_SOURCE_DIR}")
 endif()
 
-ocv_parse_header2(JASPER "${JASPER_INCLUDE_DIR}/jasper/jas_config.h" JAS_VERSION "")
+if(NOT JASPER_VERSION_STRING)
+  ocv_parse_header2(JASPER "${JASPER_INCLUDE_DIR}/jasper/jas_config.h" JAS_VERSION "")
+endif()
 
 ################### libpng - optional (should be searched after zlib)
 if(WITH_PNG)

@@ -1,34 +1,43 @@
 if(MSVC AND NOT PYTHON_EXECUTABLE)
   # search for executable with the same bitness as resulting binaries
   # standard FindPythonInterp always prefers executable from system path
-  foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} 2.7 2.6 2.5 2.4 2.3 2.2 2.1 2.0 1.6 1.5)
+  # this is really important because we are using the interpreter for numpy search and for choosing the install location
+  foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} 2.7 2.6 2.5 2.4 2.3 2.2 2.1 2.0)
     find_host_program(PYTHON_EXECUTABLE
       NAMES python${_CURRENT_VERSION} python
-      PATHS [HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Python\\\\PythonCore\\\\${_CURRENT_VERSION}\\\\InstallPath]
+      PATHS
+        [HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Python\\\\PythonCore\\\\${_CURRENT_VERSION}\\\\InstallPath]
+        [HKEY_CURRENT_USER\\\\SOFTWARE\\\\Python\\\\PythonCore\\\\${_CURRENT_VERSION}\\\\InstallPath]
       NO_SYSTEM_ENVIRONMENT_PATH
     )
   endforeach()
 endif()
-find_host_package(PythonInterp)
+
+find_host_package(PythonInterp 2.0)
 
 unset(PYTHON_USE_NUMPY CACHE)
 unset(HAVE_SPHINX CACHE)
 
 if(PYTHON_EXECUTABLE)
+  if(PYTHON_VERSION_STRING)
+    set(PYTHON_VERSION_FULL "${PYTHON_VERSION_STRING}")
+    set(PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+  else()
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
+      ERROR_VARIABLE PYTHON_VERSION_FULL
+      ERROR_STRIP_TRAILING_WHITESPACE)
+
+    string(REGEX MATCH "[0-9]+.[0-9]+" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
+    string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" PYTHON_VERSION_FULL "${PYTHON_VERSION_FULL}")
+  endif()
+  
   if(NOT ANDROID AND NOT IOS)
-    find_host_package(PythonLibs)
+    find_host_package(PythonLibs ${PYTHON_VERSION_FULL})
     # cmake 2.4 (at least on Ubuntu 8.04 (hardy)) don't define PYTHONLIBS_FOUND
     if(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
       set(PYTHONLIBS_FOUND ON)
     endif()
   endif()
-
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
-    ERROR_VARIABLE PYTHON_VERSION_FULL
-    ERROR_STRIP_TRAILING_WHITESPACE)
-
-  string(REGEX MATCH "[0-9]+.[0-9]+" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
-  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" PYTHON_VERSION_FULL "${PYTHON_VERSION_FULL}")
 
   if(NOT ANDROID AND NOT IOS)
     if(CMAKE_HOST_UNIX)
@@ -53,6 +62,9 @@ if(PYTHON_EXECUTABLE)
       if(NOT EXISTS "${PYTHON_PATH}/Lib/site-packages")
         unset(PYTHON_PATH)
         get_filename_component(PYTHON_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\${PYTHON_VERSION_MAJOR_MINOR}\\InstallPath]" ABSOLUTE)
+        if(NOT PYTHON_PATH)
+           get_filename_component(PYTHON_PATH "[HKEY_CURRENT_USER\\SOFTWARE\\Python\\PythonCore\\${PYTHON_VERSION_MAJOR_MINOR}\\InstallPath]" ABSOLUTE)
+        endif()
         file(TO_CMAKE_PATH "${PYTHON_PATH}" PYTHON_PATH)
       endif()
       set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
