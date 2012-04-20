@@ -251,6 +251,41 @@ void Algorithm::set(const char* name, const Ptr<Algorithm>& value)
     info()->set(this, name, ParamType<Algorithm>::type, &value);
 }
     
+int Algorithm::getInt(const string& name) const
+{
+    return get<int>(name);
+}
+    
+double Algorithm::getDouble(const string& name) const
+{
+    return get<double>(name);
+}
+
+bool Algorithm::getBool(const string& name) const
+{
+    return get<bool>(name);
+}
+
+string Algorithm::getString(const string& name) const
+{
+    return get<string>(name);
+}
+
+Mat Algorithm::getMat(const string& name) const
+{
+    return get<Mat>(name);
+}
+
+vector<Mat> Algorithm::getMatVector(const string& name) const
+{
+    return get<vector<Mat> >(name);
+}
+
+Ptr<Algorithm> Algorithm::getAlgorithm(const string& name) const
+{
+    return get<Algorithm>(name);
+}
+    
 string Algorithm::paramHelp(const string& name) const
 {
     return info()->paramHelp(name.c_str());
