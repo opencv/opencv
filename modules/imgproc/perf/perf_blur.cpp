@@ -89,7 +89,7 @@ PERF_TEST_P(Size_MatType_BorderType3x3, blur3x3,
 
     TEST_CYCLE() blur(src, dst, Size(3,3), Point(-1,-1), btype);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-3);
 }
 
 PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
@@ -133,5 +133,5 @@ PERF_TEST_P(Size_MatType_BorderType, blur5x5,
 
     TEST_CYCLE() blur(src, dst, Size(5,5), Point(-1,-1), btype);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-3);
 }
