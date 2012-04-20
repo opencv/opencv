@@ -1469,6 +1469,7 @@ void CvVideoWriter_FFMPEG::close()
         lbit_rate += (bitrate / 2);
         lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
         c->bit_rate_tolerance = static_cast<int>(lbit_rate);
+        c->bit_rate = static_cast<int>(lbit_rate);
 
         /* open the codec */
         if ((err=
