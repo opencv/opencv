@@ -136,7 +136,7 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
     }
 
     Mat_<float> sol;
-    solve(A, b, sol, DECOMP_SVD);
+    solve(A, b, sol, DECOMP_NORMAL | DECOMP_LU);
 
     if (rmse)
         *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / sqrt(static_cast<double>(npoints)));
@@ -173,7 +173,7 @@ static Mat estimateGlobMotionLeastSquaresSimilarity(
     }
 
     Mat_<float> sol;
-    solve(A, b, sol, DECOMP_SVD);
+    solve(A, b, sol, DECOMP_NORMAL | DECOMP_LU);
 
     if (rmse)
         *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / sqrt(static_cast<double>(npoints)));
@@ -212,7 +212,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
     }
 
     Mat_<float> sol;
-    solve(A, b, sol, DECOMP_SVD);
+    solve(A, b, sol, DECOMP_NORMAL | DECOMP_LU);
 
     if (rmse)
         *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / sqrt(static_cast<double>(npoints)));
