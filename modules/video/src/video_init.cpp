@@ -42,4 +42,78 @@
 
 #include "precomp.hpp"
 
-/* End of file. */
+namespace cv
+{
+    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static Algorithm* createMOG()
+{
+    return new BackgroundSubtractorMOG;
+}
+
+static AlgorithmInfo& mog_info()
+{
+    static AlgorithmInfo mog_info_var("BackgroundSubtractor.MOG", createMOG);
+    return mog_info_var;
+}
+
+static AlgorithmInfo& mog_info_auto = mog_info();
+
+AlgorithmInfo* BackgroundSubtractorMOG::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        BackgroundSubtractorMOG obj;
+        
+        mog_info().addParam(obj, "history", obj.history);
+        mog_info().addParam(obj, "nmixtures", obj.nmixtures);
+        mog_info().addParam(obj, "backgroundRatio", obj.backgroundRatio);
+        mog_info().addParam(obj, "noiseSigma", obj.noiseSigma);
+        
+        initialized = true;
+    }
+    return &mog_info();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static Algorithm* createMOG2()
+{
+    return new BackgroundSubtractorMOG2;
+}
+
+static AlgorithmInfo& mog2_info()
+{
+    static AlgorithmInfo mog2_info_var("BackgroundSubtractor.MOG2", createMOG2);
+    return mog2_info_var;
+}
+
+static AlgorithmInfo& mog2_info_auto = mog2_info();
+
+AlgorithmInfo* BackgroundSubtractorMOG2::info() const
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+        BackgroundSubtractorMOG2 obj;
+        
+        mog2_info().addParam(obj, "history", obj.history);
+        mog2_info().addParam(obj, "varThreshold", obj.varThreshold);
+        mog2_info().addParam(obj, "detectShadows", obj.bShadowDetection);
+        
+        initialized = true;
+    }
+    return &mog2_info();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////    
+
+bool initModule_video(void)
+{
+    Ptr<Algorithm> mog = createMOG(), mog2 = createMOG2();
+    return mog->info() != 0 && mog2->info() != 0;
+}
+    
+}

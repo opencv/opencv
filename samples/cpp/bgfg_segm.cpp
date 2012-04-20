@@ -1,4 +1,5 @@
 #include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdio.h>
@@ -17,7 +18,7 @@ void help()
 
 const char* keys = 
 {
-	"{c |camera   |false    | use camera or not}"
+	"{c |camera   |true    | use camera or not}"
 	"{fn|file_name|tree.avi | movie file             }"
 };
 
@@ -49,7 +50,8 @@ int main(int argc, const char** argv)
     namedWindow("foreground image", CV_WINDOW_NORMAL);
     namedWindow("mean background image", CV_WINDOW_NORMAL);
 
-    BackgroundSubtractorMOG2 bg_model;
+    BackgroundSubtractorMOG2 bg_model;//(100, 3, 0.3, 5);
+                                     
     Mat img, fgmask, fgimg;
 
     for(;;)
@@ -58,6 +60,8 @@ int main(int argc, const char** argv)
         
         if( img.empty() )
             break;
+        
+        //cvtColor(_img, img, COLOR_BGR2GRAY);
         
         if( fgimg.empty() )
           fgimg.create(img.size(), img.type());

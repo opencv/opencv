@@ -134,17 +134,19 @@ template<typename VT> struct MixData
 };
 
     
-static void process8uC1( BackgroundSubtractorMOG& obj, const Mat& image, Mat& fgmask, double learningRate )
+static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
+                         Mat& bgmodel, int nmixtures, double backgroundRatio,
+                         double varThreshold, double noiseSigma )
 {
     int x, y, k, k1, rows = image.rows, cols = image.cols;
-    float alpha = (float)learningRate, T = (float)obj.backgroundRatio, vT = (float)obj.varThreshold;
-    int K = obj.nmixtures;
-    MixData<float>* mptr = (MixData<float>*)obj.bgmodel.data;
+    float alpha = (float)learningRate, T = (float)backgroundRatio, vT = (float)varThreshold;
+    int K = nmixtures;
+    MixData<float>* mptr = (MixData<float>*)bgmodel.data;
     
     const float w0 = (float)defaultInitialWeight;
     const float sk0 = (float)(w0/(defaultNoiseSigma*2));
     const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
-    const float minVar = (float)(obj.noiseSigma*obj.noiseSigma);
+    const float minVar = (float)(noiseSigma*noiseSigma);
     
     for( y = 0; y < rows; y++ )
     {
@@ -259,17 +261,20 @@ static void process8uC1( BackgroundSubtractorMOG& obj, const Mat& image, Mat& fg
     }
 }
 
-static void process8uC3( BackgroundSubtractorMOG& obj, const Mat& image, Mat& fgmask, double learningRate )
+    
+static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
+                         Mat& bgmodel, int nmixtures, double backgroundRatio,
+                         double varThreshold, double noiseSigma )
 {
     int x, y, k, k1, rows = image.rows, cols = image.cols;
-    float alpha = (float)learningRate, T = (float)obj.backgroundRatio, vT = (float)obj.varThreshold;
-    int K = obj.nmixtures;
+    float alpha = (float)learningRate, T = (float)backgroundRatio, vT = (float)varThreshold;
+    int K = nmixtures;
     
     const float w0 = (float)defaultInitialWeight;
     const float sk0 = (float)(w0/(defaultNoiseSigma*2*sqrt(3.)));
     const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
-    const float minVar = (float)(obj.noiseSigma*obj.noiseSigma);
-    MixData<Vec3f>* mptr = (MixData<Vec3f>*)obj.bgmodel.data;
+    const float minVar = (float)(noiseSigma*noiseSigma);
+    MixData<Vec3f>* mptr = (MixData<Vec3f>*)bgmodel.data;
     
     for( y = 0; y < rows; y++ )
     {
@@ -403,9 +408,9 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
     CV_Assert(learningRate >= 0);
     
     if( image.type() == CV_8UC1 )
-        process8uC1( *this, image, fgmask, learningRate );
+        process8uC1( image, fgmask, learningRate, bgmodel, nmixtures, backgroundRatio, varThreshold, noiseSigma );
     else if( image.type() == CV_8UC3 )
-        process8uC3( *this, image, fgmask, learningRate );
+        process8uC3( image, fgmask, learningRate, bgmodel, nmixtures, backgroundRatio, varThreshold, noiseSigma );
     else
         CV_Error( CV_StsUnsupportedFormat, "Only 1- and 3-channel 8-bit images are supported in BackgroundSubtractorMOG" );
 }

@@ -176,15 +176,6 @@ struct NoVec
 
 extern volatile bool USE_SSE2;
 
-typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
-                           const uchar* src2, size_t step2,
-                           uchar* dst, size_t step, Size sz,
-                           void*);
-
-BinaryFunc getConvertFunc(int sdepth, int ddepth);
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
-BinaryFunc getCopyMaskFunc(size_t esz);
-
 enum { BLOCK_SIZE = 1024 };
 
 #ifdef HAVE_IPP

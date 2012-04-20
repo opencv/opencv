@@ -3365,6 +3365,7 @@ typedef struct CvGaussBGModel
     CvGaussBGStatModelParams   params;    
     CvGaussBGPoint*            g_point;    
     int                        countFrames;
+    void*                      mog;
 } CvGaussBGModel;
 
 

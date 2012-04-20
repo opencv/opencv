@@ -671,29 +671,6 @@ void EM::read(const FileNode& fn)
     computeLogWeightDivDet();
 }
 
-static Algorithm* createEM()
-{
-    return new EM;
-}
-static AlgorithmInfo em_info("StatModel.EM", createEM);
-
-AlgorithmInfo* EM::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        EM obj;
-        em_info.addParam(obj, "nclusters", obj.nclusters, true);
-        em_info.addParam(obj, "covMatType", obj.covMatType, true);
-
-        em_info.addParam(obj, "weights", obj.weights, true);
-        em_info.addParam(obj, "means", obj.means, true);
-        em_info.addParam(obj, "covs", obj.covs, true);
-
-        initialized = true;
-    }
-    return &em_info;
-}
 } // namespace cv
 
 /* End of file. */
