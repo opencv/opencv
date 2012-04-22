@@ -2070,26 +2070,26 @@ template<typename T> int mat_get(cv::Mat* m, int row, int col, int count, char* 
     if(! m) return 0;
     if(! buff) return 0;
 
-    count *= sizeof(T);
-    int rest = ((m->rows - row) * m->cols - col) * m->channels() * sizeof(T);
-    if(count>rest) count = rest;
-    int res = count;
+    int bytesToCopy = count * sizeof(T);
+    int bytesRestInMat = ((m->rows - row) * m->cols - col) * m->elemSize();
+    if(bytesToCopy > bytesRestInMat) bytesToCopy = bytesRestInMat;
+    int res = bytesToCopy;
 
     if( m->isContinuous() )
     {
-        memcpy(buff, m->ptr(row, col), count);
+        memcpy(buff, m->ptr(row, col), bytesToCopy);
     } else {
         // row by row
-        int num = (m->cols - col - 1) * m->channels() * sizeof(T); // 1st partial row
-        if(count<num) num = count;
-        uchar* data = m->ptr(row++, col);
-        while(count>0){//TODO: recheck this cycle for the case col!=0
-            memcpy(buff, data, num);
-            count -= num;
-            buff += num;
-            num = m->cols * m->channels() * sizeof(T);
-            if(count<num) num = count;
-            data = m->ptr(row++, 0);
+        int bytesInRow = (m->cols - col) * m->elemSize(); // 1st partial row
+        while(bytesToCopy > 0)
+        {
+            int len = std::min(bytesToCopy, bytesInRow);
+            memcpy(buff, m->ptr(row, col), len);
+            bytesToCopy -= len;
+            buff += len;
+            row++;
+            col = 0;
+            bytesInRow = m->cols * m->elemSize();
         }
     }
     return res;
