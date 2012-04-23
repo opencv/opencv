@@ -969,6 +969,8 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
 
 	CVPixelBufferUnlockBaseAddress(pixels, 0);
 	CVBufferRelease(pixels);
+    CMSampleBufferInvalidate(sampleBuffer);
+    CFRelease(sampleBuffer);
 
 	[localpool drain]; 
 	return bgr_image; 
