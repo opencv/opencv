@@ -706,7 +706,7 @@ cv::Mat::Mat(const GpuMat& m) : flags(0), dims(0), rows(0), cols(0), data(0), re
 
 namespace
 {
-    class CV_EXPORTS GpuFuncTable
+    class GpuFuncTable
     {
     public:
         virtual ~GpuFuncTable() {}
