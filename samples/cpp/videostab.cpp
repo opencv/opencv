@@ -95,15 +95,15 @@ void printHelp()
             "      (i.e. sqrt(radius)).\n"
             "  -lps, --lin-prog-stab=(yes|no)\n"
             "      Turn on/off linear programming based stabilization method.\n"
-            "  --lp-trim-ratio=(<float_number>|auto)\n"
+            "  --lps-trim-ratio=(<float_number>|auto)\n"
             "      Trimming ratio used in linear programming based method.\n"
-            "  --lp-w1=(<float_number>|1)\n"
+            "  --lps-w1=(<float_number>|1)\n"
             "      1st derivative weight. The default is 1.\n"
-            "  --lp-w2=(<float_number>|10)\n"
+            "  --lps-w2=(<float_number>|10)\n"
             "      2nd derivative weight. The default is 10.\n"
-            "  --lp-w3=(<float_number>|100)\n"
+            "  --lps-w3=(<float_number>|100)\n"
             "      3rd derivative weight. The default is 100.\n"
-            "  --lp-w4=(<float_number>|100)\n"
+            "  --lps-w4=(<float_number>|100)\n"
             "      Non-translation motion components weight. The default is 100.\n\n"
             "  --deblur=(yes|no)\n"
             "      Do deblurring.\n"
@@ -185,11 +185,11 @@ int main(int argc, const char **argv)
                 "{ r | radius | 15 | }"
                 "{ | stdev | auto | }"
                 "{ lps | lin-prog-stab | no | }"
-                "{ | lp-trim-ratio | auto | }"
-                "{ | lp-w1 | 1 | }"
-                "{ | lp-w2 | 10 | }"
-                "{ | lp-w3 | 100 | }"
-                "{ | lp-w4 | 100 | }"
+                "{ | lps-trim-ratio | auto | }"
+                "{ | lps-w1 | 1 | }"
+                "{ | lps-w2 | 10 | }"
+                "{ | lps-w3 | 100 | }"
+                "{ | lps-w4 | 100 | }"
                 "{ | deblur | no | }"
                 "{ | deblur-sens | 0.1 | }"
                 "{ et | est-trim | yes | }"
@@ -260,11 +260,11 @@ int main(int argc, const char **argv)
             {
                 LpMotionStabilizer *stab = new LpMotionStabilizer();
                 stab->setFrameSize(Size(source->width(), source->height()));
-                stab->setTrimRatio(arg("lp-trim-ratio") == "auto" ? argf("trim-ratio") : argf("lp-trim-ratio"));
-                stab->setWeight1(argf("lp-w1"));
-                stab->setWeight2(argf("lp-w2"));
-                stab->setWeight3(argf("lp-w3"));
-                stab->setWeight4(argf("lp-w4"));
+                stab->setTrimRatio(arg("lps-trim-ratio") == "auto" ? argf("trim-ratio") : argf("lps-trim-ratio"));
+                stab->setWeight1(argf("lps-w1"));
+                stab->setWeight2(argf("lps-w2"));
+                stab->setWeight3(argf("lps-w3"));
+                stab->setWeight4(argf("lps-w4"));
                 twoPassStabilizer->setMotionStabilizer(stab);
             }
             else if (arg("stdev") == "auto")

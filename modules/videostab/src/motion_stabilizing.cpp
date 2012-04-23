@@ -616,11 +616,15 @@ static inline bool isGoodMotion(const float M[], float w, float h, float dx, flo
 {
     Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};
     Point2f Mpt[4];
+    float z;
 
     for (int i = 0; i < 4; ++i)
     {
         Mpt[i].x = M[0]*pt[i].x + M[1]*pt[i].y + M[2];
         Mpt[i].y = M[3]*pt[i].x + M[4]*pt[i].y + M[5];
+        z = M[6]*pt[i].x + M[7]*pt[i].y + M[8];
+        Mpt[i].x /= z;
+        Mpt[i].y /= z;
     }
 
     pt[0] = Point2f(dx, dy);
@@ -640,6 +644,9 @@ static inline void relaxMotion(const float M[], float t, float res[])
     res[3] = M[3]*(1.f-t);
     res[4] = M[4]*(1.f-t) + t;
     res[5] = M[5]*(1.f-t);
+    res[6] = M[6]*(1.f-t);
+    res[7] = M[7]*(1.f-t);
+    res[8] = M[8]*(1.f-t) + t;
 }
 
 
@@ -651,11 +658,12 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
     const float h = static_cast<float>(size.height);
     const float dx = floor(w * trimRatio);
     const float dy = floor(h * trimRatio);
-    const float srcM[6] =
+    const float srcM[] =
             {M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2),
-             M.at<float>(1,0), M.at<float>(1,1), M.at<float>(1,2)};
+             M.at<float>(1,0), M.at<float>(1,1), M.at<float>(1,2),
+             M.at<float>(2,0), M.at<float>(2,1), M.at<float>(2,2)};
 
-    float curM[6];
+    float curM[9];
     float t = 0;
     relaxMotion(srcM, t, curM);
     if (isGoodMotion(curM, w, h, dx, dy))
@@ -687,11 +695,15 @@ float estimateOptimalTrimRatio(const Mat &M, Size size)
 
     Point2f pt[4] = {Point2f(0,0), Point2f(w,0), Point2f(w,h), Point2f(0,h)};
     Point2f Mpt[4];
+    float z;
 
     for (int i = 0; i < 4; ++i)
     {
         Mpt[i].x = M_(0,0)*pt[i].x + M_(0,1)*pt[i].y + M_(0,2);
         Mpt[i].y = M_(1,0)*pt[i].x + M_(1,1)*pt[i].y + M_(1,2);
+        z = M_(2,0)*pt[i].x + M_(2,1)*pt[i].y + M_(2,2);
+        Mpt[i].x /= z;
+        Mpt[i].y /= z;
     }
 
     float l = 0, r = 0.5f;
