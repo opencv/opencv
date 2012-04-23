@@ -761,6 +761,8 @@ public class %(jc)s {
                 print "Skipped property: [%s]" % name, p
 
         self.add_class_code_stream(name, classinfo.base)
+        if classinfo.base:
+            self.get_imports(name, classinfo.base)
 
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -932,7 +934,9 @@ extern "C" {
         j_type = ''
         if ctype in type_dict:
             j_type = type_dict[ctype]['j_type']
-        if j_type in ( "CvType", "Mat", "Point", "Point3", "Range", "Rect", "RotatedRect", "Scalar", "Size", "TermCriteria" ):
+        elif ctype in ("Algorithm"):
+            j_type = ctype
+        if j_type in ( "CvType", "Mat", "Point", "Point3", "Range", "Rect", "RotatedRect", "Scalar", "Size", "TermCriteria", "Algorithm" ):
             imports.add("org.opencv.core." + j_type)
         if j_type == 'String':
             imports.add("java.lang.String")
