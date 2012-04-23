@@ -12,7 +12,7 @@ if(NOT COMMAND find_host_program)
 endif()
 
 #added include directories in such way that directories from the OpenCV source tree go first
-macro(ocv_include_directories)
+function(ocv_include_directories)
   set(__add_before "")
   foreach(dir ${ARGN})
     get_filename_component(__abs_dir "${dir}" ABSOLUTE)
@@ -23,7 +23,7 @@ macro(ocv_include_directories)
     endif()
   endforeach()
   include_directories(BEFORE ${__add_before})
-endmacro()
+endfunction()
 
 
 # Provides an option that the user can optionally select.
