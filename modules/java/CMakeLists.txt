@@ -235,6 +235,7 @@ if(ANDROID)
         COMMENT "Generating OpenCV Android library project. SDK target: ${lib_target_sdk_target}"
         )
     install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION . COMPONENT main)
+    install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION . COMPONENT main)
 
     if(ANT_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
       # build the library project
