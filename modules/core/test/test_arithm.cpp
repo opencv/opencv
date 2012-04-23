@@ -1226,7 +1226,14 @@ struct NormOp : public BaseElemWiseOp
     };
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 4);
+        int type = cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 4);
+        normType = 1 << rng.uniform(0, 3);
+        if( CV_MAT_DEPTH(type) == CV_8U && (rng.next() & 8) != 0 )
+        {
+            normType = cv::NORM_HAMMING + rng.uniform(0, 2);
+            type = CV_MAT_DEPTH(type);
+        }
+        return type;
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
@@ -1242,7 +1249,6 @@ struct NormOp : public BaseElemWiseOp
     }
     void generateScalars(int, RNG& rng)
     {
-        normType = 1 << rng.uniform(0, 3);
     }
     double getMaxErr(int)
     {

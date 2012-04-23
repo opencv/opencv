@@ -1100,6 +1100,23 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
 }
 
     
+static int
+normHamming(const uchar* src, size_t total, int cellSize)
+{
+    int result = 0;
+    int mask = cellSize == 1 ? 1 : cellSize == 2 ? 3 : cellSize == 4 ? 15 : -1;
+    CV_Assert( mask >= 0 );
+    
+    for( size_t i = 0; i < total; i++ )
+    {
+        unsigned a = src[i];
+        for( ; a != 0; a >>= cellSize )
+            result += (a & mask) != 0;
+    }
+    return result;
+}
+    
+    
 template<typename _Tp> static double
 norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const uchar* mask)
 {
@@ -1216,8 +1233,34 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
     
 double norm(const Mat& src, int normType, const Mat& mask)
 {
+    if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+    {
+        if( !mask.empty() )
+        {
+            Mat temp;
+            bitwise_and(src, mask, temp);
+            return norm(temp, normType, Mat());
+        }
+        
+        CV_Assert( src.depth() == CV_8U );
+        
+        const Mat *arrays[]={&src, 0};
+        Mat planes[1];
+        
+        NAryMatIterator it(arrays, planes);
+        size_t total = planes[0].total();
+        size_t i, nplanes = it.nplanes;
+        double result = 0;
+        int cellSize = normType == NORM_HAMMING ? 1 : 2;
+        
+        for( i = 0; i < nplanes; i++, ++it )
+            result += normHamming(planes[0].data, total, cellSize);
+        return result;
+    }
+    
     CV_Assert( mask.empty() || (src.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
+    
     const Mat *arrays[]={&src, &mask, 0};
     Mat planes[2];
     
@@ -1267,6 +1310,29 @@ double norm(const Mat& src, int normType, const Mat& mask)
     
 double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
 {
+    if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+    {
+        Mat temp;
+        bitwise_xor(src1, src2, temp);
+        if( !mask.empty() )
+            bitwise_and(temp, mask, temp);
+        
+        CV_Assert( temp.depth() == CV_8U );
+        
+        const Mat *arrays[]={&temp, 0};
+        Mat planes[1];
+        
+        NAryMatIterator it(arrays, planes);
+        size_t total = planes[0].total();
+        size_t i, nplanes = it.nplanes;
+        double result = 0;
+        int cellSize = normType == NORM_HAMMING ? 1 : 2;
+        
+        for( i = 0; i < nplanes; i++, ++it )
+            result += normHamming(planes[0].data, total, cellSize);
+        return result;
+    }
+    
     CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
     CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );

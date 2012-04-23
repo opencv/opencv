@@ -965,6 +965,34 @@ static const uchar popCountTable4[] =
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
+int normHamming(const uchar* a, int n)
+{
+    int i = 0, result = 0;
+#if CV_NEON
+    if (CPU_HAS_NEON_FEATURE)
+    {
+        uint32x4_t bits = vmovq_n_u32(0);
+        for (; i <= n - 16; i += 16) {
+            uint8x16_t A_vec = vld1q_u8 (a + i);
+            uint8x16_t bitsSet = vcntq_u8 (A_vec);
+            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+            bits = vaddq_u32(bits, bitSet4);
+        }
+        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+    }
+    else
+#endif
+        for( ; i <= n - 4; i += 4 )
+            result += popCountTable[a[i]] + popCountTable[a[i+1]] +
+            popCountTable[a[i+2]] + popCountTable[a[i+3]];
+    for( ; i < n; i++ )
+        result += popCountTable[a[i]];
+    return result;
+}
+    
 int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0, result = 0;
@@ -995,6 +1023,27 @@ int normHamming(const uchar* a, const uchar* b, int n)
     return result;
 }
 
+int normHamming(const uchar* a, int n, int cellSize)
+{
+    if( cellSize == 1 )
+        return normHamming(a, n);
+    const uchar* tab = 0;
+    if( cellSize == 2 )
+        tab = popCountTable2;
+    else if( cellSize == 4 )
+        tab = popCountTable4;
+    else
+        CV_Error( CV_StsBadSize, "bad cell size (not 1, 2 or 4) in normHamming" );
+    int i = 0, result = 0;
+#if CV_ENABLE_UNROLLED
+    for( ; i <= n - 4; i += 4 )
+        result += tab[a[i]] + tab[a[i+1]] + tab[a[i+2]] + tab[a[i+3]];
+#endif
+    for( ; i < n; i++ )
+        result += tab[a[i]];
+    return result;
+}    
+    
 int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 {
     if( cellSize == 1 )
@@ -1221,37 +1270,73 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     int depth = src.depth(), cn = src.channels();
     
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 ||
+               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src.type() == CV_8U) );
     
-    if( depth == CV_32F && src.isContinuous() && mask.empty() )
+    if( src.isContinuous() && mask.empty() )
     {
         size_t len = src.total()*cn;
         if( len == (size_t)(int)len )
         {
-            const float* data = src.ptr<float>();
-            
-            if( normType == NORM_L2 )
+            if( depth == CV_32F )
             {
-                double result = 0;
-                GET_OPTIMIZED(normL2_32f)(data, 0, &result, (int)len, 1);
-                return std::sqrt(result);
+                const float* data = src.ptr<float>();
+                
+                if( normType == NORM_L2 )
+                {
+                    double result = 0;
+                    GET_OPTIMIZED(normL2_32f)(data, 0, &result, (int)len, 1);
+                    return std::sqrt(result);
+                }
+                if( normType == NORM_L1 )
+                {
+                    double result = 0;
+                    GET_OPTIMIZED(normL1_32f)(data, 0, &result, (int)len, 1);
+                    return result;
+                }
+                if( normType == NORM_INF )
+                {
+                    float result = 0;
+                    GET_OPTIMIZED(normInf_32f)(data, 0, &result, (int)len, 1);
+                    return result;
+                }
             }
-            if( normType == NORM_L1 )
+            if( depth == CV_8U )
             {
-                double result = 0;
-                GET_OPTIMIZED(normL1_32f)(data, 0, &result, (int)len, 1);
-                return result;
-            }
-            {
-                float result = 0;
-                GET_OPTIMIZED(normInf_32f)(data, 0, &result, (int)len, 1);
-                return result;
-
+                const uchar* data = src.ptr<uchar>();
+                
+                if( normType == NORM_HAMMING )
+                    return normHamming(data, (int)len);
+                
+                if( normType == NORM_HAMMING2 )
+                    return normHamming(data, (int)len, 2);
             }
         }
     }
     
     CV_Assert( mask.empty() || mask.type() == CV_8U );
+    
+    if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+    {
+        if( !mask.empty() )
+        {
+            Mat temp;
+            bitwise_and(src, mask, temp);
+            return norm(temp, normType);
+        }
+        int cellSize = normType == NORM_HAMMING ? 1 : 2;
+        
+        const Mat* arrays[] = {&src, 0};
+        uchar* ptrs[1];
+        NAryMatIterator it(arrays, ptrs);
+        int total = (int)it.size;
+        int result = 0;
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            result += normHamming(ptrs[0], total, cellSize);
+        
+        return result;
+    }
     
     NormFunc func = normTab[normType >> 1][depth];
     CV_Assert( func != 0 );
@@ -1328,37 +1413,65 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
     
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 ||
+              ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
     
-    if( src1.depth() == CV_32F && src1.isContinuous() && src2.isContinuous() && mask.empty() )
+    if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
         size_t len = src1.total()*src1.channels();
         if( len == (size_t)(int)len )
         {
-            const float* data1 = src1.ptr<float>();
-            const float* data2 = src2.ptr<float>();
-            
-            if( normType == NORM_L2 )
+            if( src1.depth() == CV_32F )
             {
-                double result = 0;
-                GET_OPTIMIZED(normDiffL2_32f)(data1, data2, 0, &result, (int)len, 1);
-                return std::sqrt(result);
-            }
-            if( normType == NORM_L1 )
-            {
-                double result = 0;
-                GET_OPTIMIZED(normDiffL1_32f)(data1, data2, 0, &result, (int)len, 1);
-                return result;
-            }
-            {
-                float result = 0;
-                GET_OPTIMIZED(normDiffInf_32f)(data1, data2, 0, &result, (int)len, 1);
-                return result;
+                const float* data1 = src1.ptr<float>();
+                const float* data2 = src2.ptr<float>();
+                
+                if( normType == NORM_L2 )
+                {
+                    double result = 0;
+                    GET_OPTIMIZED(normDiffL2_32f)(data1, data2, 0, &result, (int)len, 1);
+                    return std::sqrt(result);
+                }
+                if( normType == NORM_L1 )
+                {
+                    double result = 0;
+                    GET_OPTIMIZED(normDiffL1_32f)(data1, data2, 0, &result, (int)len, 1);
+                    return result;
+                }
+                if( normType == NORM_INF )
+                {
+                    float result = 0;
+                    GET_OPTIMIZED(normDiffInf_32f)(data1, data2, 0, &result, (int)len, 1);
+                    return result;
+                }
             }
         }
     }
     
     CV_Assert( mask.empty() || mask.type() == CV_8U );
+    
+    if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+    {
+        if( !mask.empty() )
+        {
+            Mat temp;
+            bitwise_xor(src1, src2, temp);
+            bitwise_and(temp, mask, temp);
+            return norm(temp, normType);
+        }
+        int cellSize = normType == NORM_HAMMING ? 1 : 2;
+        
+        const Mat* arrays[] = {&src1, &src2, 0};
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs);
+        int total = (int)it.size;
+        int result = 0;
+        
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            result += normHamming(ptrs[0], ptrs[1], total, cellSize);
+        
+        return result;
+    }
     
     NormDiffFunc func = normDiffTab[normType >> 1][depth];
     CV_Assert( func != 0 );
