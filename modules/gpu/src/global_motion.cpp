@@ -49,14 +49,20 @@ using namespace cv::gpu;
 #ifndef HAVE_CUDA
 
 void cv::gpu::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
+void cv::gpu::calcWobbleSuppressionMaps(
+        int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 
 #else
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace gpu { namespace device { namespace globmotion {
 
     int compactPoints(int N, float *points0, float *points1, const uchar *mask);
 
-}}}
+    void calcWobbleSuppressionMaps(
+            int left, int idx, int right, int width, int height,
+            const float *ml, const float *mr, DevMem2Df mapx, DevMem2Df mapy);
+
+}}}}
 
 void cv::gpu::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
 {
@@ -65,11 +71,27 @@ void cv::gpu::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask
     CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
 
     int npoints = points0.cols;
-    int remaining = cv::gpu::device::compactPoints(
+    int remaining = cv::gpu::device::globmotion::compactPoints(
             npoints, (float*)points0.data, (float*)points1.data, mask.data);
 
     points0 = points0.colRange(0, remaining);
     points1 = points1.colRange(0, remaining);
+}
+
+
+void cv::gpu::calcWobbleSuppressionMaps(
+        int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
+        GpuMat &mapx, GpuMat &mapy)
+{
+    CV_Assert(ml.size() == Size(3, 3) && ml.type() == CV_32F && ml.isContinuous());
+    CV_Assert(mr.size() == Size(3, 3) && mr.type() == CV_32F && mr.isContinuous());
+
+    mapx.create(size, CV_32F);
+    mapy.create(size, CV_32F);
+
+    cv::gpu::device::globmotion::calcWobbleSuppressionMaps(
+                left, idx, right, size.width, size.height,
+                ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
 }
 
 #endif

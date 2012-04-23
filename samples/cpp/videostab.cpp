@@ -273,12 +273,11 @@ int main(int argc, const char **argv)
                 twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius"), argf("stdev")));
             if (arg("wobble-suppress") == "yes")
             {
-                MoreAccurateMotionWobbleSuppressor *ws = new MoreAccurateMotionWobbleSuppressor();
-                twoPassStabilizer->setWobbleSuppressor(ws);
-                ws->setPeriod(argi("ws-period"));
+                MoreAccurateMotionWobbleSuppressorBase *ws;
 
                 if (arg("gpu") == "no")
                 {
+                    ws = new MoreAccurateMotionWobbleSuppressor();
                     PyrLkRobustMotionEstimator *est = 0;
 
                     if (arg("ws-model") == "transl")
@@ -312,6 +311,7 @@ int main(int argc, const char **argv)
                 else if (arg("gpu") == "yes")
                 {
 #if HAVE_OPENCV_GPU
+                    ws = new MoreAccurateMotionWobbleSuppressorGpu();
                     PyrLkRobustMotionEstimatorGpu *est = 0;
 
                     if (arg("ws-model") == "transl")
@@ -345,7 +345,10 @@ int main(int argc, const char **argv)
                 else
                 {
                     throw runtime_error("bad gpu optimization argument value: " + arg("gpu"));
-                }
+                }                
+
+                twoPassStabilizer->setWobbleSuppressor(ws);
+                ws->setPeriod(argi("ws-period"));
 
                 MotionModel model = ws->motionEstimator()->motionModel();
                 if (arg("load-motions2") != "no")

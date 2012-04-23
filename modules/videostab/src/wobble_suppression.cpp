@@ -56,19 +56,12 @@ WobbleSuppressorBase::WobbleSuppressorBase() : motions_(0), stabilizationMotions
     PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator();
     est->setMotionModel(MM_HOMOGRAPHY);
     est->setRansacParams(RansacParams::default2dMotion(MM_HOMOGRAPHY));
-    setMotionEstimator(est);
 }
 
 
 void NullWobbleSuppressor::suppress(int /*idx*/, const Mat &frame, Mat &result)
 {
     result = frame;
-}
-
-
-MoreAccurateMotionWobbleSuppressor::MoreAccurateMotionWobbleSuppressor()
-{
-    setPeriod(30);
 }
 
 
@@ -122,6 +115,43 @@ void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat
 
     remap(frame, result, mapx_, mapy_, INTER_LINEAR, BORDER_REPLICATE);
 }
+
+
+#if HAVE_OPENCV_GPU
+void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const gpu::GpuMat &frame, gpu::GpuMat &result)
+{
+    CV_Assert(motions_ && stabilizationMotions_);
+
+    if (idx % period_ == 0)
+    {
+        result = frame;
+        return;
+    }
+
+    int k1 = idx / period_ * period_;
+    int k2 = std::min(k1 + period_, frameCount_ - 1);
+
+    Mat S1 = (*stabilizationMotions_)[idx];
+
+    Mat ML = S1 * getMotion(k1, idx, *motions2_) * getMotion(k1, idx, *motions_).inv() * S1.inv();
+    Mat MR = S1 * getMotion(idx, k2, *motions2_).inv() * getMotion(idx, k2, *motions_) * S1.inv();
+
+    gpu::calcWobbleSuppressionMaps(k1, idx, k2, frame.size(), ML, MR, mapx_, mapy_);
+
+    if (result.data == frame.data)
+        result = gpu::GpuMat(frame.size(), frame.type());
+
+    gpu::remap(frame, result, mapx_, mapy_, INTER_LINEAR, BORDER_REPLICATE);
+}
+
+
+void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const Mat &frame, Mat &result)
+{
+    frameDevice_.upload(frame);
+    suppress(idx, frameDevice_, resultDevice_);
+    resultDevice_.download(result);
+}
+#endif
 
 } // namespace videostab
 } // namespace cv

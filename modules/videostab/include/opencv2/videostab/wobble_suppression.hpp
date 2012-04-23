@@ -48,6 +48,10 @@
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/log.hpp"
 
+#if HAVE_OPENCV_GPU
+  #include "opencv2/gpu/gpu.hpp"
+#endif
+
 namespace cv
 {
 namespace videostab
@@ -94,20 +98,39 @@ public:
     virtual void suppress(int idx, const Mat &frame, Mat &result);
 };
 
-class CV_EXPORTS MoreAccurateMotionWobbleSuppressor : public WobbleSuppressorBase
+class CV_EXPORTS MoreAccurateMotionWobbleSuppressorBase : public WobbleSuppressorBase
 {
 public:
-    MoreAccurateMotionWobbleSuppressor();
+    MoreAccurateMotionWobbleSuppressorBase() { setPeriod(30); }
 
     void setPeriod(int val) { period_ = val; }
     int period() const { return period_; }
 
+protected:
+    int period_;
+};
+
+class CV_EXPORTS MoreAccurateMotionWobbleSuppressor : public MoreAccurateMotionWobbleSuppressorBase
+{
+public:
     virtual void suppress(int idx, const Mat &frame, Mat &result);
 
 private:
-    int period_;
     Mat_<float> mapx_, mapy_;
 };
+
+#if HAVE_OPENCV_GPU
+class CV_EXPORTS MoreAccurateMotionWobbleSuppressorGpu : public MoreAccurateMotionWobbleSuppressorBase
+{
+public:
+    void suppress(int idx, const gpu::GpuMat &frame, gpu::GpuMat &result);
+    virtual void suppress(int idx, const Mat &frame, Mat &result);
+
+private:
+    gpu::GpuMat frameDevice_, resultDevice_;
+    gpu::GpuMat mapx_, mapy_;
+};
+#endif
 
 } // namespace videostab
 } // namespace cv

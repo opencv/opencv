@@ -48,7 +48,10 @@
 
 using namespace thrust;
 
-namespace cv { namespace gpu { namespace device {
+namespace cv { namespace gpu { namespace device { namespace globmotion {
+
+__constant__ float cml[9];
+__constant__ float cmr[9];
 
 int compactPoints(int N, float *points0, float *points1, const uchar *mask)
 {
@@ -62,4 +65,51 @@ int compactPoints(int N, float *points0, float *points1, const uchar *mask)
            - make_zip_iterator(make_tuple(dpoints0, dpoints1));
 }
 
-}}}
+
+__global__ void calcWobbleSuppressionMapsKernel(
+        const int left, const int idx, const int right, const int width, const int height,
+        PtrElemStepf mapx, PtrElemStepf mapy)
+{
+    const int x = blockDim.x * blockIdx.x + threadIdx.x;
+    const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (x < width && y < height)
+    {
+        float xl = cml[0]*x + cml[1]*y + cml[2];
+        float yl = cml[3]*x + cml[4]*y + cml[5];
+        float izl = 1.f / (cml[6]*x + cml[7]*y + cml[8]);
+        xl *= izl;
+        yl *= izl;
+
+        float xr = cmr[0]*x + cmr[1]*y + cmr[2];
+        float yr = cmr[3]*x + cmr[4]*y + cmr[5];
+        float izr = 1.f / (cmr[6]*x + cmr[7]*y + cmr[8]);
+        xr *= izr;
+        yr *= izr;
+
+        float wl = idx - left;
+        float wr = right - idx;
+        mapx(y,x) = (wr * xl + wl * xr) / (wl + wr);
+        mapy(y,x) = (wr * yl + wl * yr) / (wl + wr);
+    }
+}
+
+
+void calcWobbleSuppressionMaps(
+        int left, int idx, int right, int width, int height,
+        const float *ml, const float *mr, DevMem2Df mapx, DevMem2Df mapy)
+{
+    cudaSafeCall(cudaMemcpyToSymbol(cml, ml, 9*sizeof(float)));
+    cudaSafeCall(cudaMemcpyToSymbol(cmr, mr, 9*sizeof(float)));
+
+    dim3 threads(32, 8);
+    dim3 grid(divUp(width, threads.x), divUp(height, threads.y));
+
+    calcWobbleSuppressionMapsKernel<<<grid, threads>>>(
+            left, idx, right, width, height, mapx, mapy);
+
+    cudaSafeCall(cudaGetLastError());
+    cudaSafeCall(cudaDeviceSynchronize());
+}
+
+}}}}
