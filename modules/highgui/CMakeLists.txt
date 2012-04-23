@@ -279,7 +279,7 @@ if(WIN32 AND WITH_FFMPEG)
   set(ffmpeg_bare_name "opencv_ffmpeg${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
   
-  if(CMAKE_VERSION VERSION_GREATER "2.8.2")
+  if(MSVC AND CMAKE_VERSION VERSION_GREATER "2.8.2")
     add_custom_command(TARGET ${the_module} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
