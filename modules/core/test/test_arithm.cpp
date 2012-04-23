@@ -1227,11 +1227,17 @@ struct NormOp : public BaseElemWiseOp
     int getRandomType(RNG& rng)
     {
         int type = cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 4);
-        normType = 1 << rng.uniform(0, 3);
-        if( CV_MAT_DEPTH(type) == CV_8U && (rng.next() & 8) != 0 )
+        for(;;)
         {
-            normType = cv::NORM_HAMMING + rng.uniform(0, 2);
-            type = CV_MAT_DEPTH(type);
+            normType = rng.uniform(1, 8);
+            if( normType == NORM_INF || normType == NORM_L1 ||
+                normType == NORM_L2 || normType == NORM_L2SQR ||
+                normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+                break;
+        }
+        if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+        {
+            type = CV_8U;
         }
         return type;
     }

@@ -1270,7 +1270,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     int depth = src.depth(), cn = src.channels();
     
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 ||
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src.type() == CV_8U) );
     
     if( src.isContinuous() && mask.empty() )
@@ -1287,6 +1287,12 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                     double result = 0;
                     GET_OPTIMIZED(normL2_32f)(data, 0, &result, (int)len, 1);
                     return std::sqrt(result);
+                }
+                if( normType == NORM_L2SQR )
+                {
+                    double result = 0;
+                    GET_OPTIMIZED(normL2_32f)(data, 0, &result, (int)len, 1);
+                    return result;
                 }
                 if( normType == NORM_L1 )
                 {
@@ -1354,7 +1360,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     NAryMatIterator it(arrays, ptrs);
     int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
     bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
-            (normType == NORM_L2 && depth <= CV_8S);
+            ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
     int isum = 0;
     int *ibuf = &result.i;
     size_t esz = 0;
@@ -1413,7 +1419,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
     
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 ||
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
     
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
@@ -1431,6 +1437,12 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                     double result = 0;
                     GET_OPTIMIZED(normDiffL2_32f)(data1, data2, 0, &result, (int)len, 1);
                     return std::sqrt(result);
+                }
+                if( normType == NORM_L2SQR )
+                {
+                    double result = 0;
+                    GET_OPTIMIZED(normDiffL2_32f)(data1, data2, 0, &result, (int)len, 1);
+                    return result;
                 }
                 if( normType == NORM_L1 )
                 {
@@ -1490,7 +1502,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     NAryMatIterator it(arrays, ptrs);
     int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
     bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
-            (normType == NORM_L2 && depth <= CV_8S);
+            ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
     unsigned isum = 0;
     unsigned *ibuf = &result.u;
     size_t esz = 0;
