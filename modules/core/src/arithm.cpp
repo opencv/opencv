@@ -2504,8 +2504,8 @@ typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2,
 
 static InRangeFunc inRangeTab[] =
 {
-    (InRangeFunc)inRange8u, (InRangeFunc)inRange8s, (InRangeFunc)inRange16u,
-    (InRangeFunc)inRange16s, (InRangeFunc)inRange32s, (InRangeFunc)inRange32f,
+    (InRangeFunc)GET_OPTIMIZED(inRange8u), (InRangeFunc)GET_OPTIMIZED(inRange8s), (InRangeFunc)GET_OPTIMIZED(inRange16u),
+    (InRangeFunc)GET_OPTIMIZED(inRange16s), (InRangeFunc)GET_OPTIMIZED(inRange32s), (InRangeFunc)GET_OPTIMIZED(inRange32f),
     (InRangeFunc)inRange64f, 0
 };
 
@@ -2609,7 +2609,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                 ptrs[idx] += delta;
             }
             func( ptrs[0], 0, lptr, 0, uptr, 0, cn == 1 ? ptrs[1] : mbuf, 0, Size(bsz*cn, 1));
-            if( cn > 1 )
+			if( cn > 1 )
                 inRangeReduce(mbuf, ptrs[1], bsz, cn);
             ptrs[0] += delta;
             ptrs[1] += bsz;
