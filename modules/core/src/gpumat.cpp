@@ -320,7 +320,8 @@ namespace
     template <class T> void getCudaAttribute(T *attribute, CUdevice_attribute device_attribute, int device)
     {
         *attribute = T();
-        CUresult error = CUDA_SUCCESS;// = cuDeviceGetAttribute( attribute, device_attribute, device ); why link erros under ubuntu??
+        //CUresult error = CUDA_SUCCESS;// = cuDeviceGetAttribute( attribute, device_attribute, device ); why link erros under ubuntu??
+        CUresult error = cuDeviceGetAttribute( attribute, device_attribute, device );
         if( CUDA_SUCCESS == error )
             return;
 
@@ -760,7 +761,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream);
+    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, size_t elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream);
 
     template <typename T>
     void set_to_gpu(DevMem2Db mat, const T* scalar, int channels, cudaStream_t stream);

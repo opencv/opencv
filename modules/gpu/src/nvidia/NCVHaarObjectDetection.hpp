@@ -83,7 +83,7 @@ struct HaarFeature64
     __host__ NCVStatus setRect(Ncv32u rectX, Ncv32u rectY, Ncv32u rectWidth, Ncv32u rectHeight, Ncv32u /*clsWidth*/, Ncv32u /*clsHeight*/)
     {
         ncvAssertReturn(rectWidth <= HaarFeature64_CreateCheck_MaxRectField && rectHeight <= HaarFeature64_CreateCheck_MaxRectField, NCV_HAAR_TOO_LARGE_FEATURES);
-        _rect = NcvRect8u(rectX,rectY,rectWidth,rectHeight);
+        _rect = NcvRect8u(static_cast<Ncv8u>(rectX),static_cast<Ncv8u>(rectY),static_cast<Ncv8u>(rectWidth),static_cast<Ncv8u>(rectHeight));
 
         return NCV_SUCCESS;
     }

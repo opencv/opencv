@@ -70,7 +70,7 @@ bool cv::gpu::detail::VideoParser::parseVideoData(const unsigned char* data, siz
     if (endOfStream)
         packet.flags |= CUVID_PKT_ENDOFSTREAM;
 
-    packet.payload_size = size;
+    packet.payload_size = static_cast<unsigned long>(size);
     packet.payload = data;
 
     if (cuvidParseVideoData(parser_, &packet) != CUDA_SUCCESS)

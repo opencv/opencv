@@ -221,7 +221,7 @@ namespace cv
 
         static Ptr<GlFont> get(const std::string& family, int height = 12, Weight weight = WEIGHT_NORMAL, Style style = STYLE_NORMAL);
 
-        void draw(const char* str, int len) const;
+        void draw(const char* str, size_t len) const;
 
         inline const std::string& family() const { return family_; }
         inline int height() const { return height_; }

@@ -114,16 +114,16 @@ void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& f
     vMemSeg.begin.ptr = v.ptr();
     vMemSeg.size = v.step * v.rows;
 
-    NCVMatrixReuse<Ncv32f> frame0Mat(frame0MemSeg, devProp.textureAlignment, frame0.cols, frame0.rows, frame0.step);
-    NCVMatrixReuse<Ncv32f> frame1Mat(frame1MemSeg, devProp.textureAlignment, frame1.cols, frame1.rows, frame1.step);
-    NCVMatrixReuse<Ncv32f> uMat(uMemSeg, devProp.textureAlignment, u.cols, u.rows, u.step);
-    NCVMatrixReuse<Ncv32f> vMat(vMemSeg, devProp.textureAlignment, v.cols, v.rows, v.step);
+    NCVMatrixReuse<Ncv32f> frame0Mat(frame0MemSeg, static_cast<Ncv32u>(devProp.textureAlignment), frame0.cols, frame0.rows, static_cast<Ncv32u>(frame0.step));
+    NCVMatrixReuse<Ncv32f> frame1Mat(frame1MemSeg, static_cast<Ncv32u>(devProp.textureAlignment), frame1.cols, frame1.rows, static_cast<Ncv32u>(frame1.step));
+    NCVMatrixReuse<Ncv32f> uMat(uMemSeg, static_cast<Ncv32u>(devProp.textureAlignment), u.cols, u.rows, static_cast<Ncv32u>(u.step));
+    NCVMatrixReuse<Ncv32f> vMat(vMemSeg, static_cast<Ncv32u>(devProp.textureAlignment), v.cols, v.rows, static_cast<Ncv32u>(v.step));
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     size_t bufSize = getBufSize(desc, frame0Mat, frame1Mat, uMat, vMat, devProp);
 
-    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
+    ensureSizeIsEnough(1, static_cast<int>(bufSize), CV_8UC1, buf);
 
     NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), buf.ptr());
     

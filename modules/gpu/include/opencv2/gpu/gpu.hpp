@@ -1928,7 +1928,7 @@ public:
 
     void write(const cv::gpu::GpuMat& image, bool lastFrame = false);
 
-    struct EncoderParams
+    struct CV_EXPORTS EncoderParams
     {
         int       P_Interval;      //    NVVE_P_INTERVAL,
         int       IDR_Period;      //    NVVE_IDR_PERIOD,
@@ -1957,7 +1957,9 @@ public:
         void save(const std::string& configFile) const;
     };
 
-    class EncoderCallBack
+    EncoderParams getParams() const;
+
+    class CV_EXPORTS EncoderCallBack
     {
     public:
         enum PicType
@@ -2056,7 +2058,7 @@ public:
     FormatInfo format() const;
     void dumpFormat(std::ostream& st);
 
-    class VideoSource
+    class CV_EXPORTS VideoSource
     {
     public:
         VideoSource() : frameQueue_(0), videoParser_(0) {}

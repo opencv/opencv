@@ -406,7 +406,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
     float n_desired_features_per_scale = nFeatures_ * (1.0f - factor) / (1.0f - std::pow(factor, nLevels_));
     
     n_features_per_level_.resize(nLevels_);
-    int sum_n_features = 0;
+    size_t sum_n_features = 0;
     for (int level = 0; level < nLevels_ - 1; ++level)
     {
         n_features_per_level_[level] = cvRound(n_desired_features_per_scale);
@@ -430,7 +430,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
         ++v_0;
     }
     CV_Assert(u_max.size() < 32);
-    cv::gpu::device::orb::loadUMax(&u_max[0], u_max.size());
+    cv::gpu::device::orb::loadUMax(&u_max[0], static_cast<int>(u_max.size()));
     
     // Calc pattern
     const int npoints = 512;
@@ -573,7 +573,7 @@ void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
         GpuMat fastKpRange = keyPointsPyr_[level].rowRange(0, 2);
         keyPointsCount_[level] = fastDetector_.getKeyPoints(fastKpRange);
 
-        int n_features = n_features_per_level_[level];
+        int n_features = static_cast<int>(n_features_per_level_[level]);
         
         if (scoreType_ == ORB::HARRIS_SCORE)
         {

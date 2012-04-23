@@ -57,6 +57,7 @@ void cv::gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>&, cv::Size, d
 bool cv::gpu::VideoWriter_GPU::isOpened() const { return false; }
 void cv::gpu::VideoWriter_GPU::close() {}
 void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat&, bool) { throw_nogpu(); }
+cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::getParams() const { EncoderParams params; throw_nogpu(); return params; }
 
 cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams() { throw_nogpu(); }
 cv::gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const std::string&) { throw_nogpu(); }
@@ -128,6 +129,8 @@ public:
     Impl(const cv::Ptr<EncoderCallBack>& callback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format, CodecType codec = H264);
 
     void write(const cv::gpu::GpuMat& image, bool lastFrame);
+
+    EncoderParams getParams() const;
 
 private:
     Impl(const Impl&);
@@ -224,8 +227,7 @@ void cv::gpu::VideoWriter_GPU::Impl::initEncoder(double fps)
     err = NVSetParamValue(encoder_, NVVE_OUT_SIZE, &inputSize);
     CV_Assert( err == 0 );
 
-    //int aspectRatio[] = { frameSize_.width, frameSize_.height, ASPECT_RATIO_DAR };
-    int aspectRatio[] = { 16, 9, ASPECT_RATIO_DAR };
+    int aspectRatio[] = { frameSize_.width, frameSize_.height, ASPECT_RATIO_DAR };
     err = NVSetParamValue(encoder_, NVVE_ASPECT_RATIO, &aspectRatio);
     CV_Assert( err == 0 );
 
@@ -331,6 +333,107 @@ void cv::gpu::VideoWriter_GPU::Impl::setEncodeParams(const EncoderParams& params
     int DisableSPSPPS = params.DisableSPSPPS;
     err = NVSetParamValue(encoder_, NVVE_DISABLE_SPS_PPS, &DisableSPSPPS);
     CV_Assert ( err == 0 );
+}
+
+cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::Impl::getParams() const
+{
+    int err;
+
+    EncoderParams params;
+
+    int P_Interval;
+    err = NVGetParamValue(encoder_, NVVE_P_INTERVAL, &P_Interval);
+    CV_Assert( err == 0 );
+    params.P_Interval = P_Interval;
+
+    int IDR_Period;
+    err = NVGetParamValue(encoder_, NVVE_IDR_PERIOD, &IDR_Period);
+    CV_Assert( err == 0 );
+    params.IDR_Period = IDR_Period;
+
+    int DynamicGOP;
+    err = NVGetParamValue(encoder_, NVVE_DYNAMIC_GOP, &DynamicGOP);
+    CV_Assert( err == 0 );
+    params.DynamicGOP = DynamicGOP;
+
+    NVVE_RateCtrlType RCType;
+    err = NVGetParamValue(encoder_, NVVE_RC_TYPE, &RCType);
+    CV_Assert( err == 0 );
+    params.RCType = RCType;
+
+    int AvgBitrate;
+    err = NVGetParamValue(encoder_, NVVE_AVG_BITRATE, &AvgBitrate);
+    CV_Assert( err == 0 );
+    params.AvgBitrate = AvgBitrate;
+
+    int PeakBitrate;
+    err = NVGetParamValue(encoder_, NVVE_PEAK_BITRATE, &PeakBitrate);
+    CV_Assert( err == 0 );
+    params.PeakBitrate = PeakBitrate;
+
+    int QP_Level_Intra;
+    err = NVGetParamValue(encoder_, NVVE_QP_LEVEL_INTRA, &QP_Level_Intra);
+    CV_Assert( err == 0 );
+    params.QP_Level_Intra = QP_Level_Intra;
+
+    int QP_Level_InterP;
+    err = NVGetParamValue(encoder_, NVVE_QP_LEVEL_INTER_P, &QP_Level_InterP);
+    CV_Assert( err == 0 );
+    params.QP_Level_InterP = QP_Level_InterP;
+
+    int QP_Level_InterB;
+    err = NVGetParamValue(encoder_, NVVE_QP_LEVEL_INTER_B, &QP_Level_InterB);
+    CV_Assert( err == 0 );
+    params.QP_Level_InterB = QP_Level_InterB;
+
+    int DeblockMode;
+    err = NVGetParamValue(encoder_, NVVE_DEBLOCK_MODE, &DeblockMode);
+    CV_Assert( err == 0 );
+    params.DeblockMode = DeblockMode;
+
+    int ProfileLevel;
+    err = NVGetParamValue(encoder_, NVVE_PROFILE_LEVEL, &ProfileLevel);
+    CV_Assert( err == 0 );
+    params.ProfileLevel = ProfileLevel;
+
+    int ForceIntra;
+    err = NVGetParamValue(encoder_, NVVE_FORCE_INTRA, &ForceIntra);
+    CV_Assert( err == 0 );
+    params.ForceIntra = ForceIntra;
+
+    int ForceIDR;
+    err = NVGetParamValue(encoder_, NVVE_FORCE_IDR, &ForceIDR);
+    CV_Assert( err == 0 );
+    params.ForceIDR = ForceIDR;
+
+    int ClearStat;
+    err = NVGetParamValue(encoder_, NVVE_CLEAR_STAT, &ClearStat);
+    CV_Assert( err == 0 );
+    params.ClearStat = ClearStat;
+
+    NVVE_DI_MODE DIMode;
+    err = NVGetParamValue(encoder_, NVVE_SET_DEINTERLACE, &DIMode);
+    CV_Assert( err == 0 );
+    params.DIMode = DIMode;
+
+    params.Presets = -1;
+
+    int DisableCabac;
+    err = NVGetParamValue(encoder_, NVVE_DISABLE_CABAC, &DisableCabac);
+    CV_Assert ( err == 0 );
+    params.DisableCabac = DisableCabac;
+
+    int NaluFramingType;
+    err = NVGetParamValue(encoder_, NVVE_CONFIGURE_NALU_FRAMING_TYPE, &NaluFramingType);
+    CV_Assert ( err == 0 );
+    params.NaluFramingType = NaluFramingType;
+
+    int DisableSPSPPS;
+    err = NVGetParamValue(encoder_, NVVE_DISABLE_SPS_PPS, &DisableSPSPPS);
+    CV_Assert ( err == 0 );
+    params.DisableSPSPPS = DisableSPSPPS;
+
+    return params;
 }
 
 void cv::gpu::VideoWriter_GPU::Impl::initGpuMemory()
@@ -805,6 +908,13 @@ void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat& image, bool lastFram
     CV_Assert( isOpened() );
 
     impl_->write(image, lastFrame);
+}
+
+cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::getParams() const 
+{
+    CV_Assert( isOpened() );
+
+    return impl_->getParams();
 }
 
 ///////////////////////////////////////////////////////////////////////////

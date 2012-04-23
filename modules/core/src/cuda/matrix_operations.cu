@@ -67,7 +67,7 @@ namespace cv { namespace gpu { namespace device
             cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, identity<T>(), SingleMaskChannels(mask, cn), stream);
     }
 
-    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, int elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream)
+    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, size_t elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream)
     {
         typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream);
 

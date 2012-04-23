@@ -1257,11 +1257,11 @@ cv::GlFont::GlFont(const string& family, int height, Weight weight, Style style)
 #endif
 }
 
-void cv::GlFont::draw(const char* str, int len) const
+void cv::GlFont::draw(const char* str, size_t len) const
 {
 #ifndef HAVE_OPENGL
-	(void)str;
-	(void)len;
+    (void)str;
+    (void)len;
     throw_nogl;
 #else
     if (base_ && len > 0)
@@ -1269,7 +1269,7 @@ void cv::GlFont::draw(const char* str, int len) const
         glPushAttrib(GL_LIST_BIT);
         glListBase(base_);
 
-        glCallLists(len, GL_UNSIGNED_BYTE, str);
+        glCallLists(static_cast<GLsizei>(len), GL_UNSIGNED_BYTE, str);
 
         glPopAttrib();
 

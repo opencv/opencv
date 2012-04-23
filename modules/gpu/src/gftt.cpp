@@ -160,7 +160,7 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
             }
         }
 
-        corners.upload(Mat(1, tmp2.size(), CV_32FC2, &tmp2[0]));
+        corners.upload(Mat(1, static_cast<int>(tmp2.size()), CV_32FC2, &tmp2[0]));
     }
 }
 

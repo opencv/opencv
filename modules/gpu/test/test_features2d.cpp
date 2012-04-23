@@ -617,12 +617,18 @@ TEST_P(BruteForceMatcher, MatchAdd)
 
         if ((int)i < queryDescCount / 2)
         {
-            if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + shift) || (match.imgIdx != 0))
+            bool validQueryIdx = (match.queryIdx == (int)i);
+            bool validTrainIdx = (match.trainIdx == (int)i * countFactor + shift);
+            bool validImgIdx = (match.imgIdx == 0);
+            if (!validQueryIdx || !validTrainIdx || !validImgIdx)
                 badCount++;
         }
         else
         {
-            if ((match.queryIdx != (int)i) || (match.trainIdx != ((int)i - queryDescCount / 2) * countFactor + shift) || (match.imgIdx != 1))
+            bool validQueryIdx = (match.queryIdx == (int)i);
+            bool validTrainIdx = (match.trainIdx == ((int)i - queryDescCount / 2) * countFactor + shift);
+            bool validImgIdx = (match.imgIdx == 1);
+            if (!validQueryIdx || !validTrainIdx || !validImgIdx)
                 badCount++;
         }
     }

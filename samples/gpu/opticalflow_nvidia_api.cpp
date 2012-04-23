@@ -407,10 +407,10 @@ int main(int argc, char **argv)
     std::cout << "Using GPU: " << devId << "(" << devProp.name <<
         "), arch=" << devProp.major << "." << devProp.minor << std::endl;
 
-    g_pGPUMemAllocator  = Ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeDevice, devProp.textureAlignment));
+    g_pGPUMemAllocator  = Ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeDevice, static_cast<Ncv32u>(devProp.textureAlignment)));
     ncvAssertPrintReturn (g_pGPUMemAllocator->isInitialized (), "Device memory allocator isn't initialized", -1);
 
-    g_pHostMemAllocator = Ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeHostPageable, devProp.textureAlignment));
+    g_pHostMemAllocator = Ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeHostPageable, static_cast<Ncv32u>(devProp.textureAlignment)));
     ncvAssertPrintReturn (g_pHostMemAllocator->isInitialized (), "Host memory allocator isn't initialized", -1);
 
     int width, height;

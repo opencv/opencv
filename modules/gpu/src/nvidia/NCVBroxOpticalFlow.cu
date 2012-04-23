@@ -692,7 +692,7 @@ namespace
             w.clear();
             h.clear();
 
-            for (int i = img0.size() - 1; i >= 0; --i)
+            for (int i = static_cast<int>(img0.size()) - 1; i >= 0; --i)
             {
                 delete img1[i];
                 delete img0[i];
