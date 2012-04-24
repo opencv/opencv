@@ -156,7 +156,7 @@ TEST_P(NCV, HypothesesFiltration)
     ASSERT_TRUE(res);
 }
 
-TEST_P(NCV, DISABLED_Visualization)
+TEST_P(NCV, Visualization)
 {
     // this functionality doesn't used in gpu module
     bool res = nvidia_NCV_Visualization(path, nvidiaTestOutputLevel);

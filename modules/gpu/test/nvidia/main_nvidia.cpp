@@ -1,5 +1,5 @@
 #pragma warning (disable : 4408 4201 4100)
- 
+
 #include <cstdio>
 
 #include "NCV.hpp"
@@ -290,11 +290,11 @@ static void devNullOutput(const std::string& msg)
 
 bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
 
     NCVAutoTestLister testListerII("NPPST Integral Image", outputLevel);
-    
+
     NCVTestSourceProvider<Ncv8u> testSrcRandom_8u(2010, 0, 255, 4096, 4096);
     NCVTestSourceProvider<Ncv32f> testSrcRandom_32f(2010, -1.0f, 1.0f, 4096, 4096);
 
@@ -306,7 +306,7 @@ bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel 
 
 bool nvidia_NPPST_Squared_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
 
     NCVAutoTestLister testListerSII("NPPST Squared Integral Image", outputLevel);
@@ -320,11 +320,11 @@ bool nvidia_NPPST_Squared_Integral_Image(const std::string& test_data_path, Outp
 
 bool nvidia_NPPST_RectStdDev(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
-    
+
     NCVAutoTestLister testListerRStdDev("NPPST RectStdDev", outputLevel);
-    
+
     NCVTestSourceProvider<Ncv8u> testSrcRandom_8u(2010, 0, 255, 4096, 4096);
 
     generateRectStdDevTests(testListerRStdDev, testSrcRandom_8u, 4096, 4096);
@@ -334,7 +334,7 @@ bool nvidia_NPPST_RectStdDev(const std::string& test_data_path, OutputLevel outp
 
 bool nvidia_NPPST_Resize(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
 
     NCVAutoTestLister testListerResize("NPPST Resize", outputLevel);
@@ -350,11 +350,11 @@ bool nvidia_NPPST_Resize(const std::string& test_data_path, OutputLevel outputLe
 
 bool nvidia_NPPST_Vector_Operations(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
-    
+
     NCVAutoTestLister testListerNPPSTVectorOperations("NPPST Vector Operations", outputLevel);
-    
+
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
 
     generateNPPSTVectorTests(testListerNPPSTVectorOperations, testSrcRandom_32u, 4096*4096);
@@ -364,11 +364,11 @@ bool nvidia_NPPST_Vector_Operations(const std::string& test_data_path, OutputLev
 
 bool nvidia_NPPST_Transpose(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
 
     NCVAutoTestLister testListerTranspose("NPPST Transpose", outputLevel);
-    
+
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
     NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, -1, 4096, 4096);
 
@@ -380,13 +380,13 @@ bool nvidia_NPPST_Transpose(const std::string& test_data_path, OutputLevel outpu
 
 bool nvidia_NCV_Vector_Operations(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
-    
+
     NCVAutoTestLister testListerVectorOperations("Vector Operations", outputLevel);
 
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
-    
+
     generateVectorTests(testListerVectorOperations, testSrcRandom_32u, 4096*4096);
 
     return testListerVectorOperations.invoke();
@@ -394,11 +394,11 @@ bool nvidia_NCV_Vector_Operations(const std::string& test_data_path, OutputLevel
 
 bool nvidia_NCV_Haar_Cascade_Loader(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
 
     NCVAutoTestLister testListerHaarLoader("Haar Cascade Loader", outputLevel);
-    
+
     generateHaarLoaderTests(testListerHaarLoader);
 
     return testListerHaarLoader.invoke();
@@ -406,13 +406,13 @@ bool nvidia_NCV_Haar_Cascade_Loader(const std::string& test_data_path, OutputLev
 
 bool nvidia_NCV_Haar_Cascade_Application(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
-    
+
     NCVAutoTestLister testListerHaarAppl("Haar Cascade Application", outputLevel);
-    
+
     NCVTestSourceProvider<Ncv8u> testSrcFacesVGA_8u(path + "group_1_640x480_VGA.pgm");
-    
+
     generateHaarApplicationTests(testListerHaarAppl, testSrcFacesVGA_8u, 1280, 720);
 
     return testListerHaarAppl.invoke();
@@ -420,11 +420,11 @@ bool nvidia_NCV_Haar_Cascade_Application(const std::string& test_data_path, Outp
 
 bool nvidia_NCV_Hypotheses_Filtration(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
-    
+
     NCVAutoTestLister testListerHypFiltration("Hypotheses Filtration", outputLevel);
-    
+
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
 
     generateHypothesesFiltrationTests(testListerHypFiltration, testSrcRandom_32u, 1024);
@@ -434,14 +434,14 @@ bool nvidia_NCV_Hypotheses_Filtration(const std::string& test_data_path, OutputL
 
 bool nvidia_NCV_Visualization(const std::string& test_data_path, OutputLevel outputLevel)
 {
-	path = test_data_path;
+    path = test_data_path;
     ncvSetDebugOutputHandler(devNullOutput);
 
     NCVAutoTestLister testListerVisualize("Visualization", outputLevel);
 
     NCVTestSourceProvider<Ncv8u> testSrcRandom_8u(2010, 0, 255, 4096, 4096);
-    NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
-    
+    NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, RAND_MAX, 4096, 4096);
+
     generateDrawRectsTests(testListerVisualize, testSrcRandom_8u, testSrcRandom_32u, 4096, 4096);
     generateDrawRectsTests(testListerVisualize, testSrcRandom_32u, testSrcRandom_32u, 4096, 4096);
 
