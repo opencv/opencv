@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
+#include "opencv2/videostab/outlier_rejection.hpp"
 #include "opencv2/opencv_modules.hpp"
 
 using namespace std;
@@ -150,6 +151,61 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
 }
 
 
+static Mat estimateGlobMotionLeastSquaresRigid(
+        int npoints, Point2f *points0, Point2f *points1, float *rmse)
+{
+    Point2f mean0(0.f, 0.f);
+    Point2f mean1(0.f, 0.f);
+
+    for (int i = 0; i < npoints; ++i)
+    {
+        mean0 += points0[i];
+        mean1 += points1[i];
+    }
+
+    mean0 *= 1.f / npoints;
+    mean1 *= 1.f / npoints;
+
+    Mat_<float> A = Mat::zeros(2, 2, CV_32F);
+    Point2f pt0, pt1;
+
+    for (int i = 0; i < npoints; ++i)
+    {
+        pt0 = points0[i] - mean0;
+        pt1 = points1[i] - mean1;
+        A(0,0) += pt1.x * pt0.x;
+        A(0,1) += pt1.x * pt0.y;
+        A(1,0) += pt1.y * pt0.x;
+        A(1,1) += pt1.y * pt0.y;
+    }
+
+    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+
+    SVD svd(A);
+    Mat_<float> R = svd.u * svd.vt;
+    Mat tmp(M(Rect(0,0,2,2)));
+    R.copyTo(tmp);
+
+    M(0,2) = mean1.x - R(0,0)*mean0.x - R(0,1)*mean0.y;
+    M(1,2) = mean1.y - R(1,0)*mean0.x - R(1,1)*mean0.y;
+
+    if (rmse)
+    {
+        *rmse = 0;
+        for (int i = 0; i < npoints; ++i)
+        {
+            pt0 = points0[i];
+            pt1 = points1[i];
+            *rmse += sqr(pt1.x - M(0,0)*pt0.x - M(0,1)*pt0.y - M(0,2)) +
+                     sqr(pt1.y - M(1,0)*pt0.x - M(1,1)*pt0.y - M(1,2));
+        }
+        *rmse = sqrt(*rmse / npoints);
+    }
+
+    return M;
+}
+
+
 static Mat estimateGlobMotionLeastSquaresSimilarity(
         int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
@@ -234,6 +290,7 @@ Mat estimateGlobalMotionLeastSquares(
     typedef Mat (*Impl)(int, Point2f*, Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
                             estimateGlobMotionLeastSquaresTranslationAndScale,
+                            estimateGlobMotionLeastSquaresRigid,
                             estimateGlobMotionLeastSquaresSimilarity,
                             estimateGlobMotionLeastSquaresAffine };
 
@@ -247,8 +304,7 @@ Mat estimateGlobalMotionRobust(
 {
     CV_Assert(model <= MM_AFFINE);
 
-    const int niters = static_cast<int>(ceil(log(1 - params.prob) /
-                                             log(1 - pow(1 - params.eps, params.size))));
+    const int niters = params.niters();
 
     // current hypothesis
     vector<int> indices(params.size);
@@ -338,6 +394,7 @@ Mat estimateGlobalMotionRobust(
 
 
 FromFileMotionReader::FromFileMotionReader(const string &path)
+    : GlobalMotionEstimatorBase(MM_UNKNOWN)
 {
     file_.open(path.c_str());
     CV_Assert(file_.is_open());
@@ -357,6 +414,7 @@ Mat FromFileMotionReader::estimate(const Mat &/*frame0*/, const Mat &/*frame1*/,
 
 
 ToFileMotionWriter::ToFileMotionWriter(const string &path, Ptr<GlobalMotionEstimatorBase> estimator)
+    : GlobalMotionEstimatorBase(estimator->motionModel())
 {
     file_.open(path.c_str());
     CV_Assert(file_.is_open());
@@ -376,13 +434,20 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 }
 
 
+PyrLkRobustMotionEstimatorBase::PyrLkRobustMotionEstimatorBase(MotionModel model)
+    : GlobalMotionEstimatorBase(model)
+{
+    setRansacParams(RansacParams::default2dMotion(model));
+    setOutlierRejector(new NullOutlierRejector());
+    setMinInlierRatio(0.1f);
+}
+
+
 PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
+    : PyrLkRobustMotionEstimatorBase(model)
 {
     setDetector(new GoodFeaturesToTrackDetector());
     setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());
-    setMotionModel(model);
-    setRansacParams(RansacParams::default2dMotion(model));
-    setMinInlierRatio(0.1f);
     setGridSize(Size(0,0));
 }
 
@@ -428,6 +493,29 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
         }
     }
 
+    // perfrom outlier rejection
+
+    IOutlierRejector *outlierRejector = static_cast<IOutlierRejector*>(outlierRejector_);
+    if (!dynamic_cast<NullOutlierRejector*>(outlierRejector))
+    {
+        pointsPrev_.swap(pointsPrevGood_);
+        points_.swap(pointsGood_);
+
+        outlierRejector_->process(frame0.size(), pointsPrev_, points_, status_);
+
+        pointsPrevGood_.clear(); pointsPrevGood_.reserve(points_.size());
+        pointsGood_.clear(); pointsGood_.reserve(points_.size());
+
+        for (size_t i = 0; i < points_.size(); ++i)
+        {
+            if (status_[i])
+            {
+                pointsPrevGood_.push_back(pointsPrev_[i]);
+                pointsGood_.push_back(points_[i]);
+            }
+        }
+    }
+
     size_t npoints = pointsGood_.size();
 
     // find motion
@@ -462,11 +550,9 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
 
 #if HAVE_OPENCV_GPU
 PyrLkRobustMotionEstimatorGpu::PyrLkRobustMotionEstimatorGpu(MotionModel model)
+    : PyrLkRobustMotionEstimatorBase(model)
 {
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
-    setMotionModel(model);
-    setRansacParams(RansacParams::default2dMotion(model));
-    setMinInlierRatio(0.1f);
 }
 
 
@@ -506,7 +592,33 @@ Mat PyrLkRobustMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu
     pointsPrev_.download(hostPointsPrev_);
     points_.download(hostPoints_);
 
+    Point2f *points0 = hostPointsPrev_.ptr<Point2f>();
+    Point2f *points1 = hostPoints_.ptr<Point2f>();
     int npoints = hostPointsPrev_.cols;
+
+    // perfrom outlier rejection
+
+    IOutlierRejector *outlierRejector = static_cast<IOutlierRejector*>(outlierRejector_);
+    if (!dynamic_cast<NullOutlierRejector*>(outlierRejector))
+    {
+        outlierRejector_->process(frame0.size(), hostPointsPrev_, hostPoints_, rejectionStatus_);
+
+        hostPointsPrevGood_.clear(); hostPointsPrevGood_.reserve(hostPoints_.cols);
+        hostPointsGood_.clear(); hostPointsGood_.reserve(hostPoints_.cols);
+
+        for (int i = 0; i < hostPoints_.cols; ++i)
+        {
+            if (rejectionStatus_[i])
+            {
+                hostPointsPrevGood_.push_back(hostPointsPrev_.at<Point2f>(0,i));
+                hostPointsGood_.push_back(hostPoints_.at<Point2f>(0,i));
+            }
+        }
+
+        points0 = &hostPointsPrevGood_[0];
+        points1 = &hostPointsGood_[0];
+        npoints = static_cast<int>(hostPointsGood_.size());
+    }
 
     // find motion
 
@@ -515,12 +627,13 @@ Mat PyrLkRobustMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu
 
     if (motionModel_ != MM_HOMOGRAPHY)
         M = estimateGlobalMotionRobust(
-                npoints, hostPointsPrev_.ptr<Point2f>(0), hostPoints_.ptr<Point2f>(), motionModel_,
-                ransacParams_, 0, &ninliers);
+                npoints, points0, points1, motionModel_, ransacParams_, 0, &ninliers);
     else
     {
         vector<uchar> mask;
-        M = findHomography(hostPointsPrev_, hostPoints_, mask, CV_RANSAC, ransacParams_.thresh);
+        M = findHomography(
+                Mat(1, npoints, CV_32FC2, points0), Mat(1, npoints, CV_32FC2, points1),
+                mask, CV_RANSAC, ransacParams_.thresh);
         for (int i  = 0; i < npoints; ++i)
             if (mask[i]) ninliers++;
     }
@@ -558,3 +671,4 @@ Mat getMotion(int from, int to, const vector<Mat> &motions)
 
 } // namespace videostab
 } // namespace cv
+

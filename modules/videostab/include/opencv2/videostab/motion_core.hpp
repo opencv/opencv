@@ -40,16 +40,64 @@
 //
 //M*/
 
-// REFERENCES
-// 1. "Full-Frame Video Stabilization with Motion Inpainting"
-//     Yasuyuki Matsushita, Eyal Ofek, Weina Ge, Xiaoou Tang, Senior Member, and Heung-Yeung Shum
-// 2. "Auto-Directed Video Stabilization with Robust L1 Optimal Camera Paths"
-//     Matthias Grundmann, Vivek Kwatra, Irfan Essa
+#ifndef __OPENCV_VIDEOSTAB_MOTION_CORE_HPP__
+#define __OPENCV_VIDEOSTAB_MOTION_CORE_HPP__
 
-#ifndef __OPENCV_VIDEOSTAB_HPP__
-#define __OPENCV_VIDEOSTAB_HPP__
+#include <cmath>
+#include "opencv2/core/core.hpp"
 
-#include "opencv2/videostab/stabilizer.hpp"
-#include "opencv2/videostab/ring_buffer.hpp"
+namespace cv
+{
+namespace videostab
+{
+
+enum MotionModel
+{
+    MM_TRANSLATION = 0,
+    MM_TRANSLATION_AND_SCALE = 1,
+    MM_RIGID = 2,
+    MM_SIMILARITY = 3,
+    MM_AFFINE = 4,
+    MM_HOMOGRAPHY = 5,
+    MM_UNKNOWN = 6
+};
+
+struct CV_EXPORTS RansacParams
+{
+    int size; // subset size
+    float thresh; // max error to classify as inlier
+    float eps; // max outliers ratio
+    float prob; // probability of success
+
+    RansacParams() : size(0), thresh(0), eps(0), prob(0) {}
+    RansacParams(int size, float thresh, float eps, float prob)
+        : size(size), thresh(thresh), eps(eps), prob(prob) {}
+
+    int niters() const
+    {
+        return static_cast<int>(
+                std::ceil(std::log(1 - prob) / std::log(1 - std::pow(1 - eps, size))));
+    }
+
+    static RansacParams default2dMotion(MotionModel model)
+    {
+        CV_Assert(model < MM_UNKNOWN);
+        if (model == MM_TRANSLATION)
+            return RansacParams(1, 0.5f, 0.5f, 0.99f);
+        if (model == MM_TRANSLATION_AND_SCALE)
+            return RansacParams(2, 0.5f, 0.5f, 0.99f);
+        if (model == MM_RIGID)
+            return RansacParams(2, 0.5f, 0.5f, 0.99f);
+        if (model == MM_SIMILARITY)
+            return RansacParams(2, 0.5f, 0.5f, 0.99f);
+        if (model == MM_AFFINE)
+            return RansacParams(3, 0.5f, 0.5f, 0.99f);
+        return RansacParams(4, 0.5f, 0.5f, 0.99f);
+    }
+};
+
+
+} // namespace videostab
+} // namespace cv
 
 #endif

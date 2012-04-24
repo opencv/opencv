@@ -40,16 +40,57 @@
 //
 //M*/
 
-// REFERENCES
-// 1. "Full-Frame Video Stabilization with Motion Inpainting"
-//     Yasuyuki Matsushita, Eyal Ofek, Weina Ge, Xiaoou Tang, Senior Member, and Heung-Yeung Shum
-// 2. "Auto-Directed Video Stabilization with Robust L1 Optimal Camera Paths"
-//     Matthias Grundmann, Vivek Kwatra, Irfan Essa
+#ifndef __OPENCV_VIDEOSTAB_OUTLIER_REJECTION_HPP__
+#define __OPENCV_VIDEOSTAB_OUTLIER_REJECTION_HPP__
 
-#ifndef __OPENCV_VIDEOSTAB_HPP__
-#define __OPENCV_VIDEOSTAB_HPP__
+#include <vector>
+#include "opencv2/core/core.hpp"
+#include "opencv2/videostab/motion_core.hpp"
 
-#include "opencv2/videostab/stabilizer.hpp"
-#include "opencv2/videostab/ring_buffer.hpp"
+namespace cv
+{
+namespace videostab
+{
+
+class CV_EXPORTS IOutlierRejector
+{
+public:
+    virtual ~IOutlierRejector() {}
+
+    virtual void process(
+            Size frameSize, InputArray points0, InputArray points1, OutputArray mask) = 0;
+};
+
+class CV_EXPORTS NullOutlierRejector : public IOutlierRejector
+{
+public:
+    virtual void process(
+            Size frameSize, InputArray points0, InputArray points1, OutputArray mask);
+};
+
+class CV_EXPORTS TranslationBasedLocalOutlierRejector : public IOutlierRejector
+{
+public:
+    TranslationBasedLocalOutlierRejector();
+
+    void setCellSize(Size val) { cellSize_ = val; }
+    Size cellSize() const { return cellSize_; }
+
+    void setRansacParams(RansacParams val) { ransacParams_ = val; }
+    RansacParams ransacParams() const { return ransacParams_; }
+
+    virtual void process(
+            Size frameSize, InputArray points0, InputArray points1, OutputArray mask);
+
+private:
+    Size cellSize_;
+    RansacParams ransacParams_;
+
+    typedef std::vector<int> Cell;
+    std::vector<Cell> grid_;
+};
+
+} // namespace videostab
+} // namespace cv
 
 #endif

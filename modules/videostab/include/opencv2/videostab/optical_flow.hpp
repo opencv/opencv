@@ -78,11 +78,11 @@ class CV_EXPORTS PyrLkOptFlowEstimatorBase
 public:
     PyrLkOptFlowEstimatorBase() { setWinSize(Size(21, 21)); setMaxLevel(3); }
 
-    void setWinSize(Size val) { winSize_ = val; }
-    Size winSize() const { return winSize_; }
+    virtual void setWinSize(Size val) { winSize_ = val; }
+    virtual Size winSize() const { return winSize_; }
 
-    void setMaxLevel(int val) { maxLevel_ = val; }
-    int maxLevel() const { return maxLevel_; }
+    virtual void setMaxLevel(int val) { maxLevel_ = val; }
+    virtual int maxLevel() const { return maxLevel_; }
 
 protected:
     Size winSize_;

@@ -48,8 +48,10 @@
 #include <fstream>
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
-#include "opencv2/videostab/optical_flow.hpp"
 #include "opencv2/opencv_modules.hpp"
+#include "opencv2/videostab/optical_flow.hpp"
+#include "opencv2/videostab/motion_core.hpp"
+#include "opencv2/videostab/outlier_rejection.hpp"
 
 #if HAVE_OPENCV_GPU
   #include "opencv2/gpu/gpu.hpp"
@@ -60,44 +62,9 @@ namespace cv
 namespace videostab
 {
 
-enum MotionModel
-{
-    MM_TRANSLATION = 0,
-    MM_TRANSLATION_AND_SCALE = 1,
-    MM_SIMILARITY = 2,
-    MM_AFFINE = 3,
-    MM_HOMOGRAPHY = 4,
-    MM_UNKNOWN = 5
-};
-
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
         int npoints, Point2f *points0, Point2f *points1, int model = MM_AFFINE, float *rmse = 0);
 
-struct CV_EXPORTS RansacParams
-{
-    int size; // subset size
-    float thresh; // max error to classify as inlier
-    float eps; // max outliers ratio
-    float prob; // probability of success
-
-    RansacParams() : size(0), thresh(0), eps(0), prob(0) {}
-    RansacParams(int size, float thresh, float eps, float prob)
-        : size(size), thresh(thresh), eps(eps), prob(prob) {}
-
-    static RansacParams default2dMotion(MotionModel model)
-    {
-        CV_Assert(model < MM_UNKNOWN);
-        if (model == MM_TRANSLATION)
-            return RansacParams(1, 0.5f, 0.5f, 0.99f);
-        if (model == MM_TRANSLATION_AND_SCALE)
-            return RansacParams(2, 0.5f, 0.5f, 0.99f);
-        if (model == MM_SIMILARITY)
-            return RansacParams(2, 0.5f, 0.5f, 0.99f);
-        if (model == MM_AFFINE)
-            return RansacParams(3, 0.5f, 0.5f, 0.99f);
-        return RansacParams(4, 0.5f, 0.5f, 0.99f);
-    }
-};
 
 CV_EXPORTS Mat estimateGlobalMotionRobust(
         const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
@@ -106,8 +73,7 @@ CV_EXPORTS Mat estimateGlobalMotionRobust(
 
 class CV_EXPORTS GlobalMotionEstimatorBase
 {
-public:
-    GlobalMotionEstimatorBase() : motionModel_(MM_UNKNOWN) {}
+public:    
     virtual ~GlobalMotionEstimatorBase() {}
 
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
@@ -116,6 +82,8 @@ public:
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) = 0;
 
 protected:
+    GlobalMotionEstimatorBase(MotionModel model) { setMotionModel(model); }
+
     MotionModel motionModel_;
 };
 
@@ -140,7 +108,27 @@ private:
     Ptr<GlobalMotionEstimatorBase> estimator_;
 };
 
-class CV_EXPORTS PyrLkRobustMotionEstimator : public GlobalMotionEstimatorBase
+class CV_EXPORTS PyrLkRobustMotionEstimatorBase : public GlobalMotionEstimatorBase
+{
+public:
+    virtual void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
+    virtual RansacParams ransacParams() const { return ransacParams_; }
+
+    virtual void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
+    virtual Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
+
+    virtual void setMinInlierRatio(float val) { minInlierRatio_ = val; }
+    virtual float minInlierRatio() const { return minInlierRatio_; }
+
+protected:
+    PyrLkRobustMotionEstimatorBase(MotionModel model);
+
+    RansacParams ransacParams_;
+    Ptr<IOutlierRejector> outlierRejector_;
+    float minInlierRatio_;
+};
+
+class CV_EXPORTS PyrLkRobustMotionEstimator : public PyrLkRobustMotionEstimatorBase
 {
 public:
     PyrLkRobustMotionEstimator(MotionModel model = MM_AFFINE);
@@ -151,12 +139,6 @@ public:
     void setOptFlowEstimator(Ptr<ISparseOptFlowEstimator> val) { optFlowEstimator_ = val; }
     Ptr<ISparseOptFlowEstimator> optFlowEstimator() const { return optFlowEstimator_; }
 
-    void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
-    RansacParams ransacParams() const { return ransacParams_; }
-
-    void setMinInlierRatio(float val) { minInlierRatio_ = val; }
-    float minInlierRatio() const { return minInlierRatio_; }
-
     void setGridSize(Size val) { gridSize_ = val; }
     Size gridSize() const { return gridSize_; }
 
@@ -165,8 +147,6 @@ public:
 private:
     Ptr<FeatureDetector> detector_;
     Ptr<ISparseOptFlowEstimator> optFlowEstimator_;
-    RansacParams ransacParams_;
-    float minInlierRatio_;
     Size gridSize_;
 
     std::vector<uchar> status_;
@@ -176,16 +156,10 @@ private:
 };
 
 #if HAVE_OPENCV_GPU
-class CV_EXPORTS PyrLkRobustMotionEstimatorGpu : public GlobalMotionEstimatorBase
+class CV_EXPORTS PyrLkRobustMotionEstimatorGpu : public PyrLkRobustMotionEstimatorBase
 {
 public:
     PyrLkRobustMotionEstimatorGpu(MotionModel model = MM_AFFINE);
-
-    void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
-    RansacParams ransacParams() const { return ransacParams_; }
-
-    void setMinInlierRatio(float val) { minInlierRatio_ = val; }
-    float minInlierRatio() const { return minInlierRatio_; }
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
     Mat estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok = 0);
@@ -193,13 +167,14 @@ public:
 private:
     gpu::GoodFeaturesToTrackDetector_GPU detector_;
     SparsePyrLkOptFlowEstimatorGpu optFlowEstimator_;
-    RansacParams ransacParams_;
-    float minInlierRatio_;
 
     gpu::GpuMat frame0_, grayFrame0_, frame1_;
     gpu::GpuMat pointsPrev_, points_;
-    Mat hostPointsPrev_, hostPoints_;
     gpu::GpuMat status_;
+
+    Mat hostPointsPrev_, hostPoints_;
+    std::vector<Point2f> hostPointsPrevGood_, hostPointsGood_;
+    std::vector<uchar> rejectionStatus_;
 };
 #endif
 

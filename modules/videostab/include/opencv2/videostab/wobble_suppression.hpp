@@ -101,12 +101,12 @@ public:
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressorBase : public WobbleSuppressorBase
 {
 public:
-    MoreAccurateMotionWobbleSuppressorBase() { setPeriod(30); }
-
-    void setPeriod(int val) { period_ = val; }
-    int period() const { return period_; }
+    virtual void setPeriod(int val) { period_ = val; }
+    virtual int period() const { return period_; }
 
 protected:
+    MoreAccurateMotionWobbleSuppressorBase() { setPeriod(30); }
+
     int period_;
 };
 

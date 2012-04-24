@@ -29,6 +29,7 @@ bool quietMode;
 void run();
 void saveMotionsIfNecessary();
 void printHelp();
+MotionModel motionModel(const string &str);
 
 
 void run()
@@ -70,7 +71,7 @@ void printHelp()
     cout << "OpenCV video stabilizer.\n"
             "Usage: videostab <file_path> [arguments]\n\n"
             "Arguments:\n"
-            "  -m, --model=(transl|transl_and_scale|similarity|affine|homography)\n"
+            "  -m, --model=(transl|transl_and_scale|rigid|similarity|affine|homography)\n"
             "      Set motion model. The default is affine.\n"
             "  --subset=(<int_number>|auto)\n"
             "      Number of random samples per one motion hypothesis. The default is auto.\n"
@@ -83,7 +84,9 @@ void printHelp()
             "  --nkps=<int_number>\n"
             "      Number of keypoints to find in each frame. The default is 1000.\n"
             "  --extra-kps=<int_number>\n"
-            "      Extra keypoint grid size for motion estimation. The default is 0.\n\n"
+            "      Extra keypoint grid size for motion estimation. The default is 0.\n"
+            "  --local-outlier-rejection=(yes|no)\n"
+            "      Perform local outlier rejection. The default is no.\n\n"
             "  -sm, --save-motions=(<file_path>|no)\n"
             "      Save estimated motions into file. The default is no.\n"
             "  -lm, --load-motions=(<file_path>|no)\n"
@@ -134,7 +137,7 @@ void printHelp()
             "      Perform wobble suppression. The default is no.\n"
             "  --ws-period=<int_number>\n"
             "      Set wobble suppression period. The default is 30.\n"
-            "  --ws-model=(transl|transl_and_scale|similarity|affine|homography)\n"
+            "  --ws-model=(transl|transl_and_scale|rigid|similarity|affine|homography)\n"
             "      Set wobble suppression motion model (must have more DOF than motion \n"
             "      estimation model). The default is homography.\n"
             "  --ws-subset=(<int_number>|auto)\n"
@@ -148,7 +151,9 @@ void printHelp()
             "  --ws-nkps=<int_number>\n"
             "      Number of keypoints to find in each frame. The default is 1000.\n"
             "  --ws-extra-kps=<int_number>\n"
-            "      Extra keypoint grid size for motion estimation. The default is 0.\n\n"
+            "      Extra keypoint grid size for motion estimation. The default is 0.\n"
+            "  --ws-local-outlier-rejection=(yes|no)\n"
+            "      Perform local outlier rejection. The default is no.\n\n"
             "  -sm2, --save-motions2=(<file_path>|no)\n"
             "      Save motions estimated for wobble suppression. The default is no.\n"
             "  -lm2, --load-motions2=(<file_path>|no)\n"
@@ -180,6 +185,7 @@ int main(int argc, const char **argv)
                 "{ | min-inlier-ratio | 0.1 | }"
                 "{ | nkps | 1000 | }"
                 "{ | extra-kps | 0 | }"
+                "{ | local-outlier-rejection | no | }"
                 "{ sm | save-motions | no | }"
                 "{ lm | load-motions | no | }"
                 "{ r | radius | 15 | }"
@@ -211,6 +217,7 @@ int main(int argc, const char **argv)
                 "{ | ws-min-inlier-ratio | 0.1 | }"
                 "{ | ws-nkps | 1000 | }"
                 "{ | ws-extra-kps | 0 | }"
+                "{ | ws-local-outlier-rejection | no | }"
                 "{ sm2 | save-motions2 | no | }"
                 "{ lm2 | load-motions2 | no | }"
                 "{ gpu | | no }"
@@ -273,29 +280,21 @@ int main(int argc, const char **argv)
                 twoPassStabilizer->setMotionStabilizer(new GaussianMotionFilter(argi("radius"), argf("stdev")));
             if (arg("wobble-suppress") == "yes")
             {
-                MoreAccurateMotionWobbleSuppressorBase *ws;
+                MoreAccurateMotionWobbleSuppressorBase *ws = 0;
+
+                Ptr<IOutlierRejector> outlierRejector = new NullOutlierRejector();
+                if (arg("local-outlier-rejection") == "yes")
+                {
+                    TranslationBasedLocalOutlierRejector *tor = new TranslationBasedLocalOutlierRejector();
+                    RansacParams ransacParams = tor->ransacParams();
+                    if (arg("ws-thresh") != "auto") ransacParams.thresh = argf("ws-thresh");
+                    tor->setRansacParams(ransacParams);
+                    outlierRejector = tor;
+                }
 
                 if (arg("gpu") == "no")
                 {
-                    ws = new MoreAccurateMotionWobbleSuppressor();
-                    PyrLkRobustMotionEstimator *est = 0;
-
-                    if (arg("ws-model") == "transl")
-                        est = new PyrLkRobustMotionEstimator(MM_TRANSLATION);
-                    else if (arg("ws-model") == "transl_and_scale")
-                        est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
-                    else if (arg("ws-model") == "similarity")
-                        est = new PyrLkRobustMotionEstimator(MM_SIMILARITY);
-                    else if (arg("ws-model") == "affine")
-                        est = new PyrLkRobustMotionEstimator(MM_AFFINE);
-                    else if (arg("ws-model") == "homography")
-                        est = new PyrLkRobustMotionEstimator(MM_HOMOGRAPHY);
-                    else
-                    {
-                        delete est;
-                        throw runtime_error("unknown wobble suppression motion model: " + arg("ws-model"));
-                    }
-
+                    PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator(motionModel(arg("ws-model")));
                     est->setDetector(new GoodFeaturesToTrackDetector(argi("ws-nkps")));
 
                     RansacParams ransac = est->ransacParams();
@@ -306,29 +305,15 @@ int main(int argc, const char **argv)
 
                     est->setMinInlierRatio(argf("ws-min-inlier-ratio"));
                     est->setGridSize(Size(argi("ws-extra-kps"), argi("ws-extra-kps")));
+                    est->setOutlierRejector(outlierRejector);
+
+                    ws = new MoreAccurateMotionWobbleSuppressor();
                     ws->setMotionEstimator(est);
                 }
                 else if (arg("gpu") == "yes")
                 {
 #if HAVE_OPENCV_GPU
-                    ws = new MoreAccurateMotionWobbleSuppressorGpu();
-                    PyrLkRobustMotionEstimatorGpu *est = 0;
-
-                    if (arg("ws-model") == "transl")
-                        est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION);
-                    else if (arg("ws-model") == "transl_and_scale")
-                        est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION_AND_SCALE);
-                    else if (arg("ws-model") == "similarity")
-                        est = new PyrLkRobustMotionEstimatorGpu(MM_SIMILARITY);
-                    else if (arg("ws-model") == "affine")
-                        est = new PyrLkRobustMotionEstimatorGpu(MM_AFFINE);
-                    else if (arg("ws-model") == "homography")
-                        est = new PyrLkRobustMotionEstimatorGpu(MM_HOMOGRAPHY);
-                    else
-                    {
-                        delete est;
-                        throw runtime_error("unknown wobble suppression motion model: " + arg("ws-model"));
-                    }
+                    PyrLkRobustMotionEstimatorGpu *est = new PyrLkRobustMotionEstimatorGpu(motionModel(arg("ws-model")));
 
                     RansacParams ransac = est->ransacParams();
                     if (arg("ws-subset") != "auto") ransac.size = argi("ws-subset");
@@ -337,6 +322,9 @@ int main(int argc, const char **argv)
                     est->setRansacParams(ransac);
 
                     est->setMinInlierRatio(argf("ws-min-inlier-ratio"));
+                    est->setOutlierRejector(outlierRejector);
+
+                    ws = new MoreAccurateMotionWobbleSuppressorGpu();
                     ws->setMotionEstimator(est);
 #else
                     throw runtime_error("OpenCV is built without GPU support");
@@ -376,27 +364,21 @@ int main(int argc, const char **argv)
         stabilizer->setFrameSource(source);
         stabilizedFrames = dynamic_cast<IFrameSource*>(stabilizer);
 
+        Ptr<IOutlierRejector> outlierRejector = new NullOutlierRejector();
+        if (arg("local-outlier-rejection") == "yes")
+        {
+            TranslationBasedLocalOutlierRejector *tor = new TranslationBasedLocalOutlierRejector();
+            RansacParams ransacParams = tor->ransacParams();
+            if (arg("thresh") != "auto") ransacParams.thresh = argf("thresh");
+            tor->setRansacParams(ransacParams);
+            outlierRejector = tor;
+        }
+
         if (arg("gpu") == "no")
         {
-            PyrLkRobustMotionEstimator *est = 0;
-
-            if (arg("model") == "transl")
-                est = new PyrLkRobustMotionEstimator(MM_TRANSLATION);
-            else if (arg("model") == "transl_and_scale")
-                est = new PyrLkRobustMotionEstimator(MM_TRANSLATION_AND_SCALE);
-            else if (arg("model") == "similarity")
-                est = new PyrLkRobustMotionEstimator(MM_SIMILARITY);
-            else if (arg("model") == "affine")
-                est = new PyrLkRobustMotionEstimator(MM_AFFINE);
-            else if (arg("model") == "homography")
-                est = new PyrLkRobustMotionEstimator(MM_HOMOGRAPHY);
-            else
-            {
-                delete est;
-                throw runtime_error("unknown motion model: " + arg("model"));
-            }
-
+            PyrLkRobustMotionEstimator *est = new PyrLkRobustMotionEstimator(motionModel(arg("model")));;
             est->setDetector(new GoodFeaturesToTrackDetector(argi("nkps")));
+
             RansacParams ransac = est->ransacParams();
             if (arg("subset") != "auto") ransac.size = argi("subset");
             if (arg("thresh") != "auto") ransac.thresh = argi("thresh");
@@ -405,28 +387,14 @@ int main(int argc, const char **argv)
 
             est->setMinInlierRatio(argf("min-inlier-ratio"));
             est->setGridSize(Size(argi("extra-kps"), argi("extra-kps")));
+            est->setOutlierRejector(outlierRejector);
+
             stabilizer->setMotionEstimator(est);
         }
         else if (arg("gpu") == "yes")
         {
 #if HAVE_OPENCV_GPU
-            PyrLkRobustMotionEstimatorGpu *est = 0;
-
-            if (arg("model") == "transl")
-                est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION);
-            else if (arg("model") == "transl_and_scale")
-                est = new PyrLkRobustMotionEstimatorGpu(MM_TRANSLATION_AND_SCALE);
-            else if (arg("model") == "similarity")
-                est = new PyrLkRobustMotionEstimatorGpu(MM_SIMILARITY);
-            else if (arg("model") == "affine")
-                est = new PyrLkRobustMotionEstimatorGpu(MM_AFFINE);
-            else if (arg("model") == "homography")
-                est = new PyrLkRobustMotionEstimatorGpu(MM_HOMOGRAPHY);
-            else
-            {
-                delete est;
-                throw runtime_error("unknown wobble suppression motion model: " + arg("ws-model"));
-            }
+            PyrLkRobustMotionEstimatorGpu *est = new PyrLkRobustMotionEstimatorGpu(motionModel(arg("model")));;
 
             RansacParams ransac = est->ransacParams();
             if (arg("subset") != "auto") ransac.size = argi("subset");
@@ -435,6 +403,8 @@ int main(int argc, const char **argv)
             est->setRansacParams(ransac);
 
             est->setMinInlierRatio(argf("min-inlier-ratio"));
+            est->setOutlierRejector(outlierRejector);
+
             stabilizer->setMotionEstimator(est);
 #else
             throw runtime_error("OpenCV is built without GPU support");
@@ -522,4 +492,22 @@ int main(int argc, const char **argv)
     }
     stabilizedFrames.release();
     return 0;
+}
+
+
+MotionModel motionModel(const string &str)
+{
+    if (str == "transl")
+        return MM_TRANSLATION;
+    if (str == "transl_and_scale")
+        return MM_TRANSLATION_AND_SCALE;
+    if (str == "rigid")
+        return MM_RIGID;
+    if (str == "similarity")
+        return MM_SIMILARITY;
+    if (str == "affine")
+        return MM_AFFINE;
+    if (str == "homography")
+        return MM_HOMOGRAPHY;
+    throw runtime_error("unknown motion model: " + str);
 }
