@@ -504,12 +504,14 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, ORB,  testing::Combine(
 // BruteForceMatcher
 
 IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
+IMPLEMENT_PARAM_CLASS(UseMask, bool)
 
-PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize)
+PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize, UseMask)
 {
     cv::gpu::DeviceInfo devInfo;
     int normCode;
     int dim;
+    bool useMask;
 
     int queryDescCount;
     int countFactor;
@@ -521,6 +523,7 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize
         devInfo = GET_PARAM(0);
         normCode = GET_PARAM(1);
         dim = GET_PARAM(2);
+        useMask = GET_PARAM(3);
 
         cv::gpu::setDevice(devInfo.deviceID());
 
@@ -563,12 +566,19 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize
     }
 };
 
-TEST_P(BruteForceMatcher, Match)
+TEST_P(BruteForceMatcher, Match_Single)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
+    cv::gpu::GpuMat mask;
+    if (useMask)
+    {
+        mask.create(query.rows, train.rows, CV_8UC1);
+        mask.setTo(cv::Scalar::all(1));
+    }
+
     std::vector<cv::DMatch> matches;
-    matcher.match(loadMat(query), loadMat(train), matches);
+    matcher.match(loadMat(query), loadMat(train), matches, mask);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -583,7 +593,7 @@ TEST_P(BruteForceMatcher, Match)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, MatchAdd)
+TEST_P(BruteForceMatcher, Match_Collection)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
@@ -603,12 +613,15 @@ TEST_P(BruteForceMatcher, MatchAdd)
     }
 
     std::vector<cv::DMatch> matches;
-    matcher.match(cv::gpu::GpuMat(query), matches, masks);
+    if (useMask)
+        matcher.match(cv::gpu::GpuMat(query), matches, masks);
+    else
+        matcher.match(cv::gpu::GpuMat(query), matches);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
-    int shift = matcher.isMaskSupported() ? 1 : 0;
+    int shift = useMask ? 1 : 0;
     for (size_t i = 0; i < matches.size(); i++)
     {
         cv::DMatch match = matches[i];
@@ -634,14 +647,21 @@ TEST_P(BruteForceMatcher, MatchAdd)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatch2)
+TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int knn = 2;
 
+    cv::gpu::GpuMat mask;
+    if (useMask)
+    {
+        mask.create(query.rows, train.rows, CV_8UC1);
+        mask.setTo(cv::Scalar::all(1));
+    }
+
     std::vector< std::vector<cv::DMatch> > matches;
-    matcher.knnMatch(loadMat(query), loadMat(train), matches, knn);
+    matcher.knnMatch(loadMat(query), loadMat(train), matches, knn, mask);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -666,14 +686,21 @@ TEST_P(BruteForceMatcher, KnnMatch2)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatch3)
+TEST_P(BruteForceMatcher, KnnMatch_3_Single)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int knn = 3;
 
+    cv::gpu::GpuMat mask;
+    if (useMask)
+    {
+        mask.create(query.rows, train.rows, CV_8UC1);
+        mask.setTo(cv::Scalar::all(1));
+    }
+
     std::vector< std::vector<cv::DMatch> > matches;
-    matcher.knnMatch(loadMat(query), loadMat(train), matches, knn);
+    matcher.knnMatch(loadMat(query), loadMat(train), matches, knn, mask);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -698,7 +725,7 @@ TEST_P(BruteForceMatcher, KnnMatch3)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatchAdd2)
+TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
@@ -721,12 +748,15 @@ TEST_P(BruteForceMatcher, KnnMatchAdd2)
 
     std::vector< std::vector<cv::DMatch> > matches;
 
-    matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
+    if (useMask)
+        matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
+    else
+        matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
-    int shift = matcher.isMaskSupported() ? 1 : 0;
+    int shift = useMask ? 1 : 0;
     for (size_t i = 0; i < matches.size(); i++)
     {
         if ((int)matches[i].size() != knn)
@@ -757,7 +787,7 @@ TEST_P(BruteForceMatcher, KnnMatchAdd2)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatchAdd3)
+TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
@@ -779,12 +809,16 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
     }
 
     std::vector< std::vector<cv::DMatch> > matches;
-    matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
+
+    if (useMask)
+        matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
+    else
+        matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn);
 
     ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
     int badCount = 0;
-    int shift = matcher.isMaskSupported() ? 1 : 0;
+    int shift = useMask ? 1 : 0;
     for (size_t i = 0; i < matches.size(); i++)
     {
         if ((int)matches[i].size() != knn)
@@ -815,7 +849,7 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, RadiusMatch)
+TEST_P(BruteForceMatcher, RadiusMatch_Single)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
@@ -835,8 +869,15 @@ TEST_P(BruteForceMatcher, RadiusMatch)
     }
     else
     {
+        cv::gpu::GpuMat mask;
+        if (useMask)
+        {
+            mask.create(query.rows, train.rows, CV_8UC1);
+            mask.setTo(cv::Scalar::all(1));
+        }
+
         std::vector< std::vector<cv::DMatch> > matches;
-        matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius);
+        matcher.radiusMatch(loadMat(query), loadMat(train), matches, radius, mask);
 
         ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
@@ -857,7 +898,7 @@ TEST_P(BruteForceMatcher, RadiusMatch)
     }
 }
 
-TEST_P(BruteForceMatcher, RadiusMatchAdd)
+TEST_P(BruteForceMatcher, RadiusMatch_Collection)
 {
     cv::gpu::BFMatcher_GPU matcher(normCode);
 
@@ -894,13 +935,17 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
     else
     {
         std::vector< std::vector<cv::DMatch> > matches;
-        matcher.radiusMatch(cv::gpu::GpuMat(query), matches, radius, masks);
+
+        if (useMask)
+            matcher.radiusMatch(cv::gpu::GpuMat(query), matches, radius, masks);
+        else
+            matcher.radiusMatch(cv::gpu::GpuMat(query), matches, radius);
 
         ASSERT_EQ(static_cast<size_t>(queryDescCount), matches.size());
 
         int badCount = 0;
-        int shift = matcher.isMaskSupported() ? 1 : 0;
-        int needMatchCount = matcher.isMaskSupported() ? n-1 : n;
+        int shift = useMask ? 1 : 0;
+        int needMatchCount = useMask ? n-1 : n;
         for (size_t i = 0; i < matches.size(); i++)
         {
             if ((int)matches[i].size() != needMatchCount)
@@ -935,6 +980,7 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
     ALL_DEVICES,
     testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2)),
-    testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304))));
+    testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),
+    testing::Values(UseMask(false), UseMask(true))));
 
 } // namespace
