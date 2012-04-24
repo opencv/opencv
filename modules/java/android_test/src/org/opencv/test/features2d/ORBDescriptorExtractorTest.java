@@ -16,6 +16,11 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
     DescriptorExtractor extractor;
     int matSize;
 
+    public static void assertDescriptorsClose(Mat expected, Mat actual, int allowedDistance) {
+        double distance = Core.norm(expected, actual, Core.NORM_HAMMING);
+        assertTrue("expected:<" + allowedDistance + "> but was:<" + distance + ">", distance <= allowedDistance);
+    }
+
     private Mat getTestImg() {
         Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
         Core.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
@@ -50,7 +55,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
                 		6, 74, 6, 129, 2, 130, 56, 0, 36, 132, 66, 165, 172, 6, 3, 72, 102, 61, 163, 214, 0, 144, 65, 232, 4, 32, 138, 129, 4, 21, 37, 88);
             }
         };
-        assertMatEqual(truth, descriptors);
+        assertDescriptorsClose(truth, descriptors, 1);
     }
 
     public void testCreate() {
@@ -87,7 +92,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
                 		6, 10, 22, 5, 2, 130, 56, 0, 44, 164, 66, 165, 140, 6, 1, 72, 38, 61, 163, 210, 0, 208, 1, 104, 4, 32, 10, 131, 0, 37, 37, 67);
             }
         };
-        assertMatEqual(truth, descriptors);
+        assertDescriptorsClose(truth, descriptors, 1);
     }
 
     public void testWrite() {
