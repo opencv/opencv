@@ -24,7 +24,7 @@ source_group("Device" FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
 if (HAVE_CUDA)
-  file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
+  file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")
   file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
   file(GLOB_RECURSE ncv_hdrs "src/nvidia/*.hpp" "src/nvidia/*.h")
   set(ncv_files ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
@@ -34,34 +34,38 @@ if (HAVE_CUDA)
 
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
-    
+
   if(MSVC)
     if(NOT ENABLE_NOISY_WARNINGS)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408")
-      
+
       foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
         string(REPLACE "/W4" "/W3" ${var} "${${var}}")
       endforeach()
-    
+
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
     endif()
   endif()
 
   OCV_CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
   #CUDA_BUILD_CLEAN_TARGET()
-  
+
   unset(CUDA_nvcuvid_LIBRARY CACHE)
   find_cuda_helper_libs(nvcuvid)
 
-  if (WIN32)
+  if(WIN32)
     unset(CUDA_nvcuvenc_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvenc)
   endif()
-  
-  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY} ${HIGHGUI_LIBRARIES})
 
-  if (WIN32)
+  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
+
+  if(WIN32)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
+  endif()
+
+  if(WITH_FFMPEG)
+    set(cuda_link_libs ${cuda_link_libs} ${HIGHGUI_LIBRARIES})
   endif()
 else()
   set(lib_cuda "")
@@ -74,9 +78,9 @@ ocv_set_module_sources(
   HEADERS ${lib_hdrs}
   SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
   )
-  
+
 ocv_create_module(${cuda_link_libs})
-  
+
 if(HAVE_CUDA)
   if(HAVE_CUFFT)
     CUDA_ADD_CUFFT_TO_TARGET(${the_module})
@@ -85,10 +89,10 @@ if(HAVE_CUDA)
   if(HAVE_CUBLAS)
     CUDA_ADD_CUBLAS_TO_TARGET(${the_module})
   endif()
-  
+
   install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
-	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
-	COMPONENT main)
+    DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
+    COMPONENT main)
 endif()
 
 ocv_add_precompiled_headers(${the_module})
@@ -99,7 +103,7 @@ ocv_add_precompiled_headers(${the_module})
 file(GLOB test_srcs "test/*.cpp")
 file(GLOB test_hdrs "test/*.hpp" "test/*.h")
 if(HAVE_CUDA)
-  file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.hpp" "test/nvidia/*.h")            
+  file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.hpp" "test/nvidia/*.h")
   set(nvidia FILES "Src\\\\\\\\NVidia" ${nvidia}) # 8 ugly backslashes :'(
 else()
   set(nvidia "")
