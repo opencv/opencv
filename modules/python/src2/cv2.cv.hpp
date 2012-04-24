@@ -3383,7 +3383,7 @@ static PyObject *pycvCalcEMD2(PyObject *self, PyObject *args, PyObject *kw)
   PyObject *pyobj_cost_matrix = NULL;
   CvArr* flow=NULL;
   PyObject *pyobj_flow = NULL;
-  float lower_bound = 0.0;
+  float lower_bound = FLT_MAX;
   PyObject *userdata = NULL;
 
   if (!PyArg_ParseTupleAndKeywords(args, kw, "OOi|OOOfO", (char**)keywords,
