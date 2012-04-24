@@ -877,7 +877,7 @@ status("    Use Eigen:" HAVE_EIGEN THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN
 
 if(HAVE_CUDA)
   status("")
-  status("  NVIDIA CUDA:")
+  status("  NVIDIA CUDA:"            "(ver ${CUDA_VERSION_STRING})")
 
   status("    Use CUFFT:"            HAVE_CUFFT  THEN YES ELSE NO)
   status("    Use CUBLAS:"           HAVE_CUBLAS THEN YES ELSE NO)
