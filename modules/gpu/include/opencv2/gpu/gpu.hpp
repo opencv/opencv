@@ -1220,12 +1220,10 @@ protected:
 
 ////////////////////////////////// BruteForceMatcher //////////////////////////////////
 
-class CV_EXPORTS BruteForceMatcher_GPU_base
+class CV_EXPORTS BFMatcher_GPU
 {
 public:
-    enum DistType {L1Dist = 0, L2Dist, HammingDist};
-
-    explicit BruteForceMatcher_GPU_base(DistType distType = L2Dist);
+    explicit BFMatcher_GPU(int norm = cv::NORM_L2);
 
     // Add descriptors to train descriptor collection
     void add(const std::vector<GpuMat>& descCollection);
@@ -1367,34 +1365,10 @@ public:
     void radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, float maxDistance,
         const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
-    DistType distType;
+    int norm;
 
 private:
     std::vector<GpuMat> trainDescCollection;
-};
-
-template <class Distance>
-class CV_EXPORTS BruteForceMatcher_GPU;
-
-template <typename T>
-class CV_EXPORTS BruteForceMatcher_GPU< L1<T> > : public BruteForceMatcher_GPU_base
-{
-public:
-    explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L1Dist) {}
-    explicit BruteForceMatcher_GPU(L1<T> /*d*/) : BruteForceMatcher_GPU_base(L1Dist) {}
-};
-template <typename T>
-class CV_EXPORTS BruteForceMatcher_GPU< L2<T> > : public BruteForceMatcher_GPU_base
-{
-public:
-    explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L2Dist) {}
-    explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BruteForceMatcher_GPU_base(L2Dist) {}
-};
-template <> class CV_EXPORTS BruteForceMatcher_GPU< Hamming > : public BruteForceMatcher_GPU_base
-{
-public:
-    explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(HammingDist) {}
-    explicit BruteForceMatcher_GPU(Hamming /*d*/) : BruteForceMatcher_GPU_base(HammingDist) {}
 };
 
 ////////////////////////////////// CascadeClassifier_GPU //////////////////////////////////////////

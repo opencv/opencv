@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     cout << "FOUND " << keypoints2GPU.cols << " keypoints on second image" << endl;
 
     // matching descriptors
-    BruteForceMatcher_GPU< L2<float> > matcher;
+    BFMatcher_GPU matcher(NORM_L2);
     GpuMat trainIdx, distance;
     matcher.matchSingle(descriptors1GPU, descriptors2GPU, trainIdx, distance);
     
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     surf.downloadKeypoints(keypoints2GPU, keypoints2);
     surf.downloadDescriptors(descriptors1GPU, descriptors1);
     surf.downloadDescriptors(descriptors2GPU, descriptors2);
-    BruteForceMatcher_GPU< L2<float> >::matchDownload(trainIdx, distance, matches);
+    BFMatcher_GPU::matchDownload(trainIdx, distance, matches);
 
     // drawing the results
     Mat img_matches;

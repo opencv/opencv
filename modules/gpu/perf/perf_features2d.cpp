@@ -21,7 +21,7 @@ GPU_PERF_TEST(BruteForceMatcher_match, cv::gpu::DeviceInfo, int)
     cv::gpu::GpuMat train(train_host);
     cv::gpu::GpuMat trainIdx, distance;
 
-    cv::gpu::BruteForceMatcher_GPU< cv::L2<float> > matcher;
+    cv::gpu::BFMatcher_GPU matcher(cv::NORM_L2);
 
     declare.time(3.0);
 
@@ -55,7 +55,7 @@ GPU_PERF_TEST(BruteForceMatcher_knnMatch, cv::gpu::DeviceInfo, int, int)
     cv::gpu::GpuMat train(train_host);
     cv::gpu::GpuMat trainIdx, distance, allDist;
 
-    cv::gpu::BruteForceMatcher_GPU< cv::L2<float> > matcher;
+    cv::gpu::BFMatcher_GPU matcher(cv::NORM_L2);
 
     declare.time(3.0);
 
@@ -90,7 +90,7 @@ GPU_PERF_TEST(BruteForceMatcher_radiusMatch, cv::gpu::DeviceInfo, int)
     cv::gpu::GpuMat train(train_host);
     cv::gpu::GpuMat trainIdx, nMatches, distance;
 
-    cv::gpu::BruteForceMatcher_GPU< cv::L2<float> > matcher;
+    cv::gpu::BFMatcher_GPU matcher(cv::NORM_L2);
 
     declare.time(3.0);
 

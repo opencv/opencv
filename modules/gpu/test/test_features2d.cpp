@@ -503,13 +503,12 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, ORB,  testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // BruteForceMatcher
 
-CV_ENUM(DistType, cv::gpu::BruteForceMatcher_GPU_base::L1Dist, cv::gpu::BruteForceMatcher_GPU_base::L2Dist, cv::gpu::BruteForceMatcher_GPU_base::HammingDist)
 IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
 
-PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, DistType, DescriptorSize)
+PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, NormCode, DescriptorSize)
 {
     cv::gpu::DeviceInfo devInfo;
-    cv::gpu::BruteForceMatcher_GPU_base::DistType distType;
+    int normCode;
     int dim;
 
     int queryDescCount;
@@ -520,7 +519,7 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, DistType, DescriptorSize
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        distType = (cv::gpu::BruteForceMatcher_GPU_base::DistType)(int)GET_PARAM(1);
+        normCode = GET_PARAM(1);
         dim = GET_PARAM(2);
 
         cv::gpu::setDevice(devInfo.deviceID());
@@ -566,7 +565,7 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::gpu::DeviceInfo, DistType, DescriptorSize
 
 TEST_P(BruteForceMatcher, Match)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     std::vector<cv::DMatch> matches;
     matcher.match(loadMat(query), loadMat(train), matches);
@@ -584,10 +583,9 @@ TEST_P(BruteForceMatcher, Match)
     ASSERT_EQ(0, badCount);
 }
 
-
 TEST_P(BruteForceMatcher, MatchAdd)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     cv::gpu::GpuMat d_train(train);
 
@@ -638,9 +636,9 @@ TEST_P(BruteForceMatcher, MatchAdd)
 
 TEST_P(BruteForceMatcher, KnnMatch2)
 {
-    const int knn = 2;
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+    const int knn = 2;
 
     std::vector< std::vector<cv::DMatch> > matches;
     matcher.knnMatch(loadMat(query), loadMat(train), matches, knn);
@@ -670,7 +668,7 @@ TEST_P(BruteForceMatcher, KnnMatch2)
 
 TEST_P(BruteForceMatcher, KnnMatch3)
 {
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
     const int knn = 3;
 
@@ -702,9 +700,9 @@ TEST_P(BruteForceMatcher, KnnMatch3)
 
 TEST_P(BruteForceMatcher, KnnMatchAdd2)
 {
-    const int knn = 2;
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+    const int knn = 2;
 
     cv::gpu::GpuMat d_train(train);
 
@@ -761,9 +759,9 @@ TEST_P(BruteForceMatcher, KnnMatchAdd2)
 
 TEST_P(BruteForceMatcher, KnnMatchAdd3)
 {
-    const int knn = 3;
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+    const int knn = 3;
 
     cv::gpu::GpuMat d_train(train);
 
@@ -819,9 +817,9 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
 
 TEST_P(BruteForceMatcher, RadiusMatch)
 {
-    const float radius = 1.f / countFactor;
+    cv::gpu::BFMatcher_GPU matcher(normCode);
 
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+    const float radius = 1.f / countFactor;
 
     if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
     {
@@ -861,10 +859,10 @@ TEST_P(BruteForceMatcher, RadiusMatch)
 
 TEST_P(BruteForceMatcher, RadiusMatchAdd)
 {
+    cv::gpu::BFMatcher_GPU matcher(normCode);
+
     const int n = 3;
     const float radius = 1.f / countFactor * n;
-
-    cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
 
     cv::gpu::GpuMat d_train(train);
 
@@ -936,7 +934,7 @@ TEST_P(BruteForceMatcher, RadiusMatchAdd)
 
 INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
     ALL_DEVICES,
-    testing::Values(DistType(cv::gpu::BruteForceMatcher_GPU_base::L1Dist), DistType(cv::gpu::BruteForceMatcher_GPU_base::L2Dist)),
+    testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2)),
     testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304))));
 
 } // namespace
