@@ -44,6 +44,10 @@
 
 #if !defined HAVE_CUDA || !defined WIN32
 
+class cv::gpu::VideoWriter_GPU::Impl
+{
+};
+
 cv::gpu::VideoWriter_GPU::VideoWriter_GPU() { throw_nogpu(); }
 cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double, SurfaceFormat) { throw_nogpu(); }
 cv::gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string&, cv::Size, double, const EncoderParams&, SurfaceFormat) { throw_nogpu(); }

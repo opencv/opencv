@@ -58,7 +58,7 @@ if (HAVE_CUDA)
     find_cuda_helper_libs(nvcuvenc)
   endif()
   
-  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
+  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY} ${HIGHGUI_LIBRARIES})
 
   if (WIN32)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
@@ -75,7 +75,7 @@ ocv_set_module_sources(
   SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
   )
   
-ocv_create_module(${cuda_link_libs} ${HIGHGUI_LIBRARIES})
+ocv_create_module(${cuda_link_libs})
   
 if(HAVE_CUDA)
   if(HAVE_CUFFT)

@@ -44,6 +44,10 @@
 
 #ifndef HAVE_CUDA
 
+class cv::gpu::VideoReader_GPU::Impl
+{
+};
+
 cv::gpu::VideoReader_GPU::VideoReader_GPU() { throw_nogpu(); }
 cv::gpu::VideoReader_GPU::VideoReader_GPU(const std::string&) { throw_nogpu(); }
 cv::gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>&) { throw_nogpu(); }
@@ -53,7 +57,7 @@ void cv::gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>&) { throw_nogpu()
 bool cv::gpu::VideoReader_GPU::isOpened() const { return false; }
 void cv::gpu::VideoReader_GPU::close() { }
 bool cv::gpu::VideoReader_GPU::read(GpuMat&) { throw_nogpu(); return false; }
-cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::VideoReader_GPU::format() const { throw_nogpu(); FormatInfo format; return format; }
+cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::VideoReader_GPU::format() const { throw_nogpu(); FormatInfo format = {MPEG1,Monochrome,0,0}; return format; }
 bool cv::gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char*, size_t, bool) { throw_nogpu(); return false; }
 void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream&) { throw_nogpu(); }
 
