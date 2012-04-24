@@ -1439,6 +1439,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     // temporary copy of the image with borders for easy processing
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
+    patchNaNs(temp);
 
     // allocate lookup tables
     vector<float> _space_weight(d*d);

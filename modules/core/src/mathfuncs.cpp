@@ -2186,6 +2186,28 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 }
 
     
+void patchNaNs( InputOutputArray _a, double _val )
+{
+    Mat a = _a.getMat();
+    CV_Assert( a.depth() == CV_32F );
+    
+    const Mat* arrays[] = {&a, 0};
+    int* ptrs[1];
+    NAryMatIterator it(arrays, (uchar**)ptrs);
+    size_t len = it.size*a.channels();
+    Cv32suf val;
+    val.f = (float)_val;
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        int* tptr = ptrs[0];
+        for( size_t j = 0; j < len; j++ )
+            if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
+                tptr[j] = val.i;
+    }
+}
+
+    
 void exp(const float* src, float* dst, int n)
 {
     Exp_32f(src, dst, n);
