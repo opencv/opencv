@@ -638,6 +638,14 @@ Matx<_Tp, m, n> operator * (const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b)
 }
 
     
+template<typename _Tp, int m, int n> static inline
+Vec<_Tp, m> operator * (const Matx<_Tp, m, n>& a, const Vec<_Tp, n>& b)
+{
+    Matx<_Tp, m, 1> c(a, b, Matx_MatMulOp());
+    return reinterpret_cast<const Vec<_Tp, m>&>(c);
+}
+    
+    
 template<typename _Tp> static inline
 Point_<_Tp> operator * (const Matx<_Tp, 2, 2>& a, const Point_<_Tp>& b)
 {

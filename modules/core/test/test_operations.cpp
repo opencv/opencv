@@ -754,12 +754,19 @@ bool CV_OperationsTest::TestMatxMultiplication()
 { 
     try 
     { 
-        Matx33f mat(1, 0, 0, 0, 1, 0, 0, 0, 1); // Identity matrix 
+        Matx33f mat(1, 1, 1, 0, 1, 1, 0, 0, 1); // Identity matrix 
         Point2f pt(3, 4); 
         Point3f res = mat * pt; // Correctly assumes homogeneous coordinates 
-        if(res.x != 3.0) throw test_excep(); 
-        if(res.y != 4.0) throw test_excep(); 
-        if(res.z != 1.0) throw test_excep(); 
+        
+        Vec3f res2 = mat*Vec3f(res.x, res.y, res.z);
+        
+        if(res.x != 8.0) throw test_excep(); 
+        if(res.y != 5.0) throw test_excep(); 
+        if(res.z != 1.0) throw test_excep();
+        
+        if(res2[0] != 14.0) throw test_excep(); 
+        if(res2[1] != 6.0) throw test_excep(); 
+        if(res2[2] != 1.0) throw test_excep();
     } 
     catch(const test_excep&) 
     { 
