@@ -641,23 +641,23 @@ The function compares two shapes. All three implemented methods use the Hu invar
 :ocv:func:`HuMoments` ) as follows (
 :math:`A` denotes ``object1``,:math:`B` denotes ``object2`` ):
 
-* method=CV\_CONTOURS\_MATCH\_I1
+* method=CV_CONTOURS_MATCH_I1
 
     .. math::
 
         I_1(A,B) =  \sum _{i=1...7}  \left |  \frac{1}{m^A_i} -  \frac{1}{m^B_i} \right |
 
-* method=CV\_CONTOURS\_MATCH\_I2
+* method=CV_CONTOURS_MATCH_I2
 
     .. math::
 
         I_2(A,B) =  \sum _{i=1...7}  \left | m^A_i - m^B_i  \right |
 
-* method=CV\_CONTOURS\_MATCH\_I3
+* method=CV_CONTOURS_MATCH_I3
 
     .. math::
 
-        I_3(A,B) =  \sum _{i=1...7}  \frac{ \left| m^A_i - m^B_i \right| }{ \left| m^A_i \right| }
+        I_3(A,B) =  \max _{i=1...7}  \frac{ \left| m^A_i - m^B_i \right| }{ \left| m^A_i \right| }
 
 where
 
