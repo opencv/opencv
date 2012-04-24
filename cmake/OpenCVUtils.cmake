@@ -113,6 +113,15 @@ function(ocv_output_status msg)
   file(APPEND "${OPENCV_BUILD_INFO_FILE}" "\"${msg}\\n\"\n")
 endfunction()
 
+macro(ocv_finalize_status)
+  if(NOT OPENCV_SKIP_STATUS_FINALIZATION)
+    if(TARGET opencv_core)
+      execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENCV_BUILD_INFO_FILE}" "${opencv_core_BINARY_DIR}/version_string.inc" OUTPUT_QUIET)
+    endif()
+  endif()
+endmacro()
+
+
 # Status report function.
 # Automatically align right column and selects text based on condition.
 # Usage:
