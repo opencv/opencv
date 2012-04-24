@@ -166,13 +166,15 @@ bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
     errNorm = cvNorm( err, 0, CV_L2 );
     if( errNorm > prevErrNorm )
     {
-        lambdaLg10++;
-        step();
-        _param = param;
-        cvZero( err );
-        _err = err;
-        state = CHECK_ERR;
-        return true;
+        if( ++lambdaLg10 <= 16 )
+        {
+            step();
+            _param = param;
+            cvZero( err );
+            _err = err;
+            state = CHECK_ERR;
+            return true;
+        }
     }
 
     lambdaLg10 = MAX(lambdaLg10-1, -16);
@@ -233,13 +235,15 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
     assert( state == CHECK_ERR );
     if( errNorm > prevErrNorm )
     {
-        lambdaLg10++;
-        step();
-        _param = param;
-        errNorm = 0;
-        _errNorm = &errNorm;
-        state = CHECK_ERR;
-        return true;
+        if( ++lambdaLg10 <= 16 )
+        {
+            step();
+            _param = param;
+            errNorm = 0;
+            _errNorm = &errNorm;
+            state = CHECK_ERR;
+            return true;
+        }
     }
 
     lambdaLg10 = MAX(lambdaLg10-1, -16);
