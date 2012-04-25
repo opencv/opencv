@@ -47,6 +47,8 @@ int main(int argc, char* argv[]) {
 	std::cout<<"* => reports comments/remarks at benoit.alexandre.vision@gmail.com"<<std::endl;
 	std::cout<<"* => more informations and papers at : http://sites.google.com/site/benoitalexandrevision/"<<std::endl;
 	std::cout<<"****************************************************"<<std::endl;
+	std::cout<<" NOTE : this program generates the default retina parameters file 'RetinaDefaultParameters.xml'"<<std::endl;
+	std::cout<<" => you can use this to fine tune parameters and load them if you save to file 'RetinaSpecificParameters.xml'"<<std::endl;
 
 	// basic input arguments checking
 	if (argc<2)
@@ -116,7 +118,10 @@ int main(int argc, char* argv[]) {
 		// save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
 		myRetina->write("RetinaDefaultParameters.xml");
 
+		// load parameters if file exists
+		myRetina->setup("RetinaSpecificParameters.xml");
 		myRetina->clearBuffers();
+
 		// declare retina output buffers
 		cv::Mat retinaOutput_parvo;
 		cv::Mat retinaOutput_magno;
