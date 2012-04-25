@@ -3888,7 +3888,7 @@ PyObject* init_cv()
   m = Py_InitModule(OLD_MODULESTR, old_methods);
   d = PyModule_GetDict(m);
 
-  PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 4557 $"));
+  PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
   PyDict_SetItemString(d, "error", opencv_error);
 
   // Couple of warnings about strict aliasing here.  Not clear how to fix.
