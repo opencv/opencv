@@ -109,7 +109,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
   if(X86 OR X86_64)
     if(NOT APPLE AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-       set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mfpmath=387")
+       if(ENABLE_SSE2)
+         set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mfpmath=sse")# !! important - be on the same wave with x64 compilers
+       else()
+         set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mfpmath=387")
+       endif()
     endif()
   endif()
 

@@ -834,7 +834,6 @@ float normL2Sqr_(const float* a, const float* b, int n)
     }
     else
 #endif
-    //vz why do we need unroll here? no sse = no need to unroll
 	{
         for( ; j <= n - 4; j += 4 )
         {
@@ -875,7 +874,6 @@ float normL1_(const float* a, const float* b, int n)
     }
     else
 #endif
-     //vz no need to unroll here - if no sse
     {
         for( ; j <= n - 4; j += 4 )
         {
@@ -916,7 +914,6 @@ int normL1_(const uchar* a, const uchar* b, int n)
     }
     else
 #endif
-     //vz why do we need unroll here? no sse = no unroll
     {
         for( ; j <= n - 4; j += 4 )
         {

@@ -992,7 +992,7 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
 
 TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
-    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.035f,
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
                                                  DescriptorExtractor::create("SURF"), 0.147372f );
     test.safe_run();
 }
