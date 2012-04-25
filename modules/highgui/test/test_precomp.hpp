@@ -57,5 +57,11 @@
 #  define BUILD_WITH_VIDEO_OUTPUT_SUPPORT 0
 #endif
 
+namespace cvtest
+{
+
+string fourccToString(int fourcc);
+
+}
 
 #endif

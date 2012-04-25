@@ -63,6 +63,10 @@ extern "C" {
   #include <libswscale/swscale.h>
 #else
 
+#ifndef HAVE_FFMPEG_SWSCALE
+    #error "libswscale is necessary to build the newer OpenCV ffmpeg wrapper"
+#endif
+    
 // if the header path is not specified explicitly, let's deduce it
 #if !defined HAVE_FFMPEG_AVCODEC_H && !defined HAVE_LIBAVCODEC_AVCODEC_H
 
@@ -232,9 +236,7 @@ struct CvCapture_FFMPEG
 
     AVPacket          packet;
     Image_FFMPEG      frame;
-	#if defined(HAVE_FFMPEG_SWSCALE)
-		struct SwsContext *img_convert_ctx;
-	#endif
+    struct SwsContext *img_convert_ctx;
 
     int64_t frame_number;
 
@@ -260,9 +262,7 @@ void CvCapture_FFMPEG::init()
     memset( &frame, 0, sizeof(frame) );
     filename = 0;
     packet.data = NULL;
-#if defined(HAVE_FFMPEG_SWSCALE)
     img_convert_ctx = 0;
-#endif
 
     avcodec = 0;
     frame_number = 0;
@@ -272,6 +272,12 @@ void CvCapture_FFMPEG::init()
 
 void CvCapture_FFMPEG::close()
 {
+    if( img_convert_ctx )
+    {
+        sws_freeContext(img_convert_ctx);
+        img_convert_ctx = 0;
+    }
+    
     if( picture )
         av_free(picture);
 
@@ -545,32 +551,32 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if( !video_st || !picture->data[0] )
         return false;
 
-    avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], PIX_FMT_RGB24, video_st->codec->width, video_st->codec->height);
+    avpicture_fill((AVPicture*)&rgb_picture, rgb_picture.data[0], PIX_FMT_RGB24,
+                   video_st->codec->width, video_st->codec->height);
 
-    frame.width = video_st->codec->width;
-    frame.height = video_st->codec->height;
+    if( img_convert_ctx == NULL ||
+        frame.width != video_st->codec->width ||
+        frame.height != video_st->codec->height )
+    {
+        if( img_convert_ctx )
+            sws_freeContext(img_convert_ctx);
+        
+        frame.width = video_st->codec->width;
+        frame.height = video_st->codec->height;
 
-    img_convert_ctx = sws_getContext(
-            video_st->codec->width, video_st->codec->height,
-            video_st->codec->pix_fmt,
-            video_st->codec->width, video_st->codec->height,
-            PIX_FMT_BGR24,
-            SWS_BICUBIC,
-            NULL, NULL, NULL
-            );
+        img_convert_ctx = sws_getCachedContext(
+                NULL,
+                video_st->codec->width, video_st->codec->height,
+                video_st->codec->pix_fmt,
+                video_st->codec->width, video_st->codec->height,
+                PIX_FMT_BGR24,
+                SWS_BICUBIC,
+                NULL, NULL, NULL
+                );
 
-    img_convert_ctx = sws_getCachedContext(
-            img_convert_ctx,
-            video_st->codec->width, video_st->codec->height,
-            video_st->codec->pix_fmt,
-            video_st->codec->width, video_st->codec->height,
-            PIX_FMT_BGR24,
-            SWS_BICUBIC,
-            NULL, NULL, NULL
-            );
-
-    if (img_convert_ctx == NULL)
-        return false;//CV_Error(0, "Cannot initialize the conversion context!");
+        if (img_convert_ctx == NULL)
+            return false;//CV_Error(0, "Cannot initialize the conversion context!");
+    }
 
     sws_scale(
             img_convert_ctx,
@@ -580,10 +586,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
             rgb_picture.data,
             rgb_picture.linesize
             );
-
-    sws_freeContext(img_convert_ctx);
-
-
 
     frame_number++;
 
@@ -674,7 +676,8 @@ double CvCapture_FFMPEG::get_duration_sec()
 
     if (sec < eps_zero)
     {
-        sec = static_cast<double>(static_cast<int64_t>(ic->streams[video_stream]->duration)) * r2d(ic->streams[video_stream]->time_base);
+        sec = static_cast<double>(static_cast<int64_t>(ic->streams[video_stream]->duration)) *
+                                    r2d(ic->streams[video_stream]->time_base);
     }
 
     return sec;
@@ -721,7 +724,8 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
 {
-    return static_cast<double>(dts - ic->streams[video_stream]->start_time) * r2d(ic->streams[video_stream]->time_base);
+    return static_cast<double>(dts - ic->streams[video_stream]->start_time) *
+        r2d(ic->streams[video_stream]->time_base);
 }
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
@@ -828,9 +832,7 @@ struct CvVideoWriter_FFMPEG
     Image_FFMPEG      temp_image;
     int               frame_width, frame_height;
     bool              ok;
-#if defined(HAVE_FFMPEG_SWSCALE)
     struct SwsContext *img_convert_ctx;
-#endif
 };
 
 static const char * icvFFMPEGErrStr(int err)
@@ -904,9 +906,7 @@ void CvVideoWriter_FFMPEG::init()
     video_st = 0;
     input_pix_fmt = 0;
     memset(&temp_image, 0, sizeof(temp_image));
-#if defined(HAVE_FFMPEG_SWSCALE)
     img_convert_ctx = 0;
-#endif
     frame_width = frame_height = 0;
     ok = false;
 }
@@ -1190,32 +1190,25 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         avpicture_fill((AVPicture *)input_picture, (uint8_t *) data,
                        (PixelFormat)input_pix_fmt, width, height);
 
-#if !defined(HAVE_FFMPEG_SWSCALE)
-        // convert to the color format needed by the codec
-        if( img_convert((AVPicture *)picture, c->pix_fmt,
-                        (AVPicture *)input_picture, (PixelFormat)input_pix_fmt,
-                        width, height) < 0){
-            return false;
+        if( !img_convert_ctx )
+        {
+            img_convert_ctx = sws_getContext(width,
+                                             height,
+                                             (PixelFormat)input_pix_fmt,
+                                             c->width,
+                                             c->height,
+                                             c->pix_fmt,
+                                             SWS_BICUBIC,
+                                             NULL, NULL, NULL);
+            if( !img_convert_ctx )
+                return false;
         }
-#else
-        img_convert_ctx = sws_getContext(width,
-                                         height,
-                                         (PixelFormat)input_pix_fmt,
-                                         c->width,
-                                         c->height,
-                                         c->pix_fmt,
-                                         SWS_BICUBIC,
-                                         NULL, NULL, NULL);
 
         if ( sws_scale(img_convert_ctx, input_picture->data,
                        input_picture->linesize, 0,
                        height,
                        picture->data, picture->linesize) < 0 )
-        {
             return false;
-        }
-        sws_freeContext(img_convert_ctx);
-#endif
     }
     else{
         avpicture_fill((AVPicture *)picture, (uint8_t *) data,
@@ -1235,7 +1228,7 @@ void CvVideoWriter_FFMPEG::close()
     // nothing to do if already released
     if ( !picture )
         return;
-
+    
     /* no more frame to compress. The codec has a latency of a few
        frames if using B frames, so we get the last frames by
        passing the same picture again */
@@ -1244,7 +1237,7 @@ void CvVideoWriter_FFMPEG::close()
     /* write the trailer, if any */
     if(ok && oc)
     {
-        if (!(oc->oformat->flags & AVFMT_RAWPICTURE))
+        if( (oc->oformat->flags & AVFMT_RAWPICTURE) == 0 )
         {
             for(;;)
             {
@@ -1255,361 +1248,369 @@ void CvVideoWriter_FFMPEG::close()
         }
         av_write_trailer(oc);
     }
+    
+    if( img_convert_ctx )
+    {
+        sws_freeContext(img_convert_ctx);
+        img_convert_ctx = 0;
+    }
 
     // free pictures
 #if LIBAVFORMAT_BUILD > 4628
-    if( video_st->codec->pix_fmt != input_pix_fmt){
+    if( video_st->codec->pix_fmt != input_pix_fmt)
 #else
-		if( video_st->codec.pix_fmt != input_pix_fmt){
+    if( video_st->codec.pix_fmt != input_pix_fmt)
 #endif
-            if(picture->data[0])
-                free(picture->data[0]);
-            picture->data[0] = 0;
-        }
-        av_free(picture);
+    {
+        if(picture->data[0])
+            free(picture->data[0]);
+        picture->data[0] = 0;
+    }
+    av_free(picture);
 
-        if (input_picture) {
-            av_free(input_picture);
-        }
+    if (input_picture)
+        av_free(input_picture);
 
-        /* close codec */
+    /* close codec */
 #if LIBAVFORMAT_BUILD > 4628
-		avcodec_close(video_st->codec);
+    avcodec_close(video_st->codec);
 #else
-		avcodec_close(&(video_st->codec));
+    avcodec_close(&(video_st->codec));
 #endif
 
-        av_free(outbuf);
+    av_free(outbuf);
 
-        /* free the streams */
-        for(i = 0; i < oc->nb_streams; i++) {
-            av_freep(&oc->streams[i]->codec);
-            av_freep(&oc->streams[i]);
-        }
+    /* free the streams */
+    for(i = 0; i < oc->nb_streams; i++)
+    {
+        av_freep(&oc->streams[i]->codec);
+        av_freep(&oc->streams[i]);
+    }
 
-        if (!(fmt->flags & AVFMT_NOFILE)) {
-            /* close the output file */
+    if (!(fmt->flags & AVFMT_NOFILE))
+    {
+        /* close the output file */
 
 #if LIBAVCODEC_VERSION_INT < ((52<<16)+(123<<8)+0)
 #if LIBAVCODEC_VERSION_INT >= ((51<<16)+(49<<8)+0)
-			url_fclose(oc->pb);
+        url_fclose(oc->pb);
 #else
-			url_fclose(&oc->pb);
+        url_fclose(&oc->pb);
 #endif
 #else
-			avio_close(oc->pb);
+        avio_close(oc->pb);
 #endif
 
-        }
-
-        /* free the stream */
-        av_free(oc);
-
-        if( temp_image.data )
-        {
-            free(temp_image.data);
-            temp_image.data = 0;
-        }
-
-        init();
     }
 
-    /// Create a video writer object that uses FFMPEG
-    bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
-                                     double fps, int width, int height, bool is_color )
+    /* free the stream */
+    av_free(oc);
+
+    if( temp_image.data )
     {
-        CodecID codec_id = CODEC_ID_NONE;
-        int err, codec_pix_fmt;
-        double bitrate_scale = 1;
+        free(temp_image.data);
+        temp_image.data = 0;
+    }
 
-        close();
+    init();
+}
 
-        // check arguments
-        if( !filename )
-            return false;
-        if(fps <= 0)
-            return false;
-        
-        // we allow frames of odd width or height, but in this case we truncate
-        // the rightmost column/the bottom row. Probably, this should be handled more elegantly,
-        // but some internal functions inside FFMPEG swscale require even width/height.
-        width &= -2;
-        height &= -2;
-        if( width <= 0 || height <= 0 )
-            return false;
+/// Create a video writer object that uses FFMPEG
+bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
+                                 double fps, int width, int height, bool is_color )
+{
+    CodecID codec_id = CODEC_ID_NONE;
+    int err, codec_pix_fmt;
+    double bitrate_scale = 1;
 
-        // tell FFMPEG to register codecs
-        av_register_all();
-        av_log_set_level(AV_LOG_ERROR);
+    close();
 
-        /* auto detect the output format from the name and fourcc code. */
+    // check arguments
+    if( !filename )
+        return false;
+    if(fps <= 0)
+        return false;
+    
+    // we allow frames of odd width or height, but in this case we truncate
+    // the rightmost column/the bottom row. Probably, this should be handled more elegantly,
+    // but some internal functions inside FFMPEG swscale require even width/height.
+    width &= -2;
+    height &= -2;
+    if( width <= 0 || height <= 0 )
+        return false;
+
+    // tell FFMPEG to register codecs
+    av_register_all();
+    av_log_set_level(AV_LOG_ERROR);
+
+    /* auto detect the output format from the name and fourcc code. */
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
-		fmt = av_guess_format(NULL, filename, NULL);
+    fmt = av_guess_format(NULL, filename, NULL);
 #else
-		fmt = guess_format(NULL, filename, NULL);
+    fmt = guess_format(NULL, filename, NULL);
 #endif
 
-        if (!fmt)
-            return false;
+    if (!fmt)
+        return false;
 
-        /* determine optimal pixel format */
-        if (is_color) {
-            input_pix_fmt = PIX_FMT_BGR24;
-        }
-        else {
-            input_pix_fmt = PIX_FMT_GRAY8;
-        }
+    /* determine optimal pixel format */
+    if (is_color) {
+        input_pix_fmt = PIX_FMT_BGR24;
+    }
+    else {
+        input_pix_fmt = PIX_FMT_GRAY8;
+    }
 
-        /* Lookup codec_id for given fourcc */
+    /* Lookup codec_id for given fourcc */
 #if LIBAVCODEC_VERSION_INT<((51<<16)+(49<<8)+0)
-		if( (codec_id = codec_get_bmp_id( fourcc )) == CODEC_ID_NONE )
-			return false;
+    if( (codec_id = codec_get_bmp_id( fourcc )) == CODEC_ID_NONE )
+        return false;
 #else
-		const struct AVCodecTag * tags[] = { codec_bmp_tags, NULL};
-		if( (codec_id = av_codec_get_id(tags, fourcc)) == CODEC_ID_NONE )
-			return false;
+    const struct AVCodecTag * tags[] = { codec_bmp_tags, NULL};
+    if( (codec_id = av_codec_get_id(tags, fourcc)) == CODEC_ID_NONE )
+        return false;
 #endif
 
-        // alloc memory for context
+    // alloc memory for context
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
-		oc = avformat_alloc_context();
+    oc = avformat_alloc_context();
 #else
-		oc = av_alloc_format_context();
+    oc = av_alloc_format_context();
 #endif
-        assert (oc);
+    assert (oc);
 
-        /* set file name */
-        oc->oformat = fmt;
-        snprintf(oc->filename, sizeof(oc->filename), "%s", filename);
+    /* set file name */
+    oc->oformat = fmt;
+    snprintf(oc->filename, sizeof(oc->filename), "%s", filename);
 
-        /* set some options */
-        oc->max_delay = (int)(0.7*AV_TIME_BASE);  /* This reduces buffer underrun warnings with MPEG */
+    /* set some options */
+    oc->max_delay = (int)(0.7*AV_TIME_BASE);  /* This reduces buffer underrun warnings with MPEG */
 
-        // set a few optimal pixel formats for lossless codecs of interest..
-        switch (codec_id) {
+    // set a few optimal pixel formats for lossless codecs of interest..
+    switch (codec_id) {
 #if LIBAVCODEC_VERSION_INT>((50<<16)+(1<<8)+0)
-		case CODEC_ID_JPEGLS:
-			// BGR24 or GRAY8 depending on is_color...
-			codec_pix_fmt = input_pix_fmt;
-			break;
+    case CODEC_ID_JPEGLS:
+        // BGR24 or GRAY8 depending on is_color...
+        codec_pix_fmt = input_pix_fmt;
+        break;
 #endif
-        case CODEC_ID_HUFFYUV:
-            codec_pix_fmt = PIX_FMT_YUV422P;
-            break;
-        case CODEC_ID_MJPEG:
-        case CODEC_ID_LJPEG:
-            codec_pix_fmt = PIX_FMT_YUVJ420P;
-            bitrate_scale = 3;
-            break;
-        case CODEC_ID_RAWVIDEO:
-            codec_pix_fmt = input_pix_fmt == PIX_FMT_GRAY8 ||
-                            input_pix_fmt == PIX_FMT_GRAY16LE ||
-                            input_pix_fmt == PIX_FMT_GRAY16BE ? input_pix_fmt : PIX_FMT_YUV420P;
-            break;
-        default:
-            // good for lossy formats, MPEG, etc.
-            codec_pix_fmt = PIX_FMT_YUV420P;
-            break;
-        }
-        
-        double bitrate = MIN(bitrate_scale*fps*width*height, (double)INT_MAX/2);
+    case CODEC_ID_HUFFYUV:
+        codec_pix_fmt = PIX_FMT_YUV422P;
+        break;
+    case CODEC_ID_MJPEG:
+    case CODEC_ID_LJPEG:
+        codec_pix_fmt = PIX_FMT_YUVJ420P;
+        bitrate_scale = 3;
+        break;
+    case CODEC_ID_RAWVIDEO:
+        codec_pix_fmt = input_pix_fmt == PIX_FMT_GRAY8 ||
+                        input_pix_fmt == PIX_FMT_GRAY16LE ||
+                        input_pix_fmt == PIX_FMT_GRAY16BE ? input_pix_fmt : PIX_FMT_YUV420P;
+        break;
+    default:
+        // good for lossy formats, MPEG, etc.
+        codec_pix_fmt = PIX_FMT_YUV420P;
+        break;
+    }
+    
+    double bitrate = MIN(bitrate_scale*fps*width*height, (double)INT_MAX/2);
 
-        // TODO -- safe to ignore output audio stream?
-        video_st = icv_add_video_stream_FFMPEG(oc, codec_id,
-                                               width, height, (int)(bitrate + 0.5),
-                                               fps, codec_pix_fmt);
+    // TODO -- safe to ignore output audio stream?
+    video_st = icv_add_video_stream_FFMPEG(oc, codec_id,
+                                           width, height, (int)(bitrate + 0.5),
+                                           fps, codec_pix_fmt);
 
-        /* set the output parameters (must be done even if no
-       parameters). */
+    /* set the output parameters (must be done even if no
+   parameters). */
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
-        if (av_set_parameters(oc, NULL) < 0) {
-            return false;
-        }
+    if (av_set_parameters(oc, NULL) < 0) {
+        return false;
+    }
 #endif
 
 #if 0
 #if FF_API_DUMP_FORMAT
-		dump_format(oc, 0, filename, 1);
+    dump_format(oc, 0, filename, 1);
 #else
-		av_dump_format(oc, 0, filename, 1);
+    av_dump_format(oc, 0, filename, 1);
 #endif
 #endif
 
-        /* now that all the parameters are set, we can open the audio and
-       video codecs and allocate the necessary encode buffers */
-        if (!video_st){
-            return false;
-        }
+    /* now that all the parameters are set, we can open the audio and
+     video codecs and allocate the necessary encode buffers */
+    if (!video_st){
+        return false;
+    }
 
-        AVCodec *codec;
-        AVCodecContext *c;
+    AVCodec *codec;
+    AVCodecContext *c;
 
 #if LIBAVFORMAT_BUILD > 4628
-		c = (video_st->codec);
+    c = (video_st->codec);
 #else
-		c = &(video_st->codec);
+    c = &(video_st->codec);
 #endif
 
-        c->codec_tag = fourcc;
-        /* find the video encoder */
-        codec = avcodec_find_encoder(c->codec_id);
-        if (!codec) {
-            fprintf(stderr, "Could not find encoder for codec id %d: %s", c->codec_id, icvFFMPEGErrStr(
-            #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
-                    AVERROR_ENCODER_NOT_FOUND
-            #else
-                    -1
-            #endif
-                    ));
-            return false;
-        }
+    c->codec_tag = fourcc;
+    /* find the video encoder */
+    codec = avcodec_find_encoder(c->codec_id);
+    if (!codec) {
+        fprintf(stderr, "Could not find encoder for codec id %d: %s", c->codec_id, icvFFMPEGErrStr(
+        #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
+                AVERROR_ENCODER_NOT_FOUND
+        #else
+                -1
+        #endif
+                ));
+        return false;
+    }
 
-        unsigned long long lbit_rate = static_cast<unsigned long long>(c->bit_rate);
-        lbit_rate += (bitrate / 2);
-        lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
-        c->bit_rate_tolerance = static_cast<int>(lbit_rate);
-        c->bit_rate = static_cast<int>(lbit_rate);
+    unsigned long long lbit_rate = static_cast<unsigned long long>(c->bit_rate);
+    lbit_rate += (bitrate / 2);
+    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
+    c->bit_rate_tolerance = static_cast<int>(lbit_rate);
+    c->bit_rate = static_cast<int>(lbit_rate);
 
-        /* open the codec */
-        if ((err=
+    /* open the codec */
+    if ((err=
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
-             avcodec_open2(c, codec, NULL)
+         avcodec_open2(c, codec, NULL)
 #else
-             avcodec_open(c, codec)
+         avcodec_open(c, codec)
 #endif
-             ) < 0) {
-            fprintf(stderr, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
+         ) < 0) {
+        fprintf(stderr, "Could not open codec '%s': %s", codec->name, icvFFMPEGErrStr(err));
+        return false;
+    }
+
+    outbuf = NULL;
+
+    if (!(oc->oformat->flags & AVFMT_RAWPICTURE)) {
+        /* allocate output buffer */
+        /* assume we will never get codec output with more than 4 bytes per pixel... */
+        outbuf_size = width*height*4;
+        outbuf = (uint8_t *) av_malloc(outbuf_size);
+    }
+
+    bool need_color_convert;
+    need_color_convert = (c->pix_fmt != input_pix_fmt);
+
+    /* allocate the encoded raw picture */
+    picture = icv_alloc_picture_FFMPEG(c->pix_fmt, c->width, c->height, need_color_convert);
+    if (!picture) {
+        return false;
+    }
+
+    /* if the output format is not our input format, then a temporary
+   picture of the input format is needed too. It is then converted
+   to the required output format */
+    input_picture = NULL;
+    if ( need_color_convert ) {
+        input_picture = icv_alloc_picture_FFMPEG(input_pix_fmt, c->width, c->height, false);
+        if (!input_picture) {
             return false;
         }
+    }
 
-        outbuf = NULL;
-
-        if (!(oc->oformat->flags & AVFMT_RAWPICTURE)) {
-            /* allocate output buffer */
-            /* assume we will never get codec output with more than 4 bytes per pixel... */
-            outbuf_size = width*height*4;
-            outbuf = (uint8_t *) av_malloc(outbuf_size);
-        }
-
-        bool need_color_convert;
-        need_color_convert = (c->pix_fmt != input_pix_fmt);
-
-        /* allocate the encoded raw picture */
-        picture = icv_alloc_picture_FFMPEG(c->pix_fmt, c->width, c->height, need_color_convert);
-        if (!picture) {
-            return false;
-        }
-
-        /* if the output format is not our input format, then a temporary
-       picture of the input format is needed too. It is then converted
-       to the required output format */
-        input_picture = NULL;
-        if ( need_color_convert ) {
-            input_picture = icv_alloc_picture_FFMPEG(input_pix_fmt, c->width, c->height, false);
-            if (!input_picture) {
-                return false;
-            }
-        }
-
-        /* open the output file, if needed */
-        if (!(fmt->flags & AVFMT_NOFILE)) {
+    /* open the output file, if needed */
+    if (!(fmt->flags & AVFMT_NOFILE)) {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 2, 0)
-			if (url_fopen(&oc->pb, filename, URL_WRONLY) < 0)
+        if (url_fopen(&oc->pb, filename, URL_WRONLY) < 0)
 #else
-                if (avio_open(&oc->pb, filename, AVIO_FLAG_WRITE) < 0)
+            if (avio_open(&oc->pb, filename, AVIO_FLAG_WRITE) < 0)
 #endif
-                {
-                return false;
-            }
-        }
-
-        /* write the stream header, if any */
-        err=avformat_write_header(oc, NULL);
-        if(err < 0)
-        {
-            close();
-            remove(filename);
+            {
             return false;
         }
-        frame_width = width;
-        frame_height = height;
-        ok = true;
-        return true;
     }
 
-
-
-    CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG( const char* filename )
+    /* write the stream header, if any */
+    err=avformat_write_header(oc, NULL);
+    if(err < 0)
     {
-        CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
-        capture->init();
-        if( capture->open( filename ))
-            return capture;
-        capture->close();
-        free(capture);
-        return 0;
+        close();
+        remove(filename);
+        return false;
     }
+    frame_width = width;
+    frame_height = height;
+    ok = true;
+    return true;
+}
 
 
-    void cvReleaseCapture_FFMPEG(CvCapture_FFMPEG** capture)
+
+CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG( const char* filename )
+{
+    CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
+    capture->init();
+    if( capture->open( filename ))
+        return capture;
+    capture->close();
+    free(capture);
+    return 0;
+}
+
+
+void cvReleaseCapture_FFMPEG(CvCapture_FFMPEG** capture)
+{
+    if( capture && *capture )
     {
-        if( capture && *capture )
-        {
-            (*capture)->close();
-            free(*capture);
-            *capture = 0;
-        }
+        (*capture)->close();
+        free(*capture);
+        *capture = 0;
     }
+}
 
-    int cvSetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id, double value)
+int cvSetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id, double value)
+{
+    return capture->setProperty(prop_id, value);
+}
+
+double cvGetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id)
+{
+    return capture->getProperty(prop_id);
+}
+
+int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)
+{
+    return capture->grabFrame();
+}
+
+int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn)
+{
+    return capture->retrieveFrame(0, data, step, width, height, cn);
+}
+
+CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,
+                                                  int width, int height, int isColor )
+{
+    CvVideoWriter_FFMPEG* writer = (CvVideoWriter_FFMPEG*)malloc(sizeof(*writer));
+    writer->init();
+    if( writer->open( filename, fourcc, fps, width, height, isColor != 0 ))
+        return writer;
+    writer->close();
+    free(writer);
+    return 0;
+}
+
+
+void cvReleaseVideoWriter_FFMPEG( CvVideoWriter_FFMPEG** writer )
+{
+    if( writer && *writer )
     {
-        return capture->setProperty(prop_id, value);
+        (*writer)->close();
+        free(*writer);
+        *writer = 0;
     }
-
-    double cvGetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id)
-    {
-        return capture->getProperty(prop_id);
-    }
-
-    int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)
-    {
-        return capture->grabFrame();
-    }
-
-    int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn)
-    {
-        return capture->retrieveFrame(0, data, step, width, height, cn);
-    }
-
-    CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,
-                                                      int width, int height, int isColor )
-    {
-        CvVideoWriter_FFMPEG* writer = (CvVideoWriter_FFMPEG*)malloc(sizeof(*writer));
-        writer->init();
-        if( writer->open( filename, fourcc, fps, width, height, isColor != 0 ))
-            return writer;
-        writer->close();
-        free(writer);
-        return 0;
-    }
+}
 
 
-    void cvReleaseVideoWriter_FFMPEG( CvVideoWriter_FFMPEG** writer )
-    {
-        if( writer && *writer )
-        {
-            (*writer)->close();
-            free(*writer);
-            *writer = 0;
-        }
-    }
-
-
-    int cvWriteFrame_FFMPEG( CvVideoWriter_FFMPEG* writer,
-                             const unsigned char* data, int step,
-                             int width, int height, int cn, int origin)
-    {
-        return writer->writeFrame(data, step, width, height, cn, origin);
-    }
+int cvWriteFrame_FFMPEG( CvVideoWriter_FFMPEG* writer,
+                         const unsigned char* data, int step,
+                         int width, int height, int cn, int origin)
+{
+    return writer->writeFrame(data, step, width, height, cn, origin);
+}
 
