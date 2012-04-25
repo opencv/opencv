@@ -124,7 +124,7 @@ void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
         {
             float d = max(fabsf(ptr_u[j]), fabsf(ptr_v[j]));
 
-            if (d > maxDisplacement) 
+            if (d > maxDisplacement)
                 maxDisplacement = d;
         }
     }
@@ -152,11 +152,16 @@ void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
 int main(int argc, const char* argv[])
 {
     const char* keys =
-       "{ h  | help           | false | print help message }"
-       "{ l  | left           |       | specify left image }"
-       "{ r  | right          |       | specify right image }"
-       "{ g  | gray           | false | use grayscale sources [PyrLK Sparse] }"
-       "{ p  | points         | 4000  | specify points count [GoodFeatureToTrack] }";
+        "{ h            | help           | false | print help message }"
+        "{ l            | left           |       | specify left image }"
+        "{ r            | right          |       | specify right image }"
+        "{ gray         | gray           | false | use grayscale sources [PyrLK Sparse] }"
+        "{ win_size     | win_size       | 21    | specify windows size [PyrLK] }"
+        "{ max_level    | max_level      | 3     | specify max level [PyrLK] }"
+        "{ iters        | iters          | 30    | specify iterations count [PyrLK] }"
+        "{ deriv_lambda | deriv_lambda   | 0.5   | specify deriv lambda [PyrLK] }"
+        "{ points       | points         | 4000  | specify points count [GoodFeatureToTrack] }"
+        "{ min_dist     | min_dist       | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
 
     CommandLineParser cmd(argc, argv, keys);
 
@@ -178,8 +183,13 @@ int main(int argc, const char* argv[])
     }
 
     bool useGray = cmd.get<bool>("gray");
+    int winSize = cmd.get<int>("win_size");
+    int maxLevel = cmd.get<int>("max_level");
+    int iters = cmd.get<int>("iters");
+    double derivLambda = cmd.get<double>("deriv_lambda");
     int points = cmd.get<int>("points");
-    
+    double minDist = cmd.get<double>("min_dist");
+
     Mat frame0 = imread(fname0);
     Mat frame1 = imread(fname1);
 
@@ -210,7 +220,7 @@ int main(int argc, const char* argv[])
 
     // goodFeaturesToTrack
 
-    GoodFeaturesToTrackDetector_GPU detector(points, 0.01, 0.0);
+    GoodFeaturesToTrackDetector_GPU detector(points, 0.01, minDist);
 
     GpuMat d_frame0Gray(frame0Gray);
     GpuMat d_prevPts;
@@ -220,6 +230,12 @@ int main(int argc, const char* argv[])
     // Sparse
 
     PyrLKOpticalFlow d_pyrLK;
+
+    d_pyrLK.winSize.width = winSize;
+    d_pyrLK.winSize.height = winSize;
+    d_pyrLK.maxLevel = maxLevel;
+    d_pyrLK.iters = iters;
+    d_pyrLK.derivLambda = derivLambda;
 
     GpuMat d_frame0(frame0);
     GpuMat d_frame1(frame1);
@@ -252,13 +268,13 @@ int main(int argc, const char* argv[])
     d_pyrLK.dense(d_frame0Gray, d_frame1Gray, d_u, d_v);
 
     // Draw flow field
-    
+
     Mat flowField;
     getFlowField(Mat(d_u), Mat(d_v), flowField);
 
     imshow("PyrLK [Dense] Flow Field", flowField);
 
-    #ifdef HAVE_OPENGL        
+    #ifdef HAVE_OPENGL
         setOpenGlContext("PyrLK [Dense]");
 
         GpuMat d_vertex, d_colors;
