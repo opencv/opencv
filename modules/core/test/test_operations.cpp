@@ -808,6 +808,22 @@ bool CV_OperationsTest::TestMatxMultiplication()
         if(res2[0] != 14.0) throw test_excep(); 
         if(res2[1] != 6.0) throw test_excep(); 
         if(res2[2] != 1.0) throw test_excep();
+        
+        Matx44f mat44f(1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1);
+        Matx44d mat44d(1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1);
+        Scalar s(4, 3, 2, 1);
+        Scalar sf = mat44f*s;
+        Scalar sd = mat44d*s;
+        
+        if(sf[0] != 10.0) throw test_excep(); 
+        if(sf[1] != 6.0) throw test_excep(); 
+        if(sf[2] != 3.0) throw test_excep();
+        if(sf[3] != 1.0) throw test_excep();
+        
+        if(sd[0] != 10.0) throw test_excep(); 
+        if(sd[1] != 6.0) throw test_excep(); 
+        if(sd[2] != 3.0) throw test_excep();
+        if(sd[3] != 1.0) throw test_excep();
     } 
     catch(const test_excep&) 
     { 

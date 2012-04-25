@@ -676,14 +676,23 @@ Matx<_Tp, 4, 1> operator * (const Matx<_Tp, 4, 4>& a, const Point3_<_Tp>& b)
     return a*Matx<_Tp, 4, 1>(b.x, b.y, b.z, 1);
 }    
 
-    
+
 template<typename _Tp> static inline
 Scalar operator * (const Matx<_Tp, 4, 4>& a, const Scalar& b)
 {
-    return Scalar(a*Matx<_Tp, 4, 1>(b[0],b[1],b[2],b[3]));
-}    
-    
+    Matx<double, 4, 1> c(Matx<double, 4, 4>(a), b, Matx_MatMulOp());
+    return reinterpret_cast<const Scalar&>(c);
+}
 
+    
+static inline
+Scalar operator * (const Matx<double, 4, 4>& a, const Scalar& b)
+{
+    Matx<double, 4, 1> c(a, b, Matx_MatMulOp());
+    return reinterpret_cast<const Scalar&>(c);
+}
+
+    
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, m, n> Matx<_Tp, m, n>::mul(const Matx<_Tp, m, n>& a) const
 {
