@@ -272,23 +272,72 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(5, Core.countNonZero(eye));
 
     }
+    
+    public Mat getTestMat(int size, int type) {
+    	Mat m = new Mat(size, size, type);
+    	final int ch = CvType.channels(type);
+    	double buff[] = new double[size*size * ch];
+    	for(int i=0; i<size; i++)
+    		for(int j=0; j<size; j++)
+    			for(int k=0; k<ch; k++) {
+    				buff[i*size*ch + j*ch + k] = 100*i + 10*j + k;
+    			}
+    	m.put(0, 0, buff);
+    	return m;
+    }
 
-    public void testGetIntInt() {
-        Mat src = new Mat(3, 3, CvType.CV_8UC2, new Scalar(2, 5));
-        double[] actualArray = src.get(1, 1);
+    public void testGetIntInt_8U() {
+        Mat m = getTestMat(5, CvType.CV_8UC2);
 
-        assertTrue(Arrays.equals(new double[] { 2, 5 }, actualArray));
+    	// whole Mat
+        assertTrue(Arrays.equals(new double[] {0, 1}, m.get(0, 0)));
+        assertTrue(Arrays.equals(new double[] {240, 241}, m.get(2, 4)));
+        assertTrue(Arrays.equals(new double[] {255, 255}, m.get(4, 4)));
+        
+    	// sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        assertTrue(Arrays.equals(new double[] {230, 231}, sm.get(0, 0)));
+        assertTrue(Arrays.equals(new double[] {255, 255}, sm.get(1, 1)));
+    }
+
+    public void testGetIntInt_32S() {
+        Mat m = getTestMat(5, CvType.CV_32SC3);
+
+    	// whole Mat
+        assertTrue(Arrays.equals(new double[] {0, 1, 2}, m.get(0, 0)));
+        assertTrue(Arrays.equals(new double[] {240, 241, 242}, m.get(2, 4)));
+        assertTrue(Arrays.equals(new double[] {440, 441, 442}, m.get(4, 4)));
+        
+    	// sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        assertTrue(Arrays.equals(new double[] {230, 231, 232}, sm.get(0, 0)));
+        assertTrue(Arrays.equals(new double[] {340, 341, 342}, sm.get(1, 1)));
+    }
+
+    public void testGetIntInt_64F() {
+        Mat m = getTestMat(5, CvType.CV_64FC1);
+
+    	// whole Mat
+        assertTrue(Arrays.equals(new double[] {0}, m.get(0, 0)));
+        assertTrue(Arrays.equals(new double[] {240}, m.get(2, 4)));
+        assertTrue(Arrays.equals(new double[] {440}, m.get(4, 4)));
+        
+    	// sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        assertTrue(Arrays.equals(new double[] {230}, sm.get(0, 0)));
+        assertTrue(Arrays.equals(new double[] {340}, sm.get(1, 1)));
     }
 
     public void testGetIntIntByteArray() {
-        Mat m = new Mat(5, 5, CvType.CV_8UC3, new Scalar(1, 2, 3));
+        Mat m = getTestMat(5, CvType.CV_8UC3);
         byte[] goodData = new byte[9];
         byte[] badData = new byte[7];
         
+    	// whole Mat
         int bytesNum = m.get(1, 1, goodData);
 
-        assertTrue(Arrays.equals(new byte[] { 1, 2, 3, 1, 2, 3, 1, 2, 3 }, goodData));
         assertEquals(9, bytesNum);
+        assertTrue(Arrays.equals(new byte[] { 110, 111, 112, 120, 121, 122, (byte) 130, (byte) 131, (byte) 132 }, goodData));
 
         try {
             m.get(2, 2, badData);
@@ -296,38 +345,105 @@ public class MatTest extends OpenCVTestCase {
         } catch (UnsupportedOperationException e) {
             // expected
         }
+
+        // sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        byte buff00[] = new byte[3];
+        bytesNum = sm.get(0, 0, buff00);
+        assertEquals(3, bytesNum);
+        assertTrue(Arrays.equals(new byte[] {(byte) 230, (byte) 231, (byte) 232}, buff00));
+        byte buff11[] = new byte[3];
+        bytesNum = sm.get(1, 1, buff11);
+        assertEquals(3, bytesNum);
+        assertTrue(Arrays.equals(new byte[] {(byte) 255, (byte) 255, (byte) 255}, buff11));
     }
 
     public void testGetIntIntDoubleArray() {
-        Mat src = new Mat(2, 2, CvType.CV_64F);
-        double[] doubleArray = { 1.0, 2.0, 3.0 };
+        Mat m = getTestMat(5, CvType.CV_64F);
+        double buff[] = new double[4];
 
-        int numOfBytes = src.get(0, 0, doubleArray);
-        assertEquals(24, numOfBytes);
-    }
+    	// whole Mat
+        int bytesNum = m.get(1, 1, buff);
+
+        assertEquals(32, bytesNum);
+        assertTrue(Arrays.equals(new double[] { 110, 120, 130, 140 }, buff));
+
+        // sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        double buff00[] = new double[2];
+        bytesNum = sm.get(0, 0, buff00);
+        assertEquals(16, bytesNum);
+        assertTrue(Arrays.equals(new double[] {230, 240}, buff00));
+        double buff11[] = new double[] {0, 0};
+        bytesNum = sm.get(1, 1, buff11);
+        assertEquals(8, bytesNum);
+        assertTrue(Arrays.equals(new double[] {340, 0}, buff11));
+}
 
     public void testGetIntIntFloatArray() {
-        Mat src = new Mat(2, 2, CvType.CV_32F);
-        float[] floatArray = { 3.0f, 1.0f, 4.0f };
+        Mat m = getTestMat(5, CvType.CV_32F);
+        float buff[] = new float[4];
 
-        int numOfBytes = src.get(0, 0, floatArray);
-        assertEquals(12, numOfBytes);
+    	// whole Mat
+        int bytesNum = m.get(1, 1, buff);
+
+        assertEquals(16, bytesNum);
+        assertTrue(Arrays.equals(new float[] { 110, 120, 130, 140 }, buff));
+
+        // sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        float buff00[] = new float[2];
+        bytesNum = sm.get(0, 0, buff00);
+        assertEquals(8, bytesNum);
+        assertTrue(Arrays.equals(new float[] {230, 240}, buff00));
+        float buff11[] = new float[] {0, 0};
+        bytesNum = sm.get(1, 1, buff11);
+        assertEquals(4, bytesNum);
+        assertTrue(Arrays.equals(new float[] {340, 0}, buff11));
     }
 
     public void testGetIntIntIntArray() {
-        Mat src = new Mat(2, 2, CvType.CV_32S);
-        int[] intArray = { 3, 1, 4, 7 };
+        Mat m = getTestMat(5, CvType.CV_32SC2);
+        int[] buff = new int[6];
+        
+    	// whole Mat
+        int bytesNum = m.get(1, 1, buff);
 
-        int numOfBytes = src.get(0, 0, intArray);
-        assertEquals(16, numOfBytes);
+        assertEquals(24, bytesNum);
+        assertTrue(Arrays.equals(new int[] { 110, 111, 120, 121, 130, 131 }, buff));
+
+        // sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        int buff00[] = new int[4];
+        bytesNum = sm.get(0, 0, buff00);
+        assertEquals(16, bytesNum);
+        assertTrue(Arrays.equals(new int[] {230, 231, 240, 241}, buff00));
+        int buff11[] = new int[]{0, 0, 0, 0};
+        bytesNum = sm.get(1, 1, buff11);
+        assertEquals(8, bytesNum);
+        assertTrue(Arrays.equals(new int[] {340, 341, 0, 0}, buff11));
     }
 
     public void testGetIntIntShortArray() {
-        Mat src = new Mat(2, 3, CvType.CV_16U, new Scalar(11));
-        short[] data = { 3, 1, 4, 7 };
+        Mat m = getTestMat(5, CvType.CV_16SC2);
+        short[] buff = new short[6];
+        
+    	// whole Mat
+        int bytesNum = m.get(1, 1, buff);
 
-        int numOfBytes = src.get(1, 0, data);
-        assertEquals(6, numOfBytes);
+        assertEquals(12, bytesNum);
+        assertTrue(Arrays.equals(new short[] { 110, 111, 120, 121, 130, 131 }, buff));
+
+        // sub-Mat
+        Mat sm = m.submat(2, 4, 3, 5);
+        short buff00[] = new short[4];
+        bytesNum = sm.get(0, 0, buff00);
+        assertEquals(8, bytesNum);
+        assertTrue(Arrays.equals(new short[] {230, 231, 240, 241}, buff00));
+        short buff11[] = new short[]{0, 0, 0, 0};
+        bytesNum = sm.get(1, 1, buff11);
+        assertEquals(4, bytesNum);
+        assertTrue(Arrays.equals(new short[] {340, 341, 0, 0}, buff11));
     }
 
     public void testGetNativeObjAddr() {
@@ -531,16 +647,33 @@ public class MatTest extends OpenCVTestCase {
 
     public void testPutIntIntByteArray() {
         Mat m = new Mat(5, 5, CvType.CV_8UC3, new Scalar(1, 2, 3));
-        byte[] bytes = new byte[] { 10, 20, 30, 40, 50, 60 };
+        Mat sm = m.submat(2, 4, 3, 5);
+        byte[] buff  = new byte[] { 0, 0, 0, 0, 0, 0 };
+        byte[] buff0 = new byte[] { 10, 20, 30, 40, 50, 60 };
+        byte[] buff1 = new byte[] { -1, -2, -3, -4, -5, -6 };
         
-        int bytesNum = m.put(1, 2, bytes);
+        int bytesNum = m.put(1, 2, buff0);
         
         assertEquals(6, bytesNum);
-        byte buff[] = new byte[3];
+        bytesNum = m.get(1, 2, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff0));
+        
+        bytesNum = sm.put(0, 0, buff1);
+
+        assertEquals(6, bytesNum);
+        bytesNum = sm.get(0, 0, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff1));
+        bytesNum = m.get(2, 3, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff1));
+
         Mat m1 = m.row(1);
-        bytesNum = m1.get(0, 3, buff);
-        assertEquals(3, bytesNum);
-        assertTrue(Arrays.equals(new byte[]{40, 50, 60}, buff));
+        bytesNum = m1.get(0, 2, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, buff0));
+
         try {
             byte[] bytes2 = new byte[] { 10, 20, 30, 40, 50 };
             m.put(2, 2, bytes2);
@@ -552,23 +685,25 @@ public class MatTest extends OpenCVTestCase {
 
     public void testPutIntIntDoubleArray() {
         Mat m = new Mat(5, 5, CvType.CV_8UC3, new Scalar(1, 2, 3));
+        Mat sm = m.submat(2, 4, 3, 5);
+        byte[] buff  = new byte[] { 0, 0, 0, 0, 0, 0 };
         
-        int bytesNum = m.put(2, 1, 10, 20, 30, 40, 50, 60);
+        int bytesNum = m.put(1, 2, 10, 20, 30, 40, 50, 60);
         
         assertEquals(6, bytesNum);
-        Mat m1 = m.row(2);
-        byte buff[] = new byte[3];
-        bytesNum = m1.get(0, 2, buff);
-        assertEquals(3, bytesNum);
-        assertTrue(Arrays.equals(new byte[]{40, 50, 60}, buff));
-        assertArrayEquals(new double[]{10, 20, 30}, m.get(2, 1), EPS);
-        
-        try {
-            m.put(2, 2, 11, 22, 33, 44, 55);
-            fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
-        } catch (UnsupportedOperationException e) {
-            // expected
-        }
+        bytesNum = m.get(1, 2, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, new byte[]{10, 20, 30, 40, 50, 60}));
+
+        bytesNum = sm.put(0, 0, 255, 254, 253, 252, 251, 250);
+
+        assertEquals(6, bytesNum);
+        bytesNum = sm.get(0, 0, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, new byte[]{-1, -2, -3, -4, -5, -6}));
+        bytesNum = m.get(2, 3, buff);
+        assertEquals(6, bytesNum);
+        assertTrue(Arrays.equals(buff, new byte[]{-1, -2, -3, -4, -5, -6}));
     }
 
     public void testPutIntIntFloatArray() {

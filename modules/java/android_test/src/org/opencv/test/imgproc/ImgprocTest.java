@@ -275,7 +275,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, hist, EPS);
     }
 
-    public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2d() {
+    public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2D() {
         List<Mat> images = Arrays.asList(gray255, gray128);
         MatOfInt channels = new MatOfInt(0, 1);
         MatOfInt histSize = new MatOfInt(10, 10);
@@ -290,6 +290,43 @@ public class ImgprocTest extends OpenCVTestCase {
             }
         };
         assertMatEqual(truth, hist, EPS);
+    }
+
+    public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat3D() {
+        List<Mat> images = Arrays.asList(rgbLena);
+        
+        Mat hist3D = new Mat();
+        List<Mat> histList = Arrays.asList( new Mat[] {new Mat(), new Mat(), new Mat()} );
+        
+        MatOfInt histSize = new MatOfInt(10);
+        MatOfFloat ranges = new MatOfFloat(0f, 256f);
+        
+        for(int i=0; i<rgbLena.channels(); i++)
+        {
+            Imgproc.calcHist(images, new MatOfInt(i), new Mat(), histList.get(i), histSize, ranges);
+
+            assertEquals(10, histList.get(i).checkVector(1));
+        }
+        
+        Core.merge(histList, hist3D);
+
+        assertEquals(CvType.CV_32FC3, hist3D.type());
+        
+        Mat truth = new Mat(10, 1, CvType.CV_32FC3);
+        truth.put(0, 0,
+        		 0, 24870, 0,
+        		 1863, 31926, 1,
+        		 56682, 37677, 2260,
+        		 77278, 44751, 32436,
+        		 69397, 41343, 18526,
+        		 27180, 40407, 18658,
+        		 21101, 15993, 32042,
+        		 8343, 18585, 47786,
+        		 300, 6567, 80988,
+        		 0, 25, 29447
+        		);
+        
+        assertMatEqual(truth, hist3D, EPS);
     }
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloatBoolean() {

@@ -2,11 +2,12 @@
 
 #include "converters.h"
 
-#ifdef DEBUG
 #include <android/log.h>
-#define MODULE_LOG_TAG "OpenCV.core.Mat"
-#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-#else //DEBUG
+#define LOG_TAG "org.opencv.core.Mat"
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
+#ifdef DEBUG
+#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
+#else //!DEBUG
 #define LOGD(...)
 #endif //DEBUG
 
@@ -1979,7 +1980,7 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
     if(! buff) return 0;
 
     count *= sizeof(T);
-    int rest = ((m->rows - row) * m->cols - col) * m->channels() * sizeof(T);
+    int rest = ((m->rows - row) * m->cols - col) * m->elemSize();
     if(count>rest) count = rest;
     int res = count;
 
@@ -1988,14 +1989,14 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
         memcpy(m->ptr(row, col), buff, count);
     } else {
         // row by row
-        int num = (m->cols - col - 1) * m->channels() * sizeof(T); // 1st partial row
+        int num = (m->cols - col) * m->elemSize(); // 1st partial row
         if(count<num) num = count;
         uchar* data = m->ptr(row++, col);
         while(count>0){
             memcpy(data, buff, num);
             count -= num;
             buff += num;
-            num = m->cols * m->channels() * sizeof(T);
+            num = m->cols * m->elemSize();
             if(count<num) num = count;
             data = m->ptr(row++, 0);
         }
@@ -2197,8 +2198,23 @@ JNIEXPORT jstring JNICALL Java_org_opencv_core_Mat_nDump
 {
     cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
     std::stringstream s;
-    s << *me;
-    return env->NewStringUTF(s.str().c_str());
+    try {
+            LOGD("Mat::nDump()");
+    
+            s << *me;
+            return env->NewStringUTF(s.str().c_str());
+        } catch(cv::Exception e) {
+            LOGE("Mat::nDump() catched cv::Exception: %s", e.what());
+            jclass je = env->FindClass("org/opencv/core/CvException");
+            if(!je) je = env->FindClass("java/lang/Exception");
+            env->ThrowNew(je, e.what());
+            return env->NewStringUTF("ERROR");
+        } catch (...) {
+            LOGE("Mat::nDump() catched unknown exception (...)");
+            jclass je = env->FindClass("java/lang/Exception");
+            env->ThrowNew(je, "Unknown exception in JNI code {Mat::nDump()}");
+            return env->NewStringUTF("ERROR");
+        }
 }
 
 
