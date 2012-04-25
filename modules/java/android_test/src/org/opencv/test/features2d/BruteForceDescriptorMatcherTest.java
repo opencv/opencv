@@ -19,8 +19,6 @@ import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
-import android.util.Log;
-
 public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
     DescriptorMatcher matcher;
@@ -86,18 +84,11 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
-        		/*
-                new DMatch(0, 0, 0, 0.643284f),
-                new DMatch(1, 1, 0, 0.92945856f),
-                new DMatch(2, 1, 0, 0.2841479f),
-                new DMatch(3, 1, 0, 0.9194034f),
-                new DMatch(4, 1, 0, 0.3006621f)
-                */
-        		new DMatch(0, 0, 0, 1.049694f), 
-        		new DMatch(1, 0, 0, 1.083795f), 
-        		new DMatch(2, 1, 0, 0.484352f), 
-        		new DMatch(3, 0, 0, 1.098605f), 
-        		new DMatch(4, 1, 0, 0.494587f)
+        		new DMatch(0, 0, 0, 1.049694f),
+        		new DMatch(1, 0, 0, 1.098605f),
+        		new DMatch(2, 1, 0, 0.494587f),
+        		new DMatch(3, 1, 0, 0.484352f),
+        		new DMatch(4, 0, 0, 1.083795f)
                 };
 
         super.setUp();
@@ -180,9 +171,10 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         Mat query = getQueryDescriptors();
         List<MatOfDMatch> matches = new ArrayList<MatOfDMatch>();
         matcher.knnMatch(query, train, matches, k);
+        /*
         Log.d("knnMatch", "train = " + train);
         Log.d("knnMatch", "query = " + query);
-        /*
+
         matcher.add(train);
         matcher.knnMatch(query, matches, k);
         */
@@ -190,7 +182,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         for(int i = 0; i<matches.size(); i++)
         {
         	MatOfDMatch vdm = matches.get(i); 
-        	Log.d("knn", "vdm["+i+"]="+vdm.dump());
+        	//Log.d("knn", "vdm["+i+"]="+vdm.dump());
             assertTrue(Math.min(k, train.rows()) >= vdm.total());
             for(DMatch dm : vdm.toArray())
             {
