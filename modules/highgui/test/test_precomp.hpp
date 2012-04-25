@@ -61,7 +61,19 @@ namespace cvtest
 {
 
 string fourccToString(int fourcc);
-
+    
+struct VideoFormat
+{
+    VideoFormat() { fourcc = -1; }
+    VideoFormat(const string& _ext, int _fourcc) : ext(_ext), fourcc(_fourcc) {}
+    bool empty() const { return ext.empty(); }
+    
+    string ext;
+    int fourcc;
+};
+    
+extern const VideoFormat g_specific_fmt_list[];
+    
 }
 
 #endif

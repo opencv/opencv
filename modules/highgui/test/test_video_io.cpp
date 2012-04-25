@@ -46,38 +46,33 @@
 using namespace cv;
 using namespace std;
 
-string cvtest::fourccToString(int fourcc)
+namespace cvtest
+{
+
+string fourccToString(int fourcc)
 {
     return format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
 }
-
-struct VideoFmt
-{
-    VideoFmt() { fourcc = -1; }
-    VideoFmt(const string& _ext, int _fourcc) : ext(_ext), fourcc(_fourcc) {}
-    bool empty() const { return ext.empty(); }
     
-    string ext;
-    int fourcc;
-};
-
-static const VideoFmt specific_fmt_list[] =
+const VideoFormat g_specific_fmt_list[] =
 {
-    VideoFmt("avi", CV_FOURCC('m', 'p', 'e', 'g')),
-    VideoFmt("avi", CV_FOURCC('M', 'J', 'P', 'G')),
-    VideoFmt("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
-    VideoFmt("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
-    VideoFmt("mov", CV_FOURCC('m', 'p', '4', 'v')),
-    VideoFmt()
+    VideoFormat("avi", CV_FOURCC('m', 'p', 'e', 'g')),
+    VideoFormat("avi", CV_FOURCC('M', 'J', 'P', 'G')),
+    VideoFormat("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
+    VideoFormat("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
+    VideoFormat("mov", CV_FOURCC('m', 'p', '4', 'v')),
+    VideoFormat()
 };
+    
+}
 
 class CV_HighGuiTest : public cvtest::BaseTest
 {
 protected:
     void ImageTest(const string& dir);
-    void VideoTest (const string& dir, const VideoFmt& fmt);
+    void VideoTest (const string& dir, const cvtest::VideoFormat& fmt);
     void SpecificImageTest (const string& dir);
-    void SpecificVideoTest (const string& dir, const VideoFmt& fmt);
+    void SpecificVideoTest (const string& dir, const cvtest::VideoFormat& fmt);
 
     CV_HighGuiTest() {}
     ~CV_HighGuiTest() {}
@@ -116,16 +111,6 @@ public:
     void run(int);
 };
 
-double PSNR(const Mat& m1, const Mat& m2)
-{
-    Mat tmp;
-    absdiff( m1.reshape(1), m2.reshape(1), tmp);
-    multiply(tmp, tmp, tmp);
-
-    double MSE = 1.0/(tmp.cols * tmp.rows) * sum(tmp)[0];
-
-    return 20 * log10(255.0 / sqrt(MSE));
-}
 
 void CV_HighGuiTest::ImageTest(const string& dir)
 {
@@ -233,7 +218,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
 }
 
 
-void CV_HighGuiTest::VideoTest(const string& dir, const VideoFmt& fmt)
+void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt)
 {
     string src_file = dir + "../cv/shared/video_for_test.avi";
     string tmp_name = format("video.%s", fmt.ext.c_str());
@@ -397,7 +382,7 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
 }
 
 
-void CV_HighGuiTest::SpecificVideoTest(const string& dir, const VideoFmt& fmt)
+void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFormat& fmt)
 {
     string ext = fmt.ext;
     int fourcc = fmt.fourcc;
@@ -505,17 +490,23 @@ void CV_SpecificImageTest::run(int)
 
 void CV_VideoTest::run(int)
 {
-    for (int i = 0; !specific_fmt_list[i].empty(); ++i)
+    for (int i = 0; ; ++i)
     {
-        VideoTest(ts->get_data_path(), specific_fmt_list[i]);
+        const cvtest::VideoFormat& fmt = cvtest::g_specific_fmt_list[i];
+        if( fmt.empty() )
+            break;
+        VideoTest(ts->get_data_path(), fmt);
     }
 }
 
 void CV_SpecificVideoTest::run(int)
 {
-    for (int i = 0; !specific_fmt_list[i].empty(); ++i)
+    for (int i = 0; ; ++i)
     {
-        SpecificVideoTest(ts->get_data_path(), specific_fmt_list[i]);
+        const cvtest::VideoFormat& fmt = cvtest::g_specific_fmt_list[i];
+        if( fmt.empty() )
+            break;
+        SpecificVideoTest(ts->get_data_path(), fmt);
     }
 }
 
