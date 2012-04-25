@@ -45,6 +45,7 @@
 #include "opencv2/videostab/ring_buffer.hpp"
 #include "opencv2/videostab/outlier_rejection.hpp"
 #include "opencv2/opencv_modules.hpp"
+#include "clp.hpp"
 
 using namespace std;
 
@@ -434,25 +435,19 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 }
 
 
-PyrLkRobustMotionEstimatorBase::PyrLkRobustMotionEstimatorBase(MotionModel model)
+RansacMotionEstimator::RansacMotionEstimator(MotionModel model)
     : GlobalMotionEstimatorBase(model)
 {
+    setDetector(new GoodFeaturesToTrackDetector());
+    setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());
+    setGridSize(Size(0,0));
     setRansacParams(RansacParams::default2dMotion(model));
     setOutlierRejector(new NullOutlierRejector());
     setMinInlierRatio(0.1f);
 }
 
 
-PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator(MotionModel model)
-    : PyrLkRobustMotionEstimatorBase(model)
-{
-    setDetector(new GoodFeaturesToTrackDetector());
-    setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());
-    setGridSize(Size(0,0));
-}
-
-
-Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
+Mat RansacMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 {
     // find keypoints
 
@@ -549,14 +544,17 @@ Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, b
 
 
 #if HAVE_OPENCV_GPU
-PyrLkRobustMotionEstimatorGpu::PyrLkRobustMotionEstimatorGpu(MotionModel model)
-    : PyrLkRobustMotionEstimatorBase(model)
+RansacMotionEstimatorGpu::RansacMotionEstimatorGpu(MotionModel model)
+    : GlobalMotionEstimatorBase(model)
 {
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
+    setRansacParams(RansacParams::default2dMotion(model));
+    setOutlierRejector(new NullOutlierRejector());
+    setMinInlierRatio(0.1f);
 }
 
 
-Mat PyrLkRobustMotionEstimatorGpu::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
+Mat RansacMotionEstimatorGpu::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 {
     frame0_.upload(frame0);
     frame1_.upload(frame1);
@@ -564,7 +562,7 @@ Mat PyrLkRobustMotionEstimatorGpu::estimate(const Mat &frame0, const Mat &frame1
 }
 
 
-Mat PyrLkRobustMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok)
+Mat RansacMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok)
 {
     // convert frame to gray if it's color
 
@@ -650,6 +648,188 @@ Mat PyrLkRobustMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu
     return M;
 }
 #endif // #if HAVE_OPENCV_GPU
+
+
+LpBasedMotionEstimator::LpBasedMotionEstimator(MotionModel model)
+    : GlobalMotionEstimatorBase(model)
+{
+    setDetector(new GoodFeaturesToTrackDetector());
+    setOptFlowEstimator(new SparsePyrLkOptFlowEstimator());
+    setOutlierRejector(new NullOutlierRejector());
+}
+
+// TODO will estimation of all motions as one LP problem be faster?
+
+Mat LpBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
+{
+    // find keypoints
+
+    detector_->detect(frame0, keypointsPrev_);
+
+    // extract points from keypoints
+
+    pointsPrev_.resize(keypointsPrev_.size());
+    for (size_t i = 0; i < keypointsPrev_.size(); ++i)
+        pointsPrev_[i] = keypointsPrev_[i].pt;
+
+    // find correspondences
+
+    optFlowEstimator_->run(frame0, frame1, pointsPrev_, points_, status_, noArray());
+
+    // leave good correspondences only
+
+    pointsPrevGood_.clear(); pointsPrevGood_.reserve(points_.size());
+    pointsGood_.clear(); pointsGood_.reserve(points_.size());
+
+    for (size_t i = 0; i < points_.size(); ++i)
+    {
+        if (status_[i])
+        {
+            pointsPrevGood_.push_back(pointsPrev_[i]);
+            pointsGood_.push_back(points_[i]);
+        }
+    }
+
+    // perfrom outlier rejection
+
+    IOutlierRejector *outlierRejector = static_cast<IOutlierRejector*>(outlierRejector_);
+    if (!dynamic_cast<NullOutlierRejector*>(outlierRejector))
+    {
+        pointsPrev_.swap(pointsPrevGood_);
+        points_.swap(pointsGood_);
+
+        outlierRejector_->process(frame0.size(), pointsPrev_, points_, status_);
+
+        pointsPrevGood_.clear(); pointsPrevGood_.reserve(points_.size());
+        pointsGood_.clear(); pointsGood_.reserve(points_.size());
+
+        for (size_t i = 0; i < points_.size(); ++i)
+        {
+            if (status_[i])
+            {
+                pointsPrevGood_.push_back(pointsPrev_[i]);
+                pointsGood_.push_back(points_[i]);
+            }
+        }
+    }
+
+    int npoints = static_cast<int>(pointsGood_.size());
+
+    // prepare LP problem
+
+#ifndef HAVE_CLP
+
+    CV_Error(CV_StsError, "The library is built without Clp support");
+    if (ok) *ok = false;
+    return Mat::eye(3, 3, CV_32F);
+
+#else
+
+    CV_Assert(motionModel_ <= MM_AFFINE && motionModel_ != MM_RIGID);
+
+    int ncols = 6 + 2*npoints;
+    int nrows = 4*npoints;
+
+    if (motionModel_ == MM_SIMILARITY)
+        nrows += 2;
+    else if (motionModel_ == MM_TRANSLATION_AND_SCALE)
+        nrows += 3;
+    else if (motionModel_ == MM_TRANSLATION)
+        nrows += 4;
+
+    rows_.clear();
+    cols_.clear();
+    elems_.clear();
+
+    obj_.assign(ncols, 0);
+    collb_.assign(ncols, -INF);
+    colub_.assign(ncols, INF);
+
+    int c = 6;
+
+    for (int i = 0; i < npoints; ++i, c += 2)
+    {
+        obj_[c] = 1;
+        collb_[c] = 0;
+
+        obj_[c+1] = 1;
+        collb_[c+1] = 0;
+    }
+
+    elems_.clear();
+    rowlb_.assign(nrows, -INF);
+    rowub_.assign(nrows, INF);
+
+    int r = 0;
+    Point2f p0, p1;
+
+    for (int i = 0; i < npoints; ++i, r += 4)
+    {
+        p0 = pointsPrevGood_[i];
+        p1 = pointsGood_[i];
+
+        set(r, 0, p0.x); set(r, 1, p0.y); set(r, 2, 1); set(r, 6+2*i, -1);
+        rowub_[r] = p1.x;
+
+        set(r+1, 3, p0.x); set(r+1, 4, p0.y); set(r+1, 5, 1); set(r+1, 6+2*i+1, -1);
+        rowub_[r+1] = p1.y;
+
+        set(r+2, 0, p0.x); set(r+2, 1, p0.y); set(r+2, 2, 1); set(r+2, 6+2*i, 1);
+        rowlb_[r+2] = p1.x;
+
+        set(r+3, 3, p0.x); set(r+3, 4, p0.y); set(r+3, 5, 1); set(r+3, 6+2*i+1, 1);
+        rowlb_[r+3] = p1.y;
+    }
+
+    if (motionModel_ == MM_SIMILARITY)
+    {
+        set(r, 0, 1); set(r, 4, -1); rowlb_[r] = rowub_[r] = 0;
+        set(r+1, 1, 1); set(r+1, 3, 1); rowlb_[r+1] = rowub_[r+1] = 0;
+    }
+    else if (motionModel_ == MM_TRANSLATION_AND_SCALE)
+    {
+        set(r, 0, 1); set(r, 4, -1); rowlb_[r] = rowub_[r] = 0;
+        set(r+1, 1, 1); rowlb_[r+1] = rowub_[r+1] = 0;
+        set(r+2, 3, 1); rowlb_[r+2] = rowub_[r+2] = 0;
+    }
+    else if (motionModel_ == MM_TRANSLATION)
+    {
+        set(r, 0, 1); rowlb_[r] = rowub_[r] = 1;
+        set(r+1, 1, 1); rowlb_[r+1] = rowub_[r+1] = 0;
+        set(r+2, 3, 1); rowlb_[r+2] = rowub_[r+2] = 0;
+        set(r+3, 4, 1); rowlb_[r+3] = rowub_[r+3] = 1;
+    }
+
+    // solve
+
+    CoinPackedMatrix A(true, &rows_[0], &cols_[0], &elems_[0], elems_.size());
+    A.setDimensions(nrows, ncols);
+
+    ClpSimplex model(false);
+    model.loadProblem(A, &collb_[0], &colub_[0], &obj_[0], &rowlb_[0], &rowub_[0]);
+
+    ClpDualRowSteepest dualSteep(1);
+    model.setDualRowPivotAlgorithm(dualSteep);
+    model.scaling(1);
+
+    model.dual();
+
+    // extract motion
+
+    const double *sol = model.getColSolution();
+
+    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    M(0,0) = sol[0];
+    M(0,1) = sol[1];
+    M(0,2) = sol[2];
+    M(1,0) = sol[3];
+    M(1,1) = sol[4];
+    M(1,2) = sol[5];
+
+    if (ok) *ok = true;
+    return M;
+#endif
+}
 
 
 Mat getMotion(int from, int to, const vector<Mat> &motions)

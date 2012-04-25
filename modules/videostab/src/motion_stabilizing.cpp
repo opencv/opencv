@@ -44,23 +44,7 @@
 #include "opencv2/videostab/motion_stabilizing.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
-
-#ifdef HAVE_CLP
-  #include "ClpSimplex.hpp"
-  #include "ClpPresolve.hpp"
-  #include "ClpPrimalColumnSteepest.hpp"
-  #include "ClpDualRowSteepest.hpp"    
-  #define INF 1e10
-#endif
-
-// Clp replaces min and max with ?: globally, we can't use std::min and std::max in case 
-// when HAVE_CLP is true, otherwise we create the defines by ourselves
-#ifndef min
-  #define min(a,b) std::min(a,b)
-#endif
-#ifndef max
-  #define max(a,b) std::max(a,b)
-#endif
+#include "clp.hpp"
 
 using namespace std;
 
@@ -171,6 +155,10 @@ void LpMotionStabilizer::stabilize(
 
     int ncols = 4*N + 6*(N-1) + 6*(N-2) + 6*(N-3);
     int nrows = 8*N + 2*6*(N-1) + 2*6*(N-2) + 2*6*(N-3);
+
+    rows_.clear();
+    cols_.clear();
+    elems_.clear();
 
     obj_.assign(ncols, 0);
     collb_.assign(ncols, -INF);
@@ -574,10 +562,8 @@ void LpMotionStabilizer::stabilize(
         S0(0,2) = sol[c+2];
         S0(1,2) = sol[c+3];
         S[t] = S0;
-    }
+    }    
 }
-
-
 #endif // #ifndef HAVE_CLP
 
 
