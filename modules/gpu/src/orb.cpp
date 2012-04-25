@@ -568,13 +568,19 @@ void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
     {
         keyPointsCount_[level] = fastDetector_.calcKeyPointsLocation(imagePyr_[level], maskPyr_[level]);
 
+        if (keyPointsCount_[level] == 0)
+            continue;
+
         ensureSizeIsEnough(3, keyPointsCount_[level], CV_32FC1, keyPointsPyr_[level]);
 
         GpuMat fastKpRange = keyPointsPyr_[level].rowRange(0, 2);
         keyPointsCount_[level] = fastDetector_.getKeyPoints(fastKpRange);
 
-        int n_features = n_features_per_level_[level];
-        
+        if (keyPointsCount_[level] == 0)
+            continue;
+
+        int n_features = static_cast<int>(n_features_per_level_[level]);
+
         if (scoreType_ == ORB::HARRIS_SCORE)
         {
             // Keep more points than necessary as FAST does not give amazing corners
@@ -613,6 +619,9 @@ void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
 
     for (int level = 0; level < nLevels_; ++level)
     {       
+        if (keyPointsCount_[level] == 0)
+            continue;
+
         GpuMat descRange = descriptors.rowRange(offset, offset + keyPointsCount_[level]);
 
         if (blurForDescriptor)
@@ -650,6 +659,9 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
     
     for (int level = 0; level < nLevels_; ++level)
     {
+        if (keyPointsCount_[level] == 0)
+            continue;
+
         float sf = getScale(scaleFactor_, firstLevel_, level);
 
         GpuMat keyPointsRange = keypoints.colRange(offset, offset + keyPointsCount_[level]);        
