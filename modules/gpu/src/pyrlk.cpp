@@ -53,20 +53,20 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, Gpu
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace pyrlk 
+    namespace pyrlk
     {
         void loadConstants(int cn, float minEigThreshold, int2 winSize, int iters);
 
-        void calcSharrDeriv_gpu(DevMem2Db src, DevMem2D_<short> dx_buf, DevMem2D_<short> dy_buf, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy, int cn, 
+        void calcSharrDeriv_gpu(DevMem2Db src, DevMem2D_<short> dx_buf, DevMem2D_<short> dy_buf, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy, int cn,
             cudaStream_t stream = 0);
 
         void lkSparse_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy,
-            const float2* prevPts, float2* nextPts, uchar* status, float* err, bool GET_MIN_EIGENVALS, int ptcount, 
+            const float2* prevPts, float2* nextPts, uchar* status, float* err, bool GET_MIN_EIGENVALS, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
-        void lkDense_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy, 
+        void lkDense_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy,
             DevMem2Df u, DevMem2Df v, DevMem2Df* err, bool GET_MIN_EIGENVALS, cudaStream_t stream = 0);
     }
 }}}
@@ -91,7 +91,7 @@ void cv::gpu::PyrLKOpticalFlow::buildImagePyramid(const GpuMat& img0, vector<Gpu
     pyr.resize(maxLevel + 1);
 
     Size sz = img0.size();
-    
+
     for (int level = 0; level <= maxLevel; ++level)
     {
         GpuMat temp;
@@ -124,10 +124,33 @@ void cv::gpu::PyrLKOpticalFlow::buildImagePyramid(const GpuMat& img0, vector<Gpu
     }
 }
 
+namespace
+{
+    void calcPatchSize(cv::Size winSize, int cn, dim3& block, dim3& patch)
+    {
+        winSize.width *= cn;
+
+        if (winSize.width > 32 && winSize.width > 2 * winSize.height)
+        {
+            block.x = 32;
+            block.y = 8;
+        }
+        else
+        {
+            block.x = block.y = 16;
+        }
+
+        patch.x = (winSize.width  + block.x - 1) / block.x;
+        patch.y = (winSize.height + block.y - 1) / block.y;
+
+        block.z = patch.z = 1;
+    }
+}
+
 void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err)
 {
     using namespace cv::gpu::device::pyrlk;
-        
+
     if (prevPts.empty())
     {
         nextPts.release();
@@ -136,32 +159,21 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
         return;
     }
 
-    derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);    
+    derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);
 
     iters = std::min(std::max(iters, 0), 100);
 
     const int cn = prevImg.channels();
 
-    dim3 block;
-
-    if (winSize.width * cn > 32)
-    {
-        block.x = 32;
-        block.y = 8;
-    }
-    else
-    {
-        block.x = block.y = 16;
-    }
-
-    dim3 patch((winSize.width * cn + block.x - 1) / block.x, (winSize.height + block.y - 1) / block.y);
+    dim3 block, patch;
+    calcPatchSize(winSize, cn, block, patch);
 
     CV_Assert(derivLambda >= 0);
     CV_Assert(maxLevel >= 0 && winSize.width > 2 && winSize.height > 2);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
     CV_Assert(patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6);
     CV_Assert(prevPts.rows == 1 && prevPts.type() == CV_32FC2);
-    
+
     if (useInitialFlow)
         CV_Assert(nextPts.size() == prevPts.size() && nextPts.type() == CV_32FC2);
     else
@@ -176,19 +188,19 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
 
     if (err)
         ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
-    
+
     // build the image pyramids.
     // we pad each level with +/-winSize.{width|height}
     // pixels to simplify the further patch extraction.
 
     buildImagePyramid(prevImg, prevPyr_, true);
     buildImagePyramid(nextImg, nextPyr_, true);
-    
+
     // dI/dx ~ Ix, dI/dy ~ Iy
 
     ensureSizeIsEnough(prevImg.rows + winSize.height * 2, prevImg.cols + winSize.width * 2, CV_MAKETYPE(CV_16S, cn), dx_buf_);
     ensureSizeIsEnough(prevImg.rows + winSize.height * 2, prevImg.cols + winSize.width * 2, CV_MAKETYPE(CV_16S, cn), dy_buf_);
-    
+
     loadConstants(cn, minEigThreshold, make_int2(winSize.width, winSize.height), iters);
 
     for (int level = maxLevel; level >= 0; level--)
@@ -204,8 +216,8 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
 
         calcSharrDeriv(prevPyr_[level], dIdx, dIdy);
 
-        lkSparse_gpu(prevPyr_[level], nextPyr_[level], dIdx, dIdy, 
-            prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, getMinEigenVals, prevPts.cols, 
+        lkSparse_gpu(prevPyr_[level], nextPyr_[level], dIdx, dIdy,
+            prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, getMinEigenVals, prevPts.cols,
             level, block, patch);
     }
 }
@@ -214,7 +226,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 {
     using namespace cv::gpu::device::pyrlk;
 
-    derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);    
+    derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);
 
     iters = std::min(std::max(iters, 0), 100);
 
@@ -222,7 +234,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
     CV_Assert(derivLambda >= 0);
     CV_Assert(maxLevel >= 0 && winSize.width > 2 && winSize.height > 2);
-    
+
     if (useInitialFlow)
     {
         CV_Assert(u.size() == prevImg.size() && u.type() == CV_32FC1);
@@ -239,7 +251,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 
     if (err)
         err->create(prevImg.size(), CV_32FC1);
-    
+
     // build the image pyramids.
     // we pad each level with +/-winSize.{width|height}
     // pixels to simplify the further patch extraction.
@@ -248,12 +260,12 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     buildImagePyramid(nextImg, nextPyr_, true);
     buildImagePyramid(u, uPyr_, false);
     buildImagePyramid(v, vPyr_, false);
-    
+
     // dI/dx ~ Ix, dI/dy ~ Iy
 
     ensureSizeIsEnough(prevImg.rows + winSize.height * 2, prevImg.cols + winSize.width * 2, CV_16SC1, dx_buf_);
     ensureSizeIsEnough(prevImg.rows + winSize.height * 2, prevImg.cols + winSize.width * 2, CV_16SC1, dy_buf_);
-    
+
     loadConstants(1, minEigThreshold, make_int2(winSize.width, winSize.height), iters);
 
     DevMem2Df derr = err ? *err : DevMem2Df();
@@ -271,7 +283,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 
         calcSharrDeriv(prevPyr_[level], dIdx, dIdy);
 
-        lkDense_gpu(prevPyr_[level], nextPyr_[level], dIdx, dIdy, uPyr_[level], vPyr_[level], 
+        lkDense_gpu(prevPyr_[level], nextPyr_[level], dIdx, dIdy, uPyr_[level], vPyr_[level],
             level == 0 && err ? &derr : 0, getMinEigenVals);
 
         if (level == 0)
