@@ -16,6 +16,7 @@ public class ImageManipulationsActivity extends Activity {
     public static final int     VIEW_MODE_SOBEL = 3;
     public static final int     VIEW_MODE_BLUR  = 4;
     public static final int     VIEW_MODE_ZOOM  = 5;
+    public static final int     VIEW_MODE_PIXELIZE  = 6;
 
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewCanny;
@@ -23,8 +24,9 @@ public class ImageManipulationsActivity extends Activity {
     private MenuItem            mItemPreviewSobel;
     private MenuItem            mItemPreviewBlur;
     private MenuItem            mItemPreviewZoom;
+    private MenuItem            mItemPreviewPixelize;
 
-    public static int           viewMode        = VIEW_MODE_RGBA;
+    public static int           viewMode = VIEW_MODE_RGBA;
 
     public ImageManipulationsActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -48,6 +50,7 @@ public class ImageManipulationsActivity extends Activity {
         mItemPreviewSobel = menu.add("Sobel");
         mItemPreviewBlur = menu.add("Blur");
         mItemPreviewZoom = menu.add("Zoom");
+        mItemPreviewPixelize = menu.add("Pixelize");
         return true;
     }
 
@@ -66,6 +69,8 @@ public class ImageManipulationsActivity extends Activity {
             viewMode = VIEW_MODE_BLUR;
         else if (item == mItemPreviewZoom)
             viewMode = VIEW_MODE_ZOOM;
+        else if (item == mItemPreviewPixelize)
+            viewMode = VIEW_MODE_PIXELIZE;
         return true;
     }
 }

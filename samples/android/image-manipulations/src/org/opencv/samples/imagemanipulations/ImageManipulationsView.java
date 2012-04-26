@@ -17,6 +17,9 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 class ImageManipulationsView extends SampleCvViewBase {
+    private Size mSize0;
+    private Size mSizeRgbaInner;
+    
     private Mat mRgba;
     private Mat mGray;
     private Mat mIntermediateMat;
@@ -48,6 +51,7 @@ class ImageManipulationsView extends SampleCvViewBase {
             mGray = new Mat();
             mRgba = new Mat();
             mIntermediateMat = new Mat();
+            mSize0 = new Size();
         }
     }
 
@@ -66,6 +70,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         if (mRgbaInnerWindow == null)
             mRgbaInnerWindow = mRgba.submat(top, top + height, left, left + width);
+        mSizeRgbaInner = mRgbaInnerWindow.size(); 
 
         if (mGrayInnerWindow == null && !mGray.empty())
             mGrayInnerWindow = mGray.submat(top, top + height, left, left + width);
@@ -132,6 +137,15 @@ class ImageManipulationsView extends SampleCvViewBase {
             Size wsize = mZoomWindow.size();
             Core.rectangle(mZoomWindow, new Point(1, 1), new Point(wsize.width - 2, wsize.height - 2), new Scalar(255, 0, 0, 255), 2);
             break;
+
+        case ImageManipulationsActivity.VIEW_MODE_PIXELIZE:
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            if (mRgbaInnerWindow == null)
+                CreateAuxiliaryMats();
+            Imgproc.resize(mRgbaInnerWindow, mIntermediateMat, mSize0, 0.1, 0.1, Imgproc.INTER_NEAREST);
+            Imgproc.resize(mIntermediateMat, mRgbaInnerWindow, mSizeRgbaInner, 0., 0., Imgproc.INTER_NEAREST);
+            break;
+
         }
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
