@@ -644,6 +644,9 @@ class RunInfo(object):
             return
         elif self.targetos == "android":
             hostlogpath = ""
+            usercolor = [a for a in args if a.startswith("--gtest_color=")]
+            if len(userlog) == 0 and _stdout.isatty() and hostos != "nt":
+                args.append("--gtest_color=yes")
             try:
                 andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_" + self.options.mode +"/"
                 exename = os.path.basename(exe)
