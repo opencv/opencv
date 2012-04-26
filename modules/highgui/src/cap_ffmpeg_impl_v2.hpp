@@ -444,16 +444,16 @@ bool CvCapture_FFMPEG::grabFrame()
             if (count_errs > max_number_of_attempts)
                 break;
         }
-
+        
         // Decode video frame
         avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
 
         // Did we get a video frame?
         if(got_picture)
         {
-            picture_pts = picture->best_effort_timestamp;
+            //picture_pts = picture->best_effort_timestamp;
             if( picture_pts == AV_NOPTS_VALUE_ )
-                picture_pts = packet.pts != AV_NOPTS_VALUE_ ? packet.pts : packet.dts;
+                picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
             frame_number++;
             valid = true;
         }
