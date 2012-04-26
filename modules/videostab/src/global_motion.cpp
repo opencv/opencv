@@ -460,9 +460,6 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
     const int npoints = points0.getMat().checkVector(2);
     CV_Assert(points1.getMat().checkVector(2) == npoints);
 
-    const Point2f *points0_ = points0.getMat().ptr<Point2f>();
-    const Point2f *points1_ = points1.getMat().ptr<Point2f>();
-
 #ifndef HAVE_CLP
 
     CV_Error(CV_StsError, "The library is built without Clp support");
@@ -474,6 +471,9 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
     CV_Assert(motionModel() <= MM_AFFINE && motionModel() != MM_RIGID);
 
     // prepare LP problem
+
+    const Point2f *points0_ = points0.getMat().ptr<Point2f>();
+    const Point2f *points1_ = points1.getMat().ptr<Point2f>();
 
     int ncols = 6 + 2*npoints;
     int nrows = 4*npoints;
