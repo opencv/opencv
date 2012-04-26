@@ -65,12 +65,12 @@ namespace videostab
 {
 
 CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
-        int npoints, Point2f *points0, Point2f *points1, int model = MM_AFFINE, float *rmse = 0);
-
+        InputOutputArray points0, InputOutputArray points1, int model = MM_AFFINE,
+        float *rmse = 0);
 
 CV_EXPORTS Mat estimateGlobalMotionRobust(
-        const std::vector<Point2f> &points0, const std::vector<Point2f> &points1,
-        int model = MM_AFFINE, const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE),
+        InputArray points0, InputArray points1, int model = MM_AFFINE,
+        const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE),
         float *rmse = 0, int *ninliers = 0);
 
 class CV_EXPORTS GlobalMotionEstimatorBase
@@ -181,7 +181,7 @@ private:
     gpu::GpuMat status_;
 
     Mat hostPointsPrev_, hostPoints_;
-    std::vector<Point2f> hostPointsPrevGood_, hostPointsGood_;
+    std::vector<Point2f> hostPointsPrevTmp_, hostPointsTmp_;
     std::vector<uchar> rejectionStatus_;
 };
 #endif

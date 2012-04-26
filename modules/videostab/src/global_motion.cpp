@@ -284,9 +284,12 @@ static Mat estimateGlobMotionLeastSquaresAffine(
 
 
 Mat estimateGlobalMotionLeastSquares(
-        int npoints, Point2f *points0, Point2f *points1, int model, float *rmse)
+        InputOutputArray points0, InputOutputArray points1, int model, float *rmse)
 {
     CV_Assert(model <= MM_AFFINE);
+    CV_Assert(points0.type() == points1.type());
+    const int npoints = points0.getMat().checkVector(2);
+    CV_Assert(points1.getMat().checkVector(2) == npoints);
 
     typedef Mat (*Impl)(int, Point2f*, Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
@@ -295,16 +298,24 @@ Mat estimateGlobalMotionLeastSquares(
                             estimateGlobMotionLeastSquaresSimilarity,
                             estimateGlobMotionLeastSquaresAffine };
 
-    return impls[model](npoints, points0, points1, rmse);
+    Point2f *points0_ = points0.getMat().ptr<Point2f>();
+    Point2f *points1_ = points1.getMat().ptr<Point2f>();
+
+    return impls[model](npoints, points0_, points1_, rmse);
 }
 
 
 Mat estimateGlobalMotionRobust(
-        int npoints, const Point2f *points0, const Point2f *points1, int model,
-        const RansacParams &params, float *rmse, int *ninliers)
+        InputArray points0, InputArray points1, int model, const RansacParams &params,
+        float *rmse, int *ninliers)
 {
     CV_Assert(model <= MM_AFFINE);
+    CV_Assert(points0.type() == points1.type());
+    const int npoints = points0.getMat().checkVector(2);
+    CV_Assert(points1.getMat().checkVector(2) == npoints);
 
+    const Point2f *points0_ = points0.getMat().ptr<Point2f>();
+    const Point2f *points1_ = points1.getMat().ptr<Point2f>();
     const int niters = params.niters();
 
     // current hypothesis
@@ -338,17 +349,17 @@ Mat estimateGlobalMotionRobust(
         }
         for (int i = 0; i < params.size; ++i)
         {
-            subset0[i] = points0[indices[i]];
-            subset1[i] = points1[indices[i]];
+            subset0[i] = points0_[indices[i]];
+            subset1[i] = points1_[indices[i]];
         }
 
-        Mat_<float> M = estimateGlobalMotionLeastSquares(
-                params.size, &subset0[0], &subset1[0], model, 0);
+        Mat_<float> M = estimateGlobalMotionLeastSquares(subset0, subset1, model, 0);
 
         int ninliers = 0;
         for (int i = 0; i < npoints; ++i)
         {
-            p0 = points0[i]; p1 = points1[i];
+            p0 = points0_[i];
+            p1 = points1_[i];
             x = M(0,0)*p0.x + M(0,1)*p0.y + M(0,2);
             y = M(1,0)*p0.x + M(1,1)*p0.y + M(1,2);
             if (sqr(x - p1.x) + sqr(y - p1.y) < params.thresh * params.thresh)
@@ -365,15 +376,15 @@ Mat estimateGlobalMotionRobust(
 
     if (ninliersMax < params.size)
         // compute RMSE
-        bestM = estimateGlobalMotionLeastSquares(
-                params.size, &subset0best[0], &subset1best[0], model, rmse);
+        bestM = estimateGlobalMotionLeastSquares(subset0best, subset1best, model, rmse);
     else
     {
         subset0.resize(ninliersMax);
         subset1.resize(ninliersMax);
         for (int i = 0, j = 0; i < npoints; ++i)
         {
-            p0 = points0[i]; p1 = points1[i];
+            p0 = points0_[i];
+            p1 = points1_[i];
             x = bestM(0,0)*p0.x + bestM(0,1)*p0.y + bestM(0,2);
             y = bestM(1,0)*p0.x + bestM(1,1)*p0.y + bestM(1,2);
             if (sqr(x - p1.x) + sqr(y - p1.y) < params.thresh * params.thresh)
@@ -383,8 +394,7 @@ Mat estimateGlobalMotionRobust(
                 j++;
             }
         }
-        bestM = estimateGlobalMotionLeastSquares(
-                ninliersMax, &subset0[0], &subset1[0], model, rmse);
+        bestM = estimateGlobalMotionLeastSquares(subset0, subset1, model, rmse);
     }
 
     if (ninliers)
@@ -520,8 +530,7 @@ Mat RansacMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool *
 
     if (motionModel_ != MM_HOMOGRAPHY)
         M = estimateGlobalMotionRobust(
-                npoints, &pointsPrevGood_[0], &pointsGood_[0], motionModel_,
-                ransacParams_, 0, &ninliers);
+                pointsPrevGood_, pointsGood_, motionModel_, ransacParams_, 0, &ninliers);
     else
     {
         vector<uchar> mask;
@@ -590,10 +599,6 @@ Mat RansacMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu::Gpu
     pointsPrev_.download(hostPointsPrev_);
     points_.download(hostPoints_);
 
-    Point2f *points0 = hostPointsPrev_.ptr<Point2f>();
-    Point2f *points1 = hostPoints_.ptr<Point2f>();
-    int npoints = hostPointsPrev_.cols;
-
     // perfrom outlier rejection
 
     IOutlierRejector *outlierRejector = static_cast<IOutlierRejector*>(outlierRejector_);
@@ -601,37 +606,35 @@ Mat RansacMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu::Gpu
     {
         outlierRejector_->process(frame0.size(), hostPointsPrev_, hostPoints_, rejectionStatus_);
 
-        hostPointsPrevGood_.clear(); hostPointsPrevGood_.reserve(hostPoints_.cols);
-        hostPointsGood_.clear(); hostPointsGood_.reserve(hostPoints_.cols);
+        hostPointsPrevTmp_.clear(); hostPointsPrevTmp_.reserve(hostPoints_.cols);
+        hostPointsTmp_.clear(); hostPointsTmp_.reserve(hostPoints_.cols);
 
         for (int i = 0; i < hostPoints_.cols; ++i)
         {
             if (rejectionStatus_[i])
             {
-                hostPointsPrevGood_.push_back(hostPointsPrev_.at<Point2f>(0,i));
-                hostPointsGood_.push_back(hostPoints_.at<Point2f>(0,i));
+                hostPointsPrevTmp_.push_back(hostPointsPrev_.at<Point2f>(0,i));
+                hostPointsTmp_.push_back(hostPoints_.at<Point2f>(0,i));
             }
         }
 
-        points0 = &hostPointsPrevGood_[0];
-        points1 = &hostPointsGood_[0];
-        npoints = static_cast<int>(hostPointsGood_.size());
+        hostPointsPrev_ = Mat(1, hostPointsPrevTmp_.size(), CV_32FC2, &hostPointsPrevTmp_[0]);
+        hostPoints_ = Mat(1, hostPointsTmp_.size(), CV_32FC2, &hostPointsTmp_[0]);
     }
 
     // find motion
 
+    int npoints = hostPoints_.cols;
     int ninliers = 0;
     Mat_<float> M;
 
     if (motionModel_ != MM_HOMOGRAPHY)
         M = estimateGlobalMotionRobust(
-                npoints, points0, points1, motionModel_, ransacParams_, 0, &ninliers);
+                hostPointsPrev_, hostPoints_, motionModel_, ransacParams_, 0, &ninliers);
     else
     {
         vector<uchar> mask;
-        M = findHomography(
-                Mat(1, npoints, CV_32FC2, points0), Mat(1, npoints, CV_32FC2, points1),
-                mask, CV_RANSAC, ransacParams_.thresh);
+        M = findHomography(hostPointsPrev_, hostPoints_, mask, CV_RANSAC, ransacParams_.thresh);
         for (int i  = 0; i < npoints; ++i)
             if (mask[i]) ninliers++;
     }
@@ -713,8 +716,6 @@ Mat LpBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool 
         }
     }
 
-    int npoints = static_cast<int>(pointsGood_.size());
-
     // prepare LP problem
 
 #ifndef HAVE_CLP
@@ -727,6 +728,7 @@ Mat LpBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1, bool 
 
     CV_Assert(motionModel_ <= MM_AFFINE && motionModel_ != MM_RIGID);
 
+    int npoints = static_cast<int>(pointsGood_.size());
     int ncols = 6 + 2*npoints;
     int nrows = 4*npoints;
 
@@ -851,4 +853,5 @@ Mat getMotion(int from, int to, const vector<Mat> &motions)
 
 } // namespace videostab
 } // namespace cv
+
 
