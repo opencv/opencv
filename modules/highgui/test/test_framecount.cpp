@@ -65,13 +65,10 @@ void CV_FramecountTest::run(int)
 
     ts->printf(cvtest::TS::LOG, "\n\nSource files directory: %s\n", (src_dir+"video/").c_str());
 
-    int failed = 0;
     Ptr<CvCapture> cap;
 
     for (size_t i = 0; i < n; ++i)
     {
-        int code = cvtest::TS::OK;
-
         string file_path = src_dir+"video/big_buck_bunny."+ext[i];
 
         cap = cvCreateFileCapture(file_path.c_str());

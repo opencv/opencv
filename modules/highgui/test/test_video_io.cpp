@@ -452,7 +452,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
         return;
     }
 
-    for (int i = 0; i < FRAME_COUNT; i++)
+    for (int i = 0; (size_t)i < FRAME_COUNT; i++)
     {
         Mat frame; cap >> frame;
         if (frame.empty())
