@@ -277,28 +277,30 @@ if(WIN32 AND WITH_FFMPEG)
   endif()
   
   set(ffmpeg_bare_name "opencv_ffmpeg${FFMPEG_SUFFIX}.dll")
+  set(ffmpeg_bare_name_ver "opencv_ffmpeg${OPENCV_DLLVERSION}${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
   
-  if(MSVC AND CMAKE_VERSION VERSION_GREATER "2.8.2")
+  #if(MSVC AND CMAKE_VERSION VERSION_GREATER "2.8.2")
+  #  add_custom_command(TARGET ${the_module} POST_BUILD
+  #                     COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name_ver}"
+  #                     COMMENT "Copying ${ffmpeg_path} to the output directory")
+  #else
+  if(MSVC_IDE)
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name}"
-                       COMMENT "Copying ${ffmpeg_path} to the output directory")
-  elseif(MSVC_IDE)
-    add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name}"
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name}"
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   elseif(MSVC)
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name}"
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   else()
     add_custom_command(TARGET ${the_module} POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name}"
+                       COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   endif()
   
-  install(FILES "${ffmpeg_path}" DESTINATION bin COMPONENT main)
+  install(FILES "${ffmpeg_path}" DESTINATION bin COMPONENT main RENAME "${ffmpeg_bare_name_ver}")
 endif()
 
 ocv_add_accuracy_tests()
