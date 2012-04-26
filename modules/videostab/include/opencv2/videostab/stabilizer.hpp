@@ -74,8 +74,8 @@ public:
     void setFrameSource(Ptr<IFrameSource> val) { frameSource_ = val; }
     Ptr<IFrameSource> frameSource() const { return frameSource_; }
 
-    void setMotionEstimator(Ptr<GlobalMotionEstimatorBase> val) { motionEstimator_ = val; }
-    Ptr<GlobalMotionEstimatorBase> motionEstimator() const { return motionEstimator_; }
+    void setMotionEstimator(Ptr<ImageMotionEstimatorBase> val) { motionEstimator_ = val; }
+    Ptr<ImageMotionEstimatorBase> motionEstimator() const { return motionEstimator_; }
 
     void setDeblurer(Ptr<DeblurerBase> val) { deblurer_ = val; }
     Ptr<DeblurerBase> deblurrer() const { return deblurer_; }
@@ -107,7 +107,7 @@ protected:
 
     Ptr<ILog> log_;
     Ptr<IFrameSource> frameSource_;
-    Ptr<GlobalMotionEstimatorBase> motionEstimator_;
+    Ptr<ImageMotionEstimatorBase> motionEstimator_;
     Ptr<DeblurerBase> deblurer_;
     Ptr<InpainterBase> inpainter_;
     int radius_;

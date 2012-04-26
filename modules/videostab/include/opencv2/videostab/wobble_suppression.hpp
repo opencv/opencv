@@ -64,8 +64,8 @@ public:
 
     virtual ~WobbleSuppressorBase() {}
 
-    void setMotionEstimator(Ptr<GlobalMotionEstimatorBase> val) { motionEstimator_ = val; }
-    Ptr<GlobalMotionEstimatorBase> motionEstimator() const { return motionEstimator_; }
+    void setMotionEstimator(Ptr<ImageMotionEstimatorBase> val) { motionEstimator_ = val; }
+    Ptr<ImageMotionEstimatorBase> motionEstimator() const { return motionEstimator_; }
 
     virtual void suppress(int idx, const Mat &frame, Mat &result) = 0;
 
@@ -85,7 +85,7 @@ public:
     virtual const std::vector<Mat>& stabilizationMotions() const { return *stabilizationMotions_; }
 
 protected:
-    Ptr<GlobalMotionEstimatorBase> motionEstimator_;
+    Ptr<ImageMotionEstimatorBase> motionEstimator_;
     int frameCount_;
     const std::vector<Mat> *motions_;
     const std::vector<Mat> *motions2_;

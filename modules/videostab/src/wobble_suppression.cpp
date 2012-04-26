@@ -53,9 +53,7 @@ namespace videostab
 
 WobbleSuppressorBase::WobbleSuppressorBase() : motions_(0), stabilizationMotions_(0)
 {
-    RansacMotionEstimator *est = new RansacMotionEstimator();
-    est->setMotionModel(MM_HOMOGRAPHY);
-    est->setRansacParams(RansacParams::default2dMotion(MM_HOMOGRAPHY));
+    setMotionEstimator(new KeypointBasedMotionEstimator(new MotionEstimatorRansacL2(MM_HOMOGRAPHY)));
 }
 
 

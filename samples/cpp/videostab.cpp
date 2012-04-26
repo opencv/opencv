@@ -85,8 +85,6 @@ void printHelp()
             "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n"
             "  --nkps=<int_number>\n"
             "      Number of keypoints to find in each frame. The default is 1000.\n"
-            "  --extra-kps=<int_number>\n"
-            "      Extra keypoint grid size for motion estimation. The default is 0.\n"
             "  --local-outlier-rejection=(yes|no)\n"
             "      Perform local outlier rejection. The default is no.\n\n"
             "  -sm, --save-motions=(<file_path>|no)\n"
@@ -154,8 +152,6 @@ void printHelp()
             "      Minimum inlier ratio to decide if estimated motion is OK. The default is 0.1.\n"
             "  --ws-nkps=<int_number>\n"
             "      Number of keypoints to find in each frame. The default is 1000.\n"
-            "  --ws-extra-kps=<int_number>\n"
-            "      Extra keypoint grid size for motion estimation. The default is 0.\n"
             "  --ws-local-outlier-rejection=(yes|no)\n"
             "      Perform local outlier rejection. The default is no.\n\n"
             "  -sm2, --save-motions2=(<file_path>|no)\n"
@@ -181,24 +177,22 @@ class IMotionEstimatorBuilder
 {
 public:
     virtual ~IMotionEstimatorBuilder() {}
-    virtual Ptr<GlobalMotionEstimatorBase> build() = 0;
+    virtual Ptr<ImageMotionEstimatorBase> build() = 0;
 protected:
     IMotionEstimatorBuilder(CommandLineParser &cmd) : cmd(cmd) {}
     CommandLineParser cmd;
 };
 
 
-class RansacMotionEstimatorBuilder : public IMotionEstimatorBuilder
+class MotionEstimatorRansacL2Builder : public IMotionEstimatorBuilder
 {
 public:
-    RansacMotionEstimatorBuilder(CommandLineParser &cmd, const string &prefix = "")
-        : IMotionEstimatorBuilder(cmd), prefix(prefix) {}
+    MotionEstimatorRansacL2Builder(CommandLineParser &cmd, bool gpu, const string &prefix = "")
+        : IMotionEstimatorBuilder(cmd), gpu(gpu), prefix(prefix) {}
 
-    virtual Ptr<GlobalMotionEstimatorBase> build()
+    virtual Ptr<ImageMotionEstimatorBase> build()
     {
-        RansacMotionEstimator *est = new RansacMotionEstimator(motionModel(arg(prefix + "model")));
-
-        est->setDetector(new GoodFeaturesToTrackDetector(argi(prefix + "nkps")));
+        MotionEstimatorRansacL2 *est = new MotionEstimatorRansacL2(motionModel(arg(prefix + "model")));
 
         RansacParams ransac = est->ransacParams();
         if (arg(prefix + "subset") != "auto")
@@ -208,97 +202,76 @@ public:
         ransac.eps = argf(prefix + "outlier-ratio");
         est->setRansacParams(ransac);
 
-        est->setGridSize(Size(argi(prefix + "extra-kps"), argi(prefix + "extra-kps")));
+        est->setMinInlierRatio(argf(prefix + "min-inlier-ratio"));
 
         Ptr<IOutlierRejector> outlierRejector = new NullOutlierRejector();
         if (arg(prefix + "local-outlier-rejection") == "yes")
         {
-            TranslationBasedLocalOutlierRejector *tor = new TranslationBasedLocalOutlierRejector();
-            RansacParams ransacParams = tor->ransacParams();
+            TranslationBasedLocalOutlierRejector *tblor = new TranslationBasedLocalOutlierRejector();
+            RansacParams ransacParams = tblor->ransacParams();
             if (arg(prefix + "thresh") != "auto")
                 ransacParams.thresh = argf(prefix + "thresh");
-            tor->setRansacParams(ransacParams);
-            outlierRejector = tor;
+            tblor->setRansacParams(ransacParams);
+            outlierRejector = tblor;
         }
-        est->setOutlierRejector(outlierRejector);
-
-        est->setMinInlierRatio(argf(prefix + "min-inlier-ratio"));
-
-        return est;
-    }
-private:
-    string prefix;
-};
-
 
 #if HAVE_OPENCV_GPU
-class RansacMotionEstimatorBuilderGpu : public IMotionEstimatorBuilder
-{
-public:
-    RansacMotionEstimatorBuilderGpu(CommandLineParser &cmd, const string &prefix = "")
-        : IMotionEstimatorBuilder(cmd), prefix(prefix) {}
-
-    virtual Ptr<GlobalMotionEstimatorBase> build()
-    {
-        RansacMotionEstimatorGpu *est = new RansacMotionEstimatorGpu(motionModel(arg(prefix + "model")));
-
-        RansacParams ransac = est->ransacParams();
-        if (arg(prefix + "subset") != "auto")
-            ransac.size = argi(prefix + "subset");
-        if (arg(prefix + "thresh") != "auto")
-            ransac.thresh = argi(prefix + "thresh");
-        ransac.eps = argf(prefix + "outlier-ratio");
-        est->setRansacParams(ransac);
-
-        Ptr<IOutlierRejector> outlierRejector = new NullOutlierRejector();
-        if (arg(prefix + "local-outlier-rejection") == "yes")
+        if (gpu)
         {
-            TranslationBasedLocalOutlierRejector *tor = new TranslationBasedLocalOutlierRejector();
-            RansacParams ransacParams = tor->ransacParams();
-            if (arg(prefix + "thresh") != "auto")
-                ransacParams.thresh = argf(prefix + "thresh");
-            tor->setRansacParams(ransacParams);
-            outlierRejector = tor;
+            KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);
+            kbest->setOutlierRejector(outlierRejector);
+            return kbest;
         }
-        est->setOutlierRejector(outlierRejector);
-
-        est->setMinInlierRatio(argf(prefix + "min-inlier-ratio"));
-
-        return est;
-    }
-private:
-    string prefix;
-};
 #endif
 
+        KeypointBasedMotionEstimator *kbest = new KeypointBasedMotionEstimator(est);
+        kbest->setDetector(new GoodFeaturesToTrackDetector(argi(prefix + "nkps")));
+        kbest->setOutlierRejector(outlierRejector);
+        return kbest;
+    }
+private:
+    bool gpu;
+    string prefix;
+};
 
-class LpBasedMotionEstimatorBuilder : public IMotionEstimatorBuilder
+
+class MotionEstimatorL1Builder : public IMotionEstimatorBuilder
 {
 public:
-    LpBasedMotionEstimatorBuilder(CommandLineParser &cmd, const string &prefix = "")
-        : IMotionEstimatorBuilder(cmd), prefix(prefix) {}
+    MotionEstimatorL1Builder(CommandLineParser &cmd, bool gpu, const string &prefix = "")
+        : IMotionEstimatorBuilder(cmd), gpu(gpu), prefix(prefix) {}
 
-    virtual Ptr<GlobalMotionEstimatorBase> build()
+    virtual Ptr<ImageMotionEstimatorBase> build()
     {
-        LpBasedMotionEstimator *est = new LpBasedMotionEstimator(motionModel(arg(prefix + "model")));
-
-        est->setDetector(new GoodFeaturesToTrackDetector(argi(prefix + "nkps")));
+        MotionEstimatorL1 *est = new MotionEstimatorL1(motionModel(arg(prefix + "model")));
 
         Ptr<IOutlierRejector> outlierRejector = new NullOutlierRejector();
         if (arg(prefix + "local-outlier-rejection") == "yes")
         {
-            TranslationBasedLocalOutlierRejector *tor = new TranslationBasedLocalOutlierRejector();
-            RansacParams ransacParams = tor->ransacParams();
+            TranslationBasedLocalOutlierRejector *tblor = new TranslationBasedLocalOutlierRejector();
+            RansacParams ransacParams = tblor->ransacParams();
             if (arg(prefix + "thresh") != "auto")
                 ransacParams.thresh = argf(prefix + "thresh");
-            tor->setRansacParams(ransacParams);
-            outlierRejector = tor;
+            tblor->setRansacParams(ransacParams);
+            outlierRejector = tblor;
         }
-        est->setOutlierRejector(outlierRejector);
 
-        return est;
+#if HAVE_OPENCV_GPU
+        if (gpu)
+        {
+            KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);
+            kbest->setOutlierRejector(outlierRejector);
+            return kbest;
+        }
+#endif
+
+        KeypointBasedMotionEstimator *kbest = new KeypointBasedMotionEstimator(est);
+        kbest->setDetector(new GoodFeaturesToTrackDetector(argi(prefix + "nkps")));
+        kbest->setOutlierRejector(outlierRejector);
+        return kbest;
     }
 private:
+    bool gpu;
     string prefix;
 };
 
@@ -399,40 +372,16 @@ int main(int argc, const char **argv)
         // prepare motion estimation builders
 
         Ptr<IMotionEstimatorBuilder> motionEstBuilder;
-#if HAVE_OPENCV_GPU
-        if (arg("gpu") == "yes")
-        {
-            if (arg("lin-prog-motion-est") == "yes")
-                motionEstBuilder = new LpBasedMotionEstimatorBuilder(cmd);
-            else
-                motionEstBuilder = new RansacMotionEstimatorBuilderGpu(cmd);
-        }
+        if (arg("lin-prog-motion-est") == "yes")
+            motionEstBuilder = new MotionEstimatorL1Builder(cmd, arg("gpu") == "yes");
         else
-#endif
-        {
-            if (arg("lin-prog-motion-est") == "yes")
-                motionEstBuilder = new LpBasedMotionEstimatorBuilder(cmd);
-            else
-                motionEstBuilder = new RansacMotionEstimatorBuilder(cmd);
-        }
+            motionEstBuilder = new MotionEstimatorRansacL2Builder(cmd, arg("gpu") == "yes");
 
         Ptr<IMotionEstimatorBuilder> wsMotionEstBuilder;
-#if HAVE_OPENCV_GPU
-        if (arg("gpu") == "yes")
-        {
-            if (arg("ws-lp") == "yes")
-                wsMotionEstBuilder = new LpBasedMotionEstimatorBuilder(cmd, "ws-");
-            else
-                wsMotionEstBuilder = new RansacMotionEstimatorBuilderGpu(cmd, "ws-");
-        }
+        if (arg("ws-lp") == "yes")
+            wsMotionEstBuilder = new MotionEstimatorL1Builder(cmd, arg("gpu") == "yes", "ws-");
         else
-#endif
-        {
-            if (arg("ws-lp") == "yes")
-                wsMotionEstBuilder = new LpBasedMotionEstimatorBuilder(cmd, "ws-");
-            else
-                wsMotionEstBuilder = new RansacMotionEstimatorBuilder(cmd, "ws-");
-        }
+            wsMotionEstBuilder = new MotionEstimatorRansacL2Builder(cmd, arg("gpu") == "yes", "ws-");
 
         // determine whether we must use one pass or two pass stabilizer
         bool isTwoPass =

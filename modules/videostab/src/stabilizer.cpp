@@ -58,7 +58,7 @@ StabilizerBase::StabilizerBase()
 {
     setLog(new LogToStdout());
     setFrameSource(new NullFrameSource());
-    setMotionEstimator(new RansacMotionEstimator());
+    setMotionEstimator(new KeypointBasedMotionEstimator(new MotionEstimatorRansacL2()));
     setDeblurer(new NullDeblurer());
     setInpainter(new NullInpainter());
     setRadius(15);

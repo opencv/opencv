@@ -57,8 +57,6 @@
   #include "opencv2/gpu/gpu.hpp"
 #endif
 
-// TODO remove code duplications (in cpp too)
-
 namespace cv
 {
 namespace videostab
@@ -73,10 +71,65 @@ CV_EXPORTS Mat estimateGlobalMotionRobust(
         const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE),
         float *rmse = 0, int *ninliers = 0);
 
-class CV_EXPORTS GlobalMotionEstimatorBase
+class CV_EXPORTS MotionEstimatorBase
 {
 public:    
-    virtual ~GlobalMotionEstimatorBase() {}
+    virtual ~MotionEstimatorBase() {}
+
+    virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
+    virtual MotionModel motionModel() const { return motionModel_; }
+
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0) = 0;
+
+protected:
+    MotionEstimatorBase(MotionModel model) { setMotionModel(model); }
+
+private:
+    MotionModel motionModel_;
+};
+
+class CV_EXPORTS MotionEstimatorRansacL2 : public MotionEstimatorBase
+{
+public:
+    MotionEstimatorRansacL2(MotionModel model = MM_AFFINE);
+
+    void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
+    RansacParams ransacParams() const { return ransacParams_; }
+
+    void setMinInlierRatio(float val) { minInlierRatio_ = val; }
+    float minInlierRatio() const { return minInlierRatio_; }
+
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0);
+
+private:
+    RansacParams ransacParams_;
+    float minInlierRatio_;
+};
+
+class CV_EXPORTS MotionEstimatorL1 : public MotionEstimatorBase
+{
+public:
+    MotionEstimatorL1(MotionModel model = MM_AFFINE);
+
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok);
+
+private:
+    std::vector<double> obj_, collb_, colub_;
+    std::vector<double> elems_, rowlb_, rowub_;
+    std::vector<int> rows_, cols_;
+
+    void set(int row, int col, double coef)
+    {
+        rows_.push_back(row);
+        cols_.push_back(col);
+        elems_.push_back(coef);
+    }
+};
+
+class CV_EXPORTS ImageMotionEstimatorBase
+{
+public:
+    virtual ~ImageMotionEstimatorBase() {}
 
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
     virtual MotionModel motionModel() const { return motionModel_; }
@@ -84,12 +137,13 @@ public:
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0) = 0;
 
 protected:
-    GlobalMotionEstimatorBase(MotionModel model) { setMotionModel(model); }
+    ImageMotionEstimatorBase(MotionModel model) { setMotionModel(model); }
 
+private:
     MotionModel motionModel_;
 };
 
-class CV_EXPORTS FromFileMotionReader : public GlobalMotionEstimatorBase
+class CV_EXPORTS FromFileMotionReader : public ImageMotionEstimatorBase
 {
 public:
     FromFileMotionReader(const std::string &path);
@@ -100,50 +154,45 @@ private:
     std::ifstream file_;
 };
 
-class CV_EXPORTS ToFileMotionWriter : public GlobalMotionEstimatorBase
+class CV_EXPORTS ToFileMotionWriter : public ImageMotionEstimatorBase
 {
 public:
-    ToFileMotionWriter(const std::string &path, Ptr<GlobalMotionEstimatorBase> estimator);
+    ToFileMotionWriter(const std::string &path, Ptr<ImageMotionEstimatorBase> estimator);
+
+    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
 private:
     std::ofstream file_;
-    Ptr<GlobalMotionEstimatorBase> estimator_;
+    Ptr<ImageMotionEstimatorBase> motionEstimator_;
 };
 
-class CV_EXPORTS RansacMotionEstimator : public GlobalMotionEstimatorBase
+class CV_EXPORTS KeypointBasedMotionEstimator : public ImageMotionEstimatorBase
 {
 public:
-    RansacMotionEstimator(MotionModel model = MM_AFFINE);
+    KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator);
+
+    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
 
     void setDetector(Ptr<FeatureDetector> val) { detector_ = val; }
     Ptr<FeatureDetector> detector() const { return detector_; }
 
-    void setOptFlowEstimator(Ptr<ISparseOptFlowEstimator> val) { optFlowEstimator_ = val; }
-    Ptr<ISparseOptFlowEstimator> optFlowEstimator() const { return optFlowEstimator_; }
-
-    void setGridSize(Size val) { gridSize_ = val; }
-    Size gridSize() const { return gridSize_; }
-
-    void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
-    RansacParams ransacParams() const { return ransacParams_; }
+    void setOpticalFlowEstimator(Ptr<ISparseOptFlowEstimator> val) { optFlowEstimator_ = val; }
+    Ptr<ISparseOptFlowEstimator> opticalFlowEstimator() const { return optFlowEstimator_; }
 
     void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
-    void setMinInlierRatio(float val) { minInlierRatio_ = val; }
-    float minInlierRatio() const { return minInlierRatio_; }
-
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
 private:
+    Ptr<MotionEstimatorBase> motionEstimator_;
     Ptr<FeatureDetector> detector_;
     Ptr<ISparseOptFlowEstimator> optFlowEstimator_;
-    Size gridSize_;
-    RansacParams ransacParams_;
     Ptr<IOutlierRejector> outlierRejector_;
-    float minInlierRatio_;
 
     std::vector<uchar> status_;
     std::vector<KeyPoint> keypointsPrev_;
@@ -152,29 +201,25 @@ private:
 };
 
 #if HAVE_OPENCV_GPU
-class CV_EXPORTS RansacMotionEstimatorGpu : public GlobalMotionEstimatorBase
+class CV_EXPORTS KeypointBasedMotionEstimatorGpu : public ImageMotionEstimatorBase
 {
 public:
-    RansacMotionEstimatorGpu(MotionModel model = MM_AFFINE);
+    KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator);
 
-    void setRansacParams(const RansacParams &val) { ransacParams_ = val; }
-    RansacParams ransacParams() const { return ransacParams_; }
+    virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
+    virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
 
     void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
-
-    void setMinInlierRatio(float val) { minInlierRatio_ = val; }
-    float minInlierRatio() const { return minInlierRatio_; }
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
     Mat estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok = 0);
 
 private:
+    Ptr<MotionEstimatorBase> motionEstimator_;
     gpu::GoodFeaturesToTrackDetector_GPU detector_;
     SparsePyrLkOptFlowEstimatorGpu optFlowEstimator_;
-    RansacParams ransacParams_;
     Ptr<IOutlierRejector> outlierRejector_;
-    float minInlierRatio_;
 
     gpu::GpuMat frame0_, grayFrame0_, frame1_;
     gpu::GpuMat pointsPrev_, points_;
@@ -185,44 +230,6 @@ private:
     std::vector<uchar> rejectionStatus_;
 };
 #endif
-
-class CV_EXPORTS LpBasedMotionEstimator : public GlobalMotionEstimatorBase
-{
-public:
-    LpBasedMotionEstimator(MotionModel model = MM_AFFINE);
-
-    void setDetector(Ptr<FeatureDetector> val) { detector_ = val; }
-    Ptr<FeatureDetector> detector() const { return detector_; }
-
-    void setOptFlowEstimator(Ptr<ISparseOptFlowEstimator> val) { optFlowEstimator_ = val; }
-    Ptr<ISparseOptFlowEstimator> optFlowEstimator() const { return optFlowEstimator_; }
-
-    void setOutlierRejector(Ptr<IOutlierRejector> val) { outlierRejector_ = val; }
-    Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
-
-    virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok);
-
-private:
-    Ptr<FeatureDetector> detector_;
-    Ptr<ISparseOptFlowEstimator> optFlowEstimator_;
-    Ptr<IOutlierRejector> outlierRejector_;
-
-    std::vector<uchar> status_;
-    std::vector<KeyPoint> keypointsPrev_;
-    std::vector<Point2f> pointsPrev_, points_;
-    std::vector<Point2f> pointsPrevGood_, pointsGood_;
-
-    std::vector<double> obj_, collb_, colub_;
-    std::vector<int> rows_, cols_;
-    std::vector<double> elems_, rowlb_, rowub_;
-
-    void set(int row, int col, double coef)
-    {
-        rows_.push_back(row);
-        cols_.push_back(col);
-        elems_.push_back(coef);
-    }
-};
 
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 
