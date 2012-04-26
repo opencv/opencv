@@ -302,6 +302,8 @@ protected:
         if( validDescriptors.size != calcDescriptors.size || validDescriptors.type() != calcDescriptors.type() )
         {
             ts->printf(cvtest::TS::LOG, "Valid and computed descriptors matrices must have the same size and type.\n");
+            ts->printf(cvtest::TS::LOG, "Valid size is (%d x %d) actual size is (%d x %d).\n", validDescriptors.rows, validDescriptors.cols, calcDescriptors.rows, calcDescriptors.cols);
+            ts->printf(cvtest::TS::LOG, "Valid type is %d  actual type is %d.\n", validDescriptors.type(), calcDescriptors.type());
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
             return;
         }
@@ -997,12 +999,12 @@ TEST( Features2d_DescriptorExtractor_SURF, regression )
     test.safe_run();
 }
 
-/*TEST( Features2d_DescriptorExtractor_OpponentSIFT, regression )
+TEST( Features2d_DescriptorExtractor_OpponentSIFT, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-sift", 0.18f,
                                                  DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );
     test.safe_run();
-}*/
+}
 
 TEST( Features2d_DescriptorExtractor_OpponentSURF, regression )
 {

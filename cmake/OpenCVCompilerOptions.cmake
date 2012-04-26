@@ -17,27 +17,6 @@ set(OPENCV_EXTRA_EXE_LINKER_FLAGS "")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "")
 
-if(MSVC)
-  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
-  # 64-bit portability warnings, in MSVC80
-  if(MSVC80)
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Wp64")
-  endif()
-
-  if(BUILD_WITH_DEBUG_INFO)
-    set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
-  endif()
-
-  # Remove unreferenced functions: function level linking
-  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Gy")
-  if(NOT MSVC_VERSION LESS 1400)
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /bigobj")
-  endif()
-  if(BUILD_WITH_DEBUG_INFO)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Zi")
-  endif()
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
   set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -Wall")
@@ -138,8 +117,27 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 if(MSVC)
-  # 64-bit MSVC compiler uses SSE/SSE2 by default
+  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
+  # 64-bit portability warnings, in MSVC80
+  if(MSVC80)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Wp64")
+  endif()
+
+  if(BUILD_WITH_DEBUG_INFO)
+    set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
+  endif()
+
+  # Remove unreferenced functions: function level linking
+  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Gy")
+  if(NOT MSVC_VERSION LESS 1400)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /bigobj")
+  endif()
+  if(BUILD_WITH_DEBUG_INFO)
+    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Zi")
+  endif()
+
   if(NOT MSVC64)
+    # 64-bit MSVC compiler uses SSE/SSE2 by default
     if(ENABLE_SSE)
       set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE")
     endif()
@@ -147,14 +145,22 @@ if(MSVC)
       set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE2")
     endif()
   endif()
+  
   if(ENABLE_SSE3)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE3")
   endif()
   if(ENABLE_SSE4_1)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE4.1")
   endif()
+  
   if(ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Oi")
+  endif()
+  
+  if(X86 OR X86_64)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND ENABLE_SSE2)
+      set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /fp:fast")# !! important - be on the same wave with x64 compilers
+    endif()
   endif()
 endif()
 
