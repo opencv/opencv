@@ -1984,8 +1984,8 @@ static void addWeighted64f( const double* src1, size_t step1, const double* src2
 
 static BinaryFunc addWeightedTab[] =
 {
-    (BinaryFunc)addWeighted8u, (BinaryFunc)addWeighted8s, (BinaryFunc)addWeighted16u,
-    (BinaryFunc)addWeighted16s, (BinaryFunc)addWeighted32s, (BinaryFunc)addWeighted32f,
+    (BinaryFunc)GET_OPTIMIZED(addWeighted8u), (BinaryFunc)GET_OPTIMIZED(addWeighted8s), (BinaryFunc)GET_OPTIMIZED(addWeighted16u),
+    (BinaryFunc)GET_OPTIMIZED(addWeighted16s), (BinaryFunc)GET_OPTIMIZED(addWeighted32s), (BinaryFunc)addWeighted32f,
     (BinaryFunc)addWeighted64f, 0
 };
 
