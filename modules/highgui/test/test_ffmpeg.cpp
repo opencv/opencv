@@ -71,19 +71,19 @@ public:
         
         if( tag != MKTAG('H', '2', '6', '3') &&
             tag != MKTAG('H', '2', '6', '1') &&
-            tag != MKTAG('D', 'I', 'V', 'X') &&
+            //tag != MKTAG('D', 'I', 'V', 'X') &&
             tag != MKTAG('D', 'X', '5', '0') &&
             tag != MKTAG('X', 'V', 'I', 'D') &&
             tag != MKTAG('m', 'p', '4', 'v') &&
-            tag != MKTAG('D', 'I', 'V', '3') &&
-            tag != MKTAG('W', 'M', 'V', '1') &&
-            tag != MKTAG('W', 'M', 'V', '2') &&
+            //tag != MKTAG('D', 'I', 'V', '3') &&
+            //tag != MKTAG('W', 'M', 'V', '1') &&
+            //tag != MKTAG('W', 'M', 'V', '2') &&
             tag != MKTAG('M', 'P', 'E', 'G') &&
             tag != MKTAG('M', 'J', 'P', 'G') &&
-            tag != MKTAG('j', 'p', 'e', 'g') &&
+            //tag != MKTAG('j', 'p', 'e', 'g') &&
             tag != 0 &&
             tag != MKTAG('I', '4', '2', '0') &&
-            tag != MKTAG('Y', 'U', 'Y', '2') &&
+            //tag != MKTAG('Y', 'U', 'Y', '2') &&
             tag != MKTAG('F', 'L', 'V', '1') )
             continue;
 
@@ -142,6 +142,6 @@ public:
     }
 };
 
-TEST(Highgui_FFmpeg_WriteBigVideo, regression) { CV_FFmpegWriteBigVideoTest      test; test.safe_run(); }
+TEST(Highgui_Video, ffmpeg_writebig) { CV_FFmpegWriteBigVideoTest      test; test.safe_run(); }
 
 #endif

@@ -134,6 +134,12 @@ extern "C" {
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
+#if defined(__APPLE__)
+#define AV_NOPTS_VALUE_ ((int64_t)0x8000000000000000LL)
+#else
+#define AV_NOPTS_VALUE_ ((int64_t)AV_NOPTS_VALUE)
+#endif
+
 int get_number_of_cpus(void)
 {
 #if defined WIN32 || defined _WIN32
@@ -148,11 +154,11 @@ int get_number_of_cpus(void)
     int mib[4];
     size_t len = sizeof(numCPU);
 
-    /* set the mib for hw.ncpu */
+    // set the mib for hw.ncpu
     mib[0] = CTL_HW;
     mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
 
-    /* get the number of CPUs from the system */
+    // get the number of CPUs from the system
     sysctl(mib, 2, &numCPU, &len, NULL, 0);
 
     if( numCPU < 1 )
@@ -168,18 +174,6 @@ int get_number_of_cpus(void)
 #else
     return 1;
 #endif
-}
-
-
-char * FOURCC2str( int fourcc )
-{
-    char * mystr=(char*)malloc(5);
-    mystr[0]=(char)((fourcc    )&255);
-    mystr[1]=(char)((fourcc>> 8)&255);
-    mystr[2]=(char)((fourcc>>16)&255);
-    mystr[3]=(char)((fourcc>>24)&255);
-    mystr[4]=0;
-    return mystr;
 }
 
 
@@ -211,7 +205,6 @@ struct CvCapture_FFMPEG
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
 
     void init();
-    bool reopen();
 
     void    seek(int64_t frame_number);
     void    seek(double sec);
@@ -238,7 +231,7 @@ struct CvCapture_FFMPEG
     Image_FFMPEG      frame;
     struct SwsContext *img_convert_ctx;
 
-    int64_t frame_number;
+    int64_t frame_number, first_frame_number;
 
     double eps_zero;
 /*
@@ -257,7 +250,8 @@ void CvCapture_FFMPEG::init()
     video_stream = -1;
     video_st = 0;
     picture = 0;
-    picture_pts = 0;
+    picture_pts = AV_NOPTS_VALUE_;
+    first_frame_number = -1;
     memset( &rgb_picture, 0, sizeof(rgb_picture) );
     memset( &frame, 0, sizeof(frame) );
     filename = 0;
@@ -313,61 +307,12 @@ void CvCapture_FFMPEG::close()
     // free last packet if exist
     if (packet.data) {
         av_free_packet (&packet);
+        packet.data = NULL;
     }
 
     init();
 }
 
-
-/*
-    Used to reopen a video if the slower fallback function for seeking is used.
-*/
-bool CvCapture_FFMPEG::reopen()
-{
-    /*if ( filename==NULL ) return false;
-
-	#if LIBAVFORMAT_BUILD > 4628
-		avcodec_close( video_st->codec );
-	#else
-		avcodec_close( &video_st->codec );
-	#endif
-    #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
-        av_close_input_file(ic);
-        av_open_input_file(&ic, filename, )
-    #else
-        avformat_close_input(&ic);
-        avformat_open_input(&ic, filename, NULL, NULL);
-    #endif
-
-    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 3, 0)
-             avformat_find_stream_info(ic, NULL);
-    #else
-        av_find_stream_info(ic);
-    #endif
-	#if LIBAVFORMAT_BUILD > 4628
-		AVCodecContext *enc = ic->streams[video_stream]->codec;
-	#else
-		AVCodecContext *enc = &ic->streams[video_stream]->codec;
-	#endif
-
-	#ifdef FF_API_THREAD_INIT
-		avcodec_thread_init(enc, std::min(get_number_of_cpus(), 16));
-	#endif
-
-	AVCodec *codec = avcodec_find_decoder(enc->codec_id);
-    #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
-        avcodec_open2(enc, codec, NULL);
-    #else
-        avcodec_open(enc, codec);
-    #endif
-	video_st = ic->streams[video_stream];
-
-	// reset framenumber to zero
-	frame_number = 0;
-    picture_pts=0;*/
-
-    return true;
-}
 
 #ifndef AVSEEK_FLAG_FRAME
 #define AVSEEK_FLAG_FRAME 0
@@ -456,25 +401,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
     if(video_stream >= 0) valid = true;
 
-    // perform check if source is seekable via ffmpeg's seek function av_seek_frame(...)
-    /*err = av_seek_frame(ic, video_stream, 10, 0);
-    if (err < 0)
-    {
-        filename=(char*)malloc(strlen(_filename)+1);
-        strcpy(filename, _filename);
-        // reopen videofile to 'seek' back to first frame
-        reopen();
-    }
-    else
-    {
-        // seek seems to work, so we don't need the filename,
-        // but we still need to seek back to filestart
-        filename=NULL;
-        int64_t ts    = video_st->first_dts;
-        int     flags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
-        av_seek_frame(ic, video_stream, ts, flags);
-    }*/
-    exit_func:
+exit_func:
 
     if( !valid )
         close();
@@ -486,30 +413,25 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 bool CvCapture_FFMPEG::grabFrame()
 {
     bool valid = false;
-    static bool bFirstTime = true;
     int got_picture;
 
     int count_errs = 0;
     const int max_number_of_attempts = 64;
-
-    if (bFirstTime)
-    {
-        bFirstTime = false;
-        packet.data = NULL;
-    }
 
     if( !ic || !video_st )  return false;
 
     if (packet.data != NULL)
     {
         av_free_packet (&packet);
+        packet.data = NULL;
     }
+    
+    picture_pts = AV_NOPTS_VALUE_;
 
     // get the next frame
     while (!valid)
     {
         int ret = av_read_frame(ic, &packet);
-
         if (ret == AVERROR(EAGAIN)) continue;
 
         /* else if (ret < 0) break; */
@@ -517,9 +439,10 @@ bool CvCapture_FFMPEG::grabFrame()
         if( packet.stream_index != video_stream )
         {
             av_free_packet (&packet);
+            packet.data = NULL;
             count_errs++;
-            if (count_errs > max_number_of_attempts) break; else
-                continue;
+            if (count_errs > max_number_of_attempts)
+                break;
         }
 
         // Decode video frame
@@ -528,8 +451,10 @@ bool CvCapture_FFMPEG::grabFrame()
         // Did we get a video frame?
         if(got_picture)
         {
+            picture_pts = picture->best_effort_timestamp;
+            if( picture_pts == AV_NOPTS_VALUE_ )
+                picture_pts = packet.pts != AV_NOPTS_VALUE_ ? packet.pts : packet.dts;
             frame_number++;
-            picture_pts = packet.pts;
             valid = true;
         }
         else
@@ -538,9 +463,11 @@ bool CvCapture_FFMPEG::grabFrame()
             if (count_errs > max_number_of_attempts)
                 break;
         }
-
     }
 
+    if( valid && first_frame_number < 0 )
+        first_frame_number = dts_to_frame_number(picture_pts);
+    
     // return if we have a new picture or not
     return valid;
 }
@@ -587,8 +514,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
             rgb_picture.linesize
             );
 
-    frame_number++;
-
     *data = frame.data;
     *step = frame.step;
     *width = frame.width;
@@ -598,55 +523,39 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     return true;
 }
 
-#if defined(__APPLE__)
-#define AV_NOPTS_VALUE_ ((int64_t)0x8000000000000000LL)
-#else
-#define AV_NOPTS_VALUE_ ((int64_t)AV_NOPTS_VALUE)
-#endif
 
 double CvCapture_FFMPEG::getProperty( int property_id )
 {
-    // if( !capture || !video_st || !picture->data[0] ) return 0;
     if( !video_st ) return 0;
-
-    // double frameScale = av_q2d (video_st->time_base) * av_q2d (video_st->r_frame_rate);
-    //int64_t timestamp;
-    //timestamp = picture_pts;
 
     switch( property_id )
     {
     case CV_FFMPEG_CAP_PROP_POS_MSEC:
-        return 1000.0*static_cast<int>(frame_number)/static_cast<int>(get_fps());
-        break;
+        return 1000.0*(double)frame_number/get_fps();
     case CV_FFMPEG_CAP_PROP_POS_FRAMES:
-        return (double)static_cast<int>(frame_number);
-        break;
+        return (double)frame_number;
     case CV_FFMPEG_CAP_PROP_POS_AVI_RATIO:
         return r2d(ic->streams[video_stream]->time_base);
-        break;
     case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
-        return (double)static_cast<int>(get_total_frames());
-        break;
+        return (double)get_total_frames();
     case CV_FFMPEG_CAP_PROP_FRAME_WIDTH:
         return (double)frame.width;
-        break;
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
         return (double)frame.height;
-        break;
     case CV_FFMPEG_CAP_PROP_FPS:
 #if LIBAVCODEC_BUILD > 4753
-        return av_q2d (video_st->r_frame_rate);
+        return av_q2d(video_st->r_frame_rate);
 #else
         return (double)video_st->codec.frame_rate
                 / (double)video_st->codec.frame_rate_base;
 #endif
-        break;
-     case CV_FFMPEG_CAP_PROP_FOURCC:
+    case CV_FFMPEG_CAP_PROP_FOURCC:
 #if LIBAVFORMAT_BUILD > 4628
         return (double)video_st->codec->codec_tag;
 #else
         return (double)video_st->codec.codec_tag;
 #endif
+    default:
         break;
     }
 
@@ -655,29 +564,21 @@ double CvCapture_FFMPEG::getProperty( int property_id )
 
 double CvCapture_FFMPEG::r2d(AVRational r)
 {
-    if (r.num == 0 || r.den == 0)
-    {
-        return 0.0;
-    }
-    else
-    {
-        return static_cast<double>(r.num) / static_cast<double>(r.den);
-    }
+    return r.num == 0 || r.den == 0 ? 0. : (double)r.num / (double)r.den;
 }
 
 double CvCapture_FFMPEG::get_duration_sec()
 {
-    double sec = static_cast<double>(ic->duration) / static_cast<double>(AV_TIME_BASE);
+    double sec = (double)ic->duration / (double)AV_TIME_BASE;
 
     if (sec < eps_zero)
     {
-        sec = static_cast<double>(ic->streams[video_stream]->duration) * r2d(ic->streams[video_stream]->time_base);
+        sec = (double)ic->streams[video_stream]->duration * r2d(ic->streams[video_stream]->time_base);
     }
 
     if (sec < eps_zero)
     {
-        sec = static_cast<double>(static_cast<int64_t>(ic->streams[video_stream]->duration)) *
-                                    r2d(ic->streams[video_stream]->time_base);
+        sec = (double)ic->streams[video_stream]->duration * r2d(ic->streams[video_stream]->time_base);
     }
 
     return sec;
@@ -719,58 +620,76 @@ int64_t CvCapture_FFMPEG::get_total_frames()
 int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 {
     double sec = dts_to_sec(dts);
-    return static_cast<int64_t>(get_fps() * sec);
+    return (int64_t)(get_fps() * sec + 0.5);
 }
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
 {
-    return static_cast<double>(dts - ic->streams[video_stream]->start_time) *
+    return (double)(dts - ic->streams[video_stream]->start_time) *
         r2d(ic->streams[video_stream]->time_base);
 }
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
 {
-    frame_number = std::min(_frame_number, get_total_frames());
-    int64_t dts = dts_to_frame_number(ic->streams[video_stream]->cur_dts);
-
-    if (abs(dts - 2 - frame_number) > 16)
+    _frame_number = std::min(_frame_number, get_total_frames());
+    int delta = 2;
+    
+    // if we have not grabbed a single frame before first seek, let's read the first frame
+    // and get some valuable information during the process
+    if( first_frame_number < 0 )
+        grabFrame();
+    
+    for(;;)
     {
-        double sec = static_cast<double>(frame_number) / static_cast<double>(get_fps());
+        int64_t _frame_number_temp = std::max(_frame_number-delta, (int64_t)0);
+        double sec = (double)_frame_number_temp / get_fps();
         int64_t time_stamp = ic->streams[video_stream]->start_time;
         double  time_base  = r2d(ic->streams[video_stream]->time_base);
-        time_stamp += static_cast<int64_t>(sec / time_base);
-        av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
-    }
-
-    while(dts - 2 < frame_number)
-    {
-        /* cv::Mat imag = read(); */
-        if (!grabFrame()) break;
-
-        dts = dts_to_frame_number(ic->streams[video_stream]->cur_dts);
+        time_stamp += (int64_t)(sec / time_base + 0.5);
+        av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
+        avcodec_flush_buffers(ic->streams[video_stream]->codec);
+        if( _frame_number > 0 )
+        {
+            grabFrame();
+            
+            if( _frame_number > 1 )
+            {
+                frame_number = dts_to_frame_number(picture_pts) - first_frame_number;
+                //printf("_frame_number = %d, frame_number = %d, delta = %d\n",
+                //       (int)_frame_number, (int)frame_number, delta);
+                
+                if( frame_number < 0 || frame_number > _frame_number-1 )
+                {
+                    if( _frame_number_temp == 0 || delta >= INT_MAX/4 )
+                        break;
+                    delta = delta < 16 ? delta*2 : delta*3/2;
+                    continue;
+                }
+                while( frame_number < _frame_number-1 )
+                {
+                    if(!grabFrame())
+                        break;
+                }
+                frame_number++;
+                break;
+            }
+            else
+            {
+                frame_number = 1;
+                break;
+            }
+        }
+        else
+        {
+            frame_number = 0;
+            break;
+        }
     }
 }
 
 void CvCapture_FFMPEG::seek(double sec)
 {
-    seek(static_cast<int64_t>(sec * get_fps()));
-}
-
-// this is a VERY slow fallback function, ONLY used if ffmpeg's av_seek_frame delivers no correct result!
-bool CvCapture_FFMPEG::slowSeek( int framenumber )
-{
-    if ( framenumber>picture_pts )
-    {
-        while ( picture_pts<framenumber )
-            if ( !grabFrame() ) return false;
-    }
-    else if ( framenumber<picture_pts )
-    {
-        reopen();
-        while ( picture_pts<framenumber )
-            if ( !grabFrame() ) return false;
-    }
-    return true;
+    seek((int64_t)(sec * get_fps() + 0.5));
 }
 
 bool CvCapture_FFMPEG::setProperty( int property_id, double value )
@@ -984,9 +903,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
     /* put sample parameters */
-    unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
+    int64_t lbit_rate = (int64_t)bitrate;
     lbit_rate += (bitrate / 2);
-    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
+    lbit_rate = std::min(lbit_rate, (int64_t)INT_MAX);
     c->bit_rate = lbit_rate;
 
     // took advice from
@@ -1466,11 +1385,11 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         return false;
     }
 
-    unsigned long long lbit_rate = static_cast<unsigned long long>(c->bit_rate);
+    int64_t lbit_rate = (int64_t)c->bit_rate;
     lbit_rate += (bitrate / 2);
-    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
-    c->bit_rate_tolerance = static_cast<int>(lbit_rate);
-    c->bit_rate = static_cast<int>(lbit_rate);
+    lbit_rate = std::min(lbit_rate, (int64_t)INT_MAX);
+    c->bit_rate_tolerance = (int)lbit_rate;
+    c->bit_rate = (int)lbit_rate;
 
     /* open the codec */
     if ((err=

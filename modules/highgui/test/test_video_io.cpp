@@ -56,10 +56,14 @@ string fourccToString(int fourcc)
     
 const VideoFormat g_specific_fmt_list[] =
 {
-    VideoFormat("avi", CV_FOURCC('m', 'p', 'e', 'g')),
+    VideoFormat("avi", CV_FOURCC('X', 'V', 'I', 'D')),
+    VideoFormat("avi", CV_FOURCC('M', 'P', 'E', 'G')),
     VideoFormat("avi", CV_FOURCC('M', 'J', 'P', 'G')),
     VideoFormat("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
     VideoFormat("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
+    VideoFormat("mkv", CV_FOURCC('M', 'P', 'E', 'G')),
+    VideoFormat("mkv", CV_FOURCC('M', 'J', 'P', 'G')),
+    
     VideoFormat("mov", CV_FOURCC('m', 'p', '4', 'v')),
     VideoFormat()
 };
@@ -516,7 +520,7 @@ TEST(Highgui_Image, regression) { CV_ImageTest test; test.safe_run(); }
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT
 TEST(Highgui_Video, regression) { CV_VideoTest test; test.safe_run(); }
-TEST(Highgui_SpecificVideoFile, regression) { CV_SpecificVideoTest test; test.safe_run(); }
+TEST(Highgui_Video, write_read) { CV_SpecificVideoTest test; test.safe_run(); }
 #endif
 
-TEST(Highgui_SpecificImage, regression) { CV_SpecificImageTest test; test.safe_run(); }
+TEST(Highgui_Image, write_read) { CV_SpecificImageTest test; test.safe_run(); }

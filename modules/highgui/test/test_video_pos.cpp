@@ -94,7 +94,8 @@ public:
             if( fmt.empty() )
                 break;
             string filename = getFilename(fmt);
-            ts->printf(ts->LOG, "\n\nFile: %s\n", filename.c_str());
+            ts->printf(ts->LOG, "\nFile: %s\n", filename.c_str());
+
             if( !CreateTestVideo(fmt, n_frames) )
             {
                 ts->printf(ts->LOG, "\nError: cannot create video file");
@@ -133,7 +134,21 @@ public:
                     return;
                 }
                 
+                int idx1 = (int)cap.get(CV_CAP_PROP_POS_FRAMES);
+                
                 Mat img; cap >> img;
+                Mat img0 = drawFrame(idx);
+                
+                if( idx != idx1 )
+                {
+                    ts->printf(ts->LOG, "\nError: the current position (%d) after seek is different from specified (%d)\n",
+                               idx1, idx);
+                    ts->printf(ts->LOG, "Saving both frames ...\n");
+                    ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                    imwrite("opencv_test_highgui_postest_actual.png", img);
+                    imwrite("opencv_test_highgui_postest_expected.png", img0);
+                    return;
+                }
                 
                 if (img.empty())
                 {
@@ -142,10 +157,9 @@ public:
                     return;
                 }
                 
-                Mat img0 = drawFrame(idx);
                 double err = PSNR(img, img0);
                 
-                if( err < 20 )
+                if( err < 25 )
                 {
                     ts->printf(ts->LOG, "The frame read after positioning to %d is incorrect (PSNR=%g)\n", idx, err);
                     ts->printf(ts->LOG, "Saving both frames ...\n");
@@ -162,5 +176,5 @@ public:
 };
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT
-TEST(Highgui_Positioning, regression) { CV_PositioningTest test; test.safe_run(); }
+TEST(Highgui_Video, seek_random_synthetic) { CV_PositioningTest test; test.safe_run(); }
 #endif
