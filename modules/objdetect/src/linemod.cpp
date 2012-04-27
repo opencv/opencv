@@ -1712,7 +1712,7 @@ void Detector::read(const FileNode& fn)
 void Detector::write(FileStorage& fs) const
 {
   fs << "pyramid_levels" << pyramid_levels;
-  fs << "T" << "[:" << T_at_level << "]";
+  fs << "T" << T_at_level;
 
   fs << "modalities" << "[";
   for (int i = 0; i < (int)modalities.size(); ++i)
