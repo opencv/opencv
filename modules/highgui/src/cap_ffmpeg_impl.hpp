@@ -468,6 +468,12 @@ bool CvCapture_FFMPEG::grabFrame()
             picture_pts = packet.pts;
             valid = 1;
         }
+
+        if (packet.data)
+        {
+            av_free_packet(&packet);
+            packet.data = NULL;
+        }
     }
 
     // return if we have a new picture or not
