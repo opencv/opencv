@@ -586,16 +586,13 @@ public:
 };
 
 
-    
-    
-struct CV_EXPORTS DataMatrixCode {
-  char msg[4]; //TODO std::string
-  Mat original;
-  Point corners[4]; //TODO vector
-};
-
-CV_EXPORTS void findDataMatrix(const Mat& image, std::vector<DataMatrixCode>& codes);
-CV_EXPORTS  void drawDataMatrixCodes(const std::vector<DataMatrixCode>& codes, Mat& drawImage);
+CV_EXPORTS_W void findDataMatrix(InputArray image,
+                                 CV_OUT vector<string>& codes,
+                                 OutputArray corners=noArray(),
+                                 OutputArrayOfArrays dmtx=noArray());
+CV_EXPORTS_W void drawDataMatrixCodes(InputOutputArray image,
+                                      const vector<string>& codes,
+                                      InputArray corners);
 }
 
 /****************************************************************************************\
