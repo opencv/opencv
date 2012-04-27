@@ -241,7 +241,8 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_palette_to_rgb( png_ptr );
 
             if( m_color_type == PNG_COLOR_TYPE_GRAY && m_bit_depth < 8 )
-#if PNG_LIBPNG_VER_MAJOR*100 + PNG_LIBPNG_VER_MINOR >= 104
+#if (PNG_LIBPNG_VER_MAJOR*10000 + PNG_LIBPNG_VER_MINOR*100 + PNG_LIBPNG_VER_RELEASE >= 10209) || \
+    (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR == 0 && PNG_LIBPNG_VER_RELEASE >= 18)
                 png_set_expand_gray_1_2_4_to_8( png_ptr );
 #else
                 png_set_gray_1_2_4_to_8( png_ptr );
