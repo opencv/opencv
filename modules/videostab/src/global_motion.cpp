@@ -429,7 +429,7 @@ Mat MotionEstimatorRansacL2::estimate(InputArray points0, InputArray points1, bo
     else
     {
         vector<uchar> mask;
-        M = findHomography(points0, points1, mask, CV_RANSAC, ransacParams_.thresh);
+        M = findHomography(points0, points1, mask, CV_LMEDS);
         for (int i  = 0; i < npoints; ++i)
             if (mask[i]) ninliers++;
     }

@@ -264,8 +264,10 @@ void LpMotionStabilizer::stabilize(
         {
             set(r, c, pt[i].x); set(r, c+1, pt[i].y); set(r, c+2, 1);
             set(r+1, c, pt[i].y); set(r+1, c+1, -pt[i].x); set(r+1, c+3, 1);
-            rowlb_[r] = pt[i].x-tw; rowub_[r] = pt[i].x+tw;
-            rowlb_[r+1] = pt[i].y-th; rowub_[r+1] = pt[i].y+th;
+            rowlb_[r] = pt[i].x-tw;
+            rowub_[r] = pt[i].x+tw;
+            rowlb_[r+1] = pt[i].y-th;
+            rowub_[r+1] = pt[i].y+th;
         }
     }
 
