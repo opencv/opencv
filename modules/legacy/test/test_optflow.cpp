@@ -351,6 +351,6 @@ void CV_OptFlowTest::run( int /* start_from */)
 }
 
 
-TEST(Video_OpticalFlow, accuracy) { CV_OptFlowTest test; test.safe_run(); }
+TEST(Legacy_OpticalFlow, accuracy) { CV_OptFlowTest test; test.safe_run(); }
 
 

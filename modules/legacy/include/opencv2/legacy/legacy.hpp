@@ -2840,6 +2840,110 @@ bool CalonderDescriptorExtractor<T>::empty() const
     return classifier_.trees_.empty();
 }
     
+    
+////////////////////// Distance & Brute Force Matcher //////////////////////////
+
+template<typename T>
+struct CV_EXPORTS Accumulator
+{
+    typedef T Type;
+};
+
+template<> struct Accumulator<unsigned char>  { typedef float Type; };
+template<> struct Accumulator<unsigned short> { typedef float Type; };
+template<> struct Accumulator<char>   { typedef float Type; };
+template<> struct Accumulator<short>  { typedef float Type; };
+
+/*
+ * Squared Euclidean distance functor
+ */
+template<class T>
+struct CV_EXPORTS SL2
+{
+    enum { normType = NORM_L2SQR };
+    typedef T ValueType;
+    typedef typename Accumulator<T>::Type ResultType;
+    
+    ResultType operator()( const T* a, const T* b, int size ) const
+    {
+        return normL2Sqr<ValueType, ResultType>(a, b, size);
+    }
+};
+
+/*
+ * Euclidean distance functor
+ */
+template<class T>
+struct CV_EXPORTS L2
+{
+    enum { normType = NORM_L2 };
+    typedef T ValueType;
+    typedef typename Accumulator<T>::Type ResultType;
+    
+    ResultType operator()( const T* a, const T* b, int size ) const
+    {
+        return (ResultType)sqrt((double)normL2Sqr<ValueType, ResultType>(a, b, size));
+    }
+};
+
+/*
+ * Manhattan distance (city block distance) functor
+ */
+template<class T>
+struct CV_EXPORTS L1
+{
+    enum { normType = NORM_L1 };
+    typedef T ValueType;
+    typedef typename Accumulator<T>::Type ResultType;
+    
+    ResultType operator()( const T* a, const T* b, int size ) const
+    {
+        return normL1<ValueType, ResultType>(a, b, size);
+    }
+};
+
+/*
+ * Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
+ * bit count of A exclusive XOR'ed with B
+ */
+struct CV_EXPORTS Hamming
+{
+    enum { normType = NORM_HAMMING };
+    typedef unsigned char ValueType;
+    typedef int ResultType;
+    
+    /** this will count the bits in a ^ b
+     */
+    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
+    {
+        return normHamming(a, b, size);
+    }
+};
+
+typedef Hamming HammingLUT;
+
+template<int cellsize> struct CV_EXPORTS HammingMultilevel
+{
+    enum { normType = NORM_HAMMING + (cellsize>1) };
+    typedef unsigned char ValueType;
+    typedef int ResultType;
+    
+    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
+    {
+        return normHamming(a, b, size, cellsize);
+    }
+};
+    
+    
+template<class Distance>
+class CV_EXPORTS BruteForceMatcher : public BFMatcher
+{
+public:
+    BruteForceMatcher( Distance d = Distance() ) : BFMatcher(Distance::normType, false) {}
+    virtual ~BruteForceMatcher() {}
+};
+    
+    
 /****************************************************************************************\
 *                                Planar Object Detection                                 *
 \****************************************************************************************/

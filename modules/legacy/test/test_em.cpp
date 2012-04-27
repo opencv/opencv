@@ -444,5 +444,5 @@ protected:
     }
 };
 
-TEST(ML_CvEM, accuracy) { CV_CvEMTest test; test.safe_run(); }
-TEST(ML_CvEM, save_load) { CV_CvEMTest_SaveLoad test; test.safe_run(); }
+TEST(Legacy_CvEM, accuracy) { CV_CvEMTest test; test.safe_run(); }
+TEST(Legacy_CvEM, save_load) { CV_CvEMTest_SaveLoad test; test.safe_run(); }

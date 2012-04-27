@@ -719,4 +719,4 @@ protected:
 };
 
 
-TEST(Calib3d_StereoGC, regression) { CV_StereoGCTest test; test.safe_run(); }
+TEST(Legacy_StereoGC, regression) { CV_StereoGCTest test; test.safe_run(); }

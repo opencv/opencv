@@ -259,6 +259,6 @@ int CV_KDTreeTest_C::checkFindBoxed()
 }
 
 
-TEST(Features2d_LSH, regression) { CV_LSHTest test; test.safe_run(); }
-TEST(Features2d_SpillTree, regression) { CV_SpillTreeTest_C test; test.safe_run(); }
-TEST(Features2d_KDTree_C, regression) { CV_KDTreeTest_C test; test.safe_run(); }
+TEST(Legacy_LSH, regression) { CV_LSHTest test; test.safe_run(); }
+TEST(Legacy_SpillTree, regression) { CV_SpillTreeTest_C test; test.safe_run(); }
+TEST(Legacy_KDTree_C, regression) { CV_KDTreeTest_C test; test.safe_run(); }
