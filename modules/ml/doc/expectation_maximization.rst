@@ -182,14 +182,17 @@ Returns ``true`` if the Gaussian mixture model was trained.
 
 EM::read, EM::write
 -------------------
-See :ocv:function:`Algorithm::read` and :ocv:function:`Algorithm::write`.
+See :ocv:func:`Algorithm::read` and :ocv:func:`Algorithm::write`.
 
-EM::get
--------
-See :ocv:function:`Algorithm::get`. The following parameters are available for getting:
+EM::get, EM::set
+----------------
+See :ocv:func:`Algorithm::get` and :ocv:func:`Algorithm::set`. The following parameters are available:
 
 * ``"nclusters"``
 * ``"covMatType"``
-* ``"weights"``
-* ``"means"``
-* ``"covs"``
+* ``"maxIters"``
+* ``"epsilon"``
+* ``"weights"`` *(read-only)*
+* ``"means"`` *(read-only)*
+* ``"covs"`` *(read-only)*
+..
