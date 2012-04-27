@@ -171,8 +171,49 @@ RotatedRect
 -----------
 .. ocv:class:: RotatedRect
 
-Template class for rotated rectangles specified by the center, size, and the rotation angle in degrees.
+The class represents rotated (i.e. not up-right) rectangles on a plane. Each rectangle is specified by the center point (mass center), length of each side (represented by cv::Size2f structure) and the rotation angle in degrees.
 
+    .. ocv:function:: RotatedRect::RotatedRect()
+    .. ocv:function:: RotatedRect::RotatedRect(const Point2f& center, const Size2f& size, float angle)
+    .. ocv:function:: RotatedRect::RotatedRect(const CvBox2D& box)
+
+        :param center: The rectangle mass center.
+        :param size: Width and height of the rectangle.
+        :param angle: The rotation angle in a clockwise direction. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
+        :param box: The rotated rectangle parameters as the obsolete CvBox2D structure.
+
+    .. ocv:function:: void RotatedRect::points(Point2f* pts) const
+    .. ocv:function:: Rect RotatedRect::boundingRect() const
+    .. ocv:function:: RotatedRect::operator CvBox2D() const
+
+        :param pts: The points array for storing rectangle vertices.
+
+The sample below demonstrates how to use RotatedRect:
+
+::
+
+    Mat image(200, 200, CV_8UC3, Scalar(0));
+    RotatedRect rRect = RotatedRect(Point2f(100,100), Size2f(100,50), 30);
+
+    Point2f vertices[4];
+    rRect.points(vertices);
+    for (int i = 0; i < 4; i++)
+        line(image, vertices[i], vertices[(i+1)%4], Scalar(0,255,0));
+
+    Rect brect = rRect.boundingRect();
+    rectangle(image, brect, Scalar(255,0,0));
+
+    imshow("rectangles", image);
+    waitKey(0);
+
+.. image:: pics/rotatedrect.png
+
+.. seealso::
+
+    :ocv:cfunc:`CamShift`,
+    :ocv:func:`fitEllipse`,
+    :ocv:func:`minAreaRect`,
+    :ocv:struct:`CvBox2D`
 
 TermCriteria
 ------------
