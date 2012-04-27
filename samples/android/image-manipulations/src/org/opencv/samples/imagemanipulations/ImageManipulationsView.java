@@ -1,8 +1,12 @@
 package org.opencv.samples.imagemanipulations;
 
+import java.util.Arrays;
+
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.Size;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
@@ -18,11 +22,19 @@ import android.view.SurfaceHolder;
 
 class ImageManipulationsView extends SampleCvViewBase {
     private Size mSize0;
+    private Size mSizeRgba;
     private Size mSizeRgbaInner;
     
     private Mat mRgba;
     private Mat mGray;
     private Mat mIntermediateMat;
+    private Mat mHist, mMat0;
+    private MatOfInt mChannels[], mHistSize;
+    private int mHistSizeNum;
+    private MatOfFloat mRanges;
+    private Scalar mColorsRGB[], mColorsHue[], mWhilte;
+    private Point mP1, mP2;
+    float mBuff[];
 
     private Mat mRgbaInnerWindow;
     private Mat mGrayInnerWindow;
@@ -52,6 +64,24 @@ class ImageManipulationsView extends SampleCvViewBase {
             mRgba = new Mat();
             mIntermediateMat = new Mat();
             mSize0 = new Size();
+            mHist = new Mat();
+            mChannels = new MatOfInt[] { new MatOfInt(0), new MatOfInt(1), new MatOfInt(2) };
+            mHistSizeNum = 25;
+            mBuff = new float[mHistSizeNum];
+            mHistSize = new MatOfInt(mHistSizeNum);
+            mRanges = new MatOfFloat(0f, 256f);
+            mMat0  = new Mat();
+            mColorsRGB = new Scalar[] { new Scalar(200, 0, 0, 255), new Scalar(0, 200, 0, 255), new Scalar(0, 0, 200, 255) };
+            mColorsHue = new Scalar[] {
+            		new Scalar(255, 0, 0, 255),   new Scalar(255, 60, 0, 255),  new Scalar(255, 120, 0, 255), new Scalar(255, 180, 0, 255), new Scalar(255, 240, 0, 255),
+            		new Scalar(215, 213, 0, 255), new Scalar(150, 255, 0, 255), new Scalar(85, 255, 0, 255),  new Scalar(20, 255, 0, 255),  new Scalar(0, 255, 30, 255),
+            		new Scalar(0, 255, 85, 255),  new Scalar(0, 255, 150, 255), new Scalar(0, 255, 215, 255), new Scalar(0, 234, 255, 255), new Scalar(0, 170, 255, 255),
+            		new Scalar(0, 120, 255, 255), new Scalar(0, 60, 255, 255),  new Scalar(0, 0, 255, 255),   new Scalar(64, 0, 255, 255),  new Scalar(120, 0, 255, 255),
+            		new Scalar(180, 0, 255, 255), new Scalar(255, 0, 255, 255), new Scalar(255, 0, 215, 255), new Scalar(255, 0, 85, 255),  new Scalar(255, 0, 0, 255)
+            };
+            mWhilte = Scalar.all(255);
+            mP1 = new Point();
+            mP2 = new Point();
         }
     }
 
@@ -59,8 +89,10 @@ class ImageManipulationsView extends SampleCvViewBase {
         if (mRgba.empty())
             return;
 
-        int rows = mRgba.rows();
-        int cols = mRgba.cols();
+        mSizeRgba = mRgba.size(); 
+
+        int rows = (int) mSizeRgba.height;
+        int cols = (int) mSizeRgba.width;
 
         int left = cols / 8;
         int top = rows / 8;
@@ -93,6 +125,49 @@ class ImageManipulationsView extends SampleCvViewBase {
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             break;
 
+        case ImageManipulationsActivity.VIEW_MODE_HIST:
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            if (mSizeRgba == null)
+                CreateAuxiliaryMats();
+            int thikness = (int) (mSizeRgba.width / (mHistSizeNum + 10) / 5);
+            if(thikness > 5) thikness = 5;
+            int offset = (int) ((mSizeRgba.width - (5*mHistSizeNum + 4*10)*thikness)/2);
+            // RGB
+            for(int c=0; c<3; c++) {
+            	Imgproc.calcHist(Arrays.asList(mRgba), mChannels[c], mMat0, mHist, mHistSize, mRanges);
+            	Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
+            	mHist.get(0, 0, mBuff);
+            	for(int h=0; h<mHistSizeNum; h++) {
+            		mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness; 
+            		mP1.y = mSizeRgba.height-1;
+            		mP2.y = mP1.y - 2 - (int)mBuff[h]; 
+            		Core.line(mRgba, mP1, mP2, mColorsRGB[c], thikness);
+            	}
+            }
+            // Value and Hue
+            Imgproc.cvtColor(mRgba, mIntermediateMat, Imgproc.COLOR_RGB2HSV_FULL);
+            // Value
+            Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[2], mMat0, mHist, mHistSize, mRanges);
+        	Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
+        	mHist.get(0, 0, mBuff);
+        	for(int h=0; h<mHistSizeNum; h++) {
+        		mP1.x = mP2.x = offset + (3 * (mHistSizeNum + 10) + h) * thikness; 
+        		mP1.y = mSizeRgba.height-1;
+        		mP2.y = mP1.y - 2 - (int)mBuff[h]; 
+        		Core.line(mRgba, mP1, mP2, mWhilte, thikness);
+        	}
+            // Hue
+            Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[0], mMat0, mHist, mHistSize, mRanges);
+        	Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
+        	mHist.get(0, 0, mBuff);
+        	for(int h=0; h<mHistSizeNum; h++) {
+        		mP1.x = mP2.x = offset + (4 * (mHistSizeNum + 10) + h) * thikness; 
+        		mP1.y = mSizeRgba.height-1;
+        		mP2.y = mP1.y - 2 - (int)mBuff[h]; 
+        		Core.line(mRgba, mP1, mP2, mColorsHue[h], thikness);
+        	}
+            break;
+
         case ImageManipulationsActivity.VIEW_MODE_CANNY:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
@@ -121,13 +196,6 @@ class ImageManipulationsView extends SampleCvViewBase {
             Core.transform(mRgba, mRgba, mSepiaKernel);
             break;
 
-        case ImageManipulationsActivity.VIEW_MODE_BLUR:
-            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            if (mBlurWindow == null)
-                CreateAuxiliaryMats();
-            Imgproc.blur(mBlurWindow, mBlurWindow, new Size(15, 15));
-            break;
-
         case ImageManipulationsActivity.VIEW_MODE_ZOOM:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             if (mZoomCorner == null || mZoomWindow == null)
@@ -146,6 +214,18 @@ class ImageManipulationsView extends SampleCvViewBase {
             Imgproc.resize(mIntermediateMat, mRgbaInnerWindow, mSizeRgbaInner, 0., 0., Imgproc.INTER_NEAREST);
             break;
 
+        case ImageManipulationsActivity.VIEW_MODE_POSTERIZE:
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            if (mRgbaInnerWindow == null)
+                CreateAuxiliaryMats();
+            /*
+            Imgproc.cvtColor(mRgbaInnerWindow, mIntermediateMat, Imgproc.COLOR_RGBA2RGB);
+            Imgproc.pyrMeanShiftFiltering(mIntermediateMat, mIntermediateMat, 5, 50);
+            Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_RGB2RGBA);
+            */
+            Core.convertScaleAbs(mRgbaInnerWindow, mIntermediateMat, 1./64, 0);
+            Core.convertScaleAbs(mIntermediateMat, mRgbaInnerWindow, 64, 0);
+            break;
         }
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
