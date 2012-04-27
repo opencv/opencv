@@ -381,6 +381,8 @@ class RunInfo(object):
     def isTest(self, fullpath):
         if not os.path.isfile(fullpath):
             return False
+        if self.targetos == "nt" and not fullpath.endswith(".exe"):
+            return False
         if hostos == self.targetos:
             return os.access(fullpath, os.X_OK)
         if self.targetos == "android" and fullpath.endswith(".apk"):

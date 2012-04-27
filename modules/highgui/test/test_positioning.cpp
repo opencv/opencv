@@ -135,7 +135,7 @@ void CV_VideoPositioningTest::run_test(int method)
             continue;
         string file_path = src_dir + "video/big_buck_bunny." + ext[i];
 
-        printf("\nReading video file in %s...\n", file_path.c_str());
+        ts->printf(cvtest::TS::LOG, "\nReading video file in %s...\n", file_path.c_str());
 
 		CvCapture* cap = cvCreateFileCapture(file_path.c_str());
 
