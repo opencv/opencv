@@ -311,6 +311,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Core.merge(histList, hist3D);
 
         assertEquals(CvType.CV_32FC3, hist3D.type());
+        assertEquals(10, hist3D.checkVector(3));
         
         Mat truth = new Mat(10, 1, CvType.CV_32FC3);
         truth.put(0, 0,
