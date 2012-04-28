@@ -464,11 +464,11 @@ bool CvCapture_FFMPEG::grabFrame()
                 break;
         }
 
-        if (packet.data)
+        /*if (packet.data)
         {
             av_free_packet (&packet);
             packet.data = NULL;
-        }
+        }*/
     }
 
     if( valid && first_frame_number < 0 )
