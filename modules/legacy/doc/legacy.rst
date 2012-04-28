@@ -9,3 +9,4 @@ legacy. Deprecated stuff
 
     motion_analysis
     expectation_maximization
+    planar_subdivisions

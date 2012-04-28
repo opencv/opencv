@@ -1814,6 +1814,84 @@ To use ``Mat_`` for multi-channel images/matrices, pass ``Vec`` as a ``Mat_`` pa
             img(i,j)[2] ^= (uchar)(i ^ j);
 
 
+InputArray
+----------
+
+This is the proxy class for passing read-only input arrays into OpenCV functions. It is defined as ::
+
+    typedef const _InputArray& InputArray;
+    
+where ``_InputArray`` is a class that can be constructed from ``Mat``, ``Mat_<T>``, ``Matx<T, m, n>``, ``std::vector<T>``, ``std::vector<std::vector<T> >`` or ``std::vector<Mat>``. It can also be constructed from a matrix expression.
+
+Since this is mostly implementation-level class, and its interface may change in future versions, we do not describe it in details. There are a few key things, though, that should be kept in mind:
+
+  * When you see in the reference manual or in OpenCV source code a function that takes ``InputArray``, it means that you can actually pass ``Mat``, ``Matx``, ``vector<T>`` etc. (see above the complete list).
+  
+  * Optional input arguments: If some of the input arrays may be empty, pass ``cv::noArray()`` (or simply ``cv::Mat()`` as you probably did before).
+
+  * The class is designed solely for passing parameters. That is, normally you *should not* declare class members, local and global variables of this type.
+  
+  * If you want to design your own function or a class method that can operate of arrays of multiple types, you can use ``InputArray`` (or ``OutputArray``) for the respective parameters. Inside a function you should use ``_InputArray::getMat()`` method to construct a matrix header for the array (without copying data). ``_InputArray::kind()`` can be used to distinguish ``Mat`` from ``vector<>`` etc., but normally it is not needed.
+  
+Here is how you can use a function that takes ``InputArray`` ::
+
+    std::vector<Point2f> vec;
+    // points or a circle
+    for( int i = 0; i < 30; i++ )
+        vec.push_back(Point2f((float)(100 + 30*cos(i*CV_PI*2/5)),
+                              (float)(100 - 30*sin(i*CV_PI*2/5))));
+    cv::transform(vec, vec, cv::Matx23f(0.707, -0.707, 10, 0.707, 0.707, 20));
+
+That is, we form an STL vector containing points, and apply in-place affine transformation to the vector using the 2x3 matrix created inline as ``Matx<float, 2, 3>`` instance.
+
+Here is how such a function can be implemented (for simplicity, we implement a very specific case of it, according to the assertion statement inside) ::
+
+    void myAffineTransform(InputArray _src, OutputArray _dst, InputArray _m)
+    {
+        // get Mat headers for input arrays. This is O(1) operation,
+        // unless _src and/or _m are matrix expressions.
+        Mat src = _src.getMat(), m = _m.getMat();
+        CV_Assert( src.type() == CV_32FC2 && m.type() == CV_32F && m.size() == Size(3, 2) );
+        
+        // [re]create the output array so that it has the proper size and type.
+        // In case of Mat it calls Mat::create, in case of STL vector it calls vector::resize.
+        _dst.create(src.size(), src.type());
+        Mat dst = _dst.getMat();
+        
+        for( int i = 0; i < src.rows; i++ )
+            for( int j = 0; j < src.cols; j++ )
+            {
+                Point2f pt = src.at<Point2f>(i, j);
+                dst.at<Point2f>(i, j) = Point2f(m.at<float>(0, 0)*pt.x +
+                                                m.at<float>(0, 1)*pt.y +
+                                                m.at<float>(0, 2),
+                                                m.at<float>(1, 0)*pt.x +
+                                                m.at<float>(1, 1)*pt.y +
+                                                m.at<float>(1, 2));
+            }
+    }
+
+There is another related type, ``InputArrayOfArrays``, which is currently defined as a synonym for ``InputArray``: ::
+
+    typedef InputArray InputArrayOfArrays;
+    
+It denotes function arguments that are either vectors of vectors or vectors of matrices. A separate synonym is needed to generate Python/Java etc. wrappers properly. At the function implementation level their use is similar, but ``_InputArray::getMat(idx)`` should be used to get header for the idx-th component of the outer vector and ``_InputArray::size().area()`` should be used to find the number of components (vectors/matrices) of the outer vector.
+
+
+OutputArray
+-----------
+
+This type is very similar to ``InputArray`` except that it is used for input/output and output function parameters. Just like with ``InputArray``, OpenCV users should not care about ``OutputArray``, they just pass ``Mat``, ``vector<T>`` etc. to the functions. The same limitation as for ``InputArray``: **Do not explicitly create OutputArray instances** applies here too.
+
+If you want to make your function polymorphic (i.e. accept different arrays as output parameters), it is also not very difficult. Take the sample above as the reference. Note that ``_OutputArray::create()`` needs to be called before ``_OutputArray::getMat()``. This way you guarantee that the output array is properly allocated.
+
+Optional output parameters. If you do not need certain output array to be computed and returned to you, pass ``cv::noArray()``, just like you would in the case of optional input array. At the implementation level, use ``_OutputArray::needed()`` to check if certain output array needs to be computed or not.
+
+There are several synonyms for ``OutputArray`` that are used to assist automatic Python/Java/... wrapper generators: ::
+
+    typedef OutputArray OutputArrayOfArrays;
+    typedef OutputArray InputOutputArray;
+    typedef OutputArray InputOutputArrayOfArrays;
 
 NAryMatIterator
 ---------------
@@ -2230,3 +2308,11 @@ It simplifies notation of some operations. ::
     M.ref(1, 2, 3) = M(4, 5, 6) + M(7, 8, 9);
 
 
+Algorithm
+---------
+
+This is a base class for all more or less complex algorithms in OpenCV, especially for classes of algorithms, for which there can be multiple implementations. The examples are stereo correspondence (for which there are algorithms like block matching, semi-global block matching, graph-cut etc.), background subtraction (which can be done using mixture-of-gaussians models, codebook-based algorithm etc.), optical flow (block matching, Lucas-Kanade, Horn-Schunck etc.).
+
+Algorithm performs several functions:
+
+    * It provides virtual constructor. That is, if algorithm class is 
