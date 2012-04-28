@@ -118,6 +118,9 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         int cols = mRgba.cols();
         int rows = mRgba.rows();
 
+        rows = rows - rows%4;
+        cols = cols - cols%4;
+
         if (mCells == null)
             createPuzzle(cols, rows);
 
