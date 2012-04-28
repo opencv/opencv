@@ -1095,7 +1095,7 @@ extern "C" {
             f_name = fi.name
             if fi.classname:
                 f_name = fi.classname + "::" + fi.name
-            java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in args])
+            java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in args if a.ctype])
             j_code.write(" "*4 + java_doc + "\n")
 
             # public java wrapper method impl (calling native one above)
