@@ -194,6 +194,12 @@ public class VideoCapture {
         super.finalize();
     }
 
+    // native stuff
+
+    static {
+        System.loadLibrary("opencv_java");
+    }
+
     // C++: VideoCapture::VideoCapture()
     private static native long n_VideoCapture();
 

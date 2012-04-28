@@ -113,6 +113,11 @@ public class Utils {
         nMatToBitmap(m.nativeObj, b);
     }
 
+    // native stuff
+    static {
+        System.loadLibrary("opencv_java");
+    }
+
     private static native void nBitmapToMat(Bitmap b, long m_addr);
 
     private static native void nMatToBitmap(long m_addr, Bitmap b);
