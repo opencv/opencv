@@ -10,3 +10,6 @@ legacy. Deprecated stuff
     motion_analysis
     expectation_maximization
     planar_subdivisions
+    feature_detection_and_description
+    common_interfaces_of_descriptor_extractors
+    common_interfaces_of_generic_descriptor_matchers

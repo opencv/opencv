@@ -183,29 +183,6 @@ Wrapping class for computing descriptors by using the
 
 
 
-
-CalonderDescriptorExtractor
----------------------------
-.. ocv:class:: CalonderDescriptorExtractor
-
-Wrapping class for computing descriptors by using the
-:ocv:class:`RTreeClassifier` class. ::
-
-    template<typename T>
-    class CalonderDescriptorExtractor : public DescriptorExtractor
-    {
-    public:
-        CalonderDescriptorExtractor( const string& classifierFile );
-
-        virtual void read( const FileNode &fn );
-        virtual void write( FileStorage &fs ) const;
-        virtual int descriptorSize() const;
-        virtual int descriptorType() const;
-    protected:
-        ...
-    }
-
-
 OpponentColorDescriptorExtractor
 --------------------------------
 .. ocv:class:: OpponentColorDescriptorExtractor
