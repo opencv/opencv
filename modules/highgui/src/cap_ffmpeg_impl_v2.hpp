@@ -255,7 +255,8 @@ void CvCapture_FFMPEG::init()
     memset( &rgb_picture, 0, sizeof(rgb_picture) );
     memset( &frame, 0, sizeof(frame) );
     filename = 0;
-    packet.data = NULL;
+    memset(&packet, 0, sizeof(packet));
+    av_init_packet(&packet);
     img_convert_ctx = 0;
 
     avcodec = 0;
@@ -321,22 +322,33 @@ void CvCapture_FFMPEG::close()
 #define AVSEEK_FLAG_ANY 1
 #endif
 
+static void icvInitFFMPEG_internal()
+{
+    static volatile bool initialized = false;
+    if( !initialized )
+    {
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
+        avformat_network_init();
+    #endif
+
+        /* register all codecs, demux and protocols */
+        av_register_all();
+
+        av_log_set_level(AV_LOG_ERROR);
+        
+        initialized = true;
+    }
+}
+
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
+    icvInitFFMPEG_internal();
+    
     unsigned i;
     bool valid = false;
 
     close();
-	
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
-    avformat_network_init();
-#endif
-
-    /* register all codecs, demux and protocols */
-    av_register_all();
-
-    av_log_set_level(AV_LOG_ERROR);
-
+    
     int err = avformat_open_input(&ic, _filename, NULL, NULL);
     if (err < 0) {
         CV_WARN("Error opening file");
@@ -416,15 +428,11 @@ bool CvCapture_FFMPEG::grabFrame()
     int got_picture;
 
     int count_errs = 0;
-    const int max_number_of_attempts = 64;
+    const int max_number_of_attempts = 1 << 16;
 
     if( !ic || !video_st )  return false;
 
-    if (packet.data != NULL)
-    {
-        av_free_packet (&packet);
-        packet.data = NULL;
-    }
+    av_free_packet (&packet);
     
     picture_pts = AV_NOPTS_VALUE_;
 
@@ -439,10 +447,10 @@ bool CvCapture_FFMPEG::grabFrame()
         if( packet.stream_index != video_stream )
         {
             av_free_packet (&packet);
-            packet.data = NULL;
             count_errs++;
             if (count_errs > max_number_of_attempts)
                 break;
+            continue;
         }
         
         // Decode video frame
@@ -464,11 +472,7 @@ bool CvCapture_FFMPEG::grabFrame()
                 break;
         }
 
-        /*if (packet.data)
-        {
-            av_free_packet (&packet);
-            packet.data = NULL;
-        }*/
+        av_free_packet (&packet);
     }
 
     if( valid && first_frame_number < 0 )
@@ -1244,6 +1248,8 @@ void CvVideoWriter_FFMPEG::close()
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, bool is_color )
 {
+    icvInitFFMPEG_internal();
+    
     CodecID codec_id = CODEC_ID_NONE;
     int err, codec_pix_fmt;
     double bitrate_scale = 1;
@@ -1263,10 +1269,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     height &= -2;
     if( width <= 0 || height <= 0 )
         return false;
-
-    // tell FFMPEG to register codecs
-    av_register_all();
-    av_log_set_level(AV_LOG_ERROR);
 
     /* auto detect the output format from the name and fourcc code. */
 
