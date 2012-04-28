@@ -1762,7 +1762,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         if( tvecs )
         {
             src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 + 3 );
-            dst = cvMat( 3, 1, CV_MAT_TYPE(tvecs->type), tvecs->rows == 1 ?
+            dst = cvMat( 3, 1, CV_MAT_DEPTH(tvecs->type), tvecs->rows == 1 ?
                     tvecs->data.ptr + i*CV_ELEM_SIZE(tvecs->type) :
                     tvecs->data.ptr + tvecs->step*i );
             cvConvert( &src, &dst );
