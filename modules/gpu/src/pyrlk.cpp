@@ -294,8 +294,8 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
         }
         else
         {
-            pyrUp(uPyr_[level], uPyr_[level - 1]);
-            pyrUp(vPyr_[level], vPyr_[level - 1]);
+            resize(uPyr_[level], uPyr_[level - 1], uPyr_[level - 1].size());
+            resize(vPyr_[level], vPyr_[level - 1], vPyr_[level - 1].size());
 
             multiply(uPyr_[level - 1], Scalar::all(2), uPyr_[level - 1]);
             multiply(vPyr_[level - 1], Scalar::all(2), vPyr_[level - 1]);
