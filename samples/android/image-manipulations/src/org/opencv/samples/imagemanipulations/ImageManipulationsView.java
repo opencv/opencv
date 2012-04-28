@@ -170,13 +170,11 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         case ImageManipulationsActivity.VIEW_MODE_CANNY:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
 
             if (mRgbaInnerWindow == null || mGrayInnerWindow == null)
                 CreateAuxiliaryMats();
-
-            Imgproc.Canny(mGrayInnerWindow, mGrayInnerWindow, 80, 90);
-            Imgproc.cvtColor(mGrayInnerWindow, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
+            Imgproc.Canny(mRgbaInnerWindow, mIntermediateMat, 80, 90);
+            Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SOBEL:
@@ -223,8 +221,10 @@ class ImageManipulationsView extends SampleCvViewBase {
             Imgproc.pyrMeanShiftFiltering(mIntermediateMat, mIntermediateMat, 5, 50);
             Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_RGB2RGBA);
             */
-            Core.convertScaleAbs(mRgbaInnerWindow, mIntermediateMat, 1./64, 0);
-            Core.convertScaleAbs(mIntermediateMat, mRgbaInnerWindow, 64, 0);
+            Imgproc.Canny(mRgbaInnerWindow, mIntermediateMat, 80, 90);
+            mRgbaInnerWindow.setTo(new Scalar(0, 0, 0, 255), mIntermediateMat);
+            Core.convertScaleAbs(mRgbaInnerWindow, mIntermediateMat, 1./16, 0);
+            Core.convertScaleAbs(mIntermediateMat, mRgbaInnerWindow, 16, 0);
             break;
         }
 
