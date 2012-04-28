@@ -14,7 +14,7 @@ class_ignore_list = (
     #features2d
     #"KeyPoint", "MSER", "StarDetector", "SURF", "DMatch",
     #ml
-    "EM",
+    #"EM",
 )
 
 const_ignore_list = (
@@ -289,8 +289,15 @@ type_dict = {
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
 "TermCriteria": { "j_type" : "TermCriteria",  "jn_args" : (("int", ".type"), ("int", ".maxCount"), ("double", ".epsilon")),
-                  "jni_var" : "TermCriteria %(n)s(%(n)s_type, %(n)s_maxCount, %(n)s_epsilon)",
+                  "jni_var" : "TermCriteria %(n)s(%(n)s_type, %(n)s_maxCount, %(n)s_epsilon)", "jni_type" : "jdoubleArray",
                   "suffix" : "IID"},
+"CvTermCriteria": { "j_type" : "TermCriteria",  "jn_args" : (("int", ".type"), ("int", ".maxCount"), ("double", ".epsilon")),
+                  "jni_var" : "TermCriteria %(n)s(%(n)s_type, %(n)s_maxCount, %(n)s_epsilon)", "jni_type" : "jdoubleArray",
+                  "suffix" : "IID"},
+    "Vec2d"   : { "j_type" : "double[]",  "jn_args" : (("double", ".val[0]"), ("double", ".val[1]")),
+                  "jn_type" : "double[]",
+                  "jni_var" : "Vec2d %(n)s(%(n)s_val0, %(n)s_val1)", "jni_type" : "jdoubleArray",
+                  "suffix" : "DD"},
     "Vec3d"   : { "j_type" : "double[]",  "jn_args" : (("double", ".val[0]"), ("double", ".val[1]"), ("double", ".val[2]")),
                   "jn_type" : "double[]",
                   "jni_var" : "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)", "jni_type" : "jdoubleArray",
@@ -615,7 +622,7 @@ class FuncInfo(object):
             if m.startswith("="):
                 self.jname = m[1:]
         self.static = ["","static"][ "/S" in decl[2] ]
-        self.ctype = decl[1] or ""
+        self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
         self.args = []
         arg_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
         for a in decl[3]:

@@ -719,6 +719,19 @@ public class Mat {
     }
 
     //
+    // C++: Mat Mat::setTo(Scalar value, Mat mask = Mat())
+    //
+
+    // javadoc: Mat::setTo(value, mask)
+    public Mat setTo(Scalar value, Mat mask)
+    {
+
+        Mat retVal = new Mat(n_setTo(nativeObj, value.val[0], value.val[1], value.val[2], value.val[3], mask.nativeObj));
+
+        return retVal;
+    }
+
+    //
     // C++: Mat Mat::setTo(Mat value, Mat mask = Mat())
     //
 
@@ -1227,6 +1240,9 @@ public class Mat {
 
     // C++: Mat Mat::operator =(Scalar s)
     private static native long n_setTo(long nativeObj, double s_val0, double s_val1, double s_val2, double s_val3);
+
+    // C++: Mat Mat::setTo(Scalar value, Mat mask = Mat())
+    private static native long n_setTo(long nativeObj, double s_val0, double s_val1, double s_val2, double s_val3, long mask_nativeObj);
 
     // C++: Mat Mat::setTo(Mat value, Mat mask = Mat())
     private static native long n_setTo(long nativeObj, long value_nativeObj, long mask_nativeObj);

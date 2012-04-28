@@ -871,6 +871,15 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(gray127, gray0);
     }
 
+    public void testSetToScalarMask() {
+    	Mat mask = gray0.clone();
+    	mask.put(1, 1, 1, 2, 3);
+        gray0.setTo(new Scalar(1), mask);
+        assertEquals(3, Core.countNonZero(gray0));
+        Core.subtract(gray0, mask, gray0);
+        assertEquals(0, Core.countNonZero(gray0));
+    }
+
     public void testSize() {
         assertEquals(new Size(matSize, matSize), gray0.size());
 

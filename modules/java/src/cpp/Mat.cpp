@@ -1558,6 +1558,38 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1setTo__JDDDD
 
 
 //
+//  Mat Mat::setTo(Scalar value, Mat mask = Mat())
+//
+
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1setTo__JDDDDJ
+  (JNIEnv* env, jclass cls, jlong self, jdouble s_val0, jdouble s_val1, jdouble s_val2, jdouble s_val3, jlong mask_nativeObj)
+{
+    try {
+        LOGD("Mat::n_1setTo__JDDDDJ()");
+        Mat* me = (Mat*) self; //TODO: check for NULL
+        Scalar s(s_val0, s_val1, s_val2, s_val3);
+        Mat& mask = *((Mat*)mask_nativeObj);
+        Mat _retval_ = me->setTo( s, mask );
+        
+        return (jlong) new Mat(_retval_);
+    } catch(cv::Exception e) {
+        LOGD("Mat::n_1setTo__JDDDDJ() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::n_1setTo__JDDDDJ() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::n_1setTo__JDDDDJ()}");
+        return 0;
+    }
+}
+
+
+
+//
 //  Mat Mat::setTo(Mat value, Mat mask = Mat())
 //
 
@@ -1930,45 +1962,59 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1delete
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jdoubleArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(!me || !me->data) return 0;  // no native object behind
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+    try {
+        LOGD("Mat::nPutD()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(!me || !me->data) return 0;  // no native object behind
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
-    int rest = ((me->rows - row) * me->cols - col) * me->channels();
-    if(count>rest) count = rest;
-    int res = count;
-    double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
-    double* src = values;
-    int r, c;
-    for(c=col; c<me->cols && count>0; c++)
-    {
-        switch(me->depth()) {
-            case CV_8U:  PUT_ITEM(uchar,  row, c); break;
-            case CV_8S:  PUT_ITEM(schar,  row, c); break;
-            case CV_16U: PUT_ITEM(ushort, row, c); break;
-            case CV_16S: PUT_ITEM(short,  row, c); break;
-            case CV_32S: PUT_ITEM(int,    row, c); break;
-            case CV_32F: PUT_ITEM(float,  row, c); break;
-            case CV_64F: PUT_ITEM(double, row, c); break;
-        }
-    }
-
-    for(r=row+1; r<me->rows && count>0; r++)
-        for(c=0; c<me->cols && count>0; c++)
+        int rest = ((me->rows - row) * me->cols - col) * me->channels();
+        if(count>rest) count = rest;
+        int res = count;
+        double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
+        double* src = values;
+        int r, c;
+        for(c=col; c<me->cols && count>0; c++)
         {
             switch(me->depth()) {
-                case CV_8U:  PUT_ITEM(uchar,  r, c); break;
-                case CV_8S:  PUT_ITEM(schar,  r, c); break;
-                case CV_16U: PUT_ITEM(ushort, r, c); break;
-                case CV_16S: PUT_ITEM(short,  r, c); break;
-                case CV_32S: PUT_ITEM(int,    r, c); break;
-                case CV_32F: PUT_ITEM(float,  r, c); break;
-                case CV_64F: PUT_ITEM(double, r, c); break;
+                case CV_8U:  PUT_ITEM(uchar,  row, c); break;
+                case CV_8S:  PUT_ITEM(schar,  row, c); break;
+                case CV_16U: PUT_ITEM(ushort, row, c); break;
+                case CV_16S: PUT_ITEM(short,  row, c); break;
+                case CV_32S: PUT_ITEM(int,    row, c); break;
+                case CV_32F: PUT_ITEM(float,  row, c); break;
+                case CV_64F: PUT_ITEM(double, row, c); break;
             }
         }
 
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+        for(r=row+1; r<me->rows && count>0; r++)
+            for(c=0; c<me->cols && count>0; c++)
+            {
+                switch(me->depth()) {
+                    case CV_8U:  PUT_ITEM(uchar,  r, c); break;
+                    case CV_8S:  PUT_ITEM(schar,  r, c); break;
+                    case CV_16U: PUT_ITEM(ushort, r, c); break;
+                    case CV_16S: PUT_ITEM(short,  r, c); break;
+                    case CV_32S: PUT_ITEM(int,    r, c); break;
+                    case CV_32F: PUT_ITEM(float,  r, c); break;
+                    case CV_64F: PUT_ITEM(double, r, c); break;
+                }
+            }
+
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nPutD() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nPutD() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nPutD()}");
+        return 0;
+    }
 }
 
 
@@ -2010,57 +2056,113 @@ extern "C" {
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jbyteArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_put<char>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nPutB()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_put<char>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nPutB() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nPutB() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nPutB()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jshortArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_16U && me->depth() != CV_16S) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_put<short>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nPutS()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_16U && me->depth() != CV_16S) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_put<short>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nPutS() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nPutS() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nPutS()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jintArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_32S) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_put<int>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nPutI()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_32S) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_put<int>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nPutI() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nPutI() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nPutI()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jfloatArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_32F) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_put<float>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nPutF()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_32F) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_put<float>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nPutF() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nPutF() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nPutF()}");
+        return 0;
+    }
 }
 
 
@@ -2101,96 +2203,180 @@ extern "C" {
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetB
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jbyteArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_get<char>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nGetB()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_get<char>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nGetB() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nGetB() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nGetB()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetS
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jshortArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_16U && me->depth() != CV_16S) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_get<short>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nGetS()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_16U && me->depth() != CV_16S) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_get<short>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nGetS() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nGetS() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nGetS()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetI
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jintArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_32S) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_get<int>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nGetI()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_32S) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_get<int>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nGetI() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nGetI() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nGetI()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetF
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jfloatArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_32F) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_get<float>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nGetF()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_32F) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_get<float>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nGetF() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nGetF() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nGetF()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetD
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jdoubleArray vals)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->depth() != CV_64F) return 0; // incompatible type
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
-    
-    char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
-    int res = mat_get<double>(me, row, col, count, values);
-    env->ReleasePrimitiveArrayCritical(vals, values, 0);
-    return res;
+    try {
+        LOGD("Mat::nGetD()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != CV_64F) return 0; // incompatible type
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+        
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_get<double>(me, row, col, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nGetD() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nGetD() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nGetD()}");
+        return 0;
+    }
 }
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
     (JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count)
 {
-    cv::Mat* me = (cv::Mat*) self;
-    if(! self) return 0; // no native object behind
-    if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+    try {
+        LOGD("Mat::nGet()");
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
-    jdoubleArray res = env->NewDoubleArray(me->channels());
-    if(res){
-        jdouble buff[me->channels()];
-        int i;
-        switch(me->depth()){
-            case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) me->ptr(row, col) + i); break;
-            case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(row, col) + i); break;
-            case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(row, col) + i); break;
-            case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(row, col) + i); break;
-            case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
-            case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
-            case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
+        jdoubleArray res = env->NewDoubleArray(me->channels());
+        if(res){
+            jdouble buff[me->channels()];
+            int i;
+            switch(me->depth()){
+                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) me->ptr(row, col) + i); break;
+                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(row, col) + i); break;
+                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(row, col) + i); break;
+                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(row, col) + i); break;
+                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
+                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
+                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
+            }
+            env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
         }
-        env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
+        return res;
+    } catch(cv::Exception e) {
+        LOGD("Mat::nGet() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::nGet() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::nGet()}");
+        return 0;
     }
-    return res;
 }
 
 JNIEXPORT jstring JNICALL Java_org_opencv_core_Mat_nDump
