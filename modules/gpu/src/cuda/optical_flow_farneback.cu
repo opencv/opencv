@@ -433,6 +433,25 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
+    void boxFilter5Gpu_CC11(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream)
+    {
+        int height = src.rows / 5;
+        int width = src.cols;
+
+        dim3 block(128);
+        dim3 grid(divUp(width, block.x), divUp(height, block.y));
+        int smem = (block.x + 2*ksizeHalf) * 5 * block.y * sizeof(float);
+
+        float boxAreaInv = 1.f / ((1 + 2*ksizeHalf) * (1 + 2*ksizeHalf));
+        boxFilter5<<<grid, block, smem, stream>>>(height, width, src, ksizeHalf, boxAreaInv, dst);
+
+        cudaSafeCall(cudaGetLastError());
+
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
     __constant__ float c_gKer[MAX_KSIZE_HALF + 1];
 
     template <typename Border>
@@ -575,14 +594,14 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
-    template <typename Border>
+    template <typename Border, int blockDimX>
     void gaussianBlur5Caller(
             const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream)
     {
         int height = src.rows / 5;
         int width = src.cols;
 
-        dim3 block(256);
+        dim3 block(blockDimX);
         dim3 grid(divUp(width, block.x), divUp(height, block.y));
         int smem = (block.x + 2*ksizeHalf) * 5 * block.y * sizeof(float);
         Border b(height, width);
@@ -603,12 +622,26 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
         static const caller_t callers[] =
         {
-            gaussianBlur5Caller<BrdReflect101<float> >,
-            gaussianBlur5Caller<BrdReplicate<float> >,
+            gaussianBlur5Caller<BrdReflect101<float>,256>,
+            gaussianBlur5Caller<BrdReplicate<float>,256>,
         };
 
         callers[borderMode](src, ksizeHalf, dst, stream);
-    } 
+    }
+
+    void gaussianBlur5Gpu_CC11(
+            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderMode, cudaStream_t stream)
+    {
+        typedef void (*caller_t)(const DevMem2Df, int, DevMem2Df, cudaStream_t);
+
+        static const caller_t callers[] =
+        {
+            gaussianBlur5Caller<BrdReflect101<float>,128>,
+            gaussianBlur5Caller<BrdReplicate<float>,128>,
+        };
+
+        callers[borderMode](src, ksizeHalf, dst, stream);
+    }
 
 }}}} // namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 

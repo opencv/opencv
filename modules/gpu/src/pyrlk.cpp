@@ -126,18 +126,19 @@ void cv::gpu::PyrLKOpticalFlow::buildImagePyramid(const GpuMat& img0, vector<Gpu
 
 namespace
 {
-    void calcPatchSize(cv::Size winSize, int cn, dim3& block, dim3& patch)
+    void calcPatchSize(cv::Size winSize, int cn, dim3& block, dim3& patch, bool isDeviceArch11)
     {
         winSize.width *= cn;
 
         if (winSize.width > 32 && winSize.width > 2 * winSize.height)
         {
-            block.x = 32;
+            block.x = isDeviceArch11 ? 16 : 32;
             block.y = 8;
         }
         else
         {
-            block.x = block.y = 16;
+            block.x = 16;
+            block.y = isDeviceArch11 ? 8 : 16;
         }
 
         patch.x = (winSize.width  + block.x - 1) / block.x;
@@ -166,7 +167,7 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     const int cn = prevImg.channels();
 
     dim3 block, patch;
-    calcPatchSize(winSize, cn, block, patch);
+    calcPatchSize(winSize, cn, block, patch, isDeviceArch11_);   
 
     CV_Assert(derivLambda >= 0);
     CV_Assert(maxLevel >= 0 && winSize.width > 2 && winSize.height > 2);
