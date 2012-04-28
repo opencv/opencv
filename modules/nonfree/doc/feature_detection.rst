@@ -5,90 +5,45 @@ SIFT
 ----
 .. ocv:class:: SIFT
 
-Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform (SIFT) approach. ::
+Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform (SIFT) algorithm by D. Lowe [Lowe04]_.
 
-    class CV_EXPORTS SIFT
-    {
-    public:
-        struct CommonParams
-        {
-            static const int DEFAULT_NOCTAVES = 4;
-            static const int DEFAULT_NOCTAVE_LAYERS = 3;
-            static const int DEFAULT_FIRST_OCTAVE = -1;
-            enum{ FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
-
-            CommonParams();
-            CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave,
-                                              int _angleMode );
-            int nOctaves, nOctaveLayers, firstOctave;
-            int angleMode;
-        };
-
-        struct DetectorParams
-        {
-            static double GET_DEFAULT_THRESHOLD()
-              { return 0.04 / SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS / 2.0; }
-            static double GET_DEFAULT_EDGE_THRESHOLD() { return 10.0; }
-
-            DetectorParams();
-            DetectorParams( double _threshold, double _edgeThreshold );
-            double threshold, edgeThreshold;
-        };
-
-        struct DescriptorParams
-        {
-            static double GET_DEFAULT_MAGNIFICATION() { return 3.0; }
-            static const bool DEFAULT_IS_NORMALIZE = true;
-            static const int DESCRIPTOR_SIZE = 128;
-
-            DescriptorParams();
-            DescriptorParams( double _magnification, bool _isNormalize,
-                                                      bool _recalculateAngles );
-            double magnification;
-            bool isNormalize;
-            bool recalculateAngles;
-        };
-
-        SIFT();
-        //! sift-detector constructor
-        SIFT( double _threshold, double _edgeThreshold,
-              int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
-              int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
-              int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
-              int _angleMode=CommonParams::FIRST_ANGLE );
-        //! sift-descriptor constructor
-        SIFT( double _magnification, bool _isNormalize=true,
-              bool _recalculateAngles = true,
-              int _nOctaves=CommonParams::DEFAULT_NOCTAVES,
-              int _nOctaveLayers=CommonParams::DEFAULT_NOCTAVE_LAYERS,
-              int _firstOctave=CommonParams::DEFAULT_FIRST_OCTAVE,
-              int _angleMode=CommonParams::FIRST_ANGLE );
-        SIFT( const CommonParams& _commParams,
-              const DetectorParams& _detectorParams = DetectorParams(),
-              const DescriptorParams& _descriptorParams = DescriptorParams() );
-
-        //! returns the descriptor size in floats (128)
-        int descriptorSize() const { return DescriptorParams::DESCRIPTOR_SIZE; }
-        //! finds the keypoints using the SIFT algorithm
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints) const;
-        //! finds the keypoints and computes descriptors for them using SIFT algorithm.
-        //! Optionally it can compute descriptors for the user-provided keypoints
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints,
-                        Mat& descriptors,
-                        bool useProvidedKeypoints=false) const;
-
-        CommonParams getCommonParams () const { return commParams; }
-        DetectorParams getDetectorParams () const { return detectorParams; }
-        DescriptorParams getDescriptorParams () const { return descriptorParams; }
-    protected:
-        ...
-    };
+.. [Lowe04] Lowe, D. G., “Distinctive Image Features from Scale-Invariant Keypoints”, International Journal of Computer Vision, 60, 2, pp. 91-110, 2004.
 
 
+SIFT::SIFT
+----------
+The SIFT constructors.
+
+.. ocv:function:: SIFT::SIFT( int nfeatures=0, int nOctaveLayers=3, double contrastThreshold=0.04, double edgeThreshold=10, double sigma=1.6)
+
+    :param nfeatures: The number of best features to retain. The features are ranked by their scores (measured in SIFT algorithm as the local contrast)
+    
+    :param nOctaveLayers: The number of layers in each octave. 3 is the value used in D. Lowe paper. The number of octaves is computed automatically from the image resolution.
+    
+    :param contrastThreshold: The contrast threshold used to filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
+    
+    :param edgeThreshold: The threshold used to filter out edge-like features. Note that the its meaning is different from the contrastThreshold, i.e. the larger the ``edgeThreshold``, the less features are filtered out (more features are retained).
+
+    :param sigma: The sigma of the Gaussian applied to the input image at the octave #0. If your image is captured with a weak camera with soft lenses, you might want to reduce the number.
 
 
+SIFT::operator ()
+-----------------
+Extract features and computes their descriptors using SIFT algorithm
+
+.. ocv:function:: void SIFT::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false)
+
+    :param image: Input 8-bit grayscale image
+
+    :param mask: Optional input mask that marks the regions where we should detect features.
+
+    :param keypoints: The input/output vector of keypoints
+
+    :param descriptors: The output matrix of descriptors. Pass ``cv::noArray()`` if you do not need them.
+
+    :param useProvidedKeypoints: Boolean flag. If it is true, the keypoint detector is not run. Instead, the provided vector of keypoints is used and the algorithm just computes their descriptors.
+
+    
 SURF
 ----
 .. ocv:class:: SURF
@@ -146,8 +101,8 @@ SURF::operator()
 ----------------
 Detects keypoints and computes SURF descriptors for them.
 
-.. ocv:function:: void SURF::operator()(const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints)
-.. ocv:function:: void SURF::operator()(const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints, vector<float>& descriptors, bool useProvidedKeypoints=false)
+.. ocv:function:: void SURF::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const
+.. ocv:function:: void SURF::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false)
 
 .. ocv:pyfunction:: cv2.SURF.detect(img, mask) -> keypoints
 .. ocv:pyfunction:: cv2.SURF.detect(img, mask[, useProvidedKeypoints]) -> keypoints, descriptors
@@ -162,7 +117,7 @@ Detects keypoints and computes SURF descriptors for them.
     
     :param keypoints: The input/output vector of keypoints
     
-    :param descriptors: The output concatenated vectors of descriptors. Each descriptor is 64- or 128-element vector, as returned by ``SURF::descriptorSize()``. So the total size of ``descriptors`` will be ``keypoints.size()*descriptorSize()``.
+    :param descriptors: The output matrix of descriptors. Pass ``cv::noArray()`` if you do not need them.
     
     :param useProvidedKeypoints: Boolean flag. If it is true, the keypoint detector is not run. Instead, the provided vector of keypoints is used and the algorithm just computes their descriptors.
     

@@ -95,92 +95,14 @@ Creates a descriptor extractor by name.
 
 The current implementation supports the following types of a descriptor extractor:
 
- * ``"SIFT"`` -- :ocv:class:`SiftDescriptorExtractor`
- * ``"SURF"`` -- :ocv:class:`SurfDescriptorExtractor`
- * ``"ORB"`` -- :ocv:class:`OrbDescriptorExtractor`
+ * ``"SIFT"`` -- :ocv:class:`SIFT`
+ * ``"SURF"`` -- :ocv:class:`SURF`
+ * ``"ORB"`` -- :ocv:class:`ORB`
  * ``"BRIEF"`` -- :ocv:class:`BriefDescriptorExtractor`
 
 A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
 :ocv:class:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
 for example: ``"OpponentSIFT"`` .
-
-
-
-SiftDescriptorExtractor
------------------------
-.. ocv:class:: SiftDescriptorExtractor
-
-Wrapping class for computing descriptors by using the
-:ocv:class:`SIFT` class. ::
-
-    class SiftDescriptorExtractor : public DescriptorExtractor
-    {
-    public:
-        SiftDescriptorExtractor(
-            const SIFT::DescriptorParams& descriptorParams=SIFT::DescriptorParams(),
-            const SIFT::CommonParams& commonParams=SIFT::CommonParams() );
-        SiftDescriptorExtractor( double magnification, bool isNormalize=true,
-            bool recalculateAngles=true, int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
-            int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
-            int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
-            int angleMode=SIFT::CommonParams::FIRST_ANGLE );
-
-        virtual void read (const FileNode &fn);
-        virtual void write (FileStorage &fs) const;
-        virtual int descriptorSize() const;
-        virtual int descriptorType() const;
-    protected:
-        ...
-    }
-
-
-
-
-SurfDescriptorExtractor
------------------------
-.. ocv:class:: SurfDescriptorExtractor
-
-Wrapping class for computing descriptors by using the
-:ocv:class:`SURF` class. ::
-
-    class SurfDescriptorExtractor : public DescriptorExtractor
-    {
-    public:
-        SurfDescriptorExtractor( int nOctaves=4,
-                                 int nOctaveLayers=2, bool extended=false );
-
-        virtual void read (const FileNode &fn);
-        virtual void write (FileStorage &fs) const;
-        virtual int descriptorSize() const;
-        virtual int descriptorType() const;
-    protected:
-        ...
-    }
-
-
-
-
-OrbDescriptorExtractor
----------------------------
-.. ocv:class:: OrbDescriptorExtractor
-
-Wrapping class for computing descriptors by using the
-:ocv:class:`ORB` class. ::
-
-    template<typename T>
-    class ORbDescriptorExtractor : public DescriptorExtractor
-    {
-    public:
-        OrbDescriptorExtractor( ORB::PatchSize patch_size );
-
-        virtual void read( const FileNode &fn );
-        virtual void write( FileStorage &fs ) const;
-        virtual int descriptorSize() const;
-        virtual int descriptorType() const;
-    protected:
-        ...
-    }
-
 
 
 OpponentColorDescriptorExtractor

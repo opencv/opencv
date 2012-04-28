@@ -140,10 +140,10 @@ The following detector types are supported:
 
 * ``"FAST"`` -- :ocv:class:`FastFeatureDetector`
 * ``"STAR"`` -- :ocv:class:`StarFeatureDetector`
-* ``"SIFT"`` -- :ocv:class:`SiftFeatureDetector`
-* ``"SURF"`` -- :ocv:class:`SurfFeatureDetector`
-* ``"ORB"`` -- :ocv:class:`OrbFeatureDetector`
-* ``"MSER"`` -- :ocv:class:`MserFeatureDetector`
+* ``"SIFT"`` -- :ocv:class:`SIFT` (nonfree module)
+* ``"SURF"`` -- :ocv:class:`SURF` (nonfree module)
+* ``"ORB"`` -- :ocv:class:`ORB`
+* ``"MSER"`` -- :ocv:class:`MSER`
 * ``"GFTT"`` -- :ocv:class:`GoodFeaturesToTrackDetector`
 * ``"HARRIS"`` -- :ocv:class:`GoodFeaturesToTrackDetector` with Harris detector enabled
 * ``"Dense"`` -- :ocv:class:`DenseFeatureDetector`
@@ -249,67 +249,6 @@ Wrapping class for feature detection using the
     protected:
         ...
     };
-
-SiftFeatureDetector
--------------------
-.. ocv:class:: SiftFeatureDetector
-
-Wrapping class for feature detection using the
-:ocv:class:`SIFT` class. ::
-
-    class SiftFeatureDetector : public FeatureDetector
-    {
-    public:
-        SiftFeatureDetector(
-            const SIFT::DetectorParams& detectorParams=SIFT::DetectorParams(),
-            const SIFT::CommonParams& commonParams=SIFT::CommonParams() );
-        SiftFeatureDetector( double threshold, double edgeThreshold,
-                             int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
-                             int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
-                             int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
-                             int angleMode=SIFT::CommonParams::FIRST_ANGLE );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-SurfFeatureDetector
--------------------
-.. ocv:class:: SurfFeatureDetector
-
-Wrapping class for feature detection using the
-:ocv:class:`SURF` class. ::
-
-    class SurfFeatureDetector : public FeatureDetector
-    {
-    public:
-        SurfFeatureDetector( double hessianThreshold = 400., int octaves = 3,
-                             int octaveLayers = 4 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-OrbFeatureDetector
--------------------
-.. ocv:class:: OrbFeatureDetector
-
-Wrapping class for feature detection using the
-:ocv:class:`ORB` class. ::
-
-    class OrbFeatureDetector : public FeatureDetector
-    {
-    public:
-        OrbFeatureDetector( size_t n_features );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
 
 DenseFeatureDetector
 --------------------
@@ -603,17 +542,5 @@ StarAdjuster
         class StarAdjuster: public AdjusterAdapter
         {
                 StarAdjuster(double initial_thresh = 30.0);
-                ...
-        };
-
-SurfAdjuster
-------------
-.. ocv:class:: SurfAdjuster
-
-:ocv:class:`AdjusterAdapter` for :ocv:class:`SurfFeatureDetector`. This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector``. ::
-
-        class SurfAdjuster: public SurfAdjuster
-        {
-                SurfAdjuster();
                 ...
         };

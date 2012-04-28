@@ -7,7 +7,7 @@ FAST
 --------
 Detects corners using the FAST algorithm
 
-.. ocv:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
+.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true )
 
     :param image: Image where keypoints (corners) are detected.
 
@@ -17,7 +17,9 @@ Detects corners using the FAST algorithm
 
     :param nonmaxSupression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
 
-Detects corners using the FAST algorithm by E. Rosten (*Machine Learning for High-speed Corner Detection*, 2006).
+Detects corners using the FAST algorithm by [Rosten06]_.
+
+.. [Rosten06] E. Rosten. Machine Learning for High-speed Corner Detection, 2006.
 
 
 MSER
@@ -46,102 +48,51 @@ The class encapsulates all the parameters of the MSER extraction algorithm (see
 http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for useful comments and parameters description.
 
 
-StarDetector
-------------
-.. ocv:class:: StarDetector
-
-Class implementing the ``Star`` keypoint detector, a modified version of the ``CenSurE`` keypoint detector described in [Agrawal08]_.
-
-.. [Agrawal08] Agrawal, M. and Konolige, K. and Blas, M.R. "CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching", ECCV08, 2008
-
-StarDetector::StarDetector
---------------------------
-The Star Detector constructor
-
-.. ocv:function:: StarDetector::StarDetector()
-
-.. ocv:function:: StarDetector::StarDetector(int maxSize, int responseThreshold, int lineThresholdProjected, int lineThresholdBinarized, int suppressNonmaxSize)
-
-.. ocv:pyfunction:: cv2.StarDetector(maxSize, responseThreshold, lineThresholdProjected, lineThresholdBinarized, suppressNonmaxSize) -> <StarDetector object>
-
-    :param maxSize: maximum size of the features. The following values are supported: 4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128. In the case of a different value the result is undefined.
-    
-    :param responseThreshold: threshold for the approximated laplacian, used to eliminate weak features. The larger it is, the less features will be retrieved
-    
-    :param lineThresholdProjected: another threshold for the laplacian to eliminate edges    
-
-    :param lineThresholdBinarized: yet another threshold for the feature size to eliminate edges. The larger the 2nd threshold, the more points you get.
-
-StarDetector::operator()
-------------------------
-Finds keypoints in an image
-        
-.. ocv:function:: void StarDetector::operator()(const Mat& image, vector<KeyPoint>& keypoints)
-
-.. ocv:pyfunction:: cv2.StarDetector.detect(image) -> keypoints
-
-.. ocv:cfunction:: CvSeq* cvGetStarKeypoints( const CvArr* image, CvMemStorage* storage, CvStarDetectorParams params=cvStarDetectorParams() )
-
-.. ocv:pyoldfunction:: cv.GetStarKeypoints(image, storage, params)-> keypoints
-
-    :param image: The input 8-bit grayscale image
-    
-    :param keypoints: The output vector of keypoints
-    
-    :param storage: The memory storage used to store the keypoints (OpenCV 1.x API only)
-    
-    :param params: The algorithm parameters stored in ``CvStarDetectorParams`` (OpenCV 1.x API only)
-
 ORB
-----
+---
 .. ocv:class:: ORB
 
-Class for extracting ORB features and descriptors from an image. ::
+Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor, described in [RRKB11]_. The algorithm uses FAST in pyramids to detect stable keypoints, selects the strongest features using FAST or Harris response, finds their orientation using first-order moments and computes the descriptors using BRIEF (where the coordinates of random point pairs (or k-tuples) are rotated according to the measured orientation).
 
-    class ORB
-    {
-    public:
-        /** The patch sizes that can be used (only one right now) */
-        struct CommonParams
-        {
-            enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0};
+.. [RRKB11] Ethan Rublee, Vincent Rabaud, Kurt Konolige, Gary R. Bradski: ORB: An efficient alternative to SIFT or SURF. ICCV 2011: 2564-2571.
 
-            /** default constructor */
-            CommonParams(float scale_factor = 1.2f, unsigned int n_levels = DEFAULT_N_LEVELS,
-                 int edge_threshold = 31, unsigned int first_level = DEFAULT_FIRST_LEVEL);
-            void read(const FileNode& fn);
-            void write(FileStorage& fs) const;
+ORB::ORB
+--------
+The ORB constructor
 
-            /** Coefficient by which we divide the dimensions from one scale pyramid level to the next */
-            float scale_factor_;
-            /** The number of levels in the scale pyramid */
-            unsigned int n_levels_;
-            /** The level at which the image is given
-             * if 1, that means we will also look at the image scale_factor_ times bigger
-             */
-            unsigned int first_level_;
-            /** How far from the boundary the points should be */
-            int edge_threshold_;
-        };
+.. ocv:function:: ORB::ORB()
 
-        // constructor that initializes all the algorithm parameters
-        // n_features is the number of desired features
-        ORB(size_t n_features = 500, const CommonParams & detector_params = CommonParams());
-        // returns the number of elements in each descriptor (32 bytes)
-        int descriptorSize() const;
-        // detects keypoints using ORB
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints) const;
-        // detects ORB keypoints and computes the ORB descriptors for them;
-        // output vector "descriptors" stores elements of descriptors and has size
-        // equal descriptorSize()*keypoints.size() as each descriptor is
-        // descriptorSize() elements of this vector.
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints,
-                        cv::Mat& descriptors,
-                        bool useProvidedKeypoints=false) const;
-    };
+.. ocv:function:: ORB::ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31, int firstLevel = 0, int WTA_K=2, int scoreType=HARRIS_SCORE, int patchSize=31)
 
-The class implements ORB.
+    :param nfeatures: The maximum number of features to retain.
+    
+    :param scaleFactor: Pyramid decimation ratio, greater than 1. ``scaleFactor==2`` means the classical pyramid, where each next level has 4x less pixels than the previous, but such a big scale factor will degrade feature matching scores dramatically. On the other hand, too close to 1 scale factor will mean that to cover certain scale range you will need more pyramid levels and so the speed will suffer.
+    
+    :param nlevels: The number of pyramid levels. The smallest level will have linear size equal to ``input_image_linear_size/pow(scaleFactor, nlevels)``.
+    
+    :param edgeThreshold: This is size of the border where the features are not detected. It should roughly match the ``patchSize`` parameter.
+    
+    :param firstLevel: It should be 0 in the current implementation.
+    
+    :param WTA_K: The number of points that produce each element of the oriented BRIEF descriptor. The default value 2 means the BRIEF where we take a random point pair and compare their brightnesses, so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3 random points (of course, those point coordinates are random, but they are generated from the pre-defined seed, so each element of BRIEF descriptor is computed deterministically from the pixel rectangle), find point of maximum brightness and output index of the winner (0, 1 or 2). Such output will occupy 2 bits, and therefore it will need a special variant of Hamming distance, denoted as ``NORM_HAMMING2`` (2 bits per bin).  When ``WTA_K=4``, we take 4 random points to compute each bin (that will also occupy 2 bits with possible values 0, 1, 2 or 3).
+    
+    :param scoreType: The default HARRIS_SCORE means that Harris algorithm is used to rank features (the score is written to ``KeyPoint::score`` and is used to retain best ``nfeatures`` features); FAST_SCORE is alternative value of the parameter that produces slightly less stable keypoints, but it is a little faster to compute.
+    
+    :param patchSize: size of the patch used by the oriented BRIEF descriptor. Of course, on smaller pyramid layers the perceived image area covered by a feature will be larger.
 
-..
+ORB::operator()
+---------------
+Finds keypoints in an image and computes their descriptors
+        
+.. ocv:function:: void ORB::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false ) const
+
+    :param image: The input 8-bit grayscale image.
+    
+    :param mask: The operation mask.
+    
+    :param keypoints: The output vector of keypoints.
+    
+    :param descriptors: The output descriptors. Pass ``cv::noArray()`` if you do not need it.
+    
+    :param useProvidedKeypoints: If it is true, then the method will use the provided vector of keypoints instead of detecting them.
+
