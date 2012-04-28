@@ -141,11 +141,11 @@ OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for sta
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF ANDROID AND NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
 
 # 3rd party libs
-OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS )
-OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR IOS OR ANDROID )
-OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR IOS OR ANDROID )
-OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR IOS OR ANDROID )
-OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR IOS OR ANDROID )
+OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS OR APPLE )
+OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR IOS OR ANDROID OR APPLE )
 
 # OpenCV installation options
 # ===================================================
