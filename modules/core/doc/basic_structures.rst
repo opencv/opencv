@@ -2313,6 +2313,155 @@ Algorithm
 
 This is a base class for all more or less complex algorithms in OpenCV, especially for classes of algorithms, for which there can be multiple implementations. The examples are stereo correspondence (for which there are algorithms like block matching, semi-global block matching, graph-cut etc.), background subtraction (which can be done using mixture-of-gaussians models, codebook-based algorithm etc.), optical flow (block matching, Lucas-Kanade, Horn-Schunck etc.).
 
-Algorithm performs several functions:
+The class provides the following features for all derived classes:
 
-    * It provides virtual constructor. That is, if algorithm class is 
+    * so called "virtual constructor". That is, each Algorithm derivative is registered at program start and you can get the list of registered algorithms and create instance of a particular algorithm by its name (see ``Algorithm::create``). If you plan to add your own algorithms, it is good practice to add a unique prefix to your algorithms to distinguish them from other algorithms.
+    
+    * setting/retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with ``cvSetCaptureProperty()``, ``cvGetCaptureProperty()``, ``VideoCapture::set()`` and ``VideoCapture::get()``. ``Algorithm`` provides similar method where instead of integer id's you specify the parameter names as text strings. See ``Algorithm::set`` and ``Algorithm::get`` for details.
+
+    * reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store all its parameters and then read them back. There is no need to re-implement it each time.
+    
+Here is example of SIFT use in your application via Algorithm interface: ::
+
+    #include "opencv2/opencv.hpp"
+
+    ...
+
+    initModule_nonfree(); // to load SURF/SIFT etc.
+    
+    Ptr<Feature2D> sift = Algorithm::create<Feature2D>("Feature2D.SIFT");
+    
+    FileStorage fs("sift_params.xml", FileStorage::READ);
+    if( fs.isOpened() ) // if we have file with parameters, read them
+    {
+        sift.read(fs["sift_params"]);
+        fs.release();
+    }
+    else // else modify the parameters and store them; user can later edit the file to use different parameters
+    {
+        sift.set("contrastThreshold", 0.01f); // lower the contrast threshold, compared to the default value
+        
+        {
+        WriteStructContext ws(fs, "sift_params", CV_NODE_MAP);
+        sift.write(fs);
+        }
+    }
+    
+    Mat image = imread("myimage.png", 0), descriptors;
+    vector<KeyPoint> keypoints;
+    sift(image, noArray(), keypoints, descriptors);
+    
+
+Algorithm::get
+--------------
+Returns the algorithm parameter
+
+.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const
+
+    :param name: The parameter name.
+
+The method returns value of the particular parameter. Since the compiler can not deduce the type of the returned parameter, you should specify it explicitly in angle brackets. Here are the allowed forms of get:
+
+    * myalgo.get<int>("param_name")
+    * myalgo.get<double>("param_name")
+    * myalgo.get<bool>("param_name")
+    * myalgo.get<string>("param_name")
+    * myalgo.get<Mat>("param_name")
+    * myalgo.get<vector<Mat> >("param_name")
+    * myalgo.get<Algorithm>("param_name") (it returns Ptr<Algorithm>).
+
+In some cases the actual type of the parameter can be cast to the specified type, e.g. integer parameter can be cast to double, ``bool`` can be cast to ``int``. But "dangerous" transformations (string<->number, double->int, 1x1 Mat<->number, ...) are not performed and the method will throw an exception. In the case of ``Mat`` or ``vector<Mat>`` parameters the method does not clone the matrix data, so do not modify the matrices. Use ``Algorithm::set`` instead - slower, but more safe.
+
+
+Algorithm::set
+--------------
+Sets the algorithm parameter
+
+.. ocv:function:: void set(const string& name, int value)
+.. ocv:function:: void set(const string& name, double value)
+.. ocv:function:: void set(const string& name, bool value)
+.. ocv:function:: void set(const string& name, const string& value)
+.. ocv:function:: void set(const string& name, const Mat& value)
+.. ocv:function:: void set(const string& name, const vector<Mat>& value)
+.. ocv:function:: void set(const string& name, const Ptr<Algorithm>& value)
+
+    :param name: The parameter name.
+    :param value: The parameter value.
+
+The method sets value of the particular parameter. Some of the algorithm parameters may be declared as read-only. If you try to set such a parameter, you will get exception with the corresponding error message.
+
+
+Algorithm::write
+----------------
+Stores algorithm parameters in a file storage
+
+.. ocv:function:: void write(FileStorage& fs) const
+
+    :param fs: File storage.
+    
+The method stores all the algorithm parameters (in alphabetic order) to the file storage. The method is virtual. If you define your own Algorithm derivative, your can override the method and store some extra information. However, it's rarely needed. Here are some examples:
+
+ * SIFT feature detector (from nonfree module). The class only stores algorithm parameters and no keypoints or their descriptors. Therefore, it's enough to store the algorithm parameters, which is what ``Algorithm::write()`` does. Therefore, there is no dedicated ``SIFT::write()``.
+ 
+ * Background subtractor (from video module). It has the algorithm parameters and also it has the current background model. However, the background model is not stored. First, it's rather big. Then, if you have stored the background model, it would likely become irrelevant on the next run (because of shifted camera, changed background, different lighting etc.). Therefore, ``BackgroundSubtractorMOG`` and ``BackgroundSubtractorMOG2`` also rely on the standard ``Algorithm::write()`` to store just the algorithm parameters.
+ 
+ * Expectation Maximization (from ml module). The algorithm finds mixture of gaussians that approximates user data best of all. In this case the model may be re-used on the next run to test new data against the trained statistical model. So EM needs to store the model. However, since the model is described by a few parameters that are available as read-only algorithm parameters (i.e. they are available via ``EM::get()``), EM also relies on ``Algorithm::write()`` to store both EM parameters and the model (represented by read-only algorithm parameters).
+ 
+
+Algorithm::read
+---------------
+Reads algorithm parameters from a file storage
+
+.. ocv:function:: void read(const FileNode& fn)
+
+    :param fn: File node of the file storage.
+    
+The method reads all the algorithm parameters from the specified node of a file storage. Similarly to ``Algorithm::write()``, if you implement an algorithm that needs to read some extra data and/or re-compute some internal data, you may override the method.
+
+Algorithm::getList
+------------------
+Returns the list of registered algorithms
+
+.. ocv:function:: void read(vector<string>& algorithms)
+
+    :param algorithms: The output vector of algorithm names.
+    
+This static method returns the list of registered algorithms in alphabetical order.
+
+
+Algorithm::getList
+------------------
+Returns the list of registered algorithms
+
+.. ocv:function:: void read(vector<string>& algorithms)
+
+    :param algorithms: The output vector of algorithm names.
+    
+This static method returns the list of registered algorithms in alphabetical order.
+
+
+Algorithm::create
+-----------------
+Creates algorithm instance by name
+
+.. ocv:function:: template<typename _Tp> Ptr<_Tp> create(const string& name)
+
+    :param name: The algorithm name, one of the names returned by ``Algorithm::getList()``.
+    
+This static method creates a new instance of the specified algorithm. If there is no such algorithm, the method will silently return null pointer (that can be checked by ``Ptr::empty()`` method). Also, you should specify the particular ``Algorithm`` subclass as ``_Tp`` (or simply ``Algorithm`` if you do not know it at that point). ::
+
+    Ptr<BackgroundSubtractor> bgfg = Algorithm::create<BackgroundSubtractor>("BackgroundSubtractor.MOG2");
+    
+.. note:: This is important note about seemingly mysterious behavior of ``Algorithm::create()`` when it returns NULL while it should not. The reason is simple - ``Algorithm::create()`` resides in OpenCV`s core module and the algorithms are implemented in other modules. If you create algorithms dynamically, C++ linker may decide to throw away the modules where the actual algorithms are implemented, since you do not call any functions from the modules. To avoid this problem, you need to call ``initModule_<modulename>();`` somewhere in the beginning of the program before ``Algorithm::create()``. For example, call ``initModule_nonfree()`` in order to use SURF/SIFT, call ``initModule_ml()`` to use expectation maximization etc.
+    
+Creating Own Algorithms
+-----------------------
+
+The above methods are usually enough for users. If you want to make your own algorithm, derived from ``Algorithm``, you should basically follow a few conventions and add a little semi-standard piece of code to your class:
+
+ * Make a class and specify ``Algorithm`` as its base class.
+ * The algorithm parameters should be the class members. See ``Algorithm::get()`` for the list of possible types of the parameters.
+ * Add public virtual method ``AlgorithmInfo* info() const;`` to your class.
+ * Add constructor function, ``AlgorithmInfo`` instance and implement the ``info()`` method. The simplest way is to take  http://code.opencv.org/svn/opencv/trunk/opencv/modules/ml/src/ml_init.cpp as the reference and modify it according to the list of your parameters.
+ * Add some public function (e.g. ``initModule_<mymodule>()``) that calls info() of your algorithm and put it into the same source file as ``info()`` implementation. This is to force C++ linker to include this object file into the target application. See ``Algorithm::create()`` for details.
+ 
