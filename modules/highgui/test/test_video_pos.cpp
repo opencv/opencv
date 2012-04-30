@@ -159,7 +159,7 @@ public:
                 
                 double err = PSNR(img, img0);
                 
-                if( err < 25 )
+                if( err < 20 )
                 {
                     ts->printf(ts->LOG, "The frame read after positioning to %d is incorrect (PSNR=%g)\n", idx, err);
                     ts->printf(ts->LOG, "Saving both frames ...\n");

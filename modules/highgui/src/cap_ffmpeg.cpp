@@ -42,11 +42,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_FFMPEG
-#ifdef NEW_FFMPEG
-#include "cap_ffmpeg_impl_v2.hpp"
-#else
 #include "cap_ffmpeg_impl.hpp"
-#endif
 #else
 #include "cap_ffmpeg_api.hpp"
 #endif

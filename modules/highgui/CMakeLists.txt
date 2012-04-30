@@ -52,11 +52,7 @@ set(grfmt_srcs src/bitstrm.cpp ${grfmt_srcs})
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
-if(NEW_FFMPEG)
-  set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl_v2.hpp)
-else()
-  set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl.hpp)
-endif()
+set(highgui_hdrs src/precomp.hpp src/utils.hpp src/cap_ffmpeg_impl.hpp)
 
 set(highgui_srcs
     src/cap.cpp

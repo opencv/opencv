@@ -59,7 +59,7 @@ const VideoFormat g_specific_fmt_list[] =
     VideoFormat("avi", CV_FOURCC('X', 'V', 'I', 'D')),
     VideoFormat("avi", CV_FOURCC('M', 'P', 'E', 'G')),
     VideoFormat("avi", CV_FOURCC('M', 'J', 'P', 'G')),
-    VideoFormat("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
+    //VideoFormat("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
     VideoFormat("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
     VideoFormat("mkv", CV_FOURCC('M', 'P', 'E', 'G')),
     VideoFormat("mkv", CV_FOURCC('M', 'J', 'P', 'G')),
@@ -225,9 +225,9 @@ void CV_HighGuiTest::ImageTest(const string& dir)
 void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt)
 {
     string src_file = dir + "../cv/shared/video_for_test.avi";
-    string tmp_name = format("video.%s", fmt.ext.c_str());
+    string tmp_name = format("video_%s.%s", cvtest::fourccToString(fmt.fourcc).c_str(), fmt.ext.c_str());
 
-    ts->printf(ts->LOG, "reading video : %s\n", src_file.c_str());
+    ts->printf(ts->LOG, "reading video : %s and converting it to %s\n", src_file.c_str(), tmp_name.c_str());
 
     CvCapture* cap = cvCaptureFromFile(src_file.c_str());
 

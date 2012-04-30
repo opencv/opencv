@@ -57,7 +57,7 @@ void CV_FramecountTest::run(int)
 {
     const int time_sec = 5, fps = 25;
 
-    const string ext[] = {"avi", "mov", "mp4", "mpg", "wmv"};
+    const string ext[] = {"avi", "mov", "mp4"};
 
     const size_t n = sizeof(ext)/sizeof(ext[0]);
 
