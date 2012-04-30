@@ -496,60 +496,80 @@ endo: ; // end search for this o
 
 namespace cv
 {
-namespace
+    
+void findDataMatrix(InputArray _image,
+                    vector<string>& codes,
+                    OutputArray _corners,
+                    OutputArrayOfArrays _dmtx)
 {
-  struct CvDM2DM_transform
-  {
-    DataMatrixCode operator()(CvDataMatrixCode& cvdm)
+    Mat image = _image.getMat();
+    CvMat m(image);
+    deque <CvDataMatrixCode> rc = cvFindDataMatrix(&m);
+    int i, n = (int)rc.size();
+    Mat corners;
+    
+    if( _corners.needed() )
     {
-      DataMatrixCode dm;
-      memcpy(dm.msg,cvdm.msg,sizeof(cvdm.msg));
-      dm.original = cv::Mat(cvdm.original,true);
-      cvReleaseMat(&cvdm.original);
-      cv::Mat c(cvdm.corners,true);
-      dm.corners[0] = c.at<Point>(0,0);
-      dm.corners[1] = c.at<Point>(1,0);
-      dm.corners[2] = c.at<Point>(2,0);
-      dm.corners[3] = c.at<Point>(3,0);
-      cvReleaseMat(&cvdm.corners);
-      return dm;
+        _corners.create(n, 4, CV_32SC2);
+        corners = _corners.getMat();
     }
-  };
-  
-  struct DrawDataMatrixCode
-  {
-    DrawDataMatrixCode(cv::Mat& image):image(image){}
-    void operator()(const DataMatrixCode& code)
+    
+    if( _dmtx.needed() )
+        _dmtx.create(n, 1, CV_8U);
+    
+    codes.resize(n);
+    
+    for( i = 0; i < n; i++ )
     {
-      Scalar c(0, 255, 0);
-      Scalar c2(255, 0,0);
-      line(image, code.corners[0], code.corners[1], c);
-      line(image, code.corners[1], code.corners[2], c);
-      line(image, code.corners[2], code.corners[3], c);
-      line(image, code.corners[3], code.corners[0], c);
-      string code_text(code.msg,4);
-      //int baseline = 0;
-      //Size sz = getTextSize(code_text, CV_FONT_HERSHEY_SIMPLEX, 1, 1, &baseline);
-      putText(image, code_text, code.corners[0], CV_FONT_HERSHEY_SIMPLEX, 0.8, c2, 1, CV_AA, false);
+        CvDataMatrixCode& rc_i = rc[i];
+        codes[i] = string(rc_i.msg);
+        
+        if( corners.data )
+        {
+            const Point* srcpt = (Point*)rc_i.corners->data.ptr;
+            Point* dstpt = (Point*)corners.ptr(i);
+            for( int k = 0; k < 4; k++ )
+                dstpt[k] = srcpt[k];
+        }
+        cvReleaseMat(&rc_i.corners);
+        
+        if( _dmtx.needed() )
+        {
+            _dmtx.create(rc_i.original->rows, rc_i.original->cols, rc_i.original->type, i);
+            Mat dst = _dmtx.getMat(i);
+            Mat(rc_i.original).copyTo(dst);
+        }
+        cvReleaseMat(&rc_i.original);
     }
-    cv::Mat& image;
-
-    DrawDataMatrixCode& operator=(const DrawDataMatrixCode&);
-  };
 }
 
-void findDataMatrix(const cv::Mat& image, std::vector<DataMatrixCode>& codes)
+void drawDataMatrixCodes(InputOutputArray _image,
+                         const vector<string>& codes,
+                         InputArray _corners)
 {
-  CvMat m(image);
-  deque <CvDataMatrixCode> rc = cvFindDataMatrix(&m);
-  codes.clear();
-  codes.resize(rc.size());
-  std::transform(rc.begin(),rc.end(),codes.begin(),CvDM2DM_transform());  
+    Mat image = _image.getMat();
+    Mat corners = _corners.getMat();
+    int i, n = corners.rows;
+    
+    if( n > 0 )
+    {
+        CV_Assert( corners.depth() == CV_32S &&
+                  corners.cols*corners.channels() == 8 &&
+                  n == (int)codes.size() );
+    }
+    
+    for( i = 0; i < n; i++ )
+    {
+        Scalar c(0, 255, 0);
+        Scalar c2(255, 0,0);
+        const Point* pt = (const Point*)corners.ptr(i);
+        
+        for( int k = 0; k < 4; k++ )
+            line(image, pt[k], pt[(k+1)%4], c);
+        //int baseline = 0;
+        //Size sz = getTextSize(code_text, CV_FONT_HERSHEY_SIMPLEX, 1, 1, &baseline);
+        putText(image, codes[i], pt[0], CV_FONT_HERSHEY_SIMPLEX, 0.8, c2, 1, CV_AA, false);
+    }
 }
-
-void drawDataMatrixCodes(const std::vector<DataMatrixCode>& codes, Mat& drawImage)
-{
-  std::for_each(codes.begin(),codes.end(),DrawDataMatrixCode(drawImage));
-}
-
+    
 }

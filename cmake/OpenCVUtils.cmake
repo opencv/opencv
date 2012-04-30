@@ -12,7 +12,7 @@ if(NOT COMMAND find_host_program)
 endif()
 
 #added include directories in such way that directories from the OpenCV source tree go first
-macro(ocv_include_directories)
+function(ocv_include_directories)
   set(__add_before "")
   foreach(dir ${ARGN})
     get_filename_component(__abs_dir "${dir}" ABSOLUTE)
@@ -23,7 +23,7 @@ macro(ocv_include_directories)
     endif()
   endforeach()
   include_directories(BEFORE ${__add_before})
-endmacro()
+endfunction()
 
 
 # Provides an option that the user can optionally select.
@@ -112,6 +112,15 @@ function(ocv_output_status msg)
   string(REPLACE "\"" "\\\"" msg "${msg}")
   file(APPEND "${OPENCV_BUILD_INFO_FILE}" "\"${msg}\\n\"\n")
 endfunction()
+
+macro(ocv_finalize_status)
+  if(NOT OPENCV_SKIP_STATUS_FINALIZATION)
+    if(TARGET opencv_core)
+      execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENCV_BUILD_INFO_FILE}" "${opencv_core_BINARY_DIR}/version_string.inc" OUTPUT_QUIET)
+    endif()
+  endif()
+endmacro()
+
 
 # Status report function.
 # Automatically align right column and selects text based on condition.

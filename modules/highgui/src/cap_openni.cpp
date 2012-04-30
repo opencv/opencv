@@ -409,9 +409,10 @@ private:
 class CvCapture_OpenNI : public CvCapture
 {
 public:
+    enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_MAX=1 };
+    
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
-
 
 #ifdef HAVE_TBB
     static const int DEFAULT_MAX_BUFFER_SIZE = 8;
@@ -516,14 +517,25 @@ XnMapOutputMode defaultMapOutputMode()
     return mode;
 }
 
+
 CvCapture_OpenNI::CvCapture_OpenNI( int index )
 {
+    int deviceType = DEVICE_DEFAULT;
     XnStatus status;
-
+    
     isContextOpened = false;
     maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;
     isCircleBuffer = DEFAULT_IS_CIRCLE_BUFFER;
     maxTimeDuration = DEFAULT_MAX_TIME_DURATION;
+    
+    if( index >= 10 )
+    {
+        deviceType = index / 10;
+        index %= 10;
+    }
+
+    if( deviceType > DEVICE_MAX )
+        return;
 
     // Initialize and configure the context.
     status = context.Init();
@@ -618,6 +630,14 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     if( imageGenerator.IsValid() )
     {
         CV_DbgAssert( imageGenerator.SetMapOutputMode(defaultMapOutputMode()) == XN_STATUS_OK );
+    }
+
+    if( deviceType == DEVICE_ASUS_XTION )
+    {
+        //ps/asus specific
+        imageGenerator.SetIntProperty("InputFormat", 1 /*XN_IO_IMAGE_FORMAT_YUV422*/);
+        imageGenerator.SetPixelFormat(XN_PIXEL_FORMAT_RGB24);
+        depthGenerator.SetIntProperty("RegistrationType", 1 /*XN_PROCESSING_HARDWARE*/);
     }
 
     //  Start generating data.

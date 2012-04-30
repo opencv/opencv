@@ -1750,6 +1750,7 @@ public:
         useInitialFlow = false;
         minEigThreshold = 1e-4f;
         getMinEigenVals = false;
+        isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
     }
 
     void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
@@ -1796,6 +1797,8 @@ private:
 
     vector<GpuMat> uPyr_;
     vector<GpuMat> vPyr_;
+
+    bool isDeviceArch11_;
 };
 
 
@@ -1812,6 +1815,7 @@ public:
         polyN = 5;
         polySigma = 1.1;
         flags = 0;
+        isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
     }
 
     int numLevels;
@@ -1859,6 +1863,8 @@ private:
     GpuMat frames_[2];
     GpuMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
     std::vector<GpuMat> pyramid0_, pyramid1_;
+
+    bool isDeviceArch11_;
 };
 
 

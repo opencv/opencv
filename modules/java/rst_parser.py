@@ -499,7 +499,8 @@ class RstParser(object):
     def normalizeText(self, s):
         if s is None:
             return s
-        s = re.sub(r"\.\. math::[ ]*\n+(.*?)(\n[ ]*\n|$)", mathReplace2, s)
+
+        s = re.sub(r"\.\. math::[ \r]*\n+((.|\n)*?)(\n[ \r]*\n|$)", mathReplace2, s)
         s = re.sub(r":math:`([^`]+?)`", mathReplace, s)
         s = re.sub(r" *:sup:", "^", s)
         
@@ -574,6 +575,7 @@ class RstParser(object):
         s = re.sub(r"[\n ]+\.", ".", s)
 
         s = s.replace("**", "")
+        s = re.sub(r"``([^\n]+?)``", "<code>\\1</code>", s)
         s = s.replace("``", "\"")
         s = s.replace("`", "\"")
         s = s.replace("\"\"", "\"")
@@ -688,7 +690,7 @@ def mathReplace(match):
     m = m.replace("}", ")")
 
     #print "%s   ===>   %s" % (match.group(0), m)
-    return m
+    return "<em>" + m + "</em>"
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

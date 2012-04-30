@@ -17,27 +17,6 @@ set(OPENCV_EXTRA_EXE_LINKER_FLAGS "")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "")
 
-if(MSVC)
-  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
-  # 64-bit portability warnings, in MSVC80
-  if(MSVC80)
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Wp64")
-  endif()
-
-  if(BUILD_WITH_DEBUG_INFO)
-    set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
-  endif()
-
-  # Remove unreferenced functions: function level linking
-  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Gy")
-  if(NOT MSVC_VERSION LESS 1400)
-    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /bigobj")
-  endif()
-  if(BUILD_WITH_DEBUG_INFO)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Zi")
-  endif()
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
   set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -Wall")
@@ -62,27 +41,27 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
   # Other optimizations
   if(ENABLE_OMIT_FRAME_POINTER)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -fomit-frame-pointer")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -fomit-frame-pointer")
   else()
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -fno-omit-frame-pointer")
   endif()
   if(ENABLE_FAST_MATH)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -ffast-math")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -ffast-math")
   endif()
   if(ENABLE_POWERPC)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mcpu=G3 -mtune=G5")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -mcpu=G3 -mtune=G5")
   endif()
   if(ENABLE_SSE)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -msse")
   endif()
   if(ENABLE_SSE2)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse2")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -msse2")
   endif()
 
   # SSE3 and further should be disabled under MingW because it generates compiler errors
   if(NOT MINGW)
     if(ENABLE_SSE3)
-      set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse3")
+      set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -msse3")
     endif()
 
     if(${CMAKE_OPENCV_GCC_VERSION_NUM} GREATER 402)
@@ -94,14 +73,14 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
     if(HAVE_GCC42_OR_NEWER OR APPLE)
       if(ENABLE_SSSE3)
-        set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mssse3")
+        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -mssse3")
       endif()
       if(HAVE_GCC43_OR_NEWER)
         if(ENABLE_SSE41)
-           set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse4.1")
+           set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -msse4.1")
         endif()
         if(ENABLE_SSE42)
-           set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -msse4.2")
+           set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -msse4.2")
         endif()
       endif()
     endif()
@@ -109,13 +88,22 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
   if(X86 OR X86_64)
     if(NOT APPLE AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-       set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -mfpmath=387")
+       if(ENABLE_SSE2)
+         set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -mfpmath=sse")# !! important - be on the same wave with x64 compilers
+       else()
+         set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -mfpmath=387")
+       endif()
     endif()
   endif()
 
   # Profiling?
   if(ENABLE_PROFILING)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} -pg -g")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -pg -g")
+    # turn off incompatible options
+    foreach(flags CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG CMAKE_C_FLAGS_DEBUG OPENCV_EXTRA_C_FLAGS_RELEASE)
+      string(REPLACE "-fomit-frame-pointer" "" ${flags} "${${flags}}")
+      string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
+    endforeach()
   elseif(NOT APPLE AND NOT ANDROID)
     # Remove unreferenced functions: function level linking
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -ffunction-sections")
@@ -129,23 +117,50 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 if(MSVC)
-  # 64-bit MSVC compiler uses SSE/SSE2 by default
+  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _SCL_SECURE_NO_WARNINGS")
+  # 64-bit portability warnings, in MSVC80
+  if(MSVC80)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Wp64")
+  endif()
+
+  if(BUILD_WITH_DEBUG_INFO)
+    set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
+  endif()
+
+  # Remove unreferenced functions: function level linking
+  set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Gy")
+  if(NOT MSVC_VERSION LESS 1400)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /bigobj")
+  endif()
+  if(BUILD_WITH_DEBUG_INFO)
+    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Zi")
+  endif()
+
   if(NOT MSVC64)
+    # 64-bit MSVC compiler uses SSE/SSE2 by default
     if(ENABLE_SSE)
-      set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE")
+      set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE")
     endif()
     if(ENABLE_SSE2)
-      set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE2")
+      set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE2")
     endif()
   endif()
+  
   if(ENABLE_SSE3)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE3")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE3")
   endif()
   if(ENABLE_SSE4_1)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /arch:SSE4.1")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /arch:SSE4.1")
   endif()
+  
   if(ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1)
-    set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE} /Oi")
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /Oi")
+  endif()
+  
+  if(X86 OR X86_64)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND ENABLE_SSE2)
+      set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /fp:fast")# !! important - be on the same wave with x64 compilers
+    endif()
   endif()
 endif()
 

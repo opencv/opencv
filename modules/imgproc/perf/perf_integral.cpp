@@ -78,5 +78,5 @@ PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum_tilted,
     
     SANITY_CHECK(sum, 1e-6);
     SANITY_CHECK(sqsum, 1e-6);
-    SANITY_CHECK(tilted, 1e-6);
+    SANITY_CHECK(tilted, 1e-6, tilted.depth() > CV_32S ? ERROR_RELATIVE : ERROR_ABSOLUTE);
 }

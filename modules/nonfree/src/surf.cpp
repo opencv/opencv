@@ -443,6 +443,22 @@ struct SURFFindInvoker
     float hessianThreshold;
 };
 
+struct KeypointGreater
+{
+    inline bool operator()(const KeyPoint& kp1, const KeyPoint& kp2) const
+    {
+        if(kp1.response > kp2.response) return true;
+        if(kp1.response < kp2.response) return false;
+        if(kp1.size > kp2.size) return true;
+        if(kp1.size < kp2.size) return false;
+        if(kp1.octave > kp2.octave) return true;
+        if(kp1.octave < kp2.octave) return false;
+        if(kp1.pt.y < kp2.pt.y) return false;
+        if(kp1.pt.y > kp2.pt.y) return true;
+        return kp1.pt.x < kp2.pt.y;
+    }
+};
+
     
 static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<KeyPoint>& keypoints,
                                  int nOctaves, int nOctaveLayers, float hessianThreshold )
@@ -490,6 +506,8 @@ static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<Key
                       SURFFindInvoker(sum, mask_sum, dets, traces, sizes,
                                       sampleSteps, middleIndices, keypoints,
                                       nOctaveLayers, hessianThreshold) );
+
+    std::sort(keypoints.begin(), keypoints.end(), KeypointGreater());
 }
 
 
@@ -938,76 +956,6 @@ void SURF::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat&
 void SURF::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
-}    
-
-    
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-static Algorithm* createSURF()
-{
-    return new SURF;
-}
-
-static AlgorithmInfo& surf_info()
-{
-    static AlgorithmInfo surf_info_var("Feature2D.SURF", createSURF);
-    return surf_info_var;
-}
-
-static AlgorithmInfo& surf_info_auto = surf_info();
-
-AlgorithmInfo* SURF::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        SURF obj;
-        surf_info().addParam(obj, "hessianThreshold", obj.hessianThreshold);
-        surf_info().addParam(obj, "nOctaves", obj.nOctaves);
-        surf_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        surf_info().addParam(obj, "extended", obj.extended);
-        surf_info().addParam(obj, "upright", obj.upright);
-        
-        initialized = true;
-    }
-    return &surf_info();
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static Algorithm* createSIFT() { return new SIFT; }
-
-static AlgorithmInfo& sift_info()
-{
-    static AlgorithmInfo sift_info_var("Feature2D.SIFT", createSIFT);
-    return sift_info_var;
-}
-
-static AlgorithmInfo& sift_info_auto = sift_info();
-
-AlgorithmInfo* SIFT::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        SIFT obj;
-        sift_info().addParam(obj, "nFeatures", obj.nfeatures);
-        sift_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        sift_info().addParam(obj, "contrastThreshold", obj.contrastThreshold);
-        sift_info().addParam(obj, "edgeThreshold", obj.edgeThreshold);
-        sift_info().addParam(obj, "sigma", obj.sigma);
-        
-        initialized = true;
-    }
-    return &sift_info();
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////    
-    
-bool initModule_nonfree(void)
-{
-    Ptr<Algorithm> sift = createSIFT(), surf = createSURF();
-    return sift->info() != 0 && surf->info() != 0;
 }
 
 }

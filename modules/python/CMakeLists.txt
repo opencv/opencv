@@ -60,7 +60,12 @@ add_custom_command(
    DEPENDS ${opencv_hdrs})
 
 add_library(${the_module} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i ${cv2_generated_hdrs} src2/cv2.cv.hpp)
-target_link_libraries(${the_module} ${PYTHON_LIBRARIES} ${OPENCV_MODULE_${the_module}_DEPS})
+if(PYTHON_DEBUG_LIBRARIES)
+  target_link_libraries(${the_module} debug ${PYTHON_DEBUG_LIBRARIES} optimized ${PYTHON_LIBRARIES})
+else()
+  target_link_libraries(${the_module} ${PYTHON_LIBRARIES})
+endif()
+target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print distutils.sysconfig.get_config_var('SO')"
                 RESULT_VARIABLE PYTHON_CVPY_PROCESS
@@ -87,7 +92,7 @@ if(MSVC AND NOT BUILD_SHARED_LIBS)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
 endif()
 
-if(MSVC)
+if(MSVC AND NOT PYTHON_DEBUG_LIBRARIES)
   set(PYTHON_INSTALL_CONFIGURATIONS CONFIGURATIONS Release)
 else()
   set(PYTHON_INSTALL_CONFIGURATIONS "")

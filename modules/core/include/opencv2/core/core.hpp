@@ -2020,6 +2020,15 @@ public:
 };
 
     
+typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
+                           const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, Size sz,
+                           void*);
+
+CV_EXPORTS BinaryFunc getConvertFunc(int sdepth, int ddepth);
+CV_EXPORTS BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
+CV_EXPORTS BinaryFunc getCopyMaskFunc(size_t esz);    
+    
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
     
@@ -2133,11 +2142,11 @@ CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
         
 CV_EXPORTS void hconcat(const Mat* src, size_t nsrc, OutputArray dst);
 CV_EXPORTS void hconcat(InputArray src1, InputArray src2, OutputArray dst);
-CV_EXPORTS_W void hconcat(InputArray src, OutputArray dst);
+CV_EXPORTS_W void hconcat(InputArrayOfArrays src, OutputArray dst);
 
 CV_EXPORTS void vconcat(const Mat* src, size_t nsrc, OutputArray dst);
 CV_EXPORTS void vconcat(InputArray src1, InputArray src2, OutputArray dst);
-CV_EXPORTS_W void vconcat(InputArray src, OutputArray dst);
+CV_EXPORTS_W void vconcat(InputArrayOfArrays src, OutputArray dst);
     
 //! computes bitwise conjunction of the two arrays (dst = src1 & src2)
 CV_EXPORTS_W void bitwise_and(InputArray src1, InputArray src2,
@@ -2205,6 +2214,9 @@ CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
 //! checks that each matrix element is within the specified range.
 CV_EXPORTS_W bool checkRange(InputArray a, bool quiet=true, CV_OUT Point* pos=0,
                             double minVal=-DBL_MAX, double maxVal=DBL_MAX);
+//! converts NaN's to the given number
+CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val=0);
+    
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
                        InputArray src3, double gamma, OutputArray dst, int flags=0);
@@ -4263,7 +4275,7 @@ template<typename _Tp> struct ParamType {};
 /*!
   Base class for high-level OpenCV algorithms
 */    
-class CV_EXPORTS Algorithm
+class CV_EXPORTS_W Algorithm
 {
 public:
     Algorithm();
@@ -4272,13 +4284,22 @@ public:
     
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const;
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
-    void set(const string& name, int value);
-    void set(const string& name, double value);
-    void set(const string& name, bool value);
-    void set(const string& name, const string& value);
-    void set(const string& name, const Mat& value);
-    void set(const string& name, const vector<Mat>& value);
-    void set(const string& name, const Ptr<Algorithm>& value);
+    
+    CV_WRAP int getInt(const string& name) const;
+    CV_WRAP double getDouble(const string& name) const;
+    CV_WRAP bool getBool(const string& name) const;
+    CV_WRAP string getString(const string& name) const;
+    CV_WRAP Mat getMat(const string& name) const;
+    CV_WRAP vector<Mat> getMatVector(const string& name) const;
+    CV_WRAP Ptr<Algorithm> getAlgorithm(const string& name) const;
+    
+    CV_WRAP_AS(setInt) void set(const string& name, int value);
+    CV_WRAP_AS(setDouble) void set(const string& name, double value);
+    CV_WRAP_AS(setBool) void set(const string& name, bool value);
+    CV_WRAP_AS(setString) void set(const string& name, const string& value);
+    CV_WRAP_AS(setMat) void set(const string& name, const Mat& value);
+    CV_WRAP_AS(setMatVector) void set(const string& name, const vector<Mat>& value);
+    CV_WRAP_AS(setAlgorithm) void set(const string& name, const Ptr<Algorithm>& value);
     
     void set(const char* name, int value);
     void set(const char* name, double value);
@@ -4288,10 +4309,10 @@ public:
     void set(const char* name, const vector<Mat>& value);
     void set(const char* name, const Ptr<Algorithm>& value);
     
-    string paramHelp(const string& name) const;
+    CV_WRAP string paramHelp(const string& name) const;
     int paramType(const char* name) const;
-    int paramType(const string& name) const;
-    void getParams(vector<string>& names) const;
+    CV_WRAP int paramType(const string& name) const;
+    CV_WRAP void getParams(CV_OUT vector<string>& names) const;
     
     
     virtual void write(FileStorage& fs) const;
@@ -4301,8 +4322,8 @@ public:
     typedef int (Algorithm::*Getter)() const;
     typedef void (Algorithm::*Setter)(int);
     
-    static void getList(vector<string>& algorithms);
-    static Ptr<Algorithm> _create(const string& name);
+    CV_WRAP static void getList(CV_OUT vector<string>& algorithms);
+    CV_WRAP static Ptr<Algorithm> _create(const string& name);
     template<typename _Tp> static Ptr<_Tp> create(const string& name);
     
     virtual AlgorithmInfo* info() const /* TODO: make it = 0;*/ { return 0; }
@@ -4312,10 +4333,10 @@ public:
 class CV_EXPORTS AlgorithmInfo
 {
 public:
+    friend class Algorithm;
     AlgorithmInfo(const string& name, Algorithm::Constructor create);
     ~AlgorithmInfo();
     void get(const Algorithm* algo, const char* name, int argType, void* value) const;
-    void set(Algorithm* algo, const char* name, int argType, const void* value) const;
     void addParam_(Algorithm& algo, const char* name, int argType,
                    void* value, bool readOnly, 
                    Algorithm::Getter getter, Algorithm::Setter setter,
@@ -4365,6 +4386,8 @@ public:
                   const string& help=string());
 protected:
     AlgorithmInfoData* data;
+    void set(Algorithm* algo, const char* name, int argType,
+              const void* value, bool force=false) const;
 };
 
 

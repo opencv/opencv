@@ -381,6 +381,8 @@ class RunInfo(object):
     def isTest(self, fullpath):
         if not os.path.isfile(fullpath):
             return False
+        if self.targetos == "nt" and not fullpath.endswith(".exe"):
+            return False
         if hostos == self.targetos:
             return os.access(fullpath, os.X_OK)
         if self.targetos == "android" and fullpath.endswith(".apk"):
@@ -397,7 +399,10 @@ class RunInfo(object):
     def getLogName(self, app, timestamp):
         app = os.path.basename(app)
         if app.endswith(".exe"):
-            app = app[:-4]
+            if app.endswith("d.exe"):
+                app = app[:-5]
+            else:
+                app = app[:-4]
         if app.startswith(self.nameprefix):
             app = app[len(self.nameprefix):]
 
@@ -531,7 +536,10 @@ class RunInfo(object):
             if fname == name:
                 return t
             if fname.endswith(".exe") or (self.targetos == "android" and fname.endswith(".apk")):
-                fname = fname[:-4]
+                if fname.endswith("d.exe"):
+                    fname = fname[:-5]
+                else:
+                    fname = fname[:-4]
             if fname == name:
                 return t
             if fname.startswith(self.nameprefix):
@@ -644,6 +652,9 @@ class RunInfo(object):
             return
         elif self.targetos == "android":
             hostlogpath = ""
+            usercolor = [a for a in args if a.startswith("--gtest_color=")]
+            if len(userlog) == 0 and _stdout.isatty() and hostos != "nt":
+                args.append("--gtest_color=yes")
             try:
                 andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_" + self.options.mode +"/"
                 exename = os.path.basename(exe)
@@ -744,7 +755,7 @@ if __name__ == "__main__":
     parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
     parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
     parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
-    parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
+    parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release configuration", metavar="CFG", default="")
     parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
     parser.add_option("", "--package", dest="junit_package", help="Android: run jUnit tests for specified package", metavar="package", default="")
     parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
@@ -756,7 +767,7 @@ if __name__ == "__main__":
     else:
         options.mode = "perf"
     
-    run_args = getRunArgs(args)
+    run_args = getRunArgs(args[1:] or ['.'])
     
     if len(run_args) == 0:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<build_path>"

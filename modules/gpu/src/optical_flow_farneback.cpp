@@ -81,12 +81,17 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
     void boxFilter5Gpu(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream);
 
+    void boxFilter5Gpu_CC11(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream);
+
     void setGaussianBlurKernel(const float *gKer, int ksizeHalf);
 
     void gaussianBlurGpu(
             const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderType, cudaStream_t stream);
 
     void gaussianBlur5Gpu(
+            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderType, cudaStream_t stream);
+
+    void gaussianBlur5Gpu_CC11(
             const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderType, cudaStream_t stream);
 
 }}}} // namespace cv { namespace gpu { namespace device { namespace optflow_farneback
@@ -167,7 +172,10 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_boxFilter(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat &flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
-    device::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
+    if (!isDeviceArch11_)
+        device::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
+    else
+        device::optflow_farneback::boxFilter5Gpu_CC11(M, blockSize/2, bufM, S(streams[0]));
     swap(M, bufM);
 
     for (int i = 1; i < 5; ++i)
@@ -183,8 +191,12 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat& flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
-    device::optflow_farneback::gaussianBlur5Gpu(
-                M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
+    if (!isDeviceArch11_)
+        device::optflow_farneback::gaussianBlur5Gpu(
+                    M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
+    else
+        device::optflow_farneback::gaussianBlur5Gpu_CC11(
+                    M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
     swap(M, bufM);
 
     device::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));

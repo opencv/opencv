@@ -74,11 +74,17 @@ protected:
     bool TestSparseMat();
     bool TestVec();
     bool TestMatxMultiplication();
+    bool TestSubMatAccess();
     bool operations1();
 
-    void checkDiff(const Mat& m1, const Mat& m2, const string& s) { if (norm(m1, m2, NORM_INF) != 0) throw test_excep(s); }
-    void checkDiffF(const Mat& m1, const Mat& m2, const string& s) { if (norm(m1, m2, NORM_INF) > 1e-5) throw test_excep(s); }
-
+    void checkDiff(const Mat& m1, const Mat& m2, const string& s)
+    {
+        if (norm(m1, m2, NORM_INF) != 0) throw test_excep(s);
+    }
+    void checkDiffF(const Mat& m1, const Mat& m2, const string& s)
+    {
+        if (norm(m1, m2, NORM_INF) > 1e-5) throw test_excep(s);
+    }
 };
 
 CV_OperationsTest::CV_OperationsTest()
@@ -438,6 +444,41 @@ bool CV_OperationsTest::SomeMatFunctions()
 }
 
 
+bool CV_OperationsTest::TestSubMatAccess()
+{
+    try
+    {
+        Mat_<float> T_bs(4,4);
+        Vec3f cdir(1.f, 1.f, 0.f);
+        Vec3f ydir(1.f, 0.f, 1.f);
+        Vec3f fpt(0.1f, 0.7f, 0.2f);
+        T_bs.setTo(0);
+        T_bs(Range(0,3),Range(2,3)) = 1.0*Mat(cdir); // wierd OpenCV stuff, need to do multiply
+        T_bs(Range(0,3),Range(1,2)) = 1.0*Mat(ydir);
+        T_bs(Range(0,3),Range(0,1)) = 1.0*Mat(cdir.cross(ydir));
+        T_bs(Range(0,3),Range(3,4)) = 1.0*Mat(fpt);
+        T_bs(3,3) = 1.0;
+        //std::cout << "[Nav Grok] S frame =" << std::endl << T_bs << std::endl;
+
+        // set up display coords, really just the S frame
+        std::vector<float>coords;
+        
+        for (int i=0; i<16; i++)
+        {
+            coords.push_back(T_bs(i));
+            //std::cout << T_bs1(i) << std::endl;
+        }
+        CV_Assert( norm(coords, T_bs.reshape(1,1), NORM_INF) == 0 );
+    }
+    catch (const test_excep& e)
+    {
+        ts->printf(cvtest::TS::LOG, "%s\n", e.s.c_str());
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        return false;
+    }
+    return true;
+}
+
 bool CV_OperationsTest::TestTemplateMat()
 {  
     try
@@ -754,12 +795,35 @@ bool CV_OperationsTest::TestMatxMultiplication()
 { 
     try 
     { 
-        Matx33f mat(1, 0, 0, 0, 1, 0, 0, 0, 1); // Identity matrix 
+        Matx33f mat(1, 1, 1, 0, 1, 1, 0, 0, 1); // Identity matrix 
         Point2f pt(3, 4); 
         Point3f res = mat * pt; // Correctly assumes homogeneous coordinates 
-        if(res.x != 3.0) throw test_excep(); 
-        if(res.y != 4.0) throw test_excep(); 
-        if(res.z != 1.0) throw test_excep(); 
+        
+        Vec3f res2 = mat*Vec3f(res.x, res.y, res.z);
+        
+        if(res.x != 8.0) throw test_excep(); 
+        if(res.y != 5.0) throw test_excep(); 
+        if(res.z != 1.0) throw test_excep();
+        
+        if(res2[0] != 14.0) throw test_excep(); 
+        if(res2[1] != 6.0) throw test_excep(); 
+        if(res2[2] != 1.0) throw test_excep();
+        
+        Matx44f mat44f(1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1);
+        Matx44d mat44d(1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1);
+        Scalar s(4, 3, 2, 1);
+        Scalar sf = mat44f*s;
+        Scalar sd = mat44d*s;
+        
+        if(sf[0] != 10.0) throw test_excep(); 
+        if(sf[1] != 6.0) throw test_excep(); 
+        if(sf[2] != 3.0) throw test_excep();
+        if(sf[3] != 1.0) throw test_excep();
+        
+        if(sd[0] != 10.0) throw test_excep(); 
+        if(sd[1] != 6.0) throw test_excep(); 
+        if(sd[2] != 3.0) throw test_excep();
+        if(sd[3] != 1.0) throw test_excep();
     } 
     catch(const test_excep&) 
     { 
@@ -876,6 +940,9 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
     
     if (!TestMatxMultiplication())
+        return;
+    
+    if (!TestSubMatAccess())
         return;
 
     if (!operations1())

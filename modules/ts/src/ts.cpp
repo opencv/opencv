@@ -316,9 +316,11 @@ int BaseTest::update_progress( int progress, int test_case_idx, int count, doubl
 
 BadArgTest::BadArgTest()
 {
-    progress      = -1;
-    test_case_idx = -1;
-    freq          = cv::getTickFrequency();
+    progress        = -1;
+    test_case_idx   = -1;
+    freq            = cv::getTickFrequency();
+    // oldErrorCbk     = 0;
+    // oldErrorCbkData = 0;
 }
 
 BadArgTest::~BadArgTest(void)
@@ -377,7 +379,6 @@ int BadArgTest::run_test_case( int expected_code, const string& _descr )
 
     return errcount;
 }
-
 
 /*****************************************************************************************\
 *                                 Base Class for Test System                              *
@@ -438,6 +439,12 @@ string TS::str_from_code( int code )
     return "Generic/Unknown";
 }
 
+static int tsErrorCallback( int status, const char* func_name, const char* err_msg, const char* file_name, int line, TS* ts )
+{
+    ts->printf(TS::LOG, "OpenCV Error: %s (%s) in %s, file %s, line %d\n", cvErrorStr(status), err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
+    return 0;
+}
+
 /************************************** Running tests **********************************/
 
 void TS::init( const string& modulename )
@@ -453,10 +460,10 @@ void TS::init( const string& modulename )
         data_path = string(buf);
     }
     
+    cv::redirectError((cv::ErrorCallback)tsErrorCallback, this);
+
     if( ::testing::GTEST_FLAG(catch_exceptions) )
     {
-        cvSetErrMode( CV_ErrModeParent );
-        cvRedirectError( cvStdErrReport );
 #if defined WIN32 || defined _WIN32
 #ifdef _MSC_VER
         _set_se_translator( SEHTranslator );
@@ -468,8 +475,6 @@ void TS::init( const string& modulename )
     }
     else
     {
-        cvSetErrMode( CV_ErrModeLeaf );
-        cvRedirectError( cvGuiBoxReport );
 #if defined WIN32 || defined _WIN32
 #ifdef _MSC_VER
         _set_se_translator( 0 );

@@ -61,14 +61,22 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 #ifdef HAVE_OPENCV_GPU
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
+#if HAVE_OPENCV_NONFREE
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
+#else
+        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
+#endif
         stitcher.setWarper(new SphericalWarperGpu());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
     }
     else
 #endif
     {
+#if HAVE_OPENCV_NONFREE
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
+#else
+        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
+#endif
         stitcher.setWarper(new SphericalWarper());
         stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
     }

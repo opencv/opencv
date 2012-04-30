@@ -172,11 +172,11 @@ static void add(float *res, const float *rhs, const int count, cudaStream_t stre
 ///////////////////////////////////////////////////////////////////////////////
 __global__ void scaleVector(float *d_res, const float *d_src, float scale, const int len)
 {
-	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
-	
-	if (pos >= len) return;
-	
-	d_res[pos] = d_src[pos] * scale;
+    const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (pos >= len) return;
+
+    d_res[pos] = d_src[pos] * scale;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -191,10 +191,10 @@ __global__ void scaleVector(float *d_res, const float *d_src, float scale, const
 ///////////////////////////////////////////////////////////////////////////////
 static void ScaleVector(float *d_res, const float *d_src, float scale, const int len, cudaStream_t stream)
 {
-	dim3 threads(256);
-	dim3 blocks(iDivUp(len, threads.x));
-	
-	scaleVector<<<blocks, threads, 0, stream>>>(d_res, d_src, scale, len);
+    dim3 threads(256);
+    dim3 blocks(iDivUp(len, threads.x));
+
+    scaleVector<<<blocks, threads, 0, stream>>>(d_res, d_src, scale, len);
 }
 
 const int SOR_TILE_WIDTH = 32;
@@ -1128,14 +1128,14 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
                 ncvAssertReturnNcvStat( nppiStResize_32f_C1R (ptrU->ptr(), srcSize, kLevelStride * sizeof (float), srcROI, 
                     ptrUNew->ptr(), dstSize, ns * sizeof (float), dstROI, 1.0f/scale_factor, 1.0f/scale_factor, nppStBicubic) );
-					
-				ScaleVector(ptrUNew->ptr(), ptrUNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
+
+                ScaleVector(ptrUNew->ptr(), ptrUNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
                 ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
 
                 ncvAssertReturnNcvStat( nppiStResize_32f_C1R (ptrV->ptr(), srcSize, kLevelStride * sizeof (float), srcROI, 
                     ptrVNew->ptr(), dstSize, ns * sizeof (float), dstROI, 1.0f/scale_factor, 1.0f/scale_factor, nppStBicubic) );
-					
-				ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
+
+                ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
                 ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
 
                 cv::gpu::device::swap<FloatVector*>(ptrU, ptrUNew);

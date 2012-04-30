@@ -375,7 +375,7 @@ TEST_P(FarnebackOpticalFlow, Accuracy)
 
     EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
     EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
-}
+};
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
     ALL_DEVICES,
@@ -384,116 +384,33 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
     testing::Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN)),
     testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// VideoWriter
+struct OpticalFlowNan : public BroxOpticalFlow {};
 
-#ifdef WIN32
-
-PARAM_TEST_CASE(VideoWriter, cv::gpu::DeviceInfo, std::string)
+TEST_P(OpticalFlowNan, Regression)
 {
-    cv::gpu::DeviceInfo devInfo;
-    std::string inputFile;
+    cv::Mat frame0 = readImageType("opticalflow/frame0.png", CV_32FC1);
+    ASSERT_FALSE(frame0.empty());
+    cv::Mat r_frame0, r_frame1;
+    cv::resize(frame0, r_frame0, cv::Size(1380,1000));
 
-    std::string outputFile;
+    cv::Mat frame1 = readImageType("opticalflow/frame1.png", CV_32FC1);
+    ASSERT_FALSE(frame1.empty());
+    cv::resize(frame1, r_frame1, cv::Size(1380,1000));
 
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        inputFile = GET_PARAM(1);
+    cv::gpu::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+                                  5 /*inner_iterations*/, 150 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+    cv::gpu::GpuMat u;
+    cv::gpu::GpuMat v;
+    brox(loadMat(r_frame0), loadMat(r_frame1), u, v);
 
-        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
-        outputFile = inputFile.substr(0, inputFile.find('.')) + "_test.avi";
-    }
+    cv::Mat h_u, h_v;
+    u.download(h_u);
+    v.download(h_v);
+    EXPECT_TRUE(cv::checkRange(h_u));
+    EXPECT_TRUE(cv::checkRange(h_v));
 };
 
-TEST_P(VideoWriter, Regression)
-{
-    const double FPS = 25.0;
-
-    cv::VideoCapture reader(inputFile);
-    ASSERT_TRUE( reader.isOpened() );
-
-    cv::gpu::VideoWriter_GPU d_writer;
-
-    cv::Mat frame;
-    std::vector<cv::Mat> frames;
-    cv::gpu::GpuMat d_frame;
-
-    for (int i = 1; i < 10; ++i)
-    {
-        reader >> frame;
-
-        if (frame.empty())
-            break;
-
-        frames.push_back(frame.clone());
-        d_frame.upload(frame);
-
-        if (!d_writer.isOpened())
-            d_writer.open(outputFile, frame.size(), FPS);
-
-        d_writer.write(d_frame);
-    }
-
-    reader.release();
-    d_writer.close();
-
-    reader.open(outputFile);
-    ASSERT_TRUE( reader.isOpened() );
-
-    for (int i = 0; i < 5; ++i)
-    {
-        reader >> frame;
-        ASSERT_FALSE( frame.empty() );
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_Video, VideoWriter, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(std::string("VID00003-20100701-2204.mpg"), std::string("big_buck_bunny.mpg"))));
-
-#endif // WIN32
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// VideoReader
-
-PARAM_TEST_CASE(VideoReader, cv::gpu::DeviceInfo, std::string)
-{
-    cv::gpu::DeviceInfo devInfo;
-    std::string inputFile;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        inputFile = GET_PARAM(1);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
-    }
-};
-
-TEST_P(VideoReader, Regression)
-{
-    cv::gpu::VideoReader_GPU reader(inputFile);
-    ASSERT_TRUE( reader.isOpened() );
-
-    cv::gpu::GpuMat frame;
-
-    for (int i = 0; i < 5; ++i)
-    {
-        ASSERT_TRUE( reader.read(frame) );
-        ASSERT_FALSE( frame.empty() );
-    }
-
-    reader.close();
-    ASSERT_FALSE( reader.isOpened() );
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(std::string("VID00003-20100701-2204.mpg"))));
+INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowNan, ALL_DEVICES);
 
 } // namespace

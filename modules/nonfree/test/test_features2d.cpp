@@ -302,6 +302,8 @@ protected:
         if( validDescriptors.size != calcDescriptors.size || validDescriptors.type() != calcDescriptors.type() )
         {
             ts->printf(cvtest::TS::LOG, "Valid and computed descriptors matrices must have the same size and type.\n");
+            ts->printf(cvtest::TS::LOG, "Valid size is (%d x %d) actual size is (%d x %d).\n", validDescriptors.rows, validDescriptors.cols, calcDescriptors.rows, calcDescriptors.cols);
+            ts->printf(cvtest::TS::LOG, "Valid type is %d  actual type is %d.\n", validDescriptors.type(), calcDescriptors.type());
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
             return;
         }
@@ -992,21 +994,21 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
 
 TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
-    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.035f,
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
                                                  DescriptorExtractor::create("SURF"), 0.147372f );
     test.safe_run();
 }
 
-/*TEST( Features2d_DescriptorExtractor_OpponentSIFT, regression )
+TEST( Features2d_DescriptorExtractor_OpponentSIFT, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-sift", 0.18f,
                                                  DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );
     test.safe_run();
-}*/
+}
 
 TEST( Features2d_DescriptorExtractor_OpponentSURF, regression )
 {
-    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-surf",  0.18f,
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-surf",  0.3f,
                                                  DescriptorExtractor::create("OpponentSURF"), 0.147372f );
     test.safe_run();
 }
@@ -1066,11 +1068,11 @@ TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
     matcher->knnMatch(descQ, descT, matches, k);
 
     //cout << "\nBest " << k << " matches to " << descT.rows << " train desc-s." << endl;
-    ASSERT_EQ(descQ.rows, matches.size());
+    ASSERT_EQ(descQ.rows, static_cast<int>(matches.size()));
     for(size_t i = 0; i<matches.size(); i++)
     {
         //cout << "\nmatches[" << i << "].size()==" << matches[i].size() << endl;
-        ASSERT_GT(min(k, descT.rows), static_cast<int>(matches[i].size()));
+        ASSERT_GE(min(k, descT.rows), static_cast<int>(matches[i].size()));
         for(size_t j = 0; j<matches[i].size(); j++)
         {
             //cout << "\t" << matches[i][j].queryIdx << " -> " << matches[i][j].trainIdx << endl;

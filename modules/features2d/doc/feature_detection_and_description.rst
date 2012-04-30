@@ -7,7 +7,7 @@ FAST
 --------
 Detects corners using the FAST algorithm
 
-.. ocv:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
+.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true )
 
     :param image: Image where keypoints (corners) are detected.
 
@@ -17,7 +17,9 @@ Detects corners using the FAST algorithm
 
     :param nonmaxSupression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
 
-Detects corners using the FAST algorithm by E. Rosten (*Machine Learning for High-speed Corner Detection*, 2006).
+Detects corners using the FAST algorithm by [Rosten06]_.
+
+.. [Rosten06] E. Rosten. Machine Learning for High-speed Corner Detection, 2006.
 
 
 MSER
@@ -46,533 +48,51 @@ The class encapsulates all the parameters of the MSER extraction algorithm (see
 http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for useful comments and parameters description.
 
 
-StarDetector
-------------
-.. ocv:class:: StarDetector
-
-Class implementing the ``Star`` keypoint detector, a modified version of the ``CenSurE`` keypoint detector described in [Agrawal08]_.
-
-.. [Agrawal08] Agrawal, M. and Konolige, K. and Blas, M.R. "CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching", ECCV08, 2008
-
-StarDetector::StarDetector
---------------------------
-The Star Detector constructor
-
-.. ocv:function:: StarDetector::StarDetector()
-
-.. ocv:function:: StarDetector::StarDetector(int maxSize, int responseThreshold, int lineThresholdProjected, int lineThresholdBinarized, int suppressNonmaxSize)
-
-.. ocv:pyfunction:: cv2.StarDetector(maxSize, responseThreshold, lineThresholdProjected, lineThresholdBinarized, suppressNonmaxSize) -> <StarDetector object>
-
-    :param maxSize: maximum size of the features. The following values are supported: 4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128. In the case of a different value the result is undefined.
-    
-    :param responseThreshold: threshold for the approximated laplacian, used to eliminate weak features. The larger it is, the less features will be retrieved
-    
-    :param lineThresholdProjected: another threshold for the laplacian to eliminate edges    
-
-    :param lineThresholdBinarized: yet another threshold for the feature size to eliminate edges. The larger the 2nd threshold, the more points you get.
-
-StarDetector::operator()
-------------------------
-Finds keypoints in an image
-        
-.. ocv:function:: void StarDetector::operator()(const Mat& image, vector<KeyPoint>& keypoints)
-
-.. ocv:pyfunction:: cv2.StarDetector.detect(image) -> keypoints
-
-.. ocv:cfunction:: CvSeq* cvGetStarKeypoints( const CvArr* image, CvMemStorage* storage, CvStarDetectorParams params=cvStarDetectorParams() )
-
-.. ocv:pyoldfunction:: cv.GetStarKeypoints(image, storage, params)-> keypoints
-
-    :param image: The input 8-bit grayscale image
-    
-    :param keypoints: The output vector of keypoints
-    
-    :param storage: The memory storage used to store the keypoints (OpenCV 1.x API only)
-    
-    :param params: The algorithm parameters stored in ``CvStarDetectorParams`` (OpenCV 1.x API only)
-
 ORB
-----
+---
 .. ocv:class:: ORB
 
-Class for extracting ORB features and descriptors from an image. ::
+Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor, described in [RRKB11]_. The algorithm uses FAST in pyramids to detect stable keypoints, selects the strongest features using FAST or Harris response, finds their orientation using first-order moments and computes the descriptors using BRIEF (where the coordinates of random point pairs (or k-tuples) are rotated according to the measured orientation).
 
-    class ORB
-    {
-    public:
-        /** The patch sizes that can be used (only one right now) */
-        struct CommonParams
-        {
-            enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0};
+.. [RRKB11] Ethan Rublee, Vincent Rabaud, Kurt Konolige, Gary R. Bradski: ORB: An efficient alternative to SIFT or SURF. ICCV 2011: 2564-2571.
 
-            /** default constructor */
-            CommonParams(float scale_factor = 1.2f, unsigned int n_levels = DEFAULT_N_LEVELS,
-                 int edge_threshold = 31, unsigned int first_level = DEFAULT_FIRST_LEVEL);
-            void read(const FileNode& fn);
-            void write(FileStorage& fs) const;
+ORB::ORB
+--------
+The ORB constructor
 
-            /** Coefficient by which we divide the dimensions from one scale pyramid level to the next */
-            float scale_factor_;
-            /** The number of levels in the scale pyramid */
-            unsigned int n_levels_;
-            /** The level at which the image is given
-             * if 1, that means we will also look at the image scale_factor_ times bigger
-             */
-            unsigned int first_level_;
-            /** How far from the boundary the points should be */
-            int edge_threshold_;
-        };
+.. ocv:function:: ORB::ORB()
 
-        // constructor that initializes all the algorithm parameters
-        // n_features is the number of desired features
-        ORB(size_t n_features = 500, const CommonParams & detector_params = CommonParams());
-        // returns the number of elements in each descriptor (32 bytes)
-        int descriptorSize() const;
-        // detects keypoints using ORB
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints) const;
-        // detects ORB keypoints and computes the ORB descriptors for them;
-        // output vector "descriptors" stores elements of descriptors and has size
-        // equal descriptorSize()*keypoints.size() as each descriptor is
-        // descriptorSize() elements of this vector.
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints,
-                        cv::Mat& descriptors,
-                        bool useProvidedKeypoints=false) const;
-    };
+.. ocv:function:: ORB::ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31, int firstLevel = 0, int WTA_K=2, int scoreType=HARRIS_SCORE, int patchSize=31)
 
-The class implements ORB.
-
-
-
-
-
-RandomizedTree
---------------
-.. ocv:class:: RandomizedTree
-
-Class containing a base structure for ``RTreeClassifier``. ::
-
-    class CV_EXPORTS RandomizedTree
-    {
-    public:
-            friend class RTreeClassifier;
-
-            RandomizedTree();
-            ~RandomizedTree();
-
-            void train(std::vector<BaseKeypoint> const& base_set,
-                     RNG &rng, int depth, int views,
-                     size_t reduced_num_dim, int num_quant_bits);
-            void train(std::vector<BaseKeypoint> const& base_set,
-                     RNG &rng, PatchGenerator &make_patch, int depth,
-                     int views, size_t reduced_num_dim, int num_quant_bits);
-
-            // next two functions are EXPERIMENTAL
-            //(do not use unless you know exactly what you do)
-            static void quantizeVector(float *vec, int dim, int N, float bnds[2],
-                     int clamp_mode=0);
-            static void quantizeVector(float *src, int dim, int N, float bnds[2],
-                     uchar *dst);
-
-            // patch_data must be a 32x32 array (no row padding)
-            float* getPosterior(uchar* patch_data);
-            const float* getPosterior(uchar* patch_data) const;
-            uchar* getPosterior2(uchar* patch_data);
-
-            void read(const char* file_name, int num_quant_bits);
-            void read(std::istream &is, int num_quant_bits);
-            void write(const char* file_name) const;
-            void write(std::ostream &os) const;
-
-            int classes() { return classes_; }
-            int depth() { return depth_; }
-
-            void discardFloatPosteriors() { freePosteriors(1); }
-
-            inline void applyQuantization(int num_quant_bits)
-                     { makePosteriors2(num_quant_bits); }
-
-    private:
-            int classes_;
-            int depth_;
-            int num_leaves_;
-            std::vector<RTreeNode> nodes_;
-            float **posteriors_;        // 16-byte aligned posteriors
-            uchar **posteriors2_;     // 16-byte aligned posteriors
-            std::vector<int> leaf_counts_;
-
-            void createNodes(int num_nodes, RNG &rng);
-            void allocPosteriorsAligned(int num_leaves, int num_classes);
-            void freePosteriors(int which);
-                     // which: 1=posteriors_, 2=posteriors2_, 3=both
-            void init(int classes, int depth, RNG &rng);
-            void addExample(int class_id, uchar* patch_data);
-            void finalize(size_t reduced_num_dim, int num_quant_bits);
-            int getIndex(uchar* patch_data) const;
-            inline float* getPosteriorByIndex(int index);
-            inline uchar* getPosteriorByIndex2(int index);
-            inline const float* getPosteriorByIndex(int index) const;
-            void convertPosteriorsToChar();
-            void makePosteriors2(int num_quant_bits);
-            void compressLeaves(size_t reduced_num_dim);
-            void estimateQuantPercForPosteriors(float perc[2]);
-    };
-
-
-
-RandomizedTree::train
--------------------------
-Trains a randomized tree using an input set of keypoints.
-
-.. ocv:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
-
-.. ocv:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
-
-    :param base_set: Vector of the ``BaseKeypoint`` type. It contains image keypoints used for training.
+    :param nfeatures: The maximum number of features to retain.
     
-    :param rng: Random-number generator used for training.
+    :param scaleFactor: Pyramid decimation ratio, greater than 1. ``scaleFactor==2`` means the classical pyramid, where each next level has 4x less pixels than the previous, but such a big scale factor will degrade feature matching scores dramatically. On the other hand, too close to 1 scale factor will mean that to cover certain scale range you will need more pyramid levels and so the speed will suffer.
     
-    :param make_patch: Patch generator used for training.
+    :param nlevels: The number of pyramid levels. The smallest level will have linear size equal to ``input_image_linear_size/pow(scaleFactor, nlevels)``.
     
-    :param depth: Maximum tree depth.
-
-    :param views: Number of random views of each keypoint neighborhood to generate.
-
-    :param reduced_num_dim: Number of dimensions used in the compressed signature.
+    :param edgeThreshold: This is size of the border where the features are not detected. It should roughly match the ``patchSize`` parameter.
     
-    :param num_quant_bits: Number of bits used for quantization.
+    :param firstLevel: It should be 0 in the current implementation.
+    
+    :param WTA_K: The number of points that produce each element of the oriented BRIEF descriptor. The default value 2 means the BRIEF where we take a random point pair and compare their brightnesses, so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3 random points (of course, those point coordinates are random, but they are generated from the pre-defined seed, so each element of BRIEF descriptor is computed deterministically from the pixel rectangle), find point of maximum brightness and output index of the winner (0, 1 or 2). Such output will occupy 2 bits, and therefore it will need a special variant of Hamming distance, denoted as ``NORM_HAMMING2`` (2 bits per bin).  When ``WTA_K=4``, we take 4 random points to compute each bin (that will also occupy 2 bits with possible values 0, 1, 2 or 3).
+    
+    :param scoreType: The default HARRIS_SCORE means that Harris algorithm is used to rank features (the score is written to ``KeyPoint::score`` and is used to retain best ``nfeatures`` features); FAST_SCORE is alternative value of the parameter that produces slightly less stable keypoints, but it is a little faster to compute.
+    
+    :param patchSize: size of the patch used by the oriented BRIEF descriptor. Of course, on smaller pyramid layers the perceived image area covered by a feature will be larger.
 
-
-
-RandomizedTree::read
-------------------------
-Reads a pre-saved randomized tree from a file or stream.
-
-.. ocv:function:: read(const char* file_name, int num_quant_bits)
-
-.. ocv:function:: read(std::istream &is, int num_quant_bits)
-
-    :param file_name: Name of the file that contains randomized tree data.
-
-    :param is: Input stream associated with the file that contains randomized tree data.
-
-    :param num_quant_bits: Number of bits used for quantization.
-
-
-
-RandomizedTree::write
--------------------------
-Writes the current randomized tree to a file or stream.
-
-.. ocv:function:: void write(const char* file_name) const
-
-.. ocv:function:: void write(std::ostream &os) const
-
-    :param file_name: Name of the file where randomized tree data is stored.
-
-    :param os: Output stream associated with the file where randomized tree data is stored.
-
-
-
-RandomizedTree::applyQuantization
--------------------------------------
-.. ocv:function:: void applyQuantization(int num_quant_bits)
-
-    Applies quantization to the current randomized tree.
-
-    :param num_quant_bits: Number of bits used for quantization.
-
-
-RTreeNode
----------
-.. ocv:class:: RTreeNode
-
-Class containing a base structure for ``RandomizedTree``. ::
-
-    struct RTreeNode
-    {
-            short offset1, offset2;
-
-            RTreeNode() {}
-
-            RTreeNode(uchar x1, uchar y1, uchar x2, uchar y2)
-                    : offset1(y1*PATCH_SIZE + x1),
-                    offset2(y2*PATCH_SIZE + x2)
-            {}
-
-            //! Left child on 0, right child on 1
-            inline bool operator() (uchar* patch_data) const
-            {
-                    return patch_data[offset1] > patch_data[offset2];
-            }
-    };
-
-
-
-RTreeClassifier
+ORB::operator()
 ---------------
-.. ocv:class:: RTreeClassifier
+Finds keypoints in an image and computes their descriptors
+        
+.. ocv:function:: void ORB::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false ) const
 
-Class containing ``RTreeClassifier``. It represents the Calonder descriptor originally introduced by Michael Calonder. ::
-
-    class CV_EXPORTS RTreeClassifier
-    {
-    public:
-            static const int DEFAULT_TREES = 48;
-            static const size_t DEFAULT_NUM_QUANT_BITS = 4;
-
-            RTreeClassifier();
-
-            void train(std::vector<BaseKeypoint> const& base_set,
-                    RNG &rng,
-                    int num_trees = RTreeClassifier::DEFAULT_TREES,
-                    int depth = DEFAULT_DEPTH,
-                    int views = DEFAULT_VIEWS,
-                    size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,
-                    int num_quant_bits = DEFAULT_NUM_QUANT_BITS,
-                             bool print_status = true);
-            void train(std::vector<BaseKeypoint> const& base_set,
-                    RNG &rng,
-                    PatchGenerator &make_patch,
-                    int num_trees = RTreeClassifier::DEFAULT_TREES,
-                    int depth = DEFAULT_DEPTH,
-                    int views = DEFAULT_VIEWS,
-                    size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,
-                    int num_quant_bits = DEFAULT_NUM_QUANT_BITS,
-                     bool print_status = true);
-
-            // sig must point to a memory block of at least
-            //classes()*sizeof(float|uchar) bytes
-            void getSignature(IplImage *patch, uchar *sig);
-            void getSignature(IplImage *patch, float *sig);
-            void getSparseSignature(IplImage *patch, float *sig,
-                     float thresh);
-
-            static int countNonZeroElements(float *vec, int n, double tol=1e-10);
-            static inline void safeSignatureAlloc(uchar **sig, int num_sig=1,
-                            int sig_len=176);
-            static inline uchar* safeSignatureAlloc(int num_sig=1,
-                             int sig_len=176);
-
-            inline int classes() { return classes_; }
-            inline int original_num_classes()
-                     { return original_num_classes_; }
-
-            void setQuantization(int num_quant_bits);
-            void discardFloatPosteriors();
-
-            void read(const char* file_name);
-            void read(std::istream &is);
-            void write(const char* file_name) const;
-            void write(std::ostream &os) const;
-
-            std::vector<RandomizedTree> trees_;
-
-    private:
-            int classes_;
-            int num_quant_bits_;
-            uchar **posteriors_;
-            ushort *ptemp_;
-            int original_num_classes_;
-            bool keep_floats_;
-    };
-
-
-
-RTreeClassifier::train
---------------------------
-Trains a randomized tree classifier using an input set of keypoints.
-
-.. ocv:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM, int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
-
-.. ocv:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
-
-    :param base_set: Vector of the ``BaseKeypoint``  type. It contains image keypoints used for training.
+    :param image: The input 8-bit grayscale image.
     
-    :param rng: Random-number generator used for training.
+    :param mask: The operation mask.
     
-    :param make_patch: Patch generator used for training.
+    :param keypoints: The output vector of keypoints.
     
-    :param num_trees: Number of randomized trees used in ``RTreeClassificator`` .
+    :param descriptors: The output descriptors. Pass ``cv::noArray()`` if you do not need it.
     
-    :param depth: Maximum tree depth.
+    :param useProvidedKeypoints: If it is true, then the method will use the provided vector of keypoints instead of detecting them.
 
-    :param views: Number of random views of each keypoint neighborhood to generate.
-
-    :param reduced_num_dim: Number of dimensions used in the compressed signature.
-    
-    :param num_quant_bits: Number of bits used for quantization.
-    
-    :param print_status: Current status of training printed on the console.
-
-
-
-RTreeClassifier::getSignature
----------------------------------
-Returns a signature for an image patch.
-
-.. ocv:function:: void getSignature(IplImage *patch, uchar *sig)
-
-.. ocv:function:: void getSignature(IplImage *patch, float *sig)
-
-    :param patch: Image patch to calculate the signature for.
-    :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
-
-
-
-RTreeClassifier::getSparseSignature
---------------------------------------- 
-Returns a sparse signature for an image patch
-
-.. ocv:function:: void getSparseSignature(IplImage *patch, float *sig, float thresh)
-
-    :param patch: Image patch to calculate the signature for.
-    
-    :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
-    
-    :param thresh: Threshold used for compressing the signature.
-
-    Returns a signature for an image patch similarly to ``getSignature``  but uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
-
-
-RTreeClassifier::countNonZeroElements
------------------------------------------
-Returns the number of non-zero elements in an input array.
-
-.. ocv:function:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
-
-    :param vec: Input vector containing float elements.
-
-    :param n: Input vector size.
-
-    :param tol: Threshold used for counting elements. All elements less than ``tol``  are considered as zero elements.
-
-
-
-RTreeClassifier::read
--------------------------
-Reads a pre-saved ``RTreeClassifier`` from a file or stream.
-
-.. ocv:function:: read(const char* file_name)
-
-.. ocv:function:: read(std::istream& is)
-
-    :param file_name: Name of the file that contains randomized tree data.
-
-    :param is: Input stream associated with the file that contains randomized tree data.
-
-
-
-RTreeClassifier::write
---------------------------
-Writes the current ``RTreeClassifier`` to a file or stream.
-
-.. ocv:function:: void write(const char* file_name) const
-
-.. ocv:function:: void write(std::ostream &os) const
-
-    :param file_name: Name of the file where randomized tree data is stored.
-
-    :param os: Output stream associated with the file where randomized tree data is stored.
-
-
-
-RTreeClassifier::setQuantization
-------------------------------------
-Applies quantization to the current randomized tree.
-
-.. ocv:function:: void setQuantization(int num_quant_bits)
-
-    :param num_quant_bits: Number of bits used for quantization.
-
-The example below demonstrates the usage of ``RTreeClassifier`` for matching the features. The features are extracted from the test and train images with SURF. Output is
-:math:`best\_corr` and
-:math:`best\_corr\_idx` arrays that keep the best probabilities and corresponding features indices for every train feature. ::
-
-    CvMemStorage* storage = cvCreateMemStorage(0);
-    CvSeq *objectKeypoints = 0, *objectDescriptors = 0;
-    CvSeq *imageKeypoints = 0, *imageDescriptors = 0;
-    CvSURFParams params = cvSURFParams(500, 1);
-    cvExtractSURF( test_image, 0, &imageKeypoints, &imageDescriptors,
-                     storage, params );
-    cvExtractSURF( train_image, 0, &objectKeypoints, &objectDescriptors,
-                     storage, params );
-
-    RTreeClassifier detector;
-    int patch_width = PATCH_SIZE;
-    iint patch_height = PATCH_SIZE;
-    vector<BaseKeypoint> base_set;
-    int i=0;
-    CvSURFPoint* point;
-    for (i=0;i<(n_points > 0 ? n_points : objectKeypoints->total);i++)
-    {
-            point=(CvSURFPoint*)cvGetSeqElem(objectKeypoints,i);
-            base_set.push_back(
-                    BaseKeypoint(point->pt.x,point->pt.y,train_image));
-    }
-
-            //Detector training
-     RNG rng( cvGetTickCount() );
-    PatchGenerator gen(0,255,2,false,0.7,1.3,-CV_PI/3,CV_PI/3,
-                            -CV_PI/3,CV_PI/3);
-
-    printf("RTree Classifier training...n");
-    detector.train(base_set,rng,gen,24,DEFAULT_DEPTH,2000,
-            (int)base_set.size(), detector.DEFAULT_NUM_QUANT_BITS);
-    printf("Donen");
-
-    float* signature = new float[detector.original_num_classes()];
-    float* best_corr;
-    int* best_corr_idx;
-    if (imageKeypoints->total > 0)
-    {
-            best_corr = new float[imageKeypoints->total];
-            best_corr_idx = new int[imageKeypoints->total];
-    }
-
-    for(i=0; i < imageKeypoints->total; i++)
-    {
-            point=(CvSURFPoint*)cvGetSeqElem(imageKeypoints,i);
-            int part_idx = -1;
-            float prob = 0.0f;
-
-            CvRect roi = cvRect((int)(point->pt.x) - patch_width/2,
-                    (int)(point->pt.y) - patch_height/2,
-                     patch_width, patch_height);
-            cvSetImageROI(test_image, roi);
-            roi = cvGetImageROI(test_image);
-            if(roi.width != patch_width || roi.height != patch_height)
-            {
-                    best_corr_idx[i] = part_idx;
-                    best_corr[i] = prob;
-            }
-            else
-            {
-                    cvSetImageROI(test_image, roi);
-                    IplImage* roi_image =
-                             cvCreateImage(cvSize(roi.width, roi.height),
-                             test_image->depth, test_image->nChannels);
-                    cvCopy(test_image,roi_image);
-
-                    detector.getSignature(roi_image, signature);
-                    for (int j = 0; j< detector.original_num_classes();j++)
-                    {
-                            if (prob < signature[j])
-                            {
-                                    part_idx = j;
-                                    prob = signature[j];
-                            }
-                    }
-
-                    best_corr_idx[i] = part_idx;
-                    best_corr[i] = prob;
-
-                    if (roi_image)
-                            cvReleaseImage(&roi_image);
-            }
-            cvResetImageROI(test_image);
-    }
-
-..

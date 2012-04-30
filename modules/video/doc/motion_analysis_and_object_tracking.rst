@@ -404,11 +404,11 @@ Updates the predicted state from the measurement.
 BackgroundSubtractor
 --------------------
 
-.. ocv:class:: BackgroundSubtractor
+.. ocv:class:: BackgroundSubtractor : public Algorithm
 
 Base class for background/foreground segmentation. ::
 
-    class BackgroundSubtractor
+    class BackgroundSubtractor : public Algorithm
     {
     public:
         virtual ~BackgroundSubtractor();

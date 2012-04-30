@@ -86,11 +86,13 @@ typedef vector<Rect> vector_Rect;
 typedef vector<KeyPoint> vector_KeyPoint;
 typedef vector<Mat> vector_Mat;
 typedef vector<DMatch> vector_DMatch;
+typedef vector<string> vector_string;
 typedef vector<vector<Point> > vector_vector_Point;
 typedef vector<vector<Point2f> > vector_vector_Point2f;
 typedef vector<vector<Point3f> > vector_vector_Point3f;
 typedef vector<vector<DMatch> > vector_vector_DMatch;
 
+typedef Ptr<Algorithm> Ptr_Algorithm;
 typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
 typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
@@ -759,6 +761,19 @@ template<> struct pyopencvVecConverter<DMatch>
     }
 };
 
+template<> struct pyopencvVecConverter<string>
+{
+    static bool to(PyObject* obj, vector<string>& value, const char* name="<unknown>")
+    {
+        return pyopencv_to_generic_vec(obj, value, name);
+    }
+    
+    static PyObject* from(const vector<string>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
 
 static inline bool pyopencv_to(PyObject *obj, CvTermCriteria& dst, const char *name="<unknown>")
 {
@@ -995,7 +1010,7 @@ void initcv2()
   PyObject* m = Py_InitModule(MODULESTR, methods);
   PyObject* d = PyModule_GetDict(m);
 
-  PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 4557 $"));
+  PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
 
   opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);

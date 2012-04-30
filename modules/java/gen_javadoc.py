@@ -1,5 +1,5 @@
 import os, sys, re, string, glob
-allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "python", "stitching", "traincascade", "ts", "photo"]
+allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "python", "stitching", "traincascade", "ts", "photo", "videostab"]
 verbose = False
 show_warnings = True
 show_errors = True
@@ -67,14 +67,47 @@ class JavadocGenerator(object):
             inf.close()
             outf.close()
 
+    def FinishParagraph(self, text):
+        return text[:-1] + "</p>\n"
+
     def ReformatForJavadoc(self, s):
         out = ""
+        in_paragraph = False
+        in_list = False
         for term in s.split("\n"):
-            if term.startswith("*") or term.startswith("#."):
-                term = "  " + term
+            in_list_item = False
+            if term.startswith("*"):
+                in_list_item = True
+                if in_paragraph:
+                    out = self.FinishParagraph(out)
+                    in_paragraph = False
+                if not in_list:
+                    out += " * <ul>\n"
+                    in_list = True
+                term = "  <li>" + term[1:]
+
+            if term.startswith("#."):
+                in_list_item = True
+                if in_paragraph:
+                    out = self.FinishParagraph(out)
+                    in_paragraph = False
+                if not in_list:
+                    out += " * <ul>\n"
+                    in_list = True
+                term = "  <li>" + term[2:]
+
             if not term:
+                if in_paragraph:
+                    out = self.FinishParagraph(out)
+                    in_paragraph = False
                 out += " *\n"
             else:
+                if in_list and not in_list_item:
+                    in_list = False
+                    if out.endswith(" *\n"):
+                        out = out[:-3] + " * </ul>\n *\n"
+                    else:
+                        out += " * </ul>\n"
                 pos_start = 0
                 pos_end = min(77, len(term)-1)
                 while pos_start < pos_end:
@@ -91,12 +124,22 @@ class JavadocGenerator(object):
                                     pos_end += 1
                                 else:
                                     break
-                    out += " * " + term[pos_start:pos_end+1].rstrip() + "\n"
+                    if in_paragraph or term.startswith("@") or in_list_item:
+                        out += " * "
+                    else:
+                        in_paragraph = True
+                        out += " * <p>"
+                    out += term[pos_start:pos_end+1].rstrip() + "\n"
                     pos_start = pos_end + 1
                     pos_end = min(pos_start + 77, len(term)-1)
+
+        if in_paragraph:
+            out = self.FinishParagraph(out)
+        if in_list:
+            out += " * </ul>\n"
         return out
 
-    def getJavaName(self, decl):
+    def getJavaName(self, decl, methodSeparator = "."):
         name = "org.opencv."
         name += decl["module"]
         if "class" in decl:
@@ -104,11 +147,11 @@ class JavadocGenerator(object):
         else:
             name += "." + decl["module"].capitalize()
         if "method" in decl:
-            name += "." + decl["method"]
+            name += methodSeparator + decl["method"]
         return name
 
     def getDocURL(self, decl):
-        url = "http://opencv.itseez.com/modules/"
+        url = "http://docs.opencv.org/modules/"
         url += decl["module"]
         url += "/doc/"
         url += os.path.basename(decl["file"]).replace(".rst",".html")
@@ -168,7 +211,7 @@ class JavadocGenerator(object):
             for see in decl["seealso"]:
                 seedecl = self.definitions.get(see,None)
                 if seedecl:
-                    doc += prefix + " * @see " + self.getJavaName(seedecl) + "\n"
+                    doc += prefix + " * @see " + self.getJavaName(seedecl, "#") + "\n"
                 else:
                     doc += prefix + " * @see " + see.replace("::",".") + "\n"
         prefix = " *\n"

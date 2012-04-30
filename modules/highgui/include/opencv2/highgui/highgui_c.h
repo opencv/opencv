@@ -300,6 +300,7 @@ enum
     CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
 
     CV_CAP_OPENNI   =900,   // OpenNI (for Kinect)
+    CV_CAP_OPENNI_ASUS =910,   // OpenNI (for Asus Xtion)
 
     CV_CAP_ANDROID  =1000,  // Android
     

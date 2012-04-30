@@ -7,6 +7,11 @@ static cvflann::IndexParams& get_params(const cv::flann::IndexParams& p)
     return *(cvflann::IndexParams*)(p.params);
 }
 
+cv::flann::IndexParams::~IndexParams()
+{
+    delete &get_params(*this);
+}
+
 namespace cv
 {
     
@@ -18,11 +23,6 @@ using namespace cvflann;
 IndexParams::IndexParams()
 {
     params = new ::cvflann::IndexParams();
-}
-    
-IndexParams::~IndexParams()
-{
-    delete &get_params(*this);
 }
 
 template<typename T>

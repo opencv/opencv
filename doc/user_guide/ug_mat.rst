@@ -18,9 +18,15 @@ If you read a jpg file, a 3 channel image is created by default. If you need a g
 
     Mat img = imread(filename, 0);
 
+.. note:: format of the file is determined by its content (first few bytes)
+
 Save an image to a file: ::
 
-    Mat img = imwrite(filename);
+    imwrite(filename, img);
+    
+.. note:: format of the file is determined by its extension.
+
+.. note:: use ``imdecode`` and ``imencode`` to read and write image from/to memory rather than a file.
 
 XML/YAML
 --------

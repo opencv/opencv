@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     namedWindow("segmented", 1);
     
     BackgroundSubtractorMOG bgsubtractor;
-    bgsubtractor.noiseSigma = 10;
+    bgsubtractor.set("noiseSigma", 10);
     
     for(;;)
     {

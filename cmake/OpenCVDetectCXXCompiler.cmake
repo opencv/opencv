@@ -5,12 +5,15 @@ if(CMAKE_CL_64)
     set(MSVC64 1)
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  set(CMAKE_COMPILER_IS_GNUCXX 1)
-endif()
-
-if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
-  set(CMAKE_COMPILER_IS_GNUC 1) 
+if(NOT APPLE)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_COMPILER_IS_GNUCXX 1)
+    unset(ENABLE_PRECOMPILED_HEADERS CACHE)
+  endif()
+  if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_COMPILER_IS_GNUC 1)
+    unset(ENABLE_PRECOMPILED_HEADERS CACHE)
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------

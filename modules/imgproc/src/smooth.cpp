@@ -312,9 +312,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             ksize.width = 1;
     }
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::box(src, dst, ksize, borderType))
-        return;
-    if ( tegra::boxFilter(src, dst, ksize, anchor, normalize, borderType) )
+    if ( tegra::box(src, dst, ksize, anchor, normalize, borderType) )
         return;
 #endif
 
@@ -1441,6 +1439,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     // temporary copy of the image with borders for easy processing
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
+    patchNaNs(temp);
 
     // allocate lookup tables
     vector<float> _space_weight(d*d);

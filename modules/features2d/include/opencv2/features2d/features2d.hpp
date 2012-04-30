@@ -737,9 +737,11 @@ protected:
     PixelTestFn test_fn_;
 };
 
+
 /****************************************************************************************\
-*                                          Distance                                      *
+*                                      Distance                                          *
 \****************************************************************************************/
+    
 template<typename T>
 struct CV_EXPORTS Accumulator
 {
@@ -757,9 +759,10 @@ template<> struct Accumulator<short>  { typedef float Type; };
 template<class T>
 struct CV_EXPORTS SL2
 {
+    enum { normType = NORM_L2SQR };
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
-
+    
     ResultType operator()( const T* a, const T* b, int size ) const
     {
         return normL2Sqr<ValueType, ResultType>(a, b, size);
@@ -772,9 +775,10 @@ struct CV_EXPORTS SL2
 template<class T>
 struct CV_EXPORTS L2
 {
+    enum { normType = NORM_L2 };
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
-
+    
     ResultType operator()( const T* a, const T* b, int size ) const
     {
         return (ResultType)sqrt((double)normL2Sqr<ValueType, ResultType>(a, b, size));
@@ -787,9 +791,10 @@ struct CV_EXPORTS L2
 template<class T>
 struct CV_EXPORTS L1
 {
+    enum { normType = NORM_L1 };
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
-
+    
     ResultType operator()( const T* a, const T* b, int size ) const
     {
         return normL1<ValueType, ResultType>(a, b, size);
@@ -802,9 +807,10 @@ struct CV_EXPORTS L1
  */
 struct CV_EXPORTS Hamming
 {
+    enum { normType = NORM_HAMMING };
     typedef unsigned char ValueType;
     typedef int ResultType;
-
+    
     /** this will count the bits in a ^ b
      */
     ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
@@ -817,6 +823,7 @@ typedef Hamming HammingLUT;
 
 template<int cellsize> struct CV_EXPORTS HammingMultilevel
 {
+    enum { normType = NORM_HAMMING + (cellsize>1) };
     typedef unsigned char ValueType;
     typedef int ResultType;
     
@@ -824,7 +831,7 @@ template<int cellsize> struct CV_EXPORTS HammingMultilevel
     {
         return normHamming(a, b, size, cellsize);
     }
-};
+};    
     
 /****************************************************************************************\
 *                                      DMatch                                            *

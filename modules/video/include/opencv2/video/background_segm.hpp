@@ -54,7 +54,7 @@ namespace cv
  The class is only used to define the common interface for
  the whole family of background/foreground segmentation algorithms.
 */
-class CV_EXPORTS_W BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractor : public Algorithm
 {
 public:
     //! the virtual destructor
@@ -93,6 +93,9 @@ public:
     //! re-initiaization method
     virtual void initialize(Size frameSize, int frameType);
     
+    virtual AlgorithmInfo* info() const;
+
+protected:    
     Size frameSize;
     int frameType;
     Mat bgmodel;
@@ -130,6 +133,9 @@ public:
     //! re-initiaization method
     virtual void initialize(Size frameSize, int frameType);
     
+    virtual AlgorithmInfo* info() const;
+    
+protected:    
     Size frameSize;
     int frameType;
     Mat bgmodel;
@@ -137,24 +143,24 @@ public:
     int nframes;
     int history;
     int nmixtures;
-    //! here it is the maximum allowed number of mixture comonents.
+    //! here it is the maximum allowed number of mixture components.
     //! Actual number is determined dynamically per pixel
-    float varThreshold;
-    // threshold on the squared Mahalan. dist. to decide if it is well described
-    //by the background model or not. Related to Cthr from the paper.
-    //This does not influence the update of the background. A typical value could be 4 sigma
-    //and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
+    double varThreshold;
+    // threshold on the squared Mahalanobis distance to decide if it is well described
+    // by the background model or not. Related to Cthr from the paper.
+    // This does not influence the update of the background. A typical value could be 4 sigma
+    // and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
     
     /////////////////////////
-    //less important parameters - things you might change but be carefull
+    // less important parameters - things you might change but be carefull
     ////////////////////////
     float backgroundRatio;
-    //corresponds to fTB=1-cf from the paper
-    //TB - threshold when the component becomes significant enough to be included into
-    //the background model. It is the TB=1-cf from the paper. So I use cf=0.1 => TB=0.
-    //For alpha=0.001 it means that the mode should exist for approximately 105 frames before
-    //it is considered foreground
-    //float noiseSigma;
+    // corresponds to fTB=1-cf from the paper
+    // TB - threshold when the component becomes significant enough to be included into
+    // the background model. It is the TB=1-cf from the paper. So I use cf=0.1 => TB=0.
+    // For alpha=0.001 it means that the mode should exist for approximately 105 frames before
+    // it is considered foreground
+    // float noiseSigma;
     float varThresholdGen;
     //correspondts to Tg - threshold on the squared Mahalan. dist. to decide
     //when a sample is close to the existing components. If it is not close

@@ -2508,7 +2508,7 @@ __global__ void resizeBicubic(NcvSize32u srcSize,
             wsum += wx;
         }
     }
-    dst[(ix + dstROI.x)+ (iy + dstROI.y) * dstStep] = sum / wsum;
+    dst[(ix + dstROI.x)+ (iy + dstROI.y) * dstStep] = (!wsum)? 0 : sum / wsum;
 }
 
 

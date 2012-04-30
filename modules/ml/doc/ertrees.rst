@@ -3,7 +3,7 @@ Extremely randomized trees
 
 Extremely randomized trees have been introduced by Pierre Geurts, Damien Ernst and Louis Wehenkel in the article "Extremely randomized trees", 2006 [http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.65.7485&rep=rep1&type=pdf]. The algorithm of growing Extremely randomized trees is similar to :ref:`Random Trees` (Random Forest), but there are two differences:
 
-#. Extremely randomized trees don't apply the bagging procedure to constract the training samples for each tree. The same input training set is used to train all trees.
+#. Extremely randomized trees don't apply the bagging procedure to construct a set of the training samples for each tree. The same input training set is used to train all trees.
 
 #. Extremely randomized trees pick a node split very extremely (both a variable index and variable splitting value are chosen randomly), whereas Random Forest finds the best split (optimal one by variable index and variable splitting value) among random subset of variables.
 

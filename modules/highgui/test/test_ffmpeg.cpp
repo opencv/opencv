@@ -71,19 +71,19 @@ public:
         
         if( tag != MKTAG('H', '2', '6', '3') &&
             tag != MKTAG('H', '2', '6', '1') &&
-            tag != MKTAG('D', 'I', 'V', 'X') &&
+            //tag != MKTAG('D', 'I', 'V', 'X') &&
             tag != MKTAG('D', 'X', '5', '0') &&
             tag != MKTAG('X', 'V', 'I', 'D') &&
             tag != MKTAG('m', 'p', '4', 'v') &&
-            tag != MKTAG('D', 'I', 'V', '3') &&
-            tag != MKTAG('W', 'M', 'V', '1') &&
-            tag != MKTAG('W', 'M', 'V', '2') &&
+            //tag != MKTAG('D', 'I', 'V', '3') &&
+            //tag != MKTAG('W', 'M', 'V', '1') &&
+            //tag != MKTAG('W', 'M', 'V', '2') &&
             tag != MKTAG('M', 'P', 'E', 'G') &&
             tag != MKTAG('M', 'J', 'P', 'G') &&
-            tag != MKTAG('j', 'p', 'e', 'g') &&
+            //tag != MKTAG('j', 'p', 'e', 'g') &&
             tag != 0 &&
             tag != MKTAG('I', '4', '2', '0') &&
-            tag != MKTAG('Y', 'U', 'Y', '2') &&
+            //tag != MKTAG('Y', 'U', 'Y', '2') &&
             tag != MKTAG('F', 'L', 'V', '1') )
             continue;
 
@@ -142,6 +142,35 @@ public:
     }
 };
 
-TEST(Highgui_FFmpeg_WriteBigVideo, regression) { CV_FFmpegWriteBigVideoTest      test; test.safe_run(); }
+TEST(Highgui_Video, ffmpeg_writebig) { CV_FFmpegWriteBigVideoTest test; test.safe_run(); }
+
+class CV_FFmpegReadImageTest : public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            string filename = ts->get_data_path() + "../cv/features2d/tsukuba.png";
+            VideoCapture cap(filename);
+            Mat img0 = imread(filename, 1);
+            Mat img, img_next;
+            cap >> img;
+            cap >> img_next;
+            
+            CV_Assert( !img0.empty() && !img.empty() && img_next.empty() );
+            
+            double diff = norm(img0, img, CV_C);
+            CV_Assert( diff == 0 );
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+        }
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+};
+
+TEST(Highgui_Video, ffmpeg_image) { CV_FFmpegReadImageTest test; test.safe_run(); }
 
 #endif

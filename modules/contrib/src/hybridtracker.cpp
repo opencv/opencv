@@ -213,7 +213,7 @@ void CvHybridTracker::updateTrackerWithEM(Mat image) {
     cv::Mat lbls;
     
     EM em_model(1, EM::COV_MAT_SPHERICAL, TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10000, 0.001));
-    em_model.train(cvarrToMat(samples), lbls);
+    em_model.train(cvarrToMat(samples), noArray(), lbls);
     if(labels)
         lbls.copyTo(cvarrToMat(labels));
 

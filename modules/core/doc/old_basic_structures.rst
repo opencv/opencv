@@ -195,6 +195,29 @@ Stores coordinates of a rectangle.
     
 .. seealso:: :ocv:class:`Rect\_`
 
+
+CvBox2D
+------
+
+.. ocv:struct:: CvBox2D
+
+Stores coordinates of a rotated rectangle.
+
+    .. ocv:member:: CvPoint2D32f center
+
+        Center of the box
+
+    .. ocv:member:: CvSize2D32f  size
+
+        Box width and height
+
+    .. ocv:member:: float angle
+
+        Angle between the horizontal axis and the first side (i.e. length) in degrees
+
+.. seealso:: :ocv:class:`RotatedRect`
+
+
 CvScalar
 --------
 

@@ -42,10 +42,12 @@ endif(NOT CMAKE_TOOLCHAIN_FILE)
 # --------------------------------------------------------------
 # Top level OpenCV project
 # --------------------------------------------------------------
-if(NOT IOS)
-  cmake_minimum_required(VERSION 2.6.3)
+if(CMAKE_GENERATOR MATCHES Xcode AND XCODE_VERSION VERSION_GREATER 4.3)
+  cmake_minimum_required(VERSION 2.8.8)
+elseif(IOS)
+  cmake_minimum_required(VERSION 2.8.0)
 else()
-  cmake_minimum_required(VERSION 2.8)
+  cmake_minimum_required(VERSION 2.6.3)
 endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
@@ -53,7 +55,7 @@ if(DEFINED CMAKE_BUILD_TYPE AND CMAKE_VERSION VERSION_GREATER "2.8")
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES} )
 endif()
 
-project(OpenCV)
+project(OpenCV CXX C)
 
 include(cmake/OpenCVUtils.cmake REQUIRED)
 
@@ -140,11 +142,11 @@ OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for sta
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF ANDROID AND NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
 
 # 3rd party libs
-OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS )
-OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR IOS OR ANDROID )
-OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR IOS OR ANDROID )
-OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR IOS OR ANDROID )
-OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR IOS OR ANDROID )
+OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS OR APPLE )
+OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR IOS OR ANDROID OR APPLE )
 
 # OpenCV installation options
 # ===================================================
@@ -271,7 +273,7 @@ endif()
 include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 
 # In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
-if(CMAKE_GENERATOR MATCHES "Makefiles" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
+if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
@@ -368,7 +370,7 @@ if(UNIX)
         endif()
       endif()
       if(HAVE_FFMPEG_CODEC AND HAVE_FFMPEG_FORMAT AND HAVE_FFMPEG_UTIL)
-        if(HAVE_FFMPEG_SWSCALE OR NOT HAVE_GENTOO_FFMPEG)
+        if(HAVE_FFMPEG_SWSCALE)
             set(HAVE_FFMPEG 1)
         endif()
       endif()
@@ -378,12 +380,6 @@ if(UNIX)
       if(NOT BZIP2_LIBRARIES)
         # Do an other trial
         FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
-      endif()
-    endif()
-
-    if(HAVE_FFMPEG)
-      if(NOT ALIASOF_libavformat_VERSION VERSION_LESS "52.111.0")
-        set(NEW_FFMPEG ON)
       endif()
     endif()
 
@@ -454,7 +450,6 @@ if(APPLE AND WITH_FFMPEG)
             "${FFMPEG_LIB_DIR}/libavformat.a" "${FFMPEG_LIB_DIR}/libavutil.a"
             "${FFMPEG_LIB_DIR}/libswscale.a")
         set(HAVE_FFMPEG 1)
-        set(NEW_FFMPEG 1)
     endif()
     endif()
     endif()
@@ -716,6 +711,9 @@ endif()
 if(CMAKE_GENERATOR MATCHES Xcode)
   status("    Xcode:"          ${XCODE_VERSION})
 endif()
+if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
+  status("    Configuration:"  ${CMAKE_BUILD_TYPE})
+endif()
 
 # C/C++ options
 status("")
@@ -817,7 +815,11 @@ else()
   status("    PNG:"        "NO")
 endif()
 if(WITH_TIFF)
-  status("    TIFF:"       TIFF_FOUND    THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION})"            ELSE "build (ver ${TIFF_VERSION})")
+  if(TIFF_VERSION_STRING AND TIFF_FOUND)
+    status("    TIFF:"     "${TIFF_LIBRARY} (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
+  else()
+    status("    TIFF:"     TIFF_FOUND    THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION})"            ELSE "build (ver ${TIFF_VERSION})")
+  endif()
 else()
   status("    TIFF:"       "NO")
 endif()
@@ -909,7 +911,7 @@ status("    Use Clp:"   HAVE_CLP   THEN YES ELSE NO)
 
 if(HAVE_CUDA)
   status("")
-  status("  NVIDIA CUDA:")
+  status("  NVIDIA CUDA:"            "(ver ${CUDA_VERSION_STRING})")
 
   status("    Use CUFFT:"            HAVE_CUFFT  THEN YES ELSE NO)
   status("    Use CUBLAS:"           HAVE_CUBLAS THEN YES ELSE NO)
@@ -923,7 +925,11 @@ status("")
 status("  Python:")
 status("    Interpreter:"   PYTHON_EXECUTABLE     THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_FULL})"         ELSE NO)
 if(BUILD_opencv_python)
-  status("    Libraries:"     HAVE_opencv_python  THEN  ${PYTHON_LIBRARIES}                                        ELSE NO)
+  if(PYTHONLIBS_VERSION_STRING)
+    status("    Libraries:"     HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})" ELSE NO)
+  else()
+    status("    Libraries:"     HAVE_opencv_python  THEN  ${PYTHON_LIBRARIES}                                      ELSE NO)
+  endif()
   status("    numpy:"         PYTHON_USE_NUMPY    THEN "${PYTHON_NUMPY_INCLUDE_DIR} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
   status("    packages path:" PYTHON_EXECUTABLE   THEN "${PYTHON_PACKAGES_PATH}"                                   ELSE "-")
 endif()
@@ -965,6 +971,8 @@ status("")
 status("  cvconfig.h is in:" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}")
 status("-----------------------------------------------------------------")
 status("")
+
+ocv_finalize_status()
 
 # ----------------------------------------------------------------------------
 # Warn in the case of in-source build

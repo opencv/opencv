@@ -50,10 +50,9 @@ icvReleaseGaussianBGModel( CvGaussBGModel** bg_model )
     
     if( *bg_model )
     {
-        delete (cv::Mat*)((*bg_model)->g_point);
+        delete (cv::BackgroundSubtractorMOG*)((*bg_model)->mog);
         cvReleaseImage( &(*bg_model)->background );
         cvReleaseImage( &(*bg_model)->foreground );
-        cvReleaseMemStorage(&(*bg_model)->storage);
         memset( *bg_model, 0, sizeof(**bg_model) );
         delete *bg_model;
         *bg_model = 0;
@@ -64,70 +63,15 @@ icvReleaseGaussianBGModel( CvGaussBGModel** bg_model )
 static int CV_CDECL
 icvUpdateGaussianBGModel( IplImage* curr_frame, CvGaussBGModel*  bg_model, double learningRate )
 {
-    int region_count = 0;
-    
     cv::Mat image = cv::cvarrToMat(curr_frame), mask = cv::cvarrToMat(bg_model->foreground);
     
-    cv::BackgroundSubtractorMOG mog;
-    mog.bgmodel = *(cv::Mat*)bg_model->g_point;
-    mog.frameSize = mog.bgmodel.data ? cv::Size(cvGetSize(curr_frame)) : cv::Size();
-    mog.frameType = image.type();
+    cv::BackgroundSubtractorMOG* mog = (cv::BackgroundSubtractorMOG*)(bg_model->mog);
+    CV_Assert(mog != 0);
     
-    mog.nframes = bg_model->countFrames;
-    mog.history = bg_model->params.win_size;
-    mog.nmixtures = bg_model->params.n_gauss;
-    mog.varThreshold = bg_model->params.std_threshold*bg_model->params.std_threshold;
-    mog.backgroundRatio = bg_model->params.bg_threshold;
+    (*mog)(image, mask, learningRate);    
+    bg_model->countFrames++;
     
-    mog(image, mask, learningRate);
-    
-    bg_model->countFrames = mog.nframes;
-    if( ((cv::Mat*)bg_model->g_point)->data != mog.bgmodel.data )
-        *((cv::Mat*)bg_model->g_point) = mog.bgmodel;
-    
-    //foreground filtering
-    
-    //filter small regions
-    cvClearMemStorage(bg_model->storage);
-    
-    //cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_OPEN, 1 );
-    //cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_CLOSE, 1 );
-    
-#if 0
-    CvSeq *first_seq = NULL, *prev_seq = NULL, *seq = NULL;
-    cvFindContours( bg_model->foreground, bg_model->storage, &first_seq, sizeof(CvContour), CV_RETR_LIST );
-    for( seq = first_seq; seq; seq = seq->h_next )
-    {
-        CvContour* cnt = (CvContour*)seq;
-        if( cnt->rect.width * cnt->rect.height < bg_model->params.minArea )
-        {
-            //delete small contour
-            prev_seq = seq->h_prev;
-            if( prev_seq )
-            {
-                prev_seq->h_next = seq->h_next;
-                if( seq->h_next ) seq->h_next->h_prev = prev_seq;
-            }
-            else
-            {
-                first_seq = seq->h_next;
-                if( seq->h_next ) seq->h_next->h_prev = NULL;
-            }
-        }
-        else
-        {
-            region_count++;
-        }
-    }
-    bg_model->foreground_regions = first_seq;
-    cvZero(bg_model->foreground);
-    cvDrawContours(bg_model->foreground, first_seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
-#endif
-    
-    CvMat _mask = mask;
-    cvCopy(&_mask, bg_model->foreground);
-    
-    return region_count;
+    return 0;
 }
 
 CV_IMPL CvBGStatModel*
@@ -161,15 +105,17 @@ cvCreateGaussianBGModel( IplImage* first_frame, CvGaussBGStatModelParams* parame
     
     bg_model->params = params;
     
-    //prepare storages
-    bg_model->g_point = (CvGaussBGPoint*)new cv::Mat();
+    cv::BackgroundSubtractorMOG* mog =
+        new cv::BackgroundSubtractorMOG(params.win_size,
+                                        params.n_gauss,
+                                        params.bg_threshold,
+                                        params.variance_init);
     
-    bg_model->background = cvCreateImage(cvSize(first_frame->width,
-                                                first_frame->height), IPL_DEPTH_8U, first_frame->nChannels);
-    bg_model->foreground = cvCreateImage(cvSize(first_frame->width,
-                                                first_frame->height), IPL_DEPTH_8U, 1);
+    bg_model->mog = mog;
     
-    bg_model->storage = cvCreateMemStorage();
+    CvSize sz = cvGetSize(first_frame);
+    bg_model->background = cvCreateImage(sz, IPL_DEPTH_8U, first_frame->nChannels);
+    bg_model->foreground = cvCreateImage(sz, IPL_DEPTH_8U, 1);
     
     bg_model->countFrames = 0;
     

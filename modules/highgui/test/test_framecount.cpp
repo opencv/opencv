@@ -55,12 +55,9 @@ public:
 
 void CV_FramecountTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
     const int time_sec = 5, fps = 25;
 
-    const string ext[] = {"avi", "mov", "mp4", "mpg", "wmv"};
+    const string ext[] = {"avi", "mov", "mp4"};
 
     const size_t n = sizeof(ext)/sizeof(ext[0]);
 
@@ -68,34 +65,31 @@ void CV_FramecountTest::run(int)
 
     ts->printf(cvtest::TS::LOG, "\n\nSource files directory: %s\n", (src_dir+"video/").c_str());
 
-    int failed = 0;
+    Ptr<CvCapture> cap;
 
     for (size_t i = 0; i < n; ++i)
     {
-        int code = cvtest::TS::OK;
-
         string file_path = src_dir+"video/big_buck_bunny."+ext[i];
 
-        printf("\nReading video file in %s...\n", file_path.c_str());
-
-        CvCapture *cap = cvCreateFileCapture(file_path.c_str());
-        if (!cap)
+        cap = cvCreateFileCapture(file_path.c_str());
+        if (cap.empty())
         {
             ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
             ts->printf(cvtest::TS::LOG, "Error: cannot read source video file.\n");
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-            failed++; continue;
+            return;
         }
 
-        cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, 0);
-        IplImage* frame; int FrameCount = -1;
+        //cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, 0);
+        IplImage* frame; int FrameCount = 0;
 
-        do
+        for(;;)
         {
-            FrameCount++;
             frame = cvQueryFrame(cap);
+            if( !frame )
+                break;
+            FrameCount++;
         }
-        while (frame);
 
         int framecount = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
 
@@ -105,30 +99,16 @@ void CV_FramecountTest::run(int)
                    "Frame count returned by cvGetCaptureProperty function: %d\n",
                    i+1, ext[i].c_str(), time_sec*fps, FrameCount, framecount);
 
-        code = FrameCount != time_sec*fps ? cvtest::TS::FAIL_INVALID_OUTPUT : FrameCount != framecount ? cvtest::TS::FAIL_INVALID_OUTPUT : code;
-
-        if (code)
+        if( (FrameCount != cvRound(time_sec*fps) ||
+             FrameCount != framecount) && ext[i] != "mpg" )
         {
             ts->printf(cvtest::TS::LOG, "FAILED\n");
             ts->printf(cvtest::TS::LOG, "\nError: actual frame count and returned frame count are not matched.\n");
-            ts->set_failed_test_info(code);
-            failed++;
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return;
         }
-        else
-        {
-            ts->printf(cvtest::TS::LOG, "OK\n");
-            ts->set_failed_test_info(ts->OK);
-        }
-
-        cvReleaseImage(&frame);
-        cvReleaseCapture(&cap);
     }
-
-    ts->printf(cvtest::TS::LOG, "\nSuccessfull experiments: %d (%d%%)\n", n-failed, (n - failed)*100/n);
-    ts->printf(cvtest::TS::LOG, "Failed experiments: %d (%d%%)\n", failed, failed*100/n);
-
-#endif
-#endif
 }
-
-TEST(HighguiFramecount, regression) {CV_FramecountTest test; test.safe_run();}
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+TEST(Highgui_Video, framecount) {CV_FramecountTest test; test.safe_run();}
+#endif

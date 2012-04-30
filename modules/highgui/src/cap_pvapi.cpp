@@ -126,7 +126,8 @@ void CvCaptureCAM_PvAPI::close()
 	// Stop the acquisition & free the camera
 	PvCommandRun(Camera.Handle, "AcquisitionStop");
 	PvCaptureEnd(Camera.Handle);
-	PvCameraClose(Camera.Handle);	
+    PvCameraClose(Camera.Handle);
+    PvUnInitialize();
 }
 
 // Initialize camera input

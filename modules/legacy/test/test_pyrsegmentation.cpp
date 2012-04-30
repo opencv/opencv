@@ -199,6 +199,6 @@ _exit_:
         ts->set_failed_test_info( code );
 }
 
-TEST(Imgproc_PyrSegmentation, regression) { CV_PyrSegmentationTest test; test.safe_run(); }
+TEST(Legacy_PyrSegmentation, regression) { CV_PyrSegmentationTest test; test.safe_run(); }
 
 /* End of file. */

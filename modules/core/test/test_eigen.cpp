@@ -79,10 +79,12 @@ protected:
     bool check_full(int type);													// compex test for symmetric matrix
     virtual void run (int) = 0;													// main testing method
 
-private:
+protected:
 
     float eps_val_32, eps_vec_32;
     float eps_val_64, eps_vec_64;
+    int ntests;
+    
     bool check_pair_count(const cv::Mat& src, const cv::Mat& evalues, int low_index = -1, int high_index = -1);
     bool check_pair_count(const cv::Mat& src, const cv::Mat& evalues, const cv::Mat& evectors, int low_index = -1, int high_index = -1);
     bool check_pairs_order(const cv::Mat& eigen_values);											// checking order of eigen values & vectors (it should be none up)
@@ -140,8 +142,7 @@ Core_EigenTest_Scalar_64::~Core_EigenTest_Scalar_64() {}
 
 void Core_EigenTest_Scalar_32::run(int) 
 {
-    const size_t MATRIX_COUNT = 500;
-    for (size_t i = 0; i < MATRIX_COUNT; ++i)
+    for (int i = 0; i < ntests; ++i)
     {
         float value = cv::randu<float>();
         cv::Mat src(1, 1, CV_32FC1, Scalar::all((float)value));
@@ -151,8 +152,7 @@ void Core_EigenTest_Scalar_32::run(int)
 
 void Core_EigenTest_Scalar_64::run(int)
 {
-    const size_t MATRIX_COUNT = 500;
-    for (size_t i = 0; i < MATRIX_COUNT; ++i)
+    for (int i = 0; i < ntests; ++i)
     {
         float value = cv::randu<float>();
         cv::Mat src(1, 1, CV_64FC1, Scalar::all((double)value));
@@ -163,7 +163,9 @@ void Core_EigenTest_Scalar_64::run(int)
 void Core_EigenTest_32::run(int) { check_full(CV_32FC1); }
 void Core_EigenTest_64::run(int) { check_full(CV_64FC1); }
 
-Core_EigenTest::Core_EigenTest() : eps_val_32(1e-3f), eps_vec_32(1e-2f), eps_val_64(1e-4f), eps_vec_64(1e-3f) {}
+Core_EigenTest::Core_EigenTest()
+: eps_val_32(1e-3f), eps_vec_32(1e-2f),
+  eps_val_64(1e-4f), eps_vec_64(1e-3f), ntests(100) {}
 Core_EigenTest::~Core_EigenTest() {}
 
 bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues, int low_index, int high_index)
@@ -382,14 +384,13 @@ bool Core_EigenTest::test_values(const cv::Mat& src)
 
 bool Core_EigenTest::check_full(int type)
 {
-    const int MATRIX_COUNT = 500;
     const int MAX_DEGREE = 7;
 
     srand((unsigned int)time(0));
 
-    for (int i = 1; i <= MATRIX_COUNT; ++i)
+    for (int i = 0; i < ntests; ++i)
     {
-        int src_size = (int)(std::pow(2.0, (rand()%MAX_DEGREE+1)*1.0));
+        int src_size = (int)(std::pow(2.0, (rand()%MAX_DEGREE)+1.));
 
         cv::Mat src(src_size, src_size, type);
 

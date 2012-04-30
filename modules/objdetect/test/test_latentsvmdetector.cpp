@@ -61,23 +61,17 @@ const CvRect true_bounding_boxes[3] = {cvRect(0, 45, 362, 452), cvRect(304, 0, 6
 
 class CV_LatentSVMDetectorTest : public cvtest::BaseTest
 {
-public:
-    CV_LatentSVMDetectorTest();
-    ~CV_LatentSVMDetectorTest();    
 protected:    
     void run(int);
-	bool isEqual(CvRect r1, CvRect r2);
+    bool isEqual(CvRect r1, CvRect r2, int eps);
 };
 
-CV_LatentSVMDetectorTest::CV_LatentSVMDetectorTest()
+bool CV_LatentSVMDetectorTest::isEqual(CvRect r1, CvRect r2, int eps)
 {
-}
-
-CV_LatentSVMDetectorTest::~CV_LatentSVMDetectorTest() {}
-
-bool CV_LatentSVMDetectorTest::isEqual(CvRect r1, CvRect r2)
-{
-	return ((r1.x == r2.x) && (r1.y == r2.y) && (r1.width == r2.width) && (r1.height == r2.height));
+    return (std::abs(r1.x - r2.x) <= eps
+            && std::abs(r1.y - r2.y) <= eps
+            && std::abs(r1.width - r2.width) <= eps
+            && std::abs(r1.height - r2.height) <= eps);
 }
 
 void CV_LatentSVMDetectorTest::run( int /* start_from */)
@@ -85,53 +79,55 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
     string img_path = string(ts->get_data_path()) + "latentsvmdetector/cat.jpg";
     string model_path = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
     int numThreads = -1;
+
 #ifdef HAVE_TBB
     numThreads = 2;
     tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
-	init.initialize(numThreads);
+    init.initialize(numThreads);
 #endif
-	IplImage* image = cvLoadImage(img_path.c_str());
-	if (!image)
+
+    IplImage* image = cvLoadImage(img_path.c_str());
+    if (!image)
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         return;
     }
 
-	CvLatentSvmDetector* detector = cvLoadLatentSvmDetector(model_path.c_str());
-	if (!detector)
-	{
-		ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-		cvReleaseImage(&image);
-		return;
-	}
+    CvLatentSvmDetector* detector = cvLoadLatentSvmDetector(model_path.c_str());
+    if (!detector)
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
+        cvReleaseImage(&image);
+        return;
+    }
 
-	CvMemStorage* storage = cvCreateMemStorage(0);
+    CvMemStorage* storage = cvCreateMemStorage(0);
     CvSeq* detections = 0;         
     detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
-	if (detections->total != num_detections)
-	{
-		ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-	}
-	else
-	{
-		ts->set_failed_test_info(cvtest::TS::OK);
-		for (int i = 0; i < detections->total; i++)
-		{
-			CvObjectDetection detection = *(CvObjectDetection*)cvGetSeqElem( detections, i );
-			CvRect bounding_box = detection.rect;
-			float score = detection.score;
-			if ((!isEqual(bounding_box, true_bounding_boxes[i])) || (fabs(score - true_scores[i]) > score_thr))
-			{
-				ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-				break;
-			}
-		}
-	}
+    if (detections->total != num_detections)
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
+    }
+    else
+    {
+        ts->set_failed_test_info(cvtest::TS::OK);
+        for (int i = 0; i < detections->total; i++)
+        {
+            CvObjectDetection detection = *(CvObjectDetection*)cvGetSeqElem( detections, i );
+            CvRect bounding_box = detection.rect;
+            float score = detection.score;
+            if ((!isEqual(bounding_box, true_bounding_boxes[i], 1)) || (fabs(score - true_scores[i]) > score_thr))
+            {
+                ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
+                break;
+            }
+        }
+    }
 #ifdef HAVE_TBB
     init.terminate();
 #endif
-	cvReleaseMemStorage( &storage );
-	cvReleaseLatentSvmDetector( &detector );
+    cvReleaseMemStorage( &storage );
+    cvReleaseLatentSvmDetector( &detector );
     cvReleaseImage( &image );
 }
 
@@ -139,15 +135,9 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
 
 class LatentSVMDetectorTest : public cvtest::BaseTest
 {
-public:
-    LatentSVMDetectorTest();
 protected:
     void run(int);
 };
-
-LatentSVMDetectorTest::LatentSVMDetectorTest()
-{
-}
 
 static void writeDetections( FileStorage& fs, const string& nodeName, const vector<LatentSvmDetector::ObjectDetection>& detections )
 {
@@ -176,14 +166,24 @@ static void readDetections( FileStorage fs, const string& nodeName, vector<Laten
     }
 }
 
-static inline bool isEqual( const LatentSvmDetector::ObjectDetection& d1, const LatentSvmDetector::ObjectDetection& d2)
+static inline bool isEqual( const LatentSvmDetector::ObjectDetection& d1, const LatentSvmDetector::ObjectDetection& d2, int eps, float threshold)
 {
-    return ((d1.rect.x == d2.rect.x) && (d1.rect.y == d2.rect.y) && (d1.rect.width == d2.rect.width) && (d1.rect.height == d2.rect.height) &&
-            (d1.classID == d2.classID) &&
-            std::abs(d1.score-d2.score) < score_thr );
+    return (
+           std::abs(d1.rect.x - d2.rect.x) <= eps
+           && std::abs(d1.rect.y - d2.rect.y) <= eps
+           && std::abs(d1.rect.width - d2.rect.width) <= eps
+           && std::abs(d1.rect.height - d2.rect.height) <= eps
+           && (d1.classID == d2.classID)
+           && std::abs(d1.score - d2.score) <= threshold
+           );
 }
 
-bool compareResults( const vector<LatentSvmDetector::ObjectDetection>& calc, const vector<LatentSvmDetector::ObjectDetection>& valid )
+std::ostream& operator << (std::ostream& os, const CvRect& r)
+{
+    return (os << "[x=" << r.x << ", y=" << r.y << ", w=" << r.width << ", h=" << r.height << "]");
+}
+
+bool compareResults( const vector<LatentSvmDetector::ObjectDetection>& calc, const vector<LatentSvmDetector::ObjectDetection>& valid, int eps, float threshold)
 {
     if( calc.size() != valid.size() )
         return false;
@@ -192,8 +192,12 @@ bool compareResults( const vector<LatentSvmDetector::ObjectDetection>& calc, con
     {
         const LatentSvmDetector::ObjectDetection& c = calc[i];
         const LatentSvmDetector::ObjectDetection& v = valid[i];
-        if( !isEqual(c,v) )
+        if( !isEqual(c, v, eps, threshold) )
+        {
+            std::cerr << "Expected: " << v.rect << " class=" << v.classID << " score=" << v.score << std::endl;
+            std::cerr << "Actual:   " << c.rect << " class=" << c.classID << " score=" << c.score << std::endl;
             return false;
+        }
     }
     return true;
 }
@@ -209,9 +213,11 @@ void LatentSVMDetectorTest::run( int /* start_from */)
     string true_res_path = string(ts->get_data_path()) + "latentsvmdetector/results.xml";
 
     int numThreads = 1;
+
 #ifdef HAVE_TBB
     numThreads = 2;
 #endif
+
     Mat image_cat = imread( img_path_cat );
     Mat image_cars = imread( img_path_cars );
     if( image_cat.empty() || image_cars.empty() )
@@ -255,17 +261,17 @@ void LatentSVMDetectorTest::run( int /* start_from */)
         readDetections( fs, "detections12_cars", true_detections12_cars );
 
 
-        if( !compareResults(detections1_cat, true_detections1_cat) )
+        if( !compareResults(detections1_cat, true_detections1_cat, 1, score_thr) )
         {
             std::cerr << "Results of detector1 are invalid on image cat.jpg" << std::endl;
             ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         }
-        if( !compareResults(detections12_cat, true_detections12_cat) )
+        if( !compareResults(detections12_cat, true_detections12_cat, 1, score_thr) )
         {
             std::cerr << "Results of detector12 are invalid on image cat.jpg" << std::endl;
             ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         }
-        if( !compareResults(detections12_cars, true_detections12_cars) )
+        if( !compareResults(detections12_cars, true_detections12_cars, 1, score_thr) )
         {
             std::cerr << "Results of detector12 are invalid on image cars.jpg" << std::endl;
             ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );

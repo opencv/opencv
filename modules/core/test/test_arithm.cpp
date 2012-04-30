@@ -1186,8 +1186,12 @@ struct CountNonZeroOp : public BaseElemWiseOp
     
 struct MeanStdDevOp : public BaseElemWiseOp
 {
+    Scalar sqmeanRef;
+    int cn;
+
     MeanStdDevOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
+        cn = 0;
         context = 7;
     };
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
@@ -1202,6 +1206,9 @@ struct MeanStdDevOp : public BaseElemWiseOp
         cvtest::multiply(temp, temp, temp);
         Scalar mean = cvtest::mean(src[0], mask);
         Scalar sqmean = cvtest::mean(temp, mask);
+        
+        sqmeanRef = sqmean;
+        cn = temp.channels();
 
         for( int c = 0; c < 4; c++ )
             sqmean[c] = std::sqrt(std::max(sqmean[c] - mean[c]*mean[c], 0.)); 
@@ -1212,7 +1219,11 @@ struct MeanStdDevOp : public BaseElemWiseOp
     }
     double getMaxErr(int)
     {
-        return 1e-6;
+        CV_Assert(cn > 0);
+        double err = sqmeanRef[0];
+        for(int i = 1; i < cn; ++i)
+            err = std::max(err, sqmeanRef[i]);
+        return 3e-7 * err;
     }
 };    
 
@@ -1226,7 +1237,20 @@ struct NormOp : public BaseElemWiseOp
     };
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 4);
+        int type = cvtest::randomType(rng, DEPTH_MASK_ALL_BUT_8S, 1, 4);
+        for(;;)
+        {
+            normType = rng.uniform(1, 8);
+            if( normType == NORM_INF || normType == NORM_L1 ||
+                normType == NORM_L2 || normType == NORM_L2SQR ||
+                normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+                break;
+        }
+        if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
+        {
+            type = CV_8U;
+        }
+        return type;
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
@@ -1242,7 +1266,6 @@ struct NormOp : public BaseElemWiseOp
     }
     void generateScalars(int, RNG& rng)
     {
-        normType = 1 << rng.uniform(0, 3);
     }
     double getMaxErr(int)
     {

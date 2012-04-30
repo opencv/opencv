@@ -1802,6 +1802,7 @@ Core_MatrixTest( 1, 4, false, false, 1 ),
 flags(0), have_u(false), have_v(false), symmetric(false), compact(false), vector_w(false)
 {
     test_case_count = 100;
+    max_log_array_size = 8;
     test_array[TEMP].push_back(NULL);
     test_array[TEMP].push_back(NULL);
     test_array[TEMP].push_back(NULL);

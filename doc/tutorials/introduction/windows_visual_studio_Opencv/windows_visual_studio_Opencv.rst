@@ -48,7 +48,7 @@ The really useful stuff of these is that you may create a rule package *once* an
    :alt: Add a new Property Sheet
    :align: center
 
-Use for example the *OpenCV_Debug* name. Then by selecting the sheet :menuselection:`Right Click --> Properties`. In the following I will show to set the OpenCV rules locally, as I find unnecessary to pollute projects with custom rules that I do not use it. Go the C++ groups General entry and under the *"Additional Include Directories"* add the path to your OpenCV include. 
+Use for example the *OpenCV_Debug* name. Then by selecting the sheet :menuselection:`Right Click --> Properties`. In the following I will show to set the OpenCV rules locally, as I find unnecessary to pollute projects with custom rules that I do not use it. Go the C++ groups General entry and under the *"Additional Include Directories"* add the path to your OpenCV include. If you don't have *"C/C++"* group, you should add any .c/.cpp file to the project.
 
 .. code-block:: bash
 

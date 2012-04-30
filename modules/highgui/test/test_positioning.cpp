@@ -47,11 +47,11 @@
 using namespace cv;
 using namespace std;
 
-enum NAVIGATION_METHOD {PROGRESSIVE, RANDOM};
-
 class CV_VideoPositioningTest: public cvtest::BaseTest
 {
 public:
+    enum {PROGRESSIVE, RANDOM};
+    
 	CV_VideoPositioningTest();
 	~CV_VideoPositioningTest();
 	virtual void run(int) = 0;
@@ -122,17 +122,20 @@ void CV_VideoPositioningTest::run_test(int method)
 
     ts->printf(cvtest::TS::LOG, "\n\nSource files directory: %s\n", (src_dir+"video/").c_str());
 
-    const string ext[] = {"avi", "mp4", "wmv"};
+    const string ext[] = {"avi", "mov", "mp4", "mpg"};
 
-    size_t n = sizeof(ext)/sizeof(ext[0]);
+    int n = (int)(sizeof(ext)/sizeof(ext[0]));
 
     int failed_videos = 0;
 
-	for (size_t i = 0; i < n; ++i)
+	for (int i = 0; i < n; ++i)
 	{
+        // skip random positioning test in plain mpegs
+        if( method == RANDOM && ext[i] == "mpg" )
+            continue;
         string file_path = src_dir + "video/big_buck_bunny." + ext[i];
 
-        printf("\nReading video file in %s...\n", file_path.c_str());
+        ts->printf(cvtest::TS::LOG, "\nReading video file in %s...\n", file_path.c_str());
 
 		CvCapture* cap = cvCreateFileCapture(file_path.c_str());
 
@@ -186,19 +189,16 @@ void CV_VideoPositioningTest::run_test(int method)
                 ts->printf(cvtest::TS::LOG, "Required pos: %d\nReturned pos: %d\n", idx.at(j), val);
                 ts->printf(cvtest::TS::LOG, "Error: required and returned positions are not matched.\n");
 				ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                if (!flag) flag = !flag;
+                flag = true;
 			}
 
-            if (flag) failed_iterations++;
+            if (flag)
+            {
+                failed_iterations++;
+                failed_videos++;
+                break;
+            }
 		}
-
-        ts->printf(cvtest::TS::LOG, "\nSuccessfull iterations: %d (%d%%)\n", idx.size()-failed_iterations, 100*(idx.size()-failed_iterations)/idx.size());
-        ts->printf(cvtest::TS::LOG, "Failed iterations: %d (%d%%)\n", failed_iterations, 100*failed_iterations/idx.size());
-
-        if (failed_frames||failed_positions)
-        {
-            ts->printf(cvtest::TS::LOG, "\nFAILED\n----------\n"); failed_videos++;
-        }
 
 		cvReleaseCapture(&cap);
 	}
@@ -209,25 +209,15 @@ void CV_VideoPositioningTest::run_test(int method)
 
 void CV_VideoProgressivePositioningTest::run(int) 
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
 	run_test(PROGRESSIVE);
-
-#endif
-#endif
 }
 
 void CV_VideoRandomPositioningTest::run(int)
 {
-#if defined WIN32 || (defined __linux__ && !defined ANDROID) || (defined __APPLE__ && defined HAVE_FFMPEG)
-#if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP
-
 	run_test(RANDOM);
-
-#endif
-#endif
 }
 
-TEST (HighguiPositioning, progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
-TEST (HighguiPositioning, random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+TEST (Highgui_Video, seek_progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
+TEST (Highgui_Video, seek_random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
+#endif

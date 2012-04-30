@@ -96,10 +96,11 @@ void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
 
 Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExtractorType)
 {
-    if( descriptorExtractorType.find("Opponent") == 0)
+    if( descriptorExtractorType.find("Opponent") == 0 )
     {
         size_t pos = string("Opponent").size();
-        return DescriptorExtractor::create(descriptorExtractorType.substr(pos));
+        string type = descriptorExtractorType.substr(pos);
+        return new OpponentColorDescriptorExtractor(DescriptorExtractor::create(type));
     }
     
     return Algorithm::create<DescriptorExtractor>("Feature2D." + descriptorExtractorType);
@@ -231,9 +232,9 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
            cp[1] < channelKeypoints[1].size() &&
            cp[2] < channelKeypoints[2].size() )
     {
-        const int maxInitIdx = std::max( channelKeypoints[0][idxs[0][cp[0]]].class_id,
-                                         std::max( channelKeypoints[1][idxs[1][cp[1]]].class_id,
-                                                   channelKeypoints[2][idxs[2][cp[2]]].class_id ) );
+        const int maxInitIdx = std::max( 0, std::max( channelKeypoints[0][idxs[0][cp[0]]].class_id,
+                                                      std::max( channelKeypoints[1][idxs[1][cp[1]]].class_id,
+                                                                channelKeypoints[2][idxs[2][cp[2]]].class_id ) ) );
 
         while( channelKeypoints[0][idxs[0][cp[0]]].class_id < maxInitIdx && cp[0] < channelKeypoints[0].size() ) { cp[0]++; }
         while( channelKeypoints[1][idxs[1][cp[1]]].class_id < maxInitIdx && cp[1] < channelKeypoints[1].size() ) { cp[1]++; }

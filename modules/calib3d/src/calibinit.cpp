@@ -1990,7 +1990,8 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       bool isFound = false;
 #define BE_QUIET 1
 #if BE_QUIET
-      redirectError(quiet_error);
+      void* oldCbkData;
+      ErrorCallback oldCbk = redirectError(quiet_error, 0, &oldCbkData);
 #endif
       try
       {
@@ -2001,7 +2002,7 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
 
       }
 #if BE_QUIET
-      redirectError(0);
+      redirectError(oldCbk, oldCbkData);
 #endif
       if (isFound)
       {

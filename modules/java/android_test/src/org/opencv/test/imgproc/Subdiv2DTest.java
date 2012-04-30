@@ -1,6 +1,6 @@
 package org.opencv.test.imgproc;
 
-import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfFloat6;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Subdiv2D;
@@ -50,7 +50,7 @@ public class Subdiv2DTest extends OpenCVTestCase {
     	s2d.insert( new Point(20, 10) );
     	s2d.insert( new Point(20, 20) );
     	s2d.insert( new Point(10, 20) );
-    	MatOfFloat triangles = new MatOfFloat();
+    	MatOfFloat6 triangles = new MatOfFloat6();
     	s2d.getTriangleList(triangles);
     	assertEquals(10, triangles.rows());
     	/*

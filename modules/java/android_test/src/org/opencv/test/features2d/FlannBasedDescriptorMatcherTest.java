@@ -158,18 +158,11 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
-        		/*
-                new DMatch(0, 0, 0, 0.643284f),
-                new DMatch(1, 1, 0, 0.92945856f),
-                new DMatch(2, 1, 0, 0.2841479f),
-                new DMatch(3, 1, 0, 0.9194034f),
-                new DMatch(4, 1, 0, 0.3006621f)
-                */
         		new DMatch(0, 0, 0, 1.049694f), 
-        		new DMatch(1, 0, 0, 1.083795f), 
-        		new DMatch(2, 1, 0, 0.484352f), 
-        		new DMatch(3, 0, 0, 1.098605f), 
-        		new DMatch(4, 1, 0, 0.494587f)
+        		new DMatch(1, 0, 0, 1.098605f), 
+        		new DMatch(2, 1, 0, 0.494587f), 
+        		new DMatch(3, 1, 0, 0.484352f), 
+        		new DMatch(4, 0, 0, 1.083795f)
                 };
 
         super.setUp();

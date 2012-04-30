@@ -34,7 +34,7 @@ Class for loading the data from a ``.csv`` file.
         void mix_train_and_test_idx();
         
         const CvMat* get_var_idx();
-        void chahge_var_idx( int vi, bool state );
+        void change_var_idx( int vi, bool state );
 
         const CvMat* get_var_types();
         void set_var_types( const char* str );
@@ -158,11 +158,11 @@ The method returns the indices of variables (columns) used in the ``values`` mat
 
 It returns ``0`` if the used subset is not set. It throws an exception if the data has not been loaded from the file yet. Returned matrix is a single-row matrix of the type ``CV_32SC1``. Its column count is equal to the size of the used variable subset.
 
-CvMLData::chahge_var_idx
+CvMLData::change_var_idx
 ------------------------
 Enables or disables particular variable in the loaded data
 
-.. ocv:function:: void CvMLData::chahge_var_idx( int vi, bool state )
+.. ocv:function:: void CvMLData::change_var_idx( int vi, bool state )
 
 By default, after reading the data set all variables in the ``values`` matrix (see :ocv:func:`CvMLData::get_values`) are used. But you may want to use only a subset of variables and include/exclude (depending on ``state`` value) a variable with the ``vi`` index from the used subset. If the data has not been loaded from the file yet, an exception is thrown.
     

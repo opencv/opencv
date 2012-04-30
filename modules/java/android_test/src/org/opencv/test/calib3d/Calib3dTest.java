@@ -4,6 +4,7 @@ import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
@@ -174,15 +175,17 @@ public class Calib3dTest extends OpenCVTestCase {
 
     public void testFindChessboardCornersMatSizeMat() {
         Size patternSize = new Size(9, 6);
-        Calib3d.findChessboardCorners(grayChess, patternSize, dst);
-        assertTrue(!dst.empty());
+        MatOfPoint2f corners = new MatOfPoint2f();
+        Calib3d.findChessboardCorners(grayChess, patternSize, corners);
+        assertTrue(!corners.empty());
     }
 
     public void testFindChessboardCornersMatSizeMatInt() {
         Size patternSize = new Size(9, 6);
-        Calib3d.findChessboardCorners(grayChess, patternSize, dst, Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE
+        MatOfPoint2f corners = new MatOfPoint2f();
+        Calib3d.findChessboardCorners(grayChess, patternSize, corners, Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE
                 + Calib3d.CALIB_CB_FAST_CHECK);
-        assertTrue(!dst.empty());
+        assertTrue(!corners.empty());
     }
 
     public void testFindCirclesGridDefaultMatSizeMat() {
@@ -515,7 +518,7 @@ public class Calib3dTest extends OpenCVTestCase {
 
         Mat rvec = new Mat();
         Mat tvec = new Mat();
-        Calib3d.solvePnP(points3d, points2d, intrinsics, new Mat(), rvec, tvec);
+        Calib3d.solvePnP(points3d, points2d, intrinsics, new MatOfDouble(), rvec, tvec);
 
         Mat truth_rvec = new Mat(3, 1, CvType.CV_64F);
         truth_rvec.put(0, 0, 0, Math.PI / 2, 0);

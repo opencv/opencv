@@ -199,10 +199,7 @@ int CvMLData::read_csv(const char* filename)
         int type;
         token = strtok(buf, str_delimiter);
         if (!token) 
-        {
-             fclose(file);
-             return -1;
-        }
+            break;
         for (int i = 0; i < cols_count-1; i++)
         {
             str_to_flt_elem( token, el_ptr[i], type);
@@ -217,7 +214,7 @@ int CvMLData::read_csv(const char* filename)
         str_to_flt_elem( token, el_ptr[cols_count-1], type);
         var_types_ptr[cols_count-1] |= type;
         cvSeqPush( seq, el_ptr );
-        if( !fgets_chomp( buf, M, file ) || !strchr( buf, delimiter ) )
+        if( !fgets_chomp( buf, M, file ) )
             break;
     }
     fclose(file);
@@ -743,7 +740,12 @@ const CvMat* CvMLData::get_var_idx()
 
 void CvMLData::chahge_var_idx( int vi, bool state )
 {
-     CV_FUNCNAME( "CvMLData::get_responses_ptr" );
+    change_var_idx( vi, state );
+}
+
+void CvMLData::change_var_idx( int vi, bool state )
+{
+     CV_FUNCNAME( "CvMLData::change_var_idx" );
     __BEGIN__;
 
     int var_count = 0;

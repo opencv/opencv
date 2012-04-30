@@ -1826,7 +1826,7 @@ public:
     CV_WRAP cv::Mat getWeights() const;
     CV_WRAP cv::Mat getProbs() const;
 
-    CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? likelihood : DBL_MAX; }
+    CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? logLikelihood : DBL_MAX; }
 #endif
 
     CV_WRAP virtual void clear();
@@ -1847,7 +1847,7 @@ protected:
 
     cv::EM emObj;
     cv::Mat probs;
-    double likelihood;
+    double logLikelihood;
 
     CvMat meansHdr;
     std::vector<CvMat> covsHdrs;
@@ -2840,6 +2840,18 @@ bool CalonderDescriptorExtractor<T>::empty() const
     return classifier_.trees_.empty();
 }
     
+    
+////////////////////// Brute Force Matcher //////////////////////////
+    
+template<class Distance>
+class CV_EXPORTS BruteForceMatcher : public BFMatcher
+{
+public:
+    BruteForceMatcher( Distance d = Distance() ) : BFMatcher(Distance::normType, false) {}
+    virtual ~BruteForceMatcher() {}
+};
+    
+    
 /****************************************************************************************\
 *                                Planar Object Detection                                 *
 \****************************************************************************************/
@@ -3365,6 +3377,7 @@ typedef struct CvGaussBGModel
     CvGaussBGStatModelParams   params;    
     CvGaussBGPoint*            g_point;    
     int                        countFrames;
+    void*                      mog;
 } CvGaussBGModel;
 
 
