@@ -238,6 +238,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
     }
 
     CvVideoWriter* writer = 0;
+    vector<Mat> frames;
 
     for(;;)
     {
@@ -245,6 +246,8 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
 
         if (!img)
             break;
+            
+        frames.push_back(Mat(img).clone());
 
         if (writer == 0)
         {
@@ -265,8 +268,6 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
     cvReleaseVideoWriter( &writer );
     cvReleaseCapture( &cap );
 
-    cap = cvCaptureFromFile(src_file.c_str());
-
     CvCapture *saved = cvCaptureFromFile(tmp_name.c_str());
     if (!saved)
     {
@@ -276,25 +277,27 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
 
     const double thresDbell = 20;
 
-    for(;;)
+    for(int i = 0;; i++)
     {
-        IplImage* ipl  = cvQueryFrame( cap );
         IplImage* ipl1 = cvQueryFrame( saved );
 
-        if (!ipl || !ipl1)
+        if (!ipl1)
             break;
 
-        Mat img(ipl);
+        Mat img = frames[i];
         Mat img1(ipl1);
 
-        if (PSNR(img1, img) < thresDbell)
+        double psnr = PSNR(img1, img);
+        if (psnr < thresDbell)
         {
+            printf("Too low psnr = %gdb\n", psnr);
+            imwrite("img.png", img);
+            imwrite("img1.png", img1);
             ts->set_failed_test_info(ts->FAIL_MISMATCH);
             break;
         }
     }
 
-    cvReleaseCapture( &cap );
     cvReleaseCapture( &saved );
 
     ts->printf(ts->LOG, "end test function : ImagesVideo \n");
