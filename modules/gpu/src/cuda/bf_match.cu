@@ -97,7 +97,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
-        __device__ void loopUnrolledCached(int queryIdx, const DevMem2D_<T>& query, int imgIdx, const DevMem2D_<T>& train, const Mask& mask, 
+        __device__ void loopUnrolledCached(int queryIdx, const DevMem2D_<T>& query,volatile int imgIdx, const DevMem2D_<T>& train, const Mask& mask,
                                            typename Dist::value_type* s_query, typename Dist::value_type* s_train, 
                                            float& bestDistance, int& bestTrainIdx, int& bestImgIdx)
         {
@@ -253,7 +253,7 @@ namespace cv { namespace gpu { namespace device
         // Match Unrolled
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask> 
-        __device__ void loopUnrolled(int queryIdx, const DevMem2D_<T>& query, int imgIdx, const DevMem2D_<T>& train, const Mask& mask, 
+        __device__ void loopUnrolled(int queryIdx, const DevMem2D_<T>& query,volatile int imgIdx, const DevMem2D_<T>& train, const Mask& mask,
                                      typename Dist::value_type* s_query, typename Dist::value_type* s_train, 
                                      float& bestDistance, int& bestTrainIdx, int& bestImgIdx)
         {
@@ -409,7 +409,7 @@ namespace cv { namespace gpu { namespace device
         // Match
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask> 
-        __device__ void loop(int queryIdx, const DevMem2D_<T>& query, int imgIdx, const DevMem2D_<T>& train, const Mask& mask, 
+        __device__ void loop(int queryIdx, const DevMem2D_<T>& query, volatile int imgIdx, const DevMem2D_<T>& train, const Mask& mask,
                              typename Dist::value_type* s_query, typename Dist::value_type* s_train, 
                              float& bestDistance, int& bestTrainIdx, int& bestImgIdx)
         {
