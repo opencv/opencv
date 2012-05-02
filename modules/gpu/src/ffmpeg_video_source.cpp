@@ -68,6 +68,7 @@ namespace
         {
             #if defined WIN32 || defined _WIN32
                 const char* module_name = "opencv_ffmpeg"
+                    CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
                 #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
                     "_64"
                 #endif
