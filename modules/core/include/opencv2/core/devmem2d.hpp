@@ -61,10 +61,10 @@ namespace cv
         template <bool expr> struct StaticAssert;
         template <> struct StaticAssert<true> {static __CV_GPU_HOST_DEVICE__ void check(){}};
 
-		template<typename T> struct DevPtr
-		{
-			typedef T elem_type;
-			typedef int index_type;
+        template<typename T> struct DevPtr
+        {
+            typedef T elem_type;
+            typedef int index_type;
 
             enum { elem_size = sizeof(elem_type) };
 

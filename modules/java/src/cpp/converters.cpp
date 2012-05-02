@@ -413,21 +413,6 @@ void vector_vector_Point2f_to_Mat(vector< vector< Point2f > >& vv_pt, Mat& mat)
     vector_Mat_to_Mat(vm, mat);
 }
 
-
-void vector_vector_Point_to_Mat(vector< vector< Point > >& vv_pt, Mat& mat)
-{
-    vector<Mat> vm;
-    vm.reserve( vv_pt.size() );
-    for(size_t i=0; i<vv_pt.size(); i++)
-    {
-        Mat m;
-        vector_Point_to_Mat(vv_pt[i], m);
-        vm.push_back(m);
-    }
-    vector_Mat_to_Mat(vm, mat);
-}
-
-
 void vector_vector_Point3f_to_Mat(vector< vector< Point3f > >& vv_pt, Mat& mat)
 {
     vector<Mat> vm;

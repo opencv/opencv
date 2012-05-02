@@ -49,6 +49,8 @@
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, CAMERA_LOG_TAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, CAMERA_LOG_TAG, __VA_ARGS__))
 
+#include <dlfcn.h>
+
 using namespace android;
 
 void debugShowFPS()
@@ -200,18 +202,25 @@ protected:
         return strstr(supported_modes, mode) > 0;
     }
 
-    float getFocusDistance(int focus_distance_type){
-        if (focus_distance_type >= 0 && focus_distance_type < 3) {
+    float getFocusDistance(int focus_distance_type)
+    {
+#if !defined(ANDROID_r2_2_0)
+        if (focus_distance_type >= 0 && focus_distance_type < 3)
+	{
             float focus_distances[3];
             const char* output = params.get(CameraParameters::KEY_FOCUS_DISTANCES);
             int val_num = CameraHandler::split_float(output, focus_distances, ',', 3);
-            if(val_num == 3){
+            if(val_num == 3)
+	    {
                 return focus_distances[focus_distance_type];
-            } else {
+            } 
+            else
+	    {
                 LOGE("Invalid focus distances.");
             }
         }
-        return -1;
+#endif
+	return -1;
     }
 
     static int getModeNum(const char** modes, const int modes_num, const char* mode_name)
@@ -299,7 +308,9 @@ const char* CameraHandler::flashModesNames[ANDROID_CAMERA_FLASH_MODES_NUM] =
 const char* CameraHandler::focusModesNames[ANDROID_CAMERA_FOCUS_MODES_NUM] =
 {
     CameraParameters::FOCUS_MODE_AUTO,
+#if !defined(ANDROID_r2_2_0)
     CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO,
+#endif
     CameraParameters::FOCUS_MODE_EDOF,
     CameraParameters::FOCUS_MODE_FIXED,
     CameraParameters::FOCUS_MODE_INFINITY
@@ -326,17 +337,61 @@ const char* CameraHandler::antibandingModesNames[ANDROID_CAMERA_ANTIBANDING_MODE
 
 CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, int cameraId, void* userData, CameraParameters* prevCameraParameters)
 {
+
+    typedef sp<Camera> (*Android22ConnectFuncType)();
+    typedef sp<Camera> (*Android23ConnectFuncType)(int);
+    typedef sp<Camera> (*Android3DConnectFuncType)(int, int);
+    
+    enum {
+	CAMERA_SUPPORT_MODE_2D = 0x01, /* Camera Sensor supports 2D mode. */
+	CAMERA_SUPPORT_MODE_3D = 0x02, /* Camera Sensor supports 3D mode. */
+	CAMERA_SUPPORT_MODE_NONZSL = 0x04, /* Camera Sensor in NON-ZSL mode. */
+	CAMERA_SUPPORT_MODE_ZSL = 0x08 /* Camera Sensor supports ZSL mode. */
+    };
+        
+    const char Android22ConnectName[] = "_ZN7android6Camera7connectEv";
+    const char Android23ConnectName[] = "_ZN7android6Camera7connectEi";
+    const char Android3DConnectName[] = "_ZN7android6Camera7connectEii";
+    
     LOGD("CameraHandler::initCameraConnect(%p, %d, %p, %p)", callback, cameraId, userData, prevCameraParameters);
-
+    
     sp<Camera> camera = 0;
+    
+    void* CameraHALHandle = dlopen("libcamera_client.so", RTLD_LAZY);
+    
+    if (!CameraHALHandle)
+    {
+	LOGE("Cannot link to \"libcamera_client.so\"");
+	return NULL;
+    }
+    
+    // reset errors
+    dlerror();
 
-#ifdef ANDROID_r2_2_0
-    camera = Camera::connect();
-#else
-    /* This is 2.3 or higher. The connect method has cameraID parameter */
-    camera = Camera::connect(cameraId);
-#endif
-
+    if (Android22ConnectFuncType Android22Connect = (Android22ConnectFuncType)dlsym(CameraHALHandle, Android22ConnectName))
+    {
+	LOGD("Connecting to CameraService v 2.2");
+	camera = Android22Connect();
+    }
+    else if (Android23ConnectFuncType Android23Connect = (Android23ConnectFuncType)dlsym(CameraHALHandle, Android23ConnectName))
+    {
+	LOGD("Connecting to CameraService v 2.3");
+	camera = Android23Connect(cameraId);
+    }
+    else if (Android3DConnectFuncType Android3DConnect = (Android3DConnectFuncType)dlsym(CameraHALHandle, Android3DConnectName))
+    {
+	LOGD("Connecting to CameraService v 3D");
+	camera = Android3DConnect(cameraId, CAMERA_SUPPORT_MODE_2D);
+    }
+    else
+    {
+	dlclose(CameraHALHandle);
+	LOGE("Cannot connect to CameraService. Connect method was not found!");
+	return NULL;
+    }
+    
+    dlclose(CameraHALHandle);
+    
     if ( 0 == camera.get() )
     {
         LOGE("initCameraConnect: Unable to connect to CameraService\n");

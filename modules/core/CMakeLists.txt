@@ -16,13 +16,7 @@ else()
   set(cuda_link_libs "")
 endif()
 
-set(OPENCV_VERSION_FILE "${opencv_core_BINARY_DIR}/version_string.inc")
-add_custom_command(OUTPUT "${OPENCV_VERSION_FILE}"
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENCV_BUILD_INFO_FILE}" "${OPENCV_VERSION_FILE}"
-                   MAIN_DEPENDENCY "${OPENCV_BUILD_INFO_FILE}"
-                   COMMENT "")
-
-ocv_glob_module_sources(SOURCES ${lib_cuda} ${cuda_objs} "${OPENCV_VERSION_FILE}")
+ocv_glob_module_sources(SOURCES ${lib_cuda} ${cuda_objs} "${opencv_core_BINARY_DIR}/version_string.inc")
 
 ocv_create_module(${cuda_link_libs})
 ocv_add_precompiled_headers(${the_module})

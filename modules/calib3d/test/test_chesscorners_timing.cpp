@@ -75,7 +75,6 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
 
     sprintf( filepath, "%scameracalibration/", ts->get_data_path().c_str() );
     sprintf( filename, "%schessboard_timing_list.dat", filepath );
-    printf("Reading file %s\n", filename);
     CvFileStorage* fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ );
     CvFileNode* board_list = fs ? cvGetFileNodeByName( fs, 0, "boards" ) : 0;
 

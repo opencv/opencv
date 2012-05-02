@@ -6,23 +6,27 @@ import java.util.List;
 import org.opencv.features2d.KeyPoint;
 
 public class MatOfKeyPoint extends Mat {
-	// 32FC7
-	private static final int _depth = CvType.CV_32F;
-	private static final int _channels = 7;
+    // 32FC7
+    private static final int _depth = CvType.CV_32F;
+    private static final int _channels = 7;
 
     public MatOfKeyPoint() {
         super();
     }
 
-    public MatOfKeyPoint(long addr) {
+    protected MatOfKeyPoint(long addr) {
         super(addr);
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
 
+    public static MatOfKeyPoint fromNativeAddr(long addr) {
+		return new MatOfKeyPoint(addr);
+	}
+
     public MatOfKeyPoint(Mat m) {
-    	super(m, Range.all());
+        super(m, Range.all());
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
@@ -32,7 +36,7 @@ public class MatOfKeyPoint extends Mat {
         super();
         fromArray(a);
     }
-    
+
     public void alloc(int elemNumber) {
         if(elemNumber>0)
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
@@ -71,12 +75,12 @@ public class MatOfKeyPoint extends Mat {
     }
 
     public void fromList(List<KeyPoint> lkp) {
-    	KeyPoint akp[] = lkp.toArray(null);
-    	fromArray(akp);
+        KeyPoint akp[] = lkp.toArray(new KeyPoint[0]);
+        fromArray(akp);
     }
-    
+
     public List<KeyPoint> toList() {
-    	KeyPoint[] akp = toArray();
-    	return Arrays.asList(akp); 
+        KeyPoint[] akp = toArray();
+        return Arrays.asList(akp);
     }
 }

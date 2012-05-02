@@ -6,23 +6,27 @@ import java.util.List;
 import org.opencv.features2d.DMatch;
 
 public class MatOfDMatch extends Mat {
-	// 32FC4
-	private static final int _depth = CvType.CV_32F;
-	private static final int _channels = 4;
+    // 32FC4
+    private static final int _depth = CvType.CV_32F;
+    private static final int _channels = 4;
 
     public MatOfDMatch() {
         super();
     }
 
-    public MatOfDMatch(long addr) {
+    protected MatOfDMatch(long addr) {
         super(addr);
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
 
+    public static MatOfDMatch fromNativeAddr(long addr) {
+        return new MatOfDMatch(addr);
+    }
+
     public MatOfDMatch(Mat m) {
-    	super(m, Range.all());
+        super(m, Range.all());
         if(checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
@@ -32,7 +36,7 @@ public class MatOfDMatch extends Mat {
         super();
         fromArray(ap);
     }
-    
+
     public void alloc(int elemNumber) {
         if(elemNumber>0)
             super.create(elemNumber, 1, CvType.makeType(_depth, _channels));
@@ -68,12 +72,12 @@ public class MatOfDMatch extends Mat {
     }
 
     public void fromList(List<DMatch> ldm) {
-    	DMatch adm[] = ldm.toArray(null);
-    	fromArray(adm);
+        DMatch adm[] = ldm.toArray(new DMatch[0]);
+        fromArray(adm);
     }
-    
+
     public List<DMatch> toList() {
-    	DMatch[] adm = toArray();
-    	return Arrays.asList(adm); 
+        DMatch[] adm = toArray();
+        return Arrays.asList(adm);
     }
 }

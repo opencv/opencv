@@ -173,6 +173,15 @@ missing_consts = \
         ) # public
     }, # Calib3d
 
+    "Video":
+    {
+        'private' :
+        (
+            ('CV_LKFLOW_INITIAL_GUESSES',    4 ),
+            ('CV_LKFLOW_GET_MIN_EIGENVALS',  8 ),
+        ) # private
+    }, # Video
+
 }
 
 

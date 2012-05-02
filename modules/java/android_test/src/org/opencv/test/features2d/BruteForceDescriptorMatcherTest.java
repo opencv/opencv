@@ -19,8 +19,6 @@ import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
-import android.util.Log;
-
 public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
 
     DescriptorMatcher matcher;
@@ -173,8 +171,6 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         Mat query = getQueryDescriptors();
         List<MatOfDMatch> matches = new ArrayList<MatOfDMatch>();
         matcher.knnMatch(query, train, matches, k);
-        Log.d("knnMatch", "train = " + train);
-        Log.d("knnMatch", "query = " + query);
         /*
         Log.d("knnMatch", "train = " + train);
         Log.d("knnMatch", "query = " + query);
