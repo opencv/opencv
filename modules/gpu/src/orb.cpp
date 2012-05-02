@@ -622,9 +622,6 @@ void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
         if (keyPointsCount_[level] == 0)
             continue;
 
-        if (keyPointsCount_[level] == 0)
-            continue;
-
         GpuMat descRange = descriptors.rowRange(offset, offset + keyPointsCount_[level]);
 
         if (blurForDescriptor)

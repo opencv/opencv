@@ -215,6 +215,7 @@ int main(int argc, const char* argv[])
             switch (key)
             {
             case 27:
+                return 0;
 
             case 'A':
                 if (currentFrame > 0) 

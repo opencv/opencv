@@ -375,7 +375,7 @@ TEST_P(FarnebackOpticalFlow, Accuracy)
 
     EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
     EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
-};
+}
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
     ALL_DEVICES,
@@ -412,5 +412,117 @@ TEST_P(OpticalFlowNan, Regression)
 };
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowNan, ALL_DEVICES);
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// VideoWriter
+
+#ifdef WIN32
+
+PARAM_TEST_CASE(VideoWriter, cv::gpu::DeviceInfo, std::string)
+{
+    cv::gpu::DeviceInfo devInfo;
+    std::string inputFile;
+
+    std::string outputFile;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        inputFile = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
+        outputFile = inputFile.substr(0, inputFile.find('.')) + "_test.avi";
+    }
+};
+
+TEST_P(VideoWriter, Regression)
+{
+    const double FPS = 25.0;
+
+    cv::VideoCapture reader(inputFile);
+    ASSERT_TRUE( reader.isOpened() );
+
+    cv::gpu::VideoWriter_GPU d_writer;
+
+    cv::Mat frame;
+    std::vector<cv::Mat> frames;
+    cv::gpu::GpuMat d_frame;
+
+    for (int i = 1; i < 10; ++i)
+    {
+        reader >> frame;
+
+        if (frame.empty())
+            break;
+
+        frames.push_back(frame.clone());
+        d_frame.upload(frame);
+
+        if (!d_writer.isOpened())
+            d_writer.open(outputFile, frame.size(), FPS);
+
+        d_writer.write(d_frame);
+    }
+
+    reader.release();
+    d_writer.close();
+
+    reader.open(outputFile);
+    ASSERT_TRUE( reader.isOpened() );
+
+    for (int i = 0; i < 5; ++i)
+    {
+        reader >> frame;
+        ASSERT_FALSE( frame.empty() );
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Video, VideoWriter, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("VID00003-20100701-2204.mpg"), std::string("big_buck_bunny.mpg"))));
+
+#endif // WIN32
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// VideoReader
+
+PARAM_TEST_CASE(VideoReader, cv::gpu::DeviceInfo, std::string)
+{
+    cv::gpu::DeviceInfo devInfo;
+    std::string inputFile;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        inputFile = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
+    }
+};
+
+TEST_P(VideoReader, Regression)
+{
+    cv::gpu::VideoReader_GPU reader(inputFile);
+    ASSERT_TRUE( reader.isOpened() );
+
+    cv::gpu::GpuMat frame;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        ASSERT_TRUE( reader.read(frame) );
+        ASSERT_FALSE( frame.empty() );
+    }
+
+    reader.close();
+    ASSERT_FALSE( reader.isOpened() );
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("VID00003-20100701-2204.mpg"))));
 
 } // namespace
