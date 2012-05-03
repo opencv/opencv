@@ -601,7 +601,7 @@ class RunInfo(object):
             logfile = userlog[0][userlog[0].find(":")+1:]
         
         if self.targetos == "android" and exe.endswith(".apk"):
-            print "running", exe
+            print "running java tests:", exe
             try:
                 # get package info
                 output = Popen(self.aapt + ["dump", "xmltree", exe, "AndroidManifest.xml"], stdout=PIPE, stderr=_stderr).communicate()
@@ -614,14 +614,14 @@ class RunInfo(object):
                 if not manifest_tag:
                     print >> _stderr, "failed to get manifest info from", exe
                     return
-                pkg_name =  re.search(r"^[ ]+A: package=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)$", manifest_tag[0], flags=re.MULTILINE).group("pkg")
+                pkg_name =  re.search(r"^[ ]+A: package=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)\r?$", manifest_tag[0], flags=re.MULTILINE).group("pkg")
                 #get test instrumentation info
                 instrumentation_tag = [t for t in tags if t.startswith("instrumentation ")]
                 if not instrumentation_tag:
                     print >> _stderr, "can not find instrumentation detials in", exe
                     return
-                pkg_runner = re.search(r"^[ ]+A: android:name\(0x[0-9a-f]{8}\)=\"(?P<runner>.*?)\" \(Raw: \"(?P=runner)\"\)$", instrumentation_tag[0], flags=re.MULTILINE).group("runner")
-                pkg_target =  re.search(r"^[ ]+A: android:targetPackage\(0x[0-9a-f]{8}\)=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)$", instrumentation_tag[0], flags=re.MULTILINE).group("pkg")
+                pkg_runner = re.search(r"^[ ]+A: android:name\(0x[0-9a-f]{8}\)=\"(?P<runner>.*?)\" \(Raw: \"(?P=runner)\"\)\r?$", instrumentation_tag[0], flags=re.MULTILINE).group("runner")
+                pkg_target =  re.search(r"^[ ]+A: android:targetPackage\(0x[0-9a-f]{8}\)=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)\r?$", instrumentation_tag[0], flags=re.MULTILINE).group("pkg")
                 if not pkg_name or not pkg_runner or not pkg_target:
                     print >> _stderr, "can not find instrumentation detials in", exe
                     return
@@ -632,14 +632,14 @@ class RunInfo(object):
                         pkg_target = self.options.junit_package
                 #uninstall already installed package
                 print >> _stderr, "Uninstalling old", pkg_name, "from device..."
-                output = Popen(self.adb + ["uninstall", pkg_name], stdout=_stdout, stderr=_stderr).wait()
-                if output != 0:
-                    print >> _stderr, "failed to uninstall", pkg_name, "from device"
-                    return
-                print >> _stderr, "Installing new", exe, "to device..."
-                output = Popen(self.adb + ["install", exe], stdout=_stdout, stderr=_stderr).wait()
-                if output != 0:
-                    print >> _stderr, "failed to install", exe, "to device"
+                Popen(self.adb + ["uninstall", pkg_name], stdout=PIPE, stderr=_stderr).communicate()
+                print >> _stderr, "Installing new", exe, "to device...",
+                output = Popen(self.adb + ["install", exe], stdout=PIPE, stderr=PIPE).communicate()
+                if output[0] and output[0].strip().endswith("Success"):
+                    print >> _stderr, "Success"
+                else:
+                    print >> _stderr, "Failure"
+                    print >> _stderr, "Failed to install", exe, "to device"
                     return
                 print >> _stderr, "Running jUnit tests for ", pkg_target
                 if self.setUp is not None:
