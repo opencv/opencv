@@ -25,6 +25,17 @@
 using namespace cv;
 using namespace std;
 
+Mat toGrayscale(InputArray _src) {
+    Mat src = _src.getMat();
+    // only allow one channel
+    if(src.channels() != 1)
+        CV_Error(CV_StsBadArg, "Only Matrices with one channel are supported");
+    // create and return normalized image
+    Mat dst;
+    cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
+    return dst;
+}
+
 void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
     std::ifstream file(filename.c_str(), ifstream::in);
     if (!file)
@@ -79,10 +90,10 @@ int main(int argc, const char *argv[]) {
     for (int i = 0; i < min(10, W.cols); i++) {
         // get eigenvector #i
         Mat ev = W.col(i).clone();
-        // reshape to original site
-        Mat grayscale, cgrayscale;
-        cvtColor(ev.reshape(1, height), grayscale, COLOR_BGR2GRAY);
+        // reshape to original size AND normalize between [0...255]
+        Mat grayscale = toGrayscale(ev.reshape(1, height));
         // show image (with Jet colormap)
+        Mat cgrayscale;
         applyColorMap(grayscale, cgrayscale, COLORMAP_JET);
         imshow(format("%d", i), cgrayscale);
     }
