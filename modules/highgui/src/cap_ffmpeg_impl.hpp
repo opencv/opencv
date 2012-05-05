@@ -665,7 +665,7 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
     
     // if we have not grabbed a single frame before first seek, let's read the first frame
     // and get some valuable information during the process
-    if( first_frame_number < 0 )
+    if( first_frame_number < 0 && get_total_frames() > 1 )
         grabFrame();
     
     for(;;)
@@ -675,7 +675,7 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         int64_t time_stamp = ic->streams[video_stream]->start_time;
         double  time_base  = r2d(ic->streams[video_stream]->time_base);
         time_stamp += (int64_t)(sec / time_base + 0.5);
-        av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
+        if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
         avcodec_flush_buffers(ic->streams[video_stream]->codec);
         if( _frame_number > 0 )
         {
@@ -2046,7 +2046,7 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
 
         if (ret < 0)
         {
-            if (ret == AVERROR_EOF)
+            if (ret == (int64_t)AVERROR_EOF)
                 *endOfFile = true;
             return false;
         }
