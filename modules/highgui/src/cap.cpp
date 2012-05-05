@@ -494,10 +494,13 @@ bool VideoCapture::retrieve(Mat& image, int channel)
 
 bool VideoCapture::read(Mat& image)
 {
+    if (get(CV_CAP_PROP_POS_FRAMES) < get(CV_CAP_PROP_FRAME_COUNT))
     if(!grab())
         image.release();
     else
         retrieve(image);
+    else
+        image.release();
     return !image.empty();
 }
     
