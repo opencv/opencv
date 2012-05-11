@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if !defined HAVE_CUDA || !defined WIN32
+#if !defined(HAVE_CUDA) || !defined(WIN32)
 
 class cv::gpu::VideoWriter_GPU::Impl
 {

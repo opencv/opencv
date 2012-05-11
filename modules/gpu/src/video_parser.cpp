@@ -43,7 +43,7 @@
 #include "video_parser.h"
 #include "cu_safe_call.h"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(__APPLE__)
 
 cv::gpu::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue) :
     videoDecoder_(videoDecoder), frameQueue_(frameQueue), unparsedPackets_(0), hasError_(false)

@@ -45,7 +45,7 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(__APPLE__)
 
 namespace cv { namespace gpu 
 {

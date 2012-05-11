@@ -88,7 +88,9 @@
         #include <cublas.h>
     #endif
 
-    #include <nvcuvid.h>
+    #ifndef __APPLE__
+        #include <nvcuvid.h>
+    #endif
 
     #ifdef WIN32
         #include <NVEncoderAPI.h>
