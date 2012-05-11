@@ -1956,7 +1956,7 @@ The function ``mulSpectrums`` performs the per-element multiplication of the two
 
 The function, together with
 :ocv:func:`dft` and
-:ocv:func:`idft` , may be used to calculate convolution (pass ``conj=false`` ) or correlation (pass ``conj=false`` ) of two arrays rapidly. When the arrays are complex, they are simply multiplied (per element) with an optional conjugation of the second-array elements. When the arrays are real, they are assumed to be CCS-packed (see
+:ocv:func:`idft` , may be used to calculate convolution (pass ``conj=false`` ) or correlation (pass ``conj=true`` ) of two arrays rapidly. When the arrays are complex, they are simply multiplied (per element) with an optional conjugation of the second-array elements. When the arrays are real, they are assumed to be CCS-packed (see
 :ocv:func:`dft` for details).
 
 
