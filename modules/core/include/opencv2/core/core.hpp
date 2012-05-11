@@ -1305,6 +1305,7 @@ public:
     template<typename _Tp> _InputArray(const vector<_Tp>& vec);
     template<typename _Tp> _InputArray(const vector<vector<_Tp> >& vec);
     _InputArray(const vector<Mat>& vec);
+    template<typename _Tp> _InputArray(const vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const Scalar& s);
@@ -1360,6 +1361,7 @@ public:
     template<typename _Tp> _OutputArray(vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(vector<vector<_Tp> >& vec);
     _OutputArray(vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
@@ -1368,6 +1370,7 @@ public:
     template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(const vector<vector<_Tp> >& vec);
     _OutputArray(const vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(const vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
@@ -2112,12 +2115,12 @@ CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, in
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
 //! makes multi-channel array out of several single-channel arrays
-CV_EXPORTS_W void merge(const vector<Mat>& mv, OutputArray dst);
+CV_EXPORTS_W void merge(InputArrayOfArrays mv, OutputArray dst);
     
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const Mat& src, Mat* mvbegin);
 //! copies each plane of a multi-channel array to a dedicated array
-CV_EXPORTS_W void split(const Mat& m, CV_OUT vector<Mat>& mv);
+CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
     
 //! copies selected channels from the input arrays to the selected channels of the output arrays
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,

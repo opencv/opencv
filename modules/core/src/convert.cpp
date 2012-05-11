@@ -253,11 +253,18 @@ void cv::split(const Mat& src, Mat* mv)
     }
 }
     
-void cv::split(const Mat& m, vector<Mat>& mv)
+void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
-    mv.resize(!m.empty() ? m.channels() : 0);
-    if(!m.empty())
-        split(m, &mv[0]);
+    Mat m = _m.getMat();
+    if( m.empty() )
+    {
+        _mv.release();
+        return;
+    }
+    CV_Assert( !_mv.fixedType() || CV_MAT_TYPE(_mv.flags) == m.depth() );
+    _mv.create(m.channels(), 1, m.depth());
+    Mat* dst = &_mv.getMatRef(0);
+    split(m, dst);
 }
     
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
@@ -335,8 +342,10 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
     }
 }
 
-void cv::merge(const vector<Mat>& mv, OutputArray _dst)
+void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
+    vector<Mat> mv;
+    _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
 }    
 

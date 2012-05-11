@@ -749,7 +749,15 @@ bool CV_OperationsTest::TestTemplateMat()
         if (Mat3i(1, 1).channels() != 3) throw test_excep();
         if (Mat3w(1, 1).channels() != 3) throw test_excep();
         if (Mat3s(1, 1).channels() != 3) throw test_excep();
-
+        
+        vector<Mat_<float> > mvf, mvf2;
+        Mat_<Vec2f> mf2;
+        mvf.push_back(Mat_<float>::ones(4, 3));
+        mvf.push_back(Mat_<float>::zeros(4, 3));
+        merge(mvf, mf2);
+        split(mf2, mvf2);
+        CV_Assert( norm(mvf2[0], mvf[0], CV_C) == 0 &&
+                  norm(mvf2[1], mvf[1], CV_C) == 0 );
     }
     catch (const test_excep& e)
     {
