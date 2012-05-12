@@ -27,16 +27,27 @@ import android.view.View.OnTouchListener;
 public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchListener {
 
 	private Mat mRgba;
-	private static final String TAG = "Example/CollorBlobDetection";
 
 	private boolean mIsColorSelected = false;
 	private Scalar mSelectedColorRgba = new Scalar(255);
 	private Scalar mSelectedColorHsv = new Scalar(255);
+	
+	// Lower and Upper bounds for range checking in HSV color space
 	private Scalar mLowerBound = new Scalar(0);
 	private Scalar mUpperBound = new Scalar(0);
-	private final Scalar mColorRadius = new Scalar(25,50,50,0);
+	
 	private Mat mSpectrum = new Mat();
 	private int mSpectrumScale = 4;
+
+	// Color radius for range checking in HSV color space
+	private static final Scalar COLOR_RADIUS = new Scalar(25,50,50,0);
+
+	// Minimum contour area in percent for contours filtering
+	private static final double MIN_CONTOUR_AREA = 0.1;
+
+	// Logcat tag
+	private static final String TAG = "Example/CollorBlobDetection";
+	
 	
 	public ColorBlobDetectionView(Context context)
 	{
@@ -55,110 +66,81 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
 	
 	public boolean onTouch(View v, MotionEvent event)
 	{
-		// TODO Auto-generated method stub
         int cols = mRgba.cols();
         int rows = mRgba.rows();
         
-        Log.d(TAG, "Resolition: " + cols + "x" + rows);
+        int xOffset = (getWidth() - cols) / 2;
+        int yOffset = (getHeight() - rows) / 2;
         
-        int xoffset = (getWidth() - cols) / 2;
-        int yoffset = (getHeight() - rows) / 2;
-
-        Log.d(TAG, "Touch offset " + xoffset + "x" + yoffset);
+        int x = (int)event.getX() - xOffset;
+        int y = (int)event.getY() - yOffset;
         
-        Log.d(TAG, "Screen touch coordinates: " + event.getX() + "x" + event.getY());
+        Log.i(TAG, "Touch image coordinates: (" + x + ", " + y + ")");
         
-        int x = (int)event.getX() - xoffset;
-        int y = (int)event.getY() - yoffset;
-        
-        Log.i(TAG, "Touch coordinates: (" + x + ", " + y + ")");
-        
-        if ((x > cols) || (y > rows)) return false;
+        if ((x < 0) || (y < 0) || (x > cols) || (y > rows)) return false;
   
-        Rect TouchedRect = new Rect();
+        Rect touchedRect = new Rect();
         
-        if (x-4 >= 0)
-        	TouchedRect.x = x-4;
-        else
-        	TouchedRect.x = 0;
-        
-        if (y-4 >= 0)
-        	TouchedRect.y = y-4;
-        else
-        	TouchedRect.y = 0;
+        touchedRect.x = (x>4) ? x-4 : 0;
+        touchedRect.y = (y>4) ? y-4 : 0;
 
-        if (x+4 < mRgba.cols())
-        	TouchedRect.width = x + 4 - TouchedRect.x;
-        else
-        	TouchedRect.width = mRgba.width() - TouchedRect.x;
-        
-        if (y+4 < mRgba.rows())
-        	TouchedRect.height = y+4 - TouchedRect.y;
-        else
-        	TouchedRect.height = mRgba.rows() - TouchedRect.y;
+        touchedRect.width = (x+4<mRgba.cols()) ? x + 4 - touchedRect.x : mRgba.width() - touchedRect.x;
+        touchedRect.height = (y+4 < mRgba.rows()) ? y + 4 - touchedRect.y : mRgba.rows() - touchedRect.y;
         	
-        Mat TouchedRegionMat = mRgba.submat(TouchedRect);
-        Mat TouchedRegionMatHsv = new Mat();
+        Mat touchedRegionMatRgba = mRgba.submat(touchedRect);
+        Mat touchedRegionMatHsv = new Mat();
         
-        Imgproc.cvtColor(TouchedRegionMat, TouchedRegionMatHsv, Imgproc.COLOR_RGB2HSV_FULL);
+        Imgproc.cvtColor(touchedRegionMatRgba, touchedRegionMatHsv, Imgproc.COLOR_RGB2HSV_FULL);
         
-        mSelectedColorHsv = Core.sumElems(TouchedRegionMatHsv);
-        int DotCount = TouchedRect.width*TouchedRect.height;
+        mSelectedColorHsv = Core.sumElems(touchedRegionMatHsv);
+        int pointCount = touchedRect.width*touchedRect.height;
         for (int i = 0; i < mSelectedColorHsv.val.length; i++)
         {
-        	mSelectedColorHsv.val[i] /= DotCount;
+        	mSelectedColorHsv.val[i] /= pointCount;
         }
         
-        Mat rgbaDotMap = new Mat();
-        Mat hsvDotMat = new Mat(1, 1, CvType.CV_8UC3);
+        Mat pointMapRgba = new Mat();
+        Mat pointMatHsv = new Mat(1, 1, CvType.CV_8UC3);
         
         byte[] buf = {(byte)mSelectedColorHsv.val[0], (byte)mSelectedColorHsv.val[1], (byte)mSelectedColorHsv.val[2]};
         
-        hsvDotMat.put(0, 0, buf);
-        Imgproc.cvtColor(hsvDotMat, rgbaDotMap, Imgproc.COLOR_HSV2RGB_FULL, 4);
+        pointMatHsv.put(0, 0, buf);
+        Imgproc.cvtColor(pointMatHsv, pointMapRgba, Imgproc.COLOR_HSV2RGB_FULL, 4);
         
-        mSelectedColorRgba.val = rgbaDotMap.get(0, 0);
+        mSelectedColorRgba.val = pointMapRgba.get(0, 0);
         
         Log.i(TAG, "Touched rgba color: (" + mSelectedColorRgba.val[0] + ", " + mSelectedColorRgba.val[1] + 
     			", " + mSelectedColorRgba.val[2] + ", " + mSelectedColorRgba.val[3] + ")");
         
-    	double MinH = 0;
-    	double MaxH = 255;
-        
-        if (mSelectedColorHsv.val[0]-mColorRadius.val[0] >= 0)
-        	MinH = mSelectedColorHsv.val[0]-mColorRadius.val[0];
-        else
-        	MinH = 0;
-        
-        if (mSelectedColorHsv.val[0]+mColorRadius.val[0] <= 255)
-        	MaxH = mSelectedColorHsv.val[0]+mColorRadius.val[0];
-        else
-        	MaxH = 255;
-    	
-  		mLowerBound.val[0] = MinH;
-   		mUpperBound.val[0] = MaxH;
+    	double minH = (mSelectedColorHsv.val[0] >= COLOR_RADIUS.val[0]) ? mSelectedColorHsv.val[0]-COLOR_RADIUS.val[0] : 0; 
+    	double maxH = (mSelectedColorHsv.val[0]+COLOR_RADIUS.val[0] <= 255) ? mSelectedColorHsv.val[0]+COLOR_RADIUS.val[0] : 255;
+            	
+  		mLowerBound.val[0] = minH;
+   		mUpperBound.val[0] = maxH;
    		
-  		mLowerBound.val[1] = mSelectedColorHsv.val[1] - mColorRadius.val[1];
-   		mUpperBound.val[1] = mSelectedColorHsv.val[1] + mColorRadius.val[1];
+  		mLowerBound.val[1] = mSelectedColorHsv.val[1] - COLOR_RADIUS.val[1];
+   		mUpperBound.val[1] = mSelectedColorHsv.val[1] + COLOR_RADIUS.val[1];
    		
-  		mLowerBound.val[2] = mSelectedColorHsv.val[2] - mColorRadius.val[2];
-   		mUpperBound.val[2] = mSelectedColorHsv.val[2] + mColorRadius.val[2];
+  		mLowerBound.val[2] = mSelectedColorHsv.val[2] - COLOR_RADIUS.val[2];
+   		mUpperBound.val[2] = mSelectedColorHsv.val[2] + COLOR_RADIUS.val[2];
    		
-   		Mat HsvSpectrum = new Mat(32, 2*(int)mColorRadius.val[0]*mSpectrumScale, CvType.CV_8UC3);
+    	Log.d(TAG, "Bounds: " + mLowerBound + "x" + mUpperBound);
+   		
+   		Mat spectrumHsv = new Mat(32, (int)(maxH-minH)*mSpectrumScale, CvType.CV_8UC3);
    		
    		for (int i = 0; i < 32; i++)
    		{
    			for (int k = 0; k < mSpectrumScale; k++)
    			{
-   				for (int j = 0; j < MaxH-MinH; j++)
+   				for (int j = 0; j < maxH-minH; j++)
    				{
-   					byte[] tmp = {(byte)(MinH+j), (byte)255, (byte)255};
-   					HsvSpectrum.put(i, j*mSpectrumScale + k, tmp);
+   					byte[] tmp = {(byte)(minH+j), (byte)255, (byte)255};
+   					spectrumHsv.put(i, j*mSpectrumScale + k, tmp);
    				}
    			}
    		}
         
-   		Imgproc.cvtColor(HsvSpectrum, mSpectrum, Imgproc.COLOR_HSV2RGB_FULL, 4);
+   		Imgproc.cvtColor(spectrumHsv, mSpectrum, Imgproc.COLOR_HSV2RGB_FULL, 4);
    		
         mIsColorSelected = true;
         
@@ -167,7 +149,6 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
 
 	@Override
 	protected Bitmap processFrame(VideoCapture capture) {
-		// TODO Auto-generated method stub
 		capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
 		
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
@@ -181,54 +162,53 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
         	
         	Mat hsvMat = new Mat();
         	Imgproc.cvtColor(PyrDownMat, hsvMat, Imgproc.COLOR_RGB2HSV_FULL);
-       		
-        	Log.d(TAG, "Bounds: " + mLowerBound + "x" + mUpperBound);
         	
-        	Mat RangedHsvMat = new Mat();
-        	Core.inRange(hsvMat, mLowerBound, mUpperBound, RangedHsvMat);
+        	Mat rangedHsvMat = new Mat();
+        	Core.inRange(hsvMat, mLowerBound, mUpperBound, rangedHsvMat);
         	
-        	Mat DilatedMat = new Mat();
-        	Imgproc.dilate(RangedHsvMat, DilatedMat, new Mat());
+        	Mat dilatedMat = new Mat();
+        	Imgproc.dilate(rangedHsvMat, dilatedMat, new Mat());
         	        	
             List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
             Mat hierarchy = new Mat();
 
-            Imgproc.findContours(DilatedMat, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            Imgproc.findContours(dilatedMat, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
             
             // Find max contour area
-            double MaxArea = 0;
+            double maxArea = 0;
             Iterator<MatOfPoint> it = contours.iterator();
             while (it.hasNext())
             {
             	MatOfPoint wrapper = it.next();
-            	double Area = Imgproc.contourArea(wrapper);
-            	if (Area > MaxArea)
-            		MaxArea = Area;
+            	double area = Imgproc.contourArea(wrapper);
+            	if (area > maxArea)
+            		maxArea = area;
             }
             
             // Filter contours by area and resize to fit the original image size
-            List<MatOfPoint> FilteredContours = new ArrayList<MatOfPoint>();
+            List<MatOfPoint> filteredContours = new ArrayList<MatOfPoint>();
             it = contours.iterator();
             while (it.hasNext())
             {
             	MatOfPoint wrapper = it.next();
-            	if (Imgproc.contourArea(wrapper) > 0.01*MaxArea);
+            	if (Imgproc.contourArea(wrapper) > MIN_CONTOUR_AREA*maxArea);
             	Point[] contour = wrapper.toArray();
             	for (int i = 0; i < contour.length; i++)
             	{
+            		// Original image was pyrDown twice
             		contour[i].x *= 4;
             		contour[i].y *= 4;
             	}
-            	FilteredContours.add(new MatOfPoint(contour));
+            	filteredContours.add(new MatOfPoint(contour));
             }
             
-            Imgproc.drawContours(mRgba, FilteredContours, -1, new Scalar(255,0,0,255));
+            Imgproc.drawContours(mRgba, filteredContours, -1, new Scalar(255,0,0,255));
             
-            Mat TestColorMat = mRgba.submat(2, 34, 2, 34);
-            TestColorMat.setTo(mSelectedColorRgba);
+            Mat testColorMat = mRgba.submat(2, 34, 2, 34);
+            testColorMat.setTo(mSelectedColorRgba);
             
-            Mat TestSpectrumMat = mRgba.submat(2, 34, 38, 38 + mSpectrum.cols());
-            mSpectrum.copyTo(TestSpectrumMat);
+            Mat testSpectrumMat = mRgba.submat(2, 34, 38, 38 + mSpectrum.cols());
+            mSpectrum.copyTo(testSpectrumMat);
         }
 
         try {
