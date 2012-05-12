@@ -64,6 +64,7 @@ void cv::gpu::sqrt(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::exp(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::log(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
+void cv::gpu::compare(const GpuMat&, Scalar, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::bitwise_or(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -1357,17 +1358,24 @@ void cv::gpu::exp(const GpuMat& src, GpuMat& dst, Stream& stream)
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> void compare_eq(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template <typename T> void compare_ne(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template <typename T> void compare_lt(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template <typename T> void compare_le(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template <typename T> void compare_eq(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_ne(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_lt(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_le(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+
+    template <typename T> void compare_eq(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_ne(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_lt(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_le(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_gt(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template <typename T> void compare_ge(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
 }}}
 
 void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int cmpop, Stream& stream)
 {
     using namespace cv::gpu::device;
 
-    typedef void (*func_t)(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    typedef void (*func_t)(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
     static const func_t funcs[7][4] =
     {
         {compare_eq<unsigned char> , compare_ne<unsigned char> , compare_lt<unsigned char> , compare_le<unsigned char> },
@@ -1405,6 +1413,57 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
     dst.create(src1.size(), CV_MAKE_TYPE(CV_8U, src1.channels()));
 
     funcs[src1.depth()][codes[cmpop]](psrc1[cmpop]->reshape(1), psrc2[cmpop]->reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
+}
+
+namespace
+{
+    template <typename T>
+    void castScalar(Scalar& sc)
+    {
+        sc.val[0] = saturate_cast<T>(sc.val[0]);
+        sc.val[1] = saturate_cast<T>(sc.val[1]);
+        sc.val[2] = saturate_cast<T>(sc.val[2]);
+        sc.val[3] = saturate_cast<T>(sc.val[3]);
+    }
+}
+
+void cv::gpu::compare(const GpuMat& src, Scalar sc, GpuMat& dst, int cmpop, Stream& stream)
+{
+    using namespace cv::gpu::device;
+
+    typedef void (*func_t)(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    static const func_t funcs[7][6] =
+    {
+        {compare_eq<unsigned char> , compare_gt<unsigned char> , compare_ge<unsigned char> , compare_lt<unsigned char> , compare_le<unsigned char> , compare_ne<unsigned char> },
+        {compare_eq<signed char>   , compare_gt<signed char>   , compare_ge<signed char>   , compare_lt<signed char>   , compare_le<signed char>   , compare_ne<signed char>   },
+        {compare_eq<unsigned short>, compare_gt<unsigned short>, compare_ge<unsigned short>, compare_lt<unsigned short>, compare_le<unsigned short>, compare_ne<unsigned short>},
+        {compare_eq<short>         , compare_gt<short>         , compare_ge<short>         , compare_lt<short>         , compare_le<short>         , compare_ne<short>         },
+        {compare_eq<int>           , compare_gt<int>           , compare_ge<int>           , compare_lt<int>           , compare_le<int>           , compare_ne<int>           },
+        {compare_eq<float>         , compare_gt<float>         , compare_ge<float>         , compare_lt<float>         , compare_le<float>         , compare_ne<float>         },
+        {compare_eq<double>        , compare_gt<double>        , compare_ge<double>        , compare_lt<double>        , compare_le<double>        , compare_ne<double>        }
+    };
+
+    typedef void (*cast_func_t)(Scalar& sc);
+    static const cast_func_t cast_func[] =
+    {
+        castScalar<unsigned char>, castScalar<signed char>, castScalar<unsigned short>, castScalar<short>, castScalar<int>, castScalar<float>, castScalar<double>
+    };
+
+    CV_Assert(src.depth() <= CV_64F);
+    CV_Assert(src.channels() <= 4);
+    CV_Assert(cmpop >= CMP_EQ && cmpop <= CMP_NE);
+
+    if (src.depth() == CV_64F)
+    {
+        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+    }
+
+    dst.create(src.size(), CV_MAKE_TYPE(CV_8U, src.channels()));
+
+    cast_func[src.depth()](sc);
+
+    funcs[src.depth()][cmpop](src, src.channels(), sc.val, dst, StreamAccessor::getStream(stream));
 }
 
 

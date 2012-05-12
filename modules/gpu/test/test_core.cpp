@@ -1480,12 +1480,12 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Exp, testing::Combine(
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
-// compare
+// Compare_Array
 
 CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
 #define ALL_CMP_CODES testing::Values(CmpCode(cv::CMP_EQ), CmpCode(cv::CMP_NE), CmpCode(cv::CMP_GT), CmpCode(cv::CMP_GE), CmpCode(cv::CMP_LT), CmpCode(cv::CMP_LE))
 
-PARAM_TEST_CASE(Compare, cv::gpu::DeviceInfo, cv::Size, MatDepth, CmpCode, UseRoi)
+PARAM_TEST_CASE(Compare_Array, cv::gpu::DeviceInfo, cv::Size, MatDepth, CmpCode, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -1505,7 +1505,7 @@ PARAM_TEST_CASE(Compare, cv::gpu::DeviceInfo, cv::Size, MatDepth, CmpCode, UseRo
     }
 };
 
-TEST_P(Compare, Accuracy)
+TEST_P(Compare_Array, Accuracy)
 {
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
@@ -1534,10 +1534,113 @@ TEST_P(Compare, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Core, Compare, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Core, Compare_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
+    ALL_CMP_CODES,
+    WHOLE_SUBMAT));
+
+////////////////////////////////////////////////////////////////////////////////
+// Compare_Scalar
+
+namespace
+{
+    template <template <typename> class Op, typename T>
+    void compareScalarImpl(const cv::Mat& src, cv::Scalar sc, cv::Mat& dst)
+    {
+        Op<T> op;
+
+        const int cn = src.channels();
+
+        dst.create(src.size(), CV_MAKE_TYPE(CV_8U, cn));
+
+        for (int y = 0; y < src.rows; ++y)
+        {
+            for (int x = 0; x < src.cols; ++x)
+            {
+                for (int c = 0; c < cn; ++c)
+                {
+                    T src_val = src.at<T>(y, x * cn + c);
+                    T sc_val = cv::saturate_cast<T>(sc.val[c]);
+                    dst.at<uchar>(y, x * cn + c) = static_cast<uchar>(static_cast<int>(op(src_val, sc_val)) * 255);
+                }
+            }
+        }
+    }
+
+    void compareScalarGold(const cv::Mat& src, cv::Scalar sc, cv::Mat& dst, int cmpop)
+    {
+        typedef void (*func_t)(const cv::Mat& src, cv::Scalar sc, cv::Mat& dst);
+        static const func_t funcs[7][6] =
+        {
+            {compareScalarImpl<std::equal_to, unsigned char> , compareScalarImpl<std::greater, unsigned char> , compareScalarImpl<std::greater_equal, unsigned char> , compareScalarImpl<std::less, unsigned char> , compareScalarImpl<std::less_equal, unsigned char> , compareScalarImpl<std::not_equal_to, unsigned char> },
+            {compareScalarImpl<std::equal_to, signed char>   , compareScalarImpl<std::greater, signed char>   , compareScalarImpl<std::greater_equal, signed char>   , compareScalarImpl<std::less, signed char>   , compareScalarImpl<std::less_equal, signed char>   , compareScalarImpl<std::not_equal_to, signed char>   },
+            {compareScalarImpl<std::equal_to, unsigned short>, compareScalarImpl<std::greater, unsigned short>, compareScalarImpl<std::greater_equal, unsigned short>, compareScalarImpl<std::less, unsigned short>, compareScalarImpl<std::less_equal, unsigned short>, compareScalarImpl<std::not_equal_to, unsigned short>},
+            {compareScalarImpl<std::equal_to, short>         , compareScalarImpl<std::greater, short>         , compareScalarImpl<std::greater_equal, short>         , compareScalarImpl<std::less, short>         , compareScalarImpl<std::less_equal, short>         , compareScalarImpl<std::not_equal_to, short>         },
+            {compareScalarImpl<std::equal_to, int>           , compareScalarImpl<std::greater, int>           , compareScalarImpl<std::greater_equal, int>           , compareScalarImpl<std::less, int>           , compareScalarImpl<std::less_equal, int>           , compareScalarImpl<std::not_equal_to, int>           },
+            {compareScalarImpl<std::equal_to, float>         , compareScalarImpl<std::greater, float>         , compareScalarImpl<std::greater_equal, float>         , compareScalarImpl<std::less, float>         , compareScalarImpl<std::less_equal, float>         , compareScalarImpl<std::not_equal_to, float>         },
+            {compareScalarImpl<std::equal_to, double>        , compareScalarImpl<std::greater, double>        , compareScalarImpl<std::greater_equal, double>        , compareScalarImpl<std::less, double>        , compareScalarImpl<std::less_equal, double>        , compareScalarImpl<std::not_equal_to, double>        }
+        };
+
+        funcs[src.depth()][cmpop](src, sc, dst);
+    }
+}
+
+PARAM_TEST_CASE(Compare_Scalar, cv::gpu::DeviceInfo, cv::Size, MatType, CmpCode, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    int type;
+    int cmp_code;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        cmp_code = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(Compare_Scalar, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+    cv::Scalar sc = randomScalar(0.0, 255.0);
+
+    if (src.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::gpu::GpuMat dst;
+            cv::gpu::compare(loadMat(src), sc, dst, cmp_code);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::gpu::GpuMat dst = createMat(size, CV_MAKE_TYPE(CV_8U, src.channels()), useRoi);
+
+        cv::gpu::compare(loadMat(src, useRoi), sc, dst, cmp_code);
+
+        cv::Mat dst_gold;
+        compareScalarGold(src, sc, dst_gold, cmp_code);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Core, Compare_Scalar, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    TYPES(CV_8U, CV_64F, 1, 4),
     ALL_CMP_CODES,
     WHOLE_SUBMAT));
 

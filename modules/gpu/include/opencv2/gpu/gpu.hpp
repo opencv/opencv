@@ -527,6 +527,7 @@ CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream
 
 //! compares elements of two arrays (c = a <cmpop> b)
 CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
+CV_EXPORTS void compare(const GpuMat& a, Scalar sc, GpuMat& dst, int cmpop, Stream& stream = Stream::Null());
 
 //! performs per-elements bit-wise inversion
 CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
@@ -1371,7 +1372,7 @@ private:
     std::vector<GpuMat> trainDescCollection;
 };
 
-template <class Distance> 
+template <class Distance>
 class CV_EXPORTS BruteForceMatcher_GPU;
 
 template <typename T>

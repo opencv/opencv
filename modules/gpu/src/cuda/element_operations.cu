@@ -1158,130 +1158,279 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////////////////////////////////////////////////////////////
     // Compare
 
-    template <typename T> struct Equal : binary_function<T, T, uchar>
+#define TYPE_VEC(type, cn) typename TypeVec<type, cn>::vec_type
+
+    template <template <typename> class Op, typename T, int cn> struct Compare;
+    template <template <typename> class Op, typename T>
+    struct Compare<Op, T, 1>: binary_function<T, T, uchar>
     {
         __device__ __forceinline__ uchar operator()(T src1, T src2) const
         {
-            return static_cast<uchar>((src1 == src2) * 255);
+            Op<T> op;
+            return static_cast<uchar>(static_cast<int>(op(src1, src2)) * 255);
         }
     };
-    template <typename T> struct NotEqual : binary_function<T, T, uchar>
+    template <template <typename> class Op, typename T>
+    struct Compare<Op, T, 2>: binary_function<TYPE_VEC(T, 2), TYPE_VEC(T, 2), TYPE_VEC(uchar, 2)>
     {
-        __device__ __forceinline__ uchar operator()(T src1, T src2) const
+        __device__ __forceinline__ TYPE_VEC(uchar, 2) operator()(const TYPE_VEC(T, 2) & src1, const TYPE_VEC(T, 2) & src2) const
         {
-            return static_cast<uchar>((src1 != src2) * 255);
+            Op<T> op;
+            return VecTraits<TYPE_VEC(uchar, 2)>::make(
+                        static_cast<uchar>(static_cast<int>(op(src1.x, src2.x)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src1.y, src2.y)) * 255));
         }
     };
-    template <typename T> struct Less : binary_function<T, T, uchar>
+    template <template <typename> class Op, typename T>
+    struct Compare<Op, T, 3>: binary_function<TYPE_VEC(T, 3), TYPE_VEC(T, 3), TYPE_VEC(uchar, 3)>
     {
-        __device__ __forceinline__ uchar operator()(T src1, T src2) const
+        __device__ __forceinline__ TYPE_VEC(uchar, 3) operator()(const TYPE_VEC(T, 3) & src1, const TYPE_VEC(T, 3) & src2) const
         {
-            return static_cast<uchar>((src1 < src2) * 255);
+            Op<T> op;
+            return VecTraits<TYPE_VEC(uchar, 3)>::make(
+                        static_cast<uchar>(static_cast<int>(op(src1.x, src2.x)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src1.y, src2.y)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src1.z, src2.z)) * 255));
         }
     };
-    template <typename T> struct LessEqual : binary_function<T, T, uchar>
+    template <template <typename> class Op, typename T>
+    struct Compare<Op, T, 4>: binary_function<TYPE_VEC(T, 4), TYPE_VEC(T, 4), TYPE_VEC(uchar, 4)>
     {
-        __device__ __forceinline__ uchar operator()(T src1, T src2) const
+        __device__ __forceinline__ TYPE_VEC(uchar, 4) operator()(const TYPE_VEC(T, 4) & src1, const TYPE_VEC(T, 4) & src2) const
         {
-            return static_cast<uchar>((src1 <= src2) * 255);
+            Op<T> op;
+            return VecTraits<TYPE_VEC(uchar, 4)>::make(
+                        static_cast<uchar>(static_cast<int>(op(src1.x, src2.x)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src1.y, src2.y)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src1.z, src2.z)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src1.w, src2.w)) * 255));
         }
     };
 
-    template <> struct TransformFunctorTraits< Equal<int> > : DefaultTransformFunctorTraits< Equal<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Equal<float> > : DefaultTransformFunctorTraits< Equal<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< NotEqual<int> > : DefaultTransformFunctorTraits< NotEqual<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< NotEqual<float> > : DefaultTransformFunctorTraits< NotEqual<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Less<int> > : DefaultTransformFunctorTraits< Less<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Less<float> > : DefaultTransformFunctorTraits< Less<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< LessEqual<int> > : DefaultTransformFunctorTraits< LessEqual<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< LessEqual<float> > : DefaultTransformFunctorTraits< LessEqual<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
+#undef TYPE_VEC
+
+#define IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(op, type, block_dim_y, shift) \
+    template <> struct TransformFunctorTraits< Compare<op, type, 1> > : DefaultTransformFunctorTraits< Compare<op, type, 1> > \
+    { \
+        enum { smart_block_dim_y = block_dim_y }; \
+        enum { smart_shift = shift }; \
     };
 
-    template <template <typename> class Op, typename T> void compare(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, float, 8, 4)
+
+#undef IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS
+
+    template <template <typename> class Op, typename T> void compare(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        Op<T> op;
+        Compare<Op, T, 1> op;
         cv::gpu::device::transform(static_cast< DevMem2D_<T> >(src1), static_cast< DevMem2D_<T> >(src2), dst, op, WithOutMask(), stream);
     }
 
-    template <typename T> void compare_eq(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
+    template <typename T> void compare_eq(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        compare<Equal, T>(src1, src2, dst, stream);
+        compare<equal_to, T>(src1, src2, dst, stream);
     }
-    template <typename T> void compare_ne(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
+    template <typename T> void compare_ne(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        compare<NotEqual, T>(src1, src2, dst, stream);
+        compare<not_equal_to, T>(src1, src2, dst, stream);
     }
-    template <typename T> void compare_lt(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
+    template <typename T> void compare_lt(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        compare<Less, T>(src1, src2, dst, stream);
+        compare<less, T>(src1, src2, dst, stream);
     }
-    template <typename T> void compare_le(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream)
+    template <typename T> void compare_le(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        compare<LessEqual, T>(src1, src2, dst, stream);
+        compare<less_equal, T>(src1, src2, dst, stream);
     }
 
-    template void compare_eq<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_eq<schar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_eq<ushort>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_eq<short >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_eq<int   >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_eq<float >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_eq<double>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template void compare_eq<uchar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<schar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<ushort>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<short >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<int   >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<float >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<double>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
 
-    template void compare_ne<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_ne<schar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_ne<ushort>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_ne<short >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_ne<int   >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_ne<float >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_ne<double>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template void compare_ne<uchar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<schar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<ushort>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<short >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<int   >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<float >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<double>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
 
-    template void compare_lt<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_lt<schar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_lt<ushort>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_lt<short >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_lt<int   >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_lt<float >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_lt<double>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template void compare_lt<uchar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<schar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<ushort>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<short >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<int   >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<float >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<double>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
 
-    template void compare_le<uchar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_le<schar >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_le<ushort>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_le<short >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_le<int   >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_le<float >(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
-    template void compare_le<double>(const DevMem2Db& src1, const DevMem2Db& src2, const DevMem2Db& dst, cudaStream_t stream);
+    template void compare_le<uchar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<schar >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<ushort>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<short >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<int   >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<float >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<double>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
+
+    template <template <typename> class Op, typename T, int cn> void compare(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream)
+    {
+        typedef typename TypeVec<T, cn>::vec_type src_t;
+        typedef typename TypeVec<uchar, cn>::vec_type dst_t;
+
+        T sval[] = {static_cast<T>(val[0]), static_cast<T>(val[1]), static_cast<T>(val[2]), static_cast<T>(val[3])};
+        src_t val1 = VecTraits<src_t>::make(sval);
+
+        Compare<Op, T, cn> op;
+
+        cv::gpu::device::transform(static_cast< DevMem2D_<src_t> >(src), static_cast< DevMem2D_<dst_t> >(dst), cv::gpu::device::bind2nd(op, val1), WithOutMask(), stream);
+    }
+
+    template <typename T> void compare_eq(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream);
+        static const func_t funcs[] =
+        {
+            0,
+            compare<equal_to, T, 1>,
+            compare<equal_to, T, 2>,
+            compare<equal_to, T, 3>,
+            compare<equal_to, T, 4>
+        };
+
+        funcs[cn](src, val, dst, stream);
+    }
+    template <typename T> void compare_ne(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream);
+        static const func_t funcs[] =
+        {
+            0,
+            compare<not_equal_to, T, 1>,
+            compare<not_equal_to, T, 2>,
+            compare<not_equal_to, T, 3>,
+            compare<not_equal_to, T, 4>
+        };
+
+        funcs[cn](src, val, dst, stream);
+    }
+    template <typename T> void compare_lt(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream);
+        static const func_t funcs[] =
+        {
+            0,
+            compare<less, T, 1>,
+            compare<less, T, 2>,
+            compare<less, T, 3>,
+            compare<less, T, 4>
+        };
+
+        funcs[cn](src, val, dst, stream);
+    }
+    template <typename T> void compare_le(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream);
+        static const func_t funcs[] =
+        {
+            0,
+            compare<less_equal, T, 1>,
+            compare<less_equal, T, 2>,
+            compare<less_equal, T, 3>,
+            compare<less_equal, T, 4>
+        };
+
+        funcs[cn](src, val, dst, stream);
+    }
+    template <typename T> void compare_gt(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream);
+        static const func_t funcs[] =
+        {
+            0,
+            compare<greater, T, 1>,
+            compare<greater, T, 2>,
+            compare<greater, T, 3>,
+            compare<greater, T, 4>
+        };
+
+        funcs[cn](src, val, dst, stream);
+    }
+    template <typename T> void compare_ge(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream);
+        static const func_t funcs[] =
+        {
+            0,
+            compare<greater_equal, T, 1>,
+            compare<greater_equal, T, 2>,
+            compare<greater_equal, T, 3>,
+            compare<greater_equal, T, 4>
+        };
+
+        funcs[cn](src, val, dst, stream);
+    }
+
+    template void compare_eq<uchar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<schar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<ushort>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<short >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<int   >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<float >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_eq<double>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+
+    template void compare_ne<uchar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<schar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<ushort>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<short >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<int   >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<float >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ne<double>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+
+    template void compare_lt<uchar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<schar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<ushort>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<short >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<int   >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<float >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_lt<double>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+
+    template void compare_le<uchar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<schar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<ushort>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<short >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<int   >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<float >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_le<double>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+
+    template void compare_gt<uchar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_gt<schar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_gt<ushort>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_gt<short >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_gt<int   >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_gt<float >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_gt<double>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+
+    template void compare_ge<uchar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ge<schar >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ge<ushort>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ge<short >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ge<int   >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ge<float >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
+    template void compare_ge<double>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
 
 
     //////////////////////////////////////////////////////////////////////////
