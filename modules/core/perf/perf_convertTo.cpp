@@ -32,5 +32,5 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
 
     TEST_CYCLE() src.convertTo(dst, depthDst, alpha);
 
-    SANITY_CHECK(dst, 1e-12);
+    SANITY_CHECK(dst, alpha == 1.0 ? 1e-12 : 1e-7);
 }
