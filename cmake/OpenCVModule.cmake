@@ -58,8 +58,8 @@ set(OPENCV_MODULES_DISABLED_FORCE "" CACHE INTERNAL "List of OpenCV modules whic
 # * <list of dependencies> - can include full names of modules or full pathes to shared/static libraries or cmake targets
 macro(ocv_add_dependencies full_modname)
   #we don't clean the dependencies here to allow this macro several times for every module
-  foreach(d "REQIRED" ${ARGN})
-    if(d STREQUAL "REQIRED")
+  foreach(d "REQUIRED" ${ARGN})
+    if(d STREQUAL "REQUIRED")
       set(__depsvar OPENCV_MODULE_${full_modname}_REQ_DEPS)
     elseif(d STREQUAL "OPTIONAL")
       set(__depsvar OPENCV_MODULE_${full_modname}_OPT_DEPS)
@@ -110,7 +110,13 @@ macro(ocv_add_module _name)
     unset(OPENCV_MODULE_${the_module}_OPT_DEPS CACHE)
 
     #create option to enable/disable this module
-    option(BUILD_${the_module} "Include ${the_module} module into the OpenCV build" ON)
+    if(the_module STREQUAL "opencv_world")
+        set(build_the_module OFF)
+    else()
+        set(build_the_module ON)
+    endif()
+    option(BUILD_${the_module} "Include ${the_module} module into the OpenCV build" ${build_the_module})
+    unset(build_the_module)
 
     if("${ARGV1}" STREQUAL "INTERNAL" OR "${ARGV1}" STREQUAL "BINDINGS")
       set(__ocv_argn__ ${ARGN})

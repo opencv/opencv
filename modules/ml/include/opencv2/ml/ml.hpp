@@ -2136,6 +2136,8 @@ typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
 
 template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
+
+CV_EXPORTS bool initModule_ml(void);
     
 }
 

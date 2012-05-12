@@ -7,11 +7,11 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,18 +40,22 @@
 //
 //M*/
 
-#ifndef __OPENCV_NONFREE_HPP__
-#define __OPENCV_NONFREE_HPP__
+#include "precomp.hpp"
 
-#include "opencv2/nonfree/features2d.hpp"
-
-namespace cv
+bool cv::initAll()
 {
-
-CV_EXPORTS bool initModule_nonfree();
-    
-}
-
+    return true
+#ifdef HAVE_OPENCV_VIDEO
+    && initModule_video()
 #endif
-
-/* End of file. */
+#ifdef HAVE_OPENCV_FEATURES2D
+    && initModule_features2d()
+#endif
+#ifdef HAVE_OPENCV_NONFREE
+    && initModule_nonfree()
+#endif
+#ifdef HAVE_OPENCV_ML
+    && initModule_ml()
+#endif
+    ;
+}
