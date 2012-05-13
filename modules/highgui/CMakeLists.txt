@@ -301,7 +301,3 @@ endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
-
-set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} PARENT_SCOPE)
-set(GRFMT_LIBS ${GRFMT_LIBS} PARENT_SCOPE)
-

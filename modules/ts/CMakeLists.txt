@@ -1,3 +1,5 @@
+set(the_description "The ts module")
+
 if(IOS)
   ocv_module_disable(ts)
 endif()
@@ -5,8 +7,9 @@ endif()
 if(MINGW)
   set(OPENCV_MODULE_TYPE STATIC)
 endif()
-    
-set(the_description "The ts module")
+
+set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
+   
 ocv_add_module(ts opencv_core)
 ocv_glob_module_sources()
 ocv_module_include_directories()

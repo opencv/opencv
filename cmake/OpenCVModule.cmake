@@ -7,6 +7,7 @@
 #
 # OPENCV_MODULE_${the_module}_LOCATION
 # OPENCV_MODULE_${the_module}_DESCRIPTION
+# OPENCV_MODULE_${the_module}_CLASS - PUBLIC|INTERNAL|BINDINGS
 # OPENCV_MODULE_${the_module}_HEADERS
 # OPENCV_MODULE_${the_module}_SOURCES
 # OPENCV_MODULE_${the_module}_DEPS - final flattened set of module dependencies
@@ -18,6 +19,8 @@
 # To control the setup of the module you could also set:
 # the_description - text to be used as current module description
 # OPENCV_MODULE_TYPE - STATIC|SHARED - set to force override global settings for current module
+# OPENCV_MODULE_IS_PART_OF_WORLD - ON|OFF (default ON) - should the module be added to the opencv_world?
+# BUILD_${the_module}_INIT - ON|OFF (default ON) - initial value for BUILD_${the_module}
 
 # The verbose template for OpenCV module:
 #
@@ -38,10 +41,12 @@
 
 # clean flags for modules enabled on previous cmake run
 # this is necessary to correctly handle modules removal
-foreach(mod ${OPENCV_MODULES_BUILD})
+foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MODULES_DISABLED_AUTO} ${OPENCV_MODULES_DISABLED_FORCE})
   if(HAVE_${mod})
     unset(HAVE_${mod} CACHE)
   endif()
+  unset(OPENCV_MODULE_${mod}_REQ_DEPS CACHE)
+  unset(OPENCV_MODULE_${mod}_OPT_DEPS CACHE)
 endforeach()
 
 # clean modules info which needs to be recalculated
@@ -84,7 +89,7 @@ endmacro()
 # Usage:
 #   ocv_add_module(<name> [INTERNAL|BINDINGS] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 # Example:
-#   ocv_add_module(yaom INTERNAL opencv_core opencv_highgui NOLINK opencv_flann OPTIONAL opencv_gpu)
+#   ocv_add_module(yaom INTERNAL opencv_core opencv_highgui opencv_flann OPTIONAL opencv_gpu)
 macro(ocv_add_module _name)
   string(TOLOWER "${_name}" name)
   string(REGEX REPLACE "^opencv_" "" ${name} "${name}")
@@ -106,28 +111,30 @@ macro(ocv_add_module _name)
     endif()
     set(OPENCV_MODULE_${the_module}_DESCRIPTION "${the_description}" CACHE INTERNAL "Brief description of ${the_module} module")
     set(OPENCV_MODULE_${the_module}_LOCATION    "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "Location of ${the_module} module sources")
-    unset(OPENCV_MODULE_${the_module}_REQ_DEPS CACHE)
-    unset(OPENCV_MODULE_${the_module}_OPT_DEPS CACHE)
 
     #create option to enable/disable this module
-    if(the_module STREQUAL "opencv_world")
-        set(build_the_module OFF)
-    else()
-        set(build_the_module ON)
+    if(NOT DEFINED BUILD_${the_module}_INIT)
+      set(BUILD_${the_module}_INIT ON)
     endif()
-    option(BUILD_${the_module} "Include ${the_module} module into the OpenCV build" ${build_the_module})
-    unset(build_the_module)
+    option(BUILD_${the_module} "Include ${the_module} module into the OpenCV build" ${BUILD_${the_module}_INIT})
 
     if("${ARGV1}" STREQUAL "INTERNAL" OR "${ARGV1}" STREQUAL "BINDINGS")
+      set(OPENCV_MODULE_${the_module}_CLASS "${ARGV1}" CACHE INTERNAL "The cathegory of the module")
       set(__ocv_argn__ ${ARGN})
       list(REMOVE_AT __ocv_argn__ 0)
       ocv_add_dependencies(${the_module} ${__ocv_argn__})
       unset(__ocv_argn__)
     else()
+      set(OPENCV_MODULE_${the_module}_CLASS "PUBLIC" CACHE INTERNAL "The cathegory of the module")
       ocv_add_dependencies(${the_module} ${ARGN})
       if(BUILD_${the_module})
         set(OPENCV_MODULES_PUBLIC ${OPENCV_MODULES_PUBLIC} "${the_module}" CACHE INTERNAL "List of OpenCV modules marked for export")
       endif()
+    endif()
+    
+    # add self to the world dependencies
+    if(NOT DEFINED OPENCV_MODULE_IS_PART_OF_WORLD AND NOT OPENCV_MODULE_${the_module}_CLASS STREQUAL "BINDINGS" OR OPENCV_MODULE_IS_PART_OF_WORLD)
+      ocv_add_dependencies(opencv_world OPTIONAL ${the_module})
     endif()
 
     if(BUILD_${the_module})
@@ -435,10 +442,13 @@ endmacro()
 # creates OpenCV module in current folder
 # creates new target, configures standard dependencies, compilers flags, install rules
 # Usage:
-# ocv_create_module(<extra link dependencies>)
+#   ocv_create_module(<extra link dependencies>)
+#   ocv_create_module(SKIP_LINK)
 macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES})
-  target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+  if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
+    target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+  endif()
   add_dependencies(opencv_modules ${the_module})
 
   if(ENABLE_SOLUTION_FOLDERS)
