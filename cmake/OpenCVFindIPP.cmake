@@ -220,45 +220,40 @@ function(set_ipp_variables _LATEST_VERSION)
 endfunction()
 
 
-    # ------------------------------------------------------------------------
-    # This section will look for IPP through IPPROOT env variable
-    # Note, IPPROOT is not set by IPP installer, you may need to set it manually
-    # ------------------------------------------------------------------------
-    find_path(
-        IPP_H_PATH
-        NAMES ippversion.h
-        PATHS $ENV{IPPROOT}
-        PATH_SUFFIXES include
-        DOC "The path to Intel(R) IPP header files"
-        NO_DEFAULT_PATH
-        NO_CMAKE_PATH)
+# ------------------------------------------------------------------------
+# This section will look for IPP through IPPROOT env variable
+# Note, IPPROOT is not set by IPP installer, you may need to set it manually
+# ------------------------------------------------------------------------
+find_path(
+    IPP_H_PATH
+    NAMES ippversion.h
+    PATHS $ENV{IPPROOT}
+    PATH_SUFFIXES include
+    DOC "The path to Intel(R) IPP header files"
+    NO_DEFAULT_PATH
+    NO_CMAKE_PATH)
 
-    if(IPP_H_PATH)
+if(IPP_H_PATH)
+    set(IPP_FOUND 1)
 
-        set(IPP_FOUND 1)
+    # traverse up to IPPROOT level
+    get_filename_component(IPP_ROOT_DIR ${IPP_H_PATH} PATH)
 
-        # traverse up to IPPROOT level
-        get_filename_component(IPP_ROOT_DIR ${IPP_H_PATH} PATH)
+    # extract IPP version info
+    get_ipp_version(${IPP_ROOT_DIR})
 
-        # extract IPP version info
-        get_ipp_version(${IPP_ROOT_DIR})
+    # keep info in the same vars for auto search and search by IPPROOT
+    set(IPP_LATEST_VERSION_STR   ${IPP_VERSION_STR})
+    set(IPP_LATEST_VERSION_MAJOR ${IPP_VERSION_MAJOR})
+    set(IPP_LATEST_VERSION_MINOR ${IPP_VERSION_MINOR})
+    set(IPP_LATEST_VERSION_BUILD ${IPP_VERSION_BUILD})
 
-        # keep info in the same vars for auto search and search by IPPROOT
-        set(IPP_LATEST_VERSION_STR   ${IPP_VERSION_STR})
-        set(IPP_LATEST_VERSION_MAJOR ${IPP_VERSION_MAJOR})
-        set(IPP_LATEST_VERSION_MINOR ${IPP_VERSION_MINOR})
-        set(IPP_LATEST_VERSION_BUILD ${IPP_VERSION_BUILD})
-
-        # set IPP INCLUDE, LIB dirs and library names
-        set_ipp_variables(${IPP_LATEST_VERSION_STR})
-
-    endif()
+    # set IPP INCLUDE, LIB dirs and library names
+    set_ipp_variables(${IPP_LATEST_VERSION_STR})
+endif()
 
 
-    if(IPP_FOUND)
-        return()
-    endif()
-
+if(NOT IPP_FOUND)
     # reset var from previous search
     set(IPP_H_PATH)
 
@@ -304,19 +299,38 @@ endfunction()
             endforeach()
         endif()
     endforeach()
+endif()
 
-    if(IPP_FOUND)
-        # set IPP INCLUDE, LIB dirs and library names
-        set_ipp_variables(${IPP_LATEST_VERSION_STR})
+if(IPP_FOUND)
+    # set IPP INCLUDE, LIB dirs and library names
+    set_ipp_variables(${IPP_LATEST_VERSION_STR})
 
-        # set CACHE variable IPP_H_PATH,
-        # path to IPP header files for the latest version
-        find_path(
-            IPP_H_PATH
-            NAMES ippversion.h
-            PATHS ${IPP_ROOT_DIR}
-            PATH_SUFFIXES include
-            DOC "The path to Intel(R) IPP header files"
-            NO_DEFAULT_PATH
-            NO_CMAKE_PATH)
-    endif()
+    # set CACHE variable IPP_H_PATH,
+    # path to IPP header files for the latest version
+    find_path(
+        IPP_H_PATH
+        NAMES ippversion.h
+        PATHS ${IPP_ROOT_DIR}
+        PATH_SUFFIXES include
+        DOC "The path to Intel(R) IPP header files"
+        NO_DEFAULT_PATH
+        NO_CMAKE_PATH)
+endif()
+
+if(WIN32 AND MINGW AND NOT IPP_LATEST_VERSION_MAJOR LESS 7)
+    # Since IPP built with Microsoft compiler and /GS option
+    # ======================================================
+    # From Windows SDK 7.1
+    #   (usually in "C:\Program Files\Microsoft Visual Studio 10.0\VC\lib"),
+    # to avoid undefined reference to __security_cookie and _chkstk:
+    set(MSV_RUNTMCHK "RunTmChk")
+    set(IPP_LIBRARIES ${IPP_LIBRARIES} ${MSV_RUNTMCHK}${IPP_LIB_SUFFIX})
+
+    # To avoid undefined reference to _alldiv and _chkstk
+    # ===================================================
+    # NB: it may require a recompilation of w32api (after having modified
+    #     the file ntdll.def) to export the required functions
+    #     See http://code.opencv.org/issues/1906 for additional details
+    set(MSV_NTDLL    "ntdll")
+    set(IPP_LIBRARIES ${IPP_LIBRARIES} ${MSV_NTDLL}${IPP_LIB_SUFFIX})
+endif()
