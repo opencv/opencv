@@ -1,5 +1,16 @@
-if (WIN32 AND CMAKE_GENERATOR MATCHES "(MinGW)|(MSYS)")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
+if (WIN32)
+  # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    foreach(flags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+      string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
+    endforeach()
+  endforeach()
+
+  if(CMAKE_COMPILER_IS_GNUC)
+    foreach(flags CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
+      string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
+    endforeach()
+  endforeach()
 endif()
 
 if(MSVC)
