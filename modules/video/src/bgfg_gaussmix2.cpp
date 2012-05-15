@@ -571,7 +571,7 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
                                  bgmodelUsedModes.data, nmixtures, (float)learningRate,
                                  (float)varThreshold,
                                  backgroundRatio, varThresholdGen,
-                                 fVarInit, fVarMin, fVarMax, fCT, fTau,
+                                 fVarInit, fVarMin, fVarMax, -learningRate*fCT, fTau,
                                  bShadowDetection, nShadowDetection));
     }
 }
