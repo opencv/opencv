@@ -6,7 +6,7 @@ if (WIN32)
     endforeach()
   endif()
 
-  if(CMAKE_COMPILER_IS_GNUC)
+  if(CMAKE_COMPILER_IS_GNUCC)
     foreach(flags CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
       string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
     endforeach()
