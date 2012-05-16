@@ -2897,8 +2897,16 @@ cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
 namespace cv
 {
 
-Mat Mat::reshape(int, int, const int*) const
+Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 {
+    if(_newndims == dims)
+    {
+        if(_newsz == 0)
+            return reshape(_cn);
+        if(_newndims == 2)
+            return reshape(_cn, _newsz[0]);
+    }
+
     CV_Error(CV_StsNotImplemented, "");
     // TBD
     return Mat();
