@@ -54,6 +54,9 @@
 #include <stdio.h>
 #include <assert.h>
 
+#define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
+#include <multimon.h>
+
 #ifdef HAVE_OPENGL
 #include <memory>
 #include <algorithm>
@@ -1065,7 +1068,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     icvSetWindowLongPtr( hWnd, CV_USERDATA, window );
     icvSetWindowLongPtr( mainhWnd, CV_USERDATA, window );
 
-    // Recalculate window position
+    // Recalculate window pos
     icvUpdateWindowPos( window );
 
     result = 1;
@@ -1633,7 +1636,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
         {
             WINDOWPOS* pos = (WINDOWPOS*)lParam;
 
-            // Update the toolbar position/size
+            // Update the toolbar pos/size
             if(window->toolbar.toolbar)
             {
                 RECT rect;
@@ -1646,6 +1649,36 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
             break;
         }
+
+    case WM_WINDOWPOSCHANGING:
+       {
+          // Snap window to screen edges with multi-monitor support. // Adi Shavit
+          LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
+          
+          RECT rect;
+          GetWindowRect(window->frame, &rect);
+
+          HMONITOR hMonitor;
+          hMonitor = MonitorFromRect(&rect, MONITOR_DEFAULTTONEAREST);
+
+          MONITORINFO mi;
+          mi.cbSize = sizeof(mi);
+          GetMonitorInfo(hMonitor, &mi);
+
+          const int SNAP_DISTANCE = 15;
+
+          if (abs(pos->x - mi.rcMonitor.left) <= SNAP_DISTANCE) 
+             pos->x = mi.rcMonitor.left;               // snap to left edge
+          else 
+             if (abs(pos->x + pos->cx - mi.rcMonitor.right) <= SNAP_DISTANCE)
+                pos->x = mi.rcMonitor.right - pos->cx; // snap to right edge
+
+          if (abs(pos->y - mi.rcMonitor.top) <= SNAP_DISTANCE)
+             pos->y = mi.rcMonitor.top;                 // snap to top edge
+          else 
+             if (abs(pos->y + pos->cy - mi.rcMonitor.bottom) <= SNAP_DISTANCE)
+                pos->y = mi.rcMonitor.bottom - pos->cy; // snap to bottom edge
+       }
 
     case WM_ACTIVATE:
         if(LOWORD(wParam) == WA_ACTIVE || LOWORD(wParam) == WA_CLICKACTIVE)
@@ -2199,7 +2232,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         SendMessage(window->toolbar.toolbar, TB_SETBUTTONINFO,
             (WPARAM)tbs.idCommand, (LPARAM)&tbis);
 
-        /* Get button position */
+        /* Get button pos */
         SendMessage(window->toolbar.toolbar, TB_GETITEMRECT,
             (WPARAM)tbs.idCommand, (LPARAM)&rect);
 
