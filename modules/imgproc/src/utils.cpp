@@ -203,9 +203,6 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
     Mat src = _src.getMat();
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
     
-    _dst.create( src.rows + top + bottom, src.cols + left + right, src.type() );
-    Mat dst = _dst.getMat();
-    
     if( src.isSubmatrix() && (borderType & BORDER_ISOLATED) == 0 )
     {
         Size wholeSize;
@@ -220,6 +217,16 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
         left -= dleft;
         bottom -= dbottom;
         right -= dright;
+    }
+
+    _dst.create( src.rows + top + bottom, src.cols + left + right, src.type() );
+    Mat dst = _dst.getMat();
+
+    if(top == 0 && left == 0 && bottom == 0 && right == 0)
+    {
+        if(src.data != dst.data)
+            src.copyTo(dst);
+        return;
     }
     
     borderType &= ~BORDER_ISOLATED;

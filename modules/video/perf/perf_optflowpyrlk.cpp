@@ -33,7 +33,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK, testing::Combine(
                 testing::Range(0, 3),
                 testing::Values(1, 3, 4),
                 testing::Values(make_tuple(9, 9), make_tuple(15, 15)),
-                testing::Values(11, 21, 25)
+                testing::Values(7, 11, 21, 25)
                 )
             )
 {
@@ -49,7 +49,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK, testing::Combine(
     int nPointsY = min(get<1>(get<3>(GetParam())), img1.rows);
     int winSize = get<4>(GetParam());
     int maxLevel = 2;
-    TermCriteria criteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 5, 0.01);
+    TermCriteria criteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 7, 0.001);
     int flags = 0;
     double minEigThreshold = 1e-4;
 

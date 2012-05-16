@@ -493,6 +493,106 @@ struct LKTrackerInvoker
     
 }
 
+namespace cv {
+int buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Size winSize, int maxLevel, bool withDerivatives = true,
+                             int pyrBorder = BORDER_REFLECT_101, int derivBorder=BORDER_CONSTANT, bool tryReuseInputImage = true)
+{
+    Mat img = _img.getMat();
+    CV_Assert(img.depth() == CV_8U && winSize.width > 2 && winSize.height > 2 );
+    int pyrstep = withDerivatives ? 2 : 1;
+
+    pyramid.create(1, (maxLevel + 1) * pyrstep, 0 /*type*/, -1, true, 0);
+
+    //int cn = img.channels();
+    int derivType = CV_MAKETYPE(DataType<deriv_type>::depth, img.channels() * 2);
+
+    //level 0
+    bool lvl0IsSet = false;
+    if(tryReuseInputImage && img.isSubmatrix() && (pyrBorder & BORDER_ISOLATED) == 0)
+    {
+        Size wholeSize;
+        Point ofs;
+        img.locateROI(wholeSize, ofs);
+        if (ofs.x >= winSize.width && ofs.y >= winSize.height
+              && ofs.x + img.cols + winSize.width <= wholeSize.width
+              && ofs.y + img.rows + winSize.height <= wholeSize.height)
+        {
+            pyramid.getMatRef(0) = img;
+            lvl0IsSet = true;
+        }
+    }
+
+    if(!lvl0IsSet)
+    {
+        Mat& temp = pyramid.getMatRef(0);
+        
+        if(!temp.empty())
+            temp.adjustROI(winSize.height, winSize.height, winSize.width, winSize.width);
+        if(temp.type() != img.type() || temp.cols != winSize.width*2 + img.cols || temp.rows != winSize.height * 2 + img.rows)
+            temp.create(img.rows + winSize.height*2, img.cols + winSize.width*2, img.type());
+
+        if(pyrBorder == BORDER_TRANSPARENT)
+            img.copyTo(temp(Rect(winSize.width, winSize.height, img.cols, img.rows)));
+        else
+            copyMakeBorder(img, temp, winSize.height, winSize.height, winSize.width, winSize.width, pyrBorder);
+        temp.adjustROI(-winSize.height, -winSize.height, -winSize.width, -winSize.width);
+    }
+
+    Size sz = img.size();
+    Mat prevLevel = pyramid.getMatRef(0);
+    Mat thisLevel = prevLevel;
+
+    for(int level = 0; level <= maxLevel; ++level)
+    {
+        if (level != 0)
+        {
+            Mat& temp = pyramid.getMatRef(level * pyrstep);
+            
+            if(!temp.empty())
+                temp.adjustROI(winSize.height, winSize.height, winSize.width, winSize.width);
+            if(temp.type() != img.type() || temp.cols != winSize.width*2 + sz.width || temp.rows != winSize.height * 2 + sz.height)
+                temp.create(sz.height + winSize.height*2, sz.width + winSize.width*2, img.type());
+
+            thisLevel = temp(Rect(winSize.width, winSize.height, sz.width, sz.height));
+            pyrDown(prevLevel, thisLevel, sz);
+
+            if(pyrBorder != BORDER_TRANSPARENT)
+                copyMakeBorder(thisLevel, temp, winSize.height, winSize.height, winSize.width, winSize.width, pyrBorder|BORDER_ISOLATED);
+            temp.adjustROI(-winSize.height, -winSize.height, -winSize.width, -winSize.width);
+        }
+
+        if(withDerivatives)
+        {
+            Mat& deriv = pyramid.getMatRef(level * pyrstep + 1);
+
+            if(!deriv.empty())
+                deriv.adjustROI(winSize.height, winSize.height, winSize.width, winSize.width);
+            if(deriv.type() != derivType || deriv.cols != winSize.width*2 + sz.width || deriv.rows != winSize.height * 2 + sz.height)
+                deriv.create(sz.height + winSize.height*2, sz.width + winSize.width*2, derivType);
+
+            Mat derivI = deriv(Rect(winSize.width, winSize.height, sz.width, sz.height));
+            calcSharrDeriv(thisLevel, derivI);
+
+            if(derivBorder != BORDER_TRANSPARENT)
+                copyMakeBorder(derivI, deriv, winSize.height, winSize.height, winSize.width, winSize.width, derivBorder|BORDER_ISOLATED);
+            deriv.adjustROI(-winSize.height, -winSize.height, -winSize.width, -winSize.width);
+        }
+
+        sz = Size((sz.width+1)/2, (sz.height+1)/2);
+        if( sz.width <= winSize.width || sz.height <= winSize.height )
+        {
+            pyramid.create(1, (level + 1) * pyrstep, 0 /*type*/, -1, true, 0);//check this
+            return level;
+        }
+
+        prevLevel = thisLevel;
+    }
+
+    return maxLevel;
+
+}
+}
+
 void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
                            OutputArray _status, OutputArray _err,
@@ -504,14 +604,14 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
     if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, flags, minEigThreshold))
         return;
 #endif
-    Mat prevImg = _prevImg.getMat(), nextImg = _nextImg.getMat(), prevPtsMat = _prevPts.getMat();
+    Mat /*prevImg = _prevImg.getMat(), nextImg = _nextImg.getMat(),*/ prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<deriv_type>::depth;
 
     CV_Assert( maxLevel >= 0 && winSize.width > 2 && winSize.height > 2 );
-    CV_Assert( prevImg.size() == nextImg.size() &&
-        prevImg.type() == nextImg.type() );
+    //CV_Assert( prevImg.size() == nextImg.size() &&
+      //  prevImg.type() == nextImg.type() );
 
-    int level=0, i, k, npoints, cn = prevImg.channels(), cn2 = cn*2;
+    int level=0, i, npoints;//, cn = prevImg.channels(), cn2 = cn*2;
     CV_Assert( (npoints = prevPtsMat.checkVector(2, CV_32F, true)) >= 0 );
     
     if( npoints == 0 )
@@ -548,43 +648,47 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         err = (float*)errMat.data;
     }
 
-    vector<Mat> prevPyr(maxLevel+1), nextPyr(maxLevel+1);
-    
-    // build the image pyramids.
-    // we pad each level with +/-winSize.{width|height}
-    // pixels to simplify the further patch extraction.
-    // Thanks to the reference counting, "temp" mat (the pyramid layer + border)
-    // will not be deallocated, since {prevPyr|nextPyr}[level] will be a ROI in "temp".
-    for( k = 0; k < 2; k++ )
+    vector<Mat> prevPyr, nextPyr;
+    int levels1 = 0;
+    int lvlStep1 = 1;
+    int levels2 = 0;
+    int lvlStep2 = 1;
+
+    if(_prevImg.kind() == _InputArray::STD_VECTOR_MAT)
     {
-        Size sz = prevImg.size();
-        vector<Mat>& pyr = k == 0 ? prevPyr : nextPyr;
-        Mat& img0 = k == 0 ? prevImg : nextImg;
-        
-        for( level = 0; level <= maxLevel; level++ )
+        _prevImg.getMatVector(prevPyr);
+
+        levels1 = (int)prevPyr.size();
+        if (levels1 % 2 == 0 && levels1 > 1 && prevPyr[0].channels() * 2 == prevPyr[1].channels() && prevPyr[1].depth() == derivDepth)
         {
-            Mat temp(sz.height + winSize.height*2,
-                     sz.width + winSize.width*2,
-                     img0.type());
-            pyr[level] = temp(Rect(winSize.width, winSize.height, sz.width, sz.height));
-            if( level == 0 )
-                img0.copyTo(pyr[level]);
-            else
-                pyrDown(pyr[level-1], pyr[level], pyr[level].size());
-            copyMakeBorder(pyr[level], temp, winSize.height, winSize.height,
-                           winSize.width, winSize.width, BORDER_REFLECT_101|BORDER_ISOLATED);
-            sz = Size((sz.width+1)/2, (sz.height+1)/2);
-            if( sz.width <= winSize.width || sz.height <= winSize.height )
-            {
-                maxLevel = level;
-                break;
-            }
+            lvlStep1 = 2;
+            levels1 /= 2;
         }
     }
-    // dI/dx ~ Ix, dI/dy ~ Iy
-    Mat derivIBuf((prevImg.rows + winSize.height*2),
-             (prevImg.cols + winSize.width*2),
-             CV_MAKETYPE(derivDepth, cn2));
+
+    if(_nextImg.kind() == _InputArray::STD_VECTOR_MAT)
+    {
+        _nextImg.getMatVector(nextPyr);
+
+        levels2 = (int)nextPyr.size();
+        if (levels2 % 2 == 0 && levels2 > 1 && nextPyr[0].channels() * 2 == nextPyr[1].channels() && nextPyr[1].depth() == derivDepth)
+        {
+            lvlStep2 = 2;
+            levels2 /= 2;
+        }
+    }
+
+    if(levels1 != 0 || levels2 != 0)
+        maxLevel = std::max(levels1, levels2);
+
+    if (levels1 == 0)
+        maxLevel = levels1 = buildOpticalFlowPyramid(_prevImg, prevPyr, winSize, maxLevel, false);
+
+    if (levels2 == 0)
+        levels2 = buildOpticalFlowPyramid(_nextImg, nextPyr, winSize, maxLevel, false);
+
+    CV_Assert(levels1 == levels2);
+
 
     if( (criteria.type & TermCriteria::COUNT) == 0 )
         criteria.maxCount = 30;
@@ -596,20 +700,43 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         criteria.epsilon = std::min(std::max(criteria.epsilon, 0.), 10.);
     criteria.epsilon *= criteria.epsilon;
 
-    for( level = maxLevel; level >= 0; level-- )
+    if(lvlStep1 == 1)
     {
-        Size imgSize = prevPyr[level].size();
-        Mat _derivI( imgSize.height + winSize.height*2,
-            imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
-        Mat derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
-        calcSharrDeriv(prevPyr[level], derivI);
-        copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);
-        
-        parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level], derivI,
-                                                                nextPyr[level], prevPts, nextPts,
-                                                                status, err,
-                                                                winSize, criteria, level, maxLevel,
-                                                                flags, (float)minEigThreshold));
+        // dI/dx ~ Ix, dI/dy ~ Iy
+        Mat derivIBuf((prevPyr[0].rows + winSize.height*2),
+             (prevPyr[0].cols + winSize.width*2),
+             CV_MAKETYPE(derivDepth, prevPyr[0].channels() * 2));
+
+        for( level = maxLevel; level >= 0; level-- )
+        {
+            Size imgSize = prevPyr[level * lvlStep1].size();
+            Mat _derivI( imgSize.height + winSize.height*2,
+                imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
+            Mat derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
+            calcSharrDeriv(prevPyr[level * lvlStep1], derivI);
+            copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT|BORDER_ISOLATED);
+            
+            CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
+            CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
+            parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
+                                                                    nextPyr[level * lvlStep2], prevPts, nextPts,
+                                                                    status, err,
+                                                                    winSize, criteria, level, maxLevel,
+                                                                    flags, (float)minEigThreshold));
+        }
+    }
+    else
+    {
+        for( level = levels1; level >= 0; level-- )
+        {
+            CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
+            CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
+            parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], prevPyr[level * lvlStep1 + 1],
+                                                                    nextPyr[level * lvlStep2], prevPts, nextPts,
+                                                                    status, err,
+                                                                    winSize, criteria, level, maxLevel,
+                                                                    flags, (float)minEigThreshold));
+        }
     }
 }
 
