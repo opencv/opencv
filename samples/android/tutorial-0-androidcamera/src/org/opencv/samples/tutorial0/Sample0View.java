@@ -62,8 +62,8 @@ class Sample0View extends SampleViewBase {
     }
 
 	@Override
-	protected void onPreviewStared(int previewWidth, int previewHeight) {
-		Log.i(TAG, "onPreviewStared("+previewWidth+", "+previewHeight+")");
+	protected void onPreviewStarted(int previewWidth, int previewHeight) {
+		Log.i(TAG, "onPreviewStarted("+previewWidth+", "+previewHeight+")");
 		/* Create a bitmap that will be used through to calculate the image to */
         mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
     	mRGBA = new int[previewWidth * previewHeight];

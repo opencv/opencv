@@ -31,7 +31,7 @@ class Sample1View extends SampleViewBase {
     }
 
 	@Override
-	protected void onPreviewStared(int previewWidth, int previewHeight) {
+	protected void onPreviewStarted(int previewWidth, int previewHeight) {
 	    synchronized (this) {
         	// initialize Mats before usage
         	mYuv = new Mat(getFrameHeight() + getFrameHeight() / 2, getFrameWidth(), CvType.CV_8UC1);

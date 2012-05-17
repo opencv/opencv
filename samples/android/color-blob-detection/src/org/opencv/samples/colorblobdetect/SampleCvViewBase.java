@@ -52,7 +52,7 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
     }
     
     public void setupCamera(int width, int height) {
-        Log.i(TAG, "setupCamera");
+        Log.i(TAG, "setupCamera("+width+", "+height+")");
         synchronized (this) {
             if (mCamera != null && mCamera.isOpened()) {
                 List<Size> sizes = mCamera.getSupportedPreviewSizes();

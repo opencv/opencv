@@ -14,7 +14,7 @@ class Sample3View extends SampleViewBase {
     }
 
 	@Override
-	protected void onPreviewStared(int previewWidtd, int previewHeight) {
+	protected void onPreviewStarted(int previewWidtd, int previewHeight) {
 		mFrameSize = previewWidtd * previewHeight;
 		mRGBA = new int[mFrameSize];
 		mBitmap = Bitmap.createBitmap(previewWidtd, previewHeight, Bitmap.Config.ARGB_8888);

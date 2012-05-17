@@ -132,7 +132,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
     			}
 
                 /* Notify that the preview is about to be started and deliver preview size */
-                onPreviewStared(params.getPreviewSize().width, params.getPreviewSize().height);
+                onPreviewStarted(params.getPreviewSize().width, params.getPreviewSize().height);
 
                 /* Now we can start a preview */
                 mCamera.startPreview();
@@ -159,17 +159,17 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
     protected abstract Bitmap processFrame(byte[] data);
 
     /**
-     * This method is called when the preview process is beeing started. It is called before the first frame delivered and processFrame is called
+     * This method is called when the preview process is being started. It is called before the first frame delivered and processFrame is called
      * It is called with the width and height parameters of the preview process. It can be used to prepare the data needed during the frame processing.
      * @param previewWidth - the width of the preview frames that will be delivered via processFrame
      * @param previewHeight - the height of the preview frames that will be delivered via processFrame
      */
-    protected abstract void onPreviewStared(int previewWidtd, int previewHeight);
+    protected abstract void onPreviewStarted(int previewWidtd, int previewHeight);
 
     /**
      * This method is called when preview is stopped. When this method is called the preview stopped and all the processing of frames already completed.
      * If the Bitmap object returned via processFrame is cached - it is a good time to recycle it.
-     * Any other resourcses used during the preview can be released.
+     * Any other resources used during the preview can be released.
      */
     protected abstract void onPreviewStopped();
 
