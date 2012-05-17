@@ -47,15 +47,24 @@
 #pragma warning( disable: 4710 )
 #endif
 
+#define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
+#if defined SM_CMONITORS && !defined MONITOR_DEFAULTTONEAREST
+#  define MONITOR_DEFAULTTONULL       0x00000000
+#  define MONITOR_DEFAULTTOPRIMARY    0x00000001
+#  define MONITOR_DEFAULTTONEAREST    0x00000002
+#  define MONITORINFOF_PRIMARY        0x00000001
+#endif
+#ifndef __inout
+#  define __inout
+#endif
+#include <MultiMon.h>
+
 #include <commctrl.h>
 #include <winuser.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
-
-#define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
-#include <multimon.h>
 
 #ifdef HAVE_OPENGL
 #include <memory>
@@ -423,7 +432,6 @@ double cvGetModeWindow_W32(const char* name)//YV
     return result;   
 }
 
-#ifdef MONITOR_DEFAULTTONEAREST
 void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
 {
 	CV_FUNCNAME( "cvSetModeWindow_W32" );
@@ -487,11 +495,6 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
 
 	__END__;
 }
-#else
-void cvSetModeWindow_W32( const char*, double)
-{
-}
-#endif
 
 double cvGetPropWindowAutoSize_W32(const char* name)
 {
