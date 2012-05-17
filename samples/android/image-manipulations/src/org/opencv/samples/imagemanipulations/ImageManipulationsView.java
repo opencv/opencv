@@ -55,9 +55,7 @@ class ImageManipulationsView extends SampleCvViewBase {
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-        super.surfaceChanged(_holder, format, width, height);
-
+	public void surfaceCreated(SurfaceHolder holder) {
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();
@@ -83,9 +81,11 @@ class ImageManipulationsView extends SampleCvViewBase {
             mP1 = new Point();
             mP2 = new Point();
         }
-    }
 
-    private void CreateAuxiliaryMats() {
+        super.surfaceCreated(holder);
+	}
+
+	private void CreateAuxiliaryMats() {
         if (mRgba.empty())
             return;
 

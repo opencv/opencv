@@ -1,6 +1,8 @@
 package org.opencv.samples.puzzle15;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -17,6 +19,31 @@ public class puzzle15Activity extends Activity {
     public puzzle15Activity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
+
+    @Override
+	protected void onPause() {
+        Log.i(TAG, "onPause");
+		super.onPause();
+		mView.releaseCamera();
+	}
+
+	@Override
+	protected void onResume() {
+        Log.i(TAG, "onResume");
+		super.onResume();
+		if( !mView.openCamera() ) {
+			AlertDialog ad = new AlertDialog.Builder(this).create();  
+			ad.setCancelable(false); // This blocks the 'BACK' button  
+			ad.setMessage("Fatal error: can't open camera!");  
+			ad.setButton("OK", new DialogInterface.OnClickListener() {  
+			    public void onClick(DialogInterface dialog, int which) {  
+			        dialog.dismiss();                      
+					finish();
+			    }  
+			});  
+			ad.show();
+		}
+	}
 
     /** Called when the activity is first created. */
     @Override

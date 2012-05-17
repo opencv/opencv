@@ -2,7 +2,6 @@ package org.opencv.samples.tutorial4;
 
 import java.io.IOException;
 import java.util.List;
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -49,62 +48,14 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         	mCamera.setPreviewDisplay(null);
 	}
     
-    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-        Log.i(TAG, "surfaceCreated");
-        if (mCamera != null) {
-            Camera.Parameters params = mCamera.getParameters();
-            List<Camera.Size> sizes = params.getSupportedPreviewSizes();
-            mFrameWidth = width;
-            mFrameHeight = height;
-
-            // selecting optimal camera preview size
-            {
-                int  minDiff = Integer.MAX_VALUE;
-                for (Camera.Size size : sizes) {
-                    if (Math.abs(size.height - height) < minDiff) {
-                        mFrameWidth = size.width;
-                        mFrameHeight = size.height;
-                        minDiff = Math.abs(size.height - height);
-                    }
-                }
-            }
-
-            params.setPreviewSize(getFrameWidth(), getFrameHeight());
-            
-            List<String> FocusModes = params.getSupportedFocusModes();
-            if (FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
-            {
-            	params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-            }
-            
-            mCamera.setParameters(params);
-
-            /* Now allocate the buffer */
-            params = mCamera.getParameters();
-            int size = params.getPreviewSize().width * params.getPreviewSize().height;
-            size  = size * ImageFormat.getBitsPerPixel(params.getPreviewFormat()) / 8;
-            mBuffer = new byte[size];
-            /* The buffer where the current frame will be coppied */
-            mFrame = new byte [size];
-            mCamera.addCallbackBuffer(mBuffer);
-
-            try {
-                setPreview();
-            } catch (IOException e) {
-                Log.e(TAG, "mCamera.setPreviewDisplay/setPreviewTexture fails: " + e);
-            }
-
-            /* Notify that the preview is about to be started and deliver preview size */
-            onPreviewStared(params.getPreviewSize().width, params.getPreviewSize().height);
-
-            /* Now we can start a preview */
-            mCamera.startPreview();
-        }
-    }
-
-    public void surfaceCreated(SurfaceHolder holder) {
-        Log.i(TAG, "surfaceCreated");
+    public boolean openCamera() {
+        Log.i(TAG, "openCamera");
+        releaseCamera();
         mCamera = Camera.open();
+        if(mCamera == null) {
+        	Log.e(TAG, "Can't open camera!");
+        	return false;
+        }
 
         mCamera.setPreviewCallbackWithBuffer(new PreviewCallback() {
             public void onPreviewFrame(byte[] data, Camera camera) {
@@ -115,15 +66,14 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
                 camera.addCallbackBuffer(mBuffer);
             }
         });
-
-        (new Thread(this)).start();
+        return true;
     }
-
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.i(TAG, "surfaceDestroyed");
+    
+    public void releaseCamera() {
+        Log.i(TAG, "releaseCamera");
         mThreadRun = false;
-        if (mCamera != null) {
-            synchronized (this) {
+        synchronized (this) {
+	        if (mCamera != null) {
                 mCamera.stopPreview();
                 mCamera.setPreviewCallback(null);
                 mCamera.release();
@@ -132,6 +82,78 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         }
         onPreviewStopped();
     }
+    
+    public void setupCamera(int width, int height) {
+        Log.i(TAG, "setupCamera");
+        synchronized (this) {
+            if (mCamera != null) {
+                Camera.Parameters params = mCamera.getParameters();
+                List<Camera.Size> sizes = params.getSupportedPreviewSizes();
+                mFrameWidth = width;
+                mFrameHeight = height;
+
+                // selecting optimal camera preview size
+                {
+                    int  minDiff = Integer.MAX_VALUE;
+                    for (Camera.Size size : sizes) {
+                        if (Math.abs(size.height - height) < minDiff) {
+                            mFrameWidth = size.width;
+                            mFrameHeight = size.height;
+                            minDiff = Math.abs(size.height - height);
+                        }
+                    }
+                }
+
+                params.setPreviewSize(getFrameWidth(), getFrameHeight());
+                
+                List<String> FocusModes = params.getSupportedFocusModes();
+                if (FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
+                {
+                	params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+                }            
+                
+                mCamera.setParameters(params);
+                
+                /* Now allocate the buffer */
+                params = mCamera.getParameters();
+                int size = params.getPreviewSize().width * params.getPreviewSize().height;
+                size  = size * ImageFormat.getBitsPerPixel(params.getPreviewFormat()) / 8;
+                mBuffer = new byte[size];
+                /* The buffer where the current frame will be copied */
+                mFrame = new byte [size];
+                mCamera.addCallbackBuffer(mBuffer);
+
+    			try {
+    				setPreview();
+    			} catch (IOException e) {
+    				Log.e(TAG, "mCamera.setPreviewDisplay/setPreviewTexture fails: " + e);
+    			}
+
+                /* Notify that the preview is about to be started and deliver preview size */
+                onPreviewStared(params.getPreviewSize().width, params.getPreviewSize().height);
+
+                /* Now we can start a preview */
+                mCamera.startPreview();
+            }
+        }
+    }
+    
+    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
+        Log.i(TAG, "surfaceChanged");
+        setupCamera(width, height);
+    }
+
+    public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "surfaceCreated");
+        (new Thread(this)).start();
+    }
+
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        Log.i(TAG, "surfaceDestroyed");
+        releaseCamera();
+    }
+
+
 
     /* The bitmap returned by this method shall be owned by the child and released in onPreviewStopped() */
     protected abstract Bitmap processFrame(byte[] data);

@@ -1,14 +1,13 @@
 package org.opencv.samples.tutorial4;
 
 import org.opencv.android.Utils;
-import org.opencv.core.Mat;
 import org.opencv.core.CvType;
+import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.view.SurfaceHolder;
 
 class Sample4View extends SampleViewBase {
 

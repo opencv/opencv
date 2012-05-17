@@ -1,6 +1,8 @@
 package org.opencv.samples.imagemanipulations;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -8,7 +10,8 @@ import android.view.MenuItem;
 import android.view.Window;
 
 public class ImageManipulationsActivity extends Activity {
-    private static final String TAG = "Sample::Activity";
+
+	private static final String TAG = "Sample-ImageManipulations::Activity";
 
     public static final int     VIEW_MODE_RGBA  = 0;
     public static final int     VIEW_MODE_HIST  = 1;
@@ -29,10 +32,37 @@ public class ImageManipulationsActivity extends Activity {
     private MenuItem            mItemPreviewPosterize;
 
     public static int           viewMode = VIEW_MODE_RGBA;
+    
+    private ImageManipulationsView mView;
 
     public ImageManipulationsActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
+
+    @Override
+	protected void onPause() {
+        Log.i(TAG, "onPause");
+		super.onPause();
+		mView.releaseCamera();
+	}
+
+	@Override
+	protected void onResume() {
+        Log.i(TAG, "onResume");
+		super.onResume();
+		if( !mView.openCamera() ) {
+			AlertDialog ad = new AlertDialog.Builder(this).create();  
+			ad.setCancelable(false); // This blocks the 'BACK' button  
+			ad.setMessage("Fatal error: can't open camera!");  
+			ad.setButton("OK", new DialogInterface.OnClickListener() {  
+			    public void onClick(DialogInterface dialog, int which) {  
+			        dialog.dismiss();                      
+					finish();
+			    }  
+			});  
+			ad.show();
+		}
+	}
 
     /** Called when the activity is first created. */
     @Override
@@ -40,7 +70,8 @@ public class ImageManipulationsActivity extends Activity {
         Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(new ImageManipulationsView(this));
+        mView = new ImageManipulationsView(this);
+        setContentView(mView);
     }
 
     @Override

@@ -2,16 +2,15 @@ package org.opencv.samples.tutorial1;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.core.CvType;
 import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.view.SurfaceHolder;
 
 class Sample1View extends SampleViewBase {
 
@@ -94,7 +93,7 @@ class Sample1View extends SampleViewBase {
         try {
             Utils.matToBitmap(mRgba, bmp);
         } catch(Exception e) {
-            Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            Log.e("org.opencv.samples.tutorial1", "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             bmp = null;
         }
