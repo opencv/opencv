@@ -62,17 +62,17 @@ class FdView extends SampleCvViewBase {
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-        super.surfaceChanged(_holder, format, width, height);
-
+	public void surfaceCreated(SurfaceHolder holder) {
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();
             mRgba = new Mat();
         }
-    }
 
-    @Override
+        super.surfaceCreated(holder);
+	}
+
+	@Override
     protected Bitmap processFrame(VideoCapture capture) {
         capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
         capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);

@@ -18,7 +18,7 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 
 public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
-    private Mat     mRgba;
+	private Mat     mRgba;
     private Mat     mRgba15;
     private Mat[]   mCells;
     private Mat[]   mCells15;
@@ -45,13 +45,13 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-        super.surfaceChanged(_holder, format, width, height);
+	public void surfaceCreated(SurfaceHolder holder) {
         synchronized (this) {
             // initialize Mat before usage
             mRgba = new Mat();
         }
-    }
+		super.surfaceCreated(holder);
+	}
 
     public static void shuffle(int[] array) {
         for (int i = array.length; i > 1; i--) {
@@ -185,7 +185,9 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
     }
 
     public boolean onTouch(View v, MotionEvent event) {
-        int cols = mRgba.cols();
+        if(mRgba==null) return false;
+        
+    	int cols = mRgba.cols();
         int rows = mRgba.rows();
         float xoffset = (getWidth() - cols) / 2;
         float yoffset = (getHeight() - rows) / 2;

@@ -2324,6 +2324,7 @@ The class provides the following features for all derived classes:
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
+    #include "opencv2/nonfree/nonfree.hpp"
 
     ...
 
@@ -2334,22 +2335,22 @@ Here is example of SIFT use in your application via Algorithm interface: ::
     FileStorage fs("sift_params.xml", FileStorage::READ);
     if( fs.isOpened() ) // if we have file with parameters, read them
     {
-        sift.read(fs["sift_params"]);
+        sift->read(fs["sift_params"]);
         fs.release();
     }
     else // else modify the parameters and store them; user can later edit the file to use different parameters
     {
-        sift.set("contrastThreshold", 0.01f); // lower the contrast threshold, compared to the default value
+        sift->set("contrastThreshold", 0.01f); // lower the contrast threshold, compared to the default value
         
         {
         WriteStructContext ws(fs, "sift_params", CV_NODE_MAP);
-        sift.write(fs);
+        sift->write(fs);
         }
     }
     
     Mat image = imread("myimage.png", 0), descriptors;
     vector<KeyPoint> keypoints;
-    sift(image, noArray(), keypoints, descriptors);
+    (*sift)(image, noArray(), keypoints, descriptors);
     
 
 Algorithm::get

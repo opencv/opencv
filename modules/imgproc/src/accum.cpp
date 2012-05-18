@@ -272,7 +272,7 @@ accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    dst[k] += src[k]*a + dst[k]*b;
+                    dst[k] = src[k]*a + dst[k]*b;
             }
     }
 }

@@ -1,14 +1,13 @@
 package org.opencv.samples.tutorial4;
 
 import org.opencv.android.Utils;
-import org.opencv.core.Mat;
 import org.opencv.core.CvType;
+import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.view.SurfaceHolder;
 
 class Sample4View extends SampleViewBase {
 
@@ -30,7 +29,7 @@ class Sample4View extends SampleViewBase {
     }
     
 	@Override
-	protected void onPreviewStared(int previewWidtd, int previewHeight) {
+	protected void onPreviewStarted(int previewWidtd, int previewHeight) {
         // initialize Mats before usage
         mYuv = new Mat(getFrameHeight() + getFrameHeight() / 2, getFrameWidth(), CvType.CV_8UC1);
         mGraySubmat = mYuv.submat(0, getFrameHeight(), 0, getFrameWidth());

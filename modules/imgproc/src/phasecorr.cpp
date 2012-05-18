@@ -556,7 +556,7 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
     t = weightedCentroid(C, peakLoc, Size(5, 5));
 
     // adjust shift relative to image center...
-    Point2d center((double)src1.cols / 2.0, (double)src1.rows / 2.0);
+    Point2d center((double)padded1.cols / 2.0, (double)padded1.rows / 2.0);
 
     return (center - t);
 }

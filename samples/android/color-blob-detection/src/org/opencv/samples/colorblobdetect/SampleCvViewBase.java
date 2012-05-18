@@ -26,13 +26,36 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
-    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-        Log.i(TAG, "surfaceCreated");
+    public boolean openCamera() {
+        Log.i(TAG, "openCamera");
+        synchronized (this) {
+	        releaseCamera();
+	        mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+	        if (!mCamera.isOpened()) {
+	            mCamera.release();
+	            mCamera = null;
+	            Log.e(TAG, "Failed to open native camera");
+	            return false;
+	        }
+	    }
+        return true;
+    }
+    
+    public void releaseCamera() {
+        Log.i(TAG, "releaseCamera");
+        synchronized (this) {
+	        if (mCamera != null) {
+	                mCamera.release();
+	                mCamera = null;
+            }
+        }
+    }
+    
+    public void setupCamera(int width, int height) {
+        Log.i(TAG, "setupCamera("+width+", "+height+")");
         synchronized (this) {
             if (mCamera != null && mCamera.isOpened()) {
-                Log.i(TAG, "before mCamera.getSupportedPreviewSizes()");
                 List<Size> sizes = mCamera.getSupportedPreviewSizes();
-                Log.i(TAG, "after mCamera.getSupportedPreviewSizes()");
                 int mFrameWidth = width;
                 int mFrameHeight = height;
 
@@ -52,28 +75,22 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
                 mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, mFrameHeight);
             }
         }
+
+    }
+    
+    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
+        Log.i(TAG, "surfaceChanged");
+        setupCamera(width, height);
     }
 
     public void surfaceCreated(SurfaceHolder holder) {
         Log.i(TAG, "surfaceCreated");
-        mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        if (mCamera.isOpened()) {
-            (new Thread(this)).start();
-        } else {
-            mCamera.release();
-            mCamera = null;
-            Log.e(TAG, "Failed to open native camera");
-        }
+        (new Thread(this)).start();
     }
 
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.i(TAG, "surfaceDestroyed");
-        if (mCamera != null) {
-            synchronized (this) {
-                mCamera.release();
-                mCamera = null;
-            }
-        }
+        releaseCamera();
     }
 
     protected abstract Bitmap processFrame(VideoCapture capture);

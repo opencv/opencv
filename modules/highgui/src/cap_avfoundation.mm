@@ -381,9 +381,12 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
 		//TODO: add new interface for setting fps and capturing resolution.
 		[mCaptureDecompressedVideoOutput setVideoSettings:pixelBufferOptions]; 
-		mCaptureDecompressedVideoOutput.alwaysDiscardsLateVideoFrames = YES; 
-		mCaptureDecompressedVideoOutput.minFrameDuration = CMTimeMake(1, 30);	
-
+		mCaptureDecompressedVideoOutput.alwaysDiscardsLateVideoFrames = YES;
+        
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+        mCaptureDecompressedVideoOutput.minFrameDuration = CMTimeMake(1, 30);
+#endif
+        
 		//Slow. 1280*720 for iPhone4, iPod back camera. 640*480 for front camera
 		//mCaptureSession.sessionPreset = AVCaptureSessionPresetHigh; // fps ~= 5 slow for OpenCV
 
@@ -1150,9 +1153,11 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
 		fileType = [AVFileTypeMPEG4 copy];
 	}else if ([fileExt isEqualToString:@"m4v"]){
 		fileType = [AVFileTypeAppleM4V copy];
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 	}else if ([fileExt isEqualToString:@"3gp"] || [fileExt isEqualToString:@"3gpp"] || [fileExt isEqualToString:@"sdv"]  ){
 		fileType = [AVFileType3GPP copy];
-	}else{
+#endif        
+	} else{
 		fileType = [AVFileTypeMPEG4 copy];  //default mp4
 	}
 	[fileExt release];

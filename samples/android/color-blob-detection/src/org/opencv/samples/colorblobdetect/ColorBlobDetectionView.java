@@ -56,12 +56,13 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
 	}
 	
     @Override
-    public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-        super.surfaceChanged(_holder, format, width, height);
+    public void surfaceCreated(SurfaceHolder holder) {
         synchronized (this) {
             // initialize Mat before usage
             mRgba = new Mat();
         }
+        
+        super.surfaceCreated(holder);
     }
 	
 	public boolean onTouch(View v, MotionEvent event)

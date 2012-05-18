@@ -62,7 +62,8 @@ class Sample0View extends SampleViewBase {
     }
 
 	@Override
-	protected void onPreviewStared(int previewWidth, int previewHeight) {
+	protected void onPreviewStarted(int previewWidth, int previewHeight) {
+		Log.i(TAG, "onPreviewStarted("+previewWidth+", "+previewHeight+")");
 		/* Create a bitmap that will be used through to calculate the image to */
         mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
     	mRGBA = new int[previewWidth * previewHeight];
@@ -70,12 +71,19 @@ class Sample0View extends SampleViewBase {
 
 	@Override
 	protected void onPreviewStopped() {
-		mBitmap.recycle();
-		mBitmap = null;
-		mRGBA = null;
+		Log.i(TAG, "onPreviewStopped");
+		if(mBitmap != null) {
+			mBitmap.recycle();
+			mBitmap = null;
+		}
+		
+		if(mRGBA != null) {
+			mRGBA = null;
+		}
 	}
 
 	public void setViewMode(int viewMode) {
+		Log.i(TAG, "setViewMode("+viewMode+")");
 		mViewMode = viewMode;
 	}
 }

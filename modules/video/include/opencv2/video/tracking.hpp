@@ -48,7 +48,7 @@
 #define __OPENCV_TRACKING_HPP__
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/imgproc/imgproc.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -303,16 +303,19 @@ enum
     OPTFLOW_FARNEBACK_GAUSSIAN = 256
 };
 
+//! constructs a pyramid which can be used as input for calcOpticalFlowPyrLK
+CV_EXPORTS_W int buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid,
+                                         Size winSize, int maxLevel, bool withDerivatives = true,
+                                         int pyrBorder = BORDER_REFLECT_101, int derivBorder = BORDER_CONSTANT,
+                                         bool tryReuseInputImage = true);
+
 //! computes sparse optical flow using multi-scale Lucas-Kanade algorithm
 CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
                            InputArray prevPts, CV_OUT InputOutputArray nextPts,
                            OutputArray status, OutputArray err,
                            Size winSize=Size(21,21), int maxLevel=3,
-                           TermCriteria criteria=TermCriteria(
-                            TermCriteria::COUNT+TermCriteria::EPS,
-                            30, 0.01),
-                           int flags=0,
-                           double minEigThreshold=1e-4);
+                           TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
+                           int flags=0, double minEigThreshold=1e-4);
 
 //! computes dense optical flow using Farneback algorithm
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,

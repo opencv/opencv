@@ -861,3 +861,14 @@ TEST(Core_IOArray, submat_create)
     EXPECT_THROW( OutputArray_create1(A.row(0)), cv::Exception );
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
 }
+
+TEST(Core_Mat, reshape_1942)
+{
+    cv::Mat A = (cv::Mat_<float>(2,3) << 3.4884074, 1.4159607, 0.78737736,  2.3456569, -0.88010466, 0.3009364);
+    int cn = 0;
+    ASSERT_NO_THROW(
+        cv::Mat_<float> M = A.reshape(3);
+        cn = M.channels();
+    );
+    ASSERT_EQ(1, cn);
+}
