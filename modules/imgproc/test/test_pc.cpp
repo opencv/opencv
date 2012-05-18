@@ -63,8 +63,8 @@ void CV_PhaseCorrelatorTest::run( int )
 {
     ts->set_failed_test_info(cvtest::TS::OK);
 
-    Mat r1 = Mat::ones(Size(128, 128), CV_64F);
-    Mat r2 = Mat::ones(Size(128, 128), CV_64F);
+    Mat r1 = Mat::ones(Size(129, 128), CV_64F);
+    Mat r2 = Mat::ones(Size(129, 128), CV_64F);
 
     double expectedShiftX = -10.0;
     double expectedShiftY = -20.0;
