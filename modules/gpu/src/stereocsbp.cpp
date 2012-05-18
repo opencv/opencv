@@ -204,7 +204,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat& mbuf, GpuMat& te
 
 	Size temp_size = data_cost.size();
 	if ((size_t)temp_size.area() < elem_step * rows_pyr[levels - 1] * rthis.ndisp)	
-        temp_size = Size(elem_step, rows_pyr[levels - 1] * rthis.ndisp);
+        temp_size = Size(static_cast<int>(elem_step), rows_pyr[levels - 1] * rthis.ndisp);
 	
     temp.create(temp_size, DataType<T>::type);
 

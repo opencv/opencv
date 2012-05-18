@@ -1300,9 +1300,9 @@ void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
     // CUFFT has hard-coded kernels for power-of-2 sizes (up to 8192),
     // see CUDA Toolkit 4.1 CUFFT Library Programming Guide
     if (dft_size.width > 8192)
-        dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1.);
+        dft_size.width = getOptimalDFTSize(block_size.width + templ_size.width - 1);
     if (dft_size.height > 8192)
-        dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1.);
+        dft_size.height = getOptimalDFTSize(block_size.height + templ_size.height - 1);
 
     // To avoid wasting time doing small DFTs
     dft_size.width = std::max(dft_size.width, 512);

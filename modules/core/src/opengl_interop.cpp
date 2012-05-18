@@ -1269,7 +1269,7 @@ void cv::GlFont::draw(const char* str, int len) const
         glPushAttrib(GL_LIST_BIT);
         glListBase(base_);
 
-        glCallLists(len, GL_UNSIGNED_BYTE, str);
+        glCallLists(static_cast<GLsizei>(len), GL_UNSIGNED_BYTE, str);
 
         glPopAttrib();
 

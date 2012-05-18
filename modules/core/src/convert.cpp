@@ -876,33 +876,33 @@ static BinaryFunc cvtScaleAbsTab[] =
 static BinaryFunc cvtScaleTab[][8] =
 {
     {
-        (BinaryFunc)cvtScale8u, (BinaryFunc)cvtScale8s8u, (BinaryFunc)cvtScale16u8u,
-        (BinaryFunc)cvtScale16s8u, (BinaryFunc)cvtScale32s8u, (BinaryFunc)cvtScale32f8u,
+        (BinaryFunc)GET_OPTIMIZED(cvtScale8u), (BinaryFunc)GET_OPTIMIZED(cvtScale8s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale16u8u),
+        (BinaryFunc)GET_OPTIMIZED(cvtScale16s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale32s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale32f8u),
         (BinaryFunc)cvtScale64f8u, 0
     },
     {
-        (BinaryFunc)cvtScale8u8s, (BinaryFunc)cvtScale8s, (BinaryFunc)cvtScale16u8s,
-        (BinaryFunc)cvtScale16s8s, (BinaryFunc)cvtScale32s8s, (BinaryFunc)cvtScale32f8s,
+        (BinaryFunc)GET_OPTIMIZED(cvtScale8u8s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u8s),
+        (BinaryFunc)GET_OPTIMIZED(cvtScale16s8s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s8s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f8s),
         (BinaryFunc)cvtScale64f8s, 0
     },
     {
-        (BinaryFunc)cvtScale8u16u, (BinaryFunc)cvtScale8s16u, (BinaryFunc)cvtScale16u,
-        (BinaryFunc)cvtScale16s16u, (BinaryFunc)cvtScale32s16u, (BinaryFunc)cvtScale32f16u,
+        (BinaryFunc)GET_OPTIMIZED(cvtScale8u16u), (BinaryFunc)GET_OPTIMIZED(cvtScale8s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale16u),
+        (BinaryFunc)GET_OPTIMIZED(cvtScale16s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale32s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale32f16u),
         (BinaryFunc)cvtScale64f16u, 0
     },
     {
-        (BinaryFunc)cvtScale8u16s, (BinaryFunc)cvtScale8s16s, (BinaryFunc)cvtScale16u16s,
-        (BinaryFunc)cvtScale16s, (BinaryFunc)cvtScale32s16s, (BinaryFunc)cvtScale32f16s,
+        (BinaryFunc)GET_OPTIMIZED(cvtScale8u16s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s16s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u16s),
+        (BinaryFunc)GET_OPTIMIZED(cvtScale16s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s16s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f16s),
         (BinaryFunc)cvtScale64f16s, 0
     },
     {
-        (BinaryFunc)cvtScale8u32s, (BinaryFunc)cvtScale8s32s, (BinaryFunc)cvtScale16u32s,
-        (BinaryFunc)cvtScale16s32s, (BinaryFunc)cvtScale32s, (BinaryFunc)cvtScale32f32s,
+        (BinaryFunc)GET_OPTIMIZED(cvtScale8u32s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s32s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u32s),
+        (BinaryFunc)GET_OPTIMIZED(cvtScale16s32s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f32s),
         (BinaryFunc)cvtScale64f32s, 0
     },
     {
-        (BinaryFunc)cvtScale8u32f, (BinaryFunc)cvtScale8s32f, (BinaryFunc)cvtScale16u32f,
-        (BinaryFunc)cvtScale16s32f, (BinaryFunc)cvtScale32s32f, (BinaryFunc)cvtScale32f,
+        (BinaryFunc)GET_OPTIMIZED(cvtScale8u32f), (BinaryFunc)GET_OPTIMIZED(cvtScale8s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale16u32f),
+        (BinaryFunc)GET_OPTIMIZED(cvtScale16s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale32s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale32f),
         (BinaryFunc)cvtScale64f32f, 0
     },
     {
@@ -918,7 +918,7 @@ static BinaryFunc cvtScaleTab[][8] =
 static BinaryFunc cvtTab[][8] =
 {
     {
-        (BinaryFunc)cvt8u, (BinaryFunc)GET_OPTIMIZED(cvt8s8u), (BinaryFunc)GET_OPTIMIZED(cvt16u8u),
+        (BinaryFunc)(cvt8u), (BinaryFunc)GET_OPTIMIZED(cvt8s8u), (BinaryFunc)GET_OPTIMIZED(cvt16u8u),
         (BinaryFunc)GET_OPTIMIZED(cvt16s8u), (BinaryFunc)GET_OPTIMIZED(cvt32s8u), (BinaryFunc)GET_OPTIMIZED(cvt32f8u),
         (BinaryFunc)GET_OPTIMIZED(cvt64f8u), 0
     },
@@ -950,7 +950,7 @@ static BinaryFunc cvtTab[][8] =
     {
         (BinaryFunc)GET_OPTIMIZED(cvt8u64f), (BinaryFunc)GET_OPTIMIZED(cvt8s64f), (BinaryFunc)GET_OPTIMIZED(cvt16u64f),
         (BinaryFunc)GET_OPTIMIZED(cvt16s64f), (BinaryFunc)GET_OPTIMIZED(cvt32s64f), (BinaryFunc)GET_OPTIMIZED(cvt32f64f),
-        (BinaryFunc)cvt64s, 0
+        (BinaryFunc)(cvt64s), 0
     },
     {
         0, 0, 0, 0, 0, 0, 0, 0

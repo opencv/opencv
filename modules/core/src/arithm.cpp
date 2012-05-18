@@ -1984,8 +1984,8 @@ static void addWeighted64f( const double* src1, size_t step1, const double* src2
 
 static BinaryFunc addWeightedTab[] =
 {
-    (BinaryFunc)addWeighted8u, (BinaryFunc)addWeighted8s, (BinaryFunc)addWeighted16u,
-    (BinaryFunc)addWeighted16s, (BinaryFunc)addWeighted32s, (BinaryFunc)addWeighted32f,
+    (BinaryFunc)GET_OPTIMIZED(addWeighted8u), (BinaryFunc)GET_OPTIMIZED(addWeighted8s), (BinaryFunc)GET_OPTIMIZED(addWeighted16u),
+    (BinaryFunc)GET_OPTIMIZED(addWeighted16s), (BinaryFunc)GET_OPTIMIZED(addWeighted32s), (BinaryFunc)addWeighted32f,
     (BinaryFunc)addWeighted64f, 0
 };
 
@@ -2504,8 +2504,8 @@ typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2,
 
 static InRangeFunc inRangeTab[] =
 {
-    (InRangeFunc)inRange8u, (InRangeFunc)inRange8s, (InRangeFunc)inRange16u,
-    (InRangeFunc)inRange16s, (InRangeFunc)inRange32s, (InRangeFunc)inRange32f,
+    (InRangeFunc)GET_OPTIMIZED(inRange8u), (InRangeFunc)GET_OPTIMIZED(inRange8s), (InRangeFunc)GET_OPTIMIZED(inRange16u),
+    (InRangeFunc)GET_OPTIMIZED(inRange16s), (InRangeFunc)GET_OPTIMIZED(inRange32s), (InRangeFunc)GET_OPTIMIZED(inRange32f),
     (InRangeFunc)inRange64f, 0
 };
 

@@ -271,13 +271,13 @@ int main(int argc, const char *argv[])
         displayState(frameDisp, helpScreen, useGPU, findLargestObject, filterRects, fps);
         imshow("result", frameDisp);
 
-        int key = waitKey(5);
+        char key = (char)waitKey(5);
         if (key == 27)
         {
             break;
         }
 
-        switch ((char)key)
+        switch (key)
         {
         case ' ':
             useGPU = !useGPU;

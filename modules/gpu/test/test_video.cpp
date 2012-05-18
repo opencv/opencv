@@ -375,7 +375,7 @@ TEST_P(FarnebackOpticalFlow, Accuracy)
 
     EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
     EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
-};
+}
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, FarnebackOpticalFlow, testing::Combine(
     ALL_DEVICES,

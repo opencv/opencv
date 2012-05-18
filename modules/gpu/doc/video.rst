@@ -4,6 +4,7 @@ Video Analysis
 .. highlight:: cpp
 
 
+
 gpu::BroxOpticalFlow
 --------------------
 .. ocv:class:: gpu::BroxOpticalFlow
@@ -119,6 +120,7 @@ Releases inner buffers memory.
 .. ocv:function:: void gpu::GoodFeaturesToTrackDetector_GPU::releaseMemory()
 
 
+
 gpu::FarnebackOpticalFlow
 -------------------------
 .. ocv:class:: gpu::FarnebackOpticalFlow
@@ -158,6 +160,7 @@ Class computing a dense optical flow using the Gunnar Farneback’s algorithm. :
     };
 
 
+
 gpu::FarnebackOpticalFlow::operator ()
 --------------------------------------
 Computes a dense optical flow using the Gunnar Farneback’s algorithm.
@@ -173,11 +176,13 @@ Computes a dense optical flow using the Gunnar Farneback’s algorithm.
 .. seealso:: :ocv:func:`calcOpticalFlowFarneback`
 
 
+
 gpu::FarnebackOpticalFlow::releaseMemory
 ----------------------------------------
 Releases unused auxiliary memory buffers.
 
 .. ocv:function:: void gpu::FarnebackOpticalFlow::releaseMemory()
+
 
 
 gpu::PyrLKOpticalFlow
@@ -263,7 +268,7 @@ Releases inner buffers memory.
 
 gpu::interpolateFrames
 ----------------------
-Interpolate frames (images) using provided optical flow (displacement field).
+Interpolates frames (images) using provided optical flow (displacement field).
 
 .. ocv:function:: void gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, const GpuMat& fu, const GpuMat& fv, const GpuMat& bu, const GpuMat& bv, float pos, GpuMat& newFrame, GpuMat& buf, Stream& stream = Stream::Null())
 

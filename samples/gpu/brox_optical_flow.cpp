@@ -215,7 +215,7 @@ int main(int argc, const char* argv[])
             switch (key)
             {
             case 27:
-                break;
+                return 0;
 
             case 'A':
                 if (currentFrame > 0) 
@@ -243,8 +243,6 @@ int main(int argc, const char* argv[])
         cerr << "Unknow error" << endl;
         return -1;
     }
-
-    return 0;
 }
 
 template <typename T> inline T clamp (T x, T a, T b)
