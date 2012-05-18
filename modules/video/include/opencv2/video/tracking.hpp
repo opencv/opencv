@@ -304,7 +304,7 @@ enum
 };
 
 //! constructs a pyramid which can be used as input for calcOpticalFlowPyrLK
-CV_EXPORTS_W int buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid,
+CV_EXPORTS_W int buildOpticalFlowPyramid(InputArray img, OutputArrayOfArrays pyramid,
                                          Size winSize, int maxLevel, bool withDerivatives = true,
                                          int pyrBorder = BORDER_REFLECT_101, int derivBorder = BORDER_CONSTANT,
                                          bool tryReuseInputImage = true);
