@@ -1,3 +1,18 @@
+if(MINGW)
+  # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    foreach(flags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+      string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
+    endforeach()
+  endif()
+
+  if(CMAKE_COMPILER_IS_GNUCC)
+    foreach(flags CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
+      string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
+    endforeach()
+  endif()
+endif()
+
 if(MSVC)
   if(CMAKE_CXX_FLAGS STREQUAL CMAKE_CXX_FLAGS_INIT)
     # override cmake default exception handling option
@@ -14,7 +29,7 @@ set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "")
 
 if(MINGW)
-  # mingw compiler is known to produce unstable SSE code
+  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
   # here we are trying to workaround the problem
   include(CheckCXXCompilerFlag)
   CHECK_CXX_COMPILER_FLAG(-mstackrealign HAVE_STACKREALIGN_FLAG)
