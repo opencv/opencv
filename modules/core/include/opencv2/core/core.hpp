@@ -1305,6 +1305,7 @@ public:
     template<typename _Tp> _InputArray(const vector<_Tp>& vec);
     template<typename _Tp> _InputArray(const vector<vector<_Tp> >& vec);
     _InputArray(const vector<Mat>& vec);
+    template<typename _Tp> _InputArray(const vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const Scalar& s);
@@ -1360,6 +1361,7 @@ public:
     template<typename _Tp> _OutputArray(vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(vector<vector<_Tp> >& vec);
     _OutputArray(vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
@@ -1368,6 +1370,7 @@ public:
     template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(const vector<vector<_Tp> >& vec);
     _OutputArray(const vector<Mat>& vec);
+    template<typename _Tp> _OutputArray(const vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
@@ -2247,10 +2250,10 @@ CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
 
 enum
 {
-	SORT_EVERY_ROW=0,
-	SORT_EVERY_COLUMN=1,
-	SORT_ASCENDING=0,
-	SORT_DESCENDING=16
+  SORT_EVERY_ROW=0,
+  SORT_EVERY_COLUMN=1,
+  SORT_ASCENDING=0,
+  SORT_DESCENDING=16
 };
 
 //! sorts independently each matrix row or each matrix column
@@ -2273,12 +2276,12 @@ CV_EXPORTS_W bool eigen(InputArray src, bool computeEigenvectors,
 
 enum
 {
-	COVAR_SCRAMBLED=0,
-	COVAR_NORMAL=1,
-	COVAR_USE_AVG=2,
-	COVAR_SCALE=4,
-	COVAR_ROWS=8,
-	COVAR_COLS=16
+  COVAR_SCRAMBLED=0,
+  COVAR_NORMAL=1,
+  COVAR_USE_AVG=2,
+  COVAR_SCALE=4,
+  COVAR_ROWS=8,
+  COVAR_COLS=16
 };
 
 //! computes covariation matrix of a set of samples

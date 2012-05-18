@@ -1118,6 +1118,9 @@ template<typename _Tp> inline _InputArray::_InputArray(const vector<_Tp>& vec)
 template<typename _Tp> inline _InputArray::_InputArray(const vector<vector<_Tp> >& vec)
     : flags(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
 
+template<typename _Tp> inline _InputArray::_InputArray(const vector<Mat_<_Tp> >& vec)
+    : flags(FIXED_TYPE + STD_VECTOR_MAT + DataType<_Tp>::type), obj((void*)&vec) {}    
+    
 template<typename _Tp, int m, int n> inline _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
     : flags(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type), obj((void*)&mtx), sz(n, m) {}
     
@@ -1130,18 +1133,32 @@ inline _InputArray::_InputArray(const Scalar& s)
 template<typename _Tp> inline _InputArray::_InputArray(const Mat_<_Tp>& m)
     : flags(FIXED_TYPE + MAT + DataType<_Tp>::type), obj((void*)&m) {}
     
-template<typename _Tp> inline _OutputArray::_OutputArray(vector<_Tp>& vec) : _InputArray(vec) {}
-template<typename _Tp> inline _OutputArray::_OutputArray(vector<vector<_Tp> >& vec) : _InputArray(vec) {}
-template<typename _Tp> inline _OutputArray::_OutputArray(Mat_<_Tp>& m) : _InputArray(m) {}
-template<typename _Tp, int m, int n> inline _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
-template<typename _Tp> inline _OutputArray::_OutputArray(_Tp* vec, int n) : _InputArray(vec, n) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(vector<_Tp>& vec)
+    : _InputArray(vec) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(vector<vector<_Tp> >& vec)
+    : _InputArray(vec) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(vector<Mat_<_Tp> >& vec)
+    : _InputArray(vec) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(Mat_<_Tp>& m)
+    : _InputArray(m) {}
+template<typename _Tp, int m, int n> inline _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx)
+    : _InputArray(mtx) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(_Tp* vec, int n)
+    : _InputArray(vec, n) {}
 
-
-template<typename _Tp> inline _OutputArray::_OutputArray(const vector<_Tp>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
-template<typename _Tp> inline _OutputArray::_OutputArray(const vector<vector<_Tp> >& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
-template<typename _Tp> inline _OutputArray::_OutputArray(const Mat_<_Tp>& m) : _InputArray(m) {flags |= FIXED_SIZE;}
-template<typename _Tp, int m, int n> inline _OutputArray::_OutputArray(const Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
-template<typename _Tp> inline _OutputArray::_OutputArray(const _Tp* vec, int n) : _InputArray(vec, n) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(const vector<_Tp>& vec)
+    : _InputArray(vec) {flags |= FIXED_SIZE;}
+template<typename _Tp> inline _OutputArray::_OutputArray(const vector<vector<_Tp> >& vec)
+    : _InputArray(vec) {flags |= FIXED_SIZE;}
+template<typename _Tp> inline _OutputArray::_OutputArray(const vector<Mat_<_Tp> >& vec)
+    : _InputArray(vec) {flags |= FIXED_SIZE;}
+    
+template<typename _Tp> inline _OutputArray::_OutputArray(const Mat_<_Tp>& m)
+    : _InputArray(m) {flags |= FIXED_SIZE;}
+template<typename _Tp, int m, int n> inline _OutputArray::_OutputArray(const Matx<_Tp, m, n>& mtx)
+    : _InputArray(mtx) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(const _Tp* vec, int n)
+    : _InputArray(vec, n) {}
     
 //////////////////////////////////// Matrix Expressions /////////////////////////////////////////
 
