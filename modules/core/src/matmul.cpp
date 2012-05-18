@@ -2768,8 +2768,9 @@ typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
 static DotProdFunc dotProdTab[] =
 {
-    (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)dotProd_8s, (DotProdFunc)dotProd_16u,
-    (DotProdFunc)dotProd_16s, (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
+    (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
+    (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
+    (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
     (DotProdFunc)dotProd_64f, 0
 };
 

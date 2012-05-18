@@ -17,7 +17,7 @@ void TestSystem::run()
         return;
     }
 
-    // Run test initializers    
+    // Run test initializers
     for (vector<Runnable*>::iterator it = inits_.begin(); it != inits_.end(); ++it)
     {
         if ((*it)->name().find(test_filter_, 0) != string::npos)
@@ -67,7 +67,7 @@ void TestSystem::finishCurrentSubtest()
     speedup_total_ += speedup;
 
     printMetrics(cpu_time, gpu_time, speedup);
-    
+
     num_subtests_called_++;
     resetCurrentSubtest();
 }
@@ -86,8 +86,8 @@ void TestSystem::printHeading()
 {
     cout << endl;
     cout << setiosflags(ios_base::left);
-    cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms" 
-        << setw(14) << "SPEEDUP" 
+    cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms"
+        << setw(14) << "SPEEDUP"
         << "DESCRIPTION\n";
     cout << resetiosflags(ios_base::left);
 }
@@ -96,8 +96,8 @@ void TestSystem::printHeading()
 void TestSystem::printSummary()
 {
     cout << setiosflags(ios_base::fixed);
-    cout << "\naverage GPU speedup: x" 
-        << setprecision(3) << speedup_total_ / std::max(1, num_subtests_called_) 
+    cout << "\naverage GPU speedup: x"
+        << setprecision(3) << speedup_total_ / std::max(1, num_subtests_called_)
         << endl;
     cout << resetiosflags(ios_base::fixed);
 }
@@ -144,7 +144,7 @@ string abspath(const string& relpath)
 }
 
 
-int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/, 
+int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
                              const char* err_msg, const char* /*file_name*/,
                              int /*line*/, void* /*userdata*/)
 {
@@ -216,6 +216,8 @@ int main(int argc, const char* argv[])
         TestSystem::instance().setListMode(true);
 
     TestSystem::instance().setNumIters(iters);
+
+    cout << "\nNote: the timings for GPU don't include data transfer" << endl;
 
     TestSystem::instance().run();
 
