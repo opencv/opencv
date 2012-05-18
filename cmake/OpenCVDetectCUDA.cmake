@@ -1,3 +1,8 @@
+if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
+  message(STATUS WITH_CUDA flag requires CMake 2.8.3. CUDA support is disabled.)
+  return()  
+endif()
+  
 find_package(CUDA 4.1)
 
 if(CUDA_FOUND)

@@ -1352,7 +1352,7 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool allow
             if(CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 type = m.type();
             else
-                CV_Assert(!fixedType() || (CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0));
+                CV_Assert(CV_MAT_TYPE(type) == m.type());
         }
         if(fixedSize())
         {

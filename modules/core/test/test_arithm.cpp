@@ -1504,6 +1504,14 @@ protected:
                 d.convertTo(d1, depth);
                 CV_Assert( norm(c, d1, CV_C) <= DBL_EPSILON );
             }
+            
+            Mat_<uchar> tmpSrc(100,100);
+            tmpSrc = 124;
+            Mat_<uchar> tmpMask(100,100);
+            tmpMask = 255;
+            Mat_<uchar> tmpDst(100,100);
+            tmpDst = 2;
+            tmpSrc.copyTo(tmpDst,tmpMask);
         }
         catch(...)
         {
