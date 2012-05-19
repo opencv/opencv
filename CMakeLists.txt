@@ -562,9 +562,10 @@ endif()
 ############################## Eigen ##############################
 if(WITH_EIGEN)
   find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
-            PATHS "/usr/local/include/eigen2" "/opt/include/eigen2" "/usr/include/eigen2"
-                  "/usr/local/include/eigen3" "/opt/include/eigen3" "/usr/include/eigen3"
-            DOC "The path to Eigen2/Eigen3 headers")
+            PATHS /usr/local /opt /usr ENV ProgramFiles ENV ProgramW6432
+            PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
+            DOC "The path to Eigen3/Eigen2 headers")
+
   if(EIGEN_INCLUDE_PATH)
     ocv_include_directories(${EIGEN_INCLUDE_PATH})
     ocv_parse_header("${EIGEN_INCLUDE_PATH}/Eigen/src/Core/util/Macros.h" EIGEN_VERSION_LINES EIGEN_WORLD_VERSION EIGEN_MAJOR_VERSION EIGEN_MINOR_VERSION)
