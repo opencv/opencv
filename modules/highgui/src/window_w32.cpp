@@ -48,6 +48,10 @@
 #endif
 
 #define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
+#ifndef _MULTIMON_USE_SECURE_CRT
+#  define _MULTIMON_USE_SECURE_CRT 0 // some MinGW platforms have no strncpy_s
+#endif
+
 #if defined SM_CMONITORS && !defined MONITOR_DEFAULTTONEAREST
 #  define MONITOR_DEFAULTTONULL       0x00000000
 #  define MONITOR_DEFAULTTOPRIMARY    0x00000001
