@@ -60,6 +60,14 @@ project(OpenCV CXX C)
 include(cmake/OpenCVUtils.cmake REQUIRED)
 
 # ----------------------------------------------------------------------------
+# Break in case of popular CMake configuration mistakes
+# ----------------------------------------------------------------------------
+if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
+  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
+  Please check your CMake and compiler installation. If you are crosscompiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+endif()
+
+# ----------------------------------------------------------------------------
 # Detect compiler and target platform architecture
 # ----------------------------------------------------------------------------
 include(cmake/OpenCVDetectCXXCompiler.cmake REQUIRED)
@@ -116,7 +124,7 @@ OCV_OPTION(WITH_OPENEXR        "Include ILM support via OpenEXR"             ON 
 OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID AND NOT IOS AND NOT APPLE) )
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON   IF (NOT IOS) )
-OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O insted of QTKit" OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS) )
@@ -705,12 +713,12 @@ if(OPENCV_SVNVERSION)
   status("Version control:" ${OPENCV_SVNVERSION})
 endif()
 
-#build platform
+# ========================== build platform ==========================
 status("")
 status("  Platform:")
 status("    Host:"             ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR})
 if(CMAKE_CROSSCOMPILING)
-  status("    Target:"           ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR})
+  status("    Target:"         ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 status("    CMake:"            ${CMAKE_VERSION})
 status("    CMake generator:"  ${CMAKE_GENERATOR})
@@ -725,7 +733,7 @@ if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
 
-# C/C++ options
+# ========================== C/C++ options ==========================
 status("")
 status("  C/C++:")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
@@ -743,7 +751,7 @@ else()
   status("    Linker flags (Debug):"   ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
 endif()
 
-# OpenCV modules
+# ========================== OpenCV modules ==========================
 status("")
 status("  OpenCV modules:")
 string(REPLACE "opencv_" "" OPENCV_MODULES_BUILD_ST          "${OPENCV_MODULES_BUILD}")
@@ -761,12 +769,12 @@ foreach(m ${OPENCV_MODULES_DISABLED_AUTO})
 endforeach()
 string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_AUTO_ST  "${OPENCV_MODULES_DISABLED_AUTO_ST}")
 
-status("    To be built:"            OPENCV_MODULES_BUILD          THEN ${OPENCV_MODULES_BUILD_ST}          ELSE "-")
-status("    Disabled by user:"       OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV_MODULES_DISABLED_USER_ST}  ELSE "-")
-status("    Disabled by dependency:" OPENCV_MODULES_DISABLED_AUTO  THEN ${OPENCV_MODULES_DISABLED_AUTO_ST}  ELSE "-")
-status("    Unavailable:"            OPENCV_MODULES_DISABLED_FORCE THEN ${OPENCV_MODULES_DISABLED_FORCE_ST} ELSE "-")
+status("    To be built:"                  OPENCV_MODULES_BUILD          THEN ${OPENCV_MODULES_BUILD_ST}          ELSE "-")
+status("    Disabled:"                     OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV_MODULES_DISABLED_USER_ST}  ELSE "-")
+status("    Disabled by dependency:"       OPENCV_MODULES_DISABLED_AUTO  THEN ${OPENCV_MODULES_DISABLED_AUTO_ST}  ELSE "-")
+status("    Unavailable on this platform:" OPENCV_MODULES_DISABLED_FORCE THEN ${OPENCV_MODULES_DISABLED_FORCE_ST} ELSE "-")
 
-# Android extra
+# ========================== Android details ==========================
 if(ANDROID)
   status("")
   status("  Android: ")
@@ -782,14 +790,17 @@ if(ANDROID)
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"            ELSE NO)
 endif()
 
-#YV
+# ========================== GUI ==========================
 status("")
 status("  GUI: ")
 
-if (HAVE_QT)
+if(HAVE_QT)
   status("    QT 4.x:"            HAVE_QT        THEN "YES (ver ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH} ${QT_EDITION})" ELSE NO)
   status("    QT OpenGL support:" HAVE_QT_OPENGL THEN "YES (${QT_QTOPENGL_LIBRARY})" ELSE NO)
 else()
+  if(DEFINED WITH_QT)
+    status("    QT 4.x:" NO)
+  endif()
   if(WIN32)
     status("    Win32 UI:" YES)
   else()
@@ -809,7 +820,7 @@ endif()
 
 status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE NO)
 
-# media
+# ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
 status("    ZLib:"         BUILD_ZLIB    THEN "build (ver ${ZLIB_VERSION_STRING})"               ELSE "${ZLIB_LIBRARY} (ver ${ZLIB_VERSION_STRING})")
@@ -840,70 +851,100 @@ else()
 endif()
 
 status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})"                     ELSE NO)
-status("    OpenNI:"    HAVE_OPENNI                        THEN "YES (ver ${OPENNI_VERSION_STRING}, build ${OPENNI_VERSION_BUILD})" ELSE NO)
-status("    OpenNI PrimeSensor Modules:"
-                        HAVE_OPENNI_PRIME_SENSOR_MODULE    THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"                               ELSE NO)
-if(WIN32)
-  status("    XIMEA:"     HAVE_XIMEA  THEN YES ELSE NO)
-endif()
 
-# video
+# ========================== VIDEO IO ==========================
 status("")
-if(UNIX AND NOT APPLE)
-  status("  Video I/O:")
+status("  Video I/O:")
+
+if(DEFINED WITH_1394)
   status("    DC1394 1.x:"     HAVE_DC1394         THEN "YES (ver ${ALIASOF_libdc1394_VERSION})"   ELSE NO)
   status("    DC1394 2.x:"     HAVE_DC1394_2       THEN "YES (ver ${ALIASOF_libdc1394-2_VERSION})" ELSE NO)
-  status("    GStreamer:"      HAVE_GSTREAMER      THEN "" ELSE NO)
+endif(DEFINED WITH_1394)
+
+if(ANDROID)
+  if(HAVE_opencv_androidcamera)
+    status("    AndroidNativeCamera:" BUILD_ANDROID_CAMERA_WRAPPER
+                                                   THEN "YES, build for Android${ANDROID_VERSION}" ELSE "YES, use prebuilt libraries")
+  else()
+    status("    AndroidNativeCamera:" "NO (native camera requires Android API level 8 or higher)")
+  endif()
+endif()
+
+if(DEFINED WITH_AVFOUNDATION)
+  status("    AVFoundation:"   WITH_AVFOUNDATION   THEN YES                                        ELSE NO)
+endif(DEFINED WITH_AVFOUNDATION)
+
+if(DEFINED WITH_FFMPEG)
+  if(WIN32)
+    status("    FFMPEG:"       WITH_FFMPEG         THEN "YES (prebuilt binaries)"                  ELSE NO)
+  else()
+    status("    FFMPEG:"       HAVE_FFMPEG         THEN YES ELSE NO)
+  endif()
+  status("      codec:"        HAVE_FFMPEG_CODEC   THEN "YES (ver ${ALIASOF_libavcodec_VERSION})"  ELSE NO)
+  status("      format:"       HAVE_FFMPEG_FORMAT  THEN "YES (ver ${ALIASOF_libavformat_VERSION})" ELSE NO)
+  status("      util:"         HAVE_FFMPEG_UTIL    THEN "YES (ver ${ALIASOF_libavutil_VERSION})"   ELSE NO)
+  status("      swscale:"      HAVE_FFMPEG_SWSCALE THEN "YES (ver ${ALIASOF_libswscale_VERSION})"  ELSE NO)
+  status("      gentoo-style:" HAVE_GENTOO_FFMPEG  THEN YES                                        ELSE NO)
+endif(DEFINED WITH_FFMPEG)
+
+if(DEFINED WITH_GSTREAMER)
+  status("    GStreamer:"      HAVE_GSTREAMER      THEN ""                                         ELSE NO)
   if(HAVE_GSTREAMER)
     status("      base:"       "YES (ver ${ALIASOF_gstreamer-base-0.10_VERSION})")
     status("      app:"        "YES (ver ${ALIASOF_gstreamer-app-0.10_VERSION})")
     status("      video:"      "YES (ver ${ALIASOF_gstreamer-video-0.10_VERSION})")
   endif()
-  status("    UniCap:"         HAVE_UNICAP         THEN "YES (ver ${ALIASOF_libunicap_VERSION})"        ELSE NO)
-  status("    UniCap ucil:"    HAVE_UNICAP_UCIL    THEN "YES (ver ${ALIASOF_libucil_VERSION})"          ELSE NO)
-  status("    PvAPI:"          HAVE_PVAPI          THEN YES ELSE NO)
+endif(DEFINED WITH_GSTREAMER)
+
+if(DEFINED WITH_OPENNI)
+  status("    OpenNI:"         HAVE_OPENNI         THEN "YES (ver ${OPENNI_VERSION_STRING}, build ${OPENNI_VERSION_BUILD})"
+                                                                                                   ELSE NO)
+  status("    OpenNI PrimeSensor Modules:" HAVE_OPENNI_PRIME_SENSOR_MODULE
+                                                   THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"      ELSE NO)
+endif(DEFINED WITH_OPENNI)
+
+if(DEFINED WITH_PVAPI)
+  status("    PvAPI:"          HAVE_PVAPI          THEN YES                                        ELSE NO)
+endif(DEFINED WITH_PVAPI)
+
+if(DEFINED WITH_QUICKTIME)
+  status("    QuickTime:"      WITH_QUICKTIME      THEN YES                                        ELSE NO)
+  status("    QTKit:"          WITH_QUICKTIME      THEN NO                                         ELSE YES)
+endif(DEFINED WITH_QUICKTIME)
+
+if(DEFINED WITH_UNICAP)
+  status("    UniCap:"         HAVE_UNICAP         THEN "YES (ver ${ALIASOF_libunicap_VERSION})"   ELSE NO)
+  status("    UniCap ucil:"    HAVE_UNICAP_UCIL    THEN "YES (ver ${ALIASOF_libucil_VERSION})"     ELSE NO)
+endif(DEFINED WITH_UNICAP)
+
+if(DEFINED WITH_V4L)
   if(HAVE_CAMV4L)
     set(HAVE_CAMV4L_STR "YES")
   else()
     set(HAVE_CAMV4L_STR "NO")
   endif()
- if(HAVE_CAMV4L2)
+  if(HAVE_CAMV4L2)
     set(HAVE_CAMV4L2_STR "YES")
   else()
     set(HAVE_CAMV4L2_STR "NO")
   endif()
-  status("    V4L/V4L2:"       HAVE_LIBV4L         THEN "Using libv4l (ver ${ALIASOF_libv4l1_VERSION})" ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR}")
-  status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"          ELSE NO)
+  status("    V4L/V4L2:"       HAVE_LIBV4L         THEN "Using libv4l (ver ${ALIASOF_libv4l1_VERSION})"
+                                                                                                   ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR}")
+endif(DEFINED WITH_V4L)
 
-  if(ANDROID)
-    if(HAVE_opencv_androidcamera)
-      status("    AndroidNativeCamera:" BUILD_ANDROID_CAMERA_WRAPPER THEN "YES, build for Android ${ANDROID_VERSION}" ELSE "YES, use prebuilt libraries")
-    else()
-      status("    AndroidNativeCamera:" "NO (native camera requires Android API level 8 or higher)")
-    endif()
-  endif()
-elseif(APPLE)
-  if(NOT IOS)
-    status("  Video I/O:"    WITH_QUICKTIME      THEN QuickTime ELSE QTKit)
-  else()
-    status("  Video I/O: AVFoundation")
-  endif()
-elseif(WIN32)
-  status("  Video I/O:"      HAVE_VIDEOINPUT     THEN DirectShow ELSE NO)
-endif()
+if(DEFINED WITH_VIDEOINPUT)
+  status("    DirectShow:"     HAVE_VIDEOINPUT     THEN YES                                        ELSE NO)
+endif(DEFINED WITH_VIDEOINPUT)
 
-if(WIN32)
-  status("    FFMPEG:"         WITH_FFMPEG         THEN "YES (prebuilt binaries)" ELSE NO)
-else()
-  status("    FFMPEG:"         HAVE_FFMPEG         THEN YES ELSE NO)
-endif()
-status("      codec:"        HAVE_FFMPEG_CODEC   THEN "YES (ver ${ALIASOF_libavcodec_VERSION})"  ELSE NO)
-status("      format:"       HAVE_FFMPEG_FORMAT  THEN "YES (ver ${ALIASOF_libavformat_VERSION})" ELSE NO)
-status("      util:"         HAVE_FFMPEG_UTIL    THEN "YES (ver ${ALIASOF_libavutil_VERSION})"   ELSE NO)
-status("      swscale:"      HAVE_FFMPEG_SWSCALE THEN "YES (ver ${ALIASOF_libswscale_VERSION})"  ELSE NO)
-status("      gentoo-style:" HAVE_GENTOO_FFMPEG  THEN YES ELSE NO)
+if(DEFINED WITH_XIMEA)
+  status("    XIMEA:"          HAVE_XIMEA          THEN YES                                        ELSE NO)
+endif(DEFINED WITH_XIMEA)
 
-# Other third-party libraries
+if(DEFINED WITH_XINE)
+  status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"     ELSE NO)
+endif(DEFINED WITH_XINE)
+
+# ========================== Other third-party libraries ==========================
 status("")
 status("  Other third-party libraries:")
 
@@ -930,7 +971,7 @@ if(HAVE_CUDA)
   status("    NVIDIA GPU features:"  ${OPENCV_CUDA_ARCH_FEATURES})
 endif()
 
-# interfaces to other languages
+# ========================== interfaces to languages ==========================
 status("")
 status("  Python:")
 status("    Interpreter:"   PYTHON_EXECUTABLE     THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_FULL})"         ELSE NO)
@@ -949,7 +990,7 @@ if(BUILD_opencv_java)
   status("  Java:" HAVE_opencv_java THEN YES ELSE NO)
 endif()
 
-# documentation
+# ========================== documentation ==========================
 if(BUILD_DOCS)
   status("")
   status("  Documentation:")
@@ -962,7 +1003,7 @@ if(BUILD_DOCS)
   status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
 endif()
 
-# samples and tests
+# ========================== samples and tests ==========================
 status("")
 status("  Tests and samples:")
 status("    Tests:"             BUILD_TESTS AND HAVE_opencv_ts       THEN YES ELSE NO)
@@ -970,11 +1011,11 @@ status("    Performance tests:" BUILD_PERF_TESTS AND HAVE_opencv_ts  THEN YES EL
 status("    Examples:"          BUILD_EXAMPLES                       THEN YES ELSE NO)
 
 if(ANDROID)
-  status("    Android tests:"    BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)
-  status("    Android examples:" BUILD_ANDROID_EXAMPLES                     THEN YES ELSE NO)
+  status("    Android tests:"    BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS            THEN YES ELSE NO)
+  status("    Android examples:" BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)
 endif()
 
-#auxiliary
+# ========================== auxiliary ==========================
 status("")
 status("  Install path:" "${CMAKE_INSTALL_PREFIX}")
 status("")
