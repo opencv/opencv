@@ -71,6 +71,7 @@ CvMLData::CvMLData()
 {
     values = missing = var_types = var_idx_mask = response_out = var_idx_out = var_types_out = 0;
     train_sample_idx = test_sample_idx = 0;
+	header_lines_number = 0;
     sample_idx = 0;
     response_idx = -1;
 
@@ -117,6 +118,17 @@ void CvMLData::clear()
     train_sample_count = -1;
 }
 
+
+void CvMLData::set_header_lines_number( int idx )
+{
+	header_lines_number = std::max(0, idx);
+}
+
+int CvMLData::get_header_lines_number() const
+{
+	return header_lines_number;
+}
+
 static char *fgets_chomp(char *str, int n, FILE *stream)
 {
 	char *head = fgets(str, n, stream);
@@ -153,9 +165,15 @@ int CvMLData::read_csv(const char* filename)
     if( !file )
         return -1;
 
-    // read the first line and determine the number of variables
-    std::vector<char> _buf(M);
+	std::vector<char> _buf(M);
     char* buf = &_buf[0];
+    
+	// skip header lines
+	for( int i = 0; i < header_lines_number; i++ )
+		if( fgets( buf, M, file ) == 0 )
+			return -1;
+
+    // read the first data line and determine the number of variables
     if( !fgets_chomp( buf, M, file ))
     {
         fclose(file);

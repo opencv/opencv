@@ -3,7 +3,7 @@ MLData
 
 .. highlight:: cpp
 
-For the machine learning algorithms, the data set is often stored in a file of the ``.csv``-like format. The file contains a table of predictor and response values where each row of the table corresponds to a sample. Missing values are supported. The UC Irvine Machine Learning Repository (http://archive.ics.uci.edu/ml/) provides many data sets stored in such a format to the machine learning community. The class ``MLData`` is implemented to easily load the data for training one of the OpenCV machine learning algorithms. For float values, only the  ``'.'`` separator is supported.
+For the machine learning algorithms, the data set is often stored in a file of the ``.csv``-like format. The file contains a table of predictor and response values where each row of the table corresponds to a sample. Missing values are supported. The UC Irvine Machine Learning Repository (http://archive.ics.uci.edu/ml/) provides many data sets stored in such a format to the machine learning community. The class ``MLData`` is implemented to easily load the data for training one of the OpenCV machine learning algorithms. For float values, only the  ``'.'`` separator is supported. The table can have a header and in such case the user have to set the number of the header lines to skip them duaring the file reading.
 
 CvMLData
 --------
@@ -181,6 +181,20 @@ Sets the variables types in the loaded data.
 .. ocv:function:: void CvMLData::set_var_types( const char* str )
 
 In the string, a variable type is followed by a list of variables indices. For example: ``"ord[0-17],cat[18]"``, ``"ord[0,2,4,10-12], cat[1,3,5-9,13,14]"``, ``"cat"`` (all variables are categorical), ``"ord"`` (all variables are ordered). 
+
+CvMLData::get_header_lines_number
+---------------------------------
+Returns a number of the table header lines. 
+
+.. ocv:function:: int CvMLData::get_header_lines_number() const
+    
+CvMLData::set_header_lines_number
+---------------------------------
+Sets a number of the table header lines.
+
+.. ocv:function:: void CvMLData::set_header_lines_number( int n )
+
+By default it is supposed that the table does not have a header, i.e. it contains only the data.
 
 CvMLData::get_var_type
 ----------------------
