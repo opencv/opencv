@@ -11,7 +11,7 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
-#added include directories in such way that directories from the OpenCV source tree go first
+# adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   set(__add_before "")
   foreach(dir ${ARGN})
@@ -25,6 +25,12 @@ function(ocv_include_directories)
   include_directories(BEFORE ${__add_before})
 endfunction()
 
+# clears all passed variables
+macro(ocv_clear_vars)
+  foreach(_var ${ARGN})
+    unset(${_var} CACHE)
+  endforeach()
+endmacro()
 
 # Provides an option that the user can optionally select.
 # Can accept condition to control when option is available for user.
@@ -352,10 +358,11 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME SCOPE)
       set(${LIBNAME}_VERSION_STRING "${${LIBNAME}_VERSION_STRING}.${${LIBNAME}_VERSION_TWEAK}" ${SCOPE})
     endif()
   else()
-    unset(${LIBNAME}_VERSION_MAJOR CACHE)
-    unset(${LIBNAME}_VERSION_MINOR CACHE)
-    unset(${LIBNAME}_VERSION_PATCH CACHE)
-    unset(${LIBNAME}_VERSION_TWEAK CACHE)
-    unset(${LIBNAME}_VERSION_STRING CACHE)
+    ocv_clear_vars(${LIBNAME}_VERSION_MAJOR
+                   ${LIBNAME}_VERSION_MAJOR
+                   ${LIBNAME}_VERSION_MINOR
+                   ${LIBNAME}_VERSION_PATCH
+                   ${LIBNAME}_VERSION_TWEAK
+                   ${LIBNAME}_VERSION_STRING)
   endif()
 endmacro()

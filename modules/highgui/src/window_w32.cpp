@@ -978,6 +978,11 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     DWORD defStyle = WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
     int len;
     CvRect rect;
+#ifdef HAVE_OPENGL
+    bool useGl;
+    HDC hGLDC;
+    HGLRC hGLRC;
+#endif
 
     cvInitSystem(0,0);
 
@@ -1013,9 +1018,9 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     if (flags & CV_WINDOW_OPENGL)
         CV_ERROR( CV_OpenGlNotSupported, "Library was built without OpenGL support" );
 #else
-    bool useGl = false;
-    HDC hGLDC = 0;
-    HGLRC hGLRC = 0;
+    useGl = false;
+    hGLDC = 0;
+    hGLRC = 0;
 
     if (flags & CV_WINDOW_OPENGL)
         createGlContext(hWnd, hGLDC, hGLRC, useGl);

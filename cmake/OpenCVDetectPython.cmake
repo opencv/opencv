@@ -1,4 +1,4 @@
-if(MSVC AND NOT PYTHON_EXECUTABLE)
+if(WIN32 AND NOT PYTHON_EXECUTABLE)
   # search for executable with the same bitness as resulting binaries
   # standard FindPythonInterp always prefers executable from system path
   # this is really important because we are using the interpreter for numpy search and for choosing the install location
