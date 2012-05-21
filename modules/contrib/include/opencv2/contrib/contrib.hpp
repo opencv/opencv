@@ -918,7 +918,7 @@ namespace cv
         void lda(InputArray src, InputArray labels);
     };
     
-    class CV_EXPORTS FaceRecognizer
+    class CV_EXPORTS FaceRecognizer : public Algorithm
     {
     public:
         //! virtual destructor
@@ -970,6 +970,8 @@ namespace cv
     };
     
     CV_EXPORTS void applyColorMap(InputArray src, OutputArray dst, int colormap);
+    
+    CV_EXPORTS bool initModule_contrib();
 }
 
 

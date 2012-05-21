@@ -90,7 +90,7 @@ class Eigenfaces : public FaceRecognizer
 private:
     int _num_components;
     vector<Mat> _projections;
-    vector<int> _labels;
+    Mat _labels;
     Mat _eigenvectors;
     Mat _eigenvalues;
     Mat _mean;
@@ -124,20 +124,10 @@ public:
 
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
-
-    // Returns the eigenvectors of this PCA.
-    Mat eigenvectors() const { return _eigenvectors; }
-
-    // Returns the eigenvalues of this PCA.
-    Mat eigenvalues() const { return _eigenvalues; }
-
-    // Returns the sample mean of this PCA.
-    Mat mean() const { return _mean; }
-
-    // Returns the number of components used in this PCA.
-    int num_components() const { return _num_components; }
+    
+    AlgorithmInfo* info() const;
 };
-
+    
 // Belhumeur, P. N., Hespanha, J., and Kriegman, D. "Eigenfaces vs. Fisher-
 // faces: Recognition using class specific linear projection.". IEEE
 // Transactions on Pattern Analysis and Machine Intelligence 19, 7 (1997),
@@ -150,7 +140,7 @@ private:
     Mat _eigenvalues;
     Mat _mean;
     vector<Mat> _projections;
-    vector<int> _labels;
+    Mat _labels;
 
 public:
     using FaceRecognizer::save;
@@ -185,17 +175,7 @@ public:
     // See FaceRecognizer::save.
     virtual void save(FileStorage& fs) const;
 
-    // Returns the eigenvectors of this Fisherfaces model.
-    Mat eigenvectors() const { return _eigenvectors; }
-
-    // Returns the eigenvalues of this Fisherfaces model.
-    Mat eigenvalues() const { return _eigenvalues; }
-
-    // Returns the sample mean of this Fisherfaces model.
-    Mat mean() const { return _eigenvalues; }
-
-    // Returns the number of components used in this Fisherfaces model.
-    int num_components() const { return _num_components; }
+    AlgorithmInfo* info() const;
 };
 
 // Face Recognition based on Local Binary Patterns.
@@ -217,7 +197,7 @@ private:
     int _neighbors;
 
     vector<Mat> _histograms;
-    vector<int> _labels;
+    Mat _labels;
 
 public:
     using FaceRecognizer::save;
@@ -271,6 +251,7 @@ public:
     int grid_x() const { return _grid_x; }
     int grid_y() const { return _grid_y; }
 
+    AlgorithmInfo* info() const;
 };
 
 
@@ -302,7 +283,8 @@ void Eigenfaces::train(InputArray src, InputArray _lbls) {
     if(_lbls.getMat().type() != CV_32SC1)
         CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
     // get labels
-    vector<int> labels = _lbls.getMat();
+    Mat labels = _lbls.getMat();
+    CV_Assert( labels.type() == CV_32S && (labels.cols == 1 || labels.rows == 1));
     // observations in row
     Mat data = asRowMatrix(src, CV_64FC1);
     // number of samples
@@ -310,7 +292,7 @@ void Eigenfaces::train(InputArray src, InputArray _lbls) {
     // dimensionality of data
     //int d = data.cols;
     // assert there are as much samples as labels
-    if((size_t)n != labels.size())
+    if((size_t)n != labels.total())
         CV_Error(CV_StsBadArg, "The number of samples must equal the number of labels!");
     // clip number of components to be valid
     if((_num_components <= 0) || (_num_components > n))
@@ -321,7 +303,7 @@ void Eigenfaces::train(InputArray src, InputArray _lbls) {
     _mean = pca.mean.reshape(1,1); // store the mean vector
     _eigenvalues = pca.eigenvalues.clone(); // eigenvalues by row
     transpose(pca.eigenvectors, _eigenvectors); // eigenvectors by column
-    _labels = labels; // store labels for prediction
+    labels.copyTo(_labels); // store labels for prediction
     // save projections
     for(int sampleIdx = 0; sampleIdx < data.rows; sampleIdx++) {
         Mat p = subspaceProject(_eigenvectors, _mean, data.row(sampleIdx));
@@ -340,7 +322,7 @@ int Eigenfaces::predict(InputArray _src) const {
         double dist = norm(_projections[sampleIdx], q, NORM_L2);
         if(dist < minDist) {
             minDist = dist;
-            minClass = _labels[sampleIdx];
+            minClass = _labels.at<int>(sampleIdx);
         }
     }
     return minClass;
@@ -354,7 +336,7 @@ void Eigenfaces::load(const FileStorage& fs) {
     fs["eigenvectors"] >> _eigenvectors;
     // read sequences
     readFileNodeList(fs["projections"], _projections);
-    readFileNodeList(fs["labels"], _labels);
+    fs["labels"] >> _labels;
 }
 
 void Eigenfaces::save(FileStorage& fs) const {
@@ -365,7 +347,7 @@ void Eigenfaces::save(FileStorage& fs) const {
     fs << "eigenvectors" << _eigenvectors;
     // write sequences
     writeFileNodeList(fs, "projections", _projections);
-    writeFileNodeList(fs, "labels", _labels);
+    fs << "labels" << _labels;
 }
 
 //------------------------------------------------------------------------------
@@ -375,16 +357,22 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
     if(_lbls.getMat().type() != CV_32SC1)
             CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
     // get data
-    vector<int> labels = _lbls.getMat();
+    Mat labels = _lbls.getMat();
     Mat data = asRowMatrix(src, CV_64FC1);
+    
+    CV_Assert( labels.type() == CV_32S && (labels.cols == 1 || labels.rows == 1));
+    
     // dimensionality
     int N = data.rows; // number of samples
     //int D = data.cols; // dimension of samples
     // assert correct data alignment
-    if(labels.size() != (size_t)N)
+    if(labels.total() != (size_t)N)
         CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
     // compute the Fisherfaces
-    int C = (int)remove_dups(labels).size(); // number of unique classes
+    
+    vector<int> ll;
+    labels.copyTo(ll);
+    int C = (int)remove_dups(ll).size(); // number of unique classes
     // clip number of components to be a valid number
     if((_num_components <= 0) || (_num_components > (C-1)))
         _num_components = (C-1);
@@ -395,7 +383,7 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
     // store the total mean vector
     _mean = pca.mean.reshape(1,1);
     // store labels
-    _labels = labels;
+    labels.copyTo(_labels);
     // store the eigenvalues of the discriminants
     lda.eigenvalues().convertTo(_eigenvalues, CV_64FC1);
     // Now calculate the projection matrix as pca.eigenvectors * lda.eigenvectors.
@@ -419,7 +407,7 @@ int Fisherfaces::predict(InputArray _src) const {
         double dist = norm(_projections[sampleIdx], q, NORM_L2);
         if(dist < minDist) {
             minDist = dist;
-            minClass = _labels[sampleIdx];
+            minClass = _labels.at<int>(sampleIdx);
         }
     }
     return minClass;
@@ -435,7 +423,7 @@ void Fisherfaces::load(const FileStorage& fs) {
     fs["eigenvectors"] >> _eigenvectors;
     // read sequences
     readFileNodeList(fs["projections"], _projections);
-    readFileNodeList(fs["labels"], _labels);
+    fs["labels"] >> _labels;
 }
 
 // See FaceRecognizer::save.
@@ -447,7 +435,7 @@ void Fisherfaces::save(FileStorage& fs) const {
     fs << "eigenvectors" << _eigenvectors;
     // write sequences
     writeFileNodeList(fs, "projections", _projections);
-    writeFileNodeList(fs, "labels", _labels);
+    fs << "labels" << _labels;
 }
 //------------------------------------------------------------------------------
 // LBPH
@@ -630,7 +618,7 @@ void LBPH::load(const FileStorage& fs) {
     fs["grid_y"] >> _grid_y;
     //read matrices
     readFileNodeList(fs["histograms"], _histograms);
-    readFileNodeList(fs["labels"], _labels);
+    fs["labels"] >> _labels;
 }
 
 // See FaceRecognizer::save.
@@ -641,7 +629,7 @@ void LBPH::save(FileStorage& fs) const {
     fs << "grid_y" << _grid_y;
     // write matrices
     writeFileNodeList(fs, "histograms", _histograms);
-    writeFileNodeList(fs, "labels", _labels);
+    fs << "labels" << _labels;
 }
 
 void LBPH::train(InputArray _src, InputArray _lbls) {
@@ -651,11 +639,12 @@ void LBPH::train(InputArray _src, InputArray _lbls) {
     vector<Mat> src;
     _src.getMatVector(src);
     // turn the label matrix into a vector
-    vector<int> labels = _lbls.getMat();
-    if(labels.size() != src.size())
+    Mat labels = _lbls.getMat();
+    CV_Assert( labels.type() == CV_32S && (labels.cols == 1 || labels.rows == 1));
+    if(labels.total() != src.size())
         CV_Error(CV_StsUnsupportedFormat, "The number of labels must equal the number of samples.");
     // store given labels
-    _labels = labels;
+    labels.copyTo(_labels);
     // store the spatial histograms of the original data
     for(size_t sampleIdx = 0; sampleIdx < src.size(); sampleIdx++) {
         // calculate lbp image
@@ -690,7 +679,7 @@ int LBPH::predict(InputArray _src) const {
         double dist = compareHist(_histograms[sampleIdx], query, CV_COMP_CHISQR);
         if(dist < minDist) {
             minDist = dist;
-            minClass = _labels[sampleIdx];
+            minClass = _labels.at<int>(sampleIdx);
         }
     }
     return minClass;
@@ -711,6 +700,36 @@ Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius, int neighbors,
                                              int grid_x, int grid_y)
 {
     return new LBPH(radius, neighbors, grid_x, grid_y);
+}
+    
+CV_INIT_ALGORITHM(Eigenfaces, "FaceRecognizer.Eigenfaces",
+                  obj.info()->addParam(obj, "ncomponents", obj._num_components);
+                  obj.info()->addParam(obj, "projections", obj._projections, true);
+                  obj.info()->addParam(obj, "labels", obj._labels, true);
+                  obj.info()->addParam(obj, "eigenvectors", obj._eigenvectors, true);
+                  obj.info()->addParam(obj, "eigenvalues", obj._eigenvalues, true);
+                  obj.info()->addParam(obj, "mean", obj._mean, true));
+
+CV_INIT_ALGORITHM(Fisherfaces, "FaceRecognizer.Fisherfaces",
+                  obj.info()->addParam(obj, "ncomponents", obj._num_components);
+                  obj.info()->addParam(obj, "projections", obj._projections, true);
+                  obj.info()->addParam(obj, "labels", obj._labels, true);
+                  obj.info()->addParam(obj, "eigenvectors", obj._eigenvectors, true);
+                  obj.info()->addParam(obj, "eigenvalues", obj._eigenvalues, true);
+                  obj.info()->addParam(obj, "mean", obj._mean, true));    
+    
+CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
+                  obj.info()->addParam(obj, "radius", obj._radius);
+                  obj.info()->addParam(obj, "neighbors", obj._neighbors);
+                  obj.info()->addParam(obj, "grid_x", obj._grid_x);
+                  obj.info()->addParam(obj, "grid_y", obj._grid_y);
+                  obj.info()->addParam(obj, "histograms", obj._histograms, true);
+                  obj.info()->addParam(obj, "labels", obj._labels, true));
+    
+bool initModule_contrib()
+{
+    Ptr<Algorithm> efaces = createEigenfaces(), ffaces = createFisherfaces(), lbph = createLBPH();
+    return efaces->info() != 0 && ffaces->info() != 0 && lbph->info() != 0;
 }
 
 }
