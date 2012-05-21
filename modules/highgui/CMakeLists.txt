@@ -199,6 +199,17 @@ if(WIN32)
   include_directories(AFTER "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
 endif()
 
+if(UNIX)
+  #these variables are set by CHECK_MODULE macro
+  foreach(P ${HIGHGUI_INCLUDE_DIRS})
+    ocv_include_directories(${P})
+  endforeach()
+
+  foreach(P ${HIGHGUI_LIBRARY_DIRS})
+    link_directories(${P})
+  endforeach()
+endif()
+
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
