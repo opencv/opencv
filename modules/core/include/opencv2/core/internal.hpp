@@ -233,6 +233,34 @@ CV_INLINE IppiSize ippiSize(int width, int height)
         
     }
 #endif
+
+    #define CV_INIT_ALGORITHM(classname, algname, memberinit) \
+    static Algorithm* create##classname() \
+    { \
+        return new classname; \
+    } \
+    \
+    static AlgorithmInfo& classname##_info() \
+    { \
+        static AlgorithmInfo classname##_info_var(algname, create##classname); \
+        return classname##_info_var; \
+    } \
+    \
+    static AlgorithmInfo& classname##_info_auto = classname##_info(); \
+    \
+    AlgorithmInfo* classname::info() const \
+    { \
+        static volatile bool initialized = false; \
+        \
+        if( !initialized ) \
+        { \
+            initialized = true; \
+            classname obj; \
+            memberinit; \
+        } \
+        return &classname##_info(); \
+    }
+
 #endif
 
 /* maximal size of vector to run matrix operations on it inline (i.e. w/o ipp calls) */
