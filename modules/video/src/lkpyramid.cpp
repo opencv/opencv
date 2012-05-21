@@ -584,10 +584,6 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            TermCriteria criteria,
                            int flags, double minEigThreshold )
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, flags, minEigThreshold))
-        return;
-#endif
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
 
@@ -731,7 +727,11 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
         CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
 
-        typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
+#ifdef HAVE_TEGRA_OPTIMIZATION
+        typedef tegra::LKTrackerInvoker<cv::detail::LKTrackerInvoker> LKTrackerInvoker;
+#else
+        typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;    
+#endif
 
         parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
                                                                 nextPyr[level * lvlStep2], prevPts, nextPts,
