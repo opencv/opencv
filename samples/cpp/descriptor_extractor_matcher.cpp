@@ -2,6 +2,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 
 #include <iostream>
 
@@ -235,6 +236,9 @@ int main(int argc, char** argv)
     	help(argv);
         return -1;
     }
+
+    cv::initModule_nonfree();
+
     bool isWarpPerspective = argc == 7;
     double ransacReprojThreshold = -1;
     if( !isWarpPerspective )
