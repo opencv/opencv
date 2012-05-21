@@ -107,12 +107,15 @@ class DetectionBasedTracker::SeparateDetectionWork
 
 DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, const std::string& cascadeFilename)
     :detectionBasedTracker(_detectionBasedTracker),
-    cascadeInThread(cascadeFilename),
+    cascadeInThread(),
     isObjectDetectingReady(false),
     shouldObjectDetectingResultsBeForgot(false),
     stateThread(STATE_THREAD_STOPPED),
     timeWhenDetectingThreadStartedWork(-1)
 {
+    if(!cascadeInThread.load(cascadeFilename)) {
+        CV_Error(CV_StsBadArg, "DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork: Cannot load a cascade from the file '"+cascadeFilename+"'");
+    }
     int res=0;
     res=pthread_mutex_init(&mutex, NULL);//TODO: should be attributes?
     if (res) {
@@ -439,13 +442,16 @@ DetectionBasedTracker::InnerParameters::InnerParameters()
 DetectionBasedTracker::DetectionBasedTracker(const std::string& cascadeFilename, const Parameters& params)
     :separateDetectionWork(),
     innerParameters(),
-    numTrackedSteps(0),
-    cascadeForTracking(cascadeFilename)
+    numTrackedSteps(0)
 {
     CV_Assert( (params.minObjectSize > 0)
             && (params.maxObjectSize >= 0)
             && (params.scaleFactor > 1.0)
             && (params.maxTrackLifetime >= 0) );
+
+    if (!cascadeForTracking.load(cascadeFilename)) {        
+        CV_Error(CV_StsBadArg, "DetectionBasedTracker::DetectionBasedTracker: Cannot load a cascade from the file '"+cascadeFilename+"'");
+    }
 
     parameters=params;
 
