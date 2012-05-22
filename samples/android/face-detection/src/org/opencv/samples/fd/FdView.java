@@ -43,8 +43,7 @@ class FdView extends SampleCvViewBase {
     	{
     		mFaceSize = Math.round(height * faceSize);
     	}
-    	mTracker.release();
-    	mTracker = new DetectionBaseTracker(mCascadeFile.getAbsolutePath(), mFaceSize);
+    	mTracker.setMinFaceSize(mFaceSize);
     }
     
     public void setDtetectorType(int type)
@@ -120,17 +119,14 @@ class FdView extends SampleCvViewBase {
         
         if (mDetectorType == CASCADE_DETECTOR)
         {
-        	if (mCascade != null) {
+        	if (mCascade != null)
                 mCascade.detectMultiScale(mGray, faces, 1.1, 2, 2 // TODO: objdetect.CV_HAAR_SCALE_IMAGE
                         , new Size(mFaceSize, mFaceSize), new Size());
-            }
         }
         else if (mDetectorType == DBT_DETECTOR)
         {
         	if (mTracker != null)
-        	{
         		mTracker.detect(mGray, faces);
-        	}
         }
         else
         {
