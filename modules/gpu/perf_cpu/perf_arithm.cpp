@@ -636,6 +636,59 @@ INSTANTIATE_TEST_CASE_P(Arithm, BitwiseScalarOr, testing::Combine(
                         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4)));
 
 
+//////////////////////////////////////////////////////////////////////
+// BitwiseXor
+
+GPU_PERF_TEST(BitwiseXor, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+
+    declare.in(src1, src2, WARMUP_RNG);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::bitwise_xor(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseXor, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1)));
+
+//////////////////////////////////////////////////////////////////////
+// BitwiseScalarXor
+
+GPU_PERF_TEST(BitwiseScalarXor, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+
+    declare.in(src, WARMUP_RNG);
+
+    cv::Mat dst;
+    cv::Scalar sc = cv::Scalar(123, 123, 123, 123);
+
+    TEST_CYCLE()
+    {
+        cv::bitwise_xor(src, sc, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseScalarXor, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4)));
+
+
 
 //////////////////////////////////////////////////////////////////////
 // Min

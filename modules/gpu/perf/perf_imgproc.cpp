@@ -1020,4 +1020,73 @@ INSTANTIATE_TEST_CASE_P(ImgProc, ImagePyramid_getLayer, testing::Combine(
                         GPU_TYPICAL_MAT_SIZES,
                         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)));
 
+
+
+//////////////////////////////////////////////////////////////////////
+// MulAndScaleSpectrums
+
+GPU_PERF_TEST(MulAndScaleSpectrums, cv::gpu::DeviceInfo, cv::Size)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+        
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    int type = CV_32FC2;
+
+    cv::Mat src1_host(size, type);
+    cv::Mat src2_host(size, type);
+    declare.in(src1_host, src2_host, WARMUP_RNG);
+
+    cv::gpu::GpuMat src1(src1_host);
+    cv::gpu::GpuMat src2(src2_host);
+    cv::gpu::GpuMat dst(size, type);
+    
+    TEST_CYCLE()
+    {        
+        cv::gpu::mulSpectrums(src1, src2, dst, cv::DFT_ROWS, false);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, MulAndScaleSpectrums, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES));
+
+
+
+//////////////////////////////////////////////////////////////////////
+// MulAndScaleSpectrumsScale
+
+
+GPU_PERF_TEST(MulAndScaleSpectrumsScale, cv::gpu::DeviceInfo, cv::Size)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::Size size = GET_PARAM(1);
+
+    float scale = 1.f / size.area();
+    int type = CV_32FC2;
+    
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat src1_host(size, type);
+    cv::Mat src2_host(size, type);
+    declare.in(src1_host, src2_host, WARMUP_RNG);
+
+    cv::gpu::GpuMat src1(src1_host);
+    cv::gpu::GpuMat src2(src2_host);
+    cv::gpu::GpuMat dst(size, type);
+    
+    TEST_CYCLE()
+    {        
+        cv::gpu::mulAndScaleSpectrums(src1, src2, dst, cv::DFT_ROWS, scale, false);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, MulAndScaleSpectrumsScale, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES));
+
+
+
+
 #endif

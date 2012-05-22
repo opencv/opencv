@@ -24,4 +24,32 @@ GPU_PERF_TEST_1(HOG, cv::gpu::DeviceInfo)
 
 INSTANTIATE_TEST_CASE_P(ObjDetect, HOG, ALL_DEVICES);
 
+CV_FLAGS(DftFlags, 0, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
+
+GPU_PERF_TEST_1(HaarClassifier, cv::gpu::DeviceInfo, DftFlags)
+{
+    cv::gpu::DeviceInfo devInfo = GetParam();
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat img_host = readImage("gpu/haarcascade/group_1_640x480_VGA.pgm", cv::IMREAD_GRAYSCALE);
+        
+    cv::gpu::CascadeClassifier_GPU cascade;
+
+    if (!cascade.load("haarcascade_frontalface_alt.xml"))
+        CV_Error(0, "Can't load cascade");
+
+    cv::gpu::GpuMat img(img_host);
+    cv::gpu::GpuMat objects_buffer(1, 100, cv::DataType<cv::Rect>::type);
+        
+    TEST_CYCLE()
+    {
+        cascade.detectMultiScale(img, objects_buffer);        
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ObjDetect, HaarClassifier, ALL_DEVICES);
+
+
+
+
 #endif

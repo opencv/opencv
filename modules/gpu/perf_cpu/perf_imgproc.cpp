@@ -533,4 +533,31 @@ INSTANTIATE_TEST_CASE_P(ImgProc, EqualizeHist, testing::Combine(
                         ALL_DEVICES,
                         GPU_TYPICAL_MAT_SIZES));
 
+
+//////////////////////////////////////////////////////////////////////
+// MulAndScaleSpectrums
+
+
+GPU_PERF_TEST(MulAndScaleSpectrums, cv::gpu::DeviceInfo, cv::Size)
+{
+    cv::Size size = GET_PARAM(1);       
+
+    int type = CV_32FC2;
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+    cv::Mat dst(size, type);
+    declare.in(src1, src2, WARMUP_RNG);   
+    
+    TEST_CYCLE()
+    {        
+        cv::mulSpectrums(src1, src2, dst, cv::DFT_ROWS, false);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, MulAndScaleSpectrums, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES));
+
+
 #endif
