@@ -16,13 +16,18 @@ public class FdActivity extends Activity {
     private MenuItem            mItemFace40;
     private MenuItem            mItemFace30;
     private MenuItem            mItemFace20;
+    private MenuItem            mItemType;
     
     private FdView				mView;
-
-    public static float         minFaceSize = 0.5f;
+    
+    private int                 mDetectorType = 0;
+    private String[]            mDetectorName; 
 
     public FdActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
+        mDetectorName = new String[2];
+        mDetectorName[0] = "Cascade";
+        mDetectorName[1] = "DBT";
     }
 
     @Override
@@ -57,6 +62,7 @@ public class FdActivity extends Activity {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         mView = new FdView(this);
+        mView.setDtetectorType(mDetectorType);
         setContentView(mView);
     }
 
@@ -67,6 +73,8 @@ public class FdActivity extends Activity {
         mItemFace40 = menu.add("Face size 40%");
         mItemFace30 = menu.add("Face size 30%");
         mItemFace20 = menu.add("Face size 20%");
+        mItemType   = menu.add(mDetectorName[mDetectorType]);
+        		
         return true;
     }
 
@@ -74,13 +82,19 @@ public class FdActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "Menu Item selected " + item);
         if (item == mItemFace50)
-            minFaceSize = 0.5f;
+            mView.setMinFaceSize(0.5f);
         else if (item == mItemFace40)
-            minFaceSize = 0.4f;
+        	mView.setMinFaceSize(0.4f);
         else if (item == mItemFace30)
-            minFaceSize = 0.3f;
+        	mView.setMinFaceSize(0.3f);
         else if (item == mItemFace20)
-            minFaceSize = 0.2f;
+        	mView.setMinFaceSize(0.2f);
+        else if (item == mItemType)
+        {
+        	mDetectorType = (mDetectorType + 1) % mDetectorName.length;
+        	item.setTitle(mDetectorName[mDetectorType]);
+        	mView.setDtetectorType(mDetectorType);
+        }
         return true;
     }
 }
