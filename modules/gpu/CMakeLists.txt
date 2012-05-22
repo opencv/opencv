@@ -47,27 +47,23 @@ if (HAVE_CUDA)
     endif()
   endif()
 
-  OCV_CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
+  ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
   #CUDA_BUILD_CLEAN_TARGET()
 
+  
+  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  
+  
   if(NOT APPLE)
     unset(CUDA_nvcuvid_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvid)
+	set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
   endif()
 
   if(WIN32)
     unset(CUDA_nvcuvenc_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvenc)
-  endif()
-
-  set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-
-  if(NOT APPLE)
-    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
-  endif()
-
-  if(WIN32)
-    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
+	set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
   endif()
 
   if(NOT APPLE AND WITH_FFMPEG)

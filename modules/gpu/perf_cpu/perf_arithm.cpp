@@ -185,6 +185,169 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddScalar, testing::Combine(
                         GPU_TYPICAL_MAT_SIZES,
                         testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
 
+
+//////////////////////////////////////////////////////////////////////
+// SubtractMat
+
+GPU_PERF_TEST(SubtractMat, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+
+    fill(src1, 0.0, 100.0);
+    fill(src2, 0.0, 100.0);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::subtract(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, SubtractMat, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+//////////////////////////////////////////////////////////////////////
+// SubtractScalar
+
+GPU_PERF_TEST(SubtractScalar, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+
+    fill(src, 0.0, 100.0);
+
+    cv::Scalar s(1,2,3,4);
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::subtract(src, s, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, SubtractScalar, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+
+//////////////////////////////////////////////////////////////////////
+// MultiplyMat
+
+GPU_PERF_TEST(MultiplyMat, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+
+    fill(src1, 0.0, 100.0);
+    fill(src2, 0.0, 100.0);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::multiply(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, MultiplyMat, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+//////////////////////////////////////////////////////////////////////
+// MultiplyScalar
+
+GPU_PERF_TEST(MultiplyScalar, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+
+    fill(src, 0.0, 100.0);
+
+    cv::Scalar s(1,2,3,4);
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::multiply(src, s, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, MultiplyScalar, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+
+//////////////////////////////////////////////////////////////////////
+// DivideMat
+
+GPU_PERF_TEST(DivideMat, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+
+    fill(src1, 0.0, 100.0);
+    fill(src2, 0.0, 100.0);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::divide(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, DivideMat, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+//////////////////////////////////////////////////////////////////////
+// DivideScalar
+
+GPU_PERF_TEST(DivideScalar, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+
+    fill(src, 0.0, 100.0);
+
+    cv::Scalar s(1,2,3,4);
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::divide(src, s, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, DivideScalar, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+
 //////////////////////////////////////////////////////////////////////
 // Exp
 
@@ -234,6 +397,59 @@ INSTANTIATE_TEST_CASE_P(Arithm, Pow, testing::Combine(
                         testing::Values(perf::MatType(CV_32FC1))));
 
 //////////////////////////////////////////////////////////////////////
+// Log
+
+GPU_PERF_TEST(Log, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+
+    declare.in(src, WARMUP_RNG);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::log(src, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Log, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(perf::MatType(CV_32FC1))));
+
+
+//////////////////////////////////////////////////////////////////////
+// Sqrt
+
+GPU_PERF_TEST(Sqrt, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+
+    declare.in(src, WARMUP_RNG);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::sqrt(src, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(perf::MatType(CV_32FC1))));
+
+
+
+//////////////////////////////////////////////////////////////////////
 // Compare
 
 GPU_PERF_TEST(Compare, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
@@ -258,6 +474,35 @@ INSTANTIATE_TEST_CASE_P(Arithm, Compare, testing::Combine(
                         ALL_DEVICES,
                         GPU_TYPICAL_MAT_SIZES,
                         testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+
+//////////////////////////////////////////////////////////////////////
+// CompareScalar
+
+GPU_PERF_TEST(CompareScalar, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Scalar src2 = cv::Scalar::all(123);
+
+    declare.in(src1, WARMUP_RNG);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::compare(src1, src2, dst, cv::CMP_EQ);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, CompareScalar, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+
+
 
 //////////////////////////////////////////////////////////////////////
 // BitwiseNot
@@ -336,6 +581,62 @@ INSTANTIATE_TEST_CASE_P(Arithm, BitwiseScalarAnd, testing::Combine(
                         GPU_TYPICAL_MAT_SIZES,
                         testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4)));
 
+
+
+//////////////////////////////////////////////////////////////////////
+// BitwiseOr
+
+GPU_PERF_TEST(BitwiseOr, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+
+    declare.in(src1, src2, WARMUP_RNG);
+
+    cv::Mat dst;
+
+    TEST_CYCLE()
+    {
+        cv::bitwise_or(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseOr, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1)));
+
+//////////////////////////////////////////////////////////////////////
+// BitwiseScalarOr
+
+GPU_PERF_TEST(BitwiseScalarOr, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src(size, type);
+
+    declare.in(src, WARMUP_RNG);
+
+    cv::Mat dst;
+    cv::Scalar sc = cv::Scalar(123, 123, 123, 123);
+
+    TEST_CYCLE()
+    {
+        cv::bitwise_or(src, sc, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseScalarOr, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32SC1, CV_32SC3, CV_32SC4)));
+
+
+
 //////////////////////////////////////////////////////////////////////
 // Min
 
@@ -361,6 +662,168 @@ INSTANTIATE_TEST_CASE_P(Arithm, Min, testing::Combine(
                         ALL_DEVICES,
                         GPU_TYPICAL_MAT_SIZES,
                         testing::Values(CV_8UC1, CV_16UC1, CV_32SC1)));
+
+//////////////////////////////////////////////////////////////////////
+// Max
+
+GPU_PERF_TEST(Max, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+
+    declare.in(src1, src2, WARMUP_RNG);
+
+    cv::Mat dst(size, type);
+
+    TEST_CYCLE()
+    {
+        cv::max(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Max, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1)));
+
+
+//////////////////////////////////////////////////////////////////////
+// Abs
+
+GPU_PERF_TEST(Abs, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    
+    declare.in(src1, WARMUP_RNG);
+
+    cv::Mat dst(size, type);
+
+    TEST_CYCLE()
+    {
+        dst = cv::abs(src1);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Abs, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_16S, CV_32F)));
+
+
+//////////////////////////////////////////////////////////////////////
+// AbsDiff
+
+GPU_PERF_TEST(AbsDiff, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+    
+    declare.in(src1, src2, WARMUP_RNG);
+
+    cv::Mat dst(size, type);
+
+    TEST_CYCLE()
+    {
+        cv::absdiff(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, AbsDiff, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1)));
+
+
+//////////////////////////////////////////////////////////////////////
+// AbsDiffScalar
+
+GPU_PERF_TEST(AbsDiffScalar, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Scalar src2 = cv::Scalar::all(123);
+    
+    declare.in(src1, WARMUP_RNG);
+
+    cv::Mat dst(size, type);
+
+    TEST_CYCLE()
+    {
+        cv::absdiff(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, AbsDiffScalar, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1)));
+
+
+//////////////////////////////////////////////////////////////////////
+// Phase
+
+GPU_PERF_TEST(Phase, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+        
+    declare.in(src1, src2, WARMUP_RNG);
+
+    cv::Mat dst(size, type);
+
+    TEST_CYCLE()
+    {
+        cv::phase(src1, src2, dst, true);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Phase, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values<perf::MatType>(CV_32FC1) ));
+
+
+//////////////////////////////////////////////////////////////////////
+// Magnitude
+
+GPU_PERF_TEST(Magnitude, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+
+    cv::Mat src1(size, type);
+    cv::Mat src2(size, type);
+        
+    declare.in(src1, src2, WARMUP_RNG);
+
+    cv::Mat dst(size, type);
+
+    TEST_CYCLE()
+    {
+        cv::magnitude(src1, src2, dst);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, testing::Combine(
+                        ALL_DEVICES,
+                        GPU_TYPICAL_MAT_SIZES,
+                        testing::Values<perf::MatType>(CV_32FC1) ));
+
+
 
 //////////////////////////////////////////////////////////////////////
 // MeanStdDev
