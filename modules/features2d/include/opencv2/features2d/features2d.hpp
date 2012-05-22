@@ -324,13 +324,13 @@ class CV_EXPORTS_W MSER : public FeatureDetector
 {
 public:
     //! the full constructor
-    explicit MSER( int _delta=5, int _min_area=60, int _max_area=14400,
+    CV_WRAP explicit MSER( int _delta=5, int _min_area=60, int _max_area=14400,
           double _max_variation=0.25, double _min_diversity=.2,
           int _max_evolution=200, double _area_threshold=1.01,
           double _min_margin=0.003, int _edge_blur_size=5 );
     
     //! the operator that extracts the MSERs from the image or the specific part of it
-    CV_WRAP_AS(detect) void operator()( const Mat& image, vector<vector<Point> >& msers,
+    CV_WRAP_AS(detect) void operator()( const Mat& image, CV_OUT vector<vector<Point> >& msers,
                                         const Mat& mask=Mat() ) const; 
     AlgorithmInfo* info() const;
     
