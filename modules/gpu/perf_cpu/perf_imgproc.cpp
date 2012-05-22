@@ -45,7 +45,7 @@ GPU_PERF_TEST_1(MeanShiftFiltering, cv::gpu::DeviceInfo)
 
     cv::Mat dst;
 
-    declare.time(15.0);
+    declare.time(100.0);
 
     TEST_CYCLE()
     {
@@ -133,7 +133,7 @@ GPU_PERF_TEST(Threshold, cv::gpu::DeviceInfo, cv::Size, perf::MatType)
 INSTANTIATE_TEST_CASE_P(ImgProc, Threshold, testing::Combine(
                         ALL_DEVICES,
                         GPU_TYPICAL_MAT_SIZES,
-                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_32FC1)));
 
 //////////////////////////////////////////////////////////////////////
 // Resize

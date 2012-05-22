@@ -79,7 +79,7 @@ GPU_PERF_TEST(LinearFilter, cv::gpu::DeviceInfo, cv::Size, perf::MatType, int)
 
     cv::Ptr<cv::FilterEngine> filter = cv::createLinearFilter(type, type, cv::Mat::ones(ksize, ksize, CV_8U));
 
-    declare.time(1.0);
+    declare.time(10.0);
 
     TEST_CYCLE()
     {
@@ -111,7 +111,7 @@ GPU_PERF_TEST(SeparableLinearFilter, cv::gpu::DeviceInfo, cv::Size, perf::MatTyp
     cv::Mat kernel = cv::getGaussianKernel(ksize, 0.5, CV_32F);
     cv::Ptr<cv::FilterEngine> filter = cv::createSeparableLinearFilter(type, type, kernel, kernel);
 
-    declare.time(1.0);
+    declare.time(10.0);
 
     TEST_CYCLE()
     {

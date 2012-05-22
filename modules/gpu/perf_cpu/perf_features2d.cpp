@@ -100,7 +100,7 @@ GPU_PERF_TEST_1(SURF, cv::gpu::DeviceInfo)
 
     cv::SURF surf;
 
-    declare.time(10.0);
+    declare.time(30.0);
 
     TEST_CYCLE()
     {

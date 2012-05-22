@@ -596,6 +596,6 @@ GPU_PERF_TEST(GEMM, cv::gpu::DeviceInfo, cv::Size)
 
 INSTANTIATE_TEST_CASE_P(Arithm, GEMM, testing::Combine(
                         ALL_DEVICES,
-                        testing::Values(cv::Size(512, 512), cv::Size(1024, 1024), cv::Size(2048, 2048))));
+                        testing::Values(cv::Size(512, 512), cv::Size(1024, 1024))));
 
 #endif
