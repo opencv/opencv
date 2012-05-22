@@ -1,4 +1,4 @@
-#include "perf_precomp.hpp"
+#include "perf_cpu_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -7,32 +7,26 @@
 
 GPU_PERF_TEST(BruteForceMatcher_match, cv::gpu::DeviceInfo, int)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     int desc_size = GET_PARAM(1);
 
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Mat query(3000, desc_size, CV_32FC1);
+    cv::Mat train(3000, desc_size, CV_32FC1);
 
-    cv::Mat query_host(3000, desc_size, CV_32FC1);
-    cv::Mat train_host(3000, desc_size, CV_32FC1);
+    declare.in(query, train, WARMUP_RNG);
 
-    declare.in(query_host, train_host, WARMUP_RNG);
+    cv::BFMatcher matcher(cv::NORM_L2);
+    std::vector<cv::DMatch> matches;
 
-    cv::gpu::GpuMat query(query_host);
-    cv::gpu::GpuMat train(train_host);
-    cv::gpu::GpuMat trainIdx, distance;
-
-    cv::gpu::BFMatcher_GPU matcher(cv::NORM_L2);
-
-    declare.time(3.0);
+    declare.time(10.0);
 
     TEST_CYCLE()
     {
-        matcher.matchSingle(query, train, trainIdx, distance);
+        matcher.match(query, train, matches);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_match, testing::Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         testing::Values(64, 128, 256)));
 
 //////////////////////////////////////////////////////////////////////
@@ -40,33 +34,27 @@ INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_match, testing::Combine(
 
 GPU_PERF_TEST(BruteForceMatcher_knnMatch, cv::gpu::DeviceInfo, int, int)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     int desc_size = GET_PARAM(1);
     int k = GET_PARAM(2);
 
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Mat query(3000, desc_size, CV_32FC1);
+    cv::Mat train(3000, desc_size, CV_32FC1);
 
-    cv::Mat query_host(3000, desc_size, CV_32FC1);
-    cv::Mat train_host(3000, desc_size, CV_32FC1);
+    declare.in(query, train, WARMUP_RNG);
 
-    declare.in(query_host, train_host, WARMUP_RNG);
+    cv::BFMatcher matcher(cv::NORM_L2);
+    std::vector< std::vector<cv::DMatch> > matches;
 
-    cv::gpu::GpuMat query(query_host);
-    cv::gpu::GpuMat train(train_host);
-    cv::gpu::GpuMat trainIdx, distance, allDist;
-
-    cv::gpu::BFMatcher_GPU matcher(cv::NORM_L2);
-
-    declare.time(3.0);
+    declare.time(10.0);
 
     TEST_CYCLE()
     {
-        matcher.knnMatchSingle(query, train, trainIdx, distance, allDist, k);
+        matcher.knnMatch(query, train, matches, k);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_knnMatch, testing::Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         testing::Values(64, 128, 256),
                         testing::Values(2, 3)));
 
@@ -75,33 +63,27 @@ INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_knnMatch, testing::Combine
 
 GPU_PERF_TEST(BruteForceMatcher_radiusMatch, cv::gpu::DeviceInfo, int)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     int desc_size = GET_PARAM(1);
 
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Mat query(3000, desc_size, CV_32FC1);
+    cv::Mat train(3000, desc_size, CV_32FC1);
 
-    cv::Mat query_host(3000, desc_size, CV_32FC1);
-    cv::Mat train_host(3000, desc_size, CV_32FC1);
+    fill(query, 0, 1);
+    fill(train, 0, 1);
 
-    fill(query_host, 0, 1);
-    fill(train_host, 0, 1);
+    cv::BFMatcher matcher(cv::NORM_L2);
+    std::vector< std::vector<cv::DMatch> > matches;
 
-    cv::gpu::GpuMat query(query_host);
-    cv::gpu::GpuMat train(train_host);
-    cv::gpu::GpuMat trainIdx, nMatches, distance;
-
-    cv::gpu::BFMatcher_GPU matcher(cv::NORM_L2);
-
-    declare.time(3.0);
+    declare.time(10.0);
 
     TEST_CYCLE()
     {
-        matcher.radiusMatchSingle(query, train, trainIdx, distance, nMatches, 2.0);
+        matcher.radiusMatch(query, train, matches, 2.0);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_radiusMatch, testing::Combine(
-                        ALL_DEVICES, 
+                        ALL_DEVICES,
                         testing::Values(64, 128, 256)));
 
 //////////////////////////////////////////////////////////////////////
@@ -109,24 +91,20 @@ INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_radiusMatch, testing::Comb
 
 GPU_PERF_TEST_1(SURF, cv::gpu::DeviceInfo)
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
+    cv::Mat img = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
 
-    cv::gpu::setDevice(devInfo.deviceID());
+    ASSERT_FALSE(img.empty());
 
-    cv::Mat img_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
 
-    ASSERT_FALSE(img_host.empty());
+    cv::SURF surf;
 
-    cv::gpu::GpuMat img(img_host);
-    cv::gpu::GpuMat keypoints, descriptors;
-
-    cv::gpu::SURF_GPU surf;
-
-    declare.time(2.0);
+    declare.time(10.0);
 
     TEST_CYCLE()
     {
-        surf(img, cv::gpu::GpuMat(), keypoints, descriptors);
+        surf(img, cv::noArray(), keypoints, descriptors);
     }
 }
 
@@ -137,22 +115,15 @@ INSTANTIATE_TEST_CASE_P(Features2D, SURF, DEVICES(cv::gpu::GLOBAL_ATOMICS));
 
 GPU_PERF_TEST_1(FAST, cv::gpu::DeviceInfo)
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
+    cv::Mat img = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
 
-    cv::gpu::setDevice(devInfo.deviceID());
+    ASSERT_FALSE(img.empty());
 
-    cv::Mat img_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-
-    ASSERT_FALSE(img_host.empty());
-
-    cv::gpu::GpuMat img(img_host);
-    cv::gpu::GpuMat keypoints, descriptors;
-
-    cv::gpu::FAST_GPU fastGPU(20);
+    std::vector<cv::KeyPoint> keypoints;
 
     TEST_CYCLE()
     {
-        fastGPU(img, cv::gpu::GpuMat(), keypoints);
+        cv::FAST(img, keypoints, 20);
     }
 }
 
@@ -163,22 +134,18 @@ INSTANTIATE_TEST_CASE_P(Features2D, FAST, DEVICES(cv::gpu::GLOBAL_ATOMICS));
 
 GPU_PERF_TEST_1(ORB, cv::gpu::DeviceInfo)
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
+    cv::Mat img = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
 
-    cv::gpu::setDevice(devInfo.deviceID());
+    ASSERT_FALSE(img.empty());
 
-    cv::Mat img_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
 
-    ASSERT_FALSE(img_host.empty());
-
-    cv::gpu::GpuMat img(img_host);
-    cv::gpu::GpuMat keypoints, descriptors;
-
-    cv::gpu::ORB_GPU orbGPU(4000);
+    cv::ORB orb(4000);
 
     TEST_CYCLE()
     {
-        orbGPU(img, cv::gpu::GpuMat(), keypoints, descriptors);
+        orb(img, cv::noArray(), keypoints, descriptors);
     }
 }
 

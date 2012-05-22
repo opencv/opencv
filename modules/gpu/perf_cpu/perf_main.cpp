@@ -1,4 +1,4 @@
-#include "perf_precomp.hpp"
+#include "perf_cpu_precomp.hpp"
 
 #ifdef HAVE_CUDA
 

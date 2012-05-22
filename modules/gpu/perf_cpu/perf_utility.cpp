@@ -1,4 +1,4 @@
-#include "perf_precomp.hpp"
+#include "perf_cpu_precomp.hpp"
 
 using namespace std;
 using namespace cv;
@@ -12,7 +12,7 @@ void fill(Mat& m, double a, double b)
 
 void PrintTo(const CvtColorInfo& info, ostream* os)
 {
-    static const char* str[] = 
+    static const char* str[] =
     {
         "BGR2BGRA",
         "BGRA2BGR",
@@ -89,7 +89,7 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
         0,
         0,
         0,
-        
+
         "HLS2BGR",
         "HLS2RGB",
 
@@ -131,7 +131,7 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
         0,
         0,
         0,
-        0 
+        0
     };
 
     *os << str[info.code];
@@ -179,7 +179,7 @@ const vector<DeviceInfo>& devices()
 vector<DeviceInfo> devices(FeatureSet feature)
 {
     const vector<DeviceInfo>& d = devices();
-    
+
     vector<DeviceInfo> devs_filtered;
 
     if (TargetArchs::builtWith(feature))

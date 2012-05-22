@@ -125,7 +125,7 @@ ocv_add_perf_tests()
 set(perf_cpu_path "${CMAKE_CURRENT_SOURCE_DIR}/perf_cpu")
 if(BUILD_PERF_TESTS AND EXISTS "${perf_cpu_path}")
     # opencv_highgui is required for imread/imwrite
-    set(perf_deps ${the_module} opencv_ts opencv_highgui)
+    set(perf_deps ${the_module} opencv_ts opencv_highgui opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree)
     ocv_check_dependencies(${perf_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
