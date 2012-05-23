@@ -25,7 +25,7 @@ GPU_PERF_TEST(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, Bord
 
     cv::remap(src, dst, xmap, ymap, interpolation, borderMode);
 
-    declare.time(3.0);
+    declare.time(20.0);
 
     TEST_CYCLE()
     {
@@ -62,7 +62,7 @@ GPU_PERF_TEST(Resize, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, Sca
 
     cv::resize(src, dst, cv::Size(), f, f, interpolation);
 
-    declare.time(1.0);
+    declare.time(20.0);
 
     TEST_CYCLE()
     {
@@ -101,6 +101,8 @@ GPU_PERF_TEST(WarpAffine, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation,
 
     cv::warpAffine(src, dst, M, size, interpolation, borderMode);
 
+    declare.time(20.0);
+
     TEST_CYCLE()
     {
         cv::warpAffine(src, dst, M, size, interpolation, borderMode);
@@ -138,6 +140,8 @@ GPU_PERF_TEST(WarpPerspective, cv::gpu::DeviceInfo, cv::Size, MatType, Interpola
     cv::Mat M(3, 3, CV_64F, (void*) mat);
 
     cv::warpPerspective(src, dst, M, size, interpolation, borderMode);
+
+    declare.time(20.0);
 
     TEST_CYCLE()
     {
