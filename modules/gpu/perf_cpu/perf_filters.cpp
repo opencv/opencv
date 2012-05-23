@@ -14,10 +14,11 @@ GPU_PERF_TEST(Blur, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     int ksize = GET_PARAM(3);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat dst;
+
+    cv::blur(src, dst, cv::Size(ksize, ksize));
 
     declare.time(20.0);
 
@@ -27,7 +28,7 @@ GPU_PERF_TEST(Blur, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, Blur, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, Blur, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
@@ -43,10 +44,11 @@ GPU_PERF_TEST(Sobel, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     int ksize = GET_PARAM(3);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat dst;
+
+    cv::Sobel(src, dst, -1, 1, 1, ksize);
 
     declare.time(20.0);
 
@@ -56,7 +58,7 @@ GPU_PERF_TEST(Sobel, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, Sobel, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, Sobel, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
@@ -71,10 +73,11 @@ GPU_PERF_TEST(Scharr, cv::gpu::DeviceInfo, cv::Size, MatType)
     int type = GET_PARAM(2);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat dst;
+
+    cv::Scharr(src, dst, -1, 1, 0);
 
     declare.time(20.0);
 
@@ -84,7 +87,7 @@ GPU_PERF_TEST(Scharr, cv::gpu::DeviceInfo, cv::Size, MatType)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, Scharr, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, Scharr, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1))));
@@ -99,10 +102,11 @@ GPU_PERF_TEST(GaussianBlur, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     int ksize = GET_PARAM(3);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat dst;
+
+    cv::GaussianBlur(src, dst, cv::Size(ksize, ksize), 0.5);
 
     declare.time(20.0);
 
@@ -112,7 +116,7 @@ GPU_PERF_TEST(GaussianBlur, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, GaussianBlur, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
@@ -128,10 +132,11 @@ GPU_PERF_TEST(Laplacian, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     int ksize = GET_PARAM(3);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat dst;
+
+    cv::Laplacian(src, dst, -1, ksize);
 
     declare.time(20.0);
 
@@ -141,7 +146,7 @@ GPU_PERF_TEST(Laplacian, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, Laplacian, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, Laplacian, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC4)),
@@ -156,12 +161,13 @@ GPU_PERF_TEST(Erode, cv::gpu::DeviceInfo, cv::Size, MatType)
     int type = GET_PARAM(2);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
     cv::Mat dst;
+
+    cv::erode(src, dst, ker);
 
     declare.time(20.0);
 
@@ -171,7 +177,7 @@ GPU_PERF_TEST(Erode, cv::gpu::DeviceInfo, cv::Size, MatType)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, Erode, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, Erode, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
@@ -185,12 +191,13 @@ GPU_PERF_TEST(Dilate, cv::gpu::DeviceInfo, cv::Size, MatType)
     int type = GET_PARAM(2);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
     cv::Mat dst;
+
+    cv::dilate(src, dst, ker);
 
     declare.time(20.0);
 
@@ -200,7 +207,7 @@ GPU_PERF_TEST(Dilate, cv::gpu::DeviceInfo, cv::Size, MatType)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, Dilate, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, Dilate, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
@@ -218,12 +225,13 @@ GPU_PERF_TEST(MorphologyEx, cv::gpu::DeviceInfo, cv::Size, MatType, MorphOp)
     int morphOp = GET_PARAM(3);
 
     cv::Mat src(size, type);
-
-    declare.in(src, WARMUP_RNG);
+    fill(src, 0.0, 255.0);
 
     cv::Mat dst;
 
     cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+
+    cv::morphologyEx(src, dst, morphOp, ker);
 
     declare.time(20.0);
 
@@ -233,7 +241,7 @@ GPU_PERF_TEST(MorphologyEx, cv::gpu::DeviceInfo, cv::Size, MatType, MorphOp)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, MorphologyEx, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
@@ -249,11 +257,14 @@ GPU_PERF_TEST(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     int ksize = GET_PARAM(3);
 
     cv::Mat src(size, type);
-    cv::Mat kernel(ksize, ksize, CV_32FC1);
+    fill(src, 0.0, 255.0);
 
-    declare.in(src, kernel, WARMUP_RNG);
+    cv::Mat kernel(ksize, ksize, CV_32FC1);
+    fill(kernel, 0.0, 1.0);
 
     cv::Mat dst;
+
+    cv::filter2D(src, dst, -1, kernel);
 
     declare.time(20.0);
 
@@ -263,7 +274,7 @@ GPU_PERF_TEST(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KernelSize)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Filter, Filter2D, testing::Combine(
+INSTANTIATE_TEST_CASE_P(Filters, Filter2D, testing::Combine(
     ALL_DEVICES,
     GPU_TYPICAL_MAT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC4)),

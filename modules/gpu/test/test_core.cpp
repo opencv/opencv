@@ -1916,10 +1916,10 @@ TEST_P(LShift, Accuracy)
     cv::Scalar_<int> val = randomScalar(0.0, 8.0);
 
     cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::rshift(loadMat(src, useRoi), val, dst);
+    cv::gpu::lshift(loadMat(src, useRoi), val, dst);
 
     cv::Mat dst_gold;
-    rhiftGold(src, val, dst_gold);
+    lhiftGold(src, val, dst_gold);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }

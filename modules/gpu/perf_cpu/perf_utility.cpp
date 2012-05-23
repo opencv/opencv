@@ -147,11 +147,6 @@ Mat readImage(const string& fileName, int flags)
     return imread(perf::TestBase::getDataPath(fileName), flags);
 }
 
-bool supportFeature(const DeviceInfo& info, FeatureSet feature)
-{
-    return TargetArchs::builtWith(feature) && info.supports(feature);
-}
-
 const vector<DeviceInfo>& devices()
 {
     static vector<DeviceInfo> devs;
@@ -175,27 +170,3 @@ const vector<DeviceInfo>& devices()
 
     return devs;
 }
-
-vector<DeviceInfo> devices(FeatureSet feature)
-{
-    const vector<DeviceInfo>& d = devices();
-
-    vector<DeviceInfo> devs_filtered;
-
-    if (TargetArchs::builtWith(feature))
-    {
-        devs_filtered.reserve(d.size());
-
-        for (size_t i = 0, size = d.size(); i < size; ++i)
-        {
-            const DeviceInfo& info = d[i];
-
-            if (info.supports(feature))
-                devs_filtered.push_back(info);
-        }
-    }
-
-    return devs_filtered;
-}
-
-

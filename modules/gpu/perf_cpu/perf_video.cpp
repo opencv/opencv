@@ -5,15 +5,18 @@
 //////////////////////////////////////////////////////
 // GoodFeaturesToTrack
 
-GPU_PERF_TEST(GoodFeaturesToTrack, cv::gpu::DeviceInfo, double)
+IMPLEMENT_PARAM_CLASS(MinDistance, double)
+
+GPU_PERF_TEST(GoodFeaturesToTrack, cv::gpu::DeviceInfo, MinDistance)
 {
     double minDistance = GET_PARAM(1);
 
     cv::Mat image = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-
     ASSERT_FALSE(image.empty());
 
     cv::Mat corners;
+
+    cv::goodFeaturesToTrack(image, corners, 8000, 0.01, minDistance);
 
     TEST_CYCLE()
     {
@@ -21,21 +24,27 @@ GPU_PERF_TEST(GoodFeaturesToTrack, cv::gpu::DeviceInfo, double)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Video, GoodFeaturesToTrack, testing::Combine(ALL_DEVICES, testing::Values(0.0, 3.0)));
+INSTANTIATE_TEST_CASE_P(Video, GoodFeaturesToTrack, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(MinDistance(0.0), MinDistance(3.0))));
 
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlowSparse
 
-GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, bool, int, int)
+IMPLEMENT_PARAM_CLASS(GraySource, bool)
+IMPLEMENT_PARAM_CLASS(Points, int)
+IMPLEMENT_PARAM_CLASS(WinSize, int)
+
+GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, GraySource, Points, WinSize)
 {
     bool useGray = GET_PARAM(1);
     int points = GET_PARAM(2);
     int win_size = GET_PARAM(3);
 
     cv::Mat frame0 = readImage("gpu/opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
-    cv::Mat frame1 = readImage("gpu/opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
-
     ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage("gpu/opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;
@@ -50,6 +59,8 @@ GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, bool, int, int)
     cv::Mat nextPts;
     cv::Mat status;
 
+    cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(), cv::Size(win_size, win_size));
+
     TEST_CYCLE()
     {
         cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(), cv::Size(win_size, win_size));
@@ -57,10 +68,10 @@ GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, bool, int, int)
 }
 
 INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, testing::Combine(
-                        ALL_DEVICES,
-                        testing::Bool(),
-                        testing::Values(1000, 2000, 4000, 8000),
-                        testing::Values(17, 21)));
+    ALL_DEVICES,
+    testing::Values(GraySource(true), GraySource(false)),
+    testing::Values(Points(1000), Points(2000), Points(4000), Points(8000)),
+    testing::Values(WinSize(17), WinSize(21))));
 
 //////////////////////////////////////////////////////
 // FarnebackOpticalFlowTest
@@ -68,14 +79,12 @@ INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, testing::Combine(
 GPU_PERF_TEST_1(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
-    cv::Mat frame1 = readImage("gpu/opticalflow/frame1.png", cv::IMREAD_GRAYSCALE);
-
     ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage("gpu/opticalflow/frame1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat flow;
-
-    declare.time(10);
 
     int numLevels = 5;
     double pyrScale = 0.5;
@@ -85,9 +94,12 @@ GPU_PERF_TEST_1(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo)
     double polySigma = 1.1;
     int flags = 0;
 
+    cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
+
+    declare.time(10);
+
     TEST_CYCLE()
     {
-        cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
     }
 }
 

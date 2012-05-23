@@ -7,12 +7,12 @@ using namespace cv::gpu;
 void fill(Mat& m, double a, double b)
 {
     RNG rng(123456789);
-    rng.fill(m, RNG::UNIFORM, a, b);
+    rng.fill(m, RNG::UNIFORM, Scalar::all(a), Scalar::all(b));
 }
 
 void PrintTo(const CvtColorInfo& info, ostream* os)
 {
-    static const char* str[] = 
+    static const char* str[] =
     {
         "BGR2BGRA",
         "BGRA2BGR",
@@ -89,7 +89,7 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
         0,
         0,
         0,
-        
+
         "HLS2BGR",
         "HLS2RGB",
 
@@ -131,7 +131,7 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
         0,
         0,
         0,
-        0 
+        0
     };
 
     *os << str[info.code];
@@ -145,11 +145,6 @@ void cv::gpu::PrintTo(const DeviceInfo& info, ostream* os)
 Mat readImage(const string& fileName, int flags)
 {
     return imread(perf::TestBase::getDataPath(fileName), flags);
-}
-
-bool supportFeature(const DeviceInfo& info, FeatureSet feature)
-{
-    return TargetArchs::builtWith(feature) && info.supports(feature);
 }
 
 const vector<DeviceInfo>& devices()
@@ -175,27 +170,3 @@ const vector<DeviceInfo>& devices()
 
     return devs;
 }
-
-vector<DeviceInfo> devices(FeatureSet feature)
-{
-    const vector<DeviceInfo>& d = devices();
-    
-    vector<DeviceInfo> devs_filtered;
-
-    if (TargetArchs::builtWith(feature))
-    {
-        devs_filtered.reserve(d.size());
-
-        for (size_t i = 0, size = d.size(); i < size; ++i)
-        {
-            const DeviceInfo& info = d[i];
-
-            if (info.supports(feature))
-                devs_filtered.push_back(info);
-        }
-    }
-
-    return devs_filtered;
-}
-
-
