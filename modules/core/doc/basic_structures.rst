@@ -2423,11 +2423,17 @@ Algorithm::getList
 ------------------
 Returns the list of registered algorithms
 
-.. ocv:function:: void read(vector<string>& algorithms)
+.. ocv:function:: void getList(vector<string>& algorithms)
 
     :param algorithms: The output vector of algorithm names.
     
-This static method returns the list of registered algorithms in alphabetical order.
+This static method returns the list of registered algorithms in alphabetical order. Here is how to use it ::
+
+    vector<string> algorithms;
+    Algorithm::getList(algorithms);
+    cout << "Algorithms: " << algorithms.size() << endl;
+    for (size_t i=0; i < algorithms.size(); i++)
+        cout << algorithms[i] << endl;
 
 
 Algorithm::getList
