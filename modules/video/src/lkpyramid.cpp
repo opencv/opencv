@@ -655,6 +655,9 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                 && ofs.x + prevPyr[lvlStep1].cols + winSize.width <= fullSize.width
                 && ofs.y + prevPyr[lvlStep1].rows + winSize.height <= fullSize.height);
         }
+
+        if(levels1 < maxLevel)
+            maxLevel = levels1;
     }
 
     if(_nextImg.kind() == _InputArray::STD_VECTOR_MAT)
@@ -680,19 +683,16 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                 && ofs.x + nextPyr[lvlStep2].cols + winSize.width <= fullSize.width
                 && ofs.y + nextPyr[lvlStep2].rows + winSize.height <= fullSize.height);
         }
+
+        if(levels2 < maxLevel)
+            maxLevel = levels2;
     }
 
-    if(levels1 >= 0 || levels2 >= 0)
-        maxLevel = std::max(levels1, levels2);
-
     if (levels1 < 0)
-        maxLevel = levels1 = buildOpticalFlowPyramid(_prevImg, prevPyr, winSize, maxLevel, false);
+        maxLevel = buildOpticalFlowPyramid(_prevImg, prevPyr, winSize, maxLevel, false);
 
     if (levels2 < 0)
-        levels2 = buildOpticalFlowPyramid(_nextImg, nextPyr, winSize, maxLevel, false);
-
-    CV_Assert(levels1 == levels2);
-
+        maxLevel = buildOpticalFlowPyramid(_nextImg, nextPyr, winSize, maxLevel, false);
 
     if( (criteria.type & TermCriteria::COUNT) == 0 )
         criteria.maxCount = 30;
