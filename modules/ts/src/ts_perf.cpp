@@ -731,7 +731,7 @@ performance_metrics& TestBase::calcMetrics()
     int n = 0;
     for(TimeVector::const_iterator i = times.begin(); i != times.end(); ++i)
     {
-        double x = (double)*i;
+        double x = static_cast<double>(*i)/runsPerIteration;
         if (x < DBL_EPSILON) continue;
         double lx = log(x);
 
@@ -751,14 +751,14 @@ performance_metrics& TestBase::calcMetrics()
     int offset = 0;
     if (gstddev > DBL_EPSILON)
     {
-        double minout = exp(gmean - 3 * gstddev);
-        double maxout = exp(gmean + 3 * gstddev);
+        double minout = exp(gmean - 3 * gstddev) * runsPerIteration;
+        double maxout = exp(gmean + 3 * gstddev) * runsPerIteration;
         while(*start < minout) ++start, ++metrics.outliers, ++offset;
         do --end, ++metrics.outliers; while(*end > maxout);
         ++end, --metrics.outliers;
     }
 
-    metrics.min = (double)*start;
+    metrics.min = static_cast<double>(*start)/runsPerIteration;
     //calc final metrics
     n = 0;
     gmean = 0;
@@ -768,7 +768,7 @@ performance_metrics& TestBase::calcMetrics()
     int m = 0;
     for(; start != end; ++start)
     {
-        double x = (double)*start;
+        double x = static_cast<double>(*start)/runsPerIteration;
         if (x > DBL_EPSILON)
         {
             double lx = log(x);
@@ -790,6 +790,8 @@ performance_metrics& TestBase::calcMetrics()
     metrics.median = n % 2
             ? (double)times[offset + n / 2]
             : 0.5 * (times[offset + n / 2] + times[offset + n / 2 - 1]);
+
+    metrics.median /= runsPerIteration;
 
     return metrics;
 }
@@ -902,6 +904,7 @@ void TestBase::SetUp()
 #endif
     lastTime = 0;
     totalTime = 0;
+    runsPerIteration = 1;
     nIters = iterationsLimitDefault;
     currentIter = (unsigned int)-1;
     timeLimit = timeLimitDefault;
@@ -1020,6 +1023,12 @@ TestBase::_declareHelper& TestBase::_declareHelper::tbb_threads(int n)
         test->p_tbb_initializer=new tbb::task_scheduler_init(n);
 #endif
     (void)n;
+    return *this;
+}
+
+TestBase::_declareHelper& TestBase::_declareHelper::runs(unsigned int runsNumber)
+{
+    test->runsPerIteration = runsNumber;
     return *this;
 }
 

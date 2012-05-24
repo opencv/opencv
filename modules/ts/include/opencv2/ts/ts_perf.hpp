@@ -279,6 +279,7 @@ private:
 
     unsigned int nIters;
     unsigned int currentIter;
+    unsigned int runsPerIteration;
 
     performance_metrics metrics;
     void validateMetrics();
@@ -307,6 +308,7 @@ private:
         _declareHelper& iterations(unsigned int n);
         _declareHelper& time(double timeLimitSecs);
         _declareHelper& tbb_threads(int n = -1);
+        _declareHelper& runs(unsigned int runsNumber);
     private:
         TestBase* test;
         _declareHelper(TestBase* t);
@@ -460,6 +462,7 @@ int main(int argc, char **argv)\
 
 #define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
 #define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
+#define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; ++r)
 
 //flags
 namespace perf
