@@ -2357,7 +2357,7 @@ Algorithm::get
 --------------
 Returns the algorithm parameter
 
-.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const
+.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
 
     :param name: The parameter name.
 
@@ -2378,13 +2378,13 @@ Algorithm::set
 --------------
 Sets the algorithm parameter
 
-.. ocv:function:: void set(const string& name, int value)
-.. ocv:function:: void set(const string& name, double value)
-.. ocv:function:: void set(const string& name, bool value)
-.. ocv:function:: void set(const string& name, const string& value)
-.. ocv:function:: void set(const string& name, const Mat& value)
-.. ocv:function:: void set(const string& name, const vector<Mat>& value)
-.. ocv:function:: void set(const string& name, const Ptr<Algorithm>& value)
+.. ocv:function:: void Algorithm::set(const string& name, int value)
+.. ocv:function:: void Algorithm::set(const string& name, double value)
+.. ocv:function:: void Algorithm::set(const string& name, bool value)
+.. ocv:function:: void Algorithm::set(const string& name, const string& value)
+.. ocv:function:: void Algorithm::set(const string& name, const Mat& value)
+.. ocv:function:: void Algorithm::set(const string& name, const vector<Mat>& value)
+.. ocv:function:: void Algorithm::set(const string& name, const Ptr<Algorithm>& value)
 
     :param name: The parameter name.
     :param value: The parameter value.
@@ -2396,7 +2396,7 @@ Algorithm::write
 ----------------
 Stores algorithm parameters in a file storage
 
-.. ocv:function:: void write(FileStorage& fs) const
+.. ocv:function:: void Algorithm::write(FileStorage& fs) const
 
     :param fs: File storage.
     
@@ -2413,7 +2413,7 @@ Algorithm::read
 ---------------
 Reads algorithm parameters from a file storage
 
-.. ocv:function:: void read(const FileNode& fn)
+.. ocv:function:: void Algorithm::read(const FileNode& fn)
 
     :param fn: File node of the file storage.
     
@@ -2423,7 +2423,7 @@ Algorithm::getList
 ------------------
 Returns the list of registered algorithms
 
-.. ocv:function:: void getList(vector<string>& algorithms)
+.. ocv:function:: void Algorithm::getList(vector<string>& algorithms)
 
     :param algorithms: The output vector of algorithm names.
     
@@ -2436,22 +2436,11 @@ This static method returns the list of registered algorithms in alphabetical ord
         cout << algorithms[i] << endl;
 
 
-Algorithm::getList
-------------------
-Returns the list of registered algorithms
-
-.. ocv:function:: void read(vector<string>& algorithms)
-
-    :param algorithms: The output vector of algorithm names.
-    
-This static method returns the list of registered algorithms in alphabetical order.
-
-
 Algorithm::create
 -----------------
 Creates algorithm instance by name
 
-.. ocv:function:: template<typename _Tp> Ptr<_Tp> create(const string& name)
+.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const string& name)
 
     :param name: The algorithm name, one of the names returned by ``Algorithm::getList()``.
     
