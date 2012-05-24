@@ -16,7 +16,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
                 testing::Values( "stitching/a1.jpg", "cv/shared/pic5.png"),
                 testing::Values( 3, 5 ),
                 testing::Values( 3, 5 ),
-                testing::Values( 1, 0.1 ),
+                testing::Values( 0.04, 0.1 ),
                 testing::ValuesIn(BorderType::all())
                 )
           )
@@ -35,5 +35,5 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
 
     TEST_CYCLE() cornerHarris(src, dst, blockSize, apertureSize, k, borderType);
 
-    SANITY_CHECK(dst, 2e-6);
+    SANITY_CHECK(dst, 2e-5);
 }

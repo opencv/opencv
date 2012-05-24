@@ -33,5 +33,8 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerEigenValsAndVecs,
 
     TEST_CYCLE() cornerEigenValsAndVecs(src, dst, blockSize, apertureSize, borderType);
 
-    SANITY_CHECK(dst, 2e-5);
+    Mat l1;
+    extractChannel(dst, l1, 0);
+
+    SANITY_CHECK(l1, 2e-5);
 }
