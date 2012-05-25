@@ -92,6 +92,56 @@ PERF_TEST_P(Size_MatType_BorderType3x3, blur3x3,
     SANITY_CHECK(dst, 1e-3);
 }
 
+PERF_TEST_P(Size_MatType_BorderType3x3, box3x3,
+            testing::Combine(
+                testing::Values(szODD, szQVGA, szVGA, sz720p),
+                testing::Values(CV_8UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_32FC3),
+                testing::ValuesIn(BorderType3x3::all())
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    BorderType3x3 btype = get<2>(GetParam());
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() boxFilter(src, dst, -1, Size(3,3), Point(-1,-1), false, btype);
+
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+}
+
+PERF_TEST_P(Size_MatType_BorderType3x3, box3x3_inplace,
+            testing::Combine(
+                testing::Values(szODD, szQVGA, szVGA, sz720p),
+                testing::Values(CV_8UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_32FC3),
+                testing::ValuesIn(BorderType3x3::all())
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    BorderType3x3 btype = get<2>(GetParam());
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    while(next())
+    {
+        src.copyTo(dst);
+        startTimer();
+        boxFilter(dst, dst, -1, Size(3,3), Point(-1,-1), false, btype);
+        stopTimer();
+    }
+
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+}
+
 PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
@@ -117,7 +167,7 @@ PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
 PERF_TEST_P(Size_MatType_BorderType, blur5x5,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
-                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1),
+                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1, CV_32FC3),
                 testing::ValuesIn(BorderType::all())
                 )
             )

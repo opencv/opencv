@@ -279,7 +279,7 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
 {
     int sdepth = CV_MAT_DEPTH(srcType);
     int cn = CV_MAT_CN(srcType), sumType = CV_64F;
-    if( sdepth < CV_32S && (!normalize ||
+    if( sdepth <= CV_32S && (!normalize ||
         ksize.width*ksize.height <= (sdepth == CV_8U ? (1<<23) :
             sdepth == CV_16U ? (1 << 15) : (1 << 16))) )
         sumType = CV_32S;
