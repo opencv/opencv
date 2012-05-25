@@ -247,6 +247,11 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                      int aperture_size, int op_type, double k=0.,
                      int borderType=BORDER_DEFAULT )
 {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
+        return;
+#endif 
+
     int depth = src.depth();
     double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
     if( aperture_size < 0 )
