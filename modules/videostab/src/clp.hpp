@@ -44,6 +44,13 @@
 #define __OPENCV_VIDEOSTAB_CLP_HPP__
 
 #ifdef HAVE_CLP
+  #undef PACKAGE
+  #undef PACKAGE_BUGREPORT
+  #undef PACKAGE_NAME
+  #undef PACKAGE_STRING
+  #undef PACKAGE_TARNAME
+  #undef PACKAGE_VERSION
+  #undef VERSION
   #include "ClpSimplex.hpp"
   #include "ClpPresolve.hpp"
   #include "ClpPrimalColumnSteepest.hpp"
