@@ -1,12 +1,10 @@
-macro(unset_all)
-  foreach(var ${ARGN})
-    unset(${var} CACHE)
-  endforeach()
-endmacro()
+# ----------------------------------------------------------------------------
+#  Detect 3rd-party image IO libraries
+# ----------------------------------------------------------------------------
 
-################### zlib - required
+# --- zlib (required) ---
 if(BUILD_ZLIB)
-  unset_all(ZLIB_FOUND)
+  ocv_clear_vars(ZLIB_FOUND)
 else()
   include(FindZLIB)
   if(ZLIB_FOUND)
@@ -25,7 +23,7 @@ else()
 endif()
 
 if(NOT ZLIB_FOUND)
-  unset_all(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
+  ocv_clear_vars(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
 
   set(ZLIB_LIBRARY zlib)
   set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
@@ -33,10 +31,10 @@ if(NOT ZLIB_FOUND)
   set(ZLIB_INCLUDE_DIR "${${ZLIB_LIBRARY}_SOURCE_DIR}" "${${ZLIB_LIBRARY}_BINARY_DIR}")
 endif()
 
-################### libtiff - optional (should be searched after zlib)
+# --- libtiff (optional, should be searched after zlib) ---
 if(WITH_TIFF)
   if(BUILD_TIFF)
-    unset_all(TIFF_FOUND)
+    ocv_clear_vars(TIFF_FOUND)
   else()
     include(FindTIFF)
     if(TIFF_FOUND)
@@ -46,7 +44,7 @@ if(WITH_TIFF)
 endif()
 
 if(WITH_TIFF AND NOT TIFF_FOUND)
-  unset_all(TIFF_LIBRARY TIFF_LIBRARIES TIFF_INCLUDE_DIR)
+  ocv_clear_vars(TIFF_LIBRARY TIFF_LIBRARIES TIFF_INCLUDE_DIR)
 
   set(TIFF_LIBRARY libtiff)
   set(TIFF_LIBRARIES ${TIFF_LIBRARY})
@@ -63,17 +61,17 @@ if(TIFF_BIGTIFF_VERSION AND NOT TIFF_VERSION_BIG)
   set(TIFF_VERSION_BIG ${TIFF_BIGTIFF_VERSION})
 endif()
 
-################### libjpeg - optional
+# --- libjpeg (optional) ---
 if(WITH_JPEG)
   if(BUILD_JPEG)
-    unset_all(JPEG_FOUND)
+    ocv_clear_vars(JPEG_FOUND)
   else()
     include(FindJPEG)
   endif()
 endif()
 
 if(WITH_JPEG AND NOT JPEG_FOUND)
-  unset_all(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
+  ocv_clear_vars(JPEG_LIBRARY JPEG_LIBRARIES JPEG_INCLUDE_DIR)
 
   set(JPEG_LIBRARY libjpeg)
   set(JPEG_LIBRARIES ${JPEG_LIBRARY})
@@ -84,17 +82,17 @@ endif()
 ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
 
 
-################### libjasper - optional (should be searched after libjpeg)
+# --- libjasper (optional, should be searched after libjpeg) ---
 if(WITH_JASPER)
   if(BUILD_JASPER)
-    unset_all(JASPER_FOUND)
+    ocv_clear_vars(JASPER_FOUND)
   else()
     include(FindJasper)
   endif()
 endif()
 
 if(WITH_JASPER AND NOT JASPER_FOUND)
-  unset_all(JASPER_LIBRARY JASPER_LIBRARIES JASPER_INCLUDE_DIR)
+  ocv_clear_vars(JASPER_LIBRARY JASPER_LIBRARIES JASPER_INCLUDE_DIR)
 
   set(JASPER_LIBRARY libjasper)
   set(JASPER_LIBRARIES ${JASPER_LIBRARY})
@@ -106,10 +104,10 @@ if(NOT JASPER_VERSION_STRING)
   ocv_parse_header2(JASPER "${JASPER_INCLUDE_DIR}/jasper/jas_config.h" JAS_VERSION "")
 endif()
 
-################### libpng - optional (should be searched after zlib)
+# --- libpng (optional, should be searched after zlib) ---
 if(WITH_PNG)
   if(BUILD_PNG)
-    unset_all(PNG_FOUND)
+    ocv_clear_vars(PNG_FOUND)
   else()
     include(FindPNG)
     if(PNG_FOUND)
@@ -125,7 +123,7 @@ if(WITH_PNG)
 endif()
 
 if(WITH_PNG AND NOT PNG_FOUND)
-  unset_all(PNG_LIBRARY PNG_LIBRARIES PNG_INCLUDE_DIR PNG_PNG_INCLUDE_DIR HAVE_PNG_H HAVE_LIBPNG_PNG_H PNG_DEFINITIONS)
+  ocv_clear_vars(PNG_LIBRARY PNG_LIBRARIES PNG_INCLUDE_DIR PNG_PNG_INCLUDE_DIR HAVE_PNG_H HAVE_LIBPNG_PNG_H PNG_DEFINITIONS)
 
   set(PNG_LIBRARY libpng)
   set(PNG_LIBRARIES ${PNG_LIBRARY})
@@ -137,7 +135,7 @@ endif()
 
 set(PNG_VERSION "${PNG_LIBPNG_VER_MAJOR}.${PNG_LIBPNG_VER_MINOR}.${PNG_LIBPNG_VER_RELEASE}")
 
-################### OpenEXR - optional
+# --- OpenEXR (optional) ---
 if(WITH_OPENEXR)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenEXR.cmake")
 endif()
