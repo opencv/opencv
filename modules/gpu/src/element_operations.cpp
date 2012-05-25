@@ -997,7 +997,11 @@ namespace
         typedef NppTypeTraits<CV_16U>::npp_t npp_t;
         typedef Npp32u scalar_t;
 
+#if (CUDA_VERSION <= 4020)
         typedef NppStatus (*func_t)(const Npp16u* pSrc1, int nSrc1Step, Npp16u* pDst, int nDstStep, NppiSize oSizeROI, Npp32u nConstant);
+#else
+        typedef NppStatus (*func_t)(const Npp16u * pSrc1, int nSrc1Step, Npp16u * pDst,  int nDstStep,  NppiSize oSizeROI, Npp16u nConstant);
+#endif
     };
 
     template <int DEPTH, typename NppAbsDiffCFunc<DEPTH>::func_t func> struct NppAbsDiffC

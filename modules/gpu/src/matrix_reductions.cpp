@@ -128,7 +128,11 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
     DeviceBuffer dbuf(2);
 
     int bufSize;
+#if (CUDA_VERSION <= 4020)
     nppSafeCall( nppiMeanStdDev8uC1RGetBufferHostSize(sz, &bufSize) );
+#else
+    nppSafeCall( nppiMeanStdDevGetBufferHostSize_8u_C1R(sz, &bufSize) );
+#endif
 
     ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
 
