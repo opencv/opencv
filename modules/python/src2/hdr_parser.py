@@ -419,6 +419,9 @@ class CppHeaderParser(object):
                 print "Error at %d: no args in '%s'" % (self.lineno, decl_str)
                 sys.exit(-1)
             decl_start = decl_str[:args_begin].strip()
+            # TODO: normalize all type of operators
+            if decl_start.endswith("()"):
+                decl_start = decl_start[0:-2].rstrip() + " ()"
 
         # constructor/destructor case
         if bool(re.match(r'(\w+::)*(?P<x>\w+)::~?(?P=x)', decl_start)):

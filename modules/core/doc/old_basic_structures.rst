@@ -160,7 +160,7 @@ Sub-pixel accurate size of a rectangle.
 
         Height of the rectangle
 
-.. ocv:cfunction:: CvSize2D32f cvSize2D23f( float width, float height )
+.. ocv:cfunction:: CvSize2D32f cvSize2D32f( double width, double height )
 
     constructs ``CvSize2D32f`` structure.
 

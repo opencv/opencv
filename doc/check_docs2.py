@@ -37,6 +37,11 @@ doc_signatures_whitelist = [
 # these are even non-template
 "gpu::DeviceInfo", "gpu::GpuMat", "gpu::TargetArchs", "gpu::FeatureSet"]
 
+defines = ["cvGraphEdgeIdx", "cvFree", "CV_Assert", "cvSqrt", "cvGetGraphVtx", "cvGraphVtxIdx",
+# not a real function but behaves as function
+"Mat.size"
+]
+
 synonims = {
     "StarDetector" : ["StarFeatureDetector"],
     "MSER" : ["MserFeatureDetector"],
@@ -191,6 +196,8 @@ def process_module(module, path):
                         namespaces.append(namespace)
         else:
             funcs.append(decl)
+            # if "RNG" in decl[0]:
+            #     print decl
 
     clsnamespaces = []
     # process classes
@@ -391,6 +398,8 @@ def process_module(module, path):
         decls = doc.get("decls")
         if not decls:
             continue
+        # if "RNG" in name:
+        #     print name, decls
         for signature in decls:
             if signature[0] == "C" or signature[0] == "C++":
                 if "template" in (signature[2][1] or ""):
@@ -434,7 +443,11 @@ def process_module(module, path):
         for d in doc.get("decls", []):
             if d[-1] != DOCUMENTED_MARKER:
                 if d[0] == "C" or d[0] =="C++" or (do_python_crosscheck and d[0].startswith("Python")):
+                    if d[0][0] == 'C' and d[2][0][3:] in defines:
+                        #TODO: need to find a way to verify #define's
+                        continue
                     logerror(ERROR_011_UNKNOWNFUNC, d[0] + " function is documented but is not found in OpenCV headers. It is documented as:\n\t" + d[1], doc)
+                    #print d[2][0][3:]
     # end of process_module
 
 if __name__ == "__main__":
