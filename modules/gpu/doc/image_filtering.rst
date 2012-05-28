@@ -195,7 +195,7 @@ Creates a normalized 2D box filter.
 
 .. ocv:function:: Ptr<FilterEngine_GPU> gpu::createBoxFilter_GPU(int srcType, int dstType, const Size& ksize, const Point& anchor = Point(-1,-1))
 
-.. ocv:function:: Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1))
+.. ocv:function:: Ptr<BaseFilter_GPU> gpu::getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1))
 
     :param srcType: Input image type supporting ``CV_8UC1`` and ``CV_8UC4`` .
 

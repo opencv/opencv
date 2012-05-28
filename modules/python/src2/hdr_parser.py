@@ -281,7 +281,7 @@ class CppHeaderParser(object):
 
         apos = fdecl.find("(")
         if fname.endswith("operator"):
-            fname += "()"
+            fname += " ()"
             apos = fdecl.find("(", apos+1)
 
         fname = "cv." + fname.replace("::", ".")
@@ -600,7 +600,7 @@ class CppHeaderParser(object):
                     break
                 w = stmt[:colon_pos].strip()
                 if w in ["public", "protected", "private"]:
-                    if w == "public":
+                    if w == "public" or (not self.wrap_mode and w == "protected"):
                         stack_top[self.PUBLIC_SECTION] = True
                     else:
                         stack_top[self.PUBLIC_SECTION] = False

@@ -889,16 +889,6 @@ Provides matrix assignment operators.
 
 These are available assignment operators. Since they all are very different, make sure to read the operator parameters description.
 
-
-Mat::operator MatExpr
--------------------------
-Provides a ``Mat`` -to- ``MatExpr`` cast operator.
-
-.. ocv:function:: Mat::operator MatExpr_<Mat, Mat>() const
-
-The cast operator should not be called explicitly. It is used internally by the
-:ref:`MatrixExpressions` engine.
-
 Mat::row
 ------------
 Creates a matrix header for the specified matrix row.

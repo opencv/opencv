@@ -7,9 +7,9 @@ detail::Estimator
 -----------------
 .. ocv:class:: detail::Estimator
 
-Rotation estimator base class. It takes features of all images, pairwise matches between all images and estimates rotations of all cameras. 
+Rotation estimator base class. It takes features of all images, pairwise matches between all images and estimates rotations of all cameras.
 
-.. note:: The coordinate system origin is implementation-dependent, but you can always normalize the rotations in respect to the first camera, for instance. 
+.. note:: The coordinate system origin is implementation-dependent, but you can always normalize the rotations in respect to the first camera, for instance.
 
 ::
 
@@ -18,12 +18,12 @@ Rotation estimator base class. It takes features of all images, pairwise matches
     public:
         virtual ~Estimator() {}
 
-        void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+        void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
                          std::vector<CameraParams> &cameras)
             { estimate(features, pairwise_matches, cameras); }
 
     protected:
-        virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+        virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
                               std::vector<CameraParams> &cameras) = 0;
     };
 
@@ -79,10 +79,10 @@ Base class for all camera parameters refinement methods. ::
     {
     public:
         const Mat refinementMask() const { return refinement_mask_.clone(); }
-        void setRefinementMask(const Mat &mask) 
-        { 
+        void setRefinementMask(const Mat &mask)
+        {
             CV_Assert(mask.type() == CV_8U && mask.size() == Size(3, 3));
-            refinement_mask_ = mask.clone(); 
+            refinement_mask_ = mask.clone();
         }
 
         double confThresh() const { return conf_thresh_; }
@@ -92,17 +92,17 @@ Base class for all camera parameters refinement methods. ::
         void setTermCriteria(const CvTermCriteria& term_criteria) { term_criteria_ = term_criteria; }
 
     protected:
-        BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement) 
-            : num_params_per_cam_(num_params_per_cam), 
-              num_errs_per_measurement_(num_errs_per_measurement) 
-        {    
+        BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement)
+            : num_params_per_cam_(num_params_per_cam),
+              num_errs_per_measurement_(num_errs_per_measurement)
+        {
             setRefinementMask(Mat::ones(3, 3, CV_8U));
-            setConfThresh(1.); 
+            setConfThresh(1.);
             setTermCriteria(cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
         }
 
         // Runs bundle adjustment
-        virtual void estimate(const std::vector<ImageFeatures> &features, 
+        virtual void estimate(const std::vector<ImageFeatures> &features,
                               const std::vector<MatchesInfo> &pairwise_matches,
                               std::vector<CameraParams> &cameras);
 
@@ -146,7 +146,7 @@ Construct a bundle adjuster base instance.
 .. ocv:function:: detail::BundleAdjusterBase::BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement)
 
     :param num_params_per_cam: Number of parameters per camera
-    
+
     :param num_errs_per_measurement: Number of error terms (components) per match
 
 detail::BundleAdjusterBase::setUpInitialCameraParams
@@ -234,7 +234,7 @@ detail::waveCorrect
 -------------------
 Tries to make panorama more horizontal (or vertical).
 
-.. ocv:function:: void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
+.. ocv:function:: void detail::waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 
     :param rmats: Camera rotation matrices.
 

@@ -425,8 +425,8 @@ protected:
     template<class FEval>
     friend int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
-    bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
-    virtual int runAt( Ptr<FeatureEvaluator>&, Point, double& weight );
+    bool setImage( Ptr<FeatureEvaluator>& feval, const Mat& image);
+    virtual int runAt( Ptr<FeatureEvaluator>& feval, Point pt, double& weight );
 
     class Data
     {

@@ -66,7 +66,7 @@ detail::RotationWarper::warp
 
 Projects the image.
 
-.. ocv:function:: Point detal::RotationWarper::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Mat &dst)
+.. ocv:function:: Point detail::RotationWarper::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Mat &dst)
 
     :param src: Source image
 

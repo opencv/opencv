@@ -1078,13 +1078,6 @@ CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays cont
 CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset=Point());
 
-//! draws contours in the image
-CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
-                              int contourIdx, const Scalar& color,
-                              int thickness=1, int lineType=8,
-                              InputArray hierarchy=noArray(),
-                              int maxLevel=INT_MAX, Point offset=Point() );
-
 //! approximates contour or a curve using Douglas-Peucker algorithm
 CV_EXPORTS_W void approxPolyDP( InputArray curve,
                                 OutputArray approxCurve,

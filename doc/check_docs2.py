@@ -30,22 +30,31 @@ doc_signatures_whitelist = [
 # templates
 "Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
 "DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
+"gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_",
 # black boxes
 "CvArr", "CvFileStorage",
-# the following classes reside in core but documented in gpu. It's no good
-"gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_",
-# these are even non-template
-"gpu::DeviceInfo", "gpu::GpuMat", "gpu::TargetArchs", "gpu::FeatureSet"]
+]
 
 defines = ["cvGraphEdgeIdx", "cvFree", "CV_Assert", "cvSqrt", "cvGetGraphVtx", "cvGraphVtxIdx",
+"cvCaptureFromFile", "cvCaptureFromCAM", "cvCalcBackProjectPatch", "cvCalcBackProject",
+"cvGetHistValue_1D", "cvGetHistValue_2D", "cvGetHistValue_3D", "cvGetHistValue_nD",
+"cvQueryHistValue_1D", "cvQueryHistValue_2D", "cvQueryHistValue_3D", "cvQueryHistValue_nD",
 # not a real function but behaves as function
-"Mat.size"
+"Mat::size",
+# ugly "virtual" functions from ml module
+"CvStatModel::train", "CvStatModel::predict",
+# TODO:
+"cvExtractSURF"
 ]
 
 synonims = {
     "StarDetector" : ["StarFeatureDetector"],
     "MSER" : ["MserFeatureDetector"],
-    "GFTTDetector" : ["GoodFeaturesToTrackDetector"]
+    "GFTTDetector" : ["GoodFeaturesToTrackDetector"],
+    "cvCaptureFromFile" : ["cvCreateFileCapture"],
+    "cvCaptureFromCAM" : ["cvCreateCameraCapture"],
+    "cvCalcArrBackProjectPatch" : ["cvCalcBackProjectPatch"],
+    "cvCalcArrBackProject" : ["cvCalcBackProject"],
 }
 
 if do_python_crosscheck:
@@ -80,10 +89,9 @@ def compareSignatures(f, s):
     # return type
     stype = (s[1] or "void")
     ftype = f[1]
-    if stype.startswith("cv::"):
-        stype = stype[4:]
-    if ftype and ftype.startswith("cv::"):
-        ftype = ftype[4:]
+    stype = re.sub(r"\b(cv|std)::", "", stype)
+    if ftype:
+        ftype = re.sub(r"\b(cv|std)::", "", ftype)
     if ftype and ftype != stype:
         return False, "return type mismatch"
     if ("\C" in f[2]) ^ ("\C" in s[2]):
@@ -168,6 +176,10 @@ def process_module(module, path):
     hdrlist = glob.glob(os.path.join(path, "include", "opencv2", module, "*.h*"))
     hdrlist.extend(glob.glob(os.path.join(path, "include", "opencv2", module, "detail", "*.h*")))
 
+    if module == "gpu":
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "devmem2d.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpumat.hpp"))
+
     decls = []
     for hname in hdrlist:
         if not "ts_gtest.h" in hname:
@@ -196,8 +208,6 @@ def process_module(module, path):
                         namespaces.append(namespace)
         else:
             funcs.append(decl)
-            # if "RNG" in decl[0]:
-            #     print decl
 
     clsnamespaces = []
     # process classes
@@ -385,21 +395,19 @@ def process_module(module, path):
                             logerror(ERROR_005_MISSINGPYFUNC, "could not load documented member of " + parent + " class: cv2." + pname, doc)
                         else:
                             logerror(ERROR_005_MISSINGPYFUNC, "could not load documented function cv2." + pname, doc)
+                        signature.append(DOCUMENTED_MARKER) # stop subsequent errors
                         continue
                     docstrings = [docprefix + s.replace("([, ", "([") for s in docstr.split("  or  ")]
                     if not signature[1] in docstrings:
                         pydocs = "\npydoc: ".join(docstrings)
                         logerror(ERROR_007_INVALIDPYDOC, "documentation differs from pydoc\npydoc: " + pydocs + "\ncvdoc: " + signature[1], doc)
-                    else:
-                        signature.append(DOCUMENTED_MARKER)
+                    signature.append(DOCUMENTED_MARKER)
 
     # verify C/C++ signatures
     for name, doc in rst.iteritems():
         decls = doc.get("decls")
         if not decls:
             continue
-        # if "RNG" in name:
-        #     print name, decls
         for signature in decls:
             if signature[0] == "C" or signature[0] == "C++":
                 if "template" in (signature[2][1] or ""):
@@ -431,6 +439,7 @@ def process_module(module, path):
                 if signature[-1] != DOCUMENTED_MARKER:
                     candidates = "\n\t".join([formatSignature(f[3]) for f in fd])
                     logerror(ERROR_009_OVERLOADNOTFOUND, signature[0] + " function " + signature[2][0].replace(".","::") + " is documented but misses in headers (" + error + ").\nDocumented as:\n\t" + signature[1] + "\nCandidates are:\n\t" + candidates, doc)
+                    signature.append(DOCUMENTED_MARKER) # to stop subsequent error on this function
 
     # verify that all signatures was found in the library headers
     for name, doc in rst.iteritems():
@@ -443,11 +452,18 @@ def process_module(module, path):
         for d in doc.get("decls", []):
             if d[-1] != DOCUMENTED_MARKER:
                 if d[0] == "C" or d[0] =="C++" or (do_python_crosscheck and d[0].startswith("Python")):
-                    if d[0][0] == 'C' and d[2][0][3:] in defines:
-                        #TODO: need to find a way to verify #define's
+                    if d[0][0] == 'C':
+                        sname = d[2][0][3:].replace(".", "::")
+                        if sname in defines:
+                            #TODO: need to find a way to verify #define's
+                            continue
+                    else:
+                        sname = d[1][:d[1].find("(")]
+                    prefixes = [x for x in doc_signatures_whitelist if sname.startswith(x)]
+                    if prefixes:
+                        # TODO: member of template class
                         continue
-                    logerror(ERROR_011_UNKNOWNFUNC, d[0] + " function is documented but is not found in OpenCV headers. It is documented as:\n\t" + d[1], doc)
-                    #print d[2][0][3:]
+                    logerror(ERROR_011_UNKNOWNFUNC, d[0] + " function " + sname + " is documented but is not found in OpenCV headers. It is documented as:\n\t" + d[1], doc)
     # end of process_module
 
 if __name__ == "__main__":

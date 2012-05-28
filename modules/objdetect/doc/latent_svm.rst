@@ -256,7 +256,7 @@ LatentSvmDetector::getClassCount
 --------------------------------
 Return a count of loaded models (classes).
 
-.. ocv:function:: size_t getClassCount() const
+.. ocv:function:: size_t LatentSvmDetector::getClassCount() const
 
 
 .. [Felzenszwalb2010] Felzenszwalb, P. F. and Girshick, R. B. and McAllester, D. and Ramanan, D. *Object Detection with Discriminatively Trained Part Based Models*. PAMI, vol. 32, no. 9, pp. 1627-1645, September 2010

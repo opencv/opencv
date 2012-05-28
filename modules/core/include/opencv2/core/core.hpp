@@ -2538,6 +2538,13 @@ CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
                             int thickness=1, int lineType=8, int shift=0 );
 
+//! draws contours in the image
+CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
+                              int contourIdx, const Scalar& color,
+                              int thickness=1, int lineType=8,
+                              InputArray hierarchy=noArray(),
+                              int maxLevel=INT_MAX, Point offset=Point() );
+
 //! clips the line segment by the rectangle Rect(0, 0, imgSize.width, imgSize.height)
 CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
 

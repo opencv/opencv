@@ -173,7 +173,7 @@ EM::predict
 -----------
 Returns a likelihood logarithm value and an index of the most probable mixture component for the given sample.
 
-.. ocv:function:: Vec2d predict(InputArray sample, OutputArray probs=noArray()) const
+.. ocv:function:: Vec2d EM::predict(InputArray sample, OutputArray probs=noArray()) const
 
 .. ocv:pyfunction:: cv2.EM.predict(sample[, probs]) -> retval, probs
 

@@ -64,7 +64,7 @@ detail::FeaturesFinder::find
 
 This method must implement features finding logic in order to make the wrappers `detail::FeaturesFinder::operator()`_ work.
 
-.. ocv:function:: void find(const Mat &image, ImageFeatures &features)
+.. ocv:function:: void detail::FeaturesFinder::find(const Mat &image, ImageFeatures &features)
 
     :param image: Source image
 
@@ -171,7 +171,7 @@ Performs images matching.
 
     :param matches_info: Found matches
 
-.. ocv:function:: void detail::FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, const Mat &mask)
+.. ocv:function:: void detail::FeaturesMatcher::operator ()( const std::vector<ImageFeatures> & features, std::vector<MatchesInfo> & pairwise_matches, const Mat & mask=Mat() )
 
     :param features: Features of the source images
 

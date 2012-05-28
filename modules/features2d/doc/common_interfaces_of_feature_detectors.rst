@@ -112,22 +112,6 @@ Detects keypoints in an image (first variant) or image set (second variant).
 
     :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]``.
 
-FeatureDetector::read
--------------------------
-Reads a feature detector object from a file node.
-
-.. ocv:function:: void FeatureDetector::read( const FileNode& fn )
-
-    :param fn: File node from which the detector is read.
-
-FeatureDetector::write
---------------------------
-Writes a feature detector object to a file storage.
-
-.. ocv:function:: void FeatureDetector::write( FileStorage& fs ) const
-
-    :param fs: File storage where the detector is written.
-
 FeatureDetector::create
 ---------------------------
 Creates a feature detector by its name.

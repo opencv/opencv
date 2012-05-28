@@ -75,8 +75,6 @@ Estimates the Gaussian mixture parameters from a sample set.
 
 .. ocv:function:: bool CvEM::train( const CvMat* samples, const CvMat* sampleIdx=0, CvEMParams params=CvEMParams(), CvMat* labels=0 )
 
-.. ocv:pyfunction:: cv2.EM.train(samples[, sampleIdx[, params]]) -> retval, labels
-
     :param samples: Samples from which the Gaussian mixture model will be estimated.
 
     :param sample_idx: Mask of samples to use. All samples are used by default.
@@ -107,8 +105,6 @@ Returns a mixture component index of a sample.
 
 .. ocv:function:: float CvEM::predict( const CvMat* sample, CvMat* probs ) const
 
-.. ocv:pyfunction:: cv2.EM.predict(sample) -> retval, probs
-
     :param sample: A sample for classification.
 
     :param probs: If it is not null then the method will write posterior probabilities of each component given the sample data to this parameter.
@@ -122,8 +118,6 @@ Returns the number of mixture components :math:`M` in the Gaussian mixture model
 
 .. ocv:function:: int CvEM::get_nclusters() const
 
-.. ocv:pyfunction:: cv2.EM.getNClusters() -> retval
-
 
 CvEM::getMeans
 ------------------
@@ -132,8 +126,6 @@ Returns mixture means :math:`a_k`.
 .. ocv:function:: Mat CvEM::getMeans() const
 
 .. ocv:function:: const CvMat* CvEM::get_means() const
-
-.. ocv:pyfunction:: cv2.EM.getMeans() -> means
 
 
 CvEM::getCovs
@@ -144,8 +136,6 @@ Returns mixture covariance matrices :math:`S_k`.
 
 .. ocv:function:: const CvMat** CvEM::get_covs() const
 
-.. ocv:pyfunction:: cv2.EM.getCovs([covs]) -> covs
-
 
 CvEM::getWeights
 ----------------
@@ -155,8 +145,6 @@ Returns mixture weights :math:`\pi_k`.
 
 .. ocv:function:: const CvMat* CvEM::get_weights() const
 
-.. ocv:pyfunction:: cv2.EM.getWeights() -> weights
-
 
 CvEM::getProbs
 --------------
@@ -165,8 +153,6 @@ Returns vectors of probabilities for each training sample.
 .. ocv:function:: Mat CvEM::getProbs() const
 
 .. ocv:function:: const CvMat* CvEM::get_probs() const
-
-.. ocv:pyfunction:: cv2.EM.getProbs() -> probs
 
 For each training sample :math:`i` (that have been passed to the constructor or to :ocv:func:`CvEM::train`) returns probabilities :math:`p_{i,k}` to belong to a mixture component :math:`k`.
 
@@ -178,8 +164,6 @@ Returns logarithm of likelihood.
 .. ocv:function:: double CvEM::getLikelihood() const
 
 .. ocv:function:: double CvEM::get_log_likelihood() const
-
-.. ocv:pyfunction:: cv2.EM.getLikelihood() -> likelihood
 
 
 CvEM::write

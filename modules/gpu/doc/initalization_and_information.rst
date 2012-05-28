@@ -47,7 +47,6 @@ Any subsequent API call to this device will reinitialize the device.
 
 gpu::FeatureSet
 ---------------
-.. ocv:class:: gpu::FeatureSet
 
 Class providing GPU computing features. ::
 
@@ -74,7 +73,7 @@ Class providing a set of static methods to check what NVIDIA* card architecture 
 
 The following method checks whether the module was built with the support of the given feature:
 
-    .. ocv:function:: static bool gpu::TargetArchs::builtWith(FeatureSet feature)
+    .. ocv:function:: static bool gpu::TargetArchs::builtWith( FeatureSet feature_set )
 
         :param feature: Feature to be checked. See :ocv:class:`gpu::FeatureSet`.
 
@@ -150,7 +149,7 @@ gpu::DeviceInfo::name
 -------------------------
 Returns the device name.
 
-.. ocv:function:: string gpu::DeviceInfo::name()
+.. ocv:function:: string gpu::DeviceInfo::name() const
 
 
 
@@ -198,7 +197,7 @@ gpu::DeviceInfo::supports
 -----------------------------
 Provides information on GPU feature support.
 
-.. ocv:function:: bool gpu::DeviceInfo::supports(FeatureSet feature)
+.. ocv:function:: bool gpu::DeviceInfo::supports( FeatureSet feature_set ) const
 
     :param feature: Feature to be checked. See :ocv:class:`gpu::FeatureSet`.
 

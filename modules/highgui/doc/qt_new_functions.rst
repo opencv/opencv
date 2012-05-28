@@ -226,27 +226,21 @@ The function ``displayOverlay`` displays useful information/tips on top of the w
 *delayms*
 . This information is displayed on the window statusbar (the window must be created with the ``CV_GUI_EXPANDED`` flags).
 
-createOpenGLCallback
+setOpenGlDrawCallback
 ------------------------
-Creates a callback function called to draw OpenGL on top the image display by ``windowname``.
+Sets a callback function to be called to draw on top of displayed image.
 
-.. ocv:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata =NULL, double angle=-1, double zmin=-1, double zmax=-1)
+.. ocv:function:: void setOpenGlDrawCallback( const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata=0 )
 
-.. ocv:cfunction:: void cvCreateOpenGLCallback( const char* windowName, CvOpenGLCallback callbackOpenGL, void* userdata=NULL, double angle=-1, double zmin=-1, double zmax=-1 )
+.. ocv:cfunction:: void cvSetOpenGlDrawCallback( const char* window_name, CvOpenGlDrawCallback callback, void* userdata=NULL )
 
     :param window_name: Name of the window.
 
-    :param callbackOpenGL: Pointer to the function to be called every frame. This function should be prototyped as  ``void Foo(*void);`` .
+    :param callbackOpenGL: Pointer to the function to be called every frame. This function should be prototyped as  ``void Foo(void*)`` .
 
     :param userdata: Pointer passed to the callback function.  *(Optional)*
 
-    :param angle: Parameter specifying the field of a view angle, in degrees, in the y direction. Default value is 45 degrees. *(Optional)*
-
-    :param zmin: Parameter specifying the distance from the viewer to the near clipping plane (always positive). Default value is 0.01. *(Optional)*
-
-    :param zmax: Parameter specifying the distance from the viewer to the far clipping plane (always positive). Default value is 1000. *(Optional)*
-
-The function ``createOpenGLCallback`` can be used to draw 3D data on the window. See the example of callback use below: ::
+The function ``setOpenGlDrawCallback`` can be used to draw 3D data on the window. See the example of callback function below: ::
 
     void on_opengl(void* param)
     {

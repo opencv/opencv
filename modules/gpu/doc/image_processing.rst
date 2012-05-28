@@ -261,7 +261,7 @@ You can use field `user_block_size` to set specific block size for :ocv:func:`gp
 
 gpu::ConvolveBuf::create
 ------------------------
-.. ocv:function:: ConvolveBuf::create(Size image_size, Size templ_size)
+.. ocv:function:: gpu::ConvolveBuf::create(Size image_size, Size templ_size)
 
 Constructs a buffer for :ocv:func:`gpu::convolve` function with respective arguments.
 
@@ -499,7 +499,7 @@ gpu::buildWarpAffineMaps
 ------------------------
 Builds transformation maps for affine transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
 
     :param M: *2x3*  transformation matrix.
 
@@ -543,7 +543,7 @@ gpu::buildWarpPerspectiveMaps
 -----------------------------
 Builds transformation maps for perspective transformation.
 
-.. ocv:function:: void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
 
     :param M: *3x3*  transformation matrix.
 

@@ -475,7 +475,7 @@ gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream
 -------------------------------------------------------
 Callback function to signal the start of bitstream that is to be encoded.
 
-.. ocv:function:: virtual unsigned char* gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream(int* bufferSize) = 0
+.. ocv:function:: virtual uchar* gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream(int* bufferSize) = 0
 
 Callback must allocate buffer for CUDA encoder and return pointer to it and it's size.
 

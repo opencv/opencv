@@ -65,25 +65,6 @@ Computes the descriptors for a set of keypoints detected in an image (first vari
 
     :param descriptors: Computed descriptors. In the second variant of the method ``descriptors[i]`` are descriptors computed for a ``keypoints[i]`. Row ``j`` is the ``keypoints`` (or ``keypoints[i]``) is the descriptor for keypoint ``j``-th keypoint.
 
-DescriptorExtractor::read
------------------------------
-Reads the object of a descriptor extractor from a file node.
-
-.. ocv:function:: void DescriptorExtractor::read( const FileNode& fn )
-
-    :param fn: File node from which the detector is read.
-
-
-
-DescriptorExtractor::write
-------------------------------
-Writes the object of a descriptor extractor to a file storage.
-
-.. ocv:function:: void DescriptorExtractor::write( FileStorage& fs ) const
-
-    :param fs: File storage where the detector is written.
-
-
 
 DescriptorExtractor::create
 -------------------------------

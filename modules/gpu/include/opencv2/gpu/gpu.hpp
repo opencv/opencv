@@ -1978,7 +1978,7 @@ public:
 
         // callback function to signal the start of bitstream that is to be encoded
         // must return pointer to buffer
-        virtual unsigned char* acquireBitStream(int* bufferSize) = 0;
+        virtual uchar* acquireBitStream(int* bufferSize) = 0;
 
         // callback function to signal that the encoded bitstream is ready to be written to file
         virtual void releaseBitStream(unsigned char* data, int size) = 0;
