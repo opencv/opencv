@@ -2852,8 +2852,19 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::warpAffine(src, dst, M, interpolation, borderType, borderValue) )
+    if (borderType == BORDER_REPLICATE)
+    {
+        if( tegra::warpAffine(src, dst, M, interpolation, borderType, borderValue) )
+        return; 
+    }
+    else
+    {
+        double warp_mat[6];
+        Mat warp_m(2, 3, CV_64F, warp_mat);
+        M0.convertTo(warp_m, warp_m.type());
+        if( tegra::warpAffine(src, dst, warp_mat, interpolation, borderType, borderValue) )
         return;
+    }
 #endif
 
     int x, y, x1, y1, width = dst.cols, height = dst.rows;
@@ -2988,6 +2999,19 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
          invert(matM, matM);
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
+    // if (borderType == BORDER_REPLICATE)
+    // {
+    //     if( tegra::warpPerspective(src, dst, M, interpolation, borderType, borderValue) )
+    //     return; 
+    // }
+    // else
+    // {
+    //     double warp_mat[9];
+    //     Mat warp_m(3, 3, CV_64F, warp_mat);
+    //     M0.convertTo(warp_m, warp_m.type());
+    //     if( tegra::warpPerspective(src, dst, warp_mat, interpolation, borderType, borderValue) )
+    //     return;
+    // }
     if( tegra::warpPerspective(src, dst, M, interpolation, borderType, borderValue) )
         return;
 #endif
