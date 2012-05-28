@@ -64,9 +64,9 @@ Clips the line against the image rectangle.
 .. ocv:pyfunction:: cv2.clipLine(imgRect, pt1, pt2) -> retval, pt1, pt2
 
 .. ocv:cfunction:: int cvClipLine( CvSize imgSize, CvPoint* pt1, CvPoint* pt2 )
-.. ocv:pyoldfunction:: cv.ClipLine(imgSize, pt1, pt2) -> (clippedPt1, clippedPt2)
+.. ocv:pyoldfunction:: cv.ClipLine(imgSize, pt1, pt2) -> (point1, point2)
 
-    :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .     
+    :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .
 
     :param imgRect: Image rectangle.
 
@@ -89,7 +89,7 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
 .. ocv:pyfunction:: cv2.ellipse(img, box, color[, thickness[, lineType]]) -> None
 
 .. ocv:cfunction:: void cvEllipse( CvArr* img, CvPoint center, CvSize axes, double angle, double startAngle, double endAngle, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
-.. ocv:pyoldfunction:: cv.Ellipse(img, center, axes, angle, startAngle, endAngle, color, thickness=1, lineType=8, shift=0)-> None
+.. ocv:pyoldfunction:: cv.Ellipse(img, center, axes, angle, start_angle, end_angle, color, thickness=1, lineType=8, shift=0)-> None
 
 .. ocv:cfunction:: void cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
 .. ocv:pyoldfunction:: cv.EllipseBox(img, box, color, thickness=1, lineType=8, shift=0)-> None
@@ -136,10 +136,10 @@ Approximates an elliptic arc with a polyline.
 
     :param center: Center of the arc.
 
-    :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.   
-    
-    :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.   
-    
+    :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.
+
+    :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.
+
     :param startAngle: Starting angle of the elliptic arc in degrees.
 
     :param endAngle: Ending angle of the elliptic arc in degrees.
@@ -227,11 +227,11 @@ Calculates the width and height of a text string.
 
     :param text: Input text string.
 
-    :param fontFace: Font to use. See the  :ocv:func:`putText` for details.    
+    :param fontFace: Font to use. See the  :ocv:func:`putText` for details.
 
-    :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.   
+    :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.
 
-    :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.   
+    :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.
 
     :param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
 
@@ -275,49 +275,49 @@ Initializes font structure (OpenCV 1.x API).
 
 .. ocv:cfunction:: void cvInitFont(  CvFont* font, int fontFace, double hscale, double vscale, double shear=0, int thickness=1, int lineType=8 )
 
-    :param font: Pointer to the font structure initialized by the function 
+    :param font: Pointer to the font structure initialized by the function
 
     :param fontFace: Font name identifier. Only a subset of Hershey fonts  http://sources.isc.org/utils/misc/hershey-font.txt  are supported now:
 
-            * **CV_FONT_HERSHEY_SIMPLEX** normal size sans-serif font 
+            * **CV_FONT_HERSHEY_SIMPLEX** normal size sans-serif font
 
-            * **CV_FONT_HERSHEY_PLAIN** small size sans-serif font 
+            * **CV_FONT_HERSHEY_PLAIN** small size sans-serif font
 
-            * **CV_FONT_HERSHEY_DUPLEX** normal size sans-serif font (more complex than    ``CV_FONT_HERSHEY_SIMPLEX`` ) 
+            * **CV_FONT_HERSHEY_DUPLEX** normal size sans-serif font (more complex than    ``CV_FONT_HERSHEY_SIMPLEX`` )
 
-            * **CV_FONT_HERSHEY_COMPLEX** normal size serif font 
+            * **CV_FONT_HERSHEY_COMPLEX** normal size serif font
 
-            * **CV_FONT_HERSHEY_TRIPLEX** normal size serif font (more complex than  ``CV_FONT_HERSHEY_COMPLEX`` ) 
+            * **CV_FONT_HERSHEY_TRIPLEX** normal size serif font (more complex than  ``CV_FONT_HERSHEY_COMPLEX`` )
 
-            * **CV_FONT_HERSHEY_COMPLEX_SMALL** smaller version of  ``CV_FONT_HERSHEY_COMPLEX`` 
+            * **CV_FONT_HERSHEY_COMPLEX_SMALL** smaller version of  ``CV_FONT_HERSHEY_COMPLEX``
 
-            * **CV_FONT_HERSHEY_SCRIPT_SIMPLEX** hand-writing style font 
+            * **CV_FONT_HERSHEY_SCRIPT_SIMPLEX** hand-writing style font
 
-            * **CV_FONT_HERSHEY_SCRIPT_COMPLEX** more complex variant of  ``CV_FONT_HERSHEY_SCRIPT_SIMPLEX`` 
+            * **CV_FONT_HERSHEY_SCRIPT_COMPLEX** more complex variant of  ``CV_FONT_HERSHEY_SCRIPT_SIMPLEX``
 
-         The parameter can be composited from one of the values above and an optional  ``CV_FONT_ITALIC``  flag, which indicates italic or oblique font. 
-
-
-    :param hscale: Horizontal scale.  If equal to  ``1.0f`` , the characters have the original width depending on the font type. If equal to  ``0.5f`` , the characters are of half the original width. 
+         The parameter can be composited from one of the values above and an optional  ``CV_FONT_ITALIC``  flag, which indicates italic or oblique font.
 
 
-    :param vscale: Vertical scale. If equal to  ``1.0f`` , the characters have the original height depending on the font type. If equal to  ``0.5f`` , the characters are of half the original height. 
+    :param hscale: Horizontal scale.  If equal to  ``1.0f`` , the characters have the original width depending on the font type. If equal to  ``0.5f`` , the characters are of half the original width.
 
 
-    :param shear: Approximate tangent of the character slope relative to the vertical line.  A zero value means a non-italic font,  ``1.0f``  means about a 45 degree slope, etc. 
+    :param vscale: Vertical scale. If equal to  ``1.0f`` , the characters have the original height depending on the font type. If equal to  ``0.5f`` , the characters are of half the original height.
 
 
-    :param thickness: Thickness of the text strokes 
+    :param shear: Approximate tangent of the character slope relative to the vertical line.  A zero value means a non-italic font,  ``1.0f``  means about a 45 degree slope, etc.
 
 
-    :param lineType: Type of the strokes, see  :ocv:func:`line`  description 
+    :param thickness: Thickness of the text strokes
+
+
+    :param lineType: Type of the strokes, see  :ocv:func:`line`  description
 
 
 The function initializes the font structure that can be passed to text rendering functions.
 
 .. seealso:: :ocv:cfunc:`PutText`
 
-.. _Line: 
+.. _Line:
 
 line
 --------
@@ -416,7 +416,7 @@ Draws a simple, thick, or filled up-right rectangle.
     :param pt1: Vertex of the rectangle.
 
     :param pt2: Vertex of the rectangle opposite to  ``pt1`` .
-    
+
     :param r: Alternative specification of the drawn rectangle.
 
     :param color: Rectangle color or brightness (grayscale image).
@@ -441,7 +441,7 @@ Draws several polygonal curves.
 
 .. ocv:cfunction:: void cvPolyLine( CvArr* img, CvPoint** pts, int* npts, int contours, int isClosed, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
 
-.. ocv:pyoldfunction:: cv.PolyLine(img, polys, isClosed, color, thickness=1, lineType=8, shift=0)-> None
+.. ocv:pyoldfunction:: cv.PolyLine(img, polys, is_closed, color, thickness=1, lineType=8, shift=0) -> None
 
     :param img: Image.
 
@@ -471,7 +471,7 @@ Draws a text string.
 
 .. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
 
-.. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, linetype[, bottomLeftOrigin]]]) -> None
+.. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]]) -> None
 
 .. ocv:cfunction:: void cvPutText( CvArr* img, const char* text, CvPoint org, const CvFont* font, CvScalar color )
 .. ocv:pyoldfunction:: cv.PutText(img, text, org, font, color)-> None

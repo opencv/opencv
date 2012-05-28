@@ -54,7 +54,7 @@ Compensate exposure in the specified image.
 
 detail::NoExposureCompensator
 -----------------------------
-.. ocv:class:: detail::NoExposureCompensator
+.. ocv:class:: detail::NoExposureCompensator : public ExposureCompensator
 
 Stub exposure compensator which does nothing. ::
 
@@ -70,7 +70,7 @@ Stub exposure compensator which does nothing. ::
 
 detail::GainCompensator
 -----------------------
-.. ocv:class:: detail::GainCompensator
+.. ocv:class:: detail::GainCompensator : public ExposureCompensator
 
 Exposure compensator which tries to remove exposure related artifacts by adjusting image intensities, see [BL07]_ and [WJ10]_ for details. ::
 
@@ -90,7 +90,7 @@ Exposure compensator which tries to remove exposure related artifacts by adjusti
 
 detail::BlocksGainCompensator
 -----------------------------
-.. ocv:class:: detail::BlocksGainCompensator
+.. ocv:class:: detail::BlocksGainCompensator : public ExposureCompensator
 
 Exposure compensator which tries to remove exposure related artifacts by adjusting image block intensities, see [UES01]_ for details. ::
 

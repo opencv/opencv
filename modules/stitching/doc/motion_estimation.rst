@@ -55,7 +55,7 @@ This method must implement camera parameters estimation logic in order to make t
 
 detail::HomographyBasedEstimator
 --------------------------------
-.. ocv:class:: detail::HomographyBasedEstimator
+.. ocv:class:: detail::HomographyBasedEstimator : public Estimator
 
 Homography based rotation estimator. ::
 
@@ -71,7 +71,7 @@ Homography based rotation estimator. ::
 
 detail::BundleAdjusterBase
 --------------------------
-.. ocv:class:: detail::BundleAdjusterBase
+.. ocv:class:: detail::BundleAdjusterBase : public Estimator
 
 Base class for all camera parameters refinement methods. ::
 
@@ -187,7 +187,7 @@ Gets the refined camera parameters.
 
 detail::BundleAdjusterReproj
 ----------------------------
-.. ocv:class:: detail::BundleAdjusterReproj
+.. ocv:class:: detail::BundleAdjusterReproj : public BundleAdjusterBase
 
 Implementation of the camera parameters refinement algorithm which minimizes sum of the reprojection error squares. ::
 
@@ -204,7 +204,7 @@ Implementation of the camera parameters refinement algorithm which minimizes sum
 
 detail::BundleAdjusterRay
 -------------------------
-.. ocv:class:: detail::BundleAdjusterRay
+.. ocv:class:: detail::BundleAdjusterRay : public BundleAdjusterBase
 
 Implementation of the camera parameters refinement algorithm which minimizes sum of the distances between the rays passing through the camera center and a feature. ::
 

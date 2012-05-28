@@ -10,6 +10,6 @@ Extremely randomized trees have been introduced by Pierre Geurts, Damien Ernst a
 
 CvERTrees
 ----------
-.. ocv:class:: CvERTrees
+.. ocv:class:: CvERTrees : public CvRTrees
 
     The class implements the Extremely randomized trees algorithm. ``CvERTrees`` is inherited from :ocv:class:`CvRTrees` and has the same interface, so see description of :ocv:class:`CvRTrees` class to get details. To set the training parameters of Extremely randomized trees the same class :ocv:class:`CvRTParams` is used.

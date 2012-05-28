@@ -131,7 +131,7 @@ FeatureEvaluator::create
 ----------------------------
 Constructs the feature evaluator.
 
-.. ocv:function:: static Ptr<FeatureEvaluator> FeatureEvaluator::create(int type)
+.. ocv:function:: Ptr<FeatureEvaluator> FeatureEvaluator::create(int type)
 
     :param type: Type of features evaluated by cascade (``HAAR`` or ``LBP`` for now).
 
@@ -148,7 +148,7 @@ Loads a classifier from a file.
 
 .. ocv:function:: CascadeClassifier::CascadeClassifier(const string& filename)
 
-.. ocv:pyfunction:: cv2.CascadeClassifier(filename) -> <CascadeClassifier object>
+.. ocv:pyfunction:: cv2.CascadeClassifier([filename]) -> <CascadeClassifier object>
 
     :param filename: Name of the file from which the classifier is loaded.
 
@@ -193,9 +193,9 @@ Detects objects of different sizes in the input image. The detected objects are 
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image, rejectLevels, levelWeights[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects
 
-.. ocv:cfunction:: CvSeq* cvHaarDetectObjects( const CvArr* image, CvHaarClassifierCascade* cascade, CvMemStorage* storage, double scaleFactor=1.1, int minNeighbors=3, int flags=0, CvSize minSize=cvSize(0, 0), CvSize maxSize=cvSize(0, 0) )
+.. ocv:cfunction:: CvSeq* cvHaarDetectObjects( const CvArr* image, CvHaarClassifierCascade* cascade, CvMemStorage* storage, double scale_factor=1.1, int min_neighbors=3, int flags=0, CvSize min_size=cvSize(0,0), CvSize max_size=cvSize(0,0) )
 
-.. ocv:pyoldfunction:: cv.HaarDetectObjects(image, cascade, storage, scaleFactor=1.1, minNeighbors=3, flags=0, minSize=(0, 0))-> detectedObjects
+.. ocv:pyoldfunction:: cv.HaarDetectObjects(image, cascade, storage, scale_factor=1.1, min_neighbors=3, flags=0, min_size=(0, 0)) -> detectedObjects
 
     :param cascade: Haar classifier cascade (OpenCV 1.x API only). It can be loaded from XML or YAML file using :ocv:cfunc:`Load`. When the cascade is not needed anymore, release it using ``cvReleaseHaarClassifierCascade(&cascade)``.
 
@@ -222,7 +222,7 @@ Sets an image for detection.
 
 .. ocv:function:: bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& feval, const Mat& image )
 
-.. ocv:cfunction:: void cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* cascade, const CvArr* sum, const CvArr* sqsum, const CvArr* tiltedSum, double scale )
+.. ocv:cfunction:: void cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* cascade, const CvArr* sum, const CvArr* sqsum, const CvArr* tilted_sum, double scale )
 
     :param cascade: Haar classifier cascade (OpenCV 1.x API only). See :ocv:func:`CascadeClassifier::detectMultiScale` for more information.
 
@@ -241,7 +241,7 @@ Runs the detector at the specified point.
 
 .. ocv:function:: int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& feval, Point pt )
 
-.. ocv:cfunction:: int cvRunHaarClassifierCascade( CvHaarClassifierCascade* cascade, CvPoint pt, int startStage=0 )
+.. ocv:cfunction:: int cvRunHaarClassifierCascade( const CvHaarClassifierCascade* cascade, CvPoint pt, int start_stage=0 )
 
     :param cascade: Haar classifier cascade (OpenCV 1.x API only). See :ocv:func:`CascadeClassifier::detectMultiScale` for more information.
 

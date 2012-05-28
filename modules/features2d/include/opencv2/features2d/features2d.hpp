@@ -276,7 +276,7 @@ public:
     enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
 
     explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
-                 int firstLevel = 0, int WTA_K=2, int scoreType=0, int patchSize=31 );
+                 int firstLevel = 0, int WTA_K=2, int scoreType=HARRIS_SCORE, int patchSize=31 );
 
     // returns the descriptor size in bytes
     int descriptorSize() const;
@@ -1158,9 +1158,9 @@ public:
                       const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
 
     // Reads matcher object from a file node
-    virtual void read( const FileNode& );
+    virtual void read( const FileNode& fn );
     // Writes matcher object to a file storage
-    virtual void write( FileStorage& ) const;
+    virtual void write( FileStorage& fs ) const;
 
     // Return true if matching object is empty (e.g. feature detector or descriptor matcher are empty)
     virtual bool empty() const;

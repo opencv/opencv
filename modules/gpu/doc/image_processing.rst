@@ -238,7 +238,7 @@ The source matrix should be continuous, otherwise reallocation and data copying 
 
 gpu::ConvolveBuf
 ----------------
-.. ocv:class:: gpu::ConvolveBuf
+.. ocv:struct:: gpu::ConvolveBuf
 
 Class providing a memory buffer for :ocv:func:`gpu::convolve` function, plus it allows to adjust some specific parameters. ::
 
@@ -290,7 +290,7 @@ Computes a convolution (or cross-correlation) of two images.
 
 gpu::MatchTemplateBuf
 ---------------------
-.. ocv:class:: gpu::MatchTemplateBuf
+.. ocv:struct:: gpu::MatchTemplateBuf
 
 Class providing memory buffers for :ocv:func:`gpu::matchTemplate` function, plus it allows to adjust some specific parameters. ::
 

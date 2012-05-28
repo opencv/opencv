@@ -164,7 +164,7 @@ Image warper factories base class. ::
 
 PlaneWarper
 -----------
-.. ocv:class:: PlaneWarper
+.. ocv:class:: PlaneWarper : public WarperCreator
 
 Plane warper factory class. ::
 
@@ -178,7 +178,7 @@ Plane warper factory class. ::
 
 CylindricalWarper
 -----------------
-.. ocv:class:: CylindricalWarper
+.. ocv:class:: CylindricalWarper : public WarperCreator
 
 Cylindrical warper factory class. ::
 
@@ -192,7 +192,7 @@ Cylindrical warper factory class. ::
 
 SphericalWarper
 ---------------
-.. ocv:class:: SphericalWarper
+.. ocv:class:: SphericalWarper : public WarperCreator
 
 Spherical warper factory class. ::
 

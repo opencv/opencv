@@ -61,35 +61,35 @@ setWindowProperty
 ---------------------
 Changes parameters of a window dynamically.
 
-.. ocv:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
+.. ocv:function:: void setWindowProperty( const string& winname, int prop_id, double prop_value )
 
 .. ocv:pyfunction:: cv2.setWindowProperty(winname, prop_id, prop_value) -> None
 
-.. ocv:cfunction:: void cvSetWindowProperty(const char* name, int propId, double propValue)
+.. ocv:cfunction:: void cvSetWindowProperty( const char* name, int prop_id, double prop_value )
 
     :param name: Name of the window.
 
     :param prop_id: Window property to edit. The following operation flags are available:
-        
+
             * **CV_WND_PROP_FULLSCREEN**  Change if the window is fullscreen ( ``CV_WINDOW_NORMAL``  or  ``CV_WINDOW_FULLSCREEN`` ).
-            
+
             * **CV_WND_PROP_AUTOSIZE**  Change if the window is resizable (``CV_WINDOW_NORMAL``  or   ``CV_WINDOW_AUTOSIZE`` ).
-            
+
             * **CV_WND_PROP_ASPECTRATIO**  Change if the aspect ratio of the image is preserved  ( ``CV_WINDOW_FREERATIO``  or  ``CV_WINDOW_KEEPRATIO`` ).
-            
+
 
     :param prop_value: New value of the window property. The following operation flags are available:
-        
+
             * **CV_WINDOW_NORMAL**  Change the window to normal size or make the window resizable.
-            
+
             * **CV_WINDOW_AUTOSIZE**  Constrain the size by the displayed image. The window is not resizable.
-            
+
             * **CV_WINDOW_FULLSCREEN**  Change the window to fullscreen.
-            
+
             * **CV_WINDOW_FREERATIO**  Make the window resizable without any ratio constraints.
-            
+
             * **CV_WINDOW_KEEPRATIO**  Make the window resizable, but preserve the proportions of the displayed image.
-            
+
 
 The function ``setWindowProperty``  enables changing properties of a window.
 
@@ -97,22 +97,22 @@ getWindowProperty
 ---------------------
 Provides parameters of a window.
 
-.. ocv:function:: void  getWindowProperty(const string& name, int prop_id)
+.. ocv:function:: double getWindowProperty( const string& winname, int prop_id )
 
 .. ocv:pyfunction:: cv2.getWindowProperty(winname, prop_id) -> retval
 
-.. ocv:cfunction:: void cvGetWindowProperty(const char* name, int propId)
+.. ocv:cfunction:: double cvGetWindowProperty( const char* name, int prop_id )
 
     :param name: Name of the window.
 
     :param prop_id: Window property to retrieve. The following operation flags are available:
-        
+
             * **CV_WND_PROP_FULLSCREEN**  Change if the window is fullscreen ( ``CV_WINDOW_NORMAL``  or  ``CV_WINDOW_FULLSCREEN`` ).
-            
+
             * **CV_WND_PROP_AUTOSIZE**  Change if the window is resizable (``CV_WINDOW_NORMAL``  or   ``CV_WINDOW_AUTOSIZE`` ).
-            
+
             * **CV_WND_PROP_ASPECTRATIO**  Change if the aspect ratio of the image is preserved  (``CV_WINDOW_FREERATIO``  or  ``CV_WINDOW_KEEPRATIO`` ).
-            
+
 
 See
 :ocv:func:`setWindowProperty` to know the meaning of the returned values.
@@ -134,27 +134,27 @@ Creates the font to draw a text on an image.
     :param color: Color of the font in BGRA where A = 255 is fully transparent. Use the macro ``CV _ RGB`` for simplicity.
 
     :param weight: Font weight. The following operation flags are available:
-        
+
             * **CV_FONT_LIGHT**  Weight of 25
-            
+
             * **CV_FONT_NORMAL**  Weight of 50
-            
+
             * **CV_FONT_DEMIBOLD**  Weight of 63
-            
+
             * **CV_FONT_BOLD**  Weight of 75
-            
+
             * **CV_FONT_BLACK**  Weight of 87
 
             You can also specify a positive integer for better control.
 
     :param style: Font style. The following operation flags are available:
-        
+
             * **CV_STYLE_NORMAL**  Normal font
-            
+
             * **CV_STYLE_ITALIC**  Italic font
-            
+
             * **CV_STYLE_OBLIQUE**  Oblique font
-            
+
     :param spacing: Spacing between characters. It can be negative or positive.
 
 The function ``fontQt`` creates a ``CvFont`` object. This ``CvFont`` is not compatible with ``putText`` .
@@ -169,9 +169,9 @@ addText
 -----------
 Creates the font to draw a text on an image.
 
-.. ocv:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
+.. ocv:function:: void addText( const Mat& img, const string& text, Point org, CvFont font )
 
-.. ocv:cfunction:: void cvAddText(const CvArr* img, const char* text, CvPoint location, CvFont *font)
+.. ocv:cfunction:: void cvAddText( const CvArr* img, const char* text, CvPoint org, CvFont * arg2 )
 
     :param img: 8-bit 3-channel image where the text should be drawn.
 
@@ -193,9 +193,9 @@ using a specific font
 
 displayOverlay
 ------------------
-Displays a  text on a window image as an overlay for a specified duration.  
+Displays a  text on a window image as an overlay for a specified duration.
 
-.. ocv:function:: void displayOverlay(const string& name, const string& text, int delayms = 0)
+.. ocv:function:: void displayOverlay( const string& winname, const string& text, int delayms=0 )
 
 .. ocv:cfunction:: void cvDisplayOverlay(const char* name, const char* text, int delayms = 0)
 
@@ -212,7 +212,7 @@ displayStatusBar
 --------------------
 Displays a text on the window statusbar during the specified period of time.
 
-.. ocv:function:: void displayStatusBar(const string& name, const string& text, int delayms = 0)
+.. ocv:function:: void displayStatusBar( const string& winname, const string& text, int delayms=0 )
 
 .. ocv:cfunction:: void cvDisplayStatusBar(const char* name, const char* text, int delayms = 0)
 
@@ -282,7 +282,7 @@ saveWindowParameters
 ------------------------
 Saves parameters of the specified window.
 
-.. ocv:function:: void saveWindowParameters(const string& name)
+.. ocv:function:: void saveWindowParameters( const string& windowName )
 
 .. ocv:cfunction:: void cvSaveWindowParameters(const char* name)
 
@@ -295,7 +295,7 @@ loadWindowParameters
 ------------------------
 Loads parameters of the specified window.
 
-.. ocv:function:: void loadWindowParameters(const string& name)
+.. ocv:function:: void loadWindowParameters( const string& windowName )
 
 .. ocv:cfunction:: void cvLoadWindowParameters(const char* name)
 
@@ -308,9 +308,9 @@ createButton
 ----------------
 Attaches a button to the control panel.
 
-.. ocv:function:: createButton( const string& button_name=NULL, ButtonCallback on_change=NULL, void* userdata=NULL, int button_type=CV_PUSH_BUTTON, int initial_button_state=0 )
+.. ocv:function:: int createButton( const string& bar_name, ButtonCallback on_change, void* userdata=NULL, int type=CV_PUSH_BUTTON, bool initial_button_state=0 )
 
-.. ocv:cfunction:: cvCreateButton( const char* buttonName=NULL, CvButtonCallback onChange=NULL, void* userdata=NULL, int buttonType=CV_PUSH_BUTTON, int initialButtonState=0 )
+.. ocv:cfunction:: int cvCreateButton( const char* button_name=NULL, CvButtonCallback on_change=NULL, void* userdata=NULL, int button_type=CV_PUSH_BUTTON, int initial_button_state=0 )
 
     :param  button_name: Name of the button.
 

@@ -7,7 +7,7 @@ Object Detection
 
 gpu::HOGDescriptor
 ------------------
-.. ocv:class:: gpu::HOGDescriptor
+.. ocv:struct:: gpu::HOGDescriptor
 
 The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detector. ::
 

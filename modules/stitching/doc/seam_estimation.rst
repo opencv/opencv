@@ -33,7 +33,7 @@ Estimates seams.
 
 detail::NoSeamFinder
 --------------------
-.. ocv:class:: detail::NoSeamFinder
+.. ocv:class:: detail::NoSeamFinder : public SeamFinder
 
 Stub seam estimator which does nothing. ::
 
@@ -47,7 +47,7 @@ Stub seam estimator which does nothing. ::
 
 detail::PairwiseSeamFinder
 --------------------------
-.. ocv:class:: detail::PairwiseSeamFinder
+.. ocv:class:: detail::PairwiseSeamFinder : public SeamFinder
 
 Base class for all pairwise seam estimators. ::
 
@@ -84,7 +84,7 @@ Resolves masks intersection of two specified images in the given ROI.
 
 detail::VoronoiSeamFinder
 -------------------------
-.. ocv:class:: detail::VoronoiSeamFinder
+.. ocv:class:: detail::VoronoiSeamFinder : public PairwiseSeamFinder
 
 Voronoi diagram-based seam estimator. ::
 
@@ -113,7 +113,7 @@ Base class for all minimum graph-cut-based seam estimators. ::
 
 detail::GraphCutSeamFinder
 --------------------------
-.. ocv:class:: detail::GraphCutSeamFinder
+.. ocv:class:: detail::GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
 
 Minimum graph cut-based seam estimator. See details in [V03]_. ::
 

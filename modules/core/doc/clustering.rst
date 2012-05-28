@@ -13,7 +13,7 @@ Finds centers of clusters and groups input samples around the clusters.
 
 .. ocv:cfunction:: int cvKMeans2(const CvArr* samples, int clusterCount, CvArr* labels, CvTermCriteria criteria, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)
 
-.. ocv:pyoldfunction:: cv.KMeans2(samples, clusterCount, labels, criteria)-> None
+.. ocv:pyoldfunction:: cv.KMeans2(samples, nclusters, labels, termcrit, attempts=1, flags=0, centers=None) -> float
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 

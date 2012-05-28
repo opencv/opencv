@@ -64,7 +64,7 @@ Blends and returns the final pano.
 
 detail::FeatherBlender
 ----------------------
-.. ocv:class:: detail::FeatherBlender
+.. ocv:class:: detail::FeatherBlender : public Blender
 
 Simple blender which mixes images at its borders. ::
 
@@ -93,7 +93,7 @@ Simple blender which mixes images at its borders. ::
 
 detail::MultiBandBlender
 ------------------------
-.. ocv:class:: detail::MultiBandBlender
+.. ocv:class:: detail::MultiBandBlender : public Blender
 
 Blender which uses multi-band blending algorithm (see [BA83]_). ::
 

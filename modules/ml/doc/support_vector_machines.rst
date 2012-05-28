@@ -16,9 +16,9 @@ SVM implementation in OpenCV is based on [LibSVM]_.
 
 CvParamGrid
 -----------
-.. ocv:class:: CvParamGrid
+.. ocv:struct:: CvParamGrid
 
-The structure represents the logarithmic grid range of statmodel parameters. It is used for optimizing statmodel accuracy by varying model parameters, the accuracy estimate being computed by cross-validation. 
+The structure represents the logarithmic grid range of statmodel parameters. It is used for optimizing statmodel accuracy by varying model parameters, the accuracy estimate being computed by cross-validation.
 
 .. ocv:member:: double CvParamGrid::min_val
 
@@ -77,7 +77,7 @@ Returns ``true`` if the grid is valid and ``false`` otherwise. The grid is valid
 
 CvSVMParams
 -----------
-.. ocv:class:: CvSVMParams
+.. ocv:struct:: CvSVMParams
 
 SVM training parameters.
 
@@ -114,7 +114,7 @@ The constructors.
         * **CvSVM::RBF** Radial basis function (RBF), a good choice in most cases. :math:`K(x_i, x_j) = e^{-\gamma ||x_i - x_j||^2}, \gamma > 0`.
 
         * **CvSVM::SIGMOID** Sigmoid kernel: :math:`K(x_i, x_j) = \tanh(\gamma x_i^T x_j + coef0)`.
- 
+
     :param degree: Parameter ``degree`` of a kernel function (POLY).
 
     :param gamma: Parameter :math:`\gamma` of a kernel function (POLY / RBF / SIGMOID).
@@ -146,7 +146,7 @@ The default constructor initialize the structure with following values:
 
 CvSVM
 -----
-.. ocv:class:: CvSVM
+.. ocv:class:: CvSVM : public CvStatModel
 
 Support Vector Machines.
 
@@ -160,7 +160,7 @@ Default and training constructors.
 
 .. ocv:function:: CvSVM::CvSVM( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
 
-.. ocv:pyfunction:: cv2.SVM(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> <SVM object>
+.. ocv:pyfunction:: cv2.SVM([trainData, responses[, varIdx[, sampleIdx[, params]]]]) -> <SVM object>
 
 The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
 
@@ -174,7 +174,7 @@ Trains an SVM.
 
 .. ocv:pyfunction:: cv2.SVM.train(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> retval
 
-The method trains the SVM model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations: 
+The method trains the SVM model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations:
 
 * Only the ``CV_ROW_SAMPLE`` data layout is supported.
 
@@ -199,7 +199,7 @@ Trains an SVM with optimal parameters.
 .. ocv:pyfunction:: cv2.SVM.train_auto(trainData, responses, varIdx, sampleIdx, params[, k_fold[, Cgrid[, gammaGrid[, pGrid[, nuGrid[, coeffGrid[, degreeGrid[, balanced]]]]]]]]) -> retval
 
     :param k_fold: Cross-validation parameter. The training set is divided into ``k_fold`` subsets. One subset is used to train the model, the others form the test set. So, the SVM algorithm is executed ``k_fold`` times.
- 
+
     :param \*Grid: Iteration grid for the corresponding SVM parameter.
 
     :param balanced: If ``true`` and the problem is 2-class classification then the method creates more balanced cross-validation subsets that is proportions between classes in subsets are close to such proportion in the whole train dataset.
@@ -285,7 +285,7 @@ Retrieves a number of support vectors and the particular vector.
 
 .. ocv:function:: const float* CvSVM::get_support_vector(int i) const
 
-.. ocv:pyfunction:: cv2.SVM.get_support_vector_count() -> nsupportVectors
+.. ocv:pyfunction:: cv2.SVM.get_support_vector_count() -> retval
 
     :param i: Index of the particular support vector.
 
@@ -297,4 +297,4 @@ Returns the number of used features (variables count).
 
 .. ocv:function:: int CvSVM::get_var_count() const
 
-.. ocv:pyfunction:: cv2.SVM.get_var_count() -> nvars
+.. ocv:pyfunction:: cv2.SVM.get_var_count() -> retval

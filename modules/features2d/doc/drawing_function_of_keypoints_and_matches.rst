@@ -7,9 +7,9 @@ drawMatches
 ---------------
 Draws the found matches of keypoints from two images.
 
-.. ocv:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,          const Mat& img2, const vector<KeyPoint>& keypoints2,          const vector<DMatch>& matches1to2, Mat& outImg,          const Scalar& matchColor=Scalar::all(-1),           const Scalar& singlePointColor=Scalar::all(-1),          const vector<char>& matchesMask=vector<char>(),          int flags=DrawMatchesFlags::DEFAULT )
+.. ocv:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1, const Mat& img2, const vector<KeyPoint>& keypoints2, const vector<DMatch>& matches1to2, Mat& outImg, const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1), const vector<char>& matchesMask=vector<char>(), int flags=DrawMatchesFlags::DEFAULT )
 
-.. ocv:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,           const Mat& img2, const vector<KeyPoint>& keypoints2,           const vector<vector<DMatch> >& matches1to2, Mat& outImg,           const Scalar& matchColor=Scalar::all(-1),            const Scalar& singlePointColor=Scalar::all(-1),           const vector<vector<char>>& matchesMask=           vector<vector<char> >(),           int flags=DrawMatchesFlags::DEFAULT )
+.. ocv:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1, const Mat& img2, const vector<KeyPoint>& keypoints2, const vector<vector<DMatch> >& matches1to2, Mat& outImg, const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1), const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=DrawMatchesFlags::DEFAULT )
 
 
     :param img1: First source image.
@@ -31,7 +31,7 @@ Draws the found matches of keypoints from two images.
     :param matchesMask: Mask determining which matches are drawn. If the mask is empty, all matches are drawn.
 
     :param flags: Flags setting drawing features. Possible  ``flags``  bit values are defined by  ``DrawMatchesFlags``.
-    
+
 This function draws matches of keypoints from two images in the output image. Match is a line connecting two keypoints (circles). The structure ``DrawMatchesFlags`` is defined as follows:
 
 .. code-block:: cpp
@@ -65,7 +65,7 @@ drawKeypoints
 -----------------
 Draws keypoints.
 
-.. ocv:function:: void drawKeypoints( const Mat& image,           const vector<KeyPoint>& keypoints,           Mat& outImg, const Scalar& color=Scalar::all(-1),           int flags=DrawMatchesFlags::DEFAULT )
+.. ocv:function:: void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImage, const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT )
 
     :param image: Source image.
 

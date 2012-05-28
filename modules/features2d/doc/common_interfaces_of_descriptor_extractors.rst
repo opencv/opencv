@@ -13,7 +13,7 @@ descriptor extractors inherit the
 
 DescriptorExtractor
 -------------------
-.. ocv:class:: DescriptorExtractor
+.. ocv:class:: DescriptorExtractor : public Algorithm
 
 Abstract base class for computing descriptors for image keypoints. ::
 
@@ -107,7 +107,7 @@ for example: ``"OpponentSIFT"`` .
 
 OpponentColorDescriptorExtractor
 --------------------------------
-.. ocv:class:: OpponentColorDescriptorExtractor
+.. ocv:class:: OpponentColorDescriptorExtractor : public DescriptorExtractor
 
 Class adapting a descriptor extractor to compute descriptors in the Opponent Color Space
 (refer to Van de Sande et al., CGIV 2008 *Color Descriptors for Object Category Recognition*).
@@ -132,7 +132,7 @@ them into a single color descriptor. ::
 
 BriefDescriptorExtractor
 ------------------------
-.. ocv:class:: BriefDescriptorExtractor
+.. ocv:class:: BriefDescriptorExtractor : public DescriptorExtractor
 
 Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
 Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,

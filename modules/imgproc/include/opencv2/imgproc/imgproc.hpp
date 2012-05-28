@@ -392,7 +392,7 @@ CV_EXPORTS_W void medianBlur( InputArray src, OutputArray dst, int ksize );
 //! smooths the image using Gaussian filter.
 CV_EXPORTS_W void GaussianBlur( InputArray src,
                                                OutputArray dst, Size ksize,
-                                               double sigma1, double sigma2=0,
+                                               double sigmaX, double sigmaY=0,
                                                int borderType=BORDER_DEFAULT );
 //! smooths the image using bilateral filter
 CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,

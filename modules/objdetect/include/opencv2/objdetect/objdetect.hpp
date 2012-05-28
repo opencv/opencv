@@ -346,7 +346,7 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
     
-    virtual bool setImage(const Mat&, Size origWinSize);
+    virtual bool setImage(const Mat& img, Size origWinSize);
     virtual bool setWindow(Point p);
 
     virtual double calcOrd(int featureIdx) const;

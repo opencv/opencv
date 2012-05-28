@@ -142,7 +142,7 @@ RandomizedTree::applyQuantization
 
 RTreeNode
 ---------
-.. ocv:class:: RTreeNode
+.. ocv:struct:: RTreeNode
 
 Class containing a base structure for ``RandomizedTree``. ::
 

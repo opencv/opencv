@@ -377,7 +377,7 @@ The method write the specified image to video file. The image must have the same
 
 gpu::VideoWriter_GPU::EncoderParams
 -----------------------------------
-.. ocv:class:: gpu::VideoWriter_GPU::EncoderParams
+.. ocv:struct:: gpu::VideoWriter_GPU::EncoderParams
 
 Different parameters for CUDA video encoder. ::
 
@@ -561,7 +561,7 @@ Chroma formats supported by ocv:class:`gpu::VideoReader_GPU` . ::
 
 gpu::VideoReader_GPU::FormatInfo
 --------------------------------
-.. ocv:class:: gpu::VideoReader_GPU::FormatInfo
+.. ocv:struct:: gpu::VideoReader_GPU::FormatInfo
 
 Struct providing information about video file format. ::
 

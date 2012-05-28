@@ -172,7 +172,7 @@ Base class for rotation-based warper using a `detail::ProjectorBase`_ derived cl
 
 detail::PlaneWarper
 -------------------
-.. ocv:class:: detail::PlaneWarper
+.. ocv:class:: detail::PlaneWarper : public RotationWarperBase<PlaneProjector>
 
 Warper that maps an image onto the z = 1 plane. ::
 
@@ -209,7 +209,7 @@ Construct an instance of the plane warper class.
 
 detail::SphericalWarper
 -----------------------
-.. ocv:class:: detail::SphericalWarper
+.. ocv:class:: detail::SphericalWarper : public RotationWarperBase<SphericalProjector>
 
 Warper that maps an image onto the unit sphere located at the origin. ::
 
@@ -235,7 +235,7 @@ Construct an instance of the spherical warper class.
    
 detail::CylindricalWarper
 -------------------------
-.. ocv:class:: detail::CylindricalWarper
+.. ocv:class:: detail::CylindricalWarper : public RotationWarperBase<CylindricalProjector>
 
 Warper that maps an image onto the x*x + z*z = 1 cylinder. ::
     

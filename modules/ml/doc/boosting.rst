@@ -65,7 +65,7 @@ training examples are recomputed at each training iteration. Examples deleted at
 
 CvBoostParams
 -------------
-.. ocv:class:: CvBoostParams
+.. ocv:struct:: CvBoostParams : public CvDTreeParams
 
     Boosting training parameters.
 
@@ -82,13 +82,13 @@ The constructors.
 .. ocv:function:: CvBoostParams::CvBoostParams( int boost_type, int weak_count, double weight_trim_rate, int max_depth, bool use_surrogates, const float* priors )
 
     :param boost_type: Type of the boosting algorithm. Possible values are:
-        
+
         * **CvBoost::DISCRETE** Discrete AdaBoost.
         * **CvBoost::REAL** Real AdaBoost. It is a technique that utilizes confidence-rated predictions and works well with categorical data.
         * **CvBoost::LOGIT** LogitBoost. It can produce good regression fits.
-        * **CvBoost::GENTLE** Gentle AdaBoost. It puts less weight on outlier data points and for that reason is often good with regression data. 
+        * **CvBoost::GENTLE** Gentle AdaBoost. It puts less weight on outlier data points and for that reason is often good with regression data.
 
-        Gentle AdaBoost and Real AdaBoost are often the preferable choices. 
+        Gentle AdaBoost and Real AdaBoost are often the preferable choices.
 
     :param weak_count: The number of weak classifiers.
 
@@ -122,7 +122,7 @@ Default parameters are:
 
 CvBoostTree
 -----------
-.. ocv:class:: CvBoostTree
+.. ocv:class:: CvBoostTree : public CvDTree
 
 The weak tree classifier, a component of the boosted tree classifier :ocv:class:`CvBoost`, is a derivative of :ocv:class:`CvDTree`. Normally, there is no need to use the weak classifiers directly. However, they can be accessed as elements of the sequence :ocv:member:`CvBoost::weak`, retrieved by :ocv:func:`CvBoost::get_weak_predictors`.
 
@@ -130,7 +130,7 @@ The weak tree classifier, a component of the boosted tree classifier :ocv:class:
 
 CvBoost
 -------
-.. ocv:class:: CvBoost
+.. ocv:class:: CvBoost : public CvStatModel
 
 Boosted tree classifier derived from :ocv:class:`CvStatModel`.
 
@@ -144,7 +144,7 @@ Default and training constructors.
 
 .. ocv:function:: CvBoost::CvBoost( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams() )
 
-.. ocv:pyfunction:: cv2.Boost(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> <Boost object>
+.. ocv:pyfunction:: cv2.Boost([trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]]) -> <Boost object>
 
 
 The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
@@ -181,10 +181,10 @@ Predicts a response for an input sample.
 
     :param weak_responses: Optional output parameter, a floating-point vector with responses of each individual weak classifier. The number of elements in the vector must be equal to the slice length.
 
-    :param slice: Continuous subset of the sequence of weak classifiers to be used for prediction. By default, all the weak classifiers are used. 
+    :param slice: Continuous subset of the sequence of weak classifiers to be used for prediction. By default, all the weak classifiers are used.
 
     :param raw_mode: Normally, it should be set to ``false``.
-    
+
     :param return_sum: If ``true`` then return sum of votes instead of the class label.
 
 The method runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
@@ -199,7 +199,7 @@ Removes the specified weak classifiers.
 
     :param slice: Continuous subset of the sequence of weak classifiers to be removed.
 
-The method removes the specified weak classifiers from the sequence. 
+The method removes the specified weak classifiers from the sequence.
 
 .. note:: Do not confuse this method with the pruning of individual decision trees, which is currently not supported.
 

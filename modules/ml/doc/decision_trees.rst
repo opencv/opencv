@@ -20,9 +20,9 @@ child node as the next observed node) or to the right based on the
 value of a certain variable whose index is stored in the observed
 node. The following variables are possible:
 
-* 
+*
   **Ordered variables.** The variable value is compared with a threshold that is also stored in the node. If the value is less than the threshold, the procedure goes to the left. Otherwise, it goes to the right. For example, if the weight is less than 1 kilogram, the procedure goes to the left, else to the right.
-* 
+*
   **Categorical variables.**  A discrete variable value is tested to see whether it belongs to a certain subset of values (also stored in the node) from a limited set of values the variable could take. If it does, the procedure goes to the left. Otherwise, it goes to the right. For example, if the color is green or red, go to the left, else to the right.
 
 So, in each node, a pair of entities (``variable_index`` , ``decision_rule
@@ -57,7 +57,7 @@ Importance of each variable is computed over all the splits on this variable in 
 
 CvDTreeSplit
 ------------
-.. ocv:class:: CvDTreeSplit
+.. ocv:struct:: CvDTreeSplit
 
 
 The structure represents a possible decision tree node split. It has public members:
@@ -68,11 +68,11 @@ The structure represents a possible decision tree node split. It has public memb
 
 .. ocv:member:: int inversed
 
-    If it is not null then inverse split rule is used that is left and right branches are exchanged in the rule expressions below. 
+    If it is not null then inverse split rule is used that is left and right branches are exchanged in the rule expressions below.
 
 .. ocv:member:: float quality
 
-    The split quality, a positive number. It is used to choose the best primary split, then to choose and sort the surrogate splits. After the tree is constructed, it is also used to compute variable importance. 
+    The split quality, a positive number. It is used to choose the best primary split, then to choose and sort the surrogate splits. After the tree is constructed, it is also used to compute variable importance.
 
 .. ocv:member:: CvDTreeSplit* next
 
@@ -82,16 +82,16 @@ The structure represents a possible decision tree node split. It has public memb
 
     Bit array indicating the value subset in case of split on a categorical variable. The rule is: ::
 
-        if var_value in subset 
-          then next_node <- left 
+        if var_value in subset
+          then next_node <- left
           else next_node <- right
 
-.. ocv:member:: float ord::c 
+.. ocv:member:: float ord::c
 
     The threshold value in case of split on an ordered variable. The rule is: ::
 
-        if var_value < ord.c 
-          then next_node<-left 
+        if var_value < ord.c
+          then next_node<-left
           else next_node<-right
 
 .. ocv:member:: int ord::split_point
@@ -100,12 +100,12 @@ The structure represents a possible decision tree node split. It has public memb
 
 CvDTreeNode
 -----------
-.. ocv:class:: CvDTreeNode
+.. ocv:struct:: CvDTreeNode
 
 
-The structure represents a node in a decision tree. It has public members:    
+The structure represents a node in a decision tree. It has public members:
 
-.. ocv:member:: int class_idx 
+.. ocv:member:: int class_idx
 
     Class index normalized to 0..class_count-1 range and assigned to the node. It is used internally in classification trees and tree ensembles.
 
@@ -135,17 +135,17 @@ The structure represents a node in a decision tree. It has public members:
 
 .. ocv:member:: int sample_count
 
-    The number of samples that fall into the node at the training stage. It is used to resolve the difficult cases - when the variable for the primary split is missing and all the variables for other surrogate splits are missing too. In this case the sample is directed to the left if ``left->sample_count > right->sample_count`` and to the right otherwise. 
+    The number of samples that fall into the node at the training stage. It is used to resolve the difficult cases - when the variable for the primary split is missing and all the variables for other surrogate splits are missing too. In this case the sample is directed to the left if ``left->sample_count > right->sample_count`` and to the right otherwise.
 
 .. ocv:member:: int depth
 
-    Depth of the node. The root node depth is 0, the child nodes depth is the parent's depth + 1. 
+    Depth of the node. The root node depth is 0, the child nodes depth is the parent's depth + 1.
 
 Other numerous fields of ``CvDTreeNode`` are used internally at the training stage.
 
 CvDTreeParams
 -------------
-.. ocv:class:: CvDTreeParams
+.. ocv:struct:: CvDTreeParams
 
 The structure contains all the decision tree training parameters. You can initialize it by default constructor and then override any parameters directly before training, or the structure may be fully initialized using the advanced variant of the constructor.
 
@@ -153,19 +153,19 @@ CvDTreeParams::CvDTreeParams
 ----------------------------
 The constructors.
 
-.. ocv:function:: CvDTreeParams::CvDTreeParams()  
+.. ocv:function:: CvDTreeParams::CvDTreeParams()
 
 .. ocv:function:: CvDTreeParams::CvDTreeParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, int cv_folds, bool use_1se_rule, bool truncate_pruned_tree, const float* priors )
 
-    :param max_depth: The maximum possible depth of the tree. That is the training algorithms attempts to split a node while its depth is less than ``max_depth``. The actual depth may be smaller if the other termination criteria are met (see the outline of the training procedure in the beginning of the section), and/or if the tree is pruned. 
-    
+    :param max_depth: The maximum possible depth of the tree. That is the training algorithms attempts to split a node while its depth is less than ``max_depth``. The actual depth may be smaller if the other termination criteria are met (see the outline of the training procedure in the beginning of the section), and/or if the tree is pruned.
+
     :param min_sample_count: If the number of samples in a node is less than this parameter then the node will not be split.
 
     :param regression_accuracy: Termination criteria for regression trees. If all absolute differences between an estimated value in a node and values of train samples in this node are less than this parameter then the node will not be split.
- 
+
     :param use_surrogates: If true then surrogate splits will be built. These splits allow to work with missing data and compute variable importance correctly.
 
-    :param max_categories: Cluster possible values of a categorical variable into ``K`` :math:`\leq` ``max_categories`` clusters to find a suboptimal split. If a discrete variable, on which the training procedure tries to make a split, takes more than ``max_categories`` values, the precise best subset estimation may take a very long time because the algorithm is exponential. Instead, many decision trees engines (including ML) try to find sub-optimal split in this case by clustering all the samples into ``max_categories`` clusters that is some categories are merged together. The clustering is applied only in ``n``>2-class classification problems for categorical variables with ``N > max_categories`` possible values. In case of regression and 2-class classification the optimal split can be found efficiently without employing clustering, thus the parameter is not used in these cases. 
+    :param max_categories: Cluster possible values of a categorical variable into ``K`` :math:`\leq` ``max_categories`` clusters to find a suboptimal split. If a discrete variable, on which the training procedure tries to make a split, takes more than ``max_categories`` values, the precise best subset estimation may take a very long time because the algorithm is exponential. Instead, many decision trees engines (including ML) try to find sub-optimal split in this case by clustering all the samples into ``max_categories`` clusters that is some categories are merged together. The clustering is applied only in ``n``>2-class classification problems for categorical variables with ``N > max_categories`` possible values. In case of regression and 2-class classification the optimal split can be found efficiently without employing clustering, thus the parameter is not used in these cases.
 
     :param cv_folds: If ``cv_folds > 1`` then prune a tree with ``K``-fold cross-validation where ``K`` is equal to ``cv_folds``.
 
@@ -184,10 +184,10 @@ The default constructor initializes all the parameters with the default values t
         truncate_pruned_tree(true), regression_accuracy(0.01f), priors(0)
     {}
 
- 
+
 CvDTreeTrainData
 ----------------
-.. ocv:class:: CvDTreeTrainData
+.. ocv:struct:: CvDTreeTrainData
 
 Decision tree training data and shared data for tree ensembles. The structure is mostly used internally for storing both standalone trees and tree ensembles efficiently. Basically, it contains the following types of information:
 
@@ -212,7 +212,7 @@ There are two ways of using this structure. In simple cases (for example, a stan
 
 CvDTree
 -------
-.. ocv:class:: CvDTree
+.. ocv:class:: CvDTree : public CvStatModel
 
 The class implements a decision tree as described in the beginning of this section.
 
@@ -221,7 +221,7 @@ CvDTree::train
 --------------
 Trains a decision tree.
 
-.. ocv:function:: bool CvDTree::train( const Mat& train_data,  int tflag, const Mat& responses,  const Mat& var_idx=Mat(), const Mat& sample_idx=Mat(), const Mat& var_type=Mat(), const Mat& missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
+.. ocv:function:: bool CvDTree::train( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvDTreeParams params=CvDTreeParams() )
 
 .. ocv:function:: bool CvDTree::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvDTreeParams params=CvDTreeParams() )
 
@@ -258,7 +258,7 @@ Returns the leaf node of a decision tree corresponding to the input vector.
     :param missingDataMask: Optional input missing measurement mask.
 
     :param preprocessedInput: This parameter is normally set to ``false``, implying a regular input. If it is ``true``, the method assumes that all the values of the discrete input variables have been already normalized to :math:`0` to :math:`num\_of\_categories_i-1` ranges since the decision tree uses such normalized representation internally. It is useful for faster prediction with tree ensembles. For ordered input variables, the flag is not used.
-       
+
 The method traverses the decision tree and returns the reached leaf node as output. The prediction result, either the class label or the estimated function value, may be retrieved as the ``value`` field of the :ocv:class:`CvDTreeNode` structure, for example: ``dtree->predict(sample,mask)->value``.
 
 
@@ -270,7 +270,7 @@ Returns error of the decision tree.
 .. ocv:function:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
 
     :param trainData: Data for the decision tree.
-    
+
     :param type: Type of error. Possible values are:
 
         * **CV_TRAIN_ERROR** Error on train samples.
@@ -290,7 +290,7 @@ Returns the variable importance array.
 
 .. ocv:function:: const CvMat* CvDTree::get_var_importance()
 
-.. ocv:pyfunction:: cv2.DTree.getVarImportance() -> importanceVector
+.. ocv:pyfunction:: cv2.DTree.getVarImportance() -> retval
 
 CvDTree::get_root
 -----------------
@@ -311,7 +311,7 @@ CvDTree::get_data
 -----------------
 Returns used train data of the decision tree.
 
-.. ocv:function:: const CvDTreeTrainData* CvDTree::get_data() const
+.. ocv:function:: CvDTreeTrainData* CvDTree::get_data() const
 
 Example: building a tree for classifying mushrooms.  See the ``mushroom.cpp`` sample that demonstrates how to build and use the
 decision tree.

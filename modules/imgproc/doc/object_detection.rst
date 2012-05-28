@@ -7,7 +7,7 @@ matchTemplate
 -----------------
 Compares a template against overlapped image regions.
 
-.. ocv:function:: void matchTemplate( InputArray image, InputArray temp, OutputArray result, int method )
+.. ocv:function:: void matchTemplate( InputArray image, InputArray templ, OutputArray result, int method )
 
 .. ocv:pyfunction:: cv2.matchTemplate(image, templ, method[, result]) -> result
 
@@ -19,7 +19,7 @@ Compares a template against overlapped image regions.
     :param templ: Searched template. It must be not greater than the source image and have the same data type.
 
     :param result: Map of comparison results. It must be single-channel 32-bit floating-point. If  ``image``  is  :math:`W \times H`  and ``templ``  is  :math:`w \times h` , then  ``result``  is  :math:`(W-w+1) \times (H-h+1)` .
-    
+
     :param method: Parameter specifying the comparison method (see below).
 
 The function slides through ``image`` , compares the

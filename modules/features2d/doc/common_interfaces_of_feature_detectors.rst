@@ -48,7 +48,7 @@ The keypoint constructors
 
 .. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
 
-.. ocv:pyfunction:: cv2.KeyPoint(x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]) -> <KeyPoint object>
+.. ocv:pyfunction:: cv2.KeyPoint([x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]]) -> <KeyPoint object>
 
     :param x: x-coordinate of the keypoint
 
@@ -69,7 +69,7 @@ The keypoint constructors
 
 FeatureDetector
 ---------------
-.. ocv:class:: FeatureDetector
+.. ocv:class:: FeatureDetector : public Algorithm
 
 Abstract base class for 2D image feature detectors. ::
 
@@ -156,7 +156,7 @@ for example: ``"GridFAST"``, ``"PyramidSTAR"`` .
 
 FastFeatureDetector
 -------------------
-.. ocv:class:: FastFeatureDetector
+.. ocv:class:: FastFeatureDetector : public FeatureDetector
 
 Wrapping class for feature detection using the
 :ocv:func:`FAST` method. ::
@@ -252,7 +252,7 @@ Wrapping class for feature detection using the
 
 DenseFeatureDetector
 --------------------
-.. ocv:class:: DenseFeatureDetector
+.. ocv:class:: DenseFeatureDetector : public FeatureDetector
 
 Class for generation of image features which are distributed densely and regularly over the image. ::
 
@@ -279,7 +279,7 @@ The detector generates several levels (in the amount of ``featureScaleLevels``) 
 
 SimpleBlobDetector
 -------------------
-.. ocv:class:: SimpleBlobDetector
+.. ocv:class:: SimpleBlobDetector : public FeatureDetector
 
 Class for extracting blobs from an image. ::
 
@@ -344,7 +344,7 @@ Default values of parameters are tuned to extract dark circular blobs.
 
 GridAdaptedFeatureDetector
 --------------------------
-.. ocv:class:: GridAdaptedFeatureDetector
+.. ocv:class:: GridAdaptedFeatureDetector : public FeatureDetector
 
 Class adapting a detector to partition the source image into a grid and detect points in each cell. ::
 
@@ -369,7 +369,7 @@ Class adapting a detector to partition the source image into a grid and detect p
 
 PyramidAdaptedFeatureDetector
 -----------------------------
-.. ocv:class:: PyramidAdaptedFeatureDetector
+.. ocv:class:: PyramidAdaptedFeatureDetector : public FeatureDetector
 
 Class adapting a detector to detect points over multiple levels of a Gaussian pyramid. Consider using this class for detectors that are not inherently scaled. ::
 
@@ -387,7 +387,7 @@ Class adapting a detector to detect points over multiple levels of a Gaussian py
 
 DynamicAdaptedFeatureDetector
 -----------------------------
-.. ocv:class:: DynamicAdaptedFeatureDetector
+.. ocv:class:: DynamicAdaptedFeatureDetector : public FeatureDetector
 
 Adaptively adjusting detector that iteratively detects features until the desired number is found. ::
 
@@ -431,7 +431,7 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
 The constructor
 
-.. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
+.. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjaster, int min_features=400, int max_features=500, int max_iters=5 )
 
     :param adjuster:  :ocv:class:`AdjusterAdapter`  that detects features and adjusts parameters.
 
@@ -443,7 +443,7 @@ The constructor
 
 AdjusterAdapter
 ---------------
-.. ocv:class:: AdjusterAdapter
+.. ocv:class:: AdjusterAdapter : public FeatureDetector
 
 Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ocv:class:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ocv:class:`FeatureDetector` that enables adjusting parameters after feature detection. ::
 
@@ -522,7 +522,7 @@ Creates an adjuster adapter by name
 
 FastAdjuster
 ------------
-.. ocv:class:: FastAdjuster
+.. ocv:class:: FastAdjuster : public AdjusterAdapter
 
 :ocv:class:`AdjusterAdapter` for :ocv:class:`FastFeatureDetector`. This class decreases or increases the threshold value by 1. ::
 
@@ -535,7 +535,7 @@ FastAdjuster
 
 StarAdjuster
 ------------
-.. ocv:class:: StarAdjuster
+.. ocv:class:: StarAdjuster : public AdjusterAdapter
 
 :ocv:class:`AdjusterAdapter` for :ocv:class:`StarFeatureDetector`. This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector``.  ::
 

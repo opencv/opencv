@@ -104,7 +104,7 @@ For classification problems, the result is :math:`\arg\max_{i=1..K}(f_i(x))`.
 
 CvGBTreesParams
 ---------------
-.. ocv:class:: CvGBTreesParams
+.. ocv:struct:: CvGBTreesParams : public CvDTreeParams
 
 GBT training parameters.
 
@@ -149,7 +149,7 @@ By default the following constructor is used:
 
 CvGBTrees
 ---------
-.. ocv:class:: CvGBTrees
+.. ocv:class:: CvGBTrees : public CvStatModel
 
 The class implements the Gradient boosted tree model as described in the beginning of this section.
 

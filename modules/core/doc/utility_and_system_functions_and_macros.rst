@@ -95,7 +95,7 @@ Computes the cube root of an argument.
 
 .. ocv:cfunction:: float cvCbrt(float val)
 
-.. ocv:pyoldfunction:: cv.Cbrt(val)-> float
+.. ocv:pyoldfunction:: cv.Cbrt(value)-> float
 
     :param val: A function argument.
 
@@ -151,7 +151,7 @@ Determines if the argument is Infinity.
 .. ocv:cfunction:: int cvIsInf(double value)
 .. ocv:pyoldfunction:: cv.IsInf(value)-> int
 
-        :param value: The input floating-point value 
+        :param value: The input floating-point value
 
 The function returns 1 if the argument is a plus or minus infinity (as defined by IEEE754 standard) and 0 otherwise.
 
@@ -162,7 +162,7 @@ Determines if the argument is Not A Number.
 .. ocv:cfunction:: int cvIsNaN(double value)
 .. ocv:pyoldfunction:: cv.IsNaN(value)-> int
 
-        :param value: The input floating-point value 
+        :param value: The input floating-point value
 
 The function returns 1 if the argument is Not A Number (as defined by IEEE754 standard), 0 otherwise.
 
@@ -186,8 +186,8 @@ Signals an error and raises an exception.
 
     :param exc: Exception to throw.
 
-    :param status: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .   
-    
+    :param status: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .
+
     :param err_msg: Text of the error message.
 
     :param args: ``printf`` -like formatted error message in parentheses.
@@ -209,7 +209,7 @@ The macro ``CV_Error_`` can be used to construct an error message on-fly to incl
 
 Exception
 ---------
-.. ocv:class:: Exception
+.. ocv:class:: Exception : public std::exception
 
 Exception class passed to an error. ::
 
@@ -261,7 +261,7 @@ Deallocates a memory buffer.
 .. ocv:cfunction:: void cvFree( void** pptr )
 
     :param ptr: Pointer to the allocated buffer.
-    
+
     :param pptr: Double pointer to the allocated buffer
 
 The function deallocates the buffer allocated with :ocv:func:`fastMalloc` . If NULL pointer is passed, the function does nothing. C version of the function clears the pointer ``*pptr`` to avoid problems with double memory deallocation.
@@ -286,10 +286,10 @@ Returns true if the specified feature is supported by the host hardware.
 
 .. ocv:function:: bool checkHardwareSupport(int feature)
 .. ocv:cfunction:: int cvCheckHardwareSupport(int feature)
-.. ocv:pyfunction:: checkHardwareSupport(feature) -> Bool
+.. ocv:pyfunction:: cv2.checkHardwareSupport(feature) -> retval
 
     :param feature: The feature of interest, one of:
-    
+
                         * ``CV_CPU_MMX`` - MMX
                         * ``CV_CPU_SSE`` - SSE
                         * ``CV_CPU_SSE2`` - SSE 2
@@ -312,7 +312,7 @@ The function returns the number of threads that is used by OpenCV.
 
 .. seealso::
    :ocv:func:`setNumThreads`,
-   :ocv:func:`getThreadNum` 
+   :ocv:func:`getThreadNum`
 
 
 
@@ -411,7 +411,7 @@ The function sets the number of threads used by OpenCV in parallel OpenMP region
 
 .. seealso::
    :ocv:func:`getNumThreads`,
-   :ocv:func:`getThreadNum` 
+   :ocv:func:`getThreadNum`
 
 
 
