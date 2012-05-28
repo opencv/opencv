@@ -156,9 +156,9 @@ The constructors.
 
 .. ocv:function:: FileStorage::FileStorage()
 
-.. ocv:function:: FileStorage::FileStorage(const string& filename, int flags, const string& encoding=string())
+.. ocv:function:: FileStorage::FileStorage(const string& source, int flags, const string& encoding=string())
 
-    :param filename: Name of the file to open. Extension of the file (``.xml`` or ``.yml``/``.yaml``) determines its format (XML or YAML respectively). Also you can append ``.gz`` to work with compressed files, for example ``myHugeMatrix.xml.gz``.
+    :param source: Name of the file to open or the text string to read the data from. Extension of the file (``.xml`` or ``.yml``/``.yaml``) determines its format (XML or YAML respectively). Also you can append ``.gz`` to work with compressed files, for example ``myHugeMatrix.xml.gz``. If both ``FileStorage::WRITE`` and ``FileStorage::MEMORY`` flags are specified, ``source`` is used just to specify the output file format (e.g. ``mydata.xml``, ``.yml`` etc.).
 
     :param flags: Mode of operation. Possible values are:
 
@@ -167,6 +167,8 @@ The constructors.
         * **FileStorage::WRITE** Open the file for writing.
 
         * **FileStorage::APPEND** Open the file for appending.
+        
+        * **FileStorage::MEMORY** Read data from ``source`` or write data to the internal buffer (which is returned by ``FileStorage::release``)
 
     :param encoding: Encoding of the file. Note that UTF-16 XML encoding is not supported currently and you should use 8-bit encoding instead of it.
 
@@ -197,9 +199,9 @@ FileStorage::release
 --------------------
 Closes the file and releases all the memory buffers.
 
-.. ocv:function:: void FileStorage::release()
+.. ocv:function:: string FileStorage::release()
 
-Call this method after all I/O operations with the storage are finished.
+Call this method after all I/O operations with the storage are finished. If the storage was opened for writing data and ``FileStorage::WRITE`` was specified
 
 
 FileStorage::getFirstTopLevelNode

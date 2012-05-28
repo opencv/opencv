@@ -3941,7 +3941,12 @@ public:
     {
         READ=0, //! read mode
         WRITE=1, //! write mode
-        APPEND=2 //! append mode
+        APPEND=2, //! append mode
+        MEMORY=4,
+        FORMAT_MASK=(7<<3),
+        FORMAT_AUTO=0,
+        FORMAT_XML=(1<<3),
+        FORMAT_YAML=(2<<3)
     };
     enum
     {
@@ -3953,7 +3958,7 @@ public:
     //! the default constructor
     CV_WRAP FileStorage();
     //! the full constructor that opens file storage for reading or writing
-    CV_WRAP FileStorage(const string& filename, int flags, const string& encoding=string());
+    CV_WRAP FileStorage(const string& source, int flags, const string& encoding=string());
     //! the constructor that takes pointer to the C FileStorage structure
     FileStorage(CvFileStorage* fs);
     //! the destructor. calls release()
@@ -3964,7 +3969,7 @@ public:
     //! returns true if the object is associated with currently opened file.
     CV_WRAP virtual bool isOpened() const;
     //! closes the file and releases all the memory buffers
-    CV_WRAP virtual void release();
+    CV_WRAP virtual string release();
 
     //! returns the first element of the top-level mapping
     CV_WRAP FileNode getFirstTopLevelNode() const;
