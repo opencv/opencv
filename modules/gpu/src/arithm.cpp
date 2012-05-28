@@ -320,12 +320,23 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
         const Npp32s* pLevels3[3];
         int nValues3[3];
 
+#if (CUDA_VERSION > 4020)
+        GpuMat d_pLevels;
+#endif
+
         LevelsInit()
         {
             nValues3[0] = nValues3[1] = nValues3[2] = 256;
             for (int i = 0; i < 256; ++i)
                 pLevels[i] = i;
+
+
+#if (CUDA_VERSION <= 4020)
             pLevels3[0] = pLevels3[1] = pLevels3[2] = pLevels;
+#else
+            d_pLevels.upload(Mat(1, 256, CV_32S, pLevels));
+            pLevels3[0] = pLevels3[1] = pLevels3[2] = d_pLevels.ptr<Npp32s>();
+#endif
         }
     };
     static LevelsInit lvls;
@@ -350,22 +361,48 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
 
     if (src.type() == CV_8UC1)
     {
+#if (CUDA_VERSION <= 4020)
         nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
             dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
+#else
+        GpuMat d_nppLut(Mat(1, 256, CV_32S, nppLut.data));
+        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, d_nppLut.ptr<Npp32s>(), lvls.d_pLevels.ptr<Npp32s>(), 256) );
+#endif
     }
     else
     {
-        Mat nppLut3[3];
         const Npp32s* pValues3[3];
+
+        Mat nppLut3[3];
         if (nppLut.channels() == 1)
+        {
+#if (CUDA_VERSION <= 4020)
             pValues3[0] = pValues3[1] = pValues3[2] = nppLut.ptr<Npp32s>();
+#else
+            GpuMat d_nppLut(Mat(1, 256, CV_32S, nppLut.data));
+            pValues3[0] = pValues3[1] = pValues3[2] = d_nppLut.ptr<Npp32s>();
+#endif
+        }
         else
         {
             cv::split(nppLut, nppLut3);
+
+#if (CUDA_VERSION <= 4020)
             pValues3[0] = nppLut3[0].ptr<Npp32s>();
             pValues3[1] = nppLut3[1].ptr<Npp32s>();
             pValues3[2] = nppLut3[2].ptr<Npp32s>();
+#else
+            GpuMat d_nppLut0(Mat(1, 256, CV_32S, nppLut3[0].data));
+            GpuMat d_nppLut1(Mat(1, 256, CV_32S, nppLut3[1].data));
+            GpuMat d_nppLut2(Mat(1, 256, CV_32S, nppLut3[2].data));
+
+            pValues3[0] = d_nppLut0.ptr<Npp32s>();
+            pValues3[1] = d_nppLut1.ptr<Npp32s>();
+            pValues3[2] = d_nppLut2.ptr<Npp32s>();
+#endif
         }
+
         nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step),
             dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, lvls.pLevels3, lvls.nValues3) );
     }
