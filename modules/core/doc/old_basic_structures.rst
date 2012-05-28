@@ -197,7 +197,7 @@ Stores coordinates of a rectangle.
 
 
 CvBox2D
-------
+-------
 
 .. ocv:struct:: CvBox2D
 

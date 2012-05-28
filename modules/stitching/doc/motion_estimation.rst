@@ -221,7 +221,6 @@ Implementation of the camera parameters refinement algorithm which minimizes sum
 
 detail::WaveCorrectKind
 -----------------------
-.. ocv:class:: detail::WaveCorrectKind
 
 Wave correction kind. ::
 

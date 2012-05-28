@@ -609,15 +609,34 @@ class CppHeaderParser(object):
             return stmt_type, "", False, None
 
         if end_token == "{":
+            if not self.wrap_mode and stmt.startswith("typedef struct"):
+                stmt_type = "struct"
+                try:
+                    classname, bases, modlist = self.parse_class_decl(stmt[len("typedef "):])
+                except:
+                    print "Error at %s:%d" % (self.hname, self.lineno)
+                    exit(1)
+                if classname.startswith("_Ipl"):
+                    classname = classname[1:]
+                decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
+                if bases:
+                    decl[1] = ": " + " ".join(bases)
+                return stmt_type, classname, True, decl
+
             if stmt.startswith("class") or stmt.startswith("struct"):
                 stmt_type = stmt.split()[0]
-                classname, bases, modlist = self.parse_class_decl(stmt)
-                decl = []
-                if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
-                    decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
-                    if bases:
-                        decl[1] = ": " + " ".join(bases)
-                return stmt_type, classname, True, decl
+                if stmt.strip() != stmt_type:
+                    try:
+                        classname, bases, modlist = self.parse_class_decl(stmt)
+                    except:
+                        print "Error at %s:%d" % (self.hname, self.lineno)
+                        exit(1)
+                    decl = []
+                    if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
+                        decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
+                        if bases:
+                            decl[1] = ": " + " ".join(bases)
+                    return stmt_type, classname, True, decl
 
             if stmt.startswith("enum"):
                 return "enum", "", True, None

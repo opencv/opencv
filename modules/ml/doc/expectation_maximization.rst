@@ -206,4 +206,5 @@ See :ocv:func:`Algorithm::get` and :ocv:func:`Algorithm::set`. The following par
 * ``"weights"`` *(read-only)*
 * ``"means"`` *(read-only)*
 * ``"covs"`` *(read-only)*
+
 ..

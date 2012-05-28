@@ -173,7 +173,7 @@ Wrapping class for feature detection using the
 
 GoodFeaturesToTrackDetector
 ---------------------------
-.. ocv:class:: GoodFeaturesToTrackDetector
+.. ocv:class:: GoodFeaturesToTrackDetector : public FeatureDetector
 
 Wrapping class for feature detection using the
 :ocv:func:`goodFeaturesToTrack` function. ::
@@ -211,7 +211,7 @@ Wrapping class for feature detection using the
 
 MserFeatureDetector
 -------------------
-.. ocv:class:: MserFeatureDetector
+.. ocv:class:: MserFeatureDetector : public FeatureDetector
 
 Wrapping class for feature detection using the
 :ocv:class:`MSER` class. ::
@@ -233,7 +233,7 @@ Wrapping class for feature detection using the
 
 StarFeatureDetector
 -------------------
-.. ocv:class:: StarFeatureDetector
+.. ocv:class:: StarFeatureDetector : public FeatureDetector
 
 Wrapping class for feature detection using the
 :ocv:class:`StarDetector` class. ::

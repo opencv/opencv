@@ -1130,7 +1130,7 @@ CV_INLINE  CvPoint3D64f  cvPoint3D64f( double x, double y, double z )
 
 /******************************** CvSize's & CvBox **************************************/
 
-typedef struct
+typedef struct CvSize
 {
     int width;
     int height;

@@ -20,9 +20,28 @@ ERROR_006_INVALIDPYOLDDOC  = 6
 ERROR_007_INVALIDPYDOC     = 7
 ERROR_008_CFUNCISNOTGLOBAL = 8
 ERROR_009_OVERLOADNOTFOUND = 9
+ERROR_010_UNKNOWNCLASS     = 10
+ERROR_011_UNKNOWNFUNC      = 11
 
 do_python_crosscheck = True
 errors_disabled = [ERROR_004_MISSEDNAMESPACE]
+
+doc_signatures_whitelist = [
+# templates
+"Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
+"DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
+# the following classes reside in core bu documented in gpu. It's no good
+"gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_",
+# these are even non-template
+"gpu::DeviceInfo", "gpu::GpuMat", "gpu::TargetArchs", "gpu::FeatureSet",
+# black boxes
+"CvArr", "CvFileStorage"]
+
+synonims = {
+    "StarDetector" : ["StarFeatureDetector"],
+    "MSER" : ["MserFeatureDetector"],
+    "GFTTDetector" : ["GoodFeaturesToTrackDetector"]
+}
 
 if do_python_crosscheck:
     try:
@@ -185,24 +204,28 @@ def process_module(module, path):
         if name.startswith("cv."):
             name = name[3:]
         name = name.replace(".", "::")
-        doc = rst.get(name)
-        if not doc:
-            #TODO: class is not documented
-            continue
-        doc[DOCUMENTED_MARKER] = True
-        # verify class marker
-        if not doc.get("isclass"):
-            logerror(ERROR_001_NOTACLASS, "class " + name + " is not marked as \"class\" in documentation", doc)
-        else:
-            # verify base
-            signature = doc.get("class", "")
-            signature = signature.replace(", public ", " ").replace(" public ", " ")
-            signature = signature.replace(", protected ", " ").replace(" protected ", " ")
-            signature = signature.replace(", private ", " ").replace(" private ", " ")
-            signature = ("class " + signature).strip()
-            hdrsignature = (cl[0] + " " +  cl[1]).replace("class cv.", "class ").replace(".", "::").strip()
-            if signature != hdrsignature:
-                logerror(ERROR_003_INCORRECTBASE, "invalid base class documentation\ndocumented: " + signature + "\nactual:     " + hdrsignature, doc)
+        sns = synonims.get(name, [])
+        sns.append(name)
+        for name in sns:
+            doc = rst.get(name)
+            if not doc:
+                #TODO: class is not documented
+                continue
+            doc[DOCUMENTED_MARKER] = True
+            # verify class marker
+            if not doc.get("isclass"):
+                logerror(ERROR_001_NOTACLASS, "class " + name + " is not marked as \"class\" in documentation", doc)
+            else:
+                # verify base
+                signature = doc.get("class", "")
+                signature = signature.replace(", public ", " ").replace(" public ", " ")
+                signature = signature.replace(", protected ", " ").replace(" protected ", " ")
+                signature = signature.replace(", private ", " ").replace(" private ", " ")
+                signature = ("class " + signature).strip()
+                #hdrsignature = (cl[0] + " " +  cl[1]).replace("class cv.", "class ").replace(".", "::").strip()
+                hdrsignature = ("class " + name + " " +  cl[1]).replace(".", "::").strip()
+                if signature != hdrsignature:
+                    logerror(ERROR_003_INCORRECTBASE, "invalid base class documentation\ndocumented: " + signature + "\nactual:     " + hdrsignature, doc)
 
     # process structs
     for st in structs:
@@ -231,6 +254,7 @@ def process_module(module, path):
             hdrsignature = (st[0] + " " +  st[1]).replace("struct cv.", "struct ").replace(".", "::").strip()
             if signature != hdrsignature:
                 logerror(ERROR_003_INCORRECTBASE, "invalid base struct documentation\ndocumented: " + signature + "\nactual:     " + hdrsignature, doc)
+                print st, doc
 
     # process functions and methods
     flookup = {}
@@ -362,7 +386,6 @@ def process_module(module, path):
                     else:
                         signature.append(DOCUMENTED_MARKER)
 
-    #build dictionary for functions lookup
     # verify C/C++ signatures
     for name, doc in rst.iteritems():
         decls = doc.get("decls")
@@ -399,10 +422,17 @@ def process_module(module, path):
                 if signature[-1] != DOCUMENTED_MARKER:
                     candidates = "\n\t".join([formatSignature(f[3]) for f in fd])
                     logerror(ERROR_009_OVERLOADNOTFOUND, signature[0] + " function " + signature[2][0].replace(".","::") + " is documented but misses in headers (" + error + ").\nDocumented as:\n\t" + signature[1] + "\nCandidates are:\n\t" + candidates, doc)
-    #print hdrlist
-    #for d in decls:
-     #   print d
-    #print rstparser.definitions
+
+    # verify that all signatures was found in the library headers
+    for name, doc in rst.iteritems():
+        # if doc.get(DOCUMENTED_MARKER, False):
+        #     continue # this class/struct was found
+        if not doc.get(DOCUMENTED_MARKER, False) and (doc.get("isclass", False) or doc.get("isstruct", False)):
+            if name in doc_signatures_whitelist:
+                continue
+            logerror(ERROR_010_UNKNOWNCLASS, "class/struct " + name + " is mentioned in documentation but is not found in OpenCV headers", doc)
+        #for signature in decls:
+    # end of process_module
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

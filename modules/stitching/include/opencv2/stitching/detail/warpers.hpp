@@ -75,8 +75,8 @@ public:
 
 struct CV_EXPORTS ProjectorBase
 {
-    void setCameraParams(const Mat &K = Mat::eye(3, 3, CV_32F), 
-                         const Mat &R = Mat::eye(3, 3, CV_32F), 
+    void setCameraParams(const Mat &K = Mat::eye(3, 3, CV_32F),
+                         const Mat &R = Mat::eye(3, 3, CV_32F),
                          const Mat &T = Mat::zeros(3, 1, CV_32F));
 
     float scale;
@@ -90,10 +90,10 @@ struct CV_EXPORTS ProjectorBase
 
 template <class P>
 class CV_EXPORTS RotationWarperBase : public RotationWarper
-{   
+{
 public:
     Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R);
-    
+
     Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap);
 
     Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
@@ -179,8 +179,8 @@ public:
 
 protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
-    { 
-        RotationWarperBase<CylindricalProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br); 
+    {
+        RotationWarperBase<CylindricalProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br);
     }
 };
 
@@ -225,11 +225,11 @@ struct CV_EXPORTS CompressedRectilinearProjector : ProjectorBase
 class CV_EXPORTS CompressedRectilinearWarper : public RotationWarperBase<CompressedRectilinearProjector>
 {
 public:
-   CompressedRectilinearWarper(float scale, float A = 1, float B = 1) 
-   { 
+   CompressedRectilinearWarper(float scale, float A = 1, float B = 1)
+   {
 	   projector_.a = A;
 	   projector_.b = B;
-	   projector_.scale = scale; 
+	   projector_.scale = scale;
    }
 };
 
@@ -246,11 +246,11 @@ struct CV_EXPORTS CompressedRectilinearPortraitProjector : ProjectorBase
 class CV_EXPORTS CompressedRectilinearPortraitWarper : public RotationWarperBase<CompressedRectilinearPortraitProjector>
 {
 public:
-   CompressedRectilinearPortraitWarper(float scale, float A = 1, float B = 1) 
-   { 
+   CompressedRectilinearPortraitWarper(float scale, float A = 1, float B = 1)
+   {
 	   projector_.a = A;
 	   projector_.b = B;
-	   projector_.scale = scale; 
+	   projector_.scale = scale;
    }
 };
 
@@ -267,11 +267,11 @@ struct CV_EXPORTS PaniniProjector : ProjectorBase
 class CV_EXPORTS PaniniWarper : public RotationWarperBase<PaniniProjector>
 {
 public:
-   PaniniWarper(float scale, float A = 1, float B = 1) 
-   { 
+   PaniniWarper(float scale, float A = 1, float B = 1)
+   {
 	   projector_.a = A;
 	   projector_.b = B;
-	   projector_.scale = scale; 
+	   projector_.scale = scale;
    }
 };
 
@@ -288,11 +288,11 @@ struct CV_EXPORTS PaniniPortraitProjector : ProjectorBase
 class CV_EXPORTS PaniniPortraitWarper : public RotationWarperBase<PaniniPortraitProjector>
 {
 public:
-   PaniniPortraitWarper(float scale, float A = 1, float B = 1) 
-   { 
+   PaniniPortraitWarper(float scale, float A = 1, float B = 1)
+   {
 	   projector_.a = A;
 	   projector_.b = B;
-	   projector_.scale = scale; 
+	   projector_.scale = scale;
    }
 
 };
@@ -478,8 +478,8 @@ public:
 
 protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
-    { 
-        RotationWarperBase<CylindricalPortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br); 
+    {
+        RotationWarperBase<CylindricalPortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br);
     }
 };
 
@@ -497,8 +497,8 @@ public:
 
 protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
-    { 
-        RotationWarperBase<PlanePortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br); 
+    {
+        RotationWarperBase<PlanePortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br);
     }
 };
 

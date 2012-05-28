@@ -310,11 +310,11 @@ gpu::VideoWriter_GPU::VideoWriter_GPU
 -------------------------------------
 Constructors.
 
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU();
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU()
+.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
+.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
 
     :param fileName: Name of the output video file. Only AVI file format is supported.
 
@@ -336,10 +336,10 @@ gpu::VideoWriter_GPU::open
 --------------------------
 Initializes or reinitializes video writer.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR);
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+.. ocv:function:: void gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: void gpu::VideoWriter_GPU::open(const std::string& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
+.. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
 
 The method opens video writer. Parameters are the same as in the constructor :ocv:func:`gpu::VideoWriter_GPU::VideoWriter_GPU` . The method throws :ocv:class:`Exception` if error occurs.
 
@@ -349,7 +349,7 @@ gpu::VideoWriter_GPU::isOpened
 ------------------------------
 Returns true if video writer has been successfully initialized.
 
-.. ocv:function:: bool gpu::VideoWriter_GPU::isOpened() const;
+.. ocv:function:: bool gpu::VideoWriter_GPU::isOpened() const
 
 
 
@@ -357,7 +357,7 @@ gpu::VideoWriter_GPU::close
 ---------------------------
 Releases the video writer.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::close();
+.. ocv:function:: void gpu::VideoWriter_GPU::close()
 
 
 
@@ -365,7 +365,7 @@ gpu::VideoWriter_GPU::write
 ---------------------------
 Writes the next video frame.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat& image, bool lastFrame = false);
+.. ocv:function:: void gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat& image, bool lastFrame = false)
 
     :param image: The written frame.
 
@@ -416,7 +416,7 @@ gpu::VideoWriter_GPU::EncoderParams::EncoderParams
 --------------------------------------------------
 Constructors.
 
-.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams();
+.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams()
 .. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const std::string& configFile)
 
     :param configFile: Config file name.
@@ -519,7 +519,6 @@ Class for reading video from files.
 
 gpu::VideoReader_GPU::Codec
 ---------------------------
-.. ocv:class:: gpu::VideoReader_GPU::Codec
 
 Video codecs supported by ocv:class:`gpu::VideoReader_GPU` . ::
 
@@ -545,7 +544,6 @@ Video codecs supported by ocv:class:`gpu::VideoReader_GPU` . ::
 
 gpu::VideoReader_GPU::ChromaFormat
 ----------------------------------
-.. ocv:class:: gpu::VideoReader_GPU::ChromaFormat
 
 Chroma formats supported by ocv:class:`gpu::VideoReader_GPU` . ::
 
@@ -579,9 +577,9 @@ gpu::VideoReader_GPU::VideoReader_GPU
 -------------------------------------
 Constructors.
 
-.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU();
-.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU(const std::string& filename);
-.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>& source);
+.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU()
+.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU(const std::string& filename)
+.. ocv:function:: gpu::VideoReader_GPU::VideoReader_GPU(const cv::Ptr<VideoSource>& source)
 
     :param filename: Name of the input video file.
 
@@ -595,8 +593,8 @@ gpu::VideoReader_GPU::open
 --------------------------
 Initializes or reinitializes video reader.
 
-.. ocv:function:: void gpu::VideoReader_GPU::open(const std::string& filename);
-.. ocv:function:: void gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>& source);
+.. ocv:function:: void gpu::VideoReader_GPU::open(const std::string& filename)
+.. ocv:function:: void gpu::VideoReader_GPU::open(const cv::Ptr<VideoSource>& source)
 
 The method opens video reader. Parameters are the same as in the constructor :ocv:func:`gpu::VideoReader_GPU::VideoReader_GPU` . The method throws :ocv:class:`Exception` if error occurs.
 
@@ -606,7 +604,7 @@ gpu::VideoReader_GPU::isOpened
 ------------------------------
 Returns true if video reader has been successfully initialized.
 
-.. ocv:function:: bool gpu::VideoReader_GPU::isOpened() const;
+.. ocv:function:: bool gpu::VideoReader_GPU::isOpened() const
 
 
 
@@ -614,7 +612,7 @@ gpu::VideoReader_GPU::close
 ---------------------------
 Releases the video reader.
 
-.. ocv:function:: void gpu::VideoReader_GPU::close();
+.. ocv:function:: void gpu::VideoReader_GPU::close()
 
 
 
@@ -622,7 +620,7 @@ gpu::VideoReader_GPU::read
 --------------------------
 Grabs, decodes and returns the next video frame.
 
-.. ocv:function:: bool gpu::VideoReader_GPU::read(GpuMat& image);
+.. ocv:function:: bool gpu::VideoReader_GPU::read(GpuMat& image)
 
 If no frames has been grabbed (there are no more frames in video file), the methods return ``false`` . The method throws :ocv:class:`Exception` if error occurs.
 
@@ -632,7 +630,7 @@ gpu::VideoReader_GPU::format
 ----------------------------
 Returns information about video file format.
 
-.. ocv:function:: FormatInfo gpu::VideoReader_GPU::format() const;
+.. ocv:function:: FormatInfo gpu::VideoReader_GPU::format() const
 
 The method throws :ocv:class:`Exception` if video reader wasn't initialized.
 
@@ -642,7 +640,7 @@ gpu::VideoReader_GPU::dumpFormat
 ----------------------------
 Dump information about video file format to specified stream.
 
-.. ocv:function:: void gpu::VideoReader_GPU::dumpFormat(std::ostream& st);
+.. ocv:function:: void gpu::VideoReader_GPU::dumpFormat(std::ostream& st)
 
     :param st: Output stream.
 
@@ -680,7 +678,7 @@ gpu::VideoReader_GPU::VideoSource::format
 -----------------------------------------
 Returns information about video file format.
 
-.. ocv:function:: virtual FormatInfo gpu::VideoReader_GPU::VideoSource::format() const = 0;
+.. ocv:function:: virtual FormatInfo gpu::VideoReader_GPU::VideoSource::format() const = 0
 
 
 
@@ -688,7 +686,7 @@ gpu::VideoReader_GPU::VideoSource::start
 ----------------------------------------
 Starts processing.
 
-.. ocv:function:: virtual void gpu::VideoReader_GPU::VideoSource::start() = 0;
+.. ocv:function:: virtual void gpu::VideoReader_GPU::VideoSource::start() = 0
 
 Implementation must create own thread with video processing and call periodic :ocv:func:`gpu::VideoReader_GPU::VideoSource::parseVideoData` .
 
@@ -698,7 +696,7 @@ gpu::VideoReader_GPU::VideoSource::stop
 ---------------------------------------
 Stops processing.
 
-.. ocv:function:: virtual void gpu::VideoReader_GPU::VideoSource::stop() = 0;
+.. ocv:function:: virtual void gpu::VideoReader_GPU::VideoSource::stop() = 0
 
 
 
@@ -706,7 +704,7 @@ gpu::VideoReader_GPU::VideoSource::isStarted
 --------------------------------------------
 Returns ``true`` if processing was successfully started.
 
-.. ocv:function:: virtual bool gpu::VideoReader_GPU::VideoSource::isStarted() const = 0;
+.. ocv:function:: virtual bool gpu::VideoReader_GPU::VideoSource::isStarted() const = 0
 
 
 
@@ -714,7 +712,7 @@ gpu::VideoReader_GPU::VideoSource::hasError
 -------------------------------------------
 Returns ``true`` if error occured during processing.
 
-.. ocv:function:: virtual bool gpu::VideoReader_GPU::VideoSource::hasError() const = 0;
+.. ocv:function:: virtual bool gpu::VideoReader_GPU::VideoSource::hasError() const = 0
 
 
 
@@ -722,7 +720,7 @@ gpu::VideoReader_GPU::VideoSource::parseVideoData
 -------------------------------------------------
 Parse next video frame. Implementation must call this method after new frame was grabbed.
 
-.. ocv:function:: bool gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char* data, size_t size, bool endOfStream = false);
+.. ocv:function:: bool gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char* data, size_t size, bool endOfStream = false)
 
     :param data: Pointer to frame data. Can be ``NULL`` if ``endOfStream`` if ``true`` .
 

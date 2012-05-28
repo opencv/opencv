@@ -20,7 +20,7 @@ Rotation-only model image warper interface. ::
 
         virtual Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
                            Mat &dst) = 0;
-       
+
         virtual void warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
                                   Size dst_size, Mat &dst) = 0;
 
@@ -35,7 +35,7 @@ Projects the image point.
 .. ocv:function:: Point2f detail::RotationWarper::warpPoint(const Point2f &pt, const Mat &K, const Mat &R)
 
     :param pt: Source point
-    
+
     :param K: Camera intrinsic parameters
 
     :param R: Camera rotation matrix
@@ -50,7 +50,7 @@ Builds the projection maps according to the given camera data.
 .. ocv:function:: Rect detail::RotationWarper::buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
 
     :param src_size: Source image size
-    
+
     :param K: Camera intrinsic parameters
 
     :param R: Camera rotation matrix
@@ -69,7 +69,7 @@ Projects the image.
 .. ocv:function:: Point detal::RotationWarper::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Mat &dst)
 
     :param src: Source image
-    
+
     :param K: Camera intrinsic parameters
 
     :param R: Camera rotation matrix
@@ -109,7 +109,7 @@ detail::RotationWarper::warpRoi
 .. ocv:function:: Rect detail::RotationWarper::warpRoi(Size src_size, const Mat &K, const Mat &R)
 
     :param src_size: Source image bounding box
-    
+
     :param K: Camera intrinsic parameters
 
     :param R: Camera rotation matrix
@@ -124,8 +124,8 @@ Base class for warping logic implementation. ::
 
     struct CV_EXPORTS ProjectorBase
     {
-        void setCameraParams(const Mat &K = Mat::eye(3, 3, CV_32F), 
-                            const Mat &R = Mat::eye(3, 3, CV_32F), 
+        void setCameraParams(const Mat &K = Mat::eye(3, 3, CV_32F),
+                            const Mat &R = Mat::eye(3, 3, CV_32F),
                             const Mat &T = Mat::zeros(3, 1, CV_32F));
 
         float scale;
@@ -144,10 +144,10 @@ Base class for rotation-based warper using a `detail::ProjectorBase`_ derived cl
 
     template <class P>
     class CV_EXPORTS RotationWarperBase : public RotationWarper
-    {   
+    {
     public:
         Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R);
-        
+
         Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap);
 
         Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
@@ -232,13 +232,13 @@ Construct an instance of the spherical warper class.
 .. ocv:function:: void detail::SphericalWarper::SphericalWarper(float scale)
 
     :param scale: Projected image scale multiplier
-   
+
 detail::CylindricalWarper
 -------------------------
 .. ocv:class:: detail::CylindricalWarper : public RotationWarperBase<CylindricalProjector>
 
 Warper that maps an image onto the x*x + z*z = 1 cylinder. ::
-    
+
     class CV_EXPORTS CylindricalWarper : public RotationWarperBase<CylindricalProjector>
     {
     public:
@@ -246,8 +246,8 @@ Warper that maps an image onto the x*x + z*z = 1 cylinder. ::
 
     protected:
         void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
-        { 
-            RotationWarperBase<CylindricalProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br); 
+        {
+            RotationWarperBase<CylindricalProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br);
         }
     };
 
