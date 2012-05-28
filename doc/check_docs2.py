@@ -63,32 +63,42 @@ def compareSignatures(f, s):
     if ftype and ftype != stype:
         return False, "return type mismatch"
     if ("\C" in f[2]) ^ ("\C" in s[2]):
-        return False, "const qulifier mismatch"
+        return False, "const qualifier mismatch"
+    if ("\S" in f[2]) ^ ("\S" in s[2]):
+        return False, "static qualifier mismatch"
+    if ("\V" in f[2]) ^ ("\V" in s[2]):
+        return False, "virtual qualifier mismatch"
+    if ("\A" in f[2]) ^ ("\A" in s[2]):
+        return False, "abstract qualifier mismatch"
     if len(f[3]) != len(s[3]):
         return False, "different number of arguments"
     for idx, arg in enumerate(zip(f[3], s[3])):
         farg = arg[0]
         sarg = arg[1]
-        ftype = re.sub(r"\bcv::", "", (farg[0] or ""))
-        stype = re.sub(r"\bcv::", "", (sarg[0] or ""))
+        ftype = re.sub(r"\b(cv|std)::", "", (farg[0] or ""))
+        stype = re.sub(r"\b(cv|std)::", "", (sarg[0] or ""))
         if ftype != stype:
             return False, "type of argument #" + str(idx+1) + " mismatch"
         fname = farg[1] or "arg" + str(idx)
         sname = sarg[1] or "arg" + str(idx)
         if fname != sname:
             return False, "name of argument #" + str(idx+1) + " mismatch"
-        fdef = re.sub(r"\bcv::", "", (farg[2] or ""))
-        sdef = re.sub(r"\bcv::", "", (sarg[2] or ""))
+        fdef = re.sub(r"\b(cv|std)::", "", (farg[2] or ""))
+        sdef = re.sub(r"\b(cv|std)::", "", (sarg[2] or ""))
         if fdef != sdef:
             return False, "default value of argument #" + str(idx+1) + " mismatch"
     return True, "match"
 
 def formatSignature(s):
     _str = ""
+    if "/V" in s[2]:
+        _str += "virtual "
+    if "/S" in s[2]:
+        _str += "static "
     if s[1]:
         _str += s[1] + " "
     else:
-        if not bool(re.match(r"(cv\.)?(?P<cls>\w+)\.(?P=cls)", s[0])):
+        if not bool(re.match(r"(\w+\.)*(?P<cls>\w+)\.(?P=cls)", s[0])):
             _str += "void "
     if s[0].startswith("cv."):
         _str += s[0][3:].replace(".", "::")
@@ -111,6 +121,8 @@ def formatSignature(s):
         _str += " )"
     if "/C" in s[2]:
         _str += " const"
+    if "/A" in s[2]:
+        _str += " = 0"
     return _str
 
 
@@ -358,6 +370,10 @@ def process_module(module, path):
             continue
         for signature in decls:
             if signature[0] == "C" or signature[0] == "C++":
+                if "template" in (signature[2][1] or ""):
+                    # TODO find a way to validate templates
+                    signature.append(DOCUMENTED_MARKER)
+                    continue
                 fd = flookup.get(signature[2][0])
                 if not fd:
                     if signature[2][0].startswith("cv."):

@@ -9,7 +9,7 @@ gpu::meanShiftFiltering
 ---------------------------
 Performs mean-shift filtering for each point of the source image.
 
-.. ocv:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. ocv:function:: void gpu::meanShiftFiltering( const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream=Stream::Null() )
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -29,7 +29,7 @@ gpu::meanShiftProc
 ----------------------
 Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
 
-.. ocv:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. ocv:function:: void gpu::meanShiftProc( const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream=Stream::Null() )
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -159,7 +159,7 @@ gpu::mulSpectrums
 ---------------------
 Performs a per-element multiplication of two Fourier spectrums.
 
-.. ocv:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false)
+.. ocv:function:: void gpu::mulSpectrums( const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false, Stream& stream=Stream::Null() )
 
     :param a: First spectrum.
 
@@ -181,7 +181,7 @@ gpu::mulAndScaleSpectrums
 -----------------------------
 Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
-.. ocv:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false)
+.. ocv:function:: void gpu::mulAndScaleSpectrums( const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false, Stream& stream=Stream::Null() )
 
     :param a: First spectrum.
 
@@ -205,7 +205,7 @@ gpu::dft
 ------------
 Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix.
 
-.. ocv:function:: void gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0)
+.. ocv:function:: void gpu::dft( const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0, Stream& stream=Stream::Null() )
 
     :param src: Source matrix (real or complex).
 
@@ -272,7 +272,7 @@ Computes a convolution (or cross-correlation) of two images.
 
 .. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
 
-.. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream &stream = Stream::Null())
+.. ocv:function:: void gpu::convolve( const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream=Stream::Null() )
 
     :param image: Source image. Only  ``CV_32FC1`` images are supported for now.
 
@@ -346,7 +346,7 @@ gpu::remap
 --------------
 Applies a generic geometrical transformation to an image.
 
-.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::remap( const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode=BORDER_CONSTANT, Scalar borderValue=Scalar(), Stream& stream=Stream::Null() )
 
     :param src: Source image.
 
@@ -477,7 +477,7 @@ gpu::warpAffine
 -------------------
 Applies an affine transformation to an image.
 
-.. ocv:function:: void gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::warpAffine( const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, Scalar borderValue=Scalar(), Stream& stream=Stream::Null() )
 
     :param src: Source image.  ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
@@ -521,7 +521,7 @@ gpu::warpPerspective
 ------------------------
 Applies a perspective transformation to an image.
 
-.. ocv:function:: void gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::warpPerspective( const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, Scalar borderValue=Scalar(), Stream& stream=Stream::Null() )
 
     :param src: Source image. ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
@@ -657,9 +657,9 @@ Calculates a histogram with evenly distributed bins.
 
 .. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat& hist, GpuMat& buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat* hist, int* histSize, int* lowerLevel, int* upperLevel, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::histEven( const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat* hist, GpuMat& buf, int* histSize, int* lowerLevel, int* upperLevel, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::histEven( const GpuMat& src, GpuMat hist[4], GpuMat& buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream=Stream::Null() )
 
     :param src: Source image. ``CV_8U``, ``CV_16U``, or ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 
@@ -684,10 +684,6 @@ Calculates a histogram with bins determined by the ``levels`` array.
 .. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, Stream& stream = Stream::Null())
 
 .. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, GpuMat& buf, Stream& stream = Stream::Null())
-
-.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat* hist, const GpuMat* levels, Stream& stream = Stream::Null())
-
-.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat* hist, const GpuMat* levels, GpuMat& buf, Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8U`` , ``CV_16U`` , or  ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 
@@ -747,7 +743,7 @@ gpu::buildWarpPlaneMaps
 -----------------------
 Builds plane warping maps.
 
-.. ocv:function:: void gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, double dist, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::buildWarpPlaneMaps( Size src_size, Rect dst_roi, const Mat & K, const Mat& R, const Mat & T, float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream=Stream::Null() )
 
     :param stream: Stream for the asynchronous version.
 
@@ -757,7 +753,7 @@ gpu::buildWarpCylindricalMaps
 -----------------------------
 Builds cylindrical warping maps.
 
-.. ocv:function:: void gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::buildWarpCylindricalMaps( Size src_size, Rect dst_roi, const Mat & K, const Mat& R, float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream=Stream::Null() )
 
     :param stream: Stream for the asynchronous version.
 
@@ -767,7 +763,7 @@ gpu::buildWarpSphericalMaps
 ---------------------------
 Builds spherical warping maps.
 
-.. ocv:function:: void gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::buildWarpSphericalMaps( Size src_size, Rect dst_roi, const Mat & K, const Mat& R, float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream=Stream::Null() )
 
     :param stream: Stream for the asynchronous version.
 

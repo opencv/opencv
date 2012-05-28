@@ -494,7 +494,7 @@ Finds the best match for each descriptor from a query set with train descriptors
 
 .. ocv:function:: void gpu::BFMatcher_GPU::match(const GpuMat& query, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>())
 
-.. ocv:function:: void gpu::BFMatcher_GPU::matchCollection(const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& masks, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::BFMatcher_GPU::matchCollection( const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& masks=GpuMat(), Stream& stream=Stream::Null() )
 
 .. seealso:: :ocv:func:`DescriptorMatcher::match`
 
@@ -512,9 +512,9 @@ gpu::BFMatcher_GPU::matchDownload
 ---------------------------------------------
 Downloads matrices obtained via :ocv:func:`gpu::BFMatcher_GPU::matchSingle` or :ocv:func:`gpu::BFMatcher_GPU::matchCollection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>&matches)
+.. ocv:function:: static void gpu::BFMatcher_GPU::matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>&matches)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>&matches)
+.. ocv:function:: static void gpu::BFMatcher_GPU::matchDownload( const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>& matches )
 
 
 

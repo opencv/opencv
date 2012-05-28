@@ -228,7 +228,7 @@ ClearSet
 --------
 Clears a set.
 
-.. ocv:cfunction:: void cvClearSet( CvSet* setHeader )
+.. ocv:cfunction:: void cvClearSet( CvSet* set_header )
 
     :param setHeader: Cleared set
 
@@ -362,7 +362,8 @@ CreateMemStorage
 ----------------
 Creates memory storage.
 
-.. ocv:cfunction:: CvMemStorage* cvCreateMemStorage( int blockSize=0 )
+.. ocv:cfunction:: CvMemStorage* cvCreateMemStorage( int block_size=0 )
+
 .. ocv:pyoldfunction:: cv.CreateMemStorage(blockSize=0) -> memstorage
 
 
@@ -376,7 +377,7 @@ CreateSeq
 ---------
 Creates a sequence.
 
-.. ocv:cfunction:: CvSeq* cvCreateSeq(  int seqFlags, int headerSize, int elemSize, CvMemStorage* storage)
+.. ocv:cfunction:: CvSeq* cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* storage )
 
 
     :param seqFlags: Flags of the created sequence. If the sequence is not passed to any function working with a specific type of sequences, the sequence value may be set to 0, otherwise the appropriate type must be selected from the list of predefined sequence types.
@@ -480,7 +481,7 @@ FindGraphEdgeByPtr
 ------------------
 Finds an edge in a graph by using its pointer.
 
-.. ocv:cfunction:: CvGraphEdge* cvFindGraphEdgeByPtr(  const CvGraph* graph, const CvGraphVtx* startVtx, const CvGraphVtx* endVtx )
+.. ocv:cfunction:: CvGraphEdge* cvFindGraphEdgeByPtr( const CvGraph* graph, const CvGraphVtx* start_vtx, const CvGraphVtx* end_vtx )
 
     :param graph: Graph
 
@@ -529,7 +530,7 @@ GetSeqElem
 ----------
 Returns a pointer to a sequence element according to its index.
 
-.. ocv:cfunction:: char* cvGetSeqElem( const CvSeq* seq, int index )
+.. ocv:cfunction:: schar* cvGetSeqElem( const CvSeq* seq, int index )
 
     :param seq: Sequence
 
@@ -587,7 +588,7 @@ GetSetElem
 ----------
 Finds a set element by its index.
 
-.. ocv:cfunction:: CvSetElem* cvGetSetElem(  const CvSet* setHeader, int index )
+.. ocv:cfunction:: CvSetElem* cvGetSetElem( const CvSet* set_header, int index )
 
     :param setHeader: Set
 
@@ -723,7 +724,7 @@ GraphVtxDegree
 --------------
 Counts the number of edges incident to the vertex.
 
-.. ocv:cfunction:: int cvGraphVtxDegree( const CvGraph* graph, int vtxIdx )
+.. ocv:cfunction:: int cvGraphVtxDegree( const CvGraph* graph, int vtx_idx )
 
     :param graph: Graph
 
@@ -1021,7 +1022,7 @@ SeqInsert
 ---------
 Inserts an element in the middle of a sequence.
 
-.. ocv:cfunction:: char* cvSeqInsert(  CvSeq* seq, int beforeIndex, void* element=NULL )
+.. ocv:cfunction:: schar* cvSeqInsert( CvSeq* seq, int before_index, const void* element=NULL )
 
     :param seq: Sequence
 
@@ -1037,7 +1038,7 @@ SeqInsertSlice
 --------------
 Inserts an array in the middle of a sequence.
 
-.. ocv:cfunction:: void cvSeqInsertSlice(  CvSeq* seq, int beforeIndex, const CvArr* fromArr )
+.. ocv:cfunction:: void cvSeqInsertSlice( CvSeq* seq, int before_index, const CvArr* from_arr )
 
     :param seq: Sequence
 
@@ -1109,7 +1110,7 @@ SeqPush
 -------
 Adds an element to the end of a sequence.
 
-.. ocv:cfunction:: char* cvSeqPush(  CvSeq* seq, void* element=NULL )
+.. ocv:cfunction:: schar* cvSeqPush( CvSeq* seq, const void* element=NULL )
 
     :param seq: Sequence
 
@@ -1149,7 +1150,7 @@ SeqPushFront
 ------------
 Adds an element to the beginning of a sequence.
 
-.. ocv:cfunction:: char* cvSeqPushFront( CvSeq* seq, void* element=NULL )
+.. ocv:cfunction:: schar* cvSeqPushFront( CvSeq* seq, const void* element=NULL )
 
     :param seq: Sequence
 
@@ -1163,7 +1164,7 @@ SeqPushMulti
 ------------
 Pushes several elements to either end of a sequence.
 
-.. ocv:cfunction:: void cvSeqPushMulti(  CvSeq* seq, void* elements, int count, int in_front=0 )
+.. ocv:cfunction:: void cvSeqPushMulti( CvSeq* seq, const void* elements, int count, int in_front=0 )
 
     :param seq: Sequence
 
@@ -1216,7 +1217,7 @@ SeqSearch
 ---------
 Searches for an element in a sequence.
 
-.. ocv:cfunction:: char* cvSeqSearch( CvSeq* seq, const void* elem, CvCmpFunc func,                    int is_sorted, int* elem_idx, void* userdata=NULL )
+.. ocv:cfunction:: schar* cvSeqSearch( CvSeq* seq, const void* elem, CvCmpFunc func, int is_sorted, int* elem_idx, void* userdata=NULL )
 
     :param seq: The sequence
 
@@ -1325,7 +1326,7 @@ SetAdd
 ------
 Occupies a node in the set.
 
-.. ocv:cfunction:: int cvSetAdd(  CvSet* setHeader, CvSetElem* elem=NULL, CvSetElem** inserted_elem=NULL )
+.. ocv:cfunction:: int cvSetAdd( CvSet* set_header, CvSetElem* elem=NULL, CvSetElem** inserted_elem=NULL )
 
     :param setHeader: Set
 
@@ -1346,7 +1347,7 @@ SetNew
 ------
 Adds an element to a set (fast variant).
 
-.. ocv:cfunction:: CvSetElem* cvSetNew( CvSet* setHeader )
+.. ocv:cfunction:: CvSetElem* cvSetNew( CvSet* set_header )
 
     :param setHeader: Set
 
@@ -1358,7 +1359,7 @@ SetRemove
 ---------
 Removes an element from a set.
 
-.. ocv:cfunction:: void cvSetRemove(  CvSet* setHeader, int index )
+.. ocv:cfunction:: void cvSetRemove( CvSet* set_header, int index )
 
     :param setHeader: Set
 
@@ -1375,7 +1376,7 @@ SetRemoveByPtr
 --------------
 Removes a set element based on its pointer.
 
-.. ocv:cfunction:: void cvSetRemoveByPtr(  CvSet* setHeader, void* elem )
+.. ocv:cfunction:: void cvSetRemoveByPtr( CvSet* set_header, void* elem )
 
     :param setHeader: Set
 
@@ -1389,7 +1390,7 @@ SetSeqBlockSize
 ---------------
 Sets up sequence block size.
 
-.. ocv:cfunction:: void cvSetSeqBlockSize(  CvSeq* seq, int deltaElems )
+.. ocv:cfunction:: void cvSetSeqBlockSize( CvSeq* seq, int delta_elems )
 
     :param seq: Sequence
 

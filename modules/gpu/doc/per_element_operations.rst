@@ -9,9 +9,9 @@ gpu::add
 ------------
 Computes a matrix-matrix or matrix-scalar sum.
 
-.. ocv:function:: void gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::add( const GpuMat& a, const GpuMat& b, GpuMat& c, const GpuMat& mask=GpuMat(), int dtype=-1, Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::add(const GpuMat& src1, const Scalar& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::add( const GpuMat& a, const Scalar& sc, GpuMat& c, const GpuMat& mask=GpuMat(), int dtype=-1, Stream& stream=Stream::Null() )
 
     :param src1: First source matrix.
 
@@ -33,9 +33,9 @@ gpu::subtract
 -----------------
 Computes a matrix-matrix or matrix-scalar difference.
 
-.. ocv:function:: void gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::subtract( const GpuMat& a, const GpuMat& b, GpuMat& c, const GpuMat& mask=GpuMat(), int dtype=-1, Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::subtract(const GpuMat& src1, const Scalar& src2, GpuMat& dst, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::subtract( const GpuMat& a, const Scalar& sc, GpuMat& c, const GpuMat& mask=GpuMat(), int dtype=-1, Stream& stream=Stream::Null() )
 
     :param src1: First source matrix.
 
@@ -57,9 +57,9 @@ gpu::multiply
 -----------------
 Computes a matrix-matrix or matrix-scalar per-element product.
 
-.. ocv:function:: void gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::multiply( const GpuMat& a, const GpuMat& b, GpuMat& c, double scale=1, int dtype=-1, Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::multiply(const GpuMat& src1, const Scalar& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::multiply( const GpuMat& a, const Scalar& sc, GpuMat& c, double scale=1, int dtype=-1, Stream& stream=Stream::Null() )
 
     :param src1: First source matrix.
 
@@ -81,9 +81,9 @@ gpu::divide
 -----------
 Computes a matrix-matrix or matrix-scalar division.
 
-.. ocv:function:: void gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::divide( const GpuMat& a, const GpuMat& b, GpuMat& c, double scale=1, int dtype=-1, Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::divide(double src1, const GpuMat& src2, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::divide( double scale, const GpuMat& src2, GpuMat& dst, int dtype=-1, Stream& stream=Stream::Null() )
 
     :param src1: First source matrix or a scalar.
 
@@ -186,7 +186,7 @@ gpu::exp
 ------------
 Computes an exponent of each matrix element.
 
-.. ocv:function:: void gpu::exp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::exp( const GpuMat& a, GpuMat& b, Stream& stream=Stream::Null() )
 
     :param src: Source matrix. Supports ``CV_8U`` , ``CV_16U`` , ``CV_16S`` and ``CV_32F`` depth.
 
@@ -202,7 +202,7 @@ gpu::log
 ------------
 Computes a natural logarithm of absolute value of each matrix element.
 
-.. ocv:function:: void gpu::log(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::log( const GpuMat& a, GpuMat& b, Stream& stream=Stream::Null() )
 
     :param src: Source matrix. Supports ``CV_8U`` , ``CV_16U`` , ``CV_16S`` and ``CV_32F`` depth.
 
@@ -242,9 +242,9 @@ gpu::absdiff
 ----------------
 Computes per-element absolute difference of two matrices (or of a matrix and scalar).
 
-.. ocv:function:: void gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::absdiff( const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::absdiff( const GpuMat& a, const Scalar& s, GpuMat& c, Stream& stream=Stream::Null() )
 
     :param src1: First source matrix.
 
@@ -262,7 +262,7 @@ gpu::compare
 ----------------
 Compares elements of two matrices.
 
-.. ocv:function:: void gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int cmpop, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::compare( const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream=Stream::Null() )
 
     :param src1: First source matrix.
 
@@ -362,7 +362,7 @@ gpu::rshift
 --------------------
 Performs pixel by pixel right shift of an image by a constant value.
 
-.. ocv:function:: void gpu::rshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::rshift( const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream=Stream::Null() )
 
     :param src: Source matrix. Supports 1, 3 and 4 channels images with integers elements.
 
@@ -378,7 +378,7 @@ gpu::lshift
 --------------------
 Performs pixel by pixel right left of an image by a constant value.
 
-.. ocv:function:: void gpu::lshift(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::lshift( const GpuMat& src, Scalar_<int> sc, GpuMat& dst, Stream& stream=Stream::Null() )
 
     :param src: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U`` , ``CV_16U`` or ``CV_32S`` depth.
 

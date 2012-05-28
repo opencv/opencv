@@ -24,7 +24,7 @@ CvPoint
 
     constructs ``CvPoint`` structure.
 
-.. ocv:cfunction:: CvPoint cvPointFrom32f( CvPoint32f pt )
+.. ocv:cfunction:: CvPoint cvPointFrom32f( CvPoint2D32f point )
 
     converts ``CvPoint2D32f`` to ``CvPoint``.
 
@@ -45,11 +45,11 @@ CvPoint2D32f
 
         y-coordinate
 
-.. ocv:cfunction:: CvPoint2D32f cvPoint2D32f( float x, float y )
+.. ocv:cfunction:: CvPoint2D32f cvPoint2D32f( double x, double y )
 
     constructs ``CvPoint2D32f`` structure.
 
-.. ocv:cfunction:: CvPoint2D32f cvPointTo32f( CvPoint pt )
+.. ocv:cfunction:: CvPoint2D32f cvPointTo32f( CvPoint point )
 
     converts ``CvPoint`` to ``CvPoint2D32f``.
 
@@ -74,7 +74,7 @@ CvPoint3D32f
 
         z-coordinate
 
-.. ocv:cfunction:: CvPoint3D32f cvPoint3D32f( float x, float y, float z )
+.. ocv:cfunction:: CvPoint3D32f cvPoint3D32f( double x, double y, double z )
 
     constructs ``CvPoint3D32f`` structure.
 
@@ -511,7 +511,8 @@ ClearND
 -------
 Clears a specific array element.
 
-.. ocv:cfunction:: void cvClearND(CvArr* arr, int* idx)
+.. ocv:cfunction:: void cvClearND( CvArr* arr, const int* idx )
+
 .. ocv:pyoldfunction:: cv.ClearND(arr, idx)-> None
 
     :param arr: Input array
@@ -799,7 +800,7 @@ Get?D
 .. ocv:cfunction:: CvScalar cvGet1D(const CvArr* arr, int idx0)
 .. ocv:cfunction:: CvScalar cvGet2D(const CvArr* arr, int idx0, int idx1)
 .. ocv:cfunction:: CvScalar cvGet3D(const CvArr* arr, int idx0, int idx1, int idx2)
-.. ocv:cfunction:: CvScalar cvGetND(const CvArr* arr, int* idx)
+.. ocv:cfunction:: CvScalar cvGetND( const CvArr* arr, const int* idx )
 
 .. ocv:pyoldfunction:: cv.Get1D(arr, idx) -> scalar
 .. ocv:pyoldfunction:: cv.Get2D(arr, idx0, idx1) -> scalar
@@ -825,9 +826,11 @@ GetCol(s)
 Returns one of more array columns.
 
 .. ocv:cfunction:: CvMat* cvGetCol(const CvArr* arr, CvMat* submat, int col)
-.. ocv:cfunction:: CvMat* cvGetCols(const CvArr* arr, CvMat* submat, int startCol, int endCol)
+
+.. ocv:cfunction:: CvMat* cvGetCols( const CvArr* arr, CvMat* submat, int start_col, int end_col )
 
 .. ocv:pyoldfunction:: cv.GetCol(arr, col)-> submat
+
 .. ocv:pyoldfunction:: cv.GetCols(arr, startCol, endCol)-> submat
 
     :param arr: Input array
@@ -907,7 +910,8 @@ GetImage
 --------
 Returns image header for arbitrary array.
 
-.. ocv:cfunction:: IplImage* cvGetImage(const CvArr* arr, IplImage* imageHeader)
+.. ocv:cfunction:: IplImage* cvGetImage( const CvArr* arr, IplImage* image_header )
+
 .. ocv:pyoldfunction:: cv.GetImage(arr) -> iplimage
 
     :param arr: Input array
@@ -966,7 +970,7 @@ GetNextSparseNode
 -----------------
 Returns the next sparse matrix element
 
-.. ocv:cfunction:: CvSparseNode* cvGetNextSparseNode(CvSparseMatIterator* matIterator)
+.. ocv:cfunction:: CvSparseNode* cvGetNextSparseNode( CvSparseMatIterator* mat_iterator )
 
     :param matIterator: Sparse array iterator
 
@@ -999,7 +1003,7 @@ GetRawData
 ----------
 Retrieves low-level information about the array.
 
-.. ocv:cfunction:: void cvGetRawData(const CvArr* arr, uchar** data, int* step=NULL, CvSize* roiSize=NULL)
+.. ocv:cfunction:: void cvGetRawData( const CvArr* arr, uchar** data, int* step=NULL, CvSize* roi_size=NULL )
 
     :param arr: Array header
 
@@ -1031,7 +1035,7 @@ Return a specific element of single-channel 1D, 2D, 3D or nD array.
 .. ocv:cfunction:: double cvGetReal1D(const CvArr* arr, int idx0)
 .. ocv:cfunction:: double cvGetReal2D(const CvArr* arr, int idx0, int idx1)
 .. ocv:cfunction:: double cvGetReal3D(const CvArr* arr, int idx0, int idx1, int idx2)
-.. ocv:cfunction:: double cvGetRealND(const CvArr* arr, int* idx)
+.. ocv:cfunction:: double cvGetRealND( const CvArr* arr, const int* idx )
 
 .. ocv:pyoldfunction:: cv.GetReal1D(arr, idx0)->float
 .. ocv:pyoldfunction:: cv.GetReal2D(arr, idx0, idx1)->float
@@ -1059,7 +1063,7 @@ Returns array row or row span.
 
 .. ocv:cfunction:: CvMat* cvGetRow(const CvArr* arr, CvMat* submat, int row)
 
-.. ocv:cfunction:: CvMat* cvGetRows(const CvArr* arr, CvMat* submat, int startRow, int endRow, int deltaRow=1)
+.. ocv:cfunction:: CvMat* cvGetRows( const CvArr* arr, CvMat* submat, int start_row, int end_row, int delta_row=1 )
 
 .. ocv:pyoldfunction:: cv.GetRow(arr, row)-> submat
 .. ocv:pyoldfunction:: cv.GetRows(arr, startRow, endRow, deltaRow=1)-> submat
@@ -1209,7 +1213,7 @@ InitSparseMatIterator
 ---------------------
 Initializes sparse array elements iterator.
 
-.. ocv:cfunction:: CvSparseNode* cvInitSparseMatIterator(const CvSparseMat* mat,                                        CvSparseMatIterator* matIterator)
+.. ocv:cfunction:: CvSparseNode* cvInitSparseMatIterator( const CvSparseMat* mat, CvSparseMatIterator* mat_iterator )
 
     :param mat: Input array
 
@@ -1250,7 +1254,7 @@ Return pointer to a particular array element.
 
 .. ocv:cfunction:: uchar* cvPtr3D(const CvArr* arr, int idx0, int idx1, int idx2, int* type=NULL)
 
-.. ocv:cfunction:: uchar* cvPtrND(const CvArr* arr, int* idx, int* type=NULL, int createNode=1, unsigned* precalcHashval=NULL)
+.. ocv:cfunction:: uchar* cvPtrND( const CvArr* arr, const int* idx, int* type=NULL, int create_node=1, unsigned* precalc_hashval=NULL )
 
     :param arr: Input array
 
@@ -1403,7 +1407,8 @@ Reshape
 -------
 Changes shape of matrix/image without copying data.
 
-.. ocv:cfunction:: CvMat* cvReshape(const CvArr* arr, CvMat* header, int newCn, int newRows=0)
+.. ocv:cfunction:: CvMat* cvReshape( const CvArr* arr, CvMat* header, int new_cn, int new_rows=0 )
+
 .. ocv:pyoldfunction:: cv.Reshape(arr, newCn, newRows=0) -> mat
 
     :param arr: Input array
@@ -1440,7 +1445,8 @@ ReshapeMatND
 ------------
 Changes the shape of a multi-dimensional array without copying the data.
 
-.. ocv:cfunction:: CvArr* cvReshapeMatND(const CvArr* arr, int sizeofHeader, CvArr* header,                        int newCn, int newDims, int* newSizes)
+.. ocv:cfunction:: CvArr* cvReshapeMatND( const CvArr* arr, int sizeof_header, CvArr* header, int new_cn, int new_dims, int* new_sizes )
+
 .. ocv:pyoldfunction:: cv.ReshapeMatND(arr, newCn, newDims) -> mat
 
     :param arr: Input array
@@ -1508,7 +1514,7 @@ Change the particular array element.
 
 .. ocv:cfunction:: void cvSet3D(CvArr* arr, int idx0, int idx1, int idx2, CvScalar value)
 
-.. ocv:cfunction:: void cvSetND(CvArr* arr, int* idx, CvScalar value)
+.. ocv:cfunction:: void cvSetND( CvArr* arr, const int* idx, CvScalar value )
 
 .. ocv:pyoldfunction:: cv.Set1D(arr, idx, value) -> None
 .. ocv:pyoldfunction:: cv.Set2D(arr, idx0, idx1, value) -> None
@@ -1589,7 +1595,7 @@ Change a specific array element.
 
 .. ocv:cfunction:: void cvSetReal3D(CvArr* arr, int idx0, int idx1, int idx2, double value)
 
-.. ocv:cfunction:: void cvSetRealND(CvArr* arr, int* idx, double value)
+.. ocv:cfunction:: void cvSetRealND( CvArr* arr, const int* idx, double value )
 
 .. ocv:pyoldfunction:: cv.SetReal1D(arr, idx, value) -> None
 .. ocv:pyoldfunction:: cv.SetReal2D(arr, idx0, idx1, value) -> None
@@ -1687,7 +1693,8 @@ RandArr
 -------
 Fills an array with random numbers and updates the RNG state.
 
-.. ocv:cfunction:: void cvRandArr( CvRNG* rng, CvArr* arr, int distType, CvScalar param1, CvScalar param2)
+.. ocv:cfunction:: void cvRandArr( CvRNG* rng, CvArr* arr, int dist_type, CvScalar param1, CvScalar param2 )
+
 .. ocv:pyoldfunction:: cv.RandArr(rng, arr, distType, param1, param2)-> None
 
     :param rng: CvRNG state initialized by :ocv:cfunc:`RNG`

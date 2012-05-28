@@ -146,7 +146,7 @@ class CppHeaderParser(object):
                     arg_type += "_and_"
                 elif w == ">":
                     if angle_stack[0] == 0:
-                        print "Error at %d: template has no arguments" % (self.lineno,)
+                        print "Error at %s:%d: template has no arguments" % (self.hname, self.lineno)
                         sys.exit(-1)
                     if angle_stack[0] > 1:
                         arg_type += "_end_"
@@ -243,6 +243,19 @@ class CppHeaderParser(object):
         return classname, bases, modlist
 
     def parse_func_decl_no_wrap(self, decl_str, static_method = False):
+        decl_str = (decl_str or "").strip()
+        virtual_method = False
+        explicit_method = False
+        if decl_str.startswith("explicit"):
+            decl_str = decl_str[len("explicit"):].lstrip()
+            explicit_method = True
+        if decl_str.startswith("virtual"):
+            decl_str = decl_str[len("virtual"):].lstrip()
+            virtual_method = True
+        if decl_str.startswith("static"):
+            decl_str = decl_str[len("static"):].lstrip()
+            static_method = True
+
         fdecl = decl_str.replace("CV_OUT", "").replace("CV_IN_OUT", "")
         fdecl = fdecl.strip().replace("\t", " ")
         while "  " in fdecl:
@@ -327,8 +340,16 @@ class CppHeaderParser(object):
 
         if static_method:
             decl[2].append("/S")
-        if decl_str.endswith("const"):
+        if virtual_method:
+            decl[2].append("/V")
+        if explicit_method:
+            decl[2].append("/E")
+        if bool(re.match(r".*\)\s*(const)?\s*=\s*0", decl_str)):
+            decl[2].append("/A")
+        if bool(re.match(r".*\)\s*const(\s*=\s*0)?", decl_str)):
             decl[2].append("/C")
+        if "virtual" in decl_str:
+            print decl_str
         return decl
 
     def parse_func_decl(self, decl_str):
@@ -418,7 +439,7 @@ class CppHeaderParser(object):
                     return []
                 else:
                     #print rettype, funcname, modlist, argno
-                    print "Error at %d in %s. the function/method name is missing: '%s'" % (self.lineno, self.hname, decl_start)
+                    print "Error at %s:%d the function/method name is missing: '%s'" % (self.hname, self.lineno, decl_start)
                     sys.exit(-1)
 
         if self.wrap_mode and (("::" in funcname) or funcname.startswith("~")):

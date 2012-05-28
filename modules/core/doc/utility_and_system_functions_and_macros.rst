@@ -93,7 +93,7 @@ Computes the cube root of an argument.
 
 .. ocv:pyfunction:: cv2.cubeRoot(val) -> retval
 
-.. ocv:cfunction:: float cvCbrt(float val)
+.. ocv:cfunction:: float cvCbrt( float value )
 
 .. ocv:pyoldfunction:: cv.Cbrt(value)-> float
 
@@ -182,7 +182,7 @@ Signals an error and raises an exception.
 
 .. ocv:function:: void error( const Exception& exc )
 
-.. ocv:cfunction:: int cvError( int status, const char* funcName, const char* err_msg, const char* filename, int line )
+.. ocv:cfunction:: void cvError( int status, const char* func_name, const char* err_msg, const char* file_name, int line )
 
     :param exc: Exception to throw.
 
@@ -244,7 +244,8 @@ fastMalloc
 --------------
 Allocates an aligned memory buffer.
 
-.. ocv:function:: void* fastMalloc(size_t size)
+.. ocv:function:: void* fastMalloc( size_t bufSize )
+
 .. ocv:cfunction:: void* cvAlloc( size_t size )
 
     :param size: Allocated buffer size.
@@ -419,11 +420,11 @@ setUseOptimized
 -----------------
 Enables or disables the optimized code.
 
-.. ocv:function:: void setUseOptimized(bool onoff)
+.. ocv:function:: int cvUseOptimized( int on_off )
 
 .. ocv:pyfunction:: cv2.setUseOptimized(onoff) -> None
 
-.. ocv:cfunction:: int cvUseOptimized( int onoff )
+.. ocv:cfunction:: int cvUseOptimized( int on_off )
 
     :param onoff: The boolean flag specifying whether the optimized code should be used (``onoff=true``) or not (``onoff=false``).
 

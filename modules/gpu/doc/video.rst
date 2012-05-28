@@ -417,7 +417,7 @@ gpu::VideoWriter_GPU::EncoderParams::EncoderParams
 Constructors.
 
 .. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams();
-.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const std::string& configFile);
+.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const std::string& configFile)
 
     :param configFile: Config file name.
 
@@ -429,7 +429,7 @@ gpu::VideoWriter_GPU::EncoderParams::load
 -----------------------------------------
 Reads parameters from config file.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::load(const std::string& configFile);
+.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::load(const std::string& configFile)
 
     :param configFile: Config file name.
 
@@ -439,7 +439,7 @@ gpu::VideoWriter_GPU::EncoderParams::save
 -----------------------------------------
 Saves parameters to config file.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::save(const std::string& configFile) const;
+.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::save(const std::string& configFile) const
 
     :param configFile: Config file name.
 
@@ -475,7 +475,7 @@ gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream
 -------------------------------------------------------
 Callback function to signal the start of bitstream that is to be encoded.
 
-.. ocv:function:: virtual unsigned char* gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream(int* bufferSize) = 0;
+.. ocv:function:: virtual unsigned char* gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream(int* bufferSize) = 0
 
 Callback must allocate buffer for CUDA encoder and return pointer to it and it's size.
 
@@ -485,7 +485,7 @@ gpu::VideoWriter_GPU::EncoderCallBack::releaseBitStream
 -------------------------------------------------------
 Callback function to signal that the encoded bitstream is ready to be written to file.
 
-.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::releaseBitStream(unsigned char* data, int size) = 0;
+.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::releaseBitStream(unsigned char* data, int size) = 0
 
 
 
@@ -493,7 +493,7 @@ gpu::VideoWriter_GPU::EncoderCallBack::onBeginFrame
 ---------------------------------------------------
 Callback function to signal that the encoding operation on the frame has started.
 
-.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::onBeginFrame(int frameNumber, PicType picType) = 0;
+.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::onBeginFrame(int frameNumber, PicType picType) = 0
 
     :param picType: Specify frame type (I-Frame, P-Frame or B-Frame).
 
@@ -503,7 +503,7 @@ gpu::VideoWriter_GPU::EncoderCallBack::onEndFrame
 -------------------------------------------------
 Callback function signals that the encoding operation on the frame has finished.
 
-.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::onEndFrame(int frameNumber, PicType picType) = 0;
+.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::onEndFrame(int frameNumber, PicType picType) = 0
 
     :param picType: Specify frame type (I-Frame, P-Frame or B-Frame).
 
