@@ -657,7 +657,11 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, doub
 
         dst.create(src1.size(), CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src1.channels()));
 
+#if (CUDA_VERSION <= 4020)
         if (scale == 1 && dst.type() == src1.type() && src1.depth() <= CV_32F)
+#else
+        if (scale == 1 && dst.type() == src1.type() && src1.depth() <= CV_32F && src1.depth() > CV_8U)
+#endif
         {
             npp_funcs[src1.depth()](src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
             return;

@@ -311,7 +311,7 @@ TEST_P(ConvertTo, WithScaling)
         cv::Mat dst_gold;
         src.convertTo(dst_gold, depth2, a, b);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth2 < CV_32F ? 0.0 : 1e-4);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth2 < CV_32F ? 1.0 : 1e-4);
     }
 }
 
