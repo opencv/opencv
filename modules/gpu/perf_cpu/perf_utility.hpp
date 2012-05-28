@@ -8,7 +8,7 @@ using perf::MatDepth;
 
 CV_ENUM(BorderMode, cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
 CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC)
-CV_ENUM(NormType, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2)
+CV_ENUM(NormType, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_HAMMING)
 
 struct CvtColorInfo
 {
@@ -32,7 +32,7 @@ void PrintTo(const CvtColorInfo& info, std::ostream* os);
     }; \
     inline void PrintTo( name param, std::ostream* os) \
     { \
-        *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
+        *os << #name <<  " = " << testing::PrintToString(static_cast< type >(param)); \
     }
 
 IMPLEMENT_PARAM_CLASS(Channels, int)

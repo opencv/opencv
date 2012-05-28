@@ -21,6 +21,7 @@ GPU_PERF_TEST_1(SURF, cv::gpu::DeviceInfo)
 
     TEST_CYCLE()
     {
+        keypoints.clear();
         surf(img, cv::noArray(), keypoints, descriptors);
     }
 }
@@ -41,6 +42,7 @@ GPU_PERF_TEST_1(FAST, cv::gpu::DeviceInfo)
 
     TEST_CYCLE()
     {
+        keypoints.clear();
         cv::FAST(img, keypoints, 20);
     }
 }
@@ -64,6 +66,7 @@ GPU_PERF_TEST_1(ORB, cv::gpu::DeviceInfo)
 
     TEST_CYCLE()
     {
+        keypoints.clear();
         orb(img, cv::noArray(), keypoints, descriptors);
     }
 }
