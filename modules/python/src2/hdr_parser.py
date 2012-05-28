@@ -242,7 +242,7 @@ class CppHeaderParser(object):
         bases = ll[2:]
         return classname, bases, modlist
 
-    def parse_func_decl_no_wrap(self, decl_str):
+    def parse_func_decl_no_wrap(self, decl_str, static_method = False):
         fdecl = decl_str.replace("CV_OUT", "").replace("CV_IN_OUT", "")
         fdecl = fdecl.strip().replace("\t", " ")
         while "  " in fdecl:
@@ -273,9 +273,16 @@ class CppHeaderParser(object):
 
         fname = "cv." + fname.replace("::", ".")
         decl = [fname, rettype, [], []]
+
+        # inline constructor implementation
+        implmatch = re.match(r"(\(.*?\))\s*:\s*(\w+\(.*?\),?\s*)+", fdecl[apos:])
+        if bool(implmatch):
+            fdecl = fdecl[:apos] + implmatch.group(1)
+
         args0str = fdecl[apos+1:fdecl.rfind(")")].strip()
 
-        if args0str != "":
+        if args0str != "" and args0str != "void":
+            args0str = re.sub(r"\([^)]*\)", lambda m: m.group(0).replace(',', "@comma@"), args0str)
             args0 = args0str.split(",")
 
             args = []
@@ -293,9 +300,19 @@ class CppHeaderParser(object):
                 defval = ""
                 if dfpos >= 0:
                     defval = arg[dfpos+1:].strip()
+                else:
+                    dfpos = arg.find("CV_DEFAULT")
+                    if dfpos >= 0:
+                        defval, pos3 = self.get_macro_arg(arg, dfpos)
+                    else:
+                        dfpos = arg.find("CV_WRAP_DEFAULT")
+                        if dfpos >= 0:
+                            defval, pos3 = self.get_macro_arg(arg, dfpos)
+                if dfpos >= 0:
+                    defval = defval.replace("@comma@", ",")
                     arg = arg[:dfpos].strip()
                 pos = len(arg)-1
-                while pos >= 0 and (arg[pos] == "_" or arg[pos].isalpha() or arg[pos].isdigit()):
+                while pos >= 0 and (arg[pos] in "_[]" or arg[pos].isalpha() or arg[pos].isdigit()):
                     pos -= 1
                 if pos >= 0:
                     aname = arg[pos+1:].strip()
@@ -308,6 +325,10 @@ class CppHeaderParser(object):
                     aname = "param"
                 decl[3].append([atype, aname, defval, []])
 
+        if static_method:
+            decl[2].append("/S")
+        if decl_str.endswith("const"):
+            decl[2].append("/C")
         return decl
 
     def parse_func_decl(self, decl_str):
@@ -328,7 +349,7 @@ class CppHeaderParser(object):
                 return []
 
         # ignore old API in the documentation check (for now)
-        if "CVAPI(" in decl_str:
+        if "CVAPI(" in decl_str and self.wrap_mode:
             return []
 
         top = self.block_stack[-1]
@@ -378,6 +399,10 @@ class CppHeaderParser(object):
                 sys.exit(-1)
             decl_start = decl_str[:args_begin].strip()
 
+        # constructor/destructor case
+        if bool(re.match(r'(\w+::)*(?P<x>\w+)::~?(?P=x)', decl_start)):
+            decl_start = "void " + decl_start
+
         rettype, funcname, modlist, argno = self.parse_arg(decl_start, -1)
 
         if argno >= 0:
@@ -385,8 +410,16 @@ class CppHeaderParser(object):
             if rettype == classname or rettype == "~" + classname:
                 rettype, funcname = "", rettype
             else:
-                print "Error at %d. the function/method name is missing: '%s'" % (self.lineno, decl_start)
-                sys.exit(-1)
+                if bool(re.match('\w+\s+\(\*\w+\)\s*\(.*\)', decl_str)):
+                    return [] # function typedef
+                elif bool(re.match('[A-Z_]+', decl_start)):
+                    return [] # it seems to be a macro instantiation
+                elif "__declspec" == decl_start:
+                    return []
+                else:
+                    #print rettype, funcname, modlist, argno
+                    print "Error at %d in %s. the function/method name is missing: '%s'" % (self.lineno, self.hname, decl_start)
+                    sys.exit(-1)
 
         if self.wrap_mode and (("::" in funcname) or funcname.startswith("~")):
             # if there is :: in function name (and this is in the header file),
@@ -399,7 +432,7 @@ class CppHeaderParser(object):
         funcname = self.get_dotted_name(funcname)
 
         if not self.wrap_mode:
-            decl = self.parse_func_decl_no_wrap(decl_str)
+            decl = self.parse_func_decl_no_wrap(decl_str, static_method)
             decl[0] = funcname
             return decl
 
@@ -515,7 +548,7 @@ class CppHeaderParser(object):
                 sys.exit(-1)
             if block_name:
                 n += block_name + "."
-        return n + name
+        return n + name.replace("::", ".")
 
     def parse_stmt(self, stmt, end_token):
         """
@@ -559,7 +592,7 @@ class CppHeaderParser(object):
                 stmt_type = stmt.split()[0]
                 classname, bases, modlist = self.parse_class_decl(stmt)
                 decl = []
-                if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode and ("CV_EXPORTS" in stmt)):
+                if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
                     decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
                     if bases:
                         decl[1] = ": " + " ".join(bases)
@@ -570,6 +603,8 @@ class CppHeaderParser(object):
 
             if stmt.startswith("namespace"):
                 stmt_list = stmt.split()
+                if len(stmt_list) < 2:
+                    stmt_list.append("<unnamed>")
                 return stmt_list[0], stmt_list[1], True, None
             if stmt.startswith("extern") and "\"C\"" in stmt:
                 return "namespace", "", True, None
@@ -633,6 +668,7 @@ class CppHeaderParser(object):
         The main method. Parses the input file.
         Returns the list of declarations (that can be print using print_decls)
         """
+        self.hname = hname
         decls = []
         f = open(hname, "rt")
         linelist = list(f.readlines())

@@ -3,6 +3,7 @@ allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d"
 verbose = False
 show_warnings = True
 show_errors = True
+show_critical_errors = True
 
 params_blacklist = {
     "fromarray" : ("object", "allowND"), # python only function
@@ -66,7 +67,7 @@ class DeclarationParser(object):
         if line.startswith(".. ocv:jfunction::"):
             return "Java"
         return None
-    
+
     def hasDeclaration(self, line):
         return self.getLang(line) is not None
 
@@ -97,7 +98,7 @@ class ParamParser(object):
             self.comment += "\n" + line.lstrip()
         else:
             self.active = False
-            
+
     def hasDeclaration(self, line):
         return line.lstrip().startswith(":param")
 
@@ -115,7 +116,7 @@ class RstParser(object):
         doclist = glob.glob(os.path.join(module_path,"doc/*.rst"))
         for doc in doclist:
             self.parse_rst_file(module_name, doc)
-            
+
     def parse_section_safe(self, module_name, section_name, file_name, lineno, lines):
         try:
             self.parse_section(module_name, section_name, file_name, lineno, lines)
@@ -184,16 +185,16 @@ class RstParser(object):
                     continue
                 else:
                     skip_code_lines = False
-                    
+
             if ll.startswith(".. code-block::") or ll.startswith(".. image::"):
                 skip_code_lines = True
                 continue
-                
+
             # todo: parse structure members; skip them for now
             if ll.startswith(".. ocv:member::"):
                 skip_code_lines = True
                 continue
-                
+
             #ignore references (todo: collect them)
             if l.startswith(".. ["):
                 continue
@@ -204,7 +205,7 @@ class RstParser(object):
                 # turn on line-skipping mode for code fragments
                 skip_code_lines = True
                 ll = ll[:len(ll)-2]
-                
+
             # continue param parsing (process params after processing .. at the beginning of the line and :: at the end)
             if pdecl.active:
                 pdecl.append(l)
@@ -269,10 +270,10 @@ class RstParser(object):
             if skip_code_lines:
                 func["long"] = func.get("long", "") + "\n"
         # endfor l in lines
-        
+
         if fdecl.balance != 0:
-            if show_errors:
-                print >> sys.stderr, "RST parser error: invalid parentheses balance in \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
+            if show_critical_errors:
+                print >> sys.stderr, "RST parser error: invalid parentheses balance in \"%s\" File: %s:%s" % (section_name, file_name, lineno)
             return
 
         # save last parameter if needed
@@ -295,7 +296,7 @@ class RstParser(object):
         lineno = 0
         whitespace_warnings = 0
         max_whitespace_warnings = 10
-      
+
         lines = []
         flineno = 0
         fname = ""
@@ -310,7 +311,7 @@ class RstParser(object):
                 if whitespace_warnings <= max_whitespace_warnings and show_warnings:
                     print >> sys.stderr, "RST parser warning: tab symbol instead of space is used at file %s (line %s)" % (doc, lineno)
                 l = l.replace("\t", "    ")
-                
+
             # handle first line
             if prev_line == None:
                 prev_line = l.rstrip()
@@ -325,7 +326,7 @@ class RstParser(object):
                 flineno = lineno-1
                 fname = prev_line.strip()
             elif flineno > 0:
-                lines.append(ll)               
+                lines.append(ll)
             prev_line = ll
         df.close()
 
@@ -346,9 +347,9 @@ class RstParser(object):
         decls =  func.get("decls",[])
         if (decl.lang == "C++" or decl.lang == "C"):
             rst_decl = self.cpp_parser.parse_func_decl_no_wrap(decl.fdecl)
-            decls.append( (decl.lang, decl.fdecl, rst_decl) )
+            decls.append( [decl.lang, decl.fdecl, rst_decl] )
         else:
-            decls.append( (decl.lang, decl.fdecl) )
+            decls.append( [decl.lang, decl.fdecl] )
         func["decls"] = decls
 
     def add_new_pdecl(self, func, decl):
@@ -403,7 +404,7 @@ class RstParser(object):
     def validateParams(self, func):
         documentedParams = func.get("params",{}).keys()
         params = []
-       	
+
         for decl in func.get("decls", []):
             if len(decl) > 2:
                 args = decl[2][3] # decl[2] -> [ funcname, return_ctype, [modifiers], [args] ]
@@ -476,7 +477,7 @@ class RstParser(object):
         return func
 
     def fixOldCFunctionName(self, func):
-        if not "decls" in func: 
+        if not "decls" in func:
             return
         fname = None
         for decl in func["decls"]:
@@ -495,7 +496,7 @@ class RstParser(object):
             elif show_warnings:
                 print >> sys.stderr, "\"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
                 #self.print_info(func)
-                
+
     def normalizeText(self, s):
         if s is None:
             return s
@@ -503,7 +504,7 @@ class RstParser(object):
         s = re.sub(r"\.\. math::[ \r]*\n+((.|\n)*?)(\n[ \r]*\n|$)", mathReplace2, s)
         s = re.sub(r":math:`([^`]+?)`", mathReplace, s)
         s = re.sub(r" *:sup:", "^", s)
-        
+
         s = s.replace(":ocv:class:", "")
         s = s.replace(":ocv:struct:", "")
         s = s.replace(":ocv:func:", "")
@@ -526,7 +527,7 @@ class RstParser(object):
         s = re.sub(r"`([^`<]+ )<(https?://[^>]+)>`_", "\\1(\\2)", s)
         # remove tailing ::
         s = re.sub(r"::(\n|$)", "\\1", s)
-            
+
         # normalize line endings
         s = re.sub(r"\r\n", "\n", s)
         # remove extra line breaks before/after _ or ,
@@ -554,7 +555,7 @@ class RstParser(object):
         #s = re.sub(r"\.\. \[", "[", s)
         # unescape
         s = re.sub(r"\\(.)", "\\1", s)
-        
+
         # remove whitespace before .
         s = re.sub(r"[ ]+\.", ".", s)
         # remove tailing whitespace
@@ -582,7 +583,7 @@ class RstParser(object):
 
         s = s.strip()
         return s
-        
+
     def printSummary(self):
         print
         print "RST Parser Summary:"
@@ -623,7 +624,7 @@ def matrixReplace(match):
     m = match.group(2)
     m = re.sub(r" *& *", "   ", m)
     return m
-        
+
 def mathReplace(match):
     m = match.group(1)
 
@@ -645,7 +646,7 @@ def mathReplace(match):
     m = re.sub(r"\\begin{(?P<gtype>array|bmatrix)}(?:{[\|lcr\. ]+})? *(.*?)\\end{(?P=gtype)}", matrixReplace, m)
     m = re.sub(r"\\hdotsfor{(\d+)}", hdotsforReplace, m)
     m = re.sub(r"\\vecthreethree{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}", "<BR>|\\1 \\2 \\3|<BR>|\\4 \\5 \\6|<BR>|\\7 \\8 \\9|<BR>", m)
-    
+
     m = re.sub(r"\\left[ ]*\\lfloor[ ]*", "[", m)
     m = re.sub(r"[ ]*\\right[ ]*\\rfloor", "]", m)
     m = re.sub(r"\\left[ ]*\([ ]*", "(", m)
@@ -696,7 +697,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "Usage:\n", os.path.basename(sys.argv[0]), " <module path>"
         exit(0)
-        
+
     if len(sys.argv) >= 3:
         if sys.argv[2].lower() == "verbose":
             verbose = True
@@ -714,7 +715,7 @@ if __name__ == "__main__":
         exit(1)
 
     parser = RstParser(hdr_parser.CppHeaderParser())
-    
+
     if module == "all":
         for m in allmodules:
             parser.parse(m, os.path.join(rst_parser_dir, "../" + m))
