@@ -75,8 +75,9 @@ if __name__ == '__main__':
             else:
                 task = DummyTask(process_frame(frame, t))
             pending.append(task)
-        ch = cv2.waitKey(1)
+        ch = 0xFF & cv2.waitKey(1)
         if ch == ord(' '):
             threaded_mode = not threaded_mode
         if ch == 27:
             break
+cv2.destroyAllWindows()
