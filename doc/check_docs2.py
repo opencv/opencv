@@ -30,12 +30,12 @@ doc_signatures_whitelist = [
 # templates
 "Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
 "DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
-# the following classes reside in core bu documented in gpu. It's no good
+# black boxes
+"CvArr", "CvFileStorage",
+# the following classes reside in core but documented in gpu. It's no good
 "gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_",
 # these are even non-template
-"gpu::DeviceInfo", "gpu::GpuMat", "gpu::TargetArchs", "gpu::FeatureSet",
-# black boxes
-"CvArr", "CvFileStorage"]
+"gpu::DeviceInfo", "gpu::GpuMat", "gpu::TargetArchs", "gpu::FeatureSet"]
 
 synonims = {
     "StarDetector" : ["StarFeatureDetector"],
@@ -431,7 +431,10 @@ def process_module(module, path):
             if name in doc_signatures_whitelist:
                 continue
             logerror(ERROR_010_UNKNOWNCLASS, "class/struct " + name + " is mentioned in documentation but is not found in OpenCV headers", doc)
-        #for signature in decls:
+        for d in doc.get("decls", []):
+            if d[-1] != DOCUMENTED_MARKER:
+                if d[0] == "C" or d[0] =="C++" or (do_python_crosscheck and d[0].startswith("Python")):
+                    logerror(ERROR_011_UNKNOWNFUNC, d[0] + " function is documented but is not found in OpenCV headers. It is documented as:\n\t" + d[1], doc)
     # end of process_module
 
 if __name__ == "__main__":
