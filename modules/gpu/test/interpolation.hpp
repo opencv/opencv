@@ -54,7 +54,7 @@ template <typename T> struct NearestInterpolator
 {
     static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
     {
-        return readVal<T>(src, cvFloor(y), cvFloor(x), c, border_type, borderVal);
+        return readVal<T>(src, cvRound(y), cvRound(x), c, border_type, borderVal);
     }
 };
 
@@ -62,9 +62,6 @@ template <typename T> struct LinearInterpolator
 {
     static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
     {
-        x -= 0.5f;
-        y -= 0.5f;
-
         int x1 = cvFloor(x);
         int y1 = cvFloor(y);
         int x2 = x1 + 1;
@@ -83,37 +80,47 @@ template <typename T> struct LinearInterpolator
 
 template <typename T> struct CubicInterpolator
 {
-    static float getValue(float p[4], float x)
+    static float bicubicCoeff(float x_)
     {
-        return static_cast<float>(p[1] + 0.5 * x * (p[2] - p[0] + x*(2.0*p[0] - 5.0*p[1] + 4.0*p[2] - p[3] + x*(3.0*(p[1] - p[2]) + p[3] - p[0]))));
-    }
-
-    static float getValue(float p[4][4], float x, float y)
-    {
-        float arr[4];
-
-        arr[0] = getValue(p[0], x);
-        arr[1] = getValue(p[1], x);
-        arr[2] = getValue(p[2], x);
-        arr[3] = getValue(p[3], x);
-
-        return getValue(arr, y);
+        float x = fabsf(x_);
+        if (x <= 1.0f)
+        {
+            return x * x * (1.5f * x - 2.5f) + 1.0f;
+        }
+        else if (x < 2.0f)
+        {
+            return x * (x * (-0.5f * x + 2.5f) - 4.0f) + 2.0f;
+        }
+        else
+        {
+            return 0.0f;
+        }
     }
 
     static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
     {
-        int ix = cvRound(x);
-        int iy = cvRound(y);
+        const float xmin = ceilf(x - 2.0f);
+        const float xmax = floorf(x + 2.0f);
 
-        float vals[4][4] =
+        const float ymin = ceilf(y - 2.0f);
+        const float ymax = floorf(y + 2.0f);
+
+        float sum  = 0.0f;
+        float wsum = 0.0f;
+
+        for (float cy = ymin; cy <= ymax; cy += 1.0f)
         {
-            {(float)readVal<T>(src, iy - 2, ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy - 2, ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy - 2, ix, c, border_type, borderVal), (float)readVal<T>(src, iy - 2, ix + 1, c, border_type, borderVal)},
-            {(float)readVal<T>(src, iy - 1, ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy - 1, ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy - 1, ix, c, border_type, borderVal), (float)readVal<T>(src, iy - 1, ix + 1, c, border_type, borderVal)},
-            {(float)readVal<T>(src, iy    , ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy    , ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy    , ix, c, border_type, borderVal), (float)readVal<T>(src, iy    , ix + 1, c, border_type, borderVal)},
-            {(float)readVal<T>(src, iy + 1, ix - 2, c, border_type, borderVal), (float)readVal<T>(src, iy + 1, ix - 1, c, border_type, borderVal), (float)readVal<T>(src, iy + 1, ix, c, border_type, borderVal), (float)readVal<T>(src, iy + 1, ix + 1, c, border_type, borderVal)},
-        };
+            for (float cx = xmin; cx <= xmax; cx += 1.0f)
+            {
+                const float w = bicubicCoeff(x - cx) * bicubicCoeff(y - cy);
+                sum += w * readVal<T>(src, cvFloor(cy), cvFloor(cx), c, border_type, borderVal);
+                wsum += w;
+            }
+        }
 
-        return cv::saturate_cast<T>(getValue(vals, static_cast<float>((x - ix + 2.0) / 4.0), static_cast<float>((y - iy + 2.0) / 4.0)));
+        float res = (!wsum)? 0 : sum / wsum;
+
+        return cv::saturate_cast<T>(res);
     }
 };
 

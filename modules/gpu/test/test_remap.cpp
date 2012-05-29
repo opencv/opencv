@@ -163,7 +163,7 @@ TEST_P(Remap, Accuracy)
     cv::Mat dst_gold;
     remapGold(src, xmap, ymap, dst_gold, interpolation, borderType, val);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-4 : 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Remap, testing::Combine(

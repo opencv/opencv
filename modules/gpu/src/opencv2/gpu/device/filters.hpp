@@ -59,7 +59,7 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
         {
-            return src(__float2int_rd(y), __float2int_rd(x));
+            return src(__float2int_rn(y), __float2int_rn(x));
         }
 
         const Ptr2D src;
@@ -77,9 +77,6 @@ namespace cv { namespace gpu { namespace device
             typedef typename TypeVec<float, VecTraits<elem_type>::cn>::vec_type work_type;
 
             work_type out = VecTraits<work_type>::all(0);
-
-            x -= 0.5f;
-            y -= 0.5f;
 
             const int x1 = __float2int_rd(x);
             const int y1 = __float2int_rd(y);
@@ -112,24 +109,47 @@ namespace cv { namespace gpu { namespace device
 
         explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_) : src(src_) {}
 
-        static __device__ __forceinline__ work_type cubicInterpolate(typename TypeTraits<work_type>::ParameterType p0, typename TypeTraits<work_type>::ParameterType p1, typename TypeTraits<work_type>::ParameterType p2, typename TypeTraits<work_type>::ParameterType p3, float x)
+        static __device__ __forceinline__ float bicubicCoeff(float x_)
         {
-            return p1 + 0.5f * x * (p2 - p0 + x * (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3 + x * (3.0f * (p1 - p2) + p3 - p0)));
+            float x = fabsf(x_);
+            if (x <= 1.0f)
+            {
+                return x * x * (1.5f * x - 2.5f) + 1.0f;
+            }
+            else if (x < 2.0f)
+            {
+                return x * (x * (-0.5f * x + 2.5f) - 4.0f) + 2.0f;
+            }
+            else
+            {
+                return 0.0f;
+            }
         }
 
         __device__ elem_type operator ()(float y, float x) const
         {
-            const int xi = __float2int_rn(x);
-            const int yi = __float2int_rn(y);
+            const float xmin = ::ceilf(x - 2.0f);
+            const float xmax = ::floorf(x + 2.0f);
 
-            work_type arr[4];
+            const float ymin = ::ceilf(y - 2.0f);
+            const float ymax = ::floorf(y + 2.0f);
 
-            arr[0] = cubicInterpolate(saturate_cast<work_type>(src(yi - 2, xi - 2)), saturate_cast<work_type>(src(yi - 2, xi - 1)), saturate_cast<work_type>(src(yi - 2, xi)), saturate_cast<work_type>(src(yi - 2, xi + 1)), (x - xi + 2.0f) / 4.0f);
-            arr[1] = cubicInterpolate(saturate_cast<work_type>(src(yi - 1, xi - 2)), saturate_cast<work_type>(src(yi - 1, xi - 1)), saturate_cast<work_type>(src(yi - 1, xi)), saturate_cast<work_type>(src(yi - 1, xi + 1)), (x - xi + 2.0f) / 4.0f);
-            arr[2] = cubicInterpolate(saturate_cast<work_type>(src(yi    , xi - 2)), saturate_cast<work_type>(src(yi    , xi - 1)), saturate_cast<work_type>(src(yi    , xi)), saturate_cast<work_type>(src(yi    , xi + 1)), (x - xi + 2.0f) / 4.0f);
-            arr[3] = cubicInterpolate(saturate_cast<work_type>(src(yi + 1, xi - 2)), saturate_cast<work_type>(src(yi + 1, xi - 1)), saturate_cast<work_type>(src(yi + 1, xi)), saturate_cast<work_type>(src(yi + 1, xi + 1)), (x - xi + 2.0f) / 4.0f);
+            work_type sum = VecTraits<work_type>::all(0);
+            float wsum = 0.0f;
 
-            return saturate_cast<elem_type>(cubicInterpolate(arr[0], arr[1], arr[2], arr[3], (y - yi + 2.0f) / 4.0f));
+            for (float cy = ymin; cy <= ymax; cy += 1.0f)
+            {
+                for (float cx = xmin; cx <= xmax; cx += 1.0f)
+                {
+                    const float w = bicubicCoeff(x - cx) * bicubicCoeff(y - cy);
+                    sum = sum + w * src(__float2int_rd(cy), __float2int_rd(cx));
+                    wsum += w;
+                }
+            }
+
+            work_type res = (!wsum)? VecTraits<work_type>::all(0) : sum / wsum;
+
+            return saturate_cast<elem_type>(res);
         }
 
         const Ptr2D src;
