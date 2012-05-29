@@ -701,8 +701,9 @@ class FuncDefExpr(NamedDefExpr):
 
 class ClassDefExpr(NamedDefExpr):
 
-    def __init__(self, name, visibility, static):
+    def __init__(self, name, visibility, static, parent = None):
         NamedDefExpr.__init__(self, name, visibility, static)
+        self.parent = parent
 
     def get_id(self):
         return self.name.get_id()
@@ -1086,7 +1087,18 @@ class DefinitionParser(object):
 
     def parse_class(self):
         visibility, static = self._parse_visibility_static()
-        return ClassDefExpr(self._parse_type(), visibility, static)
+        typename = self._parse_type()
+        parent = None
+        self.skip_ws()
+        if self.skip_string(':'):
+            self.skip_ws()
+            classname_pos = self.pos
+            pvisibility, pstatic = self._parse_visibility_static()
+            if pstatic:
+                self.fail('unsepected static keyword, got %r' %
+                      self.definition[self.classname_pos:])
+            parent = ClassDefExpr(self._parse_type(), pvisibility, pstatic)
+        return ClassDefExpr(typename, visibility, static, parent)
 
     def read_rest(self):
         rv = self.definition[self.pos:]
@@ -1213,8 +1225,8 @@ class OCVClassObject(OCVObject):
     object_annotation = "class "
     object_long_name = "class"
 
-    def attach_modifiers(self, node, obj):
-        if obj.visibility != 'public':
+    def attach_modifiers(self, node, obj, skip_visibility = 'public'):
+        if obj.visibility != skip_visibility:
             node += addnodes.desc_annotation(obj.visibility,
                                              obj.visibility)
             node += nodes.Text(' ')
@@ -1232,6 +1244,10 @@ class OCVClassObject(OCVObject):
         self.attach_modifiers(signode, cls)
         signode += addnodes.desc_annotation(self.__class__.object_annotation, self.__class__.object_annotation)
         self.attach_name(signode, cls.name)
+        if cls.parent:
+            signode += nodes.Text(' : ')
+            self.attach_modifiers(signode, cls.parent, None)
+            self.attach_name(signode, cls.parent.name)
 
 class OCVStructObject(OCVClassObject):
     object_annotation = "struct "
