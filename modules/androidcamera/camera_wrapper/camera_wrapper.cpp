@@ -199,7 +199,7 @@ protected:
     int is_supported(const char* supp_modes_key, const char* mode)
     {
         const char* supported_modes = params.get(supp_modes_key);
-        return strstr(supported_modes, mode) > 0;
+        return (supported_modes && mode && (strstr(supported_modes, mode) > 0));
     }
 
     float getFocusDistance(int focus_distance_type)
