@@ -25,7 +25,7 @@ from sphinx.util.nodes import make_refnode
 from sphinx.util.compat import Directive
 from sphinx.util.docfields import Field, GroupedField, TypedField
 
-########################### Python Part ########################### 
+########################### Python Part ###########################
 
 # REs for Python signatures
 py_sig_re = re.compile(
@@ -292,9 +292,10 @@ class OCVPyXRefRole(XRefRole):
         return title, target
 
 
-########################### C/C++/Java Part ########################### 
+########################### C/C++/Java Part ###########################
 
-_identifier_re = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*)\b')
+_identifier_re    = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*\b)')
+_argument_name_re = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*\b(?:\[\d*\])?)')
 _whitespace_re = re.compile(r'\s+(?u)')
 _string_re = re.compile(r"[LuU8]?('([^'\\]*(?:\\.[^'\\]*)*)'"
                         r'|"([^"\\]*(?:\\.[^"\\]*)*)")', re.S)
@@ -561,7 +562,7 @@ class ConstDefExpr(WrappingDefExpr):
 
     def __unicode__(self):
         return (self.prefix and u'const %s' or u'%s const') % self.typename
-        
+
 class ConstTemplateDefExpr(WrappingDefExpr):
 
     def __init__(self, typename, prefix=False):
@@ -682,7 +683,7 @@ class FuncDefExpr(NamedDefExpr):
                 u'.'.join(x.get_id() for x in self.signature) or u'',
             self.const and u'C' or u''
         )
-    
+
     def __unicode__(self):
         buf = self.get_modifiers()
         if self.explicit:
@@ -807,7 +808,7 @@ class DefinitionParser(object):
         return CastOpDefExpr(type)
 
     def _parse_name(self):
-        if not self.match(_identifier_re):
+        if not self.match(_argument_name_re):
             self.fail('expected name')
         identifier = self.matched_text
 
@@ -981,7 +982,7 @@ class DefinitionParser(object):
             elif paren_stack_depth == 0:
                 break
             self.pos = idx+1
-            
+
         rv = self.definition[rv_start:idx]
         self.pos = idx
         return rv
@@ -1138,7 +1139,7 @@ class OCVObject(ObjectDescription):
             lname = self.__class__.langname
             node += nodes.strong(lname + ":", lname + ":")
             node += addnodes.desc_name(" ", " ")
-            
+
         if obj.visibility != 'public':
             node += addnodes.desc_annotation(obj.visibility,
                                              obj.visibility)
@@ -1298,7 +1299,12 @@ class OCVFunctionObject(OCVObject):
                 self.attach_type(param, arg.type)
                 param += nodes.Text(u' ')
             #param += nodes.emphasis(unicode(arg.name), unicode(arg.name))
-            param += nodes.strong(unicode(arg.name), unicode(arg.name))
+            sbrIdx = unicode(arg.name).find("[")
+            if sbrIdx < 0:
+                param += nodes.strong(unicode(arg.name), unicode(arg.name))
+            else:
+                param += nodes.strong(unicode(arg.name)[:sbrIdx], unicode(arg.name)[:sbrIdx])
+                param += nodes.Text(unicode(arg.name)[sbrIdx:])
             if arg.default is not None:
                 def_ = u'=' + unicode(arg.default)
                 #param += nodes.emphasis(def_, def_)
@@ -1380,7 +1386,7 @@ class OCVXRefRole(XRefRole):
 
 class OCVCFunctionObject(OCVFunctionObject):
     langname = "C"
-    
+
 class OCVJavaFunctionObject(OCVFunctionObject):
     langname = "Java"
 
@@ -1430,7 +1436,7 @@ class OCVDomain(Domain):
     initial_data = {
         'objects': {},  # fullname -> docname, objtype
     }
-    
+
     def __init__(self, env):
         Domain.__init__(self, env)
         self.data['objects2'] = {}
@@ -1496,14 +1502,14 @@ class OCVDomain(Domain):
     def get_objects(self):
         for refname, (docname, type, theid) in self.data['objects'].iteritems():
             yield (refname, refname, type, docname, refname, 1)
-            
+
     def get_type_name(self, type, primary=False):
         """
         Return full name for given ObjType.
         """
         if primary:
             return type.lname
-            
+
         return {
             'class':         _('C++ class'),
             'struct':        _('C/C++ struct'),
@@ -1516,6 +1522,6 @@ class OCVDomain(Domain):
             'type':          _('C/C++ type'),
             'namespace':     _('C++ namespace'),
             }.get(type.lname, _('%s %s') % (self.label, type.lname))
-        
+
 def setup(app):
     app.add_domain(OCVDomain)
