@@ -203,7 +203,7 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
             	filteredContours.add(new MatOfPoint(contour));
             }
             
-            Imgproc.drawContours(mRgba, filteredContours, -1, new Scalar(255,0,0,255));
+            Core.drawContours(mRgba, filteredContours, -1, new Scalar(255,0,0,255));
             
             Mat testColorMat = mRgba.submat(2, 34, 2, 34);
             testColorMat.setTo(mSelectedColorRgba);

@@ -678,7 +678,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Imgproc.drawContours(gray0, contours, -1, new Scalar(0));
+        Core.drawContours(gray0, contours, -1, new Scalar(0));
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -688,7 +688,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), Core.FILLED);
+        Core.drawContours(gray0, contours, -1, new Scalar(0), Core.FILLED);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
