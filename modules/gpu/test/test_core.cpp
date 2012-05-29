@@ -850,7 +850,7 @@ TEST_P(Divide_Array, WithScale)
         cv::Mat dst_gold;
         cv::divide(mat1, mat2, dst_gold, scale, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-2 : 1.0);
     }
 }
 
@@ -1611,6 +1611,14 @@ TEST_P(Compare_Scalar, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Scalar sc = randomScalar(0.0, 255.0);
+
+    if (src.depth() < CV_32F)
+    {
+        sc.val[0] = cvRound(sc.val[0]);
+        sc.val[1] = cvRound(sc.val[1]);
+        sc.val[2] = cvRound(sc.val[2]);
+        sc.val[3] = cvRound(sc.val[3]);
+    }
 
     if (src.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
     {

@@ -1037,6 +1037,11 @@ namespace
         }
     };
 
+    template <typename T> static inline bool isAligned(const T* ptr, size_t size)
+    {
+        return reinterpret_cast<size_t>(ptr) % size == 0;
+    }
+
     //////////////////////////////////////////////////////////////////////////
     // CudaFuncTable
 
@@ -1163,6 +1168,13 @@ namespace
             {
                 if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
                     CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+            }
+
+            bool aligned = isAligned(src.data, 16) && isAligned(dst.data, 16);
+            if (!aligned)
+            {
+                cv::gpu::convertTo(src, dst);
+                return;
             }
 
             const func_t func = funcs[src.depth()][dst.depth()][src.channels() - 1];

@@ -1158,11 +1158,8 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////////////////////////////////////////////////////////////
     // Compare
 
-#define TYPE_VEC(type, cn) typename TypeVec<type, cn>::vec_type
-
-    template <template <typename> class Op, typename T, int cn> struct Compare;
     template <template <typename> class Op, typename T>
-    struct Compare<Op, T, 1>: binary_function<T, T, uchar>
+    struct Compare: binary_function<T, T, uchar>
     {
         __device__ __forceinline__ uchar operator()(T src1, T src2) const
         {
@@ -1170,47 +1167,9 @@ namespace cv { namespace gpu { namespace device
             return static_cast<uchar>(static_cast<int>(op(src1, src2)) * 255);
         }
     };
-    template <template <typename> class Op, typename T>
-    struct Compare<Op, T, 2>: binary_function<TYPE_VEC(T, 2), TYPE_VEC(T, 2), TYPE_VEC(uchar, 2)>
-    {
-        __device__ __forceinline__ TYPE_VEC(uchar, 2) operator()(const TYPE_VEC(T, 2) & src1, const TYPE_VEC(T, 2) & src2) const
-        {
-            Op<T> op;
-            return VecTraits<TYPE_VEC(uchar, 2)>::make(
-                        static_cast<uchar>(static_cast<int>(op(src1.x, src2.x)) * 255),
-                        static_cast<uchar>(static_cast<int>(op(src1.y, src2.y)) * 255));
-        }
-    };
-    template <template <typename> class Op, typename T>
-    struct Compare<Op, T, 3>: binary_function<TYPE_VEC(T, 3), TYPE_VEC(T, 3), TYPE_VEC(uchar, 3)>
-    {
-        __device__ __forceinline__ TYPE_VEC(uchar, 3) operator()(const TYPE_VEC(T, 3) & src1, const TYPE_VEC(T, 3) & src2) const
-        {
-            Op<T> op;
-            return VecTraits<TYPE_VEC(uchar, 3)>::make(
-                        static_cast<uchar>(static_cast<int>(op(src1.x, src2.x)) * 255),
-                        static_cast<uchar>(static_cast<int>(op(src1.y, src2.y)) * 255),
-                        static_cast<uchar>(static_cast<int>(op(src1.z, src2.z)) * 255));
-        }
-    };
-    template <template <typename> class Op, typename T>
-    struct Compare<Op, T, 4>: binary_function<TYPE_VEC(T, 4), TYPE_VEC(T, 4), TYPE_VEC(uchar, 4)>
-    {
-        __device__ __forceinline__ TYPE_VEC(uchar, 4) operator()(const TYPE_VEC(T, 4) & src1, const TYPE_VEC(T, 4) & src2) const
-        {
-            Op<T> op;
-            return VecTraits<TYPE_VEC(uchar, 4)>::make(
-                        static_cast<uchar>(static_cast<int>(op(src1.x, src2.x)) * 255),
-                        static_cast<uchar>(static_cast<int>(op(src1.y, src2.y)) * 255),
-                        static_cast<uchar>(static_cast<int>(op(src1.z, src2.z)) * 255),
-                        static_cast<uchar>(static_cast<int>(op(src1.w, src2.w)) * 255));
-        }
-    };
-
-#undef TYPE_VEC
 
 #define IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(op, type, block_dim_y, shift) \
-    template <> struct TransformFunctorTraits< Compare<op, type, 1> > : DefaultTransformFunctorTraits< Compare<op, type, 1> > \
+    template <> struct TransformFunctorTraits< Compare<op, type> > : DefaultTransformFunctorTraits< Compare<op, type> > \
     { \
         enum { smart_block_dim_y = block_dim_y }; \
         enum { smart_shift = shift }; \
@@ -1233,7 +1192,7 @@ namespace cv { namespace gpu { namespace device
 
     template <template <typename> class Op, typename T> void compare(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream)
     {
-        Compare<Op, T, 1> op;
+        Compare<Op, T> op;
         cv::gpu::device::transform(static_cast< DevMem2D_<T> >(src1), static_cast< DevMem2D_<T> >(src2), dst, op, WithOutMask(), stream);
     }
 
@@ -1286,6 +1245,95 @@ namespace cv { namespace gpu { namespace device
     template void compare_le<float >(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
     template void compare_le<double>(DevMem2Db src1, DevMem2Db src2, DevMem2Db dst, cudaStream_t stream);
 
+#define TYPE_VEC(type, cn) typename TypeVec<type, cn>::vec_type
+
+    template <template <typename> class Op, typename T, int cn> struct CompareScalar;
+    template <template <typename> class Op, typename T>
+    struct CompareScalar<Op, T, 1>: unary_function<T, uchar>
+    {
+        const T val;
+
+        __host__ explicit CompareScalar(T val) : val(val) {}
+
+        __device__ __forceinline__ uchar operator()(T src) const
+        {
+            Op<T> op;
+            return static_cast<uchar>(static_cast<int>(op(src, val)) * 255);
+        }
+    };
+    template <template <typename> class Op, typename T>
+    struct CompareScalar<Op, T, 2>: unary_function<TYPE_VEC(T, 2), TYPE_VEC(uchar, 2)>
+    {
+        const TYPE_VEC(T, 2) val;
+
+        __host__ explicit CompareScalar(TYPE_VEC(T, 2) val) : val(val) {}
+
+        __device__ __forceinline__ TYPE_VEC(uchar, 2) operator()(const TYPE_VEC(T, 2) & src) const
+        {
+            Op<T> op;
+            return VecTraits<TYPE_VEC(uchar, 2)>::make(
+                        static_cast<uchar>(static_cast<int>(op(src.x, val.x)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src.y, val.y)) * 255));
+        }
+    };
+    template <template <typename> class Op, typename T>
+    struct CompareScalar<Op, T, 3>: unary_function<TYPE_VEC(T, 3), TYPE_VEC(uchar, 3)>
+    {
+        const TYPE_VEC(T, 3) val;
+
+        __host__ explicit CompareScalar(TYPE_VEC(T, 3) val) : val(val) {}
+
+        __device__ __forceinline__ TYPE_VEC(uchar, 3) operator()(const TYPE_VEC(T, 3) & src) const
+        {
+            Op<T> op;
+            return VecTraits<TYPE_VEC(uchar, 3)>::make(
+                        static_cast<uchar>(static_cast<int>(op(src.x, val.x)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src.y, val.y)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src.z, val.z)) * 255));
+        }
+    };
+    template <template <typename> class Op, typename T>
+    struct CompareScalar<Op, T, 4>: unary_function<TYPE_VEC(T, 4), TYPE_VEC(uchar, 4)>
+    {
+        const TYPE_VEC(T, 4) val;
+
+        __host__ explicit CompareScalar(TYPE_VEC(T, 4) val) : val(val) {}
+
+        __device__ __forceinline__ TYPE_VEC(uchar, 4) operator()(const TYPE_VEC(T, 4) & src) const
+        {
+            Op<T> op;
+            return VecTraits<TYPE_VEC(uchar, 4)>::make(
+                        static_cast<uchar>(static_cast<int>(op(src.x, val.x)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src.y, val.y)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src.z, val.z)) * 255),
+                        static_cast<uchar>(static_cast<int>(op(src.w, val.w)) * 255));
+        }
+    };
+
+#undef TYPE_VEC
+
+#define IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(op, type, block_dim_y, shift) \
+    template <> struct TransformFunctorTraits< CompareScalar<op, type, 1> > : DefaultTransformFunctorTraits< CompareScalar<op, type, 1> > \
+    { \
+        enum { smart_block_dim_y = block_dim_y }; \
+        enum { smart_shift = shift }; \
+    };
+
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, float, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, int, 8, 4)
+    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, float, 8, 4)
+
+#undef IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS
+
     template <template <typename> class Op, typename T, int cn> void compare(DevMem2Db src, double val[4], DevMem2Db dst, cudaStream_t stream)
     {
         typedef typename TypeVec<T, cn>::vec_type src_t;
@@ -1294,9 +1342,9 @@ namespace cv { namespace gpu { namespace device
         T sval[] = {static_cast<T>(val[0]), static_cast<T>(val[1]), static_cast<T>(val[2]), static_cast<T>(val[3])};
         src_t val1 = VecTraits<src_t>::make(sval);
 
-        Compare<Op, T, cn> op;
+        CompareScalar<Op, T, cn> op(val1);
 
-        cv::gpu::device::transform(static_cast< DevMem2D_<src_t> >(src), static_cast< DevMem2D_<dst_t> >(dst), cv::gpu::device::bind2nd(op, val1), WithOutMask(), stream);
+        cv::gpu::device::transform(static_cast< DevMem2D_<src_t> >(src), static_cast< DevMem2D_<dst_t> >(dst), op, WithOutMask(), stream);
     }
 
     template <typename T> void compare_eq(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream)
@@ -1431,7 +1479,6 @@ namespace cv { namespace gpu { namespace device
     template void compare_ge<int   >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
     template void compare_ge<float >(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
     template void compare_ge<double>(DevMem2Db src, int cn, double val[4], DevMem2Db dst, cudaStream_t stream);
-
 
     //////////////////////////////////////////////////////////////////////////
     // Unary bitwise logical matrix operations
