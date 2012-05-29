@@ -48,29 +48,29 @@ SURF
 ----
 .. ocv:class:: SURF : public Feature2D
 
-Class for extracting Speeded Up Robust Features from an image [Bay06]_. The class is derived from ``CvSURFParams`` structure, which specifies the algorithm parameters:
+  Class for extracting Speeded Up Robust Features from an image [Bay06]_. The class is derived from ``CvSURFParams`` structure, which specifies the algorithm parameters:
 
-    .. ocv:member:: int extended
+  .. ocv:member:: int extended
 
-        * 0 means that the basic descriptors (64 elements each) shall be computed
-        * 1 means that the extended descriptors (128 elements each) shall be computed
+     * 0 means that the basic descriptors (64 elements each) shall be computed
+     * 1 means that the extended descriptors (128 elements each) shall be computed
 
-    .. ocv:member:: int upright
+  .. ocv:member:: int upright
 
-        * 0 means that detector computes orientation of each feature.
-        * 1 means that the orientation is not computed (which is much, much faster). For example, if you match images from a stereo pair, or do image stitching, the matched features likely have very similar angles, and you can speed up feature extraction by setting ``upright=1``.
+     * 0 means that detector computes orientation of each feature.
+     * 1 means that the orientation is not computed (which is much, much faster). For example, if you match images from a stereo pair, or do image stitching, the matched features likely have very similar angles, and you can speed up feature extraction by setting ``upright=1``.
 
-    .. ocv:member:: double hessianThreshold
+  .. ocv:member:: double hessianThreshold
 
-        Threshold for the keypoint detector. Only features, whose hessian is larger than ``hessianThreshold`` are retained by the detector. Therefore, the larger the value, the less keypoints you will get. A good default value could be from 300 to 500, depending from the image contrast.
+     Threshold for the keypoint detector. Only features, whose hessian is larger than ``hessianThreshold`` are retained by the detector. Therefore, the larger the value, the less keypoints you will get. A good default value could be from 300 to 500, depending from the image contrast.
 
-    .. ocv:member:: int nOctaves
+  .. ocv:member:: int nOctaves
 
-        The number of a gaussian pyramid octaves that the detector uses. It is set to 4 by default. If you want to get very large features, use the larger value. If you want just small features, decrease it.
+     The number of a gaussian pyramid octaves that the detector uses. It is set to 4 by default. If you want to get very large features, use the larger value. If you want just small features, decrease it.
 
-    .. ocv:member:: int nOctaveLayers
+  .. ocv:member:: int nOctaveLayers
 
-        The number of images within each octave of a gaussian pyramid. It is set to 2 by default.
+     The number of images within each octave of a gaussian pyramid. It is set to 2 by default.
 
 
 .. [Bay06] Bay, H. and Tuytelaars, T. and Van Gool, L. "SURF: Speeded Up Robust Features", 9th European Conference on Computer Vision, 2006

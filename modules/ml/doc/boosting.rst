@@ -69,6 +69,17 @@ CvBoostParams
 
     Boosting training parameters.
 
+    There is one structure member that you can set directly:
+
+  .. ocv:member:: int split_criteria
+
+     Splitting criteria used to choose optimal splits during a weak tree construction. Possible values are:
+
+        * **CvBoost::DEFAULT** Use the default for the particular boosting method, see below.
+        * **CvBoost::GINI** Use Gini index. This is default option for Real AdaBoost; may be also used for Discrete AdaBoost.
+        * **CvBoost::MISCLASS** Use misclassification rate. This is default option for Discrete AdaBoost; may be also used for Real AdaBoost.
+        * **CvBoost::SQERR** Use least squares criteria. This is default and the only option for LogitBoost and Gentle AdaBoost.
+
 The structure is derived from :ocv:class:`CvDTreeParams` but not all of the decision tree parameters are supported. In particular, cross-validation is not supported.
 
 All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
@@ -95,17 +106,6 @@ The constructors.
     :param weight_trim_rate: A threshold between 0 and 1 used to save computational time. Samples with summary weight :math:`\leq 1 - weight\_trim\_rate` do not participate in the *next* iteration of training. Set this parameter to 0 to turn off this functionality.
 
 See :ocv:func:`CvDTreeParams::CvDTreeParams` for description of other parameters.
-
-Also there is one structure member that you can set directly:
-
-.. ocv:member:: int split_criteria
-
-    Splitting criteria used to choose optimal splits during a weak tree construction. Possible values are:
-
-        * **CvBoost::DEFAULT** Use the default for the particular boosting method, see below.
-        * **CvBoost::GINI** Use Gini index. This is default option for Real AdaBoost; may be also used for Discrete AdaBoost.
-        * **CvBoost::MISCLASS** Use misclassification rate. This is default option for Discrete AdaBoost; may be also used for Real AdaBoost.
-        * **CvBoost::SQERR** Use least squares criteria. This is default and the only option for LogitBoost and Gentle AdaBoost.
 
 Default parameters are:
 

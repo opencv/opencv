@@ -10,27 +10,27 @@ CvMemStorage
 
 .. ocv:struct:: CvMemStorage
 
-A storage for various OpenCV dynamic data structures, such as ``CvSeq``, ``CvSet`` etc.
+  A storage for various OpenCV dynamic data structures, such as ``CvSeq``, ``CvSet`` etc.
 
-    .. ocv:member:: CvMemBlock* bottom
+  .. ocv:member:: CvMemBlock* bottom
 
-        the first memory block in the double-linked list of blocks
+     the first memory block in the double-linked list of blocks
 
-    .. ocv:member:: CvMemBlock* top
+  .. ocv:member:: CvMemBlock* top
 
-        the current partially allocated memory block in the list of blocks
+     the current partially allocated memory block in the list of blocks
 
-    .. ocv:member:: CvMemStorage* parent
+  .. ocv:member:: CvMemStorage* parent
 
-        the parent storage (if any) from which the new memory blocks are borrowed.
+     the parent storage (if any) from which the new memory blocks are borrowed.
 
-    .. ocv:member:: int free_space
+  .. ocv:member:: int free_space
 
-        number of free bytes in the ``top`` block
+     number of free bytes in the ``top`` block
 
-    .. ocv:member:: int block_size
+  .. ocv:member:: int block_size
 
-        the total size of the memory blocks
+     the total size of the memory blocks
 
 Memory storage is a low-level structure used to store dynamically growing data structures such as sequences, contours, graphs, subdivisions, etc. It is organized as a list of memory blocks of equal size -
 ``bottom`` field is the beginning of the list of blocks and ``top`` is the currently used block, but not necessarily the last block of the list. All blocks between ``bottom`` and ``top``, not including the
@@ -64,38 +64,38 @@ CvSeq
 
 .. ocv:struct:: CvSeq
 
-Dynamically growing sequence.
+  Dynamically growing sequence.
 
-    .. ocv:member:: int flags
+  .. ocv:member:: int flags
 
-        sequence flags, including the sequence signature (CV_SEQ_MAGIC_VAL or CV_SET_MAGIC_VAL), type of the elements and some other information about the sequence.
+     sequence flags, including the sequence signature (CV_SEQ_MAGIC_VAL or CV_SET_MAGIC_VAL), type of the elements and some other information about the sequence.
 
-    .. ocv:member:: int header_size
+  .. ocv:member:: int header_size
 
-        size of the sequence header. It should be sizeof(CvSeq) at minimum. See :ocv:cfunc:`CreateSeq`.
+     size of the sequence header. It should be sizeof(CvSeq) at minimum. See :ocv:cfunc:`CreateSeq`.
 
-    .. ocv:member:: CvSeq* h_prev
-    .. ocv:member:: CvSeq* h_next
-    .. ocv:member:: CvSeq* v_prev
-    .. ocv:member:: CvSeq* v_next
+  .. ocv:member:: CvSeq* h_prev
+  .. ocv:member:: CvSeq* h_next
+  .. ocv:member:: CvSeq* v_prev
+  .. ocv:member:: CvSeq* v_next
 
-        pointers to another sequences in a sequence tree. Sequence trees are used to store hierarchical contour structures, retrieved by :ocv:cfunc:`FindContours`
+     pointers to another sequences in a sequence tree. Sequence trees are used to store hierarchical contour structures, retrieved by :ocv:cfunc:`FindContours`
 
-    .. ocv:member:: int total
+  .. ocv:member:: int total
 
-        the number of sequence elements
+     the number of sequence elements
 
-    .. ocv:member:: int elem_size
+  .. ocv:member:: int elem_size
 
-        size of each sequence element in bytes
+     size of each sequence element in bytes
 
-    .. ocv:member:: CvMemStorage* storage
+  .. ocv:member:: CvMemStorage* storage
 
-        memory storage where the sequence resides. It can be a NULL pointer.
+     memory storage where the sequence resides. It can be a NULL pointer.
 
-    .. ocv:member:: CvSeqBlock* first
+  .. ocv:member:: CvSeqBlock* first
 
-        pointer to the first data block
+     pointer to the first data block
 
 The structure ``CvSeq`` is a base for all of OpenCV dynamic data structures.
 There are two types of sequences - dense and sparse. The base type for dense

@@ -258,7 +258,7 @@ Creates a descriptor matcher of a given type with the default parameters (using 
 
 BFMatcher
 -----------------
-.. ocv:class::BFMatcher : public DescriptorMatcher
+.. ocv:class:: BFMatcher : public DescriptorMatcher
 
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches of descriptor sets.
 

@@ -1301,6 +1301,9 @@ class OCVMemberObject(OCVObject):
         return ''
 
     def parse_definition(self, parser):
+        parent_class = self.env.temp_data.get('ocv:parent')
+        if parent_class is None:
+            parser.fail("missing parent structure/class")
         return parser.parse_member_object()
 
     def describe_signature(self, signode, obj):

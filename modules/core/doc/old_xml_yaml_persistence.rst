@@ -48,41 +48,41 @@ CvFileNode
 
 .. ocv:struct:: CvFileNode
 
-File storage node. When XML/YAML file is read, it is first parsed and stored in the memory as a hierarchical collection of nodes. Each node can be a "leaf", that is, contain a single number or a string, or be a collection of other nodes. Collections are also referenced to as "structures" in the data writing functions. There can be named collections (mappings), where each element has a name and is accessed by a name, and ordered collections (sequences), where elements do not have names, but rather accessed by index.
+  File storage node. When XML/YAML file is read, it is first parsed and stored in the memory as a hierarchical collection of nodes. Each node can be a "leaf", that is, contain a single number or a string, or be a collection of other nodes. Collections are also referenced to as "structures" in the data writing functions. There can be named collections (mappings), where each element has a name and is accessed by a name, and ordered collections (sequences), where elements do not have names, but rather accessed by index.
 
-    .. ocv:member:: int tag
+  .. ocv:member:: int tag
 
-        type of the file node:
+     type of the file node:
 
-            * CV_NODE_NONE - empty node
-            * CV_NODE_INT - an integer
-            * CV_NODE_REAL - a floating-point number
-            * CV_NODE_STR - text string
-            * CV_NODE_SEQ - a sequence
-            * CV_NODE_MAP - a mapping
+       * CV_NODE_NONE - empty node
+       * CV_NODE_INT - an integer
+       * CV_NODE_REAL - a floating-point number
+       * CV_NODE_STR - text string
+       * CV_NODE_SEQ - a sequence
+       * CV_NODE_MAP - a mapping
 
-        type of the node can be retrieved using ``CV_NODE_TYPE(node->tag)`` macro.
+     type of the node can be retrieved using ``CV_NODE_TYPE(node->tag)`` macro.
 
-    .. ocv:member:: CvTypeInfo* info
+  .. ocv:member:: CvTypeInfo* info
 
-        optional pointer to the user type information. If you look at the matrix representation in XML and YAML, shown above, you may notice ``type_id="opencv-matrix"`` or ``!!opencv-matrix`` strings. They are used to specify that the certain element of a file is a representation of a data structure of certain type  ("opencv-matrix" corresponds to :ocv:struct:`CvMat`). When a file is parsed, such type identifiers are passed to :ocv:cfunc:`FindType` to find type information and the pointer to it is stored in the file node. See :ocv:struct:`CvTypeInfo` for more details.
+     optional pointer to the user type information. If you look at the matrix representation in XML and YAML, shown above, you may notice ``type_id="opencv-matrix"`` or ``!!opencv-matrix`` strings. They are used to specify that the certain element of a file is a representation of a data structure of certain type  ("opencv-matrix" corresponds to :ocv:struct:`CvMat`). When a file is parsed, such type identifiers are passed to :ocv:cfunc:`FindType` to find type information and the pointer to it is stored in the file node. See :ocv:struct:`CvTypeInfo` for more details.
 
-    .. ocv:member:: union data
+  .. ocv:member:: union data
 
-        the node data, declared as: ::
+     the node data, declared as: ::
 
-            union
-            {
-                double f; /* scalar floating-point number */
-                int i;    /* scalar integer number */
-                CvString str; /* text string */
-                CvSeq* seq; /* sequence (ordered collection of file nodes) */
-                struct CvMap* map; /* map (collection of named file nodes) */
-            } data;
+        union
+        {
+            double f; /* scalar floating-point number */
+            int i;    /* scalar integer number */
+            CvString str; /* text string */
+            CvSeq* seq; /* sequence (ordered collection of file nodes) */
+            struct CvMap* map; /* map (collection of named file nodes) */
+        } data;
 
-        ..
+     ..
 
-        Primitive nodes are read using :ocv:cfunc:`ReadInt`, :ocv:cfunc:`ReadReal` and :ocv:cfunc:`ReadString`. Sequences are read by iterating through ``node->data.seq`` (see "Dynamic Data Structures" section). Mappings are read using :ocv:cfunc:`GetFileNodeByName`. Nodes with the specified type (so that ``node->info != NULL``) can be read using :ocv:cfunc:`Read`.
+     Primitive nodes are read using :ocv:cfunc:`ReadInt`, :ocv:cfunc:`ReadReal` and :ocv:cfunc:`ReadString`. Sequences are read by iterating through ``node->data.seq`` (see "Dynamic Data Structures" section). Mappings are read using :ocv:cfunc:`GetFileNodeByName`. Nodes with the specified type (so that ``node->info != NULL``) can be read using :ocv:cfunc:`Read`.
 
 CvAttrList
 ----------

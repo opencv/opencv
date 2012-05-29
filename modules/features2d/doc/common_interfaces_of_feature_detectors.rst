@@ -12,31 +12,31 @@ KeyPoint
 --------
 .. ocv:class:: KeyPoint
 
-Data structure for salient point detectors.
+  Data structure for salient point detectors.
 
-    .. ocv:member:: Point2f pt
+  .. ocv:member:: Point2f pt
 
-        coordinates of the keypoint
+     coordinates of the keypoint
 
-    .. ocv:member:: float size
+  .. ocv:member:: float size
 
-         diameter of the meaningful keypoint neighborhood
+     diameter of the meaningful keypoint neighborhood
 
-    .. ocv:member:: float angle
+  .. ocv:member:: float angle
 
-        computed orientation of the keypoint (-1 if not applicable)
+     computed orientation of the keypoint (-1 if not applicable)
 
-    .. ocv:member:: float response
+  .. ocv:member:: float response
 
-        the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
+     the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
 
-    .. ocv:member:: int octave
+  .. ocv:member:: int octave
 
-        octave (pyramid layer) from which the keypoint has been extracted
+     octave (pyramid layer) from which the keypoint has been extracted
 
-    .. ocv:member:: int class_id
+  .. ocv:member:: int class_id
 
-        object id that can be used to clustered keypoints by an object they belong to
+     object id that can be used to clustered keypoints by an object they belong to
 
 KeyPoint::KeyPoint
 ------------------

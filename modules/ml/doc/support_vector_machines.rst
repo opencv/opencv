@@ -18,19 +18,19 @@ CvParamGrid
 -----------
 .. ocv:struct:: CvParamGrid
 
-The structure represents the logarithmic grid range of statmodel parameters. It is used for optimizing statmodel accuracy by varying model parameters, the accuracy estimate being computed by cross-validation.
+  The structure represents the logarithmic grid range of statmodel parameters. It is used for optimizing statmodel accuracy by varying model parameters, the accuracy estimate being computed by cross-validation.
 
-.. ocv:member:: double CvParamGrid::min_val
+  .. ocv:member:: double CvParamGrid::min_val
 
-    Minimum value of the statmodel parameter.
+     Minimum value of the statmodel parameter.
 
-.. ocv:member:: double CvParamGrid::max_val
+  .. ocv:member:: double CvParamGrid::max_val
 
-    Maximum value of the statmodel parameter.
+     Maximum value of the statmodel parameter.
 
-.. ocv:member:: double CvParamGrid::step
+  .. ocv:member:: double CvParamGrid::step
 
-    Logarithmic step for iterating the statmodel parameter.
+     Logarithmic step for iterating the statmodel parameter.
 
 The grid determines the following iteration sequence of the statmodel parameter values:
 

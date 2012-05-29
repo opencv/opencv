@@ -60,84 +60,84 @@ CvDTreeSplit
 .. ocv:struct:: CvDTreeSplit
 
 
-The structure represents a possible decision tree node split. It has public members:
+  The structure represents a possible decision tree node split. It has public members:
 
-.. ocv:member:: int var_idx
+  .. ocv:member:: int var_idx
 
-    Index of variable on which the split is created.
+     Index of variable on which the split is created.
 
-.. ocv:member:: int inversed
+  .. ocv:member:: int inversed
 
-    If it is not null then inverse split rule is used that is left and right branches are exchanged in the rule expressions below.
+     If it is not null then inverse split rule is used that is left and right branches are exchanged in the rule expressions below.
 
-.. ocv:member:: float quality
+  .. ocv:member:: float quality
 
-    The split quality, a positive number. It is used to choose the best primary split, then to choose and sort the surrogate splits. After the tree is constructed, it is also used to compute variable importance.
+     The split quality, a positive number. It is used to choose the best primary split, then to choose and sort the surrogate splits. After the tree is constructed, it is also used to compute variable importance.
 
-.. ocv:member:: CvDTreeSplit* next
+  .. ocv:member:: CvDTreeSplit* next
 
-    Pointer to the next split in the node list of splits.
+     Pointer to the next split in the node list of splits.
 
-.. ocv:member:: int[] subset
+  .. ocv:member:: int[] subset
 
-    Bit array indicating the value subset in case of split on a categorical variable. The rule is: ::
+     Bit array indicating the value subset in case of split on a categorical variable. The rule is: ::
 
         if var_value in subset
           then next_node <- left
           else next_node <- right
 
-.. ocv:member:: float ord::c
+  .. ocv:member:: float ord::c
 
-    The threshold value in case of split on an ordered variable. The rule is: ::
+     The threshold value in case of split on an ordered variable. The rule is: ::
 
         if var_value < ord.c
           then next_node<-left
           else next_node<-right
 
-.. ocv:member:: int ord::split_point
+  .. ocv:member:: int ord::split_point
 
-    Used internally by the training algorithm.
+     Used internally by the training algorithm.
 
 CvDTreeNode
 -----------
 .. ocv:struct:: CvDTreeNode
 
 
-The structure represents a node in a decision tree. It has public members:
+  The structure represents a node in a decision tree. It has public members:
 
-.. ocv:member:: int class_idx
+  .. ocv:member:: int class_idx
 
     Class index normalized to 0..class_count-1 range and assigned to the node. It is used internally in classification trees and tree ensembles.
 
-.. ocv:member:: int Tn
+  .. ocv:member:: int Tn
 
     Tree index in a ordered sequence of pruned trees. The indices are used during and after the pruning procedure. The root node has the maximum value ``Tn`` of the whole tree, child nodes have ``Tn`` less than or equal to the parent's ``Tn``, and nodes with :math:`Tn \leq CvDTree::pruned\_tree\_idx` are not used at prediction stage (the corresponding branches are considered as cut-off), even if they have not been physically deleted from the tree at the pruning stage.
 
-.. ocv:member:: double value
+  .. ocv:member:: double value
 
     Value at the node: a class label in case of classification or estimated function value in case of regression.
 
-.. ocv:member:: CvDTreeNode* parent
+  .. ocv:member:: CvDTreeNode* parent
 
     Pointer to the parent node.
 
-.. ocv:member:: CvDTreeNode* left
+  .. ocv:member:: CvDTreeNode* left
 
     Pointer to the left child node.
 
-.. ocv:member:: CvDTreeNode* right
+  .. ocv:member:: CvDTreeNode* right
 
     Pointer to the right child node.
 
-.. ocv:member:: CvDTreeSplit* split
+  .. ocv:member:: CvDTreeSplit* split
 
     Pointer to the first (primary) split in the node list of splits.
 
-.. ocv:member:: int sample_count
+  .. ocv:member:: int sample_count
 
     The number of samples that fall into the node at the training stage. It is used to resolve the difficult cases - when the variable for the primary split is missing and all the variables for other surrogate splits are missing too. In this case the sample is directed to the left if ``left->sample_count > right->sample_count`` and to the right otherwise.
 
-.. ocv:member:: int depth
+  .. ocv:member:: int depth
 
     Depth of the node. The root node depth is 0, the child nodes depth is the parent's depth + 1.
 

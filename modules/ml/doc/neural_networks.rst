@@ -99,39 +99,39 @@ CvANN_MLP_TrainParams
 ---------------------
 .. ocv:struct:: CvANN_MLP_TrainParams
 
-Parameters of the MLP training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
+  Parameters of the MLP training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
 
-The back-propagation algorithm parameters:
+  The back-propagation algorithm parameters:
 
-.. ocv:member:: double bp_dw_scale
+  .. ocv:member:: double bp_dw_scale
 
-    Strength of the weight gradient term. The recommended value is about 0.1.
+     Strength of the weight gradient term. The recommended value is about 0.1.
 
-.. ocv:member:: double bp_moment_scale
+  .. ocv:member:: double bp_moment_scale
 
-    Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough
+     Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough
 
-The RPROP algorithm parameters (see [RPROP93]_ for details):
+  The RPROP algorithm parameters (see [RPROP93]_ for details):
 
-.. ocv:member:: double rp_dw0
+  .. ocv:member:: double rp_dw0
 
-    Initial value :math:`\Delta_0` of update-values :math:`\Delta_{ij}`.
+     Initial value :math:`\Delta_0` of update-values :math:`\Delta_{ij}`.
 
-.. ocv:member:: double rp_dw_plus
+  .. ocv:member:: double rp_dw_plus
 
-    Increase factor :math:`\eta^+`. It must be >1.
+     Increase factor :math:`\eta^+`. It must be >1.
 
-.. ocv:member:: double rp_dw_minus
+  .. ocv:member:: double rp_dw_minus
 
-    Decrease factor :math:`\eta^-`. It must be <1.
+     Decrease factor :math:`\eta^-`. It must be <1.
 
-.. ocv:member:: double rp_dw_min
+  .. ocv:member:: double rp_dw_min
 
-    Update-values lower limit :math:`\Delta_{min}`. It must be positive.
+     Update-values lower limit :math:`\Delta_{min}`. It must be positive.
 
-.. ocv:member:: double rp_dw_max
+  .. ocv:member:: double rp_dw_max
 
-    Update-values upper limit :math:`\Delta_{max}`. It must be >1.
+     Update-values upper limit :math:`\Delta_{max}`. It must be >1.
 
 
 CvANN_MLP_TrainParams::CvANN_MLP_TrainParams

@@ -45,97 +45,97 @@ CvLSVMFilterPosition
 --------------------
 .. ocv:struct:: CvLSVMFilterPosition
 
-Structure describes the position of the filter in the feature pyramid.
+  Structure describes the position of the filter in the feature pyramid.
 
-    .. ocv:member:: unsigned int l
+  .. ocv:member:: unsigned int l
 
-        level in the feature pyramid
+     level in the feature pyramid
 
-    .. ocv:member:: unsigned int x
+  .. ocv:member:: unsigned int x
 
-        x-coordinate in level l
+     x-coordinate in level l
 
-    .. ocv:member:: unsigned int y
+  .. ocv:member:: unsigned int y
 
-        y-coordinate in level l
+     y-coordinate in level l
 
 
 CvLSVMFilterObject
 ------------------
 .. ocv:struct:: CvLSVMFilterObject
 
-Description of the filter, which corresponds to the part of the object.
+  Description of the filter, which corresponds to the part of the object.
 
-    .. ocv:member:: CvLSVMFilterPosition V
+  .. ocv:member:: CvLSVMFilterPosition V
 
-        ideal (penalty = 0) position of the partial filter
-        from the root filter position (V_i in the paper)
+     ideal (penalty = 0) position of the partial filter
+     from the root filter position (V_i in the paper)
 
-    .. ocv:member:: float fineFunction[4]
+  .. ocv:member:: float fineFunction[4]
 
-        vector describes penalty function (d_i in the paper)
-        pf[0] * x + pf[1] * y + pf[2] * x^2 + pf[3] * y^2
+     vector describes penalty function (d_i in the paper)
+     pf[0] * x + pf[1] * y + pf[2] * x^2 + pf[3] * y^2
 
-    .. ocv:member:: int sizeX
-    .. ocv:member:: int sizeY
+  .. ocv:member:: int sizeX
+  .. ocv:member:: int sizeY
 
-        Rectangular map (sizeX x sizeY),
-        every cell stores feature vector (dimension = p)
+     Rectangular map (sizeX x sizeY),
+     every cell stores feature vector (dimension = p)
 
-    .. ocv:member:: int numFeatures
+  .. ocv:member:: int numFeatures
 
-        number of features
+     number of features
 
-    .. ocv:member:: float *H
+  .. ocv:member:: float *H
 
-        matrix of feature vectors to set and get
-        feature vectors (i,j) used formula H[(j * sizeX + i) * p + k],
-        where k - component of feature vector in cell (i, j)
+     matrix of feature vectors to set and get
+     feature vectors (i,j) used formula H[(j * sizeX + i) * p + k],
+     where k - component of feature vector in cell (i, j)
 
 CvLatentSvmDetector
 -------------------
 .. ocv:struct:: CvLatentSvmDetector
 
-Structure contains internal representation of trained Latent SVM detector.
+  Structure contains internal representation of trained Latent SVM detector.
 
-    .. ocv:member:: int num_filters
+  .. ocv:member:: int num_filters
 
-        total number of filters (root plus part) in model
+     total number of filters (root plus part) in model
 
-    .. ocv:member:: int num_components
+  .. ocv:member:: int num_components
 
-        number of components in model
+     number of components in model
 
-    .. ocv:member:: int* num_part_filters
+  .. ocv:member:: int* num_part_filters
 
-        array containing number of part filters for each component
+     array containing number of part filters for each component
 
-    .. ocv:member:: CvLSVMFilterObject** filters
+  .. ocv:member:: CvLSVMFilterObject** filters
 
-        root and part filters for all model components
+     root and part filters for all model components
 
-    .. ocv:member:: float* b
+  .. ocv:member:: float* b
 
-        biases for all model components
+     biases for all model components
 
-    .. ocv:member:: float score_threshold
+  .. ocv:member:: float score_threshold
 
-        confidence level threshold
+     confidence level threshold
 
 
 CvObjectDetection
 -----------------
 .. ocv:struct:: CvObjectDetection
 
-Structure contains the bounding box and confidence level for detected object.
+  Structure contains the bounding box and confidence level for detected object.
 
-    .. ocv:member:: CvRect rect
+  .. ocv:member:: CvRect rect
 
-        bounding box for a detected object
+     bounding box for a detected object
 
-    .. ocv:member:: float score
+  .. ocv:member:: float score
 
-        confidence level
+     confidence level
 
 
 cvLoadLatentSvmDetector
@@ -183,19 +183,19 @@ LatentSvmDetector::ObjectDetection
 ----------------------------------
 .. ocv:struct:: LatentSvmDetector::ObjectDetection
 
-Structure contains the detection information.
+  Structure contains the detection information.
 
-    .. ocv:member:: Rect rect
+  .. ocv:member:: Rect rect
 
-        bounding box for a detected object
+     bounding box for a detected object
 
-    .. ocv:member:: float score
+  .. ocv:member:: float score
 
-        confidence level
+     confidence level
 
-    .. ocv:member:: int classID
+  .. ocv:member:: int classID
 
-        class (model or detector) ID that detect an object
+     class (model or detector) ID that detect an object
 
 
 LatentSvmDetector::LatentSvmDetector

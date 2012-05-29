@@ -10,15 +10,15 @@ CvPoint
 
 .. ocv:struct:: CvPoint
 
-2D point with integer coordinates (usually zero-based).
+  2D point with integer coordinates (usually zero-based).
 
-    .. ocv:member:: int x
+  .. ocv:member:: int x
 
-        x-coordinate
+     x-coordinate
 
-    .. ocv:member:: int y
+  .. ocv:member:: int y
 
-        y-coordinate
+     y-coordinate
 
 .. ocv:cfunction:: CvPoint cvPoint( int x, int y )
 
@@ -35,15 +35,15 @@ CvPoint2D32f
 
 .. ocv:struct:: CvPoint2D32f
 
-2D point with floating-point coordinates.
+  2D point with floating-point coordinates.
 
-    .. ocv:member:: float x
+  .. ocv:member:: float x
 
-        x-coordinate
+     x-coordinate
 
-    .. ocv:member:: float y
+  .. ocv:member:: float y
 
-        y-coordinate
+     y-coordinate
 
 .. ocv:cfunction:: CvPoint2D32f cvPoint2D32f( double x, double y )
 
@@ -60,19 +60,19 @@ CvPoint3D32f
 
 .. ocv:struct:: CvPoint3D32f
 
-3D point with floating-point coordinates
+  3D point with floating-point coordinates
 
-    .. ocv:member:: float x
+  .. ocv:member:: float x
 
-        x-coordinate
+     x-coordinate
 
-    .. ocv:member:: float y
+  .. ocv:member:: float y
 
-        y-coordinate
+     y-coordinate
 
-    .. ocv:member:: float z
+  .. ocv:member:: float z
 
-        z-coordinate
+     z-coordinate
 
 .. ocv:cfunction:: CvPoint3D32f cvPoint3D32f( double x, double y, double z )
 
@@ -85,15 +85,15 @@ CvPoint2D64f
 
 .. ocv:struct:: CvPoint2D64f
 
-2D point with double-precision floating-point coordinates.
+  2D point with double-precision floating-point coordinates.
 
-    .. ocv:member:: double x
+  .. ocv:member:: double x
 
-        x-coordinate
+     x-coordinate
 
-    .. ocv:member:: double y
+  .. ocv:member:: double y
 
-        y-coordinate
+     y-coordinate
 
 .. ocv:cfunction:: CvPoint2D64f cvPoint2D64f( double x, double y )
 
@@ -106,17 +106,17 @@ CvPoint3D64f
 
 .. ocv:struct:: CvPoint3D64f
 
-3D point with double-precision floating-point coordinates.
+  3D point with double-precision floating-point coordinates.
 
-    .. ocv:member:: double x
+  .. ocv:member:: double x
 
-        x-coordinate
+     x-coordinate
 
-    .. ocv:member:: double y
+  .. ocv:member:: double y
 
-        y-coordinate
+     y-coordinate
 
-    .. ocv:member:: double z
+  .. ocv:member:: double z
 
 .. ocv:cfunction:: CvPoint3D64f cvPoint3D64f( double x, double y, double z )
 
@@ -129,15 +129,15 @@ CvSize
 
 .. ocv:struct:: CvSize
 
-Size of a rectangle or an image.
+  Size of a rectangle or an image.
 
-    .. ocv:member:: int width
+  .. ocv:member:: int width
 
-        Width of the rectangle
+     Width of the rectangle
 
-    .. ocv:member:: int height
+  .. ocv:member:: int height
 
-        Height of the rectangle
+     Height of the rectangle
 
 .. ocv:cfunction:: CvSize cvSize( int width, int height )
 
@@ -150,15 +150,15 @@ CvSize2D32f
 
 .. ocv:struct:: CvSize2D32f
 
-Sub-pixel accurate size of a rectangle.
+  Sub-pixel accurate size of a rectangle.
 
-    .. ocv:member:: float width
+  .. ocv:member:: float width
 
-        Width of the rectangle
+     Width of the rectangle
 
-    .. ocv:member:: float height
+  .. ocv:member:: float height
 
-        Height of the rectangle
+     Height of the rectangle
 
 .. ocv:cfunction:: CvSize2D32f cvSize2D32f( double width, double height )
 
@@ -171,23 +171,23 @@ CvRect
 
 .. ocv:struct:: CvRect
 
-Stores coordinates of a rectangle.
+  Stores coordinates of a rectangle.
 
-    .. ocv:member:: int x
+  .. ocv:member:: int x
 
-        x-coordinate of the top-left corner
+     x-coordinate of the top-left corner
 
-    .. ocv:member:: int y
+  .. ocv:member:: int y
 
-        y-coordinate of the top-left corner (sometimes bottom-left corner)
+     y-coordinate of the top-left corner (sometimes bottom-left corner)
 
-    .. ocv:member:: int width
+  .. ocv:member:: int width
 
-        Width of the rectangle
+     Width of the rectangle
 
-    .. ocv:member:: int height
+  .. ocv:member:: int height
 
-        Height of the rectangle
+     Height of the rectangle
 
 .. ocv:cfunction:: CvRect cvRect( int x, int y, int width, int height )
 
@@ -201,19 +201,19 @@ CvBox2D
 
 .. ocv:struct:: CvBox2D
 
-Stores coordinates of a rotated rectangle.
+  Stores coordinates of a rotated rectangle.
 
-    .. ocv:member:: CvPoint2D32f center
+  .. ocv:member:: CvPoint2D32f center
 
-        Center of the box
+     Center of the box
 
-    .. ocv:member:: CvSize2D32f  size
+  .. ocv:member:: CvSize2D32f  size
 
-        Box width and height
+     Box width and height
 
-    .. ocv:member:: float angle
+  .. ocv:member:: float angle
 
-        Angle between the horizontal axis and the first side (i.e. length) in degrees
+     Angle between the horizontal axis and the first side (i.e. length) in degrees
 
 .. seealso:: :ocv:class:`RotatedRect`
 
@@ -223,9 +223,9 @@ CvScalar
 
 .. ocv:struct:: CvScalar
 
-A container for 1-,2-,3- or 4-tuples of doubles.
+  A container for 1-,2-,3- or 4-tuples of doubles.
 
-    .. ocv:member:: double[4] val
+  .. ocv:member:: double[4] val
 
 .. ocv::cfunction:: CvScalar cvScalar( double val0, double val1=0, double val2=0, double val3=0 )
 
@@ -246,25 +246,25 @@ CvTermCriteria
 
 .. ocv:struct:: CvTermCriteria
 
-Termination criteria for iterative algorithms.
+  Termination criteria for iterative algorithms.
 
-    .. ocv:member:: int type
+  .. ocv:member:: int type
 
-        type of the termination criteria, one of:
+     type of the termination criteria, one of:
 
-            * ``CV_TERMCRIT_ITER`` - stop the algorithm after ``max_iter`` iterations at maximum.
+         * ``CV_TERMCRIT_ITER`` - stop the algorithm after ``max_iter`` iterations at maximum.
 
-            * ``CV_TERMCRIT_EPS`` - stop the algorithm after the achieved algorithm-dependent accuracy becomes lower than ``epsilon``.
+         * ``CV_TERMCRIT_EPS`` - stop the algorithm after the achieved algorithm-dependent accuracy becomes lower than ``epsilon``.
 
-            * ``CV_TERMCRIT_ITER+CV_TERMCRIT_EPS`` - stop the algorithm after ``max_iter`` iterations or when the achieved accuracy is lower than ``epsilon``, whichever comes the earliest.
+         * ``CV_TERMCRIT_ITER+CV_TERMCRIT_EPS`` - stop the algorithm after ``max_iter`` iterations or when the achieved accuracy is lower than ``epsilon``, whichever comes the earliest.
 
-    .. ocv:member:: int max_iter
+  .. ocv:member:: int max_iter
 
-        Maximum number of iterations
+     Maximum number of iterations
 
-    .. ocv:member:: double epsilon
+  .. ocv:member:: double epsilon
 
-        Required accuracy
+     Required accuracy
 
 .. seealso:: :ocv:class:`TermCriteria`
 
@@ -273,41 +273,41 @@ CvMat
 
 .. ocv:struct:: CvMat
 
-A multi-channel dense matrix.
+  A multi-channel dense matrix.
 
-    .. ocv:member:: int type
+  .. ocv:member:: int type
 
-        ``CvMat`` signature (``CV_MAT_MAGIC_VAL``) plus type of the elements. Type of the matrix elements can be retrieved using ``CV_MAT_TYPE`` macro: ::
+     ``CvMat`` signature (``CV_MAT_MAGIC_VAL``) plus type of the elements. Type of the matrix elements can be retrieved using ``CV_MAT_TYPE`` macro: ::
 
-                int type = CV_MAT_TYPE(matrix->type);
+         int type = CV_MAT_TYPE(matrix->type);
 
-        For description of possible matrix elements, see :ocv:class:`Mat`.
+     For description of possible matrix elements, see :ocv:class:`Mat`.
 
-    .. ocv:member:: int step
+  .. ocv:member:: int step
 
-        Full row length in bytes
+     Full row length in bytes
 
-    .. ocv:member:: int* refcount
+  .. ocv:member:: int* refcount
 
-        Underlying data reference counter
+     Underlying data reference counter
 
-    .. ocv:member:: union data
+  .. ocv:member:: union data
 
-        Pointers to the actual matrix data:
+     Pointers to the actual matrix data:
 
-           * ptr - pointer to 8-bit unsigned elements
-           * s - pointer to 16-bit signed elements
-           * i - pointer to 32-bit signed elements
-           * fl - pointer to 32-bit floating-point elements
-           * db - pointer to 64-bit floating-point elements
+         * ptr - pointer to 8-bit unsigned elements
+         * s - pointer to 16-bit signed elements
+         * i - pointer to 32-bit signed elements
+         * fl - pointer to 32-bit floating-point elements
+         * db - pointer to 64-bit floating-point elements
 
-    .. ocv:member:: int rows
+  .. ocv:member:: int rows
 
-        Number of rows
+     Number of rows
 
-    .. ocv:member:: int cols
+  .. ocv:member:: int cols
 
-        Number of columns
+     Number of columns
 
 Matrix elements are stored row by row. Element (i, j) (i - 0-based row index, j - 0-based column index) of a matrix can be retrieved or modified using ``CV_MAT_ELEM`` macro: ::
 
@@ -323,38 +323,38 @@ CvMatND
 
 .. ocv:struct:: CvMatND
 
-Multi-dimensional dense multi-channel array.
+  Multi-dimensional dense multi-channel array.
 
-    .. ocv:member:: int type
+  .. ocv:member:: int type
 
-        A ``CvMatND`` signature (``CV_MATND_MAGIC_VAL``) plus the type of elements. Type of the matrix elements can be retrieved using ``CV_MAT_TYPE`` macro: ::
+     A ``CvMatND`` signature (``CV_MATND_MAGIC_VAL``) plus the type of elements. Type of the matrix elements can be retrieved using ``CV_MAT_TYPE`` macro: ::
 
-                int type = CV_MAT_TYPE(ndmatrix->type);
+          int type = CV_MAT_TYPE(ndmatrix->type);
 
-    .. ocv:member:: int dims
+  .. ocv:member:: int dims
 
-        The number of array dimensions
+     The number of array dimensions
 
-    .. ocv:member:: int* refcount
+  .. ocv:member:: int* refcount
 
-        Underlying data reference counter
+     Underlying data reference counter
 
-    .. ocv:member:: union data
+  .. ocv:member:: union data
 
-        Pointers to the actual matrix data
+     Pointers to the actual matrix data
 
-           * ptr - pointer to 8-bit unsigned elements
-           * s - pointer to 16-bit signed elements
-           * i - pointer to 32-bit signed elements
-           * fl - pointer to 32-bit floating-point elements
-           * db - pointer to 64-bit floating-point elements
+         * ptr - pointer to 8-bit unsigned elements
+         * s - pointer to 16-bit signed elements
+         * i - pointer to 32-bit signed elements
+         * fl - pointer to 32-bit floating-point elements
+         * db - pointer to 64-bit floating-point elements
 
-    .. ocv:member:: array dim
+  .. ocv:member:: array dim
 
-        Arrays of pairs (array size along the i-th dimension, distance between neighbor elements along i-th dimension): ::
+     Arrays of pairs (array size along the i-th dimension, distance between neighbor elements along i-th dimension): ::
 
-            for(int i = 0; i < ndmatrix->dims; i++)
-                printf("size[i] = %d, step[i] = %d\n", ndmatrix->dim[i].size, ndmatrix->dim[i].step);
+         for(int i = 0; i < ndmatrix->dims; i++)
+             printf("size[i] = %d, step[i] = %d\n", ndmatrix->dim[i].size, ndmatrix->dim[i].step);
 
 ``CvMatND`` is now obsolete; consider using :ocv:class:`Mat` instead.
 
@@ -363,138 +363,138 @@ CvSparseMat
 
 .. ocv:struct:: CvSparseMat
 
-Multi-dimensional sparse multi-channel array.
+  Multi-dimensional sparse multi-channel array.
 
-    .. ocv:member:: int type
+  .. ocv:member:: int type
 
-        A ``CvSparseMat`` signature (CV_SPARSE_MAT_MAGIC_VAL) plus the type of sparse matrix elements. Similarly to ``CvMat`` and ``CvMatND``, use ``CV_MAT_TYPE()`` to retrieve type of the elements.
+     A ``CvSparseMat`` signature (CV_SPARSE_MAT_MAGIC_VAL) plus the type of sparse matrix elements. Similarly to ``CvMat`` and ``CvMatND``, use ``CV_MAT_TYPE()`` to retrieve type of the elements.
 
-    .. ocv:member:: int dims
+  .. ocv:member:: int dims
 
-        Number of dimensions
+     Number of dimensions
 
-    .. ocv:member:: int* refcount
+  .. ocv:member:: int* refcount
 
-        Underlying reference counter. Not used.
+     Underlying reference counter. Not used.
 
-    .. ocv:member:: CvSet* heap
+  .. ocv:member:: CvSet* heap
 
-        A pool of hash table nodes
+     A pool of hash table nodes
 
-    .. ocv:member:: void** hashtable
+  .. ocv:member:: void** hashtable
 
-        The hash table. Each entry is a list of nodes.
+     The hash table. Each entry is a list of nodes.
 
-    .. ocv:member:: int hashsize
+  .. ocv:member:: int hashsize
 
-        Size of the hash table
+     Size of the hash table
 
-    .. ocv:member:: int[] size
+  .. ocv:member:: int[] size
 
-        Array of dimension sizes
+     Array of dimension sizes
 
 IplImage
 --------
 
 .. ocv:struct:: IplImage
 
-IPL image header
+  IPL image header
 
-    .. ocv:member:: int nSize
+  .. ocv:member:: int nSize
 
-        ``sizeof(IplImage)``
+     ``sizeof(IplImage)``
 
-    .. ocv:member:: int ID
+  .. ocv:member:: int ID
 
-        Version, always equals 0
+     Version, always equals 0
 
-    .. ocv:member:: int nChannels
+  .. ocv:member:: int nChannels
 
-        Number of channels. Most OpenCV functions support 1-4 channels.
+     Number of channels. Most OpenCV functions support 1-4 channels.
 
-    .. ocv:member:: int alphaChannel
+  .. ocv:member:: int alphaChannel
 
-        Ignored by OpenCV
+     Ignored by OpenCV
 
-    .. ocv:member:: int depth
+  .. ocv:member:: int depth
 
-        Channel depth in bits + the optional sign bit ( ``IPL_DEPTH_SIGN`` ). The supported depths are:
+     Channel depth in bits + the optional sign bit ( ``IPL_DEPTH_SIGN`` ). The supported depths are:
 
-            * ``IPL_DEPTH_8U`` - unsigned 8-bit integer. Equivalent to ``CV_8U`` in matrix types.
-            * ``IPL_DEPTH_8S`` - signed 8-bit integer. Equivalent to ``CV_8S`` in matrix types.
-            * ``IPL_DEPTH_16U`` - unsigned 16-bit integer. Equivalent to ``CV_16U`` in matrix types.
-            * ``IPL_DEPTH_16S`` - signed 8-bit integer. Equivalent to ``CV_16S`` in matrix types.
-            * ``IPL_DEPTH_32S`` - signed 32-bit integer. Equivalent to ``CV_32S`` in matrix types.
-            * ``IPL_DEPTH_32F`` - single-precision floating-point number. Equivalent to ``CV_32F`` in matrix types.
-            * ``IPL_DEPTH_64F`` - double-precision floating-point number. Equivalent to ``CV_64F`` in matrix types.
+         * ``IPL_DEPTH_8U`` - unsigned 8-bit integer. Equivalent to ``CV_8U`` in matrix types.
+         * ``IPL_DEPTH_8S`` - signed 8-bit integer. Equivalent to ``CV_8S`` in matrix types.
+         * ``IPL_DEPTH_16U`` - unsigned 16-bit integer. Equivalent to ``CV_16U`` in matrix types.
+         * ``IPL_DEPTH_16S`` - signed 8-bit integer. Equivalent to ``CV_16S`` in matrix types.
+         * ``IPL_DEPTH_32S`` - signed 32-bit integer. Equivalent to ``CV_32S`` in matrix types.
+         * ``IPL_DEPTH_32F`` - single-precision floating-point number. Equivalent to ``CV_32F`` in matrix types.
+         * ``IPL_DEPTH_64F`` - double-precision floating-point number. Equivalent to ``CV_64F`` in matrix types.
 
-    .. ocv:member:: char[] colorModel
+  .. ocv:member:: char[] colorModel
 
-        Ignored by OpenCV.
+     Ignored by OpenCV.
 
-    .. ocv:member:: char[] channelSeq
+  .. ocv:member:: char[] channelSeq
 
-        Ignored by OpenCV
+     Ignored by OpenCV
 
-    .. ocv:member:: int dataOrder
+  .. ocv:member:: int dataOrder
 
-        0 =  ``IPL_DATA_ORDER_PIXEL``  - interleaved color channels, 1 - separate color channels.  :ocv:cfunc:`CreateImage`  only creates images with interleaved channels. For example, the usual layout of a color image is:  :math:`b_{00} g_{00} r_{00} b_{10} g_{10} r_{10} ...`
+     0 =  ``IPL_DATA_ORDER_PIXEL``  - interleaved color channels, 1 - separate color channels.  :ocv:cfunc:`CreateImage`  only creates images with interleaved channels. For example, the usual layout of a color image is:  :math:`b_{00} g_{00} r_{00} b_{10} g_{10} r_{10} ...`
 
-    .. ocv:member:: int origin
+  .. ocv:member:: int origin
 
-        0 - top-left origin, 1 - bottom-left origin (Windows bitmap style)
+     0 - top-left origin, 1 - bottom-left origin (Windows bitmap style)
 
-    .. ocv:member:: int align
+  .. ocv:member:: int align
 
-        Alignment of image rows (4 or 8). OpenCV ignores this and uses widthStep instead.
+     Alignment of image rows (4 or 8). OpenCV ignores this and uses widthStep instead.
 
-    .. ocv:member:: int width
+  .. ocv:member:: int width
 
-        Image width in pixels
+     Image width in pixels
 
-    .. ocv:member:: int height
+  .. ocv:member:: int height
 
-        Image height in pixels
+     Image height in pixels
 
-    .. ocv:member:: IplROI* roi
+  .. ocv:member:: IplROI* roi
 
-        Region Of Interest (ROI). If not NULL, only this image region will be processed.
+     Region Of Interest (ROI). If not NULL, only this image region will be processed.
 
-    .. ocv:member:: IplImage* maskROI
+  .. ocv:member:: IplImage* maskROI
 
-        Must be NULL in OpenCV
+     Must be NULL in OpenCV
 
-    .. ocv:member:: void* imageId
+  .. ocv:member:: void* imageId
 
-        Must be NULL in OpenCV
+     Must be NULL in OpenCV
 
-    .. ocv:member:: void* tileInfo
+  .. ocv:member:: void* tileInfo
 
-        Must be NULL in OpenCV
+     Must be NULL in OpenCV
 
-    .. ocv:member:: int imageSize
+  .. ocv:member:: int imageSize
 
-        Image data size in bytes. For interleaved data, this equals  :math:`\texttt{image->height} \cdot \texttt{image->widthStep}`
+     Image data size in bytes. For interleaved data, this equals  :math:`\texttt{image->height} \cdot \texttt{image->widthStep}`
 
-    .. ocv:member:: char* imageData
+  .. ocv:member:: char* imageData
 
-        A pointer to the aligned image data. Do not assign imageData directly. Use :ocv:cfunc:`SetData`.
+     A pointer to the aligned image data. Do not assign imageData directly. Use :ocv:cfunc:`SetData`.
 
-    .. ocv:member:: int widthStep
+  .. ocv:member:: int widthStep
 
-        The size of an aligned image row, in bytes.
+     The size of an aligned image row, in bytes.
 
-    .. ocv:member:: int[] BorderMode
+  .. ocv:member:: int[] BorderMode
 
-        Border completion mode, ignored by OpenCV
+     Border completion mode, ignored by OpenCV
 
-    .. ocv:member:: int[] BorderConst
+  .. ocv:member:: int[] BorderConst
 
-        Constant border value, ignored by OpenCV
+     Constant border value, ignored by OpenCV
 
-    .. ocv:member:: char* imageDataOrigin
+  .. ocv:member:: char* imageDataOrigin
 
-        A pointer to the origin of the image data (not necessarily aligned). This is used for image deallocation.
+     A pointer to the origin of the image data (not necessarily aligned). This is used for image deallocation.
 
 The ``IplImage`` is taken from the Intel Image Processing Library, in which the format is native. OpenCV only supports a subset of possible ``IplImage`` formats, as outlined in the parameter list above.
 

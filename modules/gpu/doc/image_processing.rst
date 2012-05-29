@@ -282,7 +282,7 @@ Computes a convolution (or cross-correlation) of two images.
 
     :param ccorr: Flags to evaluate cross-correlation instead of convolution.
 
-    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:class:`gpu::ConvolveBuf`.
+    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:struct:`gpu::ConvolveBuf`.
 
     :param stream: Stream for the asynchronous version.
 
@@ -321,7 +321,7 @@ Computes a proximity map for a raster template and an image where the template i
 
     :param method: Specifies the way to compare the template with the image.
 
-    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:class:`gpu::MatchTemplateBuf`.
+    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:struct:`gpu::MatchTemplateBuf`.
 
     :param stream: Stream for the asynchronous version.
 
