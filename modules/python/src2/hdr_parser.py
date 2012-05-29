@@ -627,7 +627,7 @@ class CppHeaderParser(object):
                     classname = classname[1:]
                 decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
                 if bases:
-                    decl[1] = ": " + " ".join(bases)
+                    decl[1] = ": " + ", ".join([b if "::" in b else self.get_dotted_name(b).replace(".","::") for b in bases])
                 return stmt_type, classname, True, decl
 
             if stmt.startswith("class") or stmt.startswith("struct"):
@@ -642,7 +642,7 @@ class CppHeaderParser(object):
                     if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode):# and ("CV_EXPORTS" in stmt)):
                         decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
                         if bases:
-                            decl[1] = ": " + " ".join(bases)
+                            decl[1] = ": " + ", ".join([b if "::" in b else self.get_dotted_name(b).replace(".","::") for b in bases])
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum"):

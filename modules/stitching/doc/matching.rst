@@ -74,7 +74,7 @@ This method must implement features finding logic in order to make the wrappers 
 
 detail::SurfFeaturesFinder
 --------------------------
-.. ocv:class:: detail::SurfFeaturesFinder : public FeaturesFinder
+.. ocv:class:: detail::SurfFeaturesFinder : public detail::FeaturesFinder
 
 SURF features finder. ::
 
@@ -92,7 +92,7 @@ SURF features finder. ::
 
 detail::OrbFeaturesFinder
 -------------------------
-.. ocv:class:: detail::OrbFeaturesFinder : public FeaturesFinder
+.. ocv:class:: detail::OrbFeaturesFinder : public detail::FeaturesFinder
 
 ORB features finder. ::
 
@@ -212,7 +212,7 @@ This method must implement matching logic in order to make the wrappers `detail:
 
 detail::BestOf2NearestMatcher
 -----------------------------
-.. ocv:class:: detail::BestOf2NearestMatcher : public FeaturesMatcher
+.. ocv:class:: detail::BestOf2NearestMatcher : public detail::FeaturesMatcher
 
 Features matcher which finds two best matches for each feature and leaves the best one only if the ratio between descriptor distances is greater than the threshold ``match_conf``. ::
 

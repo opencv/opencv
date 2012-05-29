@@ -247,12 +247,11 @@ def process_module(module, path):
             else:
                 # verify base
                 signature = doc.get("class", "")
-                signature = signature.replace(", public ", " ").replace(" public ", " ")
-                signature = signature.replace(", protected ", " ").replace(" protected ", " ")
-                signature = signature.replace(", private ", " ").replace(" private ", " ")
+                signature = signature.replace(" public ", " ")
+                namespaceIdx = signature.rfind("::")
+
                 signature = ("class " + signature).strip()
-                #hdrsignature = (cl[0] + " " +  cl[1]).replace("class cv.", "class ").replace(".", "::").strip()
-                hdrsignature = ("class " + name + " " +  cl[1]).replace(".", "::").strip()
+                hdrsignature = ("class " + name + " " +  cl[1]).replace(".", "::").replace("cv::","").strip()
                 if signature != hdrsignature:
                     logerror(ERROR_003_INCORRECTBASE, "invalid base class documentation\ndocumented: " + signature + "\nactual:     " + hdrsignature, doc)
 
