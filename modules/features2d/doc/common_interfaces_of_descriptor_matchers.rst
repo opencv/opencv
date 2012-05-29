@@ -260,7 +260,7 @@ BFMatcher
 -----------------
 .. ocv:class::BFMatcher : public DescriptorMatcher
 
-Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches of descriptor sets. ::
+Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches of descriptor sets.
 
 
 BFMatcher::BFMatcher

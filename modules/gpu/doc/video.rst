@@ -637,7 +637,7 @@ The method throws :ocv:class:`Exception` if video reader wasn't initialized.
 
 
 gpu::VideoReader_GPU::dumpFormat
-----------------------------
+--------------------------------
 Dump information about video file format to specified stream.
 
 .. ocv:function:: void gpu::VideoReader_GPU::dumpFormat(std::ostream& st)
@@ -688,7 +688,7 @@ Starts processing.
 
 .. ocv:function:: virtual void gpu::VideoReader_GPU::VideoSource::start() = 0
 
-Implementation must create own thread with video processing and call periodic :ocv:func:`gpu::VideoReader_GPU::VideoSource::parseVideoData` .
+Implementation must create own thread with video processing and call periodic ocv:func:`gpu::VideoReader_GPU::VideoSource::parseVideoData` .
 
 
 
@@ -720,7 +720,7 @@ gpu::VideoReader_GPU::VideoSource::parseVideoData
 -------------------------------------------------
 Parse next video frame. Implementation must call this method after new frame was grabbed.
 
-.. ocv:function:: bool gpu::VideoReader_GPU::VideoSource::parseVideoData(const unsigned char* data, size_t size, bool endOfStream = false)
+.. ocv:function:: bool gpu::VideoReader_GPU::VideoSource::parseVideoData(const uchar* data, size_t size, bool endOfStream = false)
 
     :param data: Pointer to frame data. Can be ``NULL`` if ``endOfStream`` if ``true`` .
 

@@ -16,7 +16,7 @@ params_blacklist = {
 }
 
 ERROR_001_SECTIONFAILURE      = 1
-ERROR_002_HDRWHITESPACE       = 2
+WARNING_002_HDRWHITESPACE     = 2
 ERROR_003_PARENTHESES         = 3
 WARNING_004_TABS              = 4
 ERROR_005_REDEFENITIONPARAM   = 5
@@ -25,6 +25,7 @@ WARNING_007_UNDOCUMENTEDPARAM = 7
 WARNING_008_MISSINGPARAM      = 8
 WARNING_009_HDRMISMATCH       = 9
 ERROR_010_NOMODULE            = 10
+ERROR_011_EOLEXPECTED         = 11
 
 params_mapping = {
     "composeRT" : {
@@ -142,7 +143,7 @@ class RstParser(object):
         #if section_name.find(" ") >= 0 and section_name.find("::operator") < 0:
         if section_name.find(" ") >= 0 and not bool(re.match(r"(\w+::)*operator\s*(\w+|>>|<<|\(\)|->|\+\+|--|=|==|\+=|-=)", section_name)):
             if show_errors:
-                print "RST parser error E%03d:  SKIPPED: \"%s\" File: %s:%s" % (ERROR_002_HDRWHITESPACE, section_name, file_name, lineno)
+                print "RST parser warning W%03d:  SKIPPED: \"%s\" File: %s:%s" % (WARNING_002_HDRWHITESPACE, section_name, file_name, lineno)
             self.sections_skipped += 1
             return
 
@@ -356,6 +357,9 @@ class RstParser(object):
         return section_name
 
     def add_new_fdecl(self, func, decl):
+        if decl.fdecl.endswith(";"):
+            print >> sys.stderr, "RST parser error E%03d: unexpected semicolon at the end of declaration in \"%s\" at %s:%s" \
+                        % (ERROR_011_EOLEXPECTED, func["name"], func["file"], func["line"])
         decls =  func.get("decls",[])
         if (decl.lang == "C++" or decl.lang == "C"):
             rst_decl = self.cpp_parser.parse_func_decl_no_wrap(decl.fdecl)

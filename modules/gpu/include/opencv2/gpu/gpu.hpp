@@ -2079,7 +2079,7 @@ public:
         void setVideoParser(detail::VideoParser* videoParser) { videoParser_ = videoParser; }
 
     protected:
-        bool parseVideoData(const unsigned char* data, size_t size, bool endOfStream = false);
+        bool parseVideoData(const uchar* data, size_t size, bool endOfStream = false);
 
     private:
         VideoSource(const VideoSource&);

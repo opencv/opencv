@@ -277,7 +277,7 @@ Returns a text string formatted using the ``printf``\ -like expression.
     :param fmt: ``printf`` -compatible formatting specifiers.
 
 The function acts like ``sprintf``  but forms and returns an STL string. It can be used to form an error message in the
-:ocv:func:`Exception` constructor.
+:ocv:class:`Exception` constructor.
 
 
 
