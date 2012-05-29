@@ -668,13 +668,14 @@ class MemberObjDefExpr(NamedDefExpr):
 class FuncDefExpr(NamedDefExpr):
 
     def __init__(self, name, visibility, static, explicit, rv,
-                 signature, const, pure_virtual):
+                 signature, const, pure_virtual, virtual):
         NamedDefExpr.__init__(self, name, visibility, static)
         self.rv = rv
         self.signature = signature
         self.explicit = explicit
         self.const = const
         self.pure_virtual = pure_virtual
+        self.virtual = virtual
 
     def get_id(self):
         return u'%s%s%s' % (
@@ -688,6 +689,8 @@ class FuncDefExpr(NamedDefExpr):
         buf = self.get_modifiers()
         if self.explicit:
             buf.append(u'explicit')
+        if self.virtual:
+            buf.append(u'virtual')
         if self.rv is not None:
             buf.append(unicode(self.rv))
         buf.append(u'%s(%s)' % (self.name, u', '.join(
@@ -1074,6 +1077,11 @@ class DefinitionParser(object):
             self.skip_ws()
         else:
             explicit = False
+        if self.skip_word('virtual'):
+            virtual = True
+            self.skip_ws()
+        else:
+            virtual = False
         rv = self._parse_type()
         self.skip_ws()
         # some things just don't have return values
@@ -1082,8 +1090,8 @@ class DefinitionParser(object):
             rv = None
         else:
             name = self._parse_type()
-        return FuncDefExpr(name, visibility, static, explicit, rv,
-                           *self._parse_signature())
+        return FuncDefExpr(name, visibility, static, explicit,  rv,
+                           *self._parse_signature(), virtual = virtual)
 
     def parse_class(self):
         visibility, static = self._parse_visibility_static()
@@ -1346,6 +1354,9 @@ class OCVFunctionObject(OCVObject):
         self.attach_modifiers(signode, func)
         if func.explicit:
             signode += addnodes.desc_annotation('explicit', 'explicit')
+            signode += nodes.Text(' ')
+        if func.virtual:
+            signode += addnodes.desc_annotation('virtual', 'virtual')
             signode += nodes.Text(' ')
         # return value is None for things with a reverse return value
         # such as casting operator definitions or constructors
