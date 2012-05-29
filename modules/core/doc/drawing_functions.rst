@@ -144,9 +144,9 @@ Approximates an elliptic arc with a polyline.
 
     :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.
 
-    :param startAngle: Starting angle of the elliptic arc in degrees.
+    :param arcStart: Starting angle of the elliptic arc in degrees.
 
-    :param endAngle: Ending angle of the elliptic arc in degrees.
+    :param arcEnd: Ending angle of the elliptic arc in degrees.
 
     :param delta: Angle between the subsequent polyline vertices. It defines the approximation accuracy.
 
@@ -284,7 +284,7 @@ Initializes font structure (OpenCV 1.x API).
 
     :param font: Pointer to the font structure initialized by the function
 
-    :param fontFace: Font name identifier. Only a subset of Hershey fonts  http://sources.isc.org/utils/misc/hershey-font.txt  are supported now:
+    :param font_face: Font name identifier. Only a subset of Hershey fonts  http://sources.isc.org/utils/misc/hershey-font.txt  are supported now:
 
             * **CV_FONT_HERSHEY_SIMPLEX** normal size sans-serif font
 
@@ -317,7 +317,7 @@ Initializes font structure (OpenCV 1.x API).
     :param thickness: Thickness of the text strokes
 
 
-    :param lineType: Type of the strokes, see  :ocv:func:`line`  description
+    :param line_type: Type of the strokes, see  :ocv:func:`line`  description
 
 
 The function initializes the font structure that can be passed to text rendering functions.
@@ -426,7 +426,7 @@ Draws a simple, thick, or filled up-right rectangle.
 
     :param pt2: Vertex of the rectangle opposite to  ``pt1`` .
 
-    :param r: Alternative specification of the drawn rectangle.
+    :param rec: Alternative specification of the drawn rectangle.
 
     :param color: Rectangle color or brightness (grayscale image).
 
@@ -477,7 +477,7 @@ drawContours
 ----------------
 Draws contours outlines or filled contours.
 
-.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
+.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours, int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
 
 .. ocv:pyfunction:: cv2.drawContours(image, contours, contourIdx, color[, thickness[, lineType[, hierarchy[, maxLevel[, offset]]]]]) -> None
 
@@ -507,9 +507,9 @@ Draws contours outlines or filled contours.
 
     :param contour: Pointer to the first contour.
 
-    :param externalColor: Color of external contours.
+    :param external_color: Color of external contours.
 
-    :param holeColor: Color of internal contours (holes).
+    :param hole_color: Color of internal contours (holes).
 
 The function draws contour outlines in the image if
 :math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if

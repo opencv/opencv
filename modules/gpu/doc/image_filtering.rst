@@ -644,9 +644,9 @@ Creates a Gaussian filter engine.
 
     :param ksize: Aperture size. See  :ocv:func:`getGaussianKernel` for details.
 
-    :param sigmaX: Gaussian sigma in the horizontal direction. See  :ocv:func:`getGaussianKernel` for details.
+    :param sigma1: Gaussian sigma in the horizontal direction. See  :ocv:func:`getGaussianKernel` for details.
 
-    :param sigmaY: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}` .
+    :param sigma2: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigma2}\leftarrow\texttt{sigma1}` .
 
     :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
 
@@ -668,11 +668,11 @@ Smooths an image using the Gaussian filter.
 
     :param dst: Destination image with the same size and type as  ``src`` .
 
-    :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigmaX``  and  ``sigmaY`` .
+    :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigma1``  and  ``sigma2`` .
 
-    :param sigmaX: Gaussian kernel standard deviation in X direction.
+    :param sigma1: Gaussian kernel standard deviation in X direction.
 
-    :param sigmaY: Gaussian kernel standard deviation in Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize`` , ``sigmaX`` , and  ``sigmaY`` .
+    :param sigma2: Gaussian kernel standard deviation in Y direction. If  ``sigma2``  is zero, it is set to be equal to  ``sigma1`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize`` , ``sigma1`` , and  ``sigma2`` .
 
     :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
 

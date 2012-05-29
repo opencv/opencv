@@ -79,13 +79,13 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
 .. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prev, next, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags[, flow]) -> flow
 
-    :param prevImg: First 8-bit single-channel input image.
+    :param prev: First 8-bit single-channel input image.
 
-    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
+    :param next: Second input image of the same size and the same type as  ``prev`` .
 
-    :param flow: Computed flow image that has the same size as  ``prevImg``  and type  ``CV_32FC2`` .
+    :param flow: Computed flow image that has the same size as  ``prev``  and type  ``CV_32FC2`` .
 
-    :param pyrScale: Parameter specifying the image scale (<1) to build pyramids for each image.  ``pyrScale=0.5``  means a classical pyramid, where each next layer is twice smaller than the previous one.
+    :param pyr_scale: Parameter specifying the image scale (<1) to build pyramids for each image.  ``pyr_scale=0.5``  means a classical pyramid, where each next layer is twice smaller than the previous one.
 
     :param levels: Number of pyramid layers including the initial image.  ``levels=1``  means that no extra layers are created and only the original images are used.
 
@@ -93,9 +93,9 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
     :param iterations: Number of iterations the algorithm does at each pyramid level.
 
-    :param polyN: Size of the pixel neighborhood used to find polynomial expansion in each pixel. Larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred  motion field. Typically,  ``polyN`` =5 or 7.
+    :param poly_n: Size of the pixel neighborhood used to find polynomial expansion in each pixel. Larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred  motion field. Typically,  ``poly_n`` =5 or 7.
 
-    :param polySigma: Standard deviation of the Gaussian that is used to smooth derivatives used as a basis for the polynomial expansion. For  ``polyN=5`` ,  you can set  ``polySigma=1.1`` . For  ``polyN=7`` , a good value would be  ``polySigma=1.5`` .
+    :param poly_sigma: Standard deviation of the Gaussian that is used to smooth derivatives used as a basis for the polynomial expansion. For  ``poly_n=5`` ,  you can set  ``poly_sigma=1.1`` . For  ``poly_n=7`` , a good value would be  ``poly_sigma=1.5`` .
 
     :param flags: Operation flags that can be a combination of the following:
 
@@ -103,11 +103,11 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
             * **OPTFLOW_FARNEBACK_GAUSSIAN** Use the Gaussian  :math:`\texttt{winsize}\times\texttt{winsize}`  filter instead of a box filter of the same size for optical flow estimation. Usually, this option gives z more accurate flow than with a box filter, at the cost of lower speed. Normally,  ``winsize``  for a Gaussian window should be set to a larger value to achieve the same level of robustness.
 
-The function finds an optical flow for each ``prevImg`` pixel using the [Farneback2003]_ algorithm so that
+The function finds an optical flow for each ``prev`` pixel using the [Farneback2003]_ algorithm so that
 
 .. math::
 
-    \texttt{prevImg} (y,x)  \sim \texttt{nextImg} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])
+    \texttt{prev} (y,x)  \sim \texttt{next} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])
 
 
 estimateRigidTransform

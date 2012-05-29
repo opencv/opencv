@@ -260,9 +260,6 @@ Trains a randomized tree classifier using an input set of keypoints.
 
     :param num_quant_bits: Number of bits used for quantization.
 
-    :param print_status: Current status of training printed on the console.
-
-
 
 RTreeClassifier::getSignature
 ---------------------------------

@@ -127,7 +127,7 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
 
         In the old interface all the vectors of object points from different views are concatenated together.
 
-    :param pointCounts: In the old interface this is a vector of integers, containing as many elements, as the number of views of the calibration pattern. Each element is the number of points in each view. Usually, all the elements are the same and equal to the number of feature points on the calibration pattern.
+    :param point_counts: In the old interface this is a vector of integers, containing as many elements, as the number of views of the calibration pattern. Each element is the number of points in each view. Usually, all the elements are the same and equal to the number of feature points on the calibration pattern.
 
     :param imageSize: Size of the image used only to initialize the intrinsic camera matrix.
 
@@ -715,7 +715,7 @@ Finds a perspective transformation between two planes.
 
         then the point  :math:`i`  is considered an outlier. If  ``srcPoints``  and  ``dstPoints``  are measured in pixels, it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 
-    :param status: Optional output mask set by a robust method ( ``CV_RANSAC``  or  ``CV_LMEDS`` ).  Note that the input mask values are ignored.
+    :param mask: Optional output mask set by a robust method ( ``CV_RANSAC``  or  ``CV_LMEDS`` ).  Note that the input mask values are ignored.
 
 The functions find and return the perspective transformation :math:`H` between the source and the destination planes:
 
@@ -775,9 +775,9 @@ Computes an optimal affine transformation between two 3D point sets.
 
 .. ocv:pyfunction:: cv2.estimateAffine3D(src, dst[, out[, inliers[, ransacThreshold[, confidence]]]]) -> retval, out, inliers
 
-    :param srcpt: First input 3D point set.
+    :param src: First input 3D point set.
 
-    :param dstpt: Second input 3D point set.
+    :param dst: Second input 3D point set.
 
     :param out: Output 3D affine transformation matrix  :math:`3 \times 4` .
 
@@ -829,9 +829,9 @@ Returns the new camera matrix based on the free scaling parameter.
 
     :param alpha: Free scaling parameter between 0 (when all the pixels in the undistorted image are valid) and 1 (when all the source image pixels are retained in the undistorted image). See  :ocv:func:`stereoRectify` for details.
 
-    :param newCameraMatrix: Output new camera matrix.
+    :param new_camera_matrix: Output new camera matrix.
 
-    :param newImageSize: Image size after rectification. By default,it is set to  ``imageSize`` .
+    :param new_imag_size: Image size after rectification. By default,it is set to  ``imageSize`` .
 
     :param validPixROI: Optional output rectangle that outlines all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ocv:func:`stereoRectify` .
 
@@ -860,7 +860,7 @@ Finds an initial camera matrix from 3D-2D point correspondences.
 
     :param imagePoints: Vector of vectors of the projections of the calibration pattern points. In the old interface all the per-view vectors are concatenated.
 
-    :param pointCounts: The integer vector of point counters for each view.
+    :param npoints: The integer vector of point counters for each view.
 
     :param imageSize: Image size in pixels used to initialize the principal point.
 
@@ -984,11 +984,11 @@ Computes an RQ decomposition of 3x3 matrices.
 .. ocv:cfunction:: void cvRQDecomp3x3( const CvMat * matrixM, CvMat * matrixR, CvMat * matrixQ, CvMat * matrixQx=NULL, CvMat * matrixQy=NULL, CvMat * matrixQz=NULL, CvPoint3D64f * eulerAngles=NULL )
 .. ocv:pyoldfunction:: cv.RQDecomp3x3(M, R, Q, Qx=None, Qy=None, Qz=None) -> eulerAngles
 
-    :param M: 3x3 input matrix.
+    :param src: 3x3 input matrix.
 
-    :param R: Output 3x3 upper-triangular matrix.
+    :param mtxR: Output 3x3 upper-triangular matrix.
 
-    :param Q: Output 3x3 orthogonal matrix.
+    :param mtxQ: Output 3x3 orthogonal matrix.
 
     :param Qx: Optional output 3x3 rotation matrix around x-axis.
 
@@ -1120,7 +1120,7 @@ Computes disparity using the BM algorithm for a rectified stereo pair.
 
     :param right: Right image of the same size and the same type as the left one.
 
-    :param disp: Output disparity map. It has the same size as the input images. When ``disptype==CV_16S``, the map is a 16-bit signed single-channel image, containing disparity values scaled by 16. To get the true disparity values from such fixed-point representation, you will need to divide each  ``disp`` element by 16. If ``disptype==CV_32F``, the disparity map will already contain the real disparity values on output.
+    :param disparity: Output disparity map. It has the same size as the input images. When ``disptype==CV_16S``, the map is a 16-bit signed single-channel image, containing disparity values scaled by 16. To get the true disparity values from such fixed-point representation, you will need to divide each  ``disp`` element by 16. If ``disptype==CV_32F``, the disparity map will already contain the real disparity values on output.
 
     :param disptype: Type of the output disparity map, ``CV_16S`` (default) or ``CV_32F``.
 
@@ -1362,9 +1362,9 @@ Computes rectification transforms for each head of a calibrated stereo camera.
 
     :param newImageSize: New image resolution after rectification. The same size should be passed to  :ocv:func:`initUndistortRectifyMap` (see the  ``stereo_calib.cpp``  sample in OpenCV samples directory). When (0,0) is passed (default), it is set to the original  ``imageSize`` . Setting it to larger value can help you preserve details in the original image, especially when there is a big radial distortion.
 
-    :param roi1:
+    :param validPixROI1: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
 
-    :param roi2: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
+    :param validPixROI2: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
 
 The function computes the rotation matrices for each camera that (virtually) make both camera image planes the same plane. Consequently, this makes all the epipolar lines parallel and thus simplifies the dense stereo correspondence problem. The function takes the matrices computed by
 :ocv:func:`stereoCalibrate` as input. As output, it provides two rotation matrices and also two projection matrices in the new coordinates. The function distinguishes the following two cases:
@@ -1427,7 +1427,7 @@ Computes a rectification transform for an uncalibrated stereo camera.
 
     :param F: Input fundamental matrix. It can be computed from the same set of point pairs using  :ocv:func:`findFundamentalMat` .
 
-    :param imageSize: Size of the image.
+    :param imgSize: Size of the image.
 
     :param H1: Output rectification homography matrix for the first image.
 

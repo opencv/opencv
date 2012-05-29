@@ -9,6 +9,7 @@ import rst_parser as rp
 rp.show_warnings = False
 rp.show_errors = False
 
+allmodules = rp.allmodules
 DOCUMENTED_MARKER = "verified"
 
 ERROR_001_NOTACLASS        = 1
@@ -33,6 +34,8 @@ doc_signatures_whitelist = [
 "gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_",
 # black boxes
 "CvArr", "CvFileStorage",
+# other
+"InputArray", "OutputArray",
 ]
 
 defines = ["cvGraphEdgeIdx", "cvFree", "CV_Assert", "cvSqrt", "cvGetGraphVtx", "cvGraphVtxIdx",
@@ -55,6 +58,8 @@ synonims = {
     "cvCaptureFromCAM" : ["cvCreateCameraCapture"],
     "cvCalcArrBackProjectPatch" : ["cvCalcBackProjectPatch"],
     "cvCalcArrBackProject" : ["cvCalcBackProject"],
+    "InputArray" : ["_InputArray"],
+    "OutputArray" : ["_OutputArray"],
 }
 
 if do_python_crosscheck:
@@ -143,11 +148,18 @@ def formatSignature(s):
         for idx, arg in enumerate(s[3]):
             if idx > 0:
                 _str += ", "
-            _str += re.sub(r"\bcv::", "", arg[0]) + " "
+            argtype = re.sub(r"\bcv::", "", arg[0])
+            bidx = argtype.find('[')
+            if bidx < 0:
+                _str += argtype + " "
+            else:
+                _srt += argtype[:bidx]
             if arg[1]:
                 _str += arg[1]
             else:
                 _str += "arg" + str(idx)
+            if bidx >= 0:
+                _str += argtype[bidx:]
             if arg[2]:
                 _str += "=" + re.sub(r"\bcv::", "", arg[2])
         _str += " )"
@@ -471,7 +483,11 @@ if __name__ == "__main__":
         print "Usage:\n", os.path.basename(sys.argv[0]), " <module path>"
         exit(0)
 
-    for module in sys.argv[1:]:
+    modules = sys.argv[1:]
+    if modules[0] == "all":
+        modules = allmodules
+
+    for module in modules:
         selfpath = os.path.dirname(os.path.abspath(sys.argv[0]))
         module_path = os.path.join(selfpath, "..", "modules", module)
 

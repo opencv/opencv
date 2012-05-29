@@ -153,9 +153,9 @@ Makes a clone of an object.
 
 .. ocv:cfunction:: void* cvClone( const void* struct_ptr )
 
-    :param structPtr: The object to clone
+    :param struct_ptr: The object to clone
 
-The function finds the type of a given object and calls ``clone`` with the passed object. Of course, if you know the object type, for example, ``structPtr`` is ``CvMat*``, it is faster to call the specific function, like :ocv:cfunc:`CloneMat`.
+The function finds the type of a given object and calls ``clone`` with the passed object. Of course, if you know the object type, for example, ``struct_ptr`` is ``CvMat*``, it is faster to call the specific function, like :ocv:cfunc:`CloneMat`.
 
 EndWriteStruct
 --------------
@@ -173,7 +173,7 @@ Finds a type by its name.
 
 .. ocv:cfunction:: CvTypeInfo* cvFindType( const char* type_name )
 
-    :param typeName: Type name
+    :param type_name: Type name
 
 The function finds a registered type by its name. It returns NULL if there is no type with the specified name.
 
@@ -197,7 +197,7 @@ Finds a node in a map or file storage.
 
     :param key: Unique pointer to the node name, retrieved with  :ocv:cfunc:`GetHashedKey`
 
-    :param createMissing: Flag that specifies whether an absent node should be added to the map
+    :param create_missing: Flag that specifies whether an absent node should be added to the map
 
 The function finds a file node. It is a faster version of  :ocv:cfunc:`GetFileNodeByName`
 (see :ocv:cfunc:`GetHashedKey` discussion). Also, the function can insert a new node, if it is not in the map yet.
@@ -239,7 +239,7 @@ Returns a unique pointer for a given name.
 
     :param len: Length of the name (if it is known apriori), or -1 if it needs to be calculated
 
-    :param createMissing: Flag that specifies, whether an absent key should be added into the hash table
+    :param create_missing: Flag that specifies, whether an absent key should be added into the hash table
 
 The function returns a unique pointer for each particular file node name. This pointer can be then passed to the :ocv:cfunc:`GetFileNode` function that is faster than  :ocv:cfunc:`GetFileNodeByName`
 because it compares text strings by comparing pointers rather than the strings' content.
@@ -331,11 +331,11 @@ Loads an object from a file.
 
     :param filename: File name
 
-    :param storage: Memory storage for dynamic structures, such as  :ocv:struct:`CvSeq`  or  :ocv:struct:`CvGraph`  . It is not used for matrices or images.
+    :param memstorage: Memory storage for dynamic structures, such as  :ocv:struct:`CvSeq`  or  :ocv:struct:`CvGraph`  . It is not used for matrices or images.
 
     :param name: Optional object name. If it is NULL, the first top-level object in the storage will be loaded.
 
-    :param realName: Optional output parameter that will contain the name of the loaded object (useful if  ``name=NULL`` )
+    :param real_name: Optional output parameter that will contain the name of the loaded object (useful if  ``name=NULL`` )
 
 The function loads an object from a file. It basically reads the specified file, find the first top-level node and calls :ocv:cfunc:`Read` for that node. If the file node does not have type information or the type information can not be found by the type name, the function returns NULL. After the object is loaded, the file storage is closed and all the temporary buffers are deleted. Thus, to load a dynamic structure, such as a sequence, contour, or graph, one should pass a valid memory storage destination to the function.
 
@@ -398,10 +398,10 @@ Retrieves an integer value from a file node.
 
     :param node: File node
 
-    :param defaultValue: The value that is returned if  ``node``  is NULL
+    :param default_value: The value that is returned if  ``node``  is NULL
 
 The function returns an integer that is represented by the file node. If the file node is NULL, the
-``defaultValue`` is returned (thus, it is convenient to call the function right after :ocv:cfunc:`GetFileNode` without checking for a NULL pointer). If the file node has type  ``CV_NODE_INT``, then  ``node->data.i`` is returned. If the file node has type  ``CV_NODE_REAL``, then  ``node->data.f``
+``default_value`` is returned (thus, it is convenient to call the function right after :ocv:cfunc:`GetFileNode` without checking for a NULL pointer). If the file node has type  ``CV_NODE_INT``, then  ``node->data.i`` is returned. If the file node has type  ``CV_NODE_REAL``, then  ``node->data.f``
 is converted to an integer and returned. Otherwise the error is reported.
 
 ReadIntByName
@@ -416,7 +416,7 @@ Finds a file node and returns its value.
 
     :param name: The node name
 
-    :param defaultValue: The value that is returned if the file node is not found
+    :param default_value: The value that is returned if the file node is not found
 
 The function is a simple superposition of  :ocv:cfunc:`GetFileNodeByName` and  :ocv:cfunc:`ReadInt`.
 
@@ -464,11 +464,11 @@ Retrieves a floating-point value from a file node.
 
     :param node: File node
 
-    :param defaultValue: The value that is returned if  ``node``  is NULL
+    :param default_value: The value that is returned if  ``node``  is NULL
 
 The function returns a floating-point value
 that is represented by the file node. If the file node is NULL, the
-``defaultValue``
+``default_value``
 is returned (thus, it is convenient to call
 the function right after
 :ocv:cfunc:`GetFileNode`
@@ -498,7 +498,7 @@ Finds a file node and returns its value.
 
     :param name: The node name
 
-    :param defaultValue: The value that is returned if the file node is not found
+    :param default_value: The value that is returned if the file node is not found
 
 The function is a simple superposition of
 :ocv:cfunc:`GetFileNodeByName`
@@ -515,11 +515,11 @@ Retrieves a text string from a file node.
 
     :param node: File node
 
-    :param defaultValue: The value that is returned if  ``node``  is NULL
+    :param default_value: The value that is returned if  ``node``  is NULL
 
 The function returns a text string that is represented
 by the file node. If the file node is NULL, the
-``defaultValue``
+``default_value``
 is returned (thus, it is convenient to call the function right after
 :ocv:cfunc:`GetFileNode`
 without checking for a NULL pointer). If
@@ -542,7 +542,7 @@ Finds a file node by its name and returns its value.
 
     :param name: The node name
 
-    :param defaultValue: The value that is returned if the file node is not found
+    :param default_value: The value that is returned if the file node is not found
 
 The function is a simple superposition of
 :ocv:cfunc:`GetFileNodeByName`
@@ -572,7 +572,7 @@ Releases an object.
 
 .. ocv:cfunction:: void cvRelease( void** struct_ptr )
 
-    :param structPtr: Double pointer to the object
+    :param struct_ptr: Double pointer to the object
 
 The function finds the type of a given object and calls
 ``release``
@@ -600,7 +600,7 @@ Saves an object to a file.
 
     :param filename: File name
 
-    :param structPtr: Object to save
+    :param struct_ptr: Object to save
 
     :param name: Optional object name. If it is NULL, the name will be formed from  ``filename`` .
 
@@ -677,7 +677,7 @@ Starts writing a new structure.
 
             * **CV_NODE_FLOW** the optional flag that makes sense only for YAML streams. It means that the structure is written as a flow (not as a block), which is more compact. It is recommended to use this flag for structures or arrays whose elements are all scalars.
 
-    :param typeName: Optional parameter - the object type name. In
+    :param type_name: Optional parameter - the object type name. In
         case of XML it is written as a  ``type_id``  attribute of the
         structure opening tag. In the case of YAML it is written after a colon
         following the structure name (see the example in  :ocv:struct:`CvFileStorage`
@@ -696,7 +696,7 @@ Returns the type of an object.
 
 .. ocv:cfunction:: CvTypeInfo* cvTypeOf( const void* struct_ptr )
 
-    :param structPtr: The object pointer
+    :param struct_ptr: The object pointer
 
 The function finds the type of a given object. It iterates through the list of registered types and calls the  ``is_instance`` function/method for every type info structure with that object until one of them returns non-zero or until the whole list has been traversed. In the latter case, the function returns NULL.
 
@@ -707,7 +707,7 @@ Unregisters the type.
 
 .. ocv:cfunction:: void cvUnregisterType( const char* type_name )
 
-    :param typeName: Name of an unregistered type
+    :param type_name: Name of an unregistered type
 
 The function unregisters a type with a specified name. If the name is unknown, it is possible to locate the type info by an instance of the type using :ocv:cfunc:`TypeOf` or by iterating the type list, starting from  :ocv:cfunc:`FirstType`, and then calling ``cvUnregisterType(info->typeName)``.
 
@@ -782,7 +782,7 @@ Writes a comment.
 
     :param comment: The written comment, single-line or multi-line
 
-    :param eolComment: If non-zero, the function tries to put the comment at the end of current line. If the flag is zero, if the comment is multi-line, or if it does not fit at the end of the current line, the comment starts  a new line.
+    :param eol_comment: If non-zero, the function tries to put the comment at the end of current line. If the flag is zero, if the comment is multi-line, or if it does not fit at the end of the current line, the comment starts  a new line.
 
 The function writes a comment into file storage. The comments are skipped when the storage is read.
 

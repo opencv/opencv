@@ -499,7 +499,7 @@ Fills a connected component with the given color.
 
         .. note:: Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
 
-    :param seed: Starting point.
+    :param seedPoint: Starting point.
 
     :param newVal: New value of the repainted domain pixels.
 
@@ -529,7 +529,7 @@ The functions ``floodFill`` fill a connected component starting from the seed po
 
     .. math::
 
-        \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)- \texttt{loDiff} \leq \texttt{src} (x,y)  \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)+ \texttt{upDiff}
+        \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)- \texttt{loDiff} \leq \texttt{src} (x,y)  \leq \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)+ \texttt{upDiff}
 
     in case of a grayscale image and fixed range
 
@@ -556,17 +556,17 @@ The functions ``floodFill`` fill a connected component starting from the seed po
 
     .. math::
 
-        \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_r- \texttt{loDiff} _r \leq \texttt{src} (x,y)_r \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_r+ \texttt{upDiff} _r,
+        \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)_r- \texttt{loDiff} _r \leq \texttt{src} (x,y)_r \leq \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)_r+ \texttt{upDiff} _r,
 
     .. math::
 
-        \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_g- \texttt{loDiff} _g \leq \texttt{src} (x,y)_g \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_g+ \texttt{upDiff} _g
+        \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)_g- \texttt{loDiff} _g \leq \texttt{src} (x,y)_g \leq \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)_g+ \texttt{upDiff} _g
 
     and
 
     .. math::
 
-        \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_b- \texttt{loDiff} _b \leq \texttt{src} (x,y)_b \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_b+ \texttt{upDiff} _b
+        \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)_b- \texttt{loDiff} _b \leq \texttt{src} (x,y)_b \leq \texttt{src} ( \texttt{seedPoint} .x, \texttt{seedPoint} .y)_b+ \texttt{upDiff} _b
 
     in case of a color image and fixed range
 
@@ -663,9 +663,9 @@ Applies a fixed-level threshold to each array element.
 
     :param thresh: Threshold value.
 
-    :param maxVal: Maximum value to use with the  ``THRESH_BINARY``  and  ``THRESH_BINARY_INV``  thresholding types.
+    :param maxval: Maximum value to use with the  ``THRESH_BINARY``  and  ``THRESH_BINARY_INV``  thresholding types.
 
-    :param thresholdType: Thresholding type (see the details below).
+    :param type: Thresholding type (see the details below).
 
 The function applies fixed-level thresholding
 to a single-channel array. The function is typically used to get a
@@ -673,19 +673,19 @@ bi-level (binary) image out of a grayscale image (
 :ocv:func:`compare` could
 be also used for this purpose) or for removing a noise, that is, filtering
 out pixels with too small or too large values. There are several
-types of thresholding supported by the function. They are determined by ``thresholdType`` :
+types of thresholding supported by the function. They are determined by ``type`` :
 
     * **THRESH_BINARY**
 
         .. math::
 
-              \texttt{dst} (x,y) =  \fork{\texttt{maxVal}}{if $\texttt{src}(x,y) > \texttt{thresh}$}{0}{otherwise}
+              \texttt{dst} (x,y) =  \fork{\texttt{maxval}}{if $\texttt{src}(x,y) > \texttt{thresh}$}{0}{otherwise}
 
     * **THRESH_BINARY_INV**
 
         .. math::
 
-              \texttt{dst} (x,y) =  \fork{0}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{maxVal}}{otherwise}
+              \texttt{dst} (x,y) =  \fork{0}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{maxval}}{otherwise}
 
     * **THRESH_TRUNC**
 
@@ -755,7 +755,7 @@ Runs the GrabCut algorithm.
 
 .. ocv:pyfunction:: cv2.grabCut(img, mask, rect, bgdModel, fgdModel, iterCount[, mode]) -> None
 
-    :param image: Input 8-bit 3-channel image.
+    :param img: Input 8-bit 3-channel image.
 
     :param mask: Input/output 8-bit single-channel mask. The mask is initialized by the function when  ``mode`` is set to ``GC_INIT_WITH_RECT``. Its elements may have one of following values:
 

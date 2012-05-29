@@ -10,7 +10,8 @@ Computes an absolute value of each matrix element.
 .. ocv:function:: MatExpr abs( const Mat& m )
 .. ocv:function:: MatExpr abs( const MatExpr& e )
 
-    :param src: Matrix or matrix expression.
+    :param m: Matrix.
+    :param e: Matrix expression.
 
 ``abs`` is a meta-function that is expanded to one of :ocv:func:`absdiff` forms:
 
@@ -464,7 +465,7 @@ Checks every element of an input array for invalid values.
 
 .. ocv:pyfunction:: cv2.checkRange(a[, quiet[, minVal[, maxVal]]]) -> retval, pos
 
-    :param src: Array to check.
+    :param a: Array to check.
 
     :param quiet: Flag indicating whether the functions quietly return false when the array elements are out of range or they throw an exception.
 
@@ -639,13 +640,13 @@ Counts non-zero array elements.
 
 .. ocv:pyoldfunction:: cv.CountNonZero(arr)-> int
 
-    :param mtx: Single-channel array.
+    :param src: Single-channel array.
 
-The function returns the number of non-zero elements in ``mtx`` :
+The function returns the number of non-zero elements in ``src`` :
 
 .. math::
 
-    \sum _{I: \; \texttt{mtx} (I) \ne0 } 1
+    \sum _{I: \; \texttt{src} (I) \ne0 } 1
 
 .. seealso::
 
@@ -663,7 +664,7 @@ Converts ``CvMat``, ``IplImage`` , or ``CvMatND`` to ``Mat``.
 
 .. ocv:function:: Mat cvarrToMat( const CvArr* arr, bool copyData=false, bool allowND=true, int coiMode=0 )
 
-    :param src: Source ``CvMat``, ``IplImage`` , or  ``CvMatND`` .
+    :param arr: Source ``CvMat``, ``IplImage`` , or  ``CvMatND`` .
 
     :param copyData: When it is false (default value), no data is copied and only the new header is created. In this case, the original array should not be deallocated while the new matrix header is used. If the parameter is true, all the data is copied and you may deallocate the original array right after the conversion.
 
@@ -678,7 +679,7 @@ Converts ``CvMat``, ``IplImage`` , or ``CvMatND`` to ``Mat``.
 The function ``cvarrToMat`` converts ``CvMat``, ``IplImage`` , or ``CvMatND`` header to
 :ocv:class:`Mat` header, and optionally duplicates the underlying data. The constructed header is returned by the function.
 
-When ``copyData=false`` , the conversion is done really fast (in O(1) time) and the newly created matrix header will have ``refcount=0`` , which means that no reference counting is done for the matrix data. In this case, you have to preserve the data until the new header is destructed. Otherwise, when ``copyData=true`` , the new buffer is allocated and managed as if you created a new matrix from scratch and copied the data there. That is, ``cvarrToMat(src, true)`` is equivalent to ``cvarrToMat(src, false).clone()`` (assuming that COI is not set). The function provides a uniform way of supporting
+When ``copyData=false`` , the conversion is done really fast (in O(1) time) and the newly created matrix header will have ``refcount=0`` , which means that no reference counting is done for the matrix data. In this case, you have to preserve the data until the new header is destructed. Otherwise, when ``copyData=true`` , the new buffer is allocated and managed as if you created a new matrix from scratch and copied the data there. That is, ``cvarrToMat(arr, true)`` is equivalent to ``cvarrToMat(arr, false).clone()`` (assuming that COI is not set). The function provides a uniform way of supporting
 ``CvArr`` paradigm in the code that is migrated to use new-style data structures internally. The reverse transformation, from
 ``Mat`` to
 ``CvMat`` or
@@ -1113,11 +1114,11 @@ Extracts the selected image channel.
 
 .. ocv:function:: void extractImageCOI( const CvArr* arr, OutputArray coiimg, int coi=-1 )
 
-    :param src: Source array. It should be a pointer to  ``CvMat``  or  ``IplImage`` .
+    :param arr: Source array. It should be a pointer to  ``CvMat``  or  ``IplImage`` .
 
-    :param dst: Destination array with a single channel and the same size and depth as  ``src`` .
+    :param coiimg: Destination array with a single channel and the same size and depth as  ``arr`` .
 
-    :param coi: If the parameter is  ``>=0`` , it specifies the channel to extract. If it is  ``<0`` and ``src``  is a pointer to  ``IplImage``  with a  valid COI set, the selected COI is extracted.
+    :param coi: If the parameter is  ``>=0`` , it specifies the channel to extract. If it is  ``<0`` and ``arr``  is a pointer to  ``IplImage``  with a  valid COI set, the selected COI is extracted.
 
 The function ``extractImageCOI`` is used to extract an image COI from an old-style array and put the result to the new-style C++ matrix. As usual, the destination matrix is reallocated using ``Mat::create`` if needed.
 
@@ -1134,11 +1135,11 @@ Copies the selected image channel from a new-style C++ matrix to the old-style C
 
 .. ocv:function:: void insertImageCOI( InputArray coiimg, CvArr* arr, int coi=-1 )
 
-    :param src: Source array with a single channel and the same size and depth as ``dst``.
+    :param coiimg: Source array with a single channel and the same size and depth as ``arr``.
 
-    :param dst: Destination array, it should be a pointer to  ``CvMat``  or  ``IplImage``.
+    :param arr: Destination array, it should be a pointer to  ``CvMat``  or  ``IplImage``.
 
-    :param coi: If the parameter is  ``>=0`` , it specifies the channel to insert. If it is  ``<0`` and ``dst``  is a pointer to  ``IplImage``  with a  valid COI set, the selected COI is extracted.
+    :param coi: If the parameter is  ``>=0`` , it specifies the channel to insert. If it is  ``<0`` and ``arr``  is a pointer to  ``IplImage``  with a  valid COI set, the selected COI is extracted.
 
 The function ``insertImageCOI`` is used to extract an image COI from a new-style C++ matrix and put the result to the old-style array.
 
@@ -1899,11 +1900,11 @@ Copies specified channels from input arrays to the specified channels of output 
 
     :param src: Input array or vector of matrices. All the matrices must have the same size and the same depth.
 
-    :param nsrc: Number of matrices in  ``src`` .
+    :param nsrcs: Number of matrices in  ``src`` .
 
     :param dst: Output array or vector of matrices. All the matrices  *must be allocated* . Their size and depth must be the same as in  ``src[0]`` .
 
-    :param ndst: Number of matrices in  ``dst`` .
+    :param ndsts: Number of matrices in  ``dst`` .
 
     :param fromTo: Array of index pairs specifying which channels are copied and where. ``fromTo[k*2]``  is a 0-based index of the input channel in  ``src`` . ``fromTo[k*2+1]``  is an index of the output channel in  ``dst`` . The continuous channel numbering is used: the first input image channels are indexed from  ``0``  to  ``src[0].channels()-1`` , the second input image channels are indexed from  ``src[0].channels()``  to ``src[0].channels() + src[1].channels()-1``,  and so on. The same scheme is used for the output image channels. As a special case, when  ``fromTo[k*2]``  is negative, the corresponding output channel is filled with zero .
 
@@ -1959,13 +1960,13 @@ Performs the per-element multiplication of two Fourier spectrums.
 
     :param flags: Operation flags. Currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is an independent 1D Fourier spectrum.
 
-    :param conj: Optional flag that conjugates the second source array before the multiplication (true) or not (false).
+    :param conjB: Optional flag that conjugates the second source array before the multiplication (true) or not (false).
 
 The function ``mulSpectrums`` performs the per-element multiplication of the two CCS-packed or complex matrices that are results of a real or complex Fourier transform.
 
 The function, together with
 :ocv:func:`dft` and
-:ocv:func:`idft` , may be used to calculate convolution (pass ``conj=false`` ) or correlation (pass ``conj=true`` ) of two arrays rapidly. When the arrays are complex, they are simply multiplied (per element) with an optional conjugation of the second-array elements. When the arrays are real, they are assumed to be CCS-packed (see
+:ocv:func:`idft` , may be used to calculate convolution (pass ``conjB=false`` ) or correlation (pass ``conjB=true`` ) of two arrays rapidly. When the arrays are complex, they are simply multiplied (per element) with an optional conjugation of the second-array elements. When the arrays are real, they are assumed to be CCS-packed (see
 :ocv:func:`dft` for details).
 
 
@@ -2037,11 +2038,11 @@ Calculates the product of a matrix and its transposition.
 
     :param aTa: Flag specifying the multiplication ordering. See the description below.
 
-    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :ocv:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``rtype``  parameter description below.
+    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :ocv:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``dtype``  parameter description below.
 
     :param scale: Optional scale factor for the matrix product.
 
-    :param rtype: Optional type of the destination matrix. When it is negative, the destination matrix will have the same type as  ``src`` . Otherwise, it will be ``type=CV_MAT_DEPTH(rtype)`` that should be either  ``CV_32F``  or  ``CV_64F`` .
+    :param dtype: Optional type of the destination matrix. When it is negative, the destination matrix will have the same type as  ``src`` . Otherwise, it will be ``type=CV_MAT_DEPTH(dtype)`` that should be either  ``CV_32F``  or  ``CV_64F`` .
 
 The function ``mulTransposed`` calculates the product of ``src`` and its transposition:
 
@@ -2143,7 +2144,7 @@ Normalizes the norm or value range of an array.
 
     :param normType: Normalization type. See the details below.
 
-    :param rtype: When the parameter is negative, the destination array has the same type as  ``src``. Otherwise, it has the same number of channels as  ``src``  and the depth ``=CV_MAT_DEPTH(rtype)`` .
+    :param dtype: When the parameter is negative, the destination array has the same type as  ``src``. Otherwise, it has the same number of channels as  ``src``  and the depth ``=CV_MAT_DEPTH(dtype)`` .
 
     :param mask: Optional operation mask.
 
@@ -2334,7 +2335,7 @@ Performs the perspective matrix transformation of vectors.
 
     :param dst: Destination array of the same size and type as  ``src`` .
 
-    :param mtx: ``3x3`` or ``4x4`` floating-point transformation matrix.
+    :param m: ``3x3`` or ``4x4`` floating-point transformation matrix.
 
 The function ``perspectiveTransform`` transforms every element of ``src`` by treating it as a 2D or 3D vector, in the following way:
 
@@ -2447,15 +2448,15 @@ Raises every array element to a power.
 
     :param src: Source array.
 
-    :param p: Exponent of power.
+    :param power: Exponent of power.
 
     :param dst: Destination array of the same size and type as  ``src`` .
 
-The function ``pow`` raises every element of the input array to ``p`` :
+The function ``pow`` raises every element of the input array to ``power`` :
 
 .. math::
 
-    \texttt{dst} (I) =  \fork{\texttt{src}(I)^p}{if \texttt{p} is integer}{|\texttt{src}(I)|^p}{otherwise}
+    \texttt{dst} (I) =  \fork{\texttt{src}(I)^power}{if \texttt{power} is integer}{|\texttt{src}(I)|^power}{otherwise}
 
 So, for a non-integer power exponent, the absolute values of input array elements are used. However, it is possible to get true values for negative values using some extra operations. In the example below, computing the 5th root of array ``src``  shows: ::
 
@@ -2464,7 +2465,7 @@ So, for a non-integer power exponent, the absolute values of input array element
     subtract(Scalar::all(0), dst, dst, mask);
 
 
-For some values of ``p`` , such as integer values, 0.5 and -0.5, specialized faster algorithms are used.
+For some values of ``power`` , such as integer values, 0.5 and -0.5, specialized faster algorithms are used.
 
 Special values (NaN, Inf) are not handled.
 
@@ -2633,7 +2634,7 @@ Generates a single uniformly-distributed random number or an array of random num
 
 .. ocv:pyfunction:: cv2.randu(dst, low, high) -> None
 
-    :param mtx: Output array of random numbers. The array must be pre-allocated.
+    :param dst: Output array of random numbers. The array must be pre-allocated.
 
     :param low: Inclusive lower boundary of the generated random numbers.
 
@@ -2642,11 +2643,11 @@ Generates a single uniformly-distributed random number or an array of random num
 The template functions ``randu`` generate and return the next uniformly-distributed random value of the specified type. ``randu<int>()`` is an equivalent to ``(int)theRNG();`` , and so on. See
 :ocv:class:`RNG` description.
 
-The second non-template variant of the function fills the matrix ``mtx`` with uniformly-distributed random numbers from the specified range:
+The second non-template variant of the function fills the matrix ``dst`` with uniformly-distributed random numbers from the specified range:
 
 .. math::
 
-    \texttt{low} _c  \leq \texttt{mtx} (I)_c <  \texttt{high} _c
+    \texttt{low} _c  \leq \texttt{dst} (I)_c <  \texttt{high} _c
 
 .. seealso::
 
@@ -2664,13 +2665,13 @@ Fills the array with normally distributed random numbers.
 
 .. ocv:pyfunction:: cv2.randn(dst, mean, stddev) -> None
 
-    :param mtx: Output array of random numbers. The array must be pre-allocated and have 1 to 4 channels.
+    :param dst: Output array of random numbers. The array must be pre-allocated and have 1 to 4 channels.
 
     :param mean: Mean value (expectation) of the generated random numbers.
 
     :param stddev: Standard deviation of the generated random numbers. It can be either a vector (in which case a diagonal standard deviation matrix is assumed) or a square matrix.
 
-The function ``randn`` fills the matrix ``mtx`` with normally distributed random numbers with the specified mean vector and the standard deviation matrix. The generated random numbers are clipped to fit the value range of the destination array data type.
+The function ``randn`` fills the matrix ``dst`` with normally distributed random numbers with the specified mean vector and the standard deviation matrix. The generated random numbers are clipped to fit the value range of the destination array data type.
 
 .. seealso::
 
@@ -2687,13 +2688,13 @@ Shuffles the array elements randomly.
 
 .. ocv:pyfunction:: cv2.randShuffle(dst[, iterFactor]) -> None
 
-    :param mtx: Input/output numerical 1D array.
+    :param dst: Input/output numerical 1D array.
 
     :param iterFactor: Scale factor that determines the number of random swap operations. See the details below.
 
     :param rng: Optional random number generator used for shuffling. If it is zero, :ocv:func:`theRNG` () is used instead.
 
-The function ``randShuffle`` shuffles the specified 1D array by randomly choosing pairs of elements and swapping them. The number of such swap operations will be ``mtx.rows*mtx.cols*iterFactor`` .
+The function ``randShuffle`` shuffles the specified 1D array by randomly choosing pairs of elements and swapping them. The number of such swap operations will be ``dst.rows*dst.cols*iterFactor`` .
 
 .. seealso::
 
@@ -2713,13 +2714,13 @@ Reduces a matrix to a vector.
 .. ocv:cfunction:: void cvReduce(const CvArr* src, CvArr* dst, int dim=-1, int op=CV_REDUCE_SUM)
 .. ocv:pyoldfunction:: cv.Reduce(src, dst, dim=-1, op=CV_REDUCE_SUM)-> None
 
-    :param mtx: Source 2D matrix.
+    :param src: Source 2D matrix.
 
-    :param vec: Destination vector. Its size and type is defined by  ``dim``  and  ``dtype``  parameters.
+    :param dst: Destination vector. Its size and type is defined by  ``dim``  and  ``dtype``  parameters.
 
     :param dim: Dimension index along which the matrix is reduced. 0 means that the matrix is reduced to a single row. 1 means that the matrix is reduced to a single column.
 
-    :param reduceOp: Reduction operation that could be one of the following:
+    :param rtype: Reduction operation that could be one of the following:
 
             * **CV_REDUCE_SUM** The output is the sum of all rows/columns of the matrix.
 
@@ -2729,7 +2730,7 @@ Reduces a matrix to a vector.
 
             * **CV_REDUCE_MIN** The output is the minimum (column/row-wise) of all rows/columns of the matrix.
 
-    :param dtype: When it is negative, the destination vector will have the same type as the source matrix. Otherwise, its type will be  ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), mtx.channels())`` .
+    :param dtype: When it is negative, the destination vector will have the same type as the source matrix. Otherwise, its type will be  ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels())`` .
 
 The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
@@ -2831,7 +2832,7 @@ Initializes a scaled identity matrix.
 
 .. ocv:pyoldfunction:: cv.SetIdentity(mat, value=1)-> None
 
-    :param dst: Matrix to initialize (not necessarily square).
+    :param mtx: Matrix to initialize (not necessarily square).
 
     :param value: Value to assign to diagonal elements.
 
@@ -2840,7 +2841,7 @@ The function
 
 .. math::
 
-    \texttt{dst} (i,j)= \fork{\texttt{value}}{ if $i=j$}{0}{otherwise}
+    \texttt{mtx} (i,j)= \fork{\texttt{value}}{ if $i=j$}{0}{otherwise}
 
 The function can also be emulated using the matrix initializers and the matrix expressions: ::
 
@@ -3047,15 +3048,15 @@ Divides a multi-channel array into several single-channel arrays.
 
 .. ocv:pyoldfunction:: cv.Split(src, dst0, dst1, dst2, dst3)-> None
 
-    :param mtx: Source multi-channel array.
+    :param src: Source multi-channel array.
 
-    :param mv: Destination array or vector of arrays. In the first variant of the function the number of arrays must match  ``mtx.channels()`` . The arrays themselves are reallocated, if needed.
+    :param mv: Destination array or vector of arrays. In the first variant of the function the number of arrays must match  ``src.channels()`` . The arrays themselves are reallocated, if needed.
 
 The functions ``split`` split a multi-channel array into separate single-channel arrays:
 
 .. math::
 
-    \texttt{mv} [c](I) =  \texttt{mtx} (I)_c
+    \texttt{mv} [c](I) =  \texttt{src} (I)_c
 
 If you need to extract a single channel or do some other sophisticated channel permutation, use
 :ocv:func:`mixChannels` .
@@ -3248,7 +3249,7 @@ Performs SVD of a matrix
 
     :param u: Computed left singular vectors
 
-    :param v: Computed right singular vectors
+    :param V: Computed right singular vectors
 
     :param vt: Transposed matrix of right singular values
 
@@ -3296,7 +3297,7 @@ Performs a singular value back substitution.
 
     :param u: Left singular vectors
 
-    :param v: Right singular vectors
+    :param V: Right singular vectors
 
     :param vt: Transposed matrix of right singular vectors.
 
@@ -3395,30 +3396,30 @@ Performs the matrix transformation of every array element.
 
 .. ocv:pyoldfunction:: cv.Transform(src, dst, transmat, shiftvec=None)-> None
 
-    :param src: Source array that must have as many channels (1 to 4) as  ``mtx.cols``  or  ``mtx.cols-1``.
+    :param src: Source array that must have as many channels (1 to 4) as  ``m.cols``  or  ``m.cols-1``.
 
-    :param dst: Destination array of the same size and depth as  ``src`` . It has as many channels as  ``mtx.rows``  .
+    :param dst: Destination array of the same size and depth as  ``src`` . It has as many channels as  ``m.rows``  .
 
-    :param mtx: Transformation ``2x2`` or ``2x3`` floating-point matrix.
+    :param m: Transformation ``2x2`` or ``2x3`` floating-point matrix.
 
-    :param shiftvec: Optional translation vector (when ``mtx`` is ``2x2``)
+    :param shiftvec: Optional translation vector (when ``m`` is ``2x2``)
 
 The function ``transform`` performs the matrix transformation of every element of the array ``src`` and stores the results in ``dst`` :
 
 .. math::
 
-    \texttt{dst} (I) =  \texttt{mtx} \cdot \texttt{src} (I)
+    \texttt{dst} (I) =  \texttt{m} \cdot \texttt{src} (I)
 
-(when ``mtx.cols=src.channels()`` ), or
+(when ``m.cols=src.channels()`` ), or
 
 .. math::
 
-    \texttt{dst} (I) =  \texttt{mtx} \cdot [ \texttt{src} (I); 1]
+    \texttt{dst} (I) =  \texttt{m} \cdot [ \texttt{src} (I); 1]
 
-(when ``mtx.cols=src.channels()+1`` )
+(when ``m.cols=src.channels()+1`` )
 
 Every element of the ``N`` -channel array ``src`` is interpreted as ``N`` -element vector that is transformed using
-the ``M x N`` or ``M x (N+1)`` matrix ``mtx``
+the ``M x N`` or ``M x (N+1)`` matrix ``m``
 to ``M``-element vector - the corresponding element of the destination array ``dst`` .
 
 The function may be used for geometrical transformation of

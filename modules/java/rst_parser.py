@@ -15,6 +15,17 @@ params_blacklist = {
     "gpu::swapChannels" : ("dstOrder") # parameter is not parsed correctly by the hdr_parser
 }
 
+ERROR_001_SECTIONFAILURE      = 1
+ERROR_002_HDRWHITESPACE       = 2
+ERROR_003_PARENTHESES         = 3
+WARNING_004_TABS              = 4
+ERROR_005_REDEFENITIONPARAM   = 5
+ERROR_006_REDEFENITIONFUNC    = 6
+WARNING_007_UNDOCUMENTEDPARAM = 7
+WARNING_008_MISSINGPARAM      = 8
+WARNING_009_HDRMISMATCH       = 9
+ERROR_010_NOMODULE            = 10
+
 params_mapping = {
     "composeRT" : {
         "dr3dr1" : "d*d*",
@@ -122,15 +133,16 @@ class RstParser(object):
             self.parse_section(module_name, section_name, file_name, lineno, lines)
         except AssertionError, args:
             if show_errors:
-                print >> sys.stderr, "RST parser error: assertion in \"%s\"  File: %s (line %s)" % (section_name, file_name, lineno)
+                print >> sys.stderr, "RST parser error E%03d: assertion in \"%s\" at %s:%s" % (ERROR_001_SECTIONFAILURE, section_name, file_name, lineno)
                 print >> sys.stderr, "    Details: %s" % args
 
     def parse_section(self, module_name, section_name, file_name, lineno, lines):
         self.sections_total += 1
         # skip sections having whitespace in name
-        if section_name.find(" ") >= 0 and section_name.find("::operator") < 0:
+        #if section_name.find(" ") >= 0 and section_name.find("::operator") < 0:
+        if section_name.find(" ") >= 0 and not bool(re.match(r"(\w+::)*operator\s*(\w+|>>|<<|\(\)|->|\+\+|--|=|==|\+=|-=)", section_name)):
             if show_errors:
-                print "SKIPPED: \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
+                print "RST parser error E%03d:  SKIPPED: \"%s\" File: %s:%s" % (ERROR_002_HDRWHITESPACE, section_name, file_name, lineno)
             self.sections_skipped += 1
             return
 
@@ -273,7 +285,7 @@ class RstParser(object):
 
         if fdecl.balance != 0:
             if show_critical_errors:
-                print >> sys.stderr, "RST parser error: invalid parentheses balance in \"%s\" File: %s:%s" % (section_name, file_name, lineno)
+                print >> sys.stderr, "RST parser error E%03d: invalid parentheses balance in \"%s\" at %s:%s" % (ERROR_003_PARENTHESES, section_name, file_name, lineno)
             return
 
         # save last parameter if needed
@@ -309,7 +321,7 @@ class RstParser(object):
             if l.find("\t") >= 0:
                 whitespace_warnings += 1
                 if whitespace_warnings <= max_whitespace_warnings and show_warnings:
-                    print >> sys.stderr, "RST parser warning: tab symbol instead of space is used at file %s (line %s)" % (doc, lineno)
+                    print >> sys.stderr, "RST parser warning W%03d: tab symbol instead of space is used at %s:%s" % (WARNING_004_TABS, doc, lineno)
                 l = l.replace("\t", "    ")
 
             # handle first line
@@ -358,8 +370,8 @@ class RstParser(object):
             if show_errors:
                 #check black_list
                 if decl.name not in params_blacklist.get(func["name"], []):
-                    print >> sys.stderr, "RST parser error: redefinition of parameter \"%s\" in \"%s\" File: %s (line %s)" \
-                        % (decl.name, func["name"], func["file"], func["line"])
+                    print >> sys.stderr, "RST parser error E%03d: redefinition of parameter \"%s\" in \"%s\" at %s:%s" \
+                        % (ERROR_005_REDEFENITIONPARAM, decl.name, func["name"], func["file"], func["line"])
         else:
             params[decl.name] = decl.comment
             func["params"] = params
@@ -369,7 +381,7 @@ class RstParser(object):
         if skipped:
             print >> out, "SKIPPED DEFINITION:"
         print >> out, "name:      %s" % (func.get("name","~empty~"))
-        print >> out, "file:      %s (line %s)" % (func.get("file","~empty~"), func.get("line","~empty~"))
+        print >> out, "file:      %s:%s" % (func.get("file","~empty~"), func.get("line","~empty~"))
         print >> out, "is class:  %s" % func.get("isclass",False)
         print >> out, "is struct: %s" % func.get("isstruct",False)
         print >> out, "module:    %s" % func.get("module","~unknown~")
@@ -396,8 +408,8 @@ class RstParser(object):
                 return False
         if func["name"] in self.definitions:
             if show_errors:
-                print >> sys.stderr, "RST parser error: \"%s\" from file: %s (line %s) is already documented in file: %s (line %s)" \
-                    % (func["name"], func["file"], func["line"], self.definitions[func["name"]]["file"], self.definitions[func["name"]]["line"])
+                print >> sys.stderr, "RST parser error E%03d: \"%s\" from: %s:%s is already documented at %s:%s" \
+                    % (ERROR_006_REDEFENITIONFUNC, func["name"], func["file"], func["line"], self.definitions[func["name"]]["file"], self.definitions[func["name"]]["line"])
             return False
         return self.validateParams(func)
 
@@ -417,13 +429,13 @@ class RstParser(object):
         # 1. all params are documented
         for p in params:
             if p not in documentedParams and show_warnings:
-                print >> sys.stderr, "RST parser warning: parameter \"%s\" of \"%s\" is undocumented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
+                print >> sys.stderr, "RST parser warning W%03d: parameter \"%s\" of \"%s\" is undocumented. %s:%s" % (WARNING_007_UNDOCUMENTEDPARAM, p, func["name"], func["file"], func["line"])
 
         # 2. only real params are documented
         for p in documentedParams:
             if p not in params and show_warnings:
                 if p not in params_blacklist.get(func["name"], []):
-                    print >> sys.stderr, "RST parser warning: unexisting parameter \"%s\" of \"%s\" is documented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
+                    print >> sys.stderr, "RST parser warning W%03d: unexisting parameter \"%s\" of \"%s\" is documented at %s:%s" % (WARNING_008_MISSINGPARAM, p, func["name"], func["file"], func["line"])
         return True
 
     def normalize(self, func):
@@ -490,11 +502,11 @@ class RstParser(object):
 
         fname = fname.replace(".", "::")
         if fname.startswith("cv::cv"):
-            if fname[6:] == func.get("name", ""):
+            if fname[6:] == func.get("name", "").replace("*", "_n"):
                 func["name"] = fname[4:]
                 func["method"] = fname[4:]
             elif show_warnings:
-                print >> sys.stderr, "\"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
+                print >> sys.stderr, "RST parser warning W%03d:  \"%s\" - section name is \"%s\" instead of \"%s\" at %s:%s" % (WARNING_009_HDRMISMATCH, fname, func["name"], fname[6:], func["file"], func["line"])
                 #self.print_info(func)
 
     def normalizeText(self, s):
@@ -711,7 +723,7 @@ if __name__ == "__main__":
     module = sys.argv[1]
 
     if module != "all" and not os.path.isdir(os.path.join(rst_parser_dir, "../" + module)):
-        print "Module \"" + module + "\" could not be found."
+        print "RST parser error E%03d: module \"%s\" could not be found." % (ERROR_010_NOMODULE, module)
         exit(1)
 
     parser = RstParser(hdr_parser.CppHeaderParser())

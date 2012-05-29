@@ -336,6 +336,10 @@ class CppHeaderParser(object):
                 else:
                     atype = arg
                     aname = "param"
+                if aname.endswith("]"):
+                    bidx = aname.find('[')
+                    atype += aname[bidx:]
+                    aname = aname[:bidx]
                 decl[3].append([atype, aname, defval, []])
 
         if static_method:

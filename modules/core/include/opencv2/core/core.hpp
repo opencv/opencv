@@ -4131,9 +4131,9 @@ public:
     //! moves iterator to the previous node
     FileNodeIterator operator -- (int);
     //! moves iterator forward by the specified offset (possibly negative)
-    FileNodeIterator& operator += (int);
+    FileNodeIterator& operator += (int ofs);
     //! moves iterator backward by the specified offset (possibly negative)
-    FileNodeIterator& operator -= (int);
+    FileNodeIterator& operator -= (int ofs);
 
     //! reads the next maxCount elements (or less, if the sequence/mapping last element occurs earlier) to the buffer with the specified format
     FileNodeIterator& readRaw( const string& fmt, uchar* vec,

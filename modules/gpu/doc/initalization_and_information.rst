@@ -75,7 +75,7 @@ The following method checks whether the module was built with the support of the
 
     .. ocv:function:: static bool gpu::TargetArchs::builtWith( FeatureSet feature_set )
 
-        :param feature: Feature to be checked. See :ocv:class:`gpu::FeatureSet`.
+        :param feature_set: Features to be checked. See :ocv:class:`gpu::FeatureSet`.
 
 There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 
@@ -199,7 +199,7 @@ Provides information on GPU feature support.
 
 .. ocv:function:: bool gpu::DeviceInfo::supports( FeatureSet feature_set ) const
 
-    :param feature: Feature to be checked. See :ocv:class:`gpu::FeatureSet`.
+    :param feature_set: Features to be checked. See :ocv:class:`gpu::FeatureSet`.
 
 This function returns ``true`` if the device has the specified GPU feature. Otherwise, it returns ``false`` .
 

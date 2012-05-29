@@ -71,7 +71,7 @@ Draws keypoints.
 
     :param keypoints: Keypoints from the source image.
 
-    :param outImg: Output image. Its content depends on  the ``flags``  value defining what is drawn in the output image. See possible  ``flags``  bit values below.
+    :param outImage: Output image. Its content depends on  the ``flags``  value defining what is drawn in the output image. See possible  ``flags``  bit values below.
 
     :param color: Color of keypoints.
 

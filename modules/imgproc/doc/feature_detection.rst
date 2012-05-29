@@ -52,7 +52,7 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
     :param blockSize: Neighborhood size (see details below).
 
-    :param apertureSize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
+    :param ksize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
@@ -105,7 +105,7 @@ Harris edge detector.
 
     :param blockSize: Neighborhood size (see the details on  :ocv:func:`cornerEigenValsAndVecs` ).
 
-    :param apertureSize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
+    :param ksize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
 
     :param k: Harris detector free parameter. See the formula below.
 
@@ -145,7 +145,7 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
     :param blockSize: Neighborhood size (see the details on  :ocv:func:`cornerEigenValsAndVecs` ).
 
-    :param apertureSize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
+    :param ksize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
@@ -232,9 +232,9 @@ Determines strong corners on an image.
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
-    :param eigImage: The parameter is ignored.
+    :param eig_image: The parameter is ignored.
 
-    :param tempImage: The parameter is ignored.
+    :param temp_image: The parameter is ignored.
 
     :param corners: Output vector of detected corners.
 
@@ -298,7 +298,7 @@ Finds circles in a grayscale image using the Hough transform.
 
     :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
 
-    :param circleStorage: In C function this is a memory storage that will contain the output sequence of found circles.
+    :param circle_storage: In C function this is a memory storage that will contain the output sequence of found circles.
 
     :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
 
@@ -516,7 +516,7 @@ Calculates a feature map for corner detection.
 
     :param dst: Output image that has the type  ``CV_32F``  and the same size as  ``src`` .
 
-    :param apertureSize: Aperture size of the :ocv:func:`Sobel` .
+    :param ksize: Aperture size of the :ocv:func:`Sobel` .
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 

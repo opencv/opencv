@@ -433,11 +433,11 @@ CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream = S
 
 //! computes magnitude of complex (x(i).re, x(i).im) vector
 //! supports only CV_32FC2 type
-CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS void magnitude(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null());
 
 //! computes squared magnitude of complex (x(i).re, x(i).im) vector
 //! supports only CV_32FC2 type
-CV_EXPORTS void magnitudeSqr(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS void magnitudeSqr(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null());
 
 //! computes magnitude of each (x(i), y(i)) vector
 //! supports only floating-point source
@@ -482,7 +482,7 @@ CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, double scale
 //! computes element-wise weighted quotient of matrix and scalar (c = a / s)
 CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 //! computes element-wise weighted reciprocal of an array (dst = scale/src2)
-CV_EXPORTS void divide(double scale, const GpuMat& src2, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS void divide(double scale, const GpuMat& b, GpuMat& c, int dtype = -1, Stream& stream = Stream::Null());
 
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
 CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
@@ -527,7 +527,7 @@ CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream
 
 //! compares elements of two arrays (c = a <cmpop> b)
 CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
-CV_EXPORTS void compare(const GpuMat& a, Scalar sc, GpuMat& dst, int cmpop, Stream& stream = Stream::Null());
+CV_EXPORTS void compare(const GpuMat& a, Scalar sc, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
 
 //! performs per-elements bit-wise inversion
 CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());

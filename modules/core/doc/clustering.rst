@@ -17,7 +17,7 @@ Finds centers of clusters and groups input samples around the clusters.
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
-    :param clusterCount: Number of clusters to split the set by.
+    :param cluster_count: Number of clusters to split the set by.
 
     :param labels: Input/output integer array that stores the cluster indices for every sample.
 
@@ -40,7 +40,7 @@ Finds centers of clusters and groups input samples around the clusters.
     :param compactness: The returned value that is described below.
 
 The function ``kmeans`` implements a k-means algorithm that finds the
-centers of ``clusterCount`` clusters and groups the input samples
+centers of ``cluster_count`` clusters and groups the input samples
 around the clusters. As an output,
 :math:`\texttt{labels}_i` contains a 0-based cluster index for
 the sample stored in the

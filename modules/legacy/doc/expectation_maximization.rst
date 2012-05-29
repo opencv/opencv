@@ -77,7 +77,7 @@ Estimates the Gaussian mixture parameters from a sample set.
 
     :param samples: Samples from which the Gaussian mixture model will be estimated.
 
-    :param sample_idx: Mask of samples to use. All samples are used by default.
+    :param sampleIdx: Mask of samples to use. All samples are used by default.
 
     :param params: Parameters of the EM algorithm.
 

@@ -33,7 +33,7 @@ Extract features and computes their descriptors using SIFT algorithm
 
 .. ocv:function:: void SIFT::operator()(InputArray img, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false)
 
-    :param image: Input 8-bit grayscale image
+    :param img: Input 8-bit grayscale image
 
     :param mask: Optional input mask that marks the regions where we should detect features.
 

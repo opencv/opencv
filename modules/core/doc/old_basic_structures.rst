@@ -839,9 +839,9 @@ Returns one of more array columns.
 
     :param col: Zero-based index of the selected column
 
-    :param startCol: Zero-based index of the starting column (inclusive) of the span
+    :param start_col: Zero-based index of the starting column (inclusive) of the span
 
-    :param endCol: Zero-based index of the ending column (exclusive) of the span
+    :param end_col: Zero-based index of the ending column (exclusive) of the span
 
 The functions return the header, corresponding to a specified column span of the input array. That is, no data is copied. Therefore, any modifications of the submatrix will affect the original array. If you need to copy the columns, use :ocv:cfunc:`CloneMat`. ``cvGetCol(arr, submat, col)`` is a shortcut for ``cvGetCols(arr, submat, col, col+1)``.
 
@@ -916,9 +916,9 @@ Returns image header for arbitrary array.
 
     :param arr: Input array
 
-    :param imageHeader: Pointer to  ``IplImage``  structure used as a temporary buffer
+    :param image_header: Pointer to  ``IplImage``  structure used as a temporary buffer
 
-The function returns the image header for the input array that can be a matrix (:ocv:struct:`CvMat`) or image (:ocv:struct:`IplImage`). In the case of an image the function simply returns the input pointer. In the case of ``CvMat`` it initializes an ``imageHeader`` structure with the parameters of the input matrix. Note that if we transform ``IplImage`` to ``CvMat`` using :ocv:cfunc:`GetMat` and then transform ``CvMat`` back to IplImage using this function, we will get different headers if the ROI is set in the original image.
+The function returns the image header for the input array that can be a matrix (:ocv:struct:`CvMat`) or image (:ocv:struct:`IplImage`). In the case of an image the function simply returns the input pointer. In the case of ``CvMat`` it initializes an ``image_header`` structure with the parameters of the input matrix. Note that if we transform ``IplImage`` to ``CvMat`` using :ocv:cfunc:`GetMat` and then transform ``CvMat`` back to IplImage using this function, we will get different headers if the ROI is set in the original image.
 
 GetImageCOI
 -----------
@@ -972,7 +972,7 @@ Returns the next sparse matrix element
 
 .. ocv:cfunction:: CvSparseNode* cvGetNextSparseNode( CvSparseMatIterator* mat_iterator )
 
-    :param matIterator: Sparse array iterator
+    :param mat_iterator: Sparse array iterator
 
 The function moves iterator to the next sparse matrix element and returns pointer to it. In the current version there is no any particular order of the elements, because they are stored in the hash table. The sample below demonstrates how to iterate through the sparse matrix: ::
 
@@ -1011,7 +1011,7 @@ Retrieves low-level information about the array.
 
     :param step: Output full row length in bytes
 
-    :param roiSize: Output ROI size
+    :param roi_size: Output ROI size
 
 The function fills output variables with low-level information about the array data. All output parameters are optional, so some of the pointers may be set to ``NULL``. If the array is ``IplImage`` with ROI set, the parameters of ROI are returned.
 
@@ -1074,11 +1074,11 @@ Returns array row or row span.
 
     :param row: Zero-based index of the selected row
 
-    :param startRow: Zero-based index of the starting row (inclusive) of the span
+    :param start_row: Zero-based index of the starting row (inclusive) of the span
 
-    :param endRow: Zero-based index of the ending row (exclusive) of the span
+    :param end_row: Zero-based index of the ending row (exclusive) of the span
 
-    :param deltaRow: Index step in the row span. That is, the function extracts every  ``deltaRow`` -th row from  ``startRow``  and up to (but not including)  ``endRow`` .
+    :param delta_row: Index step in the row span. That is, the function extracts every  ``delta_row`` -th row from  ``start_row``  and up to (but not including)  ``end_row`` .
 
 The functions return the header, corresponding to a specified row/row span of the input array. ``cvGetRow(arr, submat, row)`` is a shortcut for ``cvGetRows(arr, submat, row, row+1)``.
 
@@ -1217,7 +1217,7 @@ Initializes sparse array elements iterator.
 
     :param mat: Input array
 
-    :param matIterator: Initialized iterator
+    :param mat_iterator: Initialized iterator
 
 The function initializes iterator of sparse array elements and returns pointer to the first element, or NULL if the array is empty.
 
@@ -1268,9 +1268,9 @@ Return pointer to a particular array element.
 
     :param type: Optional output parameter: type of matrix elements
 
-    :param createNode: Optional input parameter for sparse matrices. Non-zero value of the parameter means that the requested element is created if it does not exist already.
+    :param create_node: Optional input parameter for sparse matrices. Non-zero value of the parameter means that the requested element is created if it does not exist already.
 
-    :param precalcHashval: Optional input parameter for sparse matrices. If the pointer is not NULL, the function does not recalculate the node hash value, but takes it from the specified location. It is useful for speeding up pair-wise operations (TODO: provide an example)
+    :param precalc_hashval: Optional input parameter for sparse matrices. If the pointer is not NULL, the function does not recalculate the node hash value, but takes it from the specified location. It is useful for speeding up pair-wise operations (TODO: provide an example)
 
 The functions return a pointer to a specific array element. Number of array dimension should match to the number of indices passed to the function except for ``cvPtr1D`` function that can be used for sequential access to 1D, 2D or nD dense arrays.
 
@@ -1415,9 +1415,9 @@ Changes shape of matrix/image without copying data.
 
     :param header: Output header to be filled
 
-    :param newCn: New number of channels. 'newCn = 0' means that the number of channels remains unchanged.
+    :param new_cn: New number of channels. 'new_cn = 0' means that the number of channels remains unchanged.
 
-    :param newRows: New number of rows. 'newRows = 0' means that the number of rows remains unchanged unless it needs to be changed according to  ``newCn``  value.
+    :param new_rows: New number of rows. 'new_rows = 0' means that the number of rows remains unchanged unless it needs to be changed according to  ``new_cn``  value.
 
 The function initializes the CvMat header so that it points to the same data as the original array but has a different shape - different number of channels, different number of rows, or both.
 
@@ -1451,15 +1451,15 @@ Changes the shape of a multi-dimensional array without copying the data.
 
     :param arr: Input array
 
-    :param sizeofHeader: Size of output header to distinguish between IplImage, CvMat and CvMatND output headers
+    :param sizeof_header: Size of output header to distinguish between IplImage, CvMat and CvMatND output headers
 
     :param header: Output header to be filled
 
-    :param newCn: New number of channels. ``newCn = 0``  means that the number of channels remains unchanged.
+    :param new_cn: New number of channels. ``new_cn = 0``  means that the number of channels remains unchanged.
 
-    :param newDims: New number of dimensions. ``newDims = 0`` means that the number of dimensions remains the same.
+    :param new_dims: New number of dimensions. ``new_dims = 0`` means that the number of dimensions remains the same.
 
-    :param newSizes: Array of new dimension sizes. Only  ``newDims-1``  values are used, because the total number of elements must remain the same. Thus, if  ``newDims = 1``,  ``newSizes``  array is not used.
+    :param new_sizes: Array of new dimension sizes. Only  ``new_dims-1``  values are used, because the total number of elements must remain the same. Thus, if  ``new_dims = 1``,  ``new_sizes``  array is not used.
 
 The function is an advanced version of :ocv:cfunc:`Reshape` that can work with multi-dimensional arrays as well (though it can work with ordinary images and matrices) and change the number of dimensions.
 
@@ -1701,7 +1701,7 @@ Fills an array with random numbers and updates the RNG state.
 
     :param arr: The destination array
 
-    :param distType: Distribution type
+    :param dist_type: Distribution type
 
             * **CV_RAND_UNI** uniform distribution
 

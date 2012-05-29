@@ -18,13 +18,13 @@ Calculates a histogram of a set of arrays.
 .. ocv:cfunction:: void cvCalcHist( IplImage** image, CvHistogram* hist, int accumulate=0, const CvArr* mask=NULL )
 .. ocv:pyoldfunction:: cv.CalcHist(image, hist, accumulate=0, mask=None)-> None
 
-    :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
+    :param images: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
-    :param narrays: Number of source arrays.
+    :param nimages: Number of source images.
 
-    :param channels: List of the  ``dims``  channels used to compute the histogram. The first array channels are numerated from 0 to  ``arrays[0].channels()-1`` , the second array channels are counted from  ``arrays[0].channels()``  to  ``arrays[0].channels() + arrays[1].channels()-1``,  and so on.
+    :param channels: List of the  ``dims``  channels used to compute the histogram. The first array channels are numerated from 0 to  ``images[0].channels()-1`` , the second array channels are counted from  ``images[0].channels()``  to  ``images[0].channels() + images[1].channels()-1``,  and so on.
 
-    :param mask: Optional mask. If the matrix is not empty, it must be an 8-bit array of the same size as  ``arrays[i]`` . The non-zero mask elements mark the array elements counted in the histogram.
+    :param mask: Optional mask. If the matrix is not empty, it must be an 8-bit array of the same size as  ``images[i]`` . The non-zero mask elements mark the array elements counted in the histogram.
 
     :param hist: Output histogram, which is a dense or sparse  ``dims`` -dimensional array.
 
@@ -115,15 +115,15 @@ Calculates the back projection of a histogram.
 .. ocv:cfunction:: void cvCalcBackProject( IplImage** image, CvArr* backProject, const CvHistogram* hist )
 .. ocv:pyoldfunction:: cv.CalcBackProject(image, back_project, hist) -> None
 
-    :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
+    :param images: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
-    :param narrays: Number of source arrays.
+    :param nimages: Number of source images.
 
-    :param channels: The list of channels used to compute the back projection. The number of channels must match the histogram dimensionality. The first array channels are numerated from 0 to  ``arrays[0].channels()-1`` , the second array channels are counted from  ``arrays[0].channels()``  to  ``arrays[0].channels() + arrays[1].channels()-1``,  and so on.
+    :param channels: The list of channels used to compute the back projection. The number of channels must match the histogram dimensionality. The first array channels are numerated from 0 to  ``images[0].channels()-1`` , the second array channels are counted from  ``images[0].channels()``  to  ``images[0].channels() + images[1].channels()-1``,  and so on.
 
     :param hist: Input histogram that can be dense or sparse.
 
-    :param backProject: Destination back projection array that is a single-channel array of the same size and depth as  ``arrays[0]`` .
+    :param backProject: Destination back projection array that is a single-channel array of the same size and depth as  ``images[0]`` .
 
     :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :ocv:func:`calcHist` .
 
@@ -235,7 +235,7 @@ Computes the "minimal work" distance between two weighted point configurations.
 
     :param distType: Used metric.  ``CV_DIST_L1, CV_DIST_L2`` , and  ``CV_DIST_C``  stand for one of the standard metrics.  ``CV_DIST_USER``  means that a pre-calculated cost matrix ``cost``  is used.
 
-    :param distFunc: Custom distance function supported by the old interface. ``CvDistanceFunction`` is defined as: ::
+    :param distance_func: Custom distance function supported by the old interface. ``CvDistanceFunction`` is defined as: ::
 
             typedef float (CV_CDECL * CvDistanceFunction)( const float* a,
                                 const float* b, void* userdata );
@@ -333,7 +333,7 @@ Divides one histogram by another.
 
     :param hist2: Second histogram.
 
-    :param dsthist: Destination histogram.
+    :param dst_hist: Destination histogram.
 
     :param scale: Scale factor for the destination histogram.
 

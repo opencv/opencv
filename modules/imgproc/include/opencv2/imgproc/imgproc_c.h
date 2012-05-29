@@ -351,8 +351,8 @@ CVAPI(CvPoint) cvReadChainPoint( CvChainPtReader* reader );
    a tree of polygonal curves (contours) */
 CVAPI(CvSeq*)  cvApproxPoly( const void* src_seq,
                              int header_size, CvMemStorage* storage,
-                             int method, double parameter,
-                             int parameter2 CV_DEFAULT(0));
+                             int method, double eps,
+                             int recursive CV_DEFAULT(0));
 
 /* Calculates perimeter of a contour or length of a part of contour */
 CVAPI(double)  cvArcLength( const void* curve,

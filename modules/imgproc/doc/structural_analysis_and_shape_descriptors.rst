@@ -175,7 +175,7 @@ Approximates a polygonal curve(s) with the specified precision.
 
 .. ocv:pyfunction:: cv2.approxPolyDP(curve, epsilon, closed[, approxCurve]) -> approxCurve
 
-.. ocv:cfunction:: CvSeq* cvApproxPoly( const void* src_seq, int header_size, CvMemStorage* storage, int method, double parameter, int parameter2=0 )
+.. ocv:cfunction:: CvSeq* cvApproxPoly( const void* src_seq, int header_size, CvMemStorage* storage, int method, double eps, int recursive=0 )
 
     :param curve: Input vector of a 2D point stored in:
 
@@ -191,7 +191,7 @@ Approximates a polygonal curve(s) with the specified precision.
 
     :param closed: If true, the approximated curve is closed (its first and last vertices are connected). Otherwise, it is not closed.
 
-    :param headerSize: Header size of the approximated curve. Normally, ``sizeof(CvContour)`` is used.
+    :param header_size: Header size of the approximated curve. Normally, ``sizeof(CvContour)`` is used.
 
     :param storage: Memory storage where the approximated curve is stored.
 
@@ -213,7 +213,7 @@ Approximates Freeman chain(s) with a polygonal curve.
 
 .. ocv:pyoldfunction:: cv.ApproxChains(src_seq, storage, method=CV_CHAIN_APPROX_SIMPLE, parameter=0, minimal_perimeter=0, recursive=0)-> contours
 
-    :param chain: Pointer to the approximated Freeman chain that can refer to other chains.
+    :param src_seq: Pointer to the approximated Freeman chain that can refer to other chains.
 
     :param storage: Storage location for the resulting polylines.
 
@@ -221,7 +221,7 @@ Approximates Freeman chain(s) with a polygonal curve.
 
     :param parameter: Method parameter (not used now).
 
-    :param minimalPerimeter: Approximates only those contours whose perimeters are not less than  ``minimal_perimeter`` . Other chains are removed from the resulting structure.
+    :param minimal_perimeter: Approximates only those contours whose perimeters are not less than  ``minimal_perimeter`` . Other chains are removed from the resulting structure.
 
     :param recursive: Recursion flag. If it is non-zero, the function approximates all chains that can be obtained from  ``chain``  by using the  ``h_next``  or  ``v_next`` links. Otherwise, the single input chain is approximated.
 
@@ -323,7 +323,7 @@ Finds the convex hull of a point set.
 
     :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case, the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case, ``hull`` elements are the convex hull points themselves.
 
-    :param storage: Output memory storage in the old API (``cvConvexHull2`` returns a sequence containing the convex hull points or their indices).
+    :param hull_storage: Output memory storage in the old API (``cvConvexHull2`` returns a sequence containing the convex hull points or their indices).
 
     :param clockwise: Orientation flag. If it is true, the output convex hull is oriented clockwise. Otherwise, it is oriented counter-clockwise. The usual screen coordinate system is assumed so that the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.
 

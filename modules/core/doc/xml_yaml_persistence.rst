@@ -665,7 +665,7 @@ FileNodeIterator::operator +=
 -----------------------------
 Moves iterator forward by the specified offset.
 
-.. ocv:function:: FileNodeIterator& FileNodeIterator::operator +=( int param )
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator +=( int ofs )
 
     :param ofs: Offset (possibly negative) to move the iterator.
 
@@ -674,7 +674,7 @@ FileNodeIterator::operator -=
 -----------------------------
 Moves iterator backward by the specified offset (possibly negative).
 
-.. ocv:function:: FileNodeIterator& FileNodeIterator::operator -=( int param )
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator -=( int ofs )
 
     :param ofs: Offset (possibly negative) to move the iterator.
 

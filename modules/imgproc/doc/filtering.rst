@@ -678,9 +678,9 @@ Returns an engine for smoothing images with the Gaussian filter.
 
     :param ksize: Aperture size. See  :ocv:func:`getGaussianKernel` .
 
-    :param sigmaX: Gaussian sigma in the horizontal direction. See  :ocv:func:`getGaussianKernel` .
+    :param sigma1: Gaussian sigma in the horizontal direction. See  :ocv:func:`getGaussianKernel` .
 
-    :param sigmaY: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}` .
+    :param sigma2: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigma2}\leftarrow\texttt{sigma1}` .
 
     :param borderType: Border type to use. See  :ocv:func:`borderInterpolate` .
 
@@ -701,7 +701,7 @@ createLinearFilter
 ----------------------
 Creates a non-separable linear filter engine.
 
-.. ocv:function:: Ptr<FilterEngine> createLinearFilter( int srcType, int dstType, InputArray kernel, Point _anchor=Point(-1,-1), double delta=0, int _rowBorderType=BORDER_DEFAULT, int _columnBorderType=-1, const Scalar& _borderValue=Scalar() )
+.. ocv:function:: Ptr<FilterEngine> createLinearFilter( int srcType, int dstType, InputArray kernel, Point _anchor=Point(-1,-1), double delta=0, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, const Scalar& borderValue=Scalar() )
 
 .. ocv:function:: Ptr<BaseFilter> getLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor=Point(-1,-1), double delta=0, int bits=0)
 
@@ -737,7 +737,7 @@ createMorphologyFilter
 --------------------------
 Creates an engine for non-separable morphological operations.
 
-.. ocv:function:: Ptr<FilterEngine> createMorphologyFilter( int op, int type, InputArray kernel, Point anchor=Point(-1,-1), int _rowBorderType=BORDER_CONSTANT, int _columnBorderType=-1, const Scalar& _borderValue=morphologyDefaultBorderValue() )
+.. ocv:function:: Ptr<FilterEngine> createMorphologyFilter( int op, int type, InputArray kernel, Point anchor=Point(-1,-1), int rowBorderType=BORDER_CONSTANT, int columnBorderType=-1, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
 .. ocv:function:: Ptr<BaseFilter> getMorphologyFilter( int op, int type, InputArray kernel, Point anchor=Point(-1,-1) )
 
@@ -751,9 +751,9 @@ Creates an engine for non-separable morphological operations.
 
     :param type: Input/output image type. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
-    :param element: 2D 8-bit structuring element for a morphological operation. Non-zero elements indicate the pixels that belong to the element.
+    :param kernel: 2D 8-bit structuring element for a morphological operation. Non-zero elements indicate the pixels that belong to the element.
 
-    :param esize: Horizontal or vertical structuring element size for separable morphological operations.
+    :param ksize: Horizontal or vertical structuring element size for separable morphological operations.
 
     :param anchor: Anchor position within the structuring element. Negative values mean that the anchor is at the kernel center.
 
@@ -783,7 +783,7 @@ createSeparableLinearFilter
 -------------------------------
 Creates an engine for a separable linear filter.
 
-.. ocv:function:: Ptr<FilterEngine> createSeparableLinearFilter( int srcType, int dstType, InputArray rowKernel, InputArray columnKernel, Point _anchor=Point(-1,-1), double delta=0, int _rowBorderType=BORDER_DEFAULT, int _columnBorderType=-1, const Scalar& _borderValue=Scalar() )
+.. ocv:function:: Ptr<FilterEngine> createSeparableLinearFilter( int srcType, int dstType, InputArray rowKernel, InputArray columnKernel, Point anchor=Point(-1,-1), double delta=0, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, const Scalar& borderValue=Scalar() )
 
 .. ocv:function:: Ptr<BaseColumnFilter> getLinearColumnFilter( int bufType, int dstType, InputArray kernel, int anchor, int symmetryType, double delta=0, int bits=0 )
 
@@ -1126,9 +1126,9 @@ Returns a structuring element of the specified size and shape for morphological 
 
     :param anchor: Anchor position within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the center. Note that only the shape of a cross-shaped element depends on the anchor position. In other cases the anchor just regulates how much the result of the morphological operation is shifted.
 
-    :param anchorX: x-coordinate of the anchor
+    :param anchor_x: x-coordinate of the anchor
 
-    :param anchorY: y-coordinate of the anchor
+    :param anchor_y: y-coordinate of the anchor
 
     :param values: integer array of ``cols``*``rows`` elements that specifies the custom shape of the structuring element, when ``shape=CV_SHAPE_CUSTOM``.
 
@@ -1418,9 +1418,9 @@ Applies a separable linear filter to an image.
 
         when ``ddepth=-1``, the destination image will have the same depth as the source.
 
-    :param rowKernel: Coefficients for filtering each row.
+    :param kernelX: Coefficients for filtering each row.
 
-    :param columnKernel: Coefficients for filtering each column.
+    :param kernelY: Coefficients for filtering each column.
 
     :param anchor: Anchor position within the kernel. The default value  :math:`(-1, 1)`  means that the anchor is at the kernel center.
 
@@ -1428,7 +1428,7 @@ Applies a separable linear filter to an image.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
 
-The function applies a separable linear filter to the image. That is, first, every row of ``src`` is filtered with the 1D kernel ``rowKernel`` . Then, every column of the result is filtered with the 1D kernel ``columnKernel`` . The final result shifted by ``delta`` is stored in ``dst`` .
+The function applies a separable linear filter to the image. That is, first, every row of ``src`` is filtered with the 1D kernel ``kernelX`` . Then, every column of the result is filtered with the 1D kernel ``kernelY`` . The final result shifted by ``delta`` is stored in ``dst`` .
 
 .. seealso::
 
@@ -1454,32 +1454,32 @@ Smooths the image in one of several ways.
 
     :param smoothtype: Type of the smoothing:
 
-            * **CV_BLUR_NO_SCALE** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's). If you want to smooth different pixels with different-size box kernels, you can use the integral image that is computed using  :ocv:func:`integral`
+            * **CV_BLUR_NO_SCALE** linear convolution with  :math:`\texttt{size1}\times\texttt{size2}`  box kernel (all 1's). If you want to smooth different pixels with different-size box kernels, you can use the integral image that is computed using  :ocv:func:`integral`
 
 
-            * **CV_BLUR** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's) with subsequent scaling by  :math:`1/(\texttt{param1}\cdot\texttt{param2})`
+            * **CV_BLUR** linear convolution with  :math:`\texttt{size1}\times\texttt{size2}`  box kernel (all 1's) with subsequent scaling by  :math:`1/(\texttt{size1}\cdot\texttt{size2})`
 
 
-            * **CV_GAUSSIAN** linear convolution with a  :math:`\texttt{param1}\times\texttt{param2}`  Gaussian kernel
+            * **CV_GAUSSIAN** linear convolution with a  :math:`\texttt{size1}\times\texttt{size2}`  Gaussian kernel
 
 
-            * **CV_MEDIAN** median filter with a  :math:`\texttt{param1}\times\texttt{param1}`  square aperture
+            * **CV_MEDIAN** median filter with a  :math:`\texttt{size1}\times\texttt{size1}`  square aperture
 
 
-            * **CV_BILATERAL** bilateral filter with a  :math:`\texttt{param1}\times\texttt{param1}`  square aperture, color sigma= ``param3``  and spatial sigma= ``param4`` . If  ``param1=0`` , the aperture square side is set to  ``cvRound(param4*1.5)*2+1`` . Information about bilateral filtering can be found at  http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.html
+            * **CV_BILATERAL** bilateral filter with a  :math:`\texttt{size1}\times\texttt{size1}`  square aperture, color sigma= ``sigma1``  and spatial sigma= ``sigma2`` . If  ``size1=0`` , the aperture square side is set to  ``cvRound(sigma2*1.5)*2+1`` . Information about bilateral filtering can be found at  http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.html
 
 
-    :param param1: The first parameter of the smoothing operation, the aperture width. Must be a positive odd number (1, 3, 5, ...)
+    :param size1: The first parameter of the smoothing operation, the aperture width. Must be a positive odd number (1, 3, 5, ...)
 
-    :param param2: The second parameter of the smoothing operation, the aperture height. Ignored by  ``CV_MEDIAN``  and  ``CV_BILATERAL``  methods. In the case of simple scaled/non-scaled and Gaussian blur if  ``param2``  is zero, it is set to  ``param1`` . Otherwise it must be a positive odd number.
+    :param size2: The second parameter of the smoothing operation, the aperture height. Ignored by  ``CV_MEDIAN``  and  ``CV_BILATERAL``  methods. In the case of simple scaled/non-scaled and Gaussian blur if  ``size2``  is zero, it is set to  ``size1`` . Otherwise it must be a positive odd number.
 
-    :param param3: In the case of a Gaussian parameter this parameter may specify Gaussian  :math:`\sigma`  (standard deviation). If it is zero, it is calculated from the kernel size:
+    :param sigma1: In the case of a Gaussian parameter this parameter may specify Gaussian  :math:`\sigma`  (standard deviation). If it is zero, it is calculated from the kernel size:
 
         .. math::
 
-            \sigma  = 0.3 (n/2 - 1) + 0.8  \quad   \text{where}   \quad  n= \begin{array}{l l} \mbox{\texttt{param1} for horizontal kernel} \\ \mbox{\texttt{param2} for vertical kernel} \end{array}
+            \sigma  = 0.3 (n/2 - 1) + 0.8  \quad   \text{where}   \quad  n= \begin{array}{l l} \mbox{\texttt{size1} for horizontal kernel} \\ \mbox{\texttt{size2} for vertical kernel} \end{array}
 
-        Using standard sigma for small kernels ( :math:`3\times 3`  to  :math:`7\times 7` ) gives better speed. If  ``param3``  is not zero, while  ``param1``  and  ``param2``  are zeros, the kernel size is calculated from the sigma (to provide accurate enough operation).
+        Using standard sigma for small kernels ( :math:`3\times 3`  to  :math:`7\times 7` ) gives better speed. If  ``sigma1``  is not zero, while  ``size1``  and  ``size2``  are zeros, the kernel size is calculated from the sigma (to provide accurate enough operation).
 
 The function smooths an image using one of several methods. Every of the methods has some features and restrictions listed below:
 
@@ -1593,9 +1593,9 @@ Calculates the first x- or y- image derivative using Scharr operator.
 
     :param ddepth: Destination image depth. See :ocv:func:`Sobel` for the list of supported combination of ``src.depth()`` and ``ddepth``.
 
-    :param xorder: Order of the derivative x.
+    :param dx: Order of the derivative x.
 
-    :param yorder: Order of the derivative y.
+    :param dy: Order of the derivative y.
 
     :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :ocv:func:`getDerivKernels` for details.
 
@@ -1607,13 +1607,13 @@ The function computes the first x- or y- spatial image derivative using the Scha
 
 .. math::
 
-    \texttt{Scharr(src, dst, ddepth, xorder, yorder, scale, delta, borderType)}
+    \texttt{Scharr(src, dst, ddepth, dx, dy, scale, delta, borderType)}
 
 is equivalent to
 
 .. math::
 
-    \texttt{Sobel(src, dst, ddepth, xorder, yorder, CV\_SCHARR, scale, delta, borderType)} .
+    \texttt{Sobel(src, dst, ddepth, dx, dy, CV\_SCHARR, scale, delta, borderType)} .
 
 .. seealso::
 

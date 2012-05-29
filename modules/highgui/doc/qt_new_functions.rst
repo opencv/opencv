@@ -177,7 +177,7 @@ Creates the font to draw a text on an image.
 
     :param text: Text to write on an image.
 
-    :param location: Point(x,y) where the text should start on an image.
+    :param org: Point(x,y) where the text should start on an image.
 
     :param font: Font to use to draw a text.
 
@@ -236,7 +236,7 @@ Sets a callback function to be called to draw on top of displayed image.
 
     :param window_name: Name of the window.
 
-    :param callbackOpenGL: Pointer to the function to be called every frame. This function should be prototyped as  ``void Foo(void*)`` .
+    :param onOpenGlDraw: Pointer to the function to be called every frame. This function should be prototyped as  ``void Foo(void*)`` .
 
     :param userdata: Pointer passed to the callback function.  *(Optional)*
 

@@ -855,8 +855,6 @@ Various Mat constructors
 
     :param ranges: Array of selected ranges of  ``m``  along each dimensionality.
 
-    :param expr: Matrix expression. See  :ref:`MatrixExpressions`.
-
 These are various constructors that form a matrix. As noted in the :ref:`AutomaticAllocation`,
 often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression or can be allocated with
 :ocv:func:`Mat::create` . In the former case, the old content is de-referenced.
@@ -980,15 +978,13 @@ Extracts a diagonal from a matrix, or creates a diagonal matrix.
 
 .. ocv:function:: static Mat Mat::diag( const Mat& d )
 
-    :param d: Index of the diagonal, with the following values:
+    :param d: Single-column matrix that forms a diagonal matrix or index of the diagonal, with the following values:
 
         * **d=0** is the main diagonal.
 
         * **d>0** is a diagonal from the lower half. For example,  ``d=1``  means the diagonal is set immediately below the main one.
 
         * **d<0** is a diagonal from the upper half. For example,  ``d=1``  means the diagonal is set immediately above the main one.
-
-    :param matD: Single-column matrix that forms a diagonal matrix.
 
 The method makes a new header for the specified matrix diagonal. The new matrix is represented as a single-column matrix. Similarly to
 :ocv:func:`Mat::row` and
@@ -1065,7 +1061,7 @@ Sets all or some of the array elements to the specified value.
 
 .. ocv:function:: Mat& Mat::setTo( InputArray value, InputArray mask=noArray() )
 
-    :param s: Assigned scalar converted to the actual array type.
+    :param value: Assigned scalar converted to the actual array type.
 
     :param mask: Operation mask of the same size as  ``*this``. This is an advanced variant of the ``Mat::operator=(const Scalar& s)`` operator.
 
@@ -1187,7 +1183,7 @@ Returns a zero array of the specified size and type.
 
     :param size: Alternative to the matrix size specification ``Size(cols, rows)``  .
 
-    :param sizes: Array of integers specifying the array shape.
+    :param sz: Array of integers specifying the array shape.
 
     :param type: Created matrix type.
 
@@ -1216,7 +1212,7 @@ Returns an array of all 1's of the specified size and type.
 
     :param size: Alternative to the matrix size specification  ``Size(cols, rows)``  .
 
-    :param sizes: Array of integers specifying the array shape.
+    :param sz: Array of integers specifying the array shape.
 
     :param type: Created matrix type.
 
@@ -1805,6 +1801,7 @@ To use ``Mat_`` for multi-channel images/matrices, pass ``Vec`` as a ``Mat_`` pa
 
 InputArray
 ----------
+.. ocv:class:: InputArray
 
 This is the proxy class for passing read-only input arrays into OpenCV functions. It is defined as ::
 
@@ -1869,6 +1866,7 @@ It denotes function arguments that are either vectors of vectors or vectors of m
 
 OutputArray
 -----------
+.. ocv:class:: OutputArray : public InputArray
 
 This type is very similar to ``InputArray`` except that it is used for input/output and output function parameters. Just like with ``InputArray``, OpenCV users should not care about ``OutputArray``, they just pass ``Mat``, ``vector<T>`` etc. to the functions. The same limitation as for ``InputArray``: **Do not explicitly create OutputArray instances** applies here too.
 
@@ -2299,6 +2297,7 @@ It simplifies notation of some operations. ::
 
 Algorithm
 ---------
+.. ocv:class:: Algorithm
 
 This is a base class for all more or less complex algorithms in OpenCV, especially for classes of algorithms, for which there can be multiple implementations. The examples are stereo correspondence (for which there are algorithms like block matching, semi-global block matching, graph-cut etc.), background subtraction (which can be done using mixture-of-gaussians models, codebook-based algorithm etc.), optical flow (block matching, Lucas-Kanade, Horn-Schunck etc.).
 

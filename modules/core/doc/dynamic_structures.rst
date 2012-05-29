@@ -230,7 +230,7 @@ Clears a set.
 
 .. ocv:cfunction:: void cvClearSet( CvSet* set_header )
 
-    :param setHeader: Cleared set
+    :param set_header: Cleared set
 
 The function removes all elements from set. It has O(1) time complexity.
 
@@ -367,7 +367,7 @@ Creates memory storage.
 .. ocv:pyoldfunction:: cv.CreateMemStorage(blockSize=0) -> memstorage
 
 
-    :param blockSize: Size of the storage blocks in bytes. If it is 0, the block size is set to a default value - currently it is  about 64K.
+    :param block_size: Size of the storage blocks in bytes. If it is 0, the block size is set to a default value - currently it is  about 64K.
 
 The function creates an empty memory storage. See
 :ocv:struct:`CvMemStorage`
@@ -380,11 +380,11 @@ Creates a sequence.
 .. ocv:cfunction:: CvSeq* cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* storage )
 
 
-    :param seqFlags: Flags of the created sequence. If the sequence is not passed to any function working with a specific type of sequences, the sequence value may be set to 0, otherwise the appropriate type must be selected from the list of predefined sequence types.
+    :param seq_flags: Flags of the created sequence. If the sequence is not passed to any function working with a specific type of sequences, the sequence value may be set to 0, otherwise the appropriate type must be selected from the list of predefined sequence types.
 
-    :param headerSize: Size of the sequence header; must be greater than or equal to  ``sizeof(CvSeq)`` . If a specific type or its extension is indicated, this type must fit the base type header.
+    :param header_size: Size of the sequence header; must be greater than or equal to  ``sizeof(CvSeq)`` . If a specific type or its extension is indicated, this type must fit the base type header.
 
-    :param elemSize: Size of the sequence elements in bytes. The size must be consistent with the sequence type. For example, for a sequence of points to be created, the element type    ``CV_SEQ_ELTYPE_POINT``  should be specified and the parameter  ``elemSize``  must be equal to  ``sizeof(CvPoint)`` .
+    :param elem_size: Size of the sequence elements in bytes. The size must be consistent with the sequence type. For example, for a sequence of points to be created, the element type    ``CV_SEQ_ELTYPE_POINT``  should be specified and the parameter  ``elem_size``  must be equal to  ``sizeof(CvPoint)`` .
 
     :param storage: Sequence location
 
@@ -485,9 +485,9 @@ Finds an edge in a graph by using its pointer.
 
     :param graph: Graph
 
-    :param startVtx: Pointer to the starting vertex of the edge
+    :param start_vtx: Pointer to the starting vertex of the edge
 
-    :param endVtx: Pointer to the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
+    :param end_vtx: Pointer to the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
 
 ::
 
@@ -590,7 +590,7 @@ Finds a set element by its index.
 
 .. ocv:cfunction:: CvSetElem* cvGetSetElem( const CvSet* set_header, int index )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param index: Index of the set element within a sequence
 
@@ -728,7 +728,7 @@ Counts the number of edges incident to the vertex.
 
     :param graph: Graph
 
-    :param vtxIdx: Index of the graph vertex
+    :param vtx_idx: Index of the graph vertex
 
 The function returns the number of edges incident to the specified vertex, both incoming and outgoing. To count the edges, the following code is used:
 
@@ -1026,7 +1026,7 @@ Inserts an element in the middle of a sequence.
 
     :param seq: Sequence
 
-    :param beforeIndex: Index before which the element is inserted. Inserting before 0 (the minimal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPushFront`  and inserting before  ``seq->total``  (the maximal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPush` .
+    :param before_index: Index before which the element is inserted. Inserting before 0 (the minimal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPushFront`  and inserting before  ``seq->total``  (the maximal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPush` .
 
     :param element: Inserted element
 
@@ -1042,9 +1042,9 @@ Inserts an array in the middle of a sequence.
 
     :param seq: Sequence
 
-    :param beforeIndex: Index before which the array is inserted
+    :param before_index: Index before which the array is inserted
 
-    :param fromArr: The array to take elements from
+    :param from_arr: The array to take elements from
 
 The function inserts all
 ``fromArr``
@@ -1328,7 +1328,7 @@ Occupies a node in the set.
 
 .. ocv:cfunction:: int cvSetAdd( CvSet* set_header, CvSetElem* elem=NULL, CvSetElem** inserted_elem=NULL )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param elem: Optional input argument, an inserted element. If not NULL, the function copies the data to the allocated node (the MSB of the first integer field is cleared after copying).
 
@@ -1349,7 +1349,7 @@ Adds an element to a set (fast variant).
 
 .. ocv:cfunction:: CvSetElem* cvSetNew( CvSet* set_header )
 
-    :param setHeader: Set
+    :param set_header: Set
 
 The function is an inline lightweight variant of
 :ocv:cfunc:`SetAdd`
@@ -1361,7 +1361,7 @@ Removes an element from a set.
 
 .. ocv:cfunction:: void cvSetRemove( CvSet* set_header, int index )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param index: Index of the removed element
 
@@ -1378,7 +1378,7 @@ Removes a set element based on its pointer.
 
 .. ocv:cfunction:: void cvSetRemoveByPtr( CvSet* set_header, void* elem )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param elem: Removed element
 
@@ -1394,19 +1394,19 @@ Sets up sequence block size.
 
     :param seq: Sequence
 
-    :param deltaElems: Desirable sequence block size for elements
+    :param delta_elems: Desirable sequence block size for elements
 
 The function affects memory allocation
 granularity. When the free space in the sequence buffers has run out,
 the function allocates the space for
-``deltaElems``
+``delta_elems``
 sequence
 elements. If this block immediately follows the one previously allocated,
 the two blocks are concatenated; otherwise, a new sequence block is
 created. Therefore, the bigger the parameter is, the lower the possible
 sequence fragmentation, but the more space in the storage block is wasted. When
 the sequence is created, the parameter
-``deltaElems``
+``delta_elems``
 is set to
 the default value of about 1K. The function can be called any time after
 the sequence is created and affects future allocations. The function

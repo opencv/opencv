@@ -182,9 +182,9 @@ Sets mouse handler for the specified window
 .. ocv:cfunction:: void cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* param=NULL )
 .. ocv:pyoldfunction:: cv.SetMouseCallback(windowName, onMouse, param=None) -> None
 
-    :param name: Window name
+    :param window_name: Window name
 
-    :param onMouse: Mouse callback. See OpenCV samples, such as  http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/ffilldemo.cpp, on how to specify and use the callback.
+    :param on_mouse: Mouse callback. See OpenCV samples, such as  http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/ffilldemo.cpp, on how to specify and use the callback.
 
     :param param: The optional parameter passed to the callback.
 

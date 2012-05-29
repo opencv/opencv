@@ -16,27 +16,27 @@ Calculates the optical flow for two images by using the block matching method.
 
         :param curr: Second image, 8-bit, single-channel
 
-        :param blockSize: Size of basic blocks that are compared
+        :param block_size: Size of basic blocks that are compared
 
-        :param shiftSize: Block coordinate increments
+        :param shift_size: Block coordinate increments
 
-        :param maxRange: Size of the scanned neighborhood in pixels around the block
+        :param max_range: Size of the scanned neighborhood in pixels around the block
 
-        :param usePrevious: Flag that specifies whether to use the input velocity as initial approximations or not.
+        :param use_previous: Flag that specifies whether to use the input velocity as initial approximations or not.
 
         :param velx: Horizontal component of the optical flow of
 
             .. math::
 
-                \left \lfloor   \frac{\texttt{prev->width} - \texttt{blockSize.width}}{\texttt{shiftSize.width}}   \right \rfloor \times \left \lfloor   \frac{\texttt{prev->height} - \texttt{blockSize.height}}{\texttt{shiftSize.height}}   \right \rfloor
+                \left \lfloor   \frac{\texttt{prev->width} - \texttt{block_size.width}}{\texttt{shift_size.width}}   \right \rfloor \times \left \lfloor   \frac{\texttt{prev->height} - \texttt{block_size.height}}{\texttt{shift_size.height}}   \right \rfloor
 
             size, 32-bit floating-point, single-channel
 
         :param vely: Vertical component of the optical flow of the same size  ``velx`` , 32-bit floating-point, single-channel
 
 
-The function calculates the optical flow for overlapped blocks ``blockSize.width x blockSize.height`` pixels each, thus the velocity fields are smaller than the original images. For every block in  ``prev``
-the functions tries to find a similar block in ``curr`` in some neighborhood of the original block or shifted by ``(velx(x0,y0), vely(x0,y0))`` block as has been calculated by previous function call (if ``usePrevious=1``)
+The function calculates the optical flow for overlapped blocks ``block_size.width x block_size.height`` pixels each, thus the velocity fields are smaller than the original images. For every block in  ``prev``
+the functions tries to find a similar block in ``curr`` in some neighborhood of the original block or shifted by ``(velx(x0,y0), vely(x0,y0))`` block as has been calculated by previous function call (if ``use_previous=1``)
 
 
 CalcOpticalFlowHS
@@ -51,7 +51,7 @@ Calculates the optical flow for two images using Horn-Schunck algorithm.
 
     :param curr: Second image, 8-bit, single-channel
 
-    :param usePrevious: Flag that specifies whether to use the input velocity as initial approximations or not.
+    :param use_previous: Flag that specifies whether to use the input velocity as initial approximations or not.
 
     :param velx: Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
 
@@ -77,7 +77,7 @@ Calculates the optical flow for two images using Lucas-Kanade algorithm.
 
     :param curr: Second image, 8-bit, single-channel
 
-    :param winSize: Size of the averaging window used for grouping pixels
+    :param win_size: Size of the averaging window used for grouping pixels
 
     :param velx: Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
 

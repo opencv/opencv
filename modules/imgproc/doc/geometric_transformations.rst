@@ -210,7 +210,7 @@ Calculates an affine matrix of 2D rotation.
 
     :param scale: Isotropic scale factor.
 
-    :param mapMatrix: The output affine transformation, 2x3 floating-point matrix.
+    :param map_matrix: The output affine transformation, 2x3 floating-point matrix.
 
 The function calculates the following matrix:
 
