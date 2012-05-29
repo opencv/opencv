@@ -295,7 +295,7 @@ class OCVPyXRefRole(XRefRole):
 ########################### C/C++/Java Part ###########################
 
 _identifier_re    = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*\b)')
-_argument_name_re = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*\b(?:\[\d*\])?)')
+_argument_name_re = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*\b(?:\[\d*\])?|\.\.\.)')
 _whitespace_re = re.compile(r'\s+(?u)')
 _string_re = re.compile(r"[LuU8]?('([^'\\]*(?:\\.[^'\\]*)*)'"
                         r'|"([^"\\]*(?:\\.[^"\\]*)*)")', re.S)
@@ -304,10 +304,10 @@ _operator_re = re.compile(r'''(?x)
         \[\s*\]
     |   \(\s*\)
     |   (<<|>>)=?
+    |   \+\+ | -- | ->\*?
     |   [!<>=/*%+|&^-]=?
-    |   \+\+ | --
     |   ~ | && | \| | \|\|
-    |   ->\*? | \,
+    |   \,
 ''')
 
 _id_shortwords = {
@@ -793,7 +793,6 @@ class DefinitionParser(object):
         if self.match(_operator_re):
             return NameDefExpr('operator' +
                                 _whitespace_re.sub('', self.matched_text))
-
         # new/delete operator?
         for allocop in 'new', 'delete':
             if not self.skip_word(allocop):
@@ -1009,8 +1008,13 @@ class DefinitionParser(object):
                 self.skip_ws()
 
             argtype = self._parse_type()
-            argname = default = None
             self.skip_ws()
+            if unicode(argtype) == u"...":
+                if not self.skip_string(')'):
+                    self.fail("var arg must be the last argument")
+                args.append(ArgumentDefExpr(None, argtype, None))
+                break
+            argname = default = None
             if self.skip_string('='):
                 self.pos += 1
                 default = self._parse_default_expr()
