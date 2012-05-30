@@ -31,7 +31,7 @@ doc_signatures_whitelist = [
 # templates
 "Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
 "DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
-"gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_",
+"gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_", "gpu::BruteForceMatcher_GPU",
 # black boxes
 "CvArr", "CvFileStorage",
 # other

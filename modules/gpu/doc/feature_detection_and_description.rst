@@ -372,7 +372,7 @@ Releases inner buffer memory.
 
 gpu::BruteForceMatcher_GPU
 --------------------------
-.. ocv:class:: gpu::BruteForceMatcher_GPU
+.. ocv:class:: template<class Distance> gpu::BruteForceMatcher_GPU
 
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches between descriptor sets. ::
 

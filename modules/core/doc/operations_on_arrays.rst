@@ -1720,7 +1720,7 @@ Composes a multi-channel array from several single-channel arrays.
 
 .. ocv:function:: void merge(const Mat* mv, size_t count, OutputArray dst)
 
-.. ocv:function:: void merge( InputArrayOfArrays mv, OutputArray dst )
+.. ocv:function:: void merge( const vector<Mat>& mv, OutputArray dst )
 
 .. ocv:pyfunction:: cv2.merge(mv[, dst]) -> dst
 
@@ -3040,7 +3040,7 @@ Divides a multi-channel array into several single-channel arrays.
 
 .. ocv:function:: void split( const Mat& src, Mat* mvbegin )
 
-.. ocv:function:: void split( InputArray m, OutputArrayOfArrays mv )
+.. ocv:function:: void split( const Mat& m, vector<Mat>& mv )
 
 .. ocv:pyfunction:: cv2.split(m[, mv]) -> mv
 
