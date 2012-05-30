@@ -7,7 +7,7 @@ The algorithm caches all training samples and predicts the response for a new sa
 
 CvKNearest
 ----------
-.. ocv:class:: CvKNearest
+.. ocv:class:: CvKNearest : public CvStatModel
 
 The class implements K-Nearest Neighbors model as described in the beginning of this section. 
 

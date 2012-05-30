@@ -8,7 +8,7 @@ detail::Blender
 .. ocv:class:: detail::Blender
 
 Base class for all blenders. ::
-   
+
     class CV_EXPORTS Blender
     {
     public:
@@ -17,7 +17,7 @@ Base class for all blenders. ::
         enum { NO, FEATHER, MULTI_BAND };
         static Ptr<Blender> createDefault(int type, bool try_gpu = false);
 
-        void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);    
+        void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);
         virtual void prepare(Rect dst_roi);
         virtual void feed(const Mat &img, const Mat &mask, Point tl);
         virtual void blend(Mat &dst, Mat &dst_mask);
@@ -48,7 +48,7 @@ Processes the image.
     :param img: Source image
 
     :param mask: Source image mask
-    
+
     :param tl: Source image top-left corners
 
 detail::Blender::blend
@@ -64,7 +64,7 @@ Blends and returns the final pano.
 
 detail::FeatherBlender
 ----------------------
-.. ocv:class:: detail::FeatherBlender
+.. ocv:class:: detail::FeatherBlender : public detail::Blender
 
 Simple blender which mixes images at its borders. ::
 
@@ -93,7 +93,7 @@ Simple blender which mixes images at its borders. ::
 
 detail::MultiBandBlender
 ------------------------
-.. ocv:class:: detail::MultiBandBlender
+.. ocv:class:: detail::MultiBandBlender : public detail::Blender
 
 Blender which uses multi-band blending algorithm (see [BA83]_). ::
 

@@ -521,7 +521,7 @@ void CV_SpecificVideoTest::run(int)
 TEST(Highgui_Image, regression) { CV_ImageTest test; test.safe_run(); }
 #endif
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT && !defined(__APPLE__)
 TEST(Highgui_Video, regression) { CV_VideoTest test; test.safe_run(); }
 TEST(Highgui_Video, write_read) { CV_SpecificVideoTest test; test.safe_run(); }
 #endif

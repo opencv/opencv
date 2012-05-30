@@ -589,9 +589,8 @@ class ClassInfo(object):
                 self.jname = m[1:]
         self.base = ''
         if decl[1]:
-            self.base = re.sub(r"\b"+self.jname+r"\b", "", decl[1].replace(":", "")).strip()
-
-
+            #self.base = re.sub(r"\b"+self.jname+r"\b", "", decl[1].replace(":", "")).strip()
+            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.jname, "")
 
 class ArgInfo(object):
     def __init__(self, arg_tuple): # [ ctype, name, def val, [mod], argno ]

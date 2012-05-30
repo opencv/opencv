@@ -25,7 +25,7 @@ from sphinx.util.nodes import make_refnode
 from sphinx.util.compat import Directive
 from sphinx.util.docfields import Field, GroupedField, TypedField
 
-########################### Python Part ########################### 
+########################### Python Part ###########################
 
 # REs for Python signatures
 py_sig_re = re.compile(
@@ -292,9 +292,10 @@ class OCVPyXRefRole(XRefRole):
         return title, target
 
 
-########################### C/C++/Java Part ########################### 
+########################### C/C++/Java Part ###########################
 
-_identifier_re = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*)\b')
+_identifier_re    = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*\b)')
+_argument_name_re = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*\b(?:\[\d*\])?|\.\.\.)')
 _whitespace_re = re.compile(r'\s+(?u)')
 _string_re = re.compile(r"[LuU8]?('([^'\\]*(?:\\.[^'\\]*)*)'"
                         r'|"([^"\\]*(?:\\.[^"\\]*)*)")', re.S)
@@ -303,10 +304,10 @@ _operator_re = re.compile(r'''(?x)
         \[\s*\]
     |   \(\s*\)
     |   (<<|>>)=?
+    |   \+\+ | -- | ->\*?
     |   [!<>=/*%+|&^-]=?
-    |   \+\+ | --
     |   ~ | && | \| | \|\|
-    |   ->\*? | \,
+    |   \,
 ''')
 
 _id_shortwords = {
@@ -561,7 +562,7 @@ class ConstDefExpr(WrappingDefExpr):
 
     def __unicode__(self):
         return (self.prefix and u'const %s' or u'%s const') % self.typename
-        
+
 class ConstTemplateDefExpr(WrappingDefExpr):
 
     def __init__(self, typename, prefix=False):
@@ -667,13 +668,14 @@ class MemberObjDefExpr(NamedDefExpr):
 class FuncDefExpr(NamedDefExpr):
 
     def __init__(self, name, visibility, static, explicit, rv,
-                 signature, const, pure_virtual):
+                 signature, const, pure_virtual, virtual):
         NamedDefExpr.__init__(self, name, visibility, static)
         self.rv = rv
         self.signature = signature
         self.explicit = explicit
         self.const = const
         self.pure_virtual = pure_virtual
+        self.virtual = virtual
 
     def get_id(self):
         return u'%s%s%s' % (
@@ -682,11 +684,13 @@ class FuncDefExpr(NamedDefExpr):
                 u'.'.join(x.get_id() for x in self.signature) or u'',
             self.const and u'C' or u''
         )
-    
+
     def __unicode__(self):
         buf = self.get_modifiers()
         if self.explicit:
             buf.append(u'explicit')
+        if self.virtual:
+            buf.append(u'virtual')
         if self.rv is not None:
             buf.append(unicode(self.rv))
         buf.append(u'%s(%s)' % (self.name, u', '.join(
@@ -700,8 +704,9 @@ class FuncDefExpr(NamedDefExpr):
 
 class ClassDefExpr(NamedDefExpr):
 
-    def __init__(self, name, visibility, static):
+    def __init__(self, name, visibility, static, parents = None):
         NamedDefExpr.__init__(self, name, visibility, static)
+        self.parents = parents
 
     def get_id(self):
         return self.name.get_id()
@@ -788,7 +793,6 @@ class DefinitionParser(object):
         if self.match(_operator_re):
             return NameDefExpr('operator' +
                                 _whitespace_re.sub('', self.matched_text))
-
         # new/delete operator?
         for allocop in 'new', 'delete':
             if not self.skip_word(allocop):
@@ -807,7 +811,7 @@ class DefinitionParser(object):
         return CastOpDefExpr(type)
 
     def _parse_name(self):
-        if not self.match(_identifier_re):
+        if not self.match(_argument_name_re):
             self.fail('expected name')
         identifier = self.matched_text
 
@@ -981,7 +985,7 @@ class DefinitionParser(object):
             elif paren_stack_depth == 0:
                 break
             self.pos = idx+1
-            
+
         rv = self.definition[rv_start:idx]
         self.pos = idx
         return rv
@@ -1004,8 +1008,13 @@ class DefinitionParser(object):
                 self.skip_ws()
 
             argtype = self._parse_type()
-            argname = default = None
             self.skip_ws()
+            if unicode(argtype) == u"...":
+                if not self.skip_string(')'):
+                    self.fail("var arg must be the last argument")
+                args.append(ArgumentDefExpr(None, argtype, None))
+                break
+            argname = default = None
             if self.skip_string('='):
                 self.pos += 1
                 default = self._parse_default_expr()
@@ -1072,6 +1081,11 @@ class DefinitionParser(object):
             self.skip_ws()
         else:
             explicit = False
+        if self.skip_word('virtual'):
+            virtual = True
+            self.skip_ws()
+        else:
+            virtual = False
         rv = self._parse_type()
         self.skip_ws()
         # some things just don't have return values
@@ -1080,12 +1094,27 @@ class DefinitionParser(object):
             rv = None
         else:
             name = self._parse_type()
-        return FuncDefExpr(name, visibility, static, explicit, rv,
-                           *self._parse_signature())
+        return FuncDefExpr(name, visibility, static, explicit,  rv,
+                           *self._parse_signature(), virtual = virtual)
 
     def parse_class(self):
         visibility, static = self._parse_visibility_static()
-        return ClassDefExpr(self._parse_type(), visibility, static)
+        typename = self._parse_type()
+        parent = None
+        self.skip_ws()
+        parents = []
+        if self.skip_string(':'):
+            while not self.eof:
+                self.skip_ws()
+                classname_pos = self.pos
+                pvisibility, pstatic = self._parse_visibility_static()
+                if pstatic:
+                    self.fail('unsepected static keyword, got %r' %
+                          self.definition[self.classname_pos:])
+                parents.append(ClassDefExpr(self._parse_type(), pvisibility, pstatic))
+                if not self.skip_string(','):
+                    break
+        return ClassDefExpr(typename, visibility, static, parents)
 
     def read_rest(self):
         rv = self.definition[self.pos:]
@@ -1138,7 +1167,7 @@ class OCVObject(ObjectDescription):
             lname = self.__class__.langname
             node += nodes.strong(lname + ":", lname + ":")
             node += addnodes.desc_name(" ", " ")
-            
+
         if obj.visibility != 'public':
             node += addnodes.desc_annotation(obj.visibility,
                                              obj.visibility)
@@ -1212,8 +1241,8 @@ class OCVClassObject(OCVObject):
     object_annotation = "class "
     object_long_name = "class"
 
-    def attach_modifiers(self, node, obj):
-        if obj.visibility != 'public':
+    def attach_modifiers(self, node, obj, skip_visibility = 'public'):
+        if obj.visibility != skip_visibility:
             node += addnodes.desc_annotation(obj.visibility,
                                              obj.visibility)
             node += nodes.Text(' ')
@@ -1231,6 +1260,15 @@ class OCVClassObject(OCVObject):
         self.attach_modifiers(signode, cls)
         signode += addnodes.desc_annotation(self.__class__.object_annotation, self.__class__.object_annotation)
         self.attach_name(signode, cls.name)
+        first_parent = True
+        for p in cls.parents:
+            if first_parent:
+                signode += nodes.Text(' : ')
+                first_parent = False
+            else:
+                signode += nodes.Text(', ')
+            self.attach_modifiers(signode, p, None)
+            self.attach_name(signode, p.name)
 
 class OCVStructObject(OCVClassObject):
     object_annotation = "struct "
@@ -1263,6 +1301,9 @@ class OCVMemberObject(OCVObject):
         return ''
 
     def parse_definition(self, parser):
+        parent_class = self.env.temp_data.get('ocv:parent')
+        if parent_class is None:
+            parser.fail("missing parent structure/class")
         return parser.parse_member_object()
 
     def describe_signature(self, signode, obj):
@@ -1298,7 +1339,12 @@ class OCVFunctionObject(OCVObject):
                 self.attach_type(param, arg.type)
                 param += nodes.Text(u' ')
             #param += nodes.emphasis(unicode(arg.name), unicode(arg.name))
-            param += nodes.strong(unicode(arg.name), unicode(arg.name))
+            sbrIdx = unicode(arg.name).find("[")
+            if sbrIdx < 0:
+                param += nodes.strong(unicode(arg.name), unicode(arg.name))
+            else:
+                param += nodes.strong(unicode(arg.name)[:sbrIdx], unicode(arg.name)[:sbrIdx])
+                param += nodes.Text(unicode(arg.name)[sbrIdx:])
             if arg.default is not None:
                 def_ = u'=' + unicode(arg.default)
                 #param += nodes.emphasis(def_, def_)
@@ -1324,6 +1370,9 @@ class OCVFunctionObject(OCVObject):
         self.attach_modifiers(signode, func)
         if func.explicit:
             signode += addnodes.desc_annotation('explicit', 'explicit')
+            signode += nodes.Text(' ')
+        if func.virtual:
+            signode += addnodes.desc_annotation('virtual', 'virtual')
             signode += nodes.Text(' ')
         # return value is None for things with a reverse return value
         # such as casting operator definitions or constructors
@@ -1380,7 +1429,7 @@ class OCVXRefRole(XRefRole):
 
 class OCVCFunctionObject(OCVFunctionObject):
     langname = "C"
-    
+
 class OCVJavaFunctionObject(OCVFunctionObject):
     langname = "Java"
 
@@ -1430,7 +1479,7 @@ class OCVDomain(Domain):
     initial_data = {
         'objects': {},  # fullname -> docname, objtype
     }
-    
+
     def __init__(self, env):
         Domain.__init__(self, env)
         self.data['objects2'] = {}
@@ -1496,14 +1545,14 @@ class OCVDomain(Domain):
     def get_objects(self):
         for refname, (docname, type, theid) in self.data['objects'].iteritems():
             yield (refname, refname, type, docname, refname, 1)
-            
+
     def get_type_name(self, type, primary=False):
         """
         Return full name for given ObjType.
         """
         if primary:
             return type.lname
-            
+
         return {
             'class':         _('C++ class'),
             'struct':        _('C/C++ struct'),
@@ -1516,6 +1565,6 @@ class OCVDomain(Domain):
             'type':          _('C/C++ type'),
             'namespace':     _('C++ namespace'),
             }.get(type.lname, _('%s %s') % (self.label, type.lname))
-        
+
 def setup(app):
     app.add_domain(OCVDomain)

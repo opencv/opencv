@@ -81,7 +81,7 @@ CVAPI(void) cvConvertPointsHomogeneous( const CvMat* src, CvMat* dst );
 
 #define CV_LMEDS 4
 #define CV_RANSAC 8
-    
+
 #define CV_FM_LMEDS_ONLY  CV_LMEDS
 #define CV_FM_RANSAC_ONLY CV_RANSAC
 #define CV_FM_LMEDS CV_LMEDS
@@ -93,7 +93,7 @@ enum
     CV_EPNP = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
 	CV_P3P = 2 // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
 };
-    
+
 CVAPI(int) cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
                                  CvMat* fundamental_matrix,
                                  int method CV_DEFAULT(CV_FM_RANSAC),
@@ -117,7 +117,7 @@ CVAPI(void) cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2,
 CVAPI(void) cvCorrectMatches(CvMat* F, CvMat* points1, CvMat* points2,
                              CvMat* new_points1, CvMat* new_points2);
 
-    
+
 /* Computes the optimal new camera matrix according to the free scaling parameter alpha:
    alpha=0 - only valid pixels will be retained in the undistorted image
    alpha=1 - all the source image pixels will be retained in the undistorted image
@@ -203,20 +203,19 @@ CVAPI(void) cvInitIntrinsicParams2D( const CvMat* object_points,
 #define CV_CALIB_CB_FILTER_QUADS     4
 #define CV_CALIB_CB_FAST_CHECK       8
 
-// Performs a fast check if a chessboard is in the input image. This is a workaround to 
+// Performs a fast check if a chessboard is in the input image. This is a workaround to
 // a problem of cvFindChessboardCorners being slow on images with no chessboard
 // - src: input image
 // - size: chessboard size
-// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called, 
+// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
 // 0 if there is no chessboard, -1 in case of error
 CVAPI(int) cvCheckChessboard(IplImage* src, CvSize size);
-    
+
     /* Detects corners on a chessboard calibration pattern */
 CVAPI(int) cvFindChessboardCorners( const void* image, CvSize pattern_size,
                                     CvPoint2D32f* corners,
                                     int* corner_count CV_DEFAULT(NULL),
-                                    int flags CV_DEFAULT(CV_CALIB_CB_ADAPTIVE_THRESH+
-                                        CV_CALIB_CB_NORMALIZE_IMAGE) );
+                                    int flags CV_DEFAULT(CV_CALIB_CB_ADAPTIVE_THRESH+CV_CALIB_CB_NORMALIZE_IMAGE) );
 
 /* Draws individual chessboard corners or the whole chessboard detected */
 CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
@@ -330,7 +329,7 @@ typedef struct CvStereoBMState
     int speckleRange; // acceptable range of variation in window
 
     int trySmallerWindows; // if 1, the results may be more accurate,
-                           // at the expense of slower processing 
+                           // at the expense of slower processing
     CvRect roi1, roi2;
     int disp12MaxDiff;
 
@@ -353,13 +352,13 @@ CVAPI(void) cvReleaseStereoBMState( CvStereoBMState** state );
 
 CVAPI(void) cvFindStereoCorrespondenceBM( const CvArr* left, const CvArr* right,
                                           CvArr* disparity, CvStereoBMState* state );
-    
+
 CVAPI(CvRect) cvGetValidDisparityROI( CvRect roi1, CvRect roi2, int minDisparity,
                                       int numberOfDisparities, int SADWindowSize );
-    
+
 CVAPI(void) cvValidateDisparity( CvArr* disparity, const CvArr* cost,
                                  int minDisparity, int numberOfDisparities,
-                                 int disp12MaxDiff CV_DEFAULT(1) );  
+                                 int disp12MaxDiff CV_DEFAULT(1) );
 
 /* Reprojects the computed disparity image to the 3D space using the specified 4x4 matrix */
 CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
@@ -384,11 +383,11 @@ public:
               bool completeSymmFlag=false );
     bool update( const CvMat*& param, CvMat*& J, CvMat*& err );
     bool updateAlt( const CvMat*& param, CvMat*& JtJ, CvMat*& JtErr, double*& errNorm );
-    
+
     void clear();
     void step();
     enum { DONE=0, STARTED=1, CALC_J=2, CHECK_ERR=3 };
-    
+
     cv::Ptr<CvMat> mask;
     cv::Ptr<CvMat> prevParam;
     cv::Ptr<CvMat> param;
@@ -427,7 +426,7 @@ CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
 //! variant of findHomography for backward compatibility
 CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                OutputArray mask, int method=0, double ransacReprojThreshold=3);
-    
+
 //! Computes RQ decomposition of 3x3 matrix
 CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mtxQ,
                                 OutputArray Qx=noArray(),
@@ -440,7 +439,7 @@ CV_EXPORTS_W void decomposeProjectionMatrix( InputArray projMatrix, OutputArray 
                                              OutputArray rotMatrixX=noArray(),
                                              OutputArray rotMatrixY=noArray(),
                                              OutputArray rotMatrixZ=noArray(),
-                                             OutputArray eulerAngles=noArray() );   
+                                             OutputArray eulerAngles=noArray() );
 
 //! computes derivatives of the matrix product w.r.t each of the multiplied matrix coefficients
 CV_EXPORTS_W void matMulDeriv( InputArray A, InputArray B,
@@ -467,14 +466,14 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are not handled.
 enum
 {
-    ITERATIVE=CV_ITERATIVE, 
+    ITERATIVE=CV_ITERATIVE,
     EPNP=CV_EPNP,
-	P3P=CV_P3P
+    P3P=CV_P3P
 };
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
                             OutputArray rvec, OutputArray tvec,
-                            bool useExtrinsicGuess=false, int flags=0);
+                            bool useExtrinsicGuess=false, int flags=ITERATIVE);
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are possible.
 CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
@@ -483,12 +482,12 @@ CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
                                   InputArray distCoeffs,
                                   OutputArray rvec,
                                   OutputArray tvec,
-                                  bool useExtrinsicGuess = false,								  
+                                  bool useExtrinsicGuess = false,
                                   int iterationsCount = 100,
                                   float reprojectionError = 8.0,
                                   int minInliersCount = 100,
                                   OutputArray inliers = noArray(),
-								  int flags = 0);
+                                  int flags = ITERATIVE);
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
@@ -501,10 +500,9 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1, CALIB_CB_NORMALIZE_IMAGE = 2,
 //! finds checkerboard pattern of the specified size in the image
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize,
                                          OutputArray corners,
-                                         int flags=CALIB_CB_ADAPTIVE_THRESH+
-                                              CALIB_CB_NORMALIZE_IMAGE );
+                                         int flags=CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE );
 
-//! finds subpixel-accurate positions of the chessboard corners                                              
+//! finds subpixel-accurate positions of the chessboard corners
 CV_EXPORTS bool find4QuadCornerSubpix(InputArray img, InputOutputArray corners, Size region_size);
 
 //! draws the checkerboard pattern (found or partly found) in the image
@@ -574,11 +572,10 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      CV_OUT InputOutputArray distCoeffs2,
                                      Size imageSize, OutputArray R,
                                      OutputArray T, OutputArray E, OutputArray F,
-                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+
-                                         TermCriteria::EPS, 30, 1e-6),
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6),
                                      int flags=CALIB_FIX_INTRINSIC );
 
-    
+
 //! computes the rectification transformation for a stereo camera from its intrinsic and extrinsic parameters
 CV_EXPORTS_W void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1,
                                InputArray cameraMatrix2, InputArray distCoeffs2,
@@ -606,7 +603,7 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
                                       OutputArray P1, OutputArray P2, OutputArray P3,
                                       OutputArray Q, double alpha, Size newImgSize,
                                       CV_OUT Rect* roi1, CV_OUT Rect* roi2, int flags );
-    
+
 //! returns the optimal new camera matrix
 CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
                                             Size imageSize, double alpha, Size newImgSize=Size(),
@@ -614,16 +611,16 @@ CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray 
 
 //! converts point coordinates from normal pixel coordinates to homogeneous coordinates ((x,y)->(x,y,1))
 CV_EXPORTS_W void convertPointsToHomogeneous( InputArray src, OutputArray dst );
-    
+
 //! converts point coordinates from homogeneous to normal pixel coordinates ((x,y,z)->(x/z, y/z))
 CV_EXPORTS_W void convertPointsFromHomogeneous( InputArray src, OutputArray dst );
 
 //! for backward compatibility
 CV_EXPORTS void convertPointsHomogeneous( InputArray src, OutputArray dst );
-    
+
 //! the algorithm for finding fundamental matrix
 enum
-{ 
+{
     FM_7POINT = CV_FM_7POINT, //!< 7-point algorithm
     FM_8POINT = CV_FM_8POINT, //!< 8-point algorithm
     FM_LMEDS = CV_FM_LMEDS,  //!< least-median algorithm
@@ -642,7 +639,7 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
                                    double param1=3., double param2=0.99);
 
 //! finds coordinates of epipolar lines corresponding the specified points
-CV_EXPORTS void computeCorrespondEpilines( InputArray points1,
+CV_EXPORTS void computeCorrespondEpilines( InputArray points,
                                            int whichImage, InputArray F,
                                            OutputArray lines );
 
@@ -657,7 +654,7 @@ template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
 
 /*!
  Block Matching Stereo Correspondence Algorithm
- 
+
  The class implements BM stereo correspondence algorithm by K. Konolige.
 */
 class CV_EXPORTS_W StereoBM
@@ -683,7 +680,7 @@ public:
 
 /*!
  Semi-Global Block Matching Stereo Correspondence Algorithm
- 
+
  The class implements the original SGBM stereo correspondence algorithm by H. Hirschmuller and some its modification.
  */
 class CV_EXPORTS_W StereoSGBM
@@ -693,7 +690,7 @@ public:
 
     //! the default constructor
     CV_WRAP StereoSGBM();
-    
+
     //! the full constructor taking all the necessary algorithm parameters
     CV_WRAP StereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
                int P1=0, int P2=0, int disp12MaxDiff=0,
@@ -742,11 +739,11 @@ CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       OutputArray _3dImage, InputArray Q,
                                       bool handleMissingValues=false,
                                       int ddepth=-1 );
-    
-CV_EXPORTS_W  int estimateAffine3D(InputArray _from, InputArray _to,
-                                   OutputArray _out, OutputArray _inliers,
-                                   double param1=3, double param2=0.99);
-    
+
+CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
+                                   OutputArray out, OutputArray inliers,
+                                   double ransacThreshold=3, double confidence=0.99);
+
 }
 
 #endif

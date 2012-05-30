@@ -338,7 +338,7 @@ Blocks the current CPU thread until all operations in the stream are complete.
 
 gpu::StreamAccessor
 -------------------
-.. ocv:class:: gpu::StreamAccessor
+.. ocv:struct:: gpu::StreamAccessor
 
 Class that enables getting ``cudaStream_t`` from :ocv:class:`gpu::Stream` and is declared in ``stream_accessor.hpp`` because it is the only public header that depends on the CUDA Runtime API. Including it brings a dependency to your code. ::
 

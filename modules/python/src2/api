@@ -1669,7 +1669,7 @@ ApproxPoly  /doconly
   int method
   double parameter 0.0
   int parameter2 0
-CalcEMD2  /doconly
+CalcEMD2 float /doconly
   CvArr signature1
   CvArr signature2
   int distance_type
@@ -1688,7 +1688,7 @@ CalcOpticalFlowPyrLK currFeatures,status,track_error /doconly
   int level
   CvTermCriteria criteria
   int flags
-  CvPoint2D32f* guesses
+  CvPoint2D32f* guesses NULL
   CvPoint2D32f currFeatures /O
   char status /O
   float track_error /O
@@ -1726,7 +1726,7 @@ CreateMatND CvMatND /doconly
   ints dims
   int type
 CreateMemStorage CvMemStorage /doconly
-  int blockSize
+  int blockSize 0
 CreateTrackbar /doconly
   char* trackbarName
   char* windowName
@@ -1738,7 +1738,7 @@ FindChessboardCorners corners /doconly
   CvSize patternSize
   CvPoint2D32fs corners /O
   int flags CV_CALIB_CB_ADAPTIVE_THRESH
-FindContours /doconly
+FindContours CvSeq /doconly
   CvArr image
   CvMemStorage storage
   int mode CV_RETR_LIST
@@ -1751,14 +1751,14 @@ FitLine line /doconly
   double reps
   double aeps
   PyObject* line /O
-GetDims /doconly
+GetDims dim1,dim2,... /doconly
   CvArr arr
 GetHuMoments hu /doconly
   CvMoments moments
   PyObject* hu /O
-GetImage /doconly
+GetImage iplimage /doconly
   CvMat arr
-GetMat /doconly
+GetMat CvMat /doconly
   IplImage arr
   int allowND 0
 GetMinMaxHistValue min_value,max_value,min_idx,max_idx /doconly
@@ -1780,14 +1780,14 @@ LoadImageM /doconly
 LoadImage /doconly
   char* filename
   int iscolor CV_LOAD_IMAGE_COLOR
-ReshapeMatND /doconly
+ReshapeMatND CvMat /doconly
   CvMat arr
   int newCn
   ints newDims
-Reshape /doconly
+Reshape CvMat /doconly
   CvArr arr
   int newCn
-  int newRows
+  int newRows 0
 SetData /doconly
   CvArr arr
   PyObject* data
@@ -1801,5 +1801,5 @@ Subdiv2DLocate loc,where /doconly
   CvPoint2D32f pt
   int loc /O
   edgeorpoint where /O
-WaitKey /doconly
+WaitKey int /doconly
   int delay 0

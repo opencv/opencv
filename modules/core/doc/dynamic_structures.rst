@@ -10,27 +10,27 @@ CvMemStorage
 
 .. ocv:struct:: CvMemStorage
 
-A storage for various OpenCV dynamic data structures, such as ``CvSeq``, ``CvSet`` etc.
+  A storage for various OpenCV dynamic data structures, such as ``CvSeq``, ``CvSet`` etc.
 
-    .. ocv:member:: CvMemBlock* bottom
+  .. ocv:member:: CvMemBlock* bottom
 
-        the first memory block in the double-linked list of blocks
+     the first memory block in the double-linked list of blocks
 
-    .. ocv:member:: CvMemBlock* top
+  .. ocv:member:: CvMemBlock* top
 
-        the current partially allocated memory block in the list of blocks
+     the current partially allocated memory block in the list of blocks
 
-    .. ocv:member:: CvMemStorage* parent
+  .. ocv:member:: CvMemStorage* parent
 
-        the parent storage (if any) from which the new memory blocks are borrowed.
+     the parent storage (if any) from which the new memory blocks are borrowed.
 
-    .. ocv:member:: int free_space
+  .. ocv:member:: int free_space
 
-        number of free bytes in the ``top`` block
+     number of free bytes in the ``top`` block
 
-    .. ocv:member:: int block_size
+  .. ocv:member:: int block_size
 
-        the total size of the memory blocks
+     the total size of the memory blocks
 
 Memory storage is a low-level structure used to store dynamically growing data structures such as sequences, contours, graphs, subdivisions, etc. It is organized as a list of memory blocks of equal size -
 ``bottom`` field is the beginning of the list of blocks and ``top`` is the currently used block, but not necessarily the last block of the list. All blocks between ``bottom`` and ``top``, not including the
@@ -64,38 +64,38 @@ CvSeq
 
 .. ocv:struct:: CvSeq
 
-Dynamically growing sequence.
+  Dynamically growing sequence.
 
-    .. ocv:member:: int flags
+  .. ocv:member:: int flags
 
-        sequence flags, including the sequence signature (CV_SEQ_MAGIC_VAL or CV_SET_MAGIC_VAL), type of the elements and some other information about the sequence.
+     sequence flags, including the sequence signature (CV_SEQ_MAGIC_VAL or CV_SET_MAGIC_VAL), type of the elements and some other information about the sequence.
 
-    .. ocv:member:: int header_size
+  .. ocv:member:: int header_size
 
-        size of the sequence header. It should be sizeof(CvSeq) at minimum. See :ocv:cfunc:`CreateSeq`.
+     size of the sequence header. It should be sizeof(CvSeq) at minimum. See :ocv:cfunc:`CreateSeq`.
 
-    .. ocv:member:: CvSeq* h_prev
-    .. ocv:member:: CvSeq* h_next
-    .. ocv:member:: CvSeq* v_prev
-    .. ocv:member:: CvSeq* v_next
+  .. ocv:member:: CvSeq* h_prev
+  .. ocv:member:: CvSeq* h_next
+  .. ocv:member:: CvSeq* v_prev
+  .. ocv:member:: CvSeq* v_next
 
-        pointers to another sequences in a sequence tree. Sequence trees are used to store hierarchical contour structures, retrieved by :ocv:cfunc:`FindContours`
+     pointers to another sequences in a sequence tree. Sequence trees are used to store hierarchical contour structures, retrieved by :ocv:cfunc:`FindContours`
 
-    .. ocv:member:: int total
+  .. ocv:member:: int total
 
-        the number of sequence elements
+     the number of sequence elements
 
-    .. ocv:member:: int elem_size
+  .. ocv:member:: int elem_size
 
-        size of each sequence element in bytes
+     size of each sequence element in bytes
 
-    .. ocv:member:: CvMemStorage* storage
+  .. ocv:member:: CvMemStorage* storage
 
-        memory storage where the sequence resides. It can be a NULL pointer.
+     memory storage where the sequence resides. It can be a NULL pointer.
 
-    .. ocv:member:: CvSeqBlock* first
+  .. ocv:member:: CvSeqBlock* first
 
-        pointer to the first data block
+     pointer to the first data block
 
 The structure ``CvSeq`` is a base for all of OpenCV dynamic data structures.
 There are two types of sequences - dense and sparse. The base type for dense
@@ -228,9 +228,9 @@ ClearSet
 --------
 Clears a set.
 
-.. ocv:cfunction:: void cvClearSet( CvSet* setHeader )
+.. ocv:cfunction:: void cvClearSet( CvSet* set_header )
 
-    :param setHeader: Cleared set
+    :param set_header: Cleared set
 
 The function removes all elements from set. It has O(1) time complexity.
 
@@ -362,11 +362,12 @@ CreateMemStorage
 ----------------
 Creates memory storage.
 
-.. ocv:cfunction:: CvMemStorage* cvCreateMemStorage( int blockSize=0 )
+.. ocv:cfunction:: CvMemStorage* cvCreateMemStorage( int block_size=0 )
+
 .. ocv:pyoldfunction:: cv.CreateMemStorage(blockSize=0) -> memstorage
 
 
-    :param blockSize: Size of the storage blocks in bytes. If it is 0, the block size is set to a default value - currently it is  about 64K.
+    :param block_size: Size of the storage blocks in bytes. If it is 0, the block size is set to a default value - currently it is  about 64K.
 
 The function creates an empty memory storage. See
 :ocv:struct:`CvMemStorage`
@@ -376,14 +377,14 @@ CreateSeq
 ---------
 Creates a sequence.
 
-.. ocv:cfunction:: CvSeq* cvCreateSeq(  int seqFlags, int headerSize, int elemSize, CvMemStorage* storage)
+.. ocv:cfunction:: CvSeq* cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* storage )
 
 
-    :param seqFlags: Flags of the created sequence. If the sequence is not passed to any function working with a specific type of sequences, the sequence value may be set to 0, otherwise the appropriate type must be selected from the list of predefined sequence types.
+    :param seq_flags: Flags of the created sequence. If the sequence is not passed to any function working with a specific type of sequences, the sequence value may be set to 0, otherwise the appropriate type must be selected from the list of predefined sequence types.
 
-    :param headerSize: Size of the sequence header; must be greater than or equal to  ``sizeof(CvSeq)`` . If a specific type or its extension is indicated, this type must fit the base type header.
+    :param header_size: Size of the sequence header; must be greater than or equal to  ``sizeof(CvSeq)`` . If a specific type or its extension is indicated, this type must fit the base type header.
 
-    :param elemSize: Size of the sequence elements in bytes. The size must be consistent with the sequence type. For example, for a sequence of points to be created, the element type    ``CV_SEQ_ELTYPE_POINT``  should be specified and the parameter  ``elemSize``  must be equal to  ``sizeof(CvPoint)`` .
+    :param elem_size: Size of the sequence elements in bytes. The size must be consistent with the sequence type. For example, for a sequence of points to be created, the element type    ``CV_SEQ_ELTYPE_POINT``  should be specified and the parameter  ``elem_size``  must be equal to  ``sizeof(CvPoint)`` .
 
     :param storage: Sequence location
 
@@ -480,13 +481,13 @@ FindGraphEdgeByPtr
 ------------------
 Finds an edge in a graph by using its pointer.
 
-.. ocv:cfunction:: CvGraphEdge* cvFindGraphEdgeByPtr(  const CvGraph* graph, const CvGraphVtx* startVtx, const CvGraphVtx* endVtx )
+.. ocv:cfunction:: CvGraphEdge* cvFindGraphEdgeByPtr( const CvGraph* graph, const CvGraphVtx* start_vtx, const CvGraphVtx* end_vtx )
 
     :param graph: Graph
 
-    :param startVtx: Pointer to the starting vertex of the edge
+    :param start_vtx: Pointer to the starting vertex of the edge
 
-    :param endVtx: Pointer to the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
+    :param end_vtx: Pointer to the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
 
 ::
 
@@ -529,7 +530,7 @@ GetSeqElem
 ----------
 Returns a pointer to a sequence element according to its index.
 
-.. ocv:cfunction:: char* cvGetSeqElem( const CvSeq* seq, int index )
+.. ocv:cfunction:: schar* cvGetSeqElem( const CvSeq* seq, int index )
 
     :param seq: Sequence
 
@@ -587,9 +588,9 @@ GetSetElem
 ----------
 Finds a set element by its index.
 
-.. ocv:cfunction:: CvSetElem* cvGetSetElem(  const CvSet* setHeader, int index )
+.. ocv:cfunction:: CvSetElem* cvGetSetElem( const CvSet* set_header, int index )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param index: Index of the set element within a sequence
 
@@ -723,11 +724,11 @@ GraphVtxDegree
 --------------
 Counts the number of edges incident to the vertex.
 
-.. ocv:cfunction:: int cvGraphVtxDegree( const CvGraph* graph, int vtxIdx )
+.. ocv:cfunction:: int cvGraphVtxDegree( const CvGraph* graph, int vtx_idx )
 
     :param graph: Graph
 
-    :param vtxIdx: Index of the graph vertex
+    :param vtx_idx: Index of the graph vertex
 
 The function returns the number of edges incident to the specified vertex, both incoming and outgoing. To count the edges, the following code is used:
 
@@ -1021,11 +1022,11 @@ SeqInsert
 ---------
 Inserts an element in the middle of a sequence.
 
-.. ocv:cfunction:: char* cvSeqInsert(  CvSeq* seq, int beforeIndex, void* element=NULL )
+.. ocv:cfunction:: schar* cvSeqInsert( CvSeq* seq, int before_index, const void* element=NULL )
 
     :param seq: Sequence
 
-    :param beforeIndex: Index before which the element is inserted. Inserting before 0 (the minimal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPushFront`  and inserting before  ``seq->total``  (the maximal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPush` .
+    :param before_index: Index before which the element is inserted. Inserting before 0 (the minimal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPushFront`  and inserting before  ``seq->total``  (the maximal allowed value of the parameter) is equal to  :ocv:cfunc:`SeqPush` .
 
     :param element: Inserted element
 
@@ -1037,13 +1038,13 @@ SeqInsertSlice
 --------------
 Inserts an array in the middle of a sequence.
 
-.. ocv:cfunction:: void cvSeqInsertSlice(  CvSeq* seq, int beforeIndex, const CvArr* fromArr )
+.. ocv:cfunction:: void cvSeqInsertSlice( CvSeq* seq, int before_index, const CvArr* from_arr )
 
     :param seq: Sequence
 
-    :param beforeIndex: Index before which the array is inserted
+    :param before_index: Index before which the array is inserted
 
-    :param fromArr: The array to take elements from
+    :param from_arr: The array to take elements from
 
 The function inserts all
 ``fromArr``
@@ -1109,7 +1110,7 @@ SeqPush
 -------
 Adds an element to the end of a sequence.
 
-.. ocv:cfunction:: char* cvSeqPush(  CvSeq* seq, void* element=NULL )
+.. ocv:cfunction:: schar* cvSeqPush( CvSeq* seq, const void* element=NULL )
 
     :param seq: Sequence
 
@@ -1149,7 +1150,7 @@ SeqPushFront
 ------------
 Adds an element to the beginning of a sequence.
 
-.. ocv:cfunction:: char* cvSeqPushFront( CvSeq* seq, void* element=NULL )
+.. ocv:cfunction:: schar* cvSeqPushFront( CvSeq* seq, const void* element=NULL )
 
     :param seq: Sequence
 
@@ -1163,7 +1164,7 @@ SeqPushMulti
 ------------
 Pushes several elements to either end of a sequence.
 
-.. ocv:cfunction:: void cvSeqPushMulti(  CvSeq* seq, void* elements, int count, int in_front=0 )
+.. ocv:cfunction:: void cvSeqPushMulti( CvSeq* seq, const void* elements, int count, int in_front=0 )
 
     :param seq: Sequence
 
@@ -1216,7 +1217,7 @@ SeqSearch
 ---------
 Searches for an element in a sequence.
 
-.. ocv:cfunction:: char* cvSeqSearch( CvSeq* seq, const void* elem, CvCmpFunc func,                    int is_sorted, int* elem_idx, void* userdata=NULL )
+.. ocv:cfunction:: schar* cvSeqSearch( CvSeq* seq, const void* elem, CvCmpFunc func, int is_sorted, int* elem_idx, void* userdata=NULL )
 
     :param seq: The sequence
 
@@ -1325,9 +1326,9 @@ SetAdd
 ------
 Occupies a node in the set.
 
-.. ocv:cfunction:: int cvSetAdd(  CvSet* setHeader, CvSetElem* elem=NULL, CvSetElem** inserted_elem=NULL )
+.. ocv:cfunction:: int cvSetAdd( CvSet* set_header, CvSetElem* elem=NULL, CvSetElem** inserted_elem=NULL )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param elem: Optional input argument, an inserted element. If not NULL, the function copies the data to the allocated node (the MSB of the first integer field is cleared after copying).
 
@@ -1346,9 +1347,9 @@ SetNew
 ------
 Adds an element to a set (fast variant).
 
-.. ocv:cfunction:: CvSetElem* cvSetNew( CvSet* setHeader )
+.. ocv:cfunction:: CvSetElem* cvSetNew( CvSet* set_header )
 
-    :param setHeader: Set
+    :param set_header: Set
 
 The function is an inline lightweight variant of
 :ocv:cfunc:`SetAdd`
@@ -1358,9 +1359,9 @@ SetRemove
 ---------
 Removes an element from a set.
 
-.. ocv:cfunction:: void cvSetRemove(  CvSet* setHeader, int index )
+.. ocv:cfunction:: void cvSetRemove( CvSet* set_header, int index )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param index: Index of the removed element
 
@@ -1375,9 +1376,9 @@ SetRemoveByPtr
 --------------
 Removes a set element based on its pointer.
 
-.. ocv:cfunction:: void cvSetRemoveByPtr(  CvSet* setHeader, void* elem )
+.. ocv:cfunction:: void cvSetRemoveByPtr( CvSet* set_header, void* elem )
 
-    :param setHeader: Set
+    :param set_header: Set
 
     :param elem: Removed element
 
@@ -1389,23 +1390,23 @@ SetSeqBlockSize
 ---------------
 Sets up sequence block size.
 
-.. ocv:cfunction:: void cvSetSeqBlockSize(  CvSeq* seq, int deltaElems )
+.. ocv:cfunction:: void cvSetSeqBlockSize( CvSeq* seq, int delta_elems )
 
     :param seq: Sequence
 
-    :param deltaElems: Desirable sequence block size for elements
+    :param delta_elems: Desirable sequence block size for elements
 
 The function affects memory allocation
 granularity. When the free space in the sequence buffers has run out,
 the function allocates the space for
-``deltaElems``
+``delta_elems``
 sequence
 elements. If this block immediately follows the one previously allocated,
 the two blocks are concatenated; otherwise, a new sequence block is
 created. Therefore, the bigger the parameter is, the lower the possible
 sequence fragmentation, but the more space in the storage block is wasted. When
 the sequence is created, the parameter
-``deltaElems``
+``delta_elems``
 is set to
 the default value of about 1K. The function can be called any time after
 the sequence is created and affects future allocations. The function

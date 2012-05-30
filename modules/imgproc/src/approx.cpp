@@ -70,15 +70,15 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
     CvChainPtReader reader;
     CvSeqWriter     writer;
     CvPoint         pt = chain->origin;
-    
+
     CV_Assert( CV_IS_SEQ_CHAIN_CONTOUR( chain ));
     CV_Assert( header_size >= (int)sizeof(CvContour) );
-    
+
     cvStartWriteSeq( (chain->flags & ~CV_SEQ_ELTYPE_MASK) | CV_SEQ_ELTYPE_POINT,
                      header_size, sizeof( CvPoint ), storage, &writer );
-    
+
     if( chain->total == 0 )
-    {        
+    {
         CV_WRITE_SEQ_ELEM( pt, writer );
         return cvEndWriteSeq( &writer );
     }
@@ -380,13 +380,13 @@ CV_IMPL CvSeq*
 cvApproxChains( CvSeq*              src_seq,
                 CvMemStorage*       storage,
                 int                 method,
-                double              /*parameter*/, 
-                int                 minimal_perimeter, 
+                double              /*parameter*/,
+                int                 minimal_perimeter,
                 int                 recursive )
 {
     CvSeq *prev_contour = 0, *parent = 0;
     CvSeq *dst_seq = 0;
-    
+
     if( !src_seq || !storage )
         CV_Error( CV_StsNullPtr, "" );
     if( method > CV_CHAIN_APPROX_TC89_KCOS || method <= 0 || minimal_perimeter < 0 )
@@ -399,7 +399,7 @@ cvApproxChains( CvSeq*              src_seq,
         if( len >= minimal_perimeter )
         {
             CvSeq *contour = 0;
-            
+
             switch( method )
             {
             case CV_CHAIN_APPROX_NONE:
@@ -471,7 +471,7 @@ cvApproxChains( CvSeq*              src_seq,
 
 /* the version for integer point coordinates */
 template<typename T> static CvSeq*
-icvApproxPolyDP( CvSeq* src_contour, int header_size, 
+icvApproxPolyDP( CvSeq* src_contour, int header_size,
                  CvMemStorage* storage, double eps )
 {
     typedef cv::Point_<T> PT;
@@ -486,7 +486,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
     CvMemStorage*   temp_storage = 0;
     CvSeq*          stack = 0;
     CvSeq*          dst_contour;
-    
+
     assert( CV_SEQ_ELTYPE(src_contour) == cv::DataType<PT>::type );
     cvStartWriteSeq( src_contour->flags, header_size, sizeof(pt), storage, &writer );
 
@@ -518,7 +518,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
             init_iters = 1;
         }
     }
-    
+
     if( is_closed )
     {
         /* 1. Find approximately two farthest points of the contour */
@@ -629,10 +629,10 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
         CV_WRITE_SEQ_ELEM( end_pt, writer );
 
     dst_contour = cvEndWriteSeq( &writer );
-    
+
     // last stage: do final clean-up of the approximated contour -
-    // remove extra points on the [almost] stright lines. 
-    
+    // remove extra points on the [almost] stright lines.
+
     cvStartReadSeq( dst_contour, &reader, is_closed );
     CV_READ_SEQ_ELEM( start_pt, reader );
 
@@ -675,7 +675,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
 
 CV_IMPL CvSeq*
 cvApproxPoly( const void*  array, int  header_size,
-              CvMemStorage*  storage, int  method, 
+              CvMemStorage*  storage, int  method,
               double  parameter, int parameter2 )
 {
     CvSeq* dst_seq = 0;

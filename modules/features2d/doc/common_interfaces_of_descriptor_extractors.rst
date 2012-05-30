@@ -13,7 +13,7 @@ descriptor extractors inherit the
 
 DescriptorExtractor
 -------------------
-.. ocv:class:: DescriptorExtractor
+.. ocv:class:: DescriptorExtractor : public Algorithm
 
 Abstract base class for computing descriptors for image keypoints. ::
 
@@ -65,25 +65,6 @@ Computes the descriptors for a set of keypoints detected in an image (first vari
 
     :param descriptors: Computed descriptors. In the second variant of the method ``descriptors[i]`` are descriptors computed for a ``keypoints[i]`. Row ``j`` is the ``keypoints`` (or ``keypoints[i]``) is the descriptor for keypoint ``j``-th keypoint.
 
-DescriptorExtractor::read
------------------------------
-Reads the object of a descriptor extractor from a file node.
-
-.. ocv:function:: void DescriptorExtractor::read( const FileNode& fn )
-
-    :param fn: File node from which the detector is read.
-
-
-
-DescriptorExtractor::write
-------------------------------
-Writes the object of a descriptor extractor to a file storage.
-
-.. ocv:function:: void DescriptorExtractor::write( FileStorage& fs ) const
-
-    :param fs: File storage where the detector is written.
-
-
 
 DescriptorExtractor::create
 -------------------------------
@@ -107,7 +88,7 @@ for example: ``"OpponentSIFT"`` .
 
 OpponentColorDescriptorExtractor
 --------------------------------
-.. ocv:class:: OpponentColorDescriptorExtractor
+.. ocv:class:: OpponentColorDescriptorExtractor : public DescriptorExtractor
 
 Class adapting a descriptor extractor to compute descriptors in the Opponent Color Space
 (refer to Van de Sande et al., CGIV 2008 *Color Descriptors for Object Category Recognition*).
@@ -132,7 +113,7 @@ them into a single color descriptor. ::
 
 BriefDescriptorExtractor
 ------------------------
-.. ocv:class:: BriefDescriptorExtractor
+.. ocv:class:: BriefDescriptorExtractor : public DescriptorExtractor
 
 Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
 Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,

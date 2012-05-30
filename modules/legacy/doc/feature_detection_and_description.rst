@@ -81,22 +81,22 @@ RandomizedTree::train
 -------------------------
 Trains a randomized tree using an input set of keypoints.
 
-.. ocv:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
+.. ocv:function:: void RandomizedTree::train( vector<BaseKeypoint> const& base_set, RNG & rng, int depth, int views, size_t reduced_num_dim, int num_quant_bits )
 
-.. ocv:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
+.. ocv:function:: void RandomizedTree::train( vector<BaseKeypoint> const& base_set, RNG & rng, PatchGenerator & make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits )
 
     :param base_set: Vector of the ``BaseKeypoint`` type. It contains image keypoints used for training.
-    
+
     :param rng: Random-number generator used for training.
-    
+
     :param make_patch: Patch generator used for training.
-    
+
     :param depth: Maximum tree depth.
 
     :param views: Number of random views of each keypoint neighborhood to generate.
 
     :param reduced_num_dim: Number of dimensions used in the compressed signature.
-    
+
     :param num_quant_bits: Number of bits used for quantization.
 
 
@@ -105,9 +105,9 @@ RandomizedTree::read
 ------------------------
 Reads a pre-saved randomized tree from a file or stream.
 
-.. ocv:function:: read(const char* file_name, int num_quant_bits)
+.. ocv:function:: RandomizedTree::read(const char* file_name, int num_quant_bits)
 
-.. ocv:function:: read(std::istream &is, int num_quant_bits)
+.. ocv:function:: RandomizedTree::read(std::istream &is, int num_quant_bits)
 
     :param file_name: Name of the file that contains randomized tree data.
 
@@ -121,9 +121,9 @@ RandomizedTree::write
 -------------------------
 Writes the current randomized tree to a file or stream.
 
-.. ocv:function:: void write(const char* file_name) const
+.. ocv:function:: void RandomizedTree::write(const char* file_name) const
 
-.. ocv:function:: void write(std::ostream &os) const
+.. ocv:function:: void RandomizedTree::write(std::ostream &os) const
 
     :param file_name: Name of the file where randomized tree data is stored.
 
@@ -133,7 +133,7 @@ Writes the current randomized tree to a file or stream.
 
 RandomizedTree::applyQuantization
 -------------------------------------
-.. ocv:function:: void applyQuantization(int num_quant_bits)
+.. ocv:function:: void RandomizedTree::applyQuantization(int num_quant_bits)
 
     Applies quantization to the current randomized tree.
 
@@ -142,7 +142,7 @@ RandomizedTree::applyQuantization
 
 RTreeNode
 ---------
-.. ocv:class:: RTreeNode
+.. ocv:struct:: RTreeNode
 
 Class containing a base structure for ``RandomizedTree``. ::
 
@@ -240,37 +240,34 @@ RTreeClassifier::train
 --------------------------
 Trains a randomized tree classifier using an input set of keypoints.
 
-.. ocv:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM, int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
+.. ocv:function:: void RTreeClassifier::train( vector<BaseKeypoint> const& base_set, RNG & rng, int num_trees=RTreeClassifier::DEFAULT_TREES, int depth=RandomizedTree::DEFAULT_DEPTH, int views=RandomizedTree::DEFAULT_VIEWS, size_t reduced_num_dim=RandomizedTree::DEFAULT_REDUCED_NUM_DIM, int num_quant_bits=DEFAULT_NUM_QUANT_BITS )
 
-.. ocv:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
+.. ocv:function:: void RTreeClassifier::train( vector<BaseKeypoint> const& base_set, RNG & rng, PatchGenerator & make_patch, int num_trees=RTreeClassifier::DEFAULT_TREES, int depth=RandomizedTree::DEFAULT_DEPTH, int views=RandomizedTree::DEFAULT_VIEWS, size_t reduced_num_dim=RandomizedTree::DEFAULT_REDUCED_NUM_DIM, int num_quant_bits=DEFAULT_NUM_QUANT_BITS )
 
     :param base_set: Vector of the ``BaseKeypoint``  type. It contains image keypoints used for training.
-    
+
     :param rng: Random-number generator used for training.
-    
+
     :param make_patch: Patch generator used for training.
-    
+
     :param num_trees: Number of randomized trees used in ``RTreeClassificator`` .
-    
+
     :param depth: Maximum tree depth.
 
     :param views: Number of random views of each keypoint neighborhood to generate.
 
     :param reduced_num_dim: Number of dimensions used in the compressed signature.
-    
-    :param num_quant_bits: Number of bits used for quantization.
-    
-    :param print_status: Current status of training printed on the console.
 
+    :param num_quant_bits: Number of bits used for quantization.
 
 
 RTreeClassifier::getSignature
 ---------------------------------
 Returns a signature for an image patch.
 
-.. ocv:function:: void getSignature(IplImage *patch, uchar *sig)
+.. ocv:function:: void RTreeClassifier::getSignature(IplImage *patch, uchar *sig)
 
-.. ocv:function:: void getSignature(IplImage *patch, float *sig)
+.. ocv:function:: void RTreeClassifier::getSignature(IplImage *patch, float *sig)
 
     :param patch: Image patch to calculate the signature for.
     :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
@@ -278,15 +275,15 @@ Returns a signature for an image patch.
 
 
 RTreeClassifier::getSparseSignature
---------------------------------------- 
+---------------------------------------
 Returns a sparse signature for an image patch
 
-.. ocv:function:: void getSparseSignature(IplImage *patch, float *sig, float thresh)
+.. ocv:function:: void RTreeClassifier::getSparseSignature(IplImage *patch, float *sig, float thresh)
 
     :param patch: Image patch to calculate the signature for.
-    
+
     :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
-    
+
     :param thresh: Threshold used for compressing the signature.
 
     Returns a signature for an image patch similarly to ``getSignature``  but uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
@@ -296,7 +293,7 @@ RTreeClassifier::countNonZeroElements
 -----------------------------------------
 Returns the number of non-zero elements in an input array.
 
-.. ocv:function:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
+.. ocv:function:: static int RTreeClassifier::countNonZeroElements(float *vec, int n, double tol=1e-10)
 
     :param vec: Input vector containing float elements.
 
@@ -310,9 +307,9 @@ RTreeClassifier::read
 -------------------------
 Reads a pre-saved ``RTreeClassifier`` from a file or stream.
 
-.. ocv:function:: read(const char* file_name)
+.. ocv:function:: void RTreeClassifier::read(const char* file_name)
 
-.. ocv:function:: read(std::istream& is)
+.. ocv:function:: void RTreeClassifier::read( std::istream & is )
 
     :param file_name: Name of the file that contains randomized tree data.
 
@@ -324,9 +321,9 @@ RTreeClassifier::write
 --------------------------
 Writes the current ``RTreeClassifier`` to a file or stream.
 
-.. ocv:function:: void write(const char* file_name) const
+.. ocv:function:: void RTreeClassifier::write(const char* file_name) const
 
-.. ocv:function:: void write(std::ostream &os) const
+.. ocv:function:: void RTreeClassifier::write(std::ostream &os) const
 
     :param file_name: Name of the file where randomized tree data is stored.
 
@@ -338,7 +335,7 @@ RTreeClassifier::setQuantization
 ------------------------------------
 Applies quantization to the current randomized tree.
 
-.. ocv:function:: void setQuantization(int num_quant_bits)
+.. ocv:function:: void RTreeClassifier::setQuantization(int num_quant_bits)
 
     :param num_quant_bits: Number of bits used for quantization.
 

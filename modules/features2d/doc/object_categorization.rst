@@ -54,7 +54,7 @@ BOWTrainer::descripotorsCount
 ---------------------------------
 Returns the count of all descriptors stored in the training set.
 
-.. ocv:function:: const vector<Mat>& BOWTrainer::descripotorsCount() const
+.. ocv:function:: int BOWTrainer::descripotorsCount() const
 
 
 
@@ -72,7 +72,7 @@ The vocabulary consists of cluster centers. So, this method returns the vocabula
 
 BOWKMeansTrainer
 ----------------
-.. ocv:class:: BOWKMeansTrainer
+.. ocv:class:: BOWKMeansTrainer : public BOWTrainer
 
 :ocv:func:`kmeans` -based class to train visual vocabulary using the *bag of visual words* approach.
 ::

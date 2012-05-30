@@ -18,9 +18,9 @@ Here is an example: ::
 
     #include "opencv2/opencv.hpp"
     #include <time.h>
-    
+
     using namespace cv;
-    
+
     int main(int, char** argv)
     {
         FileStorage fs("test.yml", FileStorage::WRITE);
@@ -76,18 +76,18 @@ As an exercise, you can replace ".yml" with ".xml" in the sample above and see, 
 Several things can be noted by looking at the sample code and the output:
  *
    The produced YAML (and XML) consists of heterogeneous collections that can be nested. There are 2 types of collections: named collections (mappings) and unnamed collections (sequences). In mappings each element has a name and is accessed by name. This is similar to structures and ``std::map`` in C/C++ and dictionaries in Python. In sequences elements do not have names, they are accessed by indices. This is similar to arrays and ``std::vector`` in C/C++ and lists, tuples in Python. "Heterogeneous" means that elements of each single collection can have different types.
- 
+
    Top-level collection in YAML/XML is a mapping. Each matrix is stored as a mapping, and the matrix elements are stored as a sequence. Then, there is a sequence of features, where each feature is represented a mapping, and lbp value in a nested sequence.
-   
+
  *
    When you write to a mapping (a structure), you write element name followed by its value. When you write to a sequence, you simply write the elements one by one. OpenCV data structures (such as cv::Mat) are written in absolutely the same way as simple C data structures - using **``<<``** operator.
-   
+
  *
    To write a mapping, you first write the special string **"{"** to the storage, then write the elements as pairs (``fs << <element_name> << <element_value>``) and then write the closing **"}"**.
-   
+
  *
    To write a sequence, you first write the special string **"["**, then write the elements, then write the closing **"]"**.
- 
+
  *
    In YAML (but not XML), mappings and sequences can be written in a compact Python-like inline form. In the sample above matrix elements, as well as each feature, including its lbp value, is stored in such inline form. To store a mapping/sequence in a compact form, put ":" after the opening character, e.g. use **"{:"** instead of **"{"** and **"[:"** instead of **"["**. When the data is written to XML, those extra ":" are ignored.
 
@@ -99,38 +99,38 @@ To read the previously written XML or YAML file, do the following:
 
  #.
    Open the file storage using :ocv:func:`FileStorage::FileStorage` constructor or :ocv:func:`FileStorage::open` method. In the current implementation the whole file is parsed and the whole representation of file storage is built in memory as a hierarchy of file nodes (see :ocv:class:`FileNode`)
-   
+
  #.
    Read the data you are interested in. Use :ocv:func:`FileStorage::operator []`, :ocv:func:`FileNode::operator []` and/or :ocv:class:`FileNodeIterator`.
-   
+
  #.
-   Close the storage using :ocv:func:`FileStorage::release`.  
-     
+   Close the storage using :ocv:func:`FileStorage::release`.
+
 Here is how to read the file created by the code sample above: ::
 
     FileStorage fs2("test.yml", FileStorage::READ);
-    
+
     // first method: use (type) operator on FileNode.
     int frameCount = (int)fs2["frameCount"];
-    
+
     std::string date;
     // second method: use FileNode::operator >>
     fs2["calibrationDate"] >> date;
-    
+
     Mat cameraMatrix2, distCoeffs2;
     fs2["cameraMatrix"] >> cameraMatrix2;
     fs2["distCoeffs"] >> distCoeffs2;
-    
+
     cout << "frameCount: " << frameCount << endl
          << "calibration date: " << date << endl
          << "camera matrix: " << cameraMatrix2 << endl
          << "distortion coeffs: " << distCoeffs2 << endl;
-    
+
     FileNode features = fs2["features"];
     FileNodeIterator it = features.begin(), it_end = features.end();
     int idx = 0;
     std::vector<uchar> lbpval;
-    
+
     // iterate through a sequence using FileNodeIterator
     for( ; it != it_end; ++it, idx++ )
     {
@@ -189,7 +189,7 @@ Checks whether the file is opened.
 .. ocv:function:: bool FileStorage::isOpened() const
 
     :returns: ``true`` if the object is associated with the current file and ``false`` otherwise.
-   
+
 It is a good practice to call this method after you tried to open a file.
 
 
@@ -254,22 +254,22 @@ Writes multiple numbers.
 
      :param fmt: Specification of each array element that has the following format  ``([count]{'u'|'c'|'w'|'s'|'i'|'f'|'d'})...`` where the characters correspond to fundamental C++ types:
 
-            * **u** 8-bit unsigned number 
+            * **u** 8-bit unsigned number
 
-            * **c** 8-bit signed number 
+            * **c** 8-bit signed number
 
-            * **w** 16-bit unsigned number 
+            * **w** 16-bit unsigned number
 
-            * **s** 16-bit signed number 
+            * **s** 16-bit signed number
 
-            * **i** 32-bit signed number 
+            * **i** 32-bit signed number
 
-            * **f** single precision floating-point number 
+            * **f** single precision floating-point number
 
-            * **d** double precision floating-point number 
+            * **d** double precision floating-point number
 
-            * **r** pointer, 32 lower bits of which are written as a signed integer. The type can be used to store structures with links between the elements. 
-            
+            * **r** pointer, 32 lower bits of which are written as a signed integer. The type can be used to store structures with links between the elements.
+
             ``count``  is the optional counter of values of a given type. For example,  ``2if``  means that each array element is a structure of 2 integers, followed by a single-precision floating-point number. The equivalent notations of the above specification are ' ``iif`` ', ' ``2i1f`` ' and so forth. Other examples:  ``u``  means that the array consists of bytes, and  ``2d``  means the array consists of pairs  of doubles.
 
      :param vec: Pointer to the written array.
@@ -431,7 +431,7 @@ Checks whether the node is empty.
 
 FileNode::isNone
 ----------------
-Checks whether the node is a "none" object 
+Checks whether the node is a "none" object
 
 .. ocv:function:: bool FileNode::isNone() const
 
@@ -459,7 +459,7 @@ Checks whether the node is a mapping.
 FileNode::isInt
 ---------------
 Checks whether the node is an integer.
-    
+
 .. ocv:function:: bool FileNode::isInt() const
 
     :returns: ``true`` if the node is an integer.
@@ -544,7 +544,7 @@ Returns the node content as text string.
 .. ocv:function:: FileNode::operator string() const
 
     :returns: The node content as a text string.
-        
+
 
 FileNode::operator*
 -------------------
@@ -663,7 +663,7 @@ FileNodeIterator::operator +=
 -----------------------------
 Moves iterator forward by the specified offset.
 
-.. ocv:function:: FileNodeIterator& FileNodeIterator::operator += (int ofs)
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator +=( int ofs )
 
     :param ofs: Offset (possibly negative) to move the iterator.
 
@@ -672,7 +672,7 @@ FileNodeIterator::operator -=
 -----------------------------
 Moves iterator backward by the specified offset (possibly negative).
 
-.. ocv:function:: FileNodeIterator& FileNodeIterator::operator -= (int ofs)
+.. ocv:function:: FileNodeIterator& FileNodeIterator::operator -=( int ofs )
 
     :param ofs: Offset (possibly negative) to move the iterator.
 

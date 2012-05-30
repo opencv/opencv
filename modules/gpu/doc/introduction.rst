@@ -32,7 +32,7 @@ By default, the OpenCV GPU module includes:
     PTX code for compute capabilities 1.1 and 1.3 (controlled by ``CUDA_ARCH_PTX``     in ``CMake``)
 
 This means that for devices with CC 1.3 and 2.0 binary images are ready to run. For all newer platforms, the PTX code for 1.3 is JIT'ed to a binary image. For devices with CC 1.1 and 1.2, the PTX for 1.1 is JIT'ed. For devices with CC 1.0, no code is available and the functions throw
-:ocv:func:`Exception`. For platforms where JIT compilation is performed first, the run is slow.
+:ocv:class:`Exception`. For platforms where JIT compilation is performed first, the run is slow.
 
 On a GPU with CC 1.0, you can still compile the GPU module and most of the functions will run flawlessly. To achieve this, add "1.0" to the list of binaries, for example, ``CUDA_ARCH_BIN="1.0 1.3 2.0"`` . The functions that cannot be run on CC 1.0 GPUs throw an exception.
 

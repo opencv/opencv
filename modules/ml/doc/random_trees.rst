@@ -42,7 +42,7 @@ For the random trees usage example, please, see letter_recog.cpp sample in OpenC
 
 CvRTParams
 ----------
-.. ocv:class:: CvRTParams
+.. ocv:struct:: CvRTParams : public CvDTreeParams
 
     Training parameters of random trees.
 
@@ -53,7 +53,7 @@ CvRTParams::CvRTParams:
 -----------------------
 The constructors.
 
-.. ocv:function:: CvRTParams::CvRTParams()  
+.. ocv:function:: CvRTParams::CvRTParams()
 
 .. ocv:function:: CvRTParams::CvRTParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, const float* priors, bool calc_var_importance, int nactive_vars, int max_num_of_trees_in_the_forest, float forest_accuracy, int termcrit_type )
 
@@ -72,9 +72,9 @@ The constructors.
     :param forest_accuracy: Sufficient accuracy (OOB error).
 
     :param termcrit_type: The type of the termination criteria:
-     
+
         * **CV_TERMCRIT_ITER** Terminate learning by the ``max_num_of_trees_in_the_forest``;
-        
+
         * **CV_TERMCRIT_EPS** Terminate learning by the ``forest_accuracy``;
 
         * **CV_TERMCRIT_ITER | CV_TERMCRIT_EPS** Use both termination criteria.
@@ -94,7 +94,7 @@ The default constructor sets all parameters to default values which are differen
 
 CvRTrees
 --------
-.. ocv:class:: CvRTrees
+.. ocv:class:: CvRTrees : public CvStatModel
 
     The class implements the random forest predictor as described in the beginning of this section.
 
@@ -118,7 +118,7 @@ CvRTrees::predict
 -----------------
 Predicts the output for an input sample.
 
-.. ocv:function:: double CvRTrees::predict(  const Mat& sample,  const Mat& missing=Mat() ) const
+.. ocv:function:: float CvRTrees::predict( const Mat& sample, const Mat& missing=Mat() ) const
 
 .. ocv:function:: float CvRTrees::predict( const CvMat* sample, const CvMat* missing = 0 ) const
 
@@ -156,7 +156,7 @@ Returns the variable importance array.
 
 .. ocv:function:: const CvMat* CvRTrees::get_var_importance()
 
-.. ocv:pyfunction:: cv2.RTrees.getVarImportance() -> importanceVector
+.. ocv:pyfunction:: cv2.RTrees.getVarImportance() -> retval
 
 The method returns the variable importance vector, computed at the training stage when ``CvRTParams::calc_var_importance`` is set to true. If this flag was set to false, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
 
@@ -181,7 +181,7 @@ CvRTrees::calc_error
 --------------------
 Returns error of the random forest.
 
-.. ocv:function:: float CvRTrees::calc_error( CvMLData* data, int type, std::vector<float> *resp = 0 )
+.. ocv:function:: float CvRTrees::calc_error( CvMLData* data, int type, std::vector<float>* resp=0 )
 
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the random forest as predictor.
 

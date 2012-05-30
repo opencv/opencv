@@ -7,17 +7,17 @@ kmeans
 ------
 Finds centers of clusters and groups input samples around the clusters.
 
-.. ocv:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria criteria, int attempts, int flags, OutputArray centers=noArray() )
+.. ocv:function:: double kmeans( InputArray data, int K, InputOutputArray bestLabels, TermCriteria criteria, int attempts, int flags, OutputArray centers=noArray() )
 
 .. ocv:pyfunction:: cv2.kmeans(data, K, criteria, attempts, flags[, bestLabels[, centers]]) -> retval, bestLabels, centers
 
-.. ocv:cfunction:: int cvKMeans2(const CvArr* samples, int clusterCount, CvArr* labels, CvTermCriteria criteria, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)
+.. ocv:cfunction:: int cvKMeans2( const CvArr* samples, int cluster_count, CvArr* labels, CvTermCriteria termcrit, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* _centers=0, double* compactness=0 )
 
-.. ocv:pyoldfunction:: cv.KMeans2(samples, clusterCount, labels, criteria)-> None
+.. ocv:pyoldfunction:: cv.KMeans2(samples, nclusters, labels, termcrit, attempts=1, flags=0, centers=None) -> float
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
-    :param clusterCount: Number of clusters to split the set by.
+    :param cluster_count: Number of clusters to split the set by.
 
     :param labels: Input/output integer array that stores the cluster indices for every sample.
 
@@ -40,7 +40,7 @@ Finds centers of clusters and groups input samples around the clusters.
     :param compactness: The returned value that is described below.
 
 The function ``kmeans`` implements a k-means algorithm that finds the
-centers of ``clusterCount`` clusters and groups the input samples
+centers of ``cluster_count`` clusters and groups the input samples
 around the clusters. As an output,
 :math:`\texttt{labels}_i` contains a 0-based cluster index for
 the sample stored in the

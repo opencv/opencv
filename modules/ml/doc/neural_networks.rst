@@ -8,7 +8,7 @@ ML implements feed-forward artificial neural networks or, more particularly, mul
 .. image:: pics/mlp.png
 
 All the neurons in MLP are similar. Each of them has several input links (it takes the output values from several neurons in the previous layer as input) and several output links (it passes the response to several neurons in the next layer). The values retrieved from the previous layer are summed up with certain weights, individual for each neuron, plus the bias term. The sum is transformed using the activation function
-:math:`f` that may be also different for different neurons. 
+:math:`f` that may be also different for different neurons.
 
 .. image:: pics/neuron_model.png
 
@@ -45,7 +45,7 @@ Different activation functions may be used. ML implements three standard functio
 In ML, all the neurons have the same activation functions, with the same free parameters (
 :math:`\alpha, \beta` ) that are specified by user and are not altered by the training algorithms.
 
-So, the whole trained network works as follows: 
+So, the whole trained network works as follows:
 
 #. Take the feature vector as input. The vector size is equal to the size of the input layer.
 
@@ -93,45 +93,45 @@ The second (default) one is a batch RPROP algorithm.
 .. [LeCun98] Y. LeCun, L. Bottou, G.B. Orr and K.-R. Muller, *Efficient backprop*, in Neural Networks---Tricks of the Trade, Springer Lecture Notes in Computer Sciences 1524, pp.5-50, 1998.
 
 .. [RPROP93] M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
-    
+
 
 CvANN_MLP_TrainParams
 ---------------------
-.. ocv:class:: CvANN_MLP_TrainParams
+.. ocv:struct:: CvANN_MLP_TrainParams
 
-Parameters of the MLP training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
+  Parameters of the MLP training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
 
-The back-propagation algorithm parameters:
+  The back-propagation algorithm parameters:
 
-.. ocv:member:: double bp_dw_scale
+  .. ocv:member:: double bp_dw_scale
 
-    Strength of the weight gradient term. The recommended value is about 0.1.
+     Strength of the weight gradient term. The recommended value is about 0.1.
 
-.. ocv:member:: double bp_moment_scale
+  .. ocv:member:: double bp_moment_scale
 
-    Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough
+     Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough
 
-The RPROP algorithm parameters (see [RPROP93]_ for details):
+  The RPROP algorithm parameters (see [RPROP93]_ for details):
 
-.. ocv:member:: double rp_dw0
+  .. ocv:member:: double rp_dw0
 
-    Initial value :math:`\Delta_0` of update-values :math:`\Delta_{ij}`.
+     Initial value :math:`\Delta_0` of update-values :math:`\Delta_{ij}`.
 
-.. ocv:member:: double rp_dw_plus
+  .. ocv:member:: double rp_dw_plus
 
-    Increase factor :math:`\eta^+`. It must be >1.
+     Increase factor :math:`\eta^+`. It must be >1.
 
-.. ocv:member:: double rp_dw_minus
+  .. ocv:member:: double rp_dw_minus
 
-    Decrease factor :math:`\eta^-`. It must be <1.
+     Decrease factor :math:`\eta^-`. It must be <1.
 
-.. ocv:member:: double rp_dw_min
+  .. ocv:member:: double rp_dw_min
 
-    Update-values lower limit :math:`\Delta_{min}`. It must be positive.
+     Update-values lower limit :math:`\Delta_{min}`. It must be positive.
 
-.. ocv:member:: double rp_dw_max
+  .. ocv:member:: double rp_dw_max
 
-    Update-values upper limit :math:`\Delta_{max}`. It must be >1.
+     Update-values upper limit :math:`\Delta_{max}`. It must be >1.
 
 
 CvANN_MLP_TrainParams::CvANN_MLP_TrainParams
@@ -169,9 +169,9 @@ By default the RPROP algorithm is used:
 
 CvANN_MLP
 ---------
-.. ocv:class:: CvANN_MLP
+.. ocv:class:: CvANN_MLP : public CvStatModel
 
-MLP model.   
+MLP model.
 
 Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method :ocv:func:`CvANN_MLP::create`. All the weights are set to zeros. Then, the network is trained using a set of input and output vectors. The training procedure can be repeated more than once, that is, the weights can be adjusted based on the new training data.
 
@@ -184,7 +184,7 @@ The constructors.
 
 .. ocv:function:: CvANN_MLP::CvANN_MLP( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
-.. ocv:pyfunction:: cv2.ANN_MLP(layerSizes[, activateFunc[, fparam1[, fparam2]]]) -> <ANN_MLP object>
+.. ocv:pyfunction::  cv2.ANN_MLP([layerSizes[, activateFunc[, fparam1[, fparam2]]]]) -> <ANN_MLP object>
 
 The advanced constructor allows to create MLP with the specified topology. See :ocv:func:`CvANN_MLP::create` for details.
 
@@ -203,7 +203,7 @@ Constructs MLP with the specified topology.
     :param activateFunc: Parameter specifying the activation function for each neuron: one of  ``CvANN_MLP::IDENTITY``, ``CvANN_MLP::SIGMOID_SYM``, and ``CvANN_MLP::GAUSSIAN``.
 
     :param fparam1: Free parameter of the activation function, :math:`\alpha`. See the formulas in the introduction section.
-    
+
     :param fparam2: Free parameter of the activation function, :math:`\beta`. See the formulas in the introduction section.
 
 The method creates an MLP network with the specified topology and assigns the same activation function to all the neurons.
@@ -216,7 +216,7 @@ Trains/updates MLP.
 
 .. ocv:function:: int CvANN_MLP::train( const CvMat* inputs, const CvMat* outputs, const CvMat* sampleWeights, const CvMat* sampleIdx=0, CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
 
-.. ocv:pyfunction:: cv2.ANN_MLP.train(inputs, outputs, sampleWeights[, sampleIdx[, params[, flags]]]) -> niterations
+.. ocv:pyfunction:: cv2.ANN_MLP.train(inputs, outputs, sampleWeights[, sampleIdx[, params[, flags]]]) -> retval
 
     :param inputs: Floating-point matrix of input vectors, one vector per row.
 
@@ -249,7 +249,7 @@ Predicts responses for input samples.
 
 .. ocv:function:: float CvANN_MLP::predict( const CvMat* inputs, CvMat* outputs ) const
 
-.. ocv:pyfunction:: cv2.ANN_MLP.predict(inputs, outputs) -> retval
+.. ocv:pyfunction:: cv2.ANN_MLP.predict(inputs[, outputs]) -> retval, outputs
 
     :param inputs: Input samples.
 
@@ -278,4 +278,4 @@ Returns neurons weights of the particular layer.
 .. ocv:function:: double* CvANN_MLP::get_weights(int layer)
 
     :param layer: Index of the particular layer.
-    
+

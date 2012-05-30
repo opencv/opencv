@@ -195,7 +195,7 @@ Creates a normalized 2D box filter.
 
 .. ocv:function:: Ptr<FilterEngine_GPU> gpu::createBoxFilter_GPU(int srcType, int dstType, const Size& ksize, const Point& anchor = Point(-1,-1))
 
-.. ocv:function:: Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1))
+.. ocv:function:: Ptr<BaseFilter_GPU> gpu::getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1))
 
     :param srcType: Input image type supporting ``CV_8UC1`` and ``CV_8UC4`` .
 
@@ -285,7 +285,9 @@ gpu::erode
 --------------
 Erodes an image by using a specific structuring element.
 
-.. ocv:function:: void gpu::erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor=Point(-1, -1), int iterations=1 )
+
+.. ocv:function:: void gpu::erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, Point anchor=Point(-1, -1), int iterations=1, Stream& stream=Stream::Null() )
 
     :param src: Source image. Only  ``CV_8UC1``  and  ``CV_8UC4``  types are supported.
 
@@ -309,7 +311,9 @@ gpu::dilate
 ---------------
 Dilates an image by using a specific structuring element.
 
-.. ocv:function:: void gpu::dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::dilate( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor=Point(-1, -1), int iterations=1 )
+
+.. ocv:function:: void gpu::dilate( const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, Point anchor=Point(-1, -1), int iterations=1, Stream& stream=Stream::Null() )
 
     :param src: Source image. ``CV_8UC1`` and ``CV_8UC4`` source types are supported.
 
@@ -333,7 +337,9 @@ gpu::morphologyEx
 ---------------------
 Applies an advanced morphological operation to an image.
 
-.. ocv:function:: void gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null())
+.. ocv:function::  void gpu::morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor=Point(-1, -1), int iterations=1 )
+
+.. ocv:function:: void gpu::morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, GpuMat& buf1, GpuMat& buf2, Point anchor=Point(-1, -1), int iterations=1, Stream& stream=Stream::Null() )
 
     :param src: Source image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
 
@@ -370,8 +376,6 @@ gpu::createLinearFilter_GPU
 Creates a non-separable linear filter.
 
 .. ocv:function:: Ptr<FilterEngine_GPU> gpu::createLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, Point anchor = Point(-1,-1), int borderType = BORDER_DEFAULT)
-
-.. ocv:function:: Ptr<BaseFilter_GPU> gpu::getLinearFilter_GPU(int srcType, int dstType, const Mat& kernel, const Size& ksize, Point anchor = Point(-1, -1))
 
     :param srcType: Input image type. Supports  ``CV_8U``  ,  ``CV_16U``  and  ``CV_32F``  one and four channel image.
 
@@ -441,7 +445,7 @@ gpu::getLinearRowFilter_GPU
 -------------------------------
 Creates a primitive row filter with the specified kernel.
 
-.. ocv:function:: Ptr<BaseRowFilter_GPU> gpu::getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, int anchor = -1, int borderType = BORDER_CONSTANT)
+.. ocv:function:: Ptr<BaseRowFilter_GPU> gpu::getLinearRowFilter_GPU( int srcType, int bufType, const Mat& rowKernel, int anchor=-1, int borderType=BORDER_DEFAULT )
 
     :param srcType: Source array type. Only  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1``  source types are supported.
 
@@ -467,7 +471,7 @@ gpu::getLinearColumnFilter_GPU
 ----------------------------------
 Creates a primitive column filter with the specified kernel.
 
-.. ocv:function:: Ptr<BaseColumnFilter_GPU> gpu::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, int anchor = -1, int borderType = BORDER_CONSTANT)
+.. ocv:function:: Ptr<BaseColumnFilter_GPU> gpu::getLinearColumnFilter_GPU( int bufType, int dstType, const Mat& columnKernel, int anchor=-1, int borderType=BORDER_DEFAULT )
 
     :param bufType: Intermediate buffer type with as many channels as  ``dstType`` .
 
@@ -517,7 +521,10 @@ gpu::sepFilter2D
 --------------------
 Applies a separable 2D linear filter to an image.
 
-.. ocv:function:: void gpu::sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::sepFilter2D( const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, Point anchor=Point(-1,-1), int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1 )
+
+.. ocv:function:: void gpu::sepFilter2D( const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, GpuMat& buf, Point anchor=Point(-1,-1), int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, Stream& stream=Stream::Null() )
+
 
     :param src: Source image.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_32SC1`` , ``CV_32FC1``  source types are supported.
 
@@ -569,7 +576,9 @@ gpu::Sobel
 --------------
 Applies the generalized Sobel operator to an image.
 
-.. ocv:function:: void gpu::Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::Sobel( const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize=3, double scale=1, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1 )
+
+.. ocv:function:: void gpu::Sobel( const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, GpuMat& buf, int ksize=3, double scale=1, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, Stream& stream=Stream::Null() )
 
     :param src: Source image.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1``  source types are supported.
 
@@ -599,7 +608,9 @@ gpu::Scharr
 ---------------
 Calculates the first x- or y- image derivative using the Scharr operator.
 
-.. ocv:function:: void gpu::Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::Scharr( const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale=1, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1 )
+
+.. ocv:function:: void gpu::Scharr( const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, GpuMat& buf, double scale=1, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, Stream& stream=Stream::Null() )
 
     :param src: Source image.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1``  source types are supported.
 
@@ -627,15 +638,15 @@ gpu::createGaussianFilter_GPU
 ---------------------------------
 Creates a Gaussian filter engine.
 
-.. ocv:function:: Ptr<FilterEngine_GPU> gpu::createGaussianFilter_GPU(int type, Size ksize, double sigmaX, double sigmaY = 0, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
+.. ocv:function:: Ptr<FilterEngine_GPU> gpu::createGaussianFilter_GPU( int type, Size ksize, double sigma1, double sigma2=0, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1 )
 
     :param type: Source and destination image type.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1`` are supported.
 
     :param ksize: Aperture size. See  :ocv:func:`getGaussianKernel` for details.
 
-    :param sigmaX: Gaussian sigma in the horizontal direction. See  :ocv:func:`getGaussianKernel` for details.
+    :param sigma1: Gaussian sigma in the horizontal direction. See  :ocv:func:`getGaussianKernel` for details.
 
-    :param sigmaY: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}` .
+    :param sigma2: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigma2}\leftarrow\texttt{sigma1}` .
 
     :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
 
@@ -649,17 +660,19 @@ gpu::GaussianBlur
 ---------------------
 Smooths an image using the Gaussian filter.
 
-.. ocv:function:: void gpu::GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigmaX, double sigmaY = 0, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::GaussianBlur( const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2=0, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1 )
+
+.. ocv:function:: void gpu::GaussianBlur( const GpuMat& src, GpuMat& dst, Size ksize, GpuMat& buf, double sigma1, double sigma2=0, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, Stream& stream=Stream::Null() )
 
     :param src: Source image.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1``  source types are supported.
 
     :param dst: Destination image with the same size and type as  ``src`` .
 
-    :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigmaX``  and  ``sigmaY`` .
+    :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigma1``  and  ``sigma2`` .
 
-    :param sigmaX: Gaussian kernel standard deviation in X direction.
+    :param sigma1: Gaussian kernel standard deviation in X direction.
 
-    :param sigmaY: Gaussian kernel standard deviation in Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize`` , ``sigmaX`` , and  ``sigmaY`` .
+    :param sigma2: Gaussian kernel standard deviation in Y direction. If  ``sigma2``  is zero, it is set to be equal to  ``sigma1`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize`` , ``sigma1`` , and  ``sigma2`` .
 
     :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
 

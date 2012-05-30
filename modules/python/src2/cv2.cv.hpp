@@ -3844,7 +3844,7 @@ static double cppKMeans(const CvArr* _samples, int cluster_count, CvArr* _labels
 static PyMethodDef old_methods[] = {
 
 #if PYTHON_USE_NUMPY
-    {"fromarray", (PyCFunction)pycvfromarray, METH_KEYWORDS, "fromarray(array) -> cvmatnd"},
+    {"fromarray", (PyCFunction)pycvfromarray, METH_KEYWORDS, "fromarray(array [, allowND]) -> CvMat"},
 #endif
 
   {"FindDataMatrix", pyfinddatamatrix, METH_VARARGS},

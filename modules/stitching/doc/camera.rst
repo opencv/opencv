@@ -5,7 +5,7 @@ Camera
 
 detail::CameraParams
 --------------------
-.. ocv:class:: detail::CameraParams
+.. ocv:struct:: detail::CameraParams
 
 Describes camera parameters.
 

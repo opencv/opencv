@@ -289,7 +289,7 @@ Enables the :ocv:class:`gpu::StereoConstantSpaceBP` constructors.
 
 .. ocv:function:: gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp = DEFAULT_NDISP, int iters = DEFAULT_ITERS, int levels = DEFAULT_LEVELS, int nr_plane = DEFAULT_NR_PLANE, int msg_type = CV_32F)
 
-.. ocv:function:: StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th = 0, int msg_type = CV_32F)
+.. ocv:function:: gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th = 0, int msg_type = CV_32F)
 
     :param ndisp: Number of disparities.
 

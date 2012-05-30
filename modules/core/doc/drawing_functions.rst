@@ -30,11 +30,12 @@ circle
 ----------
 Draws a circle.
 
-.. ocv:function:: void circle(Mat& img, Point center, int radius,            const Scalar& color, int thickness=1,            int lineType=8, int shift=0)
+.. ocv:function:: void circle(Mat& img, Point center, int radius, const Scalar& color, int thickness=1, int lineType=8, int shift=0)
 
 .. ocv:pyfunction:: cv2.circle(img, center, radius, color[, thickness[, lineType[, shift]]]) -> None
 
-.. ocv:cfunction:: void cvCircle( CvArr* img, CvPoint center, int radius, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:cfunction:: void cvCircle( CvArr* img, CvPoint center, int radius, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
+
 .. ocv:pyoldfunction:: cv.Circle(img, center, radius, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image where the circle is drawn.
@@ -63,10 +64,11 @@ Clips the line against the image rectangle.
 
 .. ocv:pyfunction:: cv2.clipLine(imgRect, pt1, pt2) -> retval, pt1, pt2
 
-.. ocv:cfunction:: int cvClipLine( CvSize imgSize, CvPoint* pt1, CvPoint* pt2 )
-.. ocv:pyoldfunction:: cv.ClipLine(imgSize, pt1, pt2) -> (clippedPt1, clippedPt2)
+.. ocv:cfunction:: int cvClipLine( CvSize img_size, CvPoint* pt1, CvPoint* pt2 )
 
-    :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .     
+.. ocv:pyoldfunction:: cv.ClipLine(imgSize, pt1, pt2) -> (point1, point2)
+
+    :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .
 
     :param imgRect: Image rectangle.
 
@@ -88,10 +90,12 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
 .. ocv:pyfunction:: cv2.ellipse(img, center, axes, angle, startAngle, endAngle, color[, thickness[, lineType[, shift]]]) -> None
 .. ocv:pyfunction:: cv2.ellipse(img, box, color[, thickness[, lineType]]) -> None
 
-.. ocv:cfunction:: void cvEllipse( CvArr* img, CvPoint center, CvSize axes, double angle, double startAngle, double endAngle, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
-.. ocv:pyoldfunction:: cv.Ellipse(img, center, axes, angle, startAngle, endAngle, color, thickness=1, lineType=8, shift=0)-> None
+.. ocv:cfunction:: void cvEllipse( CvArr* img, CvPoint center, CvSize axes, double angle, double start_angle, double end_angle, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
 
-.. ocv:cfunction:: void cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: cv.Ellipse(img, center, axes, angle, start_angle, end_angle, color, thickness=1, lineType=8, shift=0)-> None
+
+.. ocv:cfunction:: void cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
+
 .. ocv:pyoldfunction:: cv.EllipseBox(img, box, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
@@ -130,19 +134,19 @@ ellipse2Poly
 ----------------
 Approximates an elliptic arc with a polyline.
 
-.. ocv:function:: void ellipse2Poly( Point center, Size axes, int angle,                   int startAngle, int endAngle, int delta,                   vector<Point>& pts )
+.. ocv:function:: void ellipse2Poly( Point center, Size axes, int angle, int arcStart, int arcEnd, int delta, vector<Point>& pts )
 
 .. ocv:pyfunction:: cv2.ellipse2Poly(center, axes, angle, arcStart, arcEnd, delta) -> pts
 
     :param center: Center of the arc.
 
-    :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.   
-    
-    :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.   
-    
-    :param startAngle: Starting angle of the elliptic arc in degrees.
+    :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.
 
-    :param endAngle: Ending angle of the elliptic arc in degrees.
+    :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.
+
+    :param arcStart: Starting angle of the elliptic arc in degrees.
+
+    :param arcEnd: Ending angle of the elliptic arc in degrees.
 
     :param delta: Angle between the subsequent polyline vertices. It defines the approximation accuracy.
 
@@ -157,11 +161,12 @@ fillConvexPoly
 ------------------
 Fills a convex polygon.
 
-.. ocv:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts,                    const Scalar& color, int lineType=8,                    int shift=0)
+.. ocv:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts, const Scalar& color, int lineType=8, int shift=0)
 
 .. ocv:pyfunction:: cv2.fillConvexPoly(img, points, color[, lineType[, shift]]) -> None
 
-.. ocv:cfunction:: void cvFillConvexPoly( CvArr* img, CvPoint* pts, int npts, CvScalar color, int lineType=8, int shift=0 )
+.. ocv:cfunction:: void cvFillConvexPoly( CvArr* img, const CvPoint* pts, int npts, CvScalar color, int line_type=8, int shift=0 )
+
 .. ocv:pyoldfunction:: cv.FillConvexPoly(img, pn, color, lineType=8, shift=0)-> None
 
     :param img: Image.
@@ -190,7 +195,8 @@ Fills the area bounded by one or more polygons.
 
 .. ocv:pyfunction:: cv2.fillPoly(img, pts, color[, lineType[, shift[, offset]]]) -> None
 
-.. ocv:cfunction:: void cvFillPoly( CvArr* img, CvPoint** pts, int* npts, int ncontours, CvScalar color, int lineType=8, int shift=0 )
+.. ocv:cfunction:: void cvFillPoly( CvArr* img, CvPoint** pts, const int* npts, int contours, CvScalar color, int line_type=8, int shift=0 )
+
 .. ocv:pyoldfunction:: cv.FillPoly(img, polys, color, lineType=8, shift=0)-> None
 
     :param img: Image.
@@ -218,20 +224,21 @@ getTextSize
 ---------------
 Calculates the width and height of a text string.
 
-.. ocv:function:: Size getTextSize(const string& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
+.. ocv:function:: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine)
 
 .. ocv:pyfunction:: cv2.getTextSize(text, fontFace, fontScale, thickness) -> retval, baseLine
 
-.. ocv:cfunction:: void cvGetTextSize( const char* textString, const CvFont* font, CvSize* textSize, int* baseline )
+.. ocv:cfunction:: void cvGetTextSize( const char* text_string, const CvFont* font, CvSize* text_size, int* baseline )
+
 .. ocv:pyoldfunction:: cv.GetTextSize(textString, font)-> (textSize, baseline)
 
     :param text: Input text string.
 
-    :param fontFace: Font to use. See the  :ocv:func:`putText` for details.    
+    :param fontFace: Font to use. See the  :ocv:func:`putText` for details.
 
-    :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.   
+    :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.
 
-    :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.   
+    :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.
 
     :param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
 
@@ -273,51 +280,51 @@ InitFont
 --------
 Initializes font structure (OpenCV 1.x API).
 
-.. ocv:cfunction:: void cvInitFont(  CvFont* font, int fontFace, double hscale, double vscale, double shear=0, int thickness=1, int lineType=8 )
+.. ocv:cfunction:: void cvInitFont( CvFont* font, int font_face, double hscale, double vscale, double shear=0, int thickness=1, int line_type=8 )
 
-    :param font: Pointer to the font structure initialized by the function 
+    :param font: Pointer to the font structure initialized by the function
 
-    :param fontFace: Font name identifier. Only a subset of Hershey fonts  http://sources.isc.org/utils/misc/hershey-font.txt  are supported now:
+    :param font_face: Font name identifier. Only a subset of Hershey fonts  http://sources.isc.org/utils/misc/hershey-font.txt  are supported now:
 
-            * **CV_FONT_HERSHEY_SIMPLEX** normal size sans-serif font 
+            * **CV_FONT_HERSHEY_SIMPLEX** normal size sans-serif font
 
-            * **CV_FONT_HERSHEY_PLAIN** small size sans-serif font 
+            * **CV_FONT_HERSHEY_PLAIN** small size sans-serif font
 
-            * **CV_FONT_HERSHEY_DUPLEX** normal size sans-serif font (more complex than    ``CV_FONT_HERSHEY_SIMPLEX`` ) 
+            * **CV_FONT_HERSHEY_DUPLEX** normal size sans-serif font (more complex than    ``CV_FONT_HERSHEY_SIMPLEX`` )
 
-            * **CV_FONT_HERSHEY_COMPLEX** normal size serif font 
+            * **CV_FONT_HERSHEY_COMPLEX** normal size serif font
 
-            * **CV_FONT_HERSHEY_TRIPLEX** normal size serif font (more complex than  ``CV_FONT_HERSHEY_COMPLEX`` ) 
+            * **CV_FONT_HERSHEY_TRIPLEX** normal size serif font (more complex than  ``CV_FONT_HERSHEY_COMPLEX`` )
 
-            * **CV_FONT_HERSHEY_COMPLEX_SMALL** smaller version of  ``CV_FONT_HERSHEY_COMPLEX`` 
+            * **CV_FONT_HERSHEY_COMPLEX_SMALL** smaller version of  ``CV_FONT_HERSHEY_COMPLEX``
 
-            * **CV_FONT_HERSHEY_SCRIPT_SIMPLEX** hand-writing style font 
+            * **CV_FONT_HERSHEY_SCRIPT_SIMPLEX** hand-writing style font
 
-            * **CV_FONT_HERSHEY_SCRIPT_COMPLEX** more complex variant of  ``CV_FONT_HERSHEY_SCRIPT_SIMPLEX`` 
+            * **CV_FONT_HERSHEY_SCRIPT_COMPLEX** more complex variant of  ``CV_FONT_HERSHEY_SCRIPT_SIMPLEX``
 
-         The parameter can be composited from one of the values above and an optional  ``CV_FONT_ITALIC``  flag, which indicates italic or oblique font. 
-
-
-    :param hscale: Horizontal scale.  If equal to  ``1.0f`` , the characters have the original width depending on the font type. If equal to  ``0.5f`` , the characters are of half the original width. 
+         The parameter can be composited from one of the values above and an optional  ``CV_FONT_ITALIC``  flag, which indicates italic or oblique font.
 
 
-    :param vscale: Vertical scale. If equal to  ``1.0f`` , the characters have the original height depending on the font type. If equal to  ``0.5f`` , the characters are of half the original height. 
+    :param hscale: Horizontal scale.  If equal to  ``1.0f`` , the characters have the original width depending on the font type. If equal to  ``0.5f`` , the characters are of half the original width.
 
 
-    :param shear: Approximate tangent of the character slope relative to the vertical line.  A zero value means a non-italic font,  ``1.0f``  means about a 45 degree slope, etc. 
+    :param vscale: Vertical scale. If equal to  ``1.0f`` , the characters have the original height depending on the font type. If equal to  ``0.5f`` , the characters are of half the original height.
 
 
-    :param thickness: Thickness of the text strokes 
+    :param shear: Approximate tangent of the character slope relative to the vertical line.  A zero value means a non-italic font,  ``1.0f``  means about a 45 degree slope, etc.
 
 
-    :param lineType: Type of the strokes, see  :ocv:func:`line`  description 
+    :param thickness: Thickness of the text strokes
+
+
+    :param line_type: Type of the strokes, see  :ocv:func:`line`  description
 
 
 The function initializes the font structure that can be passed to text rendering functions.
 
 .. seealso:: :ocv:cfunc:`PutText`
 
-.. _Line: 
+.. _Line:
 
 line
 --------
@@ -327,7 +334,8 @@ Draws a line segment connecting two points.
 
 .. ocv:pyfunction:: cv2.line(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> None
 
-.. ocv:cfunction:: void cvLine( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:cfunction:: void cvLine( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
+
 .. ocv:pyoldfunction:: cv.Line(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
@@ -402,13 +410,14 @@ rectangle
 -------------
 Draws a simple, thick, or filled up-right rectangle.
 
-.. ocv:function:: void rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
+.. ocv:function:: void rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1, int lineType=8, int shift=0)
 
-.. ocv:function:: void rectangle(Mat& img, Rect r, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
+.. ocv:function:: void rectangle( Mat& img, Rect rec, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
 
 .. ocv:pyfunction:: cv2.rectangle(img, pt1, pt2, color[, thickness[, lineType[, shift]]]) -> None
 
-.. ocv:cfunction:: void cvRectangle( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:cfunction:: void cvRectangle( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
+
 .. ocv:pyoldfunction:: cv.Rectangle(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
@@ -416,8 +425,8 @@ Draws a simple, thick, or filled up-right rectangle.
     :param pt1: Vertex of the rectangle.
 
     :param pt2: Vertex of the rectangle opposite to  ``pt1`` .
-    
-    :param r: Alternative specification of the drawn rectangle.
+
+    :param rec: Alternative specification of the drawn rectangle.
 
     :param color: Rectangle color or brightness (grayscale image).
 
@@ -439,9 +448,9 @@ Draws several polygonal curves.
 
 .. ocv:pyfunction:: cv2.polylines(img, pts, isClosed, color[, thickness[, lineType[, shift]]]) -> None
 
-.. ocv:cfunction:: void cvPolyLine( CvArr* img, CvPoint** pts, int* npts, int contours, int isClosed, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:cfunction:: void cvPolyLine( CvArr* img, CvPoint** pts, const int* npts, int contours, int is_closed, CvScalar color, int thickness=1, int line_type=8, int shift=0 )
 
-.. ocv:pyoldfunction:: cv.PolyLine(img, polys, isClosed, color, thickness=1, lineType=8, shift=0)-> None
+.. ocv:pyoldfunction:: cv.PolyLine(img, polys, is_closed, color, thickness=1, lineType=8, shift=0) -> None
 
     :param img: Image.
 
@@ -464,6 +473,88 @@ Draws several polygonal curves.
 The function ``polylines`` draws one or more polygonal curves.
 
 
+drawContours
+----------------
+Draws contours outlines or filled contours.
+
+.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours, int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
+
+.. ocv:pyfunction:: cv2.drawContours(image, contours, contourIdx, color[, thickness[, lineType[, hierarchy[, maxLevel[, offset]]]]]) -> None
+
+.. ocv:cfunction:: void cvDrawContours( CvArr * img, CvSeq* contour, CvScalar external_color, CvScalar hole_color, int max_level, int thickness=1, int line_type=8, CvPoint offset=cvPoint(0,0) )
+
+.. ocv:pyoldfunction:: cv.DrawContours(img, contour, external_color, hole_color, max_level, thickness=1, lineType=8, offset=(0, 0))-> None
+
+    :param image: Destination image.
+
+    :param contours: All the input contours. Each contour is stored as a point vector.
+
+    :param contourIdx: Parameter indicating a contour to draw. If it is negative, all the contours are drawn.
+
+    :param color: Color of the contours.
+
+    :param thickness: Thickness of lines the contours are drawn with. If it is negative (for example,  ``thickness=CV_FILLED`` ), the contour interiors are
+        drawn.
+
+    :param lineType: Line connectivity. See  :ocv:func:`line`  for details.
+
+    :param hierarchy: Optional information about hierarchy. It is only needed if you want to draw only some of the  contours (see  ``maxLevel`` ).
+
+    :param maxLevel: Maximal level for drawn contours. If it is 0, only
+        the specified contour is drawn. If it is 1, the function draws the contour(s) and all the nested contours. If it is 2, the function draws the contours, all the nested contours, all the nested-to-nested contours, and so on. This parameter is only taken into account when there is  ``hierarchy``  available.
+
+    :param offset: Optional contour shift parameter. Shift all the drawn contours by the specified  :math:`\texttt{offset}=(dx,dy)` .
+
+    :param contour: Pointer to the first contour.
+
+    :param external_color: Color of external contours.
+
+    :param hole_color: Color of internal contours (holes).
+
+The function draws contour outlines in the image if
+:math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
+:math:`\texttt{thickness}<0` . The example below shows how to retrieve connected components from the binary image and label them: ::
+
+    #include "cv.h"
+    #include "highgui.h"
+
+    using namespace cv;
+
+    int main( int argc, char** argv )
+    {
+        Mat src;
+        // the first command-line parameter must be a filename of the binary
+        // (black-n-white) image
+        if( argc != 2 || !(src=imread(argv[1], 0)).data)
+            return -1;
+
+        Mat dst = Mat::zeros(src.rows, src.cols, CV_8UC3);
+
+        src = src > 1;
+        namedWindow( "Source", 1 );
+        imshow( "Source", src );
+
+        vector<vector<Point> > contours;
+        vector<Vec4i> hierarchy;
+
+        findContours( src, contours, hierarchy,
+            CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+
+        // iterate through all the top-level contours,
+        // draw each connected component with its own random color
+        int idx = 0;
+        for( ; idx >= 0; idx = hierarchy[idx][0] )
+        {
+            Scalar color( rand()&255, rand()&255, rand()&255 );
+            drawContours( dst, contours, idx, color, CV_FILLED, 8, hierarchy );
+        }
+
+        namedWindow( "Components", 1 );
+        imshow( "Components", dst );
+        waitKey(0);
+    }
+
+
 
 putText
 -----------
@@ -471,7 +562,7 @@ Draws a text string.
 
 .. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
 
-.. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, linetype[, bottomLeftOrigin]]]) -> None
+.. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]]) -> None
 
 .. ocv:cfunction:: void cvPutText( CvArr* img, const char* text, CvPoint org, const CvFont* font, CvScalar color )
 .. ocv:pyoldfunction:: cv.PutText(img, text, org, font, color)-> None

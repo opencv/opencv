@@ -7,7 +7,7 @@ Object Detection
 
 gpu::HOGDescriptor
 ------------------
-.. ocv:class:: gpu::HOGDescriptor
+.. ocv:struct:: gpu::HOGDescriptor
 
 The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detector. ::
 
@@ -235,7 +235,7 @@ gpu::CascadeClassifier_GPU::CascadeClassifier_GPU
 -----------------------------------------------------
 Loads the classifier from a file.
 
-.. ocv:function:: gpu::CascadeClassifier_GPU(const string& filename)
+.. ocv:function:: gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string& filename)
 
     :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the ``haar`` training application) and NVIDIA's ``nvbin`` are supported.
 

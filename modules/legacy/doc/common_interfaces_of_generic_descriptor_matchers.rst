@@ -5,7 +5,7 @@ Common Interfaces of Generic Descriptor Matchers
 
 OneWayDescriptorMatcher
 -----------------------
-.. ocv:class:: OneWayDescriptorMatcher
+.. ocv:class:: OneWayDescriptorMatcher : public GenericDescriptorMatcher
 
 Wrapping class for computing, matching, and classifying descriptors using the
 :ocv:class:`OneWayDescriptorBase` class. ::
@@ -64,7 +64,7 @@ Wrapping class for computing, matching, and classifying descriptors using the
 
 FernDescriptorMatcher
 ---------------------
-.. ocv:class:: FernDescriptorMatcher
+.. ocv:class:: FernDescriptorMatcher : public GenericDescriptorMatcher
 
 Wrapping class for computing, matching, and classifying descriptors using the
 :ocv:class:`FernClassifier` class. ::

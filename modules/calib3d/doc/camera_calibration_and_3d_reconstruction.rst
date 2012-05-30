@@ -111,11 +111,11 @@ calibrateCamera
 ---------------
 Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
-.. ocv:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags=0, TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, DBL_EPSILON))
+.. ocv:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags=0, TermCriteria criteria=TermCriteria( TermCriteria::COUNT+TermCriteria::EPS, 30, DBL_EPSILON) )
 
 .. ocv:pyfunction:: cv2.calibrateCamera(objectPoints, imagePoints, imageSize[, cameraMatrix[, distCoeffs[, rvecs[, tvecs[, flags[, criteria]]]]]]) -> retval, cameraMatrix, distCoeffs, rvecs, tvecs
 
-.. ocv:cfunction:: double cvCalibrateCamera2(const CvMat* objectPoints, const CvMat* imagePoints, const CvMat* pointCounts, CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs, CvMat* rvecs=NULL, CvMat* tvecs=NULL, int flags=0, CvTermCriteria term_crit = cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON) )
+.. ocv:cfunction:: double cvCalibrateCamera2( const CvMat* object_points, const CvMat* image_points, const CvMat* point_counts, CvSize image_size, CvMat* camera_matrix, CvMat* distortion_coeffs, CvMat* rotation_vectors=NULL, CvMat* translation_vectors=NULL, int flags=0, CvTermCriteria term_crit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON) )
 
 .. ocv:pyoldfunction:: cv.CalibrateCamera2(objectPoints, imagePoints, pointCounts, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, flags=0)-> None
 
@@ -127,7 +127,7 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
 
         In the old interface all the vectors of object points from different views are concatenated together.
 
-    :param pointCounts: In the old interface this is a vector of integers, containing as many elements, as the number of views of the calibration pattern. Each element is the number of points in each view. Usually, all the elements are the same and equal to the number of feature points on the calibration pattern.
+    :param point_counts: In the old interface this is a vector of integers, containing as many elements, as the number of views of the calibration pattern. Each element is the number of points in each view. Usually, all the elements are the same and equal to the number of feature points on the calibration pattern.
 
     :param imageSize: Size of the image used only to initialize the intrinsic camera matrix.
 
@@ -268,7 +268,7 @@ For points in an image of a stereo pair, computes the corresponding epilines in 
 
 .. ocv:function:: void computeCorrespondEpilines( InputArray points, int whichImage, InputArray F, OutputArray lines )
 
-.. ocv:cfunction:: void cvComputeCorrespondEpilines( const CvMat* points, int whichImage, const CvMat* F, CvMat* lines)
+.. ocv:cfunction:: void cvComputeCorrespondEpilines( const CvMat* points, int which_image, const CvMat* fundamental_matrix, CvMat* correspondent_lines )
 
 .. ocv:pyoldfunction:: cv.ComputeCorrespondEpilines(points, whichImage, F, lines) -> None
 
@@ -344,10 +344,8 @@ Converts points to/from homogeneous coordinates.
 
 .. ocv:function:: void convertPointsHomogeneous( InputArray src, OutputArray dst )
 
-.. ocv:pyfunction:: cv2.convertPointsHomogeneous(src[, dst]) -> dst
-
 .. ocv:cfunction:: void cvConvertPointsHomogeneous( const CvMat* src, CvMat* dst )
-.. ocv:pyoldfunction:: cv.ConvertPointsHomogeneous( src, dst ) -> None
+.. ocv:pyoldfunction:: cv.ConvertPointsHomogeneous(src, dst) -> None
 
     :param src: Input array or vector of 2D, 3D, or 4D points.
 
@@ -391,7 +389,7 @@ Decomposes a projection matrix into a rotation matrix and a camera matrix.
 
 .. ocv:pyfunction:: cv2.decomposeProjectionMatrix(projMatrix[, cameraMatrix[, rotMatrix[, transVect[, rotMatrixX[, rotMatrixY[, rotMatrixZ[, eulerAngles]]]]]]]) -> cameraMatrix, rotMatrix, transVect, rotMatrixX, rotMatrixY, rotMatrixZ, eulerAngles
 
-.. ocv:cfunction:: void cvDecomposeProjectionMatrix( const CvMat *projMatrix, CvMat *cameraMatrix, CvMat *rotMatrix, CvMat *transVect, CvMat *rotMatrX=NULL, CvMat *rotMatrY=NULL, CvMat *rotMatrZ=NULL, CvPoint3D64f *eulerAngles=NULL)
+.. ocv:cfunction:: void cvDecomposeProjectionMatrix( const CvMat * projMatr, CvMat * calibMatr, CvMat * rotMatr, CvMat * posVect, CvMat * rotMatrX=NULL, CvMat * rotMatrY=NULL, CvMat * rotMatrZ=NULL, CvPoint3D64f * eulerAngles=NULL )
 
 .. ocv:pyoldfunction:: cv.DecomposeProjectionMatrix(projMatrix, cameraMatrix, rotMatrix, transVect, rotMatrX=None, rotMatrY=None, rotMatrZ=None) -> eulerAngles
 
@@ -428,7 +426,7 @@ Renders the detected chessboard corners.
 
 .. ocv:pyfunction:: cv2.drawChessboardCorners(image, patternSize, corners, patternWasFound) -> None
 
-.. ocv:cfunction:: void cvDrawChessboardCorners( CvArr* image, CvSize patternSize, CvPoint2D32f* corners, int count, int patternWasFound )
+.. ocv:cfunction:: void cvDrawChessboardCorners( CvArr* image, CvSize pattern_size, CvPoint2D32f* corners, int count, int pattern_was_found )
 .. ocv:pyoldfunction:: cv.DrawChessboardCorners(image, patternSize, corners, patternWasFound)-> None
 
     :param image: Destination image. It must be an 8-bit color image.
@@ -447,11 +445,11 @@ findChessboardCorners
 -------------------------
 Finds the positions of internal corners of the chessboard.
 
-.. ocv:function:: bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners, int flags=CV_CALIB_CB_ADAPTIVE_THRESH+CV_CALIB_CB_NORMALIZE_IMAGE )
+.. ocv:function:: bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners, int flags=CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE )
 
 .. ocv:pyfunction:: cv2.findChessboardCorners(image, patternSize[, corners[, flags]]) -> retval, corners
 
-.. ocv:cfunction:: int cvFindChessboardCorners( const void* image, CvSize patternSize, CvPoint2D32f* corners, int* cornerCount=NULL, int flags=CV_CALIB_CB_ADAPTIVE_THRESH )
+.. ocv:cfunction:: int cvFindChessboardCorners( const void* image, CvSize pattern_size, CvPoint2D32f* corners, int* corner_count=NULL, int flags=CV_CALIB_CB_ADAPTIVE_THRESH+CV_CALIB_CB_NORMALIZE_IMAGE )
 .. ocv:pyoldfunction:: cv.FindChessboardCorners(image, patternSize, flags=CV_CALIB_CB_ADAPTIVE_THRESH) -> corners
 
     :param image: Source chessboard view. It must be an 8-bit grayscale or color image.
@@ -508,7 +506,7 @@ Finds the centers in the grid of circles.
 
 .. ocv:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
 
-.. ocv:pyfunction:: cv2.findCirclesGridDefault(image, patternSize[, centers[, flags]]) -> centers
+.. ocv:pyfunction:: cv2.findCirclesGridDefault(image, patternSize[, centers[, flags]]) -> retval, centers
 
     :param image: Grid view of source circles. It must be an 8-bit grayscale or color image.
 
@@ -551,13 +549,13 @@ solvePnP
 ------------
 Finds an object pose from 3D-2D point correspondences.
 
-.. ocv:function:: void solvePnP( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int flags = CV_ITERATIVE )
+.. ocv:function:: bool solvePnP( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int flags=ITERATIVE )
 
-.. ocv:pyfunction:: cv2.solvePnP( objectPoints, imagePoints, cameraMatrix, distCoeffs[, rvec[, tvec[, useExtrinsicGuess[, flags]]]] ) -> rvec, tvec
+.. ocv:pyfunction:: cv2.solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs[, rvec[, tvec[, useExtrinsicGuess[, flags]]]]) -> retval, rvec, tvec
 
-.. ocv:cfunction:: void cvFindExtrinsicCameraParams2( const CvMat* objectPoints, const CvMat* imagePoints, const CvMat* cameraMatrix, const CvMat* distCoeffs, CvMat* rvec, CvMat* tvec, int useExtrinsicGuess=0 )
+.. ocv:cfunction:: void cvFindExtrinsicCameraParams2( const CvMat* object_points, const CvMat* image_points, const CvMat* camera_matrix, const CvMat* distortion_coeffs, CvMat* rotation_vector, CvMat* translation_vector, int use_extrinsic_guess=0 )
 
-.. ocv:pyoldfunction:: cv.FindExtrinsicCameraParams2( objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess=0 )-> None
+.. ocv:pyoldfunction:: cv.FindExtrinsicCameraParams2(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess=0 ) -> None
 
     :param objectPoints: Array of object points in the object coordinate space, 3xN/Nx3 1-channel or 1xN/Nx1 3-channel, where N is the number of points.  ``vector<Point3f>``  can be also passed here.
 
@@ -587,7 +585,7 @@ solvePnPRansac
 ------------------
 Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
-.. ocv:function:: void solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, OutputArray inliers = noArray(), int flags = CV_ITERATIVE )
+.. ocv:function:: void solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, OutputArray inliers = noArray(), int flags = ITERATIVE )
 
 .. ocv:pyfunction:: cv2.solvePnPRansac(objectPoints, imagePoints, cameraMatrix, distCoeffs[, rvec[, tvec[, useExtrinsicGuess[, iterationsCount[, reprojectionError[, minInliersCount[, inliers[, flags]]]]]]]]) -> rvec, tvec, inliers
 
@@ -628,8 +626,8 @@ Calculates a fundamental matrix from the corresponding points in two images.
 
 .. ocv:pyfunction:: cv2.findFundamentalMat(points1, points2[, method[, param1[, param2[, mask]]]]) -> retval, mask
 
-.. ocv:cfunction:: int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2, CvMat* fundamentalMatrix, int method=CV_FM_RANSAC, double param1=1., double param2=0.99, CvMat* status=NULL)
-.. ocv:pyoldfunction:: cv.FindFundamentalMat(points1, points2, fundamentalMatrix, method=CV_FM_RANSAC, param1=1., param2=0.99, status=None) -> None
+.. ocv:cfunction:: int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2, CvMat* fundamental_matrix, int method=CV_FM_RANSAC, double param1=3., double param2=0.99, CvMat* status=NULL )
+.. ocv:pyoldfunction:: cv.FindFundamentalMat(points1, points2, fundamentalMatrix, method=CV_FM_RANSAC, param1=1., param2=0.99, status=None) -> retval
 
     :param points1: Array of  ``N``  points from the first image. The point coordinates should be floating-point (single or double precision).
 
@@ -693,9 +691,9 @@ Finds a perspective transformation between two planes.
 
 .. ocv:pyfunction:: cv2.findHomography(srcPoints, dstPoints[, method[, ransacReprojThreshold[, mask]]]) -> retval, mask
 
-.. ocv:cfunction:: void cvFindHomography( const CvMat* srcPoints, const CvMat* dstPoints, CvMat* H, int method=0, double ransacReprojThreshold=3, CvMat* status=NULL)
+.. ocv:cfunction:: int cvFindHomography( const CvMat* src_points, const CvMat* dst_points, CvMat* homography, int method=0, double ransacReprojThreshold=3, CvMat* mask=0 )
 
-.. ocv:pyoldfunction:: cv.FindHomography(srcPoints, dstPoints, H, method, ransacReprojThreshold=3.0, status=None)-> None
+.. ocv:pyoldfunction:: cv.FindHomography(srcPoints, dstPoints, H, method=0, ransacReprojThreshold=3.0, status=None) -> None
 
     :param srcPoints: Coordinates of the points in the original plane, a matrix of the type  ``CV_32FC2``  or ``vector<Point2f>`` .
 
@@ -717,7 +715,7 @@ Finds a perspective transformation between two planes.
 
         then the point  :math:`i`  is considered an outlier. If  ``srcPoints``  and  ``dstPoints``  are measured in pixels, it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 
-    :param status: Optional output mask set by a robust method ( ``CV_RANSAC``  or  ``CV_LMEDS`` ).  Note that the input mask values are ignored.
+    :param mask: Optional output mask set by a robust method ( ``CV_RANSAC``  or  ``CV_LMEDS`` ).  Note that the input mask values are ignored.
 
 The functions find and return the perspective transformation :math:`H` between the source and the destination planes:
 
@@ -773,13 +771,13 @@ estimateAffine3D
 --------------------
 Computes an optimal affine transformation between two 3D point sets.
 
-.. ocv:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray inliers, double ransacThreshold = 3.0, double confidence = 0.99)
+.. ocv:function:: int estimateAffine3D(InputArray src, InputArray dst, OutputArray out,  OutputArray inliers, double ransacThreshold = 3, double confidence = 0.99)
 
-.. ocv:pyfunction:: cv2.estimateAffine3D(srcpt, dstpt[, out[, inliers[, ransacThreshold[, confidence]]]]) -> retval, out, inliers
+.. ocv:pyfunction:: cv2.estimateAffine3D(src, dst[, out[, inliers[, ransacThreshold[, confidence]]]]) -> retval, out, inliers
 
-    :param srcpt: First input 3D point set.
+    :param src: First input 3D point set.
 
-    :param dstpt: Second input 3D point set.
+    :param dst: Second input 3D point set.
 
     :param out: Output 3D affine transformation matrix  :math:`3 \times 4` .
 
@@ -815,13 +813,13 @@ getOptimalNewCameraMatrix
 -----------------------------
 Returns the new camera matrix based on the free scaling parameter.
 
-.. ocv:function:: Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs, Size imageSize, double alpha, Size newImageSize=Size(), Rect* validPixROI=0, bool centerPrincipalPoint=false)
+.. ocv:function:: Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs, Size imageSize, double alpha, Size newImgSize=Size(), Rect* validPixROI=0, bool centerPrincipalPoint=false )
 
 .. ocv:pyfunction:: cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, alpha[, newImgSize[, centerPrincipalPoint]]) -> retval, validPixROI
 
-.. ocv:cfunction:: void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCoeffs, CvSize imageSize, double alpha, CvMat* newCameraMatrix, CvSize newImageSize=cvSize(0, 0), CvRect* validPixROI=0, int centerPrincipalPoint=0)
+.. ocv:cfunction:: void cvGetOptimalNewCameraMatrix( const CvMat* camera_matrix, const CvMat* dist_coeffs, CvSize image_size, double alpha, CvMat* new_camera_matrix, CvSize new_imag_size=cvSize(0,0), CvRect* valid_pixel_ROI=0, int center_principal_point=0 )
 
-.. ocv:pyoldfunction:: cv.GetOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, alpha, newCameraMatrix, newImageSize=(0, 0), validPixROI=0) -> None
+.. ocv:pyoldfunction:: cv.GetOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, alpha, newCameraMatrix, newImageSize=(0, 0), validPixROI=0, centerPrincipalPoint=0) -> None
 
     :param cameraMatrix: Input camera matrix.
 
@@ -831,9 +829,9 @@ Returns the new camera matrix based on the free scaling parameter.
 
     :param alpha: Free scaling parameter between 0 (when all the pixels in the undistorted image are valid) and 1 (when all the source image pixels are retained in the undistorted image). See  :ocv:func:`stereoRectify` for details.
 
-    :param newCameraMatrix: Output new camera matrix.
+    :param new_camera_matrix: Output new camera matrix.
 
-    :param newImageSize: Image size after rectification. By default,it is set to  ``imageSize`` .
+    :param new_imag_size: Image size after rectification. By default,it is set to  ``imageSize`` .
 
     :param validPixROI: Optional output rectangle that outlines all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ocv:func:`stereoRectify` .
 
@@ -854,15 +852,15 @@ Finds an initial camera matrix from 3D-2D point correspondences.
 
 .. ocv:pyfunction:: cv2.initCameraMatrix2D(objectPoints, imagePoints, imageSize[, aspectRatio]) -> retval
 
-.. ocv:cfunction:: void cvInitIntrinsicParams2D( const CvMat* objectPoints, const CvMat* imagePoints, const CvMat* pointCounts, CvSize imageSize, CvMat* cameraMatrix, double aspectRatio=1.)
+.. ocv:cfunction:: void cvInitIntrinsicParams2D( const CvMat* object_points, const CvMat* image_points, const CvMat* npoints, CvSize image_size, CvMat* camera_matrix, double aspect_ratio=1. )
 
-.. ocv:pyoldfunction:: cv.InitIntrinsicParams2D(objectPoints, imagePoints, pointCounts, imageSize, cameraMatrix, aspectRatio=1.) -> None
+.. ocv:pyoldfunction:: cv.InitIntrinsicParams2D(objectPoints, imagePoints, npoints, imageSize, cameraMatrix, aspectRatio=1.) -> None
 
     :param objectPoints: Vector of vectors of the calibration pattern points in the calibration pattern coordinate space. In the old interface all the per-view vectors are concatenated. See :ocv:func:`calibrateCamera` for details.
 
     :param imagePoints: Vector of vectors of the projections of the calibration pattern points. In the old interface all the per-view vectors are concatenated.
 
-    :param pointCounts: The integer vector of point counters for each view.
+    :param npoints: The integer vector of point counters for each view.
 
     :param imageSize: Image size in pixels used to initialize the principal point.
 
@@ -903,7 +901,8 @@ Projects 3D points to an image plane.
 
 .. ocv:pyfunction:: cv2.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs[, imagePoints[, jacobian[, aspectRatio]]]) -> imagePoints, jacobian
 
-.. ocv:cfunction:: void cvProjectPoints2( const CvMat* objectPoints, const CvMat* rvec, const CvMat* tvec, const CvMat* cameraMatrix, const CvMat* distCoeffs, CvMat* imagePoints, CvMat* dpdrot=NULL, CvMat* dpdt=NULL, CvMat* dpdf=NULL, CvMat* dpdc=NULL, CvMat* dpddist=NULL )
+.. ocv:cfunction:: void cvProjectPoints2( const CvMat* object_points, const CvMat* rotation_vector, const CvMat* translation_vector, const CvMat* camera_matrix, const CvMat* distortion_coeffs, CvMat* image_points, CvMat* dpdrot=NULL, CvMat* dpdt=NULL, CvMat* dpdf=NULL, CvMat* dpdc=NULL, CvMat* dpddist=NULL, double aspect_ratio=0 )
+
 .. ocv:pyoldfunction:: cv.ProjectPoints2(objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints, dpdrot=None, dpdt=None, dpdf=None, dpdc=None, dpddist=None)-> None
 
     :param objectPoints: Array of object points, 3xN/Nx3 1-channel or 1xN/Nx1 3-channel  (or  ``vector<Point3f>`` ), where N is the number of points in the view.
@@ -943,11 +942,11 @@ reprojectImageTo3D
 ----------------------
 Reprojects a disparity image to 3D space.
 
-.. ocv:function:: void reprojectImageTo3D( InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false, int depth=-1 )
+.. ocv:function:: void reprojectImageTo3D( InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false, int ddepth=-1 )
 
 .. ocv:pyfunction:: cv2.reprojectImageTo3D(disparity, Q[, _3dImage[, handleMissingValues[, ddepth]]]) -> _3dImage
 
-.. ocv:cfunction:: void cvReprojectImageTo3D( const CvArr* disparity, CvArr* _3dImage, const CvMat* Q, int handleMissingValues=0)
+.. ocv:cfunction:: void cvReprojectImageTo3D( const CvArr* disparityImage, CvArr* _3dImage, const CvMat* Q, int handleMissingValues=0 )
 
 .. ocv:pyoldfunction:: cv.ReprojectImageTo3D(disparity, _3dImage, Q, handleMissingValues=0) -> None
 
@@ -978,18 +977,18 @@ RQDecomp3x3
 ---------------
 Computes an RQ decomposition of 3x3 matrices.
 
-.. ocv:function:: Vec3d RQDecomp3x3( InputArray M, OutputArray R, OutputArray Q, OutputArray Qx=noArray(), OutputArray Qy=noArray(), OutputArray Qz=noArray() )
+.. ocv:function:: Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mtxQ, OutputArray Qx=noArray(), OutputArray Qy=noArray(), OutputArray Qz=noArray() )
 
 .. ocv:pyfunction:: cv2.RQDecomp3x3(src[, mtxR[, mtxQ[, Qx[, Qy[, Qz]]]]]) -> retval, mtxR, mtxQ, Qx, Qy, Qz
 
-.. ocv:cfunction:: void cvRQDecomp3x3( const CvMat *M, CvMat *R, CvMat *Q, CvMat *Qx=NULL, CvMat *Qy=NULL, CvMat *Qz=NULL, CvPoint3D64f *eulerAngles=NULL)
+.. ocv:cfunction:: void cvRQDecomp3x3( const CvMat * matrixM, CvMat * matrixR, CvMat * matrixQ, CvMat * matrixQx=NULL, CvMat * matrixQy=NULL, CvMat * matrixQz=NULL, CvPoint3D64f * eulerAngles=NULL )
 .. ocv:pyoldfunction:: cv.RQDecomp3x3(M, R, Q, Qx=None, Qy=None, Qz=None) -> eulerAngles
 
-    :param M: 3x3 input matrix.
+    :param src: 3x3 input matrix.
 
-    :param R: Output 3x3 upper-triangular matrix.
+    :param mtxR: Output 3x3 upper-triangular matrix.
 
-    :param Q: Output 3x3 orthogonal matrix.
+    :param mtxQ: Output 3x3 orthogonal matrix.
 
     :param Qx: Optional output 3x3 rotation matrix around x-axis.
 
@@ -1083,11 +1082,11 @@ The constructors.
 .. ocv:function:: StereoBM::StereoBM()
 .. ocv:function:: StereoBM::StereoBM(int preset, int ndisparities=0, int SADWindowSize=21)
 
-.. ocv:pyfunction:: cv2.StereoBM.StereoBM(preset[, ndisparities[, SADWindowSize]]) -> <StereoBM object>
+.. ocv:pyfunction:: cv2.StereoBM([preset[, ndisparities[, SADWindowSize]]]) -> <StereoBM object>
 
-.. ocv:cfunction:: CvStereoBMState* cvCreateStereoBMState( int preset=CV_STEREO_BM_BASIC, int ndisparities=0 )
+.. ocv:cfunction:: CvStereoBMState* cvCreateStereoBMState( int preset=CV_STEREO_BM_BASIC, int numberOfDisparities=0 )
 
-.. ocv:pyoldfunction:: cv.CreateStereoBMState(preset=CV_STEREO_BM_BASIC, ndisparities=0)-> StereoBMState
+.. ocv:pyoldfunction:: cv.CreateStereoBMState(preset=CV_STEREO_BM_BASIC, numberOfDisparities=0)-> CvStereoBMState
 
     :param preset: specifies the whole set of algorithm parameters, one of:
 
@@ -1109,7 +1108,7 @@ StereoBM::operator()
 -----------------------
 Computes disparity using the BM algorithm for a rectified stereo pair.
 
-.. ocv:function:: void StereoBM::operator()(InputArray left, InputArray right, OutputArray disp, int disptype=CV_16S )
+.. ocv:function:: void StereoBM::operator()( InputArray left, InputArray right, OutputArray disparity, int disptype=CV_16S )
 
 .. ocv:pyfunction:: cv2.StereoBM.compute(left, right[, disparity[, disptype]]) -> disparity
 
@@ -1121,7 +1120,7 @@ Computes disparity using the BM algorithm for a rectified stereo pair.
 
     :param right: Right image of the same size and the same type as the left one.
 
-    :param disp: Output disparity map. It has the same size as the input images. When ``disptype==CV_16S``, the map is a 16-bit signed single-channel image, containing disparity values scaled by 16. To get the true disparity values from such fixed-point representation, you will need to divide each  ``disp`` element by 16. If ``disptype==CV_32F``, the disparity map will already contain the real disparity values on output.
+    :param disparity: Output disparity map. It has the same size as the input images. When ``disptype==CV_16S``, the map is a 16-bit signed single-channel image, containing disparity values scaled by 16. To get the true disparity values from such fixed-point representation, you will need to divide each  ``disp`` element by 16. If ``disptype==CV_32F``, the disparity map will already contain the real disparity values on output.
 
     :param disptype: Type of the output disparity map, ``CV_16S`` (default) or ``CV_32F``.
 
@@ -1182,7 +1181,7 @@ StereoSGBM::StereoSGBM
 
 .. ocv:function:: StereoSGBM::StereoSGBM( int minDisparity, int numDisparities, int SADWindowSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, bool fullDP=false)
 
-.. ocv:pyfunction:: cv2.StereoSGBM.StereoSGBM(minDisparity, numDisparities, SADWindowSize[, P1[, P2[, disp12MaxDiff[, preFilterCap[, uniquenessRatio[, speckleWindowSize[, speckleRange[, fullDP]]]]]]]]) -> <StereoSGBM object>
+.. ocv:pyfunction:: cv2.StereoSGBM([minDisparity, numDisparities, SADWindowSize[, P1[, P2[, disp12MaxDiff[, preFilterCap[, uniquenessRatio[, speckleWindowSize[, speckleRange[, fullDP]]]]]]]]]) -> <StereoSGBM object>
 
     Initializes ``StereoSGBM`` and sets parameters to custom values.??
 
@@ -1232,129 +1231,17 @@ The method executes the SGBM algorithm on a rectified stereo pair. See ``stereo_
 .. note:: The method is not constant, so you should not use the same ``StereoSGBM`` instance from different threads simultaneously.
 
 
-StereoVar
-----------
-
-.. ocv:class:: StereoVar
-
-Class for computing stereo correspondence using the variational matching algorithm ::
-
-    class StereoVar
-    {
-        StereoVar();
-        StereoVar(    int levels, double pyrScale,
-                                        int nIt, int minDisp, int maxDisp,
-                                        int poly_n, double poly_sigma, float fi,
-                                        float lambda, int penalization, int cycle,
-                                        int flags);
-        virtual ~StereoVar();
-
-        virtual void operator()(InputArray left, InputArray right, OutputArray disp);
-
-        int        levels;
-        double    pyrScale;
-        int        nIt;
-        int        minDisp;
-        int        maxDisp;
-        int        poly_n;
-        double    poly_sigma;
-        float    fi;
-        float    lambda;
-        int        penalization;
-        int        cycle;
-        int        flags;
-
-        ...
-    };
-
-The class implements the modified S. G. Kosov algorithm [Publication] that differs from the original one as follows:
-
- * The automatic initialization of method's parameters is added.
-
- * The method of Smart Iteration Distribution (SID) is implemented.
-
- * The support of Multi-Level Adaptation Technique (MLAT) is not included.
-
- * The method of dynamic adaptation of method's parameters is not included.
-
-StereoVar::StereoVar
---------------------------
-
-.. ocv:function:: StereoVar::StereoVar()
-
-.. ocv:function:: StereoVar::StereoVar( int levels, double pyrScale, int nIt, int minDisp, int maxDisp, int poly_n, double poly_sigma, float fi, float lambda, int penalization, int cycle, int flags )
-
-    The constructor
-
-    :param levels: The number of pyramid layers, including the initial image. levels=1 means that no extra layers are created and only the original images are used. This parameter is ignored if flag USE_AUTO_PARAMS is set.
-
-    :param pyrScale: Specifies the image scale (<1) to build the pyramids for each image. pyrScale=0.5 means the classical pyramid, where each next layer is twice smaller than the previous. (This parameter is ignored if flag USE_AUTO_PARAMS is set).
-
-    :param nIt: The number of iterations the algorithm does at each pyramid level. (If the flag USE_SMART_ID is set, the number of iterations will be redistributed in such a way, that more iterations will be done on more coarser levels.)
-
-    :param minDisp: Minimum possible disparity value. Could be negative in case the left and right input images change places.
-
-    :param maxDisp: Maximum possible disparity value.
-
-    :param poly_n: Size of the pixel neighbourhood used to find polynomial expansion in each pixel. The larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred motion field. Typically, poly_n = 3, 5 or 7
-
-    :param poly_sigma: Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion. For poly_n=5 you can set poly_sigma=1.1 , for poly_n=7 a good value would be poly_sigma=1.5
-
-    :param fi: The smoothness parameter, ot the weight coefficient for the smoothness term.
-
-    :param lambda: The threshold parameter for edge-preserving smoothness. (This parameter is ignored if PENALIZATION_CHARBONNIER or PENALIZATION_PERONA_MALIK is used.)
-
-    :param penalization: Possible values: PENALIZATION_TICHONOV - linear smoothness; PENALIZATION_CHARBONNIER - non-linear edge preserving smoothness; PENALIZATION_PERONA_MALIK - non-linear edge-enhancing smoothness. (This parameter is ignored if flag USE_AUTO_PARAMS is set).
-
-    :param cycle: Type of the multigrid cycle. Possible values: CYCLE_O and CYCLE_V for null- and v-cycles respectively. (This parameter is ignored if flag USE_AUTO_PARAMS is set).
-
-    :param flags: The operation flags; can be a combination of the following:
-
-        * USE_INITIAL_DISPARITY: Use the input flow as the initial flow approximation.
-
-        * USE_EQUALIZE_HIST: Use the histogram equalization in the pre-processing phase.
-
-        * USE_SMART_ID: Use the smart iteration distribution (SID).
-
-        * USE_AUTO_PARAMS: Allow the method to initialize the main parameters.
-
-        * USE_MEDIAN_FILTERING: Use the median filer of the solution in the post processing phase.
-
-The first constructor initializes ``StereoVar`` with all the default parameters. So, you only have to set ``StereoVar::maxDisp`` and / or ``StereoVar::minDisp`` at minimum. The second constructor enables you to set each parameter to a custom value.
-
-
-
-StereoVar::operator ()
------------------------
-
-.. ocv:function:: void StereoVar::operator()(InputArray left, InputArray right, OutputArray disp)
-
-    Computes disparity using the variational algorithm for a rectified stereo pair.
-
-    :param left: Left 8-bit single-channel or 3-channel image.
-
-    :param right: Right image of the same size and the same type as the left one.
-
-    :param disp: Output disparity map. It is a 8-bit signed single-channel image of the same size as the input image.
-
-The method executes the variational algorithm on a rectified stereo pair. See ``stereo_match.cpp`` OpenCV sample on how to prepare images and call the method.
-
-**Note**:
-
-The method is not constant, so you should not use the same ``StereoVar`` instance from different threads simultaneously.
-
-
-
 stereoCalibrate
 -------------------
 Calibrates the stereo camera.
 
-.. ocv:function:: double stereoCalibrate( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1, InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2, Size imageSize, OutputArray R, OutputArray T, OutputArray E, OutputArray F, TermCriteria term_crit = TermCriteria(TermCriteria::COUNT+                         TermCriteria::EPS, 30, 1e-6), int flags=CALIB_FIX_INTRINSIC )
+.. ocv:function:: double stereoCalibrate( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1, InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2, Size imageSize, OutputArray R, OutputArray T, OutputArray E, OutputArray F, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6), int flags=CALIB_FIX_INTRINSIC )
 
-.. ocv:pyfunction:: cv2.stereoCalibrate(objectPoints, imagePoints1, imagePoints2, imageSize[, cameraMatrix1[, distCoeffs1[, cameraMatrix2[, distCoeffs2[, R[, T[, E[, F[, criteria[, flags]]]]]]) -> retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F
+.. ocv:pyfunction:: cv2.stereoCalibrate(objectPoints, imagePoints1, imagePoints2, imageSize[, cameraMatrix1[, distCoeffs1[, cameraMatrix2[, distCoeffs2[, R[, T[, E[, F[, criteria[, flags]]]]]]]]]]) -> retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F
 
-.. ocv:cfunction:: double cvStereoCalibrate( const CvMat* objectPoints, const CvMat* imagePoints1, const CvMat* imagePoints2, const CvMat* pointCounts, CvMat* cameraMatrix1, CvMat* distCoeffs1, CvMat* cameraMatrix2, CvMat* distCoeffs2, CvSize imageSize, CvMat* R, CvMat* T, CvMat* E=0, CvMat* F=0, CvTermCriteria termCrit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 30, 1e-6), int flags=CV_CALIB_FIX_INTRINSIC )
-.. ocv:pyoldfunction:: cv.StereoCalibrate( objectPoints, imagePoints1, imagePoints2, pointCounts, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, imageSize, R, T, E=None, F=None, termCrit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 30, 1e-6), flags=CV_CALIB_FIX_INTRINSIC)-> None
+.. ocv:cfunction:: double cvStereoCalibrate( const CvMat* object_points, const CvMat* image_points1, const CvMat* image_points2, const CvMat* npoints, CvMat* camera_matrix1, CvMat* dist_coeffs1, CvMat* camera_matrix2, CvMat* dist_coeffs2, CvSize image_size, CvMat* R, CvMat* T, CvMat* E=0, CvMat* F=0, CvTermCriteria term_crit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,1e-6), int flags=CV_CALIB_FIX_INTRINSIC )
+
+.. ocv:pyoldfunction:: cv.StereoCalibrate(objectPoints, imagePoints1, imagePoints2, pointCounts, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, imageSize, R, T, E=None, F=None, term_crit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 30, 1e-6), flags=CV_CALIB_FIX_INTRINSIC)-> None
 
     :param objectPoints: Vector of vectors of the calibration pattern points.
 
@@ -1439,10 +1326,11 @@ stereoRectify
 -----------------
 Computes rectification transforms for each head of a calibrated stereo camera.
 
-.. ocv:function:: void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1, InputArray cameraMatrix2, InputArray distCoeffs2, Size imageSize, InputArray R, InputArray T, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags=CALIB_ZERO_DISPARITY, double alpha, Size newImageSize=Size(), Rect* roi1=0, Rect* roi2=0 )
+.. ocv:function:: void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1, InputArray cameraMatrix2, InputArray distCoeffs2, Size imageSize, InputArray R, InputArray T, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags=CALIB_ZERO_DISPARITY, double alpha=-1, Size newImageSize=Size(), Rect* validPixROI1=0, Rect* validPixROI2=0 )
 
-.. ocv:cfunction:: void cvStereoRectify( const CvMat* cameraMatrix1, const CvMat* cameraMatrix2, const CvMat* distCoeffs1, const CvMat* distCoeffs2, CvSize imageSize, const CvMat* R, const CvMat* T, CvMat* R1, CvMat* R2, CvMat* P1, CvMat* P2, CvMat* Q=0, int flags=CV_CALIB_ZERO_DISPARITY, double alpha=-1, CvSize newImageSize=cvSize(0, 0), CvRect* roi1=0, CvRect* roi2=0)
-.. ocv:pyoldfunction:: cv.StereoRectify( cameraMatrix1, cameraMatrix2, distCoeffs1, distCoeffs2, imageSize, R, T, R1, R2, P1, P2, Q=None, flags=CV_CALIB_ZERO_DISPARITY, alpha=-1, newImageSize=(0, 0))-> (roi1, roi2)
+.. ocv:cfunction:: void cvStereoRectify( const CvMat* camera_matrix1, const CvMat* camera_matrix2, const CvMat* dist_coeffs1, const CvMat* dist_coeffs2, CvSize image_size, const CvMat* R, const CvMat* T, CvMat* R1, CvMat* R2, CvMat* P1, CvMat* P2, CvMat* Q=0, int flags=CV_CALIB_ZERO_DISPARITY, double alpha=-1, CvSize new_image_size=cvSize(0,0), CvRect* valid_pix_ROI1=0, CvRect* valid_pix_ROI2=0 )
+
+.. ocv:pyoldfunction:: cv.StereoRectify(cameraMatrix1, cameraMatrix2, distCoeffs1, distCoeffs2, imageSize, R, T, R1, R2, P1, P2, Q=None, flags=CV_CALIB_ZERO_DISPARITY, alpha=-1, newImageSize=(0, 0)) -> (roi1, roi2)
 
     :param cameraMatrix1: First camera matrix.
 
@@ -1474,9 +1362,9 @@ Computes rectification transforms for each head of a calibrated stereo camera.
 
     :param newImageSize: New image resolution after rectification. The same size should be passed to  :ocv:func:`initUndistortRectifyMap` (see the  ``stereo_calib.cpp``  sample in OpenCV samples directory). When (0,0) is passed (default), it is set to the original  ``imageSize`` . Setting it to larger value can help you preserve details in the original image, especially when there is a big radial distortion.
 
-    :param roi1:
+    :param validPixROI1: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
 
-    :param roi2: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
+    :param validPixROI2: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
 
 The function computes the rotation matrices for each camera that (virtually) make both camera image planes the same plane. Consequently, this makes all the epipolar lines parallel and thus simplifies the dense stereo correspondence problem. The function takes the matrices computed by
 :ocv:func:`stereoCalibrate` as input. As output, it provides two rotation matrices and also two projection matrices in the new coordinates. The function distinguishes the following two cases:
@@ -1529,7 +1417,7 @@ Computes a rectification transform for an uncalibrated stereo camera.
 
 .. ocv:pyfunction:: cv2.stereoRectifyUncalibrated(points1, points2, F, imgSize[, H1[, H2[, threshold]]]) -> retval, H1, H2
 
-.. ocv:cfunction:: void cvStereoRectifyUncalibrated( const CvMat* points1, const CvMat* points2, const CvMat* F, CvSize imageSize, CvMat* H1, CvMat* H2, double threshold=5 )
+.. ocv:cfunction:: int cvStereoRectifyUncalibrated( const CvMat* points1, const CvMat* points2, const CvMat* F, CvSize img_size, CvMat* H1, CvMat* H2, double threshold=5 )
 
 .. ocv:pyoldfunction:: cv.StereoRectifyUncalibrated(points1, points2, F, imageSize, H1, H2, threshold=5)-> None
 
@@ -1539,7 +1427,7 @@ Computes a rectification transform for an uncalibrated stereo camera.
 
     :param F: Input fundamental matrix. It can be computed from the same set of point pairs using  :ocv:func:`findFundamentalMat` .
 
-    :param imageSize: Size of the image.
+    :param imgSize: Size of the image.
 
     :param H1: Output rectification homography matrix for the first image.
 

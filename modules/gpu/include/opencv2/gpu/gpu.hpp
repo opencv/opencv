@@ -431,11 +431,11 @@ CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream = S
 
 //! computes magnitude of complex (x(i).re, x(i).im) vector
 //! supports only CV_32FC2 type
-CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS void magnitude(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null());
 
 //! computes squared magnitude of complex (x(i).re, x(i).im) vector
 //! supports only CV_32FC2 type
-CV_EXPORTS void magnitudeSqr(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS void magnitudeSqr(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null());
 
 //! computes magnitude of each (x(i), y(i)) vector
 //! supports only floating-point source
@@ -480,7 +480,7 @@ CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, double scale
 //! computes element-wise weighted quotient of matrix and scalar (c = a / s)
 CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 //! computes element-wise weighted reciprocal of an array (dst = scale/src2)
-CV_EXPORTS void divide(double scale, const GpuMat& src2, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS void divide(double scale, const GpuMat& b, GpuMat& c, int dtype = -1, Stream& stream = Stream::Null());
 
 //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
 CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst,
@@ -1697,15 +1697,15 @@ public:
 class CV_EXPORTS GoodFeaturesToTrackDetector_GPU
 {
 public:
-    explicit GoodFeaturesToTrackDetector_GPU(int maxCorners_ = 1000, double qualityLevel_ = 0.01, double minDistance_ = 0.0,
-        int blockSize_ = 3, bool useHarrisDetector_ = false, double harrisK_ = 0.04)
+    explicit GoodFeaturesToTrackDetector_GPU(int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+        int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
     {
-        maxCorners = maxCorners_;
-        qualityLevel = qualityLevel_;
-        minDistance = minDistance_;
-        blockSize = blockSize_;
-        useHarrisDetector = useHarrisDetector_;
-        harrisK = harrisK_;
+        this->maxCorners = maxCorners;
+        this->qualityLevel = qualityLevel;
+        this->minDistance = minDistance;
+        this->blockSize = blockSize;
+        this->useHarrisDetector = useHarrisDetector;
+        this->harrisK = harrisK;
     }
 
     //! return 1 rows matrix with CV_32FC2 type

@@ -231,9 +231,9 @@ latex_documents = [
   ('modules/refman', 'opencv2refman.tex', u'The OpenCV Reference Manual',
    u'', 'manual'),
   ('doc/user_guide/user_guide', 'opencv_user.tex', u'The OpenCV User Guide',
-   u'', 'manual'), 
+   u'', 'manual'),
   ('doc/tutorials/tutorials', 'opencv_tutorials.tex', u'The OpenCV Tutorials',
-   u'', 'manual'), 
+   u'', 'manual'),
 ]
 
 preamble ="""
@@ -303,7 +303,7 @@ extlinks = {
             'calib3d' : ('http://opencv.itseez.com/trunk/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#%s', None ),
             'feature2d' : ('http://opencv.itseez.com/trunk/modules/imgproc/doc/feature_detection.html#%s', None ),
             'imgproc_geometric' : ('http://opencv.itseez.com/trunk/modules/imgproc/doc/geometric_transformations.html#%s', None ),
-            
+
             'opencv_group' : ('http://tech.groups.yahoo.com/group/OpenCV/%s', None),
 
             'cvt_color': ('http://opencv.itseez.com/modules/imgproc/doc/miscellaneous_transformations.html?highlight=cvtcolor#cvtcolor%s', None),

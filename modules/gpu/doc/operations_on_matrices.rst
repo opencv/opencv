@@ -9,7 +9,7 @@ gpu::gemm
 ------------------
 Performs generalized matrix multiplication.
 
-.. ocv:function:: void gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null())
 
     :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
@@ -47,9 +47,9 @@ gpu::transpose
 ------------------
 Transposes a matrix.
 
-.. ocv:function:: void gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::transpose( const GpuMat& src1, GpuMat& dst, Stream& stream=Stream::Null() )
 
-    :param src: Source matrix. 1-, 4-, 8-byte element sizes are supported for now (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc).
+    :param src1: Source matrix. 1-, 4-, 8-byte element sizes are supported for now (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc).
 
     :param dst: Destination matrix.
 
@@ -63,11 +63,11 @@ gpu::flip
 -------------
 Flips a 2D matrix around vertical, horizontal, or both axes.
 
-.. ocv:function:: void gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::flip( const GpuMat& a, GpuMat& b, int flipCode, Stream& stream=Stream::Null() )
 
-    :param src: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth.
+    :param a: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth.
 
-    :param dst: Destination matrix.
+    :param b: Destination matrix.
 
     :param flipCode: Flip mode for the source:
 
@@ -143,7 +143,7 @@ gpu::magnitude
 ------------------
 Computes magnitudes of complex matrix elements.
 
-.. ocv:function:: void gpu::magnitude(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::magnitude( const GpuMat& xy, GpuMat& magnitude, Stream& stream=Stream::Null() )
 
 .. ocv:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null())
 
@@ -165,7 +165,7 @@ gpu::magnitudeSqr
 ---------------------
 Computes squared magnitudes of complex matrix elements.
 
-.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::magnitudeSqr( const GpuMat& xy, GpuMat& magnitude, Stream& stream=Stream::Null() )
 
 .. ocv:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null())
 

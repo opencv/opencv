@@ -19,7 +19,7 @@ Planar subdivision.
         CvSubdiv2DEdge recent_edge; \
         CvPoint2D32f  topleft;      \
         CvPoint2D32f  bottomright;
-    
+
     typedef struct CvSubdiv2D
     {
         CV_SUBDIV2D_FIELDS()
@@ -64,13 +64,13 @@ Quad-edge of a planar subdivision.
     /* one of edges within quad-edge, lower 2 bits is index (0..3)
        and upper bits are quad-edge pointer */
     typedef long CvSubdiv2DEdge;
-    
+
     /* quad-edge structure fields */
     #define CV_QUADEDGE2D_FIELDS()     \
         int flags;                     \
         struct CvSubdiv2DPoint* pt[4]; \
         CvSubdiv2DEdge  next[4];
-    
+
     typedef struct CvQuadEdge2D
     {
         CV_QUADEDGE2D_FIELDS()
@@ -97,9 +97,9 @@ Point of an original or dual subdivision.
         CvSubdiv2DEdge first;      \
         CvPoint2D32f   pt;         \
         int id;
-    
+
     #define CV_SUBDIV2D_VIRTUAL_POINT_FLAG (1 << 30)
-    
+
     typedef struct CvSubdiv2DPoint
     {
         CV_SUBDIV2D_POINT_FIELDS()
@@ -135,7 +135,7 @@ Removes all virtual points.
     :param subdiv: Delaunay subdivision.
 
 The function removes all of the virtual points. It
-is called internally in 
+is called internally in
 :ocv:cfunc:`CalcSubdivVoronoi2D`
 if the subdivision
 was modified after the previous call to the function.
@@ -145,7 +145,7 @@ CreateSubdivDelaunay2D
 Creates an empty Delaunay triangulation.
 
 .. ocv:cfunction:: CvSubdiv2D* cvCreateSubdivDelaunay2D(  CvRect rect, CvMemStorage* storage )
-.. ocv:pyoldfunction:: cv.CreateSubdivDelaunay2D(rect, storage)-> emptyDelaunayTriangulation
+.. ocv:pyoldfunction:: cv.CreateSubdivDelaunay2D(rect, storage) -> CvSubdiv2D
 
     :param rect: Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
@@ -157,7 +157,7 @@ subdivision where 2D points can be added using the function
 . All of the points to be added must be within
 the specified rectangle, otherwise a runtime error is raised.
 
-Note that the triangulation is a single large triangle that covers the given rectangle.  Hence the three vertices of this triangle are outside the rectangle 
+Note that the triangulation is a single large triangle that covers the given rectangle.  Hence the three vertices of this triangle are outside the rectangle
 ``rect``
 .
 
@@ -192,7 +192,7 @@ Returns the edge destination.
 The function returns the edge destination. The
 returned pointer may be NULL if the edge is from a dual subdivision and
 the virtual point coordinates are not calculated yet. The virtual points
-can be calculated using the function 
+can be calculated using the function
 :ocv:cfunc:`CalcSubdivVoronoi2D`.
 
 Subdiv2DGetEdge
@@ -235,9 +235,9 @@ Returns next edge around the edge origin.
 
     :param edge: Subdivision edge (not a quad-edge).
 
-The function returns the next edge around the edge origin: 
+The function returns the next edge around the edge origin:
 ``eOnext``
-on the picture above if 
+on the picture above if
 ``e``
 is the input edge).
 
@@ -259,33 +259,33 @@ Returns the location of a point within a Delaunay triangulation.
 The function locates the input point within the subdivision. There are five cases:
 
 *
-    The point falls into some facet. The function returns 
+    The point falls into some facet. The function returns
     ``CV_PTLOC_INSIDE``
-    and 
+    and
     ``*edge``
     will contain one of edges of the facet.
 
 *
-    The point falls onto the edge. The function returns 
+    The point falls onto the edge. The function returns
     ``CV_PTLOC_ON_EDGE``
-    and 
+    and
     ``*edge``
     will contain this edge.
 
 *
-    The point coincides with one of the subdivision vertices. The function returns 
+    The point coincides with one of the subdivision vertices. The function returns
     ``CV_PTLOC_VERTEX``
-    and 
+    and
     ``*vertex``
     will contain a pointer to the vertex.
 
 *
-    The point is outside the subdivision reference rectangle. The function returns 
+    The point is outside the subdivision reference rectangle. The function returns
     ``CV_PTLOC_OUTSIDE_RECT``
     and no pointers are filled.
 
 *
-    One of input arguments is invalid. A runtime error is raised or, if silent or "parent" error processing mode is selected, 
+    One of input arguments is invalid. A runtime error is raised or, if silent or "parent" error processing mode is selected,
     ``CV_PTLOC_ERROR``
     is returnd.
 

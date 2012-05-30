@@ -63,9 +63,9 @@
 //Written by Theodore Watson - theo.watson@gmail.com    //
 //Do whatever you want with this code but if you find   //
 //a bug or make an improvement I would love to know!    //
-//                                                        //
+//                                                      //
 //Warning This code is experimental                     //
-//use at your own risk :)                                //
+//use at your own risk :)                               //
 //////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 /*                     Shoutouts
@@ -164,7 +164,7 @@ interface IMPEG2PIDMap : public IUnknown
 /*
 MEDIASUBTYPE_I420 : TGUID ='{30323449-0000-0010-8000-00AA00389B71}';
 MEDIASUBTYPE_Y800 : TGUID ='{30303859-0000-0010-8000-00AA00389B71}';
-MEDIASUBTYPE_Y8 : TGUID ='{20203859-0000-0010-8000-00AA00389B71}';
+MEDIASUBTYPE_Y8   : TGUID ='{20203859-0000-0010-8000-00AA00389B71}';
 MEDIASUBTYPE_Y160 : TGUID ='{30363159-0000-0010-8000-00AA00389B71}';
 MEDIASUBTYPE_YV16 : TGUID ='{32315659-0000-0010-8000-00AA00389B71}';
 MEDIASUBTYPE_Y422 : TGUID ='{32323459-0000-0010-8000-00AA00389B71}';
@@ -285,13 +285,13 @@ interface ISampleGrabber : public IUnknown
     //setup the first device - there are a number of options:
 
     VI.setupDevice(device1);                           //setup the first device with the default settings
-    //VI.setupDevice(device1, VI_COMPOSITE);               //or setup device with specific connection type
-    //VI.setupDevice(device1, 320, 240);                  //or setup device with specified video size
-    //VI.setupDevice(device1, 320, 240, VI_COMPOSITE);  //or setup device with video size and connection type
+    //VI.setupDevice(device1, VI_COMPOSITE);           //or setup device with specific connection type
+    //VI.setupDevice(device1, 320, 240);               //or setup device with specified video size
+    //VI.setupDevice(device1, 320, 240, VI_COMPOSITE); //or setup device with video size and connection type
 
-    //VI.setFormat(device1, VI_NTSC_M);                    //if your card doesn't remember what format it should be
-                                                        //call this with the appropriate format listed above
-                                                        //NOTE: must be called after setupDevice!
+    //VI.setFormat(device1, VI_NTSC_M);                //if your card doesn't remember what format it should be
+                                                       //call this with the appropriate format listed above
+                                                       //NOTE: must be called after setupDevice!
 
     //optionally setup a second (or third, fourth ...) device - same options as above
     VI.setupDevice(device2);
@@ -299,8 +299,8 @@ interface ISampleGrabber : public IUnknown
     //As requested width and height can not always be accomodated
     //make sure to check the size once the device is setup
 
-    int width     = VI.getWidth(device1);
-    int height     = VI.getHeight(device1);
+    int width   = VI.getWidth(device1);
+    int height  = VI.getHeight(device1);
     int size    = VI.getSize(device1);
 
     unsigned char * yourBuffer1 = new unsigned char[size];
@@ -308,7 +308,7 @@ interface ISampleGrabber : public IUnknown
 
     //to get the data from the device first check if the data is new
     if(VI.isFrameNew(device1)){
-        VI.getPixels(device1, yourBuffer1, false, false);    //fills pixels as a BGR (for openCV) unsigned char array - no flipping
+        VI.getPixels(device1, yourBuffer1, false, false);   //fills pixels as a BGR (for openCV) unsigned char array - no flipping
         VI.getPixels(device1, yourBuffer2, true, true);     //fills pixels as a RGB (for openGL) unsigned char array - flipping!
     }
 
@@ -338,7 +338,7 @@ static bool verbose = true;
 //STUFF YOU DON'T CHANGE
 
 //videoInput defines
-#define VI_VERSION     0.1995
+#define VI_VERSION      0.1995
 #define VI_MAX_CAMERAS  20
 #define VI_NUM_TYPES    20 //MGB
 #define VI_NUM_FORMATS  18 //DON'T TOUCH
@@ -348,10 +348,10 @@ static bool verbose = true;
 #define VI_S_VIDEO   1
 #define VI_TUNER     2
 #define VI_USB       3
-#define VI_1394         4
+#define VI_1394      4
 
 //defines for formats
-#define VI_NTSC_M    0
+#define VI_NTSC_M   0
 #define VI_PAL_B    1
 #define VI_PAL_D    2
 #define VI_PAL_G    3
@@ -359,16 +359,16 @@ static bool verbose = true;
 #define VI_PAL_I    5
 #define VI_PAL_M    6
 #define VI_PAL_N    7
-#define VI_PAL_NC    8
-#define VI_SECAM_B    9
-#define VI_SECAM_D    10
-#define VI_SECAM_G    11
-#define VI_SECAM_H    12
-#define VI_SECAM_K    13
-#define VI_SECAM_K1    14
-#define VI_SECAM_L    15
-#define VI_NTSC_M_J    16
-#define VI_NTSC_433    17
+#define VI_PAL_NC   8
+#define VI_SECAM_B  9
+#define VI_SECAM_D  10
+#define VI_SECAM_G  11
+#define VI_SECAM_H  12
+#define VI_SECAM_K  13
+#define VI_SECAM_K1 14
+#define VI_SECAM_L  15
+#define VI_NTSC_M_J 16
+#define VI_NTSC_433 17
 
 
 //allows us to directShow classes here with the includes in the cpp
@@ -731,48 +731,48 @@ public:
 
 videoDevice::videoDevice(){
 
-         pCaptureGraph      = NULL;    // Capture graph builder object
-         pGraph             = NULL;    // Graph builder object
-         pControl           = NULL;    // Media control object
-         pVideoInputFilter  = NULL; // Video Capture filter
-         pGrabber           = NULL; // Grabs frame
-         pDestFilter         = NULL; // Null Renderer Filter
-         pGrabberF             = NULL; // Grabber Filter
-         pMediaEvent        = NULL;
-         streamConf            = NULL;
-         pAmMediaType        = NULL;
+     pCaptureGraph      = NULL;    // Capture graph builder object
+     pGraph             = NULL;    // Graph builder object
+     pControl           = NULL;    // Media control object
+     pVideoInputFilter  = NULL; // Video Capture filter
+     pGrabber           = NULL; // Grabs frame
+     pDestFilter        = NULL; // Null Renderer Filter
+     pGrabberF          = NULL; // Grabber Filter
+     pMediaEvent        = NULL;
+     streamConf         = NULL;
+     pAmMediaType       = NULL;
 
-         //This is our callback class that processes the frame.
-         sgCallback            = new SampleGrabberCallback();
-         sgCallback->newFrame = false;
+     //This is our callback class that processes the frame.
+     sgCallback           = new SampleGrabberCallback();
+     sgCallback->newFrame = false;
 
-         //Default values for capture type
-         videoType             = MEDIASUBTYPE_RGB24;
-         connection         = PhysConn_Video_Composite;
-         storeConn            = 0;
+     //Default values for capture type
+     videoType          = MEDIASUBTYPE_RGB24;
+     connection         = PhysConn_Video_Composite;
+     storeConn          = 0;
 
-         videoSize             = 0;
-         width                 = 0;
-         height                = 0;
+     videoSize          = 0;
+     width              = 0;
+     height             = 0;
 
-         tryWidth            = 640;
-         tryHeight            = 480;
-         tryVideoType = MEDIASUBTYPE_RGB24;
-         nFramesForReconnect= 10000;
-         nFramesRunning     = 0;
-         myID                = -1;
+     tryWidth           = 640;
+     tryHeight          = 480;
+     tryVideoType = MEDIASUBTYPE_RGB24;
+     nFramesForReconnect= 10000;
+     nFramesRunning     = 0;
+     myID               = -1;
 
-         tryDiffSize         = true;
-         useCrossbar         = false;
-         readyToCapture      = false;
-         sizeSet            = false;
-         setupStarted        = false;
-         specificFormat        = false;
-         autoReconnect        = false;
-         requestedFrameTime = -1;
+     tryDiffSize        = true;
+     useCrossbar        = false;
+     readyToCapture     = false;
+     sizeSet            = false;
+     setupStarted       = false;
+     specificFormat     = false;
+     autoReconnect      = false;
+     requestedFrameTime = -1;
 
-         memset(wDeviceName, 0, sizeof(WCHAR) * 255);
-         memset(nDeviceName, 0, sizeof(char) * 255);
+     memset(wDeviceName, 0, sizeof(WCHAR) * 255);
+     memset(nDeviceName, 0, sizeof(char) * 255);
 
 }
 
@@ -808,39 +808,39 @@ void videoDevice::setSize(int w, int h){
 // ----------------------------------------------------------------------
 
 void videoDevice::NukeDownstream(IBaseFilter *pBF){
-        IPin *pP, *pTo;
-        ULONG u;
-        IEnumPins *pins = NULL;
-        PIN_INFO pininfo;
-        HRESULT hr = pBF->EnumPins(&pins);
-        pins->Reset();
-        while (hr == NOERROR)
+    IPin *pP, *pTo;
+    ULONG u;
+    IEnumPins *pins = NULL;
+    PIN_INFO pininfo;
+    HRESULT hr = pBF->EnumPins(&pins);
+    pins->Reset();
+    while (hr == NOERROR)
+    {
+        hr = pins->Next(1, &pP, &u);
+        if (hr == S_OK && pP)
         {
-                hr = pins->Next(1, &pP, &u);
-                if (hr == S_OK && pP)
+            pP->ConnectedTo(&pTo);
+            if (pTo)
+            {
+                hr = pTo->QueryPinInfo(&pininfo);
+                if (hr == NOERROR)
                 {
-                        pP->ConnectedTo(&pTo);
-                        if (pTo)
-                        {
-                                hr = pTo->QueryPinInfo(&pininfo);
-                                if (hr == NOERROR)
-                                {
-                                        if (pininfo.dir == PINDIR_INPUT)
-                                        {
-                                                NukeDownstream(pininfo.pFilter);
-                                                pGraph->Disconnect(pTo);
-                                                pGraph->Disconnect(pP);
-                                                pGraph->RemoveFilter(pininfo.pFilter);
-                                        }
-                                        pininfo.pFilter->Release();
-                                        pininfo.pFilter = NULL;
-                                }
-                                pTo->Release();
-                        }
-                        pP->Release();
+                    if (pininfo.dir == PINDIR_INPUT)
+                    {
+                        NukeDownstream(pininfo.pFilter);
+                        pGraph->Disconnect(pTo);
+                        pGraph->Disconnect(pP);
+                        pGraph->RemoveFilter(pininfo.pFilter);
+                    }
+                    pininfo.pFilter->Release();
+                    pininfo.pFilter = NULL;
                 }
+                pTo->Release();
+            }
+            pP->Release();
         }
-        if (pins) pins->Release();
+    }
+    if (pins) pins->Release();
 }
 
 
@@ -949,27 +949,27 @@ videoDevice::~videoDevice(){
     if( (pVideoInputFilter) )NukeDownstream(pVideoInputFilter);
 
     //Release and zero pointers to our filters etc
-    if( (pDestFilter) ){         if(verbose)printf("SETUP: freeing Renderer \n");
+    if( (pDestFilter) ){        if(verbose)printf("SETUP: freeing Renderer \n");
                                 (pDestFilter)->Release();
                                 (pDestFilter) = 0;
     }
-    if( (pVideoInputFilter) ){     if(verbose)printf("SETUP: freeing Capture Source \n");
+    if( (pVideoInputFilter) ){  if(verbose)printf("SETUP: freeing Capture Source \n");
                                 (pVideoInputFilter)->Release();
                                 (pVideoInputFilter) = 0;
     }
-    if( (pGrabberF) ){             if(verbose)printf("SETUP: freeing Grabber Filter  \n");
+    if( (pGrabberF) ){          if(verbose)printf("SETUP: freeing Grabber Filter  \n");
                                 (pGrabberF)->Release();
                                 (pGrabberF) = 0;
     }
-    if( (pGrabber) ){             if(verbose)printf("SETUP: freeing Grabber  \n");
+    if( (pGrabber) ){           if(verbose)printf("SETUP: freeing Grabber  \n");
                                 (pGrabber)->Release();
                                 (pGrabber) = 0;
     }
-    if( (pControl) ){             if(verbose)printf("SETUP: freeing Control   \n");
+    if( (pControl) ){           if(verbose)printf("SETUP: freeing Control   \n");
                                 (pControl)->Release();
                                 (pControl) = 0;
     }
-    if( (pMediaEvent) ){         if(verbose)printf("SETUP: freeing Media Event  \n");
+    if( (pMediaEvent) ){        if(verbose)printf("SETUP: freeing Media Event  \n");
                                 (pMediaEvent)->Release();
                                 (pMediaEvent) = 0;
     }
@@ -978,7 +978,7 @@ videoDevice::~videoDevice(){
                                 (streamConf) = 0;
     }
 
-    if( (pAmMediaType) ){         if(verbose)printf("SETUP: freeing Media Type  \n");
+    if( (pAmMediaType) ){       if(verbose)printf("SETUP: freeing Media Type  \n");
                                 MyDeleteMediaType(pAmMediaType);
     }
 
@@ -992,7 +992,7 @@ videoDevice::~videoDevice(){
     if( (pGraph) )destroyGraph();
 
     //Release and zero our capture graph and our main graph
-    if( (pCaptureGraph) ){         if(verbose)printf("SETUP: freeing Capture Graph \n");
+    if( (pCaptureGraph) ){      if(verbose)printf("SETUP: freeing Capture Graph \n");
                                 (pCaptureGraph)->Release();
                                 (pCaptureGraph) = 0;
     }
@@ -1031,7 +1031,7 @@ videoInput::videoInput(){
 
     devicesFound         = 0;
     callbackSetCount     = 0;
-    bCallback             = true;
+    bCallback            = true;
 
     //setup a max no of device objects
     for(int i=0; i<VI_MAX_CAMERAS; i++)  VDList[i] = new videoDevice();
@@ -1057,9 +1057,9 @@ videoInput::videoInput(){
     mediaSubtypes[8]     = MEDIASUBTYPE_UYVY;
     mediaSubtypes[9]     = MEDIASUBTYPE_YV12;
     mediaSubtypes[10]    = MEDIASUBTYPE_YVU9;
-    mediaSubtypes[11]     = MEDIASUBTYPE_Y411;
-    mediaSubtypes[12]     = MEDIASUBTYPE_Y41P;
-    mediaSubtypes[13]     = MEDIASUBTYPE_Y211;
+    mediaSubtypes[11]    = MEDIASUBTYPE_Y411;
+    mediaSubtypes[12]    = MEDIASUBTYPE_Y41P;
+    mediaSubtypes[13]    = MEDIASUBTYPE_Y211;
     mediaSubtypes[14]    = MEDIASUBTYPE_AYUV;
     mediaSubtypes[15]    = MEDIASUBTYPE_MJPG; // MGB
 
@@ -1067,31 +1067,29 @@ videoInput::videoInput(){
     mediaSubtypes[16]    = MEDIASUBTYPE_Y800;
     mediaSubtypes[17]    = MEDIASUBTYPE_Y8;
     mediaSubtypes[18]    = MEDIASUBTYPE_GREY;
-	mediaSubtypes[19]    = MEDIASUBTYPE_I420;
+    mediaSubtypes[19]    = MEDIASUBTYPE_I420;
 
     //The video formats we support
-    formatTypes[VI_NTSC_M]        = AnalogVideo_NTSC_M;
+    formatTypes[VI_NTSC_M]      = AnalogVideo_NTSC_M;
     formatTypes[VI_NTSC_M_J]    = AnalogVideo_NTSC_M_J;
     formatTypes[VI_NTSC_433]    = AnalogVideo_NTSC_433;
 
-    formatTypes[VI_PAL_B]        = AnalogVideo_PAL_B;
-    formatTypes[VI_PAL_D]        = AnalogVideo_PAL_D;
-    formatTypes[VI_PAL_G]        = AnalogVideo_PAL_G;
-    formatTypes[VI_PAL_H]        = AnalogVideo_PAL_H;
-    formatTypes[VI_PAL_I]        = AnalogVideo_PAL_I;
-    formatTypes[VI_PAL_M]        = AnalogVideo_PAL_M;
-    formatTypes[VI_PAL_N]        = AnalogVideo_PAL_N;
-    formatTypes[VI_PAL_NC]        = AnalogVideo_PAL_N_COMBO;
+    formatTypes[VI_PAL_B]       = AnalogVideo_PAL_B;
+    formatTypes[VI_PAL_D]       = AnalogVideo_PAL_D;
+    formatTypes[VI_PAL_G]       = AnalogVideo_PAL_G;
+    formatTypes[VI_PAL_H]       = AnalogVideo_PAL_H;
+    formatTypes[VI_PAL_I]       = AnalogVideo_PAL_I;
+    formatTypes[VI_PAL_M]       = AnalogVideo_PAL_M;
+    formatTypes[VI_PAL_N]       = AnalogVideo_PAL_N;
+    formatTypes[VI_PAL_NC]      = AnalogVideo_PAL_N_COMBO;
 
-    formatTypes[VI_SECAM_B]        = AnalogVideo_SECAM_B;
-    formatTypes[VI_SECAM_D]        = AnalogVideo_SECAM_D;
-    formatTypes[VI_SECAM_G]        = AnalogVideo_SECAM_G;
-    formatTypes[VI_SECAM_H]        = AnalogVideo_SECAM_H;
-    formatTypes[VI_SECAM_K]        = AnalogVideo_SECAM_K;
+    formatTypes[VI_SECAM_B]     = AnalogVideo_SECAM_B;
+    formatTypes[VI_SECAM_D]     = AnalogVideo_SECAM_D;
+    formatTypes[VI_SECAM_G]     = AnalogVideo_SECAM_G;
+    formatTypes[VI_SECAM_H]     = AnalogVideo_SECAM_H;
+    formatTypes[VI_SECAM_K]     = AnalogVideo_SECAM_K;
     formatTypes[VI_SECAM_K1]    = AnalogVideo_SECAM_K1;
-    formatTypes[VI_SECAM_L]        = AnalogVideo_SECAM_L;
-
-
+    formatTypes[VI_SECAM_L]     = AnalogVideo_SECAM_L;
 
 }
 
@@ -2029,30 +2027,30 @@ void videoInput::setAttemptCaptureSize(int id, int w, int h,GUID mediaType){
 
 void videoInput::setPhyCon(int id, int conn){
 
-        switch(conn){
+    switch(conn){
 
-            case 0:
-                VDList[id]->connection = PhysConn_Video_Composite;
-                break;
-            case 1:
-                VDList[id]->connection = PhysConn_Video_SVideo;
-                break;
-            case 2:
-                VDList[id]->connection = PhysConn_Video_Tuner;
-                break;
-            case 3:
-                VDList[id]->connection = PhysConn_Video_USB;
-                break;
-            case 4:
-                VDList[id]->connection = PhysConn_Video_1394;
-                break;
-            default:
-                return; //if it is not these types don't set crossbar
+        case 0:
+            VDList[id]->connection = PhysConn_Video_Composite;
             break;
-        }
+        case 1:
+            VDList[id]->connection = PhysConn_Video_SVideo;
+            break;
+        case 2:
+            VDList[id]->connection = PhysConn_Video_Tuner;
+            break;
+        case 3:
+            VDList[id]->connection = PhysConn_Video_USB;
+            break;
+        case 4:
+            VDList[id]->connection = PhysConn_Video_1394;
+            break;
+        default:
+            return; //if it is not these types don't set crossbar
+        break;
+    }
 
-        VDList[id]->storeConn    = conn;
-        VDList[id]->useCrossbar    = true;
+    VDList[id]->storeConn    = conn;
+    VDList[id]->useCrossbar    = true;
 }
 
 
@@ -2154,26 +2152,26 @@ void videoInput::processPixels(unsigned char * src, unsigned char * dst, int wid
 void videoInput::getMediaSubtypeAsString(GUID type, char * typeAsString){
 
     char tmpStr[8];
-    if( type == MEDIASUBTYPE_RGB24) sprintf(tmpStr, "RGB24");
+    if( type == MEDIASUBTYPE_RGB24)     sprintf(tmpStr, "RGB24");
     else if(type == MEDIASUBTYPE_RGB32) sprintf(tmpStr, "RGB32");
     else if(type == MEDIASUBTYPE_RGB555)sprintf(tmpStr, "RGB555");
     else if(type == MEDIASUBTYPE_RGB565)sprintf(tmpStr, "RGB565");
-    else if(type == MEDIASUBTYPE_YUY2)     sprintf(tmpStr, "YUY2");
-    else if(type == MEDIASUBTYPE_YVYU)     sprintf(tmpStr, "YVYU");
-    else if(type == MEDIASUBTYPE_YUYV)     sprintf(tmpStr, "YUYV");
-    else if(type == MEDIASUBTYPE_IYUV)     sprintf(tmpStr, "IYUV");
+    else if(type == MEDIASUBTYPE_YUY2)  sprintf(tmpStr, "YUY2");
+    else if(type == MEDIASUBTYPE_YVYU)  sprintf(tmpStr, "YVYU");
+    else if(type == MEDIASUBTYPE_YUYV)  sprintf(tmpStr, "YUYV");
+    else if(type == MEDIASUBTYPE_IYUV)  sprintf(tmpStr, "IYUV");
     else if(type == MEDIASUBTYPE_UYVY)  sprintf(tmpStr, "UYVY");
     else if(type == MEDIASUBTYPE_YV12)  sprintf(tmpStr, "YV12");
     else if(type == MEDIASUBTYPE_YVU9)  sprintf(tmpStr, "YVU9");
-    else if(type == MEDIASUBTYPE_Y411)     sprintf(tmpStr, "Y411");
-    else if(type == MEDIASUBTYPE_Y41P)     sprintf(tmpStr, "Y41P");
+    else if(type == MEDIASUBTYPE_Y411)  sprintf(tmpStr, "Y411");
+    else if(type == MEDIASUBTYPE_Y41P)  sprintf(tmpStr, "Y41P");
     else if(type == MEDIASUBTYPE_Y211)  sprintf(tmpStr, "Y211");
-    else if(type == MEDIASUBTYPE_AYUV)     sprintf(tmpStr, "AYUV");
-    else if(type == MEDIASUBTYPE_MJPG)     sprintf(tmpStr, "MJPG");
-    else if(type == MEDIASUBTYPE_Y800)     sprintf(tmpStr, "Y800");
-    else if(type == MEDIASUBTYPE_Y8)       sprintf(tmpStr, "Y8");
-    else if(type == MEDIASUBTYPE_GREY)     sprintf(tmpStr, "GREY");
-	else if(type == MEDIASUBTYPE_I420)     sprintf(tmpStr, "I420");
+    else if(type == MEDIASUBTYPE_AYUV)  sprintf(tmpStr, "AYUV");
+    else if(type == MEDIASUBTYPE_MJPG)  sprintf(tmpStr, "MJPG");
+    else if(type == MEDIASUBTYPE_Y800)  sprintf(tmpStr, "Y800");
+    else if(type == MEDIASUBTYPE_Y8)    sprintf(tmpStr, "Y8");
+    else if(type == MEDIASUBTYPE_GREY)  sprintf(tmpStr, "GREY");
+    else if(type == MEDIASUBTYPE_I420)  sprintf(tmpStr, "I420");
     else sprintf(tmpStr, "OTHER");
 
     memcpy(typeAsString, tmpStr, sizeof(char)*8);
@@ -2245,7 +2243,7 @@ int videoInput::getVideoPropertyFromCV(int cv_property){
             return VideoProcAmp_BacklightCompensation;
 
         case CV_CAP_PROP_GAIN:
-            return     VideoProcAmp_Gain;
+            return VideoProcAmp_Gain;
     }
     return -1;
 }
@@ -2254,7 +2252,6 @@ int videoInput::getCameraPropertyFromCV(int cv_property){
 
     // see CameraControlProperty in strmif.h
     switch (cv_property) {
-
         case CV_CAP_PROP_PAN:
             return CameraControl_Pan;
 
@@ -3075,7 +3072,7 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
             }
             Crossbar->Route(pOIndex,pIndex);
         }else{
-            if(verbose)printf("SETUP: Didn't find specified Physical Connection type. Using Defualt. \n");
+            if(verbose) printf("SETUP: Didn't find specified Physical Connection type. Using Defualt. \n");
         }
 
         //we only free the crossbar when we close or restart the device
@@ -3087,7 +3084,7 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
         if(pXBar1)pXBar1 = NULL;
 
     }else{
-        if(verbose)printf("SETUP: You are a webcam or snazzy firewire cam! No Crossbar needed\n");
+        if(verbose) printf("SETUP: You are a webcam or snazzy firewire cam! No Crossbar needed\n");
         return hr;
     }
 
@@ -3109,8 +3106,6 @@ public:
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
     virtual int getCaptureDomain() { return CV_CAP_DSHOW; } // Return the type of the capture object: CV_CAP_VFW, etc...
-
-
 
 protected:
     void init();
@@ -3217,60 +3212,29 @@ double CvCaptureCAM_DShow::getProperty( int property_id )
     switch( property_id )
     {
     case CV_CAP_PROP_BRIGHTNESS:
-        if ( VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BRIGHTNESS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_CONTRAST:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_CONTRAST),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_HUE:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_HUE),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_SATURATION:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SATURATION),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_SHARPNESS:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SHARPNESS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_GAMMA:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAMMA),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_MONOCROME:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_MONOCROME),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_WHITE_BALANCE_BLUE_U),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
-    case  CV_CAP_PROP_BACKLIGHT:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BACKLIGHT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
+    case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
-        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAIN),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
+        if (VI.getVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
     }
 
     // camera properties
     switch( property_id )
     {
-
-    case CV_CAP_PROP_BACKLIGHT:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_BACKLIGHT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_PAN:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_PAN),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_TILT:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_TILT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_ROLL:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ROLL),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_ZOOM:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_BACKLIGHT),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
+    case CV_CAP_PROP_EXPOSURE:
     case CV_CAP_PROP_IRIS:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_IRIS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-
     case CV_CAP_PROP_FOCUS:
-        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
+        if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),min_value,max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
 
     }
 
@@ -3282,36 +3246,36 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
 {
     // image capture properties
     bool handled = false;
-	switch( property_id )
+    switch( property_id )
     {
-        case CV_CAP_PROP_FRAME_WIDTH:
-            width = cvRound(value);
-            handled = true;
-            break;
+    case CV_CAP_PROP_FRAME_WIDTH:
+        width = cvRound(value);
+        handled = true;
+        break;
 
-        case CV_CAP_PROP_FRAME_HEIGHT:
-            height = cvRound(value);
-            handled = true;
-            break;
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        height = cvRound(value);
+        handled = true;
+        break;
 
-        case CV_CAP_PROP_FOURCC:
-            fourcc = cvRound(value);
-            if ( fourcc < 0 ) {
-                // following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
-                // TODO - how to create a capture pin dialog
-            }
-            handled = true;
-            break;
+    case CV_CAP_PROP_FOURCC:
+        fourcc = cvRound(value);
+        if ( fourcc < 0 ) {
+            // following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
+            // TODO - how to create a capture pin dialog
+        }
+        handled = true;
+        break;
 
-        case CV_CAP_PROP_FPS:
-            int fps = cvRound(value);
-			if (fps != VI.getFPS(0))
-			{
-			    VI.stopDevice(index);
-			    VI.setIdealFramerate(index,fps);
-			    VI.setupDevice(index);
-			}
-            break;
+    case CV_CAP_PROP_FPS:
+        int fps = cvRound(value);
+        if (fps != VI.getFPS(0))
+        {
+            VI.stopDevice(index);
+            VI.setIdealFramerate(index,fps);
+            VI.setupDevice(index);
+        }
+        break;
 
     }
 
@@ -3329,7 +3293,7 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
             width = height = fourcc = -1;
             return VI.isDeviceSetup(index);
         }
-		return true;
+        return true;
     }
 
     // show video/camera filter dialog
@@ -3341,66 +3305,31 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
     //video Filter properties
     switch( property_id )
     {
-
-        case CV_CAP_PROP_BRIGHTNESS:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BRIGHTNESS),(long)value);
-
-        case CV_CAP_PROP_CONTRAST:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_CONTRAST),(long)value);
-
-        case CV_CAP_PROP_HUE:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_HUE),(long)value);
-
-        case CV_CAP_PROP_SATURATION:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SATURATION),(long)value);
-
-        case CV_CAP_PROP_SHARPNESS:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_SHARPNESS),(long)value);
-
-        case CV_CAP_PROP_GAMMA:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAMMA),(long)value);
-
-        case CV_CAP_PROP_MONOCROME:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_MONOCROME),(long)value);
-
-        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_WHITE_BALANCE_BLUE_U),(long)value);
-
-        case  CV_CAP_PROP_BACKLIGHT:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_BACKLIGHT),(long)value);
-
-        case CV_CAP_PROP_GAIN:
-            return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(CV_CAP_PROP_GAIN),(long)value);
-
-        default:
-            ;
+    case CV_CAP_PROP_BRIGHTNESS:
+    case CV_CAP_PROP_CONTRAST:
+    case CV_CAP_PROP_HUE:
+    case CV_CAP_PROP_SATURATION:
+    case CV_CAP_PROP_SHARPNESS:
+    case CV_CAP_PROP_GAMMA:
+    case CV_CAP_PROP_MONOCROME:
+    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case CV_CAP_PROP_BACKLIGHT:
+    case CV_CAP_PROP_GAIN:
+        return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),(long)value);
     }
 
     //camera properties
     switch( property_id )
     {
-    case  CV_CAP_PROP_PAN:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_PAN),(long)value);
-
-    case  CV_CAP_PROP_TILT:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_TILT),(long)value);
-
-    case  CV_CAP_PROP_ROLL:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ROLL),(long)value);
-
-    case  CV_CAP_PROP_ZOOM:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_ZOOM),(long)value);
-
-    case  CV_CAP_PROP_EXPOSURE:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_EXPOSURE),(long)value);
-
-    case  CV_CAP_PROP_IRIS:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_IRIS),(long)value);
-
-    case  CV_CAP_PROP_FOCUS:
-        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(CV_CAP_PROP_FOCUS),(long)value);
+    case CV_CAP_PROP_PAN:
+    case CV_CAP_PROP_TILT:
+    case CV_CAP_PROP_ROLL:
+    case CV_CAP_PROP_ZOOM:
+    case CV_CAP_PROP_EXPOSURE:
+    case CV_CAP_PROP_IRIS:
+    case CV_CAP_PROP_FOCUS:
+        return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),(long)value);
     }
-
 
     return false;
 }
@@ -3410,8 +3339,16 @@ CvCapture* cvCreateCameraCapture_DShow( int index )
 {
     CvCaptureCAM_DShow* capture = new CvCaptureCAM_DShow;
 
-    if( capture->open( index ))
-        return capture;
+    try
+    {
+        if( capture->open( index ))
+            return capture;
+    }
+    catch(...)
+    {
+        delete capture;
+        throw;
+    }
 
     delete capture;
     return 0;

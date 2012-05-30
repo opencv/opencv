@@ -237,7 +237,7 @@ The method returns a map that converts string class labels to the numerical clas
 
 CvTrainTestSplit
 ----------------
-.. ocv:class:: CvTrainTestSplit
+.. ocv:struct:: CvTrainTestSplit
 
 Structure setting the split of a data set read by :ocv:class:`CvMLData`.
 ::

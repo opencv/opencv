@@ -13,7 +13,7 @@ descriptor extractors inherit the
 
 CalonderDescriptorExtractor
 ---------------------------
-.. ocv:class:: CalonderDescriptorExtractor
+.. ocv:class:: CalonderDescriptorExtractor : public DescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ocv:class:`RTreeClassifier` class. ::

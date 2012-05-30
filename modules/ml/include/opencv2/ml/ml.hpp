@@ -170,10 +170,10 @@ struct CV_EXPORTS_W_MAP CvParamGrid
         min_val = max_val = step = 0;
     }
 
-    CvParamGrid( double _min_val, double _max_val, double log_step )
+    CvParamGrid( double min_val, double max_val, double log_step )
     {
-        min_val = _min_val;
-        max_val = _max_val;
+        this->min_val = min_val;
+        this->max_val = max_val;
         step = log_step;
     }
     //CvParamGrid( int param_id );
@@ -291,10 +291,10 @@ protected:
 struct CV_EXPORTS_W_MAP CvSVMParams
 {
     CvSVMParams();
-    CvSVMParams( int _svm_type, int _kernel_type,
-                 double _degree, double _gamma, double _coef0,
-                 double Cvalue, double _nu, double _p,
-                 CvMat* _class_weights, CvTermCriteria _term_crit );
+    CvSVMParams( int svm_type, int kernel_type,
+                 double degree, double gamma, double coef0,
+                 double Cvalue, double nu, double p,
+                 CvMat* class_weights, CvTermCriteria term_crit );
 
     CV_PROP_RW int         svm_type;
     CV_PROP_RW int         kernel_type;
@@ -569,8 +569,7 @@ public:
     enum {START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0};
 
     CV_WRAP EM(int nclusters=EM::DEFAULT_NCLUSTERS, int covMatType=EM::COV_MAT_DIAGONAL,
-       const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+
-                                                 TermCriteria::EPS,
+       const TermCriteria& termCrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
                                                  EM::DEFAULT_MAX_ITERS, FLT_EPSILON));
     
     virtual ~EM();
@@ -1026,7 +1025,7 @@ public:
     virtual float get_proximity( const CvMat* sample1, const CvMat* sample2,
         const CvMat* missing1 = 0, const CvMat* missing2 = 0 ) const;
     
-    virtual float calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 ); // type in {CV_TRAIN_ERROR, CV_TEST_ERROR}
+    virtual float calc_error( CvMLData* data, int type , std::vector<float>* resp = 0 ); // type in {CV_TRAIN_ERROR, CV_TEST_ERROR}
 
     virtual float get_train_error();    
 
