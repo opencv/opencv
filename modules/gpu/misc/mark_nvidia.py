@@ -1,13 +1,19 @@
 import sys, re
 
+spaces = '[\s]*'
+symbols = '[\s\w\d,=:|]*'
+
 def pattern1(prefix, test):
-    return re.compile('[\s]*' + 'perf::' + prefix + '/' + test + '::' + '\(' + '[\s\w\d,=:|]*' + '\)' + '[\s]*')
+    return re.compile(spaces + 'perf::' + prefix + '/' + test + '::' + '\(' + symbols + '\)' + spaces)
 
 def pattern2(prefix, test, cvtype):
-    return re.compile('[\s]*' + 'perf::' + prefix + '/' + test + '::' + '\(' + '[\s\w\d,=:|]*' + cvtype + '[\s\w\d,=:|]*' + '\)' + '[\s]*')
+    return re.compile(spaces + 'perf::' + prefix + '/' + test + '::' + '\(' + symbols + cvtype + symbols + '\)' + spaces)
 
 def pattern3(prefix, test, cvtype, param1):
-    return re.compile('[\s]*' + 'perf::' + prefix + '/' + test + '::' + '\(' + '[\s\w\d,=:|]*' + cvtype + '[\s\w\d,=:|]*' + param1 + '[\s\w\d,=:|]*' + '\)' + '[\s]*')
+    return re.compile(spaces + 'perf::' + prefix + '/' + test + '::' + '\(' + symbols + cvtype + symbols + param1 + symbols + '\)' + spaces)
+
+def pattern4(prefix, test, cvtype, param1, param2):
+    return re.compile(spaces + 'perf::' + prefix + '/' + test + '::' + '\(' + symbols + cvtype + symbols + param1 + symbols + param2 + symbols + '\)' + spaces)
 
 npp_patterns = [
     ##############################################################
@@ -144,45 +150,45 @@ npp_patterns = [
     # ImgProc/Resize (8UC4, INTER_CUBIC)
     pattern3('ImgProc', 'Resize', '8UC4', 'INTER_CUBIC'),
     
-    # ImgProc/WarpAffine (8UC1 | 8UC3 | 8UC4 | 32FC1 | 32FC3 | 32FC4, INTER_NEAREST | INTER_LINEAR | INTER_CUBIC)
-    pattern3('ImgProc', 'WarpAffine', '8UC1', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpAffine', '8UC1', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpAffine', '8UC1', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpAffine', '8UC3', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpAffine', '8UC3', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpAffine', '8UC3', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpAffine', '8UC4', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpAffine', '8UC4', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpAffine', '8UC4', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpAffine', '32FC1', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpAffine', '32FC1', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpAffine', '32FC1', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpAffine', '32FC3', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpAffine', '32FC3', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpAffine', '32FC3', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpAffine', '32FC4', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpAffine', '32FC4', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpAffine', '32FC4', 'INTER_CUBIC'),
+    # ImgProc/WarpAffine (8UC1 | 8UC3 | 8UC4 | 32FC1 | 32FC3 | 32FC4, INTER_NEAREST | INTER_LINEAR | INTER_CUBIC, BORDER_CONSTANT)
+    pattern4('ImgProc', 'WarpAffine', '8UC1', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC1', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC1', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC3', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC3', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC3', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC4', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC4', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '8UC4', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC1', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC1', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC1', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC3', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC3', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC3', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC4', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC4', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpAffine', '32FC4', 'INTER_CUBIC', 'BORDER_CONSTANT'),
     
-    # ImgProc/WarpPerspective (8UC1 | 8UC3 | 8UC4 | 32FC1 | 32FC3 | 32FC4, INTER_NEAREST | INTER_LINEAR | INTER_CUBIC)
-    pattern3('ImgProc', 'WarpPerspective', '8UC1', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC1', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC1', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC3', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC3', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC3', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC4', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC4', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpPerspective', '8UC4', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC1', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC1', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC1', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC3', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC3', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC3', 'INTER_CUBIC'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC4', 'INTER_NEAREST'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC4', 'INTER_LINEAR'),
-    pattern3('ImgProc', 'WarpPerspective', '32FC4', 'INTER_CUBIC'),
+    # ImgProc/WarpPerspective (8UC1 | 8UC3 | 8UC4 | 32FC1 | 32FC3 | 32FC4, INTER_NEAREST | INTER_LINEAR | INTER_CUBIC, BORDER_CONSTANT)
+    pattern4('ImgProc', 'WarpPerspective', '8UC1', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC1', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC1', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC3', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC3', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC3', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC4', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC4', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '8UC4', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC1', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC1', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC1', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC3', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC3', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC3', 'INTER_CUBIC', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC4', 'INTER_NEAREST', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC4', 'INTER_LINEAR', 'BORDER_CONSTANT'),
+    pattern4('ImgProc', 'WarpPerspective', '32FC4', 'INTER_CUBIC', 'BORDER_CONSTANT'),
     
     # ImgProc/CopyMakeBorder (8UC1 | 8UC4 | 32SC1 | 32FC1, BORDER_CONSTANT)
     pattern3('ImgProc', 'CopyMakeBorder', '8UC1', 'BORDER_CONSTANT'),
