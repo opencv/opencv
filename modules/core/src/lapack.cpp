@@ -947,6 +947,9 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     bool result = false;
     Mat src = _src.getMat();
     int type = src.type();
+
+    CV_Assert(type == CV_32F || type == CV_64F);
+
     size_t esz = CV_ELEM_SIZE(type);
     int m = src.rows, n = src.cols;
     
@@ -969,7 +972,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
              ((double*)w.data)[n-1]/((double*)w.data)[0] : 0);
     }
     
-    CV_Assert( m == n && (type == CV_32F || type == CV_64F));
+    CV_Assert( m == n );
     
     if( method == DECOMP_EIG )
     {

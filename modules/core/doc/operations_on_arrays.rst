@@ -1434,7 +1434,7 @@ Finds the inverse or pseudo-inverse of a matrix.
 The function ``invert`` inverts the matrix ``src`` and stores the result in ``dst`` .
 When the matrix ``src`` is singular or non-square, the function computes the pseudo-inverse matrix (the ``dst`` matrix) so that ``norm(src*dst - I)`` is minimal, where I is an identity matrix.
 
-In case of the ``DECOMP_LU`` method, the function returns the ``src`` determinant ( ``src`` must be square). If it is 0, the matrix is not inverted and ``dst`` is filled with zeros.
+In case of the ``DECOMP_LU`` method, the function returns non-zero value if the inverse has been successfully computed and 0 if ``src`` is singular.
 
 In case of the ``DECOMP_SVD`` method, the function returns the inverse condition number of ``src`` (the ratio of the smallest singular value to the largest singular value) and 0 if ``src`` is singular. The SVD method calculates a pseudo-inverse matrix if ``src`` is singular.
 

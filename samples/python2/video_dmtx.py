@@ -1,4 +1,4 @@
-help='''
+'''
 Data matrix detector sample.
 Usage:
    video_dmtx {<video device number>|<video file name>}
@@ -52,7 +52,7 @@ def data_matrix_demo(cap):
 
 
 if __name__ == '__main__':
-    print help
+    print __doc__
 
     if len(sys.argv) == 1:
         cap = cv2.VideoCapture(0)

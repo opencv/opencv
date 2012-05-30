@@ -970,6 +970,8 @@ namespace cv
     };
     
     CV_EXPORTS void applyColorMap(InputArray src, OutputArray dst, int colormap);
+    
+    CV_EXPORTS bool initModule_contrib();
 }
 
 

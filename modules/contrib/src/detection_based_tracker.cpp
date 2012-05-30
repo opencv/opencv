@@ -241,6 +241,11 @@ void DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
             CV_Assert(stateThread==STATE_THREAD_WORKING_SLEEPING);
 
             pthread_mutex_lock(&mutex);
+            if (!isWorking()) {//it is a rare case, but may cause a crash
+                LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- go out from the workcycle from inner part of lock just before waiting");
+                pthread_mutex_unlock(&mutex);
+                break;
+            }
             CV_Assert(stateThread==STATE_THREAD_WORKING_SLEEPING);
             pthread_cond_wait(&objectDetectorRun, &mutex);
             if (isWorking()) {

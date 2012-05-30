@@ -57,6 +57,18 @@ private:
     PyThreadState* _state;
 };
 
+class PyEnsureGIL
+{
+public:
+    PyEnsureGIL() : _state(PyGILState_Ensure()) {}
+    ~PyEnsureGIL() 
+    {
+        PyGILState_Release(_state);
+    }
+private:
+    PyGILState_STATE _state;
+};
+
 #define ERRWRAP2(expr) \
 try \
 { \
@@ -139,6 +151,8 @@ public:
     void allocate(int dims, const int* sizes, int type, int*& refcount,
                   uchar*& datastart, uchar*& data, size_t* step)
     {
+        PyEnsureGIL gil;
+
         int depth = CV_MAT_DEPTH(type);
         int cn = CV_MAT_CN(type);
         const int f = (int)(sizeof(size_t)/8);
@@ -169,6 +183,7 @@ public:
     
     void deallocate(int* refcount, uchar* datastart, uchar* data)
     {
+        PyEnsureGIL gil;
         if( !refcount )
             return;
         PyObject* o = pyObjectFromRefcount(refcount);

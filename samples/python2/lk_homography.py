@@ -25,8 +25,7 @@ from common import draw_str
 
 lk_params = dict( winSize  = (19, 19), 
                   maxLevel = 2, 
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
-                  derivLambda = 0.0 )    
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))    
 
 feature_params = dict( maxCorners = 1000, 
                        qualityLevel = 0.01,

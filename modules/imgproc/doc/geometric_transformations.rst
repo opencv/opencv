@@ -665,7 +665,7 @@ Computes the ideal point coordinates from the observed point coordinates.
 
     :param src: Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
 
-    :param dst: Output ideal point coordinates after undistortion and reverse perspective transformation.
+    :param dst: Output ideal point coordinates after undistortion and reverse perspective transformation. If matrix ``P`` is identity  or omitted, ``dst`` will contain normalized point coordinates.
 
     :param cameraMatrix: Camera matrix  :math:`\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` .
     
@@ -688,6 +688,7 @@ The function is similar to
     (x',y') = undistort(x",y",dist_coeffs)
     [X,Y,W]T = R*[x' y' 1]T
     x = X/W, y = Y/W
+    // only performed if P=[fx' 0 cx' [tx]; 0 fy' cy' [ty]; 0 0 1 [tz]] is specified
     u' = x*fx' + cx'
     v' = y*fy' + cy',
 

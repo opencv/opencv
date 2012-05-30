@@ -5,20 +5,31 @@ endif()
 
 project(tbb)
 
+# 4.0 update 4 - works fine
+set(tbb_ver "tbb40_20120408oss")
+set(tbb_url "http://threadingbuildingblocks.org/uploads/77/185/4.0%20update%204/tbb40_20120408oss_src.tgz")
+set(tbb_md5 "734b356da7fe0ed308741f3e6018251e")
+set(tbb_version_file "version_string.ver")
+
 # 4.0 update 3 - build broken
 #set(tbb_ver "tbb40_20120201oss")
 #set(tbb_url "http://threadingbuildingblocks.org/uploads/77/182/4.0%20update%203/tbb40_20120201oss_src.tgz")
 #set(tbb_md5 "4669e7d4adee018de7a7b8b972987218")
+#set(tbb_version_file "version_string.tmp")
 
 # 4.0 update 2 - works fine
-set(tbb_ver "tbb40_20111130oss")
-set(tbb_url "http://threadingbuildingblocks.org/uploads/77/180/4.0%20update%202/tbb40_20111130oss_src.tgz")
-set(tbb_md5 "1e6926b21e865e79772119cd44fc3ad8")
+#set(tbb_ver "tbb40_20111130oss")
+#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/180/4.0%20update%202/tbb40_20111130oss_src.tgz")
+#set(tbb_md5 "1e6926b21e865e79772119cd44fc3ad8")
+#set(tbb_version_file "version_string.tmp")
+#set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
 
 # 4.0 update 1 - works fine
 #set(tbb_ver "tbb40_20111003oss")
 #set(tbb_url "http://threadingbuildingblocks.org/uploads/77/177/4.0%20update%201/tbb40_20111003oss_src.tgz")
 #set(tbb_md5 "7b5d94eb35a563b29ef402e0fd8f15c9")
+#set(tbb_version_file "version_string.tmp")
+#set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
 
 set(tbb_tarball "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_ver}_src.tgz")
 set(tbb_src_dir "${CMAKE_CURRENT_BINARY_DIR}/${tbb_ver}")
@@ -92,16 +103,20 @@ list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
 add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
                 -D__TBB_BUILD=1                        #required
-                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android
-                -D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1 #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
+                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android ?
                 -DUSE_PTHREAD                          #required
                 -DTBB_USE_GCC_BUILTINS=1               #required
-                -DTBB_USE_DEBUG=0                      #just ot be sure
+                -DTBB_USE_DEBUG=0                      #just to be sure
                 -DTBB_NO_LEGACY=1                      #don't need backward compatibility
                 -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
                )
 
-add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/version_string.tmp")
+if(tbb_need_GENERIC_DWORD_LOAD_STORE)
+  #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
+  add_definitions(-D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1)
+endif()
+
+add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 target_link_libraries(tbb c m dl)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")

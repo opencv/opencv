@@ -15,9 +15,9 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 .. ocv:cfunction:: void cvCalcOpticalFlowPyrLK( const CvArr* prev, const CvArr* curr, CvArr* prevPyr, CvArr* currPyr, const CvPoint2D32f* prevFeatures, CvPoint2D32f* currFeatures, int count, CvSize winSize, int level, char* status, float* trackError, CvTermCriteria criteria, int flags )
 .. ocv:pyoldfunction:: cv.CalcOpticalFlowPyrLK( prev, curr, prevPyr, currPyr, prevFeatures, winSize, level, criteria, flags, guesses=None) -> (currFeatures, status, trackError)
 
-    :param prevImg: First 8-bit single-channel or 3-channel input image.
+    :param prevImg: First 8-bit input image or pyramid constructed by :ocv:func:`buildOpticalFlowPyramid`.
 
-    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
+    :param nextImg: Second input image or pyramid of the same size and the same type as  ``prevImg``.
 
     :param prevPts: Vector of 2D points for which the flow needs to be found. The point coordinates must be single-precision floating-point numbers.
 
@@ -29,27 +29,51 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
     :param winSize: Size of the search window at each pyramid level.
 
-    :param maxLevel: 0-based maximal pyramid level number. If set to 0, pyramids are not used (single level). If set to 1, two levels are used, and so on.
+    :param maxLevel: 0-based maximal pyramid level number. If set to 0, pyramids are not used (single level). If set to 1, two levels are used, and so on. If pyramids are passed to input then algorithm will use as many levels as pyramids have but no more than ``maxLevel``.
 
     :param criteria: Parameter specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations  ``criteria.maxCount``  or when the search window moves by less than  ``criteria.epsilon`` .
     
     :param flags: Operation flags:
-
-            * **OPTFLOW_USE_INITIAL_FLOW** Use initial estimations stored in  ``nextPts`` . If the flag is not set, then ``prevPts`` is copied to ``nextPts`` and is considered as the initial estimate.
-
-            * **OPTFLOW_LK_GET_MIN_EIGENVALS** Use minimum eigen values as a error measure (see ``minEigThreshold`` description). If the flag is not set, then L1 distance between patches around the original and a moved point divided by number of pixels in a window is used as a error measure.
+        
+        * **OPTFLOW_USE_INITIAL_FLOW** Use initial estimations stored in  ``nextPts`` . If the flag is not set, then ``prevPts`` is copied to ``nextPts`` and is considered as the initial estimate.
+        * **OPTFLOW_LK_GET_MIN_EIGENVALS** Use minimum eigen values as a error measure (see ``minEigThreshold`` description). If the flag is not set, then L1 distance between patches around the original and a moved point divided by number of pixels in a window is used as a error measure.
 
     :param minEigThreshold: The algorithm computes a minimum eigen value of a 2x2 normal matrix of optical flow equations (this matrix is called a spatial gradient matrix in [Bouguet00]_) divided by number of pixels in a window. If this value is less then ``minEigThreshold`` then a corresponding feature is filtered out and its flow is not computed. So it allows to remove bad points earlier and speed up the computation.
             
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See [Bouguet00]_. The function is parallelized with the TBB library.
 
+buildOpticalFlowPyramid
+-----------------------
+Constructs the image pyramid which can be passed to :ocv:func:`calcOpticalFlowPyrLK`.
+
+.. ocv:function:: int buildOpticalFlowPyramid(InputArray img, OutputArrayOfArrays pyramid, Size winSize, int maxLevel, bool withDerivatives = true, int pyrBorder = BORDER_REFLECT_101, int derivBorder = BORDER_CONSTANT, bool tryReuseInputImage = true)
+
+.. ocv:pyfunction:: cv2.buildOpticalFlowPyramid(img, winSize, maxLevel[, pyramid[, withDerivatives[, pyrBorder[, derivBorder[, tryReuseInputImage]]]]]) -> retval, pyramid
+
+    :param img: 8-bit input image.
+
+    :param pyramid: output pyramid.
+
+    :param winSize: window size of optical flow algorithm. Must be not less than ``winSize`` argument of :ocv:func:`calcOpticalFlowPyrLK`. It is needed to calculate required padding for pyramid levels.
+
+    :param maxLevel: 0-based maximal pyramid level number.
+
+    :param withDerivatives: set to precompute gradients for the every pyramid level. If pyramid is constructed without the gradients then :ocv:func:`calcOpticalFlowPyrLK` will calculate them internally.
+
+    :param pyrBorder: the border mode for pyramid layers.
+
+    :param derivBorder: the border mode for gradients.
+
+    :param tryReuseInputImage: put ROI of input image into the pyramid if possible. You can pass ``false`` to force data copying.
+
+    :return: number of levels in constructed pyramid. Can be less than ``maxLevel``.
 
 
 calcOpticalFlowFarneback
 ----------------------------
 Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
-.. ocv:function:: void calcOpticalFlowFarneback( InputArray prevImg, InputArray nextImg,                               InputOutputArray flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
+.. ocv:function:: void calcOpticalFlowFarneback( InputArray prevImg, InputArray nextImg, InputOutputArray flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
 
 .. ocv:cfunction:: void cvCalcOpticalFlowFarneback( const CvArr* prevImg, const CvArr* nextImg, CvArr* flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
 

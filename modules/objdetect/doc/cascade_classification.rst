@@ -259,12 +259,12 @@ groupRectangles
 Groups the object candidate rectangles.
 
 .. ocv:function:: void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2)
+.. ocv:function:: void groupRectangles(vector<Rect>& rectList, vector<int>& weights, int groupThreshold, double eps=0.2)
 
-.. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold[, eps]) -> None
-.. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold[, eps]) -> weights
-.. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold, eps, weights, levelWeights) -> None
+.. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold[, eps]) -> rectList, weights
 
-    :param rectList: Input/output vector of rectangles. Output vector includes retained and grouped rectangles.
+
+    :param rectList: Input/output vector of rectangles. Output vector includes retained and grouped rectangles. (The Python list is not modified in place.)
 
     :param groupThreshold: Minimum possible number of rectangles minus 1. The threshold is used in a group of rectangles to retain it.
 

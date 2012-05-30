@@ -170,7 +170,7 @@ elseif(MSVC_IDE)
     set(ENABLE_SOLUTION_FOLDERS0 ON)
 else()
     set(ENABLE_SOLUTION_FOLDERS0 OFF)
-endif()    
+endif()
 
 # OpenCV build options
 # ===================================================
@@ -311,7 +311,7 @@ if(UNIX)
   include(cmake/OpenCVFindPkgConfig.cmake OPTIONAL)
   include(CheckFunctionExists)
   include(CheckIncludeFile)
-  
+
   if(NOT APPLE)
     CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
     CHECK_FUNCTION_EXISTS(alloca HAVE_ALLOCA)
@@ -407,11 +407,32 @@ endif(WITH_UNICAP)
 ocv_clear_vars(HAVE_PVAPI)
 if(WITH_PVAPI)
   find_path(PVAPI_INCLUDE_PATH "PvApi.h"
-            PATHS "/usr/local/include" "/usr/include"
+            PATHS /usr/local /opt /usr ENV ProgramFiles ENV ProgramW6432
+            PATH_SUFFIXES include "Allied Vision Technologies/GigESDK/inc-pc" "AVT GigE SDK/inc-pc" "GigESDK/inc-pc"
             DOC "The path to PvAPI header")
+
   if(PVAPI_INCLUDE_PATH)
-    set(HAVE_PVAPI TRUE)
-  endif()
+    if(X86 AND NOT WIN32)
+      set(PVAPI_SDK_SUBDIR x86)
+    elseif(X86_64)
+      set(PVAPI_SDK_SUBDIR x64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES arm)
+      set(PVAPI_SDK_SUBDIR arm)
+    endif()
+
+    get_filename_component(_PVAPI_LIBRARY "${PVAPI_INCLUDE_PATH}/../lib-pc" ABSOLUTE)
+    if(PVAPI_SDK_SUBDIR)
+      set(_PVAPI_LIBRARY "${_PVAPI_LIBRARY}/${PVAPI_SDK_SUBDIR}")
+    endif()
+    if(NOT WIN32 AND CMAKE_COMPILER_IS_GNUCXX)
+      set(_PVAPI_LIBRARY "${_PVAPI_LIBRARY}/${CMAKE_OPENCV_GCC_VERSION_MAJOR}.${CMAKE_OPENCV_GCC_VERSION_MINOR}")
+    endif()
+
+    set(PVAPI_LIBRARY "${_PVAPI_LIBRARY}/${CMAKE_STATIC_LIBRARY_PREFIX}PvAPI${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE PATH "The PvAPI library")
+    if(EXISTS "${PVAPI_LIBRARY}")
+      set(HAVE_PVAPI TRUE)
+    endif()
+  endif(PVAPI_INCLUDE_PATH)
 endif(WITH_PVAPI)
 
 # --- Dc1394 ---
@@ -462,7 +483,7 @@ if(WITH_FFMPEG)
     CHECK_MODULE(libavformat HAVE_FFMPEG_FORMAT)
     CHECK_MODULE(libavutil HAVE_FFMPEG_UTIL)
     CHECK_MODULE(libswscale HAVE_FFMPEG_SWSCALE)
-    
+
     CHECK_INCLUDE_FILE(libavformat/avformat.h HAVE_GENTOO_FFMPEG)
     CHECK_INCLUDE_FILE(ffmpeg/avformat.h HAVE_FFMPEG_FFMPEG)
     if(NOT HAVE_GENTOO_FFMPEG AND NOT HAVE_FFMPEG_FFMPEG)
@@ -589,7 +610,7 @@ include(cmake/OpenCVDetectPython.cmake REQUIRED)
 if(ANDROID)
   include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
   include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
-  
+
   if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
     message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
   endif()

@@ -24,8 +24,7 @@ from time import clock
 
 lk_params = dict( winSize  = (15, 15), 
                   maxLevel = 2, 
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
-                  derivLambda = 0.0 )    
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))    
 
 feature_params = dict( maxCorners = 500, 
                        qualityLevel = 0.3,

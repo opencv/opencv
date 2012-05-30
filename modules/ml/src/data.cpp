@@ -177,12 +177,13 @@ int CvMLData::read_csv(const char* filename)
             ptr++;
     }
 
+	cols_count++;
+
     if ( cols_count == 0)
     {
         fclose(file);
         return -1;
     }
-    cols_count++;
 
     // create temporary memory storage to store the whole database
     el_ptr = new float[cols_count];

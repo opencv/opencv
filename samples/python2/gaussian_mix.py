@@ -35,9 +35,10 @@ if __name__ == '__main__':
         points, ref_distrs = make_gaussians(cluster_n, img_size)
 
         print 'EM (opencv) ...'
-        em = cv2.EM(points, params = dict( nclusters = cluster_n, cov_mat_type = cv2.EM_COV_MAT_GENERIC) )
-        means = em.getMeans()
-        covs = em.getCovs()
+        em = cv2.EM(cluster_n, cv2.EM_COV_MAT_GENERIC)
+        em.train(points)
+        means = em.getMat('means')
+        covs = em.getMatVector('covs')
         found_distrs = zip(means, covs)
         print 'ready!\n'
 

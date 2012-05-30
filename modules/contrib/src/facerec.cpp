@@ -713,4 +713,9 @@ Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius, int neighbors,
     return new LBPH(radius, neighbors, grid_x, grid_y);
 }
 
+bool initModule_contrib()
+{
+    return true;
+}
+
 }

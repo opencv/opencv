@@ -511,7 +511,7 @@ Unnormalized box filter is useful for computing various integral characteristics
 
 .. seealso::
 
-    :ocv:func:`boxFilter`,
+    :ocv:func:`blur`,
     :ocv:func:`bilateralFilter`,
     :ocv:func:`GaussianBlur`,
     :ocv:func:`medianBlur`,

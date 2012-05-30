@@ -96,7 +96,7 @@ elseif(APPLE)
     list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
   endif()
 endif()
-    
+
 if(WIN32)
   list(APPEND highgui_srcs src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
 endif(WIN32)
@@ -157,19 +157,8 @@ endif(HAVE_FFMPEG)
 if(HAVE_PVAPI)
   add_definitions(-DHAVE_PVAPI)
   ocv_include_directories(${PVAPI_INCLUDE_PATH})
-  if(X86)
-    set(PVAPI_SDK_SUBDIR x86)
-  elseif(X86_64)
-    set(PVAPI_SDK_SUBDIR x64)
-  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES arm)
-    set(PVAPI_SDK_SUBDIR arm)
-  endif()
-  if(PVAPI_SDK_SUBDIR AND CMAKE_COMPILER_IS_GNUCXX)
-    get_filename_component(PVAPI_EXPECTED_LIB_PATH "${PVAPI_INCLUDE_PATH}/../lib-pc/${PVAPI_SDK_SUBDIR}/${CMAKE_OPENCV_GCC_VERSION_MAJOR}.${CMAKE_OPENCV_GCC_VERSION_MINOR}" ABSOLUTE)
-    link_directories(${PVAPI_EXPECTED_LIB_PATH})
-  endif()
   set(highgui_srcs src/cap_pvapi.cpp ${highgui_srcs})
-  set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} PvAPI)
+  list(APPEND HIGHGUI_LIBRARIES ${PVAPI_LIBRARY})
 endif()
 
 if(WITH_IMAGEIO)
@@ -241,11 +230,11 @@ if(WIN32 AND WITH_FFMPEG)
   if(MSVC64 OR MINGW64)
     set(FFMPEG_SUFFIX _64)
   endif()
-  
+
   set(ffmpeg_bare_name "opencv_ffmpeg${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_bare_name_ver "opencv_ffmpeg${OPENCV_DLLVERSION}${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
-  
+
   #if(MSVC AND CMAKE_VERSION VERSION_GREATER "2.8.2")
   #  add_custom_command(TARGET ${the_module} POST_BUILD
   #                     COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name_ver}"
@@ -265,7 +254,7 @@ if(WIN32 AND WITH_FFMPEG)
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}"
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   endif()
-  
+
   install(FILES "${ffmpeg_path}" DESTINATION bin COMPONENT main RENAME "${ffmpeg_bare_name_ver}")
 endif()
 
