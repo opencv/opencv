@@ -3976,7 +3976,9 @@ public:
     //! returns true if the object is associated with currently opened file.
     CV_WRAP virtual bool isOpened() const;
     //! closes the file and releases all the memory buffers
-    CV_WRAP virtual string release();
+    CV_WRAP virtual void release();
+    //! closes the file, releases all the memory buffers and returns the text string    
+    CV_WRAP_AS(releaseAndGetString) virtual void release(CV_OUT string& buf);
 
     //! returns the first element of the top-level mapping
     CV_WRAP FileNode getFirstTopLevelNode() const;

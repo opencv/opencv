@@ -5154,19 +5154,25 @@ bool FileStorage::isOpened() const
     return !fs.empty() && fs.obj->is_opened;
 }
 
-string FileStorage::release()
+void FileStorage::release()
 {
-    string buf;
-    
-    if( fs.obj && fs.obj->outbuf )
-        icvClose(fs.obj, &buf); 
-        
     fs.release();
     structs.clear();
     state = UNDEFINED;
-    return buf;
 }
 
+void FileStorage::release(string& buf)
+{
+    if( fs.obj && fs.obj->outbuf )
+        icvClose(fs.obj, &buf);
+    else
+        buf.clear();
+    
+    fs.release();
+    structs.clear();
+    state = UNDEFINED;
+}    
+    
 FileNode FileStorage::root(int streamidx) const
 {
     return isOpened() ? FileNode(fs, cvGetRootFileNode(fs, streamidx)) : FileNode();
