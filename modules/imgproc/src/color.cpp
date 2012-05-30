@@ -3353,6 +3353,10 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if( code == CV_BGR2HSV || code == CV_RGB2HSV ||
                 code == CV_BGR2HSV_FULL || code == CV_RGB2HSV_FULL )
             {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+				if(tegra::cvtRGB2HSV(src, dst, bidx, hrange))
+                    break;
+#endif
                 if( depth == CV_8U )
                     CvtColorLoop(src, dst, RGB2HSV_b(scn, bidx, hrange));
                 else
