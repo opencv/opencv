@@ -850,7 +850,7 @@ TEST_P(Divide_Array, WithScale)
         cv::Mat dst_gold;
         cv::divide(mat1, mat2, dst_gold, scale, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-2 : 1.0);
     }
 }
 
