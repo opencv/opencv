@@ -51,208 +51,93 @@ namespace cv
    All the AlgorithmInfo-related stuff should be in the same file as initModule_features2d().
    Otherwise, linker may throw away some seemingly unused stuff.
 */
-    
-static Algorithm* createBRIEF() { return new BriefDescriptorExtractor; }
-static AlgorithmInfo& brief_info()
-{
-    static AlgorithmInfo brief_info_var("Feature2D.BRIEF", createBRIEF);
-    return brief_info_var;
-}
 
-static AlgorithmInfo& brief_info_auto = brief_info();
-
-AlgorithmInfo* BriefDescriptorExtractor::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        BriefDescriptorExtractor brief;
-        brief_info().addParam(brief, "bytes", brief.bytes_);
-        
-        initialized = true;
-    }
-    return &brief_info();
-}
-    
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-static Algorithm* createFAST() { return new FastFeatureDetector; }
-static AlgorithmInfo& fast_info()
-{
-    static AlgorithmInfo fast_info_var("Feature2D.FAST", createFAST);
-    return fast_info_var;
-}
-
-static AlgorithmInfo& fast_info_auto = fast_info();
-
-AlgorithmInfo* FastFeatureDetector::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        FastFeatureDetector obj;
-        fast_info().addParam(obj, "threshold", obj.threshold);
-        fast_info().addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
-        
-        initialized = true;
-    }
-    return &fast_info();
-}
-    
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-static Algorithm* createStarDetector() { return new StarDetector; }
-static AlgorithmInfo& star_info()
-{
-    static AlgorithmInfo star_info_var("Feature2D.STAR", createStarDetector);
-    return star_info_var;
-}
-
-static AlgorithmInfo& star_info_auto = star_info();
-
-AlgorithmInfo* StarDetector::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        StarDetector obj;
-        star_info().addParam(obj, "maxSize", obj.maxSize);
-        star_info().addParam(obj, "responseThreshold", obj.responseThreshold);
-        star_info().addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
-        star_info().addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
-        star_info().addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize);
-        
-        initialized = true;
-    }
-    return &star_info();
-}    
-    
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-static Algorithm* createMSER() { return new MSER; }
-static AlgorithmInfo& mser_info()
-{
-    static AlgorithmInfo mser_info_var("Feature2D.MSER", createMSER);
-    return mser_info_var;
-}
-
-static AlgorithmInfo& mser_info_auto = mser_info();
-
-AlgorithmInfo* MSER::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        MSER obj;
-        mser_info().addParam(obj, "delta", obj.delta);
-        mser_info().addParam(obj, "minArea", obj.minArea);
-        mser_info().addParam(obj, "maxArea", obj.maxArea);
-        mser_info().addParam(obj, "maxVariation", obj.maxVariation);
-        mser_info().addParam(obj, "minDiversity", obj.minDiversity);
-        mser_info().addParam(obj, "maxEvolution", obj.maxEvolution);
-        mser_info().addParam(obj, "areaThreshold", obj.areaThreshold);
-        mser_info().addParam(obj, "minMargin", obj.minMargin);
-        mser_info().addParam(obj, "edgeBlurSize", obj.edgeBlurSize);
-        
-        initialized = true;
-    }
-    return &mser_info();
-}
-    
+CV_INIT_ALGORITHM(BriefDescriptorExtractor, "Feature2D.BRIEF",
+                  obj.info()->addParam(obj, "bytes", obj.bytes_));
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static Algorithm* createORB() { return new ORB; }
-static AlgorithmInfo& orb_info()
-{
-    static AlgorithmInfo orb_info_var("Feature2D.ORB", createORB);
-    return orb_info_var;
-}
+CV_INIT_ALGORITHM(FastFeatureDetector, "Feature2D.FAST",
+                  obj.info()->addParam(obj, "threshold", obj.threshold);
+                  obj.info()->addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression));
 
-static AlgorithmInfo& orb_info_auto = orb_info();
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-AlgorithmInfo* ORB::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        ORB obj;
-        orb_info().addParam(obj, "nFeatures", obj.nfeatures);
-        orb_info().addParam(obj, "scaleFactor", obj.scaleFactor);
-        orb_info().addParam(obj, "nLevels", obj.nlevels);
-        orb_info().addParam(obj, "firstLevel", obj.firstLevel);
-        orb_info().addParam(obj, "edgeThreshold", obj.edgeThreshold);
-        orb_info().addParam(obj, "patchSize", obj.patchSize);
-        orb_info().addParam(obj, "WTA_K", obj.WTA_K);
-        orb_info().addParam(obj, "scoreType", obj.scoreType);
-        
-        initialized = true;
-    }
-    return &orb_info();
-}
-
-static Algorithm* createGFTT() { return new GFTTDetector; }
-static Algorithm* createHarris()
-{
-    GFTTDetector* d = new GFTTDetector;
-    d->set("useHarris", true);
-    return d;
-}
-
-static AlgorithmInfo gftt_info("Feature2D.GFTT", createGFTT);
-static AlgorithmInfo harris_info("Feature2D.HARRIS", createHarris);
+CV_INIT_ALGORITHM(StarDetector, "Feature2D.STAR",
+                  obj.info()->addParam(obj, "maxSize", obj.maxSize);
+                  obj.info()->addParam(obj, "responseThreshold", obj.responseThreshold);
+                  obj.info()->addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
+                  obj.info()->addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
+                  obj.info()->addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize));
     
-AlgorithmInfo* GFTTDetector::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        GFTTDetector obj;
-        gftt_info.addParam(obj, "nfeatures", obj.nfeatures);
-        gftt_info.addParam(obj, "qualityLevel", obj.qualityLevel);
-        gftt_info.addParam(obj, "minDistance", obj.minDistance);
-        gftt_info.addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
-        gftt_info.addParam(obj, "k", obj.k);
-        
-        harris_info.addParam(obj, "nfeatures", obj.nfeatures);
-        harris_info.addParam(obj, "qualityLevel", obj.qualityLevel);
-        harris_info.addParam(obj, "minDistance", obj.minDistance);
-        harris_info.addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
-        harris_info.addParam(obj, "k", obj.k);
-        
-        initialized = true;
-    }
-    return &gftt_info;
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static Algorithm* createDense() { return new DenseFeatureDetector; }
-static AlgorithmInfo dense_info("Feature2D.Dense", createDense);
+CV_INIT_ALGORITHM(MSER, "Feature2D.MSER",
+                  obj.info()->addParam(obj, "delta", obj.delta);
+                  obj.info()->addParam(obj, "minArea", obj.minArea);
+                  obj.info()->addParam(obj, "maxArea", obj.maxArea);
+                  obj.info()->addParam(obj, "maxVariation", obj.maxVariation);
+                  obj.info()->addParam(obj, "minDiversity", obj.minDiversity);
+                  obj.info()->addParam(obj, "maxEvolution", obj.maxEvolution);
+                  obj.info()->addParam(obj, "areaThreshold", obj.areaThreshold);
+                  obj.info()->addParam(obj, "minMargin", obj.minMargin);
+                  obj.info()->addParam(obj, "edgeBlurSize", obj.edgeBlurSize));    
     
-AlgorithmInfo* DenseFeatureDetector::info() const
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CV_INIT_ALGORITHM(ORB, "Feature2D.ORB",
+                  obj.info()->addParam(obj, "nFeatures", obj.nfeatures);
+                  obj.info()->addParam(obj, "scaleFactor", obj.scaleFactor);
+                  obj.info()->addParam(obj, "nLevels", obj.nlevels);
+                  obj.info()->addParam(obj, "firstLevel", obj.firstLevel);
+                  obj.info()->addParam(obj, "edgeThreshold", obj.edgeThreshold);
+                  obj.info()->addParam(obj, "patchSize", obj.patchSize);
+                  obj.info()->addParam(obj, "WTA_K", obj.WTA_K);
+                  obj.info()->addParam(obj, "scoreType", obj.scoreType));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
+                  obj.info()->addParam(obj, "nfeatures", obj.nfeatures);
+                  obj.info()->addParam(obj, "qualityLevel", obj.qualityLevel);
+                  obj.info()->addParam(obj, "minDistance", obj.minDistance);
+                  obj.info()->addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
+                  obj.info()->addParam(obj, "k", obj.k));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+class CV_EXPORTS HarrisDetector : public GFTTDetector
 {
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        DenseFeatureDetector obj;
-        dense_info.addParam(obj, "initFeatureScale", obj.initFeatureScale);
-        dense_info.addParam(obj, "featureScaleLevels", obj.featureScaleLevels);
-        dense_info.addParam(obj, "featureScaleMul", obj.featureScaleMul);
-        dense_info.addParam(obj, "initXyStep", obj.initXyStep);
-        dense_info.addParam(obj, "initImgBound", obj.initImgBound);
-        dense_info.addParam(obj, "varyXyStepWithScale", obj.varyXyStepWithScale);
-        dense_info.addParam(obj, "varyImgBoundWithScale", obj.varyImgBoundWithScale);
-        
-        initialized = true;
-    }
-    return &dense_info;
-}    
+public:
+    HarrisDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
+                    int blockSize=3, bool useHarrisDetector=true, double k=0.04 )
+    : GFTTDetector( maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k ) {}
+    AlgorithmInfo* info() const;
+};    
+
+CV_INIT_ALGORITHM(HarrisDetector, "Feature2D.HARRIS",
+                  obj.info()->addParam(obj, "nfeatures", obj.nfeatures);
+                  obj.info()->addParam(obj, "qualityLevel", obj.qualityLevel);
+                  obj.info()->addParam(obj, "minDistance", obj.minDistance);
+                  obj.info()->addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
+                  obj.info()->addParam(obj, "k", obj.k));
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+
+CV_INIT_ALGORITHM(DenseFeatureDetector, "Feature2D.Dense",
+                  obj.info()->addParam(obj, "initFeatureScale", obj.initFeatureScale);
+                  obj.info()->addParam(obj, "featureScaleLevels", obj.featureScaleLevels);
+                  obj.info()->addParam(obj, "featureScaleMul", obj.featureScaleMul);
+                  obj.info()->addParam(obj, "initXyStep", obj.initXyStep);
+                  obj.info()->addParam(obj, "initImgBound", obj.initImgBound);
+                  obj.info()->addParam(obj, "varyXyStepWithScale", obj.varyXyStepWithScale);
+                  obj.info()->addParam(obj, "varyImgBoundWithScale", obj.varyImgBoundWithScale));
 
 bool initModule_features2d(void)
 {
-    Ptr<Algorithm> brief = createBRIEF(), orb = createORB(),
-        star = createStarDetector(), fastd = createFAST(), mser = createMSER(),
-        dense = createDense(), gftt = createGFTT(), harris = createHarris();
+    Ptr<Algorithm> brief = createBriefDescriptorExtractor(), orb = createORB(),
+        star = createStarDetector(), fastd = createFastFeatureDetector(), mser = createMSER(),
+        dense = createDenseFeatureDetector(), gftt = createGFTTDetector(), harris = createHarrisDetector();
         
     return brief->info() != 0 && orb->info() != 0 && star->info() != 0 &&
         fastd->info() != 0 && mser->info() != 0 && dense->info() != 0 &&

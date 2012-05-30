@@ -48,6 +48,10 @@
 #endif
 
 #define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
+#ifndef _MULTIMON_USE_SECURE_CRT
+#  define _MULTIMON_USE_SECURE_CRT 0 // some MinGW platforms have no strncpy_s
+#endif
+
 #if defined SM_CMONITORS && !defined MONITOR_DEFAULTTONEAREST
 #  define MONITOR_DEFAULTTONULL       0x00000000
 #  define MONITOR_DEFAULTTOPRIMARY    0x00000001
@@ -974,6 +978,11 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     DWORD defStyle = WS_VISIBLE | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
     int len;
     CvRect rect;
+#ifdef HAVE_OPENGL
+    bool useGl;
+    HDC hGLDC;
+    HGLRC hGLRC;
+#endif
 
     cvInitSystem(0,0);
 
@@ -1009,9 +1018,9 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     if (flags & CV_WINDOW_OPENGL)
         CV_ERROR( CV_OpenGlNotSupported, "Library was built without OpenGL support" );
 #else
-    bool useGl = false;
-    HDC hGLDC = 0;
-    HGLRC hGLRC = 0;
+    useGl = false;
+    hGLDC = 0;
+    hGLRC = 0;
 
     if (flags & CV_WINDOW_OPENGL)
         createGlContext(hWnd, hGLDC, hGLRC, useGl);

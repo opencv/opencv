@@ -224,7 +224,7 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 
     if(top == 0 && left == 0 && bottom == 0 && right == 0)
     {
-        if(src.data != dst.data)
+        if(src.data != dst.data || src.step != dst.step)
             src.copyTo(dst);
         return;
     }

@@ -60,6 +60,14 @@ project(OpenCV CXX C)
 include(cmake/OpenCVUtils.cmake REQUIRED)
 
 # ----------------------------------------------------------------------------
+# Break in case of popular CMake configuration mistakes
+# ----------------------------------------------------------------------------
+if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
+  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
+  Please check your CMake and compiler installation. If you are crosscompiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+endif()
+
+# ----------------------------------------------------------------------------
 # Detect compiler and target platform architecture
 # ----------------------------------------------------------------------------
 include(cmake/OpenCVDetectCXXCompiler.cmake REQUIRED)
@@ -109,6 +117,7 @@ OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON)
 OCV_OPTION(WITH_FFMPEG         "Include FFMPEG support"                      ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_GSTREAMER      "Include Gstreamer support"                   ON   IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_GTK            "Include GTK support"                         ON   IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_IMAGEIO        "ImageIO support for OS X"                    OFF  IF APPLE)
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   OFF  IF (MSVC OR X86 OR X86_64) )
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON   IF (NOT IOS) )
@@ -116,7 +125,7 @@ OCV_OPTION(WITH_OPENEXR        "Include ILM support via OpenEXR"             ON 
 OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID AND NOT IOS AND NOT APPLE) )
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON   IF (NOT IOS) )
-OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O insted of QTKit" OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS) )
@@ -302,182 +311,281 @@ if(UNIX)
   include(cmake/OpenCVFindPkgConfig.cmake OPTIONAL)
   include(CheckFunctionExists)
   include(CheckIncludeFile)
+  
+  if(NOT APPLE)
+    CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
+    CHECK_FUNCTION_EXISTS(alloca HAVE_ALLOCA)
+    CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
+    CHECK_INCLUDE_FILE(pthread.h HAVE_LIBPTHREAD)
+    if(ANDROID)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log)
+    elseif(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR ${CMAKE_SYSTEM_NAME} MATCHES "NetBSD")
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m pthread)
+    else()
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m pthread rt)
+    endif()
+  else()
+    add_definitions(-DHAVE_ALLOCA -DHAVE_ALLOCA_H -DHAVE_LIBPTHREAD -DHAVE_UNISTD_H)
+  endif()
 endif()
 
 include(cmake/OpenCVPCHSupport.cmake REQUIRED)
 include(cmake/OpenCVModule.cmake REQUIRED)
 
 # ----------------------------------------------------------------------------
-#  Detect 3rd-party tools and libraries
+#  Detect 3rd-party image IO libraries
 # ----------------------------------------------------------------------------
-
-# IO libraries
 include(cmake/OpenCVIOLibs.cmake REQUIRED)
 
-#Graphic libraries
-set(HAVE_OPENGL 0)
-if(UNIX)
-    if(NOT APPLE)
-      if(WITH_GTK)
-        CHECK_MODULE(gtk+-2.0 HAVE_GTK)
-        CHECK_MODULE(gthread-2.0 HAVE_GTHREAD)
-        if(WITH_OPENGL)
-            CHECK_MODULE(gtkglext-1.0 HAVE_GTKGLEXT)
-            if(HAVE_GTKGLEXT)
-                find_package(OpenGL QUIET)
-                if(OPENGL_FOUND)
-                    set(HAVE_OPENGL 1)
-                    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-                    ocv_include_directories(${OPENGL_INCLUDE_DIR})
-                endif()
-            endif()
-        endif()
+# ----------------------------------------------------------------------------
+#  Detect 3rd-party GUI libraries
+# ----------------------------------------------------------------------------
+# --- QT4 ---
+ocv_clear_vars(HAVE_QT)
+if(WITH_QT)
+  find_package(Qt4)
+  if(QT4_FOUND)
+    set(HAVE_QT TRUE)
+    add_definitions(-DHAVE_QT) #We need to define te macro this way, using cvconfig.h.cmake does not work
+  endif()
+endif()
+
+# --- GTK ---
+ocv_clear_vars(HAVE_GTK HAVE_GTHREAD HAVE_GTKGLEXT)
+if(WITH_GTK AND NOT HAVE_QT)
+  CHECK_MODULE(gtk+-2.0 HAVE_GTK)
+  CHECK_MODULE(gthread-2.0 HAVE_GTHREAD)
+  if(WITH_OPENGL)
+    CHECK_MODULE(gtkglext-1.0 HAVE_GTKGLEXT)
+  endif()
+endif()
+
+# --- OpenGl ---
+ocv_clear_vars(HAVE_OPENGL HAVE_QT_OPENGL)
+if(WITH_OPENGL)
+  if(WIN32 OR QT_QTOPENGL_FOUND OR HAVE_GTKGLEXT)
+    find_package (OpenGL QUIET)
+    if(OPENGL_FOUND)
+      set(HAVE_OPENGL TRUE)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
+      if(QT_QTOPENGL_FOUND)
+        set(HAVE_QT_OPENGL TRUE)
+        add_definitions(-DHAVE_QT_OPENGL)
       else()
-        set(HAVE_GTK FALSE)
-        set(HAVE_GTHREAD FALSE)
-      endif()
-      if(WITH_GSTREAMER)
-        CHECK_MODULE(gstreamer-base-0.10 HAVE_GSTREAMER)
-        CHECK_MODULE(gstreamer-app-0.10 HAVE_GSTREAMER)
-        CHECK_MODULE(gstreamer-video-0.10 HAVE_GSTREAMER)
-      else()
-        set(HAVE_GSTREAMER FALSE)
+        ocv_include_directories(${OPENGL_INCLUDE_DIR})
       endif()
     endif()
+  endif()
+endif(WITH_OPENGL)
 
-    if(WITH_UNICAP)
-      CHECK_MODULE(libunicap HAVE_UNICAP_)
-      CHECK_MODULE(libucil HAVE_UNICAP_UCIL)
-      if(HAVE_UNICAP_ AND HAVE_UNICAP_UCIL)
-        set(HAVE_UNICAP 1)
+# ----------------------------------------------------------------------------
+#  Detect 3rd-party video IO libraries
+# ----------------------------------------------------------------------------
+# --- GStreamer ---
+ocv_clear_vars(HAVE_GSTREAMER)
+if(WITH_GSTREAMER)
+  CHECK_MODULE(gstreamer-base-0.10 HAVE_GSTREAMER)
+  if(HAVE_GSTREAMER)
+    CHECK_MODULE(gstreamer-app-0.10 HAVE_GSTREAMER)
+  endif()
+  if(HAVE_GSTREAMER)
+    CHECK_MODULE(gstreamer-video-0.10 HAVE_GSTREAMER)
+  endif()
+endif(WITH_GSTREAMER)
+
+# --- unicap ---
+ocv_clear_vars(HAVE_UNICAP)
+if(WITH_UNICAP)
+  CHECK_MODULE(libunicap HAVE_UNICAP_)
+  CHECK_MODULE(libucil HAVE_UNICAP_UCIL)
+  if(HAVE_UNICAP_ AND HAVE_UNICAP_UCIL)
+    set(HAVE_UNICAP TRUE)
+  endif()
+endif(WITH_UNICAP)
+
+# --- PvApi ---
+ocv_clear_vars(HAVE_PVAPI)
+if(WITH_PVAPI)
+  find_path(PVAPI_INCLUDE_PATH "PvApi.h"
+            PATHS "/usr/local/include" "/usr/include"
+            DOC "The path to PvAPI header")
+  if(PVAPI_INCLUDE_PATH)
+    set(HAVE_PVAPI TRUE)
+  endif()
+endif(WITH_PVAPI)
+
+# --- Dc1394 ---
+ocv_clear_vars(HAVE_DC1394 HAVE_DC1394_2)
+if(WITH_1394)
+  CHECK_MODULE(libdc1394-2 HAVE_DC1394_2)
+  if(NOT HAVE_DC1394_2)
+    CHECK_MODULE(libdc1394 HAVE_DC1394)
+  endif()
+endif(WITH_1394)
+
+# --- xine ---
+ocv_clear_vars(HAVE_XINE)
+if(WITH_XINE)
+  CHECK_MODULE(libxine HAVE_XINE)
+endif(WITH_XINE)
+
+# --- V4L ---
+ocv_clear_vars(HAVE_LIBV4L HAVE_CAMV4L HAVE_CAMV4L2)
+if(WITH_V4L)
+  CHECK_MODULE(libv4l1 HAVE_LIBV4L)
+  CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
+  CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)
+endif(WITH_V4L)
+
+# --- OpenNI ---
+ocv_clear_vars(HAVE_OPENNI HAVE_OPENNI_PRIME_SENSOR_MODULE)
+if(WITH_OPENNI)
+  include(cmake/OpenCVFindOpenNI.cmake)
+endif(WITH_OPENNI)
+
+# --- XIMEA ---
+ocv_clear_vars(HAVE_XIMEA)
+if(WITH_XIMEA)
+  include(cmake/OpenCVFindXimea.cmake)
+  if(XIMEA_FOUND)
+    set(HAVE_XIMEA TRUE)
+  endif()
+endif(WITH_XIMEA)
+
+# --- FFMPEG ---
+ocv_clear_vars(HAVE_FFMPEG HAVE_FFMPEG_CODEC HAVE_FFMPEG_FORMAT HAVE_FFMPEG_UTIL HAVE_FFMPEG_SWSCALE HAVE_GENTOO_FFMPEG HAVE_FFMPEG_FFMPEG)
+if(WITH_FFMPEG)
+  if(WIN32)
+    include(3rdparty/ffmpeg/ffmpeg_version.cmake REQUIRED)
+  elseif(UNIX)
+    CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
+    CHECK_MODULE(libavformat HAVE_FFMPEG_FORMAT)
+    CHECK_MODULE(libavutil HAVE_FFMPEG_UTIL)
+    CHECK_MODULE(libswscale HAVE_FFMPEG_SWSCALE)
+    
+    CHECK_INCLUDE_FILE(libavformat/avformat.h HAVE_GENTOO_FFMPEG)
+    CHECK_INCLUDE_FILE(ffmpeg/avformat.h HAVE_FFMPEG_FFMPEG)
+    if(NOT HAVE_GENTOO_FFMPEG AND NOT HAVE_FFMPEG_FFMPEG)
+      if(EXISTS /usr/include/ffmpeg/libavformat/avformat.h OR HAVE_FFMPEG_SWSCALE)
+        set(HAVE_GENTOO_FFMPEG TRUE)
       endif()
-    else()
-      set(HAVE_UNICAP FALSE)
+    endif()
+    if(HAVE_FFMPEG_CODEC AND HAVE_FFMPEG_FORMAT AND HAVE_FFMPEG_UTIL AND HAVE_FFMPEG_SWSCALE)
+      set(HAVE_FFMPEG TRUE)
     endif()
 
-    if(WITH_PVAPI)
-      find_path(PVAPI_INCLUDE_PATH "PvApi.h"
-                PATHS "/usr/local/include" "/usr/include"
-                DOC "The path to PvAPI header")
-      if(PVAPI_INCLUDE_PATH)
-        set(HAVE_PVAPI 1)
-      endif()
-    endif()
-
-    set(HAVE_FFMPEG 0)
-    if(WITH_FFMPEG)
-      CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
-      CHECK_MODULE(libavformat HAVE_FFMPEG_FORMAT)
-      CHECK_MODULE(libavutil HAVE_FFMPEG_UTIL)
-      CHECK_MODULE(libswscale HAVE_FFMPEG_SWSCALE)
-      CHECK_INCLUDE_FILE(libavformat/avformat.h HAVE_GENTOO_FFMPEG)
-      CHECK_INCLUDE_FILE(ffmpeg/avformat.h HAVE_FFMPEG_FFMPEG)
-      if(NOT HAVE_GENTOO_FFMPEG AND NOT HAVE_FFMPEG_FFMPEG)
-        if(EXISTS /usr/include/ffmpeg/libavformat/avformat.h OR HAVE_FFMPEG_SWSCALE)
-          set(HAVE_GENTOO_FFMPEG 1)
-        endif()
-      endif()
-      if(HAVE_FFMPEG_CODEC AND HAVE_FFMPEG_FORMAT AND HAVE_FFMPEG_UTIL)
-        if(HAVE_FFMPEG_SWSCALE)
-            set(HAVE_FFMPEG 1)
-        endif()
-      endif()
-
+    if(HAVE_FFMPEG)
       # Find the bzip2 library because it is required on some systems
       FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2)
       if(NOT BZIP2_LIBRARIES)
         # Do an other trial
         FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
       endif()
-    endif()
-
-    if(WITH_1394)
-      CHECK_MODULE(libdc1394-2 HAVE_DC1394_2)
-      if(NOT HAVE_DC1394_2)
-        CHECK_MODULE(libdc1394 HAVE_DC1394)
-      endif()
-    else()
-      set(HAVE_DC1394_2 FALSE)
-      set(HAVE_DC1394 FALSE)
-    endif()
-
-    if(NOT APPLE)
-        CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
-        CHECK_FUNCTION_EXISTS(alloca HAVE_ALLOCA)
-        CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
-        CHECK_INCLUDE_FILE(pthread.h HAVE_LIBPTHREAD)
-
-        if(WITH_XINE)
-            CHECK_MODULE(libxine HAVE_XINE)
-        else()
-            set(HAVE_XINE FALSE)
-        endif()
-        if(WITH_V4L)
-            CHECK_MODULE(libv4l1 HAVE_LIBV4L)
-            CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
-            CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)
-        else()
-            set(HAVE_LIBV4L FALSE)
-            set(HAVE_CAMV4L FALSE)
-            set(HAVE_CAMV4L2 FALSE)
-        endif()
-
-        if(ANDROID)
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log)
-        elseif(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" OR ${CMAKE_SYSTEM_NAME} MATCHES "NetBSD")
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m pthread)
-        else()
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m pthread rt)
-        endif()
-    else()
-        add_definitions(-DHAVE_ALLOCA -DHAVE_ALLOCA_H -DHAVE_LIBPTHREAD -DHAVE_UNISTD_H)
-    endif()
-endif()
-
-if(APPLE AND WITH_FFMPEG)
-  set(FFMPEG_DEFAULT_INCLUDE_DIRS "/usr/local/include/" "/usr/include/" "opt/include/")
-
-  find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h" PATHS ${FFMPEG_DEFAULT_INCLUDE_DIRS} DOC "The path to FFMPEG headers")
-  if(FFMPEG_INCLUDE_DIR)
-    set(HAVE_GENTOO_FFMPEG 1)
-    set(FFMPEG_LIB_DIR "${FFMPEG_INCLUDE_DIR}/../lib" CACHE PATH "Full path of FFMPEG library directory")
-    if(EXISTS "${FFMPEG_LIB_DIR}/libavcodec.a")
-    set(HAVE_FFMPEG_CODEC 1)
-    set(ALIASOF_libavcodec_VERSION "Unknown")
-    if(EXISTS "${FFMPEG_LIB_DIR}/libavformat.a")
-    set(HAVE_FFMPEG_FORMAT 1)
-    set(ALIASOF_libavformat_VERSION "Unknown")
-    if(EXISTS "${FFMPEG_LIB_DIR}/libavutil.a")
-    set(HAVE_FFMPEG_UTIL 1)
-    set(ALIASOF_libavutil_VERSION "Unknown")
-    if(EXISTS "${FFMPEG_LIB_DIR}/libswscale.a")
-        ocv_include_directories(${FFMPEG_INCLUDE_DIR})
-        set(HAVE_FFMPEG_SWSCALE 1)
-        set(ALIASOF_libswscale_VERSION "Unknown")
-        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} "${FFMPEG_LIB_DIR}/libavcodec.a"
-            "${FFMPEG_LIB_DIR}/libavformat.a" "${FFMPEG_LIB_DIR}/libavutil.a"
-            "${FFMPEG_LIB_DIR}/libswscale.a")
-        set(HAVE_FFMPEG 1)
-    endif()
-    endif()
-    endif()
-    endif()
+    endif(HAVE_FFMPEG)
   endif()
-endif()
 
-if(WIN32 AND WITH_FFMPEG)
-  include(3rdparty/ffmpeg/ffmpeg_version.cmake REQUIRED)
-endif()
+  if(APPLE)
+    find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
+              PATHS /usr/local /usr /opt
+              PATH_SUFFIXES include
+              DOC "The path to FFMPEG headers")
+    if(FFMPEG_INCLUDE_DIR)
+      set(HAVE_GENTOO_FFMPEG TRUE)
+      set(FFMPEG_LIB_DIR "${FFMPEG_INCLUDE_DIR}/../lib" CACHE PATH "Full path of FFMPEG library directory")
+      if(EXISTS "${FFMPEG_LIB_DIR}/libavcodec.a")
+        set(HAVE_FFMPEG_CODEC 1)
+        set(ALIASOF_libavcodec_VERSION "Unknown")
+        if(EXISTS "${FFMPEG_LIB_DIR}/libavformat.a")
+          set(HAVE_FFMPEG_FORMAT 1)
+          set(ALIASOF_libavformat_VERSION "Unknown")
+          if(EXISTS "${FFMPEG_LIB_DIR}/libavutil.a")
+            set(HAVE_FFMPEG_UTIL 1)
+            set(ALIASOF_libavutil_VERSION "Unknown")
+            if(EXISTS "${FFMPEG_LIB_DIR}/libswscale.a")
+              set(HAVE_FFMPEG_SWSCALE 1)
+              set(ALIASOF_libswscale_VERSION "Unknown")
+              set(HAVE_FFMPEG 1)
+            endif()
+          endif()
+        endif()
+      endif()
+    endif(FFMPEG_INCLUDE_DIR)
+    if(HAVE_FFMPEG)
+      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} "${FFMPEG_LIB_DIR}/libavcodec.a"
+          "${FFMPEG_LIB_DIR}/libavformat.a" "${FFMPEG_LIB_DIR}/libavutil.a"
+          "${FFMPEG_LIB_DIR}/libswscale.a")
+      ocv_include_directories(${FFMPEG_INCLUDE_DIR})
+    endif()
+  endif(APPLE)
+endif(WITH_FFMPEG)
 
-#################### LATEX for dpf documentation ##################
+# --- VideoInput ---
+if(WITH_VIDEOINPUT)
+  # always have VideoInput on Windows
+  set(HAVE_VIDEOINPUT 1)
+endif(WITH_VIDEOINPUT)
+
+# --- Extra HighGUI libs on Windows ---
+if(WIN32)
+  list(APPEND HIGHGUI_LIBRARIES comctl32 gdi32 ole32)
+  if(MSVC)
+    list(APPEND HIGHGUI_LIBRARIES vfw32)
+  elseif(MINGW64)
+    list(APPEND HIGHGUI_LIBRARIES msvfw32 avifil32 avicap32 winmm)
+  elseif(MINGW)
+    list(APPEND HIGHGUI_LIBRARIES vfw32 winmm)
+  endif()
+endif(WIN32)
+
+
+# ----------------------------------------------------------------------------
+#  Detect other 3rd-party libraries/tools
+# ----------------------------------------------------------------------------
+# --- TBB ---
+if(WITH_TBB)
+  include(cmake/OpenCVDetectTBB.cmake REQUIRED)
+endif(WITH_TBB)
+
+# --- IPP ---
+ocv_clear_vars(IPP_FOUND)
+if(WITH_IPP)
+  include(cmake/OpenCVFindIPP.cmake)
+  if(IPP_FOUND)
+    add_definitions(-DHAVE_IPP)
+    ocv_include_directories(${IPP_INCLUDE_DIRS})
+    link_directories(${IPP_LIBRARY_DIRS})
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_LIBRARIES})
+  endif()
+endif(WITH_IPP)
+
+# --- CUDA ---
+if(WITH_CUDA)
+  include(cmake/OpenCVDetectCUDA.cmake REQUIRED)
+endif(WITH_CUDA)
+
+# --- Eigen ---
+if(WITH_EIGEN)
+  find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
+            PATHS /usr/local /opt /usr ENV ProgramFiles ENV ProgramW6432
+            PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
+            DOC "The path to Eigen3/Eigen2 headers")
+
+  if(EIGEN_INCLUDE_PATH)
+    ocv_include_directories(${EIGEN_INCLUDE_PATH})
+    ocv_parse_header("${EIGEN_INCLUDE_PATH}/Eigen/src/Core/util/Macros.h" EIGEN_VERSION_LINES EIGEN_WORLD_VERSION EIGEN_MAJOR_VERSION EIGEN_MINOR_VERSION)
+    set(HAVE_EIGEN 1)
+  endif()
+endif(WITH_EIGEN)
+
+# --- LATEX for pdf documentation ---
 if(BUILD_DOCS)
   include(cmake/OpenCVFindLATEX.cmake REQUIRED)
-endif()
+endif(BUILD_DOCS)
 
-########################## Python Support #########################
+# --- Python Support ---
 include(cmake/OpenCVDetectPython.cmake REQUIRED)
 
-########################### Java Support ##########################
+# --- Java Support ---
 if(ANDROID)
   include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
   include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
@@ -485,121 +593,12 @@ if(ANDROID)
   if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
     message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
   endif()
-endif()
+endif(ANDROID)
 
 if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
   SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
 else()
   SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
-endif()
-
-############################### QT ################################
-set(HAVE_QT 0)
-set(HAVE_QT_OPENGL 0)
-
-if(WITH_QT)
-  find_package(Qt4)
-  if(QT4_FOUND)
-    set(HAVE_QT 1)
-    add_definitions(-DHAVE_QT) #We need to define te macro this way, using cvconfig.h.cmake does not work
-
-    if(WITH_OPENGL)
-      find_package (OpenGL QUIET)
-      if(QT_QTOPENGL_FOUND AND OPENGL_FOUND)
-        set(HAVE_OPENGL 1)
-        set(HAVE_QT_OPENGL 1)
-        add_definitions(-DHAVE_QT_OPENGL)
-        set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-      endif()
-    endif()
-  endif()
-endif()
-
-############################### TBB ################################
-if(WITH_TBB)
-  include(cmake/OpenCVDetectTBB.cmake REQUIRED)
-endif()
-
-############################ Intel IPP #############################
-set(IPP_FOUND)
-
-if(WITH_IPP)
-  include(cmake/OpenCVFindIPP.cmake)
-endif()
-
-if(IPP_FOUND)
-  add_definitions(-DHAVE_IPP)
-  ocv_include_directories(${IPP_INCLUDE_DIRS})
-  link_directories(${IPP_LIBRARY_DIRS})
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_LIBRARIES})
-endif()
-
-############################### CUDA ################################
-if(WITH_CUDA)
-  include(cmake/OpenCVDetectCUDA.cmake REQUIRED)
-endif()
-
-############################### OpenNI ################################
-set(HAVE_OPENNI FALSE)
-set(HAVE_OPENNI_PRIME_SENSOR_MODULE FALSE)
-
-if(WITH_OPENNI)
-  include(cmake/OpenCVFindOpenNI.cmake)
-endif()
-
-############################### XIMEA ################################
-set(HAVE_XIMEA FALSE)
-
-if(WITH_XIMEA)
-  include(cmake/OpenCVFindXimea.cmake)
-endif()
-
-if(XIMEA_FOUND)
-  set(HAVE_XIMEA TRUE)
-endif()
-
-############################## Eigen ##############################
-if(WITH_EIGEN)
-  find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
-            PATHS "/usr/local/include/eigen2" "/opt/include/eigen2" "/usr/include/eigen2"
-                  "/usr/local/include/eigen3" "/opt/include/eigen3" "/usr/include/eigen3"
-            DOC "The path to Eigen2/Eigen3 headers")
-  if(EIGEN_INCLUDE_PATH)
-    ocv_include_directories(${EIGEN_INCLUDE_PATH})
-    ocv_parse_header("${EIGEN_INCLUDE_PATH}/Eigen/src/Core/util/Macros.h" EIGEN_VERSION_LINES EIGEN_WORLD_VERSION EIGEN_MAJOR_VERSION EIGEN_MINOR_VERSION)
-    set(HAVE_EIGEN 1)
-  endif()
-endif()
-
-################## Extra HighGUI libs on Windows ###################
-if(WIN32)
-  set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32)
-
-  if(WITH_VIDEOINPUT)
-    set(HAVE_VIDEOINPUT 1)
-  endif()
-
-  if(MSVC)
-    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
-  endif()
-
-  if(MINGW)
-    if(MINGW64)
-      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} msvfw32 avifil32 avicap32 winmm)
-    else()
-      set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32 winmm)
-    endif()
-  endif()
-
-  if(WITH_OPENGL AND NOT HAVE_QT_OPENGL)
-    find_package(OpenGL QUIET)
-
-    if(OPENGL_FOUND)
-      set(HAVE_OPENGL 1)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${OPENGL_LIBRARIES})
-      ocv_include_directories(${OPENGL_INCLUDE_DIR})
-    endif()
-  endif()
 endif()
 
 
@@ -667,12 +666,12 @@ if(OPENCV_SVNVERSION)
   status("Version control:" ${OPENCV_SVNVERSION})
 endif()
 
-#build platform
+# ========================== build platform ==========================
 status("")
 status("  Platform:")
 status("    Host:"             ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR})
 if(CMAKE_CROSSCOMPILING)
-  status("    Target:"           ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR})
+  status("    Target:"         ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 status("    CMake:"            ${CMAKE_VERSION})
 status("    CMake generator:"  ${CMAKE_GENERATOR})
@@ -687,7 +686,7 @@ if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
 
-# C/C++ options
+# ========================== C/C++ options ==========================
 status("")
 status("  C/C++:")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
@@ -705,7 +704,7 @@ else()
   status("    Linker flags (Debug):"   ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
 endif()
 
-# OpenCV modules
+# ========================== OpenCV modules ==========================
 status("")
 status("  OpenCV modules:")
 string(REPLACE "opencv_" "" OPENCV_MODULES_BUILD_ST          "${OPENCV_MODULES_BUILD}")
@@ -724,11 +723,11 @@ endforeach()
 string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_AUTO_ST  "${OPENCV_MODULES_DISABLED_AUTO_ST}")
 
 status("    To be built:"            OPENCV_MODULES_BUILD          THEN ${OPENCV_MODULES_BUILD_ST}          ELSE "-")
-status("    Disabled by user:"       OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV_MODULES_DISABLED_USER_ST}  ELSE "-")
+status("    Disabled:"               OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV_MODULES_DISABLED_USER_ST}  ELSE "-")
 status("    Disabled by dependency:" OPENCV_MODULES_DISABLED_AUTO  THEN ${OPENCV_MODULES_DISABLED_AUTO_ST}  ELSE "-")
 status("    Unavailable:"            OPENCV_MODULES_DISABLED_FORCE THEN ${OPENCV_MODULES_DISABLED_FORCE_ST} ELSE "-")
 
-# Android extra
+# ========================== Android details ==========================
 if(ANDROID)
   status("")
   status("  Android: ")
@@ -744,14 +743,17 @@ if(ANDROID)
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"            ELSE NO)
 endif()
 
-#YV
+# ========================== GUI ==========================
 status("")
 status("  GUI: ")
 
-if (HAVE_QT)
+if(HAVE_QT)
   status("    QT 4.x:"            HAVE_QT        THEN "YES (ver ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH} ${QT_EDITION})" ELSE NO)
   status("    QT OpenGL support:" HAVE_QT_OPENGL THEN "YES (${QT_QTOPENGL_LIBRARY})" ELSE NO)
 else()
+  if(DEFINED WITH_QT)
+    status("    QT 4.x:" NO)
+  endif()
   if(WIN32)
     status("    Win32 UI:" YES)
   else()
@@ -771,7 +773,7 @@ endif()
 
 status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE NO)
 
-# media
+# ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
 status("    ZLib:"         BUILD_ZLIB    THEN "build (ver ${ZLIB_VERSION_STRING})"               ELSE "${ZLIB_LIBRARY} (ver ${ZLIB_VERSION_STRING})")
@@ -802,82 +804,120 @@ else()
 endif()
 
 status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})"                     ELSE NO)
-status("    OpenNI:"    HAVE_OPENNI                        THEN "YES (ver ${OPENNI_VERSION_STRING}, build ${OPENNI_VERSION_BUILD})" ELSE NO)
-status("    OpenNI PrimeSensor Modules:"
-                        HAVE_OPENNI_PRIME_SENSOR_MODULE    THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"                               ELSE NO)
-if(WIN32)
-  status("    XIMEA:"     HAVE_XIMEA  THEN YES ELSE NO)
-endif()
 
-# video
+# ========================== VIDEO IO ==========================
 status("")
-if(UNIX AND NOT APPLE)
-  status("  Video I/O:")
+status("  Video I/O:")
+
+if(DEFINED WITH_1394)
   status("    DC1394 1.x:"     HAVE_DC1394         THEN "YES (ver ${ALIASOF_libdc1394_VERSION})"   ELSE NO)
   status("    DC1394 2.x:"     HAVE_DC1394_2       THEN "YES (ver ${ALIASOF_libdc1394-2_VERSION})" ELSE NO)
-  status("    GStreamer:"      HAVE_GSTREAMER      THEN "" ELSE NO)
+endif(DEFINED WITH_1394)
+
+if(ANDROID)
+  if(HAVE_opencv_androidcamera)
+    status("    AndroidNativeCamera:" BUILD_ANDROID_CAMERA_WRAPPER
+                                                   THEN "YES, build for Android${ANDROID_VERSION}" ELSE "YES, use prebuilt libraries")
+  else()
+    status("    AndroidNativeCamera:" "NO (native camera requires Android API level 8 or higher)")
+  endif()
+endif()
+
+if(DEFINED WITH_AVFOUNDATION)
+  status("    AVFoundation:"   WITH_AVFOUNDATION   THEN YES                                        ELSE NO)
+endif(DEFINED WITH_AVFOUNDATION)
+
+if(DEFINED WITH_FFMPEG)
+  if(WIN32)
+    status("    FFMPEG:"       WITH_FFMPEG         THEN "YES (prebuilt binaries)"                  ELSE NO)
+  else()
+    status("    FFMPEG:"       HAVE_FFMPEG         THEN YES ELSE NO)
+  endif()
+  status("      codec:"        HAVE_FFMPEG_CODEC   THEN "YES (ver ${ALIASOF_libavcodec_VERSION})"  ELSE NO)
+  status("      format:"       HAVE_FFMPEG_FORMAT  THEN "YES (ver ${ALIASOF_libavformat_VERSION})" ELSE NO)
+  status("      util:"         HAVE_FFMPEG_UTIL    THEN "YES (ver ${ALIASOF_libavutil_VERSION})"   ELSE NO)
+  status("      swscale:"      HAVE_FFMPEG_SWSCALE THEN "YES (ver ${ALIASOF_libswscale_VERSION})"  ELSE NO)
+  status("      gentoo-style:" HAVE_GENTOO_FFMPEG  THEN YES                                        ELSE NO)
+endif(DEFINED WITH_FFMPEG)
+
+if(DEFINED WITH_GSTREAMER)
+  status("    GStreamer:"      HAVE_GSTREAMER      THEN ""                                         ELSE NO)
   if(HAVE_GSTREAMER)
     status("      base:"       "YES (ver ${ALIASOF_gstreamer-base-0.10_VERSION})")
     status("      app:"        "YES (ver ${ALIASOF_gstreamer-app-0.10_VERSION})")
     status("      video:"      "YES (ver ${ALIASOF_gstreamer-video-0.10_VERSION})")
   endif()
-  status("    UniCap:"         HAVE_UNICAP         THEN "YES (ver ${ALIASOF_libunicap_VERSION})"        ELSE NO)
-  status("    UniCap ucil:"    HAVE_UNICAP_UCIL    THEN "YES (ver ${ALIASOF_libucil_VERSION})"          ELSE NO)
-  status("    PvAPI:"          HAVE_PVAPI          THEN YES ELSE NO)
+endif(DEFINED WITH_GSTREAMER)
+
+if(DEFINED WITH_OPENNI)
+  status("    OpenNI:"         HAVE_OPENNI         THEN "YES (ver ${OPENNI_VERSION_STRING}, build ${OPENNI_VERSION_BUILD})"
+                                                                                                   ELSE NO)
+  status("    OpenNI PrimeSensor Modules:" HAVE_OPENNI_PRIME_SENSOR_MODULE
+                                                   THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"      ELSE NO)
+endif(DEFINED WITH_OPENNI)
+
+if(DEFINED WITH_PVAPI)
+  status("    PvAPI:"          HAVE_PVAPI          THEN YES                                        ELSE NO)
+endif(DEFINED WITH_PVAPI)
+
+if(DEFINED WITH_QUICKTIME)
+  status("    QuickTime:"      WITH_QUICKTIME      THEN YES                                        ELSE NO)
+  status("    QTKit:"          WITH_QUICKTIME      THEN NO                                         ELSE YES)
+endif(DEFINED WITH_QUICKTIME)
+
+if(DEFINED WITH_UNICAP)
+  status("    UniCap:"         HAVE_UNICAP         THEN "YES (ver ${ALIASOF_libunicap_VERSION})"   ELSE NO)
+  status("    UniCap ucil:"    HAVE_UNICAP_UCIL    THEN "YES (ver ${ALIASOF_libucil_VERSION})"     ELSE NO)
+endif(DEFINED WITH_UNICAP)
+
+if(DEFINED WITH_V4L)
   if(HAVE_CAMV4L)
     set(HAVE_CAMV4L_STR "YES")
   else()
     set(HAVE_CAMV4L_STR "NO")
   endif()
- if(HAVE_CAMV4L2)
+  if(HAVE_CAMV4L2)
     set(HAVE_CAMV4L2_STR "YES")
   else()
     set(HAVE_CAMV4L2_STR "NO")
   endif()
-  status("    V4L/V4L2:"       HAVE_LIBV4L         THEN "Using libv4l (ver ${ALIASOF_libv4l1_VERSION})" ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR}")
-  status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"          ELSE NO)
+  status("    V4L/V4L2:"       HAVE_LIBV4L         THEN "Using libv4l (ver ${ALIASOF_libv4l1_VERSION})"
+                                                                                                   ELSE "${HAVE_CAMV4L_STR}/${HAVE_CAMV4L2_STR}")
+endif(DEFINED WITH_V4L)
 
-  if(ANDROID)
-    if(HAVE_opencv_androidcamera)
-      status("    AndroidNativeCamera:" BUILD_ANDROID_CAMERA_WRAPPER THEN "YES, build for Android ${ANDROID_VERSION}" ELSE "YES, use prebuilt libraries")
-    else()
-      status("    AndroidNativeCamera:" "NO (native camera requires Android API level 8 or higher)")
-    endif()
-  endif()
-elseif(APPLE)
-  if(NOT IOS)
-    status("  Video I/O:"    WITH_QUICKTIME      THEN QuickTime ELSE QTKit)
-  else()
-    status("  Video I/O: AVFoundation")
-  endif()
-elseif(WIN32)
-  status("  Video I/O:"      HAVE_VIDEOINPUT     THEN DirectShow ELSE NO)
-endif()
+if(DEFINED WITH_VIDEOINPUT)
+  status("    DirectShow:"     HAVE_VIDEOINPUT     THEN YES                                        ELSE NO)
+endif(DEFINED WITH_VIDEOINPUT)
 
-if(WIN32)
-  status("    FFMPEG:"         WITH_FFMPEG         THEN "YES (prebuilt binaries)" ELSE NO)
-else()
-  status("    FFMPEG:"         HAVE_FFMPEG         THEN YES ELSE NO)
-endif()
-status("      codec:"        HAVE_FFMPEG_CODEC   THEN "YES (ver ${ALIASOF_libavcodec_VERSION})"  ELSE NO)
-status("      format:"       HAVE_FFMPEG_FORMAT  THEN "YES (ver ${ALIASOF_libavformat_VERSION})" ELSE NO)
-status("      util:"         HAVE_FFMPEG_UTIL    THEN "YES (ver ${ALIASOF_libavutil_VERSION})"   ELSE NO)
-status("      swscale:"      HAVE_FFMPEG_SWSCALE THEN "YES (ver ${ALIASOF_libswscale_VERSION})"  ELSE NO)
-status("      gentoo-style:" HAVE_GENTOO_FFMPEG  THEN YES ELSE NO)
+if(DEFINED WITH_XIMEA)
+  status("    XIMEA:"          HAVE_XIMEA          THEN YES                                        ELSE NO)
+endif(DEFINED WITH_XIMEA)
 
-# Other third-party libraries
+if(DEFINED WITH_XINE)
+  status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"     ELSE NO)
+endif(DEFINED WITH_XINE)
+
+# ========================== Other third-party libraries ==========================
 status("")
 status("  Other third-party libraries:")
 
-if(WITH_IPP AND IPP_FOUND)
-  status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
-  status("         at:" "${IPP_ROOT_DIR}")
-else()
-  status("    Use IPP:"   WITH_IPP AND NOT IPP_FOUND THEN "IPP not found" ELSE NO)
-endif()
+if(DEFINED WITH_IPP)
+  if(WITH_IPP AND IPP_FOUND)
+    status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
+    status("         at:" "${IPP_ROOT_DIR}")
+  else()
+    status("    Use IPP:"   WITH_IPP AND NOT IPP_FOUND THEN "IPP not found" ELSE NO)
+  endif()
+endif(DEFINED WITH_IPP)
 
-status("    Use TBB:"   HAVE_TBB   THEN "YES (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})" ELSE NO)
-status("    Use Cuda:"  HAVE_CUDA  THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
+if(DEFINED WITH_TBB)
+  status("    Use TBB:"   HAVE_TBB   THEN "YES (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})" ELSE NO)
+endif(DEFINED WITH_TBB)
+
+if(DEFINED WITH_CUDA)
+  status("    Use Cuda:"  HAVE_CUDA  THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)
+endif(DEFINED WITH_CUDA)
+
 status("    Use Eigen:" HAVE_EIGEN THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 
 if(HAVE_CUDA)
@@ -891,7 +931,7 @@ if(HAVE_CUDA)
   status("    NVIDIA GPU features:"  ${OPENCV_CUDA_ARCH_FEATURES})
 endif()
 
-# interfaces to other languages
+# ========================== python ==========================
 status("")
 status("  Python:")
 status("    Interpreter:"   PYTHON_EXECUTABLE     THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_FULL})"         ELSE NO)
@@ -905,12 +945,7 @@ if(BUILD_opencv_python)
   status("    packages path:" PYTHON_EXECUTABLE   THEN "${PYTHON_PACKAGES_PATH}"                                   ELSE "-")
 endif()
 
-if(BUILD_opencv_java)
-  status("")
-  status("  Java:" HAVE_opencv_java THEN YES ELSE NO)
-endif()
-
-# documentation
+# ========================== documentation ==========================
 if(BUILD_DOCS)
   status("")
   status("  Documentation:")
@@ -923,7 +958,7 @@ if(BUILD_DOCS)
   status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
 endif()
 
-# samples and tests
+# ========================== samples and tests ==========================
 status("")
 status("  Tests and samples:")
 status("    Tests:"             BUILD_TESTS AND HAVE_opencv_ts       THEN YES ELSE NO)
@@ -931,11 +966,11 @@ status("    Performance tests:" BUILD_PERF_TESTS AND HAVE_opencv_ts  THEN YES EL
 status("    Examples:"          BUILD_EXAMPLES                       THEN YES ELSE NO)
 
 if(ANDROID)
-  status("    Android tests:"    BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)
-  status("    Android examples:" BUILD_ANDROID_EXAMPLES                     THEN YES ELSE NO)
+  status("    Android tests:"    BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS            THEN YES ELSE NO)
+  status("    Android examples:" BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)
 endif()
 
-#auxiliary
+# ========================== auxiliary ==========================
 status("")
 status("  Install path:" "${CMAKE_INSTALL_PREFIX}")
 status("")

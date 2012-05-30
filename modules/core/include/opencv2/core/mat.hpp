@@ -322,7 +322,10 @@ inline Mat Mat::diag(const Mat& d)
     CV_Assert( d.cols == 1 || d.rows == 1 );
     int len = d.rows + d.cols - 1;
     Mat m(len, len, d.type(), Scalar(0)), md = m.diag();
-    d.copyTo(md);
+    if( d.cols == 1 )
+        d.copyTo(md);
+    else
+        transpose(d, md);
     return m;
 }
 

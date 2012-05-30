@@ -1,6 +1,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/ml/ml.hpp"
 
 #include <fstream>
@@ -2514,6 +2515,8 @@ int main(int argc, char** argv)
     	help(argv);
         return -1;
     }
+
+    cv::initModule_nonfree();
 
     const string vocPath = argv[1], resPath = argv[2];
 

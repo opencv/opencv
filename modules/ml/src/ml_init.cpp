@@ -45,31 +45,14 @@
 namespace cv
 {
 
-static Algorithm* createEM()
-{
-    return new EM;
-}
-static AlgorithmInfo em_info("StatModel.EM", createEM);
-
-AlgorithmInfo* EM::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        EM obj;
-        em_info.addParam(obj, "nclusters", obj.nclusters);
-        em_info.addParam(obj, "covMatType", obj.covMatType);
-        em_info.addParam(obj, "maxIters", obj.maxIters);
-        em_info.addParam(obj, "epsilon", obj.epsilon);
-
-        em_info.addParam(obj, "weights", obj.weights, true);
-        em_info.addParam(obj, "means", obj.means, true);
-        em_info.addParam(obj, "covs", obj.covs, true);
-
-        initialized = true;
-    }
-    return &em_info;
-}
+CV_INIT_ALGORITHM(EM, "StatModel.EM",
+                  obj.info()->addParam(obj, "nclusters", obj.nclusters);
+                  obj.info()->addParam(obj, "covMatType", obj.covMatType);
+                  obj.info()->addParam(obj, "maxIters", obj.maxIters);
+                  obj.info()->addParam(obj, "epsilon", obj.epsilon);
+                  obj.info()->addParam(obj, "weights", obj.weights, true);
+                  obj.info()->addParam(obj, "means", obj.means, true);
+                  obj.info()->addParam(obj, "covs", obj.covs, true));
 
 bool initModule_ml(void)
 {

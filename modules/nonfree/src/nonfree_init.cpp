@@ -46,65 +46,22 @@ namespace cv
 {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-static Algorithm* createSURF()
-{
-    return new SURF;
-}
 
-static AlgorithmInfo& surf_info()
-{
-    static AlgorithmInfo surf_info_var("Feature2D.SURF", createSURF);
-    return surf_info_var;
-}
-
-static AlgorithmInfo& surf_info_auto = surf_info();
-
-AlgorithmInfo* SURF::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        SURF obj;
-        surf_info().addParam(obj, "hessianThreshold", obj.hessianThreshold);
-        surf_info().addParam(obj, "nOctaves", obj.nOctaves);
-        surf_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        surf_info().addParam(obj, "extended", obj.extended);
-        surf_info().addParam(obj, "upright", obj.upright);
-        
-        initialized = true;
-    }
-    return &surf_info();
-}
+CV_INIT_ALGORITHM(SURF, "Feature2D.SURF",
+                  obj.info()->addParam(obj, "hessianThreshold", obj.hessianThreshold);
+                  obj.info()->addParam(obj, "nOctaves", obj.nOctaves);
+                  obj.info()->addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+                  obj.info()->addParam(obj, "extended", obj.extended);
+                  obj.info()->addParam(obj, "upright", obj.upright));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static Algorithm* createSIFT() { return new SIFT; }
-
-static AlgorithmInfo& sift_info()
-{
-    static AlgorithmInfo sift_info_var("Feature2D.SIFT", createSIFT);
-    return sift_info_var;
-}
-
-static AlgorithmInfo& sift_info_auto = sift_info();
-
-AlgorithmInfo* SIFT::info() const
-{
-    static volatile bool initialized = false;
-    if( !initialized )
-    {
-        SIFT obj;
-        sift_info().addParam(obj, "nFeatures", obj.nfeatures);
-        sift_info().addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
-        sift_info().addParam(obj, "contrastThreshold", obj.contrastThreshold);
-        sift_info().addParam(obj, "edgeThreshold", obj.edgeThreshold);
-        sift_info().addParam(obj, "sigma", obj.sigma);
-        
-        initialized = true;
-    }
-    return &sift_info();
-}
+CV_INIT_ALGORITHM(SIFT, "Feature2D.SIFT",    
+                  obj.info()->addParam(obj, "nFeatures", obj.nfeatures);
+                  obj.info()->addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+                  obj.info()->addParam(obj, "contrastThreshold", obj.contrastThreshold);
+                  obj.info()->addParam(obj, "edgeThreshold", obj.edgeThreshold);
+                  obj.info()->addParam(obj, "sigma", obj.sigma));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////    
     
