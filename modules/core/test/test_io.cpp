@@ -180,8 +180,7 @@ protected:
             fs.writeObj("test_graph",graph);
             CvGraph* graph2 = (CvGraph*)cvClone(graph);
             
-            string content;
-            fs.release(content);
+            string content = fs.releaseAndGetString();
             
             if(!fs.open(mem ? content : filename, FileStorage::READ + (mem ? FileStorage::MEMORY : 0)))
             {

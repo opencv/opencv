@@ -5161,16 +5161,16 @@ void FileStorage::release()
     state = UNDEFINED;
 }
 
-void FileStorage::release(string& buf)
+string FileStorage::releaseAndGetString()
 {
+	string buf;
     if( fs.obj && fs.obj->outbuf )
         icvClose(fs.obj, &buf);
-    else
-        buf.clear();
     
     fs.release();
     structs.clear();
     state = UNDEFINED;
+	return buf;
 }    
     
 FileNode FileStorage::root(int streamidx) const
