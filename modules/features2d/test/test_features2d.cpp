@@ -1091,3 +1091,51 @@ TEST( Features2d_DescriptorMatcher_FlannBased, regression )
     CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based", new FlannBasedMatcher, 0.04f );
     test.safe_run();
 }
+
+
+TEST(Features2D_ORB, _1996)
+{
+    cv::Ptr<cv::FeatureDetector> fd = cv::FeatureDetector::create("ORB");
+    cv::Ptr<cv::DescriptorExtractor> de = cv::DescriptorExtractor::create("ORB");
+
+    Mat image = cv::imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.jpg");
+    ASSERT_FALSE(image.empty());
+
+    Mat roi(image.size(), CV_8UC1, Scalar(0));
+
+    Point poly[] = {Point(100, 20), Point(300, 50), Point(400, 200), Point(10, 500)};
+    fillConvexPoly(roi, poly, int(sizeof(poly) / sizeof(poly[0])), Scalar(255));
+
+    std::vector<cv::KeyPoint> keypoints;
+    fd->detect(image, keypoints, roi);
+    cv::Mat descriptors;
+    de->compute(image, keypoints, descriptors);
+
+    //image.setTo(Scalar(255,255,255), roi);
+
+    int roiViolations = 0;
+    for(std::vector<cv::KeyPoint>::const_iterator kp = keypoints.begin(); kp != keypoints.end(); ++kp)
+    {
+        int x = cvRound(kp->pt.x);
+        int y = cvRound(kp->pt.y);
+
+        ASSERT_LE(0, x);
+        ASSERT_LE(0, y);
+        ASSERT_GT(image.cols, x);
+        ASSERT_GT(image.rows, y);
+
+        // if (!roi.at<uchar>(y,x))
+        // {
+        //     roiViolations++;
+        //     circle(image, kp->pt, 3, Scalar(0,0,255));
+        // }
+    }
+
+    // if(roiViolations)
+    // {
+    //     imshow("img", image);
+    //     waitKey();
+    // }
+
+    ASSERT_EQ(0, roiViolations);
+}

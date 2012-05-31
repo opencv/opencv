@@ -16,8 +16,8 @@ are met:
 	 notice, this list of conditions and the following disclaimer in the
 	 documentation and/or other materials provided with the distribution.
 
-	*Neither the name of the University of Cambridge nor the names of 
-	 its contributors may be used to endorse or promote products derived 
+	*Neither the name of the University of Cambridge nor the names of
+	 its contributors may be used to endorse or promote products derived
 	 from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*
 The references are:
- * Machine learning for high-speed corner detection, 
+ * Machine learning for high-speed corner detection,
    E. Rosten and T. Drummond, ECCV 2006
  * Faster and better: A machine learning approach to corner detection
    E. Rosten, R. Porter and T. Drummond, PAMI, 2009
@@ -64,7 +64,7 @@ static void makeOffsets(int pixel[], int row_stride)
     pixel[13] = -3 + row_stride * 1;
     pixel[14] = -2 + row_stride * 2;
     pixel[15] = -1 + row_stride * 3;
-}    
+}
 
 static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
 {
@@ -73,7 +73,7 @@ static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
     short d[N];
     for( k = 0; k < N; k++ )
         d[k] = (short)(v - ptr[pixel[k]]);
-    
+
 #if CV_SSE2
     __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
     for( k = 0; k < 16; k += 8 )
@@ -128,7 +128,7 @@ static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
         a0 = std::max(a0, std::min(a, (int)d[k]));
         a0 = std::max(a0, std::min(a, (int)d[k+9]));
     }
-    
+
     int b0 = -a0;
     for( k = 0; k < 16; k += 2 )
     {
@@ -141,14 +141,14 @@ static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
         b = std::max(b, (int)d[k+6]);
         b = std::max(b, (int)d[k+7]);
         b = std::max(b, (int)d[k+8]);
-        
+
         b0 = std::min(b0, std::max(b, (int)d[k]));
         b0 = std::min(b0, std::max(b, (int)d[k+9]));
     }
-    
+
     threshold = -b0-1;
 #endif
-    
+
 #if 0
     // check that with the computed "threshold" the pixel is still a corner
     // and that with the increased-by-1 "threshold" the pixel is not a corner anymore
@@ -157,7 +157,7 @@ static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
         int v0 = std::min(ptr[0] + threshold + delta, 255);
         int v1 = std::max(ptr[0] - threshold - delta, 0);
         int c0 = 0, c1 = 0;
-        
+
         for( int k = 0; k < N; k++ )
         {
             int x = ptr[pixel[k]];
@@ -184,7 +184,7 @@ static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
 #endif
     return threshold;
 }
-    
+
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
@@ -214,7 +214,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     cpbuf[1] = cpbuf[0] + img.cols + 1;
     cpbuf[2] = cpbuf[1] + img.cols + 1;
     memset(buf[0], 0, img.cols*3);
-    
+
     for(i = 3; i < img.rows-2; i++)
     {
         const uchar* ptr = img.ptr<uchar>(i) + 3;
@@ -222,7 +222,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
         int* cornerpos = cpbuf[(i - 3)%3];
         memset(curr, 0, img.cols);
         int ncorners = 0;
-        
+
         if( i < img.rows - 3 )
         {
             j = 3;
@@ -233,7 +233,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                 __m128i v0 = _mm_loadu_si128((const __m128i*)ptr);
                 __m128i v1 = _mm_xor_si128(_mm_subs_epu8(v0, t), delta);
                 v0 = _mm_xor_si128(_mm_adds_epu8(v0, t), delta);
-                
+
                 __m128i x0 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[0])), delta);
                 __m128i x1 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[4])), delta);
                 __m128i x2 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[8])), delta);
@@ -256,24 +256,24 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                     ptr -= 8;
                     continue;
                 }
-                
+
                 __m128i c0 = _mm_setzero_si128(), c1 = c0, max0 = c0, max1 = c0;
                 for( k = 0; k < N; k++ )
                 {
                     __m128i x = _mm_xor_si128(_mm_loadu_si128((const __m128i*)(ptr + pixel[k])), delta);
                     m0 = _mm_cmpgt_epi8(x, v0);
                     m1 = _mm_cmpgt_epi8(v1, x);
-                    
+
                     c0 = _mm_and_si128(_mm_sub_epi8(c0, m0), m0);
                     c1 = _mm_and_si128(_mm_sub_epi8(c1, m1), m1);
-                    
+
                     max0 = _mm_max_epu8(max0, c0);
                     max1 = _mm_max_epu8(max1, c1);
                 }
-                
+
                 max0 = _mm_max_epu8(max0, max1);
                 int m = _mm_movemask_epi8(_mm_cmpgt_epi8(max0, K16));
-                
+
                 for( k = 0; m > 0 && k < 16; k++, m >>= 1 )
                     if(m & 1)
                     {
@@ -288,26 +288,26 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                 int v = ptr[0];
                 const uchar* tab = &threshold_tab[0] - v + 255;
                 int d = tab[ptr[pixel[0]]] | tab[ptr[pixel[8]]];
-                
+
                 if( d == 0 )
                     continue;
-                
+
                 d &= tab[ptr[pixel[2]]] | tab[ptr[pixel[10]]];
                 d &= tab[ptr[pixel[4]]] | tab[ptr[pixel[12]]];
                 d &= tab[ptr[pixel[6]]] | tab[ptr[pixel[14]]];
-                
+
                 if( d == 0 )
                     continue;
-                
+
                 d &= tab[ptr[pixel[1]]] | tab[ptr[pixel[9]]];
                 d &= tab[ptr[pixel[3]]] | tab[ptr[pixel[11]]];
                 d &= tab[ptr[pixel[5]]] | tab[ptr[pixel[13]]];
                 d &= tab[ptr[pixel[7]]] | tab[ptr[pixel[15]]];
-                
+
                 if( d & 1 )
                 {
                     int vt = v - threshold, count = 0;
-                    
+
                     for( k = 0; k < N; k++ )
                     {
                         int x = ptr[pixel[k]];
@@ -325,11 +325,11 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                             count = 0;
                     }
                 }
-                
+
                 if( d & 2 )
                 {
                     int vt = v + threshold, count = 0;
-                    
+
                     for( k = 0; k < N; k++ )
                     {
                         int x = ptr[pixel[k]];
@@ -349,17 +349,17 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                 }
             }
         }
-        
+
         cornerpos[-1] = ncorners;
-        
+
         if( i == 3 )
             continue;
-        
+
         const uchar* prev = buf[(i - 4 + 3)%3];
         const uchar* pprev = buf[(i - 5 + 3)%3];
         cornerpos = cpbuf[(i - 4 + 3)%3];
         ncorners = cornerpos[-1];
-        
+
         for( k = 0; k < ncorners; k++ )
         {
             j = cornerpos[k];
@@ -375,7 +375,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     }
 }
 
-    
+
 /*
  *   FastFeatureDetector
  */
