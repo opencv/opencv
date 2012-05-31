@@ -91,7 +91,7 @@ protected:
             {-1000000, 1000000}, {-10, 10}, {-10, 10}};
         RNG& rng = ts->get_rng();
         RNG rng0;
-        test_case_count = 2;
+        test_case_count = 4;
         int progress = 0;
         MemStorage storage(cvCreateMemStorage(0));
         
@@ -102,9 +102,10 @@ protected:
             
             cvClearMemStorage(storage);
             
+            bool mem = (idx % 4) >= 2;
             string filename = tempfile(idx % 2 ? ".yml" : ".xml");
             
-            FileStorage fs(filename.c_str(), FileStorage::WRITE);
+            FileStorage fs(filename, FileStorage::WRITE + (mem ? FileStorage::MEMORY : 0));
             
             int test_int = (int)cvtest::randInt(rng);
             double test_real = (cvtest::randInt(rng)%2?1:-1)*exp(cvtest::randReal(rng)*18-9);
@@ -179,11 +180,11 @@ protected:
             fs.writeObj("test_graph",graph);
             CvGraph* graph2 = (CvGraph*)cvClone(graph);
             
-            fs.release();
+            string content = fs.releaseAndGetString();
             
-            if(!fs.open(filename.c_str(), FileStorage::READ))
+            if(!fs.open(mem ? content : filename, FileStorage::READ + (mem ? FileStorage::MEMORY : 0)))
             {
-                ts->printf( cvtest::TS::LOG, "filename %s can not be read\n", filename.c_str() );
+                ts->printf( cvtest::TS::LOG, "filename %s can not be read\n", !mem ? filename.c_str() : content.c_str());
                 ts->set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
                 return;
             }
@@ -310,7 +311,6 @@ protected:
             int real_width = (int)tm["width"];
             int real_height = (int)tm["height"];
             
-            
             int real_lbp_val = 0;
             FileNodeIterator it;
             it = tm_lbp.begin();
@@ -370,7 +370,8 @@ protected:
             }
             
             fs.release();
-            remove(filename.c_str());
+            if( !mem )
+                remove(filename.c_str());
         }
     }
 };

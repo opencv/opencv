@@ -1740,6 +1740,11 @@ typedef struct CvFileStorage CvFileStorage;
 #define CV_STORAGE_WRITE_TEXT    CV_STORAGE_WRITE
 #define CV_STORAGE_WRITE_BINARY  CV_STORAGE_WRITE
 #define CV_STORAGE_APPEND        2
+#define CV_STORAGE_MEMORY        4
+#define CV_STORAGE_FORMAT_MASK   (7<<3)
+#define CV_STORAGE_FORMAT_AUTO   0
+#define CV_STORAGE_FORMAT_XML    8
+#define CV_STORAGE_FORMAT_YAML  16
 
 /* List of attributes: */
 typedef struct CvAttrList
