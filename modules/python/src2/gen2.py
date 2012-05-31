@@ -211,15 +211,17 @@ class ClassInfo(object):
         self.props = []
         self.consts = {}
         customname = False
-        
+
         if decl:
             self.bases = decl[1].split()[1:]
             if len(self.bases) > 1:
                 print "Warning: class %s has more than 1 base class (not supported by Python C extensions)" % (self.name,)
-                print "Bases: ", self.bases
+                print "Bases: ", " ".join(self.bases)
                 print "Only the first base class will be used"
-                self.bases = self.bases[:1]
+                self.bases = [self.bases[0].strip(",")]
                 #return sys.exit(-1)
+            if self.bases and self.bases[0].startswith("cv::"):
+                self.bases[0] = self.bases[0][4:]
             for m in decl[2]:
                 if m.startswith("="):
                     self.wname = m[1:]
@@ -229,10 +231,10 @@ class ClassInfo(object):
                 elif m == "/Simple":
                     self.issimple = True
             self.props = [ClassProp(p) for p in decl[3]]
-        
+
         if not customname and self.wname.startswith("Cv"):
             self.wname = self.wname[2:]
-        
+
     def gen_map_code(self, all_classes):
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
@@ -241,21 +243,21 @@ class ClassInfo(object):
         else:
             code += "\n    return true;\n}\n"
         return code
-        
+
     def gen_code(self, all_classes):
         if self.ismap:
             return self.gen_map_code(all_classes)
-        
+
         getset_code = cStringIO.StringIO()
         getset_inits = cStringIO.StringIO()
-        
+
         sorted_props = [(p.name, p) for p in self.props]
         sorted_props.sort()
-        
+
         access_op = "->"
         if self.issimple:
             access_op = "."
-        
+
         for pname, p in sorted_props:
             getset_code.write(gen_template_get_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
             if p.readonly:
@@ -263,29 +265,29 @@ class ClassInfo(object):
             else:
                 getset_code.write(gen_template_set_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
                 getset_inits.write(gen_template_rw_prop_init.substitute(name=self.name, member=pname))
-                
+
         methods_code = cStringIO.StringIO()
         methods_inits = cStringIO.StringIO()
-        
+
         sorted_methods = self.methods.items()
         sorted_methods.sort()
-        
+
         for mname, m in sorted_methods:
             methods_code.write(m.gen_code(all_classes))
             methods_inits.write(m.get_tab_entry())
-        
+
         baseptr = "NULL"
         if self.bases and all_classes.has_key(self.bases[0]):
             baseptr = "&pyopencv_" + all_classes[self.bases[0]].name + "_Type"
-        
+
         code = gen_template_type_impl.substitute(name=self.name, wname=self.wname, cname=self.cname,
             getset_code=getset_code.getvalue(), getset_inits=getset_inits.getvalue(),
             methods_code=methods_code.getvalue(), methods_inits=methods_inits.getvalue(),
             baseptr=baseptr, extra_specials="")
-        
+
         return code
-            
-            
+
+
 class ConstInfo(object):
     def __init__(self, name, val):
         self.cname = name.replace(".", "::")
@@ -295,7 +297,7 @@ class ConstInfo(object):
         self.name = re.sub(r"([a-z])([A-Z])", r"\1_\2", self.name)
         self.name = self.name.upper()
         self.value = val
-     
+
 class ArgInfo(object):
     def __init__(self, arg_tuple):
         self.tp = arg_tuple[0]
@@ -323,7 +325,7 @@ class ArgInfo(object):
                 self.arraycvt = m[2:].strip()
         self.py_inputarg = False
         self.py_outputarg = False
-        
+
     def isbig(self):
         return self.tp == "Mat" or self.tp == "vector_Mat"# or self.tp.startswith("vector")
 
@@ -338,7 +340,7 @@ class FuncVariant(object):
                 self.wname = self.wname[2:]
             else:
                 self.wname = self.classname
-            
+
         self.rettype = decl[1]
         if self.rettype == "void":
             self.rettype = ""
@@ -355,28 +357,28 @@ class FuncVariant(object):
                     self.array_counters[c] = [ainfo.name]
             self.args.append(ainfo)
         self.init_pyproto()
-        
+
     def init_pyproto(self):
         # string representation of argument list, with '[', ']' symbols denoting optional arguments, e.g.
         # "src1, src2[, dst[, mask]]" for cv.add
         argstr = ""
-        
+
         # list of all input arguments of the Python function, with the argument numbers:
         #    [("src1", 0), ("src2", 1), ("dst", 2), ("mask", 3)]
         # we keep an argument number to find the respective argument quickly, because
         # some of the arguments of C function may not present in the Python function (such as array counters)
         # or even go in a different order ("heavy" output parameters of the C function
         # become the first optional input parameters of the Python function, and thus they are placed right after
-        # non-optional input parameters) 
+        # non-optional input parameters)
         arglist = []
-        
+
         # the list of "heavy" output parameters. Heavy parameters are the parameters
         # that can be expensive to allocate each time, such as vectors and matrices (see isbig).
         outarr_list = []
-        
+
         # the list of output parameters. Also includes input/output parameters.
         outlist = []
-        
+
         firstoptarg = 1000000
         argno = -1
         for a in self.args:
@@ -400,12 +402,12 @@ class FuncVariant(object):
                     arglist += outarr_list
                     outarr_list = []
                 arglist.append((a.name, argno))
-                
+
         if outarr_list:
             firstoptarg = min(firstoptarg, len(arglist))
             arglist += outarr_list
         firstoptarg = min(firstoptarg, len(arglist))
-        
+
         noptargs = len(arglist) - firstoptarg
         argnamelist = [aname for aname, argno in arglist]
         argstr = ", ".join(argnamelist[:firstoptarg])
@@ -425,7 +427,7 @@ class FuncVariant(object):
             outstr = ", ".join([o[0] for o in outlist])
         else:
             outstr = "None"
-            
+
         self.py_docstring = "%s(%s) -> %s" % (self.wname, argstr, outstr)
         self.py_noptargs = noptargs
         self.py_arglist = arglist
@@ -444,10 +446,10 @@ class FuncInfo(object):
         self.cname = cname
         self.isconstructor = isconstructor
         self.variants = []
-    
+
     def add_variant(self, decl):
         self.variants.append(FuncVariant(self.classname, self.name, decl, self.isconstructor))
-        
+
     def get_wrapper_name(self):
         name = self.name
         if self.classname:
@@ -457,7 +459,7 @@ class FuncInfo(object):
         else:
             classname = ""
         return "pyopencv_" + classname + name
-    
+
     def get_wrapper_prototype(self):
         full_fname = self.get_wrapper_name()
         if self.classname and not self.isconstructor:
@@ -465,7 +467,7 @@ class FuncInfo(object):
         else:
             self_arg = ""
         return "static PyObject* %s(PyObject* %s, PyObject* args, PyObject* kw)" % (full_fname, self_arg)
-    
+
     def get_tab_entry(self):
         docstring_list = []
         have_empty_constructor = False
@@ -485,11 +487,11 @@ class FuncInfo(object):
             p1 = s.find("(")
             p2 = s.rfind(")")
             docstring_list = [s[:p1+1] + "[" + s[p1+1:p2] + "]" + s[p2:]]
-            
+
         return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, METH_KEYWORDS, "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
                                      py_docstring = "  or  ".join(docstring_list))
-        
+
     def gen_code(self, all_classes):
         proto = self.get_wrapper_prototype()
         code = "%s\n{\n" % (proto,)
@@ -560,9 +562,9 @@ class FuncInfo(object):
                         code_decl += "    PyObject* pyobj_%s = NULL;\n" % (a.name,)
                         parse_name = "pyobj_" + a.name
                         code_cvt_list.append("pyopencv_to(pyobj_%s, %s)" % (a.name, a.name))
-                
+
                 all_cargs.append([amapping, parse_name])
-                
+
                 defval = a.defval
                 if not defval:
                     defval = amapping[2]
@@ -630,7 +632,7 @@ class FuncInfo(object):
                     amapping = all_cargs[argno][0]
                     backcvt_arg_list.append("%s(%s)" % (amapping[2], aname))
                 code_ret = "return Py_BuildValue(\"(%s)\", %s)" % \
-                    (fmtspec, ", ".join(["pyopencv_from(" + aname + ")" for aname, argno in v.py_outlist]))                    
+                    (fmtspec, ", ".join(["pyopencv_from(" + aname + ")" for aname, argno in v.py_outlist]))
 
             all_code_variants.append(gen_template_func_body.substitute(code_decl=code_decl,
                 code_parse=code_parse, code_fcall=code_fcall, code_ret=code_ret))
@@ -642,13 +644,13 @@ class FuncInfo(object):
             # try to execute each signature
             code += "    PyErr_Clear();\n\n".join(["    {\n" + v + "    }\n" for v in all_code_variants])
         code += "\n    return NULL;\n}\n\n"
-        return code    
-  
-    
+        return code
+
+
 class PythonWrapperGenerator(object):
     def __init__(self):
         self.clear()
-        
+
     def clear(self):
         self.classes = {}
         self.funcs = {}
@@ -664,20 +666,20 @@ class PythonWrapperGenerator(object):
         classinfo = ClassInfo(name, decl)
         classinfo.decl_idx = self.class_idx
         self.class_idx += 1
-        
+
         if self.classes.has_key(classinfo.name):
             print "Generator error: class %s (cname=%s) already exists" \
                 % (classinfo.name, classinfo.cname)
-            sys.exit(-1) 
+            sys.exit(-1)
         self.classes[classinfo.name] = classinfo
-        
+
     def add_const(self, name, decl):
         constinfo = ConstInfo(name, decl[1])
-        
+
         if self.consts.has_key(constinfo.name):
             print "Generator error: constant %s (cname=%s) already exists" \
                 % (constinfo.name, constinfo.cname)
-            sys.exit(-1) 
+            sys.exit(-1)
         self.consts[constinfo.name] = constinfo
 
     def add_func(self, decl):
@@ -704,7 +706,7 @@ class PythonWrapperGenerator(object):
                 name = m[1:]
                 customname = True
         func_map = self.funcs
-        
+
         if not classname or isconstructor:
             pass
         elif isclassmethod:
@@ -718,24 +720,24 @@ class PythonWrapperGenerator(object):
                 print "Generator error: the class for method %s is missing" % (name,)
                 sys.exit(-1)
             func_map = classinfo.methods
-            
+
         func = func_map.get(name, FuncInfo(classname, name, cname, isconstructor))
         func.add_variant(decl)
         if len(func.variants) == 1:
             func_map[name] = func
-    
+
     def gen_const_reg(self, constinfo):
         self.code_const_reg.write("PUBLISH2(%s,%s);\n" % (constinfo.name, constinfo.cname))
-    
+
     def save(self, path, name, buf):
         f = open(path + "/" + name, "wt")
         f.write(buf.getvalue())
         f.close()
-            
+
     def gen(self, srcfiles, output_path):
         self.clear()
         parser = hdr_parser.CppHeaderParser()
-        
+
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
             decls = parser.parse(hdr)
@@ -753,7 +755,7 @@ class PythonWrapperGenerator(object):
                 else:
                     # function
                     self.add_func(decl)
-        
+
         # step 2: generate code for the classes and their methods
         classlist = self.classes.items()
         classlist.sort()
@@ -766,18 +768,18 @@ class PythonWrapperGenerator(object):
                 else:
                     templ = gen_template_type_decl
                 self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname))
-        
+
         # register classes in the same order as they have been declared.
         # this way, base classes will be registered in Python before their derivatives.
         classlist1 = [(classinfo.decl_idx, name, classinfo) for name, classinfo in classlist]
         classlist1.sort()
-        
+
         for decl_idx, name, classinfo in classlist1:
             code = classinfo.gen_code(self.classes)
             self.code_types.write(code)
             if not classinfo.ismap:
                 self.code_type_reg.write("MKTYPE2(%s);\n" % (classinfo.name,) )
-            
+
         # step 3: generate the code for all the global functions
         funclist = self.funcs.items()
         funclist.sort()
@@ -785,13 +787,13 @@ class PythonWrapperGenerator(object):
             code = func.gen_code(self.classes)
             self.code_funcs.write(code)
             self.code_func_tab.write(func.get_tab_entry())
-            
+
         # step 4: generate the code for constants
         constlist = self.consts.items()
         constlist.sort()
         for name, constinfo in constlist:
             self.gen_const_reg(constinfo)
-            
+
         # That's it. Now save all the files
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
         self.save(output_path, "pyopencv_generated_func_tab.h", self.code_func_tab)
@@ -809,5 +811,5 @@ if __name__ == "__main__":
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)
 
-    
-    
+
+

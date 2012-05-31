@@ -280,8 +280,6 @@ Compares elements of two matrices.
 
     :param b: Second source matrix with the same size and type as ``a`` .
 
-    :param sc: A scalar to be compared with ``a`` .
-
     :param c: Destination matrix with the same size as ``a`` and the ``CV_8UC1`` type.
 
     :param cmpop: Flag specifying the relation between the elements to be checked:
