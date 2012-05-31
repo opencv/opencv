@@ -12,10 +12,10 @@ else
     include $(OPENCV_MK_PATH)
 endif
 
-LOCAL_SRC_FILES  := DetectionBaseTracker.cpp
-LOCAL_C_INCLUDES := $(LOCAL_PATH) 
+LOCAL_SRC_FILES  := DetectionBasedTracker_jni.cpp
+LOCAL_C_INCLUDES := $(LOCAL_PATH)
 LOCAL_LDLIBS +=  -llog -ldl
 
-LOCAL_MODULE     := detection_base_tacker
+LOCAL_MODULE     := detection_based_tacker
 
 include $(BUILD_SHARED_LIBRARY)

@@ -26,8 +26,8 @@ public class FdActivity extends Activity {
     public FdActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
         mDetectorName = new String[2];
-        mDetectorName[0] = "Cascade";
-        mDetectorName[1] = "DBT";
+        mDetectorName[FdView.JAVA_DETECTOR] = "Java";
+        mDetectorName[FdView.NATIVE_DETECTOR] = "Native (tracking)";
     }
 
     @Override
@@ -62,7 +62,8 @@ public class FdActivity extends Activity {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         mView = new FdView(this);
-        mView.setDtetectorType(mDetectorType);
+        mView.setDetectorType(mDetectorType);
+        mView.setMinFaceSize(0.2f);
         setContentView(mView);
     }
 
@@ -93,7 +94,7 @@ public class FdActivity extends Activity {
         {
         	mDetectorType = (mDetectorType + 1) % mDetectorName.length;
         	item.setTitle(mDetectorName[mDetectorType]);
-        	mView.setDtetectorType(mDetectorType);
+        	mView.setDetectorType(mDetectorType);
         }
         return true;
     }
