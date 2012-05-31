@@ -23,3 +23,20 @@ TEST(Core_Drawing, _914)
     int pixelsDrawn = rows*cols - countNonZero(img);
     ASSERT_EQ( (3*rows + cols)*3 - 3*9, pixelsDrawn);
 }
+
+
+TEST(Core_OutputArraySreate, _1997)
+{
+    struct local {
+        static void create(OutputArray arr, Size submatSize, int type)
+        {
+            int sizes[] = {submatSize.width, submatSize.height};
+            arr.create(sizeof(sizes)/sizeof(sizes[0]), sizes, type);
+        }
+    };
+
+    Mat mat(Size(512, 512), CV_8U);
+    Size submatSize = Size(256, 256);
+
+    ASSERT_NO_THROW(local::create( mat(Rect(Point(), submatSize)), submatSize, mat.type() ));
+}

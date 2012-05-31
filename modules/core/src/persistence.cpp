@@ -268,7 +268,8 @@ static char* icvGets( CvFileStorage* fs, char* str, int maxCount )
 {
     if( fs->strbuf )
     {
-        size_t i = fs->strbufpos, len = fs->strbufsize, j = 0;
+        size_t i = fs->strbufpos, len = fs->strbufsize;
+        int j = 0;
         const char* instr = fs->strbuf;
         while( i < len && j < maxCount-1 )
         {
@@ -2782,7 +2783,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
                 int xml_buf_size = 1 << 10;
                 char substr[] = "</opencv_storage>";
                 int last_occurence = -1;
-                xml_buf_size = MIN(xml_buf_size, file_size);
+                xml_buf_size = MIN(xml_buf_size, int(file_size));
                 fseek( fs->file, -xml_buf_size, SEEK_END );
                 xml_buf = (char*)cvAlloc( xml_buf_size+2 );
                 // find the last occurence of </opencv_storage>
