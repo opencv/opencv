@@ -28,7 +28,7 @@ Calculates the optical flow for two images by using the block matching method.
 
             .. math::
 
-                \left \lfloor   \frac{\texttt{prev->width} - \texttt{block_size.width}}{\texttt{shift_size.width}}   \right \rfloor \times \left \lfloor   \frac{\texttt{prev->height} - \texttt{block_size.height}}{\texttt{shift_size.height}}   \right \rfloor
+                \left \lfloor   \frac{\texttt{prev->width} - \texttt{block\_size.width}}{\texttt{shift\_size.width}}   \right \rfloor \times \left \lfloor   \frac{\texttt{prev->height} - \texttt{block\_size.height}}{\texttt{shift\_size.height}}   \right \rfloor
 
             size, 32-bit floating-point, single-channel
 
