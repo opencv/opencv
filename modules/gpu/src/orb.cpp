@@ -513,7 +513,10 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
                 resize(imagePyr_[level - 1], imagePyr_[level], sz, 0, 0, INTER_LINEAR);
 
                 if (!mask.empty())
+                {
                     resize(maskPyr_[level - 1], maskPyr_[level], sz, 0, 0, INTER_LINEAR);
+                    threshold(maskPyr_[level], maskPyr_[level], 254, 0, THRESH_TOZERO);
+                }
             }
         }
         else
