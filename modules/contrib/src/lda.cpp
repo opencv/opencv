@@ -185,21 +185,16 @@ Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     Mat W = _W.getMat();
     Mat mean = _mean.getMat();
     Mat src = _src.getMat();
-    // get number of samples and dimension
+    // get number of samples
     int n = src.rows;
-    int d = src.cols;
     // initalize temporary matrices
     Mat X, Y;
     // copy data & make sure we are using the correct type
     src.convertTo(Y, W.type());
     // calculate the reconstruction
-    gemm(Y,
-            W,
-            1.0,
-            ((size_t)d == mean.total()) ? repeat(mean.reshape(1,1), n, 1) : Mat(),
-            ((size_t)d == mean.total()) ? 1.0 : 0.0,
-            X,
-            GEMM_2_T);
+    gemm(Y, W, 1.0, Mat(), 0.0, X, GEMM_2_T);
+    if(mean.total() == (size_t) X.cols)
+        add(X, repeat(mean.reshape(1,1), n, 1), X);
     return X;
 }
 
