@@ -508,12 +508,14 @@ public:
      * gridRows            Grid rows count.
      * gridCols            Grid column count.
      */
-    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector,
+    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=0,
                                         int maxTotalKeypoints=1000,
                                         int gridRows=4, int gridCols=4 );
 
     // TODO implement read/write
     virtual bool empty() const;
+    
+    AlgorithmInfo* info() const;
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
