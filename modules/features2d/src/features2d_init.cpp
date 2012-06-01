@@ -133,15 +133,22 @@ CV_INIT_ALGORITHM(DenseFeatureDetector, "Feature2D.Dense",
                   obj.info()->addParam(obj, "varyXyStepWithScale", obj.varyXyStepWithScale);
                   obj.info()->addParam(obj, "varyImgBoundWithScale", obj.varyImgBoundWithScale));
 
+CV_INIT_ALGORITHM(GridAdaptedFeatureDetector, "Feature2D.Grid",
+                  obj.info()->addParam(obj, "detector", (Ptr<Algorithm>&)obj.detector);
+                  obj.info()->addParam(obj, "maxTotalKeypoints", obj.maxTotalKeypoints);
+                  obj.info()->addParam(obj, "gridRows", obj.gridRows);
+                  obj.info()->addParam(obj, "gridCols", obj.gridCols));
+
 bool initModule_features2d(void)
 {
     Ptr<Algorithm> brief = createBriefDescriptorExtractor(), orb = createORB(),
         star = createStarDetector(), fastd = createFastFeatureDetector(), mser = createMSER(),
-        dense = createDenseFeatureDetector(), gftt = createGFTTDetector(), harris = createHarrisDetector();
+        dense = createDenseFeatureDetector(), gftt = createGFTTDetector(),
+        harris = createHarrisDetector(), grid = createGridAdaptedFeatureDetector();
         
     return brief->info() != 0 && orb->info() != 0 && star->info() != 0 &&
         fastd->info() != 0 && mser->info() != 0 && dense->info() != 0 &&
-        gftt->info() != 0 && harris->info() != 0;
+        gftt->info() != 0 && harris->info() != 0 && grid->info() != 0;
 }
 
 }

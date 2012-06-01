@@ -57,6 +57,7 @@ CV_INIT_ALGORITHM(BackgroundSubtractorMOG, "BackgroundSubtractor.MOG",
 
 CV_INIT_ALGORITHM(BackgroundSubtractorMOG2, "BackgroundSubtractor.MOG2",
     obj.info()->addParam(obj, "history", obj.history);
+    obj.info()->addParam(obj, "nmixtures", obj.nmixtures);
     obj.info()->addParam(obj, "varThreshold", obj.varThreshold);
     obj.info()->addParam(obj, "detectShadows", obj.bShadowDetection));
 

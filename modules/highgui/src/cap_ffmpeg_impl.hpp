@@ -438,6 +438,10 @@ bool CvCapture_FFMPEG::grabFrame()
     const int max_number_of_attempts = 1 << 16;
 
     if( !ic || !video_st )  return false;
+    
+    if( ic->streams[video_stream]->nb_frames > 0 &&
+        frame_number > ic->streams[video_stream]->nb_frames )
+        return false;
 
     av_free_packet (&packet);
     

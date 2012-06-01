@@ -494,19 +494,16 @@ bool VideoCapture::retrieve(Mat& image, int channel)
 
 bool VideoCapture::read(Mat& image)
 {
-    if(!grab())
-        image.release();
-    else
+    if(grab())
         retrieve(image);
+    else
+        image.release();
     return !image.empty();
 }
     
 VideoCapture& VideoCapture::operator >> (Mat& image)
 {
-    if(!grab())
-        image.release();
-    else
-        retrieve(image);
+    read(image);
     return *this;
 }
     
