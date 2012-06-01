@@ -316,7 +316,9 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 	capture = [[CaptureDelegate alloc] init]; 
 	
 	QTCaptureDevice *device; 
-	NSArray* devices = [QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeVideo];
+    NSArray* devices = [[[QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeVideo]
+	        arrayByAddingObjectsFromArray:[QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeMuxed]] retain];
+	
 	if ([devices count] == 0) {
 		cout << "QTKit didn't find any attached Video Input Devices!" << endl; 
 		[localpool drain]; 
