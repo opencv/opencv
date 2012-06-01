@@ -9,7 +9,7 @@ import android.view.Window;
 
 public class ColorBlobDetectionActivity extends Activity {
 	
-	private static final String TAG = "Example/CollorBlobDetection";
+	private static final String TAG = "Example/ColorBlobDetection";
 	private ColorBlobDetectionView mView;
 	
 	public ColorBlobDetectionActivity()
