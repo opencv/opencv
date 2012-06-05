@@ -1207,7 +1207,7 @@ struct DecimateAlpha
 };
 
 template<typename T, typename WT>
-static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, int xofs_count )
+static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, int xofs_count, double scale_y_)
 {
     Size ssize = src.size(), dsize = dst.size();
     int cn = src.channels();
@@ -1215,7 +1215,7 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
     AutoBuffer<WT> _buffer(dsize.width*2);
     WT *buf = _buffer, *sum = buf + dsize.width;
     int k, sy, dx, cur_dy = 0;
-    WT scale_y = (WT)ssize.height/dsize.height;
+    WT scale_y = (WT)scale_y_;
 
     CV_Assert( cn <= 4 );
     for( dx = 0; dx < dsize.width; dx++ )
@@ -1315,7 +1315,7 @@ typedef void (*ResizeAreaFastFunc)( const Mat& src, Mat& dst,
                                     int scale_x, int scale_y );
 
 typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
-                                const DecimateAlpha* xofs, int xofs_count );
+                                const DecimateAlpha* xofs, int xofs_count, double scale_y_);
 
 }
 
@@ -1532,7 +1532,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             }
         }
 
-        func( src, dst, xofs, k );
+        func( src, dst, xofs, k ,scale_y);
         return;
     }
 
