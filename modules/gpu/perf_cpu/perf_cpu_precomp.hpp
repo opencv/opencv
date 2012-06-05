@@ -16,6 +16,7 @@
 #include "opencv2/video/video.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/legacy/legacy.hpp"
 
 #include "perf_utility.hpp"
 

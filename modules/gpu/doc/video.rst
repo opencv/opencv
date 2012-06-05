@@ -294,6 +294,104 @@ Interpolates frames (images) using provided optical flow (displacement field).
 
 
 
+gpu::FGDStatModel
+-----------------
+.. ocv:class:: gpu::FGDStatModel
+
+Class used for background/foreground segmentation. ::
+
+    class FGDStatModel
+    {
+    public:
+        struct Params
+        {
+            ...
+        };
+
+        explicit FGDStatModel(int out_cn = 3);
+        explicit FGDStatModel(const cv::gpu::GpuMat& firstFrame, const Params& params = Params(), int out_cn = 3);
+
+        ~FGDStatModel();
+
+        void create(const cv::gpu::GpuMat& firstFrame, const Params& params = Params());
+        void release();
+
+        int update(const cv::gpu::GpuMat& curFrame);
+
+        //8UC3 or 8UC4 reference background image
+        cv::gpu::GpuMat background;
+
+        //8UC1 foreground image
+        cv::gpu::GpuMat foreground;
+
+        std::vector< std::vector<cv::Point> > foreground_regions;
+    };
+
+The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
+
+The results are available through the class fields:
+
+    .. ocv:member:: cv::gpu::GpuMat background
+
+        The output background image.
+
+    .. ocv:member:: cv::gpu::GpuMat foreground
+
+        The output foreground mask as an 8-bit binary image.
+
+    .. ocv:member:: cv::gpu::GpuMat foreground_regions
+
+        The output foreground regions calculated by :ocv:func:`findContours`.
+
+
+
+gpu::FGDStatModel::FGDStatModel
+-------------------------------
+Constructors.
+
+.. ocv:function:: gpu::FGDStatModel::FGDStatModel(int out_cn = 3)
+.. ocv:function:: gpu::FGDStatModel::FGDStatModel(const cv::gpu::GpuMat& firstFrame, const Params& params = Params(), int out_cn = 3)
+
+    :param firstFrame: First frame from video stream. Supports 3- and 4-channels input ( ``CV_8UC3`` and ``CV_8UC4`` ).
+
+    :param params: Algorithm's parameters. See [FGD2003]_ for explanation.
+
+    :param out_cn: Channels count in output result and inner buffers. Can be 3 or 4. 4-channels version requires more memory, but works a bit faster.
+
+.. seealso:: :ocv:func:`gpu::FGDStatModel::create`
+
+
+
+gpu::FGDStatModel::create
+-------------------------
+Initializes background model.
+
+.. ocv:function:: void gpu::FGDStatModel::create(const cv::gpu::GpuMat& firstFrame, const Params& params = Params())
+
+    :param firstFrame: First frame from video stream. Supports 3- and 4-channels input ( ``CV_8UC3`` and ``CV_8UC4`` ).
+
+    :param params: Algorithm's parameters. See [FGD2003]_ for explanation.
+
+
+
+gpu::FGDStatModel::release
+--------------------------
+Releases all inner buffer's memory.
+
+.. ocv:function:: void gpu::FGDStatModel::release()
+
+
+
+gpu::FGDStatModel::update
+--------------------------
+Updates the background model and returns foreground regions count.
+
+.. ocv:function:: int gpu::FGDStatModel::update(const cv::gpu::GpuMat& curFrame);
+
+    :param curFrame: Next video frame.
+
+
+
 gpu::VideoWriter_GPU
 ---------------------
 Video writer class.
@@ -731,3 +829,4 @@ Parse next video frame. Implementation must call this method after new frame was
 
 
 .. [Brox2004] T. Brox, A. Bruhn, N. Papenberg, J. Weickert. *High accuracy optical flow estimation based on a theory for warping*. ECCV 2004.
+.. [FGD2003] Liyuan Li, Weimin Huang, Irene Y.H. Gu, and Qi Tian. *Foreground Object Detection from Videos Containing Complex Background*. ACM MM2003 9p, 2003.

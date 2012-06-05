@@ -105,4 +105,118 @@ GPU_PERF_TEST_1(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo)
 
 INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlowTest, ALL_DEVICES);
 
+//////////////////////////////////////////////////////
+// FGDStatModel
+
+namespace cv
+{
+    template<> void Ptr<CvBGStatModel>::delete_obj()
+    {
+        cvReleaseBGStatModel(&obj);
+    }
+}
+
+GPU_PERF_TEST(FGDStatModel, cv::gpu::DeviceInfo, std::string)
+{
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+
+    cv::VideoCapture cap(inputFile);
+    ASSERT_TRUE(cap.isOpened());
+
+    cv::Mat frame;
+    cap >> frame;
+    ASSERT_FALSE(frame.empty());
+
+    IplImage ipl_frame = frame;
+    cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
+
+    declare.time(60);
+
+    for (int i = 0; i < 10; ++i)
+    {
+        cap >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        ipl_frame = frame;
+
+        startTimer();
+        next();
+
+        cvUpdateBGStatModel(&ipl_frame, model);
+
+        stopTimer();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, FGDStatModel, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
+
+//////////////////////////////////////////////////////
+// VideoWriter
+
+#ifdef WIN32
+
+GPU_PERF_TEST(VideoWriter, cv::gpu::DeviceInfo, std::string)
+{
+    const double FPS = 25.0;
+
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+    std::string outputFile = inputFile.substr(0, inputFile.find('.')) + "_test.avi";
+
+    cv::VideoCapture reader(inputFile);
+    ASSERT_TRUE( reader.isOpened() );
+
+    cv::VideoWriter writer;
+
+    cv::Mat frame;
+
+    declare.time(30);
+
+    for (int i = 0; i < 10; ++i)
+    {
+        reader >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        if (!writer.isOpened())
+            writer.open(outputFile, CV_FOURCC('H', '2', '6', '4'), frame.size(), FPS);
+
+        startTimer(); next();
+        writer.write(frame);
+        stopTimer();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, VideoWriter, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
+
+#endif // WIN32
+
+//////////////////////////////////////////////////////
+// VideoReader
+
+GPU_PERF_TEST(VideoReader, cv::gpu::DeviceInfo, std::string)
+{
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+
+    cv::VideoCapture reader(inputFile);
+    ASSERT_TRUE( reader.isOpened() );
+
+    cv::Mat frame;
+
+    reader >> frame;
+
+    declare.time(20);
+
+    TEST_CYCLE_N(10)
+    {
+        reader >> frame;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, VideoReader, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
+
 #endif

@@ -3365,7 +3365,7 @@ TEST_P(Reduce, Rows)
     cv::Mat dst_gold;
     cv::reduce(src, dst_gold, 0, reduceOp, dst_depth);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 0.0 : 1e-2);
+    EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 0.0 : 0.02);
 }
 
 TEST_P(Reduce, Cols)
@@ -3381,7 +3381,7 @@ TEST_P(Reduce, Cols)
     dst_gold.rows = 1;
     dst_gold.step = dst_gold.cols * dst_gold.elemSize();
 
-    EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 0.0 : 1e-2);
+    EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 0.0 : 0.02);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Reduce, testing::Combine(

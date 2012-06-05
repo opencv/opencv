@@ -3,7 +3,7 @@ if(ANDROID OR IOS)
 endif()
 
 set(the_description "GPU-accelerated Computer Vision")
-ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree)
+ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_legacy)
 
 ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
@@ -50,20 +50,20 @@ if (HAVE_CUDA)
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
   #CUDA_BUILD_CLEAN_TARGET()
 
-  
+
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-  
-  
+
+
   if(NOT APPLE)
     unset(CUDA_nvcuvid_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvid)
-	set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
+    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
   endif()
 
   if(WIN32)
     unset(CUDA_nvcuvenc_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvenc)
-	set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
+    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
   endif()
 
   if(NOT APPLE AND WITH_FFMPEG)

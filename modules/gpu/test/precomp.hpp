@@ -62,6 +62,7 @@
 #include "opencv2/ts/ts_perf.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/legacy/legacy.hpp"
 
 #include "utility.hpp"
 #include "interpolation.hpp"

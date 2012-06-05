@@ -41,11 +41,9 @@
 
 #include "precomp.hpp"
 
-namespace {
-
 //#define DUMP
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
 // BroxOpticalFlow
 
 #define BROX_OPTICAL_FLOW_DUMP_FILE            "opticalflow/brox_optical_flow.bin"
@@ -130,7 +128,7 @@ TEST_P(BroxOpticalFlow, Regression)
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, BroxOpticalFlow, ALL_DEVICES);
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
 // GoodFeaturesToTrack
 
 IMPLEMENT_PARAM_CLASS(MinDistance, double)
@@ -207,7 +205,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, GoodFeaturesToTrack, testing::Combine(
     ALL_DEVICES,
     testing::Values(MinDistance(0.0), MinDistance(3.0))));
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
 // PyrLKOpticalFlow
 
 IMPLEMENT_PARAM_CLASS(UseGray, bool)
@@ -306,7 +304,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, PyrLKOpticalFlow, testing::Combine(
     ALL_DEVICES,
     testing::Values(UseGray(true), UseGray(false))));
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
 // FarnebackOpticalFlow
 
 IMPLEMENT_PARAM_CLASS(PyrScale, double)
@@ -413,7 +411,87 @@ TEST_P(OpticalFlowNan, Regression)
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowNan, ALL_DEVICES);
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
+// FGDStatModel
+
+namespace cv
+{
+    template<> void Ptr<CvBGStatModel>::delete_obj()
+    {
+        cvReleaseBGStatModel(&obj);
+    }
+}
+
+PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string, Channels)
+{
+};
+
+TEST_P(FGDStatModel, Accuracy)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
+    int out_cn = GET_PARAM(2);
+
+    cv::VideoCapture cap(inputFile);
+    ASSERT_TRUE(cap.isOpened());
+
+    cv::Mat frame;
+    cap >> frame;
+    ASSERT_FALSE(frame.empty());
+
+    IplImage ipl_frame = frame;
+    cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::FGDStatModel d_model(out_cn);
+    d_model.create(d_frame);
+
+    cv::Mat h_background;
+    cv::Mat h_foreground;
+    cv::Mat h_background3;
+
+    cv::Mat backgroundDiff;
+    cv::Mat foregroundDiff;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        cap >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        ipl_frame = frame;
+        int gold_count = cvUpdateBGStatModel(&ipl_frame, model);
+
+        d_frame.upload(frame);
+
+        int count = d_model.update(d_frame);
+
+        ASSERT_EQ(gold_count, count);
+
+        cv::Mat gold_background(model->background);
+        cv::Mat gold_foreground(model->foreground);
+
+        if (out_cn == 3)
+            d_model.background.download(h_background3);
+        else
+        {
+            d_model.background.download(h_background);
+            cv::cvtColor(h_background, h_background3, cv::COLOR_BGRA2BGR);
+        }
+        d_model.foreground.download(h_foreground);
+
+        EXPECT_MAT_NEAR(gold_background, h_background3, 1.0);
+        EXPECT_MAT_NEAR(gold_foreground, h_foreground, 0.0);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Video, FGDStatModel, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi")),
+    testing::Values(Channels(3), Channels(4))));
+
+//////////////////////////////////////////////////////
 // VideoWriter
 
 #ifdef WIN32
@@ -447,17 +525,13 @@ TEST_P(VideoWriter, Regression)
     cv::gpu::VideoWriter_GPU d_writer;
 
     cv::Mat frame;
-    std::vector<cv::Mat> frames;
     cv::gpu::GpuMat d_frame;
 
-    for (int i = 1; i < 10; ++i)
+    for (int i = 0; i < 10; ++i)
     {
         reader >> frame;
+        ASSERT_FALSE(frame.empty());
 
-        if (frame.empty())
-            break;
-
-        frames.push_back(frame.clone());
         d_frame.upload(frame);
 
         if (!d_writer.isOpened())
@@ -481,11 +555,11 @@ TEST_P(VideoWriter, Regression)
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, VideoWriter, testing::Combine(
     ALL_DEVICES,
-    testing::Values(std::string("VID00003-20100701-2204.mpg"), std::string("big_buck_bunny.mpg"))));
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
 #endif // WIN32
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
 // VideoReader
 
 PARAM_TEST_CASE(VideoReader, cv::gpu::DeviceInfo, std::string)
@@ -511,7 +585,7 @@ TEST_P(VideoReader, Regression)
 
     cv::gpu::GpuMat frame;
 
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < 10; ++i)
     {
         ASSERT_TRUE( reader.read(frame) );
         ASSERT_FALSE( frame.empty() );
@@ -523,6 +597,4 @@ TEST_P(VideoReader, Regression)
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
     ALL_DEVICES,
-    testing::Values(std::string("VID00003-20100701-2204.mpg"))));
-
-} // namespace
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));

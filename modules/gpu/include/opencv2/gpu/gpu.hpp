@@ -1891,7 +1891,71 @@ CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
 CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
 
 
-////////////////////////////////// Video Encoding //////////////////////////////////////////
+//////////////////////// Background/foreground segmentation ////////////////////////
+
+// Foreground Object Detection from Videos Containing Complex Background.
+// Liyuan Li, Weimin Huang, Irene Y.H. Gu, and Qi Tian.
+// ACM MM2003 9p
+class CV_EXPORTS FGDStatModel
+{
+public:
+    struct CV_EXPORTS Params
+    {
+        int Lc;  // Quantized levels per 'color' component. Power of two, typically 32, 64 or 128.
+        int N1c; // Number of color vectors used to model normal background color variation at a given pixel.
+        int N2c; // Number of color vectors retained at given pixel.  Must be > N1c, typically ~ 5/3 of N1c.
+        // Used to allow the first N1c vectors to adapt over time to changing background.
+
+        int Lcc;  // Quantized levels per 'color co-occurrence' component.  Power of two, typically 16, 32 or 64.
+        int N1cc; // Number of color co-occurrence vectors used to model normal background color variation at a given pixel.
+        int N2cc; // Number of color co-occurrence vectors retained at given pixel.  Must be > N1cc, typically ~ 5/3 of N1cc.
+        // Used to allow the first N1cc vectors to adapt over time to changing background.
+
+        bool is_obj_without_holes; // If TRUE we ignore holes within foreground blobs. Defaults to TRUE.
+        int perform_morphing;     // Number of erode-dilate-erode foreground-blob cleanup iterations.
+        // These erase one-pixel junk blobs and merge almost-touching blobs. Default value is 1.
+
+        float alpha1; // How quickly we forget old background pixel values seen. Typically set to 0.1.
+        float alpha2; // "Controls speed of feature learning". Depends on T. Typical value circa 0.005.
+        float alpha3; // Alternate to alpha2, used (e.g.) for quicker initial convergence. Typical value 0.1.
+
+        float delta;   // Affects color and color co-occurrence quantization, typically set to 2.
+        float T;       // A percentage value which determines when new features can be recognized as new background. (Typically 0.9).
+        float minArea; // Discard foreground blobs whose bounding box is smaller than this threshold.
+
+        // default Params
+        Params();
+    };
+
+    // out_cn - channels count in output result (can be 3 or 4)
+    // 4-channels require more memory, but a bit faster
+    explicit FGDStatModel(int out_cn = 3);
+    explicit FGDStatModel(const cv::gpu::GpuMat& firstFrame, const Params& params = Params(), int out_cn = 3);
+
+    ~FGDStatModel();
+
+    void create(const cv::gpu::GpuMat& firstFrame, const Params& params = Params());
+    void release();
+
+    int update(const cv::gpu::GpuMat& curFrame);
+
+    //8UC3 or 8UC4 reference background image
+    cv::gpu::GpuMat background;
+
+    //8UC1 foreground image
+    cv::gpu::GpuMat foreground;
+
+    std::vector< std::vector<cv::Point> > foreground_regions;
+
+private:
+    FGDStatModel(const FGDStatModel&);
+    FGDStatModel& operator=(const FGDStatModel&);
+
+    class Impl;
+    std::auto_ptr<Impl> impl_;
+};
+
+////////////////////////////////// Video Encoding //////////////////////////////////
 
 // Works only under Windows
 // Supports olny H264 video codec and AVI files
