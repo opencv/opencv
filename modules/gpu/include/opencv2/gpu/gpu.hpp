@@ -1449,12 +1449,12 @@ public:
     int descriptorSize() const;
 
     //! upload host keypoints to device memory
-    void uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMat& keypointsGPU);
+    static void uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMat& keypointsGPU);
     //! download keypoints from device to host memory
-    void downloadKeypoints(const GpuMat& keypointsGPU, vector<KeyPoint>& keypoints);
+    static void downloadKeypoints(const GpuMat& keypointsGPU, vector<KeyPoint>& keypoints);
 
     //! download descriptors from device to host memory
-    void downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors);
+    static void downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors);
 
     //! finds the keypoints using fast hessian detector used in SURF
     //! supports CV_8UC1 images
@@ -1521,10 +1521,10 @@ public:
     void operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
 
     //! download keypoints from device to host memory
-    void downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+    static void downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! convert keypoints to KeyPoint vector
-    void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
+    static void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! release temporary buffer's memory
     void release();
@@ -1595,10 +1595,9 @@ public:
     void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors);
 
     //! download keypoints from device to host memory
-    void downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
-
+    static void downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
     //! convert keypoints to KeyPoint vector
-    void convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
+    static void convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! returns the descriptor size in bytes
     inline int descriptorSize() const { return kBytes; }
