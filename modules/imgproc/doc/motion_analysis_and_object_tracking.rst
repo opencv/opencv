@@ -161,34 +161,34 @@ Return value: detected phase shift (sub-pixel) between the two arrays.
 
 The function performs the following equations
 
-*
-    First it applies a Hanning window (see http://en.wikipedia.org/wiki/Hann\_function) to each image to remove possible edge effects. This window is cached until the array size changes to speed up processing time.
+* First it applies a Hanning window (see http://en.wikipedia.org/wiki/Hann\_function) to each image to remove possible edge effects. This window is cached until the array size changes to speed up processing time.
 
-*
-    Next it computes the forward DFTs of each source array:
-    .. math::
+* Next it computes the forward DFTs of each source array:
+
+     .. math::
 
         \mathbf{G}_a = \mathcal{F}\{src_1\}, \; \mathbf{G}_b = \mathcal{F}\{src_2\}
 
-    where
-    :math:`\mathcal{F}` is the forward DFT.
+  where
+  :math:`\mathcal{F}` is the forward DFT.
 
-*
-    It then computes the cross-power spectrum of each frequency domain array:
+* It then computes the cross-power spectrum of each frequency domain array:
+
     .. math::
 
-        R = \frac{ \mathbf{G}_a \mathbf{G}_b^*}{|\mathbf{G}_a \mathbf{G}_b^*|}
+          R = \frac{ \mathbf{G}_a \mathbf{G}_b^*}{|\mathbf{G}_a \mathbf{G}_b^*|}
 
-*
-    Next the cross-correlation is converted back into the time domain via the inverse DFT:
+* Next the cross-correlation is converted back into the time domain via the inverse DFT:
+
     .. math::
 
-        r = \mathcal{F}^{-1}\{R\}
-*
-    Finally, it computes the peak location and computes a 5x5 weighted centroid around the peak to achieve sub-pixel accuracy.
+          r = \mathcal{F}^{-1}\{R\}
+
+* Finally, it computes the peak location and computes a 5x5 weighted centroid around the peak to achieve sub-pixel accuracy.
+
     .. math::
 
-       (\Delta x, \Delta y) = \texttt{weighted_centroid}\{\arg \max_{(x, y)}\{r\}\}
+         (\Delta x, \Delta y) = \texttt{weightedCentroid} \{\arg \max_{(x, y)}\{r\}\}
 
 .. seealso::
     :ocv:func:`dft`,
