@@ -179,7 +179,7 @@ GPU_PERF_TEST(VideoWriter, cv::gpu::DeviceInfo, std::string)
         ASSERT_FALSE(frame.empty());
 
         if (!writer.isOpened())
-            writer.open(outputFile, CV_FOURCC('H', '2', '6', '4'), frame.size(), FPS);
+            writer.open(outputFile, CV_FOURCC('X', 'V', 'I', 'D'), FPS, frame.size());
 
         startTimer(); next();
         writer.write(frame);
