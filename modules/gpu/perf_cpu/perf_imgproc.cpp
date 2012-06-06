@@ -76,8 +76,9 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
                     MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
                     MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
-    testing::Values(Scale(0.5), Scale(2.0))));
+    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR),
+                    Interpolation(cv::INTER_CUBIC),   Interpolation(cv::INTER_AREA)),
+    testing::Values(Scale(0.5), Scale(0.3)/*, Scale(2.0)*/)));
 
 //////////////////////////////////////////////////////////////////////
 // WarpAffine

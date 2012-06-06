@@ -105,6 +105,8 @@ namespace cv { namespace gpu { namespace device
                 AreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
                 resize_area<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
                 cudaSafeCall( cudaGetLastError() );
+                if (stream == 0)
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 
@@ -120,6 +122,8 @@ namespace cv { namespace gpu { namespace device
                 IntegerAreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
                 resize_area<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
                 cudaSafeCall( cudaGetLastError() );
+                if (stream == 0)
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
 

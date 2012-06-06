@@ -198,7 +198,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeArea, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC3), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(/*0.3,*/0.5),
+    testing::Values(0.3, 0.5),
     testing::Values(Interpolation(cv::INTER_AREA)),
     WHOLE_SUBMAT));
 

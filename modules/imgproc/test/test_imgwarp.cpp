@@ -1495,8 +1495,6 @@ TEST(Imgproc_resize_area, regression)
     cv::Mat expected(5,5,CV_16UC1, expected_data);
 
     cv::resize(src, actual, cv::Size(), 0.3, 0.3, INTER_AREA);
-    std::cout << actual << std::endl;
-    std::cout << expected << std::endl;
 
     ASSERT_EQ(actual.type(), expected.type());
     ASSERT_EQ(actual.size(), expected.size());
