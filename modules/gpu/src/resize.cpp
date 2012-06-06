@@ -91,7 +91,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     src.locateROI(wholeSize, ofs);
 
     bool useNpp = (src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    useNpp = useNpp && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || src.type() == CV_8UC4);
+    useNpp = useNpp && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || (src.type() == CV_8UC4 && interpolation != INTER_AREA));
 
     if (useNpp)
     {
