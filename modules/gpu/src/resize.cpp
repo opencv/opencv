@@ -61,7 +61,8 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
 {
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
+    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR
+            || interpolation == INTER_CUBIC || interpolation == INTER_AREA);
     CV_Assert(!(dsize == Size()) || (fx > 0 && fy > 0));
 
     if (dsize == Size())

@@ -878,8 +878,8 @@ struct VResizeLinear
         VecOp vecOp;
 
         int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
-	    #if CV_ENABLE_UNROLLED
-		for( ; x <= width - 4; x += 4 )
+        #if CV_ENABLE_UNROLLED
+        for( ; x <= width - 4; x += 4 )
         {
             WT t0, t1;
             t0 = S0[x]*b0 + S1[x]*b1;
@@ -1035,7 +1035,7 @@ struct VResizeLanczos4
         CastOp castOp;
         VecOp vecOp;
         int k, x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
             WT b = beta[0];
@@ -1130,7 +1130,7 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
         if( k0 < ksize )
             hresize( srows + k0, rows + k0, ksize - k0, xofs, alpha,
                      ssize.width, dsize.width, cn, xmin, xmax );
-		vresize( (const WT**)rows, (T*)(dst.data + dst.step*dy), beta, dsize.width );
+        vresize( (const WT**)rows, (T*)(dst.data + dst.step*dy), beta, dsize.width );
     }
 }
 
@@ -1163,8 +1163,8 @@ static void resizeAreaFast_( const Mat& src, Mat& dst, const int* ofs, const int
         {
             const T* S = (const T*)(src.data + src.step*sy0) + xofs[dx];
             WT sum = 0;
-			k=0;
-			#if CV_ENABLE_UNROLLED
+            k=0;
+            #if CV_ENABLE_UNROLLED
             for( ; k <= area - 4; k += 4 )
                 sum += S[ofs[k]] + S[ofs[k+1]] + S[ofs[k+2]] + S[ofs[k+3]];
             #endif
@@ -1329,11 +1329,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         resizeGeneric_<
             HResizeLinear<uchar, int, short,
                 INTER_RESIZE_COEF_SCALE,
-				HResizeLinearVec_8u32s>,
+                HResizeLinearVec_8u32s>,
             VResizeLinear<uchar, int, short,
                 FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>,
-				VResizeLinearVec_32s8u> >,
-		0,
+                VResizeLinearVec_32s8u> >,
+        0,
         resizeGeneric_<
             HResizeLinear<ushort, float, float, 1,
                 HResizeLinearVec_16u32f>,
@@ -1344,7 +1344,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 HResizeLinearVec_16s32f>,
             VResizeLinear<short, float, float, Cast<float, short>,
                 VResizeLinearVec_32f16s> >,
-		0,
+        0,
         resizeGeneric_<
             HResizeLinear<float, float, float, 1,
                 HResizeLinearVec_32f>,
@@ -1374,7 +1374,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             HResizeCubic<short, float, float>,
             VResizeCubic<short, float, float, Cast<float, short>,
             VResizeCubicVec_32f16s> >,
-		0,
+        0,
         resizeGeneric_<
             HResizeCubic<float, float, float>,
             VResizeCubic<float, float, float, Cast<float, float>,
@@ -1396,10 +1396,10 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         resizeGeneric_<HResizeLanczos4<ushort, float, float>,
             VResizeLanczos4<ushort, float, float, Cast<float, ushort>,
             VResizeNoVec> >,
-       	resizeGeneric_<HResizeLanczos4<short, float, float>,
+        resizeGeneric_<HResizeLanczos4<short, float, float>,
             VResizeLanczos4<short, float, float, Cast<float, short>,
             VResizeNoVec> >,
-		0,
+        0,
         resizeGeneric_<HResizeLanczos4<float, float, float>,
             VResizeLanczos4<float, float, float, Cast<float, float>,
             VResizeNoVec> >,
@@ -1412,8 +1412,8 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     static ResizeAreaFastFunc areafast_tab[] =
     {
         resizeAreaFast_<uchar, int>, 0,
-		resizeAreaFast_<ushort, float>,
-		resizeAreaFast_<short, float>,
+        resizeAreaFast_<ushort, float>,
+        resizeAreaFast_<short, float>,
         0,
         resizeAreaFast_<float, float>,
         resizeAreaFast_<double, double>,
@@ -1528,7 +1528,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 assert( k < ssize.width*2 );
                 xofs[k].di = dx*cn;
                 xofs[k].si = sx2*cn;
-                xofs[k++].alpha = (float)((fsx2 - sx2)*scale);
+                xofs[k++].alpha = (float)(min(fsx2 - sx2, 1.)*scale);
             }
         }
 
@@ -3480,7 +3480,7 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     if( !CV_ARE_TYPES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedFormats, "" );
 
-	ssize.width = src->cols;
+    ssize.width = src->cols;
     ssize.height = src->rows;
     dsize.width = dst->cols;
     dsize.height = dst->rows;

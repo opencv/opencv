@@ -46,6 +46,7 @@
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/filters.hpp"
+# include <cfloat>
 
 namespace cv { namespace gpu { namespace device
 {
@@ -65,6 +66,17 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
+        template <typename Ptr2D, typename T> __global__ void resize_area(const Ptr2D src, float fx, float fy, DevMem2D_<T> dst)
+        {
+            const int x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+            if (x < dst.cols && y < dst.rows)
+            {
+                dst(y, x) = saturate_cast<T>(src(y, x));
+            }
+        }
+
         template <template <typename> class Filter, typename T> struct ResizeDispatcherStream
         {
             static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
@@ -74,9 +86,39 @@ namespace cv { namespace gpu { namespace device
 
                 BrdReplicate<T> brd(src.rows, src.cols);
                 BorderReader< PtrStep<T>, BrdReplicate<T> > brdSrc(src, brd);
-                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc);
+                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc, fx, fy);
 
                 resize<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
+                cudaSafeCall( cudaGetLastError() );
+            }
+        };
+
+        template <typename T> struct ResizeDispatcherStream<AreaFilter, T>
+        {
+            static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            {
+                dim3 block(32, 8);
+                dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+                BrdConstant<T> brd(src.rows, src.cols);
+                BorderReader< PtrStep<T>, BrdConstant<T> > brdSrc(src, brd);
+                AreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
+                resize_area<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
+                cudaSafeCall( cudaGetLastError() );
+            }
+        };
+
+        template <typename T> struct ResizeDispatcherStream<IntegerAreaFilter, T>
+        {
+            static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            {
+                dim3 block(32, 8);
+                dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+                BrdConstant<T> brd(src.rows, src.cols);
+                BorderReader< PtrStep<T>, BrdConstant<T> > brdSrc(src, brd);
+                IntegerAreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
+                resize_area<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
                 cudaSafeCall( cudaGetLastError() );
             }
         };
@@ -169,14 +211,31 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
+        template <typename T> struct ResizeDispatcher<AreaFilter, T>
+        {
+            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            {
+                int iscale_x = round(fx);
+                int iscale_y = round(fy);
+
+                if( std::abs(fx - iscale_x) < FLT_MIN && std::abs(fy - iscale_y) < FLT_MIN)
+                    ResizeDispatcherStream<IntegerAreaFilter, T>::call(src, fx, fy, dst, stream);
+                else
+                    ResizeDispatcherStream<AreaFilter, T>::call(src, fx, fy, dst, stream);
+            }
+        };
+
         template <typename T> void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, 
             DevMem2Db dst, int interpolation, cudaStream_t stream)
         {
             typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream);
 
-            static const caller_t callers[3] = 
+            static const caller_t callers[4] =
             {
-                ResizeDispatcher<PointFilter, T>::call, ResizeDispatcher<LinearFilter, T>::call, ResizeDispatcher<CubicFilter, T>::call
+                ResizeDispatcher<PointFilter, T>::call,
+                ResizeDispatcher<LinearFilter, T>::call,
+                ResizeDispatcher<CubicFilter, T>::call,
+                ResizeDispatcher<AreaFilter, T>::call
             };
 
             callers[interpolation](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, fx, fy, 

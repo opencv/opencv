@@ -48,7 +48,8 @@
 
 namespace
 {
-    template <typename T, template <typename> class Interpolator> void resizeImpl(const cv::Mat& src, cv::Mat& dst, double fx, double fy)
+    template <typename T, template <typename> class Interpolator>
+    void resizeImpl(const cv::Mat& src, cv::Mat& dst, double fx, double fy)
     {
         const int cn = src.channels();
 
@@ -154,6 +155,51 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Resize, testing::Combine(
     testing::Values(MatType(CV_8UC3), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     testing::Values(0.3, 0.5, 1.5, 2.0),
     testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+    WHOLE_SUBMAT));
+
+
+/////////////////
+PARAM_TEST_CASE(ResizeArea, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size size;
+    double coeff;
+    int interpolation;
+    int type;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        type = GET_PARAM(2);
+        coeff = GET_PARAM(3);
+        interpolation = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(ResizeArea, Accuracy)
+{
+    cv::Mat src = randomMat(size, type);
+
+    cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
+    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
+
+    cv::Mat dst_cpu;
+    cv::resize(src, dst_cpu, cv::Size(), coeff, coeff, interpolation);
+
+    EXPECT_MAT_NEAR(dst_cpu, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeArea, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC3), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(/*0.3,*/0.5),
+    testing::Values(Interpolation(cv::INTER_AREA)),
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////
