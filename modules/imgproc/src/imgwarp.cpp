@@ -1276,14 +1276,14 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
                 if(cur_dy >= dsize.height) return;
                 for( dx = 0; dx < dsize.width; dx++ )
                 {
-                    D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.cols - cur_dy * scale_y));
+                    D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.rows - cur_dy * scale_y));
                     sum[dx] = buf[dx] = 0;
                 }
             }
             else
                 for( dx = 0; dx < dsize.width; dx++ )
                 {
-                    D[dx] = saturate_cast<T>((sum[dx] + buf[dx]* beta1)/ min(scale_y, src.cols - cur_dy*scale_y));
+                    D[dx] = saturate_cast<T>((sum[dx] + buf[dx]* beta1)/ min(scale_y, src.rows - cur_dy*scale_y));
                     sum[dx] = buf[dx]*beta;
                     buf[dx] = 0;
                 }
