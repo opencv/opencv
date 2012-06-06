@@ -1274,13 +1274,13 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             if( fabs(beta) < 1e-3 )
                 for( dx = 0; dx < dsize.width; dx++ )
                 {
-                    D[dx] = saturate_cast<T>(sum[dx] + buf[dx]);
+                    D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.cols - cur_dy * scale_y));
                     sum[dx] = buf[dx] = 0;
                 }
             else
                 for( dx = 0; dx < dsize.width; dx++ )
                 {
-                    D[dx] = saturate_cast<T>(sum[dx] + buf[dx]*beta1);
+                    D[dx] = saturate_cast<T>((sum[dx] + buf[dx]* beta1)/ min(scale_y, src.cols - cur_dy*scale_y));
                     sum[dx] = buf[dx]*beta;
                     buf[dx] = 0;
                 }
@@ -1498,7 +1498,6 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
         AutoBuffer<DecimateAlpha> _xofs(ssize.width*2);
         DecimateAlpha* xofs = _xofs;
-        double scale = 1.f/(scale_x*scale_y);
 
         for( dx = 0, k = 0; dx < dsize.width; dx++ )
         {
@@ -1512,7 +1511,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 assert( k < ssize.width*2 );
                 xofs[k].di = dx*cn;
                 xofs[k].si = (sx1-1)*cn;
-                xofs[k++].alpha = (float)((sx1 - fsx1)*scale);
+                xofs[k++].alpha = (float)((sx1 - fsx1) / min(scale_x, src.cols - fsx1));
             }
 
             for( sx = sx1; sx < sx2; sx++ )
@@ -1520,7 +1519,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 assert( k < ssize.width*2 );
                 xofs[k].di = dx*cn;
                 xofs[k].si = sx*cn;
-                xofs[k++].alpha = (float)scale;
+                xofs[k++].alpha = 1.f / min(scale_x, src.cols - fsx1);
             }
 
             if( fsx2 - sx2 > 1e-3 )
@@ -1528,10 +1527,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 assert( k < ssize.width*2 );
                 xofs[k].di = dx*cn;
                 xofs[k].si = sx2*cn;
-                xofs[k++].alpha = (float)(min(fsx2 - sx2, 1.)*scale);
+                xofs[k++].alpha = (float)(min(fsx2 - sx2, 1.) / min(scale_x, src.cols - fsx1));
             }
         }
-
         func( src, dst, xofs, k ,scale_y);
         return;
     }
