@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import os
 from contextlib import contextmanager
+import itertools as it
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
 
@@ -170,3 +171,22 @@ class RectSelector:
             return
         x0, y0, x1, y1 = self.drag_rect
         cv2.rectangle(vis, (x0, y0), (x1, y1), (0, 255, 0), 2)
+
+
+def grouper(n, iterable, fillvalue=None):
+    '''grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx'''
+    args = [iter(iterable)] * n
+    return it.izip_longest(fillvalue=fillvalue, *args)
+
+def mosaic(w, imgs):
+    '''Make a grid from images. 
+
+    w    -- number of grid columns
+    imgs -- images (must have same size and format)
+    '''
+    imgs = iter(imgs)
+    img0 = imgs.next()
+    pad = np.zeros_like(img0)
+    imgs = it.chain([img0], imgs)
+    rows = grouper(w, imgs, pad)
+    return np.vstack(map(np.hstack, rows))
