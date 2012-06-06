@@ -241,6 +241,9 @@ namespace cv { namespace gpu { namespace device
                 ResizeDispatcher<CubicFilter, T>::call,
                 ResizeDispatcher<AreaFilter, T>::call
             };
+            // chenge to linear if area interpolation upscaling
+            if (interpolation == 3 && (fx <= 1.f || fy <= 1.f))
+                interpolation = 1;
 
             callers[interpolation](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, fx, fy, 
                 static_cast< DevMem2D_<T> >(dst), stream);
