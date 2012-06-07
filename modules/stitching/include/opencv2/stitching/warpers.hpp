@@ -43,7 +43,7 @@
 #ifndef __OPENCV_STITCHING_WARPER_CREATORS_HPP__
 #define __OPENCV_STITCHING_WARPER_CREATORS_HPP__
 
-#include "detail/warpers.hpp"
+#include "opencv2/stitching/detail/warpers.hpp"
 
 namespace cv {
 
