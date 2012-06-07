@@ -493,23 +493,6 @@ private:
     CV_DescriptorExtractorTest& operator=(const CV_DescriptorExtractorTest&) { return *this; }
 };
 
-/*template<typename T, typename Distance>
-class CV_CalonderDescriptorExtractorTest : public CV_DescriptorExtractorTest<Distance>
-{
-public:
-    CV_CalonderDescriptorExtractorTest( const char* testName, float _normDif, float _prevTime ) :
-            CV_DescriptorExtractorTest<Distance>( testName, _normDif, Ptr<DescriptorExtractor>(), _prevTime )
-    {}
-
-protected:
-    virtual void createDescriptorExtractor()
-    {
-        CV_DescriptorExtractorTest<Distance>::dextractor =
-                new CalonderDescriptorExtractor<T>( string(CV_DescriptorExtractorTest<Distance>::ts->get_data_path()) +
-                                                    FEATURES2D_DIR + "/calonder_classifier.rtc");
-    }
-};*/
-
 /****************************************************************************************\
 *                       Algorithmic tests for descriptor matchers                        *
 \****************************************************************************************/
@@ -1058,24 +1041,6 @@ TEST( Features2d_DescriptorExtractor_BRIEF, regression )
                                                DescriptorExtractor::create("BRIEF"), 0.00527548f );
     test.safe_run();
 }
-
-#if CV_SSE2
-TEST( Features2d_DescriptorExtractor_Calonder_uchar, regression )
-{
-    CV_CalonderDescriptorExtractorTest<uchar, L2<uchar> > test( "descriptor-calonder-uchar",
-                                                                std::numeric_limits<float>::epsilon() + 1,
-                                                                0.0132175f );
-    test.safe_run();
-}
-
-TEST( Features2d_DescriptorExtractor_Calonder_float, regression )
-{
-    CV_CalonderDescriptorExtractorTest<float, L2<float> > test( "descriptor-calonder-float",
-                                                                std::numeric_limits<float>::epsilon(),
-                                                                0.0221308f );
-    test.safe_run();
-}
-#endif // CV_SSE2
 
 /*
  * Matchers

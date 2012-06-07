@@ -106,12 +106,12 @@ public:
     }
 };  /* class CvBlobTrackPostProcTimeAver */
 
-CvBlobTrackPostProcOne* cvCreateModuleBlobTrackPostProcTimeAverRectOne()
+static CvBlobTrackPostProcOne* cvCreateModuleBlobTrackPostProcTimeAverRectOne()
 {
     return (CvBlobTrackPostProcOne*) new CvBlobTrackPostProcTimeAver(0);
 }
 
-CvBlobTrackPostProcOne* cvCreateModuleBlobTrackPostProcTimeAverExpOne()
+static CvBlobTrackPostProcOne* cvCreateModuleBlobTrackPostProcTimeAverExpOne()
 {
     return (CvBlobTrackPostProcOne*) new CvBlobTrackPostProcTimeAver(1);
 }

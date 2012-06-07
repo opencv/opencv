@@ -9,8 +9,8 @@
 //
 //
 // API
-// int GetPointOfIntersection(const float *f, 
-                              const float a, const float b,           
+// int GetPointOfIntersection(const float *f,
+                              const float a, const float b,
                               int q1, int q2, float *point);
 // INPUT
 // f                - function on the regular grid
@@ -23,15 +23,15 @@
 // RESULT
 // Error status
 */
-int GetPointOfIntersection(const float *f,  
-                           const float a, const float b, 
+int GetPointOfIntersection(const float *f,
+                           const float a, const float b,
                            int q1, int q2, float *point)
 {
     if (q1 == q2)
     {
         return DISTANCE_TRANSFORM_EQUAL_POINTS;
-    } /* if (q1 == q2) */ 
-    (*point) = ( (f[q2] - a * q2 + b *q2 * q2) - 
+    } /* if (q1 == q2) */
+    (*point) = ( (f[q2] - a * q2 + b *q2 * q2) -
                  (f[q1] - a * q1 + b * q1 * q1) ) / (2 * b * (q2 - q1));
     return DISTANCE_TRANSFORM_OK;
 }
@@ -43,9 +43,9 @@ int GetPointOfIntersection(const float *f,
 //
 // API
 // int DistanceTransformOneDimensionalProblem(const float *f, const int n,
-                                              const float a, const float b,                                             
+                                              const float a, const float b,
                                               float *distanceTransform,
-                                              int *points); 
+                                              int *points);
 // INPUT
 // f                 - function on the regular grid
 // n                 - grid dimension
@@ -58,7 +58,7 @@ int GetPointOfIntersection(const float *f,
 // Error status
 */
 int DistanceTransformOneDimensionalProblem(const float *f, const int n,
-                                           const float a, const float b,                                             
+                                           const float a, const float b,
                                            float *distanceTransform,
                                            int *points)
 {
@@ -73,7 +73,7 @@ int DistanceTransformOneDimensionalProblem(const float *f, const int n,
     // Allocation memory (must be free in this function)
     v = (int *)malloc (sizeof(int) * n);
     z = (float *)malloc (sizeof(float) * (n + 1));
-    
+
     v[0] = 0;
     z[0] = (float)F_MIN; // left border of envelope
     z[1] = (float)F_MAX; // right border of envelope
@@ -89,7 +89,7 @@ int DistanceTransformOneDimensionalProblem(const float *f, const int n,
         } /* if (tmp != DISTANCE_TRANSFORM_OK) */
         if (pointIntersection <= z[k])
         {
-            // Envelope doesn't contain current parabola            
+            // Envelope doesn't contain current parabola
             do
             {
                 k--;
@@ -144,7 +144,7 @@ int DistanceTransformOneDimensionalProblem(const float *f, const int n,
 // INPUT
 // k                 - index of the previous cycle element
 // n                 - number of matrix rows
-// q                 - parameter that equal 
+// q                 - parameter that equal
                        (number_of_rows * number_of_columns - 1)
 // OUTPUT
 // None
@@ -196,7 +196,7 @@ void TransposeCycleElements(float *a, int *cycle, int cycle_len)
 // RESULT
 // Error status
 */
-void TransposeCycleElements_int(int *a, int *cycle, int cycle_len)
+static void TransposeCycleElements_int(int *a, int *cycle, int cycle_len)
 {
     int i;
     int buf;
@@ -229,7 +229,7 @@ void Transpose(float *a, int n, int m)
     int max_cycle_len;
 
     max_cycle_len = n * m;
-    
+
     // Allocation memory  (must be free in this function)
     cycle = (int *)malloc(sizeof(int) * max_cycle_len);
 
@@ -240,12 +240,12 @@ void Transpose(float *a, int n, int m)
         k = GetNextCycleElement(i, n, q);
         cycle[cycle_len] = i;
         cycle_len++;
-        
+
         while (k > i)
-        {            
-            cycle[cycle_len] = k;            
+        {
+            cycle[cycle_len] = k;
             cycle_len++;
-            k = GetNextCycleElement(k, n, q);            
+            k = GetNextCycleElement(k, n, q);
         }
         if (k == i)
         {
@@ -272,14 +272,14 @@ void Transpose(float *a, int n, int m)
 // RESULT
 // None
 */
-void Transpose_int(int *a, int n, int m)
+static void Transpose_int(int *a, int n, int m)
 {
     int *cycle;
     int i, k, q, cycle_len;
     int max_cycle_len;
 
     max_cycle_len = n * m;
-    
+
     // Allocation memory  (must be free in this function)
     cycle = (int *)malloc(sizeof(int) * max_cycle_len);
 
@@ -290,12 +290,12 @@ void Transpose_int(int *a, int n, int m)
         k = GetNextCycleElement(i, n, q);
         cycle[cycle_len] = i;
         cycle_len++;
-        
+
         while (k > i)
-        {            
-            cycle[cycle_len] = k;            
+        {
+            cycle[cycle_len] = k;
             cycle_len++;
-            k = GetNextCycleElement(k, n, q);            
+            k = GetNextCycleElement(k, n, q);
         }
         if (k == i)
         {
@@ -311,21 +311,21 @@ void Transpose_int(int *a, int n, int m)
 /*
 // Decision of two dimensional problem generalized distance transform
 // on the regular grid at all points
-//      min{d2(y' - y) + d4(y' - y)(y' - y) + 
+//      min{d2(y' - y) + d4(y' - y)(y' - y) +
             min(d1(x' - x) + d3(x' - x)(x' - x) + f(x',y'))} (on x', y')
 //
 // API
-// int DistanceTransformTwoDimensionalProblem(const float *f, 
+// int DistanceTransformTwoDimensionalProblem(const float *f,
                                               const int n, const int m,
-                                              const float coeff[4],                                             
+                                              const float coeff[4],
                                               float *distanceTransform,
-                                              int *pointsX, int *pointsY); 
+                                              int *pointsX, int *pointsY);
 // INPUT
 // f                 - function on the regular grid
 // n                 - number of rows
 // m                 - number of columns
 // coeff             - coefficients of optimizable function
-                       coeff[0] = d1, coeff[1] = d2, 
+                       coeff[0] = d1, coeff[1] = d2,
                        coeff[2] = d3, coeff[3] = d4
 // OUTPUT
 // distanceTransform - values of generalized distance transform
@@ -334,9 +334,9 @@ void Transpose_int(int *a, int n, int m)
 // RESULT
 // Error status
 */
-int DistanceTransformTwoDimensionalProblem(const float *f,  
+int DistanceTransformTwoDimensionalProblem(const float *f,
                                            const int n, const int m,
-                                           const float coeff[4],                                             
+                                           const float coeff[4],
                                            float *distanceTransform,
                                            int *pointsX, int *pointsY)
 {
@@ -349,10 +349,10 @@ int DistanceTransformTwoDimensionalProblem(const float *f,
     for (i = 0; i < n; i++)
     {
         resOneDimProblem = DistanceTransformOneDimensionalProblem(
-                                    f + i * m, m, 
-                                    coeff[0], coeff[2], 
-                                    &internalDistTrans[i * m], 
-                                    &internalPointsX[i * m]); 
+                                    f + i * m, m,
+                                    coeff[0], coeff[2],
+                                    &internalDistTrans[i * m],
+                                    &internalPointsX[i * m]);
         if (resOneDimProblem != DISTANCE_TRANSFORM_OK)
             return DISTANCE_TRANSFORM_ERROR;
     }
@@ -360,9 +360,9 @@ int DistanceTransformTwoDimensionalProblem(const float *f,
     for (j = 0; j < m; j++)
     {
         resOneDimProblem = DistanceTransformOneDimensionalProblem(
-                                    &internalDistTrans[j * n], n, 
-                                    coeff[1], coeff[3], 
-                                    distanceTransform + j * n, 
+                                    &internalDistTrans[j * n], n,
+                                    coeff[1], coeff[3],
+                                    distanceTransform + j * n,
                                     pointsY + j * n);
         if (resOneDimProblem != DISTANCE_TRANSFORM_OK)
             return DISTANCE_TRANSFORM_ERROR;

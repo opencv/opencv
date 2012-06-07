@@ -13,21 +13,21 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-void download(const GpuMat& d_mat, vector<Point2f>& vec)
+static void download(const GpuMat& d_mat, vector<Point2f>& vec)
 {
     vec.resize(d_mat.cols);
     Mat mat(1, d_mat.cols, CV_32FC2, (void*)&vec[0]);
     d_mat.download(mat);
 }
 
-void download(const GpuMat& d_mat, vector<uchar>& vec)
+static void download(const GpuMat& d_mat, vector<uchar>& vec)
 {
     vec.resize(d_mat.cols);
     Mat mat(1, d_mat.cols, CV_8UC1, (void*)&vec[0]);
     d_mat.download(mat);
 }
 
-void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status, Scalar line_color = Scalar(0, 0, 255))
+static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status, Scalar line_color = Scalar(0, 0, 255))
 {
     for (size_t i = 0; i < prevPts.size(); ++i)
     {
@@ -111,7 +111,7 @@ template <typename T> inline T mapValue(T x, T a, T b, T c, T d)
     return c + (d - c) * (x - a) / (b - a);
 }
 
-void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
+static void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
 {
     float maxDisplacement = 1.0f;
 

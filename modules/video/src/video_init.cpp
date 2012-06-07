@@ -41,10 +41,11 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/video/video.hpp"
 
 namespace cv
 {
-    
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(BackgroundSubtractorMOG, "BackgroundSubtractor.MOG",
@@ -61,12 +62,15 @@ CV_INIT_ALGORITHM(BackgroundSubtractorMOG2, "BackgroundSubtractor.MOG2",
     obj.info()->addParam(obj, "varThreshold", obj.varThreshold);
     obj.info()->addParam(obj, "detectShadows", obj.bShadowDetection));
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool initModule_video(void)
 {
-    Ptr<Algorithm> mog = createBackgroundSubtractorMOG(), mog2 = createBackgroundSubtractorMOG2();
-    return mog->info() != 0 && mog2->info() != 0;
+    bool all = true;
+    all &= !BackgroundSubtractorMOG_info_auto.name().empty();
+    all &= !BackgroundSubtractorMOG2_info_auto.name().empty();
+
+    return all;
 }
-    
+
 }

@@ -56,7 +56,7 @@ DescriptorExtractor::~DescriptorExtractor()
 {}
 
 void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
-{    
+{
     if( image.empty() || keypoints.empty() )
     {
         descriptors.release();
@@ -102,7 +102,7 @@ Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExt
         string type = descriptorExtractorType.substr(pos);
         return new OpponentColorDescriptorExtractor(DescriptorExtractor::create(type));
     }
-    
+
     return Algorithm::create<DescriptorExtractor>("Feature2D." + descriptorExtractorType);
 }
 
@@ -117,7 +117,7 @@ OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<De
     CV_Assert( !descriptorExtractor.empty() );
 }
 
-void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& opponentChannels )
+static void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& opponentChannels )
 {
     if( bgrImage.type() != CV_8UC3 )
         CV_Error( CV_StsBadArg, "input image must be an BGR image of type CV_8UC3" );
@@ -227,7 +227,7 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
     Mat mergedDescriptors( maxKeypointsCount, 3*descriptorSize, descriptorExtractor->descriptorType() );
     int mergedCount = 0;
     // cp - current channel position
-    size_t cp[] = {0, 0, 0}; 
+    size_t cp[] = {0, 0, 0};
     while( cp[0] < channelKeypoints[0].size() &&
            cp[1] < channelKeypoints[1].size() &&
            cp[2] < channelKeypoints[2].size() )

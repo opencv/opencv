@@ -8,12 +8,12 @@
 using namespace cv;
 using namespace cv::gpu;
 
-void help()
+static void help()
 {
 
 printf("\nShow off image morphology: erosion, dialation, open and close\n"
-	"Call:\n   morphology2 [image]\n"
-	"This program also shows use of rect, elipse and cross kernels\n\n");
+    "Call:\n   morphology2 [image]\n"
+    "This program also shows use of rect, elipse and cross kernels\n\n");
 printf( "Hot keys: \n"
     "\tESC - quit the program\n"
     "\tr - use rectangle structuring element\n"
@@ -32,20 +32,20 @@ int open_close_pos = 0;
 int erode_dilate_pos = 0;
 
 // callback function for open/close trackbar
-void OpenClose(int, void*)
+static void OpenClose(int, void*)
 {
     int n = open_close_pos - max_iters;
     int an = n > 0 ? n : -n;
     Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
     if( n < 0 )
-		cv::gpu::morphologyEx(src, dst, CV_MOP_OPEN, element);
+        cv::gpu::morphologyEx(src, dst, CV_MOP_OPEN, element);
     else
         cv::gpu::morphologyEx(src, dst, CV_MOP_CLOSE, element);
     imshow("Open/Close",(Mat)dst);
 }
 
 // callback function for erode/dilate trackbar
-void ErodeDilate(int, void*)
+static void ErodeDilate(int, void*)
 {
     int n = erode_dilate_pos - max_iters;
     int an = n > 0 ? n : -n;
@@ -78,14 +78,14 @@ int main( int argc, char** argv )
 
     help();
 
-	
-	if (src.channels() == 3)
-	{
-		// gpu support only 4th channel images
-		GpuMat src4ch;
-		cv::gpu::cvtColor(src, src4ch, CV_BGR2BGRA); 
-		src = src4ch;
-	}
+
+    if (src.channels() == 3)
+    {
+        // gpu support only 4th channel images
+        GpuMat src4ch;
+        cv::gpu::cvtColor(src, src4ch, CV_BGR2BGRA);
+        src = src4ch;
+    }
 
     //create windows for output images
     namedWindow("Open/Close",1);

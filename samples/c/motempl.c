@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-void help()
+static void help(void)
 {
 	printf(
 			"\nThis program demonstrated the use of motion templates -- basically using the gradients\n"
@@ -39,7 +39,7 @@ CvMemStorage* storage = 0; // temporary storage
 //  img - input video frame
 //  dst - resultant motion picture
 //  args - optional parameters
-void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
+static void  update_mhi( IplImage* img, IplImage* dst, int diff_threshold )
 {
     double timestamp = (double)clock()/CLOCKS_PER_SEC; // get current time in seconds
     CvSize size = cvSize(img->width,img->height); // get current frame size

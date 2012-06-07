@@ -8,16 +8,16 @@ using namespace std;
 Mat img;
 int threshval = 100;
 
-void on_trackbar(int, void*)
+static void on_trackbar(int, void*)
 {
-	Mat bw = threshval < 128 ? (img < threshval) : (img > threshval);
-    
+    Mat bw = threshval < 128 ? (img < threshval) : (img > threshval);
+
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
-    
+
     findContours( bw, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
-	
-	Mat dst = Mat::zeros(img.size(), CV_8UC3);
+
+    Mat dst = Mat::zeros(img.size(), CV_8UC3);
 
     if( !contours.empty() && !hierarchy.empty() )
     {
@@ -31,42 +31,42 @@ void on_trackbar(int, void*)
         }
     }
 
-	imshow( "Connected Components", dst );
+    imshow( "Connected Components", dst );
 }
 
-void help()
+static void help()
 {
     cout << "\n This program demonstrates connected components and use of the trackbar\n"
-			 "Usage: \n"
-			 "	./connected_components <image(stuff.jpg as default)>\n"
-			 "The image is converted to grayscale and displayed, another image has a trackbar\n"
+             "Usage: \n"
+             "  ./connected_components <image(stuff.jpg as default)>\n"
+             "The image is converted to grayscale and displayed, another image has a trackbar\n"
              "that controls thresholding and thereby the extracted contours which are drawn in color\n";
 }
 
-const char* keys = 
+const char* keys =
 {
-	"{1| |stuff.jpg|image for converting to a grayscale}"
+    "{1| |stuff.jpg|image for converting to a grayscale}"
 };
 
 int main( int argc, const char** argv )
 {
-	help();
-	CommandLineParser parser(argc, argv, keys);
-	string inputImage = parser.get<string>("1");
-	img = imread(inputImage.c_str(), 0);
+    help();
+    CommandLineParser parser(argc, argv, keys);
+    string inputImage = parser.get<string>("1");
+    img = imread(inputImage.c_str(), 0);
 
-	if(img.empty())
-	{
+    if(img.empty())
+    {
         cout << "Could not read input image file: " << inputImage << endl;
-		return -1;
-	}
+        return -1;
+    }
 
-	namedWindow( "Image", 1 );
+    namedWindow( "Image", 1 );
     imshow( "Image", img );
 
-	namedWindow( "Connected Components", 1 );
-	createTrackbar( "Threshold", "Connected Components", &threshval, 255, on_trackbar );
-	on_trackbar(threshval, 0);
+    namedWindow( "Connected Components", 1 );
+    createTrackbar( "Threshold", "Connected Components", &threshval, 255, on_trackbar );
+    on_trackbar(threshval, 0);
 
     waitKey(0);
     return 0;

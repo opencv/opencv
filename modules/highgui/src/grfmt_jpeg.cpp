@@ -126,8 +126,7 @@ skip_input_data(j_decompress_ptr cinfo, long num_bytes)
 }
 
 
-GLOBAL(void)
-jpeg_buffer_src(j_decompress_ptr cinfo, JpegSource* source)
+static void jpeg_buffer_src(j_decompress_ptr cinfo, JpegSource* source)
 {
     cinfo->src = &source->pub;
 
@@ -498,8 +497,7 @@ empty_output_buffer (j_compress_ptr cinfo)
     return TRUE;
 }
 
-GLOBAL(void)
-jpeg_buffer_dest(j_compress_ptr cinfo, JpegDestination* destination)
+static void jpeg_buffer_dest(j_compress_ptr cinfo, JpegDestination* destination)
 {
     cinfo->dest = &destination->pub;
 

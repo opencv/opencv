@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4711 )
 #endif
 
@@ -282,7 +282,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break;
 #endif
-        
+
 #ifdef HAVE_PVAPI
         case CV_CAP_PVAPI:
             capture = cvCreateCameraCapture_PvAPI (index);
@@ -306,7 +306,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break;
 #endif
-        
+
 #ifdef HAVE_XIMEA
         case CV_CAP_XIAPI:
             capture = cvCreateCameraCapture_XIMEA (index);
@@ -354,7 +354,7 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
     if (! result)
         result = cvCreateFileCapture_QT (filename);
 #endif
-    
+
 #ifdef HAVE_AVFOUNDATION
     if (! result)
         result = cvCreateFileCapture_AVFoundation (filename);
@@ -364,7 +364,7 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
     if (! result)
         result = cvCreateFileCapture_OpenNI (filename);
 #endif
-    
+
     if (! result)
         result = cvCreateFileCapture_Images (filename);
 
@@ -378,29 +378,29 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
 CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color )
 {
-	//CV_FUNCNAME( "cvCreateVideoWriter" );
+    //CV_FUNCNAME( "cvCreateVideoWriter" );
 
-	CvVideoWriter *result = 0;
+    CvVideoWriter *result = 0;
 
-	if(!fourcc || !fps)
-		result = cvCreateVideoWriter_Images(filename);
+    if(!fourcc || !fps)
+        result = cvCreateVideoWriter_Images(filename);
 
-	if(!result)
-		result = cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color);
+    if(!result)
+        result = cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color);
 
-/*	#ifdef HAVE_XINE
-	if(!result)
-		result = cvCreateVideoWriter_XINE(filename, fourcc, fps, frameSize, is_color);
-	#endif
+/*  #ifdef HAVE_XINE
+    if(!result)
+        result = cvCreateVideoWriter_XINE(filename, fourcc, fps, frameSize, is_color);
+    #endif
 */
-#ifdef HAVE_AVFOUNDATION 
+#ifdef HAVE_AVFOUNDATION
     if (! result)
         result = cvCreateVideoWriter_AVFoundation(filename, fourcc, fps, frameSize, is_color);
 #endif
 
 #ifdef HAVE_QUICKTIME
-	if(!result)
-		result = cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color);
+    if(!result)
+        result = cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color);
 #endif
 
 #ifdef HAVE_GSTREAMER
@@ -408,10 +408,10 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
         result = cvCreateVideoWriter_GStreamer(filename, fourcc, fps, frameSize, is_color);
 #endif
 
-	if(!result)
-		result = cvCreateVideoWriter_Images(filename);
+    if(!result)
+        result = cvCreateVideoWriter_Images(filename);
 
-	return result;
+    return result;
 }
 
 CV_IMPL int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
@@ -434,12 +434,12 @@ namespace cv
 
 VideoCapture::VideoCapture()
 {}
-        
+
 VideoCapture::VideoCapture(const string& filename)
 {
     open(filename);
 }
-    
+
 VideoCapture::VideoCapture(int device)
 {
     open(device);
@@ -449,21 +449,21 @@ VideoCapture::~VideoCapture()
 {
     cap.release();
 }
-    
+
 bool VideoCapture::open(const string& filename)
 {
     cap = cvCreateFileCapture(filename.c_str());
     return isOpened();
 }
-    
+
 bool VideoCapture::open(int device)
 {
     cap = cvCreateCameraCapture(device);
     return isOpened();
 }
-    
+
 bool VideoCapture::isOpened() const { return !cap.empty(); }
-    
+
 void VideoCapture::release()
 {
     cap.release();
@@ -473,7 +473,7 @@ bool VideoCapture::grab()
 {
     return cvGrabFrame(cap) != 0;
 }
-    
+
 bool VideoCapture::retrieve(Mat& image, int channel)
 {
     IplImage* _img = cvRetrieveFrame(cap, channel);
@@ -500,18 +500,18 @@ bool VideoCapture::read(Mat& image)
         image.release();
     return !image.empty();
 }
-    
+
 VideoCapture& VideoCapture::operator >> (Mat& image)
 {
     read(image);
     return *this;
 }
-    
+
 bool VideoCapture::set(int propId, double value)
 {
     return cvSetCaptureProperty(cap, propId, value) != 0;
 }
-    
+
 double VideoCapture::get(int propId)
 {
     return cvGetCaptureProperty(cap, propId);
@@ -519,7 +519,7 @@ double VideoCapture::get(int propId)
 
 VideoWriter::VideoWriter()
 {}
-    
+
 VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
 {
     open(filename, fourcc, fps, frameSize, isColor);
@@ -528,13 +528,13 @@ VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size fr
 void VideoWriter::release()
 {
     writer.release();
-}    
-    
+}
+
 VideoWriter::~VideoWriter()
 {
     release();
 }
-    
+
 bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
 {
     writer = cvCreateVideoWriter(filename.c_str(), fourcc, fps, frameSize, isColor);
@@ -544,18 +544,18 @@ bool VideoWriter::open(const string& filename, int fourcc, double fps, Size fram
 bool VideoWriter::isOpened() const
 {
     return !writer.empty();
-}    
+}
 
 void VideoWriter::write(const Mat& image)
 {
     IplImage _img = image;
     cvWriteFrame(writer, &_img);
 }
-    
+
 VideoWriter& VideoWriter::operator << (const Mat& image)
 {
     write(image);
-    return *this;    
+    return *this;
 }
 
 }

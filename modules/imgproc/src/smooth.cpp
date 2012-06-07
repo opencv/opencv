@@ -73,13 +73,13 @@ template<typename T, typename ST> struct RowSum : public BaseRowFilter
         ksize = _ksize;
         anchor = _anchor;
     }
-    
+
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
         int i = 0, k, ksz_cn = ksize*cn;
-        
+
         width = (width - 1)*cn;
         for( k = 0; k < cn; k++, S++, D++ )
         {
@@ -108,7 +108,7 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
     }
 
     void reset() { sumCount = 0; }
-    
+
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
@@ -198,7 +198,7 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
 
 
 }
-    
+
 cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksize, int anchor)
 {
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
@@ -325,7 +325,7 @@ void cv::blur( InputArray src, OutputArray dst,
            Size ksize, Point anchor, int borderType )
 {
     boxFilter( src, dst, -1, ksize, anchor, true, borderType );
-}    
+}
 
 /****************************************************************************************\
                                      Gaussian Blur
@@ -422,7 +422,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    
+
     if( borderType != BORDER_CONSTANT )
     {
         if( src.rows == 1 )
@@ -454,7 +454,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 namespace cv
 {
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4244 )
 #endif
 
@@ -479,7 +479,7 @@ typedef struct
 
 #if CV_SSE2
 #define MEDIAN_HAVE_SIMD 1
-    
+
 static inline void histogram_add_simd( const HT x[16], HT y[16] )
 {
     const __m128i* rx = (const __m128i*)x;
@@ -499,12 +499,12 @@ static inline void histogram_sub_simd( const HT x[16], HT y[16] )
     _mm_store_si128(ry+0, r0);
     _mm_store_si128(ry+1, r1);
 }
-    
+
 #else
 #define MEDIAN_HAVE_SIMD 0
 #endif
 
-    
+
 static inline void histogram_add( const HT x[16], HT y[16] )
 {
     int i;
@@ -667,14 +667,14 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                 {
                     for( j = 0; j < 2*r; ++j )
                         histogram_add( &h_coarse[16*(n*c+j)], H[c].coarse );
-                    
+
                     for( j = r; j < n-r; j++ )
                     {
                         int t = 2*r*r + 2*r, b, sum = 0;
                         HT* segment;
-                        
+
                         histogram_add( &h_coarse[16*(n*c + std::min(j+r,n-1))], H[c].coarse );
-                        
+
                         // Find median at coarse level
                         for ( k = 0; k < 16 ; ++k )
                         {
@@ -686,14 +686,14 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                             }
                         }
                         assert( k < 16 );
-                        
+
                         /* Update corresponding histogram segment */
                         if ( luc[c][k] <= j-r )
                         {
                             memset( &H[c].fine[k], 0, 16 * sizeof(HT) );
                             for ( luc[c][k] = j-r; luc[c][k] < MIN(j+r+1,n); ++luc[c][k] )
                                 histogram_add( &h_fine[16*(n*(16*c+k)+luc[c][k])], H[c].fine[k] );
-                            
+
                             if ( luc[c][k] < j+r+1 )
                             {
                                 histogram_muladd( j+r+1 - n, &h_fine[16*(n*(16*c+k)+(n-1))], &H[c].fine[k][0] );
@@ -708,9 +708,9 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                                 histogram_add( &h_fine[16*(n*(16*c+k)+MIN(luc[c][k],n-1))], H[c].fine[k] );
                             }
                         }
-                        
+
                         histogram_sub( &h_coarse[16*(n*c+MAX(j-r,0))], H[c].coarse );
-                        
+
                         /* Find median in segment */
                         segment = H[c].fine[k];
                         for ( b = 0; b < 16 ; b++ )
@@ -734,7 +734,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 }
 
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( default: 4244 )
 #endif
 
@@ -910,7 +910,7 @@ struct MinMax16u
         b = std::max(b, t);
     }
 };
-    
+
 struct MinMax16s
 {
     typedef short value_type;
@@ -974,7 +974,7 @@ struct MinMaxVec16u
     }
 };
 
-    
+
 struct MinMaxVec16s
 {
     typedef short value_type;
@@ -988,9 +988,9 @@ struct MinMaxVec16s
         a = _mm_min_epi16(a, b);
         b = _mm_max_epi16(b, t);
     }
-};    
+};
 
-    
+
 struct MinMaxVec32f
 {
     typedef float value_type;
@@ -1033,7 +1033,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     Op op;
     VecOp vop;
     volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
-    
+
     if( m == 3 )
     {
         if( size.width == 1 || size.height == 1 )
@@ -1055,7 +1055,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 }
             return;
         }
-        
+
         size.width *= cn;
         for( i = 0; i < size.height; i++, dst += dstep )
         {
@@ -1155,7 +1155,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                         p[k*5+2] = rowk[j]; p[k*5+3] = rowk[j3];
                         p[k*5+4] = rowk[j4];
                     }
-                    
+
                     op(p[1], p[2]); op(p[0], p[1]); op(p[1], p[2]); op(p[4], p[5]); op(p[3], p[4]);
                     op(p[4], p[5]); op(p[0], p[3]); op(p[2], p[5]); op(p[2], p[3]); op(p[1], p[4]);
                     op(p[1], p[2]); op(p[3], p[4]); op(p[7], p[8]); op(p[6], p[7]); op(p[7], p[8]);
@@ -1195,7 +1195,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                         p[k*5+2] = vop.load(rowk+j); p[k*5+3] = vop.load(rowk+j+cn);
                         p[k*5+4] = vop.load(rowk+j+cn*2);
                     }
-                    
+
                     vop(p[1], p[2]); vop(p[0], p[1]); vop(p[1], p[2]); vop(p[4], p[5]); vop(p[3], p[4]);
                     vop(p[4], p[5]); vop(p[0], p[3]); vop(p[2], p[5]); vop(p[2], p[3]); vop(p[1], p[4]);
                     vop(p[1], p[2]); vop(p[3], p[4]); vop(p[7], p[8]); vop(p[6], p[7]); vop(p[7], p[8]);
@@ -1229,13 +1229,13 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 }
 
 }
-    
+
 void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
-    
+
     if( ksize <= 1 )
     {
         src0.copyTo(dst);
@@ -1248,13 +1248,13 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     if (tegra::medianBlur(src0, dst, ksize))
         return;
 #endif
-    
+
     bool useSortNet = ksize == 3 || (ksize == 5
 #if !CV_SSE2
             && src0.depth() > CV_8U
 #endif
         );
-    
+
     Mat src;
     if( useSortNet )
     {
@@ -1315,7 +1315,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
-    
+
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
 
@@ -1422,7 +1422,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
-    
+
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
 
@@ -1433,9 +1433,9 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     radius = MAX(radius, 1);
     d = radius*2 + 1;
     // compute the min/max range for the input image (even if multichannel)
-    
+
     minMaxLoc( src.reshape(1), &minValSrc, &maxValSrc );
-    
+
     // temporary copy of the image with borders for easy processing
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
@@ -1454,7 +1454,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     float* expLUT = &_expLUT[0];
 
     scale_index = kExpNumBins/len;
-    
+
     // initialize the exp LUT
     for( i = 0; i < kExpNumBins+2; i++ )
     {
@@ -1467,7 +1467,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         else
             expLUT[i] = 0.f;
     }
-    
+
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
         for( j = -radius; j <= radius; j++ )
@@ -1481,7 +1481,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
     for( i = 0; i < size.height; i++ )
     {
-	    const float* sptr = (const float*)(temp.data + (i+radius)*temp.step) + radius*cn;
+        const float* sptr = (const float*)(temp.data + (i+radius)*temp.step) + radius*cn;
         float* dptr = (float*)(dst.data + i*dst.step);
 
         if( cn == 1 )
@@ -1493,11 +1493,11 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
                 for( k = 0; k < maxk; k++ )
                 {
                     float val = sptr[j + space_ofs[k]];
-					float alpha = (float)(std::abs(val - val0)*scale_index);
+                    float alpha = (float)(std::abs(val - val0)*scale_index);
                     int idx = cvFloor(alpha);
                     alpha -= idx;
                     float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
-	                sum += val*w;
+                    sum += val*w;
                     wsum += w;
                 }
                 dptr[j] = (float)(sum/wsum);
@@ -1514,7 +1514,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
                 {
                     const float* sptr_k = sptr + j + space_ofs[k];
                     float b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
-					float alpha = (float)((std::abs(b - b0) +
+                    float alpha = (float)((std::abs(b - b0) +
                         std::abs(g - g0) + std::abs(r - r0))*scale_index);
                     int idx = cvFloor(alpha);
                     alpha -= idx;
@@ -1541,7 +1541,7 @@ void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    
+
     if( src.depth() == CV_8U )
         bilateralFilter_8u( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else if( src.depth() == CV_32F )

@@ -114,7 +114,7 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
     _tabCos.allocate(numangle);
     int *accum = _accum, *sort_buf = _sort_buf;
     float *tabSin = _tabSin, *tabCos = _tabCos;
-    
+
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
     for( ang = 0, n = 0; n < numangle; ang += theta, n++ )
@@ -249,7 +249,7 @@ icvHoughLinesSDiv( const CvMat* img,
     /* Precalculating sin */
     _sinTable.resize( 5 * tn * stn );
     sinTable = &_sinTable[0];
-    
+
     for( index = 0; index < 5 * tn * stn; index++ )
         sinTable[index] = (float)cos( stheta * index * 0.2f );
 
@@ -449,7 +449,7 @@ icvHoughLinesSDiv( const CvMat* img,
             h_get_next__index( &pos );
         }
     }
-    
+
     h_destroy_list__index(list);
 }
 
@@ -756,7 +756,7 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     }
     else
         CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
-    
+
     iparam1 = cvRound(param1);
     iparam2 = cvRound(param2);
 
@@ -842,7 +842,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     acols = accum->cols - 2;
     adata = accum->data.i;
     astep = accum->step/sizeof(adata[0]);
-	// Accumulate circle evidence for each edge pixel
+    // Accumulate circle evidence for each edge pixel
     for( y = 0; y < rows; y++ )
     {
         const uchar* edges_row = edges->data.ptr + y*edges->step;
@@ -868,7 +868,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 
             x0 = cvRound((x*idp)*ONE);
             y0 = cvRound((y*idp)*ONE);
-			// Step from min_radius to max_radius in both directions of the gradient
+            // Step from min_radius to max_radius in both directions of the gradient
             for( k = 0; k < 2; k++ )
             {
                 x1 = x0 + min_radius * sx;
@@ -894,7 +894,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     nz_count = nz->total;
     if( !nz_count )
         return;
-	//Find possible circle centers
+    //Find possible circle centers
     for( y = 1; y < arows - 1; y++ )
     {
         for( x = 1; x < acols - 1; x++ )
@@ -924,19 +924,19 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     dr = dp;
     min_dist = MAX( min_dist, dp );
     min_dist *= min_dist;
-	// For each found possible center
-	// Estimate radius and check support
+    // For each found possible center
+    // Estimate radius and check support
     for( i = 0; i < centers->total; i++ )
     {
         int ofs = *(int*)cvGetSeqElem( centers, i );
         y = ofs/(acols+2);
         x = ofs - (y)*(acols+2);
-		//Calculate circle's center in pixels
+        //Calculate circle's center in pixels
         float cx = (float)((x + 0.5f)*dp), cy = (float)(( y + 0.5f )*dp);
         float start_dist, dist_sum;
         float r_best = 0, c[3];
         int max_count = 0;
-		// Check distance with previously detected circles
+        // Check distance with previously detected circles
         for( j = 0; j < circles->total; j++ )
         {
             float* c = (float*)cvGetSeqElem( circles, j );
@@ -946,7 +946,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
 
         if( j < circles->total )
             continue;
-		// Estimate best radius
+        // Estimate best radius
         cvStartReadSeq( nz, &reader );
         for( j = k = 0; j < nz_count; j++ )
         {
@@ -982,7 +982,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             {
                 float r_cur = ddata[sort_buf[(j + start_idx)/2]];
                 if( (start_idx - j)*r_best >= max_count*r_cur ||
-                    (r_best < FLT_EPSILON && start_idx - j >= max_count) ) 
+                    (r_best < FLT_EPSILON && start_idx - j >= max_count) )
                 {
                     r_best = r_cur;
                     max_count = start_idx - j;
@@ -993,7 +993,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             }
             dist_sum += d;
         }
-		// Check if the circle has enough support
+        // Check if the circle has enough support
         if( max_count > acc_threshold )
         {
             c[0] = cx;
@@ -1103,9 +1103,9 @@ static void seqToMat(const CvSeq* seq, OutputArray _arr)
     else
         _arr.release();
 }
-    
+
 }
-    
+
 void cv::HoughLines( InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double srn, double stn )

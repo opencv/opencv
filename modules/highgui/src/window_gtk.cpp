@@ -1372,17 +1372,17 @@ cvDestroyAllWindows( void )
     CV_UNLOCK_MUTEX();
 }
 
-CvSize icvCalcOptimalWindowSize( CvWindow * window, CvSize new_image_size){
-    CvSize window_size;
-    GtkWidget * toplevel = gtk_widget_get_toplevel( window->frame );
-    gdk_drawable_get_size( GDK_DRAWABLE(toplevel->window),
-            &window_size.width, &window_size.height );
+// CvSize icvCalcOptimalWindowSize( CvWindow * window, CvSize new_image_size){
+//     CvSize window_size;
+//     GtkWidget * toplevel = gtk_widget_get_toplevel( window->frame );
+//     gdk_drawable_get_size( GDK_DRAWABLE(toplevel->window),
+//             &window_size.width, &window_size.height );
 
-    window_size.width = window_size.width + new_image_size.width - window->widget->allocation.width;
-    window_size.height = window_size.height + new_image_size.height - window->widget->allocation.height;
+//     window_size.width = window_size.width + new_image_size.width - window->widget->allocation.width;
+//     window_size.height = window_size.height + new_image_size.height - window->widget->allocation.height;
 
-    return window_size;
-}
+//     return window_size;
+// }
 
 CV_IMPL void
 cvShowImage( const char* name, const CvArr* arr )

@@ -3,7 +3,7 @@
 
 #define DEBUGLOGS 1
 
-#if ANDROID
+#ifdef ANDROID
 #include <android/log.h>
 #define LOG_TAG "OBJECT_DETECTOR"
 #define LOGD0(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
@@ -25,7 +25,7 @@
 #define LOGI(_str, ...) LOGI0(_str , ## __VA_ARGS__)
 #define LOGW(_str, ...) LOGW0(_str , ## __VA_ARGS__)
 #define LOGE(_str, ...) LOGE0(_str , ## __VA_ARGS__)
-#else 
+#else
 #define LOGD(...) do{} while(0)
 #define LOGI(...) do{} while(0)
 #define LOGW(...) do{} while(0)
@@ -193,7 +193,7 @@ do {                                                                            
     } catch(...) {                                                                          \
         LOGE0("\n ERROR: UNKNOWN Exception caught\n\n");                                     \
     }                                                                                       \
-} while(0) 
+} while(0)
 #endif
 
 void* workcycleObjectDetectorFunction(void* p)
@@ -214,7 +214,7 @@ void DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
     vector<Rect> objects;
 
     CV_Assert(stateThread==STATE_THREAD_WORKING_SLEEPING);
-    pthread_mutex_lock(&mutex); 
+    pthread_mutex_lock(&mutex);
     {
         pthread_cond_signal(&objectDetectorThreadStartStop);
 
@@ -268,7 +268,7 @@ void DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
             LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- imageSeparateDetecting is empty, continue");
             continue;
         }
-        LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- start handling imageSeparateDetecting, img.size=%dx%d, img.data=0x%p", 
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- start handling imageSeparateDetecting, img.size=%dx%d, img.data=0x%p",
                 imageSeparateDetecting.size().width, imageSeparateDetecting.size().height, (void*)imageSeparateDetecting.data);
 
 
@@ -368,7 +368,7 @@ void DetectionBasedTracker::SeparateDetectionWork::resetTracking()
 
 
     pthread_mutex_unlock(&mutex);
-    
+
 }
 
 bool DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions)
@@ -398,7 +398,7 @@ bool DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThrea
     if (timeWhenDetectingThreadStartedWork > 0) {
         double time_from_previous_launch_in_ms=1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq); //the same formula as for lastBigDetectionDuration
         shouldSendNewDataToWorkThread = (time_from_previous_launch_in_ms >= detectionBasedTracker.parameters.minDetectionPeriod);
-        LOGD("DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread: shouldSendNewDataToWorkThread was 1, now it is %d, since time_from_previous_launch_in_ms=%.2f, minDetectionPeriod=%d", 
+        LOGD("DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread: shouldSendNewDataToWorkThread was 1, now it is %d, since time_from_previous_launch_in_ms=%.2f, minDetectionPeriod=%d",
                 (shouldSendNewDataToWorkThread?1:0), time_from_previous_launch_in_ms, detectionBasedTracker.parameters.minDetectionPeriod);
     }
 
@@ -454,7 +454,7 @@ DetectionBasedTracker::DetectionBasedTracker(const std::string& cascadeFilename,
             && (params.scaleFactor > 1.0)
             && (params.maxTrackLifetime >= 0) );
 
-    if (!cascadeForTracking.load(cascadeFilename)) {        
+    if (!cascadeForTracking.load(cascadeFilename)) {
         CV_Error(CV_StsBadArg, "DetectionBasedTracker::DetectionBasedTracker: Cannot load a cascade from the file '"+cascadeFilename+"'");
     }
 
@@ -495,7 +495,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
     Mat imageDetect=imageGray;
 
     int D=parameters.minObjectSize;
-    if (D < 1) 
+    if (D < 1)
         D=1;
 
     vector<Rect> rectsWhereRegions;
@@ -633,7 +633,7 @@ void DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detectedObj
                 LOGD("DetectionBasedTracker::updateTrackedObjects: j=%d is rejected, because it is intersected with another rectangle", j);
                 continue;
             }
-            LOGD("DetectionBasedTracker::updateTrackedObjects: detectedObjects[%d]={%d, %d, %d x %d}", 
+            LOGD("DetectionBasedTracker::updateTrackedObjects: detectedObjects[%d]={%d, %d, %d x %d}",
                     j, detectedObjects[j].x, detectedObjects[j].y, detectedObjects[j].width, detectedObjects[j].height);
 
             Rect r=prevRect & detectedObjects[j];
@@ -691,9 +691,9 @@ void DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detectedObj
 
     std::vector<TrackedObject>::iterator it=trackedObjects.begin();
     while( it != trackedObjects.end() ) {
-        if ( (it->numFramesNotDetected > parameters.maxTrackLifetime) 
+        if ( (it->numFramesNotDetected > parameters.maxTrackLifetime)
                 ||
-                ( 
+                (
                  (it->numDetectedFrames <= innerParameters.numStepsToWaitBeforeFirstShow)
                  &&
                  (it->numFramesNotDetected > innerParameters.numStepsToTrackWithoutDetectingIfObjectHasNotBeenShown)
@@ -718,7 +718,7 @@ Rect DetectionBasedTracker::calcTrackedObjectPositionToShow(int i) const
         return Rect();
     }
     if (trackedObjects[i].numDetectedFrames <= innerParameters.numStepsToWaitBeforeFirstShow){
-        LOGI("DetectionBasedTracker::calcTrackedObjectPositionToShow: trackedObjects[%d].numDetectedFrames=%d <= numStepsToWaitBeforeFirstShow=%d --- return empty Rect()", 
+        LOGI("DetectionBasedTracker::calcTrackedObjectPositionToShow: trackedObjects[%d].numDetectedFrames=%d <= numStepsToWaitBeforeFirstShow=%d --- return empty Rect()",
                 i, trackedObjects[i].numDetectedFrames, innerParameters.numStepsToWaitBeforeFirstShow);
         return Rect();
     }

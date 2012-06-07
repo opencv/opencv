@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-CvStatus CV_STDCALL
+static CvStatus
 icvJacobiEigens_32f(float *A, float *V, float *E, int n, float eps)
 {
     int i, j, k, ind;

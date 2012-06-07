@@ -1,3 +1,6 @@
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/internal.hpp"
+
 #include "HOGfeatures.h"
 #include "cascadeclassifier.h"
 
@@ -54,7 +57,7 @@ void CvHOGEvaluator::writeFeatures( FileStorage &fs, const Mat& featureMap ) con
             features[featIdx].write( fs, componentIdx );
             fs << "}";
         }
-    fs << "]";  
+    fs << "]";
 }
 
 void CvHOGEvaluator::generateFeatures()
@@ -85,11 +88,11 @@ void CvHOGEvaluator::generateFeatures()
             }
         }
         w = 4*t;
-        h = 2*t; 
+        h = 2*t;
         for (x = 0; x <= winSize.width - w; x += blockStep.width)
         {
             for (y = 0; y <= winSize.height - h; y += blockStep.height)
-            {     
+            {
                 features.push_back(Feature(offset, x, y, 2*t, t));
             }
         }
@@ -136,7 +139,7 @@ void CvHOGEvaluator::Feature::write(FileStorage &fs) const
 //    int cellIdx = featComponent / N_BINS;
 //    int binIdx = featComponent % N_BINS;
 //
-//    fs << CC_RECTS << "[:" << rect[cellIdx].x << rect[cellIdx].y << 
+//    fs << CC_RECTS << "[:" << rect[cellIdx].x << rect[cellIdx].y <<
 //        rect[cellIdx].width << rect[cellIdx].height << binIdx << "]";
 //}
 
@@ -144,7 +147,7 @@ void CvHOGEvaluator::Feature::write(FileStorage &fs) const
 //All block is nessesary for block normalization
 void CvHOGEvaluator::Feature::write(FileStorage &fs, int featComponentIdx) const
 {
-    fs << CC_RECT << "[:" << rect[0].x << rect[0].y << 
+    fs << CC_RECT << "[:" << rect[0].x << rect[0].y <<
         rect[0].width << rect[0].height << featComponentIdx << "]";
 }
 
@@ -228,7 +231,7 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
         memset( histBuf, 0, histSize.width * sizeof(histBuf[0]) );
         histBuf += histStep + 1;
         for( y = 0; y < qangle.rows; y++ )
-        { 
+        {
             histBuf[-1] = 0.f;
             float strSum = 0.f;
             for( x = 0; x < qangle.cols; x++ )

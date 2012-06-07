@@ -18,7 +18,7 @@ Point origin;
 Rect selection;
 int vmin = 10, vmax = 256, smin = 30;
 
-void onMouse( int event, int x, int y, int, void* )
+static void onMouse( int event, int x, int y, int, void* )
 {
     if( selectObject )
     {
@@ -45,7 +45,7 @@ void onMouse( int event, int x, int y, int, void* )
     }
 }
 
-void help()
+static void help()
 {
     cout << "\nThis is a demo that shows mean-shift based tracking\n"
 			"You select a color objects such as your face and it tracks it.\n"

@@ -3478,7 +3478,7 @@ typedef struct CvBGCodeBookModel
     CvBGCodeBookElem* freeList;
 } CvBGCodeBookModel;
 
-CVAPI(CvBGCodeBookModel*) cvCreateBGCodeBookModel();
+CVAPI(CvBGCodeBookModel*) cvCreateBGCodeBookModel( void );
 CVAPI(void) cvReleaseBGCodeBookModel( CvBGCodeBookModel** model );
 
 CVAPI(void) cvBGCodeBookUpdate( CvBGCodeBookModel* model, const CvArr* image,

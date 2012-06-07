@@ -25,7 +25,7 @@
 using namespace cv;
 using namespace std;
 
-Mat toGrayscale(InputArray _src) {
+static Mat toGrayscale(InputArray _src) {
     Mat src = _src.getMat();
     // only allow one channel
     if(src.channels() != 1)
@@ -36,7 +36,7 @@ Mat toGrayscale(InputArray _src) {
     return dst;
 }
 
-void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
+static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
     std::ifstream file(filename.c_str(), ifstream::in);
     if (!file)
         throw std::exception();

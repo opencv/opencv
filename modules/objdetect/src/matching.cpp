@@ -547,7 +547,7 @@ int addNullableBorder(CvLSVMFeatureMap *map, int bx, int by)
     return LATENT_SVM_OK;
 }
 
-CvLSVMFeatureMap* featureMapBorderPartFilter(CvLSVMFeatureMap *map,
+static CvLSVMFeatureMap* featureMapBorderPartFilter(CvLSVMFeatureMap *map,
                                        int maxXBorder, int maxYBorder)
 {
     int bx, by;
@@ -1366,6 +1366,7 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     return LATENT_SVM_OK;
 }
 
+#ifdef HAVE_TBB
 /*
 // Creating schedule of pyramid levels processing
 //
@@ -1390,7 +1391,7 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
 // RESULT
 // Error status
 */
-int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F,
+static int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F,
                    const int n, const int bx, const int by,
                    const int threadsNum, int *kLevels, int **processingLevels)
 {
@@ -1521,7 +1522,6 @@ int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all
     return LATENT_SVM_OK;
 }
 
-#ifdef HAVE_TBB
 /*
 // int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
                                    const CvLSVMFeaturePyramid *H,
@@ -1679,7 +1679,7 @@ int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
 }
 #endif
 
-void sort(int n, const float* x, int* indices)
+static void sort(int n, const float* x, int* indices)
 {
     int i, j;
     for (i = 0; i < n; i++)

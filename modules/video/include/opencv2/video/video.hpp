@@ -51,7 +51,7 @@ namespace cv
 {
 
 CV_EXPORTS bool initModule_video(void);
-    
+
 }
 #endif
 

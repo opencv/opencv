@@ -43,122 +43,132 @@
 #ifndef __OPENCV_CORE_TYPES_H__
 #define __OPENCV_CORE_TYPES_H__
 
-#if !defined _CRT_SECURE_NO_DEPRECATE && _MSC_VER > 1300
-#define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio 2005 warnings */
+#if !defined _CRT_SECURE_NO_DEPRECATE && defined _MSC_VER
+#  if _MSC_VER > 1300
+#    define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio 2005 warnings */
+#  endif
 #endif
 
 
 #ifndef SKIP_INCLUDES
-  #include <assert.h>
-  #include <stdlib.h>
-  #include <string.h>
-  #include <float.h>
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <float.h>
 
 #if !defined _MSC_VER && !defined __BORLANDC__
-  #include <stdint.h>
+#  include <stdint.h>
 #endif
 
-  #if defined __ICL
-    #define CV_ICC   __ICL
-  #elif defined __ICC
-    #define CV_ICC   __ICC
-  #elif defined __ECL
-    #define CV_ICC   __ECL
-  #elif defined __ECC
-    #define CV_ICC   __ECC
-  #elif defined __INTEL_COMPILER
-    #define CV_ICC   __INTEL_COMPILER
-  #endif
+#if defined __ICL
+#  define CV_ICC   __ICL
+#elif defined __ICC
+#  define CV_ICC   __ICC
+#elif defined __ECL
+#  define CV_ICC   __ECL
+#elif defined __ECC
+#  define CV_ICC   __ECC
+#elif defined __INTEL_COMPILER
+#  define CV_ICC   __INTEL_COMPILER
+#endif
 
-  #if (_MSC_VER >= 1400 && defined _M_X64) || (__GNUC__ >= 4 && defined __x86_64__)
-    #if defined WIN32
-      #include <intrin.h>
-    #endif
-    #if __SSE2__ || !defined __GNUC__
-      #include <emmintrin.h>
-    #endif
-  #endif
+#if defined CV_ICC && !defined CV_ENABLE_UNROLLED
+#  define CV_ENABLE_UNROLLED 0
+#else
+#  define CV_ENABLE_UNROLLED 1
+#endif
 
-  #if defined __BORLANDC__
-    #include <fastmath.h>
-  #else
-    #include <math.h>
-  #endif
+#if (defined _M_X64 && _MSC_VER >= 1400) || (__GNUC__ >= 4 && defined __x86_64__)
+#  if defined WIN32
+#    include <intrin.h>
+#  endif
+#  if __SSE2__ || !defined __GNUC__
+#    include <emmintrin.h>
+#  endif
+#endif
 
-  #ifdef HAVE_IPL
-      #ifndef __IPL_H__
-          #if defined WIN32 || defined _WIN32
-              #include <ipl.h>
-          #else
-              #include <ipl/ipl.h>
-          #endif
-      #endif
-  #elif defined __IPL_H__
-      #define HAVE_IPL
-  #endif
+#if defined __BORLANDC__
+#  include <fastmath.h>
+#else
+#  include <math.h>
+#endif
+
+#ifdef HAVE_IPL
+#  ifndef __IPL_H__
+#    if defined WIN32 || defined _WIN32
+#      include <ipl.h>
+#    else
+#      include <ipl/ipl.h>
+#    endif
+#  endif
+#elif defined __IPL_H__
+#  define HAVE_IPL
+#endif
+
 #endif // SKIP_INCLUDES
 
 #if defined WIN32 || defined _WIN32
-    #define CV_CDECL __cdecl
-    #define CV_STDCALL __stdcall
+#  define CV_CDECL __cdecl
+#  define CV_STDCALL __stdcall
 #else
-    #define CV_CDECL
-    #define CV_STDCALL
+#  define CV_CDECL
+#  define CV_STDCALL
 #endif
 
 #ifndef CV_EXTERN_C
-    #ifdef __cplusplus
-        #define CV_EXTERN_C extern "C"
-        #define CV_DEFAULT(val) = val
-    #else
-        #define CV_EXTERN_C
-        #define CV_DEFAULT(val)
-    #endif
+#  ifdef __cplusplus
+#    define CV_EXTERN_C extern "C"
+#    define CV_DEFAULT(val) = val
+#  else
+#    define CV_EXTERN_C
+#    define CV_DEFAULT(val)
+#  endif
 #endif
 
 #ifndef CV_EXTERN_C_FUNCPTR
-    #ifdef __cplusplus
-        #define CV_EXTERN_C_FUNCPTR(x) extern "C" { typedef x; }
-    #else
-        #define CV_EXTERN_C_FUNCPTR(x) typedef x
-    #endif
+#  ifdef __cplusplus
+#    define CV_EXTERN_C_FUNCPTR(x) extern "C" { typedef x; }
+#  else
+#    define CV_EXTERN_C_FUNCPTR(x) typedef x
+#  endif
 #endif
 
 #ifndef CV_INLINE
-#if defined __cplusplus
-    #define CV_INLINE inline
-#elif (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
-    #define CV_INLINE __inline
-#else
-    #define CV_INLINE static
-#endif
+#  if defined __cplusplus
+#    define CV_INLINE inline
+#  elif (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
+#    define CV_INLINE __inline
+#  else
+#    define CV_INLINE static
+#  endif
 #endif /* CV_INLINE */
 
 #if (defined WIN32 || defined _WIN32 || defined WINCE) && defined CVAPI_EXPORTS
-    #define CV_EXPORTS __declspec(dllexport)
+#  define CV_EXPORTS __declspec(dllexport)
 #else
-    #define CV_EXPORTS
+#  define CV_EXPORTS
 #endif
 
 #ifndef CVAPI
-    #define CVAPI(rettype) CV_EXTERN_C CV_EXPORTS rettype CV_CDECL
+#  define CVAPI(rettype) CV_EXTERN_C CV_EXPORTS rettype CV_CDECL
 #endif
 
 #if defined _MSC_VER || defined __BORLANDC__
-typedef __int64 int64;
-typedef unsigned __int64 uint64;
-#define CV_BIG_INT(n)   n##I64
-#define CV_BIG_UINT(n)  n##UI64
+   typedef __int64 int64;
+   typedef unsigned __int64 uint64;
+#  define CV_BIG_INT(n)   n##I64
+#  define CV_BIG_UINT(n)  n##UI64
 #else
-typedef int64_t int64;
-typedef uint64_t uint64;
-#define CV_BIG_INT(n)   n##LL
-#define CV_BIG_UINT(n)  n##ULL
+   typedef int64_t int64;
+   typedef uint64_t uint64;
+#  define CV_BIG_INT(n)   n##LL
+#  define CV_BIG_UINT(n)  n##ULL
 #endif
 
 #ifndef HAVE_IPL
-typedef unsigned char uchar;
-typedef unsigned short ushort;
+   typedef unsigned char uchar;
+   typedef unsigned short ushort;
 #endif
 
 typedef signed char schar;
@@ -203,7 +213,7 @@ Cv64suf;
 
 typedef int CVStatus;
 
-enum {    
+enum {
  CV_StsOk=                       0,  /* everithing is ok                */
  CV_StsBackTrace=               -1,  /* pseudo error for back trace     */
  CV_StsError=                   -2,  /* unknown /unspecified error      */
@@ -241,8 +251,8 @@ enum {
  CV_StsInplaceNotSupported=    -203, /* in-place operation is not supported */
  CV_StsObjectNotFound=         -204, /* request can't be completed */
  CV_StsUnmatchedFormats=       -205, /* formats of input/output arrays differ */
- CV_StsBadFlag=                -206, /* flag is wrong or not supported */  
- CV_StsBadPoint=               -207, /* bad CvPoint */ 
+ CV_StsBadFlag=                -206, /* flag is wrong or not supported */
+ CV_StsBadPoint=               -207, /* bad CvPoint */
  CV_StsBadMask=                -208, /* bad format of mask (neither 8uC1 nor 8sC1)*/
  CV_StsUnmatchedSizes=         -209, /* sizes of input/output structures do not match */
  CV_StsUnsupportedFormat=      -210, /* the data format/type is not supported by the function*/
@@ -250,8 +260,8 @@ enum {
  CV_StsParseError=             -212, /* invalid syntax/structure of the parsed file */
  CV_StsNotImplemented=         -213, /* the requested function/feature is not implemented */
  CV_StsBadMemBlock=            -214, /* an allocated block has been corrupted */
- CV_StsAssert=                 -215, /* assertion failed */    
- CV_GpuNotSupported=           -216,  
+ CV_StsAssert=                 -215, /* assertion failed */
+ CV_GpuNotSupported=           -216,
  CV_GpuApiCallError=           -217,
  CV_OpenGlNotSupported=        -218,
  CV_OpenGlApiCallError=        -219
@@ -262,7 +272,7 @@ enum {
 \****************************************************************************************/
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-# include "tegra_round.hpp"
+#  include "tegra_round.hpp"
 #endif
 
 #define CV_PI   3.1415926535897932384626433832795
@@ -271,11 +281,11 @@ enum {
 #define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
 
 #ifndef MIN
-#define MIN(a,b)  ((a) > (b) ? (b) : (a))
+#  define MIN(a,b)  ((a) > (b) ? (b) : (a))
 #endif
 
 #ifndef MAX
-#define MAX(a,b)  ((a) < (b) ? (b) : (a))
+#  define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
 
 /* min & max without jumps */
@@ -285,9 +295,9 @@ enum {
 
 /* absolute value without jumps */
 #ifndef __cplusplus
-#define  CV_IABS(a)     (((a) ^ ((a) < 0 ? -1 : 0)) - ((a) < 0 ? -1 : 0))
+#  define  CV_IABS(a)     (((a) ^ ((a) < 0 ? -1 : 0)) - ((a) < 0 ? -1 : 0))
 #else
-#define  CV_IABS(a)     abs(a)
+#  define  CV_IABS(a)     abs(a)
 #endif
 #define  CV_CMP(a,b)    (((a) > (b)) - ((a) < (b)))
 #define  CV_SIGN(a)     CV_CMP((a),0)
@@ -306,11 +316,11 @@ CV_INLINE  int  cvRound( double value )
     }
     return t;
 #elif defined HAVE_LRINT || defined CV_ICC || defined __GNUC__
-# ifdef HAVE_TEGRA_OPTIMIZATION
+#  ifdef HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND(value);
-# else
+#  else
     return (int)lrint(value);
-# endif
+#  endif
 #else
     // while this is not IEEE754-compliant rounding, it's usually a good enough approximation
     return (int)(value + (value >= 0 ? 0.5 : -0.5));
@@ -318,7 +328,7 @@ CV_INLINE  int  cvRound( double value )
 }
 
 #if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
-#include "emmintrin.h"
+#  include "emmintrin.h"
 #endif
 
 CV_INLINE  int  cvFloor( double value )
@@ -1886,6 +1896,6 @@ typedef struct CvModuleInfo
 }
 CvModuleInfo;
 
-#endif /*_CXCORE_TYPES_H_*/
+#endif /*__OPENCV_CORE_TYPES_H__*/
 
 /* End of file. */

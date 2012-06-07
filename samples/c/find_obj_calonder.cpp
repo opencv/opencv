@@ -11,7 +11,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout << "This program shows the use of the Calonder point descriptor classifier"
             "SURF is used to detect interest points, Calonder is used to describe/match these points\n"
@@ -28,7 +28,7 @@ void help()
 /*
  * Generates random perspective transform of image
  */
-void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
+static void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
 {
     H.create(3, 3, CV_32FC1);
     H.at<float>(0,0) = rng.uniform( 0.8f, 1.2f);
@@ -51,7 +51,7 @@ void warpPerspectiveRand( const Mat& src, Mat& dst, Mat& H, RNG& rng )
  *
  * To train Calonder classifier RTreeClassifier class need to be used.
  */
-void trainCalonderClassifier( const string& classifierFilename, const string& imgFilename )
+static void trainCalonderClassifier( const string& classifierFilename, const string& imgFilename )
 {
     // Reads train images
     ifstream is( imgFilename.c_str(), ifstream::in );
@@ -104,7 +104,7 @@ void trainCalonderClassifier( const string& classifierFilename, const string& im
  * but it is convenient to use CalonderDescriptorExtractor class which is wrapper of
  * RTreeClassifier.
  */
-void testCalonderClassifier( const string& classifierFilename, const string& imgFilename )
+static void testCalonderClassifier( const string& classifierFilename, const string& imgFilename )
 {
     Mat img1 = imread( imgFilename, CV_LOAD_IMAGE_GRAYSCALE ), img2, H12;
     if( img1.empty() )

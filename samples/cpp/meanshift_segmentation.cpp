@@ -7,9 +7,9 @@
 using namespace cv;
 using namespace std;
 
-void help(char** argv)
+static void help(char** argv)
 {
-	cout << "\nDemonstrate mean-shift based color segmentation in spatial pyramid.\n"
+    cout << "\nDemonstrate mean-shift based color segmentation in spatial pyramid.\n"
     << "Call:\n   " << argv[0] << " image\n"
     << "This program allows you to set the spatial and color radius\n"
     << "of the mean shift window as well as the number of pyramid reduction levels explored\n"
@@ -17,7 +17,7 @@ void help(char** argv)
 }
 
 //This colors the segmentations
-void floodFillPostprocess( Mat& img, const Scalar& colorDiff=Scalar::all(1) )
+static void floodFillPostprocess( Mat& img, const Scalar& colorDiff=Scalar::all(1) )
 {
     CV_Assert( !img.empty() );
     RNG rng = theRNG();
@@ -39,7 +39,7 @@ string winName = "meanshift";
 int spatialRad, colorRad, maxPyrLevel;
 Mat img, res;
 
-void meanShiftSegmentation( int, void* )
+static void meanShiftSegmentation( int, void* )
 {
     cout << "spatialRad=" << spatialRad << "; "
          << "colorRad=" << colorRad << "; "
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 {
     if( argc !=2 )
     {
-    	help(argv);
+        help(argv);
         return -1;
     }
 

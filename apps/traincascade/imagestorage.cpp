@@ -1,3 +1,6 @@
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/internal.hpp"
+
 #include "cv.h"
 #include "imagestorage.h"
 #include <stdio.h>
@@ -55,7 +58,7 @@ bool CvCascadeImageReader::NegReader::nextImg()
     for( size_t i = 0; i < count; i++ )
     {
         src = imread( imgFilenames[last++], 0 );
-        if( src.empty() ) 
+        if( src.empty() )
             continue;
         round += last / count;
         round = round % (winSize.width * winSize.height);
@@ -63,7 +66,7 @@ bool CvCascadeImageReader::NegReader::nextImg()
 
         _offset.x = min( (int)round % winSize.width, src.cols - winSize.width );
         _offset.y = min( (int)round / winSize.width, src.rows - winSize.height );
-        if( !src.empty() && src.type() == CV_8UC1 
+        if( !src.empty() && src.type() == CV_8UC1
                 && offset.x >= 0 && offset.y >= 0 )
             break;
     }
@@ -73,7 +76,7 @@ bool CvCascadeImageReader::NegReader::nextImg()
     point = offset = _offset;
     scale = max( ((float)winSize.width + point.x) / ((float)src.cols),
                  ((float)winSize.height + point.y) / ((float)src.rows) );
-    
+
     Size sz( (int)(scale*src.cols + 0.5F), (int)(scale*src.rows + 0.5F) );
     resize( src, img, sz );
     return true;
@@ -87,7 +90,7 @@ bool CvCascadeImageReader::NegReader::get( Mat& _img )
     CV_Assert( _img.rows == winSize.height );
 
     if( img.empty() )
-        if ( !nextImg() ) 
+        if ( !nextImg() )
             return false;
 
     Mat mat( winSize.height, winSize.width, CV_8UC1,
@@ -109,7 +112,7 @@ bool CvCascadeImageReader::NegReader::get( Mat& _img )
                 resize( src, img, Size( (int)(scale*src.cols), (int)(scale*src.rows) ) );
             else
             {
-                if ( !nextImg() ) 
+                if ( !nextImg() )
                     return false;
             }
         }
@@ -131,7 +134,7 @@ bool CvCascadeImageReader::PosReader::create( const String _filename )
 
     if( !file )
         return false;
-    short tmp = 0;  
+    short tmp = 0;
     if( fread( &count, sizeof( count ), 1, file ) != 1 ||
         fread( &vecSize, sizeof( vecSize ), 1, file ) != 1 ||
         fread( &tmp, sizeof( tmp ), 1, file ) != 1 ||

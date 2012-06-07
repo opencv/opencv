@@ -44,7 +44,7 @@
 
 #undef quad
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4701 )
 #endif
 
@@ -99,18 +99,18 @@ bool CvCalibFilter::SetEtalon( CvCalibEtalonType type, double* params,
 
     Stop();
 
-	if (latestPoints != NULL)
-	{
-		for( i = 0; i < MAX_CAMERAS; i++ )
-			cvFree( latestPoints + i );
-	}
+    if (latestPoints != NULL)
+    {
+        for( i = 0; i < MAX_CAMERAS; i++ )
+            cvFree( latestPoints + i );
+    }
 
     if( type == CV_CALIB_ETALON_USER || type != etalonType )
     {
-		if (etalonParams != NULL)
-		{
-			cvFree( &etalonParams );
-		}
+        if (etalonParams != NULL)
+        {
+            cvFree( &etalonParams );
+        }
     }
 
     etalonType = type;
@@ -154,10 +154,10 @@ bool CvCalibFilter::SetEtalon( CvCalibEtalonType type, double* params,
 
     if( etalonPointCount != pointCount )
     {
-		if (etalonPoints != NULL)
-		{
-			cvFree( &etalonPoints );
-		}
+        if (etalonPoints != NULL)
+        {
+            cvFree( &etalonPoints );
+        }
         etalonPointCount = pointCount;
         etalonPoints = (CvPoint2D32f*)cvAlloc( arrSize );
     }
@@ -184,15 +184,15 @@ bool CvCalibFilter::SetEtalon( CvCalibEtalonType type, double* params,
         break;
 
     case CV_CALIB_ETALON_USER:
-		if (params != NULL)
-		{
-			memcpy( etalonParams, params, arrSize );
-		}
-		if (points != NULL)
-		{
-			memcpy( etalonPoints, points, arrSize );
-		}
-		break;
+        if (params != NULL)
+        {
+            memcpy( etalonParams, params, arrSize );
+        }
+        if (points != NULL)
+        {
+            memcpy( etalonPoints, points, arrSize );
+        }
+        break;
 
     default:
         assert(0);
@@ -226,7 +226,7 @@ CvCalibFilter::GetEtalon( int* paramCount, const double** params,
 void CvCalibFilter::SetCameraCount( int count )
 {
     Stop();
-    
+
     if( count != cameraCount )
     {
         for( int i = 0; i < cameraCount; i++ )
@@ -245,7 +245,7 @@ void CvCalibFilter::SetCameraCount( int count )
     }
 }
 
-   
+
 bool CvCalibFilter::SetFrames( int frames )
 {
     if( frames < 5 )
@@ -253,7 +253,7 @@ bool CvCalibFilter::SetFrames( int frames )
         assert(0);
         return false;
     }
-    
+
     framesTotal = frames;
     return true;
 }
@@ -304,7 +304,7 @@ void CvCalibFilter::Stop( bool calibrate )
 
             cameraParams[i].imgSize[0] = (float)imgSize.width;
             cameraParams[i].imgSize[1] = (float)imgSize.height;
-            
+
 //            cameraParams[i].focalLength[0] = cameraParams[i].matrix[0];
 //            cameraParams[i].focalLength[1] = cameraParams[i].matrix[4];
 
@@ -315,7 +315,7 @@ void CvCalibFilter::Stop( bool calibrate )
             memcpy( cameraParams[i].transVect, transVect, 3 * sizeof(transVect[0]));
 
             mat.data.ptr = (uchar*)(cameraParams + i);
-            
+
             /* check resultant camera parameters: if there are some INF's or NAN's,
                stop and reset results */
             if( !cvCheckArr( &mat, CV_CHECK_RANGE | CV_CHECK_QUIET, -10000, 10000 ))
@@ -342,7 +342,7 @@ void CvCalibFilter::Stop( bool calibrate )
                 {
                     stereo.fundMatr[i] = stereo.fundMatr[i];
                 }
-                
+
             }
 
         }
@@ -499,16 +499,16 @@ bool CvCalibFilter::GetLatestPoints( int idx, CvPoint2D32f** pts,
                                      int* count, bool* found )
 {
     int n;
-    
+
     if( (unsigned)idx >= (unsigned)cameraCount ||
         !pts || !count || !found )
     {
         assert(0);
         return false;
     }
-    
+
     n = latestCounts[idx];
-    
+
     *found = n > 0;
     *count = abs(n);
     *pts = latestPoints[idx];
@@ -616,7 +616,7 @@ const CvCamera* CvCalibFilter::GetCameraParams( int idx ) const
         assert(0);
         return 0;
     }
-    
+
     return isCalibrated ? cameraParams + idx : 0;
 }
 
@@ -630,7 +630,7 @@ const CvStereoCamera* CvCalibFilter::GetStereoParams() const
         assert(0);
         return 0;
     }
-    
+
     return &stereo;
 }
 
@@ -640,9 +640,9 @@ bool CvCalibFilter::SetCameraParams( CvCamera* params )
 {
     CvMat mat;
     int arrSize;
-    
+
     Stop();
-    
+
     if( !params )
     {
         assert(0);
@@ -667,7 +667,7 @@ bool CvCalibFilter::SaveCameraParams( const char* filename )
     if( isCalibrated )
     {
         int i, j;
-        
+
         FILE* f = fopen( filename, "w" );
 
         if( !f ) return false;
@@ -729,7 +729,7 @@ bool CvCalibFilter::LoadCameraParams( const char* filename )
         return false;
 
     SetCameraCount( d );
-    
+
     for( i = 0; i < cameraCount; i++ )
     {
         for( j = 0; j < (int)(sizeof(cameraParams[i])/sizeof(float)); j++ )
@@ -763,16 +763,16 @@ bool CvCalibFilter::LoadCameraParams( const char* filename )
             CV_Assert(values_read == 1);
         }
     }
-    
-    
-    
-    
+
+
+
+
     fclose(f);
 
     stereo.warpSize = cvSize( cvRound(cameraParams[0].imgSize[0]), cvRound(cameraParams[0].imgSize[1]));
 
     isCalibrated = true;
-    
+
     return true;
 }
 
@@ -924,4 +924,4 @@ bool CvCalibFilter::Undistort( CvMat** srcarr, CvMat** dstarr )
     return true;
 }
 
- 	  	 
+

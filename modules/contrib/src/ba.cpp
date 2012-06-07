@@ -55,36 +55,36 @@ LevMarqSparse::LevMarqSparse() {
 
 LevMarqSparse::~LevMarqSparse() {
   clear();
-} 
+}
 
 LevMarqSparse::LevMarqSparse(int npoints, // number of points
-			     int ncameras, // number of cameras
-			     int nPointParams, // number of params per one point  (3 in case of 3D points)
-			     int nCameraParams, // number of parameters per one camera
-			     int nErrParams, // number of parameters in measurement vector
-			     // for 1 point at one camera (2 in case of 2D projections)
-			     Mat& visibility, // visibility matrix. rows correspond to points, columns correspond to cameras
-			     // 1 - point is visible for the camera, 0 - invisible
-			     Mat& P0, // starting vector of parameters, first cameras then points
-			     Mat& X_, // measurements, in order of visibility. non visible cases are skipped 
-			     TermCriteria criteria, // termination criteria
-        
-			     // callback for estimation of Jacobian matrices
-			     void (CV_CDECL * fjac)(int i, int j, Mat& point_params,
-						    Mat& cam_params, Mat& A, Mat& B, void* data),
-			     // callback for estimation of backprojection errors
-			     void (CV_CDECL * func)(int i, int j, Mat& point_params,
-						    Mat& cam_params, Mat& estim, void* data),
-			     void* data, // user-specific data passed to the callbacks
-			     BundleAdjustCallback _cb, void* _user_data
-			     ) {
+           int ncameras, // number of cameras
+           int nPointParams, // number of params per one point  (3 in case of 3D points)
+           int nCameraParams, // number of parameters per one camera
+           int nErrParams, // number of parameters in measurement vector
+           // for 1 point at one camera (2 in case of 2D projections)
+           Mat& visibility, // visibility matrix. rows correspond to points, columns correspond to cameras
+           // 1 - point is visible for the camera, 0 - invisible
+           Mat& P0, // starting vector of parameters, first cameras then points
+           Mat& X_, // measurements, in order of visibility. non visible cases are skipped
+           TermCriteria criteria, // termination criteria
+
+           // callback for estimation of Jacobian matrices
+           void (CV_CDECL * fjac)(int i, int j, Mat& point_params,
+                Mat& cam_params, Mat& A, Mat& B, void* data),
+           // callback for estimation of backprojection errors
+           void (CV_CDECL * func)(int i, int j, Mat& point_params,
+                Mat& cam_params, Mat& estim, void* data),
+           void* data, // user-specific data passed to the callbacks
+           BundleAdjustCallback _cb, void* _user_data
+           ) {
   Vis_index = X = prevP = P = deltaP = err = JtJ_diag = S = hX = NULL;
   U = ea = V = inv_V_star = eb = Yj = NULL;
   A = B = W = NULL;
 
   cb = _cb;
   user_data = _user_data;
-    
+
   run(npoints, ncameras, nPointParams, nCameraParams, nErrParams, visibility,
       P0, X_, criteria, fjac, func, data);
 }
@@ -95,19 +95,19 @@ void LevMarqSparse::clear() {
       //CvMat* tmp = ((CvMat**)(A->data.ptr + i * A->step))[j];
       CvMat* tmp = A[j+i*num_cams];
       if (tmp)
-	cvReleaseMat( &tmp );
+  cvReleaseMat( &tmp );
 
       //tmp = ((CvMat**)(B->data.ptr + i * B->step))[j];
       tmp  = B[j+i*num_cams];
       if (tmp)
-	cvReleaseMat( &tmp );
-                 
+  cvReleaseMat( &tmp );
+
       //tmp = ((CvMat**)(W->data.ptr + j * W->step))[i];
       tmp  = W[j+i*num_cams];
       if (tmp)
-	cvReleaseMat( &tmp ); 
+  cvReleaseMat( &tmp );
     }
-  }   
+  }
   delete A; //cvReleaseMat(&A);
   delete B;//cvReleaseMat(&B);
   delete W;//cvReleaseMat(&W);
@@ -122,7 +122,7 @@ void LevMarqSparse::clear() {
     cvReleaseMat( &ea[j] );
   }
   delete ea;
-     
+
   //allocate V and inv_V_star
   for( int i = 0; i < num_points; i++ ) {
     cvReleaseMat(&V[i]);
@@ -138,16 +138,16 @@ void LevMarqSparse::clear() {
 
   for( int i = 0; i < num_points; i++ ) {
     cvReleaseMat(&Yj[i]);
-  }   
+  }
   delete Yj;
-     
+
   cvReleaseMat(&X);
   cvReleaseMat(&prevP);
   cvReleaseMat(&P);
   cvReleaseMat(&deltaP);
 
-  cvReleaseMat(&err);      
-    
+  cvReleaseMat(&err);
+
   cvReleaseMat(&JtJ_diag);
   cvReleaseMat(&S);
   cvReleaseMat(&hX);
@@ -165,28 +165,28 @@ void LevMarqSparse::clear() {
 //num_errors - number of measurements.
 
 void LevMarqSparse::run( int num_points_, //number of points
-			 int num_cams_, //number of cameras
-			 int num_point_param_, //number of params per one point  (3 in case of 3D points)
-			 int num_cam_param_, //number of parameters per one camera
-			 int num_err_param_, //number of parameters in measurement vector for 1 point at one camera (2 in case of 2D projections)
-			 Mat& visibility,   //visibility matrix . rows correspond to points, columns correspond to cameras
-			 // 0 - point is visible for the camera, 0 - invisible
-			 Mat& P0, //starting vector of parameters, first cameras then points
-			 Mat& X_init, //measurements, in order of visibility. non visible cases are skipped 
-			 TermCriteria criteria_init,
-			 void (*fjac_)(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data),
-			 void (*func_)(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data),
-			 void* data_
-			 ) { //termination criteria
+       int num_cams_, //number of cameras
+       int num_point_param_, //number of params per one point  (3 in case of 3D points)
+       int num_cam_param_, //number of parameters per one camera
+       int num_err_param_, //number of parameters in measurement vector for 1 point at one camera (2 in case of 2D projections)
+       Mat& visibility,   //visibility matrix . rows correspond to points, columns correspond to cameras
+       // 0 - point is visible for the camera, 0 - invisible
+       Mat& P0, //starting vector of parameters, first cameras then points
+       Mat& X_init, //measurements, in order of visibility. non visible cases are skipped
+       TermCriteria criteria_init,
+       void (*fjac_)(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data),
+       void (*func_)(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data),
+       void* data_
+       ) { //termination criteria
   //clear();
-    
+
   func = func_; //assign evaluation function
   fjac = fjac_; //assign jacobian
   data = data_;
 
   num_cams = num_cams_;
   num_points = num_points_;
-  num_err_param = num_err_param_; 
+  num_err_param = num_err_param_;
   num_cam_param = num_cam_param_;
   num_point_param = num_point_param_;
 
@@ -204,9 +204,9 @@ void LevMarqSparse::run( int num_points_, //number of points
   int Wij_width = Bij_width;
 
   //allocate memory for all Aij, Bij, U, V, W
-    
+
   //allocate num_points*num_cams matrices A
-    
+
   //Allocate matrix A whose elements are nointers to Aij
   //if Aij is zero (point i is not visible in camera j) then A(i,j) contains NULL
   //A = cvCreateMat( num_points, num_cams, CV_32S /*pointer is stored here*/ );
@@ -221,39 +221,39 @@ void LevMarqSparse::run( int num_points_, //number of points
   //cvSetZero( B );
   //cvSetZero( W );
   cvSet( Vis_index, cvScalar(-1) );
-    
+
   //fill matrices A and B based on visibility
   CvMat _vis = visibility;
   int index = 0;
   for (int i = 0; i < num_points; i++ ) {
     for (int j = 0; j < num_cams; j++ ) {
       if (((int*)(_vis.data.ptr+ i * _vis.step))[j] ) {
-	((int*)(Vis_index->data.ptr + i * Vis_index->step))[j] = index;
-	index += num_err_param;
-    
-	//create matrices Aij, Bij
-	CvMat* tmp = cvCreateMat(Aij_height, Aij_width, CV_64F );
-	//((CvMat**)(A->data.ptr + i * A->step))[j] = tmp;
-	cvSet(tmp,cvScalar(1.0,1.0,1.0,1.0));
-	A[j+i*num_cams] = tmp;
+  ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j] = index;
+  index += num_err_param;
 
-	tmp = cvCreateMat( Bij_height, Bij_width, CV_64F );
-	//((CvMat**)(B->data.ptr + i * B->step))[j] = tmp;
-	cvSet(tmp,cvScalar(1.0,1.0,1.0,1.0));
-	B[j+i*num_cams] = tmp;
-    
-	tmp = cvCreateMat( Wij_height, Wij_width, CV_64F );
-	//((CvMat**)(W->data.ptr + j * W->step))[i] = tmp;  //note indices i and j swapped
-	cvSet(tmp,cvScalar(1.0,1.0,1.0,1.0));
-	W[j+i*num_cams] = tmp;
+  //create matrices Aij, Bij
+  CvMat* tmp = cvCreateMat(Aij_height, Aij_width, CV_64F );
+  //((CvMat**)(A->data.ptr + i * A->step))[j] = tmp;
+  cvSet(tmp,cvScalar(1.0,1.0,1.0,1.0));
+  A[j+i*num_cams] = tmp;
+
+  tmp = cvCreateMat( Bij_height, Bij_width, CV_64F );
+  //((CvMat**)(B->data.ptr + i * B->step))[j] = tmp;
+  cvSet(tmp,cvScalar(1.0,1.0,1.0,1.0));
+  B[j+i*num_cams] = tmp;
+
+  tmp = cvCreateMat( Wij_height, Wij_width, CV_64F );
+  //((CvMat**)(W->data.ptr + j * W->step))[i] = tmp;  //note indices i and j swapped
+  cvSet(tmp,cvScalar(1.0,1.0,1.0,1.0));
+  W[j+i*num_cams] = tmp;
       } else{
-	A[j+i*num_cams] = NULL;
-	B[j+i*num_cams] = NULL;
-	W[j+i*num_cams] = NULL;
+  A[j+i*num_cams] = NULL;
+  B[j+i*num_cams] = NULL;
+  W[j+i*num_cams] = NULL;
       }
-    }                
+    }
   }
-    
+
   //allocate U
   U = new CvMat* [num_cams];
   for (int j = 0; j < num_cams; j++ ) {
@@ -267,7 +267,7 @@ void LevMarqSparse::run( int num_points_, //number of points
     ea[j] = cvCreateMat( U_size, 1, CV_64F );
     cvSetZero(ea[j]);
   }
-    
+
   //allocate V and inv_V_star
   V = new CvMat* [num_points];
   inv_V_star = new CvMat* [num_points];
@@ -277,36 +277,36 @@ void LevMarqSparse::run( int num_points_, //number of points
     cvSetZero(V[i]);
     cvSetZero(inv_V_star[i]);
   }
-    
+
   //allocate eb
   eb = new CvMat* [num_points];
   for (int i = 0; i < num_points; i++ ) {
     eb[i] = cvCreateMat( V_size, 1, CV_64F );
     cvSetZero(eb[i]);
-  }   
-    
+  }
+
   //allocate Yj
   Yj = new CvMat* [num_points];
   for (int i = 0; i < num_points; i++ ) {
     Yj[i] = cvCreateMat( Wij_height, Wij_width, CV_64F );  //Yij has the same size as Wij
     cvSetZero(Yj[i]);
-  }        
-    
+  }
+
   //allocate matrix S
   S = cvCreateMat( num_cams * num_cam_param, num_cams * num_cam_param, CV_64F);
   cvSetZero(S);
   JtJ_diag = cvCreateMat( num_cams * num_cam_param + num_points * num_point_param, 1, CV_64F );
   cvSetZero(JtJ_diag);
-    
+
   //set starting parameters
-  CvMat _tmp_ = CvMat(P0); 
-  prevP = cvCloneMat( &_tmp_ );          
+  CvMat _tmp_ = CvMat(P0);
+  prevP = cvCloneMat( &_tmp_ );
   P = cvCloneMat( &_tmp_ );
   deltaP = cvCloneMat( &_tmp_ );
-    
+
   //set measurements
   _tmp_ = CvMat(X_init);
-  X = cvCloneMat( &_tmp_ );  
+  X = cvCloneMat( &_tmp_ );
   //create vector for estimated measurements
   hX = cvCreateMat( X->rows, X->cols, CV_64F );
   cvSetZero(hX);
@@ -334,9 +334,9 @@ void LevMarqSparse::run( int num_points_, //number of points
 
   prevErrNorm = cvNorm( err, 0,  CV_L2 );
   //    std::cerr<<"prevErrNorm = "<<prevErrNorm<<std::endl;
-  iters = 0; 
+  iters = 0;
   criteria = criteria_init;
-    
+
   optimize(_vis);
 
   ask_for_proj(_vis,true);
@@ -363,8 +363,8 @@ void LevMarqSparse::ask_for_proj(CvMat &/*_vis*/,bool once) {
                 func( i, j, _point_mat, _cam_mat, _measur_mat, data);
                 assert( ind*num_err_param == ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j]);
                 ind+=1;
-            }  
-        } 
+            }
+        }
     }
 }
 
@@ -372,20 +372,20 @@ void LevMarqSparse::ask_for_proj(CvMat &/*_vis*/,bool once) {
 void LevMarqSparse::ask_for_projac(CvMat &/*_vis*/)   //should be evaluated at point prevP
 {
     // compute jacobians Aij and Bij
-    for (int i = 0; i < num_points; i++ ) 
+    for (int i = 0; i < num_points; i++ )
     {
         CvMat point_mat;
         cvGetSubRect( prevP, &point_mat, cvRect( 0, num_cams * num_cam_param + num_point_param * i, 1, num_point_param ));
 
         //CvMat** A_line = (CvMat**)(A->data.ptr + A->step * i);
         //CvMat** B_line = (CvMat**)(B->data.ptr + B->step * i);
-        for( int j = 0; j < num_cams; j++ ) 
+        for( int j = 0; j < num_cams; j++ )
         {
             //CvMat* Aij = A_line[j];
             //if( Aij ) //Aij is not zero
             CvMat* Aij = A[j+i*num_cams];
             CvMat* Bij = B[j+i*num_cams];
-            if(Aij) 
+            if(Aij)
             {
                 //CvMat** A_line = (CvMat**)(A->data.ptr + A->step * i);
                 //CvMat** B_line = (CvMat**)(B->data.ptr + B->step * i);
@@ -403,13 +403,13 @@ void LevMarqSparse::ask_for_projac(CvMat &/*_vis*/)   //should be evaluated at p
             }
         }
     }
-}  
+}
 
 void LevMarqSparse::optimize(CvMat &_vis) { //main function that runs minimization
   bool done = false;
-    
-  CvMat* YWt = cvCreateMat( num_cam_param, num_cam_param, CV_64F ); //this matrix used to store Yij*Wik' 
-  CvMat* E = cvCreateMat( S->height, 1 , CV_64F ); //this is right part of system with S       
+
+  CvMat* YWt = cvCreateMat( num_cam_param, num_cam_param, CV_64F ); //this matrix used to store Yij*Wik'
+  CvMat* E = cvCreateMat( S->height, 1 , CV_64F ); //this is right part of system with S
   cvSetZero(YWt);
   cvSetZero(E);
 
@@ -419,26 +419,26 @@ void LevMarqSparse::optimize(CvMat &_vis) { //main function that runs minimizati
     int invisible_count=0;
     //compute U_j  and  ea_j
     for (int j = 0; j < num_cams; j++ ) {
-      cvSetZero(U[j]); 
+      cvSetZero(U[j]);
       cvSetZero(ea[j]);
       //summ by i (number of points)
       for (int i = 0; i < num_points; i++ ) {
-	//get Aij
-	//CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
-	CvMat* Aij = A[j+i*num_cams];
-	if (Aij ) {
-	  //Uj+= AijT*Aij
-	  cvGEMM( Aij, Aij, 1, U[j], 1, U[j], CV_GEMM_A_T );
-	  //ea_j += AijT * e_ij
-	  CvMat eij;
+  //get Aij
+  //CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
+  CvMat* Aij = A[j+i*num_cams];
+  if (Aij ) {
+    //Uj+= AijT*Aij
+    cvGEMM( Aij, Aij, 1, U[j], 1, U[j], CV_GEMM_A_T );
+    //ea_j += AijT * e_ij
+    CvMat eij;
 
-	  int index = ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j];
+    int index = ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j];
 
-	  cvGetSubRect( err, &eij, cvRect( 0, index, 1, Aij->height  ) ); //width of transposed Aij
-	  cvGEMM( Aij, &eij, 1, ea[j], 1, ea[j], CV_GEMM_A_T );
-	}
-	else
-	  invisible_count++;
+    cvGetSubRect( err, &eij, cvRect( 0, index, 1, Aij->height  ) ); //width of transposed Aij
+    cvGEMM( Aij, &eij, 1, ea[j], 1, ea[j], CV_GEMM_A_T );
+  }
+  else
+    invisible_count++;
       }
     } //U_j and ea_j computed for all j
 
@@ -450,272 +450,272 @@ void LevMarqSparse::optimize(CvMat &_vis) { //main function that runs minimizati
       cb(iters, prevErrNorm, user_data);
     //compute V_i  and  eb_i
     for (int i = 0; i < num_points; i++ ) {
-      cvSetZero(V[i]); 
+      cvSetZero(V[i]);
       cvSetZero(eb[i]);
-            
+
       //summ by i (number of points)
       for( int j = 0; j < num_cams; j++ ) {
-	//get Bij
-	//CvMat* Bij = ((CvMat**)(B->data.ptr + B->step * i))[j];
-	CvMat* Bij = B[j+i*num_cams];
-	if (Bij ) {
-	  //Vi+= BijT*Bij
-	  cvGEMM( Bij, Bij, 1, V[i], 1, V[i], CV_GEMM_A_T );
+  //get Bij
+  //CvMat* Bij = ((CvMat**)(B->data.ptr + B->step * i))[j];
+  CvMat* Bij = B[j+i*num_cams];
+  if (Bij ) {
+    //Vi+= BijT*Bij
+    cvGEMM( Bij, Bij, 1, V[i], 1, V[i], CV_GEMM_A_T );
 
-	  //eb_i += BijT * e_ij
-	  int index = ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j];
+    //eb_i += BijT * e_ij
+    int index = ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j];
 
-	  CvMat eij;
-	  cvGetSubRect( err, &eij, cvRect( 0, index, 1, Bij->height  ) ); //width of transposed Bij
-	  cvGEMM( Bij, &eij, 1, eb[i], 1, eb[i], CV_GEMM_A_T );
-	}
+    CvMat eij;
+    cvGetSubRect( err, &eij, cvRect( 0, index, 1, Bij->height  ) ); //width of transposed Bij
+    cvGEMM( Bij, &eij, 1, eb[i], 1, eb[i], CV_GEMM_A_T );
+  }
       }
     } //V_i and eb_i computed for all i
 
       //compute W_ij
     for( int i = 0; i < num_points; i++ ) {
       for( int j = 0; j < num_cams; j++ ) {
-	//CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
-	CvMat* Aij = A[j+i*num_cams];
-	if( Aij ) { //visible
-	  //CvMat* Bij = ((CvMat**)(B->data.ptr + B->step * i))[j];
-	  CvMat* Bij = B[j+i*num_cams];
-	  //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
-	  CvMat* Wij = W[j+i*num_cams];
+  //CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
+  CvMat* Aij = A[j+i*num_cams];
+  if( Aij ) { //visible
+    //CvMat* Bij = ((CvMat**)(B->data.ptr + B->step * i))[j];
+    CvMat* Bij = B[j+i*num_cams];
+    //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
+    CvMat* Wij = W[j+i*num_cams];
 
-	  //multiply
-	  cvGEMM( Aij, Bij, 1, NULL, 0, Wij, CV_GEMM_A_T );                     
-	}
+    //multiply
+    cvGEMM( Aij, Bij, 1, NULL, 0, Wij, CV_GEMM_A_T );
+  }
       }
     } //Wij computed
 
       //backup diagonal of JtJ before we start augmenting it
-    {               
+    {
       CvMat dia;
       CvMat subr;
       for( int j = 0; j < num_cams; j++ ) {
-	cvGetDiag(U[j], &dia);
-	cvGetSubRect(JtJ_diag, &subr, 
-		     cvRect(0, j*num_cam_param, 1, num_cam_param ));
-	cvCopy( &dia, &subr );
-      } 
+  cvGetDiag(U[j], &dia);
+  cvGetSubRect(JtJ_diag, &subr,
+         cvRect(0, j*num_cam_param, 1, num_cam_param ));
+  cvCopy( &dia, &subr );
+      }
       for( int i = 0; i < num_points; i++ ) {
-	cvGetDiag(V[i], &dia);
-	cvGetSubRect(JtJ_diag, &subr, 
-		     cvRect(0, num_cams*num_cam_param + i * num_point_param, 1, num_point_param ));
-	cvCopy( &dia, &subr );
-      }   
-    } 
+  cvGetDiag(V[i], &dia);
+  cvGetSubRect(JtJ_diag, &subr,
+         cvRect(0, num_cams*num_cam_param + i * num_point_param, 1, num_point_param ));
+  cvCopy( &dia, &subr );
+      }
+    }
 
     if( iters == 0 ) {
       //initialize lambda. It is set to 1e-3 * average diagonal element in JtJ
       double average_diag = 0;
       for( int j = 0; j < num_cams; j++ ) {
-	average_diag += cvTrace( U[j] ).val[0];
+  average_diag += cvTrace( U[j] ).val[0];
       }
       for( int i = 0; i < num_points; i++ ) {
-	average_diag += cvTrace( V[i] ).val[0];
+  average_diag += cvTrace( V[i] ).val[0];
       }
       average_diag /= (num_cams*num_cam_param + num_points * num_point_param );
-                        
-      //      lambda = 1e-3 * average_diag;        
-      lambda = 1e-3 * average_diag;        
+
+      //      lambda = 1e-3 * average_diag;
+      lambda = 1e-3 * average_diag;
       lambda = 0.245560;
     }
-       
+
     //now we are going to find good step and make it
     for(;;) {
       //augmentation of diagonal
       for(int j = 0; j < num_cams; j++ ) {
-	CvMat diag;
-	cvGetDiag( U[j], &diag );
+  CvMat diag;
+  cvGetDiag( U[j], &diag );
 #if 1
-	cvAddS( &diag, cvScalar( lambda ), &diag );
+  cvAddS( &diag, cvScalar( lambda ), &diag );
 #else
-	cvScale( &diag, &diag, 1 + lambda );
+  cvScale( &diag, &diag, 1 + lambda );
 #endif
       }
       for(int i = 0; i < num_points; i++ ) {
-	CvMat diag;
-	cvGetDiag( V[i], &diag );
+  CvMat diag;
+  cvGetDiag( V[i], &diag );
 #if 1
-	cvAddS( &diag, cvScalar( lambda ), &diag );
+  cvAddS( &diag, cvScalar( lambda ), &diag );
 #else
-	cvScale( &diag, &diag, 1 + lambda );
+  cvScale( &diag, &diag, 1 + lambda );
 #endif
-      }                              
+      }
       bool error = false;
       //compute inv(V*)
       bool inverted_ok = true;
       for(int i = 0; i < num_points; i++ ) {
-	double det = cvInvert( V[i], inv_V_star[i] );
+  double det = cvInvert( V[i], inv_V_star[i] );
 
-	if( fabs(det) <= FLT_EPSILON )  {
-	  inverted_ok = false;
-	  std::cerr<<"V["<<i<<"] failed"<<std::endl;
-	  break;
-	} //means we did wrong augmentation, try to choose different lambda
+  if( fabs(det) <= FLT_EPSILON )  {
+    inverted_ok = false;
+    std::cerr<<"V["<<i<<"] failed"<<std::endl;
+    break;
+  } //means we did wrong augmentation, try to choose different lambda
       }
 
       if( inverted_ok ) {
-	cvSetZero( E ); 
-	//loop through cameras, compute upper diagonal blocks of matrix S 
-	for( int j = 0; j < num_cams; j++ ) {
-	  //compute Yij = Wij (V*_i)^-1  for all i   (if Wij exists/nonzero)
-	  for( int i = 0; i < num_points; i++ ) {
-	    //
-	    //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
-	    CvMat* Wij = W[j+i*num_cams];
-	    if( Wij ) {
-	      cvMatMul( Wij, inv_V_star[i], Yj[i] );
-	    }
-	  }
+  cvSetZero( E );
+  //loop through cameras, compute upper diagonal blocks of matrix S
+  for( int j = 0; j < num_cams; j++ ) {
+    //compute Yij = Wij (V*_i)^-1  for all i   (if Wij exists/nonzero)
+    for( int i = 0; i < num_points; i++ ) {
+      //
+      //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
+      CvMat* Wij = W[j+i*num_cams];
+      if( Wij ) {
+        cvMatMul( Wij, inv_V_star[i], Yj[i] );
+      }
+    }
 
-	  //compute Sjk   for k>=j  (because Sjk = Skj)
-	  for( int k = j; k < num_cams; k++ ) {
-	    cvSetZero( YWt );
-	    for( int i = 0; i < num_points; i++ ) {
-	      //check that both Wij and Wik exist
-	      // CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
-	      CvMat* Wij = W[j+i*num_cams];
-	      //CvMat* Wik = ((CvMat**)(W->data.ptr + W->step * k))[i];
-	      CvMat* Wik = W[k+i*num_cams];
+    //compute Sjk   for k>=j  (because Sjk = Skj)
+    for( int k = j; k < num_cams; k++ ) {
+      cvSetZero( YWt );
+      for( int i = 0; i < num_points; i++ ) {
+        //check that both Wij and Wik exist
+        // CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
+        CvMat* Wij = W[j+i*num_cams];
+        //CvMat* Wik = ((CvMat**)(W->data.ptr + W->step * k))[i];
+        CvMat* Wik = W[k+i*num_cams];
 
-	      if( Wij && Wik ) {
-		//multiply YWt += Yj[i]*Wik'
-		cvGEMM( Yj[i], Wik, 1, YWt, 1, YWt, CV_GEMM_B_T  ); ///*transpose Wik
-	      }
-	    }
+        if( Wij && Wik ) {
+    //multiply YWt += Yj[i]*Wik'
+    cvGEMM( Yj[i], Wik, 1, YWt, 1, YWt, CV_GEMM_B_T  ); ///*transpose Wik
+        }
+      }
 
-	    //copy result to matrix S
+      //copy result to matrix S
 
-	    CvMat Sjk;
-	    //extract submat
-	    cvGetSubRect( S, &Sjk, cvRect( k * num_cam_param, j * num_cam_param, num_cam_param, num_cam_param ));  
-                        
+      CvMat Sjk;
+      //extract submat
+      cvGetSubRect( S, &Sjk, cvRect( k * num_cam_param, j * num_cam_param, num_cam_param, num_cam_param ));
 
-	    //if j==k, add diagonal
-	    if( j != k ) {
-	      //just copy with minus
-	      cvScale( YWt, &Sjk, -1 ); //if we set initial S to zero then we can use cvSub( Sjk, YWt, Sjk);
-	    } else {
-	      //add diagonal value
 
-	      //subtract YWt from augmented Uj
-	      cvSub( U[j], YWt, &Sjk );
-	    }                
-	  }
-
-	  //compute right part of equation involving matrix S
-	  // e_j=ea_j - \sum_i Y_ij eb_i 
-	  {
-	    CvMat e_j; 
-                    
-	    //select submat
-	    cvGetSubRect( E, &e_j, cvRect( 0, j * num_cam_param, 1, num_cam_param ) ); 
-                    
-	    for( int i = 0; i < num_points; i++ ) {
-	      //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
-	      CvMat* Wij = W[j+i*num_cams];
-	      if( Wij )
-		cvMatMulAdd( Yj[i], eb[i], &e_j, &e_j );
-	    }
-
-	    cvSub( ea[j], &e_j, &e_j );
-	  }
-
-	} 
-	//fill below diagonal elements of matrix S
-	cvCompleteSymm( S,  0  ); ///*from upper to low //operation may be done by nonzero blocks or during upper diagonal computation
-                
-	//Solve linear system  S * deltaP_a = E
-	CvMat dpa;
-	cvGetSubRect( deltaP, &dpa, cvRect(0, 0, 1, S->width ) );
-	int res = cvSolve( S, E, &dpa, CV_CHOLESKY );
-            
-	if( res ) { //system solved ok
-	  //compute db_i
-	  for( int i = 0; i < num_points; i++ ) {
-	    CvMat dbi;
-	    cvGetSubRect( deltaP, &dbi, cvRect( 0, dpa.height + i * num_point_param, 1, num_point_param ) );   
-
-	    // compute \sum_j W_ij^T da_j
-	    for( int j = 0; j < num_cams; j++ ) {
-	      //get Wij
-	      //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
-	      CvMat* Wij = W[j+i*num_cams];
-	      if( Wij ) {
-		//get da_j
-		CvMat daj;
-		cvGetSubRect( &dpa, &daj, cvRect( 0, j * num_cam_param, 1, num_cam_param ));  
-		cvGEMM( Wij, &daj, 1, &dbi, 1, &dbi, CV_GEMM_A_T  ); ///* transpose Wij
-	      }  
-	    }
-	    //finalize dbi
-	    cvSub( eb[i], &dbi, &dbi );
-	    cvMatMul(inv_V_star[i], &dbi, &dbi );  //here we get final dbi  
-	  }  //now we computed whole deltaP
-
-	  //add deltaP to delta 
-	  cvAdd( prevP, deltaP, P );
-                                        
-	  //evaluate  function with new parameters
-	  ask_for_proj(_vis); // func( P, hX );
-
-	  //compute error
-	  errNorm = cvNorm( X, hX, CV_L2 );
-                                        
-	} else {
-	  error = true;
-	}                
+      //if j==k, add diagonal
+      if( j != k ) {
+        //just copy with minus
+        cvScale( YWt, &Sjk, -1 ); //if we set initial S to zero then we can use cvSub( Sjk, YWt, Sjk);
       } else {
-	error = true;
+        //add diagonal value
+
+        //subtract YWt from augmented Uj
+        cvSub( U[j], YWt, &Sjk );
+      }
+    }
+
+    //compute right part of equation involving matrix S
+    // e_j=ea_j - \sum_i Y_ij eb_i
+    {
+      CvMat e_j;
+
+      //select submat
+      cvGetSubRect( E, &e_j, cvRect( 0, j * num_cam_param, 1, num_cam_param ) );
+
+      for( int i = 0; i < num_points; i++ ) {
+        //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
+        CvMat* Wij = W[j+i*num_cams];
+        if( Wij )
+    cvMatMulAdd( Yj[i], eb[i], &e_j, &e_j );
+      }
+
+      cvSub( ea[j], &e_j, &e_j );
+    }
+
+  }
+  //fill below diagonal elements of matrix S
+  cvCompleteSymm( S,  0  ); ///*from upper to low //operation may be done by nonzero blocks or during upper diagonal computation
+
+  //Solve linear system  S * deltaP_a = E
+  CvMat dpa;
+  cvGetSubRect( deltaP, &dpa, cvRect(0, 0, 1, S->width ) );
+  int res = cvSolve( S, E, &dpa, CV_CHOLESKY );
+
+  if( res ) { //system solved ok
+    //compute db_i
+    for( int i = 0; i < num_points; i++ ) {
+      CvMat dbi;
+      cvGetSubRect( deltaP, &dbi, cvRect( 0, dpa.height + i * num_point_param, 1, num_point_param ) );
+
+      // compute \sum_j W_ij^T da_j
+      for( int j = 0; j < num_cams; j++ ) {
+        //get Wij
+        //CvMat* Wij = ((CvMat**)(W->data.ptr + W->step * j))[i];
+        CvMat* Wij = W[j+i*num_cams];
+        if( Wij ) {
+    //get da_j
+    CvMat daj;
+    cvGetSubRect( &dpa, &daj, cvRect( 0, j * num_cam_param, 1, num_cam_param ));
+    cvGEMM( Wij, &daj, 1, &dbi, 1, &dbi, CV_GEMM_A_T  ); ///* transpose Wij
+        }
+      }
+      //finalize dbi
+      cvSub( eb[i], &dbi, &dbi );
+      cvMatMul(inv_V_star[i], &dbi, &dbi );  //here we get final dbi
+    }  //now we computed whole deltaP
+
+    //add deltaP to delta
+    cvAdd( prevP, deltaP, P );
+
+    //evaluate  function with new parameters
+    ask_for_proj(_vis); // func( P, hX );
+
+    //compute error
+    errNorm = cvNorm( X, hX, CV_L2 );
+
+  } else {
+    error = true;
+  }
+      } else {
+  error = true;
       }
       //check solution
       if( error || ///* singularities somewhere
-	  errNorm > prevErrNorm )  { //step was not accepted
-	//increase lambda and reject change 
-	lambda *= 10;
-	int nviz = X->rows / num_err_param;
-	double e2 = errNorm*errNorm, e2_prev = prevErrNorm*prevErrNorm;
-	double e2n = e2/nviz, e2n_prev = e2_prev/nviz;
-	std::cerr<<"move failed: lambda = "<<lambda<<", e2 = "<<e2<<" ("<<e2n<<") > "<<e2_prev<<" ("<<e2n_prev<<")"<<std::endl;
+    errNorm > prevErrNorm )  { //step was not accepted
+  //increase lambda and reject change
+  lambda *= 10;
+  int nviz = X->rows / num_err_param;
+  double e2 = errNorm*errNorm, e2_prev = prevErrNorm*prevErrNorm;
+  double e2n = e2/nviz, e2n_prev = e2_prev/nviz;
+  std::cerr<<"move failed: lambda = "<<lambda<<", e2 = "<<e2<<" ("<<e2n<<") > "<<e2_prev<<" ("<<e2n_prev<<")"<<std::endl;
 
-	//restore diagonal from backup
-	{               
-	  CvMat dia;
-	  CvMat subr;
-	  for( int j = 0; j < num_cams; j++ ) {
-	    cvGetDiag(U[j], &dia);
-	    cvGetSubRect(JtJ_diag, &subr, 
-			 cvRect(0, j*num_cam_param, 1, num_cam_param ));
-	    cvCopy( &subr, &dia );
-	  } 
-	  for( int i = 0; i < num_points; i++ ) {
-	    cvGetDiag(V[i], &dia);
-	    cvGetSubRect(JtJ_diag, &subr, 
-			 cvRect(0, num_cams*num_cam_param + i * num_point_param, 1, num_point_param ));
-	    cvCopy( &subr, &dia );
-	  }   
-	}                  
+  //restore diagonal from backup
+  {
+    CvMat dia;
+    CvMat subr;
+    for( int j = 0; j < num_cams; j++ ) {
+      cvGetDiag(U[j], &dia);
+      cvGetSubRect(JtJ_diag, &subr,
+       cvRect(0, j*num_cam_param, 1, num_cam_param ));
+      cvCopy( &subr, &dia );
+    }
+    for( int i = 0; i < num_points; i++ ) {
+      cvGetDiag(V[i], &dia);
+      cvGetSubRect(JtJ_diag, &subr,
+       cvRect(0, num_cams*num_cam_param + i * num_point_param, 1, num_point_param ));
+      cvCopy( &subr, &dia );
+    }
+  }
       } else {  //all is ok
-	//accept change and decrease lambda
-	lambda /= 10;
-	lambda = MAX(lambda, 1e-16);
-	std::cerr<<"decreasing lambda to "<<lambda<<std::endl;
-	prevErrNorm = errNorm;
+  //accept change and decrease lambda
+  lambda /= 10;
+  lambda = MAX(lambda, 1e-16);
+  std::cerr<<"decreasing lambda to "<<lambda<<std::endl;
+  prevErrNorm = errNorm;
 
-	//compute new projection error vector
-	cvSub(  X, hX, err );
-	break;
+  //compute new projection error vector
+  cvSub(  X, hX, err );
+  break;
       }
-    }      
+    }
     iters++;
 
     double param_change_norm = cvNorm(P, prevP, CV_RELATIVE_L2);
     //check termination criteria
-    if( (criteria.type&CV_TERMCRIT_ITER && iters > criteria.max_iter ) || 
-	(criteria.type&CV_TERMCRIT_EPS && param_change_norm < criteria.epsilon) ) {
+    if( (criteria.type&CV_TERMCRIT_ITER && iters > criteria.max_iter ) ||
+  (criteria.type&CV_TERMCRIT_EPS && param_change_norm < criteria.epsilon) ) {
       //      std::cerr<<"relative norm change "<<param_change_norm<<" lower than eps "<<criteria.epsilon<<", stopping"<<std::endl;
       done = true;
       break;
@@ -723,17 +723,17 @@ void LevMarqSparse::optimize(CvMat &_vis) { //main function that runs minimizati
       //copy new params and continue iterations
       cvCopy( P, prevP );
     }
-  }   
-  cvReleaseMat(&YWt); 
+  }
+  cvReleaseMat(&YWt);
   cvReleaseMat(&E);
-} 
+}
 
 //Utilities
 
-void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A, CvMat* B, void* /*data*/) {
+static void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A, CvMat* B, void* /*data*/) {
   //compute jacobian per camera parameters (i.e. Aij)
   //take i-th point 3D current coordinates
-    
+
   CvMat _Mi;
   cvReshape(point_params, &_Mi, 3, 1 );
 
@@ -750,25 +750,25 @@ void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A
   intr_data[2] = cam_params->data.db[8];
   intr_data[5] = cam_params->data.db[9];
 
-  CvMat _A = cvMat(3,3, CV_64F, intr_data ); 
+  CvMat _A = cvMat(3,3, CV_64F, intr_data );
 
   CvMat _dpdr, _dpdt, _dpdf, _dpdc, _dpdk;
-    
+
   bool have_dk = cam_params->height - 10 ? true : false;
 
   cvGetCols( A, &_dpdr, 0, 3 );
   cvGetCols( A, &_dpdt, 3, 6 );
   cvGetCols( A, &_dpdf, 6, 8 );
   cvGetCols( A, &_dpdc, 8, 10 );
-    
+
   if( have_dk ) {
     cvGetRows( cam_params, &_k, 10, cam_params->height );
     cvGetCols( A, &_dpdk, 10, A->width );
   }
   cvProjectPoints2(&_Mi, &_ri, &_ti, &_A, have_dk ? &_k : NULL, _mp, &_dpdr, &_dpdt,
-		   &_dpdf, &_dpdc, have_dk ? &_dpdk : NULL, 0);   
+       &_dpdf, &_dpdc, have_dk ? &_dpdk : NULL, 0);
 
-  cvReleaseMat( &_mp );                                 
+  cvReleaseMat( &_mp );
 
   //compute jacobian for point params
   //compute dMeasure/dPoint3D
@@ -781,30 +781,30 @@ void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A
   // y' = y/z
 
   //d(x') = ( dx*z - x*dz)/(z*z)
-  //d(y') = ( dy*z - y*dz)/(z*z) 
+  //d(y') = ( dy*z - y*dz)/(z*z)
 
   //g = 1 + k1*r_2 + k2*r_4 + k3*r_6
   //r_2 = x'*x' + y'*y'
 
   //d(r_2) = 2*x'*dx' + 2*y'*dy'
 
-  //dg = k1* d(r_2) + k2*2*r_2*d(r_2) + k3*3*r_2*r_2*d(r_2) 
+  //dg = k1* d(r_2) + k2*2*r_2*d(r_2) + k3*3*r_2*r_2*d(r_2)
 
   //x" = x'*g + 2*p1*x'*y' + p2(r_2+2*x'_2)
   //y" = y'*g + p1(r_2+2*y'_2) + 2*p2*x'*y'
-               
+
   //d(x") = d(x') * g + x' * d(g) + 2*p1*( d(x')*y' + x'*dy) + p2*(d(r_2) + 2*2*x'* dx')
-  //d(y") = d(y') * g + y' * d(g) + 2*p2*( d(x')*y' + x'*dy) + p1*(d(r_2) + 2*2*y'* dy')  
+  //d(y") = d(y') * g + y' * d(g) + 2*p2*( d(x')*y' + x'*dy) + p1*(d(r_2) + 2*2*y'* dy')
 
   // u = fx*( x") + cx
   // v = fy*( y") + cy
-    
+
   // du = fx * d(x")  = fx * ( dx*z - x*dz)/ (z*z)
   // dv = fy * d(y")  = fy * ( dy*z - y*dz)/ (z*z)
 
-  // dx/dX = r11,  dx/dY = r12, dx/dZ = r13 
+  // dx/dX = r11,  dx/dY = r12, dx/dZ = r13
   // dy/dX = r21,  dy/dY = r22, dy/dZ = r23
-  // dz/dX = r31,  dz/dY = r32, dz/dZ = r33 
+  // dz/dX = r31,  dz/dY = r32, dz/dZ = r33
 
   // du/dX = fx*(r11*z-x*r31)/(z*z)
   // du/dY = fx*(r12*z-x*r32)/(z*z)
@@ -833,27 +833,27 @@ void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A
   double y = R[3] * X + R[4] * Y + R[5] * Z + t[1];
   double z = R[6] * X + R[7] * Y + R[8] * Z + t[2];
 
-#if 1    
+#if 1
   //compute x',y'
   double x_strike = x/z;
-  double y_strike = y/z;   
+  double y_strike = y/z;
   //compute dx',dy'  matrix
   //
-  //    dx'/dX  dx'/dY dx'/dZ    =    
+  //    dx'/dX  dx'/dY dx'/dZ    =
   //    dy'/dX  dy'/dY dy'/dZ
 
   double coeff[6] = { z, 0, -x,
-		      0, z, -y };
+          0, z, -y };
   CvMat coeffmat = cvMat( 2, 3, CV_64F, coeff );
 
   CvMat* dstrike_dbig = cvCreateMat(2,3,CV_64F);
   cvMatMul(&coeffmat, &_R, dstrike_dbig);
-  cvScale(dstrike_dbig, dstrike_dbig, 1/(z*z) );      
-    
+  cvScale(dstrike_dbig, dstrike_dbig, 1/(z*z) );
+
   if( have_dk ) {
     double strike_[2] = {x_strike, y_strike};
-    CvMat strike = cvMat(1, 2, CV_64F, strike_);       
-        
+    CvMat strike = cvMat(1, 2, CV_64F, strike_);
+
     //compute r_2
     double r_2 = x_strike*x_strike + y_strike*y_strike;
     double r_4 = r_2*r_2;
@@ -867,24 +867,24 @@ void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A
     double& k1 = _k.data.db[0];
     double& k2 = _k.data.db[1];
     double& p1 = _k.data.db[2];
-    double& p2 = _k.data.db[3];          
+    double& p2 = _k.data.db[3];
     double k3 = 0;
 
     if( _k.cols*_k.rows == 5 ) {
       k3 = _k.data.db[4];
-    }    
+    }
     //compute dg/dbig
     double dg_dr2 = k1 + k2*2*r_2 + k3*3*r_4;
     double g = 1+k1*r_2+k2*r_4+k3*r_6;
 
     CvMat* dg_dbig = cvCreateMat(1,3,CV_64F);
-    cvScale( dr2_dbig, dg_dbig, dg_dr2 ); 
+    cvScale( dr2_dbig, dg_dbig, dg_dr2 );
 
     CvMat* tmp = cvCreateMat( 2, 3, CV_64F );
     CvMat* dstrike2_dbig = cvCreateMat( 2, 3, CV_64F );
-                                  
+
     double c[4] = { g+2*p1*y_strike+4*p2*x_strike,       2*p1*x_strike,
-		    2*p2*y_strike,                 g+2*p2*x_strike + 4*p1*y_strike };
+        2*p2*y_strike,                 g+2*p2*x_strike + 4*p1*y_strike };
 
     CvMat coeffmat = cvMat(2,2,CV_64F, c );
 
@@ -897,7 +897,7 @@ void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A
     CvMat pmat = cvMat(2, 1, CV_64F, p );
 
     cvMatMul( &pmat, dr2_dbig ,tmp);
-    cvAdd( dstrike2_dbig, tmp, dstrike2_dbig );   
+    cvAdd( dstrike2_dbig, tmp, dstrike2_dbig );
 
     cvCopy( dstrike2_dbig, B );
 
@@ -906,15 +906,15 @@ void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A
 
     cvReleaseMat(&tmp);
     cvReleaseMat(&dstrike2_dbig);
-    cvReleaseMat(&tmp);  
+    cvReleaseMat(&tmp);
   } else {
     cvCopy(dstrike_dbig, B);
   }
   //multiply by fx, fy
   CvMat row;
   cvGetRows( B, &row, 0, 1 );
-  cvScale( &row, &row, fx );    
-    
+  cvScale( &row, &row, fx );
+
   cvGetRows( B, &row, 1, 2 );
   cvScale( &row, &row, fy );
 
@@ -925,17 +925,17 @@ void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* A
   cvmSet( B, 0, 0, k*(R[0]*z-x*R[6]));
   cvmSet( B, 0, 1, k*(R[1]*z-x*R[7]));
   cvmSet( B, 0, 2, k*(R[2]*z-x*R[8]));
-    
-  k = fy/(z*z);        
-    
+
+  k = fy/(z*z);
+
   cvmSet( B, 1, 0, k*(R[3]*z-y*R[6]));
   cvmSet( B, 1, 1, k*(R[4]*z-y*R[7]));
   cvmSet( B, 1, 2, k*(R[5]*z-y*R[8]));
-    
+
 #endif
-    
+
 };
-void func(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* estim, void* /*data*/) {
+static void func(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* estim, void* /*data*/) {
   //just do projections
   CvMat _Mi;
   cvReshape( point_params, &_Mi, 3, 1 );
@@ -955,19 +955,19 @@ void func(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* e
   intr_data[2] = cam_params->data.db[8];
   intr_data[5] = cam_params->data.db[9];
 
-  CvMat _A = cvMat(3,3, CV_64F, intr_data ); 
+  CvMat _A = cvMat(3,3, CV_64F, intr_data );
 
   //int cn = CV_MAT_CN(_Mi.type);
 
   bool have_dk = cam_params->height - 10 ? true : false;
-           
+
   if( have_dk ) {
-    cvGetRows( cam_params, &_k, 10, cam_params->height );        
-  }  
+    cvGetRows( cam_params, &_k, 10, cam_params->height );
+  }
   cvProjectPoints2( &_Mi, &_ri, &_ti, &_A, have_dk ? &_k : NULL, _mp, NULL, NULL,
-		    NULL, NULL, NULL, 0);   
+        NULL, NULL, NULL, 0);
   //    std::cerr<<"_mp = "<<_mp->data.db[0]<<","<<_mp->data.db[1]<<std::endl;
-  //    
+  //
   _mp2->data.db[0] = _mp->data.db[0];
   _mp2->data.db[1] = _mp->data.db[1];
   cvTranspose( _mp2, estim );
@@ -975,41 +975,41 @@ void func(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* e
   cvReleaseMat( &_mp2 );
 };
 
-void fjac_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data) {
+static void fjac_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data) {
   CvMat _point_params = point_params, _cam_params = cam_params, _Al = A, _Bl = B;
   fjac(i,j, &_point_params, &_cam_params, &_Al, &_Bl, data);
 };
 
-void func_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data)  {
+static void func_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data)  {
   CvMat _point_params = point_params, _cam_params = cam_params, _estim = estim;
   func(i,j,&_point_params,&_cam_params,&_estim,data);
-};                                                 
+};
 
 void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points in global coordinate system (input and output)
-				  const vector<vector<Point2d> >& imagePoints, //projections of 3d points for every camera
-				  const vector<vector<int> >& visibility, //visibility of 3d points for every camera 
-				  vector<Mat>& cameraMatrix, //intrinsic matrices of all cameras (input and output)
-				  vector<Mat>& R, //rotation matrices of all cameras (input and output)
-				  vector<Mat>& T, //translation vector of all cameras (input and output)
-				  vector<Mat>& distCoeffs, //distortion coefficients of all cameras (input and output)
-				  const TermCriteria& criteria,
-				  BundleAdjustCallback cb, void* user_data) {
+          const vector<vector<Point2d> >& imagePoints, //projections of 3d points for every camera
+          const vector<vector<int> >& visibility, //visibility of 3d points for every camera
+          vector<Mat>& cameraMatrix, //intrinsic matrices of all cameras (input and output)
+          vector<Mat>& R, //rotation matrices of all cameras (input and output)
+          vector<Mat>& T, //translation vector of all cameras (input and output)
+          vector<Mat>& distCoeffs, //distortion coefficients of all cameras (input and output)
+          const TermCriteria& criteria,
+          BundleAdjustCallback cb, void* user_data) {
   //,enum{MOTION_AND_STRUCTURE,MOTION,STRUCTURE})
   int num_points = (int)points.size();
   int num_cameras = (int)cameraMatrix.size();
 
-  CV_Assert( imagePoints.size() == (size_t)num_cameras && 
-	     visibility.size() == (size_t)num_cameras && 
-	     R.size() == (size_t)num_cameras &&
-	     T.size() == (size_t)num_cameras &&
-	     (distCoeffs.size() == (size_t)num_cameras || distCoeffs.size() == 0) );                
+  CV_Assert( imagePoints.size() == (size_t)num_cameras &&
+       visibility.size() == (size_t)num_cameras &&
+       R.size() == (size_t)num_cameras &&
+       T.size() == (size_t)num_cameras &&
+       (distCoeffs.size() == (size_t)num_cameras || distCoeffs.size() == 0) );
 
   int numdist = distCoeffs.size() ? (distCoeffs[0].rows * distCoeffs[0].cols) : 0;
 
   int num_cam_param = 3 /* rotation vector */ + 3 /* translation vector */
-    + 2 /* fx, fy */ + 2 /* cx, cy */ + numdist; 
+    + 2 /* fx, fy */ + 2 /* cx, cy */ + numdist;
 
-  int num_point_param = 3; 
+  int num_point_param = 3;
 
   //collect camera parameters into vector
   Mat params( num_cameras * num_cam_param + num_points * num_point_param, 1, CV_64F );
@@ -1023,8 +1023,8 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
 
     //translation
     dst = params.rowRange(i*num_cam_param + 3, i*num_cam_param+6);
-    T[i].copyTo(dst); 
-        
+    T[i].copyTo(dst);
+
     //intrinsic camera matrix
     double* intr_data = (double*)cameraMatrix[i].data;
     double* intr = (double*)(params.data + params.step * (i*num_cam_param+6));
@@ -1033,14 +1033,14 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
     intr[1] = intr_data[4];  //fy
     //center of projection
     intr[2] = intr_data[2];  //cx
-    intr[3] = intr_data[5];  //cy  
+    intr[3] = intr_data[5];  //cy
 
     //add distortion if exists
     if( distCoeffs.size() ) {
       dst = params.rowRange(i*num_cam_param + 10, i*num_cam_param+10+numdist);
-      distCoeffs[i].copyTo(dst); 
+      distCoeffs[i].copyTo(dst);
     }
-  }  
+  }
 
   //fill point params
   Mat ptparams(num_points, 1, CV_64FC3, params.data + num_cameras*num_cam_param*params.step);
@@ -1059,26 +1059,26 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
   int num_proj = countNonZero(vismat); //total number of points projections
 
   //collect measurements
-  Mat X(num_proj*2,1,CV_64F); //measurement vector      
-    
+  Mat X(num_proj*2,1,CV_64F); //measurement vector
+
   int counter = 0;
   for(int i = 0; i < num_points; i++ ) {
     for(int j = 0; j < num_cameras; j++ ) {
       //check visibility
       if( visibility[j][i] ) {
-	//extract point and put tu vector
-	Point2d p = imagePoints[j][i];
-	((double*)(X.data))[counter] = p.x;
-	((double*)(X.data))[counter+1] = p.y;
-	assert(p.x != -1 || p.y != -1);
-	counter+=2;
-      }             
-    }   
+  //extract point and put tu vector
+  Point2d p = imagePoints[j][i];
+  ((double*)(X.data))[counter] = p.x;
+  ((double*)(X.data))[counter+1] = p.y;
+  assert(p.x != -1 || p.y != -1);
+  counter+=2;
+      }
+    }
   }
 
   LevMarqSparse levmar( num_points, num_cameras, num_point_param, num_cam_param, 2, vismat, params, X,
-			TermCriteria(criteria), fjac_new, func_new, NULL,
-			cb, user_data);
+      TermCriteria(criteria), fjac_new, func_new, NULL,
+      cb, user_data);
   //extract results
   //fill point params
   /*Mat final_points(num_points, 1, CV_64FC3,
@@ -1101,7 +1101,7 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
     Mat rot_vec = Mat(levmar.P).rowRange(i*num_cam_param, i*num_cam_param+3);
     Rodrigues( rot_vec, R[i] );
     //translation
-    T[i] = Mat(levmar.P).rowRange(i*num_cam_param + 3, i*num_cam_param+6);  
+    T[i] = Mat(levmar.P).rowRange(i*num_cam_param + 3, i*num_cam_param+6);
 
     //intrinsic camera matrix
     double* intr_data = (double*)cameraMatrix[i].data;
@@ -1111,11 +1111,11 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
     intr_data[4] = intr[1];  //fy
     //center of projection
     intr_data[2] = intr[2];  //cx
-    intr_data[5] = intr[3];  //cy  
+    intr_data[5] = intr[3];  //cy
 
     //add distortion if exists
     if( distCoeffs.size() ) {
       Mat(levmar.P).rowRange(i*num_cam_param + 10, i*num_cam_param+10+numdist).copyTo(distCoeffs[i]);
     }
-  } 
-}    
+  }
+}

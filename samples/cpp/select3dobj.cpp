@@ -29,11 +29,11 @@ const char* helphelp =
 "select3dobj -w <board_width> -h <board_height> [-s <square_size>]\n"
 "           -i <camera_intrinsics_filename> -o <output_prefix> [video_filename/cameraId]\n"
 "\n"
-" -w <board_width>     		Number of chessboard corners wide\n"
-" -h <board_height>    		Number of chessboard corners width\n"
-" [-s <square_size>]			Optional measure of chessboard squares in meters\n"
+" -w <board_width>          Number of chessboard corners wide\n"
+" -h <board_height>         Number of chessboard corners width\n"
+" [-s <square_size>]            Optional measure of chessboard squares in meters\n"
 " -i <camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp\n"
-" -o <output_prefix> 		Prefix the output segmentation images with this\n"
+" -o <output_prefix>        Prefix the output segmentation images with this\n"
 " [video_filename/cameraId]  If present, read from that video file or that ID\n"
 "\n"
 "Using a camera's intrinsics (from calibrating a camera -- see calibration.cpp) and an\n"
@@ -57,10 +57,10 @@ const char* helphelp =
 "    q     - Exit the program\n"
 "\n\n";
 
-void help()
-{
-	puts(helphelp);
-}
+// static void help()
+// {
+//     puts(helphelp);
+// }
 
 
 struct MouseEvent
@@ -88,19 +88,19 @@ static bool readCameraMatrix(const string& filename,
     fs["image_height"] >> calibratedImageSize.height;
     fs["distortion_coefficients"] >> distCoeffs;
     fs["camera_matrix"] >> cameraMatrix;
-    
+
     if( distCoeffs.type() != CV_64F )
         distCoeffs = Mat_<double>(distCoeffs);
     if( cameraMatrix.type() != CV_64F )
         cameraMatrix = Mat_<double>(cameraMatrix);
-    
+
     return true;
 }
 
 static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners)
 {
     corners.resize(0);
-    
+
     for( int i = 0; i < boardSize.height; i++ )
         for( int j = 0; j < boardSize.width; j++ )
             corners.push_back(Point3f(float(j*squareSize),
@@ -119,7 +119,7 @@ static Point3f image2plane(Point2f imgpt, const Mat& R, const Mat& tvec,
 }
 
 
-static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFrame, 
+static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFrame,
                          const Mat& cameraMatrix, const Mat& rvec, const Mat& tvec,
                          const vector<Point3f>& box, int nobjpt, bool runExtraSegmentation)
 {
@@ -128,7 +128,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
         return Rect();
     vector<Point3f> objpt;
     vector<Point2f> imgpt;
-    
+
     objpt.push_back(box[0]);
     if( nobjpt > 1 )
         objpt.push_back(box[1]);
@@ -140,9 +140,9 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
     if( nobjpt > 3 )
         for( int i = 0; i < 4; i++ )
             objpt.push_back(Point3f(objpt[i].x, objpt[i].y, box[3].z));
-    
+
     projectPoints(Mat(objpt), rvec, tvec, cameraMatrix, Mat(), imgpt);
-    
+
     if( shownFrame.data )
     {
         if( nobjpt == 1 )
@@ -158,7 +158,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
             {
                 circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, CV_AA);
                 line(shownFrame, imgpt[i], imgpt[(i+1)%4], Scalar(0,255,0), 3, CV_AA);
-            }    
+            }
         else
             for( int i = 0; i < 8; i++ )
             {
@@ -167,7 +167,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
                 line(shownFrame, imgpt[i], imgpt[i%4], Scalar(0,255,0), 3, CV_AA);
             }
     }
-    
+
     if( nobjpt <= 2 )
         return Rect();
     vector<Point> hull;
@@ -175,7 +175,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
     Mat selectedObjMask = Mat::zeros(frame.size(), CV_8U);
     fillConvexPoly(selectedObjMask, &hull[0], (int)hull.size(), Scalar::all(255), 8, 0);
     Rect roi = boundingRect(Mat(hull)) & Rect(Point(), frame.size());
-    
+
     if( runExtraSegmentation )
     {
         selectedObjMask = Scalar::all(GC_BGD);
@@ -185,7 +185,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
                 3, GC_INIT_WITH_RECT + GC_INIT_WITH_MASK);
         bitwise_and(selectedObjMask, Scalar::all(1), selectedObjMask);
     }
-    
+
     frame.copyTo(selectedObjFrame, selectedObjMask);
     return roi;
 }
@@ -197,7 +197,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
 {
     const float eps = 1e-3f;
     MouseEvent mouse;
-    
+
     setMouseCallback(windowname, onMouse, &mouse);
     vector<Point3f> tempobj(8);
     vector<Point2f> imgpt(4), tempimg(8);
@@ -206,19 +206,19 @@ static int select3DBox(const string& windowname, const string& selWinName, const
     Mat R, selectedObjMask, selectedObjFrame, shownFrame;
     Rodrigues(rvec, R);
     box.resize(4);
-    
+
     for(;;)
     {
         float Z = 0.f;
         bool dragging = (mouse.buttonState & CV_EVENT_FLAG_LBUTTON) != 0;
         int npt = nobjpt;
-        
+
         if( (mouse.event == CV_EVENT_LBUTTONDOWN ||
              mouse.event == CV_EVENT_LBUTTONUP ||
              dragging) && nobjpt < 4 )
         {
             Point2f m = mouse.pt;
-            
+
             if( nobjpt < 2 )
                 imgpt[npt] = m;
             else
@@ -232,7 +232,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
                         if( norm(m - imgpt[i]) < norm(m - imgpt[nearestIdx]) )
                             nearestIdx = i;
                 }
-                
+
                 if( npt == 2 )
                 {
                     float dx = box[1].x - box[0].x, dy = box[1].y - box[0].y;
@@ -242,9 +242,9 @@ static int select3DBox(const string& windowname, const string& selWinName, const
                 }
                 else
                     tempobj[0] = Point3f(box[nearestIdx].x, box[nearestIdx].y, 1.f);
-                
+
                 projectPoints(Mat(tempobj), rvec, tvec, cameraMatrix, Mat(), tempimg);
-                
+
                 Point2f a = imgpt[nearestIdx], b = tempimg[0], d1 = b - a, d2 = m - a;
                 float n1 = (float)norm(d1), n2 = (float)norm(d2);
                 if( n1*n2 < eps )
@@ -256,7 +256,7 @@ static int select3DBox(const string& windowname, const string& selWinName, const
                 }
             }
             box[npt] = image2plane(imgpt[npt], R, tvec, cameraMatrix, npt<3 ? 0 : Z);
-            
+
             if( (npt == 0 && mouse.event == CV_EVENT_LBUTTONDOWN) ||
                (npt > 0 && norm(box[npt] - box[npt-1]) > eps &&
                 mouse.event == CV_EVENT_LBUTTONUP) )
@@ -268,19 +268,19 @@ static int select3DBox(const string& windowname, const string& selWinName, const
                     box[nobjpt] = box[nobjpt-1];
                 }
             }
-            
+
             // reset the event
             mouse.event = -1;
             //mouse.buttonState = 0;
             npt++;
         }
-        
+
         frame.copyTo(shownFrame);
         extract3DBox(frame, shownFrame, selectedObjFrame,
                      cameraMatrix, rvec, tvec, box, npt, false);
         imshow(windowname, shownFrame);
         imshow(selWinName, selectedObjFrame);
-        
+
         int c = waitKey(30);
         if( (c & 255) == 27 )
         {
@@ -305,17 +305,17 @@ static bool readModelViews( const string& filename, vector<Point3f>& box,
     roiList.resize(0);
     poseList.resize(0);
     box.resize(0);
-    
+
     FileStorage fs(filename, FileStorage::READ);
     if( !fs.isOpened() )
         return false;
     fs["box"] >> box;
-    
+
     FileNode all = fs["views"];
     if( all.type() != FileNode::SEQ )
         return false;
     FileNodeIterator it = all.begin(), it_end = all.end();
-    
+
     for(; it != it_end; ++it)
     {
         FileNode n = *it;
@@ -326,7 +326,7 @@ static bool readModelViews( const string& filename, vector<Point3f>& box,
         poseList.push_back(Vec6f((float)np[0], (float)np[1], (float)np[2],
                                  (float)np[3], (float)np[4], (float)np[5]));
     }
-    
+
     return true;
 }
 
@@ -339,25 +339,25 @@ static bool writeModelViews(const string& filename, const vector<Point3f>& box,
     FileStorage fs(filename, FileStorage::WRITE);
     if( !fs.isOpened() )
         return false;
-    
+
     fs << "box" << "[:";
     fs << box << "]" << "views" << "[";
-    
+
     size_t i, nviews = imagelist.size();
-    
+
     CV_Assert( nviews == roiList.size() && nviews == poseList.size() );
-    
+
     for( i = 0; i < nviews; i++ )
     {
         Rect r = roiList[i];
         Vec6f p = poseList[i];
-        
+
         fs << "{" << "image" << imagelist[i] <<
             "roi" << "[:" << r.x << r.y << r.width << r.height << "]" <<
             "pose" << "[:" << p[0] << p[1] << p[2] << p[3] << p[4] << p[5] << "]" << "}";
     }
     fs << "]";
-    
+
     return true;
 }
 
@@ -389,82 +389,82 @@ int main(int argc, char** argv)
     "\tSPACE - Skip the frame; move to the next frame (not in video mode)\n"
     "\tENTER - Confirm the selection. Grab next object in video mode.\n"
     "\tq - Exit the program\n";
-    
+
     if(argc < 5)
     {
-    	puts(helphelp);
+        puts(helphelp);
         puts(help);
         return 0;
     }
     const char* intrinsicsFilename = 0;
     const char* outprefix = 0;
-	const char* inputName = 0;
-	int cameraId = 0;
-	Size boardSize;
-	double squareSize = 1;
+    const char* inputName = 0;
+    int cameraId = 0;
+    Size boardSize;
+    double squareSize = 1;
     vector<string> imageList;
-    
+
     for( int i = 1; i < argc; i++ )
     {
         if( strcmp(argv[i], "-i") == 0 )
-			intrinsicsFilename = argv[++i];
-		else if( strcmp(argv[i], "-o") == 0 )
-			outprefix = argv[++i];
-		else if( strcmp(argv[i], "-w") == 0 )
-		{
-			if(sscanf(argv[++i], "%d", &boardSize.width) != 1 || boardSize.width <= 0)
-			{
-				printf("Incorrect -w parameter (must be a positive integer)\n");
-				puts(help);
-				return 0;
-			}
-		}
-		else if( strcmp(argv[i], "-h") == 0 )
-		{
-			if(sscanf(argv[++i], "%d", &boardSize.height) != 1 || boardSize.height <= 0)
-			{
-				printf("Incorrect -h parameter (must be a positive integer)\n");
-				puts(help);
-				return 0;
-			}
-		}
-		else if( strcmp(argv[i], "-s") == 0 )
-		{
-			if(sscanf(argv[++i], "%lf", &squareSize) != 1 || squareSize <= 0)
-			{
-				printf("Incorrect -w parameter (must be a positive real number)\n");
-				puts(help);
-				return 0;
-			}
-		}
-		else if( argv[i][0] != '-' )
-		{
-			if( isdigit(argv[i][0]))
-				sscanf(argv[i], "%d", &cameraId);
-			else
-				inputName = argv[i];
-		}
-		else
-		{
-			printf("Incorrect option\n");
-			puts(help);
-			return 0;
-		}
+            intrinsicsFilename = argv[++i];
+        else if( strcmp(argv[i], "-o") == 0 )
+            outprefix = argv[++i];
+        else if( strcmp(argv[i], "-w") == 0 )
+        {
+            if(sscanf(argv[++i], "%d", &boardSize.width) != 1 || boardSize.width <= 0)
+            {
+                printf("Incorrect -w parameter (must be a positive integer)\n");
+                puts(help);
+                return 0;
+            }
+        }
+        else if( strcmp(argv[i], "-h") == 0 )
+        {
+            if(sscanf(argv[++i], "%d", &boardSize.height) != 1 || boardSize.height <= 0)
+            {
+                printf("Incorrect -h parameter (must be a positive integer)\n");
+                puts(help);
+                return 0;
+            }
+        }
+        else if( strcmp(argv[i], "-s") == 0 )
+        {
+            if(sscanf(argv[++i], "%lf", &squareSize) != 1 || squareSize <= 0)
+            {
+                printf("Incorrect -w parameter (must be a positive real number)\n");
+                puts(help);
+                return 0;
+            }
+        }
+        else if( argv[i][0] != '-' )
+        {
+            if( isdigit(argv[i][0]))
+                sscanf(argv[i], "%d", &cameraId);
+            else
+                inputName = argv[i];
+        }
+        else
+        {
+            printf("Incorrect option\n");
+            puts(help);
+            return 0;
+        }
     }
-    
-	if( !intrinsicsFilename || !outprefix ||
-		boardSize.width <= 0 || boardSize.height <= 0 )
-	{
-		printf("Some of the required parameters are missing\n");
-		puts(help);
-		return 0;
-	}
-	
+
+    if( !intrinsicsFilename || !outprefix ||
+        boardSize.width <= 0 || boardSize.height <= 0 )
+    {
+        printf("Some of the required parameters are missing\n");
+        puts(help);
+        return 0;
+    }
+
     Mat cameraMatrix, distCoeffs;
     Size calibratedImageSize;
     readCameraMatrix(intrinsicsFilename, cameraMatrix, distCoeffs, calibratedImageSize );
-    
-	VideoCapture capture;
+
+    VideoCapture capture;
     if( inputName )
     {
         if( !readStringList(inputName, imageList) &&
@@ -476,10 +476,10 @@ int main(int argc, char** argv)
     }
     else
         capture.open(cameraId);
-    
+
     if( !capture.isOpened() && imageList.empty() )
         return fprintf( stderr, "Could not initialize video capture\n" ), -2;
-    
+
     const char* outbarename = 0;
     {
         outbarename = strrchr(outprefix, '/');
@@ -498,30 +498,30 @@ int main(int argc, char** argv)
         else
             outbarename = outprefix;
     }
-	
-	Mat frame, shownFrame, selectedObjFrame, mapxy;
-    
-	namedWindow("View", 1);
+
+    Mat frame, shownFrame, selectedObjFrame, mapxy;
+
+    namedWindow("View", 1);
     namedWindow("Selected Object", 1);
     setMouseCallback("View", onMouse, 0);
     bool boardFound = false;
-    
+
     string indexFilename = format("%s_index.yml", outprefix);
-    
+
     vector<string> capturedImgList;
     vector<Rect> roiList;
     vector<Vec6f> poseList;
     vector<Point3f> box, boardPoints;
-    
+
     readModelViews(indexFilename, box, capturedImgList, roiList, poseList);
     calcChessboardCorners(boardSize, (float)squareSize, boardPoints);
     int frameIdx = 0;
     bool grabNext = !imageList.empty();
-	
+
     puts(screen_help);
 
-	for(int i = 0;;i++)
-	{
+    for(int i = 0;;i++)
+    {
         Mat frame0;
         if( !imageList.empty() )
         {
@@ -538,7 +538,7 @@ int main(int argc, char** argv)
             {
                 double sx = (double)frame0.cols/calibratedImageSize.width;
                 double sy = (double)frame0.rows/calibratedImageSize.height;
-                
+
                 // adjust the camera matrix for the new resolution
                 cameraMatrix.at<double>(0,0) *= sx;
                 cameraMatrix.at<double>(0,2) *= sx;
@@ -554,17 +554,17 @@ int main(int argc, char** argv)
         remap(frame0, frame, mapxy, Mat(), INTER_LINEAR);
         vector<Point2f> foundBoardCorners;
         boardFound = findChessboardCorners(frame, boardSize, foundBoardCorners);
-        
+
         Mat rvec, tvec;
         if( boardFound )
             solvePnP(Mat(boardPoints), Mat(foundBoardCorners), cameraMatrix,
                      distCoeffs, rvec, tvec, false);
-        
+
         frame.copyTo(shownFrame);
         drawChessboardCorners(shownFrame, boardSize, Mat(foundBoardCorners), boardFound);
         selectedObjFrame = Mat::zeros(frame.size(), frame.type());
-		
-		if( boardFound && grabNext )
+
+        if( boardFound && grabNext )
         {
             if( box.empty() )
             {
@@ -573,7 +573,7 @@ int main(int argc, char** argv)
                 if( code == -100 )
                     break;
             }
-        
+
             if( !box.empty() )
             {
                 Rect r = extract3DBox(frame, shownFrame, selectedObjFrame,
@@ -596,10 +596,10 @@ int main(int argc, char** argv)
                         break;
                     }
                     imwrite(path, selectedObjFrame(r));
-                    
+
                     capturedImgList.push_back(string(path));
                     roiList.push_back(r);
-                    
+
                     float p[6];
                     Mat RV(3, 1, CV_32F, p), TV(3, 1, CV_32F, p+3);
                     rvec.convertTo(RV, RV.type());
@@ -612,12 +612,12 @@ int main(int argc, char** argv)
 
         imshow("View", shownFrame);
         imshow("Selected Object", selectedObjFrame);
-		int c = waitKey(imageList.empty() && !box.empty() ? 30 : 300);
+        int c = waitKey(imageList.empty() && !box.empty() ? 30 : 300);
         if( c == 'q' || c == 'Q' )
             break;
         if( c == '\r' || c == '\n' )
             grabNext = true;
-	}
+    }
 
     writeModelViews(indexFilename, box, capturedImgList, roiList, poseList);
     return 0;

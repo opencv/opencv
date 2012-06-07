@@ -28,11 +28,11 @@ PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
 
     Mat src(sz, type);
     Scalar s;
-    
+
     declare.in(src, WARMUP_RNG).out(s);
-    
+
     TEST_CYCLE() s = mean(src);
-    
+
     SANITY_CHECK(s, 1e-6);
 }
 
@@ -44,11 +44,11 @@ PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
     Mat src(sz, type);
     Mat mask = Mat::ones(src.size(), CV_8U);
     Scalar s;
-    
+
     declare.in(src, WARMUP_RNG).in(mask).out(s);
-    
+
     TEST_CYCLE() s = mean(src, mask);
-    
+
     SANITY_CHECK(s, 1e-6);
 }
 
@@ -64,7 +64,7 @@ PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
     declare.in(src, WARMUP_RNG).out(mean, dev);
 
     TEST_CYCLE() meanStdDev(src, mean, dev);
-    
+
     SANITY_CHECK(mean, 1e-6);
     SANITY_CHECK(dev, 1e-6);
 }
@@ -80,9 +80,9 @@ PERF_TEST_P(Size_MatType, meanStdDev_mask, TYPICAL_MATS)
     Scalar dev;
 
     declare.in(src, WARMUP_RNG).in(mask).out(mean, dev);
-    
+
     TEST_CYCLE() meanStdDev(src, mean, dev, mask);
-    
+
     SANITY_CHECK(mean, 1e-6);
     SANITY_CHECK(dev, 1e-6);
 }
@@ -96,8 +96,8 @@ PERF_TEST_P(Size_MatType, countNonZero, testing::Combine( testing::Values( TYPIC
     int cnt = 0;
 
     declare.in(src, WARMUP_RNG);
-    
+
     TEST_CYCLE() cnt = countNonZero(src);
-    
+
     SANITY_CHECK(cnt);
 }

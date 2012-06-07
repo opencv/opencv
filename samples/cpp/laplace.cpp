@@ -8,13 +8,13 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
-	cout <<
-			"\nThis program demonstrates Laplace point/edge detection using OpenCV function Laplacian()\n"
-			"It captures from the camera of your choice: 0, 1, ... default 0\n"
-			"Call:\n"
-			"./laplace [camera #, default 0]\n" << endl;
+    cout <<
+            "\nThis program demonstrates Laplace point/edge detection using OpenCV function Laplacian()\n"
+            "It captures from the camera of your choice: 0, 1, ... default 0\n"
+            "Call:\n"
+            "./laplace [camera #, default 0]\n" << endl;
 }
 
 int sigma = 3;
@@ -54,7 +54,7 @@ int main( int argc, char** argv )
     createTrackbar( "Sigma", "Laplacian", &sigma, 15, 0 );
 
     Mat smoothed, laplace, result;
-    
+
     for(;;)
     {
         Mat frame;
@@ -69,7 +69,7 @@ int main( int argc, char** argv )
             blur(frame, smoothed, Size(ksize, ksize));
         else
             medianBlur(frame, smoothed, ksize);
-        
+
         Laplacian(smoothed, laplace, CV_16S, 5);
         convertScaleAbs(laplace, result, (sigma+1)*0.25);
         imshow("Laplacian", result);

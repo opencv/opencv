@@ -18,7 +18,7 @@ inline T mapVal(T x, T a, T b, T c, T d)
     return c + (d-c) * (x-a) / (b-a);
 }
 
-void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
+static void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
 {
     double uMin, uMax;
     minMaxLoc(u, &uMin, &uMax, 0, 0);

@@ -30,12 +30,12 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
     int height, width, numChannels;
     int i, j, kk, c, ii, jj, d;
     float  * datadx, * datady;
-    
+
     //номер канала в цикле
-    int   ch; 
+    int   ch;
     //переменные вычисления магнитуды
     float magnitude, x, y, tx, ty;
-    
+
     IplImage * dx, * dy;
     int *nearest;
     float *w, a_x, b_x;
@@ -51,7 +51,7 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
     //     четные иннексы не контрастное изображение
     //  не четные иннексы    контрастное изображение
     int   * alfa;
-    
+
     // векторы границ секторов
     float boundary_x[NUM_SECTOR + 1];
     float boundary_y[NUM_SECTOR + 1];
@@ -63,9 +63,9 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
 
     numChannels = image->nChannels;
 
-    dx    = cvCreateImage(cvSize(image->width, image->height), 
+    dx    = cvCreateImage(cvSize(image->width, image->height),
                           IPL_DEPTH_32F, 3);
-    dy    = cvCreateImage(cvSize(image->width, image->height), 
+    dy    = cvCreateImage(cvSize(image->width, image->height),
                           IPL_DEPTH_32F, 3);
 
     sizeX = width  / k;
@@ -77,7 +77,7 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
 
     cvFilter2D(image, dx, &kernel_dx, cvPoint(-1, 0));
     cvFilter2D(image, dy, &kernel_dy, cvPoint(0, -1));
-    
+
     float arg_vector;
     for(i = 0; i <= NUM_SECTOR; i++)
     {
@@ -113,20 +113,20 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
                     y = ty;
                 }
             }/*for(ch = 1; ch < numChannels; ch++)*/
-            
+
             max  = boundary_x[0] * x + boundary_y[0] * y;
             maxi = 0;
-            for (kk = 0; kk < NUM_SECTOR; kk++) 
+            for (kk = 0; kk < NUM_SECTOR; kk++)
             {
                 dotProd = boundary_x[kk] * x + boundary_y[kk] * y;
-                if (dotProd > max) 
+                if (dotProd > max)
                 {
                     max  = dotProd;
                     maxi = kk;
                 }
-                else 
+                else
                 {
-                    if (-dotProd > max) 
+                    if (-dotProd > max)
                     {
                         max  = -dotProd;
                         maxi = kk + NUM_SECTOR;
@@ -134,14 +134,14 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
                 }
             }
             alfa[j * width * 2 + i * 2    ] = maxi % NUM_SECTOR;
-            alfa[j * width * 2 + i * 2 + 1] = maxi;  
+            alfa[j * width * 2 + i * 2 + 1] = maxi;
         }/*for(i = 0; i < width; i++)*/
     }/*for(j = 0; j < height; j++)*/
 
     //подсчет весов и смещений
     nearest = (int  *)malloc(sizeof(int  ) *  k);
     w       = (float*)malloc(sizeof(float) * (k * 2));
-    
+
     for(i = 0; i < k / 2; i++)
     {
         nearest[i] = -1;
@@ -155,15 +155,15 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
     {
         b_x = k / 2 + j + 0.5f;
         a_x = k / 2 - j - 0.5f;
-        w[j * 2    ] = 1.0f/a_x * ((a_x * b_x) / ( a_x + b_x)); 
-        w[j * 2 + 1] = 1.0f/b_x * ((a_x * b_x) / ( a_x + b_x));  
+        w[j * 2    ] = 1.0f/a_x * ((a_x * b_x) / ( a_x + b_x));
+        w[j * 2 + 1] = 1.0f/b_x * ((a_x * b_x) / ( a_x + b_x));
     }/*for(j = 0; j < k / 2; j++)*/
     for(j = k / 2; j < k; j++)
     {
         a_x = j - k / 2 + 0.5f;
         b_x =-j + k / 2 - 0.5f + k;
-        w[j * 2    ] = 1.0f/a_x * ((a_x * b_x) / ( a_x + b_x)); 
-        w[j * 2 + 1] = 1.0f/b_x * ((a_x * b_x) / ( a_x + b_x));  
+        w[j * 2    ] = 1.0f/a_x * ((a_x * b_x) / ( a_x + b_x));
+        w[j * 2 + 1] = 1.0f/b_x * ((a_x * b_x) / ( a_x + b_x));
     }/*for(j = k / 2; j < k; j++)*/
 
 
@@ -176,40 +176,40 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
         {
           for(jj = 0; jj < k; jj++)
           {
-            if ((i * k + ii > 0) && 
-                (i * k + ii < height - 1) && 
-                (j * k + jj > 0) && 
+            if ((i * k + ii > 0) &&
+                (i * k + ii < height - 1) &&
+                (j * k + jj > 0) &&
                 (j * k + jj < width  - 1))
             {
               d = (k * i + ii) * width + (j * k + jj);
-              (*map)->map[ i * stringSize + j * (*map)->numFeatures + alfa[d * 2    ]] += 
+              (*map)->map[ i * stringSize + j * (*map)->numFeatures + alfa[d * 2    ]] +=
                   r[d] * w[ii * 2] * w[jj * 2];
-              (*map)->map[ i * stringSize + j * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+              (*map)->map[ i * stringSize + j * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] +=
                   r[d] * w[ii * 2] * w[jj * 2];
-              if ((i + nearest[ii] >= 0) && 
+              if ((i + nearest[ii] >= 0) &&
                   (i + nearest[ii] <= sizeY - 1))
               {
-                (*map)->map[(i + nearest[ii]) * stringSize + j * (*map)->numFeatures + alfa[d * 2    ]             ] += 
+                (*map)->map[(i + nearest[ii]) * stringSize + j * (*map)->numFeatures + alfa[d * 2    ]             ] +=
                   r[d] * w[ii * 2 + 1] * w[jj * 2 ];
-                (*map)->map[(i + nearest[ii]) * stringSize + j * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+                (*map)->map[(i + nearest[ii]) * stringSize + j * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] +=
                   r[d] * w[ii * 2 + 1] * w[jj * 2 ];
               }
-              if ((j + nearest[jj] >= 0) && 
+              if ((j + nearest[jj] >= 0) &&
                   (j + nearest[jj] <= sizeX - 1))
               {
-                (*map)->map[i * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2    ]             ] += 
+                (*map)->map[i * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2    ]             ] +=
                   r[d] * w[ii * 2] * w[jj * 2 + 1];
-                (*map)->map[i * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+                (*map)->map[i * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] +=
                   r[d] * w[ii * 2] * w[jj * 2 + 1];
               }
-              if ((i + nearest[ii] >= 0) && 
-                  (i + nearest[ii] <= sizeY - 1) && 
-                  (j + nearest[jj] >= 0) && 
+              if ((i + nearest[ii] >= 0) &&
+                  (i + nearest[ii] <= sizeY - 1) &&
+                  (j + nearest[jj] >= 0) &&
                   (j + nearest[jj] <= sizeX - 1))
               {
-                (*map)->map[(i + nearest[ii]) * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2    ]             ] += 
+                (*map)->map[(i + nearest[ii]) * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2    ]             ] +=
                   r[d] * w[ii * 2 + 1] * w[jj * 2 + 1];
-                (*map)->map[(i + nearest[ii]) * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+                (*map)->map[(i + nearest[ii]) * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] +=
                   r[d] * w[ii * 2 + 1] * w[jj * 2 + 1];
               }
             }
@@ -217,14 +217,14 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
         }/*for(ii = 0; ii < k; ii++)*/
       }/*for(j = 1; j < sizeX - 1; j++)*/
     }/*for(i = 1; i < sizeY - 1; i++)*/
-    
+
     cvReleaseImage(&dx);
     cvReleaseImage(&dy);
 
 
     free(w);
     free(nearest);
-    
+
     free(r);
     free(alfa);
 
@@ -232,7 +232,7 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
 }
 
 /*
-// Feature map Normalization and Truncation 
+// Feature map Normalization and Truncation
 //
 // API
 // int normalizeAndTruncate(featureMap *map, const float alfa);
@@ -270,7 +270,7 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
         }/*for(j = 0; j < p; j++)*/
         partOfNorm[i] = valOfNorm;
     }/*for(i = 0; i < sizeX * sizeY; i++)*/
-    
+
     sizeX -= 2;
     sizeY -= 2;
 
@@ -369,13 +369,13 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
 // Error status
 */
 int PCAFeatureMaps(CvLSVMFeatureMap *map)
-{ 
+{
     int i,j, ii, jj, k;
     int sizeX, sizeY, p,  pp, xp, yp, pos1, pos2;
     float * newData;
     float val;
     float nx, ny;
-    
+
     sizeX = map->sizeX;
     sizeY = map->sizeY;
     p     = map->numFeatures;
@@ -424,7 +424,7 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
                 }/*for(jj = 0; jj < xp; jj++)*/
                 newData[pos2 + k] = val * nx;
                 k++;
-            } /*for(ii = 0; ii < yp; ii++)*/           
+            } /*for(ii = 0; ii < yp; ii++)*/
         }/*for(j = 0; j < sizeX; j++)*/
     }/*for(i = 0; i < sizeY; i++)*/
 //swop data
@@ -439,7 +439,7 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
 }
 
 
-int getPathOfFeaturePyramid(IplImage * image, 
+static int getPathOfFeaturePyramid(IplImage * image,
                             float step, int numStep, int startIndex,
                             int sideLength, CvLSVMFeaturePyramid **maps)
 {
@@ -447,7 +447,7 @@ int getPathOfFeaturePyramid(IplImage * image,
     IplImage *scaleTmp;
     float scale;
     int   i, err;
-    
+
     for(i = 0; i < numStep; i++)
     {
         scale = 1.0f / powf(step, (float)i);
@@ -462,13 +462,13 @@ int getPathOfFeaturePyramid(IplImage * image,
 }
 
 /*
-// Getting feature pyramid  
+// Getting feature pyramid
 //
 // API
-// int getFeaturePyramid(IplImage * image, const filterObject **all_F, 
+// int getFeaturePyramid(IplImage * image, const filterObject **all_F,
                       const int n_f,
-                      const int lambda, const int k, 
-                      const int startX, const int startY, 
+                      const int lambda, const int k,
+                      const int startX, const int startY,
                       const int W, const int H, featurePyramid **maps);
 // INPUT
 // image             - image
@@ -484,7 +484,7 @@ int getFeaturePyramid(IplImage * image, CvLSVMFeaturePyramid **maps)
     int   numStep;
     int   maxNumCells;
     int   W, H;
-    
+
     if(image->depth == IPL_DEPTH_32F)
     {
         imgResize = image;
@@ -493,9 +493,9 @@ int getFeaturePyramid(IplImage * image, CvLSVMFeaturePyramid **maps)
     {
         imgResize = cvCreateImage(cvSize(image->width , image->height) ,
                                   IPL_DEPTH_32F , 3);
-        cvConvert(image, imgResize);        
+        cvConvert(image, imgResize);
     }
-    
+
     W = imgResize->width;
     H = imgResize->height;
 
@@ -506,14 +506,14 @@ int getFeaturePyramid(IplImage * image, CvLSVMFeaturePyramid **maps)
         maxNumCells = H / SIDE_LENGTH;
     }
     numStep = (int)(logf((float) maxNumCells / (5.0f)) / logf( step )) + 1;
-    
+
     allocFeaturePyramidObject(maps, numStep + LAMBDA);
 
-    getPathOfFeaturePyramid(imgResize, step   , LAMBDA, 0, 
+    getPathOfFeaturePyramid(imgResize, step   , LAMBDA, 0,
                             SIDE_LENGTH / 2, maps);
-    getPathOfFeaturePyramid(imgResize, step, numStep, LAMBDA, 
+    getPathOfFeaturePyramid(imgResize, step, numStep, LAMBDA,
                             SIDE_LENGTH    , maps);
-    
+
     if(image->depth != IPL_DEPTH_32F)
     {
         cvReleaseImage(&imgResize);

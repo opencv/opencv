@@ -188,7 +188,7 @@ void CvBlobTrackPostProcKalman::Release()
     delete this;
 }
 
-CvBlobTrackPostProcOne* cvCreateModuleBlobTrackPostProcKalmanOne()
+static CvBlobTrackPostProcOne* cvCreateModuleBlobTrackPostProcKalmanOne()
 {
     return (CvBlobTrackPostProcOne*) new CvBlobTrackPostProcKalman;
 }

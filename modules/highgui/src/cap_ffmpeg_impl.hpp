@@ -66,7 +66,7 @@ extern "C" {
 #ifndef HAVE_FFMPEG_SWSCALE
     #error "libswscale is necessary to build the newer OpenCV ffmpeg wrapper"
 #endif
-    
+
 // if the header path is not specified explicitly, let's deduce it
 #if !defined HAVE_FFMPEG_AVCODEC_H && !defined HAVE_LIBAVCODEC_AVCODEC_H
 
@@ -140,7 +140,7 @@ extern "C" {
 #define AV_NOPTS_VALUE_ ((int64_t)AV_NOPTS_VALUE)
 #endif
 
-int get_number_of_cpus(void)
+static int get_number_of_cpus(void)
 {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(52, 111, 0)
     return 1;
@@ -210,7 +210,7 @@ struct CvCapture_FFMPEG
 
     void    seek(int64_t frame_number);
     void    seek(double sec);
-    bool 	slowSeek( int framenumber );
+    bool    slowSeek( int framenumber );
 
     int64_t get_total_frames();
     double  get_duration_sec();
@@ -225,8 +225,8 @@ struct CvCapture_FFMPEG
     AVCodec         * avcodec;
     int               video_stream;
     AVStream        * video_st;
-    AVFrame         * picture;        
-    AVFrame           rgb_picture;    
+    AVFrame         * picture;
+    AVFrame           rgb_picture;
     int64_t           picture_pts;
 
     AVPacket          packet;
@@ -274,7 +274,7 @@ void CvCapture_FFMPEG::close()
         sws_freeContext(img_convert_ctx);
         img_convert_ctx = 0;
     }
-    
+
     if( picture )
         av_free(picture);
 
@@ -293,9 +293,9 @@ void CvCapture_FFMPEG::close()
     if( ic )
     {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 24, 2)
-		av_close_input_file(ic);
+        av_close_input_file(ic);
 #else
-		avformat_close_input(&ic);
+        avformat_close_input(&ic);
 #endif
 
         ic = NULL;
@@ -337,7 +337,7 @@ static void icvInitFFMPEG_internal()
         av_register_all();
 
         av_log_set_level(AV_LOG_ERROR);
-        
+
         initialized = true;
     }
 }
@@ -345,18 +345,18 @@ static void icvInitFFMPEG_internal()
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
     icvInitFFMPEG_internal();
-    
+
     unsigned i;
     bool valid = false;
 
     close();
-    
+
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     int err = avformat_open_input(&ic, _filename, NULL, NULL);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
-#endif    
-    
+#endif
+
     if (err < 0) {
         CV_WARN("Error opening file");
         goto exit_func;
@@ -438,13 +438,13 @@ bool CvCapture_FFMPEG::grabFrame()
     const int max_number_of_attempts = 1 << 16;
 
     if( !ic || !video_st )  return false;
-    
+
     if( ic->streams[video_stream]->nb_frames > 0 &&
         frame_number > ic->streams[video_stream]->nb_frames )
         return false;
 
     av_free_packet (&packet);
-    
+
     picture_pts = AV_NOPTS_VALUE_;
 
     // get the next frame
@@ -463,7 +463,7 @@ bool CvCapture_FFMPEG::grabFrame()
                 break;
             continue;
         }
-        
+
         // Decode video frame
         #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
             avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
@@ -498,7 +498,7 @@ bool CvCapture_FFMPEG::grabFrame()
 
     if( valid && first_frame_number < 0 )
         first_frame_number = dts_to_frame_number(picture_pts);
-    
+
     // return if we have a new picture or not
     return valid;
 }
@@ -518,7 +518,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     {
         if( img_convert_ctx )
             sws_freeContext(img_convert_ctx);
-        
+
         frame.width = video_st->codec->width;
         frame.height = video_st->codec->height;
 
@@ -629,7 +629,7 @@ double CvCapture_FFMPEG::get_fps()
     {
         fps = r2d(ic->streams[video_stream]->avg_frame_rate);
     }
-#endif    
+#endif
 
     if (fps < eps_zero)
     {
@@ -666,12 +666,12 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
 {
     _frame_number = std::min(_frame_number, get_total_frames());
     int delta = 16;
-    
+
     // if we have not grabbed a single frame before first seek, let's read the first frame
     // and get some valuable information during the process
     if( first_frame_number < 0 && get_total_frames() > 1 )
         grabFrame();
-    
+
     for(;;)
     {
         int64_t _frame_number_temp = std::max(_frame_number-delta, (int64_t)0);
@@ -684,13 +684,13 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         if( _frame_number > 0 )
         {
             grabFrame();
-            
+
             if( _frame_number > 1 )
             {
                 frame_number = dts_to_frame_number(picture_pts) - first_frame_number;
                 //printf("_frame_number = %d, frame_number = %d, delta = %d\n",
                 //       (int)_frame_number, (int)frame_number, delta);
-                
+
                 if( frame_number < 0 || frame_number > _frame_number-1 )
                 {
                     if( _frame_number_temp == 0 || delta >= INT_MAX/4 )
@@ -771,7 +771,7 @@ struct CvVideoWriter_FFMPEG
 
     void init();
 
-    AVOutputFormat 	* fmt;
+    AVOutputFormat  * fmt;
     AVFormatContext * oc;
     uint8_t         * outbuf;
     uint32_t          outbuf_size;
@@ -1010,7 +1010,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
 
-int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_t * outbuf, uint32_t outbuf_size, AVFrame * picture )
+static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_t * outbuf, uint32_t outbuf_size, AVFrame * picture )
 {
 #if LIBAVFORMAT_BUILD > 4628
     AVCodecContext * c = video_st->codec;
@@ -1046,7 +1046,7 @@ int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_
 
 #if LIBAVFORMAT_BUILD > 4752
             if(c->coded_frame->pts != (int64_t)AV_NOPTS_VALUE)
-				pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
+                pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
 #else
             pkt.pts = c->coded_frame->pts;
 #endif
@@ -1069,7 +1069,7 @@ int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_
 bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin )
 {
     bool ret = false;
-    
+
     if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
         return false;
     width = frame_width;
@@ -1180,7 +1180,7 @@ void CvVideoWriter_FFMPEG::close()
     // nothing to do if already released
     if ( !picture )
         return;
-    
+
     /* no more frame to compress. The codec has a latency of a few
        frames if using B frames, so we get the last frames by
        passing the same picture again */
@@ -1200,7 +1200,7 @@ void CvVideoWriter_FFMPEG::close()
         }
         av_write_trailer(oc);
     }
-    
+
     if( img_convert_ctx )
     {
         sws_freeContext(img_convert_ctx);
@@ -1272,7 +1272,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, bool is_color )
 {
     icvInitFFMPEG_internal();
-    
+
     CodecID codec_id = CODEC_ID_NONE;
     int err, codec_pix_fmt;
     double bitrate_scale = 1;
@@ -1284,7 +1284,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         return false;
     if(fps <= 0)
         return false;
-    
+
     // we allow frames of odd width or height, but in this case we truncate
     // the rightmost column/the bottom row. Probably, this should be handled more elegantly,
     // but some internal functions inside FFMPEG swscale require even width/height.
@@ -1363,7 +1363,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         codec_pix_fmt = PIX_FMT_YUV420P;
         break;
     }
-    
+
     double bitrate = MIN(bitrate_scale*fps*width*height, (double)INT_MAX/2);
 
     // TODO -- safe to ignore output audio stream?
@@ -1480,8 +1480,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     err=avformat_write_header(oc, NULL);
 #else
     err=av_write_header( oc );
-#endif    
-    
+#endif
+
     if(err < 0)
     {
         close();
@@ -1579,7 +1579,7 @@ struct OutputMediaStream_FFMPEG
 {
     bool open(const char* fileName, int width, int height, double fps);
     void close();
-    
+
     void write(unsigned char* data, int size, int keyFrame);
 
     // add a video output stream to the container
@@ -1692,7 +1692,7 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CodecID 
             {
                 AVRational error = av_sub_q(req, *p);
 
-                if (error.num < 0) 
+                if (error.num < 0)
                     error.num *= -1;
 
                 if (av_cmp_q(error, best_error) < 0)
@@ -1825,7 +1825,7 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
 void OutputMediaStream_FFMPEG::write(unsigned char* data, int size, int keyFrame)
 {
     // if zero size, it means the image was buffered
-    if (size > 0) 
+    if (size > 0)
     {
         AVPacket pkt;
         av_init_packet(&pkt);
@@ -1851,7 +1851,7 @@ struct OutputMediaStream_FFMPEG* create_OutputMediaStream_FFMPEG(const char* fil
 
     stream->close();
     free(stream);
-    
+
     return 0;
 }
 

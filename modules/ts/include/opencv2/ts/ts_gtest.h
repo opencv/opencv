@@ -307,43 +307,76 @@
 #endif  // __GNUC__
 
 // Determines the platform on which Google Test is compiled.
+#define GTEST_OS_CYGWIN 0
+#define GTEST_OS_SYMBIAN 0
+#define GTEST_OS_WINDOWS 0
+#define GTEST_OS_WINDOWS_MOBILE 0
+#define GTEST_OS_WINDOWS_MINGW 0
+#define GTEST_OS_WINDOWS_DESKTOP 0
+#define GTEST_OS_MAC 0
+#define GTEST_OS_MAC_IOS 0
+#define GTEST_OS_LINUX 0
+#define GTEST_OS_LINUX_ANDROID 0
+#define GTEST_OS_ZOS 0
+#define GTEST_OS_SOLARIS 0
+#define GTEST_OS_AIX 0
+#define GTEST_OS_HPUX 0
+#define GTEST_OS_NACL 0
+
+
 #ifdef __CYGWIN__
+# undef GTEST_OS_CYGWIN
 # define GTEST_OS_CYGWIN 1
 #elif defined __SYMBIAN32__
+# undef GTEST_OS_SYMBIAN
 # define GTEST_OS_SYMBIAN 1
 #elif defined _WIN32
+# undef GTEST_OS_WINDOWS
 # define GTEST_OS_WINDOWS 1
 # ifdef _WIN32_WCE
+#  undef GTEST_OS_WINDOWS_MOBILE
 #  define GTEST_OS_WINDOWS_MOBILE 1
 # elif defined(__MINGW__) || defined(__MINGW32__)
+#  undef GTEST_OS_WINDOWS_MINGW
 #  define GTEST_OS_WINDOWS_MINGW 1
 # else
+#  undef GTEST_OS_WINDOWS_DESKTOP
 #  define GTEST_OS_WINDOWS_DESKTOP 1
 # endif  // _WIN32_WCE
 #elif defined __APPLE__
+# undef GTEST_OS_MAC
 # define GTEST_OS_MAC 1
 # include <TargetConditionals.h>
 # if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#  undef GTEST_OS_MAC_IOS
 #  define GTEST_OS_MAC_IOS 1
 # endif
 #include <TargetConditionals.h>
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-#define GTEST_OS_MAC_IOS 1
+# undef GTEST_OS_MAC_IOS
+# define GTEST_OS_MAC_IOS 1
 #endif
 #elif defined __linux__
+# undef GTEST_OS_LINUX
 # define GTEST_OS_LINUX 1
 # ifdef ANDROID
+#  undef GTEST_OS_LINUX_ANDROID
 #  define GTEST_OS_LINUX_ANDROID 1
 # endif  // ANDROID
 #elif defined __MVS__
+# undef GTEST_OS_ZOS
 # define GTEST_OS_ZOS 1
 #elif defined(__sun) && defined(__SVR4)
+# undef GTEST_OS_SOLARIS
 # define GTEST_OS_SOLARIS 1
 #elif defined(_AIX)
+# undef GTEST_OS_AIX
 # define GTEST_OS_AIX 1
 #elif defined(__hpux)
+# undef GTEST_OS_HPUX
 # define GTEST_OS_HPUX 1
 #elif defined __native_client__
+# undef GTEST_OS_NACL
 # define GTEST_OS_NACL 1
 #endif  // __CYGWIN__
 

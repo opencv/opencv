@@ -50,7 +50,7 @@
 
 // TODO remove LOG macros, add logging class
 #if ENABLE_LOG
-#if ANDROID
+#ifdef ANDROID
   #include <iostream>
   #include <sstream>
   #include <android/log.h>

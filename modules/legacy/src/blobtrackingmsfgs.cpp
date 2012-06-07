@@ -47,7 +47,7 @@ typedef float DefHistType;
 #define DefHistTypeMat CV_32F
 #define HIST_INDEX(_pData) (((_pData)[0]>>m_ByteShift) + (((_pData)[1]>>(m_ByteShift))<<m_BinBit)+((pImgData[2]>>m_ByteShift)<<(m_BinBit*2)))
 
-void calcKernelEpanechnikov(CvMat* pK)
+static void calcKernelEpanechnikov(CvMat* pK)
 {    /* Allocate kernel for histogramm creation: */
     int     x,y;
     int     w = pK->width;
@@ -445,7 +445,7 @@ public:
     virtual void Release(){delete this;};
 }; /*CvBlobTrackerOneMSFGS*/
 
-CvBlobTrackerOne* cvCreateBlobTrackerOneMSFGS()
+static CvBlobTrackerOne* cvCreateBlobTrackerOneMSFGS()
 {
     return (CvBlobTrackerOne*) new CvBlobTrackerOneMSFGS;
 }

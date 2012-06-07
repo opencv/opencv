@@ -61,7 +61,7 @@ inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
            + sum.at<int>(img_y - HALF_KERNEL, img_x - HALF_KERNEL);
 }
 
-void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
@@ -71,7 +71,7 @@ void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& d
     }
 }
 
-void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
@@ -82,7 +82,7 @@ void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& d
     }
 }
 
-void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {

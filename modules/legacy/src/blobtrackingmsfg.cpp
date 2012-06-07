@@ -716,7 +716,7 @@ void CvBlobTrackerOneMSFG::CollectHist(IplImage* pImg, IplImage* pMask, CvBlob* 
 };  /* CollectHist */
 #endif
 
-CvBlobTrackerOne* cvCreateBlobTrackerOneMSFG()
+static CvBlobTrackerOne* cvCreateBlobTrackerOneMSFG()
 {
     return (CvBlobTrackerOne*) new CvBlobTrackerOneMSFG;
 }
@@ -739,7 +739,7 @@ public:
     };
 };
 
-CvBlobTrackerOne* cvCreateBlobTrackerOneMS()
+static CvBlobTrackerOne* cvCreateBlobTrackerOneMS()
 {
     return (CvBlobTrackerOne*) new CvBlobTrackerOneMS;
 }
@@ -1169,6 +1169,7 @@ public:
 
 };  /* CvBlobTrackerOneMSPF */
 
+CvBlobTrackerOne* cvCreateBlobTrackerOneMSPF();
 CvBlobTrackerOne* cvCreateBlobTrackerOneMSPF()
 {
     return (CvBlobTrackerOne*) new CvBlobTrackerOneMSPF;

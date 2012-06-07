@@ -43,7 +43,7 @@ private:
 
 bool stop = false;
 
-void mouseCallback(int event, int x, int y, int flags, void* userdata)
+static void mouseCallback(int event, int x, int y, int flags, void* userdata)
 {
     if (stop)
         return;
@@ -52,7 +52,7 @@ void mouseCallback(int event, int x, int y, int flags, void* userdata)
     renderer->onMouseEvent(event, x, y, flags);
 }
 
-void openGlDrawCallback(void* userdata)
+static void openGlDrawCallback(void* userdata)
 {
     if (stop)
         return;
@@ -280,7 +280,7 @@ void PointCloudRenderer::onMouseEvent(int event, int x, int y, int /*flags*/)
     mouse_dy_ = clamp(mouse_dy_, -mouseClamp, mouseClamp);
 }
 
-Point3d rotate(Point3d v, double yaw, double pitch)
+static Point3d rotate(Point3d v, double yaw, double pitch)
 {
     Point3d t1;
     t1.x = v.x * cos(-yaw / 180.0 * CV_PI) - v.z * sin(-yaw / 180.0 * CV_PI);

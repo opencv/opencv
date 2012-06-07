@@ -83,7 +83,7 @@ static int CompareContour(const void* a, const void* b, void* )
     return (dx < wt && dy < ht);
 }
 
-void cvFindBlobsByCCClasters(IplImage* pFG, CvBlobSeq* pBlobs, CvMemStorage* storage)
+static void cvFindBlobsByCCClasters(IplImage* pFG, CvBlobSeq* pBlobs, CvMemStorage* storage)
 {   /* Create contours: */
     IplImage*       pIB = NULL;
     CvSeq*          cnt = NULL;

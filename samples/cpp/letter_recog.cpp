@@ -7,24 +7,24 @@
 
 */
 
-void help()
+static void help()
 {
-	printf("\nThe sample demonstrates how to train Random Trees classifier\n"
-	"(or Boosting classifier, or MLP, or Knearest, or Nbayes, or Support Vector Machines - see main()) using the provided dataset.\n"
-	"\n"
-	"We use the sample database letter-recognition.data\n"
-	"from UCI Repository, here is the link:\n"
-	"\n"
-	"Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).\n"
-	"UCI Repository of machine learning databases\n"
-	"[http://www.ics.uci.edu/~mlearn/MLRepository.html].\n"
-	"Irvine, CA: University of California, Department of Information and Computer Science.\n"
-	"\n"
-	"The dataset consists of 20000 feature vectors along with the\n"
-	"responses - capital latin letters A..Z.\n"
-	"The first 16000 (10000 for boosting)) samples are used for training\n"
-	"and the remaining 4000 (10000 for boosting) - to test the classifier.\n"
-	"======================================================\n");
+    printf("\nThe sample demonstrates how to train Random Trees classifier\n"
+    "(or Boosting classifier, or MLP, or Knearest, or Nbayes, or Support Vector Machines - see main()) using the provided dataset.\n"
+    "\n"
+    "We use the sample database letter-recognition.data\n"
+    "from UCI Repository, here is the link:\n"
+    "\n"
+    "Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).\n"
+    "UCI Repository of machine learning databases\n"
+    "[http://www.ics.uci.edu/~mlearn/MLRepository.html].\n"
+    "Irvine, CA: University of California, Department of Information and Computer Science.\n"
+    "\n"
+    "The dataset consists of 20000 feature vectors along with the\n"
+    "responses - capital latin letters A..Z.\n"
+    "The first 16000 (10000 for boosting)) samples are used for training\n"
+    "and the remaining 4000 (10000 for boosting) - to test the classifier.\n"
+    "======================================================\n");
     printf("\nThis is letter recognition sample.\n"
             "The usage: letter_recog [-data <path to letter-recognition.data>] \\\n"
             "  [-save <output XML file for the classifier>] \\\n"
@@ -312,7 +312,7 @@ int build_boost_classifier( char* data_filename,
     }
 
     temp_sample = cvCreateMat( 1, var_count + 1, CV_32F );
-    weak_responses = cvCreateMat( 1, boost.get_weak_predictors()->total, CV_32F ); 
+    weak_responses = cvCreateMat( 1, boost.get_weak_predictors()->total, CV_32F );
 
     // compute prediction error on train and test data
     for( i = 0; i < nsamples_all; i++ )
@@ -548,7 +548,7 @@ int build_knearest_classifier( char* data_filename, int K )
         }
     }
 
-    printf("true_resp = %f%%\tavg accuracy = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100, 
+    printf("true_resp = %f%%\tavg accuracy = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100,
                                                       (float)accuracy / (nsamples_all - ntrain_samples) / K * 100);
 
     delete[] true_results;
@@ -674,15 +674,15 @@ int build_svm_classifier( char* data_filename )
     for (int j = ntrain_samples; j < nsamples_all; j++)
     {
         float *s = data->data.fl + j * var_count;
-        
+
         for (int i = 0; i < var_count; i++)
-        {   
+        {
             sample.data.fl[(j - ntrain_samples) * var_count + i] = s[i];
         }
         true_results[j - ntrain_samples] = responses->data.fl[j];
     }
     CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
-    
+
     printf("Classification (may take a few minutes)...\n");
     svm.predict(&sample, result);
 
@@ -692,9 +692,9 @@ int build_svm_classifier( char* data_filename )
         if (result->data.fl[i] == true_results[i])
             true_resp++;
     }
-    
+
     printf("true_resp = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100);
-    
+
     cvReleaseMat( &train_resp );
     cvReleaseMat( &result );
     cvReleaseMat( &data );
@@ -738,17 +738,17 @@ int main( int argc, char *argv[] )
             method = 2;
         }
         else if ( strcmp(argv[i], "-knearest") == 0)
-	{
-	    method = 3;
-	}
-	else if ( strcmp(argv[i], "-nbayes") == 0)
-	{
-	    method = 4;
-	}
-	else if ( strcmp(argv[i], "-svm") == 0)
-	{
-	    method = 5;
-	}
+    {
+        method = 3;
+    }
+    else if ( strcmp(argv[i], "-nbayes") == 0)
+    {
+        method = 4;
+    }
+    else if ( strcmp(argv[i], "-svm") == 0)
+    {
+        method = 5;
+    }
         else
             break;
     }
@@ -768,7 +768,7 @@ int main( int argc, char *argv[] )
         build_svm_classifier( data_filename ):
         -1) < 0)
     {
-    	help();
+        help();
     }
     return 0;
 }

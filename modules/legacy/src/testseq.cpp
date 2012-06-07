@@ -65,7 +65,7 @@ typedef struct CvTSTrans
     float           angle;
 } CvTSTrans;
 
-void SET_TRANS_0(CvTSTrans *pT)
+static void SET_TRANS_0(CvTSTrans *pT)
 {
     memset(pT,0,sizeof(CvTSTrans));
     pT->C = 1;

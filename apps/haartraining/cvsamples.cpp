@@ -83,7 +83,7 @@
  *        cij - coeffs[i][j], coeffs[2][2] = 1
  *   (ui, vi) - rectangle vertices
  */
-void cvGetPerspectiveTransform( CvSize src_size, double quad[4][2],
+static void cvGetPerspectiveTransform( CvSize src_size, double quad[4][2],
                                 double coeffs[3][3] )
 {
     //CV_FUNCNAME( "cvWarpPerspective" );
@@ -130,7 +130,7 @@ void cvGetPerspectiveTransform( CvSize src_size, double quad[4][2],
 }
 
 /* Warps source into destination by a perspective transform */
-void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
+static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
 {
     CV_FUNCNAME( "cvWarpPerspective" );
 

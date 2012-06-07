@@ -406,42 +406,42 @@ static void fftShift(InputOutputArray _out)
     merge(planes, out);
 }
 
-Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Size weightBoxSize)
+static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Size weightBoxSize)
 {
     Mat src = _src.getMat();
-    
+
     int type = src.type();
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
-    
+
     int minr = peakLocation.y - (weightBoxSize.height >> 1);
     int maxr = peakLocation.y + (weightBoxSize.height >> 1);
     int minc = peakLocation.x - (weightBoxSize.width  >> 1);
     int maxc = peakLocation.x + (weightBoxSize.width  >> 1);
-    
+
     Point2d centroid;
     double sumIntensity = 0.0;
-    
+
     // clamp the values to min and max if needed.
     if(minr < 0)
     {
         minr = 0;
     }
-    
+
     if(minc < 0)
     {
         minc = 0;
     }
-    
+
     if(maxr > src.rows - 1)
     {
         maxr = src.rows - 1;
     }
-    
+
     if(maxc > src.cols - 1)
     {
         maxc = src.cols - 1;
     }
-    
+
     if(type == CV_32FC1)
     {
         const float* dataIn = (const float*)src.data;
@@ -454,7 +454,7 @@ Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Size weigh
                 centroid.y   += (double)y*dataIn[x];
                 sumIntensity += (double)dataIn[x];
             }
-            
+
             dataIn += src.cols;
         }
     }
@@ -470,19 +470,19 @@ Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Size weigh
                 centroid.y   += (double)y*dataIn[x];
                 sumIntensity += dataIn[x];
             }
-            
+
             dataIn += src.cols;
         }
     }
-    
+
     sumIntensity += DBL_EPSILON; // prevent div0 problems...
-    
+
     centroid.x /= sumIntensity;
     centroid.y /= sumIntensity;
-    
+
     return centroid;
 }
-    
+
 }
 
 cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window)

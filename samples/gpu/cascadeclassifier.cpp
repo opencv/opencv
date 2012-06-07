@@ -17,7 +17,7 @@ using namespace cv;
 using namespace cv::gpu;
 
 
-void help()
+static void help()
 {
     cout << "Usage: ./cascadeclassifier_gpu \n\t--cascade <cascade_file>\n\t(<image>|--video <video>|--camera <camera_id>)\n"
             "Using OpenCV version " << CV_VERSION << endl << endl;
@@ -49,7 +49,7 @@ void convertAndResize(const T& src, T& gray, T& resized, double scale)
 }
 
 
-void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
+static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
 {
     int fontFace = FONT_HERSHEY_DUPLEX;
     double fontScale = 0.8;
@@ -64,7 +64,7 @@ void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
 }
 
 
-void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
+static void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
 {
     Scalar fontColorRed = CV_RGB(255,0,0);
     Scalar fontColorNV  = CV_RGB(118,185,0);

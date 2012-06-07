@@ -35,6 +35,9 @@
 #ifndef OPENCV_FLANN_DYNAMIC_BITSET_H_
 #define OPENCV_FLANN_DYNAMIC_BITSET_H_
 
+#ifndef FLANN_USE_BOOST
+#  define FLANN_USE_BOOST 0
+#endif
 //#define FLANN_USE_BOOST 1
 #if FLANN_USE_BOOST
 #include <boost/dynamic_bitset.hpp>

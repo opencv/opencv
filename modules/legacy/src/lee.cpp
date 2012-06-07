@@ -1247,7 +1247,7 @@ int _cvSolveEqu1th(T c1, T c0, T* X);
         vertices_number: in, number of vertices in polygon
      Return     :
     --------------------------------------------------------------------------*/
-void _cvSetSeqBlockSize(CvVoronoiDiagramInt* pVoronoiDiagramInt,int vertices_number)
+static void _cvSetSeqBlockSize(CvVoronoiDiagramInt* pVoronoiDiagramInt,int vertices_number)
 {
     int N = 2*vertices_number;
     cvSetSeqBlockSize(pVoronoiDiagramInt->SiteSeq,N*pVoronoiDiagramInt->SiteSeq->elem_size);

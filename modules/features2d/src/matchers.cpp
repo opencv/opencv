@@ -174,7 +174,7 @@ int DescriptorMatcher::DescriptorCollection::size() const
 /*
  * DescriptorMatcher
  */
-void convertMatches( const vector<vector<DMatch> >& knnMatches, vector<DMatch>& matches )
+static void convertMatches( const vector<vector<DMatch> >& knnMatches, vector<DMatch>& matches )
 {
     matches.clear();
     matches.reserve( knnMatches.size() );

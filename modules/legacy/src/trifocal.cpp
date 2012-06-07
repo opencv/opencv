@@ -99,8 +99,9 @@ void icvReconstructPointsFor3View( CvMat* projMatr1,CvMat* projMatr2,CvMat* proj
 /*==========================================================================================*/
 /*                        Functions for calculation the tensor                              */
 /*==========================================================================================*/
+#if 0
 #if 1
-void fprintMatrix(FILE* file,CvMat* matrix)
+static void fprintMatrix(FILE* file,CvMat* matrix)
 {
     int i,j;
     fprintf(file,"\n");
@@ -116,7 +117,7 @@ void fprintMatrix(FILE* file,CvMat* matrix)
 #endif
 /*==========================================================================================*/
 
-void icvNormalizePoints( CvMat* points, CvMat* normPoints,CvMat* cameraMatr )
+static void icvNormalizePoints( CvMat* points, CvMat* normPoints,CvMat* cameraMatr )
 {
     /* Normalize image points using camera matrix */
 
@@ -169,7 +170,7 @@ void icvNormalizePoints( CvMat* points, CvMat* normPoints,CvMat* cameraMatr )
 
     return;
 }
-
+#endif
 
 /*=====================================================================================*/
 /*
@@ -405,7 +406,7 @@ int icvComputeProjectMatrices6Points( CvMat* points1,CvMat* points2,CvMat* point
 }
 
 /*==========================================================================================*/
-int icvGetRandNumbers(int range,int count,int* arr)
+static int icvGetRandNumbers(int range,int count,int* arr)
 {
     /* Generate random numbers [0,range-1] */
 
@@ -454,7 +455,7 @@ int icvGetRandNumbers(int range,int count,int* arr)
     return 1;
 }
 /*==========================================================================================*/
-void icvSelectColsByNumbers(CvMat* srcMatr, CvMat* dstMatr, int* indexes,int number)
+static void icvSelectColsByNumbers(CvMat* srcMatr, CvMat* dstMatr, int* indexes,int number)
 {
 
     CV_FUNCNAME( "icvSelectColsByNumbers" );
@@ -501,7 +502,7 @@ void icvSelectColsByNumbers(CvMat* srcMatr, CvMat* dstMatr, int* indexes,int num
 }
 
 /*==========================================================================================*/
-void icvProject4DPoints(CvMat* points4D,CvMat* projMatr, CvMat* projPoints)
+static void icvProject4DPoints(CvMat* points4D,CvMat* projMatr, CvMat* projPoints)
 {
 
     CvMat* tmpProjPoints = 0;
@@ -584,7 +585,8 @@ void icvProject4DPoints(CvMat* points4D,CvMat* projMatr, CvMat* projPoints)
     return;
 }
 /*==========================================================================================*/
-int icvCompute3ProjectMatricesNPointsStatus( CvMat** points,/* 3 arrays of points on image  */
+#if 0
+static int icvCompute3ProjectMatricesNPointsStatus( CvMat** points,/* 3 arrays of points on image  */
                                              CvMat** projMatrs,/* array of 3 prejection matrices */
                                              CvMat** statuses,/* 3 arrays of status of points */
                                              double threshold,/* Threshold for good point */
@@ -783,6 +785,7 @@ int icvCompute3ProjectMatricesNPointsStatus( CvMat** points,/* 3 arrays of point
     return numProjMatrs;
 
 }
+#endif
 
 /*==========================================================================================*/
 int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* points3,
@@ -2350,8 +2353,8 @@ void ReconstructPointsFor3View_bySolve( CvMat* projMatr1,CvMat* projMatr2,CvMat*
 #endif
 
 /*==========================================================================================*/
-
-void icvComputeCameraExrinnsicByPosition(CvMat* camPos, CvMat* rotMatr, CvMat* transVect)
+#if 0
+static void icvComputeCameraExrinnsicByPosition(CvMat* camPos, CvMat* rotMatr, CvMat* transVect)
 {
     /* We know position of camera. we must to compute rotate matrix and translate vector */
 
@@ -2468,7 +2471,7 @@ void icvComputeCameraExrinnsicByPosition(CvMat* camPos, CvMat* rotMatr, CvMat* t
 
 /*==========================================================================================*/
 
-void FindTransformForProjectMatrices(CvMat* projMatr1,CvMat* projMatr2,CvMat* rotMatr,CvMat* transVect)
+static void FindTransformForProjectMatrices(CvMat* projMatr1,CvMat* projMatr2,CvMat* rotMatr,CvMat* transVect)
 {
     /* Computes homography for project matrix be "canonical" form */
     CV_FUNCNAME( "computeProjMatrHomography" );
@@ -2586,7 +2589,7 @@ void icvComputeQknowPrincipalPoint(int numImages, CvMat **projMatrs,CvMat *matrQ
 /* Part with metric reconstruction */
 
 #if 1
-void icvComputeQ(int numMatr, CvMat** projMatr, CvMat** cameraMatr, CvMat* matrQ)
+static void icvComputeQ(int numMatr, CvMat** projMatr, CvMat** cameraMatr, CvMat* matrQ)
 {
     /* K*K' = P*Q*P' */
     /* try to solve Q by linear method */
@@ -2731,7 +2734,7 @@ void icvComputeQ(int numMatr, CvMat** projMatr, CvMat** cameraMatr, CvMat* matrQ
 #endif
 /*-----------------------------------------------------------------------------------------------------*/
 
-void icvDecomposeQ(CvMat* /*matrQ*/,CvMat* /*matrH*/)
+static void icvDecomposeQ(CvMat* /*matrQ*/,CvMat* /*matrH*/)
 {
 #if 0
     /* Use SVD to decompose matrix Q=H*I*H' */
@@ -2788,4 +2791,6 @@ void icvDecomposeQ(CvMat* /*matrQ*/,CvMat* /*matrH*/)
 
 #endif
 }
+
+#endif
 

@@ -60,34 +60,34 @@
 #endif
 
 #if defined WIN32 || defined WINCE
-#ifndef _WIN32_WINNT         // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
-#define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
-#endif
-#include <windows.h>
-#undef small
-#undef min
-#undef max
+#  ifndef _WIN32_WINNT         // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
+#    define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
+#  endif
+#  include <windows.h>
+#  undef small
+#  undef min
+#  undef max
 #else
-#include <pthread.h>
+#  include <pthread.h>
 #endif
 
 #ifdef __BORLANDC__
-#ifndef WIN32
-    #define     WIN32
-#endif
-#ifndef _WIN32
-    #define     _WIN32
-#endif
-    #define     CV_DLL
-    #undef      _CV_ALWAYS_PROFILE_
-    #define     _CV_ALWAYS_NO_PROFILE_
+#  ifndef WIN32
+#    define WIN32
+#  endif
+#  ifndef _WIN32
+#    define _WIN32
+#  endif
+#  define CV_DLL
+#  undef _CV_ALWAYS_PROFILE_
+#  define _CV_ALWAYS_NO_PROFILE_
 #endif
 
 #ifndef FALSE
-#define FALSE 0
+#  define FALSE 0
 #endif
 #ifndef TRUE
-#define TRUE 1
+#  define TRUE 1
 #endif
 
 #define __BEGIN__ __CV_BEGIN__
@@ -95,7 +95,7 @@
 #define EXIT __CV_EXIT__
 
 #ifdef HAVE_IPP
-#include "ipp.h"
+#  include "ipp.h"
 
 CV_INLINE IppiSize ippiSize(int width, int height)
 {
@@ -104,137 +104,132 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 }
 #endif
 
-#if defined __SSE2__ || _MSC_VER >= 1300
-#include "emmintrin.h"
-#define CV_SSE 1
-#define CV_SSE2 1
-#if defined __SSE3__ || _MSC_VER >= 1500
-#include "pmmintrin.h"
-#define CV_SSE3 1
-#endif
-#if defined __SSSE3__
-#include "tmmintrin.h"
-#define CV_SSSE3 1
-#endif
+#if defined __SSE2__ || (defined _MSC_VER && _MSC_VER >= 1300)
+#  include "emmintrin.h"
+#  define CV_SSE 1
+#  define CV_SSE2 1
+#  if defined __SSE3__ || (defined _MSC_VER && _MSC_VER >= 1500)
+#    include "pmmintrin.h"
+#    define CV_SSE3 1
+#  else
+#    define CV_SSE3 0
+#  endif
+#  if defined __SSSE3__
+#    include "tmmintrin.h"
+#    define CV_SSSE3 1
+#  else
+#    define CV_SSSE3 0
+#  endif
 #else
-#define CV_SSE 0
-#define CV_SSE2 0
-#define CV_SSE3 0
-#define CV_SSSE3 0
+#  define CV_SSE 0
+#  define CV_SSE2 0
+#  define CV_SSE3 0
+#  define CV_SSSE3 0
 #endif
 
-#if defined ANDROID && defined __ARM_NEON__ && defined __GNUC__
-#include "arm_neon.h"
-#define CV_NEON 1
+#if defined ANDROID && defined __ARM_NEON__
+#  include "arm_neon.h"
+#  define CV_NEON 1
 
-#define CPU_HAS_NEON_FEATURE (true)
+#  define CPU_HAS_NEON_FEATURE (true)
 //TODO: make real check using stuff from "cpu-features.h"
 //((bool)android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON)
 #else
-#define CV_NEON 0
-#define CPU_HAS_NEON_FEATURE (false)
-#endif
-
-#ifdef CV_ICC
-#define CV_ENABLE_UNROLLED 0
-#else
-#define CV_ENABLE_UNROLLED 1
+#  define CV_NEON 0
+#  define CPU_HAS_NEON_FEATURE (false)
 #endif
 
 #ifndef IPPI_CALL
-#define IPPI_CALL(func) CV_Assert((func) >= 0)
+#  define IPPI_CALL(func) CV_Assert((func) >= 0)
 #endif
 
 #ifdef HAVE_TBB
-    #include "tbb/tbb_stddef.h"
-    #if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
-        #include "tbb/tbb.h"
-        #include "tbb/task.h"
-        #undef min
-        #undef max
-    #else
-        #undef HAVE_TBB
-    #endif
+#  include "tbb/tbb_stddef.h"
+#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#    include "tbb/tbb.h"
+#    include "tbb/task.h"
+#    undef min
+#    undef max
+#  else
+#    undef HAVE_TBB
+#  endif
 #endif
 
 #ifdef HAVE_EIGEN
-    #include <Eigen/Core>
-    #include "opencv2/core/eigen.hpp"
+#  include <Eigen/Core>
+#  include "opencv2/core/eigen.hpp"
 #endif
 
 #ifdef __cplusplus
 
+namespace cv
+{
 #ifdef HAVE_TBB
-    namespace cv
-    {
-        typedef tbb::blocked_range<int> BlockedRange;
-        
-        template<typename Body> static inline
-        void parallel_for( const BlockedRange& range, const Body& body )
-        {
-            tbb::parallel_for(range, body);
-        }
-        
-        template<typename Iterator, typename Body> static inline
-        void parallel_do( Iterator first, Iterator last, const Body& body )
-        {
-            tbb::parallel_do(first, last, body);
-        }
-        
-        typedef tbb::split Split;
-        
-        template<typename Body> static inline
-        void parallel_reduce( const BlockedRange& range, Body& body )
-        {
-            tbb::parallel_reduce(range, body);
-        }
-        
-        typedef tbb::concurrent_vector<Rect> ConcurrentRectVector;
-        typedef tbb::concurrent_vector<double> ConcurrentDoubleVector;
-    }
-#else
-    namespace cv
-    {
-        class BlockedRange
-        {
-        public:
-            BlockedRange() : _begin(0), _end(0), _grainsize(0) {}
-            BlockedRange(int b, int e, int g=1) : _begin(b), _end(e), _grainsize(g) {}
-            int begin() const { return _begin; }
-            int end() const { return _end; }
-            int grainsize() const { return _grainsize; }
-            
-        protected:
-            int _begin, _end, _grainsize;
-        };
 
-        template<typename Body> static inline
-        void parallel_for( const BlockedRange& range, const Body& body )
-        {
-            body(range); 
-        }
-        typedef std::vector<Rect> ConcurrentRectVector;
-        typedef std::vector<double> ConcurrentDoubleVector;
-        
-        template<typename Iterator, typename Body> static inline
-        void parallel_do( Iterator first, Iterator last, const Body& body )
-        {
-            for( ; first != last; ++first )
-                body(*first);
-        }
-        
-        class Split {};
-        
-        template<typename Body> static inline
-        void parallel_reduce( const BlockedRange& range, Body& body )
-        {
-            body(range);
-        }
-        
+    typedef tbb::blocked_range<int> BlockedRange;
+
+    template<typename Body> static inline
+    void parallel_for( const BlockedRange& range, const Body& body )
+    {
+        tbb::parallel_for(range, body);
+    }
+
+    template<typename Iterator, typename Body> static inline
+    void parallel_do( Iterator first, Iterator last, const Body& body )
+    {
+        tbb::parallel_do(first, last, body);
+    }
+
+    typedef tbb::split Split;
+
+    template<typename Body> static inline
+    void parallel_reduce( const BlockedRange& range, Body& body )
+    {
+        tbb::parallel_reduce(range, body);
+    }
+
+    typedef tbb::concurrent_vector<Rect> ConcurrentRectVector;
+    typedef tbb::concurrent_vector<double> ConcurrentDoubleVector;
+#else
+    class BlockedRange
+    {
+    public:
+        BlockedRange() : _begin(0), _end(0), _grainsize(0) {}
+        BlockedRange(int b, int e, int g=1) : _begin(b), _end(e), _grainsize(g) {}
+        int begin() const { return _begin; }
+        int end() const { return _end; }
+        int grainsize() const { return _grainsize; }
+
+    protected:
+        int _begin, _end, _grainsize;
+    };
+
+    template<typename Body> static inline
+    void parallel_for( const BlockedRange& range, const Body& body )
+    {
+        body(range);
+    }
+    typedef std::vector<Rect> ConcurrentRectVector;
+    typedef std::vector<double> ConcurrentDoubleVector;
+
+    template<typename Iterator, typename Body> static inline
+    void parallel_do( Iterator first, Iterator last, const Body& body )
+    {
+        for( ; first != last; ++first )
+            body(*first);
+    }
+
+    class Split {};
+
+    template<typename Body> static inline
+    void parallel_reduce( const BlockedRange& range, Body& body )
+    {
+        body(range);
     }
 #endif
+} //namespace cv
 
-    #define CV_INIT_ALGORITHM(classname, algname, memberinit) \
+#define CV_INIT_ALGORITHM(classname, algname, memberinit) \
     static Algorithm* create##classname() \
     { \
         return new classname; \
@@ -261,7 +256,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
         return &classname##_info(); \
     }
 
-#endif
+#endif //__cplusplus
 
 /* maximal size of vector to run matrix operations on it inline (i.e. w/o ipp calls) */
 #define  CV_MAX_INLINE_MAT_OP_SIZE  10
@@ -305,9 +300,9 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #define  CV_MAX_STRLEN  1024
 
 #if 0 /*def  CV_CHECK_FOR_NANS*/
-    #define CV_CHECK_NANS( arr ) cvCheckArray((arr))
+#  define CV_CHECK_NANS( arr ) cvCheckArray((arr))
 #else
-    #define CV_CHECK_NANS( arr )
+#  define CV_CHECK_NANS( arr )
 #endif
 
 /****************************************************************************************\
@@ -316,38 +311,38 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 
 /* get alloca declaration */
 #ifdef __GNUC__
-    #undef alloca
-    #define alloca __builtin_alloca
-    #define CV_HAVE_ALLOCA 1
+#  undef alloca
+#  define alloca __builtin_alloca
+#  define CV_HAVE_ALLOCA 1
 #elif defined WIN32 || defined _WIN32 || \
       defined WINCE || defined _MSC_VER || defined __BORLANDC__
-    #include <malloc.h>
-    #define CV_HAVE_ALLOCA 1
+#  include <malloc.h>
+#  define CV_HAVE_ALLOCA 1
 #elif defined HAVE_ALLOCA_H
-    #include <alloca.h>
-    #define CV_HAVE_ALLOCA 1
+#  include <alloca.h>
+#  define CV_HAVE_ALLOCA 1
 #elif defined HAVE_ALLOCA
-    #include <stdlib.h>
-    #define CV_HAVE_ALLOCA 1
+#  include <stdlib.h>
+#  define CV_HAVE_ALLOCA 1
 #else
-    #undef CV_HAVE_ALLOCA
+#  undef CV_HAVE_ALLOCA
 #endif
 
 #ifdef __GNUC__
-#define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
+#  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
 #elif defined _MSC_VER
-#define CV_DECL_ALIGNED(x) __declspec(align(x))
+#  define CV_DECL_ALIGNED(x) __declspec(align(x))
 #else
-#define CV_DECL_ALIGNED(x)
+#  define CV_DECL_ALIGNED(x)
 #endif
 
 #if CV_HAVE_ALLOCA
 /* ! DO NOT make it an inline function */
-#define cvStackAlloc(size) cvAlignPtr( alloca((size) + CV_MALLOC_ALIGN), CV_MALLOC_ALIGN )
+#  define cvStackAlloc(size) cvAlignPtr( alloca((size) + CV_MALLOC_ALIGN), CV_MALLOC_ALIGN )
 #endif
 
 #ifndef CV_IMPL
-#define CV_IMPL CV_EXTERN_C
+#  define CV_IMPL CV_EXTERN_C
 #endif
 
 #define CV_DBG_BREAK() { volatile int* crashMe = 0; *crashMe = 0; }
@@ -687,25 +682,25 @@ typedef enum CvStatus
     CV_UNSUPPORTED_DEPTH_ERR    = -101,
     CV_UNSUPPORTED_FORMAT_ERR   = -100,
 
-    CV_BADARG_ERR      = -49,  //ipp comp
-    CV_NOTDEFINED_ERR  = -48,  //ipp comp
+    CV_BADARG_ERR               = -49,  //ipp comp
+    CV_NOTDEFINED_ERR           = -48,  //ipp comp
 
-    CV_BADCHANNELS_ERR = -47,  //ipp comp
-    CV_BADRANGE_ERR    = -44,  //ipp comp
-    CV_BADSTEP_ERR     = -29,  //ipp comp
+    CV_BADCHANNELS_ERR          = -47,  //ipp comp
+    CV_BADRANGE_ERR             = -44,  //ipp comp
+    CV_BADSTEP_ERR              = -29,  //ipp comp
 
-    CV_BADFLAG_ERR     =  -12,
-    CV_DIV_BY_ZERO_ERR =  -11, //ipp comp
-    CV_BADCOEF_ERR     =  -10,
+    CV_BADFLAG_ERR              =  -12,
+    CV_DIV_BY_ZERO_ERR          =  -11, //ipp comp
+    CV_BADCOEF_ERR              =  -10,
 
-    CV_BADFACTOR_ERR   =  -7,
-    CV_BADPOINT_ERR    =  -6,
-    CV_BADSCALE_ERR    =  -4,
-    CV_OUTOFMEM_ERR    =  -3,
-    CV_NULLPTR_ERR     =  -2,
-    CV_BADSIZE_ERR     =  -1,
-    CV_NO_ERR          =   0,
-    CV_OK              =   CV_NO_ERR
+    CV_BADFACTOR_ERR            =  -7,
+    CV_BADPOINT_ERR             =  -6,
+    CV_BADSCALE_ERR             =  -4,
+    CV_OUTOFMEM_ERR             =  -3,
+    CV_NULLPTR_ERR              =  -2,
+    CV_BADSIZE_ERR              =  -1,
+    CV_NO_ERR                   =   0,
+    CV_OK                       =   CV_NO_ERR
 }
 CvStatus;
 
@@ -720,8 +715,7 @@ CvFuncTable;
 typedef struct CvBigFuncTable
 {
     void*   fn_2d[CV_DEPTH_MAX*4];
-}
-CvBigFuncTable;
+} CvBigFuncTable;
 
 #define CV_INIT_FUNC_TAB( tab, FUNCNAME, FLAG )         \
     (tab).fn_2d[CV_8U] = (void*)FUNCNAME##_8u##FLAG;    \
@@ -732,13 +726,14 @@ CvBigFuncTable;
     (tab).fn_2d[CV_32F] = (void*)FUNCNAME##_32f##FLAG;  \
     (tab).fn_2d[CV_64F] = (void*)FUNCNAME##_64f##FLAG
 
+#ifdef __cplusplus
 //! OpenGL extension table
 class CV_EXPORTS CvOpenGlFuncTab
 {
 public:
     virtual ~CvOpenGlFuncTab();
 
-    virtual void genBuffers(int n, unsigned int* buffers) const = 0;        
+    virtual void genBuffers(int n, unsigned int* buffers) const = 0;
     virtual void deleteBuffers(int n, const unsigned int* buffers) const = 0;
 
     virtual void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const = 0;
@@ -764,4 +759,6 @@ CV_EXPORTS bool icvCheckGlError(const char* file, const int line, const char* fu
     #define CV_CheckGlError() CV_DbgAssert( (::icvCheckGlError(__FILE__, __LINE__)) )
 #endif
 
-#endif
+#endif //__cplusplus
+
+#endif // __OPENCV_CORE_INTERNAL_HPP__

@@ -8,7 +8,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout << "\nThis program demonstrates the cascade recognizer. Now you can use Haar or LBP features.\n"
             "This classifier can recognize many ~rigid objects, it's most known use is for faces.\n"

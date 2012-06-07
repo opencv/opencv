@@ -134,7 +134,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
 
             if( size.width == cn )
                 buf[cn] = 0;
-            
+
             if( sqsum )
             {
                 sqsum[-cn] = 0;
@@ -148,7 +148,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
             sum += sumstep - cn;
             tilted += tiltedstep - cn;
             buf += -cn;
-            
+
             if( sqsum )
                 sqsum += sqsumstep - cn;
 
@@ -197,7 +197,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
                     tilted[x] = t0 + t1 + tilted[x - tiltedstep - cn];
                     buf[x] = t0;
                 }
-                
+
                 if( sqsum )
                     sqsum++;
             }
@@ -205,10 +205,10 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
     }
 }
 
-    
+
 #define DEF_INTEGRAL_FUNC(suffix, T, ST, QT) \
-void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, QT* sqsum, size_t sqsumstep, \
-                        ST* tilted, size_t tiltedstep, Size size, int cn ) \
+static void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, QT* sqsum, size_t sqsumstep, \
+                              ST* tilted, size_t tiltedstep, Size size, int cn ) \
 { integral_(src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tiltedstep, size, cn); }
 
 DEF_INTEGRAL_FUNC(8u32s, uchar, int, double)
@@ -217,7 +217,7 @@ DEF_INTEGRAL_FUNC(8u64f, uchar, double, double)
 DEF_INTEGRAL_FUNC(32f, float, float, double)
 DEF_INTEGRAL_FUNC(32f64f, float, double, double)
 DEF_INTEGRAL_FUNC(64f, double, double, double)
-    
+
 typedef void (*IntegralFunc)(const uchar* src, size_t srcstep, uchar* sum, size_t sumstep,
                              uchar* sqsum, size_t sqsumstep, uchar* tilted, size_t tstep,
                              Size size, int cn );
@@ -236,19 +236,19 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
     sdepth = CV_MAT_DEPTH(sdepth);
     _sum.create( isize, CV_MAKETYPE(sdepth, cn) );
     sum = _sum.getMat();
-    
+
     if( _tilted.needed() )
     {
         _tilted.create( isize, CV_MAKETYPE(sdepth, cn) );
         tilted = _tilted.getMat();
     }
-    
+
     if( _sqsum.needed() )
     {
         _sqsum.create( isize, CV_MAKETYPE(CV_64F, cn) );
         sqsum = _sqsum.getMat();
     }
-    
+
     IntegralFunc func = 0;
 
     if( depth == CV_8U && sdepth == CV_32S )
@@ -269,7 +269,7 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
     func( src.data, src.step, sum.data, sum.step, sqsum.data, sqsum.step,
           tilted.data, tilted.step, src.size(), cn );
 }
-    
+
 void cv::integral( InputArray src, OutputArray sum, int sdepth )
 {
     integral( src, sum, noArray(), noArray(), sdepth );

@@ -10,7 +10,7 @@
 using namespace std;
 using namespace cv;
 
-void InitMatchTemplate()
+static void InitMatchTemplate()
 {
     Mat src; gen(src, 500, 500, CV_32F, 0, 1);
     Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
@@ -80,7 +80,7 @@ TEST(remap)
 {
     Mat src, dst, xmap, ymap;
     gpu::GpuMat d_src, d_dst, d_xmap, d_ymap;
-    
+
     int interpolation = INTER_LINEAR;
     int borderMode = BORDER_REPLICATE;
 
@@ -355,10 +355,10 @@ TEST(BruteForceMatcher)
 
     BFMatcher matcher(NORM_L2);
 
-    Mat query; 
+    Mat query;
     gen(query, 3000, desc_len, CV_32F, 0, 1);
-    
-    Mat train; 
+
+    Mat train;
     gen(train, 3000, desc_len, CV_32F, 0, 1);
 
     // Init GPU matcher
@@ -594,17 +594,17 @@ TEST(cvtColor)
 
     gen(src, 4000, 4000, CV_8UC1, 0, 255);
     d_src.upload(src);
-    
+
     SUBTEST << "4000x4000, 8UC1, CV_GRAY2BGRA";
-    
+
     cvtColor(src, dst, CV_GRAY2BGRA, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_GRAY2BGRA, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_GRAY2BGRA, 4);
-    
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_GRAY2BGRA, 4);
     GPU_OFF;
@@ -613,104 +613,104 @@ TEST(cvtColor)
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2YCrCb";
-    
+
     cvtColor(src, dst, CV_BGR2YCrCb);
 
     CPU_ON;
     cvtColor(src, dst, CV_BGR2YCrCb);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_BGR2YCrCb, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_BGR2YCrCb, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC4, CV_YCrCb2BGR";
-    
+
     cvtColor(src, dst, CV_YCrCb2BGR, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_YCrCb2BGR, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_YCrCb2BGR, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_YCrCb2BGR, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2XYZ";
-    
+
     cvtColor(src, dst, CV_BGR2XYZ);
 
     CPU_ON;
     cvtColor(src, dst, CV_BGR2XYZ);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_BGR2XYZ, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_BGR2XYZ, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC4, CV_XYZ2BGR";
-    
+
     cvtColor(src, dst, CV_XYZ2BGR, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_XYZ2BGR, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_XYZ2BGR, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_XYZ2BGR, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2HSV";
-    
+
     cvtColor(src, dst, CV_BGR2HSV);
 
     CPU_ON;
     cvtColor(src, dst, CV_BGR2HSV);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_BGR2HSV, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_BGR2HSV, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC4, CV_HSV2BGR";
-    
+
     cvtColor(src, dst, CV_HSV2BGR, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_HSV2BGR, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_HSV2BGR, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_HSV2BGR, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 }
@@ -757,7 +757,7 @@ TEST(threshold)
 
         threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
 
-        CPU_ON; 
+        CPU_ON;
         threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
         CPU_OFF;
 
@@ -778,7 +778,7 @@ TEST(threshold)
 
         threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
 
-        CPU_ON; 
+        CPU_ON;
         threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
         CPU_OFF;
 
@@ -857,7 +857,7 @@ TEST(projectPoints)
 }
 
 
-void InitSolvePnpRansac()
+static void InitSolvePnpRansac()
 {
     Mat object; gen(object, 1, 4, CV_32FC3, Scalar::all(0), Scalar::all(100));
     Mat image; gen(image, 1, 4, CV_32FC2, Scalar::all(0), Scalar::all(100));
@@ -906,7 +906,7 @@ TEST(GaussianBlur)
         SUBTEST << size << 'x' << size << ", 8UC4";
 
         Mat src, dst;
-        
+
         gen(src, size, size, CV_8UC4, 0, 256);
 
         GaussianBlur(src, dst, Size(3, 3), 1);
@@ -933,11 +933,11 @@ TEST(filter2D)
     {
         Mat src;
         gen(src, size, size, CV_8UC4, 0, 256);
-                
+
         for (int ksize = 3; ksize <= 16; ksize += 2)
-        {        
+        {
             SUBTEST << "ksize = " << ksize << ", " << size << 'x' << size << ", 8UC4";
-            
+
             Mat kernel;
             gen(kernel, ksize, ksize, CV_32FC1, 0.0, 1.0);
 
@@ -966,7 +966,7 @@ TEST(pyrDown)
     {
         SUBTEST << size << 'x' << size << ", 8UC4";
 
-        Mat src, dst; 
+        Mat src, dst;
         gen(src, size, size, CV_8UC4, 0, 256);
 
         pyrDown(src, dst);
@@ -992,7 +992,7 @@ TEST(pyrUp)
     {
         SUBTEST << size << 'x' << size << ", 8UC4";
 
-        Mat src, dst; 
+        Mat src, dst;
 
         gen(src, size, size, CV_8UC4, 0, 256);
 
@@ -1055,7 +1055,7 @@ TEST(Canny)
     CPU_ON;
     Canny(img, edges, 50.0, 100.0);
     CPU_OFF;
-    
+
     gpu::GpuMat d_img(img);
     gpu::GpuMat d_edges;
     gpu::CannyBuf d_buf;
@@ -1176,10 +1176,10 @@ TEST(PyrLKOpticalFlow)
 
     Mat frame1 = imread(abspath("rubberwhale2.png"));
     if (frame1.empty()) throw runtime_error("can't open rubberwhale2.png");
-    
+
     Mat gray_frame;
     cvtColor(frame0, gray_frame, COLOR_BGR2GRAY);
-    
+
     for (int points = 1000; points <= 8000; points *= 2)
     {
         SUBTEST << points;

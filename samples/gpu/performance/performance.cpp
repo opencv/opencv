@@ -144,7 +144,7 @@ string abspath(const string& relpath)
 }
 
 
-int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
+static int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
                              const char* err_msg, const char* /*file_name*/,
                              int /*line*/, void* /*userdata*/)
 {

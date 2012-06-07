@@ -12,7 +12,7 @@ int _contrast = 100;
 Mat image;
 
 /* brightness/contrast callback function */
-void updateBrightnessContrast( int /*arg*/, void* )
+static void updateBrightnessContrast( int /*arg*/, void* )
 {
     int histSize = 64;
     int brightness = _brightness - 100;
@@ -42,7 +42,7 @@ void updateBrightnessContrast( int /*arg*/, void* )
 
     calcHist(&dst, 1, 0, Mat(), hist, 1, &histSize, 0);
     Mat histImage = Mat::ones(200, 320, CV_8U)*255;
-    
+
     normalize(hist, hist, 0, histImage.rows, CV_MINMAX, CV_32F);
 
     histImage = Scalar::all(255);
@@ -54,31 +54,31 @@ void updateBrightnessContrast( int /*arg*/, void* )
                    Scalar::all(0), -1, 8, 0 );
     imshow("histogram", histImage);
 }
-void help()
+static void help()
 {
-	std::cout << "\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
-	          << "Usage: \n" << "demhist [image_name -- Defaults to baboon.jpg]" << std::endl;
+    std::cout << "\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
+              << "Usage: \n" << "demhist [image_name -- Defaults to baboon.jpg]" << std::endl;
 }
 
-const char* keys = 
+const char* keys =
 {
-	"{1| |baboon.jpg|input image file}"
+    "{1| |baboon.jpg|input image file}"
 };
 
 int main( int argc, const char** argv )
 {
-	help();
+    help();
 
-	CommandLineParser parser(argc, argv, keys);
-	string inputImage = parser.get<string>("1");
+    CommandLineParser parser(argc, argv, keys);
+    string inputImage = parser.get<string>("1");
 
-	// Load the source image. HighGUI use.
-	image = imread( inputImage, 0 );
-	if(image.empty())
-	{
-		std::cerr << "Cannot read image file: " << inputImage << std::endl;
-		return -1;
-	}
+    // Load the source image. HighGUI use.
+    image = imread( inputImage, 0 );
+    if(image.empty())
+    {
+        std::cerr << "Cannot read image file: " << inputImage << std::endl;
+        return -1;
+    }
 
     namedWindow("image", 0);
     namedWindow("histogram", 0);

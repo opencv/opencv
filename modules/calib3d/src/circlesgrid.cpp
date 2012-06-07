@@ -1223,7 +1223,7 @@ void computePredecessorMatrix(const Mat &dm, int verticesCount, Mat &predecessor
   }
 }
 
-void computeShortestPath(Mat &predecessorMatrix, size_t v1, size_t v2, vector<size_t> &path)
+static void computeShortestPath(Mat &predecessorMatrix, size_t v1, size_t v2, vector<size_t> &path)
 {
   if (predecessorMatrix.at<int> ((int)v1, (int)v2) < 0)
   {
@@ -1403,7 +1403,7 @@ void CirclesGridFinder::getHoles(vector<Point2f> &outHoles) const
   }
 }
 
-bool areIndicesCorrect(Point pos, vector<vector<size_t> > *points)
+static bool areIndicesCorrect(Point pos, vector<vector<size_t> > *points)
 {
   if (pos.y < 0 || pos.x < 0)
     return false;

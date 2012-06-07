@@ -57,7 +57,7 @@ namespace cv
 static vector<ImageDecoder> decoders;
 static vector<ImageEncoder> encoders;
 
-ImageDecoder findDecoder( const string& filename )
+static ImageDecoder findDecoder( const string& filename )
 {
     size_t i, maxlen = 0;
     for( i = 0; i < decoders.size(); i++ )
@@ -83,7 +83,7 @@ ImageDecoder findDecoder( const string& filename )
     return ImageDecoder();
 }
 
-ImageDecoder findDecoder( const Mat& buf )
+static ImageDecoder findDecoder( const Mat& buf )
 {
     size_t i, maxlen = 0;
 
@@ -110,7 +110,7 @@ ImageDecoder findDecoder( const Mat& buf )
     return ImageDecoder();
 }
 
-ImageEncoder findEncoder( const string& _ext )
+static ImageEncoder findEncoder( const string& _ext )
 {
     if( _ext.size() <= 1 )
         return ImageEncoder();
@@ -395,7 +395,7 @@ Mat imdecode( InputArray _buf, int flags )
     imdecode_( buf, flags, LOAD_MAT, &img );
     return img;
 }
-    
+
 bool imencode( const string& ext, InputArray _image,
                vector<uchar>& buf, const vector<int>& params )
 {

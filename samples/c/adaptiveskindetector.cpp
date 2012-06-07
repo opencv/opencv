@@ -42,119 +42,119 @@
 #include "opencv2/contrib/contrib.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-void help(char **argv)
+static void help(char **argv)
 {
-	std::cout << "\nThis program demonstrates the contributed flesh detector CvAdaptiveSkinDetector which can be found in contrib.cpp\n"
-			<< "Usage: " << std::endl <<
-		argv[0] << " fileMask firstFrame lastFrame" << std::endl << std::endl <<
-		"Example: " << std::endl <<
-		argv[0] << " C:\\VideoSequences\\sample1\\right_view\\temp_%05d.jpg  0  1000" << std::endl <<
-		"	iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
-		"If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
-		"Please note: Background should not contain large surfaces with skin tone." <<
-		"\n\n ESC will stop\n"
-		"Using OpenCV version %s\n" << CV_VERSION << "\n"
-		<< std::endl;
+    std::cout << "\nThis program demonstrates the contributed flesh detector CvAdaptiveSkinDetector which can be found in contrib.cpp\n"
+            << "Usage: " << std::endl <<
+        argv[0] << " fileMask firstFrame lastFrame" << std::endl << std::endl <<
+        "Example: " << std::endl <<
+        argv[0] << " C:\\VideoSequences\\sample1\\right_view\\temp_%05d.jpg  0  1000" << std::endl <<
+        "   iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
+        "If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
+        "Please note: Background should not contain large surfaces with skin tone." <<
+        "\n\n ESC will stop\n"
+        "Using OpenCV version %s\n" << CV_VERSION << "\n"
+        << std::endl;
 }
 
 class ASDFrameHolder
 {
 private:
-	IplImage *image;
-	double timeStamp;
+    IplImage *image;
+    double timeStamp;
 
 public:
-	ASDFrameHolder();
-	virtual ~ASDFrameHolder();
-	virtual void assignFrame(IplImage *sourceImage, double frameTime);
-	inline IplImage *getImage();
-	inline double getTimeStamp();
-	virtual void setImage(IplImage *sourceImage);
+    ASDFrameHolder();
+    virtual ~ASDFrameHolder();
+    virtual void assignFrame(IplImage *sourceImage, double frameTime);
+    inline IplImage *getImage();
+    inline double getTimeStamp();
+    virtual void setImage(IplImage *sourceImage);
 };
 
 class ASDFrameSequencer
 {
 public:
-	virtual ~ASDFrameSequencer();
-	virtual IplImage *getNextImage();
-	virtual void close();
-	virtual bool isOpen();
-	virtual void getFrameCaption(char *caption);
+    virtual ~ASDFrameSequencer();
+    virtual IplImage *getNextImage();
+    virtual void close();
+    virtual bool isOpen();
+    virtual void getFrameCaption(char *caption);
 };
 
 class ASDCVFrameSequencer : public ASDFrameSequencer
 {
 protected:
-	CvCapture *capture;
+    CvCapture *capture;
 
 public:
-	virtual IplImage *getNextImage();
-	virtual void close();
-	virtual bool isOpen();
+    virtual IplImage *getNextImage();
+    virtual void close();
+    virtual bool isOpen();
 };
 
 class ASDFrameSequencerWebCam : public ASDCVFrameSequencer
 {
 public:
-	virtual bool open(int cameraIndex);
+    virtual bool open(int cameraIndex);
 };
 
 class ASDFrameSequencerVideoFile : public ASDCVFrameSequencer
 {
 public:
-	virtual bool open(const char *fileName);
+    virtual bool open(const char *fileName);
 };
 
 class ASDFrameSequencerImageFile : public ASDFrameSequencer {
 private:
-	char sFileNameMask[2048];
-	int nCurrentIndex, nStartIndex, nEndIndex;
+    char sFileNameMask[2048];
+    int nCurrentIndex, nStartIndex, nEndIndex;
 
 public:
-	virtual void open(const char *fileNameMask, int startIndex, int endIndex);
-	virtual void getFrameCaption(char *caption);
-	virtual IplImage *getNextImage();
-	virtual void close();
-	virtual bool isOpen();
+    virtual void open(const char *fileNameMask, int startIndex, int endIndex);
+    virtual void getFrameCaption(char *caption);
+    virtual IplImage *getNextImage();
+    virtual void close();
+    virtual bool isOpen();
 };
 
 //-------------------- ASDFrameHolder -----------------------//
 ASDFrameHolder::ASDFrameHolder( )
 {
-	image = NULL;
-	timeStamp = 0;
+    image = NULL;
+    timeStamp = 0;
 };
 
 ASDFrameHolder::~ASDFrameHolder( )
 {
-	cvReleaseImage(&image);
+    cvReleaseImage(&image);
 };
 
 void ASDFrameHolder::assignFrame(IplImage *sourceImage, double frameTime)
 {
-	if (image != NULL)
-	{
-		cvReleaseImage(&image);
-		image = NULL;
-	}
+    if (image != NULL)
+    {
+        cvReleaseImage(&image);
+        image = NULL;
+    }
 
-	image = cvCloneImage(sourceImage);
-	timeStamp = frameTime;
+    image = cvCloneImage(sourceImage);
+    timeStamp = frameTime;
 };
 
 IplImage *ASDFrameHolder::getImage()
 {
-	return image;
+    return image;
 };
 
 double ASDFrameHolder::getTimeStamp()
 {
-	return timeStamp;
+    return timeStamp;
 };
 
 void ASDFrameHolder::setImage(IplImage *sourceImage)
 {
-	image = sourceImage;
+    image = sourceImage;
 };
 
 
@@ -162,12 +162,12 @@ void ASDFrameHolder::setImage(IplImage *sourceImage)
 
 ASDFrameSequencer::~ASDFrameSequencer()
 {
-	close();
+    close();
 };
 
 IplImage *ASDFrameSequencer::getNextImage()
 {
-	return NULL;
+    return NULL;
 };
 
 void ASDFrameSequencer::close()
@@ -177,40 +177,40 @@ void ASDFrameSequencer::close()
 
 bool ASDFrameSequencer::isOpen()
 {
-	return false;
+    return false;
 };
 
 void ASDFrameSequencer::getFrameCaption(char* /*caption*/) {
-	return;
+    return;
 };
 
 IplImage* ASDCVFrameSequencer::getNextImage()
 {
-	IplImage *image;
+    IplImage *image;
 
-	image = cvQueryFrame(capture);
+    image = cvQueryFrame(capture);
 
-	if (image != NULL)
-	{
-		return cvCloneImage(image);
-	}
-	else
-	{
-		return NULL;
-	}
+    if (image != NULL)
+    {
+        return cvCloneImage(image);
+    }
+    else
+    {
+        return NULL;
+    }
 };
 
 void ASDCVFrameSequencer::close()
 {
-	if (capture != NULL)
-	{
-		cvReleaseCapture(&capture);
-	}
+    if (capture != NULL)
+    {
+        cvReleaseCapture(&capture);
+    }
 };
 
 bool ASDCVFrameSequencer::isOpen()
 {
-	return (capture != NULL);
+    return (capture != NULL);
 };
 
 
@@ -218,18 +218,18 @@ bool ASDCVFrameSequencer::isOpen()
 
 bool ASDFrameSequencerWebCam::open(int cameraIndex)
 {
-	close();
+    close();
 
-	capture = cvCaptureFromCAM(cameraIndex);
+    capture = cvCaptureFromCAM(cameraIndex);
 
-	if (!capture)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
+    if (!capture)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 };
 
 
@@ -237,17 +237,17 @@ bool ASDFrameSequencerWebCam::open(int cameraIndex)
 
 bool ASDFrameSequencerVideoFile::open(const char *fileName)
 {
-	close();
+    close();
 
-	capture = cvCaptureFromFile(fileName);
-	if (!capture)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
+    capture = cvCaptureFromFile(fileName);
+    if (!capture)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 };
 
 
@@ -255,159 +255,159 @@ bool ASDFrameSequencerVideoFile::open(const char *fileName)
 
 void ASDFrameSequencerImageFile::open(const char *fileNameMask, int startIndex, int endIndex)
 {
-	nCurrentIndex = startIndex-1;
-	nStartIndex = startIndex;
-	nEndIndex = endIndex;
+    nCurrentIndex = startIndex-1;
+    nStartIndex = startIndex;
+    nEndIndex = endIndex;
 
-	std::sprintf(sFileNameMask, "%s", fileNameMask);
+    std::sprintf(sFileNameMask, "%s", fileNameMask);
 };
 
 void ASDFrameSequencerImageFile::getFrameCaption(char *caption) {
-	std::sprintf(caption, sFileNameMask, nCurrentIndex);
+    std::sprintf(caption, sFileNameMask, nCurrentIndex);
 };
 
 IplImage* ASDFrameSequencerImageFile::getNextImage()
 {
-	char fileName[2048];
+    char fileName[2048];
 
-	nCurrentIndex++;
+    nCurrentIndex++;
 
-	if (nCurrentIndex > nEndIndex)
-		return NULL;
+    if (nCurrentIndex > nEndIndex)
+        return NULL;
 
-	std::sprintf(fileName, sFileNameMask, nCurrentIndex);
+    std::sprintf(fileName, sFileNameMask, nCurrentIndex);
 
-	IplImage* img = cvLoadImage(fileName);
+    IplImage* img = cvLoadImage(fileName);
 
-	return img;
+    return img;
 };
 
 void ASDFrameSequencerImageFile::close()
 {
-	nCurrentIndex = nEndIndex+1;
+    nCurrentIndex = nEndIndex+1;
 };
 
 bool ASDFrameSequencerImageFile::isOpen()
 {
-	return (nCurrentIndex <= nEndIndex);
+    return (nCurrentIndex <= nEndIndex);
 };
 
-void putTextWithShadow(IplImage *img, const char *str, CvPoint point, CvFont *font, CvScalar color = CV_RGB(255, 255, 128))
+static void putTextWithShadow(IplImage *img, const char *str, CvPoint point, CvFont *font, CvScalar color = CV_RGB(255, 255, 128))
 {
-	cvPutText(img, str, cvPoint(point.x-1,point.y-1), font, CV_RGB(0, 0, 0));
-	cvPutText(img, str, point, font, color);
+    cvPutText(img, str, cvPoint(point.x-1,point.y-1), font, CV_RGB(0, 0, 0));
+    cvPutText(img, str, point, font, color);
 };
 
-#define ASD_RGB_SET_PIXEL(pointer, r, g, b)	{ (*pointer) = (unsigned char)b; (*(pointer+1)) = (unsigned char)g;	(*(pointer+2)) = (unsigned char)r; }
+#define ASD_RGB_SET_PIXEL(pointer, r, g, b) { (*pointer) = (unsigned char)b; (*(pointer+1)) = (unsigned char)g; (*(pointer+2)) = (unsigned char)r; }
 
 #define ASD_RGB_GET_PIXEL(pointer, r, g, b) {b = (unsigned char)(*(pointer)); g = (unsigned char)(*(pointer+1)); r = (unsigned char)(*(pointer+2));}
 
-void displayBuffer(IplImage *rgbDestImage, IplImage *buffer, int rValue, int gValue, int bValue)
+static void displayBuffer(IplImage *rgbDestImage, IplImage *buffer, int rValue, int gValue, int bValue)
 {
-	int x, y, nWidth, nHeight;
-	double destX, destY, dx, dy;
-	uchar c;
-	unsigned char *pSrc;
+    int x, y, nWidth, nHeight;
+    double destX, destY, dx, dy;
+    uchar c;
+    unsigned char *pSrc;
 
-	nWidth = buffer->width;
-	nHeight = buffer->height;
+    nWidth = buffer->width;
+    nHeight = buffer->height;
 
-	dx = double(rgbDestImage->width)/double(nWidth);
-	dy = double(rgbDestImage->height)/double(nHeight);
+    dx = double(rgbDestImage->width)/double(nWidth);
+    dy = double(rgbDestImage->height)/double(nHeight);
 
-	destX = 0;
-	for (x = 0; x < nWidth; x++)
-	{
-		destY = 0;
-		for (y = 0; y < nHeight; y++)
-		{
-			c = ((uchar*)(buffer->imageData + buffer->widthStep*y))[x];
+    destX = 0;
+    for (x = 0; x < nWidth; x++)
+    {
+        destY = 0;
+        for (y = 0; y < nHeight; y++)
+        {
+            c = ((uchar*)(buffer->imageData + buffer->widthStep*y))[x];
 
-			if (c)
-			{
-				pSrc = (unsigned char *)rgbDestImage->imageData + rgbDestImage->widthStep*int(destY) + (int(destX)*rgbDestImage->nChannels);
-				ASD_RGB_SET_PIXEL(pSrc, rValue, gValue, bValue);
-			}
-			destY += dy;
-		}
-		destY = 0;
-		destX += dx;
-	}
+            if (c)
+            {
+                pSrc = (unsigned char *)rgbDestImage->imageData + rgbDestImage->widthStep*int(destY) + (int(destX)*rgbDestImage->nChannels);
+                ASD_RGB_SET_PIXEL(pSrc, rValue, gValue, bValue);
+            }
+            destY += dy;
+        }
+        destY = 0;
+        destX += dx;
+    }
 };
 
 int main(int argc, char** argv )
 {
-	IplImage *img, *filterMask = NULL;
-	CvAdaptiveSkinDetector filter(1, CvAdaptiveSkinDetector::MORPHING_METHOD_ERODE_DILATE);
-	ASDFrameSequencer *sequencer;
-	CvFont base_font;
-	char caption[2048], s[256], windowName[256];
-	long int clockTotal = 0, numFrames = 0;
-	std::clock_t clock;
+    IplImage *img, *filterMask = NULL;
+    CvAdaptiveSkinDetector filter(1, CvAdaptiveSkinDetector::MORPHING_METHOD_ERODE_DILATE);
+    ASDFrameSequencer *sequencer;
+    CvFont base_font;
+    char caption[2048], s[256], windowName[256];
+    long int clockTotal = 0, numFrames = 0;
+    std::clock_t clock;
 
-	if (argc < 4)
-	{
-		help(argv);
-		sequencer = new ASDFrameSequencerWebCam();
-		(dynamic_cast<ASDFrameSequencerWebCam*>(sequencer))->open(-1);
+    if (argc < 4)
+    {
+        help(argv);
+        sequencer = new ASDFrameSequencerWebCam();
+        (dynamic_cast<ASDFrameSequencerWebCam*>(sequencer))->open(-1);
 
-		if (! sequencer->isOpen())
-		{
-			std::cout << std::endl << "Error: Cannot initialize the default Webcam" << std::endl << std::endl;
-		}
-	}
-	else
-	{
-		sequencer = new ASDFrameSequencerImageFile();
-		(dynamic_cast<ASDFrameSequencerImageFile*>(sequencer))->open(argv[1], std::atoi(argv[2]), std::atoi(argv[3]) ); // A sequence of images captured from video source, is stored here
+        if (! sequencer->isOpen())
+        {
+            std::cout << std::endl << "Error: Cannot initialize the default Webcam" << std::endl << std::endl;
+        }
+    }
+    else
+    {
+        sequencer = new ASDFrameSequencerImageFile();
+        (dynamic_cast<ASDFrameSequencerImageFile*>(sequencer))->open(argv[1], std::atoi(argv[2]), std::atoi(argv[3]) ); // A sequence of images captured from video source, is stored here
 
-	}
-	std::sprintf(windowName, "%s", "Adaptive Skin Detection Algorithm for Video Sequences");
+    }
+    std::sprintf(windowName, "%s", "Adaptive Skin Detection Algorithm for Video Sequences");
 
-	cvNamedWindow(windowName, CV_WINDOW_AUTOSIZE);
-	cvInitFont( &base_font, CV_FONT_VECTOR0, 0.5, 0.5);
+    cvNamedWindow(windowName, CV_WINDOW_AUTOSIZE);
+    cvInitFont( &base_font, CV_FONT_VECTOR0, 0.5, 0.5);
 
-	// Usage:
-	//		c:\>CvASDSample "C:\VideoSequences\sample1\right_view\temp_%05d.jpg" 0 1000
+    // Usage:
+    //      c:\>CvASDSample "C:\VideoSequences\sample1\right_view\temp_%05d.jpg" 0 1000
 
-	std::cout << "Press ESC to stop." << std::endl << std::endl;
-	while ((img = sequencer->getNextImage()) != 0)
-	{
-		numFrames++;
+    std::cout << "Press ESC to stop." << std::endl << std::endl;
+    while ((img = sequencer->getNextImage()) != 0)
+    {
+        numFrames++;
 
-		if (filterMask == NULL)
-		{
-			filterMask = cvCreateImage( cvSize(img->width, img->height), IPL_DEPTH_8U, 1);
-		}
-		clock = std::clock();
-		filter.process(img, filterMask);	// DETECT SKIN
-		clockTotal += (std::clock() - clock);
+        if (filterMask == NULL)
+        {
+            filterMask = cvCreateImage( cvSize(img->width, img->height), IPL_DEPTH_8U, 1);
+        }
+        clock = std::clock();
+        filter.process(img, filterMask);    // DETECT SKIN
+        clockTotal += (std::clock() - clock);
 
-		displayBuffer(img, filterMask, 0, 255, 0);
+        displayBuffer(img, filterMask, 0, 255, 0);
 
-		sequencer->getFrameCaption(caption);
-		std::sprintf(s, "%s - %d x %d", caption, img->width, img->height);
-		putTextWithShadow(img, s, cvPoint(10, img->height-35), &base_font);
+        sequencer->getFrameCaption(caption);
+        std::sprintf(s, "%s - %d x %d", caption, img->width, img->height);
+        putTextWithShadow(img, s, cvPoint(10, img->height-35), &base_font);
 
-		std::sprintf(s, "Average processing time per frame: %5.2fms", (double(clockTotal*1000/CLOCKS_PER_SEC))/numFrames);
-		putTextWithShadow(img, s, cvPoint(10, img->height-15), &base_font);
+        std::sprintf(s, "Average processing time per frame: %5.2fms", (double(clockTotal*1000/CLOCKS_PER_SEC))/numFrames);
+        putTextWithShadow(img, s, cvPoint(10, img->height-15), &base_font);
 
-		cvShowImage (windowName, img);
-		cvReleaseImage(&img);
+        cvShowImage (windowName, img);
+        cvReleaseImage(&img);
 
-		if (cvWaitKey(1) == 27)
-			break;
-	}
+        if (cvWaitKey(1) == 27)
+            break;
+    }
 
-	sequencer->close();
-	delete sequencer;
+    sequencer->close();
+    delete sequencer;
 
-	cvReleaseImage(&filterMask);
+    cvReleaseImage(&filterMask);
 
-	cvDestroyWindow(windowName);
+    cvDestroyWindow(windowName);
 
-	std::cout << "Finished, " << numFrames << " frames processed." << std::endl;
+    std::cout << "Finished, " << numFrames << " frames processed." << std::endl;
 
-	return 0;
+    return 0;
 }
 

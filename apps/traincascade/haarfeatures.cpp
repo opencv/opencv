@@ -1,16 +1,19 @@
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/internal.hpp"
+
 #include "haarfeatures.h"
 #include "cascadeclassifier.h"
 
 using namespace std;
 
 CvHaarFeatureParams::CvHaarFeatureParams() : mode(BASIC)
-{ 
+{
     name = HFP_NAME;
 }
 
 CvHaarFeatureParams::CvHaarFeatureParams( int _mode ) : mode( _mode )
 {
-    name = HFP_NAME; 
+    name = HFP_NAME;
 }
 
 void CvHaarFeatureParams::init( const CvFeatureParams& fp )
@@ -22,7 +25,7 @@ void CvHaarFeatureParams::init( const CvFeatureParams& fp )
 void CvHaarFeatureParams::write( FileStorage &fs ) const
 {
     CvFeatureParams::write( fs );
-    String modeStr = mode == BASIC ? CC_MODE_BASIC : 
+    String modeStr = mode == BASIC ? CC_MODE_BASIC :
                      mode == CORE ? CC_MODE_CORE :
                      mode == ALL ? CC_MODE_ALL : String();
     CV_Assert( !modeStr.empty() );
@@ -55,7 +58,7 @@ void CvHaarFeatureParams::printDefaults() const
 void CvHaarFeatureParams::printAttrs() const
 {
     CvFeatureParams::printAttrs();
-    String mode_str = mode == BASIC ? CC_MODE_BASIC : 
+    String mode_str = mode == BASIC ? CC_MODE_BASIC :
                        mode == CORE ? CC_MODE_CORE :
                        mode == ALL ? CC_MODE_ALL : 0;
     cout << "mode: " <<  mode_str << endl;
@@ -156,7 +159,7 @@ void CvHaarEvaluator::generateFeatures()
                     if( mode != CvHaarFeatureParams::BASIC )
                     {
                         // haar_x4
-                        if ( (x+dx*4 <= winSize.width) && (y+dy <= winSize.height) ) 
+                        if ( (x+dx*4 <= winSize.width) && (y+dy <= winSize.height) )
                         {
                             features.push_back( Feature( offset, false,
                                 x,    y, dx*4, dy, -1,
@@ -171,61 +174,61 @@ void CvHaarEvaluator::generateFeatures()
                         }
                     }
                     // x2_y2
-                    if ( (x+dx*2 <= winSize.width) && (y+dy*2 <= winSize.height) ) 
+                    if ( (x+dx*2 <= winSize.width) && (y+dy*2 <= winSize.height) )
                     {
                         features.push_back( Feature( offset, false,
                             x,    y,    dx*2, dy*2, -1,
                             x,    y,    dx,   dy,   +2,
                             x+dx, y+dy, dx,   dy,   +2 ) );
                     }
-                    if (mode != CvHaarFeatureParams::BASIC) 
-                    {                
-                        if ( (x+dx*3 <= winSize.width) && (y+dy*3 <= winSize.height) ) 
+                    if (mode != CvHaarFeatureParams::BASIC)
+                    {
+                        if ( (x+dx*3 <= winSize.width) && (y+dy*3 <= winSize.height) )
                         {
                             features.push_back( Feature( offset, false,
                                 x   , y   , dx*3, dy*3, -1,
                                 x+dx, y+dy, dx  , dy  , +9) );
                         }
                     }
-                    if (mode == CvHaarFeatureParams::ALL) 
-                    {                
+                    if (mode == CvHaarFeatureParams::ALL)
+                    {
                         // tilted haar_x2
-                        if ( (x+2*dx <= winSize.width) && (y+2*dx+dy <= winSize.height) && (x-dy>= 0) ) 
+                        if ( (x+2*dx <= winSize.width) && (y+2*dx+dy <= winSize.height) && (x-dy>= 0) )
                         {
                             features.push_back( Feature( offset, true,
                                 x, y, dx*2, dy, -1,
                                 x, y, dx,   dy, +2 ) );
                         }
                         // tilted haar_y2
-                        if ( (x+dx <= winSize.width) && (y+dx+2*dy <= winSize.height) && (x-2*dy>= 0) ) 
+                        if ( (x+dx <= winSize.width) && (y+dx+2*dy <= winSize.height) && (x-2*dy>= 0) )
                         {
                             features.push_back( Feature( offset, true,
                                 x, y, dx, 2*dy, -1,
                                 x, y, dx, dy,   +2 ) );
                         }
                         // tilted haar_x3
-                        if ( (x+3*dx <= winSize.width) && (y+3*dx+dy <= winSize.height) && (x-dy>= 0) ) 
+                        if ( (x+3*dx <= winSize.width) && (y+3*dx+dy <= winSize.height) && (x-dy>= 0) )
                         {
                             features.push_back( Feature( offset, true,
                                 x,    y,    dx*3, dy, -1,
                                 x+dx, y+dx, dx,   dy, +3 ) );
                         }
                         // tilted haar_y3
-                        if ( (x+dx <= winSize.width) && (y+dx+3*dy <= winSize.height) && (x-3*dy>= 0) ) 
+                        if ( (x+dx <= winSize.width) && (y+dx+3*dy <= winSize.height) && (x-3*dy>= 0) )
                         {
                             features.push_back( Feature( offset, true,
                                 x,    y,    dx, 3*dy, -1,
                                 x-dy, y+dy, dx, dy,   +3 ) );
                         }
                         // tilted haar_x4
-                        if ( (x+4*dx <= winSize.width) && (y+4*dx+dy <= winSize.height) && (x-dy>= 0) ) 
+                        if ( (x+4*dx <= winSize.width) && (y+4*dx+dy <= winSize.height) && (x-dy>= 0) )
                         {
                             features.push_back( Feature( offset, true,
                                 x,    y,    dx*4, dy, -1,
                                 x+dx, y+dx, dx*2, dy, +2 ) );
                         }
                         // tilted haar_y4
-                        if ( (x+dx <= winSize.width) && (y+dx+4*dy <= winSize.height) && (x-4*dy>= 0) ) 
+                        if ( (x+dx <= winSize.width) && (y+dx+4*dy <= winSize.height) && (x-4*dy>= 0) )
                         {
                             features.push_back( Feature( offset, true,
                                 x,    y,    dx, 4*dy, -1,
@@ -296,7 +299,7 @@ void CvHaarEvaluator::Feature::write( FileStorage &fs ) const
     fs << CC_RECTS << "[";
     for( int ri = 0; ri < CV_HAAR_FEATURE_MAX && rect[ri].r.width != 0; ++ri )
     {
-        fs << "[:" << rect[ri].r.x << rect[ri].r.y << 
+        fs << "[:" << rect[ri].r.x << rect[ri].r.y <<
             rect[ri].r.width << rect[ri].r.height << rect[ri].weight << "]";
     }
     fs << "]" << CC_TILTED << tilted;

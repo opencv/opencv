@@ -7,16 +7,16 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
-	cout <<
-			"\nThis program demonstrates dense optical flow algorithm by Gunnar Farneback\n"
-			"Mainly the function: calcOpticalFlowFarneback()\n"
-			"Call:\n"
-			"./fback\n"
-			"This reads from video camera 0\n" << endl;
+    cout <<
+            "\nThis program demonstrates dense optical flow algorithm by Gunnar Farneback\n"
+            "Mainly the function: calcOpticalFlowFarneback()\n"
+            "Call:\n"
+            "./fback\n"
+            "This reads from video camera 0\n" << endl;
 }
-void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
+static void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
                     double, const Scalar& color)
 {
     for(int y = 0; y < cflowmap.rows; y += step)
@@ -35,15 +35,15 @@ int main(int, char**)
     help();
     if( !cap.isOpened() )
         return -1;
-    
+
     Mat prevgray, gray, flow, cflow, frame;
     namedWindow("flow", 1);
-    
+
     for(;;)
     {
         cap >> frame;
         cvtColor(frame, gray, CV_BGR2GRAY);
-        
+
         if( prevgray.data )
         {
             calcOpticalFlowFarneback(prevgray, gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);

@@ -42,8 +42,7 @@
 
 #include "precomp.hpp"
 
-namespace cv
-{
+using namespace cv;
 
 /////////////////////// AlgorithmInfo for various detector & descriptors ////////////////////////////
 
@@ -54,7 +53,7 @@ namespace cv
 
 CV_INIT_ALGORITHM(BriefDescriptorExtractor, "Feature2D.BRIEF",
                   obj.info()->addParam(obj, "bytes", obj.bytes_));
-    
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(FastFeatureDetector, "Feature2D.FAST",
@@ -69,7 +68,7 @@ CV_INIT_ALGORITHM(StarDetector, "Feature2D.STAR",
                   obj.info()->addParam(obj, "lineThresholdProjected", obj.lineThresholdProjected);
                   obj.info()->addParam(obj, "lineThresholdBinarized", obj.lineThresholdBinarized);
                   obj.info()->addParam(obj, "suppressNonmaxSize", obj.suppressNonmaxSize));
-    
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(MSER, "Feature2D.MSER",
@@ -81,8 +80,8 @@ CV_INIT_ALGORITHM(MSER, "Feature2D.MSER",
                   obj.info()->addParam(obj, "maxEvolution", obj.maxEvolution);
                   obj.info()->addParam(obj, "areaThreshold", obj.areaThreshold);
                   obj.info()->addParam(obj, "minMargin", obj.minMargin);
-                  obj.info()->addParam(obj, "edgeBlurSize", obj.edgeBlurSize));    
-    
+                  obj.info()->addParam(obj, "edgeBlurSize", obj.edgeBlurSize));
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(ORB, "Feature2D.ORB",
@@ -96,7 +95,7 @@ CV_INIT_ALGORITHM(ORB, "Feature2D.ORB",
                   obj.info()->addParam(obj, "scoreType", obj.scoreType));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
 CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
                   obj.info()->addParam(obj, "nfeatures", obj.nfeatures);
                   obj.info()->addParam(obj, "qualityLevel", obj.qualityLevel);
@@ -105,7 +104,7 @@ CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
                   obj.info()->addParam(obj, "k", obj.k));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
 class CV_EXPORTS HarrisDetector : public GFTTDetector
 {
 public:
@@ -113,7 +112,7 @@ public:
                     int blockSize=3, bool useHarrisDetector=true, double k=0.04 )
     : GFTTDetector( maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k ) {}
     AlgorithmInfo* info() const;
-};    
+};
 
 CV_INIT_ALGORITHM(HarrisDetector, "Feature2D.HARRIS",
                   obj.info()->addParam(obj, "nfeatures", obj.nfeatures);
@@ -122,7 +121,7 @@ CV_INIT_ALGORITHM(HarrisDetector, "Feature2D.HARRIS",
                   obj.info()->addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
                   obj.info()->addParam(obj, "k", obj.k));
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(DenseFeatureDetector, "Feature2D.Dense",
                   obj.info()->addParam(obj, "initFeatureScale", obj.initFeatureScale);
@@ -134,22 +133,23 @@ CV_INIT_ALGORITHM(DenseFeatureDetector, "Feature2D.Dense",
                   obj.info()->addParam(obj, "varyImgBoundWithScale", obj.varyImgBoundWithScale));
 
 CV_INIT_ALGORITHM(GridAdaptedFeatureDetector, "Feature2D.Grid",
-                  obj.info()->addParam(obj, "detector", (Ptr<Algorithm>&)obj.detector);
+                  //obj.info()->addParam(obj, "detector", (Ptr<Algorithm>&)obj.detector);
                   obj.info()->addParam(obj, "maxTotalKeypoints", obj.maxTotalKeypoints);
                   obj.info()->addParam(obj, "gridRows", obj.gridRows);
                   obj.info()->addParam(obj, "gridCols", obj.gridCols));
 
-bool initModule_features2d(void)
+bool cv::initModule_features2d(void)
 {
-    Ptr<Algorithm> brief = createBriefDescriptorExtractor(), orb = createORB(),
-        star = createStarDetector(), fastd = createFastFeatureDetector(), mser = createMSER(),
-        dense = createDenseFeatureDetector(), gftt = createGFTTDetector(),
-        harris = createHarrisDetector(), grid = createGridAdaptedFeatureDetector();
-        
-    return brief->info() != 0 && orb->info() != 0 && star->info() != 0 &&
-        fastd->info() != 0 && mser->info() != 0 && dense->info() != 0 &&
-        gftt->info() != 0 && harris->info() != 0 && grid->info() != 0;
-}
+    bool all = true;
+    all &= !BriefDescriptorExtractor_info_auto.name().empty();
+    all &= !FastFeatureDetector_info_auto.name().empty();
+    all &= !StarDetector_info_auto.name().empty();
+    all &= !MSER_info_auto.name().empty();
+    all &= !ORB_info_auto.name().empty();
+    all &= !GFTTDetector_info_auto.name().empty();
+    all &= !HarrisDetector_info_auto.name().empty();
+    all &= !DenseFeatureDetector_info_auto.name().empty();
+    all &= !GridAdaptedFeatureDetector_info_auto.name().empty();
 
+    return all;
 }
-

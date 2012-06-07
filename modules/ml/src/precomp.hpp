@@ -41,11 +41,11 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4251 4514 4710 4711 4710 )
 #endif
 
-#ifdef HAVE_CVCONFIG_H 
+#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
 #endif
 
@@ -298,10 +298,10 @@ cvPrepareTrainData( const char* /*funcname*/,
                     CvMat** out_sample_idx=0 );
 
 void
-cvSortSamplesByClasses( const float** samples, const CvMat* classes, 
+cvSortSamplesByClasses( const float** samples, const CvMat* classes,
                         int* class_ranges, const uchar** mask CV_DEFAULT(0) );
 
-void 
+void
 cvCombineResponseMaps (CvMat*  _responses,
                  const CvMat*  old_response_map,
                        CvMat*  new_response_map,
@@ -329,7 +329,7 @@ CvFileNode* icvFileNodeGetNext(CvFileNode* n, const char* name);
 
 
 void cvCheckTrainData( const CvMat* train_data, int tflag,
-                       const CvMat* missing_mask, 
+                       const CvMat* missing_mask,
                        int* var_all, int* sample_all );
 
 CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_duplicates=false );
@@ -365,7 +365,7 @@ namespace cv
         CvDTree* tree;
         CvDTreeNode* node;
     };
-    
+
     struct ForestTreeBestSplitFinder : DTreeBestSplitFinder
     {
         ForestTreeBestSplitFinder() : DTreeBestSplitFinder() {}

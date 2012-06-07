@@ -18,7 +18,7 @@
 #include <string>
 #include <stdio.h>
 
-void help()
+static void help()
 {
 	printf("\nThis program demonstrates the one way interest point descriptor found in features2d.hpp\n"
 			"Correspondences are drawn\n");

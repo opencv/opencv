@@ -122,7 +122,7 @@ void CvStatModel::read( CvFileStorage*, CvFileNode* )
 
 
 /* Calculates upper triangular matrix S, where A is a symmetrical matrix A=S'*S */
-CV_IMPL void cvChol( CvMat* A, CvMat* S )
+static void cvChol( CvMat* A, CvMat* S )
 {
     int dim = A->rows;
 
@@ -182,7 +182,7 @@ CV_IMPL void cvRandMVNormal( CvMat* mean, CvMat* cov, CvMat* sample, CvRNG* rng 
 
 /* Generates <sample> of <amount> points from a discrete variate xi,
    where Pr{xi = k} == probs[k], 0 < k < len - 1. */
-CV_IMPL void cvRandSeries( float probs[], int len, int sample[], int amount )
+static void cvRandSeries( float probs[], int len, int sample[], int amount )
 {
     CvMat* univals = cvCreateMat(1, amount, CV_32FC1);
     float* knots = (float*)cvAlloc( len * sizeof(float) );
@@ -321,48 +321,48 @@ CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
 
 #define ICV_RAND_MAX    4294967296 // == 2^32
 
-CV_IMPL void cvRandRoundUni (CvMat* center,
-                             float radius_small,
-                             float radius_large,
-                             CvMat* desired_matrix,
-                             CvRNG* rng_state_ptr)
-{
-    float rad, norm, coefficient;
-    int dim, size, i, j;
-    CvMat *cov, sample;
-    CvRNG rng_local;
+// static void cvRandRoundUni (CvMat* center,
+//                              float radius_small,
+//                              float radius_large,
+//                              CvMat* desired_matrix,
+//                              CvRNG* rng_state_ptr)
+// {
+//     float rad, norm, coefficient;
+//     int dim, size, i, j;
+//     CvMat *cov, sample;
+//     CvRNG rng_local;
 
-    CV_FUNCNAME("cvRandRoundUni");
-    __BEGIN__
+//     CV_FUNCNAME("cvRandRoundUni");
+//     __BEGIN__
 
-    rng_local = *rng_state_ptr;
+//     rng_local = *rng_state_ptr;
 
-    CV_ASSERT ((radius_small >= 0) &&
-               (radius_large > 0) &&
-               (radius_small <= radius_large));
-    CV_ASSERT (center && desired_matrix && rng_state_ptr);
-    CV_ASSERT (center->rows == 1);
-    CV_ASSERT (center->cols == desired_matrix->cols);
+//     CV_ASSERT ((radius_small >= 0) &&
+//                (radius_large > 0) &&
+//                (radius_small <= radius_large));
+//     CV_ASSERT (center && desired_matrix && rng_state_ptr);
+//     CV_ASSERT (center->rows == 1);
+//     CV_ASSERT (center->cols == desired_matrix->cols);
 
-    dim = desired_matrix->cols;
-    size = desired_matrix->rows;
-    cov = cvCreateMat (dim, dim, CV_32FC1);
-    cvSetIdentity (cov);
-    cvRandMVNormal (center, cov, desired_matrix, &rng_local);
+//     dim = desired_matrix->cols;
+//     size = desired_matrix->rows;
+//     cov = cvCreateMat (dim, dim, CV_32FC1);
+//     cvSetIdentity (cov);
+//     cvRandMVNormal (center, cov, desired_matrix, &rng_local);
 
-    for (i = 0; i < size; i++)
-    {
-        rad = (float)(cvRandReal(&rng_local)*(radius_large - radius_small) + radius_small);
-        cvGetRow (desired_matrix, &sample, i);
-        norm = (float) cvNorm (&sample, 0, CV_L2);
-        coefficient = rad / norm;
-        for (j = 0; j < dim; j++)
-             CV_MAT_ELEM (sample, float, 0, j) *= coefficient;
-    }
+//     for (i = 0; i < size; i++)
+//     {
+//         rad = (float)(cvRandReal(&rng_local)*(radius_large - radius_small) + radius_small);
+//         cvGetRow (desired_matrix, &sample, i);
+//         norm = (float) cvNorm (&sample, 0, CV_L2);
+//         coefficient = rad / norm;
+//         for (j = 0; j < dim; j++)
+//              CV_MAT_ELEM (sample, float, 0, j) *= coefficient;
+//     }
 
-    __END__
+//     __END__
 
-}
+// }
 
 // By S. Dilman - end -
 
@@ -1769,7 +1769,7 @@ void cvCombineResponseMaps (CvMat*  _responses,
 }
 
 
-int icvGetNumberOfCluster( double* prob_vector, int num_of_clusters, float r,
+static int icvGetNumberOfCluster( double* prob_vector, int num_of_clusters, float r,
                            float outlier_thresh, int normalize_probs )
 {
     int max_prob_loc = 0;

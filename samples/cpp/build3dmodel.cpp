@@ -13,7 +13,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     printf("\nSigh: This program is not complete/will be replaced. \n"
            "So:   Use this just to see hints of how to use things like Rodrigues\n"
@@ -51,17 +51,17 @@ static bool readModelViews( const string& filename, vector<Point3f>& box,
     roiList.resize(0);
     poseList.resize(0);
     box.resize(0);
-    
+
     FileStorage fs(filename, FileStorage::READ);
     if( !fs.isOpened() )
         return false;
     fs["box"] >> box;
-    
+
     FileNode all = fs["views"];
     if( all.type() != FileNode::SEQ )
         return false;
     FileNodeIterator it = all.begin(), it_end = all.end();
-    
+
     for(; it != it_end; ++it)
     {
         FileNode n = *it;
@@ -72,7 +72,7 @@ static bool readModelViews( const string& filename, vector<Point3f>& box,
         poseList.push_back(Vec6f((float)np[0], (float)np[1], (float)np[2],
                                  (float)np[3], (float)np[4], (float)np[5]));
     }
-    
+
     return true;
 }
 
@@ -90,11 +90,11 @@ static void writeModel(const string& modelFileName, const string& modelname,
                        const PointModel& model)
 {
     FileStorage fs(modelFileName, FileStorage::WRITE);
-    
+
     fs << modelname << "{" <<
         "points" << "[:" << model.points << "]" <<
         "idx" << "[:";
-    
+
     for( size_t i = 0; i < model.didx.size(); i++ )
         fs << "[:" << model.didx[i] << "]";
     fs << "]" << "descriptors" << model.descriptors;
@@ -259,7 +259,7 @@ static void findConstrainedCorrespondences(const Mat& _F,
 
 
 static Point3f findRayIntersection(Point3f k1, Point3f b1, Point3f k2, Point3f b2)
-{    
+{
     float a[4], b[2], x[2];
     a[0] = k1.dot(k1);
     a[1] = a[2] = -k1.dot(k2);
@@ -268,7 +268,7 @@ static Point3f findRayIntersection(Point3f k1, Point3f b1, Point3f k2, Point3f b
     b[1] = k2.dot(b1 - b2);
     Mat_<float> A(2, 2, a), B(2, 1, b), X(2, 1, x);
     solve(A, B, X);
-    
+
     float s1 = X.at<float>(0, 0);
     float s2 = X.at<float>(1, 0);
     return (k1*s1 + b1 + k2*s2 + b2)*0.5f;
@@ -281,19 +281,19 @@ static Point3f triangulatePoint(const vector<Point2f>& ps,
                                 const Mat& cameraMatrix)
 {
     Mat_<double> K(cameraMatrix);
-    
+
     /*if( ps.size() > 2 )
     {
         Mat_<double> L(ps.size()*3, 4), U, evalues;
         Mat_<double> P(3,4), Rt(3,4), Rt_part1=Rt.colRange(0,3), Rt_part2=Rt.colRange(3,4);
-        
+
         for( size_t i = 0; i < ps.size(); i++ )
         {
             double x = ps[i].x, y = ps[i].y;
             Rs[i].convertTo(Rt_part1, Rt_part1.type());
             ts[i].convertTo(Rt_part2, Rt_part2.type());
             P = K*Rt;
-            
+
             for( int k = 0; k < 4; k++ )
             {
                 L(i*3, k) = x*P(2,k) - P(0,k);
@@ -301,10 +301,10 @@ static Point3f triangulatePoint(const vector<Point2f>& ps,
                 L(i*3+2, k) = x*P(1,k) - y*P(0,k);
             }
         }
-        
+
         eigen(L.t()*L, evalues, U);
         CV_Assert(evalues(0,0) >= evalues(3,0));
-        
+
         double W = fabs(U(3,3)) > FLT_EPSILON ? 1./U(3,3) : 0;
         return Point3f((float)(U(3,0)*W), (float)(U(3,1)*W), (float)(U(3,2)*W));
     }
@@ -324,7 +324,7 @@ static Point3f triangulatePoint(const vector<Point2f>& ps,
 }
 
 
-void triangulatePoint_test(void)
+static void triangulatePoint_test(void)
 {
     int i, n = 100;
     vector<Point3f> objpt(n), delta1(n), delta2(n);
@@ -370,13 +370,13 @@ struct EqKeypoints
 {
     EqKeypoints(const vector<int>* _dstart, const Set2i* _pairs)
     : dstart(_dstart), pairs(_pairs) {}
-    
+
     bool operator()(const Pair2i& a, const Pair2i& b) const
     {
         return pairs->find(Pair2i(dstart->at(a.first) + a.second,
                                   dstart->at(b.first) + b.second)) != pairs->end();
     }
-    
+
     const vector<int>* dstart;
     const Set2i* pairs;
 };
@@ -423,7 +423,7 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
         vector<KeyPoint> keypoints;
         detector->detect(gray, keypoints);
         descriptorExtractor->compute(gray, keypoints, descriptorbuf);
-        Point2f roiofs = roiList[i].tl(); 
+        Point2f roiofs = roiList[i].tl();
         for( size_t k = 0; k < keypoints.size(); k++ )
             keypoints[k].pt += roiofs;
         allkeypoints.push_back(keypoints);
@@ -438,7 +438,7 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
 
         size_t prev = alldescriptorsVec.size();
         size_t delta = buf.rows*buf.cols;
-        alldescriptorsVec.resize(prev + delta); 
+        alldescriptorsVec.resize(prev + delta);
         std::copy(buf.ptr<float>(), buf.ptr<float>() + delta,
                   alldescriptorsVec.begin() + prev);
         dstart.push_back(dstart.back() + (int)keypoints.size());
@@ -514,7 +514,7 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
 
                 pairsFound++;
 
-                //model.points.push_back(objpt);   
+                //model.points.push_back(objpt);
                 pairs[Pair2i(i1+dstart[i], i2+dstart[j])] = 1;
                 pairs[Pair2i(i2+dstart[j], i1+dstart[i])] = 1;
                 keypointsIdxMap[Pair2i((int)i,i1)] = 1;
@@ -618,7 +618,7 @@ int main(int argc, char** argv)
     const char* intrinsicsFilename = 0;
     const char* modelName = 0;
     const char* detectorName = "SURF";
-    const char* descriptorExtractorName = "SURF"; 
+    const char* descriptorExtractorName = "SURF";
 
     vector<Point3f> modelBox;
     vector<string>  imageList;

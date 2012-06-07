@@ -17,16 +17,16 @@
  * Redistribution and use in source and binary forms, with or
  * without modification, are permitted provided that the following
  * conditions are met:
- * 	Redistributions of source code must retain the above
- * 	copyright notice, this list of conditions and the following
- * 	disclaimer.
- * 	Redistributions in binary form must reproduce the above
- * 	copyright notice, this list of conditions and the following
- * 	disclaimer in the documentation and/or other materials
- * 	provided with the distribution.
- * 	The name of Contributor may not be used to endorse or
- * 	promote products derived from this software without
- * 	specific prior written permission.
+ *  Redistributions of source code must retain the above
+ *  copyright notice, this list of conditions and the following
+ *  disclaimer.
+ *  Redistributions in binary form must reproduce the above
+ *  copyright notice, this list of conditions and the following
+ *  disclaimer in the documentation and/or other materials
+ *  provided with the distribution.
+ *  The name of Contributor may not be used to endorse or
+ *  promote products derived from this software without
+ *  specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
  * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
@@ -43,7 +43,7 @@
  * OF SUCH DAMAGE.
  */
 
-/* 
+/*
    The following changes have been made, comparing to the original contribution:
    1. A lot of small optimizations, less memory allocations, got rid of global buffers
    2. Reversed order of cvGetQuadrangleSubPix and cvResize calls; probably less accurate, but much faster
@@ -79,8 +79,8 @@ octave.
 The extraction of the patch of pixels surrounding a keypoint used to build a
 descriptor has been simplified.
 
-KeyPoint descriptor normalisation has been changed from normalising each 4x4 
-cell (resulting in a descriptor of magnitude 16) to normalising the entire 
+KeyPoint descriptor normalisation has been changed from normalising each 4x4
+cell (resulting in a descriptor of magnitude 16) to normalising the entire
 descriptor to magnitude 1.
 
 The default number of octaves has been increased from 3 to 4 to match the
@@ -88,20 +88,20 @@ original SURF binary default. The increase in computation time is minimal since
 the higher octaves are sampled sparsely.
 
 The default number of layers per octave has been reduced from 3 to 2, to prevent
-redundant calculation of similar sizes in consecutive octaves.  This decreases 
-computation time. The number of features extracted may be less, however the 
+redundant calculation of similar sizes in consecutive octaves.  This decreases
+computation time. The number of features extracted may be less, however the
 additional features were mostly redundant.
 
 The radius of the circle of gradient samples used to assign an orientation has
-been increased from 4 to 6 to match the description in the SURF paper. This is 
+been increased from 4 to 6 to match the description in the SURF paper. This is
 now defined by ORI_RADIUS, and could be made into a parameter.
 
 The size of the sliding window used in orientation assignment has been reduced
 from 120 to 60 degrees to match the description in the SURF paper. This is now
 defined by ORI_WIN, and could be made into a parameter.
 
-Other options like  HAAR_SIZE0, HAAR_SIZE_INC, SAMPLE_STEP0, ORI_SEARCH_INC, 
-ORI_SIGMA and DESC_SIGMA have been separated from the code and documented. 
+Other options like  HAAR_SIZE0, HAAR_SIZE_INC, SAMPLE_STEP0, ORI_SEARCH_INC,
+ORI_SIGMA and DESC_SIGMA have been separated from the code and documented.
 These could also be made into parameters.
 
 Modifications by Ian Mahon
@@ -124,12 +124,14 @@ static const int SURF_HAAR_SIZE0 = 9;
 // This ensures that when looking for the neighbours of a sample, the layers
 // above and below are aligned correctly.
 static const int SURF_HAAR_SIZE_INC = 6;
-    
-    
+
+
 struct SurfHF
 {
     int p0, p1, p2, p3;
     float w;
+
+    SurfHF(): p0(0), p1(0), p2(0), p3(0), w(0) {}
 };
 
 inline float calcHaarPattern( const int* origin, const SurfHF* f, int n )
@@ -208,10 +210,10 @@ static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
  * Maxima location interpolation as described in "Invariant Features from
  * Interest Point Groups" by Matthew Brown and David Lowe. This is performed by
  * fitting a 3D quadratic to a set of neighbouring samples.
- * 
- * The gradient vector and Hessian matrix at the initial keypoint location are 
+ *
+ * The gradient vector and Hessian matrix at the initial keypoint location are
  * approximated using central differences. The linear system Ax = b is then
- * solved, where A is the Hessian, b is the negative gradient, and x is the 
+ * solved, where A is the Hessian, b is the negative gradient, and x is the
  * offset of the interpolated maxima coordinates from the initial estimate.
  * This is equivalent to an iteration of Netwon's optimisation algorithm.
  *
@@ -234,18 +236,18 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
         N9[1][3]-2*N9[1][4]+N9[1][5],            // 2nd deriv x, x
         (N9[1][8]-N9[1][6]-N9[1][2]+N9[1][0])/4, // 2nd deriv x, y
         (N9[2][5]-N9[2][3]-N9[0][5]+N9[0][3])/4, // 2nd deriv x, s
-        (N9[1][8]-N9[1][6]-N9[1][2]+N9[1][0])/4, // 2nd deriv x, y 
-        N9[1][1]-2*N9[1][4]+N9[1][7],            // 2nd deriv y, y 
-        (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])/4, // 2nd deriv y, s 
+        (N9[1][8]-N9[1][6]-N9[1][2]+N9[1][0])/4, // 2nd deriv x, y
+        N9[1][1]-2*N9[1][4]+N9[1][7],            // 2nd deriv y, y
+        (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])/4, // 2nd deriv y, s
         (N9[2][5]-N9[2][3]-N9[0][5]+N9[0][3])/4, // 2nd deriv x, s
         (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])/4, // 2nd deriv y, s
         N9[0][4]-2*N9[1][4]+N9[2][4]);           // 2nd deriv s, s
 
     Vec3f x = A.solve(b, DECOMP_LU);
-    
+
     bool ok = (x[0] != 0 || x[1] != 0 || x[2] != 0) &&
         std::abs(x[0]) <= 1 && std::abs(x[1]) <= 1 && std::abs(x[2]) <= 1;
-    
+
     if( ok )
     {
         kpt.pt.x += x[0]*dx;
@@ -425,7 +427,7 @@ struct SURFFindInvoker
         {
             int layer = (*middleIndices)[i];
             int octave = i / nOctaveLayers;
-            findMaximaInLayer( *sum, *mask_sum, *dets, *traces, *sizes, 
+            findMaximaInLayer( *sum, *mask_sum, *dets, *traces, *sizes,
                                *keypoints, octave, layer, hessianThreshold,
                                (*sampleSteps)[layer] );
         }
@@ -459,7 +461,7 @@ struct KeypointGreater
     }
 };
 
-    
+
 static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<KeyPoint>& keypoints,
                                  int nOctaves, int nOctaveLayers, float hessianThreshold )
 {
@@ -479,7 +481,7 @@ static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<Key
 
     // Allocate space and calculate properties of each layer
     int index = 0, middleIndex = 0, step = SAMPLE_STEP0;
-    
+
     for( int octave = 0; octave < nOctaves; octave++ )
     {
         for( int layer = 0; layer < nOctaveLayers+2; layer++ )
@@ -566,7 +568,7 @@ struct SURFInvoker
         const int dx_s[NX][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
         const int dy_s[NY][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
 
-        // Optimisation is better using nOriSampleBound than nOriSamples for 
+        // Optimisation is better using nOriSampleBound than nOriSamples for
         // array lengths.  Maybe because it is a constant known at compile time
         const int nOriSampleBound =(2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
 
@@ -579,7 +581,7 @@ struct SURFInvoker
         Mat _patch(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
 
         int dsize = extended ? 128 : 64;
-        
+
         int k, k1 = range.begin(), k2 = range.end();
         float maxSize = 0;
         for( k = k1; k < k2; k++ )
@@ -601,7 +603,7 @@ struct SURFInvoker
             float s = size*1.2f/9.0f;
             /* To find the dominant orientation, the gradients in x and y are
              sampled in a circle of radius 6s using wavelets of size 4s.
-             We ensure the gradient wavelet size is even to ensure the 
+             We ensure the gradient wavelet size is even to ensure the
              wavelet pattern is balanced and symmetric around its center */
             int grad_wav_size = 2*cvRound( 2*s );
             if( sum->rows < grad_wav_size || sum->cols < grad_wav_size )
@@ -670,7 +672,7 @@ struct SURFInvoker
             kp.angle = descriptor_dir;
             if( !descriptors || !descriptors->data )
                 continue;
-            
+
             /* Extract a window of pixels around the keypoint of size 20s */
             int win_size = (int)((PATCH_SZ+1)*s);
             CV_Assert( winbuf->cols >= win_size*win_size );
@@ -678,13 +680,13 @@ struct SURFInvoker
 
             if( !upright )
             {
-            	descriptor_dir *= (float)(CV_PI/180);
+                descriptor_dir *= (float)(CV_PI/180);
                 float sin_dir = std::sin(descriptor_dir);
                 float cos_dir = std::cos(descriptor_dir);
 
                 /* Subpixel interpolation version (slower). Subpixel not required since
                 the pixels will all get averaged when we scale down to 20 pixels */
-                /*  
+                /*
                 float w[] = { cos_dir, sin_dir, center.x,
                 -sin_dir, cos_dir , center.y };
                 CvMat W = cvMat(2, 3, CV_32F, w);
@@ -711,12 +713,12 @@ struct SURFInvoker
             else
             {
                 // extract rect - slightly optimized version of the code above
-                // TODO: find faster code, as this is simply an extract rect operation, 
+                // TODO: find faster code, as this is simply an extract rect operation,
                 //       e.g. by using cvGetSubRect, problem is the border processing
                 // descriptor_dir == 90 grad
                 // sin_dir == 1
                 // cos_dir == 0
-                
+
                 float win_offset = -(float)(win_size-1)/2;
                 int start_x = cvRound(center.x + win_offset);
                 int start_y = cvRound(center.y - win_offset);
@@ -733,7 +735,7 @@ struct SURFInvoker
                         y = MIN( y, img->rows-1 );
                         WIN[i*win_size + j] = img->at<uchar>(y, x);
                     }
-                }               
+                }
             }
             // Scale the window to size PATCH_SZ so each pixel's size is s. This
             // makes calculating the gradients with wavelets of size 2s easy
@@ -860,7 +862,7 @@ void SURF::operator()(InputArray imgarg, InputArray maskarg,
 {
     (*this)(imgarg, maskarg, keypoints, noArray(), false);
 }
-    
+
 void SURF::operator()(InputArray _img, InputArray _mask,
                       CV_OUT vector<KeyPoint>& keypoints,
                       OutputArray _descriptors,
@@ -868,18 +870,18 @@ void SURF::operator()(InputArray _img, InputArray _mask,
 {
     Mat img = _img.getMat(), mask = _mask.getMat(), mask1, sum, msum;
     bool doDescriptors = _descriptors.needed();
-    
+
     CV_Assert(!img.empty() && img.depth() == CV_8U);
     if( img.channels() > 1 )
         cvtColor(img, img, COLOR_BGR2GRAY);
-    
+
     CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size() == img.size()));
     CV_Assert(hessianThreshold >= 0);
     CV_Assert(nOctaves > 0);
     CV_Assert(nOctaveLayers > 0);
-    
+
     integral(img, sum, CV_32S);
-    
+
     // Compute keypoints only if we are not asked for evaluating the descriptors are some given locations:
     if( !useProvidedKeypoints )
     {
@@ -890,7 +892,7 @@ void SURF::operator()(InputArray _img, InputArray _mask,
         }
         fastHessianDetector( sum, msum, keypoints, nOctaves, nOctaveLayers, (float)hessianThreshold );
     }
-    
+
     int i, j, N = (int)keypoints.size();
     if( N > 0 )
     {
@@ -898,7 +900,7 @@ void SURF::operator()(InputArray _img, InputArray _mask,
         bool _1d = false;
         int dcols = extended ? 128 : 64;
         size_t dsize = dcols*sizeof(float);
-        
+
         if( doDescriptors )
         {
             _1d = _descriptors.kind() == _InputArray::STD_VECTOR && _descriptors.type() == CV_32F;
@@ -913,11 +915,11 @@ void SURF::operator()(InputArray _img, InputArray _mask,
                 descriptors = _descriptors.getMat();
             }
         }
-        
+
         // we call SURFInvoker in any case, even if we do not need descriptors,
         // since it computes orientation of each feature.
         parallel_for(BlockedRange(0, N), SURFInvoker(img, sum, keypoints, descriptors, extended, upright) );
-        
+
         // remove keypoints that were marked for deletion
         for( i = j = 0; i < N; i++ )
         {
@@ -951,7 +953,7 @@ void SURF::operator()(InputArray _img, InputArray _mask,
 void SURF::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     (*this)(image, mask, keypoints, noArray(), false);
-}    
+}
 
 void SURF::computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
 {

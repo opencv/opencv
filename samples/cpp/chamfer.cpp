@@ -7,9 +7,9 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
- 
+
    cout << "\nThis program demonstrates Chamfer matching -- computing a distance between an \n"
             "edge template and a query edge image.\n"
             "Usage: \n"
@@ -17,24 +17,24 @@ void help()
             " By default the inputs are logo_in_clutter.png logo.png\n";
 }
 
-const char* keys = 
+const char* keys =
 {
-	"{1| |logo_in_clutter.png|image edge map    }"
-	"{2| |logo.png               |template edge map}"
+    "{1| |logo_in_clutter.png|image edge map    }"
+    "{2| |logo.png               |template edge map}"
 };
 
 int main( int argc, const char** argv )
 {
 
-	help();
-	CommandLineParser parser(argc, argv, keys);
+    help();
+    CommandLineParser parser(argc, argv, keys);
 
-	string image = parser.get<string>("1");
-	string templ = parser.get<string>("2");
-	Mat img = imread(image.c_str(), 0);
-	Mat tpl = imread(templ.c_str(), 0);
+    string image = parser.get<string>("1");
+    string templ = parser.get<string>("2");
+    Mat img = imread(image.c_str(), 0);
+    Mat tpl = imread(templ.c_str(), 0);
 
-	if (img.empty() || tpl.empty())
+    if (img.empty() || tpl.empty())
     {
         cout << "Could not read image file " << image << " or " << templ << "." << endl;
         return -1;

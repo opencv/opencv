@@ -88,7 +88,7 @@
 #if defined __linux__ || defined __APPLE__
 #include <unistd.h>
 #include <stdio.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #if defined ANDROID
 #include <sys/sysconf.h>
 #else
@@ -111,7 +111,7 @@ Exception::~Exception() throw() {}
 
 /*!
  \return the error description and the context as a text string.
- */ 
+ */
 const char* Exception::what() const throw() { return msg.c_str(); }
 
 void Exception::formatMessage()
@@ -121,7 +121,7 @@ void Exception::formatMessage()
     else
         msg = format("%s:%d: error: (%d) %s\n", file.c_str(), line, code, err.c_str());
 }
-    
+
 struct HWFeatures
 {
     enum { MAX_FEATURE = CV_HARDWARE_MAX_FEATURE };
@@ -374,7 +374,7 @@ int getThreadNum(void)
 #endif
 }
 
-#if ANDROID
+#ifdef ANDROID
 static inline int getNumberOfCPUsImpl()
 {
    FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
@@ -408,7 +408,7 @@ static inline int getNumberOfCPUsImpl()
           sscanf(pos, "%d-%d", &rstart, &rend);
           cpusAvailable += rend - rstart + 1;
       }
-      
+
    }
    return cpusAvailable ? cpusAvailable : 1;
 }
@@ -419,9 +419,9 @@ int getNumberOfCPUs(void)
 #if defined WIN32 || defined _WIN32
     SYSTEM_INFO sysinfo;
     GetSystemInfo( &sysinfo );
-    
+
     return (int)sysinfo.dwNumberOfProcessors;
-#elif ANDROID
+#elif defined ANDROID
     static int ncpus = getNumberOfCPUsImpl();
     printf("CPUS= %d\n", ncpus);
     return ncpus;
@@ -430,24 +430,24 @@ int getNumberOfCPUs(void)
 #elif defined __APPLE__
     int numCPU=0;
     int mib[4];
-    size_t len = sizeof(numCPU); 
-    
+    size_t len = sizeof(numCPU);
+
     /* set the mib for hw.ncpu */
     mib[0] = CTL_HW;
     mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
-    
+
     /* get the number of CPUs from the system */
     sysctl(mib, 2, &numCPU, &len, NULL, 0);
-    
-    if( numCPU < 1 ) 
+
+    if( numCPU < 1 )
     {
         mib[1] = HW_NCPU;
         sysctl( mib, 2, &numCPU, &len, NULL, 0 );
-        
+
         if( numCPU < 1 )
             numCPU = 1;
     }
-    
+
     return (int)numCPU;
 #else
     return 1;
@@ -475,7 +475,7 @@ string tempfile( const char* suffix )
 {
     char buf[L_tmpnam];
     char* name = 0;
-#if ANDROID
+#ifdef ANDROID
     strcpy(buf, "/sdcard/__opencv_temp_XXXXXX");
     name = mktemp(buf);
 #else

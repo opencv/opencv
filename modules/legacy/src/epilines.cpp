@@ -106,7 +106,7 @@ int icvCompute3DPoint( double alpha,double betta,
     double invPartAll;
 
     double alphabetta = alpha*betta;
-    
+
     partAll = alpha - betta;
     if( fabs(partAll) > 0.00001  ) /* alpha must be > betta */
     {
@@ -116,7 +116,7 @@ int icvCompute3DPoint( double alpha,double betta,
 
         partY   = coeffs->Ycoef        + coeffs->YcoefA *alpha +
                   coeffs->YcoefB*betta + coeffs->YcoefAB*alphabetta;
-        
+
         partZ   = coeffs->Zcoef        + coeffs->ZcoefA *alpha +
                   coeffs->ZcoefB*betta + coeffs->ZcoefAB*alphabetta;
 
@@ -159,12 +159,12 @@ int icvCreateConvertMatrVect( CvMatr64d     rotMatr1,
     icvMulMatrix_64d(   convRotMatr,
                         3,3,
                         transVect2,
-                        1,3, 
+                        1,3,
                         tmpVect);
-    
+
     icvSubVector_64d(transVect1,tmpVect,convTransVect,3);
 
-    
+
     return CV_NO_ERR;
 }
 
@@ -182,15 +182,15 @@ int icvConvertPointSystem(CvPoint3D64d  M2,
     icvMulMatrix_64d(   rotMatr,
                         3,3,
                         (double*)&M2,
-                        1,3, 
+                        1,3,
                         tmpVect);
 
     icvAddVector_64d(tmpVect,transVect,(double*)M1,3);
-    
+
     return CV_NO_ERR;
 }
 /*--------------------------------------------------------------------------------------*/
-int icvComputeCoeffForStereoV3( double quad1[4][2],
+static int icvComputeCoeffForStereoV3( double quad1[4][2],
                                 double quad2[4][2],
                                 int    numScanlines,
                                 CvMatr64d    camMatr1,
@@ -222,7 +222,7 @@ int icvComputeCoeffForStereoV3( double quad1[4][2],
 
         point2.x = (1.0 - alpha) * quad1[1][0] + alpha * quad1[2][0];
         point2.y = (1.0 - alpha) * quad1[1][1] + alpha * quad1[2][1];
-        
+
         point3.x = (1.0 - alpha) * quad2[0][0] + alpha * quad2[3][0];
         point3.y = (1.0 - alpha) * quad2[0][1] + alpha * quad2[3][1];
 
@@ -243,10 +243,10 @@ int icvComputeCoeffForStereoV3( double quad1[4][2],
                             &startCoeffs[currLine],
                             needSwapCamera);
     }
-    return CV_NO_ERR;    
+    return CV_NO_ERR;
 }
 /*--------------------------------------------------------------------------------------*/
-int icvComputeCoeffForStereoNew(   double quad1[4][2],
+static int icvComputeCoeffForStereoNew(   double quad1[4][2],
                                         double quad2[4][2],
                                         int    numScanlines,
                                         CvMatr32f    camMatr1,
@@ -260,10 +260,10 @@ int icvComputeCoeffForStereoNew(   double quad1[4][2],
 
     double camMatr1_64d[9];
     double camMatr2_64d[9];
-    
+
     double rotMatr1_64d[9];
     double transVect1_64d[3];
-    
+
     double rotMatr2_64d[9];
     double transVect2_64d[3];
 
@@ -348,21 +348,21 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
 {
     /* Get direction for all points */
     /* Direction for camera 1 */
-    
+
     CvPoint3D64f direct1;
     CvPoint3D64f direct2;
     CvPoint3D64f camPoint1;
-    
+
     CvPoint3D64f directS3;
     CvPoint3D64f directS4;
     CvPoint3D64f direct3;
     CvPoint3D64f direct4;
     CvPoint3D64f camPoint2;
-    
+
     icvGetDirectionForPoint(   point1,
                             camMatr1,
                             &direct1);
-    
+
     icvGetDirectionForPoint(   point2,
                             camMatr1,
                             &direct2);
@@ -372,13 +372,13 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
     icvGetDirectionForPoint(   point3,
                             camMatr2,
                             &directS3);
-    
+
     icvGetDirectionForPoint(   point4,
                             camMatr2,
                             &directS4);
 
     /* Create convertion for camera 2: two direction and camera point */
-    
+
     double convRotMatr[9];
     double convTransVect[3];
 
@@ -392,15 +392,15 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
     CvPoint3D64f zeroVect;
     zeroVect.x = zeroVect.y = zeroVect.z = 0.0;
     camPoint1.x = camPoint1.y = camPoint1.z = 0.0;
-    
+
     icvConvertPointSystem(directS3,&direct3,convRotMatr,convTransVect);
     icvConvertPointSystem(directS4,&direct4,convRotMatr,convTransVect);
     icvConvertPointSystem(zeroVect,&camPoint2,convRotMatr,convTransVect);
 
     CvPoint3D64f pointB;
-        
+
     int postype = 0;
-    
+
     /* Changed order */
     /* Compute point B: xB,yB,zB */
     icvGetCrossLines(camPoint1,direct2,
@@ -449,7 +449,7 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
 
 
     double gamma;
-    
+
     double xA,yA,zA;
     double xB,yB,zB;
     double xC,yC,zC;
@@ -476,7 +476,7 @@ int icvComCoeffForLine(   CvPoint2D64d point1,
                                 camPoint1,
                                 gamma,
                                 coeffs);
-    
+
     return CV_NO_ERR;
 }
 
@@ -489,7 +489,7 @@ int icvGetDirectionForPoint(  CvPoint2D64d point,
 {
     /*  */
     double invMatr[9];
-    
+
     /* Invert matrix */
 
     icvInvertMatrix_64d(camMatr,3,invMatr);
@@ -504,10 +504,10 @@ int icvGetDirectionForPoint(  CvPoint2D64d point,
     icvMulMatrix_64d(   invMatr,
                         3,3,
                         vect,
-                        1,3, 
+                        1,3,
                         (double*)direct);
 
-    return CV_NO_ERR;    
+    return CV_NO_ERR;
 }
 
 /*--------------------------------------------------------------------------------------*/
@@ -556,7 +556,7 @@ int icvGetCrossLines(CvPoint3D64d point11,CvPoint3D64d point12,
     double alpha,betta;
 
     delta  = a11*a22-a12*a21;
-    
+
     if( fabs(delta) < EPS64D )
     {
         /*return ERROR;*/
@@ -662,7 +662,7 @@ int icvGetAngleLine( CvPoint2D64d startPoint, CvSize imageSize,CvPoint2D64d *poi
     /* Find four lines */
 
     CvPoint2D64d pa,pb,pc,pd;
-    
+
     pa.x = 0;
     pa.y = 0;
 
@@ -674,10 +674,10 @@ int icvGetAngleLine( CvPoint2D64d startPoint, CvSize imageSize,CvPoint2D64d *poi
 
     pc.x = 0;
     pc.y = imageSize.height-1;
-    
+
     /* We can compute points for angle */
     /* Test for place section */
-    
+
     if( startPoint.x < 0 )
     {/* 1,4,7 */
         if( startPoint.y < 0)
@@ -782,7 +782,7 @@ void icvGetCoefForPiece(   CvPoint2D64d p_start,CvPoint2D64d p_end,
 /*---------------------------------------------------------------------------------------*/
 
 /* Get common area of rectifying */
-void icvGetCommonArea( CvSize imageSize,
+static void icvGetCommonArea( CvSize imageSize,
                     CvPoint3D64d epipole1,CvPoint3D64d epipole2,
                     CvMatr64d fundMatr,
                     CvVect64d coeff11,CvVect64d coeff12,
@@ -808,10 +808,10 @@ void icvGetCommonArea( CvSize imageSize,
     double transFundMatr[3*3];
     /* Compute transpose of fundamental matrix */
     icvTransposeMatrix_64d( fundMatr, 3, 3, transFundMatr );
-    
+
     CvPoint2D64d epipole1_2d;
     CvPoint2D64d epipole2_2d;
-    
+
     if( fabs(epipole1.z) < 1e-8 )
     {/* epipole1 in infinity */
         *result = 0;
@@ -853,7 +853,7 @@ void icvGetCommonArea( CvSize imageSize,
     pointW11[2] = 1.0;
 
     icvTransformVector_64d( transFundMatr, /* !!! Modified from not transposed */
-                            pointW11, 
+                            pointW11,
                             corr21,
                             3,3);
 
@@ -864,7 +864,7 @@ void icvGetCommonArea( CvSize imageSize,
                         corr21[0],corr21[1],corr21[2],
                         &start,&end,
                         &res);
-    
+
     if( res == 0 )
     {/* We have not cross */
         /* We must define new angle */
@@ -879,7 +879,7 @@ void icvGetCommonArea( CvSize imageSize,
         /* corr11 = Fund * p21 */
 
         icvTransformVector_64d( fundMatr, /* !!! Modified */
-                                pointW21, 
+                                pointW21,
                                 corr11,
                                 3,3);
 
@@ -889,7 +889,7 @@ void icvGetCommonArea( CvSize imageSize,
         coeff11[0] = corr11[0];
         coeff11[1] = corr11[1];
         coeff11[2] = corr11[2];
-        
+
         /* Set coefs for line 1 image 2 */
         icvGetCoefForPiece(    epipole2_2d,point21,
                             &coeff21[0],&coeff21[1],&coeff21[2],
@@ -911,12 +911,12 @@ void icvGetCommonArea( CvSize imageSize,
             *result = 0;
             return;/* Error */
         }
-        
+
         /* Set coefs for line 1 image 2 */
         coeff21[0] = corr21[0];
         coeff21[1] = corr21[1];
         coeff21[2] = corr21[2];
-        
+
     }
 
     /* ============= Computation for line 2 ================ */
@@ -928,7 +928,7 @@ void icvGetCommonArea( CvSize imageSize,
     pointW12[2] = 1.0;
 
     icvTransformVector_64d( transFundMatr,
-                            pointW12, 
+                            pointW12,
                             corr22,
                             3,3);
 
@@ -937,7 +937,7 @@ void icvGetCommonArea( CvSize imageSize,
                         corr22[0],corr22[1],corr22[2],
                         &start,&end,
                         &res);
-    
+
     if( res == 0 )
     {/* We have not cross */
         /* We must define new angle */
@@ -952,18 +952,18 @@ void icvGetCommonArea( CvSize imageSize,
         /* corr2 = Fund' * p1 */
 
         icvTransformVector_64d( fundMatr,
-                                pointW22, 
+                                pointW22,
                                 corr12,
                                 3,3);
 
-        
+
         /* We have cross. And it's result cross for down line. Set result coefs */
 
         /* Set coefs for line 2 image 1 */
         coeff12[0] = corr12[0];
         coeff12[1] = corr12[1];
         coeff12[2] = corr12[2];
-        
+
         /* Set coefs for line 1 image 2 */
         icvGetCoefForPiece(    epipole2_2d,point22,
                             &coeff22[0],&coeff22[1],&coeff22[2],
@@ -985,12 +985,12 @@ void icvGetCommonArea( CvSize imageSize,
             *result = 0;
             return;/* Error */
         }
-        
+
         /* Set coefs for line 1 image 2 */
         coeff22[0] = corr22[0];
         coeff22[1] = corr22[1];
         coeff22[2] = corr22[2];
-        
+
     }
 
     /* Now we know common area */
@@ -1050,9 +1050,9 @@ void icvGetCrossPieceDirect(   CvPoint2D64d p_start,CvPoint2D64d p_end,
     {/* Have cross */
         double det;
         double detxc,detyc;
-        
+
         det = a * (p_end.x - p_start.x) + b * (p_end.y - p_start.y);
-        
+
         if( fabs(det) < EPS64D )
         {/* lines are parallel and may be equal or line is point */
             if(  fabs(a*p_start.x + b*p_start.y + c) < EPS64D )
@@ -1062,7 +1062,7 @@ void icvGetCrossPieceDirect(   CvPoint2D64d p_start,CvPoint2D64d p_end,
             }
             else
             {
-                *result = 2;                
+                *result = 2;
             }
             return;
         }
@@ -1131,7 +1131,7 @@ void icvGetCrossPiecePiece( CvPoint2D64d p1_start,CvPoint2D64d p1_end,
 
     cross->x = delX / del;
     cross->y = delY / del;
-    
+
     *result = 1;
     return;
 }
@@ -1171,7 +1171,7 @@ void icvGetCrossRectDirect(    CvSize imageSize,
     CvPoint2D64d frameEnd;
     CvPoint2D64d cross[4];
     int     haveCross[4];
-    
+
     haveCross[0] = 0;
     haveCross[1] = 0;
     haveCross[2] = 0;
@@ -1182,25 +1182,25 @@ void icvGetCrossRectDirect(    CvSize imageSize,
     frameEnd.x = imageSize.width;
     frameEnd.y = 0;
 
-    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[0],&haveCross[0]);    
-    
+    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[0],&haveCross[0]);
+
     frameBeg.x = imageSize.width;
     frameBeg.y = 0;
     frameEnd.x = imageSize.width;
     frameEnd.y = imageSize.height;
-    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[1],&haveCross[1]);    
+    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[1],&haveCross[1]);
 
     frameBeg.x = imageSize.width;
     frameBeg.y = imageSize.height;
     frameEnd.x = 0;
     frameEnd.y = imageSize.height;
-    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[2],&haveCross[2]);    
+    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[2],&haveCross[2]);
 
     frameBeg.x = 0;
     frameBeg.y = imageSize.height;
     frameEnd.x = 0;
     frameEnd.y = 0;
-    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[3],&haveCross[3]);    
+    icvGetCrossPieceDirect(frameBeg,frameEnd,a,b,c,&cross[3],&haveCross[3]);
 
     double maxDist;
 
@@ -1210,7 +1210,7 @@ void icvGetCrossRectDirect(    CvSize imageSize,
     int i,j;
 
     maxDist = -1.0;
-    
+
     double distance;
 
     for( i = 0; i < 3; i++ )
@@ -1259,7 +1259,7 @@ void icvProjectPointToImage(   CvPoint3D64d point,
 
     double tmpVect1[3];
     double tmpVect2[3];
-    
+
     icvMulMatrix_64d (  rotMatr,
                         3,3,
                         (double*)&point,
@@ -1276,13 +1276,13 @@ void icvProjectPointToImage(   CvPoint3D64d point,
 
     projPoint->x = tmpVect1[0] / tmpVect1[2];
     projPoint->y = tmpVect1[1] / tmpVect1[2];
-   
+
     return;
 }
 
 /*---------------------------------------------------------------------------------------*/
 /* Get quads for transform images */
-void icvGetQuadsTransform( 
+void icvGetQuadsTransform(
                           CvSize        imageSize,
                         CvMatr64d     camMatr1,
                         CvMatr64d     rotMatr1,
@@ -1338,10 +1338,10 @@ void icvGetQuadsTransform(
                                         fundMatr_32f,
                                         camMatr1_32f,
                                         camMatr2_32f);
-        
+
         CvPoint3D32f epipole1_32f;
         CvPoint3D32f epipole2_32f;
-        
+
         cvComputeEpipolesFromFundMatrix( fundMatr_32f,
                                          &epipole1_32f,
                                          &epipole2_32f);
@@ -1353,7 +1353,7 @@ void icvGetQuadsTransform(
         epipole2->x = epipole2_32f.x;
         epipole2->y = epipole2_32f.y;
         epipole2->z = epipole2_32f.z;
-        
+
         /* Convert fundamental matrix */
         icvCvt_32f_64d(fundMatr_32f,fundMatr,9);
     }
@@ -1466,7 +1466,7 @@ void icvGetQuadsTransform(
         /* -------------Compute for first image-------------- */
         CvPoint2D32f pointb1;
         CvPoint2D32f pointe1;
-        
+
         CvPoint2D32f pointb2;
         CvPoint2D32f pointe2;
 
@@ -1494,11 +1494,11 @@ void icvGetQuadsTransform(
         double dxOld,dyOld;
         double dxNew,dyNew;
         double distOld,distNew;
-        
+
         dxOld = quad2[1][0] - quad2[0][0];
         dyOld = quad2[1][1] - quad2[0][1];
         distOld = dxOld*dxOld + dyOld*dyOld;
-        
+
         dxNew = quad2[1][0] - pointb2.x;
         dyNew = quad2[1][1] - pointb2.y;
         distNew = dxNew*dxNew + dyNew*dyNew;
@@ -1542,7 +1542,7 @@ void icvGetQuadsTransform(
             newQuad2[0][1] = quad2[0][1];
             newQuad2[3][0] = quad2[3][0];
             newQuad2[3][1] = quad2[3][1];
-            
+
             newQuad1[0][0] = pointb1.x;
             newQuad1[0][1] = pointb1.y;
             newQuad1[3][0] = pointe1.x;
@@ -1569,11 +1569,11 @@ void icvGetQuadsTransform(
                                     &pointe2);
 
         /* Compute distances */
-        
+
         dxOld = quad2[0][0] - quad2[1][0];
         dyOld = quad2[0][1] - quad2[1][1];
         distOld = dxOld*dxOld + dyOld*dyOld;
-        
+
         dxNew = quad2[0][0] - pointb2.x;
         dyNew = quad2[0][1] - pointb2.y;
         distNew = dxNew*dxNew + dyNew*dyNew;
@@ -1614,7 +1614,7 @@ void icvGetQuadsTransform(
             newQuad2[1][1] = quad2[1][1];
             newQuad2[2][0] = quad2[2][0];
             newQuad2[2][1] = quad2[2][1];
-            
+
             newQuad1[1][0] = pointb1.x;
             newQuad1[1][1] = pointb1.y;
             newQuad1[2][0] = pointe1.x;
@@ -1660,7 +1660,7 @@ void icvGetQuadsTransform(
 
 /*---------------------------------------------------------------------------------------*/
 
-void icvGetQuadsTransformNew(  CvSize        imageSize,
+static void icvGetQuadsTransformNew(  CvSize        imageSize,
                             CvMatr32f     camMatr1,
                             CvMatr32f     camMatr2,
                             CvMatr32f     rotMatr1,
@@ -1732,7 +1732,7 @@ void icvGetQuadsTransformNew(  CvSize        imageSize,
 
     /* Convert fundamental matrix */
     icvCvt_64d_32f(fundMatr_64d,fundMatr,9);
-    
+
     return;
 }
 
@@ -1771,7 +1771,7 @@ void icvGetQuadsTransformStruct(  CvStereoCamera* stereoCamera)
 /*---------------------------------------------------------------------------------------*/
 void icvComputeStereoParamsForCameras(CvStereoCamera* stereoCamera)
 {
-    /* For given intrinsic and extrinsic parameters computes rest parameters 
+    /* For given intrinsic and extrinsic parameters computes rest parameters
     **   such as fundamental matrix. warping coeffs, epipoles, ...
     */
 
@@ -1792,14 +1792,14 @@ void icvComputeStereoParamsForCameras(CvStereoCamera* stereoCamera)
 
     icvCvt_32f_64d(stereoCamera->camera[0]->transVect,transVect1,3);
     icvCvt_32f_64d(stereoCamera->camera[1]->transVect,transVect2,3);
-        
+
     icvCreateConvertMatrVect(   rotMatr1,
                                 transVect1,
                                 rotMatr2,
                                 transVect2,
                                 convRotMatr,
                                 convTransVect);
-    
+
     /* copy to stereo camera params */
     icvCvt_64d_32f(convRotMatr,stereoCamera->rotMatrix,9);
     icvCvt_64d_32f(convTransVect,stereoCamera->transVector,3);
@@ -1837,7 +1837,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
     /* Find middle line of sector */
     double midLine[3]={0,0,0};
 
-    
+
     /* Different way  */
     CvPoint2D64d pointOnLine1;  pointOnLine1.x = pointOnLine1.y = 0;
     CvPoint2D64d pointOnLine2;  pointOnLine2.x = pointOnLine2.y = 0;
@@ -1885,7 +1885,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
         candPoints[numPoints] = cornerPoint;
         numPoints++;
     }
-    
+
     cornerPoint.x = imageSize.width;
     cornerPoint.y = imageSize.height;
     icvTestPoint( cornerPoint, areaLineCoef1, areaLineCoef2, epipole, &res);
@@ -1919,7 +1919,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
                         areaLineCoef2[0],areaLineCoef2[1],areaLineCoef2[2],
                         &tmpPoints[0], &tmpPoints[1],
                         &res);
-    
+
     for( i = 0; i < res; i++ )
     {
         candPoints[numPoints++] = tmpPoints[i];
@@ -1941,7 +1941,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
     double maxDist = 0;
     double minDist = 10000000;
 
-    
+
     for( i = 0; i < numPoints; i++ )
     {
         icvProjectPointToDirect(candPoints[i], midLine, &projPoint);
@@ -1960,7 +1960,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
     }
 
     /* We know maximum and minimum points. Now we can compute cut lines */
-    
+
     icvGetNormalDirect(midLine,minPoint,cutLine1);
     icvGetNormalDirect(midLine,maxPoint,cutLine2);
 
@@ -1993,7 +1993,7 @@ void icvGetMiddleAnglePoint(   CvPoint2D64d basePoint,
                             CvPoint2D64d point1,CvPoint2D64d point2,
                             CvPoint2D64d* midPoint)
 {/* !!! May be need to return error */
-    
+
     double dist1;
     double dist2;
     icvGetPieceLength(basePoint,point1,&dist1);
@@ -2020,7 +2020,7 @@ void icvGetNormalDirect(CvVect64d direct,CvPoint2D64d point,CvVect64d normDirect
 {
     normDirect[0] =   direct[1];
     normDirect[1] = - direct[0];
-    normDirect[2] = -(normDirect[0]*point.x + normDirect[1]*point.y);  
+    normDirect[2] = -(normDirect[0]*point.x + normDirect[1]*point.y);
     return;
 }
 
@@ -2063,7 +2063,7 @@ void icvTestPoint( CvPoint2D64d testPoint,
     {
         *result = 0;
     }
-    
+
     return;
 }
 
@@ -2074,7 +2074,7 @@ void icvProjectPointToDirect(  CvPoint2D64d point,CvVect64d lineCoeff,
 {
     double a = lineCoeff[0];
     double b = lineCoeff[1];
-    
+
     double det =  1.0 / ( a*a + b*b );
     double delta =  a*point.y - b*point.x;
 
@@ -2103,7 +2103,7 @@ CV_IMPL IplImage* icvCreateIsometricImage( IplImage* src, IplImage* dst,
     CvSize src_size ;
     src_size.width = src->width;
     src_size.height = src->height;
-    
+
     CvSize dst_size = src_size;
 
     if( dst )
@@ -2127,7 +2127,7 @@ CV_IMPL IplImage* icvCreateIsometricImage( IplImage* src, IplImage* dst,
     return dst;
 }
 
-int
+static int
 icvCvt_32f_64d( float *src, double *dst, int size )
 {
     int t;
@@ -2147,7 +2147,7 @@ icvCvt_32f_64d( float *src, double *dst, int size )
 
 /*======================================================================================*/
 /* Type conversion double -> float */
-int
+static int
 icvCvt_64d_32f( double *src, float *dst, int size )
 {
     int t;
@@ -2167,9 +2167,9 @@ icvCvt_64d_32f( double *src, float *dst, int size )
 
 /*----------------------------------------------------------------------------------*/
 
-
+#if 0
 /* Find line which cross frame by line(a,b,c) */
-void FindLineForEpiline(    CvSize imageSize,
+static void FindLineForEpiline(    CvSize imageSize,
                             float a,float b,float c,
                             CvPoint2D32f *start,CvPoint2D32f *end,
                             int*)
@@ -2191,7 +2191,7 @@ void FindLineForEpiline(    CvSize imageSize,
     frameEnd.x = (float)(imageSize.width);
     frameEnd.y = 0;
     haveCross[0] = icvGetCrossLineDirect(frameBeg,frameEnd,a,b,c,&cross[0]);
-    
+
     frameBeg.x = (float)(imageSize.width);
     frameBeg.y = 0;
     frameEnd.x = (float)(imageSize.width);
@@ -2203,7 +2203,7 @@ void FindLineForEpiline(    CvSize imageSize,
     frameEnd.x = 0;
     frameEnd.y = (float)(imageSize.height);
     haveCross[2] = icvGetCrossLineDirect(frameBeg,frameEnd,a,b,c,&cross[2]);
-    
+
     frameBeg.x = 0;
     frameBeg.y = (float)(imageSize.height);
     frameEnd.x = 0;
@@ -2255,13 +2255,12 @@ void FindLineForEpiline(    CvSize imageSize,
     }
 
     return;
-    
+
 }
 
 
 /*----------------------------------------------------------------------------------*/
-
-int GetAngleLinee( CvPoint2D32f epipole, CvSize imageSize,CvPoint2D32f point1,CvPoint2D32f point2)
+static int GetAngleLinee( CvPoint2D32f epipole, CvSize imageSize,CvPoint2D32f point1,CvPoint2D32f point2)
 {
     float width  = (float)(imageSize.width);
     float height = (float)(imageSize.height);
@@ -2271,7 +2270,7 @@ int GetAngleLinee( CvPoint2D32f epipole, CvSize imageSize,CvPoint2D32f point1,Cv
     /* Find four lines */
 
     CvPoint2D32f pa,pb,pc,pd;
-    
+
     pa.x = 0;
     pa.y = 0;
 
@@ -2290,7 +2289,7 @@ int GetAngleLinee( CvPoint2D32f epipole, CvSize imageSize,CvPoint2D32f point1,Cv
     float x,y;
     x = epipole.x;
     y = epipole.y;
-    
+
     if( x < 0 )
     {/* 1,4,7 */
         if( y < 0)
@@ -2344,15 +2343,15 @@ int GetAngleLinee( CvPoint2D32f epipole, CvSize imageSize,CvPoint2D32f point1,Cv
             return 2;
         }
 
-        
+
     }
-    
+
 
     return 0;
 }
 
 /*--------------------------------------------------------------------------------------*/
-void icvComputePerspectiveCoeffs(const CvPoint2D32f srcQuad[4],const CvPoint2D32f dstQuad[4],double coeffs[3][3])
+static void icvComputePerspectiveCoeffs(const CvPoint2D32f srcQuad[4],const CvPoint2D32f dstQuad[4],double coeffs[3][3])
 {/* Computes perspective coeffs for transformation from src to dst quad */
 
 
@@ -2385,7 +2384,7 @@ void icvComputePerspectiveCoeffs(const CvPoint2D32f srcQuad[4],const CvPoint2D32
         double Y = dstQuad[i].y;
 #endif
         double* a = A + i*16;
-        
+
         a[0] = x;
         a[1] = y;
         a[2] = 1;
@@ -2420,7 +2419,7 @@ void icvComputePerspectiveCoeffs(const CvPoint2D32f srcQuad[4],const CvPoint2D32
     CV_CALL( cvPseudoInverse( &matA, &matInvA ));
     CV_CALL( cvMatMulAdd( &matInvA, &matB, 0, &matX ));
     }
-    
+
     coeffs[0][0] = c[0];
     coeffs[0][1] = c[1];
     coeffs[0][2] = c[2];
@@ -2435,6 +2434,7 @@ void icvComputePerspectiveCoeffs(const CvPoint2D32f srcQuad[4],const CvPoint2D32
 
     return;
 }
+#endif
 
 /*--------------------------------------------------------------------------------------*/
 
@@ -2457,7 +2457,7 @@ CV_IMPL void cvComputePerspectiveMap(const double c[3][3], CvArr* rectMapX, CvAr
 
     size = cvGetMatSize(mapx);
     assert( fabs(c[2][2] - 1.) < FLT_EPSILON );
-    
+
     for( i = 0; i < size.height; i++ )
     {
         float* mx = (float*)(mapx->data.ptr + mapx->step*i);
@@ -2525,7 +2525,7 @@ CV_IMPL void cvInitPerspectiveTransform( CvSize size, const CvPoint2D32f quad[4]
         double Y = quad[i].y;
 #endif
         double* a = A + i*16;
-        
+
         a[0] = x;
         a[1] = y;
         a[2] = 1;
@@ -2560,7 +2560,7 @@ CV_IMPL void cvInitPerspectiveTransform( CvSize size, const CvPoint2D32f quad[4]
     CV_CALL( cvPseudoInverse( &matA, &matInvA ));
     CV_CALL( cvMatMulAdd( &matInvA, &matB, 0, &matX ));
     }
-    
+
     matrix[0][0] = c[0];
     matrix[0][1] = c[1];
     matrix[0][2] = c[2];
@@ -2613,7 +2613,7 @@ void icvComputeeInfiniteProject1(   CvMatr64d     rotMatr,
     icvMulMatrix_64d(   invMatr1,
                         3,3,
                         p1,
-                        1,3, 
+                        1,3,
                         P1);
 
     double invR[9];
@@ -2624,7 +2624,7 @@ void icvComputeeInfiniteProject1(   CvMatr64d     rotMatr,
     icvMulMatrix_64d(   invR,
                         3,3,
                         P1,
-                        1,3, 
+                        1,3,
                         P2);
 
     /* Now we can project this point to image 2 */
@@ -2633,7 +2633,7 @@ void icvComputeeInfiniteProject1(   CvMatr64d     rotMatr,
     icvMulMatrix_64d(   camMatr2,
                         3,3,
                         P2,
-                        1,3, 
+                        1,3,
                         projP);
 
     point2->x = (float)(projP[0] / projP[2]);
@@ -2661,7 +2661,7 @@ void icvComputeeInfiniteProject2(   CvMatr64d     rotMatr,
     icvMulMatrix_64d(   invMatr2,
                         3,3,
                         p2,
-                        1,3, 
+                        1,3,
                         P2);
 
     /* Change system 1 to system 2 */
@@ -2670,7 +2670,7 @@ void icvComputeeInfiniteProject2(   CvMatr64d     rotMatr,
     icvMulMatrix_64d(   rotMatr,
                         3,3,
                         P2,
-                        1,3, 
+                        1,3,
                         P1);
 
     /* Now we can project this point to image 2 */
@@ -2679,7 +2679,7 @@ void icvComputeeInfiniteProject2(   CvMatr64d     rotMatr,
     icvMulMatrix_64d(   camMatr1,
                         3,3,
                         P1,
-                        1,3, 
+                        1,3,
                         projP);
 
     point1->x = (float)(projP[0] / projP[2]);
@@ -2690,7 +2690,7 @@ void icvComputeeInfiniteProject2(   CvMatr64d     rotMatr,
 
 /* Select best R and t for given cameras, points, ... */
 /* For both cameras */
-int icvSelectBestRt(           int           numImages,
+static int icvSelectBestRt(         int           numImages,
                                     int*          numPoints,
                                     CvPoint2D32f* imagePoints1,
                                     CvPoint2D32f* imagePoints2,
@@ -2713,7 +2713,7 @@ int icvSelectBestRt(           int           numImages,
 
     /* Need to convert input data 32 -> 64 */
     CvPoint3D64d* objectPoints_64d;
-    
+
     double* rotMatrs1_64d;
     double* rotMatrs2_64d;
 
@@ -2736,7 +2736,7 @@ int icvSelectBestRt(           int           numImages,
     }
 
     objectPoints_64d = (CvPoint3D64d*)calloc(totalNum,sizeof(CvPoint3D64d));
-    
+
     rotMatrs1_64d    = (double*)calloc(numImages,sizeof(double)*9);
     rotMatrs2_64d    = (double*)calloc(numImages,sizeof(double)*9);
 
@@ -2744,7 +2744,7 @@ int icvSelectBestRt(           int           numImages,
     transVects2_64d  = (double*)calloc(numImages,sizeof(double)*3);
 
     /* Convert input data to 64d */
-    
+
     icvCvt_32f_64d((float*)objectPoints, (double*)objectPoints_64d,  totalNum*3);
 
     icvCvt_32f_64d(rotMatrs1, rotMatrs1_64d,  numImages*9);
@@ -2774,14 +2774,14 @@ int icvSelectBestRt(           int           numImages,
     int currRt;
     for( currRt = 0; currRt < numImages; currRt++ )
     {
-        int begPoint = 0; 
+        int begPoint = 0;
         for(currImagePair = 0; currImagePair < numImages; currImagePair++ )
         {
             /* For current R,t R,t compute relative position of cameras */
 
             double convRotMatr[9];
             double convTransVect[3];
-            
+
             icvCreateConvertMatrVect( rotMatrs1_64d + currRt*9,
                                       transVects1_64d + currRt*3,
                                       rotMatrs2_64d + currRt*9,
@@ -2836,7 +2836,7 @@ int icvSelectBestRt(           int           numImages,
                 tmpPoint.x = (double)(objectPoints[i].x);
                 tmpPoint.y = (double)(objectPoints[i].y);
                 tmpPoint.z = (double)(objectPoints[i].z);
-                
+
                 icvConvertPointSystem(  tmpPoint,
                                         points2+i,
                                         rotMatrs2_64d + currImagePair*9,
@@ -2862,7 +2862,7 @@ int icvSelectBestRt(           int           numImages,
 
 
             }
-            
+
 #if 0
             cvProjectPointsSimple(  numPoints[currImagePair],
                                     objectPoints_64d + begPoint,
@@ -2901,7 +2901,7 @@ int icvSelectBestRt(           int           numImages,
                                         cameraMatrix2_64d,
                                         nodist,
                                         projImagePoints2);
-                
+
             }
 #endif
 
@@ -2929,7 +2929,7 @@ int icvSelectBestRt(           int           numImages,
             double err;
             for( currPoint = 0; currPoint < numberPnt; currPoint++ )
             {
-                double len1,len2; 
+                double len1,len2;
                 double dx1,dy1;
                 dx1 = imagePoints1[begPoint+currPoint].x - projImagePoints1[currPoint].x;
                 dy1 = imagePoints1[begPoint+currPoint].y - projImagePoints1[currPoint].y;
@@ -3030,12 +3030,12 @@ int icvConvertWarpCoordinates(double coeffs[3][3],
                                 int direction)
 {
     double x,y;
-    double det; 
+    double det;
     if( direction == CV_WARP_TO_CAMERA )
     {/* convert from camera image to warped image coordinates */
         x = warpPoint->x;
         y = warpPoint->y;
-        
+
         det = (coeffs[2][0] * x + coeffs[2][1] * y + coeffs[2][2]);
         if( fabs(det) > 1e-8 )
         {
@@ -3058,7 +3058,7 @@ int icvConvertWarpCoordinates(double coeffs[3][3],
             return CV_OK;
         }
     }
-    
+
     return CV_BADFACTOR_ERR;
 }
 
@@ -3233,8 +3233,9 @@ int icvStereoCalibration( int numImages,
     return CV_NO_ERR;
 }
 
+#if 0
 /* Find line from epipole */
-void FindLine(CvPoint2D32f epipole,CvSize imageSize,CvPoint2D32f point,CvPoint2D32f *start,CvPoint2D32f *end)
+static void FindLine(CvPoint2D32f epipole,CvSize imageSize,CvPoint2D32f point,CvPoint2D32f *start,CvPoint2D32f *end)
 {
     CvPoint2D32f frameBeg;
     CvPoint2D32f frameEnd;
@@ -3252,7 +3253,7 @@ void FindLine(CvPoint2D32f epipole,CvSize imageSize,CvPoint2D32f point,CvPoint2D
     frameEnd.x = (float)(imageSize.width);
     frameEnd.y = 0;
     haveCross[0] = icvGetCrossPieceVector(frameBeg,frameEnd,epipole,point,&cross[0]);
-    
+
     frameBeg.x = (float)(imageSize.width);
     frameBeg.y = 0;
     frameEnd.x = (float)(imageSize.width);
@@ -3264,7 +3265,7 @@ void FindLine(CvPoint2D32f epipole,CvSize imageSize,CvPoint2D32f point,CvPoint2D
     frameEnd.x = 0;
     frameEnd.y = (float)(imageSize.height);
     haveCross[2] = icvGetCrossPieceVector(frameBeg,frameEnd,epipole,point,&cross[2]);
-    
+
     frameBeg.x = 0;
     frameBeg.y = (float)(imageSize.height);
     frameEnd.x = 0;
@@ -3277,7 +3278,7 @@ void FindLine(CvPoint2D32f epipole,CvSize imageSize,CvPoint2D32f point,CvPoint2D
 
     int maxN = -1;
     int minN = -1;
-    
+
     for( n = 0; n < 4; n++ )
     {
         if( haveCross[n] > 0 )
@@ -3315,9 +3316,8 @@ void FindLine(CvPoint2D32f epipole,CvSize imageSize,CvPoint2D32f point,CvPoint2D
     return;
 }
 
-
 /* Find line which cross frame by line(a,b,c) */
-void FindLineForEpiline(CvSize imageSize,float a,float b,float c,CvPoint2D32f *start,CvPoint2D32f *end)
+static void FindLineForEpiline(CvSize imageSize,float a,float b,float c,CvPoint2D32f *start,CvPoint2D32f *end)
 {
     CvPoint2D32f frameBeg;
     CvPoint2D32f frameEnd;
@@ -3335,7 +3335,7 @@ void FindLineForEpiline(CvSize imageSize,float a,float b,float c,CvPoint2D32f *s
     frameEnd.x = (float)(imageSize.width);
     frameEnd.y = 0;
     haveCross[0] = icvGetCrossLineDirect(frameBeg,frameEnd,a,b,c,&cross[0]);
-    
+
     frameBeg.x = (float)(imageSize.width);
     frameBeg.y = 0;
     frameEnd.x = (float)(imageSize.width);
@@ -3347,7 +3347,7 @@ void FindLineForEpiline(CvSize imageSize,float a,float b,float c,CvPoint2D32f *s
     frameEnd.x = 0;
     frameEnd.y = (float)(imageSize.height);
     haveCross[2] = icvGetCrossLineDirect(frameBeg,frameEnd,a,b,c,&cross[2]);
-    
+
     frameBeg.x = 0;
     frameBeg.y = (float)(imageSize.height);
     frameEnd.x = 0;
@@ -3399,11 +3399,11 @@ void FindLineForEpiline(CvSize imageSize,float a,float b,float c,CvPoint2D32f *s
     }
 
     return;
-    
+
 }
 
 /* Cross lines */
-int GetCrossLines(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f p2_start,CvPoint2D32f p2_end,CvPoint2D32f *cross)
+static int GetCrossLines(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f p2_start,CvPoint2D32f p2_end,CvPoint2D32f *cross)
 {
     double ex1,ey1,ex2,ey2;
     double px1,py1,px2,py2;
@@ -3448,7 +3448,7 @@ int GetCrossLines(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f p2_star
     cross->y = (float)(-delY / del);
     return 1;
 }
-
+#endif
 
 int icvGetCrossPieceVector(CvPoint2D32f p1_start,CvPoint2D32f p1_end,CvPoint2D32f v2_start,CvPoint2D32f v2_end,CvPoint2D32f *cross)
 {
@@ -3527,11 +3527,12 @@ int icvGetCrossLineDirect(CvPoint2D32f p1,CvPoint2D32f p2,float a,float b,float 
 
     cross->x = (float)X;
     cross->y = (float)Y;
-    
+
     return 1;
 }
 
-int cvComputeEpipoles( CvMatr32f camMatr1,  CvMatr32f camMatr2,
+#if 0
+static int cvComputeEpipoles( CvMatr32f camMatr1,  CvMatr32f camMatr2,
                             CvMatr32f rotMatr1,  CvMatr32f rotMatr2,
                             CvVect32f transVect1,CvVect32f transVect2,
                             CvVect32f epipole1,
@@ -3571,7 +3572,7 @@ int cvComputeEpipoles( CvMatr32f camMatr1,  CvMatr32f camMatr2,
     cvmMul( &ccamMatr1, &crotMatr1, &cmatrP1);
     cvmInvert( &cmatrP1,&cinvP1 );
     cvmMul( &ccamMatr1, &ctransVect1, &cvectp1 );
-    
+
     /* Compute second */
     cvmMul( &ccamMatr2, &crotMatr2, &cmatrP2 );
     cvmInvert( &cmatrP2,&cinvP2 );
@@ -3610,7 +3611,7 @@ int cvComputeEpipoles( CvMatr32f camMatr1,  CvMatr32f camMatr2,
 
     return CV_NO_ERR;
 }/* cvComputeEpipoles */
-
+#endif
 
 /* Compute epipoles for fundamental matrix */
 int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
@@ -3632,7 +3633,7 @@ int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
     epipole1->x = matrU->data.fl[6];
     epipole1->y = matrU->data.fl[7];
     epipole1->z = matrU->data.fl[8];
-    
+
     /* Get last row from V' and compute epipole2 */
     epipole2->x = matrV->data.fl[6];
     epipole2->y = matrV->data.fl[7];
@@ -3640,7 +3641,7 @@ int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
 
     cvReleaseMat(&matrW);
     cvReleaseMat(&matrU);
-    cvReleaseMat(&matrV);    
+    cvReleaseMat(&matrV);
     return CV_OK;
 }
 
@@ -3660,7 +3661,7 @@ int cvConvertEssential2Fundamental( CvMatr32f essMatr,
     CvMat* invCM1T = cvCreateMat(3,3,CV_MAT32F);
 
     cvTranspose(&cameraMatr1C,tmpMatr);
-    cvInvert(tmpMatr,invCM1T);       
+    cvInvert(tmpMatr,invCM1T);
     cvmMul(invCM1T,&essMatrC,tmpMatr);
     cvInvert(&cameraMatr2C,invCM2);
     cvmMul(tmpMatr,invCM2,&fundMatrC);
@@ -3673,7 +3674,7 @@ int cvConvertEssential2Fundamental( CvMatr32f essMatr,
     cvReleaseMat(&invCM2);
     cvReleaseMat(&tmpMatr);
     cvReleaseMat(&invCM1T);
-    
+
     return CV_OK;
 }
 
@@ -3689,11 +3690,11 @@ int cvComputeEssentialMatrix(  CvMatr32f rotMatr,
     transMatr[0] =   0;
     transMatr[1] = - transVect[2];
     transMatr[2] =   transVect[1];
-    
+
     transMatr[3] =   transVect[2];
     transMatr[4] =   0;
     transMatr[5] = - transVect[0];
-    
+
     transMatr[6] = - transVect[1];
     transMatr[7] =   transVect[0];
     transMatr[8] =   0;

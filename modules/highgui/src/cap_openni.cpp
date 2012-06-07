@@ -50,6 +50,20 @@
 
 #include <iostream>
 #include <queue>
+
+#ifndef i386
+#  define i386 0
+#endif
+#ifndef __arm__
+#  define __arm__ 0
+#endif
+#ifndef _ARC
+#  define _ARC 0
+#endif
+#ifndef __APPLE__
+#  define __APPLE__ 0
+#endif
+
 #include "XnCppWrapper.h"
 
 const std::string XMLConfig =
@@ -168,6 +182,8 @@ private:
         ApproximateSynchronizerBase( ApproximateSyncGrabber& approxSyncGrabber ) :
             approxSyncGrabber(approxSyncGrabber), isDepthFilled(false), isImageFilled(false)
         {}
+
+        virtual ~ApproximateSynchronizerBase() {}
 
         virtual bool isSpinContinue() const = 0;
         virtual void pushDepthMetaData( xn::DepthMetaData& depthMetaData ) = 0;
@@ -410,7 +426,7 @@ class CvCapture_OpenNI : public CvCapture
 {
 public:
     enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_MAX=1 };
-    
+
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
 
@@ -508,26 +524,26 @@ bool CvCapture_OpenNI::isOpened() const
     return isContextOpened;
 }
 
-XnMapOutputMode defaultMapOutputMode()
-{
-    XnMapOutputMode mode;
-    mode.nXRes = XN_VGA_X_RES;
-    mode.nYRes = XN_VGA_Y_RES;
-    mode.nFPS  = 30;
-    return mode;
-}
+// static XnMapOutputMode defaultMapOutputMode()
+// {
+//     XnMapOutputMode mode;
+//     mode.nXRes = XN_VGA_X_RES;
+//     mode.nYRes = XN_VGA_Y_RES;
+//     mode.nFPS  = 30;
+//     return mode;
+// }
 
 
 CvCapture_OpenNI::CvCapture_OpenNI( int index )
 {
     int deviceType = DEVICE_DEFAULT;
     XnStatus status;
-    
+
     isContextOpened = false;
     maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;
     isCircleBuffer = DEFAULT_IS_CIRCLE_BUFFER;
     maxTimeDuration = DEFAULT_MAX_TIME_DURATION;
-    
+
     if( index >= 10 )
     {
         deviceType = index / 10;
@@ -1201,7 +1217,7 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
     return outputMaps[CV_CAP_OPENNI_POINT_CLOUD_MAP].getIplImagePtr();
 }
 
-void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp, XnDouble baseline, XnUInt64 F,
+static void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp, XnDouble baseline, XnUInt64 F,
                            XnUInt64 noSampleValue, XnUInt64 shadowValue )
 {
     cv::Mat depth;

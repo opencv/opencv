@@ -59,8 +59,8 @@ static Mat sortMatrixRowsByIndices(InputArray src, InputArray indices)
     return dst;
 }
 
-    
-Mat argsort(InputArray _src, bool ascending=true)
+
+static Mat argsort(InputArray _src, bool ascending=true)
 {
     Mat src = _src.getMat();
     if (src.rows != 1 && src.cols != 1)
@@ -70,14 +70,14 @@ Mat argsort(InputArray _src, bool ascending=true)
     sortIdx(src.reshape(1,1),sorted_indices,flags);
     return sorted_indices;
 }
-    
+
 template <typename _Tp> static
 Mat interp1_(const Mat& X_, const Mat& Y_, const Mat& XI)
 {
     int n = XI.rows;
     // sort input table
     vector<int> sort_indices = argsort(X_);
-    
+
     Mat X = sortMatrixRowsByIndices(X_,sort_indices);
     Mat Y = sortMatrixRowsByIndices(Y_,sort_indices);
     // interpolated values
@@ -131,7 +131,7 @@ static Mat interp1(InputArray _x, InputArray _Y, InputArray _xi)
     }
     return Mat();
 }
-    
+
 namespace colormap
 {
 
@@ -531,7 +531,7 @@ namespace colormap
                     n);  // number of sample points
         }
     };
-    
+
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
         if(_lut.total() != 256)
@@ -550,7 +550,7 @@ namespace colormap
         // Apply the ColorMap.
         LUT(src, _lut, _dst);
     }
-    
+
     Mat ColorMap::linear_colormap(InputArray X,
             InputArray r, InputArray g, InputArray b,
             InputArray xi) {
@@ -581,12 +581,12 @@ namespace colormap
             colormap == COLORMAP_HOT ? (colormap::ColorMap*)(new colormap::Hot) :
             colormap == COLORMAP_MKPJ1 ? (colormap::ColorMap*)(new colormap::MKPJ1) :
             colormap == COLORMAP_MKPJ2 ? (colormap::ColorMap*)(new colormap::MKPJ2) : 0;
-        
+
         if( !cm )
             CV_Error( CV_StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
-        
+
         (*cm)(src, dst);
-        
+
         delete cm;
     }
 }

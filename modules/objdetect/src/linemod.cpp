@@ -91,7 +91,7 @@ void Feature::write(FileStorage& fs) const
  *
  * \return The bounding box of all the templates in original image coordinates.
  */
-Rect cropTemplates(std::vector<Template>& templates)
+static Rect cropTemplates(std::vector<Template>& templates)
 {
   int min_x = std::numeric_limits<int>::max();
   int min_y = std::numeric_limits<int>::max();
@@ -113,7 +113,7 @@ Rect cropTemplates(std::vector<Template>& templates)
       max_y = std::max(max_y, y);
     }
   }
-  
+
   /// @todo Why require even min_x, min_y?
   if (min_x % 2 == 1) --min_x;
   if (min_y % 2 == 1) --min_y;
@@ -126,7 +126,7 @@ Rect cropTemplates(std::vector<Template>& templates)
     templ.height = (max_y - min_y) >> templ.pyramid_level;
     int offset_x = min_x >> templ.pyramid_level;
     int offset_y = min_y >> templ.pyramid_level;
-    
+
     for (int j = 0; j < (int)templ.features.size(); ++j)
     {
       templ.features[j].x -= offset_x;
@@ -265,7 +265,7 @@ void hysteresisGradient(Mat& magnitude, Mat& angle,
  * \param      threshold Magnitude threshold. Keep only gradients whose norms are
  *                       larger than this.
  */
-void quantizedOrientations(const Mat& src, Mat& magnitude,
+static void quantizedOrientations(const Mat& src, Mat& magnitude,
                            Mat& angle, float threshold)
 {
   magnitude.create(src.size(), CV_32F);
@@ -383,7 +383,7 @@ void hysteresisGradient(Mat& magnitude, Mat& quantized_angle,
     {
       if (mag_r[c] > threshold)
       {
-	// Compute histogram of quantized bins in 3x3 patch around pixel
+  // Compute histogram of quantized bins in 3x3 patch around pixel
         int histogram[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
         uchar* patch3x3_row = &quantized_unfiltered(r-1, c-1);
@@ -391,17 +391,17 @@ void hysteresisGradient(Mat& magnitude, Mat& quantized_angle,
         histogram[patch3x3_row[1]]++;
         histogram[patch3x3_row[2]]++;
 
-	patch3x3_row += quantized_unfiltered.step1();
+  patch3x3_row += quantized_unfiltered.step1();
         histogram[patch3x3_row[0]]++;
         histogram[patch3x3_row[1]]++;
         histogram[patch3x3_row[2]]++;
 
-	patch3x3_row += quantized_unfiltered.step1();
+  patch3x3_row += quantized_unfiltered.step1();
         histogram[patch3x3_row[0]]++;
         histogram[patch3x3_row[1]]++;
         histogram[patch3x3_row[2]]++;
 
-	// Find bin with the most votes from the patch
+  // Find bin with the most votes from the patch
         int max_votes = 0;
         int index = -1;
         for (int i = 0; i < 8; ++i)
@@ -413,8 +413,8 @@ void hysteresisGradient(Mat& magnitude, Mat& quantized_angle,
           }
         }
 
-	// Only accept the quantization if majority of pixels in the patch agree
-	static const int NEIGHBOR_THRESHOLD = 5;
+  // Only accept the quantization if majority of pixels in the patch agree
+  static const int NEIGHBOR_THRESHOLD = 5;
         if (max_votes >= NEIGHBOR_THRESHOLD)
           quantized_angle.at<uchar>(r, c) = 1 << index;
       }
@@ -630,7 +630,7 @@ static void accumBilateral(long delta, long i, long j, long * A, long * b, int t
  *
  * \todo Should also need camera model, or at least focal lengths? Replace distance_threshold with mask?
  */
-void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
+static void quantizedNormals(const Mat& src, Mat& dst, int distance_threshold,
                       int difference_threshold)
 {
   dst = Mat::zeros(src.size(), CV_8U);
@@ -923,7 +923,7 @@ void DepthNormal::write(FileStorage& fs) const
 *                                 Response maps                                          *
 \****************************************************************************************/
 
-void orUnaligned8u(const uchar * src, const int src_stride,
+static void orUnaligned8u(const uchar * src, const int src_stride,
                    uchar * dst, const int dst_stride,
                    const int width, const int height)
 {
@@ -971,7 +971,7 @@ void orUnaligned8u(const uchar * src, const int src_stride,
         __m128i* dst_ptr = reinterpret_cast<__m128i*>(dst + c);
         *dst_ptr = _mm_or_si128(*dst_ptr, val);
       }
-    }    
+    }
 #endif
     for ( ; c < width; ++c)
       dst[c] |= src[c];
@@ -991,7 +991,7 @@ void orUnaligned8u(const uchar * src, const int src_stride,
  * \param[out] dst Destination 8-bit spread image.
  * \param      T   Sampling step. Spread labels T/2 pixels in each direction.
  */
-void spread(const Mat& src, Mat& dst, int T)
+static void spread(const Mat& src, Mat& dst, int T)
 {
   // Allocate and zero-initialize spread (OR'ed) image
   dst = Mat::zeros(src.size(), CV_8U);
@@ -1019,7 +1019,7 @@ CV_DECL_ALIGNED(16) static const unsigned char SIMILARITY_LUT[256] = {0, 4, 3, 4
  * \param[in]  src           The source 8-bit spread quantized image.
  * \param[out] response_maps Vector of 8 response maps, one for each bit label.
  */
-void computeResponseMaps(const Mat& src, std::vector<Mat>& response_maps)
+static void computeResponseMaps(const Mat& src, std::vector<Mat>& response_maps)
 {
   CV_Assert((src.rows * src.cols) % 16 == 0);
 
@@ -1027,16 +1027,16 @@ void computeResponseMaps(const Mat& src, std::vector<Mat>& response_maps)
   response_maps.resize(8);
   for (int i = 0; i < 8; ++i)
     response_maps[i].create(src.size(), CV_8U);
-  
+
   Mat lsb4(src.size(), CV_8U);
   Mat msb4(src.size(), CV_8U);
-  
+
   for (int r = 0; r < src.rows; ++r)
   {
     const uchar* src_r = src.ptr(r);
     uchar* lsb4_r = lsb4.ptr(r);
     uchar* msb4_r = msb4.ptr(r);
-    
+
     for (int c = 0; c < src.cols; ++c)
     {
       // Least significant 4 bits of spread image pixel
@@ -1100,7 +1100,7 @@ void computeResponseMaps(const Mat& src, std::vector<Mat>& response_maps)
  *                          each of which is a linear memory of length (W/T)*(H/T).
  * \param      T            Sampling step.
  */
-void linearize(const Mat& response_map, Mat& linearized, int T)
+static void linearize(const Mat& response_map, Mat& linearized, int T)
 {
   CV_Assert(response_map.rows % T == 0);
   CV_Assert(response_map.cols % T == 0);
@@ -1109,7 +1109,7 @@ void linearize(const Mat& response_map, Mat& linearized, int T)
   int mem_width = response_map.cols / T;
   int mem_height = response_map.rows / T;
   linearized.create(T*T, mem_width * mem_height, CV_8U);
-  
+
   // Outer two for loops iterate over top-left T^2 starting pixels
   int index = 0;
   for (int r_start = 0; r_start < T; ++r_start)
@@ -1118,7 +1118,7 @@ void linearize(const Mat& response_map, Mat& linearized, int T)
     {
       uchar* memory = linearized.ptr(index);
       ++index;
-      
+
       // Inner two loops copy every T-th pixel into the linear memory
       for (int r = r_start; r < response_map.rows; r += T)
       {
@@ -1134,8 +1134,8 @@ void linearize(const Mat& response_map, Mat& linearized, int T)
 *                               Linearized similarities                                  *
 \****************************************************************************************/
 
-const unsigned char* accessLinearMemory(const std::vector<Mat>& linear_memories,
-					const Feature& f, int T, int W)
+static const unsigned char* accessLinearMemory(const std::vector<Mat>& linear_memories,
+          const Feature& f, int T, int W)
 {
   // Retrieve the TxT grid of linear memories associated with the feature label
   const Mat& memory_grid = linear_memories[f.label];
@@ -1170,7 +1170,7 @@ const unsigned char* accessLinearMemory(const std::vector<Mat>& linear_memories,
  * \param      size            Size (W, H) of the original input image.
  * \param      T               Sampling step.
  */
-void similarity(const std::vector<Mat>& linear_memories, const Template& templ,
+static void similarity(const std::vector<Mat>& linear_memories, const Template& templ,
                 Mat& dst, Size size, int T)
 {
   // 63 features or less is a special case because the max similarity per-feature is 4.
@@ -1266,7 +1266,7 @@ void similarity(const std::vector<Mat>& linear_memories, const Template& templ,
  * \param      T               Sampling step.
  * \param      center          Center of the local region.
  */
-void similarityLocal(const std::vector<Mat>& linear_memories, const Template& templ,
+static void similarityLocal(const std::vector<Mat>& linear_memories, const Template& templ,
                      Mat& dst, Size size, int T, Point center)
 {
   // Similar to whole-image similarity() above. This version takes a position 'center'
@@ -1342,7 +1342,7 @@ void similarityLocal(const std::vector<Mat>& linear_memories, const Template& te
   }
 }
 
-void addUnaligned8u16u(const uchar * src1, const uchar * src2, ushort * res, int length)
+static void addUnaligned8u16u(const uchar * src1, const uchar * src2, ushort * res, int length)
 {
   const uchar * end = src1 + length;
 
@@ -1362,7 +1362,7 @@ void addUnaligned8u16u(const uchar * src1, const uchar * src2, ushort * res, int
  * \param[in]  similarities Source 8-bit similarity images.
  * \param[out] dst          Destination 16-bit similarity image.
  */
-void addSimilarities(const std::vector<Mat>& similarities, Mat& dst)
+static void addSimilarities(const std::vector<Mat>& similarities, Mat& dst)
 {
   if (similarities.size() == 1)
   {

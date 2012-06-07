@@ -48,7 +48,7 @@
 #include "_vectrack.h"
 
 #define NUM_FACE_ELEMENTS   3
-enum 
+enum
 {
     MOUTH = 0,
     LEYE = 1,
@@ -69,7 +69,7 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
 inline int GetEnergy(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoint* ptTempl, CvRect* rTempl);
 inline int GetEnergy2(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoint* ptTempl, CvRect* rTempl, int* element);
 inline double CalculateTransformationLMS3_0( CvPoint* pTemplPoints, CvPoint* pSrcPoints);
-inline double CalculateTransformationLMS3( CvPoint* pTemplPoints, 
+inline double CalculateTransformationLMS3( CvPoint* pTemplPoints,
                                    CvPoint* pSrcPoints,
                                    double*       pdbAverageScale,
                                    double*       pdbAverageRotate,
@@ -91,13 +91,13 @@ struct CvTrackingRect
     int Energy(const CvTrackingRect& prev)
     {
         int prev_color = 0 == prev.iColor ? iColor : prev.iColor;
-        iEnergy =	1 * pow2(r.width - prev.r.width) + 
-            1 * pow2(r.height - prev.r.height) + 
-            1 * pow2(iColor - prev_color) / 4 + 
-            - 1 * nRectsInThis + 
-            - 0 * nRectsOnTop + 
-            + 0 * nRectsOnLeft + 
-            + 0 * nRectsOnRight + 
+        iEnergy =   1 * pow2(r.width - prev.r.width) +
+            1 * pow2(r.height - prev.r.height) +
+            1 * pow2(iColor - prev_color) / 4 +
+            - 1 * nRectsInThis +
+            - 0 * nRectsOnTop +
+            + 0 * nRectsOnLeft +
+            + 0 * nRectsOnRight +
             + 0 * nRectsOnBottom;
         return iEnergy;
     }
@@ -110,10 +110,10 @@ struct CvFaceTracker
     double dbRotateDelta;
     double dbRotateAngle;
     CvPoint ptRotate;
-    
+
     CvPoint ptTempl[NUM_FACE_ELEMENTS];
     CvRect rTempl[NUM_FACE_ELEMENTS];
-    
+
     IplImage* imgGray;
     IplImage* imgThresh;
     CvMemStorage* mstgContours;
@@ -149,8 +149,8 @@ struct CvFaceTracker
         imgGray = cvCreateImage(cvSize(imgGray->width, imgGray->height), 8, 1);
         imgThresh = cvCreateImage(cvSize(imgGray->width, imgGray->height), 8, 1);
         mstgContours = cvCreateMemStorage();
-        if ((NULL == imgGray) || 
-            (NULL == imgThresh) || 
+        if ((NULL == imgGray) ||
+            (NULL == imgThresh) ||
             (NULL == mstgContours))
             return FALSE;
         return TRUE;
@@ -162,11 +162,11 @@ struct CvFaceTracker
         ReallocImage(&imgThresh, sz, 1);
         ptRotate = face[MOUTH].ptCenter;
         float m[6];
-        CvMat mat = cvMat( 2, 3, CV_32FC1, m ); 
+        CvMat mat = cvMat( 2, 3, CV_32FC1, m );
 
         if (NULL == imgGray || NULL == imgThresh)
             return FALSE;
-        
+
         /*m[0] = (float)cos(-dbRotateAngle*CV_PI/180.);
         m[1] = (float)sin(-dbRotateAngle*CV_PI/180.);
         m[2] = (float)ptRotate.x;
@@ -175,7 +175,7 @@ struct CvFaceTracker
         m[5] = (float)ptRotate.y;*/
         cv2DRotationMatrix( cvPointTo32f(ptRotate), -dbRotateAngle, 1., &mat );
         cvWarpAffine( img, imgGray, &mat );
-        
+
         if (NULL == mstgContours)
             mstgContours = cvCreateMemStorage();
         else
@@ -225,7 +225,7 @@ protected:
     void Energy();
 }; //class CvFaceElement
 
-int CV_CDECL CompareEnergy(const void* el1, const void* el2, void*)
+inline int CV_CDECL CompareEnergy(const void* el1, const void* el2, void*)
 {
     return ((CvTrackingRect*)el1)->iEnergy - ((CvTrackingRect*)el2)->iEnergy;
 }// int CV_CDECL CompareEnergy(const void* el1, const void* el2, void*)
@@ -322,7 +322,7 @@ void CvFaceElement::FindContours(IplImage* img, IplImage* thresh, int nLayers, i
                 }
                 for (CvSeq* internal = external->v_next; internal; internal = internal->h_next)
                 {
-                    cr.r = cvContourBoundingRect(internal);	  
+                    cr.r = cvContourBoundingRect(internal);
                     Move(cr.r, roi.x, roi.y);
                     if (RectInRect(cr.r, m_rROI) && cr.r.width > dMinSize  && cr.r.height > dMinSize)
                     {
@@ -353,7 +353,7 @@ void CvFaceElement::MergeRects(int d)
         for (j = i + 1; j < nRects; j++)
         {
             CvTrackingRect* pRect2 = (CvTrackingRect*)(reader2.ptr);
-            if (abs(pRect1->ptCenter.y - pRect2->ptCenter.y) < d && 
+            if (abs(pRect1->ptCenter.y - pRect2->ptCenter.y) < d &&
                 abs(pRect1->r.height - pRect2->r.height) < d)
             {
                 CvTrackingRect rNew;
@@ -432,7 +432,7 @@ cvInitFaceTracker(CvFaceTracker* pFaceTracker, const IplImage* imgGray, CvRect* 
         (NULL == pRects) ||
         (nRects < NUM_FACE_ELEMENTS))
         return NULL;
-    
+
     //int new_face = FALSE;
     CvFaceTracker* pFace = pFaceTracker;
     if (NULL == pFace)
@@ -468,7 +468,7 @@ cvTrackFace(CvFaceTracker* pFaceTracker, IplImage* imgGray, CvRect* pRects, int 
     pFaceTracker->InitNextImage(imgGray);
     *ptRotate = pFaceTracker->ptRotate;
     *dbAngleRotate = pFaceTracker->dbRotateAngle;
-    
+
     int nElements = 16;
     double dx = pFaceTracker->face[LEYE].ptCenter.x - pFaceTracker->face[REYE].ptCenter.x;
     double dy = pFaceTracker->face[LEYE].ptCenter.y - pFaceTracker->face[REYE].ptCenter.y;
@@ -476,9 +476,9 @@ cvTrackFace(CvFaceTracker* pFaceTracker, IplImage* imgGray, CvRect* pRects, int 
     int d = cvRound(0.25 * d_eyes);
     int dMinSize = d;
     int nRestarts = 0;
-    
+
     int elem;
-    
+
     CvFaceElement big_face[NUM_FACE_ELEMENTS];
 START:
     // init
@@ -533,7 +533,7 @@ START:
             }
             if (2 == elements)
                 find2 = TRUE;
-            else 
+            else
                 restart = TRUE;
         }
     }
@@ -563,13 +563,13 @@ RESTART:
             pFaceTracker->iTrackingFaceType = noel;
             found = TRUE;
         }
-        else 
+        else
         {
             restart = TRUE;
             goto RESTART;
         }
     }
-    
+
     if (found)
     {
         // angle by mouth & eyes
@@ -613,7 +613,7 @@ void ThresholdingParam(IplImage *imgGray, int iNumLayers, int &iMinLevel, int &i
 {
     assert(imgGray != NULL);
     assert(imgGray->nChannels == 1);
-    int i, j; 
+    int i, j;
     // create histogram
     int histImg[256] = {0};
     uchar* buffImg = (uchar*)imgGray->imageData;
@@ -760,7 +760,7 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
         double prev_d02 = sqrt((double)prev_v02.x*prev_v02.x + prev_v02.y*prev_v02.y);
         double new_d01 = sqrt((double)new_v01.x*new_v01.x + new_v01.y*new_v01.y);
         double scale = templ_d01 / new_d01;
-        double new_d02 = templ_d02 / scale; 
+        double new_d02 = templ_d02 / scale;
         double sin_a = double(prev_v01.x * prev_v02.y - prev_v01.y * prev_v02.x) / (prev_d01 * prev_d02);
         double cos_a = cos(asin(sin_a));
         double x = double(new_v01.x) * cos_a - double(new_v01.y) * sin_a;
@@ -806,12 +806,12 @@ inline int GetEnergy(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoin
     double h_mouth = double(ppNew[MOUTH]->r.height) * scale;
     energy +=
         int(512.0 * (e_prev + 16.0 * e_templ)) +
-        4 * pow2(ppNew[LEYE]->r.width - ppNew[REYE]->r.width) + 
-        4 * pow2(ppNew[LEYE]->r.height - ppNew[REYE]->r.height) + 
-        4 * (int)pow(w_eye - double(rTempl[LEYE].width + rTempl[REYE].width) / 2.0, 2) + 
-        2 * (int)pow(h_eye - double(rTempl[LEYE].height + rTempl[REYE].height) / 2.0, 2) + 
-        1 * (int)pow(w_mouth - double(rTempl[MOUTH].width), 2) + 
-        1 * (int)pow(h_mouth - double(rTempl[MOUTH].height), 2) + 
+        4 * pow2(ppNew[LEYE]->r.width - ppNew[REYE]->r.width) +
+        4 * pow2(ppNew[LEYE]->r.height - ppNew[REYE]->r.height) +
+        4 * (int)pow(w_eye - double(rTempl[LEYE].width + rTempl[REYE].width) / 2.0, 2) +
+        2 * (int)pow(h_eye - double(rTempl[LEYE].height + rTempl[REYE].height) / 2.0, 2) +
+        1 * (int)pow(w_mouth - double(rTempl[MOUTH].width), 2) +
+        1 * (int)pow(h_mouth - double(rTempl[MOUTH].height), 2) +
         0;
     return energy;
 }
@@ -832,20 +832,20 @@ inline int GetEnergy2(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoi
     double h0 = (double)ppNew[element[0]]->r.height * scale_templ;
     double w1 = (double)ppNew[element[1]]->r.width * scale_templ;
     double h1 = (double)ppNew[element[1]]->r.height * scale_templ;
-    
+
     int energy = ppNew[element[0]]->iEnergy + ppNew[element[1]]->iEnergy +
-        - 2 * (ppNew[element[0]]->nRectsInThis - ppNew[element[1]]->nRectsInThis) + 
+        - 2 * (ppNew[element[0]]->nRectsInThis - ppNew[element[1]]->nRectsInThis) +
         (int)pow(w0 - (double)rTempl[element[0]].width, 2) +
         (int)pow(h0 - (double)rTempl[element[0]].height, 2) +
         (int)pow(w1 - (double)rTempl[element[1]].width, 2) +
         (int)pow(h1 - (double)rTempl[element[1]].height, 2) +
         (int)pow(new_d - prev_d, 2) +
         0;
-    
+
     return energy;
 }
 
-inline double CalculateTransformationLMS3( CvPoint* pTemplPoints, 
+inline double CalculateTransformationLMS3( CvPoint* pTemplPoints,
                                    CvPoint* pSrcPoints,
                                    double*       pdbAverageScale,
                                    double*       pdbAverageRotate,
@@ -866,41 +866,41 @@ inline double CalculateTransformationLMS3( CvPoint* pTemplPoints,
     double dbYt = double(pTemplPoints[0].y + pTemplPoints[1].y + pTemplPoints[2].y ) / 3.0;
     double dbXs = double(pSrcPoints[0].x + pSrcPoints[1].x + pSrcPoints[2].x) / 3.0;
     double dbYs = double(pSrcPoints[0].y + pSrcPoints[1].y + pSrcPoints[2].y) / 3.0;
-    
+
     double dbXtXt = double(pow2(pTemplPoints[0].x) + pow2(pTemplPoints[1].x) + pow2(pTemplPoints[2].x)) / 3.0;
     double dbYtYt = double(pow2(pTemplPoints[0].y) + pow2(pTemplPoints[1].y) + pow2(pTemplPoints[2].y)) / 3.0;
-    
+
     double dbXsXs = double(pow2(pSrcPoints[0].x) + pow2(pSrcPoints[1].x) + pow2(pSrcPoints[2].x)) / 3.0;
     double dbYsYs = double(pow2(pSrcPoints[0].y) + pow2(pSrcPoints[1].y) + pow2(pSrcPoints[2].y)) / 3.0;
-    
-    double dbXtXs = double(pTemplPoints[0].x * pSrcPoints[0].x + 
-        pTemplPoints[1].x * pSrcPoints[1].x + 
+
+    double dbXtXs = double(pTemplPoints[0].x * pSrcPoints[0].x +
+        pTemplPoints[1].x * pSrcPoints[1].x +
         pTemplPoints[2].x * pSrcPoints[2].x) / 3.0;
-    double dbYtYs = double(pTemplPoints[0].y * pSrcPoints[0].y + 
-        pTemplPoints[1].y * pSrcPoints[1].y + 
+    double dbYtYs = double(pTemplPoints[0].y * pSrcPoints[0].y +
+        pTemplPoints[1].y * pSrcPoints[1].y +
         pTemplPoints[2].y * pSrcPoints[2].y) / 3.0;
-    
-    double dbXtYs = double(pTemplPoints[0].x * pSrcPoints[0].y + 
-        pTemplPoints[1].x * pSrcPoints[1].y + 
+
+    double dbXtYs = double(pTemplPoints[0].x * pSrcPoints[0].y +
+        pTemplPoints[1].x * pSrcPoints[1].y +
         pTemplPoints[2].x * pSrcPoints[2].y) / 3.0;
-    double dbYtXs = double(pTemplPoints[0].y * pSrcPoints[0].x + 
-        pTemplPoints[1].y * pSrcPoints[1].x + 
+    double dbYtXs = double(pTemplPoints[0].y * pSrcPoints[0].x +
+        pTemplPoints[1].y * pSrcPoints[1].x +
         pTemplPoints[2].y * pSrcPoints[2].x ) / 3.0;
-    
+
     dbXtXt -= dbXt * dbXt;
     dbYtYt -= dbYt * dbYt;
-    
+
     dbXsXs -= dbXs * dbXs;
     dbYsYs -= dbYs * dbYs;
-    
+
     dbXtXs -= dbXt * dbXs;
     dbYtYs -= dbYt * dbYs;
-    
+
     dbXtYs -= dbXt * dbYs;
     dbYtXs -= dbYt * dbXs;
-    
+
     dbAverageRotate = atan2( dbXtYs - dbYtXs, dbXtXs + dbYtYs );
-    
+
     double cosR = cos(dbAverageRotate);
     double sinR = sin(dbAverageRotate);
     double del = dbXsXs + dbYsYs;
@@ -909,15 +909,15 @@ inline double CalculateTransformationLMS3( CvPoint* pTemplPoints,
         dbAverageScale = (double(dbXtXs + dbYtYs) * cosR + double(dbXtYs - dbYtXs) * sinR) / del;
         dbLMS = dbXtXt + dbYtYt - ((double)pow(dbXtXs + dbYtYs,2) + (double)pow(dbXtYs - dbYtXs,2)) / del;
     }
-    
+
     dbAverageShiftX = double(dbXt) - dbAverageScale * (double(dbXs) * cosR + double(dbYs) * sinR);
     dbAverageShiftY = double(dbYt) - dbAverageScale * (double(dbYs) * cosR - double(dbXs) * sinR);
-    
+
     if( pdbAverageScale != NULL ) *pdbAverageScale = dbAverageScale;
     if( pdbAverageRotate != NULL ) *pdbAverageRotate = dbAverageRotate;
     if( pdbAverageShiftX != NULL ) *pdbAverageShiftX = dbAverageShiftX;
     if( pdbAverageShiftY != NULL ) *pdbAverageShiftY = dbAverageShiftY;
-    
+
     assert(dbLMS >= 0);
     return dbLMS;
 }
@@ -933,39 +933,39 @@ inline double CalculateTransformationLMS3_0( CvPoint* pTemplPoints, CvPoint* pSr
     double dbYt = double(pTemplPoints[0].y + pTemplPoints[1].y + pTemplPoints[2].y ) / 3.0;
     double dbXs = double(pSrcPoints[0].x + pSrcPoints[1].x + pSrcPoints[2].x) / 3.0;
     double dbYs = double(pSrcPoints[0].y + pSrcPoints[1].y + pSrcPoints[2].y) / 3.0;
-    
+
     double dbXtXt = double(pow2(pTemplPoints[0].x) + pow2(pTemplPoints[1].x) + pow2(pTemplPoints[2].x)) / 3.0;
     double dbYtYt = double(pow2(pTemplPoints[0].y) + pow2(pTemplPoints[1].y) + pow2(pTemplPoints[2].y)) / 3.0;
-    
+
     double dbXsXs = double(pow2(pSrcPoints[0].x) + pow2(pSrcPoints[1].x) + pow2(pSrcPoints[2].x)) / 3.0;
     double dbYsYs = double(pow2(pSrcPoints[0].y) + pow2(pSrcPoints[1].y) + pow2(pSrcPoints[2].y)) / 3.0;
-    
-    double dbXtXs = double(pTemplPoints[0].x * pSrcPoints[0].x + 
-        pTemplPoints[1].x * pSrcPoints[1].x + 
+
+    double dbXtXs = double(pTemplPoints[0].x * pSrcPoints[0].x +
+        pTemplPoints[1].x * pSrcPoints[1].x +
         pTemplPoints[2].x * pSrcPoints[2].x) / 3.0;
-    double dbYtYs = double(pTemplPoints[0].y * pSrcPoints[0].y + 
-        pTemplPoints[1].y * pSrcPoints[1].y + 
+    double dbYtYs = double(pTemplPoints[0].y * pSrcPoints[0].y +
+        pTemplPoints[1].y * pSrcPoints[1].y +
         pTemplPoints[2].y * pSrcPoints[2].y) / 3.0;
-    
-    double dbXtYs = double(pTemplPoints[0].x * pSrcPoints[0].y + 
-        pTemplPoints[1].x * pSrcPoints[1].y + 
+
+    double dbXtYs = double(pTemplPoints[0].x * pSrcPoints[0].y +
+        pTemplPoints[1].x * pSrcPoints[1].y +
         pTemplPoints[2].x * pSrcPoints[2].y) / 3.0;
-    double dbYtXs = double(pTemplPoints[0].y * pSrcPoints[0].x + 
-        pTemplPoints[1].y * pSrcPoints[1].x + 
+    double dbYtXs = double(pTemplPoints[0].y * pSrcPoints[0].x +
+        pTemplPoints[1].y * pSrcPoints[1].x +
         pTemplPoints[2].y * pSrcPoints[2].x ) / 3.0;
-    
+
     dbXtXt -= dbXt * dbXt;
     dbYtYt -= dbYt * dbYt;
-    
+
     dbXsXs -= dbXs * dbXs;
     dbYsYs -= dbYs * dbYs;
-    
+
     dbXtXs -= dbXt * dbXs;
     dbYtYs -= dbYt * dbYs;
-    
+
     dbXtYs -= dbXt * dbYs;
     dbYtXs -= dbYt * dbXs;
-    
+
     double del = dbXsXs + dbYsYs;
     if( del != 0 )
         dbLMS = dbXtXt + dbYtYt - ((double)pow(dbXtXs + dbYtYs,2) + (double)pow(dbXtYs - dbYtXs,2)) / del;

@@ -53,13 +53,13 @@
 #include "assert.h"
 #include "math.h"
 
-#if _MSC_VER >= 1400
+#if defined _MSC_VER && _MSC_VER >= 1400
 #pragma warning(disable: 4512) // suppress "assignment operator could not be generated"
 #endif
 
-// J.S. Beis and D.G. Lowe. Shape indexing using approximate nearest-neighbor search 
-// in highdimensional spaces. In Proc. IEEE Conf. Comp. Vision Patt. Recog., 
-// pages 1000--1006, 1997. http://citeseer.ist.psu.edu/beis97shape.html 
+// J.S. Beis and D.G. Lowe. Shape indexing using approximate nearest-neighbor search
+// in highdimensional spaces. In Proc. IEEE Conf. Comp. Vision Patt. Recog.,
+// pages 1000--1006, 1997. http://citeseer.ist.psu.edu/beis97shape.html
 #undef __deref
 #undef __valuetype
 
@@ -72,23 +72,23 @@ public:
 
 private:
   struct node {
-    int dim;			// split dimension; >=0 for nodes, -1 for leaves
-    __valuetype value;		// if leaf, value of leaf
-    int left, right;		// node indices of left and right branches
-    scalar_type boundary;	// left if deref(value,dim)<=boundary, otherwise right
+    int dim;      // split dimension; >=0 for nodes, -1 for leaves
+    __valuetype value;    // if leaf, value of leaf
+    int left, right;    // node indices of left and right branches
+    scalar_type boundary; // left if deref(value,dim)<=boundary, otherwise right
   };
   typedef std::vector < node > node_array;
 
-  __deref deref;		// requires operator() (__valuetype lhs,int dim)
+  __deref deref;    // requires operator() (__valuetype lhs,int dim)
 
-  node_array nodes;		// node storage
-  int point_dim;		// dimension of points (the k in kd-tree)
-  int root_node;		// index of root node, -1 if empty tree
+  node_array nodes;   // node storage
+  int point_dim;    // dimension of points (the k in kd-tree)
+  int root_node;    // index of root node, -1 if empty tree
 
   // for given set of point indices, compute dimension of highest variance
   template < class __instype, class __valuector >
   int dimension_of_highest_variance(__instype * first, __instype * last,
-				    __valuector ctor) {
+            __valuector ctor) {
     assert(last - first > 0);
 
     accum_type maxvar = -std::numeric_limits < accum_type >::max();
@@ -96,32 +96,32 @@ private:
     for (int j = 0; j < point_dim; ++j) {
       accum_type mean = 0;
       for (__instype * k = first; k < last; ++k)
-	mean += deref(ctor(*k), j);
+  mean += deref(ctor(*k), j);
       mean /= last - first;
       accum_type var = 0;
       for (__instype * k = first; k < last; ++k) {
-	accum_type diff = accum_type(deref(ctor(*k), j)) - mean;
-	var += diff * diff;
+  accum_type diff = accum_type(deref(ctor(*k), j)) - mean;
+  var += diff * diff;
       }
       var /= last - first;
 
       assert(maxj != -1 || var >= maxvar);
 
       if (var >= maxvar) {
-	maxvar = var;
-	maxj = j;
+  maxvar = var;
+  maxj = j;
       }
     }
 
     return maxj;
   }
 
-  // given point indices and dimension, find index of median; (almost) modifies [first,last) 
+  // given point indices and dimension, find index of median; (almost) modifies [first,last)
   // such that points_in[first,median]<=point[median], points_in(median,last)>point[median].
   // implemented as partial quicksort; expected linear perf.
   template < class __instype, class __valuector >
   __instype * median_partition(__instype * first, __instype * last,
-			       int dim, __valuector ctor) {
+             int dim, __valuector ctor) {
     assert(last - first > 0);
     __instype *k = first + (last - first) / 2;
     median_partition(first, last, k, dim, ctor);
@@ -143,14 +143,14 @@ private:
   };
 
   template < class __instype, class __valuector >
-  void median_partition(__instype * first, __instype * last, 
-			__instype * k, int dim, __valuector ctor) {
+  void median_partition(__instype * first, __instype * last,
+      __instype * k, int dim, __valuector ctor) {
     int pivot = (int)((last - first) / 2);
 
     std::swap(first[pivot], last[-1]);
     __instype *middle = std::partition(first, last - 1,
-				       median_pr < __instype, __valuector > 
-				       (last[-1], dim, deref, ctor));
+               median_pr < __instype, __valuector >
+               (last[-1], dim, deref, ctor));
     std::swap(*middle, last[-1]);
 
     if (middle < k)
@@ -170,36 +170,36 @@ private:
       __instype *median = median_partition(first, last, dim, ctor);
 
       __instype *split = median;
-      for (; split != last && deref(ctor(*split), dim) == 
-	     deref(ctor(*median), dim); ++split);
+      for (; split != last && deref(ctor(*split), dim) ==
+       deref(ctor(*median), dim); ++split);
 
       if (split == last) { // leaf
-	int nexti = -1;
-	for (--split; split >= first; --split) {
-	  int i = (int)nodes.size();
-	  node & n = *nodes.insert(nodes.end(), node());
-	  n.dim = -1;
-	  n.value = ctor(*split);
-	  n.left = -1;
-	  n.right = nexti;
-	  nexti = i;
-	}
+  int nexti = -1;
+  for (--split; split >= first; --split) {
+    int i = (int)nodes.size();
+    node & n = *nodes.insert(nodes.end(), node());
+    n.dim = -1;
+    n.value = ctor(*split);
+    n.left = -1;
+    n.right = nexti;
+    nexti = i;
+  }
 
-	return nexti;
+  return nexti;
       } else { // node
-	int i = (int)nodes.size();
-	// note that recursive insert may invalidate this ref
-	node & n = *nodes.insert(nodes.end(), node());
+  int i = (int)nodes.size();
+  // note that recursive insert may invalidate this ref
+  node & n = *nodes.insert(nodes.end(), node());
 
-	n.dim = dim;
-	n.boundary = deref(ctor(*median), dim);
+  n.dim = dim;
+  n.boundary = deref(ctor(*median), dim);
 
-	int left = insert(first, split, ctor);
-	nodes[i].left = left;
-	int right = insert(split, last, ctor);
-	nodes[i].right = right;
+  int left = insert(first, split, ctor);
+  nodes[i].left = left;
+  int right = insert(split, last, ctor);
+  nodes[i].right = right;
 
-	return i;
+  return i;
       }
     }
   }
@@ -214,21 +214,21 @@ private:
 
     if (n.dim >= 0) { // node
       if (deref(p, n.dim) <= n.boundary) // left
-	r = remove(&n.left, p);
+  r = remove(&n.left, p);
       else // right
-	r = remove(&n.right, p);
+  r = remove(&n.right, p);
 
       // if terminal, remove this node
       if (n.left == -1 && n.right == -1)
-	*i = -1;
+  *i = -1;
 
       return r;
     } else { // leaf
       if (n.value == p) {
-	*i = n.right;
-	return true;
+  *i = n.right;
+  return true;
       } else
-	return remove(&n.right, p);
+  return remove(&n.right, p);
     }
   }
 
@@ -245,14 +245,14 @@ public:
   }
   // given points, initialize a balanced tree
   CvKDTree(__valuetype * first, __valuetype * last, int _point_dim,
-	   __deref _deref = __deref())
+     __deref _deref = __deref())
     : deref(_deref) {
     set_data(first, last, _point_dim, identity_ctor());
   }
   // given points, initialize a balanced tree
   template < class __instype, class __valuector >
   CvKDTree(__instype * first, __instype * last, int _point_dim,
-	   __valuector ctor, __deref _deref = __deref())
+     __valuector ctor, __deref _deref = __deref())
     : deref(_deref) {
     set_data(first, last, _point_dim, ctor);
   }
@@ -266,7 +266,7 @@ public:
   }
   template < class __instype, class __valuector >
   void set_data(__instype * first, __instype * last, int _point_dim,
-		__valuector ctor) {
+    __valuector ctor) {
     point_dim = _point_dim;
     nodes.clear();
     nodes.reserve(last - first);
@@ -292,9 +292,9 @@ public:
       std::cout << " ";
     const node & n = nodes[i];
     if (n.dim >= 0) {
-      std::cout << "node " << i << ", left " << nodes[i].left << ", right " << 
-	nodes[i].right << ", dim " << nodes[i].dim << ", boundary " << 
-	nodes[i].boundary << std::endl;
+      std::cout << "node " << i << ", left " << nodes[i].left << ", right " <<
+  nodes[i].right << ", dim " << nodes[i].dim << ", boundary " <<
+  nodes[i].boundary << std::endl;
       print(n.left, indent + 3);
       print(n.right, indent + 3);
     } else
@@ -304,9 +304,9 @@ public:
   ////////////////////////////////////////////////////////////////////////////////////////
   // bbf search
 public:
-  struct bbf_nn {		// info on found neighbors (approx k nearest)
-    const __valuetype *p;	// nearest neighbor
-    accum_type dist;		// distance from d to query point
+  struct bbf_nn {   // info on found neighbors (approx k nearest)
+    const __valuetype *p; // nearest neighbor
+    accum_type dist;    // distance from d to query point
     bbf_nn(const __valuetype & _p, accum_type _dist)
       : p(&_p), dist(_dist) {
     }
@@ -316,9 +316,9 @@ public:
   };
   typedef std::vector < bbf_nn > bbf_nn_pqueue;
 private:
-  struct bbf_node {		// info on branches not taken
-    int node;			// corresponding node
-    accum_type dist;		// minimum distance from bounds to query point
+  struct bbf_node {   // info on branches not taken
+    int node;     // corresponding node
+    accum_type dist;    // minimum distance from bounds to query point
     bbf_node(int _node, accum_type _dist)
       : node(_node), dist(_dist) {
     }
@@ -346,10 +346,10 @@ private:
   int bbf_branch(int i, const __desctype * d, bbf_pqueue & pq) const {
     const node & n = nodes[i];
     // push bbf_node with bounds of alternate branch, then branch
-    if (d[n.dim] <= n.boundary) {	// left
+    if (d[n.dim] <= n.boundary) { // left
       pq_alternate(n.right, pq, n.boundary - d[n.dim]);
       return n.left;
-    } else {			// right
+    } else {      // right
       pq_alternate(n.left, pq, d[n.dim] - n.boundary);
       return n.right;
     }
@@ -366,11 +366,11 @@ private:
   }
 
   // called per candidate nearest neighbor; constructs new bbf_nn for
-  // candidate and adds it to priority queue of all candidates; if 
+  // candidate and adds it to priority queue of all candidates; if
   // queue len exceeds k, drops the point furthest from query point d.
   template < class __desctype >
-  void bbf_new_nn(bbf_nn_pqueue & nn_pq, int k, 
-		  const __desctype * d, const __valuetype & p) const {
+  void bbf_new_nn(bbf_nn_pqueue & nn_pq, int k,
+      const __desctype * d, const __valuetype & p) const {
     bbf_nn nn(p, distance(d, p));
     if ((int) nn_pq.size() < k) {
       nn_pq.push_back(nn);
@@ -384,14 +384,14 @@ private:
   }
 
 public:
-  // finds (with high probability) the k nearest neighbors of d, 
+  // finds (with high probability) the k nearest neighbors of d,
   // searching at most emax leaves/bins.
-  // ret_nn_pq is an array containing the (at most) k nearest neighbors 
+  // ret_nn_pq is an array containing the (at most) k nearest neighbors
   // (see bbf_nn structure def above).
   template < class __desctype >
-  int find_nn_bbf(const __desctype * d, 
-		  int k, int emax, 
-		  bbf_nn_pqueue & ret_nn_pq) const {
+  int find_nn_bbf(const __desctype * d,
+      int k, int emax,
+      bbf_nn_pqueue & ret_nn_pq) const {
     assert(k > 0);
     ret_nn_pq.clear();
 
@@ -411,17 +411,17 @@ public:
 
       int i;
       for (i = bbf.node;
-	   i != -1 && nodes[i].dim >= 0; 
-	   i = bbf_branch(i, d, tmp_pq));
+     i != -1 && nodes[i].dim >= 0;
+     i = bbf_branch(i, d, tmp_pq));
 
       if (i != -1) {
 
-	// add points in leaf/bin to ret_nn_pq
-	do {
-	  bbf_new_nn(ret_nn_pq, k, d, nodes[i].value);
-	} while (-1 != (i = nodes[i].right));
+  // add points in leaf/bin to ret_nn_pq
+  do {
+    bbf_new_nn(ret_nn_pq, k, d, nodes[i].value);
+  } while (-1 != (i = nodes[i].right));
 
-	--emax;
+  --emax;
       }
     }
 
@@ -433,27 +433,27 @@ public:
   // orthogonal range search
 private:
   void find_ortho_range(int i, scalar_type * bounds_min,
-			scalar_type * bounds_max,
-			std::vector < __valuetype > &inbounds) const {
+      scalar_type * bounds_max,
+      std::vector < __valuetype > &inbounds) const {
     if (i == -1)
       return;
     const node & n = nodes[i];
     if (n.dim >= 0) { // node
       if (bounds_min[n.dim] <= n.boundary)
-	find_ortho_range(n.left, bounds_min, bounds_max, inbounds);
+  find_ortho_range(n.left, bounds_min, bounds_max, inbounds);
       if (bounds_max[n.dim] > n.boundary)
-	find_ortho_range(n.right, bounds_min, bounds_max, inbounds);
+  find_ortho_range(n.right, bounds_min, bounds_max, inbounds);
     } else { // leaf
       do {
-	inbounds.push_back(nodes[i].value);
+  inbounds.push_back(nodes[i].value);
       } while (-1 != (i = nodes[i].right));
     }
   }
 public:
   // return all points that lie within the given bounds; inbounds is cleared
   int find_ortho_range(scalar_type * bounds_min,
-		       scalar_type * bounds_max,
-		       std::vector < __valuetype > &inbounds) const {
+           scalar_type * bounds_max,
+           std::vector < __valuetype > &inbounds) const {
     inbounds.clear();
     find_ortho_range(root_node, bounds_min, bounds_max, inbounds);
     return (int)inbounds.size();

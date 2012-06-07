@@ -162,12 +162,15 @@ public:
     }
 };  /* class CvBlobTrackerOneKalman */
 
+#if 0
 static CvBlobTrackerOne* cvCreateModuleBlobTrackerOneKalman()
 {
     return (CvBlobTrackerOne*) new CvBlobTrackerOneKalman;
 }
 
+
 CvBlobTracker* cvCreateBlobTrackerKalman()
 {
     return cvCreateBlobTrackerList(cvCreateModuleBlobTrackerOneKalman);
 }
+#endif

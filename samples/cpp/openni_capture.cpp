@@ -6,7 +6,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
         cout << "\nThis program demonstrates usage of depth sensors (Kinect, XtionPRO,...).\n"
                         "The user gets some of the supported output images.\n"
@@ -23,7 +23,7 @@ void help()
          << endl;
 }
 
-void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f, float S=1.f, float V=1.f )
+static void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f, float S=1.f, float V=1.f )
 {
     CV_Assert( !gray.empty() );
     CV_Assert( gray.type() == CV_8UC1 );
@@ -53,30 +53,30 @@ void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f, float S=
             float t = V * (1 - (1 - f) * S);
 
             Point3f res;
-            
-            if( hi == 0 ) //R = V,	G = t,	B = p
+
+            if( hi == 0 ) //R = V,  G = t,  B = p
                 res = Point3f( p, t, V );
-            if( hi == 1 ) // R = q,	G = V,	B = p
+            if( hi == 1 ) // R = q, G = V,  B = p
                 res = Point3f( p, V, q );
-            if( hi == 2 ) // R = p,	G = V,	B = t
+            if( hi == 2 ) // R = p, G = V,  B = t
                 res = Point3f( t, V, p );
-            if( hi == 3 ) // R = p,	G = q,	B = V
+            if( hi == 3 ) // R = p, G = q,  B = V
                 res = Point3f( V, q, p );
-            if( hi == 4 ) // R = t,	G = p,	B = V
+            if( hi == 4 ) // R = t, G = p,  B = V
                 res = Point3f( V, p, t );
-            if( hi == 5 ) // R = V,	G = p,	B = q
+            if( hi == 5 ) // R = V, G = p,  B = q
                 res = Point3f( q, p, V );
 
             uchar b = (uchar)(std::max(0.f, std::min (res.x, 1.f)) * 255.f);
             uchar g = (uchar)(std::max(0.f, std::min (res.y, 1.f)) * 255.f);
             uchar r = (uchar)(std::max(0.f, std::min (res.z, 1.f)) * 255.f);
 
-            rgb.at<Point3_<uchar> >(y,x) = Point3_<uchar>(b, g, r);     
+            rgb.at<Point3_<uchar> >(y,x) = Point3_<uchar>(b, g, r);
         }
     }
 }
 
-float getMaxDisparity( VideoCapture& capture )
+static float getMaxDisparity( VideoCapture& capture )
 {
     const int minDistance = 400; // mm
     float b = (float)capture.get( CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE ); // mm
@@ -84,7 +84,7 @@ float getMaxDisparity( VideoCapture& capture )
     return b * F / minDistance;
 }
 
-void printCommandLineParams()
+static void printCommandLineParams()
 {
     cout << "-cd       Colorized disparity? (0 or 1; 1 by default) Ignored if disparity map is not selected to show." << endl;
     cout << "-fmd      Fixed max disparity? (0 or 1; 0 by default) Ignored if disparity map is not colorized (-cd 0)." << endl;
@@ -96,7 +96,7 @@ void printCommandLineParams()
     cout << "-r        Filename of .oni video file. The data will grabbed from it." << endl ;
 }
 
-void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[],
+static void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[],
                        string& filename, bool& isFileReading )
 {
     // set defaut values

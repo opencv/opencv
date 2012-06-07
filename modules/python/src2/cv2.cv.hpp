@@ -198,7 +198,7 @@ static Py_ssize_t what_size(PyObject *o)
 
 /************************************************************************/
 
-CvMat *PyCvMat_AsCvMat(PyObject *o)
+static CvMat *PyCvMat_AsCvMat(PyObject *o)
 {
   assert(0); // not yet implemented: reference counting for CvMat in Kalman is unclear...
   return NULL;
@@ -908,19 +908,19 @@ static PyTypeObject memtrack_Type = {
   sizeof(memtrack_t),                        /*basicsize*/
 };
 
-Py_ssize_t memtrack_getreadbuffer(PyObject *self, Py_ssize_t segment, void **ptrptr)
+static Py_ssize_t memtrack_getreadbuffer(PyObject *self, Py_ssize_t segment, void **ptrptr)
 {
   *ptrptr = &((memtrack_t*)self)->ptr;
   return ((memtrack_t*)self)->size;
 }
 
-Py_ssize_t memtrack_getwritebuffer(PyObject *self, Py_ssize_t segment, void **ptrptr)
+static Py_ssize_t memtrack_getwritebuffer(PyObject *self, Py_ssize_t segment, void **ptrptr)
 {
   *ptrptr = ((memtrack_t*)self)->ptr;
   return ((memtrack_t*)self)->size;
 }
 
-Py_ssize_t memtrack_getsegcount(PyObject *self, Py_ssize_t *lenp)
+static Py_ssize_t memtrack_getsegcount(PyObject *self, Py_ssize_t *lenp)
 {
   return (Py_ssize_t)1;
 }
@@ -3858,7 +3858,7 @@ static PyMethodDef old_methods[] = {
 /************************************************************************/
 /* Module init */
 
-PyObject* init_cv()
+static PyObject* init_cv()
 {
   PyObject *m, *d;
   cvSetErrMode(CV_ErrModeParent);

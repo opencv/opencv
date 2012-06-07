@@ -3,11 +3,11 @@
 #include "_lsvm_matching.h"
 
 /*
-// Transformation filter displacement from the block space 
+// Transformation filter displacement from the block space
 // to the space of pixels at the initial image
 //
 // API
-// int convertPoints(int countLevel, CvPoint *points, int *levels, 
+// int convertPoints(int countLevel, CvPoint *points, int *levels,
                   CvPoint **partsDisplacement, int kPoints, int n);
 // INPUT
 // countLevel        - the number of levels in the feature pyramid
@@ -25,10 +25,10 @@
 // RESULT
 // Error status
 */
-int convertPoints(int /*countLevel*/, int lambda, 
+int convertPoints(int /*countLevel*/, int lambda,
                   int initialImageLevel,
-                  CvPoint *points, int *levels, 
-                  CvPoint **partsDisplacement, int kPoints, int n, 
+                  CvPoint *points, int *levels,
+                  CvPoint **partsDisplacement, int kPoints, int n,
                   int maxXBorder,
                   int maxYBorder)
 {
@@ -37,7 +37,7 @@ int convertPoints(int /*countLevel*/, int lambda,
     step = powf( 2.0f, 1.0f / ((float)lambda) );
 
     computeBorderSize(maxXBorder, maxYBorder, &bx, &by);
-    
+
     for (i = 0; i < kPoints; i++)
     {
         // scaling factor for root filter
@@ -48,10 +48,10 @@ int convertPoints(int /*countLevel*/, int lambda,
         // scaling factor for part filters
         scale = SIDE_LENGTH * powf(step, (float)(levels[i] - lambda - initialImageLevel));
         for (j = 0; j < n; j++)
-        {            
-            partsDisplacement[i][j].x = (int)((partsDisplacement[i][j].x - 
+        {
+            partsDisplacement[i][j].x = (int)((partsDisplacement[i][j].x -
                                                2 * bx + 1) * scale);
-            partsDisplacement[i][j].y = (int)((partsDisplacement[i][j].y - 
+            partsDisplacement[i][j].y = (int)((partsDisplacement[i][j].y -
                                                2 * by + 1) * scale);
         }
     }
@@ -62,7 +62,7 @@ int convertPoints(int /*countLevel*/, int lambda,
 // Elimination boxes that are outside the image boudaries
 //
 // API
-// int clippingBoxes(int width, int height, 
+// int clippingBoxes(int width, int height,
                      CvPoint *points, int kPoints);
 // INPUT
 // width             - image wediht
@@ -72,12 +72,12 @@ int convertPoints(int /*countLevel*/, int lambda,
 // kPoints           - points number
 // OUTPUT
 // points            - updated points (if coordinates less than zero then
-                       set zero coordinate, if coordinates more than image 
+                       set zero coordinate, if coordinates more than image
                        size then set coordinates equal image size)
 // RESULT
 // Error status
 */
-int clippingBoxes(int width, int height, 
+int clippingBoxes(int width, int height,
                   CvPoint *points, int kPoints)
 {
     int i;
@@ -111,7 +111,7 @@ int clippingBoxes(int width, int height,
                                                   int maxXBorder, int maxYBorder);
 
 // INPUT
-// image             - initial image     
+// image             - initial image
 // maxXBorder        - the largest root filter size (X-direction)
 // maxYBorder        - the largest root filter size (Y-direction)
 // OUTPUT
@@ -149,54 +149,54 @@ CvLSVMFeaturePyramid* createFeaturePyramidWithBorder(IplImage *image,
 // Computation of the root filter displacement and values of score function
 //
 // API
-// int searchObject(const featurePyramid *H, const filterObject **all_F, int n, 
-                    float b, 
+// int searchObject(const featurePyramid *H, const filterObject **all_F, int n,
+                    float b,
                     int maxXBorder,
-                     int maxYBorder, 
+                     int maxYBorder,
                      CvPoint **points, int **levels, int *kPoints, float *score,
                      CvPoint ***partsDisplacement);
 // INPUT
 // image             - initial image for searhing object
-// all_F             - the set of filters (the first element is root filter, 
+// all_F             - the set of filters (the first element is root filter,
                        other elements - part filters)
 // n                 - the number of part filters
 // b                 - linear term of the score function
 // maxXBorder        - the largest root filter size (X-direction)
 // maxYBorder        - the largest root filter size (Y-direction)
 // OUTPUT
-// points            - positions (x, y) of the upper-left corner 
+// points            - positions (x, y) of the upper-left corner
                        of root filter frame
 // levels            - levels that correspond to each position
 // kPoints           - number of positions
 // score             - value of the score function
-// partsDisplacement - part filters displacement for each position 
+// partsDisplacement - part filters displacement for each position
                        of the root filter
 // RESULT
 // Error status
 */
-int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F, 
-                 int n, float b, 
+int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F,
+                 int n, float b,
                  int maxXBorder,
-                 int maxYBorder,  
+                 int maxYBorder,
                  CvPoint **points, int **levels, int *kPoints, float *score,
                  CvPoint ***partsDisplacement)
 {
     int opResult;
 
     // Matching
-    opResult = maxFunctionalScore(all_F, n, H, b, maxXBorder, maxYBorder, 
-                                  score, points, levels, 
+    opResult = maxFunctionalScore(all_F, n, H, b, maxXBorder, maxYBorder,
+                                  score, points, levels,
                                   kPoints, partsDisplacement);
     if (opResult != LATENT_SVM_OK)
     {
         return LATENT_SVM_SEARCH_OBJECT_FAILED;
     }
-   
-    // Transformation filter displacement from the block space 
+
+    // Transformation filter displacement from the block space
     // to the space of pixels at the initial image
     // that settles at the level number LAMBDA
-    convertPoints(H->numLevels, LAMBDA, LAMBDA, (*points), 
-                  (*levels), (*partsDisplacement), (*kPoints), n, 
+    convertPoints(H->numLevels, LAMBDA, LAMBDA, (*points),
+                  (*levels), (*partsDisplacement), (*kPoints), n,
                   maxXBorder, maxYBorder);
 
     return LATENT_SVM_OK;
@@ -206,7 +206,7 @@ int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F
 // Computation right bottom corners coordinates of bounding boxes
 //
 // API
-// int estimateBoxes(CvPoint *points, int *levels, int kPoints, 
+// int estimateBoxes(CvPoint *points, int *levels, int kPoints,
                      int sizeX, int sizeY, CvPoint **oppositePoints);
 // INPUT
 // points            - left top corners coordinates of bounding boxes
@@ -217,7 +217,7 @@ int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F
 // RESULT
 // Error status
 */
-int estimateBoxes(CvPoint *points, int *levels, int kPoints, 
+static int estimateBoxes(CvPoint *points, int *levels, int kPoints,
                   int sizeX, int sizeY, CvPoint **oppositePoints)
 {
     int i;
@@ -237,16 +237,16 @@ int estimateBoxes(CvPoint *points, int *levels, int kPoints,
 // Computation of the root filter displacement and values of score function
 //
 // API
-// int searchObjectThreshold(const featurePyramid *H, 
+// int searchObjectThreshold(const featurePyramid *H,
                              const filterObject **all_F, int n,
-                             float b, 
-                             int maxXBorder, int maxYBorder, 
+                             float b,
+                             int maxXBorder, int maxYBorder,
                              float scoreThreshold,
-                             CvPoint **points, int **levels, int *kPoints, 
+                             CvPoint **points, int **levels, int *kPoints,
                              float **score, CvPoint ***partsDisplacement);
 // INPUT
 // H                 - feature pyramid
-// all_F             - the set of filters (the first element is root filter, 
+// all_F             - the set of filters (the first element is root filter,
                        other elements - part filters)
 // n                 - the number of part filters
 // b                 - linear term of the score function
@@ -254,22 +254,22 @@ int estimateBoxes(CvPoint *points, int *levels, int kPoints,
 // maxYBorder        - the largest root filter size (Y-direction)
 // scoreThreshold    - score threshold
 // OUTPUT
-// points            - positions (x, y) of the upper-left corner 
+// points            - positions (x, y) of the upper-left corner
                        of root filter frame
 // levels            - levels that correspond to each position
 // kPoints           - number of positions
 // score             - values of the score function
-// partsDisplacement - part filters displacement for each position 
+// partsDisplacement - part filters displacement for each position
                        of the root filter
 // RESULT
 // Error status
 */
-int searchObjectThreshold(const CvLSVMFeaturePyramid *H, 
+int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                           const CvLSVMFilterObject **all_F, int n,
-                          float b, 
-                          int maxXBorder, int maxYBorder, 
+                          float b,
+                          int maxXBorder, int maxYBorder,
                           float scoreThreshold,
-                          CvPoint **points, int **levels, int *kPoints, 
+                          CvPoint **points, int **levels, int *kPoints,
                           float **score, CvPoint ***partsDisplacement,
                           int numThreads)
 {
@@ -284,28 +284,28 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
         return opResult;
     }
     opResult = tbbThresholdFunctionalScore(all_F, n, H, b, maxXBorder, maxYBorder,
-                                           scoreThreshold, numThreads, score, 
-                                           points, levels, kPoints, 
+                                           scoreThreshold, numThreads, score,
+                                           points, levels, kPoints,
                                            partsDisplacement);
 #else
-    opResult = thresholdFunctionalScore(all_F, n, H, b, 
-                                        maxXBorder, maxYBorder, 
-                                        scoreThreshold, 
-                                        score, points, levels, 
+    opResult = thresholdFunctionalScore(all_F, n, H, b,
+                                        maxXBorder, maxYBorder,
+                                        scoreThreshold,
+                                        score, points, levels,
                                         kPoints, partsDisplacement);
 
-	(void)numThreads;
+  (void)numThreads;
 #endif
     if (opResult != LATENT_SVM_OK)
     {
         return LATENT_SVM_SEARCH_OBJECT_FAILED;
-    }  
-   
-    // Transformation filter displacement from the block space 
+    }
+
+    // Transformation filter displacement from the block space
     // to the space of pixels at the initial image
     // that settles at the level number LAMBDA
-    convertPoints(H->numLevels, LAMBDA, LAMBDA, (*points), 
-                  (*levels), (*partsDisplacement), (*kPoints), n, 
+    convertPoints(H->numLevels, LAMBDA, LAMBDA, (*points),
+                  (*levels), (*partsDisplacement), (*kPoints), n,
                   maxXBorder, maxYBorder);
 
     return LATENT_SVM_OK;
@@ -350,9 +350,9 @@ int getOppositePoint(CvPoint point,
 //
 // API
 // int showRootFilterBoxes(const IplImage *image,
-                           const filterObject *filter, 
+                           const filterObject *filter,
                            CvPoint *points, int *levels, int kPoints,
-                           CvScalar color, int thickness, 
+                           CvScalar color, int thickness,
                            int line_type, int shift);
 // INPUT
 // image             - initial image
@@ -370,22 +370,22 @@ int getOppositePoint(CvPoint point,
 // Error status
 */
 int showRootFilterBoxes(IplImage *image,
-                        const CvLSVMFilterObject *filter, 
+                        const CvLSVMFilterObject *filter,
                         CvPoint *points, int *levels, int kPoints,
-                        CvScalar color, int thickness, 
+                        CvScalar color, int thickness,
                         int line_type, int shift)
-{   
+{
     int i;
     float step;
     CvPoint oppositePoint;
     step = powf( 2.0f, 1.0f / ((float)LAMBDA));
-    
+
     for (i = 0; i < kPoints; i++)
     {
         // Drawing rectangle for filter
-        getOppositePoint(points[i], filter->sizeX, filter->sizeY, 
+        getOppositePoint(points[i], filter->sizeX, filter->sizeY,
                          step, levels[i] - LAMBDA, &oppositePoint);
-        cvRectangle(image, points[i], oppositePoint, 
+        cvRectangle(image, points[i], oppositePoint,
                     color, thickness, line_type, shift);
     }
 #ifdef HAVE_OPENCV_HIGHGUI
@@ -399,9 +399,9 @@ int showRootFilterBoxes(IplImage *image,
 //
 // API
 // int showPartFilterBoxes(const IplImage *image,
-                           const filterObject *filter, 
+                           const filterObject *filter,
                            CvPoint *points, int *levels, int kPoints,
-                           CvScalar color, int thickness, 
+                           CvScalar color, int thickness,
                            int line_type, int shift);
 // INPUT
 // image             - initial image
@@ -421,9 +421,9 @@ int showRootFilterBoxes(IplImage *image,
 */
 int showPartFilterBoxes(IplImage *image,
                         const CvLSVMFilterObject **filters,
-                        int n, CvPoint **partsDisplacement, 
+                        int n, CvPoint **partsDisplacement,
                         int *levels, int kPoints,
-                        CvScalar color, int thickness, 
+                        CvScalar color, int thickness,
                         int line_type, int shift)
 {
     int i, j;
@@ -437,10 +437,10 @@ int showPartFilterBoxes(IplImage *image,
         for (j = 0; j < n; j++)
         {
             // Drawing rectangles for part filters
-            getOppositePoint(partsDisplacement[i][j], 
-                             filters[j + 1]->sizeX, filters[j + 1]->sizeY, 
+            getOppositePoint(partsDisplacement[i][j],
+                             filters[j + 1]->sizeX, filters[j + 1]->sizeY,
                              step, levels[i] - 2 * LAMBDA, &oppositePoint);
-            cvRectangle(image, partsDisplacement[i][j], oppositePoint, 
+            cvRectangle(image, partsDisplacement[i][j], oppositePoint,
                         color, thickness, line_type, shift);
         }
     }
@@ -454,8 +454,8 @@ int showPartFilterBoxes(IplImage *image,
 // Drawing boxes
 //
 // API
-// int showBoxes(const IplImage *img, 
-                 const CvPoint *points, const CvPoint *oppositePoints, int kPoints, 
+// int showBoxes(const IplImage *img,
+                 const CvPoint *points, const CvPoint *oppositePoints, int kPoints,
                  CvScalar color, int thickness, int line_type, int shift);
 // INPUT
 // img               - initial image
@@ -470,14 +470,14 @@ int showPartFilterBoxes(IplImage *image,
 // RESULT
 // Error status
 */
-int showBoxes(IplImage *img, 
-              const CvPoint *points, const CvPoint *oppositePoints, int kPoints, 
+int showBoxes(IplImage *img,
+              const CvPoint *points, const CvPoint *oppositePoints, int kPoints,
               CvScalar color, int thickness, int line_type, int shift)
 {
     int i;
     for (i = 0; i < kPoints; i++)
     {
-        cvRectangle(img, points[i], oppositePoints[i], 
+        cvRectangle(img, points[i], oppositePoints[i],
                     color, thickness, line_type, shift);
     }
 #ifdef HAVE_OPENCV_HIGHGUI
@@ -491,10 +491,10 @@ int showBoxes(IplImage *img,
 //
 // API
 // int getMaxFilterDims(const filterObject **filters, int kComponents,
-                        const int *kPartFilters, 
+                        const int *kPartFilters,
                         unsigned int *maxXBorder, unsigned int *maxYBorder);
 // INPUT
-// filters           - a set of filters (at first root filter, then part filters 
+// filters           - a set of filters (at first root filter, then part filters
                        and etc. for all components)
 // kComponents       - number of components
 // kPartFilters      - number of part filters for each component
@@ -505,10 +505,10 @@ int showBoxes(IplImage *img,
 // Error status
 */
 int getMaxFilterDims(const CvLSVMFilterObject **filters, int kComponents,
-                     const int *kPartFilters, 
+                     const int *kPartFilters,
                      unsigned int *maxXBorder, unsigned int *maxYBorder)
 {
-    int i, componentIndex;    
+    int i, componentIndex;
     *maxXBorder = filters[0]->sizeX;
     *maxYBorder = filters[0]->sizeY;
     componentIndex = kPartFilters[0] + 1;
@@ -532,7 +532,7 @@ int getMaxFilterDims(const CvLSVMFilterObject **filters, int kComponents,
 //
 // API
 // int searchObjectThresholdSomeComponents(const featurePyramid *H,
-                                           const filterObject **filters, 
+                                           const filterObject **filters,
                                            int kComponents, const int *kPartFilters,
                                            const float *b, float scoreThreshold,
                                            CvPoint **points, CvPoint **oppPoints,
@@ -553,7 +553,7 @@ int getMaxFilterDims(const CvLSVMFilterObject **filters, int kComponents,
 // Error status
 */
 int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
-                                        const CvLSVMFilterObject **filters, 
+                                        const CvLSVMFilterObject **filters,
                                         int kComponents, const int *kPartFilters,
                                         const float *b, float scoreThreshold,
                                         CvPoint **points, CvPoint **oppPoints,
@@ -566,7 +566,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
     CvPoint **pointsArr, **oppPointsArr, ***partsDisplacementArr;
     float **scoreArr;
     int *kPointsArr, **levelsArr;
-    
+
     // Allocation memory
     pointsArr = (CvPoint **)malloc(sizeof(CvPoint *) * kComponents);
     oppPointsArr = (CvPoint **)malloc(sizeof(CvPoint *) * kComponents);
@@ -574,7 +574,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
     kPointsArr = (int *)malloc(sizeof(int) * kComponents);
     levelsArr = (int **)malloc(sizeof(int *) * kComponents);
     partsDisplacementArr = (CvPoint ***)malloc(sizeof(CvPoint **) * kComponents);
-    
+
     // Getting maximum filter dimensions
     error = getMaxFilterDims(filters, kComponents, kPartFilters, &maxXBorder, &maxYBorder);
     componentIndex = 0;
@@ -585,7 +585,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
 #ifdef HAVE_TBB
         error = searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
             b[i], maxXBorder, maxYBorder, scoreThreshold,
-            &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]), 
+            &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]),
             &(scoreArr[i]), &(partsDisplacementArr[i]), numThreads);
         if (error != LATENT_SVM_OK)
         {
@@ -599,17 +599,17 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
             return LATENT_SVM_SEARCH_OBJECT_FAILED;
         }
 #else
-		(void)numThreads;
+    (void)numThreads;
         searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
-            b[i], maxXBorder, maxYBorder, scoreThreshold, 
-            &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]), 
+            b[i], maxXBorder, maxYBorder, scoreThreshold,
+            &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]),
             &(scoreArr[i]), &(partsDisplacementArr[i]));
 #endif
-        estimateBoxes(pointsArr[i], levelsArr[i], kPointsArr[i], 
-            filters[componentIndex]->sizeX, filters[componentIndex]->sizeY, &(oppPointsArr[i]));        
+        estimateBoxes(pointsArr[i], levelsArr[i], kPointsArr[i],
+            filters[componentIndex]->sizeX, filters[componentIndex]->sizeY, &(oppPointsArr[i]));
         componentIndex += (kPartFilters[i] + 1);
         *kPoints += kPointsArr[i];
-    }  
+    }
 
     *points = (CvPoint *)malloc(sizeof(CvPoint) * (*kPoints));
     *oppPoints = (CvPoint *)malloc(sizeof(CvPoint) * (*kPoints));

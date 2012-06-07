@@ -15,7 +15,7 @@ int open_close_pos = 0;
 int erode_dilate_pos = 0;
 
 // callback function for open/close trackbar
-void OpenClose(int pos)
+static void OpenClose(int pos)
 {
     int n = open_close_pos - max_iters;
     int an = n > 0 ? n : -n;
@@ -35,7 +35,7 @@ void OpenClose(int pos)
 }
 
 // callback function for erode/dilate trackbar
-void ErodeDilate(int pos)
+static void ErodeDilate(int pos)
 {
     int n = erode_dilate_pos - max_iters;
     int an = n > 0 ? n : -n;
@@ -52,7 +52,7 @@ void ErodeDilate(int pos)
     cvShowImage("Erode/Dilate",dst);
 }
 
-void help()
+static void help(void)
 {
     printf( "This program demonstrated the use of the morphology operator, especially open, close, erode, dilate operations\n"
     		"Morphology operators are built on max (close) and min (open) operators as measured by pixels covered by small structuring elements.\n"

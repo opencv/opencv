@@ -42,7 +42,7 @@ struct App
     void printParams() const;
 
     void workBegin() { work_begin = getTickCount(); }
-    void workEnd() 
+    void workEnd()
     {
         int64 d = getTickCount() - work_begin;
         double f = getTickFrequency();
@@ -61,7 +61,7 @@ private:
     bool running;
 
     Mat left_src, right_src;
-    Mat left, right; 
+    Mat left, right;
     gpu::GpuMat d_left, d_right;
 
     gpu::StereoBM_GPU bm;
@@ -72,7 +72,7 @@ private:
     double work_fps;
 };
 
-void printHelp()
+static void printHelp()
 {
     cout << "Usage: stereo_match_gpu\n"
         << "\t--left <left_view> --right <right_view> # must be rectified\n"
@@ -119,7 +119,7 @@ Params Params::read(int argc, char** argv)
     {
         if (string(argv[i]) == "--left") p.left = argv[++i];
         else if (string(argv[i]) == "--right") p.right = argv[++i];
-        else if (string(argv[i]) == "--method") 
+        else if (string(argv[i]) == "--method")
         {
             if (string(argv[i + 1]) == "BM") p.method = BM;
             else if (string(argv[i + 1]) == "BP") p.method = BP;
@@ -137,7 +137,7 @@ Params Params::read(int argc, char** argv)
 
 
 App::App(const Params& p)
-    : p(p), running(false) 
+    : p(p), running(false)
 {
     cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
 
@@ -170,7 +170,7 @@ void App::run()
     imshow("left", left);
     imshow("right", right);
 
-	// Set common parameters
+    // Set common parameters
     bm.ndisp = p.ndisp;
     bp.ndisp = p.ndisp;
     csbp.ndisp = p.ndisp;
@@ -188,7 +188,7 @@ void App::run()
         workBegin();
         switch (p.method)
         {
-        case Params::BM: 
+        case Params::BM:
             if (d_left.channels() > 1 || d_right.channels() > 1)
             {
                 cout << "BM doesn't support color images\n";
@@ -200,7 +200,7 @@ void App::run()
                 imshow("left", left);
                 imshow("right", right);
             }
-            bm(d_left, d_right, d_disp); 
+            bm(d_left, d_right, d_disp);
             break;
         case Params::BP: bp(d_left, d_right, d_disp); break;
         case Params::CSBP: csbp(d_left, d_right, d_disp); break;
@@ -252,14 +252,14 @@ void App::handleKey(char key)
         break;
     case 'p': case 'P':
         printParams();
-        break;  
+        break;
     case 'g': case 'G':
         if (left.channels() == 1 && p.method != Params::BM)
         {
             left = left_src;
             right = right_src;
         }
-        else 
+        else
         {
             cvtColor(left_src, left, CV_BGR2GRAY);
             cvtColor(right_src, right, CV_BGR2GRAY);

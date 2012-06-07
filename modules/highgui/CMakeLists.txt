@@ -81,6 +81,10 @@ if(HAVE_QT)
 
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
   list(APPEND highgui_srcs src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
+
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS "-Wno-missing-declarations")
+  endif()
 elseif(WIN32)
   list(APPEND highgui_srcs src/window_w32.cpp)
 elseif(HAVE_GTK)
@@ -131,6 +135,10 @@ if(HAVE_OPENNI)
   list(APPEND highgui_srcs src/cap_openni.cpp)
   ocv_include_directories(${OPENNI_INCLUDE_DIR})
   list(APPEND HIGHGUI_LIBRARIES ${OPENNI_LIBRARY})
+
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    set_source_files_properties(src/cap_openni.cpp PROPERTIES COMPILE_FLAGS "-Wno-unknown-pragmas -Wno-uninitialized -Wno-reorder -Wno-strict-aliasing")
+  endif()
 endif(HAVE_OPENNI)
 
 if(HAVE_opencv_androidcamera)

@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning(disable:4786) // Disable MSVC warnings in the standard library.
 #pragma warning(disable:4100)
 #pragma warning(disable:4512)
@@ -49,7 +49,7 @@
 #include <stdio.h>
 #include <map>
 #include <algorithm>
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning(default:4100)
 #pragma warning(default:4512)
 #endif
@@ -148,7 +148,7 @@ CV_IMPL CvBool cv3dTrackerCalibrateCameras(int num_cameras,
                     cvReleaseImage(&gray_img);
                 CV_CALL(gray_img = cvCreateImage(image_size, IPL_DEPTH_8U, 1));
             }
-            
+
             CV_CALL(cvCvtColor(samples[c], gray_img, CV_BGR2GRAY));
 
             img = gray_img;
@@ -172,7 +172,7 @@ CV_IMPL CvBool cv3dTrackerCalibrateCameras(int num_cameras,
                                                    etalon_size, points, &count) != 0;
         if (count == 0)
             continue;
-        
+
         // If found is true, it means all the points were found (count = num_points).
         // If found is false but count is non-zero, it means that not all points were found.
 
@@ -258,7 +258,7 @@ CV_IMPL CvBool cv3dTrackerCalibrateCameras(int num_cameras,
                              { 0.f, 1.f, 0.f, 0.f },
                              { 0.f, 0.f, 1.f, 0.f },
                              { transVect[0], transVect[1], transVect[2], 1.f } };
-        
+
         float rmat[4][4] = { { rotMatr[0], rotMatr[1], rotMatr[2], 0.f },
                              { rotMatr[3], rotMatr[4], rotMatr[5], 0.f },
                              { rotMatr[6], rotMatr[7], rotMatr[8], 0.f },
@@ -267,7 +267,7 @@ CV_IMPL CvBool cv3dTrackerCalibrateCameras(int num_cameras,
 
         MultMatrix(camera_info[c].mat, tmat, rmat);
 
-        // change the transformation of the cameras to put them in the world coordinate 
+        // change the transformation of the cameras to put them in the world coordinate
         // system we want to work with.
 
         // Start with an identity matrix; then fill in the values to accomplish

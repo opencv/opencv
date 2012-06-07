@@ -6,7 +6,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout << "\nThis program demonstrates GrabCut segmentation -- select an object in a region\n"
     		"and then grabcut will attempt to segment it out.\n"
@@ -36,7 +36,7 @@ const Scalar GREEN = Scalar(0,255,0);
 const int BGD_KEY = CV_EVENT_FLAG_CTRLKEY;
 const int FGD_KEY = CV_EVENT_FLAG_SHIFTKEY;
 
-void getBinMask( const Mat& comMask, Mat& binMask )
+static void getBinMask( const Mat& comMask, Mat& binMask )
 {
     if( comMask.empty() || comMask.type()!=CV_8UC1 )
         CV_Error( CV_StsBadArg, "comMask is empty or has incorrect type (not CV_8UC1)" );
@@ -268,7 +268,7 @@ int GCApplication::nextIter()
 
 GCApplication gcapp;
 
-void on_mouse( int event, int x, int y, int flags, void* param )
+static void on_mouse( int event, int x, int y, int flags, void* param )
 {
     gcapp.mouseClick( event, x, y, flags, param );
 }

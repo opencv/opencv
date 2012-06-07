@@ -6,6 +6,7 @@
 using namespace std;
 using namespace cv;
 
+namespace {
 void helpParser()
 {
     printf("\nThe CommandLineParser class is designed for command line arguments parsing\n"
@@ -88,6 +89,8 @@ string del_space(string name)
 
 	return name;
 }
+
+}//namespace
 
 CommandLineParser::CommandLineParser(int argc, const char* const argv[], const char* keys)
 {

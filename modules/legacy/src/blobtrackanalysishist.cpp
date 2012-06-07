@@ -237,9 +237,9 @@ public:
 	virtual float*  GetFVVar(){return m_FVVar;}; /* returned pointer to array of maximal values of FV, if return 0 then FVrange is not exist */
 };/* CvBlobTrackFVGenN */
 
-CvBlobTrackFVGen* cvCreateFVGenP(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenN(2);}
-CvBlobTrackFVGen* cvCreateFVGenPV(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenN(4);}
-CvBlobTrackFVGen* cvCreateFVGenPVS(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenN(5);}
+inline CvBlobTrackFVGen* cvCreateFVGenP(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenN(2);}
+inline CvBlobTrackFVGen* cvCreateFVGenPV(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenN(4);}
+inline CvBlobTrackFVGen* cvCreateFVGenPVS(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenN(5);}
 #undef MAX_FV_SIZE
 
 #define MAX_FV_SIZE 4
@@ -408,7 +408,7 @@ public:
 	virtual float*  GetFVVar(){return m_FVVar;}; /* returned pointer to array of maximal values of FV, if return 0 then FVrange is not exist */
 };/* CvBlobTrackFVGenSS */
 
-CvBlobTrackFVGen* cvCreateFVGenSS(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenSS;}
+inline CvBlobTrackFVGen* cvCreateFVGenSS(){return (CvBlobTrackFVGen*)new CvBlobTrackFVGenSS;}
 
 /*======================= TRAJECTORY ANALYZER MODULES =====================*/
 /* Trajectory Analyser module */
@@ -1510,7 +1510,7 @@ public:
 
 }; /* CvBlobTrackAnalysisSVM. */
 
-
+#if 0
 CvBlobTrackAnalysis* cvCreateModuleBlobTrackAnalysisSVMP()
 {return (CvBlobTrackAnalysis*) new CvBlobTrackAnalysisSVM(cvCreateFVGenP);}
 
@@ -1522,3 +1522,4 @@ CvBlobTrackAnalysis* cvCreateModuleBlobTrackAnalysisSVMPVS()
 
 CvBlobTrackAnalysis* cvCreateModuleBlobTrackAnalysisSVMSS()
 {return (CvBlobTrackAnalysis*) new CvBlobTrackAnalysisSVM(cvCreateFVGenSS);}
+#endif

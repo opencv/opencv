@@ -175,6 +175,8 @@ public:
 
     void run();
 
+    virtual ~BaseQualityEvaluator(){}
+
 protected:
     virtual string getRunParamsFilename() const = 0;
     virtual string getResultsFilename() const = 0;
@@ -540,7 +542,7 @@ void DetectorQualityEvaluator::readAlgorithm ()
     }
 }
 
-int update_progress( const string& /*name*/, int progress, int test_case_idx, int count, double dt )
+static int update_progress( const string& /*name*/, int progress, int test_case_idx, int count, double dt )
 {
     int width = 60 /*- (int)name.length()*/;
     if( count > 0 )
@@ -588,13 +590,13 @@ void DetectorQualityEvaluator::runDatasetTest (const vector<Mat> &imgs, const ve
     }
 }
 
-void testLog( bool isBadAccuracy )
-{
-    if( isBadAccuracy )
-        printf(" bad accuracy\n");
-    else
-        printf("\n");
-}
+// static void testLog( bool isBadAccuracy )
+// {
+//     if( isBadAccuracy )
+//         printf(" bad accuracy\n");
+//     else
+//         printf("\n");
+// }
 
 /****************************************************************************************\
 *                                  Descriptors evaluation                                 *

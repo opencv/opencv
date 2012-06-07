@@ -9,8 +9,8 @@
 #include <dirent.h>
 #endif
 
-#ifdef HAVE_CVCONFIG_H 
-#include <cvconfig.h> 
+#ifdef HAVE_CVCONFIG_H
+#include <cvconfig.h>
 #endif
 
 #ifdef HAVE_TBB
@@ -20,7 +20,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout << "This program demonstrated the use of the latentSVM detector." << endl <<
             "It reads in a trained object models and then uses them to detect the objects in an images." << endl <<
@@ -36,7 +36,7 @@ void help()
             endl;
 }
 
-void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector<Scalar>& colors, float overlapThreshold, int numThreads )
+static void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector<Scalar>& colors, float overlapThreshold, int numThreads )
 {
     vector<LatentSvmDetector::ObjectDetection> detections;
 
@@ -63,7 +63,7 @@ void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector
     }
 }
 
-void readDirectory( const string& directoryName, vector<string>& filenames, bool addDirectoryName=true )
+static void readDirectory( const string& directoryName, vector<string>& filenames, bool addDirectoryName=true )
 {
     filenames.clear();
 
@@ -71,8 +71,8 @@ void readDirectory( const string& directoryName, vector<string>& filenames, bool
     struct _finddata_t s_file;
     string str = directoryName + "\\*.*";
 
-	intptr_t h_file = _findfirst( str.c_str(), &s_file );
-	if( h_file != static_cast<intptr_t>(-1.0) )
+    intptr_t h_file = _findfirst( str.c_str(), &s_file );
+    if( h_file != static_cast<intptr_t>(-1.0) )
     {
         do
         {
@@ -104,13 +104,13 @@ void readDirectory( const string& directoryName, vector<string>& filenames, bool
 
 int main(int argc, char* argv[])
 {
-	help();
+    help();
 
     string images_folder, models_folder;
     float overlapThreshold = 0.2f;
     int numThreads = -1;
     if( argc > 2 )
-	{
+    {
         images_folder = argv[1];
         models_folder = argv[2];
         if( argc > 3 ) overlapThreshold = (float)atof(argv[3]);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
         }
 
         if( argc > 4 ) numThreads = atoi(argv[4]);
-	}
+    }
 
     vector<string> images_filenames, models_filenames;
     readDirectory( images_folder, images_filenames );
@@ -166,6 +166,6 @@ int main(int argc, char* argv[])
                 exit(0);
         }
     }
-    
-	return 0;
+
+    return 0;
 }

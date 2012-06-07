@@ -88,7 +88,7 @@ using namespace cv;
 #include <stdarg.h>
 #include <ctype.h>
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4514 ) /* unreferenced inline functions */
 #endif
 
@@ -1593,7 +1593,7 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     return ok;
 }
 
-struct indexedratio 
+struct indexedratio
 {
     double val;
     int ind;
@@ -1774,7 +1774,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         else
             CV_SWAP( responses->data.i[i1], responses->data.i[i2], y );
     }
-        
+
     if (!is_regression && class_labels->cols==2 && balanced)
     {
         // count class samples
@@ -1786,13 +1786,13 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
             else
                 ++num_1;
         }
-        
+
         int label_smallest_class;
         int label_biggest_class;
         if (num_0 < num_1)
         {
             label_biggest_class = class_labels->data.i[1];
-            label_smallest_class = class_labels->data.i[0]; 
+            label_smallest_class = class_labels->data.i[0];
         }
         else
         {
@@ -2001,7 +2001,7 @@ float CvSVM::predict( const float* row_sample, int row_len, bool returnDFVal ) c
 
     int var_count = get_var_count();
     assert( row_len == var_count );
-	(void)row_len;
+    (void)row_len;
 
     int class_count = class_labels ? class_labels->cols :
                   params.svm_type == ONE_CLASS ? 1 : 0;
@@ -2072,7 +2072,7 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
     __BEGIN__;
 
     int class_count;
-    
+
     if( !kernel )
         CV_ERROR( CV_StsBadArg, "The SVM should be trained first" );
 
@@ -2082,7 +2082,7 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
     CV_CALL( cvPreparePredictData( sample, var_all, var_idx,
                                    class_count, 0, &row_sample ));
     result = predict( row_sample, get_var_count(), returnDFVal );
-  
+
     __END__;
 
     if( sample && (!CV_IS_MAT(sample) || sample->data.fl != row_sample) )
@@ -2099,12 +2099,12 @@ struct predict_body_svm {
         samples = _samples;
         results = _results;
     }
-    
+
     const CvSVM* pointer;
     float* result;
     const CvMat* samples;
     CvMat* results;
-  
+
     void operator()( const cv::BlockedRange& range ) const
     {
         for(int i = range.begin(); i < range.end(); i++ )
@@ -2116,15 +2116,15 @@ struct predict_body_svm {
                 results->data.fl[i] = (float)r;
             if (i == 0)
                 *result = (float)r;
-	}
+    }
     }
 };
 
 float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
 {
     float result = 0;
-    cv::parallel_for(cv::BlockedRange(0, samples->rows), 
-		     predict_body_svm(this, &result, samples, results)
+    cv::parallel_for(cv::BlockedRange(0, samples->rows),
+             predict_body_svm(this, &result, samples, results)
     );
     return result;
 }
@@ -2141,7 +2141,7 @@ CvSVM::CvSVM( const Mat& _train_data, const Mat& _responses,
     kernel = 0;
     solver = 0;
     default_model_name = "my_svm";
-    
+
     train( _train_data, _responses, _var_idx, _sample_idx, _params );
 }
 
@@ -2166,7 +2166,7 @@ bool CvSVM::train_auto( const Mat& _train_data, const Mat& _responses,
 
 float CvSVM::predict( const Mat& _sample, bool returnDFVal ) const
 {
-    CvMat sample = _sample; 
+    CvMat sample = _sample;
     return predict(&sample, returnDFVal);
 }
 
@@ -2648,11 +2648,11 @@ cvTrainSVM_CrossValidation( const CvMat* train_data, int tflag,
     __BEGIN__;
 
     double degree_step = 7,
-	       g_step      = 15,
-		   coef_step   = 14,
-		   C_step      = 20,
-		   nu_step     = 5,
-		   p_step      = 7; // all steps must be > 1
+           g_step      = 15,
+           coef_step   = 14,
+           C_step      = 20,
+           nu_step     = 5,
+           p_step      = 7; // all steps must be > 1
     double degree_begin = 0.01, degree_end = 2;
     double g_begin      = 1e-5, g_end      = 0.5;
     double coef_begin   = 0.1,  coef_end   = 300;
@@ -2662,12 +2662,12 @@ cvTrainSVM_CrossValidation( const CvMat* train_data, int tflag,
 
     double rate = 0, gamma = 0, C = 0, degree = 0, coef = 0, p = 0, nu = 0;
 
-	double best_rate    = 0;
+    double best_rate    = 0;
     double best_degree  = degree_begin;
     double best_gamma   = g_begin;
     double best_coef    = coef_begin;
-	double best_C       = C_begin;
-	double best_nu      = nu_begin;
+    double best_C       = C_begin;
+    double best_nu      = nu_begin;
     double best_p       = p_begin;
 
     CvSVMModelParams svm_params, *psvm_params;

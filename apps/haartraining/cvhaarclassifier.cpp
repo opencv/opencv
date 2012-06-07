@@ -394,7 +394,7 @@ void icvSaveStageHaarClassifier( CvIntHaarClassifier* classifier, FILE* file )
 
 
 
-CvIntHaarClassifier* icvLoadCARTStageHaarClassifierF( FILE* file, int step )
+static CvIntHaarClassifier* icvLoadCARTStageHaarClassifierF( FILE* file, int step )
 {
     CvStageHaarClassifier* ptr = NULL;
 

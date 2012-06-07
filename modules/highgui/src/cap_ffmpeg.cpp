@@ -123,7 +123,7 @@ icvInitFFMPEG(void)
         icvReleaseVideoWriter_FFMPEG_p = (CvReleaseVideoWriter_Plugin)cvReleaseVideoWriter_FFMPEG;
         icvWriteFrame_FFMPEG_p = (CvWriteFrame_Plugin)cvWriteFrame_FFMPEG;
     #endif
-        
+
         ffmpegInitialized = 1;
     }
 }
@@ -151,7 +151,7 @@ public:
     {
         unsigned char* data = 0;
         int step=0, width=0, height=0, cn=0;
-        
+
         if(!ffmpegCapture ||
            !icvRetrieveFrame_FFMPEG_p(ffmpegCapture,&data,&step,&width,&height,&cn))
            return 0;
@@ -193,7 +193,7 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     return cvCreateFileCapture_VFW(filename);
 #else
     return 0;
-#endif    
+#endif
 }
 
 
@@ -247,5 +247,5 @@ CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourc
     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
 #else
     return 0;
-#endif    
+#endif
 }

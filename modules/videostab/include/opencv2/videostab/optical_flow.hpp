@@ -83,6 +83,7 @@ public:
 
     virtual void setMaxLevel(int val) { maxLevel_ = val; }
     virtual int maxLevel() const { return maxLevel_; }
+    virtual ~PyrLkOptFlowEstimatorBase() {}
 
 protected:
     Size winSize_;

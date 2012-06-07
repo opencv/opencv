@@ -7,24 +7,24 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
-	cout << "\nThis program demonstrates the famous watershed segmentation algorithm in OpenCV: watershed()\n"
-			"Usage:\n"
-			"./watershed [image_name -- default is fruits.jpg]\n" << endl;
+    cout << "\nThis program demonstrates the famous watershed segmentation algorithm in OpenCV: watershed()\n"
+            "Usage:\n"
+            "./watershed [image_name -- default is fruits.jpg]\n" << endl;
 
 
-	cout << "Hot keys: \n"
-		"\tESC - quit the program\n"
-		"\tr - restore the original image\n"
-		"\tw or SPACE - run watershed segmentation algorithm\n"
-		"\t\t(before running it, *roughly* mark the areas to segment on the image)\n"
-		"\t  (before that, roughly outline several markers on the image)\n";
+    cout << "Hot keys: \n"
+        "\tESC - quit the program\n"
+        "\tr - restore the original image\n"
+        "\tw or SPACE - run watershed segmentation algorithm\n"
+        "\t\t(before running it, *roughly* mark the areas to segment on the image)\n"
+        "\t  (before that, roughly outline several markers on the image)\n";
 }
 Mat markerMask, img;
 Point prevPt(-1, -1);
 
-void onMouse( int event, int x, int y, int flags, void* )
+static void onMouse( int event, int x, int y, int flags, void* )
 {
     if( x < 0 || x >= img.cols || y < 0 || y >= img.rows )
         return;
@@ -48,7 +48,7 @@ int main( int argc, char** argv )
 {
     char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
     Mat img0 = imread(filename, 1), imgGray;
-    
+
     if( img0.empty() )
     {
         cout << "Couldn'g open image " << filename << ". Usage: watershed <image_name>\n";
@@ -83,9 +83,9 @@ int main( int argc, char** argv )
             int i, j, compCount = 0;
             vector<vector<Point> > contours;
             vector<Vec4i> hierarchy;
-            
+
             findContours(markerMask, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
-            
+
             if( contours.empty() )
                 continue;
             Mat markers(markerMask.size(), CV_32S);
@@ -96,14 +96,14 @@ int main( int argc, char** argv )
 
             if( compCount == 0 )
                 continue;
-            
+
             vector<Vec3b> colorTab;
             for( i = 0; i < compCount; i++ )
             {
                 int b = theRNG().uniform(0, 255);
                 int g = theRNG().uniform(0, 255);
                 int r = theRNG().uniform(0, 255);
-                
+
                 colorTab.push_back(Vec3b((uchar)b, (uchar)g, (uchar)r));
             }
 
@@ -113,7 +113,7 @@ int main( int argc, char** argv )
             printf( "execution time = %gms\n", t*1000./getTickFrequency() );
 
             Mat wshed(markers.size(), CV_8UC3);
-            
+
             // paint the watershed image
             for( i = 0; i < markers.rows; i++ )
                 for( j = 0; j < markers.cols; j++ )
