@@ -41,9 +41,9 @@
 #ifndef GTEST_USES_POSIX_RE
 #  define GTEST_USES_POSIX_RE 0
 #endif
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#endif
+// #ifdef __GNUC__
+// #  pragma GCC diagnostic ignored "-Wmissing-declarations"
+// #endif
 
 #include "opencv2/core/core.hpp"
 

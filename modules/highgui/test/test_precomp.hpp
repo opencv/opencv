@@ -1,3 +1,7 @@
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#endif
+
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
@@ -40,7 +44,7 @@
     /*defined(HAVE_OPENNI)     || too specialized */ \
     defined(HAVE_FFMPEG)       || \
     defined(WIN32) /* assume that we have ffmpeg */
-    
+
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
 #else
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
@@ -61,19 +65,19 @@ namespace cvtest
 {
 
 string fourccToString(int fourcc);
-    
+
 struct VideoFormat
 {
     VideoFormat() { fourcc = -1; }
     VideoFormat(const string& _ext, int _fourcc) : ext(_ext), fourcc(_fourcc) {}
     bool empty() const { return ext.empty(); }
-    
+
     string ext;
     int fourcc;
 };
-    
+
 extern const VideoFormat g_specific_fmt_list[];
-    
+
 }
 
 #endif
