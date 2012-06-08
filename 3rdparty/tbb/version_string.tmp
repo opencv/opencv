@@ -6,4 +6,4 @@
 "TBB: BUILD_GLIBC	Unknown" ENDL \
 "TBB: BUILD_LD		Unknown" ENDL \
 "TBB: BUILD_TARGET	Unknown" ENDL \
-"TBB: BUILD_COMMAND	use cv::getBuildInformation() for details" ENDL \
+"TBB: BUILD_COMMAND	use cv::getBuildInformation() for details" ENDL

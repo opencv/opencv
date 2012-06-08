@@ -72,7 +72,7 @@ if(NOT EXISTS "${tbb_tarball}")
     file(REMOVE "${tbb_tarball}")
     message(FATAL_ERROR "Downloaded TBB source tarball has invalid MD5 hash: ${tbb_local_md5} (expected: ${tbb_md5})")
   endif()
-  
+
   if(EXISTS "${tbb_src_dir}")
     file(REMOVE_RECURSE "${tbb_src_dir}")
   endif()
@@ -119,18 +119,21 @@ endif()
 add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 target_link_libraries(tbb c m dl)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
+
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
+string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 set_target_properties(tbb
-	PROPERTIES OUTPUT_NAME tbb
-	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
-	)
-	
+  PROPERTIES OUTPUT_NAME tbb
+  DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
+  )
+
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(tbb PROPERTIES FOLDER "3rdparty")
 endif()
-    
+
 if(NOT BUILD_SHARED_LIBS)
   install(TARGETS tbb ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()
