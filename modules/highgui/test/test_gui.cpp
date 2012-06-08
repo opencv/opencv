@@ -43,7 +43,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#if defined HAVE_GTK  || defined HAVE_QT || defined WIN32 || defined _WIN32 || HAVE_CARBON || HAVE_COCOA
+#if defined HAVE_GTK  || defined HAVE_QT || defined WIN32 || defined _WIN32 || defined HAVE_CARBON || defined HAVE_COCOA
 
 using namespace cv;
 using namespace std;

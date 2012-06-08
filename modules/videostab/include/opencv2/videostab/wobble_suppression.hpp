@@ -48,7 +48,7 @@
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/log.hpp"
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
   #include "opencv2/gpu/gpu.hpp"
 #endif
 
@@ -119,7 +119,7 @@ private:
     Mat_<float> mapx_, mapy_;
 };
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressorGpu : public MoreAccurateMotionWobbleSuppressorBase
 {
 public:

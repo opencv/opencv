@@ -215,7 +215,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
         if (gpu)
         {
             KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);
@@ -256,7 +256,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
         if (gpu)
         {
             KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);
@@ -341,7 +341,7 @@ int main(int argc, const char **argv)
             return 0;
         }
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
         if (arg("gpu") == "yes")
         {
             cout << "initializing GPU..."; cout.flush();
@@ -419,7 +419,7 @@ int main(int argc, const char **argv)
             {
                 MoreAccurateMotionWobbleSuppressorBase *ws = new MoreAccurateMotionWobbleSuppressor();
                 if (arg("gpu") == "yes")
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
                     ws = new MoreAccurateMotionWobbleSuppressorGpu();
 #else
                     throw runtime_error("OpenCV is built without GPU support");

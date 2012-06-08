@@ -61,7 +61,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 #ifdef HAVE_OPENCV_GPU
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
-#if HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_NONFREE
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
 #else
         stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
@@ -72,7 +72,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     else
 #endif
     {
-#if HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_NONFREE
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
 #else
         stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());

@@ -25,6 +25,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   set_source_files_properties(jcdctmgr.c PROPERTIES COMPILE_FLAGS "-O1")
 endif()
 
+ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align)
+
 set_target_properties(${JPEG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${JPEG_LIBRARY}
   DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"

@@ -60,7 +60,7 @@ void SparsePyrLkOptFlowEstimator::run(
 }
 
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
 SparsePyrLkOptFlowEstimatorGpu::SparsePyrLkOptFlowEstimatorGpu()
 {
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
@@ -135,7 +135,7 @@ void DensePyrLkOptFlowEstimatorGpu::run(
     flowX_.download(flowX.getMatRef());
     flowY_.download(flowY.getMatRef());
 }
-#endif // #if HAVE_OPENCV_GPU
+#endif // HAVE_OPENCV_GPU
 
 } // namespace videostab
 } // namespace cv

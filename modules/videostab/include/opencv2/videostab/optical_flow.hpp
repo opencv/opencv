@@ -46,7 +46,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
   #include "opencv2/gpu/gpu.hpp"
 #endif
 
@@ -99,7 +99,7 @@ public:
             OutputArray status, OutputArray errors);
 };
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
 class CV_EXPORTS SparsePyrLkOptFlowEstimatorGpu
         : public PyrLkOptFlowEstimatorBase, public ISparseOptFlowEstimator
 {

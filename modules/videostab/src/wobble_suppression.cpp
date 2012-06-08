@@ -115,7 +115,7 @@ void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat
 }
 
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
 void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const gpu::GpuMat &frame, gpu::GpuMat &result)
 {
     CV_Assert(motions_ && stabilizationMotions_);

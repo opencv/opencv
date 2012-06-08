@@ -621,7 +621,7 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 
 KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
-{    
+{
     setDetector(new GoodFeaturesToTrackDetector());
     setOpticalFlowEstimator(new SparsePyrLkOptFlowEstimator());
     setOutlierRejector(new NullOutlierRejector());
@@ -686,11 +686,11 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 }
 
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
 KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
-    CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);    
+    CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
     setOutlierRejector(new NullOutlierRejector());
 }
 
@@ -720,7 +720,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
     detector_(grayFrame0, pointsPrev_);
 
     // find correspondences
-    optFlowEstimator_.run(frame0, frame1, pointsPrev_, points_, status_);    
+    optFlowEstimator_.run(frame0, frame1, pointsPrev_, points_, status_);
 
     // leave good correspondences only
     gpu::compactPoints(pointsPrev_, points_, status_);

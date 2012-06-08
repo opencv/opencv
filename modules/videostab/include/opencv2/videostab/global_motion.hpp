@@ -53,7 +53,7 @@
 #include "opencv2/videostab/motion_core.hpp"
 #include "opencv2/videostab/outlier_rejection.hpp"
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
   #include "opencv2/gpu/gpu.hpp"
 #endif
 
@@ -73,7 +73,7 @@ CV_EXPORTS Mat estimateGlobalMotionRobust(
 
 class CV_EXPORTS MotionEstimatorBase
 {
-public:    
+public:
     virtual ~MotionEstimatorBase() {}
 
     virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
@@ -200,7 +200,7 @@ private:
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
 };
 
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
 class CV_EXPORTS KeypointBasedMotionEstimatorGpu : public ImageMotionEstimatorBase
 {
 public:

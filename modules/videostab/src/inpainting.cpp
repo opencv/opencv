@@ -241,7 +241,7 @@ public:
             for (int dx = -rad; dx <= rad; ++dx)
             {
                 int qx0 = x + dx;
-                int qy0 = y + dy;               
+                int qy0 = y + dy;
 
                 if (qy0 >= 0 && qy0 < mask0.rows && qx0 >= 0 && qx0 < mask0.cols && mask0(qy0,qx0))
                 {
@@ -325,7 +325,7 @@ public:
 
 MotionInpainter::MotionInpainter()
 {
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
     setOptFlowEstimator(new DensePyrLkOptFlowEstimatorGpu());
 #else
     CV_Error(CV_StsNotImplemented, "Current implementation of MotionInpainter requires GPU");
@@ -374,7 +374,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 
         // warp frame
 
-        frame1_ = at(neighbor, *frames_);        
+        frame1_ = at(neighbor, *frames_);
 
         if (motionModel_ != MM_HOMOGRAPHY)
             warpAffine(
@@ -532,7 +532,7 @@ void completeFrameAccordingToFlow(
 
                 if (x1 >= 0 && x1 < frame1.cols && y1 >= 0 && y1 < frame1.rows && mask1_(y1,x1)
                     && sqr(flowX_(y0,x0)) + sqr(flowY_(y0,x0)) < sqr(distThresh))
-                {                    
+                {
                     frame0.at<Point3_<uchar> >(y0,x0) = frame1.at<Point3_<uchar> >(y1,x1);
                     mask0_(y0,x0) = 255;
                 }

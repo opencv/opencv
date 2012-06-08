@@ -18,7 +18,7 @@ using std::tr1::get;
 typedef TestBaseWithParam<String> stitch;
 typedef TestBaseWithParam<String> match;
 
-#if HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_NONFREE
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
 #define TEST_DETECTORS testing::Values<String>("orb")

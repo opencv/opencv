@@ -90,7 +90,7 @@ if(WIN32)
   list(APPEND lib_srcs tif_win32.c)
 endif(WIN32)
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wcast-align)
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations)
 
 if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))

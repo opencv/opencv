@@ -21,6 +21,8 @@ if(UNIX)
   endif()
 endif()
 
+ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align)
+
 set_target_properties(${PNG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${PNG_LIBRARY}
   DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
