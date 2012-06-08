@@ -61,6 +61,16 @@ if(TIFF_BIGTIFF_VERSION AND NOT TIFF_VERSION_BIG)
   set(TIFF_VERSION_BIG ${TIFF_BIGTIFF_VERSION})
 endif()
 
+if(NOT TIFF_VERSION_STRING AND TIFF_INCLUDE_DIR)
+  list(GET TIFF_INCLUDE_DIR 0 _TIFF_INCLUDE_DIR)
+  if(EXISTS "${_TIFF_INCLUDE_DIR}/tiffvers.h")
+    file(STRINGS "${_TIFF_INCLUDE_DIR}/tiffvers.h" tiff_version_str REGEX "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version .*")
+    string(REGEX REPLACE "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version +([^ \\n]*).*" "\\1" TIFF_VERSION_STRING "${tiff_version_str}")
+    unset(tiff_version_str)
+  endif()
+  unset(_TIFF_INCLUDE_DIR)
+endif()
+
 # --- libjpeg (optional) ---
 if(WITH_JPEG)
   if(BUILD_JPEG)

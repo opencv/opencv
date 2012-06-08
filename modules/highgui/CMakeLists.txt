@@ -82,7 +82,8 @@ if(HAVE_QT)
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
   list(APPEND highgui_srcs src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
 
-  if(CMAKE_COMPILER_IS_GNUCXX)
+  CHECK_CXX_COMPILER_FLAG(-Wno-missing-declarations HAVE_CXX_WNO_MISSING_DECLARATIONS)
+  if(HAVE_CXX_WNO_MISSING_DECLARATIONS)
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS "-Wno-missing-declarations")
   endif()
 elseif(WIN32)
@@ -170,7 +171,6 @@ if(WITH_IMAGEIO)
   if(IOS)
     list(APPEND HIGHGUI_LIBRARIES "-framework ImageIO")
   endif()
-  #TODO: check if need to link with some framework on OS X: -framework ApplicationServices ??
 endif(WITH_IMAGEIO)
 
 if(WITH_AVFOUNDATION)
@@ -224,7 +224,7 @@ endif()
 set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_add_precompiled_headers(${the_module})
-ocv_warnings_disable(CMAKE_C_FLAGS -Wno-deprecated-declarations)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
 if(WIN32 AND WITH_FFMPEG)
   #copy ffmpeg dll to the output folder
