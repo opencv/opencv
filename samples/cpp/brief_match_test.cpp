@@ -112,12 +112,11 @@ int main(int argc, const char ** argv)
 
   vector<Point2f> mpts_1, mpts_2;
   matches2points(matches_popcount, kpts_1, kpts_2, mpts_1, mpts_2); //Extract a list of the (x,y) location of the matches
-  vector<uchar> outlier_mask;
+  vector<char> outlier_mask;
   Mat H = findHomography(mpts_2, mpts_1, RANSAC, 1, outlier_mask);
 
   Mat outimg;
-  drawMatches(im2, kpts_2, im1, kpts_1, matches_popcount, outimg, Scalar::all(-1), Scalar::all(-1),
-              *(const vector<char>*)(void*)(&outlier_mask));
+  drawMatches(im2, kpts_2, im1, kpts_1, matches_popcount, outimg, Scalar::all(-1), Scalar::all(-1), outlier_mask);
   imshow("matches - popcount - outliers removed", outimg);
 
   Mat warped;

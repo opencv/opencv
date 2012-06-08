@@ -164,7 +164,7 @@ static void findConstrainedCorrespondences(const Mat& _F,
     {
         Point2f p1 = keypoints1[i].pt;
         double bestDist1 = DBL_MAX, bestDist2 = DBL_MAX;
-        int bestIdx1 = -1, bestIdx2 = -1;
+        int bestIdx1 = -1;//, bestIdx2 = -1;
         const float* d1 = descriptors1.ptr<float>(i);
 
         for( int j = 0; j < (int)keypoints2.size(); j++ )
@@ -203,14 +203,14 @@ static void findConstrainedCorrespondences(const Mat& _F,
                 if( dist < bestDist1 )
                 {
                     bestDist2 = bestDist1;
-                    bestIdx2 = bestIdx1;
+                    //bestIdx2 = bestIdx1;
                     bestDist1 = dist;
                     bestIdx1 = (int)j;
                 }
                 else if( dist < bestDist2 )
                 {
                     bestDist2 = dist;
-                    bestIdx2 = (int)j;
+                    //bestIdx2 = (int)j;
                 }
             }
         }

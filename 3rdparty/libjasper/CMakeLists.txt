@@ -7,31 +7,23 @@ project(${JASPER_LIBRARY})
 
 add_definitions(-DEXCLUDE_MIF_SUPPORT -DEXCLUDE_PNM_SUPPORT -DEXCLUDE_BMP_SUPPORT -DEXCLUDE_RAS_SUPPORT  -DEXCLUDE_JPG_SUPPORT -DEXCLUDE_PGX_SUPPORT)
 
-# List of C++ files:
 ocv_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-# The .cpp files:
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 file(GLOB lib_ext_hdrs jasper/*.h)
 
 # ----------------------------------------------------------------------------------
-# 				Define the library target:
+#         Define the library target:
 # ----------------------------------------------------------------------------------
 
 add_library(${JASPER_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
 
 if(MSVC)
-  if(NOT ENABLE_NOISY_WARNINGS)
-    string(REPLACE "/W3" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  endif()
   add_definitions(-DJAS_WIN_MSVC_BUILD)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-uninitialized")
-endif()
+ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-uninitialized -Wmissing-prototypes -Wmissing-declarations -Wunused)
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
@@ -39,21 +31,17 @@ if(UNIX)
   endif()
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration -Wno-unused")
-endif()
-
 set_target_properties(${JASPER_LIBRARY}
-	PROPERTIES
-	OUTPUT_NAME ${JASPER_LIBRARY}
-	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
-	)
-	
+  PROPERTIES
+  OUTPUT_NAME ${JASPER_LIBRARY}
+  DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
+  )
+
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${JASPER_LIBRARY} PROPERTIES FOLDER "3rdparty")
-endif()	
-    
+endif()
+
 if(NOT BUILD_SHARED_LIBS)
   install(TARGETS ${JASPER_LIBRARY} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()

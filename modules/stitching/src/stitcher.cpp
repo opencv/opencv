@@ -206,7 +206,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
 
-    double compose_seam_aspect = 1;
+    //double compose_seam_aspect = 1;
     double compose_work_aspect = 1;
     bool is_blender_prepared = false;
 
@@ -227,7 +227,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
             is_compose_scale_set = true;
 
             // Compute relative scales
-            compose_seam_aspect = compose_scale / seam_scale_;
+            //compose_seam_aspect = compose_scale / seam_scale_;
             compose_work_aspect = compose_scale / work_scale_;
 
             // Update warped image scale

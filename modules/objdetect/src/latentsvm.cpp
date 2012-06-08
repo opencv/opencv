@@ -560,7 +560,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
                                         float **score, int *kPoints,
                                         int numThreads)
 {
-    int error = 0;
+    //int error = 0;
     int i, j, s, f, componentIndex;
     unsigned int maxXBorder, maxYBorder;
     CvPoint **pointsArr, **oppPointsArr, ***partsDisplacementArr;
@@ -576,14 +576,14 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
     partsDisplacementArr = (CvPoint ***)malloc(sizeof(CvPoint **) * kComponents);
 
     // Getting maximum filter dimensions
-    error = getMaxFilterDims(filters, kComponents, kPartFilters, &maxXBorder, &maxYBorder);
+    /*error = */getMaxFilterDims(filters, kComponents, kPartFilters, &maxXBorder, &maxYBorder);
     componentIndex = 0;
     *kPoints = 0;
     // For each component perform searching
     for (i = 0; i < kComponents; i++)
     {
 #ifdef HAVE_TBB
-        error = searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
+        /*error = */searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
             b[i], maxXBorder, maxYBorder, scoreThreshold,
             &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]),
             &(scoreArr[i]), &(partsDisplacementArr[i]), numThreads);

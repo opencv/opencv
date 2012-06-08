@@ -252,7 +252,7 @@ bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size 
         int black_thresh = histQuantile(hist, 0.45f);
         int white_thresh = histQuantile(hist, 0.55f);
 #else
-        int black_thresh, white_thresh;
+        int black_thresh = 0, white_thresh = 0;
         segment_hist_max(hist, black_thresh, white_thresh);
 #endif
 

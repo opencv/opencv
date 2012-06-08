@@ -82,7 +82,7 @@ void GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &imag
     Mat_<int> N(num_images, num_images); N.setTo(0);
     Mat_<double> I(num_images, num_images); I.setTo(0);
 
-    Rect dst_roi = resultRoi(corners, images);
+    //Rect dst_roi = resultRoi(corners, images);
     Mat subimg1, subimg2;
     Mat_<uchar> submask1, submask2, intersect;
 
@@ -190,7 +190,7 @@ void BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat>
 
                 block_corners.push_back(corners[img_idx] + bl_tl);
                 block_images.push_back(images[img_idx](Rect(bl_tl, bl_br)));
-                block_masks.push_back(make_pair(masks[img_idx].first(Rect(bl_tl, bl_br)), 
+                block_masks.push_back(make_pair(masks[img_idx].first(Rect(bl_tl, bl_br)),
                                                 masks[img_idx].second));
             }
         }
@@ -201,7 +201,7 @@ void BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat>
     vector<double> gains = compensator.gains();
     gain_maps_.resize(num_images);
 
-    Mat_<float> ker(1, 3); 
+    Mat_<float> ker(1, 3);
     ker(0,0) = 0.25; ker(0,1) = 0.5; ker(0,2) = 0.25;
 
     int bl_idx = 0;
@@ -213,7 +213,7 @@ void BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat>
         for (int by = 0; by < bl_per_img.height; ++by)
             for (int bx = 0; bx < bl_per_img.width; ++bx, ++bl_idx)
                 gain_maps_[img_idx](by, bx) = static_cast<float>(gains[bl_idx]);
-        
+
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
     }

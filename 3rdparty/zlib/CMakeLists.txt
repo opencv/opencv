@@ -5,18 +5,9 @@
 
 project(${ZLIB_LIBRARY} C)
 
-include(CheckTypeSize)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(CheckCSourceCompiles)
-
-#
-# Check to see if we have large file support
-#
-check_type_size(off64_t OFF64_T)
-if(HAVE_OFF64_T)
-  add_definitions(-D_LARGEFILE64_SOURCE=1)
-endif()
 
 #
 # Check for fseeko
@@ -82,9 +73,7 @@ if(UNIX)
   endif()
 endif()
 
-if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4013")
-endif()
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations)
 
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES
         OUTPUT_NAME ${ZLIB_LIBRARY}
@@ -95,7 +84,7 @@ set_target_properties(${ZLIB_LIBRARY} PROPERTIES
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${ZLIB_LIBRARY} PROPERTIES FOLDER "3rdparty")
 endif()
-	
+
 if(NOT BUILD_SHARED_LIBS)
   install(TARGETS ${ZLIB_LIBRARY} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()

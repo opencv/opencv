@@ -169,10 +169,11 @@ CvIntHaarFeatures* icvCreateIntHaarFeatures( CvSize winsize,
     int dx = 0;
     int dy = 0;
 
+#if 0
     float factor = 1.0F;
 
     factor = ((float) winsize.width) * winsize.height / (24 * 24);
-#if 0
+
     s0 = (int) (s0 * factor);
     s1 = (int) (s1 * factor);
     s2 = (int) (s2 * factor);

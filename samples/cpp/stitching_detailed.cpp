@@ -632,7 +632,7 @@ int main(int argc, char* argv[])
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
     Ptr<Blender> blender;
-    double compose_seam_aspect = 1;
+    //double compose_seam_aspect = 1;
     double compose_work_aspect = 1;
 
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
@@ -648,7 +648,7 @@ int main(int argc, char* argv[])
             is_compose_scale_set = true;
 
             // Compute relative scales
-            compose_seam_aspect = compose_scale / seam_scale;
+            //compose_seam_aspect = compose_scale / seam_scale;
             compose_work_aspect = compose_scale / work_scale;
 
             // Update warped image scale

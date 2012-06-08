@@ -534,12 +534,12 @@ void parserPFilterS (FILE * xmlf, int p, CvLSVMFilterObject *** model, int *last
     int tag;
     int tagVal;
     char ch;
-    int i,j;
-    char buf[1024];
+    int /*i,*/j;
+    //char buf[1024];
     char tagBuf[1024];
     //printf("<PartFilters>\n");
 
-    i   = 0;
+    //i   = 0;
     j   = 0;
     st  = 0;
     tag = 0;
@@ -566,10 +566,10 @@ void parserPFilterS (FILE * xmlf, int p, CvLSVMFilterObject *** model, int *last
                     N_path++;
                 }
                 tag = 0;
-                i   = 0;
+                //i   = 0;
             }else{
                 if((tag == 0)&& (st == 1)){
-                    buf[i] = ch; i++;
+                    //buf[i] = ch; i++;
                 }else{
                     tagBuf[j] = ch; j++;
                 }
@@ -582,12 +582,12 @@ void parserComp (FILE * xmlf, int p, int *N_comp, CvLSVMFilterObject *** model, 
     int tag;
     int tagVal;
     char ch;
-    int i,j;
-    char buf[1024];
+    int /*i,*/j;
+    //char buf[1024];
     char tagBuf[1024];
     //printf("<Component> %d\n", *N_comp);
 
-    i   = 0;
+    //i   = 0;
     j   = 0;
     st  = 0;
     tag = 0;
@@ -616,10 +616,10 @@ void parserComp (FILE * xmlf, int p, int *N_comp, CvLSVMFilterObject *** model, 
                     parserPFilterS  (xmlf, p, model, last, max);
                 }
                 tag = 0;
-                i   = 0;
+                //i   = 0;
             }else{
                 if((tag == 0)&& (st == 1)){
-                    buf[i] = ch; i++;
+                    //buf[i] = ch; i++;
                 }else{
                     tagBuf[j] = ch; j++;
                 }
@@ -726,12 +726,12 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
 }//namespace
 
 int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, int *max, int **comp, float **b, int *count, float * score){
-    int st = 0;
+    //int st = 0;
     int tag;
     char ch;
-    int i,j;
+    int /*i,*/j;
     FILE *xmlf;
-    char buf[1024];
+    //char buf[1024];
     char tagBuf[1024];
 
     (*max) = 10;
@@ -744,9 +744,9 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
     if(xmlf == NULL)
         return LSVM_PARSER_FILE_NOT_FOUND;
 
-    i   = 0;
+    //i   = 0;
     j   = 0;
-    st  = 0;
+    //st  = 0;
     tag = 0;
     while(!feof(xmlf)){
         ch = (char)fgetc( xmlf );
@@ -757,7 +757,7 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
         }else {
             if(ch == '>'){
                 tag = 0;
-                i   = 0;
+                //i   = 0;
                 tagBuf[j    ] = ch;
                 tagBuf[j + 1] = '\0';
                 if(getTeg(tagBuf) == MODEL){
@@ -765,7 +765,7 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
                 }
             }else{
                 if(tag == 0){
-                    buf[i] = ch; i++;
+                    //buf[i] = ch; i++;
                 }else{
                     tagBuf[j] = ch; j++;
                 }

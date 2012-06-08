@@ -412,19 +412,22 @@
 // <stddef.h>.
 # include <regex.h>  // NOLINT
 
-# define GTEST_USES_POSIX_RE 1
+# define GTEST_USES_POSIX_RE  1
+# define GTEST_USES_SIMPLE_RE 0
 
 #elif GTEST_OS_WINDOWS
 
 // <regex.h> is not available on Windows.  Use our own simple regex
 // implementation instead.
 # define GTEST_USES_SIMPLE_RE 1
+# define GTEST_USES_POSIX_RE  0
 
 #else
 
 // <regex.h> may not be available on this platform.  Use our own
 // simple regex implementation instead.
 # define GTEST_USES_SIMPLE_RE 1
+# define GTEST_USES_POSIX_RE  0
 
 #endif  // GTEST_HAS_POSIX_RE
 
@@ -1678,6 +1681,8 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
 // Determines whether test results can be streamed to a socket.
 #if GTEST_OS_LINUX
 # define GTEST_CAN_STREAM_RESULTS_ 1
+#else
+# define GTEST_CAN_STREAM_RESULTS_ 0
 #endif
 
 // Defines some utility macros.

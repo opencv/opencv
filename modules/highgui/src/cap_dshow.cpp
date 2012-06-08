@@ -89,7 +89,7 @@ Thanks to:
 
 #include "precomp.hpp"
 
-#if _MSC_VER >= 100
+#if defined _MSC_VER && _MSC_VER >= 100
 #pragma warning(disable: 4995)
 #endif
 
@@ -103,17 +103,18 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
-#if _MSC_VER >= 1500
-#include "DShow.h"
-#include "strmif.h"
-#include "Aviriff.h"
-#include "dvdmedia.h"
-#include "bdaiface.h"
+#if defined _MSC_VER && _MSC_VER >= 1500
+#  include "DShow.h"
+#  include "strmif.h"
+#  include "Aviriff.h"
+#  include "dvdmedia.h"
+#  include "bdaiface.h"
 #else
-#ifdef _MSC_VER
-#define __extension__
-typedef BOOL WINBOOL;
+#  ifdef _MSC_VER
+#  define __extension__
+   typedef BOOL WINBOOL;
 #endif
+
 #include "dshow/dshow.h"
 #include "dshow/dvdmedia.h"
 #include "dshow/bdatypes.h"
@@ -133,6 +134,8 @@ public:
 
     virtual HRESULT STDMETHODCALLTYPE Clone(
         /* [out] */ IEnumPIDMap **ppIEnumPIDMap) = 0;
+
+    virtual ~IEnumPIDMap() {}
 };
 
 interface IMPEG2PIDMap : public IUnknown
@@ -148,6 +151,8 @@ interface IMPEG2PIDMap : public IUnknown
 
     virtual HRESULT STDMETHODCALLTYPE EnumPIDMap(
         /* [out] */ IEnumPIDMap **pIEnumPIDMap) = 0;
+
+    virtual ~IMPEG2PIDMap() {}
 };
 
 #endif
@@ -234,6 +239,7 @@ interface ISampleGrabberCB : public IUnknown
         BYTE *pBuffer,
         LONG BufferLen) = 0;
 
+    virtual ~ISampleGrabberCB() {}
 };
 
 interface ISampleGrabber : public IUnknown
@@ -261,6 +267,7 @@ interface ISampleGrabber : public IUnknown
         ISampleGrabberCB *pCallback,
         LONG WhichMethodToCallback) = 0;
 
+    virtual ~ISampleGrabber() {}
 };
 
 #ifndef HEADER
@@ -519,12 +526,12 @@ class videoInput{
 
         //Manual control over settings thanks.....
         //These are experimental for now.
-        bool setVideoSettingFilter(int deviceID, long Property, long lValue, long Flags = NULL, bool useDefaultValue = false);
-        bool setVideoSettingFilterPct(int deviceID, long Property, float pctValue, long Flags = NULL);
+        bool setVideoSettingFilter(int deviceID, long Property, long lValue, long Flags = 0, bool useDefaultValue = false);
+        bool setVideoSettingFilterPct(int deviceID, long Property, float pctValue, long Flags = 0);
         bool getVideoSettingFilter(int deviceID, long Property, long &min, long &max, long &SteppingDelta, long &currentValue, long &flags, long &defaultValue);
 
-        bool setVideoSettingCamera(int deviceID, long Property, long lValue, long Flags = NULL, bool useDefaultValue = false);
-        bool setVideoSettingCameraPct(int deviceID, long Property, float pctValue, long Flags = NULL);
+        bool setVideoSettingCamera(int deviceID, long Property, long lValue, long Flags = 0, bool useDefaultValue = false);
+        bool setVideoSettingCameraPct(int deviceID, long Property, float pctValue, long Flags = 0);
         bool getVideoSettingCamera(int deviceID, long Property, long &min, long &max, long &SteppingDelta, long &currentValue, long &flags, long &defaultValue);
 
         //bool setVideoSettingCam(int deviceID, long Property, long lValue, long Flags = NULL, bool useDefaultValue = false);
@@ -597,7 +604,7 @@ class videoInput{
 
 ///////////////////////////  HANDY FUNCTIONS  /////////////////////////////
 
-void MyFreeMediaType(AM_MEDIA_TYPE& mt){
+static void MyFreeMediaType(AM_MEDIA_TYPE& mt){
     if (mt.cbFormat != 0)
     {
         CoTaskMemFree((PVOID)mt.pbFormat);
@@ -612,7 +619,7 @@ void MyFreeMediaType(AM_MEDIA_TYPE& mt){
     }
 }
 
-void MyDeleteMediaType(AM_MEDIA_TYPE *pmt)
+static void MyDeleteMediaType(AM_MEDIA_TYPE *pmt)
 {
     if (pmt != NULL)
     {
@@ -642,7 +649,7 @@ public:
 
 
     //------------------------------------------------
-    ~SampleGrabberCallback(){
+    virtual ~SampleGrabberCallback(){
         ptrBuffer = NULL;
         DeleteCriticalSection(&critSection);
         CloseHandle(hEvent);
@@ -849,7 +856,7 @@ void videoDevice::NukeDownstream(IBaseFilter *pBF){
 // ----------------------------------------------------------------------
 
 void videoDevice::destroyGraph(){
-    HRESULT hr = NULL;
+    HRESULT hr = 0;
      //int FuncRetval=0;
      //int NumFilters=0;
 
@@ -867,7 +874,7 @@ void videoDevice::destroyGraph(){
         IBaseFilter * pFilter = NULL;
         if (pEnum->Next(1, &pFilter, &cFetched) == S_OK)
         {
-            FILTER_INFO FilterInfo={0};
+            FILTER_INFO FilterInfo;
             memset(&FilterInfo, 0, sizeof(FilterInfo));
             hr = pFilter->QueryFilterInfo(&FilterInfo);
             FilterInfo.pGraph->Release();
@@ -1620,14 +1627,15 @@ void __cdecl videoInput::basicThread(void * objPtr){
 void videoInput::showSettingsWindow(int id){
 
     if(isDeviceSetup(id)){
-        HANDLE myTempThread;
+        //HANDLE myTempThread;
 
         //we reconnect to the device as we have freed our reference to it
         //why have we freed our reference? because there seemed to be an issue
         //with some mpeg devices if we didn't
         HRESULT hr = getDevice(&VDList[id]->pVideoInputFilter, id, VDList[id]->wDeviceName, VDList[id]->nDeviceName);
         if(hr == S_OK){
-            myTempThread = (HANDLE)_beginthread(basicThread, 0, (void *)&VDList[id]);
+            //myTempThread = (HANDLE)
+                _beginthread(basicThread, 0, (void *)&VDList[id]);
         }
     }
 }
@@ -1705,7 +1713,7 @@ bool videoInput::setVideoSettingFilterPct(int deviceID, long Property, float pct
         float halfStep     = (float)stepAmnt * 0.5f;
         if( mod < halfStep ) rasterValue -= mod;
         else rasterValue += stepAmnt - mod;
-        printf("RASTER - pctValue is %f - value is %i - step is %i - mod is %i - rasterValue is %i\n", pctValue, value, stepAmnt, mod, rasterValue);
+        printf("RASTER - pctValue is %f - value is %li - step is %li - mod is %li - rasterValue is %li\n", pctValue, value, stepAmnt, mod, rasterValue);
     }
 
     return setVideoSettingFilter(deviceID, Property, rasterValue, Flags, false);
@@ -1795,7 +1803,7 @@ bool videoInput::setVideoSettingCameraPct(int deviceID, long Property, float pct
         float halfStep     = (float)stepAmnt * 0.5f;
         if( mod < halfStep ) rasterValue -= mod;
         else rasterValue += stepAmnt - mod;
-        printf("RASTER - pctValue is %f - value is %i - step is %i - mod is %i - rasterValue is %i\n", pctValue, value, stepAmnt, mod, rasterValue);
+        printf("RASTER - pctValue is %f - value is %li - step is %li - mod is %li - rasterValue is %li\n", pctValue, value, stepAmnt, mod, rasterValue);
     }
 
     return setVideoSettingCamera(deviceID, Property, rasterValue, Flags, false);
@@ -1920,7 +1928,7 @@ bool videoInput::restartDevice(int id){
         stopDevice(id);
 
         //set our fps if needed
-        if( avgFrameTime != -1){
+        if( avgFrameTime != (unsigned long)-1){
             VDList[id]->requestedFrameTime = avgFrameTime;
         }
 
@@ -2300,7 +2308,7 @@ static void findClosestSizeAndSubtype(videoDevice * VD, int widthIn, int heightI
     //find perfect match or closest size
     int nearW                = 9999999;
     int nearH                = 9999999;
-    bool foundClosestMatch     = true;
+    //bool foundClosestMatch     = true;
 
     int iCount = 0;
     int iSize = 0;
@@ -2360,7 +2368,7 @@ static void findClosestSizeAndSubtype(videoDevice * VD, int widthIn, int heightI
 
                 //see if we have an exact match!
                 if(exactMatchX && exactMatchY){
-                    foundClosestMatch = false;
+                    //foundClosestMatch = false;
                     exactMatch = true;
 
                     widthOut        = widthIn;

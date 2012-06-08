@@ -525,9 +525,9 @@ float icvEvalTreeCascadeClassifierFilter( CvIntHaarClassifier* classifier, sum_t
                                           sum_type* tilted, float normfactor )
 {
     CvTreeCascadeNode* ptr;
-    CvTreeCascadeClassifier* tree;
+    //CvTreeCascadeClassifier* tree;
 
-    tree = (CvTreeCascadeClassifier*) classifier;
+    //tree = (CvTreeCascadeClassifier*) classifier;
 
 
 

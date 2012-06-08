@@ -869,6 +869,8 @@ cvGetModuleInfo( const char* name, const char **version, const char **plugin_lis
 }
 
 #if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
+
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
 {
     if( fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH )

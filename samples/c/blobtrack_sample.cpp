@@ -371,7 +371,7 @@ int main(int argc, char* argv[])
     CvBlobTrackerAutoParam1     param = {0};
     CvBlobTrackerAuto*          pTracker = NULL;
 
-    float       scale = 1;
+    //float       scale = 1;
     const char* scale_name = NULL;
     char*       yml_name = NULL;
     char**      yml_video_names = NULL;
@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
     const char* bta_name = NULL;
     char*       bta_data_name = NULL;
     char*       track_name = NULL;
-    char*       comment_name = NULL;
+    //char*       comment_name = NULL;
     char*       FGTrainFrames = NULL;
     char*       log_name = NULL;
     char*       savestate_name = NULL;
@@ -462,7 +462,7 @@ int main(int argc, char* argv[])
             RO("bta_data=",bta_data_name);
             RO("btgen=",btgen_name);
             RO("track=",track_name);
-            RO("comment=",comment_name);
+            //RO("comment=",comment_name);
             RO("FGTrainFrames=",FGTrainFrames);
             RO("log=",log_name);
             RO("savestate=",savestate_name);
@@ -512,8 +512,8 @@ int main(int argc, char* argv[])
         if(!scale_name) scale_name = "1";
     }
 
-    if(scale_name)
-        scale = (float)atof(scale_name);
+//    if(scale_name)
+  //      scale = (float)atof(scale_name);
 
     for(pFGModule=FGDetector_Modules; pFGModule->nickname; ++pFGModule)
         if( fg_name && MY_STRICMP(fg_name,pFGModule->nickname)==0 ) break;

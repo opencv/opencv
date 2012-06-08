@@ -446,15 +446,15 @@ static int getPathOfFeaturePyramid(IplImage * image,
     CvLSVMFeatureMap *map;
     IplImage *scaleTmp;
     float scale;
-    int   i, err;
+    int   i;
 
     for(i = 0; i < numStep; i++)
     {
         scale = 1.0f / powf(step, (float)i);
         scaleTmp = resize_opencv (image, scale);
-        err = getFeatureMaps(scaleTmp, sideLength, &map);
-        err = normalizeAndTruncate(map, VAL_OF_TRUNCATE);
-        err = PCAFeatureMaps(map);
+        getFeatureMaps(scaleTmp, sideLength, &map);
+        normalizeAndTruncate(map, VAL_OF_TRUNCATE);
+        PCAFeatureMaps(map);
         (*maps)->pyramid[startIndex + i] = map;
         cvReleaseImage(&scaleTmp);
     }/*for(i = 0; i < numStep; i++)*/

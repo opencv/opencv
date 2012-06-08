@@ -33,7 +33,6 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/a2.jpg") ) );
     imgs.push_back( imread( getDataPath("stitching/a3.jpg") ) );
 
-    Stitcher::Status status;
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
             : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
@@ -53,7 +52,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
-        status = stitcher.stitch(imgs, pano);
+        stitcher.stitch(imgs, pano);
         stopTimer();
     }
 }
@@ -66,7 +65,6 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b1.jpg") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.jpg") ) );
 
-    Stitcher::Status status;
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
             : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
@@ -86,7 +84,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
-        status = stitcher.stitch(imgs, pano);
+        stitcher.stitch(imgs, pano);
         stopTimer();
     }
 }

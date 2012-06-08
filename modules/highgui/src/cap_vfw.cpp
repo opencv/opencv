@@ -43,7 +43,7 @@
 
 #include <vfw.h>
 
-#if _MSC_VER >= 1200
+#if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4711 )
 #endif
 

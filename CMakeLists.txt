@@ -329,6 +329,15 @@ if(UNIX)
   endif()
 endif()
 
+#
+# Check to see if we have large file support (needed by zlib)
+#
+include(CheckTypeSize)
+check_type_size(off64_t OFF64_T)
+if(HAVE_OFF64_T)
+  add_definitions(-D_LARGEFILE64_SOURCE=1)
+endif()
+
 include(cmake/OpenCVPCHSupport.cmake REQUIRED)
 include(cmake/OpenCVModule.cmake REQUIRED)
 

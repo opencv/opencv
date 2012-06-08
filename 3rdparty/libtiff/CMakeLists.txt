@@ -26,7 +26,6 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmakein"
 
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIR})
 
-# List of C++ files:
 set(lib_srcs
     tif_aux.c
     tif_close.c
@@ -91,10 +90,8 @@ if(WIN32)
   list(APPEND lib_srcs tif_win32.c)
 endif(WIN32)
 
-if(MSVC AND NOT ENABLE_NOISY_WARNINGS)
-  string(REPLACE "/W4" "/W0" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-  string(REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif()
+ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations)
 
 if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
@@ -104,15 +101,15 @@ add_library(${TIFF_LIBRARY} STATIC ${lib_srcs})
 target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})
 
 set_target_properties(${TIFF_LIBRARY}
-	PROPERTIES
-	OUTPUT_NAME "${TIFF_LIBRARY}"
-	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
-	)
-	
+    PROPERTIES
+    OUTPUT_NAME "${TIFF_LIBRARY}"
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
+    )
+
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${TIFF_LIBRARY} PROPERTIES FOLDER "3rdparty")
-endif()	
+endif()
 
 if(NOT BUILD_SHARED_LIBS)
   install(TARGETS ${TIFF_LIBRARY} ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)

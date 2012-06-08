@@ -213,13 +213,10 @@ static int icvFindStumpThreshold_##suffix(                                      
     float* curval  = NULL;                                                               \
     float curlerror = 0.0F;                                                              \
     float currerror = 0.0F;                                                              \
-    float wposl;                                                                         \
-    float wposr;                                                                         \
                                                                                          \
     int i = 0;                                                                           \
     int idx = 0;                                                                         \
                                                                                          \
-    wposl = wposr = 0.0F;                                                                \
     if( *sumw == FLT_MAX )                                                               \
     {                                                                                    \
         /* calculate sums */                                                             \
@@ -298,8 +295,8 @@ static int icvFindStumpThreshold_##suffix(                                      
  */
 #define ICV_DEF_FIND_STUMP_THRESHOLD_MISC( suffix, type )                                \
     ICV_DEF_FIND_STUMP_THRESHOLD( misc_##suffix, type,                                   \
-        wposl = 0.5F * ( wl + wyl );                                                     \
-        wposr = 0.5F * ( wr + wyr );                                                     \
+        float wposl = 0.5F * ( wl + wyl );                                               \
+        float wposr = 0.5F * ( wr + wyr );                                               \
         curleft = 0.5F * ( 1.0F + curleft );                                             \
         curright = 0.5F * ( 1.0F + curright );                                           \
         curlerror = MIN( wposl, wl - wposl );                                            \
@@ -311,8 +308,8 @@ static int icvFindStumpThreshold_##suffix(                                      
  */
 #define ICV_DEF_FIND_STUMP_THRESHOLD_GINI( suffix, type )                                \
     ICV_DEF_FIND_STUMP_THRESHOLD( gini_##suffix, type,                                   \
-        wposl = 0.5F * ( wl + wyl );                                                     \
-        wposr = 0.5F * ( wr + wyr );                                                     \
+        float wposl = 0.5F * ( wl + wyl );                                               \
+        float wposr = 0.5F * ( wr + wyr );                                               \
         curleft = 0.5F * ( 1.0F + curleft );                                             \
         curright = 0.5F * ( 1.0F + curright );                                           \
         curlerror = 2.0F * wposl * ( 1.0F - curleft );                                   \
@@ -326,8 +323,8 @@ static int icvFindStumpThreshold_##suffix(                                      
  */
 #define ICV_DEF_FIND_STUMP_THRESHOLD_ENTROPY( suffix, type )                             \
     ICV_DEF_FIND_STUMP_THRESHOLD( entropy_##suffix, type,                                \
-        wposl = 0.5F * ( wl + wyl );                                                     \
-        wposr = 0.5F * ( wr + wyr );                                                     \
+        float wposl = 0.5F * ( wl + wyl );                                               \
+        float wposr = 0.5F * ( wr + wyr );                                               \
         curleft = 0.5F * ( 1.0F + curleft );                                             \
         curright = 0.5F * ( 1.0F + curright );                                           \
         curlerror = currerror = 0.0F;                                                    \
@@ -1560,7 +1557,7 @@ CvBoostTrainer* icvBoostStartTraining( CvMat* trainClasses,
     CV_MAT2VEC( *trainClasses, ydata, ystep, m );
     CV_MAT2VEC( *weakTrainVals, traindata, trainstep, trainnum );
 
-    assert( m == trainnum );
+    CV_Assert( m == trainnum );
 
     idxnum = 0;
     idxstep = 0;
@@ -1640,8 +1637,8 @@ float icvBoostNextWeakClassifierDAB( CvMat* weakEvalVals,
     CV_MAT2VEC( *trainClasses, ydata, ystep, ynum );
     CV_MAT2VEC( *weights, wdata, wstep, wnum );
 
-    assert( m == ynum );
-    assert( m == wnum );
+    CV_Assert( m == ynum );
+    CV_Assert( m == wnum );
 
     sumw = 0.0F;
     err = 0.0F;
@@ -1808,8 +1805,8 @@ CvBoostTrainer* icvBoostStartTrainingLB( CvMat* trainClasses,
     CV_MAT2VEC( *weakTrainVals, traindata, trainstep, trainnum );
     CV_MAT2VEC( *weights, wdata, wstep, wnum );
 
-    assert( m == trainnum );
-    assert( m == wnum );
+    CV_Assert( m == trainnum );
+    CV_Assert( m == wnum );
 
 
     idxnum = 0;
@@ -1889,9 +1886,9 @@ float icvBoostNextWeakClassifierLB( CvMat* weakEvalVals,
     CV_MAT2VEC( *weakTrainVals, traindata, trainstep, trainnum );
     CV_MAT2VEC( *weights, wdata, wstep, wnum );
 
-    assert( m == ynum );
-    assert( m == wnum );
-    assert( m == trainnum );
+    CV_Assert( m == ynum );
+    CV_Assert( m == wnum );
+    CV_Assert( m == trainnum );
     //assert( m == trainer->count );
 
     for( i = 0; i < trainer->count; i++ )
@@ -1944,8 +1941,8 @@ float icvBoostNextWeakClassifierGAB( CvMat* weakEvalVals,
     CV_MAT2VEC( *trainClasses, ydata, ystep, ynum );
     CV_MAT2VEC( *weights, wdata, wstep, wnum );
 
-    assert( m == ynum );
-    assert( m == wnum );
+    CV_Assert( m == ynum );
+    CV_Assert( m == wnum );
 
     sumw = 0.0F;
     for( i = 0; i < trainer->count; i++ )
