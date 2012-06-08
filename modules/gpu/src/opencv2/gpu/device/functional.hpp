@@ -56,158 +56,224 @@ namespace cv { namespace gpu { namespace device
     using thrust::binary_function;
 
     // Arithmetic Operations
-
     template <typename T> struct plus : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a + b;
         }
+        __device__ __forceinline__ plus(const plus& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ plus():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct minus : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a - b;
         }
+        __device__ __forceinline__ minus(const minus& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ minus():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct multiplies : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a * b;
         }
+        __device__ __forceinline__ multiplies(const multiplies& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ multiplies():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct divides : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a / b;
         }
+        __device__ __forceinline__ divides(const divides& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ divides():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct modulus : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a % b;
         }
+        __device__ __forceinline__ modulus(const modulus& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ modulus():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct negate : unary_function<T, T>
     {
         __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a) const
         {
             return -a;
         }
+        __device__ __forceinline__ negate(const negate& other):unary_function<T,T>(){}
+        __device__ __forceinline__ negate():unary_function<T,T>(){}
     };
 
     // Comparison Operations
-
     template <typename T> struct equal_to : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a == b;
         }
+        __device__ __forceinline__ equal_to(const equal_to& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ equal_to():binary_function<T,T,bool>(){}
     };
+
     template <typename T> struct not_equal_to : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a != b;
         }
+        __device__ __forceinline__ not_equal_to(const not_equal_to& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ not_equal_to():binary_function<T,T,bool>(){}
     };
+
     template <typename T> struct greater : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a > b;
         }
+        __device__ __forceinline__ greater(const greater& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ greater():binary_function<T,T,bool>(){}
     };
+
     template <typename T> struct less : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a < b;
         }
+        __device__ __forceinline__ less(const less& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ less():binary_function<T,T,bool>(){}
     };
+
     template <typename T> struct greater_equal : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a >= b;
         }
+        __device__ __forceinline__ greater_equal(const greater_equal& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ greater_equal():binary_function<T,T,bool>(){}
     };
+
     template <typename T> struct less_equal : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a <= b;
         }
+        __device__ __forceinline__ less_equal(const less_equal& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ less_equal():binary_function<T,T,bool>(){}
     };
 
     // Logical Operations
-
     template <typename T> struct logical_and : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a && b;
         }
+        __device__ __forceinline__ logical_and(const logical_and& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ logical_and():binary_function<T,T,bool>(){}
     };
+
     template <typename T> struct logical_or : binary_function<T, T, bool>
     {
-        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a,
+                                                    typename TypeTraits<T>::ParameterType b) const
         {
             return a || b;
         }
+        __device__ __forceinline__ logical_or(const logical_or& other):binary_function<T,T,bool>(){}
+        __device__ __forceinline__ logical_or():binary_function<T,T,bool>(){}
     };
+
     template <typename T> struct logical_not : unary_function<T, bool>
     {
         __device__ __forceinline__ bool operator ()(typename TypeTraits<T>::ParameterType a) const
         {
             return !a;
         }
+        __device__ __forceinline__ logical_not(const logical_not& other):unary_function<T,bool>(){}
+        __device__ __forceinline__ logical_not():unary_function<T,bool>(){}
     };
 
     // Bitwise Operations
-
     template <typename T> struct bit_and : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a & b;
         }
+        __device__ __forceinline__ bit_and(const bit_and& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ bit_and():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct bit_or : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a | b;
         }
+        __device__ __forceinline__ bit_or(const bit_or& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ bit_or():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct bit_xor : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a, typename TypeTraits<T>::ParameterType b) const
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType a,
+                                                 typename TypeTraits<T>::ParameterType b) const
         {
             return a ^ b;
         }
+        __device__ __forceinline__ bit_xor(const bit_xor& other):binary_function<T,T,T>(){}
+        __device__ __forceinline__ bit_xor():binary_function<T,T,T>(){}
     };
+
     template <typename T> struct bit_not : unary_function<T, T>
     {
         __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType v) const 
         {
             return ~v;
         }
+        __device__ __forceinline__ bit_not(const bit_not& other):unary_function<T,T>(){}
+        __device__ __forceinline__ bit_not():unary_function<T,T>(){}
     };
 
     // Generalized Identity Operations
-
     template <typename T> struct identity : unary_function<T, T>
     {
         __device__ __forceinline__ typename TypeTraits<T>::ParameterType operator()(typename TypeTraits<T>::ParameterType x) const 
         {
             return x;
         }
+        __device__ __forceinline__ identity(const identity& other):unary_function<T,T>(){}
+        __device__ __forceinline__ identity():unary_function<T,T>(){}
     };
 
     template <typename T1, typename T2> struct project1st : binary_function<T1, T2, T1>
@@ -216,13 +282,18 @@ namespace cv { namespace gpu { namespace device
         {
             return lhs;
         }
+        __device__ __forceinline__ project1st(const project1st& other):binary_function<T1,T2,T1>(){}
+        __device__ __forceinline__ project1st():binary_function<T1,T2,T1>(){}
     };
+
     template <typename T1, typename T2> struct project2nd : binary_function<T1, T2, T2>
     {
         __device__ __forceinline__ typename TypeTraits<T2>::ParameterType operator()(typename TypeTraits<T1>::ParameterType lhs, typename TypeTraits<T2>::ParameterType rhs) const 
         {
             return rhs;
         }
+        __device__ __forceinline__ project2nd(const project2nd& other):binary_function<T1,T2,T2>(){}
+        __device__ __forceinline__ project2nd():binary_function<T1,T2,T2>(){}
     };
 
     // Min/Max Operations
@@ -231,6 +302,8 @@ namespace cv { namespace gpu { namespace device
     template <> struct name<type> : binary_function<type, type, type> \
     { \
         __device__ __forceinline__ type operator()(type lhs, type rhs) const {return op(lhs, rhs);} \
+        __device__ __forceinline__ name(const name& other):binary_function<type, type, type>(){}\
+        __device__ __forceinline__ name():binary_function<type, type, type>(){}\
     };
 
     template <typename T> struct maximum : binary_function<T, T, T>
@@ -239,6 +312,8 @@ namespace cv { namespace gpu { namespace device
         {
             return lhs < rhs ? rhs : lhs;
         }
+        __device__ __forceinline__ maximum(const maximum& other):binary_function<T, T, T>(){}
+        __device__ __forceinline__ maximum():binary_function<T, T, T>(){}
     };
 
     OPENCV_GPU_IMPLEMENT_MINMAX(maximum, uchar, ::max)
@@ -257,6 +332,8 @@ namespace cv { namespace gpu { namespace device
         {
             return lhs < rhs ? lhs : rhs;
         }
+        __device__ __forceinline__ minimum(const minimum& other):binary_function<T, T, T>(){}
+        __device__ __forceinline__ minimum():binary_function<T, T, T>(){}
     };
 
     OPENCV_GPU_IMPLEMENT_MINMAX(minimum, uchar, ::min)
@@ -272,7 +349,7 @@ namespace cv { namespace gpu { namespace device
 #undef OPENCV_GPU_IMPLEMENT_MINMAX
 
     // Math functions
-
+///bound=========================================
 #define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(name, func) \
     template <typename T> struct name ## _func : unary_function<T, float> \
     { \
@@ -342,17 +419,17 @@ namespace cv { namespace gpu { namespace device
     };
 
     // Saturate Cast Functor
-
     template <typename T, typename D> struct saturate_cast_func : unary_function<T, D>
     {
         __device__ __forceinline__ D operator ()(typename TypeTraits<T>::ParameterType v) const
         {
             return saturate_cast<D>(v);
         }
+        __device__ __forceinline__ saturate_cast_func(const saturate_cast_func& other):unary_function<T, D>(){}
+        __device__ __forceinline__ saturate_cast_func():unary_function<T, D>(){}
     };
 
     // Threshold Functors
-
     template <typename T> struct thresh_binary_func : unary_function<T, T>
     {
         __host__ __device__ __forceinline__ thresh_binary_func(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
@@ -361,10 +438,15 @@ namespace cv { namespace gpu { namespace device
         {
             return (src > thresh) * maxVal;
         }
+        __device__ __forceinline__ thresh_binary_func(const thresh_binary_func& other)
+            : unary_function<T, T>(), thresh(other.thresh), maxVal(other.maxVal){}
+
+        __device__ __forceinline__ thresh_binary_func():unary_function<T, T>(){}
 
         const T thresh;
         const T maxVal;
     };
+
     template <typename T> struct thresh_binary_inv_func : unary_function<T, T>
     {
         __host__ __device__ __forceinline__ thresh_binary_inv_func(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
@@ -373,10 +455,15 @@ namespace cv { namespace gpu { namespace device
         {
             return (src <= thresh) * maxVal;
         }
+        __device__ __forceinline__ thresh_binary_inv_func(const thresh_binary_inv_func& other)
+            : unary_function<T, T>(), thresh(other.thresh), maxVal(other.maxVal){}
+
+        __device__ __forceinline__ thresh_binary_inv_func():unary_function<T, T>(){}
 
         const T thresh;
         const T maxVal;
     };
+
     template <typename T> struct thresh_trunc_func : unary_function<T, T>
     {
         explicit __host__ __device__ __forceinline__ thresh_trunc_func(T thresh_, T maxVal_ = 0) : thresh(thresh_) {}
@@ -386,8 +473,14 @@ namespace cv { namespace gpu { namespace device
             return minimum<T>()(src, thresh);
         }
 
+        __device__ __forceinline__ thresh_trunc_func(const thresh_trunc_func& other)
+            : unary_function<T, T>(), thresh(other.thresh){}
+
+        __device__ __forceinline__ thresh_trunc_func():unary_function<T, T>(){}
+
         const T thresh;
     };
+
     template <typename T> struct thresh_to_zero_func : unary_function<T, T>
     {
         explicit __host__ __device__ __forceinline__ thresh_to_zero_func(T thresh_, T maxVal_ = 0) : thresh(thresh_) {}
@@ -396,9 +489,14 @@ namespace cv { namespace gpu { namespace device
         {
             return (src > thresh) * src;
         }
+        __device__ __forceinline__ thresh_to_zero_func(const thresh_to_zero_func& other)
+            : unary_function<T, T>(), thresh(other.thresh){}
+
+        __device__ __forceinline__ thresh_to_zero_func():unary_function<T, T>(){}
 
         const T thresh;
     };
+
     template <typename T> struct thresh_to_zero_inv_func : unary_function<T, T>
     {
         explicit __host__ __device__ __forceinline__ thresh_to_zero_inv_func(T thresh_, T maxVal_ = 0) : thresh(thresh_) {}
@@ -407,12 +505,15 @@ namespace cv { namespace gpu { namespace device
         {
             return (src <= thresh) * src;
         }
+        __device__ __forceinline__ thresh_to_zero_inv_func(const thresh_to_zero_inv_func& other)
+            : unary_function<T, T>(), thresh(other.thresh){}
+
+        __device__ __forceinline__ thresh_to_zero_inv_func():unary_function<T, T>(){}
 
         const T thresh;
     };
-
+//bound!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ============>
     // Function Object Adaptors
-
     template <typename Predicate> struct unary_negate : unary_function<typename Predicate::argument_type, bool>
     {
       explicit __host__ __device__ __forceinline__ unary_negate(const Predicate& p) : pred(p) {}

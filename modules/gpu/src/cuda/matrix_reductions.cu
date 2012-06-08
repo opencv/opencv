@@ -87,7 +87,9 @@ namespace cv { namespace gpu { namespace device
             __device__ __forceinline__ bool operator()(int y, int x) const 
             { 
                 return true; 
-            } 
+            }
+            __device__ __forceinline__ MaskTrue(){}
+            __device__ __forceinline__ MaskTrue(const MaskTrue& mask_){}
         };
 
         //////////////////////////////////////////////////////////////////////////////
@@ -1795,6 +1797,9 @@ namespace cv { namespace gpu { namespace device
                 return 0;
             }
 
+            __device__ __forceinline__ SumReductor(const SumReductor& other){}
+            __device__ __forceinline__ SumReductor(){}
+
             __device__ __forceinline__ S operator ()(volatile S a, volatile S b) const
             {
                 return a + b;
@@ -1813,6 +1818,9 @@ namespace cv { namespace gpu { namespace device
                 return 0;
             }
 
+            __device__ __forceinline__ AvgReductor(const AvgReductor& other){}
+            __device__ __forceinline__ AvgReductor(){}
+
             __device__ __forceinline__ S operator ()(volatile S a, volatile S b) const
             {
                 return a + b;
@@ -1830,6 +1838,9 @@ namespace cv { namespace gpu { namespace device
             {
                 return numeric_limits<S>::max();
             }
+
+            __device__ __forceinline__ MinReductor(const MinReductor& other){}
+            __device__ __forceinline__ MinReductor(){}
 
             template <typename T> __device__ __forceinline__ T operator ()(volatile T a, volatile T b) const
             {
@@ -1852,6 +1863,9 @@ namespace cv { namespace gpu { namespace device
             {
                 return numeric_limits<S>::min();
             }
+
+            __device__ __forceinline__ MaxReductor(const MaxReductor& other){}
+            __device__ __forceinline__ MaxReductor(){}
 
             template <typename T> __device__ __forceinline__ int operator ()(volatile T a, volatile T b) const
             {

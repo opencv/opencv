@@ -47,7 +47,7 @@
 
 namespace cv { namespace gpu { namespace device 
 {
-    #if __CUDA_ARCH__ >= 200
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 200
 
         // for Fermi memory space is detected automatically
         template <typename T> struct ForceGlob

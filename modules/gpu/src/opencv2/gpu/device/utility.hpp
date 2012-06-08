@@ -70,6 +70,7 @@ namespace cv { namespace gpu { namespace device
     struct SingleMask
     {
         explicit __host__ __device__ __forceinline__ SingleMask(PtrStepb mask_) : mask(mask_) {}
+        __host__ __device__ __forceinline__ SingleMask(const SingleMask& mask_): mask(mask_.mask){}
         
         __device__ __forceinline__ bool operator()(int y, int x) const
         {            
@@ -81,7 +82,10 @@ namespace cv { namespace gpu { namespace device
 
     struct SingleMaskChannels
     {
-        __host__ __device__ __forceinline__ SingleMaskChannels(PtrStepb mask_, int channels_) : mask(mask_), channels(channels_) {}
+        __host__ __device__ __forceinline__ SingleMaskChannels(PtrStepb mask_, int channels_) 
+        : mask(mask_), channels(channels_) {}
+        __host__ __device__ __forceinline__ SingleMaskChannels(const SingleMaskChannels& mask_)
+            :mask(mask_.mask), channels(mask_.channels){}
         
         __device__ __forceinline__ bool operator()(int y, int x) const
         {            
@@ -94,7 +98,11 @@ namespace cv { namespace gpu { namespace device
 
     struct MaskCollection
     {
-        explicit __host__ __device__ __forceinline__ MaskCollection(PtrStepb* maskCollection_) : maskCollection(maskCollection_) {}
+        explicit __host__ __device__ __forceinline__ MaskCollection(PtrStepb* maskCollection_)
+            : maskCollection(maskCollection_) {}
+
+        __device__ __forceinline__ MaskCollection(const MaskCollection& masks_)
+            : maskCollection(masks_.maskCollection), curMask(masks_.curMask){}
 
         __device__ __forceinline__ void next()
         {
@@ -117,6 +125,9 @@ namespace cv { namespace gpu { namespace device
 
     struct WithOutMask
     {
+        __device__ __forceinline__ WithOutMask(){}
+        __device__ __forceinline__ WithOutMask(const WithOutMask& mask){}
+
         __device__ __forceinline__ void next() const
         {
         }

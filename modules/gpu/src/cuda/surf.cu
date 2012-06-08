@@ -116,7 +116,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int N> __device__ float icvCalcHaarPatternSum(const float src[][5], int oldSize, int newSize, int y, int x)
         {
-        #if __CUDA_ARCH__ >= 200
+        #if __CUDA_ARCH__ && __CUDA_ARCH__ >= 200
             typedef double real_t;
         #else
             typedef float  real_t;
@@ -248,7 +248,7 @@ namespace cv { namespace gpu { namespace device
         template <typename Mask>
         __global__ void icvFindMaximaInLayer(const PtrStepf det, const PtrStepf trace, int4* maxPosBuffer, unsigned int* maxCounter)
         {
-            #if __CUDA_ARCH__ >= 110
+            #if __CUDA_ARCH__ && __CUDA_ARCH__ >= 110
 
             extern __shared__ float N9[];
 
@@ -371,7 +371,7 @@ namespace cv { namespace gpu { namespace device
             float* featureX, float* featureY, int* featureLaplacian, int* featureOctave, float* featureSize, float* featureHessian,
             unsigned int* featureCounter)
         {
-            #if __CUDA_ARCH__ >= 110
+            #if __CUDA_ARCH__ && __CUDA_ARCH__ >= 110
 
             const int4 maxPos = maxPosBuffer[blockIdx.x];
 

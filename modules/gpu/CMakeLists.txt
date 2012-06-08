@@ -30,7 +30,9 @@ if (HAVE_CUDA)
   set(ncv_files ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
 
   source_group("Src\\NVidia" FILES ${ncv_files})
-  ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
+  include_directories(AFTER SYSTEM  ${CUDA_INCLUDE_DIRS})
+  ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging")
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
 
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")

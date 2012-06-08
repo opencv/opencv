@@ -41,7 +41,7 @@
 
 #ifndef _ncvruntimetemplates_hpp_
 #define _ncvruntimetemplates_hpp_
-#if _MSC_VER >= 1200
+#if defined _MSC_VER &&_MSC_VER >= 1200
 #pragma warning( disable: 4800 )
 #endif
 
