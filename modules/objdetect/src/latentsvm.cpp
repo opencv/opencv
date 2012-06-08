@@ -583,7 +583,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
     for (i = 0; i < kComponents; i++)
     {
 #ifdef HAVE_TBB
-        /*error = */searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
+        int error = searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
             b[i], maxXBorder, maxYBorder, scoreThreshold,
             &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]),
             &(scoreArr[i]), &(partsDisplacementArr[i]), numThreads);
