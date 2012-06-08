@@ -63,19 +63,34 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     switch( type )
     {
     case THRESH_BINARY:
-        if(tegra::thresh_8u_binary(_src, _dst, roi.width, roi.height, thresh, maxval)) return;
-        break;
+        if(tegra::thresh_8u_binary(_src, _dst, roi.width, roi.height, thresh, maxval))
+ 		{
+			return;
+		}
+       break;
     case THRESH_BINARY_INV:
-        if(tegra::thresh_8u_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval)) return;
+        if(tegra::thresh_8u_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval))
+		{
+			return;
+		}
         break;
     case THRESH_TRUNC:
-        if(tegra::thresh_8u_trunc(_src, _dst, roi.width, roi.height, thresh)) return;
-        break;
+        if(tegra::thresh_8u_trunc(_src, _dst, roi.width, roi.height, thresh))
+ 		{
+			return;
+		}
+       break;
     case THRESH_TOZERO:
-        if(tegra::thresh_8u_tozero(_src, _dst, roi.width, roi.height, thresh)) return;
+        if(tegra::thresh_8u_tozero(_src, _dst, roi.width, roi.height, thresh))
+		{
+			return;
+		}
         break;
     case THRESH_TOZERO_INV:
-        if(tegra::thresh_8u_tozero_inv(_src, _dst, roi.width, roi.height, thresh)) return;
+        if(tegra::thresh_8u_tozero_inv(_src, _dst, roi.width, roi.height, thresh))
+		{
+			return;
+		}
         break;
     }
 #endif
@@ -292,7 +307,41 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         roi.width *= roi.height;
         roi.height = 1;
     }
-
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    switch( type )
+    {
+    case THRESH_BINARY:
+        if(tegra::thresh_16s_binary(_src, _dst, roi.width, roi.height, thresh, maxval))
+		{
+			return;
+		}
+        break;
+    case THRESH_BINARY_INV:
+        if(tegra::thresh_16s_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval))
+		{
+			return;
+		}
+        break;
+    case THRESH_TRUNC:
+        if(tegra::thresh_16s_trunc(_src, _dst, roi.width, roi.height, thresh))
+ 		{
+			return;
+		}
+       break;
+    case THRESH_TOZERO:
+        if(tegra::thresh_16s_tozero(_src, _dst, roi.width, roi.height, thresh))
+ 		{
+			return;
+		}
+       break;
+    case THRESH_TOZERO_INV:
+        if(tegra::thresh_16s_tozero_inv(_src, _dst, roi.width, roi.height, thresh))
+		{
+			return;
+		}
+        break;
+    }
+#endif 
     switch( type )
     {
     case THRESH_BINARY:
@@ -460,6 +509,41 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         roi.height = 1;
     }
     
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    switch( type )
+    {
+    case THRESH_BINARY:
+       if(tegra::thresh_32f_binary(_src, _dst, roi.width, roi.height, thresh, maxval))
+	   {
+			return;		
+	   }
+        break;
+    case THRESH_BINARY_INV:
+        if(tegra::thresh_32f_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval))
+		{
+			return;
+		}
+        break;
+    case THRESH_TRUNC:
+        if(tegra::thresh_32f_trunc(_src, _dst, roi.width, roi.height, thresh))
+		{
+			return;
+		}
+        break;
+    case THRESH_TOZERO:
+        if(tegra::thresh_32f_tozero(_src, _dst, roi.width, roi.height, thresh))
+		{
+			return;
+		}
+        break;
+    case THRESH_TOZERO_INV:
+        if(tegra::thresh_32f_tozero_inv(_src, _dst, roi.width, roi.height, thresh))
+		{
+			return;
+		}
+        break;
+    }
+#endif 
     switch( type )
     {
         case THRESH_BINARY:
