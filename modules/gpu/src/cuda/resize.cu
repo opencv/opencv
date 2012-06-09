@@ -116,7 +116,6 @@ namespace cv { namespace gpu { namespace device
             {
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
-
                 BrdConstant<T> brd(src.rows, src.cols);
                 BorderReader< PtrStep<T>, BrdConstant<T> > brdSrc(src, brd);
                 IntegerAreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
@@ -278,5 +277,52 @@ namespace cv { namespace gpu { namespace device
         //template void resize_gpu<float2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
         template void resize_gpu<float3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
         template void resize_gpu<float4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+
+        template<typename T> struct scan_traits{};
+
+        template<> struct scan_traits<uchar>
+        {
+            typedef int scan_line_type;
+        };
+
+        template <typename Ptr2D, typename T>
+        __global__ void resize_area_scan(const Ptr2D src, int fx, int fy, DevMem2D_<T> dst, DevMem2D_<T> buffer)
+        {
+            typedef typename scan_traits<T>::scan_line_type W;
+            extern __shared__ W line[];
+
+            const int x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int y = blockDim.y * blockIdx.y + threadIdx.y;
+        }
+
+        template <typename T> struct InterAreaDispatcherStream
+        {
+            static void call(DevMem2D_<T> src, int fx, int fy, DevMem2D_<T> dst, DevMem2D_<T> buffer, cudaStream_t stream)
+            {
+                dim3 block(256, 1);
+                dim3 grid(divUp(dst.cols, block.x), 1);
+
+                resize_area_scan<<<grid, block, 256 * 2 * sizeof(typename scan_traits<T>::scan_line_type) >>>(src, fx, fy, dst, buffer);
+                cudaSafeCall( cudaGetLastError() );
+
+                if (stream == 0)
+                    cudaSafeCall( cudaDeviceSynchronize() );
+            }
+        };
+
+        template <typename T>
+        void resize_area_gpu(DevMem2Db src, DevMem2Db dst,float fx, float fy,
+                             int interpolation, DevMem2Db buffer, cudaStream_t stream)
+        {
+            (void)interpolation;
+
+            int iscale_x = round(fx);
+            int iscale_y = round(fy);
+
+            InterAreaDispatcherStream<T>::call(src, iscale_x, iscale_y, dst, buffer, stream);
+        }
+
+        template void resize_area_gpu<uchar>(DevMem2Db src, DevMem2Db dst, float fx, float fy, int interpolation, DevMem2Db buffer, cudaStream_t stream);
+
     } // namespace imgproc
 }}} // namespace cv { namespace gpu { namespace device

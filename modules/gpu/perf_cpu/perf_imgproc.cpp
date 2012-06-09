@@ -80,6 +80,37 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(
                     Interpolation(cv::INTER_CUBIC),   Interpolation(cv::INTER_AREA)),
     testing::Values(Scale(0.5), Scale(0.3), Scale(2.0))));
 
+GPU_PERF_TEST(ResizeArea, cv::gpu::DeviceInfo, cv::Size, MatType, Scale)
+{
+    cv::Size size = GET_PARAM(1);
+    int type = GET_PARAM(2);
+    int interpolation = cv::INTER_AREA;
+    double f = GET_PARAM(3);
+
+    cv::Mat src_host(size, type);
+    fill(src_host, 0, 255);
+
+    cv::Mat src(src_host);
+    cv::Mat dst;
+
+    cv::resize(src, dst, cv::Size(), f, f, interpolation);
+
+    declare.time(1.0);
+
+    TEST_CYCLE()
+    {
+        cv::resize(src, dst, cv::Size(), f, f, interpolation);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, ResizeArea, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(perf::sz1080p, cv::Size(4096, 2048)),
+    testing::Values(MatType(CV_8UC1)/*,  MatType(CV_8UC3), MatType(CV_8UC4),
+                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
+                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)*/),
+    testing::Values(Scale(0.2),Scale(0.1),Scale(0.05))));
+
 //////////////////////////////////////////////////////////////////////
 // WarpAffine
 

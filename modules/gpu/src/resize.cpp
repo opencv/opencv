@@ -44,7 +44,32 @@
 
 #ifndef HAVE_CUDA
 
-void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int, Stream&) { throw_nogpu(); }
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
+{
+    (void)src;
+    (void)dst;
+    (void)dsize;
+    (void)fx;
+    (void)fy;
+    (void)interpolation;
+    (void)s;
+
+    throw_nogpu();
+}
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy,
+                     int interpolation, const GpuMat& buffer, Stream& s)
+{
+    (void)src;
+    (void)dst;
+    (void)dsize;
+    (void)fx;
+    (void)fy;
+    (void)interpolation;
+    (void)buffer;
+    (void)s;
+
+    throw_nogpu();
+}
 
 #else // HAVE_CUDA
 
@@ -55,8 +80,48 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy,
                         DevMem2Db dst, int interpolation, cudaStream_t stream);
+
+        template <typename T>
+        void resize_area_gpu(DevMem2Db src, DevMem2Db dst,float fx, float fy,
+                             int interpolation, DevMem2Db buffer, cudaStream_t stream);
     }
 }}}
+
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, GpuMat& buffer, double fx, double fy,
+                     int interpolation, Stream& s)
+{
+    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+    CV_Assert(interpolation == INTER_AREA);
+    CV_Assert( (fx < 1.0) && (fy < 1.0));
+    CV_Assert(!(dsize == Size()) || (fx > 0 && fy > 0));
+
+    if (dsize == Size())
+        dsize = Size(saturate_cast<int>(src.cols * fx), saturate_cast<int>(src.rows * fy));
+    else
+    {
+        fx = static_cast<double>(dsize.width) / src.cols;
+        fy = static_cast<double>(dsize.height) / src.rows;
+    }
+
+    fx = static_cast<float>(1.0 / fx);
+    fy = static_cast<float>(1.0 / fy);
+
+    dst.create(dsize, src.type());
+    buffer.create(cv::Size(dsize.width, src.rows), src.type());
+
+    if (dsize == src.size())
+    {
+        if (s)
+            s.enqueueCopy(src, dst);
+        else
+            src.copyTo(dst);
+        return;
+    }
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    cv::gpu::device::imgproc::resize_area_gpu<uchar>(src, dst, fx, fy, interpolation, buffer, stream);
+}
 
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
 {
