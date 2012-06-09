@@ -1250,7 +1250,7 @@ CvBoost::update_weights( CvBoostTree* tree )
         if( have_subsample )
         {
             float* values = (float*)cur_buf_pos;
-            cur_buf_pos = (uchar*)(values + data->buf->step);
+            cur_buf_pos = (uchar*)(values + data->buf->cols);
             uchar* missing = cur_buf_pos;
             cur_buf_pos = missing + data->buf->step;
             CvMat _sample, _mask;
