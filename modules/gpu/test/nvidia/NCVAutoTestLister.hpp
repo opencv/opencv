@@ -14,13 +14,13 @@
 #include <vector>
 
 #include "NCVTest.hpp"
-
-enum OutputLevel
-{
-    OutputLevelNone,
-    OutputLevelCompact,
-    OutputLevelFull
-};
+#include <main_test_nvidia.h>
+//enum OutputLevel
+//{
+//    OutputLevelNone,
+//    OutputLevelCompact,
+//    OutputLevelFull
+//};
 
 class NCVAutoTestLister
 {
