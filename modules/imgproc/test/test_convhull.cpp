@@ -193,7 +193,7 @@ protected:
     void* result;
     double low_high_range;
     CvScalar low, high;
-    
+
     bool test_cpp;
 };
 
@@ -254,7 +254,7 @@ int CV_BaseShapeDescrTest::read_params( CvFileStorage* fs )
 }
 
 
-void CV_BaseShapeDescrTest::generate_point_set( void* points )
+void CV_BaseShapeDescrTest::generate_point_set( void* pointsSet )
 {
     RNG& rng = ts->get_rng();
     int i, k, n, total, point_type;
@@ -269,16 +269,16 @@ void CV_BaseShapeDescrTest::generate_point_set( void* points )
     }
     memset( &reader, 0, sizeof(reader) );
 
-    if( CV_IS_SEQ(points) )
+    if( CV_IS_SEQ(pointsSet) )
     {
-        CvSeq* ptseq = (CvSeq*)points;
+        CvSeq* ptseq = (CvSeq*)pointsSet;
         total = ptseq->total;
         point_type = CV_SEQ_ELTYPE(ptseq);
         cvStartReadSeq( ptseq, &reader );
     }
     else
     {
-        CvMat* ptm = (CvMat*)points;
+        CvMat* ptm = (CvMat*)pointsSet;
         assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
@@ -362,7 +362,7 @@ int CV_BaseShapeDescrTest::prepare_test_case( int test_case_idx )
     }
 
     generate_point_set( points );
-    
+
     test_cpp = (cvtest::randInt(rng) & 16) == 0;
     return 1;
 }
@@ -614,16 +614,16 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
     for( i = 0; i < point_count; i++ )
     {
         int idx = 0, on_edge = 0;
-        double result = cvTsPointPolygonTest( p[i], h, hull_count, &idx, &on_edge );
+        double pptresult = cvTsPointPolygonTest( p[i], h, hull_count, &idx, &on_edge );
 
-        if( result < 0 )
+        if( pptresult < 0 )
         {
             ts->printf( cvtest::TS::LOG, "The point #%d is outside of the convex hull\n", i );
             code = cvtest::TS::FAIL_BAD_ACCURACY;
             goto _exit_;
         }
 
-        if( result < FLT_EPSILON && !on_edge )
+        if( pptresult < FLT_EPSILON && !on_edge )
             mask->data.ptr[idx] = (uchar)1;
     }
 
@@ -735,15 +735,15 @@ int CV_MinAreaRectTest::validate_test_results( int test_case_idx )
     for( i = 0; i < point_count; i++ )
     {
         int idx = 0, on_edge = 0;
-        double result = cvTsPointPolygonTest( p[i], box_pt, 4, &idx, &on_edge );
-        if( result < -eps )
+        double pptresult = cvTsPointPolygonTest( p[i], box_pt, 4, &idx, &on_edge );
+        if( pptresult < -eps )
         {
             ts->printf( cvtest::TS::LOG, "The point #%d is outside of the box\n", i );
             code = cvtest::TS::FAIL_BAD_ACCURACY;
             goto _exit_;
         }
 
-        if( result < eps )
+        if( pptresult < eps )
         {
             for( j = 0; j < 4; j++ )
             {
@@ -997,7 +997,7 @@ CV_FitEllipseTest::CV_FitEllipseTest()
 }
 
 
-void CV_FitEllipseTest::generate_point_set( void* points )
+void CV_FitEllipseTest::generate_point_set( void* pointsSet )
 {
     RNG& rng = ts->get_rng();
     int i, total, point_type;
@@ -1020,16 +1020,16 @@ void CV_FitEllipseTest::generate_point_set( void* points )
     }
     memset( &reader, 0, sizeof(reader) );
 
-    if( CV_IS_SEQ(points) )
+    if( CV_IS_SEQ(pointsSet) )
     {
-        CvSeq* ptseq = (CvSeq*)points;
+        CvSeq* ptseq = (CvSeq*)pointsSet;
         total = ptseq->total;
         point_type = CV_SEQ_ELTYPE(ptseq);
         cvStartReadSeq( ptseq, &reader );
     }
     else
     {
-        CvMat* ptm = (CvMat*)points;
+        CvMat* ptm = (CvMat*)pointsSet;
         assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
@@ -1171,7 +1171,7 @@ class CV_FitEllipseSmallTest : public cvtest::BaseTest
 {
 public:
     CV_FitEllipseSmallTest() {}
-    ~CV_FitEllipseSmallTest() {}   
+    ~CV_FitEllipseSmallTest() {}
 protected:
     void run(int)
     {
@@ -1188,7 +1188,7 @@ protected:
         c[0].push_back(Point(8, 6)*scale+ofs);
         c[0].push_back(Point(8, 2)*scale+ofs);
         c[0].push_back(Point(6, 0)*scale+ofs);
-        
+
         RotatedRect e = fitEllipse(c[0]);
         CV_Assert( fabs(e.center.x - 4) <= 1. &&
                    fabs(e.center.y - 4) <= 1. &&
@@ -1226,7 +1226,7 @@ CV_FitLineTest::CV_FitLineTest()
 }
 
 
-void CV_FitLineTest::generate_point_set( void* points )
+void CV_FitLineTest::generate_point_set( void* pointsSet )
 {
     RNG& rng = ts->get_rng();
     int i, k, n, total, point_type;
@@ -1250,16 +1250,16 @@ void CV_FitLineTest::generate_point_set( void* points )
 
     memset( &reader, 0, sizeof(reader) );
 
-    if( CV_IS_SEQ(points) )
+    if( CV_IS_SEQ(pointsSet) )
     {
-        CvSeq* ptseq = (CvSeq*)points;
+        CvSeq* ptseq = (CvSeq*)pointsSet;
         total = ptseq->total;
         point_type = CV_MAT_DEPTH(CV_SEQ_ELTYPE(ptseq));
         cvStartReadSeq( ptseq, &reader );
     }
     else
     {
-        CvMat* ptm = (CvMat*)points;
+        CvMat* ptm = (CvMat*)pointsSet;
         assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_DEPTH(CV_MAT_TYPE(ptm->type));
@@ -1498,7 +1498,7 @@ CV_ContourMomentsTest::CV_ContourMomentsTest()
 }
 
 
-void CV_ContourMomentsTest::generate_point_set( void* points )
+void CV_ContourMomentsTest::generate_point_set( void* pointsSet )
 {
     RNG& rng = ts->get_rng();
     float max_sz;
@@ -1518,7 +1518,7 @@ void CV_ContourMomentsTest::generate_point_set( void* points )
     max_r_scale = cvtest::randReal(rng)*max_max_r_scale*0.01;
     angle = cvtest::randReal(rng)*360;
 
-    cvTsGenerateTousledBlob( center, axes, max_r_scale, angle, points, rng );
+    cvTsGenerateTousledBlob( center, axes, max_r_scale, angle, pointsSet, rng );
 
     if( points1 )
         points1->flags = CV_SEQ_MAGIC_VAL + CV_SEQ_POLYGON;
@@ -1614,8 +1614,8 @@ class CV_PerimeterAreaSliceTest : public cvtest::BaseTest
 {
 public:
     CV_PerimeterAreaSliceTest();
-    ~CV_PerimeterAreaSliceTest();    
-protected:    
+    ~CV_PerimeterAreaSliceTest();
+protected:
     void run(int);
 };
 
@@ -1629,7 +1629,7 @@ void CV_PerimeterAreaSliceTest::run( int )
     Ptr<CvMemStorage> storage = cvCreateMemStorage();
     RNG& rng = theRNG();
     const double min_r = 90, max_r = 120;
-    
+
     for( int i = 0; i < 100; i++ )
     {
         ts->update_context( this, i, true );
@@ -1640,7 +1640,7 @@ void CV_PerimeterAreaSliceTest::run( int )
         CvPoint center;
         center.x = rng.uniform(cvCeil(max_r), cvFloor(640-max_r));
         center.y = rng.uniform(cvCeil(max_r), cvFloor(480-max_r));
-        
+
         for( int j = 0; j < n; j++ )
         {
             CvPoint pt;
@@ -1650,7 +1650,7 @@ void CV_PerimeterAreaSliceTest::run( int )
             pt.y = cvRound(center.y - r*sin(phi));
             cvSeqPush(contour, &pt);
         }
-        
+
         CvSlice slice;
         for(;;)
         {
@@ -1664,14 +1664,14 @@ void CV_PerimeterAreaSliceTest::run( int )
         /*printf( "%d. (%d, %d) of %d, length = %d, length1 = %d\n",
                i, slice.start_index, slice.end_index,
                contour->total, cvSliceLength(slice, contour), cslice->total );
-        
+
         double area0 = cvContourArea(cslice);
-        double area1 = cvContourArea(contour, slice); 
+        double area1 = cvContourArea(contour, slice);
         if( area0 != area1 )
         {
             ts->printf(cvtest::TS::LOG,
                        "The contour area slice is computed differently (%g vs %g)\n", area0, area1 );
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );       
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             return;
         }*/
 
@@ -1681,7 +1681,7 @@ void CV_PerimeterAreaSliceTest::run( int )
         {
             ts->printf(cvtest::TS::LOG,
                        "The contour arc length is computed differently (%g vs %g)\n", len0, len1 );
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );       
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             return;
         }
     }

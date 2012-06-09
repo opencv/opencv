@@ -504,7 +504,7 @@ void CvANN_MLP::calc_activ_func_deriv( CvMat* _xf, CvMat* _df,
 
         n *= cols;
         xf -= n; df -= n;
-        
+
         for( i = 0; i < n; i++ )
             df[i] *= xf[i];
     }
@@ -517,7 +517,7 @@ void CvANN_MLP::calc_activ_func_deriv( CvMat* _xf, CvMat* _df,
                 xf[j] = (xf[j] + bias[j])*scale;
                 df[j] = -fabs(xf[j]);
             }
-        
+
         cvExp( _df, _df );
 
         n *= cols;
@@ -1023,9 +1023,9 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
 }
 
 struct rprop_loop {
-  rprop_loop(const CvANN_MLP* _point, double**& _weights, int& _count, int& _ivcount, CvVectors* _x0, 
+  rprop_loop(const CvANN_MLP* _point, double**& _weights, int& _count, int& _ivcount, CvVectors* _x0,
      int& _l_count, CvMat*& _layer_sizes, int& _ovcount, int& _max_count,
-     CvVectors* _u, const double*& _sw, double& _inv_count, CvMat*& _dEdw, int& _dcount0, double* _E, int _buf_sz) 
+     CvVectors* _u, const double*& _sw, double& _inv_count, CvMat*& _dEdw, int& _dcount0, double* _E, int _buf_sz)
   {
     point = _point;
     weights = _weights;
@@ -1044,7 +1044,7 @@ struct rprop_loop {
     E = _E;
     buf_sz = _buf_sz;
   }
-  
+
   const CvANN_MLP* point;
   double** weights;
   int count;
@@ -1062,14 +1062,14 @@ struct rprop_loop {
   double* E;
   int buf_sz;
 
-  
+
   void operator()( const cv::BlockedRange& range ) const
   {
     double* buf_ptr;
     double** x = 0;
-    double **df = 0;    
+    double **df = 0;
     int total = 0;
-    
+
     for(int i = 0; i < l_count; i++ )
         total += layer_sizes->data.i[i];
     CvMat* buf;
@@ -1087,7 +1087,7 @@ struct rprop_loop {
     for(int si = range.begin(); si < range.end(); si++ )
     {
         if (si % dcount0 != 0) continue;
-        int n1, n2, j, k;
+        int n1, n2, k;
         double* w;
         CvMat _w, _dEdw, hdr1, hdr2, ghdr1, ghdr2, _df;
         CvMat *x1, *x2, *grad1, *grad2, *temp;
@@ -1100,23 +1100,23 @@ struct rprop_loop {
 
         // grab and preprocess input data
         if( x0->type == CV_32F )
-	{
+    {
             for(int i = 0; i < dcount; i++ )
             {
                 const float* x0data = x0->data.fl[si+i];
                 double* xdata = x[0]+i*ivcount;
-                for( j = 0; j < ivcount; j++ )
+                for(int j = 0; j < ivcount; j++ )
                     xdata[j] = x0data[j]*w[j*2] + w[j*2+1];
             }
-	}
+    }
         else
             for(int i = 0; i < dcount; i++ )
             {
                 const double* x0data = x0->data.db[si+i];
                 double* xdata = x[0]+i*ivcount;
-                for( j = 0; j < ivcount; j++ )
+                for(int j = 0; j < ivcount; j++ )
                     xdata[j] = x0data[j]*w[j*2] + w[j*2+1];
-            }  
+            }
         cvInitMatHeader( x1, dcount, ivcount, CV_64F, x[0] );
 
         // forward pass, compute y[i]=w*x[i-1], x[i]=f(y[i]), df[i]=f'(y[i])
@@ -1144,7 +1144,7 @@ struct rprop_loop {
                 double* gdata = grad1->data.db + i*ovcount;
                 double sweight = sw ? sw[si+i] : inv_count, E1 = 0;
 
-                for( j = 0; j < ovcount; j++ )
+                for(int j = 0; j < ovcount; j++ )
                 {
                     double t = udata[j]*w[j*2] + w[j*2+1] - xdata[j];
                     gdata[j] = t*sweight;
@@ -1168,7 +1168,7 @@ struct rprop_loop {
                 }
                 *E += sweight*E1;
             }
-            
+
         // backward pass, update dEdw
         #ifdef HAVE_TBB
         static tbb::spin_mutex mutex;
@@ -1191,10 +1191,10 @@ struct rprop_loop {
            {
                double* dst = _dEdw.data.db + n1*n2;
                const double* src = grad1->data.db + k*n2;
-               for( j = 0; j < n2; j++ )
+               for(int j = 0; j < n2; j++ )
                    dst[j] += src[j];
            }
-           
+
            if (i > 1)
                cvInitMatHeader( &_w, n1, n2, CV_64F, weights[i] );
            #ifdef HAVE_TBB
@@ -1215,7 +1215,7 @@ struct rprop_loop {
 
 int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
 {
-    const int max_buf_sz = 1 << 16;
+    const int max_buf_size = 1 << 16;
     CvMat* dw = 0;
     CvMat* dEdw = 0;
     CvMat* prev_dEdw_sign = 0;
@@ -1256,7 +1256,7 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
     cvZero( prev_dEdw_sign );
 
     inv_count = 1./count;
-    dcount0 = max_buf_sz/(2*total);
+    dcount0 = max_buf_size/(2*total);
     dcount0 = MAX( dcount0, 1 );
     dcount0 = MIN( dcount0, count );
     buf_sz = dcount0*(total + max_count)*2;
@@ -1297,8 +1297,8 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
         double E = 0;
 
         // first, iterate through all the samples and compute dEdw
-        cv::parallel_for(cv::BlockedRange(0, count), 
-            rprop_loop(this, weights, count, ivcount, &x0, l_count, layer_sizes, 
+        cv::parallel_for(cv::BlockedRange(0, count),
+            rprop_loop(this, weights, count, ivcount, &x0, l_count, layer_sizes,
                        ovcount, max_count, &u, sw, inv_count, dEdw, dcount0, &E, buf_sz)
         );
 
@@ -1600,8 +1600,8 @@ CvANN_MLP::CvANN_MLP( const Mat& _layer_sizes, int _activ_func,
 void CvANN_MLP::create( const Mat& _layer_sizes, int _activ_func,
                        double _f_param1, double _f_param2 )
 {
-    CvMat layer_sizes = _layer_sizes;
-    create( &layer_sizes, _activ_func, _f_param1, _f_param2 );
+    CvMat cvlayer_sizes = _layer_sizes;
+    create( &cvlayer_sizes, _activ_func, _f_param1, _f_param2 );
 }
 
 int CvANN_MLP::train( const Mat& _inputs, const Mat& _outputs,
@@ -1610,7 +1610,7 @@ int CvANN_MLP::train( const Mat& _inputs, const Mat& _outputs,
 {
     CvMat inputs = _inputs, outputs = _outputs, sweights = _sample_weights, sidx = _sample_idx;
     return train(&inputs, &outputs, sweights.data.ptr ? &sweights : 0,
-                 sidx.data.ptr ? &sidx : 0, _params, flags); 
+                 sidx.data.ptr ? &sidx : 0, _params, flags);
 }
 
 float CvANN_MLP::predict( const Mat& _inputs, Mat& _outputs ) const
@@ -1618,8 +1618,8 @@ float CvANN_MLP::predict( const Mat& _inputs, Mat& _outputs ) const
     CV_Assert(layer_sizes != 0);
     _outputs.create(_inputs.rows, layer_sizes->data.i[layer_sizes->cols-1], _inputs.type());
     CvMat inputs = _inputs, outputs = _outputs;
-    
-    return predict(&inputs, &outputs); 
+
+    return predict(&inputs, &outputs);
 }
 
 /* End of file. */

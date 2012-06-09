@@ -5,9 +5,7 @@ endif()
 set(the_description "GPU-accelerated Computer Vision")
 ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_legacy)
 
-ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
-
-ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda" "${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
 
 file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 file(GLOB lib_int_hdrs           "src/*.hpp" "src/*.h")
@@ -30,17 +28,14 @@ if (HAVE_CUDA)
   set(ncv_files ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
 
   source_group("Src\\NVidia" FILES ${ncv_files})
-  include_directories(AFTER SYSTEM  ${CUDA_INCLUDE_DIRS})
-  ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging")
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+  ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef /wd4211 /wd4201 /wd4100 /wd4505 /wd4408)
 
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
 
   if(MSVC)
     if(NOT ENABLE_NOISY_WARNINGS)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408")
-
       foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
         string(REPLACE "/W4" "/W3" ${var} "${${var}}")
       endforeach()
@@ -52,9 +47,7 @@ if (HAVE_CUDA)
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
   #CUDA_BUILD_CLEAN_TARGET()
 
-
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-
 
   if(NOT APPLE)
     unset(CUDA_nvcuvid_LIBRARY CACHE)
@@ -106,11 +99,11 @@ ocv_add_precompiled_headers(${the_module})
 ################################################################################################################
 file(GLOB test_srcs "test/*.cpp")
 file(GLOB test_hdrs "test/*.hpp" "test/*.h")
+
+set(nvidia "")
 if(HAVE_CUDA)
   file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.hpp" "test/nvidia/*.h")
   set(nvidia FILES "Src\\\\\\\\NVidia" ${nvidia}) # 8 ugly backslashes :'(
-else()
-  set(nvidia "")
 endif()
 
 ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}

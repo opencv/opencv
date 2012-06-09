@@ -88,7 +88,7 @@ split_( const T* src, T** dst, int len, int cn )
             dst2[i] = src[j+2]; dst3[i] = src[j+3];
         }
     }
-    
+
     for( ; k < cn; k += 4 )
     {
         T *dst0 = dst[k], *dst1 = dst[k+1], *dst2 = dst[k+2], *dst3 = dst[k+3];
@@ -99,7 +99,7 @@ split_( const T* src, T** dst, int len, int cn )
         }
     }
 }
-    
+
 template<typename T> static void
 merge_( const T** src, T* dst, int len, int cn )
 {
@@ -139,7 +139,7 @@ merge_( const T** src, T* dst, int len, int cn )
             dst[j+2] = src2[i]; dst[j+3] = src3[i];
         }
     }
-    
+
     for( ; k < cn; k += 4 )
     {
         const T *src0 = src[k], *src1 = src[k+1], *src2 = src[k+2], *src3 = src[k+3];
@@ -165,7 +165,7 @@ static void split32s(const int* src, int** dst, int len, int cn )
 {
     split_(src, dst, len, cn);
 }
-    
+
 static void split64s(const int64* src, int64** dst, int len, int cn )
 {
     split_(src, dst, len, cn);
@@ -189,7 +189,7 @@ static void merge32s(const int** src, int* dst, int len, int cn )
 static void merge64s(const int64** src, int64* dst, int len, int cn )
 {
     merge_(src, dst, len, cn);
-}    
+}
 
 typedef void (*SplitFunc)(const uchar* src, uchar** dst, int len, int cn);
 typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
@@ -205,9 +205,9 @@ static MergeFunc mergeTab[] =
     (MergeFunc)GET_OPTIMIZED(merge8u), (MergeFunc)GET_OPTIMIZED(merge8u), (MergeFunc)GET_OPTIMIZED(merge16u), (MergeFunc)GET_OPTIMIZED(merge16u),
     (MergeFunc)GET_OPTIMIZED(merge32s), (MergeFunc)GET_OPTIMIZED(merge32s), (MergeFunc)GET_OPTIMIZED(merge64s), 0
 };
-  
+
 }
-    
+
 void cv::split(const Mat& src, Mat* mv)
 {
     int k, depth = src.depth(), cn = src.channels();
@@ -219,30 +219,30 @@ void cv::split(const Mat& src, Mat* mv)
 
     SplitFunc func = splitTab[depth];
     CV_Assert( func != 0 );
-    
+
     int esz = (int)src.elemSize(), esz1 = (int)src.elemSize1();
     int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
-    
+
     arrays[0] = &src;
     for( k = 0; k < cn; k++ )
     {
         mv[k].create(src.dims, src.size, depth);
         arrays[k+1] = &mv[k];
     }
-    
+
     NAryMatIterator it(arrays, ptrs, cn+1);
     int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( int j = 0; j < total; j += blocksize )
         {
             int bsz = std::min(total - j, blocksize);
             func( ptrs[0], &ptrs[1], bsz, cn );
-            
+
             if( j + blocksize < total )
             {
                 ptrs[0] += bsz*esz;
@@ -252,7 +252,7 @@ void cv::split(const Mat& src, Mat* mv)
         }
     }
 }
-    
+
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
     Mat m = _m.getMat();
@@ -266,38 +266,38 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
     Mat* dst = &_mv.getMatRef(0);
     split(m, dst);
 }
-    
+
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
     CV_Assert( mv && n > 0 );
-    
+
     int depth = mv[0].depth();
     bool allch1 = true;
     int k, cn = 0;
     size_t i;
-    
+
     for( i = 0; i < n; i++ )
     {
         CV_Assert(mv[i].size == mv[0].size && mv[i].depth() == depth);
         allch1 = allch1 && mv[i].channels() == 1;
         cn += mv[i].channels();
     }
-    
+
     CV_Assert( 0 < cn && cn <= CV_CN_MAX );
     _dst.create(mv[0].dims, mv[0].size, CV_MAKETYPE(depth, cn));
     Mat dst = _dst.getMat();
-    
+
     if( n == 1 )
     {
         mv[0].copyTo(dst);
         return;
     }
-    
+
     if( !allch1 )
     {
         AutoBuffer<int> pairs(cn*2);
         int j, ni=0;
-        
+
         for( i = 0, j = 0; i < n; i++, j += ni )
         {
             ni = mv[i].channels();
@@ -310,33 +310,33 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         mixChannels( mv, n, &dst, 1, &pairs[0], cn );
         return;
     }
-        
+
     size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
     int blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
-    
+
     arrays[0] = &dst;
     for( k = 0; k < cn; k++ )
         arrays[k+1] = &mv[k];
-    
+
     NAryMatIterator it(arrays, ptrs, cn+1);
     int total = (int)it.size, blocksize = cn <= 4 ? total : std::min(total, blocksize0);
     MergeFunc func = mergeTab[depth];
-    
+
     for( i = 0; i < it.nplanes; i++, ++it )
     {
         for( int j = 0; j < total; j += blocksize )
         {
             int bsz = std::min(total - j, blocksize);
             func( (const uchar**)&ptrs[1], ptrs[0], bsz, cn );
-            
+
             if( j + blocksize < total )
             {
                 ptrs[0] += bsz*esz;
-                for( int k = 0; k < cn; k++ )
-                    ptrs[k+1] += bsz*esz1;
+                for( int t = 0; t < cn; t++ )
+                    ptrs[t+1] += bsz*esz1;
             }
         }
     }
@@ -347,7 +347,7 @@ void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
     vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
-}    
+}
 
 /****************************************************************************************\
 *                       Generalized split/merge: mixing channels                         *
@@ -387,7 +387,7 @@ mixChannels_( const T** src, const int* sdelta,
     }
 }
 
-    
+
 static void mixChannels8u( const uchar** src, const int* sdelta,
                            uchar** dst, const int* ddelta,
                            int len, int npairs )
@@ -408,14 +408,14 @@ static void mixChannels32s( const int** src, const int* sdelta,
 {
     mixChannels_(src, sdelta, dst, ddelta, len, npairs);
 }
-    
+
 static void mixChannels64s( const int64** src, const int* sdelta,
                             int64** dst, const int* ddelta,
                             int len, int npairs )
 {
     mixChannels_(src, sdelta, dst, ddelta, len, npairs);
 }
-    
+
 typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
         uchar** dst, const int* ddelta, int len, int npairs );
 
@@ -423,17 +423,17 @@ static MixChannelsFunc mixchTab[] =
 {
     (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels16u,
     (MixChannelsFunc)mixChannels16u, (MixChannelsFunc)mixChannels32s, (MixChannelsFunc)mixChannels32s,
-    (MixChannelsFunc)mixChannels64s, 0 
+    (MixChannelsFunc)mixChannels64s, 0
 };
-    
+
 }
-    
+
 void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
     if( npairs == 0 )
         return;
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
-    
+
     size_t i, j, k, esz1 = dst[0].elemSize1();
     int depth = dst[0].depth();
 
@@ -444,13 +444,13 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     uchar** dsts = (uchar**)(srcs + npairs);
     int* tab = (int*)(dsts + npairs);
     int *sdelta = (int*)(tab + npairs*4), *ddelta = sdelta + npairs;
-    
+
     for( i = 0; i < nsrcs; i++ )
         arrays[i] = &src[i];
     for( i = 0; i < ndsts; i++ )
         arrays[i + nsrcs] = &dst[i];
     ptrs[nsrcs + ndsts] = 0;
-    
+
     for( i = 0; i < npairs; i++ )
     {
         int i0 = fromTo[i*2], i1 = fromTo[i*2+1];
@@ -468,7 +468,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
             tab[i*4] = (int)(nsrcs + ndsts); tab[i*4+1] = 0;
             sdelta[i] = 0;
         }
-        
+
         for( j = 0; j < ndsts; i1 -= dst[j].channels(), j++ )
             if( i1 < dst[j].channels() )
                 break;
@@ -480,7 +480,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     NAryMatIterator it(arrays, ptrs, (int)(nsrcs + ndsts));
     int total = (int)it.size, blocksize = std::min(total, (int)((BLOCK_SIZE + esz1-1)/esz1));
     MixChannelsFunc func = mixchTab[depth];
-    
+
     for( i = 0; i < it.nplanes; i++, ++it )
     {
         for( k = 0; k < npairs; k++ )
@@ -488,13 +488,13 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
             srcs[k] = ptrs[tab[k*4]] + tab[k*4+1];
             dsts[k] = ptrs[tab[k*4+2]] + tab[k*4+3];
         }
-        
-        for( int j = 0; j < total; j += blocksize )
+
+        for( int t = 0; t < total; t += blocksize )
         {
-            int bsz = std::min(total - j, blocksize);
+            int bsz = std::min(total - t, blocksize);
             func( srcs, sdelta, dsts, ddelta, bsz, (int)npairs );
-            
-            if( j + blocksize < total )
+
+            if( t + blocksize < total )
                 for( k = 0; k < npairs; k++ )
                 {
                     srcs[k] += blocksize*sdelta[k]*esz1;
@@ -524,7 +524,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
     int i;
     int nsrc = src_is_mat ? 1 : (int)src.total();
     int ndst = dst_is_mat ? 1 : (int)dst.total();
-    
+
     CV_Assert(fromTo.size()%2 == 0 && nsrc > 0 && ndst > 0);
     cv::AutoBuffer<Mat> _buf(nsrc + ndst);
     Mat* buf = _buf;
@@ -568,7 +568,7 @@ cvtScaleAbs_( const T* src, size_t sstep,
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
-    
+
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
@@ -583,11 +583,11 @@ cvtScaleAbs_( const T* src, size_t sstep,
             t1 = saturate_cast<DT>(std::abs(src[x+3]*scale + shift));
             dst[x+2] = t0; dst[x+3] = t1;
         }
-        #endif      
+        #endif
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(std::abs(src[x]*scale + shift));
     }
-}    
+}
 
 
 template<typename T, typename DT, typename WT> static void
@@ -597,7 +597,7 @@ cvtScale_( const T* src, size_t sstep,
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
-    
+
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
@@ -623,38 +623,38 @@ cvtScale_( const T* src, size_t sstep,
 template<> void
 cvtScale_<short, short, float>( const short* src, size_t sstep,
            short* dst, size_t dstep, Size size,
-           float scale, float shift )   
+           float scale, float shift )
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-	for( ; size.height--; src += sstep, dst += dstep )
+    for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
-		#if CV_SSE2
-			if(USE_SSE2)
+        #if CV_SSE2
+            if(USE_SSE2)
             {
                 __m128 scale128 = _mm_set1_ps (scale);
                 __m128 shift128 = _mm_set1_ps (shift);
-				for(; x <= size.width - 8; x += 8 )
-				{
-					__m128i r0 = _mm_loadl_epi64((const __m128i*)(src + x));
+                for(; x <= size.width - 8; x += 8 )
+                {
+                    __m128i r0 = _mm_loadl_epi64((const __m128i*)(src + x));
                     __m128i r1 = _mm_loadl_epi64((const __m128i*)(src + x + 4));
-					__m128 rf0 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r0, r0), 16));
+                    __m128 rf0 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r0, r0), 16));
                     __m128 rf1 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r1, r1), 16));
                     rf0 = _mm_add_ps(_mm_mul_ps(rf0, scale128), shift128);
                     rf1 = _mm_add_ps(_mm_mul_ps(rf1, scale128), shift128);
-					r0 = _mm_cvtps_epi32(rf0);
-					r1 = _mm_cvtps_epi32(rf1);
-    				r0 = _mm_packs_epi32(r0, r1);
-					_mm_storeu_si128((__m128i*)(dst + x), r0);
-				}    
-			}
+                    r0 = _mm_cvtps_epi32(rf0);
+                    r1 = _mm_cvtps_epi32(rf1);
+                    r0 = _mm_packs_epi32(r0, r1);
+                    _mm_storeu_si128((__m128i*)(dst + x), r0);
+                }
+            }
         #endif
 
         for(; x < size.width; x++ )
             dst[x] = saturate_cast<short>(src[x]*scale + shift);
-    } 
+    }
 }
 
 
@@ -664,21 +664,21 @@ cvt_( const T* src, size_t sstep,
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
-    
+
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
-		#if CV_ENABLE_UNROLLED
-		for( ; x <= size.width - 4; x += 4 )
-		{
-			DT t0, t1;
-			t0 = saturate_cast<DT>(src[x]);
-			t1 = saturate_cast<DT>(src[x+1]);
-			dst[x] = t0; dst[x+1] = t1;
-			t0 = saturate_cast<DT>(src[x+2]);
-			t1 = saturate_cast<DT>(src[x+3]);
-			dst[x+2] = t0; dst[x+3] = t1;
-		}
+        #if CV_ENABLE_UNROLLED
+        for( ; x <= size.width - 4; x += 4 )
+        {
+            DT t0, t1;
+            t0 = saturate_cast<DT>(src[x]);
+            t1 = saturate_cast<DT>(src[x+1]);
+            dst[x] = t0; dst[x+1] = t1;
+            t0 = saturate_cast<DT>(src[x+2]);
+            t1 = saturate_cast<DT>(src[x+3]);
+            dst[x+2] = t0; dst[x+3] = t1;
+        }
         #endif
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<DT>(src[x]);
@@ -692,24 +692,24 @@ cvt_<float, short>( const float* src, size_t sstep,
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
- 
+
     for( ; size.height--; src += sstep, dst += dstep )
     {
         int x = 0;
-		#if   CV_SSE2
-		if(USE_SSE2){
-			  for( ; x <= size.width - 8; x += 8 )
-			{
-				__m128 src128 = _mm_loadu_ps (src + x);
-				__m128i src_int128 = _mm_cvtps_epi32 (src128);
-	
-				src128 = _mm_loadu_ps (src + x + 4); 
-				__m128i src1_int128 = _mm_cvtps_epi32 (src128);
-				
-				src1_int128 = _mm_packs_epi32(src_int128, src1_int128);
-				_mm_storeu_si128((__m128i*)(dst + x),src1_int128);
-			}
-		}
+        #if   CV_SSE2
+        if(USE_SSE2){
+              for( ; x <= size.width - 8; x += 8 )
+            {
+                __m128 src128 = _mm_loadu_ps (src + x);
+                __m128i src_int128 = _mm_cvtps_epi32 (src128);
+
+                src128 = _mm_loadu_ps (src + x + 4);
+                __m128i src1_int128 = _mm_cvtps_epi32 (src128);
+
+                src1_int128 = _mm_packs_epi32(src_int128, src1_int128);
+                _mm_storeu_si128((__m128i*)(dst + x),src1_int128);
+            }
+        }
         #endif
         for( ; x < size.width; x++ )
             dst[x] = saturate_cast<short>(src[x]);
@@ -723,11 +723,11 @@ cpy_( const T* src, size_t sstep, T* dst, size_t dstep, Size size )
 {
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
-    
+
     for( ; size.height--; src += sstep, dst += dstep )
         memcpy(dst, src, size.width*sizeof(src[0]));
 }
-    
+
 #define DEF_CVT_SCALE_ABS_FUNC(suffix, tfunc, stype, dtype, wtype) \
 static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double* scale) \
@@ -741,8 +741,8 @@ dtype* dst, size_t dstep, Size size, double* scale) \
 { \
     cvtScale_(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
-    
-    
+
+
 #define DEF_CVT_FUNC(suffix, stype, dtype) \
 static void cvt##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
                          dtype* dst, size_t dstep, Size size, double*) \
@@ -756,15 +756,15 @@ stype* dst, size_t dstep, Size size, double*) \
 { \
     cpy_(src, sstep, dst, dstep, size); \
 }
-    
-    
+
+
 DEF_CVT_SCALE_ABS_FUNC(8u, cvtScaleAbs_, uchar, uchar, float);
 DEF_CVT_SCALE_ABS_FUNC(8s8u, cvtScaleAbs_, schar, uchar, float);
 DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtScaleAbs_, ushort, uchar, float);
 DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float);
 DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float);
 DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float);    
+DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float);
 
 DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float);
 DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float);
@@ -772,7 +772,7 @@ DEF_CVT_SCALE_FUNC(16u8u,  ushort, uchar, float);
 DEF_CVT_SCALE_FUNC(16s8u,  short, uchar, float);
 DEF_CVT_SCALE_FUNC(32s8u,  int, uchar, float);
 DEF_CVT_SCALE_FUNC(32f8u,  float, uchar, float);
-DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float);    
+DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float);
 
 DEF_CVT_SCALE_FUNC(8u8s,   uchar, schar, float);
 DEF_CVT_SCALE_FUNC(8s,     schar, schar, float);
@@ -780,7 +780,7 @@ DEF_CVT_SCALE_FUNC(16u8s,  ushort, schar, float);
 DEF_CVT_SCALE_FUNC(16s8s,  short, schar, float);
 DEF_CVT_SCALE_FUNC(32s8s,  int, schar, float);
 DEF_CVT_SCALE_FUNC(32f8s,  float, schar, float);
-DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float);    
+DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float);
 
 DEF_CVT_SCALE_FUNC(8u16u,  uchar, ushort, float);
 DEF_CVT_SCALE_FUNC(8s16u,  schar, ushort, float);
@@ -788,7 +788,7 @@ DEF_CVT_SCALE_FUNC(16u,    ushort, ushort, float);
 DEF_CVT_SCALE_FUNC(16s16u, short, ushort, float);
 DEF_CVT_SCALE_FUNC(32s16u, int, ushort, float);
 DEF_CVT_SCALE_FUNC(32f16u, float, ushort, float);
-DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float);    
+DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float);
 
 DEF_CVT_SCALE_FUNC(8u16s,  uchar, short, float);
 DEF_CVT_SCALE_FUNC(8s16s,  schar, short, float);
@@ -797,7 +797,7 @@ DEF_CVT_SCALE_FUNC(16s,    short, short, float);
 DEF_CVT_SCALE_FUNC(32s16s, int, short, float);
 DEF_CVT_SCALE_FUNC(32f16s, float, short, float);
 DEF_CVT_SCALE_FUNC(64f16s, double, short, float);
-    
+
 DEF_CVT_SCALE_FUNC(8u32s,  uchar, int, float);
 DEF_CVT_SCALE_FUNC(8s32s,  schar, int, float);
 DEF_CVT_SCALE_FUNC(16u32s, ushort, int, float);
@@ -874,7 +874,7 @@ DEF_CVT_FUNC(16s64f, short, double);
 DEF_CVT_FUNC(32s64f, int, double);
 DEF_CVT_FUNC(32f64f, float, double);
 DEF_CPY_FUNC(64s,    int64);
-    
+
 static BinaryFunc cvtScaleAbsTab[] =
 {
     (BinaryFunc)cvtScaleAbs8u, (BinaryFunc)cvtScaleAbs8s8u, (BinaryFunc)cvtScaleAbs16u8u,
@@ -965,7 +965,7 @@ static BinaryFunc cvtTab[][8] =
         0, 0, 0, 0, 0, 0, 0, 0
     }
 };
-  
+
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
 {
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
@@ -974,10 +974,10 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
 BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 {
     return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
-}    
-    
 }
-    
+
+}
+
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
     Mat src = _src.getMat();
@@ -987,7 +987,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     Mat dst = _dst.getMat();
     BinaryFunc func = cvtScaleAbsTab[src.depth()];
     CV_Assert( func != 0 );
-    
+
     if( src.dims <= 2 )
     {
         Size sz = getContinuousSize(src, dst, cn);
@@ -999,7 +999,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
         uchar* ptrs[2];
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)it.size*cn, 1);
-        
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func( ptrs[0], 0, 0, 0, ptrs[1], 0, sz, scale );
     }
@@ -1022,12 +1022,12 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
     }
 
     Mat src = *this;
-        
+
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
     double scale[] = {alpha, beta};
     int cn = channels();
     CV_Assert( func != 0 );
-    
+
     if( dims <= 2 )
     {
         _dst.create( size(), _type );
@@ -1043,7 +1043,7 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
         uchar* ptrs[2];
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)(it.size*cn), 1);
-        
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func(ptrs[0], 0, 0, 0, ptrs[1], 0, sz, scale);
     }
@@ -1105,10 +1105,10 @@ static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, 
 static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
-}    
-    
+}
+
 typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
-    
+
 static LUTFunc lutTab[] =
 {
     (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
@@ -1116,7 +1116,7 @@ static LUTFunc lutTab[] =
 };
 
 }
-    
+
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst, int interpolation )
 {
     Mat src = _src.getMat(), lut = _lut.getMat();
@@ -1132,12 +1132,12 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst, int interpolat
 
     LUTFunc func = lutTab[lut.depth()];
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         func(ptrs[0], lut.data, ptrs[1], len, cn, lutcn);
 }
@@ -1147,7 +1147,7 @@ void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
-    
+
     double scale = 1, shift = 0;
     if( norm_type == CV_MINMAX )
     {
@@ -1165,13 +1165,13 @@ void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
     }
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
-    
+
     if( rtype < 0 )
         rtype = _dst.fixedType() ? _dst.depth() : src.depth();
-    
+
     _dst.create(src.dims, src.size, CV_MAKETYPE(rtype, src.channels()));
     Mat dst = _dst.getMat();
-    
+
     if( !mask.data )
         src.convertTo( dst, rtype, scale, shift );
     else
@@ -1282,7 +1282,7 @@ cvConvertScale( const void* srcarr, void* dstarr,
                 double scale, double shift )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    
+
     CV_Assert( src.size == dst.size && src.channels() == dst.channels() );
     src.convertTo(dst, dst.type(), scale, shift);
 }

@@ -555,9 +555,9 @@ static inline float getScale(int level, int firstLevel, double scaleFactor)
  * @param detector_params parameters to use
  */
 ORB::ORB(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
-         int _firstLevel, int WTA_K, int _scoreType, int _patchSize) :
+         int _firstLevel, int _WTA_K, int _scoreType, int _patchSize) :
     nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
-    edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), WTA_K(WTA_K),
+    edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), WTA_K(_WTA_K),
     scoreType(_scoreType), patchSize(_patchSize)
 {}
 
@@ -653,8 +653,8 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
 
     for (int level = 0; level < nlevels; ++level)
     {
-        int nfeatures = nfeaturesPerLevel[level];
-        allKeypoints[level].reserve(nfeatures*2);
+        int featuresNum = nfeaturesPerLevel[level];
+        allKeypoints[level].reserve(featuresNum*2);
 
         vector<KeyPoint> & keypoints = allKeypoints[level];
 
@@ -668,14 +668,14 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
         if( scoreType == ORB::HARRIS_SCORE )
         {
             // Keep more points than necessary as FAST does not give amazing corners
-            KeyPointsFilter::retainBest(keypoints, 2 * nfeatures);
+            KeyPointsFilter::retainBest(keypoints, 2 * featuresNum);
 
             // Compute the Harris cornerness (better scoring than FAST)
             HarrisResponses(imagePyramid[level], keypoints, 7, HARRIS_K);
         }
 
         //cull to the final desired level, using the new Harris scores or the original FAST scores.
-        KeyPointsFilter::retainBest(keypoints, nfeatures);
+        KeyPointsFilter::retainBest(keypoints, featuresNum);
 
         float sf = getScale(level, firstLevel, scaleFactor);
 
@@ -738,7 +738,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
     if( image.type() != CV_8UC1 )
         cvtColor(_image, image, CV_BGR2GRAY);
 
-    int nlevels = this->nlevels;
+    int levelsNum = this->nlevels;
 
     if( !do_keypoints )
     {
@@ -751,15 +751,15 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
         //
         // In short, ultimately the descriptor should
         // ignore octave parameter and deal only with the keypoint size.
-        nlevels = 0;
+        levelsNum = 0;
         for( size_t i = 0; i < _keypoints.size(); i++ )
-            nlevels = std::max(nlevels, std::max(_keypoints[i].octave, 0));
-        nlevels++;
+            levelsNum = std::max(levelsNum, std::max(_keypoints[i].octave, 0));
+        levelsNum++;
     }
 
     // Pre-compute the scale pyramids
-    vector<Mat> imagePyramid(nlevels), maskPyramid(nlevels);
-    for (int level = 0; level < nlevels; ++level)
+    vector<Mat> imagePyramid(levelsNum), maskPyramid(levelsNum);
+    for (int level = 0; level < levelsNum; ++level)
     {
         float scale = 1/getScale(level, firstLevel, scaleFactor);
         Size sz(cvRound(image.cols*scale), cvRound(image.rows*scale));
@@ -839,13 +839,13 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
         KeyPointsFilter::runByImageBorder(_keypoints, image.size(), edgeThreshold);
 
         // Cluster the input keypoints depending on the level they were computed at
-        allKeypoints.resize(nlevels);
+        allKeypoints.resize(levelsNum);
         for (vector<KeyPoint>::iterator keypoint = _keypoints.begin(),
              keypointEnd = _keypoints.end(); keypoint != keypointEnd; ++keypoint)
             allKeypoints[keypoint->octave].push_back(*keypoint);
 
         // Make sure we rescale the coordinates
-        for (int level = 0; level < nlevels; ++level)
+        for (int level = 0; level < levelsNum; ++level)
         {
             if (level == firstLevel)
                 continue;
@@ -864,7 +864,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
     if( do_descriptors )
     {
         int nkeypoints = 0;
-        for (int level = 0; level < nlevels; ++level)
+        for (int level = 0; level < levelsNum; ++level)
             nkeypoints += (int)allKeypoints[level].size();
         if( nkeypoints == 0 )
             _descriptors.release();
@@ -897,7 +897,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _ke
 
     _keypoints.clear();
     int offset = 0;
-    for (int level = 0; level < nlevels; ++level)
+    for (int level = 0; level < levelsNum; ++level)
     {
         // Get the features and compute their orientation
         vector<KeyPoint>& keypoints = allKeypoints[level];

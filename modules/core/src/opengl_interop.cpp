@@ -163,11 +163,11 @@ void icvSetOpenGlFuncTab(const CvOpenGlFuncTab* tab)
 void cv::gpu::setGlDevice(int device)
 {
 #ifndef HAVE_CUDA
-	(void)device;
+    (void)device;
     throw_nocuda;
 #else
     #ifndef HAVE_OPENGL
-	    (void)device;
+        (void)device;
         throw_nogl;
     #else
         if (!glFuncTab()->isGlContextInitialized())
@@ -287,7 +287,7 @@ class cv::GlBuffer::Impl
 {
 public:
     static const Ptr<Impl>& empty();
-    
+
     Impl(int rows, int cols, int type, unsigned int target);
     Impl(const Mat& m, unsigned int target);
     ~Impl();
@@ -311,7 +311,7 @@ public:
 
 private:
     Impl();
-    
+
     unsigned int buffer_;
 
 #ifdef HAVE_CUDA
@@ -484,57 +484,57 @@ inline void cv::GlBuffer::Impl::unmapDevice(cudaStream_t stream)
 
 #endif // HAVE_OPENGL
 
-cv::GlBuffer::GlBuffer(Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::GlBuffer::GlBuffer(Usage _usage) : rows_(0), cols_(0), type_(0), usage_(_usage)
 {
 #ifndef HAVE_OPENGL
-	(void)usage;
+    (void)_usage;
     throw_nogl;
 #else
     impl_ = Impl::empty();
 #endif
 }
 
-cv::GlBuffer::GlBuffer(int rows, int cols, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::GlBuffer::GlBuffer(int _rows, int _cols, int _type, Usage _usage) : rows_(0), cols_(0), type_(0), usage_(_usage)
 {
 #ifndef HAVE_OPENGL
-	(void)rows;
-	(void)cols;
-	(void)type;
-	(void)usage;
+    (void)_rows;
+    (void)_cols;
+    (void)_type;
+    (void)_usage;
     throw_nogl;
 #else
-    impl_ = new Impl(rows, cols, type, usage);
-    rows_ = rows;
-    cols_ = cols;
-    type_ = type;
+    impl_ = new Impl(_rows, _cols, _type, _usage);
+    rows_ = _rows;
+    cols_ = _cols;
+    type_ = _type;
 #endif
 }
 
-cv::GlBuffer::GlBuffer(Size size, int type, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::GlBuffer::GlBuffer(Size _size, int _type, Usage _usage) : rows_(0), cols_(0), type_(0), usage_(_usage)
 {
 #ifndef HAVE_OPENGL
-	(void)size;
-	(void)type;
-	(void)usage;
+    (void)_size;
+    (void)_type;
+    (void)_usage;
     throw_nogl;
 #else
-    impl_ = new Impl(size.height, size.width, type, usage);
-    rows_ = size.height;
-    cols_ = size.width;
-    type_ = type;
+    impl_ = new Impl(_size.height, _size.width, _type, _usage);
+    rows_ = _size.height;
+    cols_ = _size.width;
+    type_ = _type;
 #endif
 }
 
-cv::GlBuffer::GlBuffer(InputArray mat_, Usage usage) : rows_(0), cols_(0), type_(0), usage_(usage)
+cv::GlBuffer::GlBuffer(InputArray mat_, Usage _usage) : rows_(0), cols_(0), type_(0), usage_(_usage)
 {
 #ifndef HAVE_OPENGL
-	(void)mat_;
-	(void)usage;
+    (void)mat_;
+    (void)_usage;
     throw_nogl;
 #else
     int kind = mat_.kind();
-    Size size = mat_.size();
-    int type = mat_.type();
+    Size _size = mat_.size();
+    int _type = mat_.type();
 
     if (kind == _InputArray::GPU_MAT)
     {
@@ -542,38 +542,38 @@ cv::GlBuffer::GlBuffer(InputArray mat_, Usage usage) : rows_(0), cols_(0), type_
             throw_nocuda;
         #else
             GpuMat d_mat = mat_.getGpuMat();
-            impl_ = new Impl(d_mat.rows, d_mat.cols, d_mat.type(), usage);
+            impl_ = new Impl(d_mat.rows, d_mat.cols, d_mat.type(), _usage);
             impl_->copyFrom(d_mat);
         #endif
     }
     else
     {
         Mat mat = mat_.getMat();
-        impl_ = new Impl(mat, usage);
+        impl_ = new Impl(mat, _usage);
     }
 
-    rows_ = size.height;
-    cols_ = size.width;
-    type_ = type;
+    rows_ = _size.height;
+    cols_ = _size.width;
+    type_ = _type;
 #endif
 }
 
-void cv::GlBuffer::create(int rows, int cols, int type, Usage usage)
+void cv::GlBuffer::create(int _rows, int _cols, int _type, Usage _usage)
 {
 #ifndef HAVE_OPENGL
-	(void)rows;
-	(void)cols;
-	(void)type;
-	(void)usage;
+    (void)_rows;
+    (void)_cols;
+    (void)_type;
+    (void)_usage;
     throw_nogl;
 #else
-    if (rows_ != rows || cols_ != cols || type_ != type || usage_ != usage)
+    if (rows_ != _rows || cols_ != _cols || type_ != _type || usage_ != _usage)
     {
-        impl_ = new Impl(rows, cols, type, usage);
-        rows_ = rows;
-        cols_ = cols;
-        type_ = type;
-        usage_ = usage;
+        impl_ = new Impl(_rows, _cols, _type, _usage);
+        rows_ = _rows;
+        cols_ = _cols;
+        type_ = _type;
+        usage_ = _usage;
     }
 #endif
 }
@@ -590,14 +590,14 @@ void cv::GlBuffer::release()
 void cv::GlBuffer::copyFrom(InputArray mat_)
 {
 #ifndef HAVE_OPENGL
-	(void)mat_;
+    (void)mat_;
     throw_nogl;
 #else
     int kind = mat_.kind();
-    Size size = mat_.size();
-    int type = mat_.type();
+    Size _size = mat_.size();
+    int _type = mat_.type();
 
-    create(size, type);
+    create(_size, _type);
 
     switch (kind)
     {
@@ -728,7 +728,7 @@ public:
 
 private:
     Impl();
-    
+
     GLuint tex_;
 };
 
@@ -926,45 +926,45 @@ cv::GlTexture::GlTexture() : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTUR
 #endif
 }
 
-cv::GlTexture::GlTexture(int rows, int cols, int type) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
+cv::GlTexture::GlTexture(int _rows, int _cols, int _type) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
 {
 #ifndef HAVE_OPENGL
-	(void)rows;
-	(void)cols;
-	(void)type;
+    (void)_rows;
+    (void)_cols;
+    (void)_type;
     throw_nogl;
 #else
-    impl_ = new Impl(rows, cols, type);
-    rows_ = rows;
-    cols_ = cols;
-    type_ = type;
+    impl_ = new Impl(_rows, _cols, _type);
+    rows_ = _rows;
+    cols_ = _cols;
+    type_ = _type;
 #endif
 }
 
-cv::GlTexture::GlTexture(Size size, int type) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
+cv::GlTexture::GlTexture(Size _size, int _type) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
 {
 #ifndef HAVE_OPENGL
-	(void)size;
-	(void)type;
+    (void)_size;
+    (void)_type;
     throw_nogl;
 #else
-    impl_ = new Impl(size.height, size.width, type);
-    rows_ = size.height;
-    cols_ = size.width;
-    type_ = type;
+    impl_ = new Impl(_size.height, _size.width, _type);
+    rows_ = _size.height;
+    cols_ = _size.width;
+    type_ = _type;
 #endif
 }
 
 cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_(0), buf_(GlBuffer::TEXTURE_BUFFER)
 {
 #ifndef HAVE_OPENGL
-	(void)mat_;
-	(void)bgra;
+    (void)mat_;
+    (void)bgra;
     throw_nogl;
-#else    
+#else
     int kind = mat_.kind();
-    Size size = mat_.size();
-    int type = mat_.type();
+    Size _size = mat_.size();
+    int _type = mat_.type();
 
     switch (kind)
     {
@@ -994,26 +994,26 @@ cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_
         }
     }
 
-    rows_ = size.height;
-    cols_ = size.width;
-    type_ = type;
+    rows_ = _size.height;
+    cols_ = _size.width;
+    type_ = _type;
 #endif
 }
 
-void cv::GlTexture::create(int rows, int cols, int type)
+void cv::GlTexture::create(int _rows, int _cols, int _type)
 {
 #ifndef HAVE_OPENGL
-	(void)rows;
-	(void)cols;
-	(void)type;
+    (void)_rows;
+    (void)_cols;
+    (void)_type;
     throw_nogl;
 #else
-    if (rows_ != rows || cols_ != cols || type_ != type)
+    if (rows_ != _rows || cols_ != _cols || type_ != _type)
     {
-        impl_ = new Impl(rows, cols, type);
-        rows_ = rows;
-        cols_ = cols;
-        type_ = type;
+        impl_ = new Impl(_rows, _cols, _type);
+        rows_ = _rows;
+        cols_ = _cols;
+        type_ = _type;
     }
 #endif
 }
@@ -1030,15 +1030,15 @@ void cv::GlTexture::release()
 void cv::GlTexture::copyFrom(InputArray mat_, bool bgra)
 {
 #ifndef HAVE_OPENGL
-	(void)mat_;
-	(void)bgra;
+    (void)mat_;
+    (void)bgra;
     throw_nogl;
 #else
     int kind = mat_.kind();
-    Size size = mat_.size();
-    int type = mat_.type();
+    Size _size = mat_.size();
+    int _type = mat_.type();
 
-    create(size, type);
+    create(_size, _type);
 
     switch(kind)
     {
@@ -1244,8 +1244,8 @@ void cv::GlArrays::unbind() const
 ////////////////////////////////////////////////////////////////////////
 // GlFont
 
-cv::GlFont::GlFont(const string& family, int height, Weight weight, Style style)
-    : family_(family), height_(height), weight_(weight), style_(style), base_(0)
+cv::GlFont::GlFont(const string& _family, int _height, Weight _weight, Style _style)
+    : family_(_family), height_(_height), weight_(_weight), style_(_style), base_(0)
 {
 #ifndef HAVE_OPENGL
     throw_nogl;
@@ -1253,7 +1253,7 @@ cv::GlFont::GlFont(const string& family, int height, Weight weight, Style style)
     base_ = glGenLists(256);
     CV_CheckGlError();
 
-    glFuncTab()->generateBitmapFont(family, height, weight, (style & STYLE_ITALIC) != 0, (style & STYLE_UNDERLINE) != 0, 0, 256, base_);
+    glFuncTab()->generateBitmapFont(family_, height_, weight_, (style_ & STYLE_ITALIC) != 0, (style_ & STYLE_UNDERLINE) != 0, 0, 256, base_);
 #endif
 }
 
@@ -1283,7 +1283,7 @@ namespace
     class FontCompare : public unary_function<Ptr<GlFont>, bool>
     {
     public:
-        inline FontCompare(const string& family, int height, GlFont::Weight weight, GlFont::Style style) 
+        inline FontCompare(const string& family, int height, GlFont::Weight weight, GlFont::Style style)
             : family_(family), height_(height), weight_(weight), style_(style)
         {
         }
@@ -1304,10 +1304,10 @@ namespace
 Ptr<GlFont> cv::GlFont::get(const std::string& family, int height, Weight weight, Style style)
 {
 #ifndef HAVE_OPENGL
-	(void)family;
-	(void)height;
-	(void)weight;
-	(void)style;
+    (void)family;
+    (void)height;
+    (void)weight;
+    (void)style;
     throw_nogl;
     return Ptr<GlFont>();
 #else
@@ -1333,9 +1333,9 @@ Ptr<GlFont> cv::GlFont::get(const std::string& family, int height, Weight weight
 void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRect)
 {
 #ifndef HAVE_OPENGL
-	(void)tex;
-	(void)wndRect;
-	(void)texRect;
+    (void)tex;
+    (void)wndRect;
+    (void)texRect;
     throw_nogl;
 #else
     if (!tex.empty())
@@ -1368,9 +1368,9 @@ void cv::render(const GlTexture& tex, Rect_<double> wndRect, Rect_<double> texRe
 void cv::render(const GlArrays& arr, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
-	(void)arr;
-	(void)mode;
-	(void)color;
+    (void)arr;
+    (void)mode;
+    (void)color;
     throw_nogl;
 #else
     glColor3d(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0);
@@ -1386,10 +1386,10 @@ void cv::render(const GlArrays& arr, int mode, Scalar color)
 void cv::render(const string& str, const Ptr<GlFont>& font, Scalar color, Point2d pos)
 {
 #ifndef HAVE_OPENGL
-	(void)str;
-	(void)font;
-	(void)color;
-	(void)pos;
+    (void)str;
+    (void)font;
+    (void)color;
+    (void)pos;
     throw_nogl;
 #else
     glPushAttrib(GL_DEPTH_BUFFER_BIT);
@@ -1544,9 +1544,9 @@ void cv::GlCamera::setupModelViewMatrix() const
 bool icvCheckGlError(const char* file, const int line, const char* func)
 {
 #ifndef HAVE_OPENGL
-	(void)file;
-	(void)line;
-	(void)func;
+    (void)file;
+    (void)line;
+    (void)func;
     return true;
 #else
     GLenum err = glGetError();

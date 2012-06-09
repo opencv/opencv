@@ -223,8 +223,8 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
     vector<KeyPoint> outKeypoints;
     outKeypoints.reserve( keypoints.size() );
 
-    int descriptorSize = descriptorExtractor->descriptorSize();
-    Mat mergedDescriptors( maxKeypointsCount, 3*descriptorSize, descriptorExtractor->descriptorType() );
+    int dSize = descriptorExtractor->descriptorSize();
+    Mat mergedDescriptors( maxKeypointsCount, 3*dSize, descriptorExtractor->descriptorType() );
     int mergedCount = 0;
     // cp - current channel position
     size_t cp[] = {0, 0, 0};
@@ -250,7 +250,7 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
             // merge descriptors
             for( int ci = 0; ci < N; ci++ )
             {
-                Mat dst = mergedDescriptors(Range(mergedCount, mergedCount+1), Range(ci*descriptorSize, (ci+1)*descriptorSize));
+                Mat dst = mergedDescriptors(Range(mergedCount, mergedCount+1), Range(ci*dSize, (ci+1)*dSize));
                 channelDescriptors[ci].row( idxs[ci][cp[ci]] ).copyTo( dst );
                 cp[ci]++;
             }

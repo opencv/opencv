@@ -235,19 +235,19 @@ private:
 
     // Allocates memory.
     template<typename _Tp>
-    _Tp **alloc_2d(int m, int n) {
+    _Tp **alloc_2d(int m, int _n) {
         _Tp **arr = new _Tp*[m];
         for (int i = 0; i < m; i++)
-            arr[i] = new _Tp[n];
+            arr[i] = new _Tp[_n];
         return arr;
     }
 
     // Allocates memory.
     template<typename _Tp>
-    _Tp **alloc_2d(int m, int n, _Tp val) {
-        _Tp **arr = alloc_2d<_Tp> (m, n);
+    _Tp **alloc_2d(int m, int _n, _Tp val) {
+        _Tp **arr = alloc_2d<_Tp> (m, _n);
         for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
+            for (int j = 0; j < _n; j++) {
                 arr[i][j] = val;
             }
         }
@@ -255,17 +255,17 @@ private:
     }
 
     void cdiv(double xr, double xi, double yr, double yi) {
-        double r, d;
+        double r, dv;
         if (std::abs(yr) > std::abs(yi)) {
             r = yi / yr;
-            d = yr + r * yi;
-            cdivr = (xr + r * xi) / d;
-            cdivi = (xi - r * xr) / d;
+            dv = yr + r * yi;
+            cdivr = (xr + r * xi) / dv;
+            cdivi = (xi - r * xr) / dv;
         } else {
             r = yr / yi;
-            d = yi + r * yr;
-            cdivr = (r * xr + xi) / d;
-            cdivi = (r * xi - xr) / d;
+            dv = yi + r * yr;
+            cdivr = (r * xr + xi) / dv;
+            cdivi = (r * xi - xr) / dv;
         }
     }
 
@@ -280,7 +280,7 @@ private:
 
         // Initialize
         int nn = this->n;
-        int n = nn - 1;
+        int n1 = nn - 1;
         int low = 0;
         int high = nn - 1;
         double eps = pow(2.0, -52.0);
@@ -302,10 +302,10 @@ private:
 
         // Outer loop over eigenvalue index
         int iter = 0;
-        while (n >= low) {
+        while (n1 >= low) {
 
             // Look for single small sub-diagonal element
-            int l = n;
+            int l = n1;
             while (l > low) {
                 s = std::abs(H[l - 1][l - 1]) + std::abs(H[l][l]);
                 if (s == 0.0) {
@@ -320,23 +320,23 @@ private:
             // Check for convergence
             // One root found
 
-            if (l == n) {
-                H[n][n] = H[n][n] + exshift;
-                d[n] = H[n][n];
-                e[n] = 0.0;
-                n--;
+            if (l == n1) {
+                H[n1][n1] = H[n1][n1] + exshift;
+                d[n1] = H[n1][n1];
+                e[n1] = 0.0;
+                n1--;
                 iter = 0;
 
                 // Two roots found
 
-            } else if (l == n - 1) {
-                w = H[n][n - 1] * H[n - 1][n];
-                p = (H[n - 1][n - 1] - H[n][n]) / 2.0;
+            } else if (l == n1 - 1) {
+                w = H[n1][n1 - 1] * H[n1 - 1][n1];
+                p = (H[n1 - 1][n1 - 1] - H[n1][n1]) / 2.0;
                 q = p * p + w;
                 z = sqrt(std::abs(q));
-                H[n][n] = H[n][n] + exshift;
-                H[n - 1][n - 1] = H[n - 1][n - 1] + exshift;
-                x = H[n][n];
+                H[n1][n1] = H[n1][n1] + exshift;
+                H[n1 - 1][n1 - 1] = H[n1 - 1][n1 - 1] + exshift;
+                x = H[n1][n1];
 
                 // Real pair
 
@@ -346,14 +346,14 @@ private:
                     } else {
                         z = p - z;
                     }
-                    d[n - 1] = x + z;
-                    d[n] = d[n - 1];
+                    d[n1 - 1] = x + z;
+                    d[n1] = d[n1 - 1];
                     if (z != 0.0) {
-                        d[n] = x - w / z;
+                        d[n1] = x - w / z;
                     }
-                    e[n - 1] = 0.0;
-                    e[n] = 0.0;
-                    x = H[n][n - 1];
+                    e[n1 - 1] = 0.0;
+                    e[n1] = 0.0;
+                    x = H[n1][n1 - 1];
                     s = std::abs(x) + std::abs(z);
                     p = x / s;
                     q = z / s;
@@ -363,37 +363,37 @@ private:
 
                     // Row modification
 
-                    for (int j = n - 1; j < nn; j++) {
-                        z = H[n - 1][j];
-                        H[n - 1][j] = q * z + p * H[n][j];
-                        H[n][j] = q * H[n][j] - p * z;
+                    for (int j = n1 - 1; j < nn; j++) {
+                        z = H[n1 - 1][j];
+                        H[n1 - 1][j] = q * z + p * H[n1][j];
+                        H[n1][j] = q * H[n1][j] - p * z;
                     }
 
                     // Column modification
 
-                    for (int i = 0; i <= n; i++) {
-                        z = H[i][n - 1];
-                        H[i][n - 1] = q * z + p * H[i][n];
-                        H[i][n] = q * H[i][n] - p * z;
+                    for (int i = 0; i <= n1; i++) {
+                        z = H[i][n1 - 1];
+                        H[i][n1 - 1] = q * z + p * H[i][n1];
+                        H[i][n1] = q * H[i][n1] - p * z;
                     }
 
                     // Accumulate transformations
 
                     for (int i = low; i <= high; i++) {
-                        z = V[i][n - 1];
-                        V[i][n - 1] = q * z + p * V[i][n];
-                        V[i][n] = q * V[i][n] - p * z;
+                        z = V[i][n1 - 1];
+                        V[i][n1 - 1] = q * z + p * V[i][n1];
+                        V[i][n1] = q * V[i][n1] - p * z;
                     }
 
                     // Complex pair
 
                 } else {
-                    d[n - 1] = x + p;
-                    d[n] = x + p;
-                    e[n - 1] = z;
-                    e[n] = -z;
+                    d[n1 - 1] = x + p;
+                    d[n1] = x + p;
+                    e[n1 - 1] = z;
+                    e[n1] = -z;
                 }
-                n = n - 2;
+                n1 = n1 - 2;
                 iter = 0;
 
                 // No convergence yet
@@ -402,22 +402,22 @@ private:
 
                 // Form shift
 
-                x = H[n][n];
+                x = H[n1][n1];
                 y = 0.0;
                 w = 0.0;
-                if (l < n) {
-                    y = H[n - 1][n - 1];
-                    w = H[n][n - 1] * H[n - 1][n];
+                if (l < n1) {
+                    y = H[n1 - 1][n1 - 1];
+                    w = H[n1][n1 - 1] * H[n1 - 1][n1];
                 }
 
                 // Wilkinson's original ad hoc shift
 
                 if (iter == 10) {
                     exshift += x;
-                    for (int i = low; i <= n; i++) {
+                    for (int i = low; i <= n1; i++) {
                         H[i][i] -= x;
                     }
-                    s = std::abs(H[n][n - 1]) + std::abs(H[n - 1][n - 2]);
+                    s = std::abs(H[n1][n1 - 1]) + std::abs(H[n1 - 1][n1 - 2]);
                     x = y = 0.75 * s;
                     w = -0.4375 * s * s;
                 }
@@ -433,7 +433,7 @@ private:
                             s = -s;
                         }
                         s = x - w / ((y - x) / 2.0 + s);
-                        for (int i = low; i <= n; i++) {
+                        for (int i = low; i <= n1; i++) {
                             H[i][i] -= s;
                         }
                         exshift += s;
@@ -444,7 +444,7 @@ private:
                 iter = iter + 1; // (Could check iteration count here.)
 
                 // Look for two consecutive small sub-diagonal elements
-                int m = n - 2;
+                int m = n1 - 2;
                 while (m >= l) {
                     z = H[m][m];
                     r = x - z;
@@ -467,7 +467,7 @@ private:
                     m--;
                 }
 
-                for (int i = m + 2; i <= n; i++) {
+                for (int i = m + 2; i <= n1; i++) {
                     H[i][i - 2] = 0.0;
                     if (i > m + 2) {
                         H[i][i - 3] = 0.0;
@@ -476,8 +476,8 @@ private:
 
                 // Double QR step involving rows l:n and columns m:n
 
-                for (int k = m; k <= n - 1; k++) {
-                    bool notlast = (k != n - 1);
+                for (int k = m; k <= n1 - 1; k++) {
+                    bool notlast = (k != n1 - 1);
                     if (k != m) {
                         p = H[k][k - 1];
                         q = H[k + 1][k - 1];
@@ -523,7 +523,7 @@ private:
 
                         // Column modification
 
-                        for (int i = 0; i <= min(n, k + 3); i++) {
+                        for (int i = 0; i <= min(n1, k + 3); i++) {
                             p = x * H[i][k] + y * H[i][k + 1];
                             if (notlast) {
                                 p = p + z * H[i][k + 2];
@@ -547,7 +547,7 @@ private:
                     } // (s != 0)
                 } // k loop
             } // check convergence
-        } // while (n >= low)
+        } // while (n1 >= low)
 
         // Backsubstitute to find vectors of upper triangular form
 
@@ -555,20 +555,20 @@ private:
             return;
         }
 
-        for (n = nn - 1; n >= 0; n--) {
-            p = d[n];
-            q = e[n];
+        for (n1 = nn - 1; n1 >= 0; n1--) {
+            p = d[n1];
+            q = e[n1];
 
             // Real vector
 
             if (q == 0) {
-                int l = n;
-                H[n][n] = 1.0;
-                for (int i = n - 1; i >= 0; i--) {
+                int l = n1;
+                H[n1][n1] = 1.0;
+                for (int i = n1 - 1; i >= 0; i--) {
                     w = H[i][i] - p;
                     r = 0.0;
-                    for (int j = l; j <= n; j++) {
-                        r = r + H[i][j] * H[j][n];
+                    for (int j = l; j <= n1; j++) {
+                        r = r + H[i][j] * H[j][n1];
                     }
                     if (e[i] < 0.0) {
                         z = w;
@@ -577,9 +577,9 @@ private:
                         l = i;
                         if (e[i] == 0.0) {
                             if (w != 0.0) {
-                                H[i][n] = -r / w;
+                                H[i][n1] = -r / w;
                             } else {
-                                H[i][n] = -r / (eps * norm);
+                                H[i][n1] = -r / (eps * norm);
                             }
 
                             // Solve real equations
@@ -589,20 +589,20 @@ private:
                             y = H[i + 1][i];
                             q = (d[i] - p) * (d[i] - p) + e[i] * e[i];
                             t = (x * s - z * r) / q;
-                            H[i][n] = t;
+                            H[i][n1] = t;
                             if (std::abs(x) > std::abs(z)) {
-                                H[i + 1][n] = (-r - w * t) / x;
+                                H[i + 1][n1] = (-r - w * t) / x;
                             } else {
-                                H[i + 1][n] = (-s - y * t) / z;
+                                H[i + 1][n1] = (-s - y * t) / z;
                             }
                         }
 
                         // Overflow control
 
-                        t = std::abs(H[i][n]);
+                        t = std::abs(H[i][n1]);
                         if ((eps * t) * t > 1) {
-                            for (int j = i; j <= n; j++) {
-                                H[j][n] = H[j][n] / t;
+                            for (int j = i; j <= n1; j++) {
+                                H[j][n1] = H[j][n1] / t;
                             }
                         }
                     }
@@ -611,27 +611,27 @@ private:
                 // Complex vector
 
             } else if (q < 0) {
-                int l = n - 1;
+                int l = n1 - 1;
 
                 // Last vector component imaginary so matrix is triangular
 
-                if (std::abs(H[n][n - 1]) > std::abs(H[n - 1][n])) {
-                    H[n - 1][n - 1] = q / H[n][n - 1];
-                    H[n - 1][n] = -(H[n][n] - p) / H[n][n - 1];
+                if (std::abs(H[n1][n1 - 1]) > std::abs(H[n1 - 1][n1])) {
+                    H[n1 - 1][n1 - 1] = q / H[n1][n1 - 1];
+                    H[n1 - 1][n1] = -(H[n1][n1] - p) / H[n1][n1 - 1];
                 } else {
-                    cdiv(0.0, -H[n - 1][n], H[n - 1][n - 1] - p, q);
-                    H[n - 1][n - 1] = cdivr;
-                    H[n - 1][n] = cdivi;
+                    cdiv(0.0, -H[n1 - 1][n1], H[n1 - 1][n1 - 1] - p, q);
+                    H[n1 - 1][n1 - 1] = cdivr;
+                    H[n1 - 1][n1] = cdivi;
                 }
-                H[n][n - 1] = 0.0;
-                H[n][n] = 1.0;
-                for (int i = n - 2; i >= 0; i--) {
+                H[n1][n1 - 1] = 0.0;
+                H[n1][n1] = 1.0;
+                for (int i = n1 - 2; i >= 0; i--) {
                     double ra, sa, vr, vi;
                     ra = 0.0;
                     sa = 0.0;
-                    for (int j = l; j <= n; j++) {
-                        ra = ra + H[i][j] * H[j][n - 1];
-                        sa = sa + H[i][j] * H[j][n];
+                    for (int j = l; j <= n1; j++) {
+                        ra = ra + H[i][j] * H[j][n1 - 1];
+                        sa = sa + H[i][j] * H[j][n1];
                     }
                     w = H[i][i] - p;
 
@@ -643,8 +643,8 @@ private:
                         l = i;
                         if (e[i] == 0) {
                             cdiv(-ra, -sa, w, q);
-                            H[i][n - 1] = cdivr;
-                            H[i][n] = cdivi;
+                            H[i][n1 - 1] = cdivr;
+                            H[i][n1] = cdivi;
                         } else {
 
                             // Solve complex equations
@@ -659,28 +659,28 @@ private:
                             }
                             cdiv(x * r - z * ra + q * sa,
                                  x * s - z * sa - q * ra, vr, vi);
-                            H[i][n - 1] = cdivr;
-                            H[i][n] = cdivi;
+                            H[i][n1 - 1] = cdivr;
+                            H[i][n1] = cdivi;
                             if (std::abs(x) > (std::abs(z) + std::abs(q))) {
-                                H[i + 1][n - 1] = (-ra - w * H[i][n - 1] + q
-                                                   * H[i][n]) / x;
-                                H[i + 1][n] = (-sa - w * H[i][n] - q * H[i][n
+                                H[i + 1][n1 - 1] = (-ra - w * H[i][n1 - 1] + q
+                                                   * H[i][n1]) / x;
+                                H[i + 1][n1] = (-sa - w * H[i][n1] - q * H[i][n1
                                                                             - 1]) / x;
                             } else {
-                                cdiv(-r - y * H[i][n - 1], -s - y * H[i][n], z,
+                                cdiv(-r - y * H[i][n1 - 1], -s - y * H[i][n1], z,
                                      q);
-                                H[i + 1][n - 1] = cdivr;
-                                H[i + 1][n] = cdivi;
+                                H[i + 1][n1 - 1] = cdivr;
+                                H[i + 1][n1] = cdivi;
                             }
                         }
 
                         // Overflow control
 
-                        t = max(std::abs(H[i][n - 1]), std::abs(H[i][n]));
+                        t = max(std::abs(H[i][n1 - 1]), std::abs(H[i][n1]));
                         if ((eps * t) * t > 1) {
-                            for (int j = i; j <= n; j++) {
-                                H[j][n - 1] = H[j][n - 1] / t;
-                                H[j][n] = H[j][n] / t;
+                            for (int j = i; j <= n1; j++) {
+                                H[j][n1 - 1] = H[j][n1 - 1] / t;
+                                H[j][n1] = H[j][n1] / t;
                             }
                         }
                     }

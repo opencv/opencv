@@ -366,12 +366,12 @@ namespace cv { namespace gpu
         return m;
     }
 
-    inline void GpuMat::assignTo(GpuMat& m, int type) const
+    inline void GpuMat::assignTo(GpuMat& m, int _type) const
     {
-        if (type < 0)
+        if (_type < 0)
             m = *this;
         else
-            convertTo(m, type);
+            convertTo(m, _type);
     }
 
     inline size_t GpuMat::step1() const
@@ -434,9 +434,9 @@ namespace cv { namespace gpu
         create(size_.height, size_.width, type_);
     }
 
-    inline GpuMat GpuMat::operator()(Range rowRange, Range colRange) const
+    inline GpuMat GpuMat::operator()(Range _rowRange, Range _colRange) const
     {
-        return GpuMat(*this, rowRange, colRange);
+        return GpuMat(*this, _rowRange, _colRange);
     }
 
     inline GpuMat GpuMat::operator()(Rect roi) const

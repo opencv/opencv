@@ -75,16 +75,16 @@
 namespace cv
 {
 
-Retina::Retina(const cv::Size inputSize)
+Retina::Retina(const cv::Size inputSz)
 {
     _retinaFilter = 0;
-    _init(inputSize, true, RETINA_COLOR_BAYER, false);
+    _init(inputSz, true, RETINA_COLOR_BAYER, false);
 }
 
-Retina::Retina(const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+Retina::Retina(const cv::Size inputSz, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
     _retinaFilter = 0;
-    _init(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
+    _init(inputSz, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 };
 
 Retina::~Retina()
@@ -342,20 +342,20 @@ const std::valarray<float> & Retina::getMagno() const {return _retinaFilter->get
 const std::valarray<float> & Retina::getParvo() const {if (_retinaFilter->getColorMode())return _retinaFilter->getColorOutput(); /* implicite else */return _retinaFilter->getContours();}
 
 // private method called by constructirs
-void Retina::_init(const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+void Retina::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
     // basic error check
-    if (inputSize.height*inputSize.width <= 0)
+    if (inputSz.height*inputSz.width <= 0)
         throw cv::Exception(-1, "Bad retina size setup : size height and with must be superior to zero", "Retina::setup", "Retina.h", 0);
 
-    unsigned int nbPixels=inputSize.height*inputSize.width;
+    unsigned int nbPixels=inputSz.height*inputSz.width;
     // resize buffers if size does not match
     _inputBuffer.resize(nbPixels*3); // buffer supports gray images but also 3 channels color buffers... (larger is better...)
 
     // allocate the retina model
         if (_retinaFilter)
            delete _retinaFilter;
-    _retinaFilter = new RetinaFilter(inputSize.height, inputSize.width, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
+    _retinaFilter = new RetinaFilter(inputSz.height, inputSz.width, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 
     // prepare the default parameter XML file with default setup
         setup(_retinaParameters);

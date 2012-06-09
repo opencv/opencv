@@ -134,7 +134,7 @@ endif()
 
 if(HAVE_OPENNI)
   list(APPEND highgui_srcs src/cap_openni.cpp)
-  include_directories(AFTER SYSTEM ${OPENNI_INCLUDE_DIR})
+  ocv_include_directories(${OPENNI_INCLUDE_DIR})
   list(APPEND HIGHGUI_LIBRARIES ${OPENNI_LIBRARY})
 endif(HAVE_OPENNI)
 

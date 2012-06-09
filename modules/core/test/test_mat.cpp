@@ -22,25 +22,25 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
     assert( src.channels() == 1 );
     if( dim == 0 ) // row
     {
-        sum.create( 1, src.cols, CV_64FC1 ); 
+        sum.create( 1, src.cols, CV_64FC1 );
         max.create( 1, src.cols, CV_64FC1 );
         min.create( 1, src.cols, CV_64FC1 );
     }
     else
     {
-        sum.create( src.rows, 1, CV_64FC1 ); 
+        sum.create( src.rows, 1, CV_64FC1 );
         max.create( src.rows, 1, CV_64FC1 );
         min.create( src.rows, 1, CV_64FC1 );
     }
     sum.setTo(Scalar(0));
     max.setTo(Scalar(-DBL_MAX));
     min.setTo(Scalar(DBL_MAX));
-    
+
     const Mat_<Type>& src_ = src;
     Mat_<double>& sum_ = (Mat_<double>&)sum;
     Mat_<double>& min_ = (Mat_<double>&)min;
     Mat_<double>& max_ = (Mat_<double>&)max;
-    
+
     if( dim == 0 )
     {
         for( int ri = 0; ri < src.rows; ri++ )
@@ -128,7 +128,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         else if ( dstType == CV_32S )
             eps = 0.6;
     }
-    
+
     assert( opRes.type() == CV_64FC1 );
     Mat _dst, dst, diff;
     reduce( src, _dst, dim, opType, dstType );
@@ -151,7 +151,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         getMatTypeStr( src.type(), srcTypeStr );
         getMatTypeStr( dstType, dstTypeStr );
         const char* dimStr = dim == 0 ? "ROWS" : "COLS";
-        
+
         sprintf( msg, "bad accuracy with srcType = %s, dstType = %s, opType = %s, dim = %s",
                 srcTypeStr.c_str(), dstTypeStr.c_str(), opTypeStr, dimStr );
         ts->printf( cvtest::TS::LOG, msg );
@@ -164,10 +164,10 @@ int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
 {
     int code = cvtest::TS::OK, tempCode;
     Mat src, sum, avg, max, min;
-    
+
     src.create( sz, srcType );
     randu( src, Scalar(0), Scalar(100) );
-    
+
     if( srcType == CV_8UC1 )
         testReduce<uchar>( src, sum, avg, max, min, dim );
     else if( srcType == CV_8SC1 )
@@ -182,109 +182,107 @@ int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
         testReduce<float>( src, sum, avg, max, min, dim );
     else if( srcType == CV_64FC1 )
         testReduce<double>( src, sum, avg, max, min, dim );
-    else 
+    else
         assert( 0 );
-    
+
     // 1. sum
     tempCode = checkOp( src, dstType, CV_REDUCE_SUM, sum, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     // 2. avg
     tempCode = checkOp( src, dstType, CV_REDUCE_AVG, avg, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     // 3. max
     tempCode = checkOp( src, dstType, CV_REDUCE_MAX, max, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     // 4. min
     tempCode = checkOp( src, dstType, CV_REDUCE_MIN, min, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     return code;
 }
 
 int Core_ReduceTest::checkDim( int dim, Size sz )
 {
     int code = cvtest::TS::OK, tempCode;
-    
+
     // CV_8UC1
     tempCode = checkCase( CV_8UC1, CV_8UC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkCase( CV_8UC1, CV_32SC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkCase( CV_8UC1, CV_32FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkCase( CV_8UC1, CV_64FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     // CV_16UC1
     tempCode = checkCase( CV_16UC1, CV_32FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkCase( CV_16UC1, CV_64FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     // CV_16SC1
     tempCode = checkCase( CV_16SC1, CV_32FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkCase( CV_16SC1, CV_64FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     // CV_32FC1
     tempCode = checkCase( CV_32FC1, CV_32FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkCase( CV_32FC1, CV_64FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     // CV_64FC1
     tempCode = checkCase( CV_64FC1, CV_64FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     return code;
 }
 
 int Core_ReduceTest::checkSize( Size sz )
 {
     int code = cvtest::TS::OK, tempCode;
-    
+
     tempCode = checkDim( 0, sz ); // rows
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
-    tempCode = checkDim( 1, sz ); // cols 
+
+    tempCode = checkDim( 1, sz ); // cols
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     return code;
 }
 
 void Core_ReduceTest::run( int )
 {
     int code = cvtest::TS::OK, tempCode;
-    
+
     tempCode = checkSize( Size(1,1) );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkSize( Size(1,100) );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkSize( Size(100,1) );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     tempCode = checkSize( Size(1000,500) );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
-    
+
     ts->set_failed_test_info( code );
 }
 
 
 #define CHECK_C
-
-Size sz(200, 500);
 
 class Core_PCATest : public cvtest::BaseTest
 {
@@ -293,41 +291,43 @@ public:
 protected:
     void run(int)
     {
+        const Size sz(200, 500);
+
         double diffPrjEps, diffBackPrjEps,
         prjEps, backPrjEps,
         evalEps, evecEps;
         int maxComponents = 100;
         Mat rPoints(sz, CV_32FC1), rTestPoints(sz, CV_32FC1);
-        RNG& rng = ts->get_rng(); 
-        
+        RNG& rng = ts->get_rng();
+
         rng.fill( rPoints, RNG::UNIFORM, Scalar::all(0.0), Scalar::all(1.0) );
         rng.fill( rTestPoints, RNG::UNIFORM, Scalar::all(0.0), Scalar::all(1.0) );
-        
+
         PCA rPCA( rPoints, Mat(), CV_PCA_DATA_AS_ROW, maxComponents ), cPCA;
-        
+
         // 1. check C++ PCA & ROW
         Mat rPrjTestPoints = rPCA.project( rTestPoints );
         Mat rBackPrjTestPoints = rPCA.backProject( rPrjTestPoints );
-        
+
         Mat avg(1, sz.width, CV_32FC1 );
         reduce( rPoints, avg, 0, CV_REDUCE_AVG );
         Mat Q = rPoints - repeat( avg, rPoints.rows, 1 ), Qt = Q.t(), eval, evec;
         Q = Qt * Q;
         Q = Q /(float)rPoints.rows;
-        
+
         eigen( Q, eval, evec );
         /*SVD svd(Q);
          evec = svd.vt;
          eval = svd.w;*/
-        
+
         Mat subEval( maxComponents, 1, eval.type(), eval.data ),
         subEvec( maxComponents, evec.cols, evec.type(), evec.data );
-        
+
     #ifdef CHECK_C
         Mat prjTestPoints, backPrjTestPoints, cPoints = rPoints.t(), cTestPoints = rTestPoints.t();
         CvMat _points, _testPoints, _avg, _eval, _evec, _prjTestPoints, _backPrjTestPoints;
     #endif
-        
+
         // check eigen()
         double eigenEps = 1e-6;
         double err;
@@ -335,7 +335,7 @@ protected:
         {
             Mat v = evec.row(i).t();
             Mat Qv = Q * v;
-            
+
             Mat lv = eval.at<float>(i,0) * v;
             err = norm( Qv, lv );
             if( err > eigenEps )
@@ -370,7 +370,7 @@ protected:
                     absdiff(rPCA.eigenvectors, subEvec, tmp);
                     double mval = 0; Point mloc;
                     minMaxLoc(tmp, 0, &mval, 0, &mloc);
-                    
+
                     ts->printf( cvtest::TS::LOG, "pca.eigenvectors is incorrect (CV_PCA_DATA_AS_ROW); err = %f\n", err );
                     ts->printf( cvtest::TS::LOG, "max diff is %g at (i=%d, j=%d) (%g vs %g)\n",
                                mval, mloc.y, mloc.x, rPCA.eigenvectors.at<float>(mloc.y, mloc.x),
@@ -380,7 +380,7 @@ protected:
                 }
             }
         }
-        
+
         prjEps = 1.265, backPrjEps = 1.265;
         for( int i = 0; i < rTestPoints.rows; i++ )
         {
@@ -404,7 +404,7 @@ protected:
                 return;
             }
         }
-        
+
         // 2. check C++ PCA & COL
         cPCA( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, maxComponents );
         diffPrjEps = 1, diffBackPrjEps = 1;
@@ -423,7 +423,7 @@ protected:
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             return;
         }
-        
+
     #ifdef CHECK_C
         // 3. check C PCA & ROW
         _points = rPoints;
@@ -435,11 +435,11 @@ protected:
         backPrjTestPoints.create(rPoints.size(), rPoints.type() );
         _prjTestPoints = prjTestPoints;
         _backPrjTestPoints = backPrjTestPoints;
-        
+
         cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_ROW );
         cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
         cvBackProjectPCA( &_prjTestPoints, &_avg, &_evec, &_backPrjTestPoints );
-        
+
         err = norm(prjTestPoints, rPrjTestPoints, CV_RELATIVE_L2);
         if( err > diffPrjEps )
         {
@@ -454,7 +454,7 @@ protected:
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             return;
         }
-        
+
         // 3. check C PCA & COL
         _points = cPoints;
         _testPoints = cTestPoints;
@@ -463,11 +463,11 @@ protected:
         evec = evec.t(); _evec = evec;
         prjTestPoints = prjTestPoints.t(); _prjTestPoints = prjTestPoints;
         backPrjTestPoints = backPrjTestPoints.t(); _backPrjTestPoints = backPrjTestPoints;
-        
+
         cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_COL );
         cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
         cvBackProjectPCA( &_prjTestPoints, &_avg, &_evec, &_backPrjTestPoints );
-        
+
         err = norm(cv::abs(prjTestPoints), cv::abs(rPrjTestPoints.t()), CV_RELATIVE_L2 );
         if( err > diffPrjEps )
         {
@@ -490,9 +490,9 @@ class Core_ArrayOpTest : public cvtest::BaseTest
 {
 public:
     Core_ArrayOpTest();
-    ~Core_ArrayOpTest();    
+    ~Core_ArrayOpTest();
 protected:
-    void run(int);    
+    void run(int);
 };
 
 
@@ -536,7 +536,7 @@ static double getValue(SparseMat& M, const int* idx, RNG& rng)
         d == 3 ? M.hash(idx[0], idx[1], idx[2]) : M.hash(idx);
         phv = &hv;
     }
-    
+
     const uchar* ptr = d == 2 ? M.ptr(idx[0], idx[1], false, phv) :
     d == 3 ? M.ptr(idx[0], idx[1], idx[2], false, phv) :
     M.ptr(idx, false, phv);
@@ -560,7 +560,7 @@ static void eraseValue(SparseMat& M, const int* idx, RNG& rng)
         d == 3 ? M.hash(idx[0], idx[1], idx[2]) : M.hash(idx);
         phv = &hv;
     }
-    
+
     if( d == 2 )
         M.erase(idx[0], idx[1], phv);
     else if( d == 3 )
@@ -584,7 +584,7 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
         d == 3 ? M.hash(idx[0], idx[1], idx[2]) : M.hash(idx);
         phv = &hv;
     }
-    
+
     uchar* ptr = d == 2 ? M.ptr(idx[0], idx[1], true, phv) :
     d == 3 ? M.ptr(idx[0], idx[1], idx[2], true, phv) :
     M.ptr(idx, true, phv);
@@ -599,7 +599,7 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
 void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
-    
+
     // dense matrix operations
     {
         int sz3[] = {5, 10, 15};
@@ -608,7 +608,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         RNG rng;
         rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
         rng.fill(B, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
-        
+
         int idx0[] = {3,4,5}, idx1[] = {0, 9, 7};
         float val0 = 130;
         Scalar val1(-1000, 30, 3, 8);
@@ -617,12 +617,12 @@ void Core_ArrayOpTest::run( int /* start_from */)
         cvSetND(&matB, idx0, val1);
         cvSet3D(&matB, idx1[0], idx1[1], idx1[2], -val1);
         Ptr<CvMatND> matC = cvCloneMatND(&matB);
-        
+
         if( A.at<float>(idx0[0], idx0[1], idx0[2]) != val0 ||
            A.at<float>(idx1[0], idx1[1], idx1[2]) != -val0 ||
            cvGetReal3D(&matA, idx0[0], idx0[1], idx0[2]) != val0 ||
            cvGetRealND(&matA, idx1) != -val0 ||
-           
+
            Scalar(B.at<Vec4s>(idx0[0], idx0[1], idx0[2])) != val1 ||
            Scalar(B.at<Vec4s>(idx1[0], idx1[1], idx1[2])) != -val1 ||
            Scalar(cvGet3D(matC, idx0[0], idx0[1], idx0[2])) != val1 ||
@@ -633,7 +633,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             errcount++;
         }
     }
-    
+
     RNG rng;
     const int MAX_DIM = 5, MAX_DIM_SZ = 10;
     // sparse matrix operations
@@ -647,7 +647,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         vector<double> all_vals2;
         string sidx, min_sidx, max_sidx;
         double min_val=0, max_val=0;
-        
+
         int p = 1;
         for( k = 0; k < dims; k++ )
         {
@@ -656,7 +656,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         }
         SparseMat M( dims, size, depth );
         map<string, double> M0;
-        
+
         int nz0 = (unsigned)rng % max(p/5,10);
         nz0 = min(max(nz0, 1), p);
         all_vals.resize(nz0);
@@ -676,12 +676,12 @@ void Core_ArrayOpTest::run( int /* start_from */)
             _all_vals2.convertTo(_all_vals2_f, CV_32F);
             _all_vals2_f.convertTo(_all_vals2, CV_64F);
         }
-        
+
         minMaxLoc(_all_vals, &min_val, &max_val);
         double _norm0 = norm(_all_vals, CV_C);
         double _norm1 = norm(_all_vals, CV_L1);
         double _norm2 = norm(_all_vals, CV_L2);
-        
+
         for( i = 0; i < nz0; i++ )
         {
             for(;;)
@@ -708,18 +708,18 @@ void Core_ArrayOpTest::run( int /* start_from */)
                 break;
             }
         }
-        
+
         Ptr<CvSparseMat> M2 = (CvSparseMat*)M;
         MatND Md;
         M.copyTo(Md);
         SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);
-        
+
         int nz1 = (int)M.nzcount(), nz2 = (int)M3.nzcount();
         double norm0 = norm(M, CV_C);
         double norm1 = norm(M, CV_L1);
         double norm2 = norm(M, CV_L2);
         double eps = depth == CV_32F ? FLT_EPSILON*100 : DBL_EPSILON*1000;
-        
+
         if( nz1 != nz0 || nz2 != nz0)
         {
             errcount++;
@@ -727,7 +727,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
                        si, nz1, nz2, nz0 );
             break;
         }
-        
+
         if( fabs(norm0 - _norm0) > fabs(_norm0)*eps ||
            fabs(norm1 - _norm1) > fabs(_norm1)*eps ||
            fabs(norm2 - _norm2) > fabs(_norm2)*eps )
@@ -737,10 +737,10 @@ void Core_ArrayOpTest::run( int /* start_from */)
                        si, norm0, norm1, norm2, _norm0, _norm1, _norm2 );
             break;
         }
-        
+
         int n = (unsigned)rng % max(p/5,10);
         n = min(max(n, 1), p) + nz0;
-        
+
         for( i = 0; i < n; i++ )
         {
             double val1, val2, val3, val0;
@@ -760,7 +760,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             val1 = getValue(M, idx, rng);
             val2 = getValue(M2, idx);
             val3 = getValue(M3, idx, rng);
-            
+
             if( val1 != val0 || val2 != val0 || fabs(val3 - val0*2) > fabs(val0*2)*FLT_EPSILON )
             {
                 errcount++;
@@ -768,7 +768,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
                 break;
             }
         }
-        
+
         for( i = 0; i < n; i++ )
         {
             double val1, val2;
@@ -792,9 +792,9 @@ void Core_ArrayOpTest::run( int /* start_from */)
                 errcount++;
                 ts->printf(cvtest::TS::LOG, "SparseMat: after deleting M[%s], it is =%g/%g (while it should be 0)\n", sidx.c_str(), val1, val2 );
                 break;
-            }    
+            }
         }
-        
+
         int nz = (int)M.nzcount();
         if( nz != 0 )
         {
@@ -802,7 +802,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             ts->printf(cvtest::TS::LOG, "The number of non-zero elements after removing all the elements = %d (while it should be 0)\n", nz );
             break;
         }
-        
+
         int idx1[MAX_DIM], idx2[MAX_DIM];
         double val1 = 0, val2 = 0;
         M3 = SparseMat(Md);
@@ -816,7 +816,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
                        min_val, max_val, min_sidx.c_str(), max_sidx.c_str());
             break;
         }
-        
+
         minMaxIdx(Md, &val1, &val2, idx1, idx2);
         s1 = idx2string(idx1, dims), s2 = idx2string(idx2, dims);
         if( (min_val < 0 && (val1 != min_val || s1 != min_sidx)) ||
@@ -829,7 +829,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             break;
         }
     }
-    
+
     ts->set_failed_test_info(errcount == 0 ? cvtest::TS::OK : cvtest::TS::FAIL_INVALID_OUTPUT);
 }
 

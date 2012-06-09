@@ -350,11 +350,10 @@ public:
 
     virtual void Process(IplImage* pImg, IplImage* /*pFG*/)
     {
-        int i;
         double          MinTv = pImg->width/1440.0; /* minimal threshold for speed difference */
         double          MinTv2 = MinTv*MinTv;
 
-        for(i=m_Tracks.GetBlobNum(); i>0; --i)
+        for(int i=m_Tracks.GetBlobNum(); i>0; --i)
         {
             DefTrackForDist* pF = (DefTrackForDist*)m_Tracks.GetBlob(i-1);
             pF->state = 0;
@@ -466,14 +465,13 @@ public:
 
         if(m_Wnd)
         {   /* Debug output: */
-            int i;
 
             if(m_pDebugImg==NULL)
                 m_pDebugImg = cvCloneImage(pImg);
             else
                 cvCopy(pImg, m_pDebugImg);
 
-            for(i=m_TrackDataBase.GetBlobNum(); i>0; --i)
+            for(int i=m_TrackDataBase.GetBlobNum(); i>0; --i)
             {   /* Draw all elements in track data base:  */
                 int         j;
                 DefTrackForDist*   pF = (DefTrackForDist*)m_TrackDataBase.GetBlob(i-1);
@@ -497,7 +495,7 @@ public:
                 pF->close = 0;
             }   /* Draw all elements in track data base. */
 
-            for(i=m_Tracks.GetBlobNum(); i>0; --i)
+            for(int i=m_Tracks.GetBlobNum(); i>0; --i)
             {   /* Draw all elements for all trajectories: */
                 DefTrackForDist*    pF = (DefTrackForDist*)m_Tracks.GetBlob(i-1);
                 int                 j;

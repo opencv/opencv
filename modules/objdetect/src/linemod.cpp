@@ -451,15 +451,15 @@ protected:
   float strong_threshold;
 };
 
-ColorGradientPyramid::ColorGradientPyramid(const Mat& src, const Mat& mask,
-                                           float weak_threshold, size_t num_features,
-                                           float strong_threshold)
-  : src(src),
-    mask(mask),
+ColorGradientPyramid::ColorGradientPyramid(const Mat& _src, const Mat& _mask,
+                                           float _weak_threshold, size_t _num_features,
+                                           float _strong_threshold)
+  : src(_src),
+    mask(_mask),
     pyramid_level(0),
-    weak_threshold(weak_threshold),
-    num_features(num_features),
-    strong_threshold(strong_threshold)
+    weak_threshold(_weak_threshold),
+    num_features(_num_features),
+    strong_threshold(_strong_threshold)
 {
   update();
 }
@@ -557,10 +557,10 @@ ColorGradient::ColorGradient()
 {
 }
 
-ColorGradient::ColorGradient(float weak_threshold, size_t num_features, float strong_threshold)
-  : weak_threshold(weak_threshold),
-    num_features(num_features),
-    strong_threshold(strong_threshold)
+ColorGradient::ColorGradient(float _weak_threshold, size_t _num_features, float _strong_threshold)
+  : weak_threshold(_weak_threshold),
+    num_features(_num_features),
+    strong_threshold(_strong_threshold)
 {
 }
 
@@ -751,13 +751,13 @@ protected:
   int extract_threshold;
 };
 
-DepthNormalPyramid::DepthNormalPyramid(const Mat& src, const Mat& mask,
-                                       int distance_threshold, int difference_threshold, size_t num_features,
-                                       int extract_threshold)
-  : mask(mask),
+DepthNormalPyramid::DepthNormalPyramid(const Mat& src, const Mat& _mask,
+                                       int distance_threshold, int difference_threshold, size_t _num_features,
+                                       int _extract_threshold)
+  : mask(_mask),
     pyramid_level(0),
-    num_features(num_features),
-    extract_threshold(extract_threshold)
+    num_features(_num_features),
+    extract_threshold(_extract_threshold)
 {
   quantizedNormals(src, normal, distance_threshold, difference_threshold);
 }
@@ -876,12 +876,12 @@ DepthNormal::DepthNormal()
 {
 }
 
-DepthNormal::DepthNormal(int distance_threshold, int difference_threshold, size_t num_features,
-                         int extract_threshold)
-  : distance_threshold(distance_threshold),
-    difference_threshold(difference_threshold),
-    num_features(num_features),
-    extract_threshold(extract_threshold)
+DepthNormal::DepthNormal(int _distance_threshold, int _difference_threshold, size_t _num_features,
+                         int _extract_threshold)
+  : distance_threshold(_distance_threshold),
+    difference_threshold(_difference_threshold),
+    num_features(_num_features),
+    extract_threshold(_extract_threshold)
 {
 }
 
@@ -1388,9 +1388,9 @@ Detector::Detector()
 {
 }
 
-Detector::Detector(const std::vector< Ptr<Modality> >& modalities,
+Detector::Detector(const std::vector< Ptr<Modality> >& _modalities,
                    const std::vector<int>& T_pyramid)
-  : modalities(modalities),
+  : modalities(_modalities),
     pyramid_levels(static_cast<int>(T_pyramid.size())),
     T_at_level(T_pyramid)
 {
@@ -1480,7 +1480,7 @@ void Detector::match(const std::vector<Mat>& sources, float threshold, std::vect
 // Used to filter out weak matches
 struct MatchPredicate
 {
-  MatchPredicate(float threshold) : threshold(threshold) {}
+  MatchPredicate(float _threshold) : threshold(_threshold) {}
   bool operator() (const Match& m) { return m.similarity < threshold; }
   float threshold;
 };
@@ -1554,13 +1554,13 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
       int max_x = size.width - tp[start].width - border;
       int max_y = size.height - tp[start].height - border;
 
-      std::vector<Mat> similarities(modalities.size());
-      Mat total_similarity;
+      std::vector<Mat> similarities2(modalities.size());
+      Mat total_similarity2;
       for (int m = 0; m < (int)candidates.size(); ++m)
       {
-        Match& match = candidates[m];
-        int x = match.x * 2 + 1; /// @todo Support other pyramid distance
-        int y = match.y * 2 + 1;
+        Match& match2 = candidates[m];
+        int x = match2.x * 2 + 1; /// @todo Support other pyramid distance
+        int y = match2.y * 2 + 1;
 
         // Require 8 (reduced) row/cols to the up/left
         x = std::max(x, border);
@@ -1571,22 +1571,22 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
         y = std::min(y, max_y);
 
         // Compute local similarity maps for each modality
-        int num_features = 0;
+        int numFeatures = 0;
         for (int i = 0; i < (int)modalities.size(); ++i)
         {
           const Template& templ = tp[start + i];
-          num_features += static_cast<int>(templ.features.size());
-          similarityLocal(lms[i], templ, similarities[i], size, T, Point(x, y));
+          numFeatures += static_cast<int>(templ.features.size());
+          similarityLocal(lms[i], templ, similarities2[i], size, T, Point(x, y));
         }
-        addSimilarities(similarities, total_similarity);
+        addSimilarities(similarities2, total_similarity2);
 
         // Find best local adjustment
         int best_score = 0;
         int best_r = -1, best_c = -1;
-        for (int r = 0; r < total_similarity.rows; ++r)
+        for (int r = 0; r < total_similarity2.rows; ++r)
         {
-          ushort* row = total_similarity.ptr<ushort>(r);
-          for (int c = 0; c < total_similarity.cols; ++c)
+          ushort* row = total_similarity2.ptr<ushort>(r);
+          for (int c = 0; c < total_similarity2.cols; ++c)
           {
             int score = row[c];
             if (score > best_score)
@@ -1598,9 +1598,9 @@ void Detector::matchClass(const LinearMemoryPyramid& lm_pyramid,
           }
         }
         // Update current match
-        match.x = (x / T - 8 + best_c) * T + offset;
-        match.y = (y / T - 8 + best_r) * T + offset;
-        match.similarity = (best_score * 100.f) / (4 * num_features);
+        match2.x = (x / T - 8 + best_c) * T + offset;
+        match2.y = (y / T - 8 + best_r) * T + offset;
+        match2.similarity = (best_score * 100.f) / (4 * numFeatures);
       }
 
       // Filter out any matches that drop below the similarity threshold
@@ -1763,10 +1763,10 @@ void Detector::write(FileStorage& fs) const
     tps[template_id].resize(templates_fn.size());
 
     FileNodeIterator templ_it = templates_fn.begin(), templ_it_end = templates_fn.end();
-    int i = 0;
+    int idx = 0;
     for ( ; templ_it != templ_it_end; ++templ_it)
     {
-      tps[template_id][i++].read(*templ_it);
+      tps[template_id][idx++].read(*templ_it);
     }
   }
 

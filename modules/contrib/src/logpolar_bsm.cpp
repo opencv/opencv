@@ -60,9 +60,9 @@ ICVS 2011, Sophia Antipolis, France, September 20-22, 2011
 
 namespace cv
 {
-    
+
 //------------------------------------interp-------------------------------------------
-LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int R, double ro0, int interp, int full, int S, int sp)
+LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int _R, double _ro0, int _interp, int full, int _S, int sp)
 {
     if ( (center.x!=w/2 || center.y!=h/2) && full==0) full=1;
 
@@ -97,23 +97,23 @@ LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int R, double ro0
 
     if (sp){
         int jc=M/2-1, ic=N/2-1;
-        int romax=min(ic, jc);
-        double a=exp(log((double)(romax/2-1)/(double)ro0)/(double)R);
-        S=(int) floor(2*CV_PI/(a-1)+0.5);
+        int _romax=min(ic, jc);
+        double _a=exp(log((double)(_romax/2-1)/(double)ro0)/(double)R);
+        S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
-    this->interp=interp;
+    interp=_interp;
 
-    create_map(M, N, R, S, ro0);
+    create_map(M, N, _R, _S, _ro0);
 }
 
-void LogPolar_Interp::create_map(int M, int N, int R, int S, double ro0)
+void LogPolar_Interp::create_map(int _M, int _N, int _R, int _S, double _ro0)
 {
-    this->M=M;
-    this->N=N;
-    this->R=R;
-    this->S=S;
-    this->ro0=ro0;
+    M=_M;
+    N=_N;
+    R=_R;
+    S=_S;
+    ro0=_ro0;
 
     int jc=N/2-1, ic=M/2-1;
     romax=min(ic, jc);
@@ -130,7 +130,7 @@ void LogPolar_Interp::create_map(int M, int N, int R, int S, double ro0)
         for(int u=0; u<R; u++)
         {
             Rsri.at<float>(v,u)=(float)(ro0*pow(a,u)*sin(v/q)+jc);
-            Csri.at<float>(v,u)=(float)(ro0*pow(a,u)*cos(v/q)+ic); 
+            Csri.at<float>(v,u)=(float)(ro0*pow(a,u)*cos(v/q)+ic);
         }
     }
 
@@ -158,7 +158,7 @@ void LogPolar_Interp::create_map(int M, int N, int R, int S, double ro0)
 const Mat LogPolar_Interp::to_cortical(const Mat &source)
 {
     Mat out(S,R,CV_8UC1,Scalar(0));
-    
+
     Mat source_border;
     copyMakeBorder(source,source_border,top,bottom,left,right,BORDER_CONSTANT,Scalar(0));
 
@@ -173,7 +173,7 @@ const Mat LogPolar_Interp::to_cartesian(const Mat &source)
     Mat out(N,M,CV_8UC1,Scalar(0));
 
     Mat source_border;
-    
+
     if (interp==INTER_NEAREST || interp==INTER_LINEAR){
         copyMakeBorder(source,source_border,0,1,0,0,BORDER_CONSTANT,Scalar(0));
         Mat rowS0 = source_border.row(S);
@@ -208,7 +208,7 @@ LogPolar_Interp::~LogPolar_Interp()
 
 //------------------------------------overlapping----------------------------------
 
-LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int R, double ro0, int full, int S, int sp)
+LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int _R, double _ro0, int full, int _S, int sp)
 {
     if ( (center.x!=w/2 || center.y!=h/2) && full==0) full=1;
 
@@ -244,21 +244,21 @@ LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int R, 
 
     if (sp){
         int jc=M/2-1, ic=N/2-1;
-        int romax=min(ic, jc);
-        double a=exp(log((double)(romax/2-1)/(double)ro0)/(double)R);
-        S=(int) floor(2*CV_PI/(a-1)+0.5);
+        int _romax=min(ic, jc);
+        double _a=exp(log((double)(_romax/2-1)/(double)ro0)/(double)R);
+        S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
-    create_map(M, N, R, S, ro0);
+    create_map(M, N, _R, _S, _ro0);
 }
 
-void LogPolar_Overlapping::create_map(int M, int N, int R, int S, double ro0)
+void LogPolar_Overlapping::create_map(int _M, int _N, int _R, int _S, double _ro0)
 {
-    this->M=M;
-    this->N=N;
-    this->R=R;
-    this->S=S;
-    this->ro0=ro0;
+    M=_M;
+    N=_N;
+    R=_R;
+    S=_S;
+    ro0=_ro0;
 
     int jc=N/2-1, ic=M/2-1;
     romax=min(ic, jc);
@@ -280,14 +280,14 @@ void LogPolar_Overlapping::create_map(int M, int N, int R, int S, double ro0)
         for(int u=0; u<R; u++)
         {
             Rsri.at<float>(v,u)=(float)(ro0*pow(a,u)*sin(v/q)+jc);
-            Csri.at<float>(v,u)=(float)(ro0*pow(a,u)*cos(v/q)+ic); 
+            Csri.at<float>(v,u)=(float)(ro0*pow(a,u)*cos(v/q)+ic);
             Rsr[v*R+u]=(int)floor(Rsri.at<float>(v,u));
-            Csr[v*R+u]=(int)floor(Csri.at<float>(v,u));            
+            Csr[v*R+u]=(int)floor(Csri.at<float>(v,u));
         }
     }
 
     bool done=false;
-    
+
     for(int i=0; i<R; i++)
     {
         Wsr[i]=ro0*(a-1)*pow(a,i-1);
@@ -297,7 +297,7 @@ void LogPolar_Overlapping::create_map(int M, int N, int R, int S, double ro0)
             done =true;
         }
     }
-    
+
     for(int j=0; j<N; j++)
     {
         for(int i=0; i<M; i++)//mdf
@@ -312,7 +312,7 @@ void LogPolar_Overlapping::create_map(int M, int N, int R, int S, double ro0)
                 theta+=2*CV_PI;
 
             ETAyx.at<float>(j,i)=(float)(q*theta);
-            
+
             double ro2=(j-jc)*(j-jc)+(i-ic)*(i-ic);
             CSIyx.at<float>(j,i)=(float)(0.5*log(ro2/(ro0*ro0))/log(a));
         }
@@ -387,7 +387,7 @@ const Mat LogPolar_Overlapping::to_cartesian(const Mat &source)
     remap(source_border,out,CSIyx,ETAyx,INTER_LINEAR);
 
     int wm=w_ker_2D[R-1].w;
-    
+
     vector<double> IMG((N+2*wm+1)*(M+2*wm+1), 0.);
     vector<double> NOR((N+2*wm+1)*(M+2*wm+1), 0.);
 
@@ -426,14 +426,14 @@ const Mat LogPolar_Overlapping::to_cartesian(const Mat &source)
     Mat out_cropped=out(Range(top,N-1-bottom),Range(left,M-1-right));
     return out_cropped;
 }
- 
+
 LogPolar_Overlapping::~LogPolar_Overlapping()
 {
 }
 
 //----------------------------------------adjacent---------------------------------------
 
-LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int R, double ro0, double smin, int full, int S, int sp)
+LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int _R, double _ro0, double smin, int full, int _S, int sp)
 {
     if ( (center.x!=w/2 || center.y!=h/2) && full==0) full=1;
 
@@ -468,22 +468,22 @@ LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int R, double
 
     if (sp){
         int jc=M/2-1, ic=N/2-1;
-        int romax=min(ic, jc);
-        double a=exp(log((double)(romax/2-1)/(double)ro0)/(double)R);
-        S=(int) floor(2*CV_PI/(a-1)+0.5);
+        int _romax=min(ic, jc);
+        double _a=exp(log((double)(_romax/2-1)/(double)ro0)/(double)R);
+        S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
-    create_map(M, N, R, S, ro0, smin);
+    create_map(M, N, _R, _S, _ro0, smin);
 }
 
 
-void LogPolar_Adjacent::create_map(int M, int N, int R, int S, double ro0, double smin)
+void LogPolar_Adjacent::create_map(int _M, int _N, int _R, int _S, double _ro0, double smin)
 {
-    LogPolar_Adjacent::M=M;
-    LogPolar_Adjacent::N=N;
-    LogPolar_Adjacent::R=R;
-    LogPolar_Adjacent::S=S;
-    LogPolar_Adjacent::ro0=ro0;
+    M=_M;
+    N=_N;
+    R=_R;
+    S=_S;
+    ro0=_ro0;
     romax=min(M/2.0, N/2.0);
 
     a=exp(log(romax/ro0)/(double)R);
@@ -507,7 +507,7 @@ void LogPolar_Adjacent::create_map(int M, int N, int R, int S, double ro0, doubl
 
 
 void LogPolar_Adjacent::subdivide_recursively(double x, double y, int i, int j, double length, double smin)
-{   
+{
     if(length<=smin)
     {
         int u, v;
@@ -576,7 +576,7 @@ const Mat LogPolar_Adjacent::to_cortical(const Mat &source)
 
     for(int j=0; j<N; j++)
         for(int i=0; i<M; i++)
-        {   
+        {
             for(size_t z=0; z<(L[M*j+i]).size(); z++)
             {
                 map[R*((L[M*j+i])[z].v)+((L[M*j+i])[z].u)]+=((L[M*j+i])[z].a)*(source_border.at<uchar>(j,i));
@@ -641,7 +641,7 @@ bool LogPolar_Adjacent::get_uv(double x, double y, int&u, int&v)
         else
             v= (int) floor(q*(theta+2*CV_PI));
         return true;
-    }   
+    }
 }
 
 LogPolar_Adjacent::~LogPolar_Adjacent()

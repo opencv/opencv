@@ -69,8 +69,8 @@ void MotionStabilizationPipeline::stabilize(
     {
         stabilizers_[i]->stabilize(size, updatedMotions, range, &stabilizationMotions_[0]);
 
-        for (int i = 0; i < size; ++i)
-            stabilizationMotions[i] = stabilizationMotions_[i] * stabilizationMotions[i];
+        for (int k = 0; k < size; ++k)
+            stabilizationMotions[k] = stabilizationMotions_[k] * stabilizationMotions[k];
 
         for (int j = 0; j + 1 < size; ++j)
         {
@@ -90,10 +90,10 @@ void MotionFilterBase::stabilize(
 }
 
 
-void GaussianMotionFilter::setParams(int radius, float stdev)
+void GaussianMotionFilter::setParams(int _radius, float _stdev)
 {
-    radius_ = radius;
-    stdev_ = stdev > 0.f ? stdev : sqrt(static_cast<float>(radius));
+    radius_ = _radius;
+    stdev_ = _stdev > 0.f ? _stdev : sqrt(static_cast<float>(_radius));
 
     float sum = 0;
     weight_.resize(2*radius_ + 1);

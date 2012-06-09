@@ -156,11 +156,11 @@ static void _prepareImgAndDrawKeypoints( const Mat& img1, const vector<KeyPoint>
     // draw keypoints
     if( !(flags & DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS) )
     {
-        Mat outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
-        drawKeypoints( outImg1, keypoints1, outImg1, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
+        Mat _outImg1 = outImg( Rect(0, 0, img1.cols, img1.rows) );
+        drawKeypoints( _outImg1, keypoints1, _outImg1, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
 
-        Mat outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
-        drawKeypoints( outImg2, keypoints2, outImg2, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
+        Mat _outImg2 = outImg( Rect(img1.cols, 0, img2.cols, img2.rows) );
+        drawKeypoints( _outImg2, keypoints2, _outImg2, singlePointColor, flags + DrawMatchesFlags::DRAW_OVER_OUTIMG );
     }
 }
 
@@ -178,9 +178,9 @@ static inline void _drawMatch( Mat& outImg, Mat& outImg1, Mat& outImg2 ,
             pt2 = kp2.pt,
             dpt2 = Point2f( std::min(pt2.x+outImg1.cols, float(outImg.cols-1)), pt2.y );
 
-    line( outImg, 
-		  Point(cvRound(pt1.x*draw_multiplier), cvRound(pt1.y*draw_multiplier)),
-		  Point(cvRound(dpt2.x*draw_multiplier), cvRound(dpt2.y*draw_multiplier)),
+    line( outImg,
+          Point(cvRound(pt1.x*draw_multiplier), cvRound(pt1.y*draw_multiplier)),
+          Point(cvRound(dpt2.x*draw_multiplier), cvRound(dpt2.y*draw_multiplier)),
           color, 1, CV_AA, draw_shift_bits );
 }
 

@@ -168,20 +168,20 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     }
 
     // Warp images and their masks
-    Ptr<detail::RotationWarper> warper = warper_->create(float(warped_image_scale_ * seam_work_aspect_));
+    Ptr<detail::RotationWarper> w = warper_->create(float(warped_image_scale_ * seam_work_aspect_));
     for (size_t i = 0; i < imgs_.size(); ++i)
     {
         Mat_<float> K;
         cameras_[i].K().convertTo(K, CV_32F);
-        K(0,0) *= (float)seam_work_aspect_; 
+        K(0,0) *= (float)seam_work_aspect_;
         K(0,2) *= (float)seam_work_aspect_;
-        K(1,1) *= (float)seam_work_aspect_; 
+        K(1,1) *= (float)seam_work_aspect_;
         K(1,2) *= (float)seam_work_aspect_;
 
-        corners[i] = warper->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
-        warper->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
+        w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
     vector<Mat> images_warped_f(imgs_.size());
@@ -232,7 +232,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
 
             // Update warped image scale
             warped_image_scale_ *= static_cast<float>(compose_work_aspect);
-            warper = warper_->create((float)warped_image_scale_);
+            w = warper_->create((float)warped_image_scale_);
 
             // Update corners and sizes
             for (size_t i = 0; i < imgs_.size(); ++i)
@@ -252,7 +252,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
 
                 Mat K;
                 cameras_[i].K().convertTo(K, CV_32F);
-                Rect roi = warper->warpRoi(sz, K, cameras_[i].R);
+                Rect roi = w->warpRoi(sz, K, cameras_[i].R);
                 corners[i] = roi.tl();
                 sizes[i] = roi.size();
             }
@@ -268,12 +268,12 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         cameras_[img_idx].K().convertTo(K, CV_32F);
 
         // Warp the current image
-        warper->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
-        warper->warp(mask, K, cameras_[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
+        w->warp(mask, K, cameras_[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 
         // Compensate exposure
         exposure_comp_->apply((int)img_idx, corners[img_idx], img_warped, mask_warped);

@@ -1153,7 +1153,7 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
                   int useExtrinsicGuess )
 {
     const int max_iter = 20;
-    Ptr<CvMat> matM, _Mxy, _m, _mn, matL, matJ;
+    Ptr<CvMat> matM, _Mxy, _m, _mn, matL;
 
     int i, count;
     double a[9], ar[9]={1,0,0,0,1,0,0,0,1}, R[9];

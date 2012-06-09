@@ -75,8 +75,8 @@
         {                                      \
             LOG_STITCHING_MSG(_msg);           \
         }                                      \
-		break;                                 \
-    } 
+    break;                                 \
+    }
 
 
 #define LOG(msg) LOG_(1, msg)
@@ -115,14 +115,15 @@ private:
 
 struct CV_EXPORTS GraphEdge
 {
-    GraphEdge(int from, int to, float weight) 
-        : from(from), to(to), weight(weight) {}
+    GraphEdge(int from, int to, float weight);
     bool operator <(const GraphEdge& other) const { return weight < other.weight; }
     bool operator >(const GraphEdge& other) const { return weight > other.weight; }
 
     int from, to;
     float weight;
 };
+
+inline GraphEdge::GraphEdge(int _from, int _to, float _weight) : from(_from), to(_to), weight(_weight) {}
 
 
 class CV_EXPORTS Graph
@@ -134,7 +135,7 @@ public:
     void addEdge(int from, int to, float weight);
     template <typename B> B forEach(B body) const;
     template <typename B> B walkBreadthFirst(int from, B body) const;
-    
+
 private:
     std::vector< std::list<GraphEdge> > edges_;
 };

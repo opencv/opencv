@@ -70,8 +70,7 @@ struct CV_EXPORTS RansacParams
     float prob; // probability of success
 
     RansacParams() : size(0), thresh(0), eps(0), prob(0) {}
-    RansacParams(int size, float thresh, float eps, float prob)
-        : size(size), thresh(thresh), eps(eps), prob(prob) {}
+    RansacParams(int size, float thresh, float eps, float prob);
 
     int niters() const
     {
@@ -95,6 +94,9 @@ struct CV_EXPORTS RansacParams
         return RansacParams(4, 0.5f, 0.5f, 0.99f);
     }
 };
+
+inline RansacParams::RansacParams(int _size, float _thresh, float _eps, float _prob)
+    : size(_size), thresh(_thresh), eps(_eps), prob(_prob) {}
 
 
 } // namespace videostab

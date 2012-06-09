@@ -325,15 +325,15 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
 
 	}else
 	{
-		register const float *multiplexedColorFramePTR= get_data(multiplexedColorFrame);
-		for (unsigned int indexc=0; indexc<_filterOutput.getNBpixels() ; ++indexc, ++chrominancePTR, ++colorLocalDensityPTR, ++luminance, ++multiplexedColorFramePTR)
+		register const float *multiplexedColorFramePTR1= get_data(multiplexedColorFrame);
+		for (unsigned int indexc=0; indexc<_filterOutput.getNBpixels() ; ++indexc, ++chrominancePTR, ++colorLocalDensityPTR, ++luminance, ++multiplexedColorFramePTR1)
 		{
 			// normalize by photoreceptors density
 			float Cr=*(chrominancePTR)*_colorLocalDensity[indexc];
 			float Cg=*(chrominancePTR+_filterOutput.getNBpixels())*_colorLocalDensity[indexc+_filterOutput.getNBpixels()];
 			float Cb=*(chrominancePTR+_filterOutput.getDoubleNBpixels())*_colorLocalDensity[indexc+_filterOutput.getDoubleNBpixels()];
 			*luminance=(Cr+Cg+Cb)*_pG;
-			_demultiplexedTempBuffer[_colorSampling[indexc]] = *multiplexedColorFramePTR - *luminance;
+			_demultiplexedTempBuffer[_colorSampling[indexc]] = *multiplexedColorFramePTR1 - *luminance;
 
 		}
 

@@ -55,7 +55,7 @@ static void
 FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
 {
     int k, x, y;
-    
+
     assert( src.type() == CV_32FC1 );
     int width = src.cols;
     int height = src.rows;
@@ -64,17 +64,17 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;
     float *row = (float*)_row + n*3;
-    
+
     if( sigma < FLT_EPSILON )
         sigma = n*0.3;
-    
+
     double s = 0.;
     for( x = -n; x <= n; x++ )
     {
         g[x] = (float)std::exp(-x*x/(2*sigma*sigma));
         s += g[x];
     }
-    
+
     s = 1./s;
     for( x = -n; x <= n; x++ )
     {
@@ -84,7 +84,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     }
 
     Mat_<double> G = Mat_<double>::zeros(6, 6);
-    
+
     for( y = -n; y <= n; y++ )
         for( x = -n; x <= n; x++ )
         {
@@ -93,7 +93,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
             G(3,3) += g[y]*g[x]*x*x*x*x;
             G(5,5) += g[y]*g[x]*x*x*y*y;
         }
-        
+
     //G[0][0] = 1.;
     G(2,2) = G(0,3) = G(0,4) = G(3,0) = G(4,0) = G(1,1);
     G(4,4) = G(3,3);
@@ -110,53 +110,53 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     double ig11 = invG(1,1), ig03 = invG(0,3), ig33 = invG(3,3), ig55 = invG(5,5);
 
     dst.create( height, width, CV_32FC(5));
-    
+
     for( y = 0; y < height; y++ )
     {
         float g0 = g[0], g1, g2;
         float *srow0 = (float*)(src.data + src.step*y), *srow1 = 0;
         float *drow = (float*)(dst.data + dst.step*y);
-        
+
         // vertical part of convolution
         for( x = 0; x < width; x++ )
         {
             row[x*3] = srow0[x]*g0;
             row[x*3+1] = row[x*3+2] = 0.f;
         }
-        
+
         for( k = 1; k <= n; k++ )
         {
             g0 = g[k]; g1 = xg[k]; g2 = xxg[k];
             srow0 = (float*)(src.data + src.step*std::max(y-k,0));
             srow1 = (float*)(src.data + src.step*std::min(y+k,height-1));
-            
+
             for( x = 0; x < width; x++ )
             {
                 float p = srow0[x] + srow1[x];
                 float t0 = row[x*3] + g0*p;
                 float t1 = row[x*3+1] + g1*(srow1[x] - srow0[x]);
                 float t2 = row[x*3+2] + g2*p;
-                
+
                 row[x*3] = t0;
                 row[x*3+1] = t1;
                 row[x*3+2] = t2;
             }
         }
-        
+
         // horizontal part of convolution
         for( x = 0; x < n*3; x++ )
         {
             row[-1-x] = row[2-x];
             row[width*3+x] = row[width*3+x-3];
         }
-        
+
         for( x = 0; x < width; x++ )
         {
             g0 = g[0];
             // r1 ~ 1, r2 ~ x, r3 ~ y, r4 ~ x^2, r5 ~ y^2, r6 ~ xy
             double b1 = row[x*3]*g0, b2 = 0, b3 = row[x*3+1]*g0,
                 b4 = 0, b5 = row[x*3+2]*g0, b6 = 0;
-            
+
             for( k = 1; k <= n; k++ )
             {
                 double tg = row[(x+k)*3] + row[(x-k)*3];
@@ -168,7 +168,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
                 b6 += (row[(x+k)*3+1] - row[(x-k)*3+1])*xg[k];
                 b5 += (row[(x+k)*3+2] + row[(x-k)*3+2])*g0;
             }
-            
+
             // do not store r1
             drow[x*5+1] = (float)(b2*ig11);
             drow[x*5] = (float)(b3*ig11);
@@ -177,7 +177,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
             drow[x*5+4] = (float)(b6*ig55);
         }
     }
-    
+
     row -= n*3;
 }
 
@@ -202,7 +202,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
     int x, y, width = _flow.cols, height = _flow.rows;
     const float* R1 = (float*)_R1.data;
     size_t step1 = _R1.step/sizeof(R1[0]);
-    
+
     matM.create(height, width, CV_32FC(5));
 
     for( y = _y0; y < _y1; y++ )
@@ -210,7 +210,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
         const float* flow = (float*)(_flow.data + y*_flow.step);
         const float* R0 = (float*)(_R0.data + y*_R0.step);
         float* M = (float*)(matM.data + y*matM.step);
-        
+
         for( x = 0; x < width; x++ )
         {
             float dx = flow[x*2], dy = flow[x*2+1];
@@ -222,7 +222,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
             float r2, r3, r4, r5, r6;
 
             fx -= x1; fy -= y1;
-            
+
             if( (unsigned)x1 < (unsigned)(width-1) &&
                 (unsigned)y1 < (unsigned)(height-1) )
             {
@@ -300,7 +300,7 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
     int y0 = 0, y1;
     int min_update_stripe = std::max((1 << 10)/width, block_size);
     double scale = 1./(block_size*block_size);
-    
+
     AutoBuffer<double> _vsum((width+m*2+2)*5);
     double* vsum = _vsum + (m+1)*5;
 
@@ -324,7 +324,7 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
 
         srow0 = (const float*)(matM.data + matM.step*std::max(y-m-1,0));
         const float* srow1 = (const float*)(matM.data + matM.step*std::min(y+m,height-1));
-        
+
         // vertical blur
         for( x = 0; x < width*5; x++ )
             vsum[x] += srow1[x] - srow0[x];
@@ -368,7 +368,7 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
             double h2_ = h2*scale;
 
             double idet = 1./(g11_*g22_ - g12_*g12_+1e-3);
-            
+
             flow[x*2] = (float)((g11_*h2_-g12_*h1_)*idet);
             flow[x*2+1] = (float)((g22_*h1_-g12_*h2_)*idet);
         }
@@ -393,7 +393,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     int y0 = 0, y1;
     int min_update_stripe = std::max((1 << 10)/width, block_size);
     double sigma = m*0.3, s = 1;
-    
+
     AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
     AutoBuffer<float, 4096> _kernel((m+1)*5 + 16);
     AutoBuffer<float*, 1024> _srow(m*2+1);
@@ -464,7 +464,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
                     s2 = _mm_add_ps(s2, _mm_mul_ps(x0, g4));
                     s3 = _mm_add_ps(s3, _mm_mul_ps(x1, g4));
                 }
-                
+
                 _mm_store_ps(vsum + x, s0);
                 _mm_store_ps(vsum + x + 4, s1);
                 _mm_store_ps(vsum + x + 8, s2);
@@ -532,10 +532,10 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 #endif
         for( ; x < width*5; x++ )
         {
-            float s = vsum[x]*kernel[0];
+            float sum = vsum[x]*kernel[0];
             for( i = 1; i <= m; i++ )
-                s += kernel[i]*(vsum[x - i*5] + vsum[x + i*5]);
-            hsum[x] = s;
+                sum += kernel[i]*(vsum[x - i*5] + vsum[x + i*5]);
+            hsum[x] = sum;
         }
 
         for( x = 0; x < width; x++ )
@@ -547,7 +547,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
             h2 = hsum[x*5+4];
 
             double idet = 1./(g11*g22 - g12*g12 + 1e-3);
-            
+
             flow[x*2] = (float)((g11*h2-g12*h1)*idet);
             flow[x*2+1] = (float)((g22*h1-g12*h2)*idet);
         }
@@ -630,7 +630,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
             resize( fimg, I, Size(width, height), CV_INTER_LINEAR );
             FarnebackPolyExp( I, R[i], poly_n, poly_sigma );
         }
-        
+
         FarnebackUpdateMatrices( R[0], R[1], flow, M, 0, flow.rows );
 
         for( i = 0; i < iterations; i++ )

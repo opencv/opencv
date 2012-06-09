@@ -539,7 +539,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)ip.size(); ++i)
      {
         CV_Assert(ip[i].type() == FileNode::MAP);
-        std::string name =  (std::string)ip[i]["name"];
+        std::string _name =  (std::string)ip[i]["name"];
         int type =  (int)ip[i]["type"];
 
         switch(type)
@@ -549,19 +549,19 @@ void FlannBasedMatcher::read( const FileNode& fn)
         case CV_16U:
         case CV_16S:
         case CV_32S:
-            indexParams->setInt(name, (int) ip[i]["value"]);
+            indexParams->setInt(_name, (int) ip[i]["value"]);
             break;
         case CV_32F:
-            indexParams->setFloat(name, (float) ip[i]["value"]);
+            indexParams->setFloat(_name, (float) ip[i]["value"]);
             break;
         case CV_64F:
-            indexParams->setDouble(name, (double) ip[i]["value"]);
+            indexParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            indexParams->setString(name, (std::string) ip[i]["value"]);
+            indexParams->setString(_name, (std::string) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
-            indexParams->setBool(name, (int) ip[i]["value"] != 0);
+            indexParams->setBool(_name, (int) ip[i]["value"] != 0);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,3):
             indexParams->setAlgorithm((int) ip[i]["value"]);
@@ -578,7 +578,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)sp.size(); ++i)
      {
         CV_Assert(sp[i].type() == FileNode::MAP);
-        std::string name =  (std::string)sp[i]["name"];
+        std::string _name =  (std::string)sp[i]["name"];
         int type =  (int)sp[i]["type"];
 
         switch(type)
@@ -588,19 +588,19 @@ void FlannBasedMatcher::read( const FileNode& fn)
         case CV_16U:
         case CV_16S:
         case CV_32S:
-            searchParams->setInt(name, (int) sp[i]["value"]);
+            searchParams->setInt(_name, (int) sp[i]["value"]);
             break;
         case CV_32F:
-            searchParams->setFloat(name, (float) ip[i]["value"]);
+            searchParams->setFloat(_name, (float) ip[i]["value"]);
             break;
         case CV_64F:
-            searchParams->setDouble(name, (double) ip[i]["value"]);
+            searchParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            searchParams->setString(name, (std::string) ip[i]["value"]);
+            searchParams->setString(_name, (std::string) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
-            searchParams->setBool(name, (int) ip[i]["value"] != 0);
+            searchParams->setBool(_name, (int) ip[i]["value"] != 0);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,3):
             searchParams->setAlgorithm((int) ip[i]["value"]);

@@ -355,7 +355,7 @@ Mat estimateGlobalMotionRobust(
 
         Mat_<float> M = estimateGlobalMotionLeastSquares(subset0, subset1, model, 0);
 
-        int ninliers = 0;
+        int numinliers = 0;
         for (int i = 0; i < npoints; ++i)
         {
             p0 = points0_[i];
@@ -363,12 +363,12 @@ Mat estimateGlobalMotionRobust(
             x = M(0,0)*p0.x + M(0,1)*p0.y + M(0,2);
             y = M(1,0)*p0.x + M(1,1)*p0.y + M(1,2);
             if (sqr(x - p1.x) + sqr(y - p1.y) < params.thresh * params.thresh)
-                ninliers++;
+                numinliers++;
         }
-        if (ninliers >= ninliersMax)
+        if (numinliers >= ninliersMax)
         {
             bestM = M;
-            ninliersMax = ninliers;
+            ninliersMax = numinliers;
             subset0best.swap(subset0);
             subset1best.swap(subset1);
         }
@@ -657,8 +657,8 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 
     // perform outlier rejection
 
-    IOutlierRejector *outlierRejector = static_cast<IOutlierRejector*>(outlierRejector_);
-    if (!dynamic_cast<NullOutlierRejector*>(outlierRejector))
+    IOutlierRejector *outlRejector = static_cast<IOutlierRejector*>(outlierRejector_);
+    if (!dynamic_cast<NullOutlierRejector*>(outlRejector))
     {
         pointsPrev_.swap(pointsPrevGood_);
         points_.swap(pointsGood_);

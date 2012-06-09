@@ -73,7 +73,7 @@ private:
         int x, y;
 
         DXY() : dist(0), x(0), y(0) {}
-        DXY(float dist, int x, int y) : dist(dist), x(x), y(y) {}
+        DXY(float _dist, int _x, int _y) : dist(_dist), x(_x), y(_y) {}
         bool operator <(const DXY &dxy) const { return dist < dxy.dist; }
     };
 

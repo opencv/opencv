@@ -49,7 +49,7 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
     int i, j = 0, count;
     const int N = 16;
     float buf[N];
-    CvMat buffer = cvMat( 1, N, CV_32F, buf ); 
+    CvMat buffer = cvMat( 1, N, CV_32F, buf );
     CvSeqReader reader;
     CvContour contour_header;
     CvSeq* contour = 0;
@@ -74,7 +74,7 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
     if( contour->total > 1 )
     {
         int is_float = CV_SEQ_ELTYPE( contour ) == CV_32FC2;
-        
+
         cvStartReadSeq( contour, &reader, 0 );
         cvSetSeqReaderPos( &reader, slice.start_index );
         count = cvSliceLength( slice, contour );
@@ -110,7 +110,7 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
             CV_NEXT_SEQ_ELEM( contour->elem_size, reader );
             // Bugfix by Axel at rubico.com 2010-03-22, affects closed slices only
             // wraparound not handled by CV_NEXT_SEQ_ELEM
-            if( is_closed && i == count - 2 )				
+            if( is_closed && i == count - 2 )
                 cvSetSeqReaderPos( &reader, slice.start_index );
 
             buffer.data.fl[j] = dx * dx + dy * dy;
@@ -287,7 +287,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
         *_radius = 0;
 
     CvSeqReader reader;
-    int i, k, count;
+    int k, count;
     CvPoint2D32f pts[8];
     CvContour contour_header;
     CvSeqBlock block;
@@ -324,7 +324,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
         pt_left = pt_right = pt_top = pt_bottom = (CvPoint *)(reader.ptr);
         CV_READ_SEQ_ELEM( pt, reader );
 
-        for( i = 1; i < count; i++ )
+        for(int i = 1; i < count; i++ )
         {
             CvPoint* pt_ptr = (CvPoint*)reader.ptr;
             CV_READ_SEQ_ELEM( pt, reader );
@@ -351,7 +351,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
         pt_left = pt_right = pt_top = pt_bottom = (CvPoint2D32f *) (reader.ptr);
         CV_READ_SEQ_ELEM( pt, reader );
 
-        for( i = 1; i < count; i++ )
+        for(int i = 1; i < count; i++ )
         {
             CvPoint2D32f* pt_ptr = (CvPoint2D32f*)reader.ptr;
             CV_READ_SEQ_ELEM( pt, reader );
@@ -375,14 +375,14 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
     for( k = 0; k < max_iters; k++ )
     {
         double min_delta = 0, delta;
-		CvPoint2D32f ptfl, farAway = { 0, 0};
-		/*only for first iteration because the alg is repared at the loop's foot*/
-		if(k==0)
-			icvFindEnslosingCicle4pts_32f( pts, &center, &radius );
+        CvPoint2D32f ptfl, farAway = { 0, 0};
+        /*only for first iteration because the alg is repared at the loop's foot*/
+        if(k==0)
+            icvFindEnslosingCicle4pts_32f( pts, &center, &radius );
 
         cvStartReadSeq( sequence, &reader, 0 );
 
-        for( i = 0; i < count; i++ )
+        for(int i = 0; i < count; i++ )
         {
             if( !is_float )
             {
@@ -406,22 +406,22 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
         if( result )
             break;
 
-		CvPoint2D32f ptsCopy[4];
-		/* find good replacement partner for the point which is at most far away, 
-		starting with the one that lays in the actual circle (i=3) */
-		for(int i = 3; i >=0; i-- )
-		{
-			for(int j = 0; j < 4; j++ )
-			{
-				ptsCopy[j]=(i != j)? pts[j]: farAway;
-			}
+        CvPoint2D32f ptsCopy[4];
+        /* find good replacement partner for the point which is at most far away,
+        starting with the one that lays in the actual circle (i=3) */
+        for(int i = 3; i >=0; i-- )
+        {
+            for(int j = 0; j < 4; j++ )
+            {
+                ptsCopy[j]=(i != j)? pts[j]: farAway;
+            }
 
-			icvFindEnslosingCicle4pts_32f(ptsCopy, &center, &radius );
-			if( icvIsPtInCircle( pts[i], center, radius )>=0){ // replaced one again in the new circle?
-				pts[i] = farAway;
-				break;
-			}
-		}
+            icvFindEnslosingCicle4pts_32f(ptsCopy, &center, &radius );
+            if( icvIsPtInCircle( pts[i], center, radius )>=0){ // replaced one again in the new circle?
+                pts[i] = farAway;
+                break;
+            }
+        }
     }
 
     if( !result )
@@ -429,7 +429,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
         cvStartReadSeq( sequence, &reader, 0 );
         radius = 0.f;
 
-        for( i = 0; i < count; i++ )
+        for(int i = 0; i < count; i++ )
         {
             CvPoint2D32f ptfl;
             float t, dx, dy;
@@ -486,7 +486,7 @@ icvContourArea( const CvSeq* contour, double *area )
             yi_1 = ((CvPoint2D32f*)(reader.ptr))->y;
         }
         CV_NEXT_SEQ_ELEM( contour->elem_size, reader );
-        
+
         while( lpt-- > 0 )
         {
             double dxy, xi, yi;
@@ -520,7 +520,7 @@ icvContourArea( const CvSeq* contour, double *area )
 
 /****************************************************************************************\
 
- copy data from one buffer to other buffer 
+ copy data from one buffer to other buffer
 
 \****************************************************************************************/
 
@@ -797,9 +797,9 @@ cvFitEllipse2( const CvArr* array )
     n = ptseq->total;
     if( n < 5 )
         CV_Error( CV_StsBadSize, "Number of points should be >= 5" );
-    
+
     /*
-     *	New fitellipse algorithm, contributed by Dr. Daniel Weiss
+     *  New fitellipse algorithm, contributed by Dr. Daniel Weiss
      */
     CvPoint2D32f c = {0,0};
     double gfp[5], rp[5], t;
@@ -818,7 +818,7 @@ cvFitEllipse2( const CvArr* array )
 
     cvStartReadSeq( ptseq, &reader );
     is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
-    
+
     for( i = 0; i < n; i++ )
     {
         CvPoint2D32f p;
@@ -857,7 +857,7 @@ cvFitEllipse2( const CvArr* array )
         Ad[i*5 + 3] = p.x;
         Ad[i*5 + 4] = p.y;
     }
-    
+
     cvSolve( &A, &b, &x, CV_SVD );
 
     // now use general-form parameters A - E to find the ellipse center:
@@ -1069,7 +1069,7 @@ cvBoundingRect( CvArr* array, int update )
             xmin = ymin = 0;
     }
     else if( ptseq->total )
-    {   
+    {
         int  is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
         cvStartReadSeq( ptseq, &reader, 0 );
 
@@ -1082,12 +1082,12 @@ cvBoundingRect( CvArr* array, int update )
             ymin = ymax = pt.y;
 
             for( i = 1; i < ptseq->total; i++ )
-            {            
+            {
                 CV_READ_SEQ_ELEM( pt, reader );
-        
+
                 if( xmin > pt.x )
                     xmin = pt.x;
-        
+
                 if( xmax < pt.x )
                     xmax = pt.x;
 
@@ -1108,14 +1108,14 @@ cvBoundingRect( CvArr* array, int update )
             ymin = ymax = CV_TOGGLE_FLT(pt.y);
 
             for( i = 1; i < ptseq->total; i++ )
-            {            
+            {
                 CV_READ_SEQ_ELEM( pt, reader );
                 pt.x = CV_TOGGLE_FLT(pt.x);
                 pt.y = CV_TOGGLE_FLT(pt.y);
-        
+
                 if( xmin > pt.x )
                     xmin = pt.x;
-        
+
                 if( xmax < pt.x )
                     xmax = pt.x;
 
@@ -1144,7 +1144,7 @@ cvBoundingRect( CvArr* array, int update )
 
     if( update )
         ((CvContour*)ptseq)->rect = rect;
-    
+
     return rect;
 }
 

@@ -166,13 +166,13 @@ bool CvGBTrees::problem_type() const
 //===========================================================================
 
 bool
-CvGBTrees::train( CvMLData* data, CvGBTreesParams params, bool update )
+CvGBTrees::train( CvMLData* _data, CvGBTreesParams _params, bool update )
 {
     bool result;
-    result = train ( data->get_values(), CV_ROW_SAMPLE,
-            data->get_responses(), data->get_var_idx(),
-            data->get_train_sample_idx(), data->get_var_types(),
-            data->get_missing(), params, update);
+    result = train ( _data->get_values(), CV_ROW_SAMPLE,
+            _data->get_responses(), _data->get_var_idx(),
+            _data->get_train_sample_idx(), _data->get_var_types(),
+            _data->get_missing(), _params, update);
                                          //update is not supported
     return result;
 }
@@ -1294,12 +1294,12 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
 {
 
     float err = 0.0f;
-    const CvMat* sample_idx = (type == CV_TRAIN_ERROR) ?
+    const CvMat* _sample_idx = (type == CV_TRAIN_ERROR) ?
                               _data->get_train_sample_idx() :
                               _data->get_test_sample_idx();
     const CvMat* response = _data->get_responses();
 
-    int n = sample_idx ? get_len(sample_idx) : 0;
+    int n = _sample_idx ? get_len(_sample_idx) : 0;
     n = (type == CV_TRAIN_ERROR && n == 0) ? _data->get_values()->rows : n;
 
     if (!n)
@@ -1315,7 +1315,7 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         pred_resp = new float[n];
 
     Sample_predictor predictor = Sample_predictor(this, pred_resp, _data->get_values(),
-            _data->get_missing(), sample_idx);
+            _data->get_missing(), _sample_idx);
 
 //#ifdef HAVE_TBB
 //    tbb::parallel_for(cv::BlockedRange(0,n), predictor, tbb::auto_partitioner());
@@ -1323,7 +1323,7 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
     cv::parallel_for(cv::BlockedRange(0,n), predictor);
 //#endif
 
-    int* sidx = sample_idx ? sample_idx->data.i : 0;
+    int* sidx = _sample_idx ? _sample_idx->data.i : 0;
     int r_step = CV_IS_MAT_CONT(response->type) ?
                 1 : response->step / CV_ELEM_SIZE(response->type);
 
@@ -1357,7 +1357,7 @@ CvGBTrees::CvGBTrees( const cv::Mat& trainData, int tflag,
           const cv::Mat& responses, const cv::Mat& varIdx,
           const cv::Mat& sampleIdx, const cv::Mat& varType,
           const cv::Mat& missingDataMask,
-          CvGBTreesParams params )
+          CvGBTreesParams _params )
 {
     data = 0;
     weak = 0;
@@ -1371,14 +1371,14 @@ CvGBTrees::CvGBTrees( const cv::Mat& trainData, int tflag,
 
     clear();
 
-    train(trainData, tflag, responses, varIdx, sampleIdx, varType, missingDataMask, params, false);
+    train(trainData, tflag, responses, varIdx, sampleIdx, varType, missingDataMask, _params, false);
 }
 
 bool CvGBTrees::train( const cv::Mat& trainData, int tflag,
                    const cv::Mat& responses, const cv::Mat& varIdx,
                    const cv::Mat& sampleIdx, const cv::Mat& varType,
                    const cv::Mat& missingDataMask,
-                   CvGBTreesParams params,
+                   CvGBTreesParams _params,
                    bool update )
 {
     CvMat _trainData = trainData, _responses = responses;
@@ -1387,13 +1387,13 @@ bool CvGBTrees::train( const cv::Mat& trainData, int tflag,
 
     return train( &_trainData, tflag, &_responses, varIdx.empty() ? 0 : &_varIdx,
                   sampleIdx.empty() ? 0 : &_sampleIdx, varType.empty() ? 0 : &_varType,
-                  missingDataMask.empty() ? 0 : &_missingDataMask, params, update);
+                  missingDataMask.empty() ? 0 : &_missingDataMask, _params, update);
 }
 
-float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& missing,
+float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& _missing,
                           const cv::Range& slice, int k ) const
 {
-    CvMat _sample = sample, _missing = missing;
-    return predict(&_sample, missing.empty() ? 0 : &_missing, 0,
+    CvMat _sample = sample, miss = _missing;
+    return predict(&_sample, _missing.empty() ? 0 : &miss, 0,
                    slice==cv::Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end), k);
 }

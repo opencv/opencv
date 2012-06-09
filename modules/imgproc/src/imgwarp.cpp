@@ -97,7 +97,6 @@ static inline void interpolateLanczos4( float x, float* coeffs )
     static const double cs[][2]=
     {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
 
-    int i;
     if( x < FLT_EPSILON )
     {
         for( int i = 0; i < 8; i++ )
@@ -108,7 +107,7 @@ static inline void interpolateLanczos4( float x, float* coeffs )
 
     float sum = 0;
     double y0=-(x+3)*CV_PI*0.25, s0 = sin(y0), c0=cos(y0);
-    for( i = 0; i < 8; i++ )
+    for(int i = 0; i < 8; i++ )
     {
         double y = -(x+3-i)*CV_PI*0.25;
         coeffs[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
@@ -116,7 +115,7 @@ static inline void interpolateLanczos4( float x, float* coeffs )
     }
 
     sum = 1.f/sum;
-    for( i = 0; i < 8; i++ )
+    for(int i = 0; i < 8; i++ )
         coeffs[i] *= sum;
 }
 
@@ -1091,14 +1090,14 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
     const T* srows[MAX_ESIZE]={0};
     WT* rows[MAX_ESIZE]={0};
     int prev_sy[MAX_ESIZE];
-    int k, dy;
+    int dy;
     xmin *= cn;
     xmax *= cn;
 
     HResize hresize;
     VResize vresize;
 
-    for( k = 0; k < ksize; k++ )
+    for(int k = 0; k < ksize; k++ )
     {
         prev_sy[k] = -1;
         rows[k] = (WT*)_buffer + bufstep*k;
@@ -1107,9 +1106,9 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
     // image resize is a separable operation. In case of not too strong
     for( dy = 0; dy < dsize.height; dy++, beta += ksize )
     {
-        int sy0 = yofs[dy], k, k0=ksize, k1=0, ksize2 = ksize/2;
+        int sy0 = yofs[dy], k0=ksize, k1=0, ksize2 = ksize/2;
 
-        for( k = 0; k < ksize; k++ )
+        for(int k = 0; k < ksize; k++ )
         {
             int sy = clip(sy0 - ksize2 + 1 + k, 0, ssize.height);
             for( k1 = std::max(k1, k); k1 < ksize; k1++ )
@@ -2374,25 +2373,25 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for( i = 0; i < 8; i++, w += 8 )
                     {
                         int yi = y[i];
-                        const T* S = S0 + yi*sstep;
+                        const T* S1 = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
                         if( x[0] >= 0 )
-                            sum += (S[x[0]] - cv)*w[0];
+                            sum += (S1[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
-                            sum += (S[x[1]] - cv)*w[1];
+                            sum += (S1[x[1]] - cv)*w[1];
                         if( x[2] >= 0 )
-                            sum += (S[x[2]] - cv)*w[2];
+                            sum += (S1[x[2]] - cv)*w[2];
                         if( x[3] >= 0 )
-                            sum += (S[x[3]] - cv)*w[3];
+                            sum += (S1[x[3]] - cv)*w[3];
                         if( x[4] >= 0 )
-                            sum += (S[x[4]] - cv)*w[4];
+                            sum += (S1[x[4]] - cv)*w[4];
                         if( x[5] >= 0 )
-                            sum += (S[x[5]] - cv)*w[5];
+                            sum += (S1[x[5]] - cv)*w[5];
                         if( x[6] >= 0 )
-                            sum += (S[x[6]] - cv)*w[6];
+                            sum += (S1[x[6]] - cv)*w[6];
                         if( x[7] >= 0 )
-                            sum += (S[x[7]] - cv)*w[7];
+                            sum += (S1[x[7]] - cv)*w[7];
                     }
                     D[k] = castOp(sum);
                 }
@@ -2966,8 +2965,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                 remap( src, dpart, _XY, Mat(), interpolation, borderType, borderValue );
             else
             {
-                Mat matA(bh, bw, CV_16U, A);
-                remap( src, dpart, _XY, matA, interpolation, borderType, borderValue );
+                Mat _matA(bh, bw, CV_16U, A);
+                remap( src, dpart, _XY, _matA, interpolation, borderType, borderValue );
             }
         }
     }
@@ -3064,8 +3063,8 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                 remap( src, dpart, _XY, Mat(), interpolation, borderType, borderValue );
             else
             {
-                Mat matA(bh, bw, CV_16U, A);
-                remap( src, dpart, _XY, matA, interpolation, borderType, borderValue );
+                Mat _matA(bh, bw, CV_16U, A);
+                remap( src, dpart, _XY, _matA, interpolation, borderType, borderValue );
             }
         }
     }

@@ -109,10 +109,13 @@ class CV_EXPORTS HarrisDetector : public GFTTDetector
 {
 public:
     HarrisDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
-                    int blockSize=3, bool useHarrisDetector=true, double k=0.04 )
-    : GFTTDetector( maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k ) {}
+                    int blockSize=3, bool useHarrisDetector=true, double k=0.04 );
     AlgorithmInfo* info() const;
 };
+
+inline HarrisDetector::HarrisDetector( int _maxCorners, double _qualityLevel, double _minDistance,
+                    int _blockSize, bool _useHarrisDetector, double _k )
+    : GFTTDetector( _maxCorners, _qualityLevel, _minDistance, _blockSize, _useHarrisDetector, _k ) {}
 
 CV_INIT_ALGORITHM(HarrisDetector, "Feature2D.HARRIS",
                   obj.info()->addParam(obj, "nfeatures", obj.nfeatures);

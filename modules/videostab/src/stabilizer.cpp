@@ -158,8 +158,8 @@ bool StabilizerBase::doOneIteration()
 
 void StabilizerBase::setUp(const Mat &firstFrame)
 {
-    InpainterBase *inpainter = static_cast<InpainterBase*>(inpainter_);
-    doInpainting_ = dynamic_cast<NullInpainter*>(inpainter) == 0;
+    InpainterBase *inpaint = static_cast<InpainterBase*>(inpainter_);
+    doInpainting_ = dynamic_cast<NullInpainter*>(inpaint) == 0;
     if (doInpainting_)
     {
         inpainter_->setMotionModel(motionEstimator_->motionModel());
@@ -370,11 +370,11 @@ static void saveMotions(
 void TwoPassStabilizer::runPrePassIfNecessary()
 {
     if (!isPrePassDone_)
-    {        
+    {
         // check if we must do wobble suppression
 
-        WobbleSuppressorBase *wobbleSuppressor = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
-        doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobbleSuppressor) == 0;
+        WobbleSuppressorBase *wobble = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
+        doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobble) == 0;
 
         // estimate motions
 
@@ -471,8 +471,8 @@ void TwoPassStabilizer::setUp(const Mat &firstFrame)
     for (int i = -radius_; i <= 0; ++i)
         at(i, frames_) = firstFrame;
 
-    WobbleSuppressorBase *wobbleSuppressor = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
-    doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobbleSuppressor) == 0;
+    WobbleSuppressorBase *wobble = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
+    doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobble) == 0;
     if (doWobbleSuppression_)
     {
         wobbleSuppressor_->setFrameCount(frameCount_);

@@ -210,9 +210,9 @@ void Mat::create(int d, const int* _sizes, int _type)
 #endif
         if( !allocator )
         {
-            size_t total = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
-            data = datastart = (uchar*)fastMalloc(total + (int)sizeof(*refcount));
-            refcount = (int*)(data + total);
+            size_t totalsize = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
+            data = datastart = (uchar*)fastMalloc(totalsize + (int)sizeof(*refcount));
+            refcount = (int*)(data + totalsize);
             *refcount = 1;
         }
         else
@@ -262,15 +262,15 @@ void Mat::deallocate()
 }
 
 
-Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange) : size(&rows)
+Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange) : size(&rows)
 {
     initEmpty();
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
     {
         AutoBuffer<Range> rs(m.dims);
-        rs[0] = rowRange;
-        rs[1] = colRange;
+        rs[0] = _rowRange;
+        rs[1] = _colRange;
         for( int i = 2; i < m.dims; i++ )
             rs[i] = Range::all();
         *this = m(rs);
@@ -278,19 +278,19 @@ Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange) : size(&row
     }
 
     *this = m;
-    if( rowRange != Range::all() && rowRange != Range(0,rows) )
+    if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
     {
-        CV_Assert( 0 <= rowRange.start && rowRange.start <= rowRange.end && rowRange.end <= m.rows );
-        rows = rowRange.size();
-        data += step*rowRange.start;
+        CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end && _rowRange.end <= m.rows );
+        rows = _rowRange.size();
+        data += step*_rowRange.start;
         flags |= SUBMATRIX_FLAG;
     }
 
-    if( colRange != Range::all() && colRange != Range(0,cols) )
+    if( _colRange != Range::all() && _colRange != Range(0,cols) )
     {
-        CV_Assert( 0 <= colRange.start && colRange.start <= colRange.end && colRange.end <= m.cols );
-        cols = colRange.size();
-        data += colRange.start*elemSize();
+        CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols );
+        cols = _colRange.size();
+        data += _colRange.start*elemSize();
         flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
         flags |= SUBMATRIX_FLAG;
     }
@@ -473,14 +473,14 @@ Mat::Mat(const IplImage* img, bool copyData) : size(&rows)
     dims = 2;
     CV_DbgAssert(CV_IS_IMAGE(img) && img->imageData != 0);
 
-    int depth = IPL2CV_DEPTH(img->depth);
+    int imgdepth = IPL2CV_DEPTH(img->depth);
     size_t esz;
     step[0] = img->widthStep;
 
     if(!img->roi)
     {
         CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL);
-        flags = MAGIC_VAL + CV_MAKETYPE(depth, img->nChannels);
+        flags = MAGIC_VAL + CV_MAKETYPE(imgdepth, img->nChannels);
         rows = img->height; cols = img->width;
         datastart = data = (uchar*)img->imageData;
         esz = CV_ELEM_SIZE(flags);
@@ -489,7 +489,7 @@ Mat::Mat(const IplImage* img, bool copyData) : size(&rows)
     {
         CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL || img->roi->coi != 0);
         bool selectedPlane = img->roi->coi && img->dataOrder == IPL_DATA_ORDER_PLANE;
-        flags = MAGIC_VAL + CV_MAKETYPE(depth, selectedPlane ? 1 : img->nChannels);
+        flags = MAGIC_VAL + CV_MAKETYPE(imgdepth, selectedPlane ? 1 : img->nChannels);
         rows = img->roi->height; cols = img->roi->width;
         esz = CV_ELEM_SIZE(flags);
         data = datastart = (uchar*)img->imageData +
@@ -1299,38 +1299,38 @@ bool _OutputArray::fixedType() const
     return (flags & FIXED_TYPE) == FIXED_TYPE;
 }
 
-void _OutputArray::create(Size _sz, int type, int i, bool allowTransposed, int fixedDepthMask) const
+void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == _sz);
-        CV_Assert(!fixedType() || ((Mat*)obj)->type() == type);
-        ((Mat*)obj)->create(_sz, type);
+        CV_Assert(!fixedType() || ((Mat*)obj)->type() == mtype);
+        ((Mat*)obj)->create(_sz, mtype);
         return;
     }
-    int sz[] = {_sz.height, _sz.width};
-    create(2, sz, type, i, allowTransposed, fixedDepthMask);
+    int sizes[] = {_sz.height, _sz.width};
+    create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int rows, int cols, int type, int i, bool allowTransposed, int fixedDepthMask) const
+void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == Size(cols, rows));
-        CV_Assert(!fixedType() || ((Mat*)obj)->type() == type);
-        ((Mat*)obj)->create(rows, cols, type);
+        CV_Assert(!fixedType() || ((Mat*)obj)->type() == mtype);
+        ((Mat*)obj)->create(rows, cols, mtype);
         return;
     }
-    int sz[] = {rows, cols};
-    create(2, sz, type, i, allowTransposed, fixedDepthMask);
+    int sizes[] = {rows, cols};
+    create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int dims, const int* size, int type, int i, bool allowTransposed, int fixedDepthMask) const
+void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
-    type = CV_MAT_TYPE(type);
+    mtype = CV_MAT_TYPE(mtype);
 
     if( k == MAT )
     {
@@ -1345,24 +1345,24 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool allow
             }
 
             if( dims == 2 && m.dims == 2 && m.data &&
-                m.type() == type && m.rows == size[1] && m.cols == size[0] )
+                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
 
         if(fixedType())
         {
-            if(CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
-                type = m.type();
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+                mtype = m.type();
             else
-                CV_Assert(CV_MAT_TYPE(type) == m.type());
+                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
         }
         if(fixedSize())
         {
             CV_Assert(m.dims == dims);
             for(int j = 0; j < dims; ++j)
-                CV_Assert(m.size[j] == size[j]);
+                CV_Assert(m.size[j] == sizes[j]);
         }
-        m.create(dims, size, type);
+        m.create(dims, sizes, mtype);
         return;
     }
 
@@ -1370,16 +1370,16 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool allow
     {
         CV_Assert( i < 0 );
         int type0 = CV_MAT_TYPE(flags);
-        CV_Assert( type == type0 || (CV_MAT_CN(type) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
-        CV_Assert( dims == 2 && ((size[0] == sz.height && size[1] == sz.width) ||
-                                 (allowTransposed && size[0] == sz.width && size[1] == sz.height)));
+        CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
+        CV_Assert( dims == 2 && ((sizes[0] == sz.height && sizes[1] == sz.width) ||
+                                 (allowTransposed && sizes[0] == sz.width && sizes[1] == sz.height)));
         return;
     }
 
     if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        CV_Assert( dims == 2 && (size[0] == 1 || size[1] == 1 || size[0]*size[1] == 0) );
-        size_t len = size[0]*size[1] > 0 ? size[0] + size[1] - 1 : 0;
+        CV_Assert( dims == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+        size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
         vector<uchar>* v = (vector<uchar>*)obj;
 
         if( k == STD_VECTOR_VECTOR )
@@ -1398,7 +1398,7 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool allow
             CV_Assert( i < 0 );
 
         int type0 = CV_MAT_TYPE(flags);
-        CV_Assert( type == type0 || (CV_MAT_CN(type) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
+        CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
 
         int esz = CV_ELEM_SIZE(type0);
         CV_Assert(!fixedSize() || len == ((vector<uchar>*)v)->size() / esz);
@@ -1471,20 +1471,20 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool allow
 
         if( i < 0 )
         {
-            CV_Assert( dims == 2 && (size[0] == 1 || size[1] == 1 || size[0]*size[1] == 0) );
-            size_t len = size[0]*size[1] > 0 ? size[0] + size[1] - 1 : 0, len0 = v.size();
+            CV_Assert( dims == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+            size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0, len0 = v.size();
 
             CV_Assert(!fixedSize() || len == len0);
             v.resize(len);
             if( fixedType() )
             {
-                int type = CV_MAT_TYPE(flags);
+                int _type = CV_MAT_TYPE(flags);
                 for( size_t j = len0; j < len; j++ )
                 {
-                    if( v[i].type() == type )
+                    if( v[i].type() == _type )
                         continue;
                     CV_Assert( v[i].empty() );
-                    v[i].flags = (v[i].flags & ~CV_MAT_TYPE_MASK) | type;
+                    v[i].flags = (v[i].flags & ~CV_MAT_TYPE_MASK) | _type;
                 }
             }
             return;
@@ -1502,25 +1502,25 @@ void _OutputArray::create(int dims, const int* size, int type, int i, bool allow
             }
 
             if( dims == 2 && m.dims == 2 && m.data &&
-                m.type() == type && m.rows == size[1] && m.cols == size[0] )
+                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
 
         if(fixedType())
         {
-            if(CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
-                type = m.type();
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+                mtype = m.type();
             else
-                CV_Assert(!fixedType() || (CV_MAT_CN(type) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0));
+                CV_Assert(!fixedType() || (CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0));
         }
         if(fixedSize())
         {
             CV_Assert(m.dims == dims);
             for(int j = 0; j < dims; ++j)
-                CV_Assert(m.size[j] == size[j]);
+                CV_Assert(m.size[j] == sizes[j]);
         }
 
-        m.create(dims, size, type);
+        m.create(dims, sizes, mtype);
     }
 }
 
@@ -1929,10 +1929,10 @@ void cv::completeSymm( InputOutputArray _m, bool LtoR )
 cv::Mat cv::Mat::cross(InputArray _m) const
 {
     Mat m = _m.getMat();
-    int t = type(), d = CV_MAT_DEPTH(t);
-    CV_Assert( dims <= 2 && m.dims <= 2 && size() == m.size() && t == m.type() &&
+    int tp = type(), d = CV_MAT_DEPTH(tp);
+    CV_Assert( dims <= 2 && m.dims <= 2 && size() == m.size() && tp == m.type() &&
         ((rows == 3 && cols == 1) || (cols*channels() == 3 && rows == 1)));
-    Mat result(rows, cols, t);
+    Mat result(rows, cols, tp);
 
     if( d == CV_32F )
     {
@@ -2845,7 +2845,7 @@ cvRange( CvArr* arr, double start, double end )
 CV_IMPL void
 cvSort( const CvArr* _src, CvArr* _dst, CvArr* _idx, int flags )
 {
-    cv::Mat src = cv::cvarrToMat(_src), dst, idx;
+    cv::Mat src = cv::cvarrToMat(_src);
 
     if( _idx )
     {
@@ -3410,22 +3410,22 @@ SparseMat::SparseMat(const Mat& m)
 
     int i, idx[CV_MAX_DIM] = {0}, d = m.dims, lastSize = m.size[d - 1];
     size_t esz = m.elemSize();
-    uchar* ptr = m.data;
+    uchar* dptr = m.data;
 
     for(;;)
     {
-        for( i = 0; i < lastSize; i++, ptr += esz )
+        for( i = 0; i < lastSize; i++, dptr += esz )
         {
-            if( isZeroElem(ptr, esz) )
+            if( isZeroElem(dptr, esz) )
                 continue;
             idx[d-1] = i;
             uchar* to = newNode(idx, hash(idx));
-            copyElem( ptr, to, esz );
+            copyElem( dptr, to, esz );
         }
 
         for( i = d - 2; i >= 0; i-- )
         {
-            ptr += m.step[i] - m.size[i+1]*m.step[i+1];
+            dptr += m.step[i] - m.size[i+1]*m.step[i+1];
             if( ++idx[i] < m.size[i] )
                 break;
             idx[i] = 0;

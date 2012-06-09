@@ -1262,7 +1262,7 @@ int  Core_SetTest::test_set_ops( int iters )
 
         if( iter > iters/10 && cvtest::randInt(rng)%200 == 0 ) // clear set
         {
-            int prev_count = cvset->total;
+            prev_count = cvset->total;
             cvClearSet( cvset );
             cvTsClearSimpleSet( sset );
 
@@ -1482,19 +1482,19 @@ int  Core_GraphTest::test_graph_ops( int iters )
 
         if( cvtest::randInt(rng) % 200 == 0 ) // clear graph
         {
-            int prev_vtx_count = graph->total, prev_edge_count = graph->edges->total;
+            int prev_vtx_count2 = graph->total, prev_edge_count2 = graph->edges->total;
 
             cvClearGraph( graph );
             cvTsClearSimpleGraph( sgraph );
 
             CV_TS_SEQ_CHECK_CONDITION( graph->active_count == 0 && graph->total == 0 &&
                                       graph->first == 0 && graph->free_elems == 0 &&
-                                      (graph->free_blocks != 0 || prev_vtx_count == 0),
+                                      (graph->free_blocks != 0 || prev_vtx_count2 == 0),
                                       "The graph is not empty after clearing" );
 
             CV_TS_SEQ_CHECK_CONDITION( edges->active_count == 0 && edges->total == 0 &&
                                       edges->first == 0 && edges->free_elems == 0 &&
-                                      (edges->free_blocks != 0 || prev_edge_count == 0),
+                                      (edges->free_blocks != 0 || prev_edge_count2 == 0),
                                       "The graph is not empty after clearing" );
         }
         else if( op == 0 ) // add vertex

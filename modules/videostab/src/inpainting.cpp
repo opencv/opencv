@@ -130,9 +130,9 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
     CV_Assert(mask.size() == frame.size() && mask.type() == CV_8U);
 
     Mat invS = at(idx, *stabilizationMotions_).inv();
-    vector<Mat_<float> > motions(2*radius_ + 1);
+    vector<Mat_<float> > vmotions(2*radius_ + 1);
     for (int i = -radius_; i <= radius_; ++i)
-        motions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
+        vmotions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
 
     int n;
     float mean, var;
@@ -154,7 +154,7 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
                 for (int i = -radius_; i <= radius_; ++i)
                 {
                     const Mat_<Point3_<uchar> > &framei = at(idx + i, *frames_);
-                    const Mat_<float> &Mi = motions[radius_ + i];
+                    const Mat_<float> &Mi = vmotions[radius_ + i];
                     int xi = cvRound(Mi(0,0)*x + Mi(0,1)*y + Mi(0,2));
                     int yi = cvRound(Mi(1,0)*x + Mi(1,1)*y + Mi(1,2));
                     if (xi >= 0 && xi < framei.cols && yi >= 0 && yi < framei.rows)
@@ -339,12 +339,12 @@ MotionInpainter::MotionInpainter()
 void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 {
     priority_queue<pair<float,int> > neighbors;
-    vector<Mat> motions(2*radius_ + 1);
+    vector<Mat> vmotions(2*radius_ + 1);
 
     for (int i = -radius_; i <= radius_; ++i)
     {
         Mat motion0to1 = getMotion(idx, idx + i, *motions_) * at(idx, *stabilizationMotions_).inv();
-        motions[radius_ + i] = motion0to1;
+        vmotions[radius_ + i] = motion0to1;
 
         if (i != 0)
         {
@@ -370,7 +370,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         int neighbor = neighbors.top().second;
         neighbors.pop();
 
-        Mat motion1to0 = motions[radius_ + neighbor - idx].inv();
+        Mat motion1to0 = vmotions[radius_ + neighbor - idx].inv();
 
         // warp frame
 

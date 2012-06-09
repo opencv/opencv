@@ -129,7 +129,7 @@ CvBoostTree::train( CvDTreeTrainData*, const CvMat* )
 
 
 void
-CvBoostTree::scale( double scale )
+CvBoostTree::scale( double _scale )
 {
     CvDTreeNode* node = root;
 
@@ -139,7 +139,7 @@ CvBoostTree::scale( double scale )
         CvDTreeNode* parent;
         for(;;)
         {
-            node->value *= scale;
+            node->value *= _scale;
             if( !node->left )
                 break;
             node = node->left;
@@ -501,7 +501,7 @@ CvBoostTree::find_split_ord_reg( CvDTreeNode* node, int vi, float init_quality, 
     int i, best_i = -1;
     double L = 0, R = weights[n];
     double best_val = init_quality, lsum = 0, rsum = node->value*R;
-    
+
     // compensate for missing values
     for( i = n1; i < n; i++ )
     {
@@ -590,7 +590,7 @@ CvBoostTree::find_split_cat_reg( CvDTreeNode* node, int vi, float init_quality, 
     {
         R += counts[i];
         rsum += sum[i];
-		sum[i] = fabs(counts[i]) > DBL_EPSILON ? sum[i]/counts[i] : 0;
+        sum[i] = fabs(counts[i]) > DBL_EPSILON ? sum[i]/counts[i] : 0;
         sum_ptr[i] = sum + i;
     }
 
@@ -1030,7 +1030,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
     __BEGIN__;
 
     int i;
-    
+
     set_params( _params );
 
     cvReleaseMat( &active_vars );
@@ -1057,7 +1057,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
 
     if ( (_params.boost_type == LOGIT) || (_params.boost_type == GENTLE) )
         data->do_responses_copy();
-    
+
     update_weights( 0 );
 
     for( i = 0; i < params.weak_count; i++ )
@@ -1088,7 +1088,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
 }
 
 bool CvBoost::train( CvMLData* _data,
-             CvBoostParams params,
+             CvBoostParams _params,
              bool update )
 {
     bool result = false;
@@ -1105,7 +1105,7 @@ bool CvBoost::train( CvMLData* _data,
     const CvMat* var_idx = _data->get_var_idx();
 
     CV_CALL( result = train( values, CV_ROW_SAMPLE, response, var_idx,
-        train_sidx, var_types, missing, params, update ) );
+        train_sidx, var_types, missing, _params, update ) );
 
     __END__;
 
@@ -1258,7 +1258,7 @@ CvBoost::update_weights( CvBoostTree* tree )
             // invert the subsample mask
             cvXorS( subsample_mask, cvScalar(1.), subsample_mask );
             data->get_vectors( subsample_mask, values, missing, 0 );
-           
+
             _sample = cvMat( 1, data->var_count, CV_32F );
             _mask = cvMat( 1, data->var_count, CV_8U );
 
@@ -1458,17 +1458,17 @@ CvBoost::trim_weights()
 }
 
 
-const CvMat* 
+const CvMat*
 CvBoost::get_active_vars( bool absolute_idx )
 {
     CvMat* mask = 0;
     CvMat* inv_map = 0;
     CvMat* result = 0;
-    
+
     CV_FUNCNAME( "CvBoost::get_active_vars" );
 
     __BEGIN__;
-    
+
     if( !weak )
         CV_ERROR( CV_StsError, "The boosted tree ensemble has not been trained yet" );
 
@@ -1478,7 +1478,7 @@ CvBoost::get_active_vars( bool absolute_idx )
         int i, j, nactive_vars;
         CvBoostTree* wtree;
         const CvDTreeNode* node;
-        
+
         assert(!active_vars && !active_vars_abs);
         mask = cvCreateMat( 1, data->var_count, CV_8U );
         inv_map = cvCreateMat( 1, data->var_count, CV_32S );
@@ -1518,7 +1518,7 @@ CvBoost::get_active_vars( bool absolute_idx )
         }
 
         nactive_vars = cvCountNonZero(mask);
-        
+
         //if ( nactive_vars > 0 )
         {
             active_vars = cvCreateMat( 1, nactive_vars, CV_32S );
@@ -1538,7 +1538,7 @@ CvBoost::get_active_vars( bool absolute_idx )
                     j++;
                 }
             }
-            
+
 
             // second pass: now compute the condensed indices
             cvStartReadSeq( weak, &reader );
@@ -1638,7 +1638,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
             "floating-point vector of the same number of components as the length of input slice" );
         wstep = CV_IS_MAT_CONT(weak_responses->type) ? 1 : weak_responses->step/sizeof(float);
     }
-    
+
     int var_count = active_vars->cols;
     const int* vtype = data->var_type->data.i;
     const int* cmap = data->cat_map->data.i;
@@ -1738,7 +1738,7 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
             CvBoostTree* wtree;
             const CvDTreeNode* node;
             CV_READ_SEQ_ELEM( wtree, reader );
-            
+
             node = wtree->get_root();
             while( node->left )
             {
@@ -1757,14 +1757,14 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     {
         const int* avars = active_vars->data.i;
         const uchar* m = _missing ? _missing->data.ptr : 0;
-        
+
         // full-featured version
         for( i = 0; i < weak_count; i++ )
         {
             CvBoostTree* wtree;
             const CvDTreeNode* node;
             CV_READ_SEQ_ELEM( wtree, reader );
-            
+
             node = wtree->get_root();
             while( node->left )
             {
@@ -1841,9 +1841,9 @@ float CvBoost::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         {
             CvMat sample, miss;
             int si = sidx ? sidx[i] : i;
-            cvGetRow( values, &sample, si ); 
-            if( missing ) 
-                cvGetRow( missing, &miss, si );             
+            cvGetRow( values, &sample, si );
+            if( missing )
+                cvGetRow( missing, &miss, si );
             float r = (float)predict( &sample, missing ? &miss : 0 );
             if( pred_resp )
                 pred_resp[i] = r;
@@ -1859,15 +1859,15 @@ float CvBoost::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
             CvMat sample, miss;
             int si = sidx ? sidx[i] : i;
             cvGetRow( values, &sample, si );
-            if( missing ) 
-                cvGetRow( missing, &miss, si );             
+            if( missing )
+                cvGetRow( missing, &miss, si );
             float r = (float)predict( &sample, missing ? &miss : 0 );
             if( pred_resp )
                 pred_resp[i] = r;
             float d = r - response->data.fl[si*r_step];
             err += d*d;
         }
-        err = sample_count ? err / (float)sample_count : -FLT_MAX;    
+        err = sample_count ? err / (float)sample_count : -FLT_MAX;
     }
     return err;
 }
@@ -2097,10 +2097,10 @@ CvBoost::CvBoost( const Mat& _train_data, int _tflag,
     default_model_name = "my_boost_tree";
     active_vars = active_vars_abs = orig_response = sum_response = weak_eval =
         subsample_mask = weights = subtree_weights = 0;
-    
+
     train( _train_data, _tflag, _responses, _var_idx, _sample_idx,
           _var_type, _missing_mask, _params );
-}    
+}
 
 
 bool
@@ -2130,7 +2130,7 @@ CvBoost::predict( const Mat& _sample, const Mat& _missing,
             weak_count = weak->total;
             slice.start_index = 0;
         }
-        
+
         if( !(weak_responses->data && weak_responses->type() == CV_32FC1 &&
               (weak_responses->cols == 1 || weak_responses->rows == 1) &&
               weak_responses->cols + weak_responses->rows - 1 == weak_count) )

@@ -67,15 +67,15 @@ LevMarqSparse::LevMarqSparse(int npoints, // number of points
            // 1 - point is visible for the camera, 0 - invisible
            Mat& P0, // starting vector of parameters, first cameras then points
            Mat& X_, // measurements, in order of visibility. non visible cases are skipped
-           TermCriteria criteria, // termination criteria
+           TermCriteria _criteria, // termination criteria
 
            // callback for estimation of Jacobian matrices
-           void (CV_CDECL * fjac)(int i, int j, Mat& point_params,
+           void (CV_CDECL * _fjac)(int i, int j, Mat& point_params,
                 Mat& cam_params, Mat& A, Mat& B, void* data),
            // callback for estimation of backprojection errors
-           void (CV_CDECL * func)(int i, int j, Mat& point_params,
+           void (CV_CDECL * _func)(int i, int j, Mat& point_params,
                 Mat& cam_params, Mat& estim, void* data),
-           void* data, // user-specific data passed to the callbacks
+           void* _data, // user-specific data passed to the callbacks
            BundleAdjustCallback _cb, void* _user_data
            ) {
   Vis_index = X = prevP = P = deltaP = err = JtJ_diag = S = hX = NULL;
@@ -86,7 +86,7 @@ LevMarqSparse::LevMarqSparse(int npoints, // number of points
   user_data = _user_data;
 
   run(npoints, ncameras, nPointParams, nCameraParams, nErrParams, visibility,
-      P0, X_, criteria, fjac, func, data);
+      P0, X_, _criteria, _fjac, _func, _data);
 }
 
 void LevMarqSparse::clear() {
@@ -443,9 +443,11 @@ void LevMarqSparse::optimize(CvMat &_vis) { //main function that runs minimizati
     } //U_j and ea_j computed for all j
 
     //    if (!(iters%100))
-    int nviz = X->rows / num_err_param;
-    double e2 = prevErrNorm*prevErrNorm, e2n = e2 / nviz;
-    std::cerr<<"Iteration: "<<iters<<", normError: "<<e2<<" ("<<e2n<<")"<<std::endl;
+    {
+      int nviz = X->rows / num_err_param;
+      double e2 = prevErrNorm*prevErrNorm, e2n = e2 / nviz;
+      std::cerr<<"Iteration: "<<iters<<", normError: "<<e2<<" ("<<e2n<<")"<<std::endl;
+    }
     if (cb)
       cb(iters, prevErrNorm, user_data);
     //compute V_i  and  eb_i
@@ -676,10 +678,12 @@ void LevMarqSparse::optimize(CvMat &_vis) { //main function that runs minimizati
     errNorm > prevErrNorm )  { //step was not accepted
   //increase lambda and reject change
   lambda *= 10;
-  int nviz = X->rows / num_err_param;
-  double e2 = errNorm*errNorm, e2_prev = prevErrNorm*prevErrNorm;
-  double e2n = e2/nviz, e2n_prev = e2_prev/nviz;
-  std::cerr<<"move failed: lambda = "<<lambda<<", e2 = "<<e2<<" ("<<e2n<<") > "<<e2_prev<<" ("<<e2n_prev<<")"<<std::endl;
+  {
+    int nviz = X->rows / num_err_param;
+    double e2 = errNorm*errNorm, e2_prev = prevErrNorm*prevErrNorm;
+    double e2n = e2/nviz, e2n_prev = e2_prev/nviz;
+    std::cerr<<"move failed: lambda = "<<lambda<<", e2 = "<<e2<<" ("<<e2n<<") > "<<e2_prev<<" ("<<e2n_prev<<")"<<std::endl;
+  }
 
   //restore diagonal from backup
   {
@@ -886,9 +890,9 @@ static void fjac(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, C
     double c[4] = { g+2*p1*y_strike+4*p2*x_strike,       2*p1*x_strike,
         2*p2*y_strike,                 g+2*p2*x_strike + 4*p1*y_strike };
 
-    CvMat coeffmat = cvMat(2,2,CV_64F, c );
+    CvMat coeffmat2 = cvMat(2,2,CV_64F, c );
 
-    cvMatMul(&coeffmat, dstrike_dbig, dstrike2_dbig );
+    cvMatMul(&coeffmat2, dstrike_dbig, dstrike2_dbig );
 
     cvGEMM( &strike, dg_dbig, 1, NULL, 0, tmp, CV_GEMM_A_T );
     cvAdd( dstrike2_dbig, tmp, dstrike2_dbig );

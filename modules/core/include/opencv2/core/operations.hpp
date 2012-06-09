@@ -2616,20 +2616,20 @@ template<typename _Tp> inline void Ptr<_Tp>::delete_obj()
 
 template<typename _Tp> inline Ptr<_Tp>::~Ptr() { release(); }
 
-template<typename _Tp> inline Ptr<_Tp>::Ptr(const Ptr<_Tp>& ptr)
+template<typename _Tp> inline Ptr<_Tp>::Ptr(const Ptr<_Tp>& _ptr)
 {
-    obj = ptr.obj;
-    refcount = ptr.refcount;
+    obj = _ptr.obj;
+    refcount = _ptr.refcount;
     addref();
 }
 
-template<typename _Tp> inline Ptr<_Tp>& Ptr<_Tp>::operator = (const Ptr<_Tp>& ptr)
+template<typename _Tp> inline Ptr<_Tp>& Ptr<_Tp>::operator = (const Ptr<_Tp>& _ptr)
 {
-    int* _refcount = ptr.refcount;
+    int* _refcount = _ptr.refcount;
     if( _refcount )
         CV_XADD(_refcount, 1);
     release();
-    obj = ptr.obj;
+    obj = _ptr.obj;
     refcount = _refcount;
     return *this;
 }
@@ -3593,10 +3593,10 @@ template<typename _Tp> inline Seq<_Tp>::operator vector<_Tp>() const
 template<typename _Tp> inline SeqIterator<_Tp>::SeqIterator()
 { memset(this, 0, sizeof(*this)); }
 
-template<typename _Tp> inline SeqIterator<_Tp>::SeqIterator(const Seq<_Tp>& seq, bool seekEnd)
+template<typename _Tp> inline SeqIterator<_Tp>::SeqIterator(const Seq<_Tp>& _seq, bool seekEnd)
 {
-    cvStartReadSeq(seq.seq, this);
-    index = seekEnd ? seq.seq->total : 0;
+    cvStartReadSeq(_seq.seq, this);
+    index = seekEnd ? _seq.seq->total : 0;
 }
 
 template<typename _Tp> inline void SeqIterator<_Tp>::seek(size_t pos)
@@ -3842,17 +3842,17 @@ template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const string& name)
     return _create(name).ptr<_Tp>();
 }
 
-template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
+template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const string& _name) const
 {
     typename ParamType<_Tp>::member_type value;
-    info()->get(this, name.c_str(), ParamType<_Tp>::type, &value);
+    info()->get(this, _name.c_str(), ParamType<_Tp>::type, &value);
     return value;
 }
 
-template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const char* name) const
+template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const char* _name) const
 {
     typename ParamType<_Tp>::member_type value;
-    info()->get(this, name, ParamType<_Tp>::type, &value);
+    info()->get(this, _name, ParamType<_Tp>::type, &value);
     return value;
 }
 

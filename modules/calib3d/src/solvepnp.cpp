@@ -253,10 +253,10 @@ namespace cv
                     }
                 }
             }
-            PnPSolver(const Mat& objectPoints, const Mat& imagePoints, const Parameters& parameters,
-                      Mat& rvec, Mat& tvec, vector<int>& inliers):
-            objectPoints(objectPoints), imagePoints(imagePoints), parameters(parameters),
-            rvec(rvec), tvec(tvec), inliers(inliers)
+            PnPSolver(const Mat& _objectPoints, const Mat& _imagePoints, const Parameters& _parameters,
+                      Mat& _rvec, Mat& _tvec, vector<int>& _inliers):
+            objectPoints(_objectPoints), imagePoints(_imagePoints), parameters(_parameters),
+            rvec(_rvec), tvec(_tvec), inliers(_inliers)
             {
                 rvec.copyTo(initRvec);
                 tvec.copyTo(initTvec);

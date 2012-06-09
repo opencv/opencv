@@ -127,8 +127,8 @@ int BriefDescriptorExtractor::descriptorType() const
 
 void BriefDescriptorExtractor::read( const FileNode& fn)
 {
-    int descriptorSize = fn["descriptorSize"];
-    switch (descriptorSize)
+    int dSize = fn["descriptorSize"];
+    switch (dSize)
     {
         case 16:
             test_fn_ = pixelTests16;
@@ -142,7 +142,7 @@ void BriefDescriptorExtractor::read( const FileNode& fn)
         default:
             CV_Error(CV_StsBadArg, "descriptorSize must be 16, 32, or 64");
     }
-    bytes_ = descriptorSize;
+    bytes_ = dSize;
 }
 
 void BriefDescriptorExtractor::write( FileStorage& fs) const

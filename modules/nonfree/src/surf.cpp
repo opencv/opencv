@@ -592,7 +592,7 @@ struct SURFInvoker
         Ptr<CvMat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
         for( k = k1; k < k2; k++ )
         {
-            int i, j, kk, x, y, nangle;
+            int i, j, kk, nangle;
             float* vec;
             SurfHF dx_t[NX], dy_t[NY];
             KeyPoint& kp = (*keypoints)[k];
@@ -622,8 +622,8 @@ struct SURFInvoker
                 resizeHaarPattern( dy_s, dy_t, NY, 4, grad_wav_size, sum->cols );
                 for( kk = 0, nangle = 0; kk < nOriSamples; kk++ )
                 {
-                    x = cvRound( center.x + apt[kk].x*s - (float)(grad_wav_size-1)/2 );
-                    y = cvRound( center.y + apt[kk].y*s - (float)(grad_wav_size-1)/2 );
+                    int x = cvRound( center.x + apt[kk].x*s - (float)(grad_wav_size-1)/2 );
+                    int y = cvRound( center.y + apt[kk].y*s - (float)(grad_wav_size-1)/2 );
                     if( y < 0 || y >= sum->rows - grad_wav_size ||
                         x < 0 || x >= sum->cols - grad_wav_size )
                         continue;
@@ -729,8 +729,8 @@ struct SURFInvoker
                     int pixel_y = start_y;
                     for( j = 0; j < win_size; j++, pixel_y-- )
                     {
-                        x = MAX( pixel_x, 0 );
-                        y = MAX( pixel_y, 0 );
+                        int x = MAX( pixel_x, 0 );
+                        int y = MAX( pixel_y, 0 );
                         x = MIN( x, img->cols-1 );
                         y = MIN( y, img->rows-1 );
                         WIN[i*win_size + j] = img->at<uchar>(y, x);
@@ -763,9 +763,9 @@ struct SURFInvoker
                 for( i = 0; i < 4; i++ )
                     for( j = 0; j < 4; j++ )
                     {
-                        for( y = i*5; y < i*5+5; y++ )
+                        for(int y = i*5; y < i*5+5; y++ )
                         {
-                            for( x = j*5; x < j*5+5; x++ )
+                            for(int x = j*5; x < j*5+5; x++ )
                             {
                                 float tx = DX[y][x], ty = DY[y][x];
                                 if( ty >= 0 )
@@ -797,9 +797,9 @@ struct SURFInvoker
                 for( i = 0; i < 4; i++ )
                     for( j = 0; j < 4; j++ )
                     {
-                        for( y = i*5; y < i*5+5; y++ )
+                        for(int y = i*5; y < i*5+5; y++ )
                         {
-                            for( x = j*5; x < j*5+5; x++ )
+                            for(int x = j*5; x < j*5+5; x++ )
                             {
                                 float tx = DX[y][x], ty = DY[y][x];
                                 vec[0] += tx; vec[1] += ty;

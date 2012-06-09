@@ -60,9 +60,9 @@ namespace cv
     using std::min;
     using std::sqrt;
 }
-namespace 
+namespace
 {
-    const static Scalar colors[] = 
+    const static Scalar colors[] =
     {
         CV_RGB(255,   0,   0),
         CV_RGB(  0, 255,   0),
@@ -87,21 +87,21 @@ namespace
 
 template<class FwIt, class T> void iota(FwIt first, FwIt last, T value) { while(first != last) *first++ = value++; }
 
-void computeNormals( const Octree& Octree, const vector<Point3f>& centers, vector<Point3f>& normals, 
+void computeNormals( const Octree& Octree, const vector<Point3f>& centers, vector<Point3f>& normals,
                     vector<uchar>& mask, float normalRadius, int minNeighbors = 20)
-{    
+{
     size_t normals_size = centers.size();
     normals.resize(normals_size);
-    
+
     if (mask.size() != normals_size)
     {
-        size_t m = mask.size();        
+        size_t m = mask.size();
         mask.resize(normals_size);
         if (normals_size > m)
             for(; m < normals_size; ++m)
                 mask[m] = 1;
     }
-    
+
     vector<Point3f> buffer;
     buffer.reserve(128);
     SVD svd;
@@ -132,7 +132,7 @@ void computeNormals( const Octree& Octree, const vector<Point3f>& centers, vecto
         mean.x /= buf_size;
         mean.y /= buf_size;
         mean.z /= buf_size;
-            
+
         double pxpx = 0;
         double pypy = 0;
         double pzpz = 0;
@@ -162,9 +162,9 @@ void computeNormals( const Octree& Octree, const vector<Point3f>& centers, vecto
 
         /*normals[n] = Point3f(  (float)((double*)svd.vt.data)[6],
                                  (float)((double*)svd.vt.data)[7],
-                                 (float)((double*)svd.vt.data)[8]  );*/            
-        normals[n] = reinterpret_cast<Point3d*>(svd.vt.data)[2];                
-        mask[n] = 1;        
+                                 (float)((double*)svd.vt.data)[8]  );*/
+        normals[n] = reinterpret_cast<Point3d*>(svd.vt.data)[2];
+        mask[n] = 1;
     }
 }
 
@@ -213,22 +213,22 @@ inline __m128 transformSSE(const __m128* matrix, const __m128& in)
 }
 
 inline __m128i _mm_mullo_epi32_emul(const __m128i& a, __m128i& b)
-{    
+{
     __m128i pack = _mm_packs_epi32(a, a);
-    return _mm_unpacklo_epi16(_mm_mullo_epi16(pack, b), _mm_mulhi_epi16(pack, b));    
+    return _mm_unpacklo_epi16(_mm_mullo_epi16(pack, b), _mm_mulhi_epi16(pack, b));
 }
 
 #endif
 
-void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, const vector<Point3f>& normals, 
+void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, const vector<Point3f>& normals,
                        vector<uchar>& mask, Mat& spinImages, int imageWidth, float binSize)
-{   
+{
     float pixelsPerMeter = 1.f / binSize;
-    float support = imageWidth * binSize;    
-    
+    float support = imageWidth * binSize;
+
     assert(normals.size() == points.size());
     assert(mask.size() == points.size());
-    
+
     size_t points_size = points.size();
     mask.resize(points_size);
 
@@ -257,7 +257,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
 
         int t = cvGetThreadNum();
         vector<Point3f>& pointsInSphere = pointsInSpherePool[t];
-                
+
         const Point3f& center = points[i];
         Octree.getPointsWithinSphere(center, searchRad, pointsInSphere);
 
@@ -269,7 +269,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
         }
 
         const Point3f& normal = normals[i];
-        
+
         float rotmat[9];
         initRotationMat(normal, rotmat);
         Point3f new_center;
@@ -287,7 +287,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
         {
             __m128 rotmatSSE[3];
             convertTransformMatrix(rotmat, (float*)rotmatSSE);
-            
+
             __m128 center_x4 = _mm_set1_ps(new_center.x);
             __m128 center_y4 = _mm_set1_ps(new_center.y);
             __m128 center_z4 = _mm_set1_ps(new_center.z + halfSuppport);
@@ -313,7 +313,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
                 __m128 z0 = _mm_unpackhi_ps(pt0, pt1); // z0 z1 . .
                 __m128 z1 = _mm_unpackhi_ps(pt2, pt3); // z2 z3 . .
                 __m128 beta4 = _mm_sub_ps(center_z4, _mm_movelh_ps(z0, z1)); // b0 b1 b2 b3
-                
+
                 __m128 xy0 = _mm_unpacklo_ps(pt0, pt1); // x0 x1 y0 y1
                 __m128 xy1 = _mm_unpacklo_ps(pt2, pt3); // x2 x3 y2 y3
                 __m128 x4 = _mm_movelh_ps(xy0, xy1); // x0 x1 x2 x3
@@ -322,7 +322,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
                 x4 = _mm_sub_ps(x4, center_x4);
                 y4 = _mm_sub_ps(y4, center_y4);
                 __m128 alpha4 = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(x4,x4),_mm_mul_ps(y4,y4)));
-                
+
                 __m128 n1f4 = _mm_mul_ps( beta4, ppm4);  /* beta4 float */
                 __m128 n2f4 = _mm_mul_ps(alpha4, ppm4); /* alpha4 float */
 
@@ -333,21 +333,21 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
                 __m128 f1 = _mm_sub_ps( n1f4, _mm_cvtepi32_ps(n1) );  /* { beta4  }  */
                 __m128 f2 = _mm_sub_ps( n2f4, _mm_cvtepi32_ps(n2) );  /* { alpha4 }  */
 
-                __m128 f1f2 = _mm_mul_ps(f1, f2);  // f1 * f2                        
+                __m128 f1f2 = _mm_mul_ps(f1, f2);  // f1 * f2
                 __m128 omf1omf2 = _mm_add_ps(_mm_sub_ps(_mm_sub_ps(one4f, f2), f1), f1f2); // (1-f1) * (1-f2)
-                
-                __m128i mask = _mm_and_si128(
+
+                __m128i _mask = _mm_and_si128(
                     _mm_andnot_si128(_mm_cmpgt_epi32(zero4, n1), _mm_cmpgt_epi32(height4m1, n1)),
                     _mm_andnot_si128(_mm_cmpgt_epi32(zero4, n2), _mm_cmpgt_epi32(width4m1, n2)));
 
-                __m128 maskf = _mm_cmpneq_ps(_mm_cvtepi32_ps(mask), zero4f);
-                            
+                __m128 maskf = _mm_cmpneq_ps(_mm_cvtepi32_ps(_mask), zero4f);
+
                 __m128 v00 = _mm_and_ps(        omf1omf2       , maskf); // a00 b00 c00 d00
                 __m128 v01 = _mm_and_ps( _mm_sub_ps( f2, f1f2 ), maskf); // a01 b01 c01 d01
                 __m128 v10 = _mm_and_ps( _mm_sub_ps( f1, f1f2 ), maskf); // a10 b10 c10 d10
                 __m128 v11 = _mm_and_ps(          f1f2         , maskf); // a11 b11 c11 d11
 
-                __m128i ofs4 = _mm_and_si128(_mm_add_epi32(_mm_mullo_epi32_emul(n1, step4), n2), mask);
+                __m128i ofs4 = _mm_and_si128(_mm_add_epi32(_mm_mullo_epi32_emul(n1, step4), n2), _mask);
                 _mm_store_si128((__m128i*)o, ofs4);
 
                 __m128 t0 = _mm_unpacklo_ps(v00, v01); // a00 a01 b00 b01
@@ -395,9 +395,9 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
             if (beta >= support || beta < 0)
                 continue;
 
-            alpha = sqrt( (new_center.x - pt.x) * (new_center.x - pt.x) + 
-                          (new_center.y - pt.y) * (new_center.y - pt.y) ); 
-            
+            alpha = sqrt( (new_center.x - pt.x) * (new_center.x - pt.x) +
+                          (new_center.y - pt.y) * (new_center.y - pt.y) );
+
             float n1f = beta  * pixelsPerMeter;
             float n2f = alpha * pixelsPerMeter;
 
@@ -407,7 +407,7 @@ void computeSpinImages( const Octree& Octree, const vector<Point3f>& points, con
             float f1 = n1f - n1;
             float f2 = n2f - n2;
 
-            if  ((unsigned)n1 >= (unsigned)(spinImage.rows-1) || 
+            if  ((unsigned)n1 >= (unsigned)(spinImage.rows-1) ||
                  (unsigned)n2 >= (unsigned)(spinImage.cols-1))
                 continue;
 
@@ -454,27 +454,27 @@ float cv::Mesh3D::estimateResolution(float /*tryRatio*/)
 
     vector<double> dist(tryNum * neighbors);
     vector<int>    inds(tryNum * neighbors);
-    vector<Point3f> query;  
+    vector<Point3f> query;
 
-    RNG& rng = theRNG();          
+    RNG& rng = theRNG();
     for(int i = 0; i < tryNum; ++i)
         query.push_back(vtx[rng.next() % vtx.size()]);
-        
+
     CvMat cvinds  = cvMat( (int)tryNum, neighbors, CV_32S,  &inds[0] );
-    CvMat cvdist  = cvMat( (int)tryNum, neighbors, CV_64F,  &dist[0] );    
+    CvMat cvdist  = cvMat( (int)tryNum, neighbors, CV_64F,  &dist[0] );
     CvMat cvquery = cvMat( (int)tryNum,         3, CV_32F, &query[0] );
-    cvFindFeatures(tr, &cvquery, &cvinds, &cvdist, neighbors, 50);    
+    cvFindFeatures(tr, &cvquery, &cvinds, &cvdist, neighbors, 50);
     cvReleaseFeatureTree(tr);
 
-    const int invalid_dist = -2;    
+    const int invalid_dist = -2;
     for(int i = 0; i < tryNum; ++i)
         if (inds[i] == -1)
             dist[i] = invalid_dist;
 
     dist.resize(remove(dist.begin(), dist.end(), invalid_dist) - dist.begin());
-        
+
     sort(dist, less<double>());
-   
+
     return resolution = (float)dist[ dist.size() / 2 ];
 #else
     CV_Error(CV_StsNotImplemented, "");
@@ -494,7 +494,7 @@ void cv::Mesh3D::computeNormals(const vector<int>& subset, float normalRadius, i
 {
     buildOctree();
     vector<uchar> mask(vtx.size(), 0);
-    for(size_t i = 0; i < subset.size(); ++i) 
+    for(size_t i = 0; i < subset.size(); ++i)
         mask[subset[i]] = 1;
     ::computeNormals(octree, vtx, normals, mask, normalRadius, minNeighbors);
 }
@@ -504,31 +504,31 @@ void cv::Mesh3D::writeAsVrml(const String& file, const vector<Scalar>& _colors) 
     ofstream ofs(file.c_str());
 
     ofs << "#VRML V2.0 utf8" << endl;
-	ofs << "Shape" << std::endl << "{" << endl;
-	ofs << "geometry PointSet" << endl << "{" << endl;
-	ofs << "coord Coordinate" << endl << "{" << endl;
-	ofs << "point[" << endl;
+    ofs << "Shape" << std::endl << "{" << endl;
+    ofs << "geometry PointSet" << endl << "{" << endl;
+    ofs << "coord Coordinate" << endl << "{" << endl;
+    ofs << "point[" << endl;
 
     for(size_t i = 0; i < vtx.size(); ++i)
         ofs << vtx[i].x << " " << vtx[i].y << " " << vtx[i].z << endl;
-    
-	ofs << "]" << endl; //point[
-	ofs << "}" << endl; //Coordinate{
+
+    ofs << "]" << endl; //point[
+    ofs << "}" << endl; //Coordinate{
 
     if (vtx.size() == _colors.size())
     {
         ofs << "color Color" << endl << "{" << endl;
         ofs << "color[" << endl;
-    	
+
         for(size_t i = 0; i < _colors.size(); ++i)
             ofs << (float)_colors[i][2] << " " << (float)_colors[i][1] << " " << (float)_colors[i][0] << endl;
-      
+
         ofs << "]" << endl; //color[
-	    ofs << "}" << endl; //color Color{
+        ofs << "}" << endl; //color Color{
     }
 
-	ofs << "}" << endl; //PointSet{
-	ofs << "}" << endl; //Shape{
+    ofs << "}" << endl; //PointSet{
+    ofs << "}" << endl; //Shape{
 }
 
 
@@ -538,45 +538,45 @@ void cv::Mesh3D::writeAsVrml(const String& file, const vector<Scalar>& _colors) 
 bool cv::SpinImageModel::spinCorrelation(const Mat& spin1, const Mat& spin2, float lambda, float& result)
 {
     struct Math { static double atanh(double x) { return 0.5 * std::log( (1 + x) / (1 - x) ); } };
-      
+
     const float* s1 = spin1.ptr<float>();
     const float* s2 = spin2.ptr<float>();
 
-    int spin_sz = spin1.cols * spin1.rows; 
+    int spin_sz = spin1.cols * spin1.rows;
     double sum1 = 0.0, sum2 = 0.0, sum12 = 0.0, sum11 = 0.0, sum22 = 0.0;
 
     int N = 0;
     int i = 0;
 #if CV_SSE2//____________TEMPORARY_DISABLED_____________
-    float CV_DECL_ALIGNED(16) su1[4], su2[4], su11[4], su22[4], su12[4], n[4];    
-    
+    float CV_DECL_ALIGNED(16) su1[4], su2[4], su11[4], su22[4], su12[4], n[4];
+
     __m128 zerof4 = _mm_setzero_ps();
     __m128 onef4  = _mm_set1_ps(1.f);
-    __m128 Nf4 = zerof4;    
+    __m128 Nf4 = zerof4;
     __m128 sum1f4  = zerof4;
     __m128 sum2f4  = zerof4;
     __m128 sum11f4 = zerof4;
     __m128 sum22f4 = zerof4;
-    __m128 sum12f4 = zerof4;        
+    __m128 sum12f4 = zerof4;
     for(; i < spin_sz - 5; i += 4)
     {
-        __m128 v1f4 = _mm_loadu_ps(s1 + i); 
-        __m128 v2f4 = _mm_loadu_ps(s2 + i); 
+        __m128 v1f4 = _mm_loadu_ps(s1 + i);
+        __m128 v2f4 = _mm_loadu_ps(s2 + i);
 
         __m128 mskf4 = _mm_and_ps(_mm_cmpneq_ps(v1f4, zerof4), _mm_cmpneq_ps(v2f4, zerof4));
-        if( !_mm_movemask_ps(mskf4) ) 
+        if( !_mm_movemask_ps(mskf4) )
             continue;
-        
+
         Nf4 = _mm_add_ps(Nf4, _mm_and_ps(onef4, mskf4));
 
         v1f4 = _mm_and_ps(v1f4, mskf4);
         v2f4 = _mm_and_ps(v2f4, mskf4);
-     
+
         sum1f4 = _mm_add_ps(sum1f4, v1f4);
         sum2f4 = _mm_add_ps(sum2f4, v2f4);
         sum11f4 = _mm_add_ps(sum11f4, _mm_mul_ps(v1f4, v1f4));
         sum22f4 = _mm_add_ps(sum22f4, _mm_mul_ps(v2f4, v2f4));
-        sum12f4 = _mm_add_ps(sum12f4, _mm_mul_ps(v1f4, v2f4));        
+        sum12f4 = _mm_add_ps(sum12f4, _mm_mul_ps(v1f4, v2f4));
     }
     _mm_store_ps( su1,  sum1f4 );
     _mm_store_ps( su2,  sum2f4 );
@@ -601,11 +601,11 @@ bool cv::SpinImageModel::spinCorrelation(const Mat& spin1, const Mat& spin2, flo
         if( !v1 || !v2 )
             continue;
         N++;
-     
-        sum1  += v1; 
-        sum2  += v2; 
-        sum11 += v1 * v1; 
-        sum22 += v2 * v2; 
+
+        sum1  += v1;
+        sum2  += v2;
+        sum11 += v1 * v1;
+        sum22 += v2 * v2;
         sum12 += v1 * v2;
     }
     if( N < 4 )
@@ -624,13 +624,13 @@ bool cv::SpinImageModel::spinCorrelation(const Mat& spin1, const Mat& spin2, flo
     double corr = (Nsum12 - sum1 * sum2) / sqrt( (Nsum11 - sum1sum1) * (Nsum22 - sum2sum2) );
     double atanh = Math::atanh(corr);
     result = (float)( atanh * atanh - lambda * ( 1.0 / (N - 3) ) );
-    return true;        
+    return true;
 }
 
 inline Point2f cv::SpinImageModel::calcSpinMapCoo(const Point3f& p, const Point3f& v, const Point3f& n)
-{   
-    /*Point3f PmV(p.x - v.x, p.y - v.y, p.z - v.z);    
-    float normalNorm = (float)norm(n);    
+{
+    /*Point3f PmV(p.x - v.x, p.y - v.y, p.z - v.z);
+    float normalNorm = (float)norm(n);
     float beta = PmV.dot(n) / normalNorm;
     float pmcNorm = (float)norm(PmV);
     float alpha = sqrt( pmcNorm * pmcNorm - beta * beta);
@@ -639,23 +639,23 @@ inline Point2f cv::SpinImageModel::calcSpinMapCoo(const Point3f& p, const Point3
     float pmv_x = p.x - v.x, pmv_y = p.y - v.y, pmv_z = p.z - v.z;
 
     float beta = (pmv_x * n.x + pmv_y + n.y + pmv_z * n.z) / sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
-    float alpha = sqrt( pmv_x * pmv_x + pmv_y * pmv_y + pmv_z * pmv_z - beta * beta);        
+    float alpha = sqrt( pmv_x * pmv_x + pmv_y * pmv_y + pmv_z * pmv_z - beta * beta);
     return Point2f(alpha, beta);
 }
 
 inline float cv::SpinImageModel::geometricConsistency(const Point3f& pointScene1, const Point3f& normalScene1,
                                                       const Point3f& pointModel1, const Point3f& normalModel1,
-                                                      const Point3f& pointScene2, const Point3f& normalScene2,                               
+                                                      const Point3f& pointScene2, const Point3f& normalScene2,
                                                       const Point3f& pointModel2, const Point3f& normalModel2)
-{   
+{
     Point2f Sm2_to_m1, Ss2_to_s1;
     Point2f Sm1_to_m2, Ss1_to_s2;
 
     double n_Sm2_to_m1 = norm(Sm2_to_m1 = calcSpinMapCoo(pointModel2, pointModel1, normalModel1));
-    double n_Ss2_to_s1 = norm(Ss2_to_s1 = calcSpinMapCoo(pointScene2, pointScene1, normalScene1));   
+    double n_Ss2_to_s1 = norm(Ss2_to_s1 = calcSpinMapCoo(pointScene2, pointScene1, normalScene1));
 
     double gc21 = 2 * norm(Sm2_to_m1 - Ss2_to_s1) / (n_Sm2_to_m1 + n_Ss2_to_s1 ) ;
-        
+
     double n_Sm1_to_m2 = norm(Sm1_to_m2 = calcSpinMapCoo(pointModel1, pointModel2, normalModel2));
     double n_Ss1_to_s2 = norm(Ss1_to_s2 = calcSpinMapCoo(pointScene1, pointScene2, normalScene2));
 
@@ -666,10 +666,10 @@ inline float cv::SpinImageModel::geometricConsistency(const Point3f& pointScene1
 
 inline float cv::SpinImageModel::groupingCreteria(const Point3f& pointScene1, const Point3f& normalScene1,
                                                   const Point3f& pointModel1, const Point3f& normalModel1,
-                                                  const Point3f& pointScene2, const Point3f& normalScene2,                               
-                                                  const Point3f& pointModel2, const Point3f& normalModel2, 
+                                                  const Point3f& pointScene2, const Point3f& normalScene2,
+                                                  const Point3f& pointModel2, const Point3f& normalModel2,
                                                   float gamma)
-{   
+{
     Point2f Sm2_to_m1, Ss2_to_s1;
     Point2f Sm1_to_m2, Ss1_to_s2;
 
@@ -680,7 +680,7 @@ inline float cv::SpinImageModel::groupingCreteria(const Point3f& pointScene1, co
 
     double gc21 = 2 * norm(Sm2_to_m1 - Ss2_to_s1) / (n_Sm2_to_m1 + n_Ss2_to_s1 );
     double wgc21 = gc21 / (1 - exp( -(n_Sm2_to_m1 + n_Ss2_to_s1) * gamma05_inv ) );
-    
+
     double n_Sm1_to_m2 = norm(Sm1_to_m2 = calcSpinMapCoo(pointModel1, pointModel2, normalModel2));
     double n_Ss1_to_s2 = norm(Ss1_to_s2 = calcSpinMapCoo(pointScene1, pointScene2, normalScene2));
 
@@ -692,10 +692,10 @@ inline float cv::SpinImageModel::groupingCreteria(const Point3f& pointScene1, co
 
 
 cv::SpinImageModel::SpinImageModel(const Mesh3D& _mesh) : mesh(_mesh) , out(0)
-{ 
+{
      if (mesh.vtx.empty())
          throw Mesh3D::EmptyMeshException();
-    defaultParams(); 
+    defaultParams();
 }
 cv::SpinImageModel::SpinImageModel() : out(0) { defaultParams(); }
 cv::SpinImageModel::~SpinImageModel() {}
@@ -708,8 +708,8 @@ void cv::SpinImageModel::defaultParams()
     minNeighbors = 20;
 
     binSize    = 0.f; /* autodetect according to mesh resolution */
-    imageWidth = 32;    
-   
+    imageWidth = 32;
+
     lambda = 0.f; /* autodetect according to medan non zero images bin */
     gamma  = 0.f; /* autodetect according to mesh resolution */
 
@@ -725,28 +725,28 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
     if (num == 0)
         return Mat();
 
-    RNG& rng = theRNG();    
+    RNG& rng = theRNG();
 
     vector<Mat> spins;
     for(int i = 0; i < num; ++i)
-        spins.push_back(getSpinImage( rng.next() % spinNum ).reshape(1, imageWidth));    
-    
+        spins.push_back(getSpinImage( rng.next() % spinNum ).reshape(1, imageWidth));
+
     if (separateScale)
         for(int i = 0; i < num; ++i)
         {
             double max;
             Mat spin8u;
-            minMaxLoc(spins[i], 0, &max);         
+            minMaxLoc(spins[i], 0, &max);
             spins[i].convertTo(spin8u, CV_8U, -255.0/max, 255.0);
             spins[i] = spin8u;
         }
     else
-    {    
+    {
         double totalMax = 0;
         for(int i = 0; i < num; ++i)
         {
             double m;
-            minMaxLoc(spins[i], 0, &m);  
+            minMaxLoc(spins[i], 0, &m);
             totalMax = max(m, totalMax);
         }
 
@@ -760,12 +760,12 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
 
     int sz = spins.front().cols;
 
-    Mat result((int)(yCount * sz + (yCount - 1)), (int)(xCount * sz + (xCount - 1)), CV_8UC3);    
+    Mat result((int)(yCount * sz + (yCount - 1)), (int)(xCount * sz + (xCount - 1)), CV_8UC3);
     result = colors[(static_cast<int64>(cvGetTickCount()/cvGetTickFrequency())/1000) % colors_mum];
 
     int pos = 0;
     for(int y = 0; y < (int)yCount; ++y)
-        for(int x = 0; x < (int)xCount; ++x)        
+        for(int x = 0; x < (int)xCount; ++x)
             if (pos < num)
             {
                 int starty = (y + 0) * sz + y;
@@ -778,7 +778,7 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
                 cvtColor(spins[pos++], color, CV_GRAY2BGR);
                 Mat roi = result(Range(starty, endy), Range(startx, endx));
                 color.copyTo(roi);
-            } 
+            }
     return result;
 }
 
@@ -811,8 +811,8 @@ void cv::SpinImageModel::selectRandomSubset(float ratio)
             int pos = rnd.next() % left.size();
             subset[i] = (int)left[pos];
 
-            left[pos] = left.back();        
-            left.resize(left.size() - 1);        
+            left[pos] = left.back();
+            left.resize(left.size() - 1);
         }
         sort(subset, less<int>());
     }
@@ -823,21 +823,21 @@ void cv::SpinImageModel::setSubset(const vector<int>& ss)
     subset = ss;
 }
 
-void cv::SpinImageModel::repackSpinImages(const vector<uchar>& mask, Mat& spinImages, bool reAlloc) const
-{    
+void cv::SpinImageModel::repackSpinImages(const vector<uchar>& mask, Mat& _spinImages, bool reAlloc) const
+{
     if (reAlloc)
     {
         size_t spinCount = mask.size() - count(mask.begin(), mask.end(), (uchar)0);
-        Mat newImgs((int)spinCount, spinImages.cols, spinImages.type());    
+        Mat newImgs((int)spinCount, _spinImages.cols, _spinImages.type());
 
         int pos = 0;
         for(size_t t = 0; t < mask.size(); ++t)
             if (mask[t])
             {
                 Mat row = newImgs.row(pos++);
-                spinImages.row((int)t).copyTo(row);
+                _spinImages.row((int)t).copyTo(row);
             }
-        spinImages = newImgs;
+        _spinImages = newImgs;
     }
     else
     {
@@ -849,13 +849,13 @@ void cv::SpinImageModel::repackSpinImages(const vector<uchar>& mask, Mat& spinIm
 
         int first = dest + 1;
         for (; first != last; ++first)
-		    if (mask[first] != 0)
+            if (mask[first] != 0)
             {
-                Mat row = spinImages.row(dest);
-                spinImages.row(first).copyTo(row);
+                Mat row = _spinImages.row(dest);
+                _spinImages.row(first).copyTo(row);
                 ++dest;
             }
-        spinImages = spinImages.rowRange(0, dest);
+        _spinImages = _spinImages.rowRange(0, dest);
     }
 }
 
@@ -865,13 +865,13 @@ void cv::SpinImageModel::compute()
     if (binSize == 0.f)
     {
          if (mesh.resolution == -1.f)
-            mesh.estimateResolution();        
+            mesh.estimateResolution();
         binSize = mesh.resolution;
     }
-    /* estimate normalRadius */    
-    normalRadius = normalRadius != 0.f ? normalRadius : binSize * imageWidth / 2;    
+    /* estimate normalRadius */
+    normalRadius = normalRadius != 0.f ? normalRadius : binSize * imageWidth / 2;
 
-    mesh.buildOctree();  
+    mesh.buildOctree();
     if (subset.empty())
     {
         mesh.computeNormals(normalRadius, minNeighbors);
@@ -881,16 +881,16 @@ void cv::SpinImageModel::compute()
     else
         mesh.computeNormals(subset, normalRadius, minNeighbors);
 
-    vector<uchar> mask(mesh.vtx.size(), 0);       
+    vector<uchar> mask(mesh.vtx.size(), 0);
     for(size_t i = 0; i < subset.size(); ++i)
-        if (mesh.normals[subset[i]] == Mesh3D::allzero)                   
-            subset[i] = -1;                    
+        if (mesh.normals[subset[i]] == Mesh3D::allzero)
+            subset[i] = -1;
         else
             mask[subset[i]] = 1;
     subset.resize( remove(subset.begin(), subset.end(), -1) - subset.begin() );
-        
+
     vector<Point3f> vtx;
-    vector<Point3f> normals;    
+    vector<Point3f> normals;
     for(size_t i = 0; i < mask.size(); ++i)
         if(mask[i])
         {
@@ -906,7 +906,7 @@ void cv::SpinImageModel::compute()
     for(size_t i = 0; i < mask.size(); ++i)
         if(mask[i])
             if (spinMask[mask_pos++] == 0)
-                subset.resize( remove(subset.begin(), subset.end(), (int)i) - subset.begin() );   
+                subset.resize( remove(subset.begin(), subset.end(), (int)i) - subset.begin() );
 }
 
 void cv::SpinImageModel::matchSpinToModel(const Mat& spin, vector<int>& indeces, vector<float>& corrCoeffs, bool useExtremeOutliers) const
@@ -920,46 +920,46 @@ void cv::SpinImageModel::matchSpinToModel(const Mat& spin, vector<int>& indeces,
     vector<uchar>  masks(model.spinImages.rows);
     vector<float> cleanCorrs;
     cleanCorrs.reserve(model.spinImages.rows);
-    
+
     for(int i = 0; i < model.spinImages.rows; ++i)
     {
-        masks[i] = spinCorrelation(spin, model.spinImages.row(i), model.lambda, corrs[i]);   
+        masks[i] = spinCorrelation(spin, model.spinImages.row(i), model.lambda, corrs[i]);
         if (masks[i])
             cleanCorrs.push_back(corrs[i]);
     }
-    
+
     /* Filtering by measure histogram */
     size_t total = cleanCorrs.size();
     if(total < 5)
         return;
 
     sort(cleanCorrs, less<float>());
-    
+
     float lower_fourth = cleanCorrs[(1 * total) / 4 - 1];
     float upper_fourth = cleanCorrs[(3 * total) / 4 - 0];
     float fourth_spread = upper_fourth - lower_fourth;
 
     //extreme or moderate?
-    float coef = useExtremeOutliers ? 3.0f : 1.5f; 
+    float coef = useExtremeOutliers ? 3.0f : 1.5f;
 
-    float histThresHi = upper_fourth + coef * fourth_spread;  
-    //float histThresLo = lower_fourth - coef * fourth_spread; 
-    
+    float histThresHi = upper_fourth + coef * fourth_spread;
+    //float histThresLo = lower_fourth - coef * fourth_spread;
+
     for(size_t i = 0; i < corrs.size(); ++i)
         if (masks[i])
             if (/* corrs[i] < histThresLo || */ corrs[i] > histThresHi)
             {
                 indeces.push_back((int)i);
-                corrCoeffs.push_back(corrs[i]);                
+                corrCoeffs.push_back(corrs[i]);
             }
-} 
+}
 
-namespace 
+namespace
 {
 
 struct Match
 {
-    int sceneInd;        
+    int sceneInd;
     int modelInd;
     float measure;
 
@@ -984,7 +984,7 @@ struct WgcHelper
     {
         const float* wgcLine = mat.ptr<float>((int)corespInd);
         float maximum = numeric_limits<float>::min();
-        
+
         for(citer pos = group.begin(); pos != group.end(); ++pos)
             maximum = max(wgcLine[*pos], maximum);
 
@@ -997,7 +997,7 @@ private:
 }
 
  void cv::SpinImageModel::match(const SpinImageModel& scene, vector< vector<Vec2i> >& result)
-{   
+{
     if (mesh.vtx.empty())
         throw Mesh3D::EmptyMeshException();
 
@@ -1006,25 +1006,25 @@ private:
     SpinImageModel& model = *this;
     const float infinity = numeric_limits<float>::infinity();
     const float float_max = numeric_limits<float>::max();
-    
+
     /* estimate gamma */
     if (model.gamma == 0.f)
     {
         if (model.mesh.resolution == -1.f)
-            model.mesh.estimateResolution();        
+            model.mesh.estimateResolution();
         model.gamma = 4 * model.mesh.resolution;
     }
 
     /* estimate lambda */
     if (model.lambda == 0.f)
     {
-        vector<int> nonzero(model.spinImages.rows);        
+        vector<int> nonzero(model.spinImages.rows);
         for(int i = 0; i < model.spinImages.rows; ++i)
             nonzero[i] = countNonZero(model.spinImages.row(i));
         sort(nonzero, less<int>());
         model.lambda = static_cast<float>( nonzero[ nonzero.size()/2 ] ) / 2;
-    }    
-       
+    }
+
     TickMeter corr_timer;
     corr_timer.start();
     vector<Match> allMatches;
@@ -1032,37 +1032,37 @@ private:
     {
         vector<int> indeces;
         vector<float> coeffs;
-        matchSpinToModel(scene.spinImages.row(i), indeces, coeffs);        
+        matchSpinToModel(scene.spinImages.row(i), indeces, coeffs);
         for(size_t t = 0; t < indeces.size(); ++t)
-            allMatches.push_back(Match(i, indeces[t], coeffs[t])); 
+            allMatches.push_back(Match(i, indeces[t], coeffs[t]));
 
-        if (out) if (i % 100 == 0) *out << "Comparing scene spinimage " << i << " of " << scene.spinImages.rows << endl;        
+        if (out) if (i % 100 == 0) *out << "Comparing scene spinimage " << i << " of " << scene.spinImages.rows << endl;
     }
     corr_timer.stop();
     if (out) *out << "Spin correlation time  = " << corr_timer << endl;
     if (out) *out << "Matches number = " << allMatches.size() << endl;
 
-    if(allMatches.empty())    
+    if(allMatches.empty())
         return;
-           
+
     /* filtering by similarity measure */
     const float fraction = 0.5f;
-    float maxMeasure = max_element(allMatches.begin(), allMatches.end(), less<float>())->measure;    
+    float maxMeasure = max_element(allMatches.begin(), allMatches.end(), less<float>())->measure;
     allMatches.erase(
-        remove_if(allMatches.begin(), allMatches.end(), bind2nd(less<float>(), maxMeasure * fraction)), 
+        remove_if(allMatches.begin(), allMatches.end(), bind2nd(less<float>(), maxMeasure * fraction)),
         allMatches.end());
     if (out) *out << "Matches number [filtered by similarity measure] = " << allMatches.size() << endl;
 
     int matchesSize = (int)allMatches.size();
     if(matchesSize == 0)
         return;
-    
-    /* filtering by geometric consistency */        
+
+    /* filtering by geometric consistency */
     for(int i = 0; i < matchesSize; ++i)
     {
         int consistNum = 1;
         float gc = float_max;
-        
+
         for(int j = 0; j < matchesSize; ++j)
             if (i != j)
             {
@@ -1075,31 +1075,31 @@ private:
                 {
                     const Point3f& pointSceneI  = scene.getSpinVertex(mi.sceneInd);
                     const Point3f& normalSceneI = scene.getSpinNormal(mi.sceneInd);
-                
+
                     const Point3f& pointModelI  = model.getSpinVertex(mi.modelInd);
                     const Point3f& normalModelI = model.getSpinNormal(mi.modelInd);
-                
+
                     const Point3f& pointSceneJ  = scene.getSpinVertex(mj.sceneInd);
                     const Point3f& normalSceneJ = scene.getSpinNormal(mj.sceneInd);
-                
+
                     const Point3f& pointModelJ  = model.getSpinVertex(mj.modelInd);
                     const Point3f& normalModelJ = model.getSpinNormal(mj.modelInd);
-             
+
                     gc = geometricConsistency(pointSceneI, normalSceneI, pointModelI, normalModelI,
-                                              pointSceneJ, normalSceneJ, pointModelJ, normalModelJ);                                
+                                              pointSceneJ, normalSceneJ, pointModelJ, normalModelJ);
                 }
 
                 if (gc < model.T_GeometriccConsistency)
                     ++consistNum;
             }
-                    
-            
+
+
         if (consistNum < matchesSize / 4) /* failed consistensy test */
-            allMatches[i].measure = infinity;     
+            allMatches[i].measure = infinity;
     }
     allMatches.erase(
-      remove_if(allMatches.begin(), allMatches.end(), bind2nd(equal_to<float>(), infinity)), 
-      allMatches.end()); 
+      remove_if(allMatches.begin(), allMatches.end(), bind2nd(equal_to<float>(), infinity)),
+      allMatches.end());
     if (out) *out << "Matches number [filtered by geometric consistency] = " << allMatches.size() << endl;
 
 
@@ -1110,11 +1110,11 @@ private:
     if (out) *out << "grouping ..." << endl;
 
     Mat groupingMat((int)matchesSize, (int)matchesSize, CV_32F);
-    groupingMat = Scalar(0);        
-        
+    groupingMat = Scalar(0);
+
     /* grouping */
     for(int j = 0; j < matchesSize; ++j)
-        for(int i = j + 1; i < matchesSize; ++i)        
+        for(int i = j + 1; i < matchesSize; ++i)
         {
             const Match& mi = allMatches[i];
             const Match& mj = allMatches[j];
@@ -1128,20 +1128,20 @@ private:
 
             const Point3f& pointSceneI  = scene.getSpinVertex(mi.sceneInd);
             const Point3f& normalSceneI = scene.getSpinNormal(mi.sceneInd);
-            
+
             const Point3f& pointModelI  = model.getSpinVertex(mi.modelInd);
             const Point3f& normalModelI = model.getSpinNormal(mi.modelInd);
-            
+
             const Point3f& pointSceneJ  = scene.getSpinVertex(mj.sceneInd);
             const Point3f& normalSceneJ = scene.getSpinNormal(mj.sceneInd);
-            
+
             const Point3f& pointModelJ  = model.getSpinVertex(mj.modelInd);
             const Point3f& normalModelJ = model.getSpinNormal(mj.modelInd);
 
             float wgc = groupingCreteria(pointSceneI, normalSceneI, pointModelI, normalModelI,
                                          pointSceneJ, normalSceneJ, pointModelJ, normalModelJ,
-                                         model.gamma);   
-            
+                                         model.gamma);
+
             groupingMat.ptr<float>(i)[j] = wgc;
             groupingMat.ptr<float>(j)[i] = wgc;
         }
@@ -1149,35 +1149,35 @@ private:
     group_t allMatchesInds;
     for(int i = 0; i < matchesSize; ++i)
         allMatchesInds.insert(i);
-    
+
     vector<float> buf(matchesSize);
     float *buf_beg = &buf[0];
     vector<group_t> groups;
-    
+
     for(int g = 0; g < matchesSize; ++g)
-    {        
+    {
         if (out) if (g % 100 == 0) *out << "G = " << g << endl;
 
         group_t left = allMatchesInds;
         group_t group;
-        
+
         left.erase(g);
         group.insert(g);
-                        
+
         for(;;)
         {
             size_t left_size = left.size();
             if (left_size == 0)
                 break;
-                        
+
             std::transform(left.begin(), left.end(), buf_beg,  WgcHelper(group, groupingMat));
             size_t minInd = min_element(buf_beg, buf_beg + left_size) - buf_beg;
-            
+
             if (buf[minInd] < model.T_GroupingCorespondances) /* can add corespondance to group */
             {
                 iter pos = left.begin();
                 advance(pos, minInd);
-                
+
                 group.insert(*pos);
                 left.erase(pos);
             }
@@ -1199,16 +1199,16 @@ private:
         {
             const Match& m = allMatches[*pos];
             outgrp.push_back(Vec2i(subset[m.modelInd], scene.subset[m.sceneInd]));
-        }        
+        }
         result.push_back(outgrp);
-    }    
+    }
 }
 
 cv::TickMeter::TickMeter() { reset(); }
 int64 cv::TickMeter::getTimeTicks() const { return sumTime; }
 double cv::TickMeter::getTimeMicro() const { return (double)getTimeTicks()/cvGetTickFrequency(); }
 double cv::TickMeter::getTimeMilli() const { return getTimeMicro()*1e-3; }
-double cv::TickMeter::getTimeSec()   const { return getTimeMilli()*1e-3; }    
+double cv::TickMeter::getTimeSec()   const { return getTimeMilli()*1e-3; }
 int64 cv::TickMeter::getCounter() const { return counter; }
 void  cv::TickMeter::reset() {startTime = 0; sumTime = 0; counter = 0; }
 

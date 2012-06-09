@@ -56,7 +56,7 @@ protected:
     void prepare_to_validation( int );
 
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    
+
     /*int write_default_params(CvFileStorage* fs);
     void get_timing_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types
                                                 CvSize** whole_sizes, bool *are_images );
@@ -94,7 +94,7 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
     RNG& rng = ts->get_rng();
     int depth, cn;
     int i;
-    double buf[8];
+    double buff[8];
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     depth = cvtest::randInt(rng) % 3;
@@ -111,7 +111,7 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
     types[INPUT_OUTPUT][1] = types[REF_INPUT_OUTPUT][1] = CV_8UC1;
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(9,1);
-    
+
     if( !use_mask )
         sizes[INPUT_OUTPUT][1] = sizes[REF_INPUT_OUTPUT][1] = cvSize(0,0);
     else
@@ -119,7 +119,7 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
         CvSize sz = sizes[INPUT_OUTPUT][0];
         sizes[INPUT_OUTPUT][1] = sizes[REF_INPUT_OUTPUT][1] = cvSize(sz.width+2,sz.height+2);
     }
-    
+
     seed_pt.x = cvtest::randInt(rng) % sizes[INPUT_OUTPUT][0].width;
     seed_pt.y = cvtest::randInt(rng) % sizes[INPUT_OUTPUT][0].height;
 
@@ -127,7 +127,7 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
         l_diff = u_diff = Scalar::all(0.);
     else
     {
-        Mat m( 1, 8, CV_16S, buf );
+        Mat m( 1, 8, CV_16S, buff );
         rng.fill( m, RNG::NORMAL, Scalar::all(0), Scalar::all(32) );
         for( i = 0; i < 4; i++ )
         {
@@ -139,7 +139,7 @@ void CV_FloodFillTest::get_test_array_types_and_sizes( int test_case_idx,
     new_val = Scalar::all(0.);
     for( i = 0; i < cn; i++ )
         new_val.val[i] = cvtest::randReal(rng)*255;
-    
+
     test_cpp = (cvtest::randInt(rng) & 256) == 0;
 }
 
@@ -153,13 +153,13 @@ double CV_FloodFillTest::get_success_error_level( int /*test_case_idx*/, int i, 
 void CV_FloodFillTest::fill_array( int test_case_idx, int i, int j, Mat& arr )
 {
     RNG& rng = ts->get_rng();
-    
+
     if( i != INPUT && i != INPUT_OUTPUT )
     {
         cvtest::ArrayTest::fill_array( test_case_idx, i, j, arr );
         return;
     }
-    
+
     if( j == 0 )
     {
         Mat tmp = arr;
@@ -191,7 +191,7 @@ void CV_FloodFillTest::run_func()
     int flags = connectivity + (mask_only ? CV_FLOODFILL_MASK_ONLY : 0) +
         (range_type == 1 ? CV_FLOODFILL_FIXED_RANGE : 0) + (new_mask_val << 8);
     double* odata = test_mat[OUTPUT][0].ptr<double>();
-    
+
     if(!test_cpp)
     {
         CvConnectedComp comp;
@@ -255,7 +255,7 @@ cvTsFloodFill( CvMat* _img, CvPoint seed_pt, CvScalar new_val,
     int cols = _img->cols, rows = _img->rows;
     int u0 = 0, u1 = 0, u2 = 0;
     double s0 = 0, s1 = 0, s2 = 0;
-    
+
     if( CV_MAT_DEPTH(_img->type) == CV_8U || CV_MAT_DEPTH(_img->type) == CV_32S )
     {
         tmp = cvCreateMat( rows, cols, CV_MAKETYPE(CV_32F,CV_MAT_CN(_img->type)) );
@@ -395,7 +395,7 @@ cvTsFloodFill( CvMat* _img, CvPoint seed_pt, CvScalar new_val,
                     cvSeqPush( seq, &p );
                 }
             }
-        }        
+        }
     }
 
     r.x = r.width = seed_pt.x;

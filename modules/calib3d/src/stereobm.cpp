@@ -155,7 +155,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
             val = ((curr[x]*4 + curr[x-1] + curr[x+1] + prev[x] + next[x])*scale_g - sum*scale_s) >> 10;
             dptr[x] = tab[val + OFS];
         }
-        
+
         sum += vsum[x+wsz2] - vsum[x-wsz2-1];
         val = ((curr[x]*5 + curr[x-1] + prev[x] + next[x])*scale_g - sum*scale_s) >> 10;
         dptr[x] = tab[val + OFS];
@@ -170,15 +170,15 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
     const int OFS = 256*4, TABSZ = OFS*2 + 256;
     uchar tab[TABSZ];
     Size size = src.size();
-    
+
     for( x = 0; x < TABSZ; x++ )
         tab[x] = (uchar)(x - OFS < -ftzero ? 0 : x - OFS > ftzero ? ftzero*2 : x - OFS + ftzero);
     uchar val0 = tab[0 + OFS];
-    
+
 #if CV_SSE2
     volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
 #endif
-    
+
     for( y = 0; y < size.height-1; y += 2 )
     {
         const uchar* srow1 = src.ptr<uchar>(y);
@@ -187,10 +187,10 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         const uchar* srow3 = y < size.height-2 ? srow1 + src.step*2 : srow1;
         uchar* dptr0 = dst.ptr<uchar>(y);
         uchar* dptr1 = dptr0 + dst.step;
-        
+
         dptr0[0] = dptr0[size.width-1] = dptr1[0] = dptr1[size.width-1] = val0;
         x = 1;
-        
+
     #if CV_SSE2
         if( useSIMD )
         {
@@ -205,26 +205,26 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 
                 d0 = _mm_sub_epi16(d0, c0);
                 d1 = _mm_sub_epi16(d1, c1);
-                
+
                 __m128i c2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x - 1)), z);
                 __m128i c3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x - 1)), z);
                 __m128i d2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x + 1)), z);
                 __m128i d3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow2 + x + 1)), z);
-                
+
                 d2 = _mm_sub_epi16(d2, c2);
                 d3 = _mm_sub_epi16(d3, c3);
-                
+
                 __m128i v0 = _mm_add_epi16(d0, _mm_add_epi16(d2, _mm_add_epi16(d1, d1)));
                 __m128i v1 = _mm_add_epi16(d1, _mm_add_epi16(d3, _mm_add_epi16(d2, d2)));
                 v0 = _mm_packus_epi16(_mm_add_epi16(v0, ftz), _mm_add_epi16(v1, ftz));
                 v0 = _mm_min_epu8(v0, ftz2);
-                
+
                 _mm_storel_epi64((__m128i*)(dptr0 + x), v0);
                 _mm_storel_epi64((__m128i*)(dptr1 + x), _mm_unpackhi_epi64(v0, v0));
             }
         }
     #endif
-        
+
         for( ; x < size.width-1; x++ )
         {
             int d0 = srow0[x+1] - srow0[x-1], d1 = srow1[x+1] - srow1[x-1],
@@ -235,7 +235,7 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
             dptr1[x] = (uchar)v1;
         }
     }
-    
+
     for( ; y < size.height; y++ )
     {
         uchar* dptr = dst.ptr<uchar>(y);
@@ -336,7 +336,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
         short* costptr = cost.data ? (short*)cost.data + lofs + x : &costbuf;
         int x0 = x - wsz2 - 1, x1 = x + wsz2;
         const uchar* cbuf_sub = cbuf0 + ((x0 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
-        uchar* cbuf = cbuf0 + ((x1 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
+        cbuf = cbuf0 + ((x1 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
@@ -374,7 +374,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
         // initialize sums
         for( d = 0; d < ndisp; d++ )
             sad[d] = (ushort)(hsad0[d-ndisp*dy0]*(wsz2 + 2 - dy0));
-        
+
         hsad = hsad0 + (1 - dy0)*ndisp;
         for( y = 1 - dy0; y < wsz2; y++, hsad += ndisp )
             for( d = 0; d < ndisp; d += 16 )
@@ -405,28 +405,28 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
             {
                 __m128i u0 = _mm_load_si128((__m128i*)(hsad_sub + d));
                 __m128i u1 = _mm_load_si128((__m128i*)(hsad + d));
-                                
+
                 __m128i v0 = _mm_load_si128((__m128i*)(hsad_sub + d + 8));
                 __m128i v1 = _mm_load_si128((__m128i*)(hsad + d + 8));
-                
+
                 __m128i usad8 = _mm_load_si128((__m128i*)(sad + d));
                 __m128i vsad8 = _mm_load_si128((__m128i*)(sad + d + 8));
-                
+
                 u1 = _mm_sub_epi16(u1, u0);
                 v1 = _mm_sub_epi16(v1, v0);
                 usad8 = _mm_add_epi16(usad8, u1);
                 vsad8 = _mm_add_epi16(vsad8, v1);
-                
+
                 mask = _mm_cmpgt_epi16(minsad8, usad8);
                 minsad8 = _mm_min_epi16(minsad8, usad8);
                 mind8 = _mm_max_epi16(mind8, _mm_and_si128(mask, d8));
-                                
+
                 _mm_store_si128((__m128i*)(sad + d), usad8);
                 _mm_store_si128((__m128i*)(sad + d + 8), vsad8);
-                
+
                 mask = _mm_cmpgt_epi16(minsad8, vsad8);
                 minsad8 = _mm_min_epi16(minsad8, vsad8);
-                
+
                 d8 = _mm_add_epi16(d8, dd_8);
                 mind8 = _mm_max_epi16(mind8, _mm_and_si128(mask, d8));
                 d8 = _mm_add_epi16(d8, dd_8);
@@ -438,32 +438,33 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
                 dptr[y*dstep] = FILTERED;
                 continue;
             }
-            
+
             __m128i minsad82 = _mm_unpackhi_epi64(minsad8, minsad8);
             __m128i mind82 = _mm_unpackhi_epi64(mind8, mind8);
             mask = _mm_cmpgt_epi16(minsad8, minsad82);
             mind8 = _mm_xor_si128(mind8,_mm_and_si128(_mm_xor_si128(mind82,mind8),mask));
             minsad8 = _mm_min_epi16(minsad8, minsad82);
-             
+
             minsad82 = _mm_shufflelo_epi16(minsad8, _MM_SHUFFLE(3,2,3,2));
             mind82 = _mm_shufflelo_epi16(mind8, _MM_SHUFFLE(3,2,3,2));
             mask = _mm_cmpgt_epi16(minsad8, minsad82);
             mind8 = _mm_xor_si128(mind8,_mm_and_si128(_mm_xor_si128(mind82,mind8),mask));
             minsad8 = _mm_min_epi16(minsad8, minsad82);
-             
+
             minsad82 = _mm_shufflelo_epi16(minsad8, 1);
             mind82 = _mm_shufflelo_epi16(mind8, 1);
             mask = _mm_cmpgt_epi16(minsad8, minsad82);
             mind8 = _mm_xor_si128(mind8,_mm_and_si128(_mm_xor_si128(mind82,mind8),mask));
             mind = (short)_mm_cvtsi128_si32(mind8);
             minsad = sad[mind];
-             
+
             if( uniquenessRatio > 0 )
             {
                 int thresh = minsad + ((minsad * uniquenessRatio) >> 8);
                 __m128i thresh8 = _mm_set1_epi16((short)(thresh + 1));
                 __m128i d1 = _mm_set1_epi16((short)(mind-1)), d2 = _mm_set1_epi16((short)(mind+1));
-                __m128i dd_16 = _mm_add_epi16(dd_8, dd_8), d8 = _mm_sub_epi16(d0_8, dd_16);
+                __m128i dd_16 = _mm_add_epi16(dd_8, dd_8);
+                 d8 = _mm_sub_epi16(d0_8, dd_16);
 
                 for( d = 0; d < ndisp; d += 16 )
                 {
@@ -492,7 +493,8 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
 
             if( 0 < mind && mind < ndisp - 1 )
             {
-                int p = sad[mind+1], n = sad[mind-1], d = p + n - 2*sad[mind] + std::abs(p - n);
+                int p = sad[mind+1], n = sad[mind-1];
+                d = p + n - 2*sad[mind] + std::abs(p - n);
                 dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
             }
             else
@@ -567,7 +569,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             htext[y] += tab[lval];
         }
     }
-    
+
     // initialize the left and right borders of the disparity map
     for( y = 0; y < height; y++ )
     {
@@ -583,7 +585,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         int* costptr = cost.data ? (int*)cost.data + lofs + x : &costbuf;
         int x0 = x - wsz2 - 1, x1 = x + wsz2;
         const uchar* cbuf_sub = cbuf0 + ((x0 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
-        uchar* cbuf = cbuf0 + ((x1 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
+        cbuf = cbuf0 + ((x1 + wsz2 + 1) % (wsz + 1))*cstep - dy0*ndisp;
         hsad = hsad0 - dy0*ndisp;
         lptr_sub = lptr0 + MIN(MAX(x0, -lofs), width-1-lofs) - dy0*sstep;
         lptr = lptr0 + MIN(MAX(x1, -lofs), width-1-lofs) - dy0*sstep;
@@ -611,7 +613,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         // initialize sums
         for( d = 0; d < ndisp; d++ )
             sad[d] = (int)(hsad0[d-ndisp*dy0]*(wsz2 + 2 - dy0));
-        
+
         hsad = hsad0 + (1 - dy0)*ndisp;
         for( y = 1 - dy0; y < wsz2; y++, hsad += ndisp )
             for( d = 0; d < ndisp; d++ )
@@ -662,7 +664,8 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             {
             sad[-1] = sad[1];
             sad[ndisp] = sad[ndisp-2];
-            int p = sad[mind+1], n = sad[mind-1], d = p + n - 2*sad[mind] + std::abs(p - n);
+            int p = sad[mind+1], n = sad[mind-1];
+            d = p + n - 2*sad[mind] + std::abs(p - n);
             dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
             costptr[y*coststep] = sad[mind];
             }
@@ -681,16 +684,16 @@ struct PrefilterInvoker
         state = _state;
     }
 
-    void operator()( int ind ) const 
+    void operator()( int ind ) const
     {
         if( state->preFilterType == CV_STEREO_BM_NORMALIZED_RESPONSE )
             prefilterNorm( *imgs0[ind], *imgs[ind], state->preFilterSize, state->preFilterCap, buf[ind] );
         else
-            prefilterXSobel( *imgs0[ind], *imgs[ind], state->preFilterCap );     
+            prefilterXSobel( *imgs0[ind], *imgs[ind], state->preFilterCap );
     }
-    
+
     const Mat* imgs0[2];
-    Mat* imgs[2];    
+    Mat* imgs[2];
     uchar* buf[2];
     CvStereoBMState *state;
 };
@@ -709,21 +712,21 @@ struct FindStereoCorrespInvoker
         useShorts = _useShorts;
         validDisparityRect = _validDisparityRect;
     }
-     
-    void operator()( const BlockedRange& range ) const 
+
+    void operator()( const BlockedRange& range ) const
     {
         int cols = left->cols, rows = left->rows;
         int _row0 = min(cvRound(range.begin() * rows / nstripes), rows);
         int _row1 = min(cvRound(range.end() * rows / nstripes), rows);
         uchar *ptr = state->slidingSumBuf->data.ptr + range.begin() * stripeBufSize;
         int FILTERED = (state->minDisparity - 1)*16;
-        
+
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
         if( roi.height == 0 )
             return;
         int row0 = roi.y;
         int row1 = roi.y + roi.height;
-        
+
         Mat part;
         if( row0 > _row0 )
         {
@@ -735,22 +738,22 @@ struct FindStereoCorrespInvoker
             part = disp->rowRange(row1, _row1);
             part = Scalar::all(FILTERED);
         }
-        
+
         Mat left_i = left->rowRange(row0, row1);
         Mat right_i = right->rowRange(row0, row1);
         Mat disp_i = disp->rowRange(row0, row1);
         Mat cost_i = state->disp12MaxDiff >= 0 ? Mat(state->cost).rowRange(row0, row1) : Mat();
-        
-#if CV_SSE2        
+
+#if CV_SSE2
         if( useShorts )
             findStereoCorrespondenceBM_SSE2( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
         else
-#endif            
+#endif
             findStereoCorrespondenceBM( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
-        
+
         if( state->disp12MaxDiff >= 0 )
             validateDisparity( disp_i, cost_i, state->minDisparity, state->numberOfDisparities, state->disp12MaxDiff );
-        
+
         if( roi.x > 0 )
         {
             part = disp_i.colRange(0, roi.x);
@@ -767,7 +770,7 @@ protected:
     const Mat *left, *right;
     Mat* disp;
     CvStereoBMState *state;
-    
+
     int nstripes;
     int stripeBufSize;
     bool useShorts;
@@ -775,7 +778,7 @@ protected:
 };
 
 static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat& disp0, CvStereoBMState* state)
-{    
+{
     if (left0.size() != right0.size() || disp0.size() != left0.size())
         CV_Error( CV_StsUnmatchedSizes, "All the images must have the same size" );
 
@@ -783,7 +786,7 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
         CV_Error( CV_StsUnsupportedFormat, "Both input images must have CV_8UC1" );
 
     if (disp0.type() != CV_16SC1 && disp0.type() != CV_32FC1)
-        CV_Error( CV_StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );    
+        CV_Error( CV_StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
 
     if( !state )
         CV_Error( CV_StsNullPtr, "Stereo BM state is NULL." );
@@ -809,7 +812,7 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
 
     if( state->uniquenessRatio < 0 )
         CV_Error( CV_StsOutOfRange, "uniqueness ratio must be non-negative" );
-    
+
     if( !state->preFilteredImg0 || state->preFilteredImg0->cols * state->preFilteredImg0->rows < left0.cols * left0.rows )
     {
         cvReleaseMat( &state->preFilteredImg0 );
@@ -822,7 +825,7 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
     }
     Mat left(left0.size(), CV_8U, state->preFilteredImg0->data.ptr);
     Mat right(right0.size(), CV_8U, state->preFilteredImg1->data.ptr);
-    
+
     int mindisp = state->minDisparity;
     int ndisp = state->numberOfDisparities;
 
@@ -832,15 +835,15 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
     int rofs = -min(ndisp - 1 + mindisp, 0);
     int width1 = width - rofs - ndisp + 1;
     int FILTERED = (state->minDisparity - 1) << DISPARITY_SHIFT;
-    
+
     if( lofs >= width || rofs >= width || width1 < 1 )
     {
-        disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << DISPARITY_SHIFT) ) );        
+        disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << DISPARITY_SHIFT) ) );
         return;
     }
 
     Mat disp = disp0;
-    
+
     if( disp0.type() == CV_32F)
     {
         if( !state->disp || state->disp->rows != disp0.rows || state->disp->cols != disp0.cols )
@@ -850,8 +853,8 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
         }
         disp = cv::cvarrToMat(state->disp);
     }
-             
-    int wsz = state->SADWindowSize;    
+
+    int wsz = state->SADWindowSize;
     int bufSize0 = (int)((ndisp + 2)*sizeof(int));
     bufSize0 += (int)((height+wsz+2)*ndisp*sizeof(int));
     bufSize0 += (int)((height + wsz + 2)*sizeof(int));
@@ -861,16 +864,16 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
     int bufSize2 = 0;
     if( state->speckleRange >= 0 && state->speckleWindowSize > 0 )
         bufSize2 = width*height*(sizeof(cv::Point_<short>) + sizeof(int) + sizeof(uchar));
-    
+
 #if CV_SSE2
     bool useShorts = state->preFilterCap <= 31 && state->SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
 #else
     const bool useShorts = false;
 #endif
-    
-#ifdef HAVE_TBB    
+
+#ifdef HAVE_TBB
     const double SAD_overhead_coeff = 10.0;
-    double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread    
+    double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread
     double maxStripeSize = min(max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
     int nstripes = cvCeil(height / maxStripeSize);
 #else
@@ -878,27 +881,27 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
 #endif
 
     int bufSize = max(bufSize0 * nstripes, max(bufSize1 * 2, bufSize2));
-    
+
     if( !state->slidingSumBuf || state->slidingSumBuf->cols < bufSize )
     {
         cvReleaseMat( &state->slidingSumBuf );
         state->slidingSumBuf = cvCreateMat( 1, bufSize, CV_8U );
     }
-    
+
     uchar *_buf = state->slidingSumBuf->data.ptr;
     int idx[] = {0,1};
     parallel_do(idx, idx+2, PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, state));
-    
+
     Rect validDisparityRect(0, 0, width, height), R1 = state->roi1, R2 = state->roi2;
     validDisparityRect = getValidDisparityROI(R1.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
                                               R2.area() > 0 ? Rect(0, 0, width, height) : validDisparityRect,
                                               state->minDisparity, state->numberOfDisparities,
-                                              state->SADWindowSize); 
-    
+                                              state->SADWindowSize);
+
     parallel_for(BlockedRange(0, nstripes),
                  FindStereoCorrespInvoker(left, right, disp, state, nstripes,
                                           bufSize0, useShorts, validDisparityRect));
-    
+
     if( state->speckleRange >= 0 && state->speckleWindowSize > 0 )
     {
         Mat buf(state->slidingSumBuf);
@@ -906,7 +909,7 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
     }
 
     if (disp0.data != disp.data)
-        disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);     
+        disp.convertTo(disp0, disp0.type(), 1./(1 << DISPARITY_SHIFT), 0);
 }
 
 StereoBM::StereoBM()
@@ -928,13 +931,13 @@ void StereoBM::operator()( InputArray _left, InputArray _right,
     CV_Assert( disptype == CV_16S || disptype == CV_32F );
     _disparity.create(left.size(), disptype);
     Mat disparity = _disparity.getMat();
-    
+
     findStereoCorrespondenceBM(left, right, disparity, state);
 }
 
 template<> void Ptr<CvStereoBMState>::delete_obj()
 { cvReleaseStereoBMState(&obj); }
-    
+
 }
 
 CV_IMPL void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
@@ -942,7 +945,7 @@ CV_IMPL void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* ri
 {
     cv::Mat left = cv::cvarrToMat(leftarr),
         right = cv::cvarrToMat(rightarr),
-        disp = cv::cvarrToMat(disparr);  
+        disp = cv::cvarrToMat(disparr);
     cv::findStereoCorrespondenceBM(left, right, disp, state);
 }
 

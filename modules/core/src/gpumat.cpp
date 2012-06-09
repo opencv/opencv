@@ -524,30 +524,30 @@ cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     dataend += step * (rows - 1) + minstep;
 }
 
-cv::gpu::GpuMat::GpuMat(const GpuMat& m, Range rowRange, Range colRange)
+cv::gpu::GpuMat::GpuMat(const GpuMat& m, Range _rowRange, Range _colRange)
 {
     flags = m.flags;
     step = m.step; refcount = m.refcount;
     data = m.data; datastart = m.datastart; dataend = m.dataend;
 
-    if (rowRange == Range::all())
+    if (_rowRange == Range::all())
         rows = m.rows;
     else
     {
-        CV_Assert(0 <= rowRange.start && rowRange.start <= rowRange.end && rowRange.end <= m.rows);
+        CV_Assert(0 <= _rowRange.start && _rowRange.start <= _rowRange.end && _rowRange.end <= m.rows);
 
-        rows = rowRange.size();
-        data += step*rowRange.start;
+        rows = _rowRange.size();
+        data += step*_rowRange.start;
     }
 
-    if (colRange == Range::all())
+    if (_colRange == Range::all())
         cols = m.cols;
     else
     {
-        CV_Assert(0 <= colRange.start && colRange.start <= colRange.end && colRange.end <= m.cols);
+        CV_Assert(0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols);
 
-        cols = colRange.size();
-        data += colRange.start*elemSize();
+        cols = _colRange.size();
+        data += _colRange.start*elemSize();
         flags &= cols < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
     }
 

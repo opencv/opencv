@@ -171,9 +171,9 @@ namespace cv
     {
     }
 
-    Octree::Octree(const vector<Point3f>& points3d, int maxLevels, int minPoints)
+    Octree::Octree(const vector<Point3f>& points3d, int maxLevels, int _minPoints)
     {
-        buildTree(points3d, maxLevels, minPoints);
+        buildTree(points3d, maxLevels, _minPoints);
     }
 
     Octree::~Octree()
@@ -256,12 +256,12 @@ namespace cv
         }
     }
 
-    void Octree::buildTree(const vector<Point3f>& points3d, int maxLevels, int minPoints)
+    void Octree::buildTree(const vector<Point3f>& points3d, int maxLevels, int _minPoints)
     {
         assert((size_t)maxLevels * 8 < MAX_STACK_SIZE);
         points.resize(points3d.size());
         std::copy(points3d.begin(), points3d.end(), points.begin());
-        this->minPoints = minPoints;
+        minPoints = _minPoints;
 
         nodes.clear();
         nodes.push_back(Node());
@@ -275,7 +275,7 @@ namespace cv
         for (size_t i = 0; i < MAX_LEAFS; i++)
             root.children[i] = 0;
 
-        if (maxLevels != 1 && (root.end - root.begin) > minPoints)
+        if (maxLevels != 1 && (root.end - root.begin) > _minPoints)
         {
             root.isLeaf = false;
             buildNext(0);

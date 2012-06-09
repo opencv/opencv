@@ -93,18 +93,19 @@ class CvKDTreeWrap : public CvFeatureTree {
     assert(results->cols == k);
     assert(dist->cols == k);
 
-    for (int j = 0; j < d->rows; ++j) {
-      const typename __treetype::scalar_type* dj =
-  (const typename __treetype::scalar_type*) dptr;
+    for (int j = 0; j < d->rows; ++j)
+    {
+      const typename __treetype::scalar_type* dj = (const typename __treetype::scalar_type*) dptr;
 
       int* resultsj = (int*) resultsptr;
       double* distj = (double*) distptr;
       tr->find_nn_bbf(dj, k, emax, nn);
 
       assert((int)nn.size() <= k);
-      for (unsigned int j = 0; j < nn.size(); ++j) {
-  *resultsj++ = *nn[j].p;
-  *distj++ = nn[j].dist;
+      for (unsigned int i = 0; i < nn.size(); ++i)
+      {
+        *resultsj++ = *nn[i].p;
+        *distj++ = nn[i].dist;
       }
       std::fill(resultsj, resultsj + k - nn.size(), -1);
       std::fill(distj, distj + k - nn.size(), 0);

@@ -43,7 +43,7 @@
 #include <stdio.h>
 #include "lkpyramid.hpp"
 
-namespace 
+namespace
 {
 static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 {
@@ -56,23 +56,23 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::calcSharrDeriv(src, dst))
         return;
-#endif   
-    
+#endif
+
     int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
     deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
-    
+
 #if CV_SSE2
     __m128i z = _mm_setzero_si128(), c3 = _mm_set1_epi16(3), c10 = _mm_set1_epi16(10);
 #endif
-    
+
     for( y = 0; y < rows; y++ )
     {
         const uchar* srow0 = src.ptr<uchar>(y > 0 ? y-1 : rows > 1 ? 1 : 0);
         const uchar* srow1 = src.ptr<uchar>(y);
         const uchar* srow2 = src.ptr<uchar>(y < rows-1 ? y+1 : rows > 1 ? rows-2 : 0);
         deriv_type* drow = dst.ptr<deriv_type>(y);
-        
+
         // do vertical convolution
         x = 0;
 #if CV_SSE2
@@ -94,7 +94,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
             trow0[x] = (deriv_type)t0;
             trow1[x] = (deriv_type)t1;
         }
-        
+
         // make border
         int x0 = (cols > 1 ? 1 : 0)*cn, x1 = (cols > 1 ? cols-2 : 0)*cn;
         for( int k = 0; k < cn; k++ )
@@ -102,7 +102,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
             trow0[-cn + k] = trow0[x0 + k]; trow0[colsn + k] = trow0[x1 + k];
             trow1[-cn + k] = trow1[x0 + k]; trow1[colsn + k] = trow1[x1 + k];
         }
-            
+
         // do horizontal convolution, interleave the results and store them to dst
         x = 0;
 #if CV_SSE2
@@ -113,7 +113,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
             __m128i s2 = _mm_loadu_si128((const __m128i*)(trow1 + x - cn));
             __m128i s3 = _mm_load_si128((const __m128i*)(trow1 + x));
             __m128i s4 = _mm_loadu_si128((const __m128i*)(trow1 + x + cn));
-            
+
             __m128i t0 = _mm_sub_epi16(s1, s0);
             __m128i t1 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s2, s4), c3), _mm_mullo_epi16(s3, c10));
             __m128i t2 = _mm_unpacklo_epi16(t0, t1);
@@ -122,7 +122,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
             _mm_storeu_si128((__m128i*)(drow + x*2), t2);
             _mm_storeu_si128((__m128i*)(drow + x*2 + 8), t0);
         }
-#endif        
+#endif
         for( ; x < colsn; x++ )
         {
             deriv_type t0 = (deriv_type)(trow0[x+cn] - trow0[x-cn]);
@@ -133,7 +133,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 }
 
 }//namespace
-    
+
 cv::detail::LKTrackerInvoker::LKTrackerInvoker(
                       const Mat& _prevImg, const Mat& _prevDeriv, const Mat& _nextImg,
                       const Point2f* _prevPts, Point2f* _nextPts,
@@ -162,14 +162,14 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
     const Mat& I = *prevImg;
     const Mat& J = *nextImg;
     const Mat& derivI = *prevDeriv;
-    
+
     int j, cn = I.channels(), cn2 = cn*2;
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
     int derivDepth = DataType<deriv_type>::depth;
-    
+
     Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
     Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
-    
+
     for( int ptidx = range.begin(); ptidx < range.end(); ptidx++ )
     {
         Point2f prevPt = prevPts[ptidx]*(float)(1./(1 << level));
@@ -184,12 +184,12 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         else
             nextPt = nextPts[ptidx]*2.f;
         nextPts[ptidx] = nextPt;
-        
+
         Point2i iprevPt, inextPt;
         prevPt -= halfWin;
         iprevPt.x = cvFloor(prevPt.x);
         iprevPt.y = cvFloor(prevPt.y);
-        
+
         if( iprevPt.x < -winSize.width || iprevPt.x >= derivI.cols ||
             iprevPt.y < -winSize.height || iprevPt.y >= derivI.rows )
         {
@@ -202,7 +202,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
             }
             continue;
         }
-        
+
         float a = prevPt.x - iprevPt.x;
         float b = prevPt.y - iprevPt.y;
         const int W_BITS = 14, W_BITS1 = 14;
@@ -211,12 +211,12 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         int iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
         int iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
         int iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
-        
+
         int dstep = (int)(derivI.step/derivI.elemSize1());
         int step = (int)(I.step/I.elemSize1());
         CV_Assert( step == (int)(J.step/J.elemSize1()) );
         float A11 = 0, A12 = 0, A22 = 0;
-        
+
 #if CV_SSE2
         __m128i qw0 = _mm_set1_epi32(iw00 + (iw01 << 16));
         __m128i qw1 = _mm_set1_epi32(iw10 + (iw11 << 16));
@@ -225,39 +225,39 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         __m128i qdelta = _mm_set1_epi32(1 << (W_BITS1-5-1));
         __m128 qA11 = _mm_setzero_ps(), qA12 = _mm_setzero_ps(), qA22 = _mm_setzero_ps();
 #endif
-        
+
         // extract the patch from the first image, compute covariation matrix of derivatives
         int x, y;
         for( y = 0; y < winSize.height; y++ )
         {
             const uchar* src = (const uchar*)I.data + (y + iprevPt.y)*step + iprevPt.x*cn;
             const deriv_type* dsrc = (const deriv_type*)derivI.data + (y + iprevPt.y)*dstep + iprevPt.x*cn2;
-            
+
             deriv_type* Iptr = (deriv_type*)(IWinBuf.data + y*IWinBuf.step);
             deriv_type* dIptr = (deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
-            
+
             x = 0;
-            
+
 #if CV_SSE2
             for( ; x <= winSize.width*cn - 4; x += 4, dsrc += 4*2, dIptr += 4*2 )
             {
                 __m128i v00, v01, v10, v11, t0, t1;
-                
+
                 v00 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x)), z);
                 v01 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x + cn)), z);
                 v10 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x + step)), z);
                 v11 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x + step + cn)), z);
-                
+
                 t0 = _mm_add_epi32(_mm_madd_epi16(_mm_unpacklo_epi16(v00, v01), qw0),
                                    _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
                 t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta), W_BITS1-5);
                 _mm_storel_epi64((__m128i*)(Iptr + x), _mm_packs_epi32(t0,t0));
-                
+
                 v00 = _mm_loadu_si128((const __m128i*)(dsrc));
                 v01 = _mm_loadu_si128((const __m128i*)(dsrc + cn2));
                 v10 = _mm_loadu_si128((const __m128i*)(dsrc + dstep));
                 v11 = _mm_loadu_si128((const __m128i*)(dsrc + dstep + cn2));
-                
+
                 t0 = _mm_add_epi32(_mm_madd_epi16(_mm_unpacklo_epi16(v00, v01), qw0),
                                    _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
                 t1 = _mm_add_epi32(_mm_madd_epi16(_mm_unpackhi_epi16(v00, v01), qw0),
@@ -265,20 +265,20 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                 t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta_d), W_BITS1);
                 t1 = _mm_srai_epi32(_mm_add_epi32(t1, qdelta_d), W_BITS1);
                 v00 = _mm_packs_epi32(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
-                
+
                 _mm_storeu_si128((__m128i*)dIptr, v00);
                 t0 = _mm_srai_epi32(v00, 16); // Iy0 Iy1 Iy2 Iy3
                 t1 = _mm_srai_epi32(_mm_slli_epi32(v00, 16), 16); // Ix0 Ix1 Ix2 Ix3
-                
+
                 __m128 fy = _mm_cvtepi32_ps(t0);
                 __m128 fx = _mm_cvtepi32_ps(t1);
-                
+
                 qA22 = _mm_add_ps(qA22, _mm_mul_ps(fy, fy));
                 qA12 = _mm_add_ps(qA12, _mm_mul_ps(fx, fy));
                 qA11 = _mm_add_ps(qA11, _mm_mul_ps(fx, fx));
             }
 #endif
-            
+
             for( ; x < winSize.width*cn; x++, dsrc += 2, dIptr += 2 )
             {
                 int ival = CV_DESCALE(src[x]*iw00 + src[x+cn]*iw01 +
@@ -287,17 +287,17 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                                        dsrc[dstep]*iw10 + dsrc[dstep+cn2]*iw11, W_BITS1);
                 int iyval = CV_DESCALE(dsrc[1]*iw00 + dsrc[cn2+1]*iw01 + dsrc[dstep+1]*iw10 +
                                        dsrc[dstep+cn2+1]*iw11, W_BITS1);
-                
+
                 Iptr[x] = (short)ival;
                 dIptr[0] = (short)ixval;
                 dIptr[1] = (short)iyval;
-                
+
                 A11 += (float)(ixval*ixval);
                 A12 += (float)(ixval*iyval);
                 A22 += (float)(iyval*iyval);
             }
         }
-        
+
 #if CV_SSE2
         float CV_DECL_ALIGNED(16) A11buf[4], A12buf[4], A22buf[4];
         _mm_store_ps(A11buf, qA11);
@@ -307,35 +307,35 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         A12 += A12buf[0] + A12buf[1] + A12buf[2] + A12buf[3];
         A22 += A22buf[0] + A22buf[1] + A22buf[2] + A22buf[3];
 #endif
-        
+
         A11 *= FLT_SCALE;
         A12 *= FLT_SCALE;
         A22 *= FLT_SCALE;
-        
+
         float D = A11*A22 - A12*A12;
         float minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
                         4.f*A12*A12))/(2*winSize.width*winSize.height);
-        
+
         if( err && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) != 0 )
             err[ptidx] = (float)minEig;
-        
+
         if( minEig < minEigThreshold || D < FLT_EPSILON )
         {
             if( level == 0 && status )
                 status[ptidx] = false;
             continue;
         }
-        
+
         D = 1.f/D;
-        
+
         nextPt -= halfWin;
         Point2f prevDelta;
-        
+
         for( j = 0; j < criteria.maxCount; j++ )
         {
             inextPt.x = cvFloor(nextPt.x);
             inextPt.y = cvFloor(nextPt.y);
-            
+
             if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
                inextPt.y < -winSize.height || inextPt.y >= J.rows )
             {
@@ -343,7 +343,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                     status[ptidx] = false;
                 break;
             }
-            
+
             a = nextPt.x - inextPt.x;
             b = nextPt.y - inextPt.y;
             iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
@@ -356,15 +356,15 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
             qw1 = _mm_set1_epi32(iw10 + (iw11 << 16));
             __m128 qb0 = _mm_setzero_ps(), qb1 = _mm_setzero_ps();
 #endif
-            
+
             for( y = 0; y < winSize.height; y++ )
             {
                 const uchar* Jptr = (const uchar*)J.data + (y + inextPt.y)*step + inextPt.x*cn;
                 const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
                 const deriv_type* dIptr = (const deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
-                
+
                 x = 0;
-                
+
 #if CV_SSE2
                 for( ; x <= winSize.width*cn - 8; x += 8, dIptr += 8*2 )
                 {
@@ -373,7 +373,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                     __m128i v01 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(Jptr + x + cn)), z);
                     __m128i v10 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(Jptr + x + step)), z);
                     __m128i v11 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(Jptr + x + step + cn)), z);
-                    
+
                     __m128i t0 = _mm_add_epi32(_mm_madd_epi16(_mm_unpacklo_epi16(v00, v01), qw0),
                                                _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
                     __m128i t1 = _mm_add_epi32(_mm_madd_epi16(_mm_unpackhi_epi16(v00, v01), qw0),
@@ -383,7 +383,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                     diff0 = _mm_subs_epi16(_mm_packs_epi32(t0, t1), diff0);
                     diff1 = _mm_unpackhi_epi16(diff0, diff0);
                     diff0 = _mm_unpacklo_epi16(diff0, diff0); // It0 It0 It1 It1 ...
-                    v00 = _mm_loadu_si128((const __m128i*)(dIptr)); // Ix0 Iy0 Ix1 Iy1 ... 
+                    v00 = _mm_loadu_si128((const __m128i*)(dIptr)); // Ix0 Iy0 Ix1 Iy1 ...
                     v01 = _mm_loadu_si128((const __m128i*)(dIptr + 8));
                     v10 = _mm_mullo_epi16(v00, diff0);
                     v11 = _mm_mulhi_epi16(v00, diff0);
@@ -399,7 +399,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                     qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
                 }
 #endif
-                
+
                 for( ; x < winSize.width*cn; x++, dIptr += 2 )
                 {
                     int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
@@ -409,7 +409,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
                     b2 += (float)(diff*dIptr[1]);
                 }
             }
-            
+
 #if CV_SSE2
             float CV_DECL_ALIGNED(16) bbuf[4];
             _mm_store_ps(bbuf, _mm_add_ps(qb0, qb1));
@@ -419,17 +419,17 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
 
             b1 *= FLT_SCALE;
             b2 *= FLT_SCALE;
-            
+
             Point2f delta( (float)((A12*b2 - A22*b1) * D),
                           (float)((A12*b1 - A11*b2) * D));
             //delta = -delta;
-            
+
             nextPt += delta;
             nextPts[ptidx] = nextPt + halfWin;
-            
+
             if( delta.ddot(delta) <= criteria.epsilon )
                 break;
-            
+
             if( j > 0 && std::abs(delta.x + prevDelta.x) < 0.01 &&
                std::abs(delta.y + prevDelta.y) < 0.01 )
             {
@@ -438,36 +438,36 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
             }
             prevDelta = delta;
         }
-        
+
         if( status[ptidx] && err && level == 0 && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) == 0 )
         {
-            Point2f nextPt = nextPts[ptidx] - halfWin;
-            Point inextPt;
-            
-            inextPt.x = cvFloor(nextPt.x);
-            inextPt.y = cvFloor(nextPt.y);
-            
-            if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
-                inextPt.y < -winSize.height || inextPt.y >= J.rows )
+            Point2f nextPoint = nextPts[ptidx] - halfWin;
+            Point inextPoint;
+
+            inextPoint.x = cvFloor(nextPoint.x);
+            inextPoint.y = cvFloor(nextPoint.y);
+
+            if( inextPoint.x < -winSize.width || inextPoint.x >= J.cols ||
+                inextPoint.y < -winSize.height || inextPoint.y >= J.rows )
             {
                 if( status )
                     status[ptidx] = false;
                 continue;
             }
-            
-            float a = nextPt.x - inextPt.x;
-            float b = nextPt.y - inextPt.y;
-            iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
-            iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
-            iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
+
+            float aa = nextPoint.x - inextPoint.x;
+            float bb = nextPoint.y - inextPoint.y;
+            iw00 = cvRound((1.f - aa)*(1.f - bb)*(1 << W_BITS));
+            iw01 = cvRound(aa*(1.f - bb)*(1 << W_BITS));
+            iw10 = cvRound((1.f - aa)*bb*(1 << W_BITS));
             iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
             float errval = 0.f;
-            
+
             for( y = 0; y < winSize.height; y++ )
             {
-                const uchar* Jptr = (const uchar*)J.data + (y + inextPt.y)*step + inextPt.x*cn;
+                const uchar* Jptr = (const uchar*)J.data + (y + inextPoint.y)*step + inextPoint.x*cn;
                 const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
-                
+
                 for( x = 0; x < winSize.width*cn; x++ )
                 {
                     int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
@@ -480,7 +480,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
         }
     }
 }
-    
+
 int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Size winSize, int maxLevel, bool withDerivatives,
                                 int pyrBorder, int derivBorder, bool tryReuseInputImage)
 {
@@ -511,7 +511,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     if(!lvl0IsSet)
     {
         Mat& temp = pyramid.getMatRef(0);
-        
+
         if(!temp.empty())
             temp.adjustROI(winSize.height, winSize.height, winSize.width, winSize.width);
         if(temp.type() != img.type() || temp.cols != winSize.width*2 + img.cols || temp.rows != winSize.height * 2 + img.rows)
@@ -533,7 +533,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
         if (level != 0)
         {
             Mat& temp = pyramid.getMatRef(level * pyrstep);
-            
+
             if(!temp.empty())
                 temp.adjustROI(winSize.height, winSize.height, winSize.width, winSize.width);
             if(temp.type() != img.type() || temp.cols != winSize.width*2 + sz.width || temp.rows != winSize.height * 2 + sz.height)
@@ -591,7 +591,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
 
     int level=0, i, npoints;
     CV_Assert( (npoints = prevPtsMat.checkVector(2, CV_32F, true)) >= 0 );
-    
+
     if( npoints == 0 )
     {
         _nextPts.release();
@@ -599,25 +599,25 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         _err.release();
         return;
     }
-    
+
     if( !(flags & OPTFLOW_USE_INITIAL_FLOW) )
         _nextPts.create(prevPtsMat.size(), prevPtsMat.type(), -1, true);
-    
+
     Mat nextPtsMat = _nextPts.getMat();
     CV_Assert( nextPtsMat.checkVector(2, CV_32F, true) == npoints );
-    
+
     const Point2f* prevPts = (const Point2f*)prevPtsMat.data;
     Point2f* nextPts = (Point2f*)nextPtsMat.data;
-    
+
     _status.create((int)npoints, 1, CV_8U, -1, true);
     Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
     uchar* status = statusMat.data;
     float* err = 0;
-    
+
     for( i = 0; i < npoints; i++ )
         status[i] = true;
-    
+
     if( _err.needed() )
     {
         _err.create((int)npoints, 1, CV_32F, -1, true);
@@ -723,14 +723,14 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         }
         else
             derivI = prevPyr[level * lvlStep1 + 1];
-        
+
         CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
         CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
         typedef tegra::LKTrackerInvoker<cv::detail::LKTrackerInvoker> LKTrackerInvoker;
 #else
-        typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;    
+        typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
 #endif
 
         parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
@@ -936,7 +936,7 @@ icvAdjustRect( const void* srcptr, int src_step, int pix_size,
 {
     CvRect rect;
     const char* src = (const char*)srcptr;
-    
+
     if( ip.x >= 0 )
     {
         src += ip.x*pix_size;
@@ -948,7 +948,7 @@ icvAdjustRect( const void* srcptr, int src_step, int pix_size,
         if( rect.x > win_size.width )
             rect.x = win_size.width;
     }
-    
+
     if( ip.x + win_size.width < src_size.width )
         rect.width = win_size.width;
     else
@@ -961,7 +961,7 @@ icvAdjustRect( const void* srcptr, int src_step, int pix_size,
         }
         assert( rect.width <= win_size.width );
     }
-    
+
     if( ip.y >= 0 )
     {
         src += ip.y * src_step;
@@ -969,7 +969,7 @@ icvAdjustRect( const void* srcptr, int src_step, int pix_size,
     }
     else
         rect.y = -ip.y;
-    
+
     if( ip.y + win_size.height < src_size.height )
         rect.height = win_size.height;
     else
@@ -981,7 +981,7 @@ icvAdjustRect( const void* srcptr, int src_step, int pix_size,
             rect.height = 0;
         }
     }
-    
+
     *pRect = rect;
     return src - rect.x*pix_size;
 }
@@ -996,16 +996,16 @@ static CvStatus CV_STDCALL icvGetRectSubPix_8u32f_C1R
     float a, b;
     double s = 0;
     int i, j;
-    
+
     center.x -= (win_size.width-1)*0.5f;
     center.y -= (win_size.height-1)*0.5f;
-    
+
     ip.x = cvFloor( center.x );
     ip.y = cvFloor( center.y );
-    
+
     if( win_size.width <= 0 || win_size.height <= 0 )
         return CV_BADRANGE_ERR;
-    
+
     a = center.x - ip.x;
     b = center.y - ip.y;
     a = MAX(a,0.0001f);
@@ -1014,23 +1014,23 @@ static CvStatus CV_STDCALL icvGetRectSubPix_8u32f_C1R
     b1 = 1.f - b;
     b2 = b;
     s = (1. - a)/a;
-    
+
     src_step /= sizeof(src[0]);
     dst_step /= sizeof(dst[0]);
-    
+
     if( 0 <= ip.x && ip.x + win_size.width < src_size.width &&
        0 <= ip.y && ip.y + win_size.height < src_size.height )
     {
         // extracted rectangle is totally inside the image
         src += ip.y * src_step + ip.x;
-        
+
 #if 0
         if( icvCopySubpix_8u32f_C1R_p &&
            icvCopySubpix_8u32f_C1R_p( src, src_step, dst,
                                      dst_step*sizeof(dst[0]), win_size, a, b ) >= 0 )
             return CV_OK;
 #endif
-        
+
         for( ; win_size.height--; src += src_step, dst += dst_step )
         {
             float prev = (1 - a)*(b1*CV_8TO32F(src[0]) + b2*CV_8TO32F(src[src_step]));
@@ -1045,29 +1045,29 @@ static CvStatus CV_STDCALL icvGetRectSubPix_8u32f_C1R
     else
     {
         CvRect r;
-        
+
         src = (const uchar*)icvAdjustRect( src, src_step*sizeof(*src),
                                           sizeof(*src), src_size, win_size,ip, &r);
-        
+
         for( i = 0; i < win_size.height; i++, dst += dst_step )
         {
             const uchar *src2 = src + src_step;
-            
+
             if( i < r.y || i >= r.height )
                 src2 -= src_step;
-            
+
             for( j = 0; j < r.x; j++ )
             {
                 float s0 = CV_8TO32F(src[r.x])*b1 +
                 CV_8TO32F(src2[r.x])*b2;
-                
+
                 dst[j] = (float)(s0);
             }
-            
+
             if( j < r.width )
             {
                 float prev = (1 - a)*(b1*CV_8TO32F(src[j]) + b2*CV_8TO32F(src2[j]));
-                
+
                 for( ; j < r.width; j++ )
                 {
                     float t = a12*CV_8TO32F(src[j+1]) + a22*CV_8TO32F(src2[j+1]);
@@ -1075,20 +1075,20 @@ static CvStatus CV_STDCALL icvGetRectSubPix_8u32f_C1R
                     prev = (float)(t*s);
                 }
             }
-            
+
             for( ; j < win_size.width; j++ )
             {
                 float s0 = CV_8TO32F(src[r.width])*b1 +
                 CV_8TO32F(src2[r.width])*b2;
-                
+
                 dst[j] = (float)(s0);
             }
-            
+
             if( i < r.height )
                 src = src2;
         }
     }
-    
+
     return CV_OK;
 }
 
@@ -1189,7 +1189,7 @@ cvCalcOpticalFlowPyrLK( const void* arrA, const void* arrB,
     cv::Mat ptA(count, 1, CV_32FC2, (void*)featuresA);
     cv::Mat ptB(count, 1, CV_32FC2, (void*)featuresB);
     cv::Mat st, err;
-    
+
     if( status )
         st = cv::Mat(count, 1, CV_8U, (void*)status);
     if( error )
@@ -1549,7 +1549,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                 status[i] = (char)pt_status;
                 featuresB[i].x = Av[2];
                 featuresB[i].y = Av[5];
-            
+
                 matrices[i*4] = Av[0];
                 matrices[i*4+1] = Av[1];
                 matrices[i*4+2] = Av[3];
@@ -1745,7 +1745,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
                 cvResize( A, sA, CV_INTER_AREA );
                 cvResize( B, sB, CV_INTER_AREA );
             }
-           
+
             A = sA;
             B = sB;
         }
@@ -1801,8 +1801,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
 
     if( count < RANSAC_SIZE0 )
         return 0;
-    
-    CvMat _pB = cvMat(1, count, CV_32FC2, pB);    
+
+    CvMat _pB = cvMat(1, count, CV_32FC2, pB);
     brect = cvBoundingRect(&_pB, 1);
 
     // RANSAC stuff:
@@ -1822,7 +1822,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
             for( k1 = 0; k1 < RANSAC_MAX_ITERS; k1++ )
             {
                 idx[i] = cvRandInt(&rng) % count;
-                
+
                 for( j = 0; j < i; j++ )
                 {
                     if( idx[j] == idx[i] )
@@ -1849,7 +1849,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
                     b[0] = pB[idx[0]];
                     b[1] = pB[idx[1]];
                     b[2] = pB[idx[2]];
-                    
+
                     double dax1 = a[1].x - a[0].x, day1 = a[1].y - a[0].y;
                     double dax2 = a[2].x - a[0].x, day2 = a[2].y - a[0].y;
                     double dbx1 = b[1].x - b[0].x, dby1 = b[1].y - b[0].y;
@@ -1901,7 +1901,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
     m[2] /= scale;
     m[5] /= scale;
     cvConvert( &M, matM );
-    
+
     return 1;
 }
 

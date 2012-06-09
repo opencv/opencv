@@ -68,10 +68,10 @@ void CvMeanShiftTracker::newTrackingWindow(Mat image, Rect selection)
 	mixChannels(&hsv, 1, &hue, 1, channels, 2);
 
 	Mat roi(hue, selection);
-	Mat maskroi(mask, selection);
+	Mat mskroi(mask, selection);
 	int ch[] = {0, 1};
 	int chsize[] = {32, 32};
-	calcHist(&roi, 1, ch, maskroi, hist, 1, chsize, ranges);
+	calcHist(&roi, 1, ch, mskroi, hist, 1, chsize, ranges);
 	normalize(hist, hist, 0, 255, CV_MINMAX);
 
 	prev_trackwindow = selection;

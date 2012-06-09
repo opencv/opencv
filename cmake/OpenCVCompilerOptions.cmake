@@ -75,7 +75,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   #add_extra_compiler_option(-Wcast-align)
   #add_extra_compiler_option(-Wstrict-aliasing=2)
   #add_extra_compiler_option(-Wshadow)
-  add_extra_compiler_option(-Wno-unnamed-type-template-args)
+  #add_extra_compiler_option(-Wno-unnamed-type-template-args)
 
   # The -Wno-long-long is required in 64bit systems when including sytem headers.
   if(X86_64)

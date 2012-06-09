@@ -92,8 +92,6 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
     int step, width, height;
     int numangle, numrho;
     int total = 0;
-    float ang;
-    int r, n;
     int i, j;
     float irho = 1 / rho;
     double scale;
@@ -117,7 +115,8 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
 
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
-    for( ang = 0, n = 0; n < numangle; ang += theta, n++ )
+    float ang = 0;
+    for(int n = 0; n < numangle; ang += theta, n++ )
     {
         tabSin[n] = (float)(sin(ang) * irho);
         tabCos[n] = (float)(cos(ang) * irho);
@@ -128,17 +127,17 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
         for( j = 0; j < width; j++ )
         {
             if( image[i * step + j] != 0 )
-                for( n = 0; n < numangle; n++ )
+                for(int n = 0; n < numangle; n++ )
                 {
-                    r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                    int r = cvRound( j * tabCos[n] + i * tabSin[n] );
                     r += (numrho - 1) / 2;
                     accum[(n+1) * (numrho+2) + r+1]++;
                 }
         }
 
     // stage 2. find local maximums
-    for( r = 0; r < numrho; r++ )
-        for( n = 0; n < numangle; n++ )
+    for(int r = 0; r < numrho; r++ )
+        for(int n = 0; n < numangle; n++ )
         {
             int base = (n+1) * (numrho+2) + r+1;
             if( accum[base] > threshold &&
@@ -529,7 +528,7 @@ icvHoughLinesProbabilistic( CvMat* image,
         // choose random point out of the remaining ones
         int idx = cvRandInt(&rng) % count;
         int max_val = threshold-1, max_n = 0;
-        CvPoint* pt = (CvPoint*)cvGetSeqElem( seq, idx );
+        CvPoint* point = (CvPoint*)cvGetSeqElem( seq, idx );
         CvPoint line_end[2] = {{0,0}, {0,0}};
         float a, b;
         int* adata = (int*)accum.data;
@@ -537,11 +536,11 @@ icvHoughLinesProbabilistic( CvMat* image,
         int good_line;
         const int shift = 16;
 
-        i = pt->y;
-        j = pt->x;
+        i = point->y;
+        j = point->x;
 
         // "remove" it by overriding it with the last element
-        *pt = *(CvPoint*)cvGetSeqElem( seq, count-1 );
+        *point = *(CvPoint*)cvGetSeqElem( seq, count-1 );
 
         // check if it has been excluded already (i.e. belongs to some other line)
         if( !mdata0[i*width + j] )
@@ -852,7 +851,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         for( x = 0; x < cols; x++ )
         {
             float vx, vy;
-            int sx, sy, x0, y0, x1, y1, r, k;
+            int sx, sy, x0, y0, x1, y1, r;
             CvPoint pt;
 
             vx = dx_row[x];
@@ -869,7 +868,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             x0 = cvRound((x*idp)*ONE);
             y0 = cvRound((y*idp)*ONE);
             // Step from min_radius to max_radius in both directions of the gradient
-            for( k = 0; k < 2; k++ )
+            for(int k1 = 0; k1 < 2; k1++ )
             {
                 x1 = x0 + min_radius * sx;
                 y1 = y0 + min_radius * sy;
@@ -934,7 +933,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         //Calculate circle's center in pixels
         float cx = (float)((x + 0.5f)*dp), cy = (float)(( y + 0.5f )*dp);
         float start_dist, dist_sum;
-        float r_best = 0, c[3];
+        float r_best = 0;
         int max_count = 0;
         // Check distance with previously detected circles
         for( j = 0; j < circles->total; j++ )
@@ -996,6 +995,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         // Check if the circle has enough support
         if( max_count > acc_threshold )
         {
+            float c[3];
             c[0] = cx;
             c[1] = cy;
             c[2] = (float)r_best;

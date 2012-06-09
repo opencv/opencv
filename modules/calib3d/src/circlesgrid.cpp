@@ -65,14 +65,14 @@ void drawPoints(const vector<Point2f> &points, Mat &outImage, int radius = 2,  S
 }
 #endif
 
-void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> points, const Size &patternSize, vector<Point2f> &patternPoints)
+void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> points, const Size &patternSz, vector<Point2f> &patternPoints)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::hierarchicalClustering(points, patternSize, patternPoints))
+    if(tegra::hierarchicalClustering(points, patternSz, patternPoints))
         return;
 #endif
-    int i, j, n = (int)points.size();
-    size_t pn = static_cast<size_t>(patternSize.area());
+    int j, n = (int)points.size();
+    size_t pn = static_cast<size_t>(patternSz.area());
 
     patternPoints.clear();
     if (pn >= points.size())
@@ -84,7 +84,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
 
     Mat dists(n, n, CV_32FC1, Scalar(0));
     Mat distsMask(dists.size(), CV_8UC1, Scalar(0));
-    for(i = 0; i < n; i++)
+    for(int i = 0; i < n; i++)
     {
         for(j = i+1; j < n; j++)
         {
@@ -122,7 +122,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
     }
 
     //the largest cluster can have more than pn points -- we need to filter out such situations
-    if(clusters[patternClusterIdx].size() != static_cast<size_t>(patternSize.area()))
+    if(clusters[patternClusterIdx].size() != static_cast<size_t>(patternSz.area()))
     {
       return;
     }
@@ -505,11 +505,11 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
     {
       for (Vertices::const_iterator it3 = vertices.begin(); it3 != vertices.end(); it3++)
       {
-	    int i1 = (int)it1->first, i2 = (int)it2->first, i3 = (int)it3->first;
+      int i1 = (int)it1->first, i2 = (int)it2->first, i3 = (int)it3->first;
         int val1 = distanceMatrix.at<int> (i2, i3);
         int val2;
         if (distanceMatrix.at<int> (i2, i1) == infinity ||
-			distanceMatrix.at<int> (i1, i3) == infinity)
+      distanceMatrix.at<int> (i1, i3) == infinity)
           val2 = val1;
         else
         {

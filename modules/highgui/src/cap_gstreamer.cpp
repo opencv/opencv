@@ -283,7 +283,7 @@ void CvCapture_GStreamer::newPad(GstElement *uridecodebin,
 
 
     sinkpad = gst_element_get_static_pad (color, "sink");
-  
+
 //  printf("linking dynamic pad to colourconverter %p %p\n", uridecodebin, pad);
 
     gst_pad_link (pad, sinkpad);
@@ -357,13 +357,13 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     if(manualpipeline) {
         GstIterator *it = gst_bin_iterate_sinks(GST_BIN(uridecodebin));
         if(gst_iterator_next(it, (gpointer *)&sink) != GST_ITERATOR_OK) {
-	    CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
-	    return false;
+        CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
+        return false;
         }
 
-	pipeline = uridecodebin;
+    pipeline = uridecodebin;
     } else {
-	pipeline = gst_pipeline_new (NULL);
+    pipeline = gst_pipeline_new (NULL);
 
         color = gst_element_factory_make("ffmpegcolorspace", NULL);
         sink = gst_element_factory_make("appsink", NULL);
@@ -381,16 +381,12 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     gst_app_sink_set_max_buffers (GST_APP_SINK(sink), 1);
     gst_app_sink_set_drop (GST_APP_SINK(sink), stream);
 
-    {
-    GstCaps* caps;
-    caps = gst_caps_new_simple("video/x-raw-rgb",
-			       "red_mask",   G_TYPE_INT, 0x0000FF,
-			       "green_mask", G_TYPE_INT, 0x00FF00,
-			       "blue_mask",  G_TYPE_INT, 0xFF0000,
-			       NULL);
-    gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
+    gst_app_sink_set_caps(GST_APP_SINK(sink), gst_caps_new_simple("video/x-raw-rgb",
+                                                                  "red_mask",   G_TYPE_INT, 0x0000FF,
+                                                                  "green_mask", G_TYPE_INT, 0x00FF00,
+                                                                  "blue_mask",  G_TYPE_INT, 0xFF0000,
+                                                                  NULL));
     gst_caps_unref(caps);
-    }
 
     if(gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_READY) ==
        GST_STATE_CHANGE_FAILURE) {

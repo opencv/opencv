@@ -539,8 +539,8 @@ static void extractMSER_8UC1_Pass( int* ioptr,
 			}
 			*imgptr += 0x10000;
 		}
-		int i = (int)(imgptr-ioptr);
-		ptsptr->pt = cvPoint( i&stepmask, i>>stepgap );
+		int imsk = (int)(imgptr-ioptr);
+		ptsptr->pt = cvPoint( imsk&stepmask, imsk>>stepgap );
 		// get the current location
 		accumulateMSERComp( comptr, ptsptr );
 		ptsptr++;

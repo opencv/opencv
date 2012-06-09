@@ -94,7 +94,7 @@ public:
 class CV_EXPORTS GaussianMotionFilter : public MotionFilterBase
 {
 public:
-    GaussianMotionFilter(int radius = 15, float stdev = -1.f) { setParams(radius, stdev); }
+    GaussianMotionFilter(int radius = 15, float stdev = -1.f);
 
     void setParams(int radius, float stdev = -1.f);
     int radius() const { return radius_; }
@@ -108,6 +108,8 @@ private:
     float stdev_;
     std::vector<float> weight_;
 };
+
+inline GaussianMotionFilter::GaussianMotionFilter(int _radius, float _stdev) { setParams(_radius, _stdev); }
 
 class CV_EXPORTS LpMotionStabilizer : public IMotionStabilizer
 {

@@ -1347,9 +1347,9 @@ class CV_EXPORTS CvImage
 {
 public:
     CvImage() : image(0), refcount(0) {}
-    CvImage( CvSize size, int depth, int channels )
+    CvImage( CvSize _size, int _depth, int _channels )
     {
-        image = cvCreateImage( size, depth, channels );
+        image = cvCreateImage( _size, _depth, _channels );
         refcount = image ? new int(1) : 0;
     }
 
@@ -1383,12 +1383,12 @@ public:
 
     CvImage clone() { return CvImage(image ? cvCloneImage(image) : 0); }
 
-    void create( CvSize size, int depth, int channels )
+    void create( CvSize _size, int _depth, int _channels )
     {
         if( !image || !refcount ||
-           image->width != size.width || image->height != size.height ||
-           image->depth != depth || image->nChannels != channels )
-            attach( cvCreateImage( size, depth, channels ));
+           image->width != _size.width || image->height != _size.height ||
+           image->depth != _depth || image->nChannels != _channels )
+            attach( cvCreateImage( _size, _depth, _channels ));
     }
 
     void release() { detach(); }
@@ -1447,9 +1447,9 @@ public:
 
     int coi() const { return !image || !image->roi ? 0 : image->roi->coi; }
 
-    void set_roi(CvRect roi) { cvSetImageROI(image,roi); }
+    void set_roi(CvRect _roi) { cvSetImageROI(image,_roi); }
     void reset_roi() { cvResetImageROI(image); }
-    void set_coi(int coi) { cvSetImageCOI(image,coi); }
+    void set_coi(int _coi) { cvSetImageCOI(image,_coi); }
     int depth() const { return image ? image->depth : 0; }
     int channels() const { return image ? image->nChannels : 0; }
     int pix_size() const { return image ? ((image->depth & 255)>>3)*image->nChannels : 0; }
@@ -1511,18 +1511,18 @@ class CV_EXPORTS CvMatrix
 {
 public:
     CvMatrix() : matrix(0) {}
-    CvMatrix( int rows, int cols, int type )
-    { matrix = cvCreateMat( rows, cols, type ); }
+    CvMatrix( int _rows, int _cols, int _type )
+    { matrix = cvCreateMat( _rows, _cols, _type ); }
 
-    CvMatrix( int rows, int cols, int type, CvMat* hdr,
-             void* data=0, int step=CV_AUTOSTEP )
-    { matrix = cvInitMatHeader( hdr, rows, cols, type, data, step ); }
+    CvMatrix( int _rows, int _cols, int _type, CvMat* hdr,
+             void* _data=0, int _step=CV_AUTOSTEP )
+    { matrix = cvInitMatHeader( hdr, _rows, _cols, _type, _data, _step ); }
 
     CvMatrix( int rows, int cols, int type, CvMemStorage* storage, bool alloc_data=true );
 
-    CvMatrix( int rows, int cols, int type, void* data, int step=CV_AUTOSTEP )
-    { matrix = cvCreateMatHeader( rows, cols, type );
-        cvSetData( matrix, data, step ); }
+    CvMatrix( int _rows, int _cols, int _type, void* _data, int _step=CV_AUTOSTEP )
+    { matrix = cvCreateMatHeader( _rows, _cols, _type );
+        cvSetData( matrix, _data, _step ); }
 
     CvMatrix( CvMat* m )
     { matrix = m; }
@@ -1557,12 +1557,12 @@ public:
             addref();
     }
 
-    void create( int rows, int cols, int type )
+    void create( int _rows, int _cols, int _type )
     {
         if( !matrix || !matrix->refcount ||
-           matrix->rows != rows || matrix->cols != cols ||
-           CV_MAT_TYPE(matrix->type) != type )
-            set( cvCreateMat( rows, cols, type ), false );
+           matrix->rows != _rows || matrix->cols != _cols ||
+           CV_MAT_TYPE(matrix->type) != _type )
+            set( cvCreateMat( _rows, _cols, _type ), false );
     }
 
     void addref() const
@@ -1626,8 +1626,8 @@ public:
     const uchar* data() const { return matrix ? matrix->data.ptr : 0; }
     int step() const { return matrix ? matrix->step : 0; }
 
-    void set_data( void* data, int step=CV_AUTOSTEP )
-    { cvSetData( matrix, data, step ); }
+    void set_data( void* _data, int _step=CV_AUTOSTEP )
+    { cvSetData( matrix, _data, _step ); }
 
     uchar* row(int i) { return !matrix ? 0 : matrix->data.ptr + i*matrix->step; }
     const uchar* row(int i) const
@@ -2014,8 +2014,8 @@ struct CV_EXPORTS BaseKeypoint
     : x(0), y(0), image(NULL)
     {}
 
-    BaseKeypoint(int x, int y, IplImage* image)
-    : x(x), y(y), image(image)
+    BaseKeypoint(int _x, int _y, IplImage* _image)
+    : x(_x), y(_y), image(_image)
     {}
 };
 

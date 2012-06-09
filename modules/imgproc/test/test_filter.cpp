@@ -253,46 +253,46 @@ void CV_MorphologyBaseTest::prepare_to_validation( int /*test_case_idx*/ )
     Mat _ielement(element->nRows, element->nCols, CV_32S, element->values);
     Mat _element;
     _ielement.convertTo(_element, CV_8U);
-    Point anchor(element->anchorX, element->anchorY);
-    int border = BORDER_REPLICATE;
+    Point _anchor(element->anchorX, element->anchorY);
+    int _border = BORDER_REPLICATE;
 
     if( optype == CV_MOP_ERODE )
     {
-        cvtest::erode( src, dst, _element, anchor, border );
+        cvtest::erode( src, dst, _element, _anchor, _border );
     }
     else if( optype == CV_MOP_DILATE )
     {
-        cvtest::dilate( src, dst, _element, anchor, border );
+        cvtest::dilate( src, dst, _element, _anchor, _border );
     }
     else
     {
         Mat temp;
         if( optype == CV_MOP_OPEN )
         {
-            cvtest::erode( src, temp, _element, anchor, border );
-            cvtest::dilate( temp, dst, _element, anchor, border );
+            cvtest::erode( src, temp, _element, _anchor, _border );
+            cvtest::dilate( temp, dst, _element, _anchor, _border );
         }
         else if( optype == CV_MOP_CLOSE )
         {
-            cvtest::dilate( src, temp, _element, anchor, border );
-            cvtest::erode( temp, dst, _element, anchor, border );
+            cvtest::dilate( src, temp, _element, _anchor, _border );
+            cvtest::erode( temp, dst, _element, _anchor, _border );
         }
         else if( optype == CV_MOP_GRADIENT )
         {
-            cvtest::erode( src, temp, _element, anchor, border );
-            cvtest::dilate( src, dst, _element, anchor, border );
+            cvtest::erode( src, temp, _element, _anchor, _border );
+            cvtest::dilate( src, dst, _element, _anchor, _border );
             cvtest::add( dst, 1, temp, -1, Scalar::all(0), dst, dst.type() );
         }
         else if( optype == CV_MOP_TOPHAT )
         {
-            cvtest::erode( src, temp, _element, anchor, border );
-            cvtest::dilate( temp, dst, _element, anchor, border );
+            cvtest::erode( src, temp, _element, _anchor, _border );
+            cvtest::dilate( temp, dst, _element, _anchor, _border );
             cvtest::add( src, 1, dst, -1, Scalar::all(0), dst, dst.type() );
         }
         else if( optype == CV_MOP_BLACKHAT )
         {
-            cvtest::dilate( src, temp, _element, anchor, border );
-            cvtest::erode( temp, dst, _element, anchor, border );
+            cvtest::dilate( src, temp, _element, _anchor, _border );
+            cvtest::erode( temp, dst, _element, _anchor, _border );
             cvtest::add( dst, 1, src, -1, Scalar::all(0), dst, dst.type() );
         }
         else

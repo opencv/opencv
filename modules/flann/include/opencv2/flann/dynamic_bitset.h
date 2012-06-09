@@ -66,9 +66,9 @@ public:
     /** @param only constructor we use in our code
      * @param the size of the bitset (in bits)
      */
-    DynamicBitset(size_t size)
+    DynamicBitset(size_t sz)
     {
-        resize(size);
+        resize(sz);
         reset();
     }
 
@@ -116,10 +116,10 @@ public:
     /** @param resize the bitset so that it contains at least size bits
      * @param size
      */
-    void resize(size_t size)
+    void resize(size_t sz)
     {
-        size_ = size;
-        bitset_.resize(size / cell_bit_size_ + 1);
+        size_ = sz;
+        bitset_.resize(sz / cell_bit_size_ + 1);
     }
 
     /** @param set a bit to true

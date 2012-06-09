@@ -27,7 +27,7 @@ static double chi2_p95(int n)
         36.42f, 37.65f, 38.89f, 40.11f, 41.34f, 42.56f, 43.77f };
     static const double xp = 1.64;
     CV_Assert(n >= 1);
-    
+
     if( n <= 30 )
         return chi2_tab95[n-1];
     return n + sqrt((double)2*n)*xp + 0.6666666666666*(xp*xp - 1);
@@ -40,12 +40,12 @@ bool Core_RandTest::check_pdf(const Mat& hist, double scale,
     const int* H = (const int*)hist.data;
     float* H0 = ((float*)hist0.data);
     int i, hsz = hist.cols;
-    
+
     double sum = 0;
     for( i = 0; i < hsz; i++ )
         sum += H[i];
     CV_Assert( fabs(1./sum - scale) < FLT_EPSILON );
-    
+
     if( dist_type == CV_RAND_UNI )
     {
         float scale0 = (float)(1./hsz);
@@ -54,19 +54,19 @@ bool Core_RandTest::check_pdf(const Mat& hist, double scale,
     }
     else
     {
-        double sum = 0, r = (hsz-1.)/2;
+        double sum2 = 0, r = (hsz-1.)/2;
         double alpha = 2*sqrt(2.)/r, beta = -alpha*r;
         for( i = 0; i < hsz; i++ )
         {
             double x = i*alpha + beta;
             H0[i] = (float)exp(-x*x);
-            sum += H0[i];
+            sum2 += H0[i];
         }
-        sum = 1./sum;
+        sum2 = 1./sum2;
         for( i = 0; i < hsz; i++ )
-            H0[i] = (float)(H0[i]*sum);
+            H0[i] = (float)(H0[i]*sum2);
     }
-    
+
     double chi2 = 0;
     for( i = 0; i < hsz; i++ )
     {
@@ -76,7 +76,7 @@ bool Core_RandTest::check_pdf(const Mat& hist, double scale,
             chi2 += (a - b)*(a - b)/(a + b);
     }
     realval = chi2;
-    
+
     double chi2_pval = chi2_p95(hsz - 1 - (dist_type == CV_RAND_NORMAL ? 2 : 0));
     refval = chi2_pval*0.01;
     return realval <= refval;
@@ -87,22 +87,22 @@ void Core_RandTest::run( int )
     static int _ranges[][2] =
     {{ 0, 256 }, { -128, 128 }, { 0, 65536 }, { -32768, 32768 },
         { -1000000, 1000000 }, { -1000, 1000 }, { -1000, 1000 }};
-    
+
     const int MAX_SDIM = 10;
     const int N = 2000000;
     const int maxSlice = 1000;
     const int MAX_HIST_SIZE = 1000;
     int progress = 0;
-    
+
     RNG& rng = ts->get_rng();
     RNG tested_rng = theRNG();
     test_case_count = 200;
-    
+
     for( int idx = 0; idx < test_case_count; idx++ )
     {
         progress = update_progress( progress, idx, test_case_count, 0 );
         ts->update_context( this, idx, false );
-        
+
         int depth = cvtest::randInt(rng) % (CV_64F+1);
         int c, cn = (cvtest::randInt(rng) % 4) + 1;
         int type = CV_MAKETYPE(depth, cn);
@@ -113,15 +113,15 @@ void Core_RandTest::run( int )
         double eps = 1.e-4;
         if (depth == CV_64F)
             eps = 1.e-7;
-        
+
         bool do_sphere_test = dist_type == CV_RAND_UNI;
         Mat arr[2], hist[4];
         int W[] = {0,0,0,0};
-        
+
         arr[0].create(1, SZ, type);
         arr[1].create(1, SZ, type);
         bool fast_algo = dist_type == CV_RAND_UNI && depth < CV_32F;
-        
+
         for( c = 0; c < cn; c++ )
         {
             int a, b, hsz;
@@ -137,7 +137,7 @@ void Core_RandTest::run( int )
                 while( abs(a-b) <= 1 );
                 if( a > b )
                     std::swap(a, b);
-                
+
                 unsigned r = (unsigned)(b - a);
                 fast_algo = fast_algo && r <= 256 && (r & (r-1)) == 0;
                 hsz = min((unsigned)(b - a), (unsigned)MAX_HIST_SIZE);
@@ -149,7 +149,7 @@ void Core_RandTest::run( int )
                 int meanrange = vrange/16;
                 int mindiv = MAX(vrange/20, 5);
                 int maxdiv = MIN(vrange/8, 10000);
-                
+
                 a = cvtest::randInt(rng) % meanrange - meanrange/2 +
                 (_ranges[depth][0] + _ranges[depth][1])/2;
                 b = cvtest::randInt(rng) % (maxdiv - mindiv) + mindiv;
@@ -157,9 +157,9 @@ void Core_RandTest::run( int )
             }
             A[c] = a;
             B[c] = b;
-            hist[c].create(1, hsz, CV_32S); 
+            hist[c].create(1, hsz, CV_32S);
         }
-        
+
         cv::RNG saved_rng = tested_rng;
         int maxk = fast_algo ? 0 : 1;
         for( k = 0; k <= maxk; k++ )
@@ -173,14 +173,14 @@ void Core_RandTest::run( int )
                 tested_rng.fill(aslice, dist_type, A, B);
             }
         }
-        
+
         if( maxk >= 1 && norm(arr[0], arr[1], NORM_INF) > eps)
         {
             ts->printf( cvtest::TS::LOG, "RNG output depends on the array lengths (some generated numbers get lost?)" );
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
             return;
         }
-        
+
         for( c = 0; c < cn; c++ )
         {
             const uchar* data = arr[0].data;
@@ -190,9 +190,9 @@ void Core_RandTest::run( int )
             double maxVal = dist_type == CV_RAND_UNI ? B[c] : A[c] + B[c]*4;
             double scale = HSZ/(maxVal - minVal);
             double delta = -minVal*scale;
-            
+
             hist[c] = Scalar::all(0);
-            
+
             for( i = c; i < SZ*cn; i += cn )
             {
                 double val = depth == CV_8U ? ((const uchar*)data)[i] :
@@ -221,7 +221,7 @@ void Core_RandTest::run( int )
                     }
                 }
             }
-            
+
             if( dist_type == CV_RAND_UNI && W[c] != SZ )
             {
                 ts->printf( cvtest::TS::LOG, "Uniform RNG gave values out of the range [%g,%g) on channel %d/%d\n",
@@ -237,7 +237,7 @@ void Core_RandTest::run( int )
                 return;
             }
             double refval = 0, realval = 0;
-            
+
             if( !check_pdf(hist[c], 1./W[c], dist_type, refval, realval) )
             {
                 ts->printf( cvtest::TS::LOG, "RNG failed Chi-square test "
@@ -247,13 +247,13 @@ void Core_RandTest::run( int )
                 return;
             }
         }
-        
+
         // Monte-Carlo test. Compute volume of SDIM-dimensional sphere
         // inscribed in [-1,1]^SDIM cube.
         if( do_sphere_test )
         {
             int SDIM = cvtest::randInt(rng) % (MAX_SDIM-1) + 2;
-            int N0 = (SZ*cn/SDIM), N = 0;
+            int N0 = (SZ*cn/SDIM), n = 0;
             double r2 = 0;
             const uchar* data = arr[0].data;
             double scale[4], delta[4];
@@ -262,7 +262,7 @@ void Core_RandTest::run( int )
                 scale[c] = 2./(B[c] - A[c]);
                 delta[c] = -A[c]*scale[c] - 1;
             }
-            
+
             for( i = k = c = 0; i <= SZ*cn - SDIM; i++, k++, c++ )
             {
                 double val = depth == CV_8U ? ((const uchar*)data)[i] :
@@ -276,20 +276,20 @@ void Core_RandTest::run( int )
                 r2 += val*val;
                 if( k == SDIM-1 )
                 {
-                    N += r2 <= 1;
+                    n += r2 <= 1;
                     r2 = 0;
                     k = -1;
                 }
             }
-            
-            double V = ((double)N/N0)*(1 << SDIM);
-            
+
+            double V = ((double)n/N0)*(1 << SDIM);
+
             // the theoretically computed volume
             int sdim = SDIM % 2;
             double V0 = sdim + 1;
             for( sdim += 2; sdim <= SDIM; sdim += 2 )
                 V0 *= 2*CV_PI/sdim;
-            
+
             if( fabs(V - V0) > 0.3*fabs(V0) )
             {
                 ts->printf( cvtest::TS::LOG, "RNG failed %d-dim sphere volume test (got %g instead of %g)\n",
@@ -309,7 +309,7 @@ class Core_RandRangeTest : public cvtest::BaseTest
 {
 public:
     Core_RandRangeTest() {}
-    ~Core_RandRangeTest() {}   
+    ~Core_RandRangeTest() {}
 protected:
     void run(int)
     {
@@ -319,7 +319,7 @@ protected:
         theRNG().fill(af, RNG::UNIFORM, -DBL_MAX, DBL_MAX);
         int n0 = 0, n255 = 0, nx = 0;
         int nfmin = 0, nfmax = 0, nfx = 0;
-        
+
         for( int i = 0; i < a.rows; i++ )
             for( int j = 0; j < a.cols; j++ )
             {
