@@ -46,7 +46,21 @@
 #include <deque>
 #include <iterator>
 #include <wchar.h>
+
+#define USE_ZLIB 1
+
+#ifdef __APPLE__
+#include "TargetConditionals.h"
+#if defined TARGET_OS_IPHONE || defined TARGET_IPHONE_SIMULATOR
+#undef USE_ZLIB
+#define USE_ZLIB 0
+typedef void* gzFile;
+#endif
+#endif
+
+#if USE_ZLIB
 #include <zlib.h>
+#endif
 
 /****************************************************************************************\
 *                            Common macros and type definitions                          *
@@ -258,8 +272,10 @@ static void icvPuts( CvFileStorage* fs, const char* str )
         std::copy(str, str + strlen(str), std::back_inserter(*fs->outbuf));
     else if( fs->file )
         fputs( str, fs->file );
+#if USE_ZLIB
     else if( fs->gzfile )
         gzputs( fs->gzfile, str );
+#endif
     else
         CV_Error( CV_StsError, "The storage is not opened" );
 }
@@ -286,8 +302,10 @@ static char* icvGets( CvFileStorage* fs, char* str, int maxCount )
     }
     if( fs->file )
         return fgets( str, maxCount, fs->file );
+#if USE_ZLIB
     if( fs->gzfile )
         return gzgets( fs->gzfile, str, maxCount );
+#endif
     CV_Error( CV_StsError, "The storage is not opened" );
     return 0;
 }
@@ -298,8 +316,10 @@ static int icvEof( CvFileStorage* fs )
         return fs->strbufpos >= fs->strbufsize;
     if( fs->file )
         return feof(fs->file);
+#if USE_ZLIB
     if( fs->gzfile )
         return gzeof(fs->gzfile);
+#endif
     return false;
 }
 
@@ -307,8 +327,10 @@ static void icvCloseFile( CvFileStorage* fs )
 {
     if( fs->file )
         fclose( fs->file );
+#if USE_ZLIB
     else if( fs->gzfile )
         gzclose( fs->gzfile );
+#endif
     fs->file = 0;
     fs->gzfile = 0;
     fs->strbuf = 0;
@@ -320,8 +342,10 @@ static void icvRewind( CvFileStorage* fs )
 {
     if( fs->file )
         rewind(fs->file);
+#if USE_ZLIB
     else if( fs->gzfile )
         gzrewind(fs->gzfile);
+#endif
     fs->strbufpos = 0;
 }
 
@@ -2713,10 +2737,14 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
         }
         else
         {
+            #if USE_ZLIB
             char mode[] = { fs->write_mode ? 'w' : 'r', 'b', compression ? compression : '3', '\0' };
             fs->gzfile = gzopen(fs->filename, mode);
             if( !fs->gzfile )
                 goto _exit_;
+            #else
+            CV_Error(CV_StsNotImplemented, "There is no compressed file storage support in this configuration");
+            #endif
         }
     }
     

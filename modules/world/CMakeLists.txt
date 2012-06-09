@@ -1,7 +1,13 @@
 set(the_description "All the selected OpenCV modules in a single binary")
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 set(BUILD_opencv_world_INIT OFF)
+if(IOS)
+set(BUILD_WORLD_AS_STATIC 1)
+endif()
+
+if(NOT BUILD_WORLD_AS_STATIC)
 set(OPENCV_MODULE_TYPE SHARED)
+endif()
 
 ocv_add_module(world opencv_core)
 
@@ -79,14 +85,25 @@ string(REPLACE ";" " " objlist "${objlist}")
 if(have_cfg)
   string(REGEX REPLACE "<CONFIGURATION>" "Debug" objlist_dbg "${objlist}")
   string(REGEX REPLACE "<CONFIGURATION>" "Release" objlist_rls "${objlist}")
-  set_target_properties(${the_module} PROPERTIES
-    LINK_FLAGS_DEBUG ${objlist_dbg}
-    LINK_FLAGS_RELEASE ${objlist_rls})
+  if(BUILD_WORLD_AS_STATIC)
+      set_target_properties(${the_module} PROPERTIES
+        STATIC_LIBRARY_FLAGS_DEBUG ${objlist_dbg}
+        STATIC_LIBRARY_FLAGS_RELEASE ${objlist_rls})
+  else()
+      set_target_properties(${the_module} PROPERTIES
+        LINK_FLAGS_DEBUG ${objlist_dbg}
+        LINK_FLAGS_RELEASE ${objlist_rls})
+  endif()
 else()
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/world_objects.list" "${objlist}")
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/world_objects.list" "${CMAKE_CURRENT_BINARY_DIR}/world_objects.rsp" OUTPUT_QUIET)
-  set_target_properties(${the_module} PROPERTIES
-    LINK_FLAGS "@${CMAKE_CURRENT_BINARY_DIR}/world_objects.rsp")
+  if(BUILD_WORLD_AS_STATIC)
+    set_target_properties(${the_module} PROPERTIES
+      STATIC_LIBRARY_FLAGS "@${CMAKE_CURRENT_BINARY_DIR}/world_objects.rsp")
+  else()
+    set_target_properties(${the_module} PROPERTIES
+      LINK_FLAGS "@${CMAKE_CURRENT_BINARY_DIR}/world_objects.rsp")
+  endif()
 endif()
 
 ocv_add_precompiled_headers(${the_module})
