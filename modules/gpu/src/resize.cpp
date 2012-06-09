@@ -56,8 +56,8 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     throw_nogpu();
 }
-void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy,
-                     int interpolation, const GpuMat& buffer, Stream& s)
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, GpuMat& buffer,
+            double fx, double fy, int interpolation, Stream& s)
 {
     (void)src;
     (void)dst;
