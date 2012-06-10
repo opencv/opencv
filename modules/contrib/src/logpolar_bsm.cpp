@@ -62,7 +62,7 @@ namespace cv
 {
 
 //------------------------------------interp-------------------------------------------
-LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int _R, double _ro0, int _interp, int full, int _S, int sp)
+LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int _R, double _ro0, int _interp, int full, int _s, int sp)
 {
     if ( (center.x!=w/2 || center.y!=h/2) && full==0) full=1;
 
@@ -104,15 +104,15 @@ LogPolar_Interp::LogPolar_Interp(int w, int h, Point2i center, int _R, double _r
 
     interp=_interp;
 
-    create_map(M, N, _R, _S, _ro0);
+    create_map(M, N, _R, _s, _ro0);
 }
 
-void LogPolar_Interp::create_map(int _M, int _N, int _R, int _S, double _ro0)
+void LogPolar_Interp::create_map(int _M, int _n, int _R, int _s, double _ro0)
 {
     M=_M;
-    N=_N;
+    N=_n;
     R=_R;
-    S=_S;
+    S=_s;
     ro0=_ro0;
 
     int jc=N/2-1, ic=M/2-1;
@@ -208,7 +208,7 @@ LogPolar_Interp::~LogPolar_Interp()
 
 //------------------------------------overlapping----------------------------------
 
-LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int _R, double _ro0, int full, int _S, int sp)
+LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int _R, double _ro0, int full, int _s, int sp)
 {
     if ( (center.x!=w/2 || center.y!=h/2) && full==0) full=1;
 
@@ -249,15 +249,15 @@ LogPolar_Overlapping::LogPolar_Overlapping(int w, int h, Point2i center, int _R,
         S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
-    create_map(M, N, _R, _S, _ro0);
+    create_map(M, N, _R, _s, _ro0);
 }
 
-void LogPolar_Overlapping::create_map(int _M, int _N, int _R, int _S, double _ro0)
+void LogPolar_Overlapping::create_map(int _M, int _n, int _R, int _s, double _ro0)
 {
     M=_M;
-    N=_N;
+    N=_n;
     R=_R;
-    S=_S;
+    S=_s;
     ro0=_ro0;
 
     int jc=N/2-1, ic=M/2-1;
@@ -433,7 +433,7 @@ LogPolar_Overlapping::~LogPolar_Overlapping()
 
 //----------------------------------------adjacent---------------------------------------
 
-LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int _R, double _ro0, double smin, int full, int _S, int sp)
+LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int _R, double _ro0, double smin, int full, int _s, int sp)
 {
     if ( (center.x!=w/2 || center.y!=h/2) && full==0) full=1;
 
@@ -473,16 +473,16 @@ LogPolar_Adjacent::LogPolar_Adjacent(int w, int h, Point2i center, int _R, doubl
         S=(int) floor(2*CV_PI/(_a-1)+0.5);
     }
 
-    create_map(M, N, _R, _S, _ro0, smin);
+    create_map(M, N, _R, _s, _ro0, smin);
 }
 
 
-void LogPolar_Adjacent::create_map(int _M, int _N, int _R, int _S, double _ro0, double smin)
+void LogPolar_Adjacent::create_map(int _M, int _n, int _R, int _s, double _ro0, double smin)
 {
     M=_M;
-    N=_N;
+    N=_n;
     R=_R;
-    S=_S;
+    S=_s;
     ro0=_ro0;
     romax=min(M/2.0, N/2.0);
 
