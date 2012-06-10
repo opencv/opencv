@@ -53,7 +53,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     // make sure the input data is a vector of matrices or vector of vector
     if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
         string error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
-        error(Exception(CV_StsBadArg, error_message, "asRowMatrix", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // number of samples
     size_t n = src.total();
@@ -69,7 +69,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
         // make sure data can be reshaped, throw exception if not!
         if(src.getMat(i).total() != d) {
             string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, d, src.getMat(i).total());
-            error(Exception(CV_StsBadArg, error_message, "cv::asRowMatrix", __FILE__, __LINE__));
+            CV_Error(CV_StsBadArg, error_message);
         }
         // get a hold of the current row
         Mat xi = data.row(i);
@@ -125,8 +125,7 @@ public:
     // corresponding labels in labels. num_components will be kept for
     // classification.
     Eigenfaces(InputArray src, InputArray labels,
-            int num_components = 0,
-            double threshold = DBL_MAX) :
+            int num_components = 0, double threshold = DBL_MAX) :
         _num_components(num_components),
         _threshold(threshold) {
         train(src, labels);
@@ -178,10 +177,8 @@ public:
     // Initializes and computes a Fisherfaces model with images in src and
     // corresponding labels in labels. num_components will be kept for
     // classification.
-    Fisherfaces(InputArray src,
-            InputArray labels,
-            int num_components = 0,
-            double threshold = DBL_MAX) :
+    Fisherfaces(InputArray src, InputArray labels,
+            int num_components = 0, double threshold = DBL_MAX) :
         _num_components(num_components),
         _threshold(threshold) {
         train(src, labels);
@@ -235,7 +232,9 @@ public:
     //
     // radius, neighbors are used in the local binary patterns creation.
     // grid_x, grid_y control the grid size of the spatial histograms.
-    LBPH(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8, double threshold = DBL_MAX) :
+    LBPH(int radius=1, int neighbors=8,
+            int grid_x=8, int grid_y=8,
+            double threshold = DBL_MAX) :
         _grid_x(grid_x),
         _grid_y(grid_y),
         _radius(radius),

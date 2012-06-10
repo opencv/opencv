@@ -30,8 +30,9 @@ using namespace std;
 static Mat toGrayscale(InputArray _src) {
     Mat src = _src.getMat();
     // only allow one channel
-    if(src.channels() != 1)
+    if(src.channels() != 1) {
         CV_Error(CV_StsBadArg, "Only Matrices with one channel are supported");
+    }
     // create and return normalized image
     Mat dst;
     cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
@@ -130,16 +131,16 @@ int main(int argc, const char *argv[]) {
     // cv::Algorithm, you can query the data.
     //
     // First we'll use it to set the threshold of the FaceRecognizer
-    // without retraining the model:
+    // to 0.0 without retraining the model. This can be useful if
+    // you are evaluating the model:
     //
     model->set("threshold", 0.0);
-    // Now the threshold is of this model is 0.0. A prediction
-    // now returns -1, as it's impossible to have a distance
-    // below it
-    //
+    // Now the threshold of this model is set to 0.0. A prediction
+    // now returns -1, as it's impossible to have a distance below
+    // it
     predictedLabel = model->predict(testSample);
     cout << "Predicted class = " << predictedLabel << endl;
-    // Now here is how to get the eigenvalues of this Eigenfaces model:
+    // Here is how to get the eigenvalues of this Eigenfaces model:
     Mat eigenvalues = model->getMat("eigenvalues");
     // And we can do the same to display the Eigenvectors (read Eigenfaces):
     Mat W = model->getMat("eigenvectors");
