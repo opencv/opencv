@@ -46,6 +46,12 @@ def build_opencv(srcroot, buildroot, target):
         os.system("cmake %s ." % (cmakeargs,))
     else:
         os.system("cmake %s %s" % (cmakeargs, srcroot))
+    
+    for wlib in [builddir + "/modules/world/UninstalledProducts/libopencv_world.a",
+                 builddir + "/lib/Release/libopencv_world.a"]:
+        if os.path.isfile(wlib):
+            os.remove(wlib)
+    
     os.system("xcodebuild -parallelizeTargets -jobs 8 -sdk %s -configuration Release -target ALL_BUILD" % target.lower())
     os.system("xcodebuild -sdk %s -configuration Release -target install install" % target.lower())
     os.chdir(currdir)
