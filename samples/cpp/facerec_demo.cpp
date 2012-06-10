@@ -41,7 +41,7 @@ static Mat toGrayscale(InputArray _src) {
 static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
     std::ifstream file(filename.c_str(), ifstream::in);
     if (!file) {
-    	string error_message = "No valid input file was given, please check the given filename.";
+        string error_message = "No valid input file was given, please check the given filename.";
         CV_Error(CV_StsBadArg, error_message);
     }
     string line, path, classlabel;
@@ -58,7 +58,7 @@ static void read_csv(const string& filename, vector<Mat>& images, vector<int>& l
 
 int main(int argc, const char *argv[]) {
     // Check for valid command line arguments, print usage
-	// if no arguments were given.
+    // if no arguments were given.
     if (argc != 2) {
         cout << "usage: " << argv[0] << " <csv.ext>" << endl;
         exit(1);
@@ -79,8 +79,8 @@ int main(int argc, const char *argv[]) {
     }
     // Quit if there are not enough images for this demo.
     if(images.size() <= 1) {
-    	string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
-    	CV_Error(CV_StsError, error_message);
+        string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
+        CV_Error(CV_StsError, error_message);
     }
     // Get the height from the first image. We'll need this
     // later in code to reshape the images to their original
@@ -102,30 +102,51 @@ int main(int argc, const char *argv[]) {
     // 10 principal components (read Eigenfaces), then call
     // the factory method like this:
     //
-    //		cv::createEigenFaceRecognizer(10);
+    //      cv::createEigenFaceRecognizer(10);
+    //
+    // If you want to create a FaceRecognizer with a
+    // confidennce threshold, call it with:
+    //
+    //      cv::createEigenFaceRecognizer(10, 123.0);
+    //
     Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
     model->train(images, labels);
     // The following line predicts the label of a given
-    // test image. In this example no thresholding is
-    // done.
-    int predicted = model->predict(testSample);
-    // Show the prediction and actual class of the given
-    // sample:
-    string result_message = format("Predicted class=%d / Actual class=%d.", predicted, testLabel);
+    // test image:
+    int predictedLabel = model->predict(testSample);
+    //
+    // To get the confidence of a prediction call it with:
+    //
+    // model with:
+    //      int predictedLabel = -1;
+    //      double confidence = 0.0;
+    //      model->predict(testSample, predictedLabel, confidence);
+    //
+    string result_message = format("Predicted class = %d / Actual class = %d.", predictedLabel, testLabel);
     cout << result_message << endl;
-    // Sometimes you'll need to get some internal model data,
-	// which isn't exposed by the public cv::FaceRecognizer.
-	// Since each cv::FaceRecognizer is derived from a
-	// cv::Algorithm, you can query the data.
-	//
-	// Here is how to get the eigenvalues of this Eigenfaces model:
+    // Sometimes you'll need to get/set internal model data,
+    // which isn't exposed by the public cv::FaceRecognizer.
+    // Since each cv::FaceRecognizer is derived from a
+    // cv::Algorithm, you can query the data.
+    //
+    // First we'll use it to set the threshold of the FaceRecognizer
+    // without retraining the model:
+    //
+    model->set("threshold", 0.0);
+    // Now the threshold is of this model is 0.0. A prediction
+    // now returns -1, as it's impossible to have a distance
+    // below it
+    //
+    predictedLabel = model->predict(testSample);
+    cout << "Predicted class = " << predictedLabel << endl;
+    // Now here is how to get the eigenvalues of this Eigenfaces model:
     Mat eigenvalues = model->getMat("eigenvalues");
-    // And we can do the same to display the Eigenvectors ("Eigenfaces"):
+    // And we can do the same to display the Eigenvectors (read Eigenfaces):
     Mat W = model->getMat("eigenvectors");
     // From this we will display the (at most) first 10 Eigenfaces:
     for (int i = 0; i < min(10, W.cols); i++) {
-    	string msg = format("Eigenvalue #%d = %.5f", i, eigenvalues.at<double>(i));
-    	cout << msg << endl;
+        string msg = format("Eigenvalue #%d = %.5f", i, eigenvalues.at<double>(i));
+        cout << msg << endl;
         // get eigenvector #i
         Mat ev = W.col(i).clone();
         // Reshape to original size & normalize to [0...255] for imshow.

@@ -48,7 +48,7 @@ static Mat argsort(InputArray _src, bool ascending=true)
     Mat src = _src.getMat();
     if (src.rows != 1 && src.cols != 1) {
     	string error_message = "Wrong shape of input matrix! Expected a matrix with one row or column.";
-    	error(cv::Exception(CV_StsBadArg, error_message, "argsort", __FILE__, __LINE__));
+    	CV_Error(CV_StsBadArg, error_message);
     }
     int flags = CV_SORT_EVERY_ROW+(ascending ? CV_SORT_ASCENDING : CV_SORT_DESCENDING);
     Mat sorted_indices;
@@ -60,7 +60,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     // make sure the input data is a vector of matrices or vector of vector
     if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
     	string error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
-        error(cv::Exception(CV_StsBadArg, error_message, "asRowMatrix", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // number of samples
     size_t n = src.total();
@@ -76,7 +76,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
         // make sure data can be reshaped, throw exception if not!
         if(src.getMat(i).total() != d) {
             string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, d, src.getMat(i).total());
-            error(cv::Exception(CV_StsBadArg, error_message, "cv::asRowMatrix", __FILE__, __LINE__));
+            CV_Error(CV_StsBadArg, error_message);
         }
         // get a hold of the current row
         Mat xi = data.row(i);
@@ -91,8 +91,9 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
 }
 
 static void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, OutputArray _dst) {
-    if(_indices.getMat().type() != CV_32SC1)
+    if(_indices.getMat().type() != CV_32SC1) {
         CV_Error(CV_StsUnsupportedFormat, "cv::sortColumnsByIndices only works on integer indices!");
+    }
     Mat src = _src.getMat();
     vector<int> indices = _indices.getMat();
     _dst.create(src.rows, src.cols, src.type());
@@ -183,12 +184,12 @@ Mat subspaceProject(InputArray _W, InputArray _mean, InputArray _src) {
     // make sure the data has the correct shape
     if(W.rows != d) {
         string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
-        error(cv::Exception(CV_StsBadArg, error_message, "cv::subspace::project", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) d)) {
         string error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
-        error(cv::Exception(CV_StsBadArg, error_message, "cv::subspace::project", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // create temporary matrices
     Mat X, Y;
@@ -221,12 +222,12 @@ Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     // make sure the data has the correct shape
     if(W.cols != d) {
         string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
-        error(cv::Exception(CV_StsBadArg, error_message, "cv::subspaceReconstruct", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) W.rows)) {
         string error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
-        error(cv::Exception(CV_StsBadArg, error_message, "cv::subspaceReconstruct", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // initalize temporary matrices
     Mat X, Y;
@@ -999,12 +1000,12 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     // want to separate from each other then?
     if(C == 1) {
         string error_message = "At least two classes are needed to perform a LDA. Reason: Only one class was given!";
-        error(cv::Exception(CV_StsBadArg, error_message, "cv::LDA::lda", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // throw error if less labels, than samples
     if (labels.size() != static_cast<size_t>(N)) {
         string error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
-        error(cv::Exception(CV_StsBadArg, error_message, "LDA::lda", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
     }
     // warn if within-classes scatter matrix becomes singular
     if (N < D) {
@@ -1087,7 +1088,7 @@ void LDA::compute(InputArray _src, InputArray _lbls) {
         break;
     default:
     	string error_message= format("InputArray Datatype %d is not supported.", _src.kind());
-    	error(cv::Exception(CV_StsBadArg, error_message, "LDA::compute", __FILE__, __LINE__));
+        CV_Error(CV_StsBadArg, error_message);
         break;
     }
 }

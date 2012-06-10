@@ -930,6 +930,9 @@ namespace cv
         // Gets a prediction from a FaceRecognizer.
         virtual int predict(InputArray src) const = 0;
 
+        // Predicts the label and confidence for a given sample.
+        virtual void predict(InputArray src, int &label, double &dist) const = 0;
+
         // Serializes this object to a given filename.
         virtual void save(const string& filename) const;
 
@@ -944,10 +947,10 @@ namespace cv
 
     };
 
-    CV_EXPORTS Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0);
-    CV_EXPORTS Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0);
+    CV_EXPORTS Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
+    CV_EXPORTS Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
     CV_EXPORTS Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8,
-                                                            int grid_x=8, int grid_y=8);
+                                                            int grid_x=8, int grid_y=8, double threshold = DBL_MAX);
 
     enum
     {
