@@ -22,7 +22,7 @@ namespace cv
 {
 
 using std::set;
-
+    
 // Reads a sequence from a FileNode::SEQ with type _Tp into a result vector.
 template<typename _Tp>
 inline void readFileNodeList(const FileNode& fn, vector<_Tp>& result) {
@@ -48,26 +48,42 @@ inline void writeFileNodeList(FileStorage& fs, const string& name,
     }
     fs << "]";
 }
-
-static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0)
-{
+    
+static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
+    // make sure the input data is a vector of matrices or vector of vector
+    if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
+    	string error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
+        error(Exception(CV_StsBadArg, error_message, "asRowMatrix", __FILE__, __LINE__));
+    }
     // number of samples
-    int n = (int) src.total();
-    // return empty matrix if no data given
+    size_t n = src.total();
+    // return empty matrix if no matrices given
     if(n == 0)
         return Mat();
-    // dimensionality of samples
-    int d = (int)src.getMat(0).total();
+    // dimensionality of (reshaped) samples
+    size_t d = src.getMat(0).total();
     // create data matrix
     Mat data(n, d, rtype);
-    // copy data
-    for(int i = 0; i < n; i++) {
+    // now copy data
+    for(unsigned int i = 0; i < n; i++) {
+        // make sure data can be reshaped, throw exception if not!
+        if(src.getMat(i).total() != d) {
+            string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, d, src.getMat(i).total());
+            error(Exception(CV_StsBadArg, error_message, "cv::asRowMatrix", __FILE__, __LINE__));
+        }
+        // get a hold of the current row
         Mat xi = data.row(i);
-        src.getMat(i).reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+        // make reshape happy by cloning for non-continuous matrices
+        if(src.getMat(i).isContinuous()) {
+            src.getMat(i).reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+        } else {
+            src.getMat(i).clone().reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+        }
     }
     return data;
 }
 
+    
 // Removes duplicate elements in a given vector.
 template<typename _Tp>
 inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
@@ -82,7 +98,7 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
-
+    
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
 class Eigenfaces : public FaceRecognizer
@@ -124,10 +140,10 @@ public:
 
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
-
+    
     AlgorithmInfo* info() const;
 };
-
+    
 // Belhumeur, P. N., Hespanha, J., and Kriegman, D. "Eigenfaces vs. Fisher-
 // faces: Recognition using class specific linear projection.". IEEE
 // Transactions on Pattern Analysis and Machine Intelligence 19, 7 (1997),
@@ -160,7 +176,7 @@ public:
         train(src, labels);
     }
 
-    ~Fisherfaces() { }
+    ~Fisherfaces() {}
 
     // Computes a Fisherfaces model with images in src and corresponding labels
     // in labels.
@@ -179,10 +195,6 @@ public:
 };
 
 // Face Recognition based on Local Binary Patterns.
-//
-// TODO Allow to change the distance metric.
-// TODO Allow to change LBP computation (Extended LBP used right now).
-// TODO Optimize, Optimize, Optimize!
 //
 //  Ahonen T, Hadid A. and Pietikäinen M. "Face description with local binary
 //  patterns: Application to face recognition." IEEE Transactions on Pattern
@@ -208,11 +220,11 @@ public:
     //
     // radius, neighbors are used in the local binary patterns creation.
     // grid_x, grid_y control the grid size of the spatial histograms.
-    LBPH(int radius_=1, int neighbors_=8, int grid_x_=8, int grid_y_=8) :
-        _grid_x(grid_x_),
-        _grid_y(grid_y_),
-        _radius(radius_),
-        _neighbors(neighbors_) {}
+    LBPH(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8) :
+        _grid_x(grid_x),
+        _grid_y(grid_y),
+        _radius(radius),
+        _neighbors(neighbors) {}
 
     // Initializes and computes this LBPH Model. The current implementation is
     // rather fixed as it uses the Extended Local Binary Patterns per default.
@@ -221,12 +233,12 @@ public:
     // (grid_x=8), (grid_y=8) controls the grid size of the spatial histograms.
     LBPH(InputArray src,
             InputArray labels,
-            int radius_=1, int neighbors_=8,
-            int grid_x_=8, int grid_y_=8) :
-                _grid_x(grid_x_),
-                _grid_y(grid_y_),
-                _radius(radius_),
-                _neighbors(neighbors_) {
+            int radius=1, int neighbors=8,
+            int grid_x=8, int grid_y=8) :
+                _grid_x(grid_x),
+                _grid_y(grid_y),
+                _radius(radius),
+                _neighbors(neighbors) {
         train(src, labels);
     }
 
@@ -278,22 +290,25 @@ void FaceRecognizer::load(const string& filename) {
 //------------------------------------------------------------------------------
 // Eigenfaces
 //------------------------------------------------------------------------------
-void Eigenfaces::train(InputArray src, InputArray _lbls) {
-    // assert type
-    if(_lbls.getMat().type() != CV_32SC1)
-        CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
+void Eigenfaces::train(InputArray _src, InputArray _local_labels) {
+    if(_src.total() == 0) {
+        string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
+        error(Exception(CV_StsUnsupportedFormat, error_message, "Eigenfaces::train", __FILE__, __LINE__));
+    } else if(_local_labels.getMat().type() != CV_32SC1) {
+        string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _local_labels.type());
+        error(Exception(CV_StsUnsupportedFormat, error_message, "Eigenfaces::train", __FILE__, __LINE__));
+    }
     // get labels
-    Mat labels = _lbls.getMat();
-    CV_Assert( labels.type() == CV_32S && (labels.cols == 1 || labels.rows == 1));
+    Mat labels = _local_labels.getMat();
     // observations in row
-    Mat data = asRowMatrix(src, CV_64FC1);
+    Mat data = asRowMatrix(_src, CV_64FC1);
     // number of samples
-    int n = data.rows;
-    // dimensionality of data
-    //int d = data.cols;
+   int n = data.rows;
     // assert there are as much samples as labels
-    if((size_t)n != labels.total())
-        CV_Error(CV_StsBadArg, "The number of samples must equal the number of labels!");
+    if(static_cast<int>(labels.total()) != n) {
+        string error_message = format("The number of samples (src) must equal the number of labels (labels)! len(src)=%d, len(labels)=%d.", n, labels.total());
+        error(Exception(CV_StsBadArg, error_message, "Eigenfaces::train", __FILE__, __LINE__));
+    }
     // clip number of components to be valid
     if((_num_components <= 0) || (_num_components > n))
         _num_components = n;
@@ -307,13 +322,23 @@ void Eigenfaces::train(InputArray src, InputArray _lbls) {
     // save projections
     for(int sampleIdx = 0; sampleIdx < data.rows; sampleIdx++) {
         Mat p = subspaceProject(_eigenvectors, _mean, data.row(sampleIdx));
-        this->_projections.push_back(p);
+        _projections.push_back(p);
     }
 }
 
 int Eigenfaces::predict(InputArray _src) const {
     // get data
     Mat src = _src.getMat();
+    // make sure the user is passing correct data
+    if(_projections.empty()) {
+        // throw error if no data (or simply return -1?)
+        string error_message = "This Eigenfaces model is not computed yet. Did you call Eigenfaces::train?";
+        error(cv::Exception(CV_StsError, error_message, "Eigenfaces::predict", __FILE__, __LINE__));
+    } else if(_eigenvectors.rows != static_cast<int>(src.total())) {
+        // check data alignment just for clearer exception messages
+        string error_message = format("Wrong input image size. Reason: Training and Test images must be of equal size! Expected an image with %d elements, but got %d.", _eigenvectors.rows, src.total());
+        error(cv::Exception(CV_StsError, error_message, "Eigenfaces::predict", __FILE__, __LINE__));
+    }
     // project into PCA subspace
     Mat q = subspaceProject(_eigenvectors, _mean, src.reshape(1,1));
     double minDist = DBL_MAX;
@@ -354,25 +379,31 @@ void Eigenfaces::save(FileStorage& fs) const {
 // Fisherfaces
 //------------------------------------------------------------------------------
 void Fisherfaces::train(InputArray src, InputArray _lbls) {
-    if(_lbls.getMat().type() != CV_32SC1)
-            CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
+    if(src.total() == 0) {
+        string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
+        error(cv::Exception(CV_StsUnsupportedFormat, error_message, "cv::Eigenfaces::train", __FILE__, __LINE__));
+    } else if(_lbls.getMat().type() != CV_32SC1) {
+        string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _lbls.type());
+        error(cv::Exception(CV_StsUnsupportedFormat, error_message, "cv::Fisherfaces::train", __FILE__, __LINE__));
+    }
     // get data
     Mat labels = _lbls.getMat();
     Mat data = asRowMatrix(src, CV_64FC1);
-
-    CV_Assert( labels.type() == CV_32S && (labels.cols == 1 || labels.rows == 1));
-
-    // dimensionality
-    int N = data.rows; // number of samples
-    //int D = data.cols; // dimension of samples
-    // assert correct data alignment
-    if(labels.total() != (size_t)N)
-        CV_Error(CV_StsUnsupportedFormat, "Labels must be given as integer (CV_32SC1).");
-    // compute the Fisherfaces
-
+    // number of samples
+    int N = data.rows;
+    // make sure labels are passed in correct shape
+    if(labels.total() != (size_t) N) {
+     string error_message = format("The number of samples (src) must equal the number of labels (labels)! len(src)=%d, len(labels)=%d.", N, labels.total());
+     error(cv::Exception(CV_StsBadArg, error_message, "Fisherfaces::train", __FILE__, __LINE__));
+    } else if(labels.rows != 1 && labels.cols != 1) {
+        string error_message = format("Expected the labels in a matrix with one row or column! Given dimensions are rows=%s, cols=%d.", labels.rows, labels.cols);
+        error(cv::Exception(CV_StsBadArg, error_message, "Fisherfaces::train", __FILE__, __LINE__));
+    }
+    // Get the number of unique classes
+    // TODO Provide a cv::Mat version?
     vector<int> ll;
     labels.copyTo(ll);
-    int C = (int)remove_dups(ll).size(); // number of unique classes
+    int C = (int) remove_dups(ll).size();
     // clip number of components to be a valid number
     if((_num_components <= 0) || (_num_components > (C-1)))
         _num_components = (C-1);
@@ -398,6 +429,15 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
 
 int Fisherfaces::predict(InputArray _src) const {
     Mat src = _src.getMat();
+    // check data alignment just for clearer exception messages
+    if(_projections.empty()) {
+        // throw error if no data (or simply return -1?)
+        string error_message = "This Fisherfaces model is not computed yet. Did you call Fisherfaces::train?";
+        error(cv::Exception(CV_StsError, error_message, "Fisherfaces::predict", __FILE__, __LINE__));
+    } else if(src.total() != (size_t) _eigenvectors.rows) {
+        string error_message = format("Wrong input image size. Reason: Training and Test images must be of equal size! Expected an image with %d elements, but got %d.", _eigenvectors.rows, src.total());
+        error(cv::Exception(CV_StsError, error_message, "Fisherfaces::predict", __FILE__, __LINE__));
+    }
     // project into LDA subspace
     Mat q = subspaceProject(_eigenvectors, _mean, src.reshape(1,1));
     // find 1-nearest neighbor
@@ -531,7 +571,7 @@ histc_(const Mat& src, int minVal=0, int maxVal=255, bool normed=false)
     // Establish the number of bins.
     int histSize = maxVal-minVal+1;
     // Set the ranges.
-    float range[] = { static_cast<float>(minVal), static_cast<float>(maxVal) };
+    float range[] = { static_cast<float>(minVal), static_cast<float>(maxVal+1) };
     const float* histRange = { range };
     // calc histogram
     calcHist(&src, 1, 0, Mat(), result, 1, &histSize, &histRange, true, false);
@@ -570,7 +610,7 @@ static Mat histc(InputArray _src, int minVal, int maxVal, bool normed)
     return Mat();
 }
 
-
+    
 static Mat spatial_histogram(InputArray _src, int numPatterns,
                              int grid_x, int grid_y, bool normed)
 {
@@ -602,7 +642,7 @@ static Mat spatial_histogram(InputArray _src, int numPatterns,
 }
 
 //------------------------------------------------------------------------------
-// cv::elbp, cv::olbp, cv::varlbp wrapper
+// wrapper to cv::elbp (extended local binary patterns)
 //------------------------------------------------------------------------------
 
 static Mat elbp(InputArray src, int radius, int neighbors) {
@@ -610,7 +650,7 @@ static Mat elbp(InputArray src, int radius, int neighbors) {
     elbp(src, dst, radius, neighbors);
     return dst;
 }
-
+    
 void LBPH::load(const FileStorage& fs) {
     fs["radius"] >> _radius;
     fs["neighbors"] >> _neighbors;
@@ -633,8 +673,16 @@ void LBPH::save(FileStorage& fs) const {
 }
 
 void LBPH::train(InputArray _src, InputArray _lbls) {
-    if(_src.kind() != _InputArray::STD_VECTOR_MAT && _src.kind() != _InputArray::STD_VECTOR_VECTOR)
-        CV_Error(CV_StsUnsupportedFormat, "LBPH::train expects InputArray::STD_VECTOR_MAT or _InputArray::STD_VECTOR_VECTOR.");
+    if(_src.kind() != _InputArray::STD_VECTOR_MAT && _src.kind() != _InputArray::STD_VECTOR_VECTOR) {
+        string error_message = "The images are expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
+        error(Exception(CV_StsBadArg, error_message, "LBPH::train", __FILE__, __LINE__));
+    } else  if(_src.total() == 0) {
+        string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
+        error(Exception(CV_StsUnsupportedFormat, error_message, "LBPH::train", __FILE__, __LINE__));
+    } else if(_lbls.getMat().type() != CV_32SC1) {
+        string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _lbls.type());
+        error(Exception(CV_StsUnsupportedFormat, error_message, "LBPH::train", __FILE__, __LINE__));
+    }
     // get the vector of matrices
     vector<Mat> src;
     _src.getMatVector(src);
@@ -661,7 +709,6 @@ void LBPH::train(InputArray _src, InputArray _lbls) {
     }
 }
 
-
 int LBPH::predict(InputArray _src) const {
     Mat src = _src.getMat();
     // get the spatial histogram from input image
@@ -684,24 +731,24 @@ int LBPH::predict(InputArray _src) const {
     }
     return minClass;
 }
-
-
+    
+    
 Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components)
 {
     return new Eigenfaces(num_components);
 }
-
+    
 Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components)
 {
     return new Fisherfaces(num_components);
 }
-
+    
 Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius, int neighbors,
                                              int grid_x, int grid_y)
 {
     return new LBPH(radius, neighbors, grid_x, grid_y);
 }
-
+    
 CV_INIT_ALGORITHM(Eigenfaces, "FaceRecognizer.Eigenfaces",
                   obj.info()->addParam(obj, "ncomponents", obj._num_components);
                   obj.info()->addParam(obj, "projections", obj._projections, true);
@@ -716,8 +763,8 @@ CV_INIT_ALGORITHM(Fisherfaces, "FaceRecognizer.Fisherfaces",
                   obj.info()->addParam(obj, "labels", obj._labels, true);
                   obj.info()->addParam(obj, "eigenvectors", obj._eigenvectors, true);
                   obj.info()->addParam(obj, "eigenvalues", obj._eigenvalues, true);
-                  obj.info()->addParam(obj, "mean", obj._mean, true));
-
+                  obj.info()->addParam(obj, "mean", obj._mean, true));    
+    
 CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
                   obj.info()->addParam(obj, "radius", obj._radius);
                   obj.info()->addParam(obj, "neighbors", obj._neighbors);
@@ -725,7 +772,7 @@ CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
                   obj.info()->addParam(obj, "grid_y", obj._grid_y);
                   obj.info()->addParam(obj, "histograms", obj._histograms, true);
                   obj.info()->addParam(obj, "labels", obj._labels, true));
-
+    
 bool initModule_contrib()
 {
     Ptr<Algorithm> efaces = createEigenfaces(), ffaces = createFisherfaces(), lbph = createLBPH();

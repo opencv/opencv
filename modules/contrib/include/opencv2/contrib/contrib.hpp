@@ -942,8 +942,6 @@ namespace cv
         // Deserializes this object from a given cv::FileStorage.
         virtual void load(const FileStorage& fs) = 0;
 
-        // Returns eigenvectors (if any)
-        virtual Mat eigenvectors() const { return Mat(); }
     };
 
     CV_EXPORTS Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0);
