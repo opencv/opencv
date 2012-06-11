@@ -6,53 +6,37 @@ Installation in iOS
 Required packages
 ==================
 
-  * GCC 4.x or later
-  * CMake 2.8 or higher
-  * Xcode 4.0 or higher
+  * CMake 2.8.8 or higher
+  * Xcode 4.3 or higher
 
 Getting the cutting-edge OpenCV from SourceForge SVN repository
 -----------------------------------------------------------------
 
-Launch SVN client and checkout either
-
-a. the current OpenCV snapshot from here: http://code.opencv.org/svn/opencv/trunk
-
-#. or the latest tested OpenCV snapshot from here: http://code.opencv.org/svn/opencv/tags/latest_tested_snapshot
+Launch SVN client and checkout the current OpenCV snapshot from here: http://code.opencv.org/svn/opencv/trunk/opencv
 
 In MacOS it can be done using the following command in Terminal:
 
 .. code-block:: bash
 
    cd ~/<my_working _directory>
-   svn co http://code.opencv.org/svn/opencv/trunk  
+   svn co http://code.opencv.org/svn/opencv/trunk/opencv  
  
 
 Building OpenCV from source using CMake, using the command line
 ================================================================
 
-#. Create a temporary directory, which we denote as <cmake_binary_dir>, where you want to put the generated Makefiles, project files as well the object filees and output binaries
+#. Make symbolic link for Xcode to let OpenCV build scripts find the compiler, header files etc.
 
-#. Enter the <cmake_binary_dir> and type
-
-   .. code-block:: bash
-     
-      cmake [<some optional parameters>] <path to the OpenCV source directory>
-
-   For example
-
-   .. code-block:: bash
+    .. code-block:: bash
+    
+       cd /
+       sudo ln -s /Applications/Xcode.app/Contents/Developer Developer
        
-      cd ~/opencv
-      cd ..
-      mkdir release
-      cd release
-      cmake -GXcode -DCMAKE_TOOLCHAIN_FILE=../opencv/ios/cmake/Toolchains/Toolchain-iPhoneOS_Xcode.cmake -DCMAKE_INSTALL_PREFIX=../OpenCV_iPhoneOS -DCMAKE_BUILD_TYPE=RELEASE ../opencv
+#. Build OpenCV framework
 
-
-#. Enter the created temporary directory (<cmake_binary_dir>) and proceed with:
-
-   .. code-block:: bash
-      
-      xcodebuild -sdk iphoneos -configuration Release -target ALL_BUILD
-      xcodebuild -sdk iphoneos -configuration Release -target install install
-
+    .. code-block:: bash
+    
+       cd ~/<my_working_directory>
+       python opencv/ios/build_framework.py ios
+       
+If everything's fine, after a few minutes you will get ~/<my_working_directory>/ios/opencv2.framework. You can add this framework to your Xcode projects.
