@@ -32,14 +32,62 @@ macro(ocv_clear_vars)
   endforeach()
 endmacro()
 
+set(OCV_COMPILER_FAIL_REGEX
+    "command line option .* is valid for .* but not for C\\+\\+" # GNU
+    "unrecognized .*option"                     # GNU
+    "unknown .*option"                          # Clang
+    "ignoring unknown option"                   # MSVC
+    "warning D9002"                             # MSVC, any lang
+    "option .*not supported"                    # Intel
+    "[Uu]nknown option"                         # HP
+    "[Ww]arning: [Oo]ption"                     # SunPro
+    "command option .* is not recognized"       # XL
+    "not supported in this configuration; ignored"       # AIX
+    "File with unknown suffix passed to linker" # PGI
+    "WARNING: unknown flag:"                    # Open64
+  )
 
-include(CheckCXXCompilerFlag)
-include(CheckCCompilerFlag)
+MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
+  if("_${LANG}_" MATCHES "_CXX_")
+    set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx")
+    FILE(WRITE "${_fname}" "int main() { return 0;}\n")
+  elseif("_${LANG}_" MATCHES "_C_")
+    set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.c")
+    FILE(WRITE "${_fname}" "int main(void) { return 0;}\n")
+  else()
+    unset(_fname)
+  endif()
+  if(_fname)
+    MESSAGE(STATUS "Performing Test ${RESULT}")
+    TRY_COMPILE(${RESULT}
+      ${CMAKE_BINARY_DIR}
+      "${_fname}"
+      COMPILE_DEFINITIONS "${FLAG}"
+      OUTPUT_VARIABLE OUTPUT)
+  
+    FOREACH(_regex ${OCV_COMPILER_FAIL_REGEX})
+      IF("${OUTPUT}" MATCHES "${_regex}")
+        SET(${RESULT} 0)
+        break()
+      ENDIF()
+    ENDFOREACH()
+
+    IF(${RESULT})
+      SET(${RESULT} 1 CACHE INTERNAL "Test ${RESULT}")
+      MESSAGE(STATUS "Performing Test ${RESULT} - Success")
+    ELSE(${RESULT})
+      MESSAGE(STATUS "Performing Test ${RESULT} - Failed")
+      SET(${RESULT} "" CACHE INTERNAL "Test ${RESULT}")
+    ENDIF(${RESULT})
+  else()
+    SET(${RESULT} 0)
+  endif()
+ENDMACRO()
 
 macro(ocv_check_flag_support lang flag varname)
   if("_${lang}_" MATCHES "_CXX_")
     set(_lang CXX)
-  elseif("_${lang}_" MATCHES ".*_C_.*")
+  elseif("_${lang}_" MATCHES "_C_")
     set(_lang C)
   else()
     set(_lang ${lang})
@@ -49,13 +97,7 @@ macro(ocv_check_flag_support lang flag varname)
   string(REGEX REPLACE "^(/|-)" "HAVE_${_lang}_" ${varname} "${${varname}}")
   string(REGEX REPLACE " -|-|=| |\\." "_" ${varname} "${${varname}}")
 
-  if(_lang STREQUAL "CXX")
-    CHECK_CXX_COMPILER_FLAG("${ARGN} ${flag}" ${${varname}})
-  elseif(_lang STREQUAL "C")
-    CHECK_C_COMPILER_FLAG("${ARGN} ${flag}" ${${varname}})
-  else()
-    set(${varname} FALSE)
-  endif()
+  ocv_check_compiler_flag("${_lang}" "${ARGN} ${flag}" ${${varname}})
 endmacro()
 
 # turns off warnings

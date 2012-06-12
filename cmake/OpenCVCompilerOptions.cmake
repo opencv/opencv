@@ -50,15 +50,9 @@ endmacro()
 if(MINGW)
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
   # here we are trying to workaround the problem
-  include(CheckCXXCompilerFlag)
-  CHECK_CXX_COMPILER_FLAG(-mstackrealign HAVE_STACKREALIGN_FLAG)
-  if(HAVE_STACKREALIGN_FLAG)
-    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} -mstackrealign")
-  else()
-    CHECK_CXX_COMPILER_FLAG(-mpreferred-stack-boundary=2 HAVE_PREFERRED_STACKBOUNDARY_FLAG)
-    if(HAVE_PREFERRED_STACKBOUNDARY_FLAG)
-      set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} -mstackrealign")
-    endif()
+  add_extra_compiler_option(-mstackrealign)
+  if(NOT HAVE_CXX_MSTACKREALIGN)
+    add_extra_compiler_option(-mpreferred-stack-boundary=2)
   endif()
 endif()
 
