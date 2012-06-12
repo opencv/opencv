@@ -76,8 +76,8 @@ if __name__ == '__main__':
     img2 = cv2.imread(fn2, 0)
 
     surf = cv2.SURF(1000)
-    kp1, desc1 = surf.detect(img1, None, False)
-    kp2, desc2 = surf.detect(img2, None, False)
+    kp1, desc1 = surf.detectAndCompute(img1, None)
+    kp2, desc2 = surf.detectAndCompute(img2, None)
     desc1.shape = (-1, surf.descriptorSize())
     desc2.shape = (-1, surf.descriptorSize())
     print 'img1 - %d features, img2 - %d features' % (len(kp1), len(kp2))
