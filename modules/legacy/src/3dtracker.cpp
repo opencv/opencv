@@ -41,18 +41,9 @@
 
 #include "precomp.hpp"
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning(disable:4786) // Disable MSVC warnings in the standard library.
-#pragma warning(disable:4100)
-#pragma warning(disable:4512)
-#endif
 #include <stdio.h>
 #include <map>
 #include <algorithm>
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning(default:4100)
-#pragma warning(default:4512)
-#endif
 
 #define ARRAY_SIZEOF(a) (sizeof(a)/sizeof((a)[0]))
 

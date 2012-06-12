@@ -42,10 +42,6 @@
 #ifndef __HIGHGUI_H_
 #define __HIGHGUI_H_
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4251 )
-#endif
-
 #include "cvconfig.h"
 
 #include "opencv2/highgui/highgui.hpp"

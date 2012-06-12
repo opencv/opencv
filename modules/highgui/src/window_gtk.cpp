@@ -55,16 +55,6 @@
     #include <GL/glu.h>
 #endif
 
-/*#if _MSC_VER >= 1200
-#pragma warning( disable: 4505 )
-#pragma comment(lib,"gtk-win32-2.0.lib")
-#pragma comment(lib,"glib-2.0.lib")
-#pragma comment(lib,"gobject-2.0.lib")
-#pragma comment(lib,"gdk-win32-2.0.lib")
-#pragma comment(lib,"gdk_pixbuf-2.0.lib")
-#endif*/
-
-
 // TODO Fix the initial window size when flags=0.  Right now the initial window is by default
 // 320x240 size.  A better default would be actual size of the image.  Problem
 // is determining desired window size with trackbars while still allowing resizing.

@@ -205,7 +205,17 @@ static CvMat *PyCvMat_AsCvMat(PyObject *o)
 }
 
 #define cvReleaseIplConvKernel(x) cvReleaseStructuringElement(x)
+
+#if defined _MSC_VER && _MSC_VER >= 1200
+    #pragma warning( push )
+    #pragma warning( disable : 4244 )
+#endif
+
 #include "generated3.i"
+
+#if defined _MSC_VER && _MSC_VER >= 1200
+    #pragma warning( pop )
+#endif
 
 /* iplimage */
 
@@ -388,7 +398,8 @@ static PyObject *cvmat_tostring(PyObject *self, PyObject *args)
     bps = CV_MAT_CN(m->type) * 8;
     break;
   default:
-          return failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type)), (PyObject*)0;
+    failmsg("Unrecognized depth %d", CV_MAT_DEPTH(m->type));
+    return (PyObject*)0;
   }
 
   int bpl = m->cols * bps; // bytes per line
@@ -3800,7 +3811,7 @@ static int zero = 0;
 
 #define CVPY_VALIDATE_DrawChessboardCorners() do { \
   if ((patternSize.width * patternSize.height) != corners.count) \
-    return (PyObject*)failmsg("Size is %dx%d, but corner list is length %d", patternSize.width, patternSize.height, corners.count); \
+    return (PyObject*)0; \
   } while (0)
 
 #define cvGetRotationMatrix2D cv2DRotationMatrix
@@ -3839,7 +3850,16 @@ static double cppKMeans(const CvArr* _samples, int cluster_count, CvArr* _labels
 #define cvKMeans2(samples, nclusters, labels, termcrit, attempts, flags, centers) \
     cppKMeans(samples, nclusters, labels, termcrit, attempts, flags, centers)
 
+#if defined _MSC_VER && _MSC_VER >= 1200
+    #pragma warning( push )
+    #pragma warning( disable : 4244 )
+#endif
+
 #include "generated0.i"
+
+#if defined _MSC_VER && _MSC_VER >= 1200
+    #pragma warning( pop )
+#endif
 
 static PyMethodDef old_methods[] = {
 

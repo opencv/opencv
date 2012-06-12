@@ -179,7 +179,7 @@ public:
     virtual ~IMotionEstimatorBuilder() {}
     virtual Ptr<ImageMotionEstimatorBase> build() = 0;
 protected:
-    IMotionEstimatorBuilder(CommandLineParser &cmd) : cmd(cmd) {}
+    IMotionEstimatorBuilder(CommandLineParser &command) : cmd(command) {}
     CommandLineParser cmd;
 };
 
@@ -187,8 +187,8 @@ protected:
 class MotionEstimatorRansacL2Builder : public IMotionEstimatorBuilder
 {
 public:
-    MotionEstimatorRansacL2Builder(CommandLineParser &cmd, bool gpu, const string &prefix = "")
-        : IMotionEstimatorBuilder(cmd), gpu(gpu), prefix(prefix) {}
+    MotionEstimatorRansacL2Builder(CommandLineParser &command, bool use_gpu, const string &_prefix = "")
+        : IMotionEstimatorBuilder(command), gpu(use_gpu), prefix(_prefix) {}
 
     virtual Ptr<ImageMotionEstimatorBase> build()
     {
@@ -198,7 +198,7 @@ public:
         if (arg(prefix + "subset") != "auto")
             ransac.size = argi(prefix + "subset");
         if (arg(prefix + "thresh") != "auto")
-            ransac.thresh = argi(prefix + "thresh");
+            ransac.thresh = argf(prefix + "thresh");
         ransac.eps = argf(prefix + "outlier-ratio");
         est->setRansacParams(ransac);
 
@@ -238,8 +238,8 @@ private:
 class MotionEstimatorL1Builder : public IMotionEstimatorBuilder
 {
 public:
-    MotionEstimatorL1Builder(CommandLineParser &cmd, bool gpu, const string &prefix = "")
-        : IMotionEstimatorBuilder(cmd), gpu(gpu), prefix(prefix) {}
+    MotionEstimatorL1Builder(CommandLineParser &command, bool use_gpu, const string &_prefix = "")
+        : IMotionEstimatorBuilder(command), gpu(use_gpu), prefix(_prefix) {}
 
     virtual Ptr<ImageMotionEstimatorBase> build()
     {

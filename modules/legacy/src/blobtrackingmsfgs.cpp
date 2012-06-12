@@ -395,7 +395,7 @@ public:
 
             {   /* Mean shift in scale space: */
                 float   news = 0;
-                float   sum = 0;
+                float   sum1 = 0;
                 float   scale;
 
                 Center = cvPoint(cvRound(m_Blob.x),cvRound(m_Blob.y));
@@ -407,13 +407,13 @@ public:
                 {
                     double  W = cvDotProduct(m_Weights, m_KernelMeanShiftG[si]);;
                     int     s = si-SCALE_RANGE;
-                    sum += (float)fabs(W);
+                    sum1 += (float)fabs(W);
                     news += (float)(s*W);
                 }
 
-                if(sum>0)
+                if(sum1>0)
                 {
-                    news /= sum;
+                    news /= sum1;
                 }
 
                 scale = (float)pow((double)SCALE_BASE,(double)news);

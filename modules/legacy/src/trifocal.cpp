@@ -861,8 +861,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
     projMatrs[1] = projMatr2;
     projMatrs[2] = projMatr3;
 
-    int i;
-    for( i = 0; i < 3; i++ )
+    for(int i = 0; i < 3; i++ )
     {
         if( projMatrs[i]->cols != 4 || projMatrs[i]->rows != 3 )
         {
@@ -870,7 +869,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
         }
     }
 
-    for( i = 0; i < 3; i++ )
+    for(int i = 0; i < 3; i++ )
     {
         if( points[i]->rows != 2)
         {
@@ -951,10 +950,9 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
                 icvProject4DPoints(recPoints4D,&proj6[2],tmpProjPoints[2]);
 
                 /* Compute distances and number of good points (inliers) */
-                int i;
                 int currImage;
                 numGoodPoints = 0;
-                for( i = 0; i < numPoints; i++ )
+                for(int i = 0; i < numPoints; i++ )
                 {
                     double dist=-1;
                     dist = 0;
@@ -1051,7 +1049,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
                 CvMat *optStatus;
                 optStatus = cvCreateMat(1,numPoints,CV_64F);
                 int testNumber = 0;
-                for( i=0;i<numPoints;i++ )
+                for(int i=0;i<numPoints;i++ )
                 {
                     cvmSet(optStatus,0,i,(double)bestFlags[i]);
                     testNumber += bestFlags[i];
@@ -1063,7 +1061,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
 
                 CvMat *gPresPoints;
                 gPresPoints = cvCreateMat(1,maxGoodPoints,CV_64F);
-                for( i = 0; i < maxGoodPoints; i++)
+                for(int i = 0; i < maxGoodPoints; i++)
                 {
                     cvmSet(gPresPoints,0,i,1.0);
                 }
@@ -1130,7 +1128,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
 
                 int currImage;
                 finalGoodPoints = 0;
-                for( i = 0; i < numPoints; i++ )
+                for(int i = 0; i < numPoints; i++ )
                 {
                     double dist=-1;
                     /* Choose max distance for each of three points */
@@ -1178,7 +1176,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
                 /* Create status */
                 CvMat *optStatus;
                 optStatus = cvCreateMat(1,numPoints,CV_64F);
-                for( i=0;i<numPoints;i++ )
+                for(int i=0;i<numPoints;i++ )
                 {
                     cvmSet(optStatus,0,i,(double)bestFlags[i]);
                 }
@@ -1236,7 +1234,7 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
 
                 int currImage;
                 finalGoodPoints = 0;
-                for( i = 0; i < numPoints; i++ )
+                for(int i = 0; i < numPoints; i++ )
                 {
                     double dist=-1;
                     /* Choose max distance for each of three points */
@@ -1662,15 +1660,12 @@ void GetProjMatrFromReducedFundamental(CvMat* fundReduceCoefs,CvMat* projMatrCoe
     matrA_dat[7] = s;
     matrA_dat[8] = -(p+q+r+s+t);
 
-    CvMat matrU;
     CvMat matrW;
     CvMat matrV;
 
-    double matrU_dat[3*3];
     double matrW_dat[3*3];
     double matrV_dat[3*3];
 
-    matrU = cvMat(3,3,CV_64F,matrU_dat);
     matrW = cvMat(3,3,CV_64F,matrW_dat);
     matrV = cvMat(3,3,CV_64F,matrV_dat);
 
@@ -1731,27 +1726,24 @@ void GetProjMatrFromReducedFundamental(CvMat* fundReduceCoefs,CvMat* projMatrCoe
         matrK_dat[4*6+5] = -B2;
         matrK_dat[5*6+5] = -C2;
 
-        CvMat matrU;
-        CvMat matrW;
-        CvMat matrV;
+        CvMat matrW1;
+        CvMat matrV1;
 
-        double matrU_dat[36];
-        double matrW_dat[36];
-        double matrV_dat[36];
+        double matrW_dat1[36];
+        double matrV_dat1[36];
 
-        matrU = cvMat(6,6,CV_64F,matrU_dat);
-        matrW = cvMat(6,6,CV_64F,matrW_dat);
-        matrV = cvMat(6,6,CV_64F,matrV_dat);
+        matrW1 = cvMat(6,6,CV_64F,matrW_dat1);
+        matrV1 = cvMat(6,6,CV_64F,matrV_dat1);
 
         /* From svd we need just last vector of V or last row V' */
         /* We get transposed matrixes U and V */
 
-        cvSVD(&matrK,&matrW,0,&matrV,CV_SVD_V_T);
+        cvSVD(&matrK,&matrW1,0,&matrV1,CV_SVD_V_T);
 
-        a = matrV_dat[6*5+0];
-        b = matrV_dat[6*5+1];
-        c = matrV_dat[6*5+2];
-        d = matrV_dat[6*5+3];
+        a = matrV_dat1[6*5+0];
+        b = matrV_dat1[6*5+1];
+        c = matrV_dat1[6*5+2];
+        d = matrV_dat1[6*5+3];
         /* we don't need last two coefficients. Because it just a k1,k2 */
 
         cvmSet(projMatrCoefs,0,0,a);

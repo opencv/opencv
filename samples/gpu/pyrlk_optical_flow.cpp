@@ -74,7 +74,7 @@ struct DrawData
     GlArrays arr;
 };
 
-void drawCallback(void* userdata)
+static void drawCallback(void* userdata)
 {
     DrawData* data = static_cast<DrawData*>(userdata);
 

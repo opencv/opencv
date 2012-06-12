@@ -808,7 +808,7 @@ void cv::SpinImageModel::selectRandomSubset(float ratio)
         subset.resize(setSize);
         for(size_t i = 0; i < setSize; ++i)
         {
-            int pos = rnd.next() % left.size();
+            int pos = rnd.next() % (int)left.size();
             subset[i] = (int)left[pos];
 
             left[pos] = left.back();

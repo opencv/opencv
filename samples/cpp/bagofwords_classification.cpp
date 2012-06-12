@@ -803,9 +803,9 @@ void VocData::calcClassifierPrecRecall(const string& input_file, vector<float>& 
         std::sort(order.begin(),order.end(),orderingSorter());
 
         /* 2. save ranking results to text file */
-        string input_file_std = checkFilenamePathsep(input_file);
-        size_t fnamestart = input_file_std.rfind("/");
-        string scoregt_file_str = input_file_std.substr(0,fnamestart+1) + "scoregt_" + class_name + ".txt";
+        string input_file_std1 = checkFilenamePathsep(input_file);
+        size_t fnamestart = input_file_std1.rfind("/");
+        string scoregt_file_str = input_file_std1.substr(0,fnamestart+1) + "scoregt_" + class_name + ".txt";
         std::ofstream scoregt_file(scoregt_file_str.c_str());
         if (scoregt_file.is_open())
         {

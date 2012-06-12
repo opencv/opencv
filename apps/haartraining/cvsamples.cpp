@@ -323,8 +323,6 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
                 int i00, i10, i01, i11;
                 i00 = i10 = i01 = i11 = (int) fill_value;
 
-                double i = fill_value;
-
                 /* linear interpolation using 2x2 neighborhood */
                 if( isrc_x >= 0 && isrc_x <= src_size.width &&
                     isrc_y >= 0 && isrc_y <= src_size.height )
@@ -349,9 +347,8 @@ static void cvWarpPerspective( CvArr* src, CvArr* dst, double quad[4][2] )
 
                 double i0 = i00 + (i10 - i00)*delta_x;
                 double i1 = i01 + (i11 - i01)*delta_x;
-                i = i0 + (i1 - i0)*delta_y;
 
-                ((uchar*)(dst_data + y * dst_step))[x] = (uchar) i;
+                ((uchar*)(dst_data + y * dst_step))[x] = (uchar) (i0 + (i1 - i0)*delta_y);
             }
             x_min += k_left;
             x_max += k_right;

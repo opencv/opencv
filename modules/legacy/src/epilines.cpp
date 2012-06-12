@@ -2729,8 +2729,7 @@ static int icvSelectBestRt(         int           numImages,
     /* allocate memory for 64d data */
     int totalNum = 0;
 
-    int i;
-    for( i = 0; i < numImages; i++ )
+    for(int i = 0; i < numImages; i++ )
     {
         totalNum += numPoints[i];
     }
@@ -2828,8 +2827,7 @@ static int icvSelectBestRt(         int           numImages,
             points2 = (CvPoint3D64d*)calloc(numberPnt,sizeof(CvPoint3D64d));
 
             /* Transform object points to first camera position */
-            int i;
-            for( i = 0; i < numberPnt; i++ )
+            for(int i = 0; i < numberPnt; i++ )
             {
                 /* Create second camera point */
                 CvPoint3D64d tmpPoint;
@@ -2859,8 +2857,6 @@ static int icvSelectBestRt(         int           numImages,
                 dy = tmpPoint2.y - points1[i].y;
                 dz = tmpPoint2.z - points1[i].z;
                 err = sqrt(dx*dx + dy*dy + dz*dz);*/
-
-
             }
 
 #if 0
@@ -3094,8 +3090,7 @@ int icvComputeRestStereoParams(CvStereoCamera *stereoparams)
     corns[3].x = 0;
     corns[3].y = (float)(stereoparams->camera[0]->imgSize[1]-1);
 
-    int i;
-    for( i = 0; i < 4; i++ )
+    for(int i = 0; i < 4; i++ )
     {
         /* For first camera */
         icvConvertWarpCoordinates( stereoparams->coeffs[0],

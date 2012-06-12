@@ -173,9 +173,9 @@ static void saveCameraParams( const string& filename,
 {
     FileStorage fs( filename, FileStorage::WRITE );
 
-    time_t t;
-    time( &t );
-    struct tm *t2 = localtime( &t );
+    time_t tt;
+    time( &tt );
+    struct tm *t2 = localtime( &tt );
     char buf[1024];
     strftime( buf, sizeof(buf)-1, "%c", t2 );
 

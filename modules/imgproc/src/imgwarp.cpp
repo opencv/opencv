@@ -1521,7 +1521,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                 assert( k < ssize.width*2 );
                 xofs[k].di = dx*cn;
                 xofs[k].si = sx*cn;
-                xofs[k++].alpha = 1.f / min(scale_x, src.cols - fsx1);
+                xofs[k++].alpha = float(1.0 / min(scale_x, src.cols - fsx1));
             }
 
             if( fsx2 - sx2 > 1e-3 )

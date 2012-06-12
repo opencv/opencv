@@ -41,13 +41,9 @@
 
 #include "precomp.hpp"
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4711 )
-#endif
-
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
-#pragma warning( disable: 4748 )
+#pragma warning(disable: 4748)
 #endif
 
 namespace cv

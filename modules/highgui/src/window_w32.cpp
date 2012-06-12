@@ -43,10 +43,6 @@
 
 #if defined WIN32 || defined _WIN32
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4710 )
-#endif
-
 #define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
 #ifndef _MULTIMON_USE_SECURE_CRT
 #  define _MULTIMON_USE_SECURE_CRT 0 // some MinGW platforms have no strncpy_s
@@ -907,7 +903,7 @@ namespace
 
     void releaseGlContext(CvWindow* window)
     {
-        CV_FUNCNAME( "releaseGlContext" );
+        //CV_FUNCNAME( "releaseGlContext" );
 
         __BEGIN__;
 
@@ -1907,18 +1903,18 @@ static LRESULT CALLBACK WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     if( hg_on_preprocess )
     {
         int was_processed = 0;
-        int ret = hg_on_preprocess(hwnd, uMsg, wParam, lParam, &was_processed);
+        int rethg = hg_on_preprocess(hwnd, uMsg, wParam, lParam, &was_processed);
         if( was_processed )
-            return ret;
+            return rethg;
     }
     ret = HighGUIProc(hwnd, uMsg, wParam, lParam);
 
     if(hg_on_postprocess)
     {
         int was_processed = 0;
-        int ret = hg_on_postprocess(hwnd, uMsg, wParam, lParam, &was_processed);
+        int rethg = hg_on_postprocess(hwnd, uMsg, wParam, lParam, &was_processed);
         if( was_processed )
-            return ret;
+            return rethg;
     }
 
     return ret;

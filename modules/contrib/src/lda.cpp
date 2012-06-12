@@ -70,12 +70,12 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     // dimensionality of (reshaped) samples
     size_t d = src.getMat(0).total();
     // create data matrix
-    Mat data(n, d, rtype);
+    Mat data((int)n, (int)d, rtype);
     // now copy data
-    for(size_t i = 0; i < n; i++) {
+    for(int i = 0; i < (int)n; i++) {
         // make sure data can be reshaped, throw exception if not!
         if(src.getMat(i).total() != d) {
-            string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, d, src.getMat(i).total());
+            string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, (int)d, (int)src.getMat(i).total());
             CV_Error(CV_StsBadArg, error_message);
         }
         // get a hold of the current row
@@ -987,7 +987,7 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     vector<int> mapped_labels(labels.size());
     vector<int> num2label = remove_dups(labels);
     map<int, int> label2num;
-    for (size_t i = 0; i < num2label.size(); i++)
+    for (int i = 0; i < (int)num2label.size(); i++)
         label2num[num2label[i]] = i;
     for (size_t i = 0; i < labels.size(); i++)
         mapped_labels[i] = label2num[labels[i]];
@@ -995,7 +995,7 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     int N = data.rows;
     int D = data.cols;
     // number of unique labels
-    int C = num2label.size();
+    int C = (int)num2label.size();
     // we can't do a LDA on one class, what do you
     // want to separate from each other then?
     if(C == 1) {

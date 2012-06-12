@@ -52,7 +52,7 @@ namespace videostab
 {
 
 void NullOutlierRejector::process(
-        Size frameSize, InputArray points0, InputArray points1, OutputArray mask)
+        Size /*frameSize*/, InputArray points0, InputArray points1, OutputArray mask)
 {
     CV_Assert(points0.type() == points1.type());
     CV_Assert(points0.getMat().checkVector(2) == points1.getMat().checkVector(2));

@@ -23,14 +23,14 @@ static void help()
             "To add/remove a feature point click it\n" << endl;
 }
 
-Point2f pt;
+Point2f point;
 bool addRemovePt = false;
 
 static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
 {
     if( event == CV_EVENT_LBUTTONDOWN )
     {
-        pt = Point2f((float)x,(float)y);
+        point = Point2f((float)x,(float)y);
         addRemovePt = true;
     }
 }
@@ -97,7 +97,7 @@ int main( int argc, char** argv )
             {
                 if( addRemovePt )
                 {
-                    if( norm(pt - points[1][i]) <= 5 )
+                    if( norm(point - points[1][i]) <= 5 )
                     {
                         addRemovePt = false;
                         continue;
@@ -116,7 +116,7 @@ int main( int argc, char** argv )
         if( addRemovePt && points[1].size() < (size_t)MAX_COUNT )
         {
             vector<Point2f> tmp;
-            tmp.push_back(pt);
+            tmp.push_back(point);
             cornerSubPix( gray, tmp, winSize, cvSize(-1,-1), termcrit);
             points[1].push_back(tmp[0]);
             addRemovePt = false;

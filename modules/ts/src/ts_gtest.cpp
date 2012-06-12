@@ -36,7 +36,11 @@
 
 // This line ensures that gtest.h can be compiled on its own, even
 // when it's fused.
-#include "opencv2/ts/ts.hpp"
+#include "precomp.hpp"
+
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#endif
 
 // The following lines pull in the real gtest *.cc files.
 // Copyright 2005, Google Inc.

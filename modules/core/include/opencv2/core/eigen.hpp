@@ -48,6 +48,11 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/core.hpp"
 
+#if defined _MSC_VER && _MSC_VER >= 1200
+#pragma warning( disable: 4714 ) //__forceinline is not inlined
+#pragma warning( disable: 4127 ) //conditional expression is constant
+#endif
+
 namespace cv
 {
 

@@ -190,79 +190,79 @@ static void icvFindStereoCorrespondenceByBirchfieldDP( uchar* src1, uchar* src2,
 
         for( x = 1; x < imgW; x++ )
         {
-            int d = MIN( x + 1, maxDisparity + 1);
+            int dp = MIN( x + 1, maxDisparity + 1);
             uchar* _edges = edges + y*imgW + x;
             int e0 = _edges[0] & 1;
             _CvDPCell* _cell = cells + x*dispH;
 
             do
             {
-                int s = dsi[d*imgW+x];
+                int _s = dsi[dp*imgW+x];
                 int sum[3];
 
                 //check left step
-                sum[0] = _cell[d-dispH].sum - param2;
+                sum[0] = _cell[dp-dispH].sum - param2;
 
                 //check up step
-                if( _cell[d+1].step != ICV_DP_STEP_DIAG && e0 )
+                if( _cell[dp+1].step != ICV_DP_STEP_DIAG && e0 )
                 {
-                    sum[1] = _cell[d+1].sum + param1;
+                    sum[1] = _cell[dp+1].sum + param1;
 
-                    if( _cell[d-1-dispH].step != ICV_DP_STEP_UP && (_edges[1-d] & 2) )
+                    if( _cell[dp-1-dispH].step != ICV_DP_STEP_UP && (_edges[1-dp] & 2) )
                     {
                         int t;
 
-                        sum[2] = _cell[d-1-dispH].sum + param1;
+                        sum[2] = _cell[dp-1-dispH].sum + param1;
 
                         t = sum[1] < sum[0];
 
                         //choose local-optimal pass
                         if( sum[t] <= sum[2] )
                         {
-                            _cell[d].step = (uchar)t;
-                            _cell[d].sum = sum[t] + s;
+                            _cell[dp].step = (uchar)t;
+                            _cell[dp].sum = sum[t] + _s;
                         }
                         else
                         {
-                            _cell[d].step = ICV_DP_STEP_DIAG;
-                            _cell[d].sum = sum[2] + s;
+                            _cell[dp].step = ICV_DP_STEP_DIAG;
+                            _cell[dp].sum = sum[2] + _s;
                         }
                     }
                     else
                     {
                         if( sum[0] <= sum[1] )
                         {
-                            _cell[d].step = ICV_DP_STEP_LEFT;
-                            _cell[d].sum = sum[0] + s;
+                            _cell[dp].step = ICV_DP_STEP_LEFT;
+                            _cell[dp].sum = sum[0] + _s;
                         }
                         else
                         {
-                            _cell[d].step = ICV_DP_STEP_UP;
-                            _cell[d].sum = sum[1] + s;
+                            _cell[dp].step = ICV_DP_STEP_UP;
+                            _cell[dp].sum = sum[1] + _s;
                         }
                     }
                 }
-                else if( _cell[d-1-dispH].step != ICV_DP_STEP_UP && (_edges[1-d] & 2) )
+                else if( _cell[dp-1-dispH].step != ICV_DP_STEP_UP && (_edges[1-dp] & 2) )
                 {
-                    sum[2] = _cell[d-1-dispH].sum + param1;
+                    sum[2] = _cell[dp-1-dispH].sum + param1;
                     if( sum[0] <= sum[2] )
                     {
-                        _cell[d].step = ICV_DP_STEP_LEFT;
-                        _cell[d].sum = sum[0] + s;
+                        _cell[dp].step = ICV_DP_STEP_LEFT;
+                        _cell[dp].sum = sum[0] + _s;
                     }
                     else
                     {
-                        _cell[d].step = ICV_DP_STEP_DIAG;
-                        _cell[d].sum = sum[2] + s;
+                        _cell[dp].step = ICV_DP_STEP_DIAG;
+                        _cell[dp].sum = sum[2] + _s;
                     }
                 }
                 else
                 {
-                    _cell[d].step = ICV_DP_STEP_LEFT;
-                    _cell[d].sum = sum[0] + s;
+                    _cell[dp].step = ICV_DP_STEP_LEFT;
+                    _cell[dp].sum = sum[0] + _s;
                 }
             }
-            while( --d );
+            while( --dp );
         }// for x
 
         //extract optimal way and fill disparity image

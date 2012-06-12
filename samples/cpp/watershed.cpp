@@ -118,13 +118,13 @@ int main( int argc, char** argv )
             for( i = 0; i < markers.rows; i++ )
                 for( j = 0; j < markers.cols; j++ )
                 {
-                    int idx = markers.at<int>(i,j);
-                    if( idx == -1 )
+                    int index = markers.at<int>(i,j);
+                    if( index == -1 )
                         wshed.at<Vec3b>(i,j) = Vec3b(255,255,255);
-                    else if( idx <= 0 || idx > compCount )
+                    else if( index <= 0 || index > compCount )
                         wshed.at<Vec3b>(i,j) = Vec3b(0,0,0);
                     else
-                        wshed.at<Vec3b>(i,j) = colorTab[idx - 1];
+                        wshed.at<Vec3b>(i,j) = colorTab[index - 1];
                 }
 
             wshed = wshed*0.5 + imgGray*0.5;

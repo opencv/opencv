@@ -206,7 +206,7 @@ icvJacobiEigens_32f(float *A, float *V, float *E, int n, float eps)
 //
 //    Returns: CV_NO_ERR or error code
 //
-//    Notes:   
+//    Notes:
 //F*/
 static CvStatus  CV_STDCALL
 icvCalcCovarMatrixEx_8u32fR( int nObjects, void *input, int objStep1,
@@ -539,8 +539,7 @@ icvCalcEigenObjects_8u32fR( int nObjects, void* input, int objStep,
     /* Buffer size determination */
     if( ioFlags )
     {
-        int size = icvDefaultBufferSize();
-        ioBufSize = MIN( size, n );
+        ioBufSize = MIN( icvDefaultBufferSize(), n );
     }
 
     /* memory allocation (if necesseay) */
@@ -695,13 +694,13 @@ icvCalcEigenObjects_8u32fR( int nObjects, void* input, int objStep,
 
         for( igr = 0; igr < ngr; igr++ )
         {
-            int i, io, ie, imin = igr * nio, imax = imin + nio;
+            int io, ie, imin = igr * nio, imax = imin + nio;
 
             if( imax > m1 )
                 imax = m1;
 
-            for( i = 0; i < eigSize.width * (imax - imin); i++ )
-                ((float *) buffer)[i] = 0.f;
+            for(int k = 0; k < eigSize.width * (imax - imin); k++ )
+                ((float *) buffer)[k] = 0.f;
 
             for( io = 0; io < nObjects; io++ )
             {
@@ -1313,7 +1312,7 @@ cvCalcEigenObjects( int       nObjects,
                     int       ioBufSize,
                     void*     userData,
                     CvTermCriteria* calcLimit,
-                    IplImage* avg, 
+                    IplImage* avg,
                     float*    eigVals )
 {
     float *avg_data;
@@ -1570,7 +1569,7 @@ cvCalcDecompCoeff( IplImage * obj, IplImage * eigObj, IplImage * avg )
                                        avg_data, avg_step, obj_size );
 
     __END__;
-    
+
     return coeff;
 }
 
@@ -1598,9 +1597,9 @@ CV_IMPL void
 cvEigenDecomposite( IplImage* obj,
                     int       nEigObjs,
                     void*     eigInput,
-                    int       ioFlags, 
-                    void*     userData, 
-                    IplImage* avg, 
+                    int       ioFlags,
+                    void*     userData,
+                    IplImage* avg,
                     float*    coeffs )
 {
     float *avg_data;
@@ -1716,7 +1715,7 @@ cvEigenProjection( void*     eigInput,
                    int       nEigObjs,
                    int       ioFlags,
                    void*     userData,
-                   float*    coeffs, 
+                   float*    coeffs,
                    IplImage* avg,
                    IplImage* proj )
 {

@@ -43,16 +43,12 @@
 
 #include <vfw.h>
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4711 )
-#endif
-
 #ifdef __GNUC__
 #define WM_CAP_FIRSTA              (WM_USER)
 #define capSendMessage(hwnd,m,w,l) (IsWindow(hwnd)?SendMessage(hwnd,m,w,l):0)
 #endif
 
-#if defined _M_X64
+#if defined _M_X64 && defined _MSC_VER
 #pragma optimize("",off)
 #pragma warning(disable: 4748)
 #endif
@@ -177,13 +173,13 @@ bool CvCaptureAVI_VFW::open( const char* filename )
             {
                 size.width = aviinfo.rcFrame.right - aviinfo.rcFrame.left;
                 size.height = aviinfo.rcFrame.bottom - aviinfo.rcFrame.top;
-                BITMAPINFOHEADER bmih = icvBitmapHeader( size.width, size.height, 24 );
+                BITMAPINFOHEADER bmihdr = icvBitmapHeader( size.width, size.height, 24 );
 
                 film_range.start_index = (int)aviinfo.dwStart;
                 film_range.end_index = film_range.start_index + (int)aviinfo.dwLength;
                 fps = (double)aviinfo.dwRate/aviinfo.dwScale;
                 pos = film_range.start_index;
-                getframe = AVIStreamGetFrameOpen( avistream, &bmih );
+                getframe = AVIStreamGetFrameOpen( avistream, &bmihdr );
                 if( getframe != 0 )
                     return true;
             }

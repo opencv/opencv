@@ -16843,7 +16843,7 @@ class GTEST_API_ TestPartResultArray {
 };
 
 // This interface knows how to report a test part result.
-class TestPartResultReporterInterface {
+class GTEST_API_ TestPartResultReporterInterface {
  public:
   virtual ~TestPartResultReporterInterface() {}
 

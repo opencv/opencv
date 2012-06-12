@@ -48,46 +48,45 @@ static void onMouse( int event, int x, int y, int, void* )
 static void help()
 {
     cout << "\nThis is a demo that shows mean-shift based tracking\n"
-			"You select a color objects such as your face and it tracks it.\n"
-			"This reads from video camera (0 by default, or the camera number the user enters\n"
-			"Usage: \n"
-            "	./camshiftdemo [camera number]\n";
+            "You select a color objects such as your face and it tracks it.\n"
+            "This reads from video camera (0 by default, or the camera number the user enters\n"
+            "Usage: \n"
+            "   ./camshiftdemo [camera number]\n";
 
     cout << "\n\nHot keys: \n"
-			"\tESC - quit the program\n"
-			"\tc - stop the tracking\n"
-			"\tb - switch to/from backprojection view\n"
-			"\th - show/hide object histogram\n"
-			"\tp - pause video\n"
+            "\tESC - quit the program\n"
+            "\tc - stop the tracking\n"
+            "\tb - switch to/from backprojection view\n"
+            "\th - show/hide object histogram\n"
+            "\tp - pause video\n"
             "To initialize tracking, select the object with mouse\n";
 }
 
-const char* keys = 
+const char* keys =
 {
-	"{1|  | 0 | camera number}"
+    "{1|  | 0 | camera number}"
 };
 
 int main( int argc, const char** argv )
 {
-	help();
+    help();
 
     VideoCapture cap;
     Rect trackWindow;
-    RotatedRect trackBox;
     int hsize = 16;
     float hranges[] = {0,180};
     const float* phranges = hranges;
-	CommandLineParser parser(argc, argv, keys);
-	int camNum = parser.get<int>("1");     
-	
-	cap.open(camNum);
+    CommandLineParser parser(argc, argv, keys);
+    int camNum = parser.get<int>("1");
+
+    cap.open(camNum);
 
     if( !cap.isOpened() )
     {
-    	help();
+        help();
         cout << "***Could not initialize capturing...***\n";
         cout << "Current parameter's value: \n";
-		parser.printParams();
+        parser.printParams();
         return -1;
     }
 
@@ -100,7 +99,7 @@ int main( int argc, const char** argv )
 
     Mat frame, hsv, hue, mask, hist, histimg = Mat::zeros(200, 320, CV_8UC3), backproj;
     bool paused = false;
-    
+
     for(;;)
     {
         if( !paused )
@@ -111,7 +110,7 @@ int main( int argc, const char** argv )
         }
 
         frame.copyTo(image);
-        
+
         if( !paused )
         {
             cvtColor(image, hsv, CV_BGR2HSV);
@@ -131,7 +130,7 @@ int main( int argc, const char** argv )
                     Mat roi(hue, selection), maskroi(mask, selection);
                     calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
                     normalize(hist, hist, 0, 255, CV_MINMAX);
-                    
+
                     trackWindow = selection;
                     trackObject = 1;
 
@@ -141,7 +140,7 @@ int main( int argc, const char** argv )
                     for( int i = 0; i < hsize; i++ )
                         buf.at<Vec3b>(i) = Vec3b(saturate_cast<uchar>(i*180./hsize), 255, 255);
                     cvtColor(buf, buf, CV_HSV2BGR);
-                        
+
                     for( int i = 0; i < hsize; i++ )
                     {
                         int val = saturate_cast<int>(hist.at<float>(i)*histimg.rows/255);

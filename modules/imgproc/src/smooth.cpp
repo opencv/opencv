@@ -453,11 +453,6 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 
 namespace cv
 {
-
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4244 )
-#endif
-
 typedef ushort HT;
 
 /**
@@ -569,7 +564,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
         for( c = 0; c < cn; c++ )
         {
             for( j = 0; j < n; j++ )
-                COP( c, j, src[cn*j+c], += r+2 );
+                COP( c, j, src[cn*j+c], += (cv::HT)(r+2) );
 
             for( i = 1; i < r; i++ )
             {
@@ -628,7 +623,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         if ( luc[c][k] <= j-r )
                         {
                             memset( &H[c].fine[k], 0, 16 * sizeof(HT) );
-                            for ( luc[c][k] = j-r; luc[c][k] < MIN(j+r+1,n); ++luc[c][k] )
+                            for ( luc[c][k] = cv::HT(j-r); luc[c][k] < MIN(j+r+1,n); ++luc[c][k] )
                                 histogram_add_simd( &h_fine[16*(n*(16*c+k)+luc[c][k])], H[c].fine[k] );
 
                             if ( luc[c][k] < j+r+1 )
@@ -691,7 +686,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         if ( luc[c][k] <= j-r )
                         {
                             memset( &H[c].fine[k], 0, 16 * sizeof(HT) );
-                            for ( luc[c][k] = j-r; luc[c][k] < MIN(j+r+1,n); ++luc[c][k] )
+                            for ( luc[c][k] = cv::HT(j-r); luc[c][k] < MIN(j+r+1,n); ++luc[c][k] )
                                 histogram_add( &h_fine[16*(n*(16*c+k)+luc[c][k])], H[c].fine[k] );
 
                             if ( luc[c][k] < j+r+1 )
@@ -732,11 +727,6 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 #undef HOP
 #undef COP
 }
-
-
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( default: 4244 )
-#endif
 
 static void
 medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )

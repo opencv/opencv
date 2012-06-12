@@ -137,7 +137,7 @@ struct CvFaceTracker
         if (NULL != mstgContours)
             cvReleaseMemStorage(&mstgContours);
     };
-    int Init(CvRect* pRects, IplImage* imgGray)
+    int Init(CvRect* pRects, IplImage* imgray)
     {
         for (int i = 0; i < NUM_FACE_ELEMENTS; i++)
         {
@@ -146,10 +146,10 @@ struct CvFaceTracker
             ptTempl[i] = face[i].ptCenter;
             rTempl[i] = face[i].r;
         }
-        imgGray = cvCreateImage(cvSize(imgGray->width, imgGray->height), 8, 1);
-        imgThresh = cvCreateImage(cvSize(imgGray->width, imgGray->height), 8, 1);
+        imgray = cvCreateImage(cvSize(imgray->width, imgray->height), 8, 1);
+        imgThresh = cvCreateImage(cvSize(imgray->width, imgray->height), 8, 1);
         mstgContours = cvCreateMemStorage();
-        if ((NULL == imgGray) ||
+        if ((NULL == imgray) ||
             (NULL == imgThresh) ||
             (NULL == mstgContours))
             return FALSE;

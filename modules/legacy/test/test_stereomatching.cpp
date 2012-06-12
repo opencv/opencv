@@ -593,11 +593,11 @@ int CV_StereoMatchingTest::readDatasetsParams( FileStorage& fs )
     assert(fn.isSeq());
     for( int i = 0; i < (int)fn.size(); i+=3 )
     {
-        string name = fn[i];
+        string nm = fn[i];
         DatasetParams params;
         string sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
         string uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
-        datasetsParams[name] = params;
+        datasetsParams[nm] = params;
     }
     return cvtest::TS::OK;
 }

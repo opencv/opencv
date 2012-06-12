@@ -69,16 +69,16 @@ struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
     }
 
 #ifdef DUMP
-    void dump(const cv::Mat& block_hists, const std::vector<cv::Point>& locations)
+    void dump(const cv::Mat& blockHists, const std::vector<cv::Point>& locations)
     {
-        f.write((char*)&block_hists.rows, sizeof(block_hists.rows));
-        f.write((char*)&block_hists.cols, sizeof(block_hists.cols));
+        f.write((char*)&blockHists.rows, sizeof(blockHists.rows));
+        f.write((char*)&blockHists.cols, sizeof(blockHists.cols));
 
-        for (int i = 0; i < block_hists.rows; ++i)
+        for (int i = 0; i < blockHists.rows; ++i)
         {
-            for (int j = 0; j < block_hists.cols; ++j)
+            for (int j = 0; j < blockHists.cols; ++j)
             {
-                float val = block_hists.at<float>(i, j);
+                float val = blockHists.at<float>(i, j);
                 f.write((char*)&val, sizeof(val));
             }
         }
@@ -90,21 +90,21 @@ struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
             f.write((char*)&locations[i], sizeof(locations[i]));
     }
 #else
-    void compare(const cv::Mat& block_hists, const std::vector<cv::Point>& locations)
+    void compare(const cv::Mat& blockHists, const std::vector<cv::Point>& locations)
     {
         int rows, cols;
         f.read((char*)&rows, sizeof(rows));
         f.read((char*)&cols, sizeof(cols));
-        ASSERT_EQ(rows, block_hists.rows);
-        ASSERT_EQ(cols, block_hists.cols);
+        ASSERT_EQ(rows, blockHists.rows);
+        ASSERT_EQ(cols, blockHists.cols);
 
-        for (int i = 0; i < block_hists.rows; ++i)
+        for (int i = 0; i < blockHists.rows; ++i)
         {
-            for (int j = 0; j < block_hists.cols; ++j)
+            for (int j = 0; j < blockHists.cols; ++j)
             {
                 float val;
                 f.read((char*)&val, sizeof(val));
-                ASSERT_NEAR(val, block_hists.at<float>(i, j), 1e-3);
+                ASSERT_NEAR(val, blockHists.at<float>(i, j), 1e-3);
             }
         }
 

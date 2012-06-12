@@ -111,22 +111,22 @@ int main(int argc, const char* argv[])
         GpuMat d_fu, d_fv;
 
         d_flow(d_frame0, d_frame1, d_fu, d_fv);
-                
+
         Mat flowFieldForward;
         getFlowField(Mat(d_fu), Mat(d_fv), flowFieldForward);
-    
+
         cout << "\tBackward..." << endl;
 
         GpuMat d_bu, d_bv;
 
         d_flow(d_frame1, d_frame0, d_bu, d_bv);
-        
+
         Mat flowFieldBackward;
         getFlowField(Mat(d_bu), Mat(d_bv), flowFieldBackward);
 
 #ifdef HAVE_OPENGL
         cout << "Create Optical Flow Needle Map..." << endl;
-        
+
         GpuMat d_vertex, d_colors;
 
         createOpticalFlowNeedleMap(d_fu, d_fv, d_vertex, d_colors);
@@ -153,7 +153,7 @@ int main(int argc, const char* argv[])
         d_bt.upload(channels[0]);
         d_gt.upload(channels[1]);
         d_rt.upload(channels[2]);
-    
+
         // temporary buffer
         GpuMat d_buf;
 
@@ -179,8 +179,8 @@ int main(int argc, const char* argv[])
             // interpolate red channel
             interpolateFrames(d_r, d_rt, d_fu, d_fv, d_bu, d_bv, timePos, d_rNew, d_buf);
 
-            GpuMat channels[] = {d_bNew, d_gNew, d_rNew};
-            merge(channels, 3, d_newFrame);
+            GpuMat channels3[] = {d_bNew, d_gNew, d_rNew};
+            merge(channels3, 3, d_newFrame);
 
             frames.push_back(Mat(d_newFrame));
 
@@ -218,7 +218,7 @@ int main(int argc, const char* argv[])
                 return 0;
 
             case 'A':
-                if (currentFrame > 0) 
+                if (currentFrame > 0)
                     --currentFrame;
 
                 imshow("Interpolated frame", frames[currentFrame]);
@@ -269,7 +269,7 @@ void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
         {
             float d = max(fabsf(ptr_u[j]), fabsf(ptr_v[j]));
 
-            if (d > maxDisplacement) 
+            if (d > maxDisplacement)
                 maxDisplacement = d;
         }
     }

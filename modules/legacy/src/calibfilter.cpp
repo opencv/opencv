@@ -44,10 +44,6 @@
 
 #undef quad
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4701 )
-#endif
-
 CvCalibFilter::CvCalibFilter()
 {
     /* etalon data */
@@ -93,7 +89,7 @@ CvCalibFilter::~CvCalibFilter()
 
 
 bool CvCalibFilter::SetEtalon( CvCalibEtalonType type, double* params,
-                               int pointCount, CvPoint2D32f* points )
+                               int pointCount, CvPoint2D32f* _points )
 {
     int i, arrSize;
 
@@ -132,7 +128,7 @@ bool CvCalibFilter::SetEtalon( CvCalibEtalonType type, double* params,
     case CV_CALIB_ETALON_USER:
         etalonParamCount = 0;
 
-        if( !points || pointCount < 4 )
+        if( !_points || pointCount < 4 )
         {
             assert(0);
             return false;
@@ -188,9 +184,9 @@ bool CvCalibFilter::SetEtalon( CvCalibEtalonType type, double* params,
         {
             memcpy( etalonParams, params, arrSize );
         }
-        if (points != NULL)
+        if (_points != NULL)
         {
-            memcpy( etalonPoints, points, arrSize );
+            memcpy( etalonPoints, _points, arrSize );
         }
         break;
 
@@ -205,7 +201,7 @@ bool CvCalibFilter::SetEtalon( CvCalibEtalonType type, double* params,
 
 CvCalibEtalonType
 CvCalibFilter::GetEtalon( int* paramCount, const double** params,
-                          int* pointCount, const CvPoint2D32f** points ) const
+                          int* pointCount, const CvPoint2D32f** _points ) const
 {
     if( paramCount )
         *paramCount = etalonParamCount;
@@ -216,8 +212,8 @@ CvCalibFilter::GetEtalon( int* paramCount, const double** params,
     if( pointCount )
         *pointCount = etalonPointCount;
 
-    if( points )
-        *points = etalonPoints;
+    if( _points )
+        *_points = etalonPoints;
 
     return etalonType;
 }

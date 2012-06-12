@@ -230,13 +230,13 @@ static void findConstrainedCorrespondences(const Mat& _F,
             {
                 if( i1 == i )
                     continue;
-                Point2f p1 = keypoints1[i1].pt;
+                Point2f pt1 = keypoints1[i1].pt;
                 const float* d11 = descriptors1.ptr<float>(i1);
                 double dist = 0;
 
-                e = p2.x*(F[0]*p1.x + F[1]*p1.y + F[2]) +
-                    p2.y*(F[3]*p1.x + F[4]*p1.y + F[5]) +
-                    F[6]*p1.x + F[7]*p1.y + F[8];
+                e = p2.x*(F[0]*pt1.x + F[1]*pt1.y + F[2]) +
+                    p2.y*(F[3]*pt1.x + F[4]*pt1.y + F[5]) +
+                    F[6]*pt1.x + F[7]*pt1.y + F[8];
                 if( fabs(e) > eps )
                     continue;
 

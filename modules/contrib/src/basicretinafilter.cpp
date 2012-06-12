@@ -335,7 +335,7 @@ void BasicRetinaFilter::_localLuminanceAdaptation(const float *inputFrame, const
 	{
 		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
 		// TODO : the following line can lead to a divide by zero ! A small offset is added, take care if the offset is too large in case of High Dynamic Range images which can use very small values...		
-		*(outputFramePTR++) = (_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001);
+		*(outputFramePTR++) = (_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001f);
 		//std::cout<<"BasicRetinaFilter::inputFrame[IDpixel]=%f, X0=%f, outputFrame[IDpixel]=%f\n", inputFrame[IDpixel], X0, outputFrame[IDpixel]);
 	}
 }

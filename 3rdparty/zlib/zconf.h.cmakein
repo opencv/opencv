@@ -419,7 +419,7 @@ typedef uLong FAR uLongf;
 #endif
 
 #ifndef _FILE_OFFSET_BITS
-#  define _FILE_OFFSET_BITS
+#  define _FILE_OFFSET_BITS 0
 #endif
 
 #if defined(_LARGEFILE64_SOURCE) && _LFS64_LARGEFILE-0

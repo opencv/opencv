@@ -182,13 +182,13 @@ void CvImage::show( const char* window_name )
 
 /////////////////////////////// CvMatrix implementation //////////////////////////////////
 
-CvMatrix::CvMatrix( int rows, int cols, int type, CvMemStorage* storage, bool alloc_data )
+CvMatrix::CvMatrix( int _rows, int _cols, int _type, CvMemStorage* storage, bool alloc_data )
 {
     if( storage )
     {
         matrix = (CvMat*)cvMemStorageAlloc( storage, sizeof(*matrix) );
-        cvInitMatHeader( matrix, rows, cols, type, alloc_data ?
-            cvMemStorageAlloc( storage, rows*cols*CV_ELEM_SIZE(type) ) : 0 );
+        cvInitMatHeader( matrix, _rows, _cols, _type, alloc_data ?
+            cvMemStorageAlloc( storage, _rows*_cols*CV_ELEM_SIZE(_type) ) : 0 );
     }
     else
         matrix = 0;

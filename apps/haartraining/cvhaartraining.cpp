@@ -2191,15 +2191,15 @@ void cvCreateCascadeClassifier( const char* dirname,
         {
             char xml_path[1024];
             int len = (int)strlen(dirname);
-            CvHaarClassifierCascade* cascade = 0;
+            CvHaarClassifierCascade* cascade1 = 0;
             strcpy( xml_path, dirname );
             if( xml_path[len-1] == '\\' || xml_path[len-1] == '/' )
                 len--;
             strcpy( xml_path + len, ".xml" );
-            cascade = cvLoadHaarClassifierCascade( dirname, cvSize(winwidth,winheight) );
-            if( cascade )
-                cvSave( xml_path, cascade );
-            cvReleaseHaarClassifierCascade( &cascade );
+            cascade1 = cvLoadHaarClassifierCascade( dirname, cvSize(winwidth,winheight) );
+            if( cascade1 )
+                cvSave( xml_path, cascade1 );
+            cvReleaseHaarClassifierCascade( &cascade1 );
         }
     }
     else
@@ -2502,7 +2502,6 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                 {
                     CvTreeCascadeNode* single_cluster;
                     CvTreeCascadeNode* multiple_clusters;
-                    CvSplit* cur_split;
                     int single_num;
 
                     icvSetNumSamples( training_data, poscount + negcount );
@@ -2675,18 +2674,19 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
                     } /* try different number of clusters */
                     cvReleaseMat( &vals );
 
-                    CV_CALL( cur_split = (CvSplit*) cvAlloc( sizeof( *cur_split ) ) );
-                    CV_ZERO_OBJ( cur_split );
+                    CvSplit* curSplit;
+                    CV_CALL( curSplit = (CvSplit*) cvAlloc( sizeof( *curSplit ) ) );
+                    CV_ZERO_OBJ( curSplit );
 
-                    if( last_split ) last_split->next = cur_split;
-                    else first_split = cur_split;
-                    last_split = cur_split;
+                    if( last_split ) last_split->next = curSplit;
+                    else first_split = curSplit;
+                    last_split = curSplit;
 
-                    cur_split->single_cluster = single_cluster;
-                    cur_split->multiple_clusters = multiple_clusters;
-                    cur_split->num_clusters = best_clusters;
-                    cur_split->parent = parent;
-                    cur_split->single_multiple_ratio = (float) single_num / best_num;
+                    curSplit->single_cluster = single_cluster;
+                    curSplit->multiple_clusters = multiple_clusters;
+                    curSplit->num_clusters = best_clusters;
+                    curSplit->parent = parent;
+                    curSplit->single_multiple_ratio = (float) single_num / best_num;
                 }
 
                 if( parent ) parent = parent->next_same_level;

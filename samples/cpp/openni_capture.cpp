@@ -146,11 +146,11 @@ static void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool
                 int val = atoi(mask.c_str());
 
                 int l = 100000, r = 10000, sum = 0;
-                for( int i = 0; i < 5; i++ )
+                for( int j = 0; j < 5; j++ )
                 {
-                    retrievedImageFlags[i] = ((val % l) / r ) == 0 ? false : true;
+                    retrievedImageFlags[j] = ((val % l) / r ) == 0 ? false : true;
                     l /= 10; r /= 10;
-                    if( retrievedImageFlags[i] ) sum++;
+                    if( retrievedImageFlags[j] ) sum++;
                 }
 
                 if( sum == 0 )

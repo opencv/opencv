@@ -500,15 +500,15 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
                         int y0=0, y1=pFG->height-1;
                         for(y0=0; y0<pFG->height; ++y0)
                         {
-                            CvMat       m;
-                            CvScalar    s = cvSum(cvGetRow(pFG, &m, y0));
+                            CvMat       tmp;
+                            CvScalar    s = cvSum(cvGetRow(pFG, &tmp, y0));
                             if(s.val[0] > 255*7) break;
                         }
 
                         for(y1=pFG->height-1; y1>0; --y1)
                         {
-                            CvMat m;
-                            CvScalar s = cvSum(cvGetRow(pFG, &m, y1));
+                            CvMat tmp;
+                            CvScalar s = cvSum(cvGetRow(pFG, &tmp, y1));
                             if(s.val[0] > 255*7) break;
                         }
 
@@ -573,8 +573,8 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
             p->FrameNum = cvReadIntByName( fs, node, "FrameNum", p->FrameNum );
             p->FrameNum = cvReadIntByName( fs, node, "Dur", p->FrameNum );
             {
-                int LastFrame = cvReadIntByName( fs, node, "LastFrame", p->FrameBegin+p->FrameNum-1 );
-                p->FrameNum = MIN(p->FrameNum,LastFrame - p->FrameBegin+1);
+                int lastFrame = cvReadIntByName( fs, node, "LastFrame", p->FrameBegin+p->FrameNum-1 );
+                p->FrameNum = MIN(p->FrameNum,lastFrame - p->FrameBegin+1);
             }
 
             icvTestSeqAllocTrans(p);
@@ -621,8 +621,8 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
 
         if(pTransSeq&&KeyFrameNum>1)
         {
-            int i0,i1,i;
-            for(i=0; i<KeyFrameNum; ++i)
+            int i0,i1;
+            for(int i=0; i<KeyFrameNum; ++i)
             {
                 CvFileNode* pTN = (CvFileNode*)cvGetSeqElem(pTransSeq,i);
                 KeyFrames[i] = cvReadIntByName(fs,pTN,"frame",-1);
@@ -633,14 +633,12 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
 
             for(i0=0, i1=1; i1<KeyFrameNum;)
             {
-                int i;
-
                 for(i1=i0+1; i1<KeyFrameNum && KeyFrames[i1]<0; i1++);
 
                 assert(i1<KeyFrameNum);
                 assert(i1>i0);
 
-                for(i=i0+1; i<i1; ++i)
+                for(int i=i0+1; i<i1; ++i)
                 {
                     KeyFrames[i] = cvRound(KeyFrames[i0] + (float)(i-i0)*(float)(KeyFrames[i1] - KeyFrames[i0])/(float)(i1-i0));
                 }
@@ -665,9 +663,9 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
                     {   /* Only one transform record: */
                         int     i;
                         double  val;
-                        CvFileNode* node = cvGetFileNodeByName( fs, pTN,name);
-                        if(node == NULL) continue;
-                        val = cvReadReal(node,defv);
+                        CvFileNode* fnode = cvGetFileNodeByName( fs, pTN,name);
+                        if(fnode == NULL) continue;
+                        val = cvReadReal(fnode,defv);
 
                         for(i=0; i<p->TransNum; ++i)
                         {
@@ -683,15 +681,15 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
                         double      v0;
                         double      v1;
 
-                        CvFileNode* pTN = (CvFileNode*)cvGetSeqElem(pTransSeq,0);
-                        v0 = cvReadRealByName(fs, pTN,name,defv);
+                        CvFileNode* pTN1 = (CvFileNode*)cvGetSeqElem(pTransSeq,0);
+                        v0 = cvReadRealByName(fs, pTN1,name,defv);
 
                         for(i1=1,i0=0; i1<KeyFrameNum; ++i1)
                         {
                             int         f0,f1;
                             int         i;
-                            CvFileNode* pTN = (CvFileNode*)cvGetSeqElem(pTransSeq,i1);
-                            CvFileNode* pVN = cvGetFileNodeByName(fs,pTN,name);
+                            CvFileNode* pTN2 = (CvFileNode*)cvGetSeqElem(pTransSeq,i1);
+                            CvFileNode* pVN = cvGetFileNodeByName(fs,pTN2,name);
 
                             if(pVN)v1 = cvReadReal(pVN,defv);
                             else if(pVN == NULL && i1 == KeyFrameNum-1) v1 = defv;

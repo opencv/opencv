@@ -76,6 +76,10 @@ if(HAVE_QT)
   endif()
   include(${QT_USE_FILE})
 
+  if(QT_INCLUDE_DIR)
+    ocv_include_directories(${QT_INCLUDE_DIR})
+  endif()
+
   QT4_ADD_RESOURCES(_RCC_OUTFILES src/window_QT.qrc)
   QT4_WRAP_CPP(_MOC_OUTFILES src/window_QT.h)
 

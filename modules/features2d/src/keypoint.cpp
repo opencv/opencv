@@ -274,6 +274,7 @@ public:
 
 private:
     const Mat mask;
+    MaskPredicate& operator=(const MaskPredicate&);
 };
 
 void KeyPointsFilter::runByPixelsMask( vector<KeyPoint>& keypoints, const Mat& mask )

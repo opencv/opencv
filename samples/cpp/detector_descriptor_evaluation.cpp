@@ -223,8 +223,8 @@ void BaseQualityEvaluator::readAllDatasetsRunParams()
         isWriteParams = false;
         FileNode topfn = fs.getFirstTopLevelNode();
 
-        FileNode fn = topfn[DEFAULT_PARAMS];
-        readDefaultRunParams(fn);
+        FileNode pfn = topfn[DEFAULT_PARAMS];
+        readDefaultRunParams(pfn);
 
         for( int i = 0; i < DATASETS_COUNT; i++ )
         {
@@ -280,7 +280,7 @@ bool BaseQualityEvaluator::readDataset( const string& datasetName, vector<Mat>& 
         if( !fs.isOpened() )
         {
             cout << "filename " << dirname + filename.str() << endl;
-            FileStorage fs( dirname + filename.str(), FileStorage::READ );
+            FileStorage fs2( dirname + filename.str(), FileStorage::READ );
             return false;
         }
         fs.getFirstTopLevelNode() >> Hs[i];

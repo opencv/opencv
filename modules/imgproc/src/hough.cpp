@@ -169,10 +169,6 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
 *                     Multi-Scale variant of Classical Hough Transform                   *
 \****************************************************************************************/
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4714 )
-#endif
-
 //DECLARE_AND_IMPLEMENT_LIST( _index, h_ );
 IMPLEMENT_LIST( _index, h_ )
 

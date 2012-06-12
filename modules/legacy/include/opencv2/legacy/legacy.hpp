@@ -2826,7 +2826,7 @@ template<class Distance>
 class CV_EXPORTS BruteForceMatcher : public BFMatcher
 {
 public:
-    BruteForceMatcher( Distance d = Distance() ) : BFMatcher(Distance::normType, false) {}
+    BruteForceMatcher( Distance d = Distance() ) : BFMatcher(Distance::normType, false) {(void)d;}
     virtual ~BruteForceMatcher() {}
 };
 

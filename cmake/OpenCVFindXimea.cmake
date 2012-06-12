@@ -18,7 +18,7 @@ if(WIN32)
   # Try to find the XIMEA API path in registry.
   GET_FILENAME_COMPONENT(XIMEA_PATH "[HKEY_CURRENT_USER\\Software\\XIMEA\\CamSupport\\API;Path]" ABSOLUTE)
 
-  if(XIMEA_PATH)
+  if(EXISTS XIMEA_PATH)
     set(XIMEA_FOUND 1)
 
     # set LIB folders

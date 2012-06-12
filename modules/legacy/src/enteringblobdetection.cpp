@@ -117,11 +117,11 @@ static void cvFindBlobsByCCClasters(IplImage* pFG, CvBlobSeq* pBlobs, CvMemStora
         for(cnt_cur=0; cnt_cur<clasters->total; ++cnt_cur)
         {
             CvRect  rect;
-            CvSeq*  cnt;
+            CvSeq*  cont;
             int k = *(int*)cvGetSeqElem( clasters, cnt_cur );
             if(k!=claster_cur) continue;
-            cnt = *(CvSeq**)cvGetSeqElem( cnt_list, cnt_cur );
-            rect = ((CvContour*)cnt)->rect;
+            cont = *(CvSeq**)cvGetSeqElem( cnt_list, cnt_cur );
+            rect = ((CvContour*)cont)->rect;
 
             if(rect_res.height<0)
             {
@@ -399,7 +399,7 @@ int CvBlobDetectorSimple::DetectNewBlob(IplImage* /*pImg*/, IplImage* pFGMask, C
         if(Good)
         do{ /* For each configuration: */
             CvBlob* pBL[EBD_FRAME_NUM];
-            int     Good = 1;
+            int     good = 1;
             double  Error = 0;
             CvBlob* pBNew = m_pBlobLists[EBD_FRAME_NUM-1]->GetBlob(pBLIndex[EBD_FRAME_NUM-1]);
 
@@ -408,7 +408,7 @@ int CvBlobDetectorSimple::DetectNewBlob(IplImage* /*pImg*/, IplImage* pFGMask, C
             Count++;
 
             /* Check intersection last blob with existed: */
-            if(Good && pOldBlobList)
+            if(good && pOldBlobList)
             {   /* Check intersection last blob with existed: */
                 int     k;
                 for(k=pOldBlobList->GetBlobNum(); k>0; --k)
@@ -416,22 +416,22 @@ int CvBlobDetectorSimple::DetectNewBlob(IplImage* /*pImg*/, IplImage* pFGMask, C
                     CvBlob* pBOld = pOldBlobList->GetBlob(k-1);
                     if((fabs(pBOld->x-pBNew->x) < (CV_BLOB_RX(pBOld)+CV_BLOB_RX(pBNew))) &&
                        (fabs(pBOld->y-pBNew->y) < (CV_BLOB_RY(pBOld)+CV_BLOB_RY(pBNew))))
-                        Good = 0;
+                        good = 0;
                 }
             }   /* Check intersection last blob with existed. */
 
             /* Check distance to image border: */
-            if(Good)
+            if(good)
             {   /* Check distance to image border: */
                 CvBlob*  pB = pBNew;
                 float    dx = MIN(pB->x,S.width-pB->x)/CV_BLOB_RX(pB);
                 float    dy = MIN(pB->y,S.height-pB->y)/CV_BLOB_RY(pB);
 
-                if(dx < 1.1 || dy < 1.1) Good = 0;
+                if(dx < 1.1 || dy < 1.1) good = 0;
             }   /* Check distance to image border. */
 
             /* Check uniform motion: */
-            if(Good)
+            if(good)
             {
                 int     N = EBD_FRAME_NUM;
                 float   sum[2] = {0,0};
@@ -466,13 +466,13 @@ int CvBlobDetectorSimple::DetectNewBlob(IplImage* /*pImg*/, IplImage* pFGMask, C
                 if( Error > S.width*0.01 ||
                     fabs(a[0])>S.width*0.1 ||
                     fabs(a[1])>S.height*0.1)
-                    Good = 0;
+                    good = 0;
 
             }   /* Check configuration. */
 
 
             /* New best trajectory: */
-            if(Good && (BestError == -1 || BestError > Error))
+            if(good && (BestError == -1 || BestError > Error))
             {
                 for(i=0; i<EBD_FRAME_NUM; ++i)
                 {
@@ -491,7 +491,7 @@ int CvBlobDetectorSimple::DetectNewBlob(IplImage* /*pImg*/, IplImage* pFGMask, C
 
             if(i==EBD_FRAME_NUM)finish=1;
 
-        } while(!finish);	/* Check next time configuration of connected components. */
+        } while(!finish);   /* Check next time configuration of connected components. */
 
         #if 0
         {/**/

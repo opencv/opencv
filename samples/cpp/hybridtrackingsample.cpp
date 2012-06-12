@@ -32,8 +32,8 @@ bool selectObject = false;
 int trackObject = 0;
 int live = 1;
 
-static void drawRectangle(Mat* image, Rect win) {
-    rectangle(*image, Point(win.x, win.y), Point(win.x + win.width, win.y
+static void drawRectangle(Mat* img, Rect win) {
+    rectangle(*img, Point(win.x, win.y), Point(win.x + win.width, win.y
             + win.height), Scalar(0, 255, 0), 2, CV_AA);
 }
 

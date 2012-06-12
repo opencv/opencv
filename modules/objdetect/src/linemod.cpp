@@ -416,7 +416,7 @@ void hysteresisGradient(Mat& magnitude, Mat& quantized_angle,
   // Only accept the quantization if majority of pixels in the patch agree
   static const int NEIGHBOR_THRESHOLD = 5;
         if (max_votes >= NEIGHBOR_THRESHOLD)
-          quantized_angle.at<uchar>(r, c) = 1 << index;
+          quantized_angle.at<uchar>(r, c) = uchar(1 << index);
       }
     }
   }
@@ -1252,7 +1252,7 @@ static void similarity(const std::vector<Mat>& linear_memories, const Template& 
     }
 #endif
     for ( ; j < template_positions; ++j)
-      dst_ptr[j] += lm_ptr[j];
+      dst_ptr[j] = uchar(dst_ptr[j] + lm_ptr[j]);
   }
 }
 
@@ -1334,7 +1334,7 @@ static void similarityLocal(const std::vector<Mat>& linear_memories, const Templ
       for (int row = 0; row < 16; ++row)
       {
         for (int col = 0; col < 16; ++col)
-          dst_ptr[col] += lm_ptr[col];
+          dst_ptr[col] = uchar(dst_ptr[col] + lm_ptr[col]);
         dst_ptr += 16;
         lm_ptr += W;
       }

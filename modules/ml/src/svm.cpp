@@ -88,10 +88,6 @@ using namespace cv;
 #include <stdarg.h>
 #include <ctype.h>
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4514 ) /* unreferenced inline functions */
-#endif
-
 #if 1
 typedef float Qfloat;
 #define QFLOAT_TYPE CV_32F

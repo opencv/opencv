@@ -90,6 +90,7 @@ Thanks to:
 #include "precomp.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 100
+//'sprintf': name was marked as #pragma deprecated
 #pragma warning(disable: 4995)
 #endif
 
@@ -1170,10 +1171,10 @@ bool videoInput::setupDevice(int deviceNumber){
 //
 // ----------------------------------------------------------------------
 
-bool videoInput::setupDevice(int deviceNumber, int connection){
+bool videoInput::setupDevice(int deviceNumber, int _connection){
     if(deviceNumber >= VI_MAX_CAMERAS || VDList[deviceNumber]->readyToCapture) return false;
 
-    setPhyCon(deviceNumber, connection);
+    setPhyCon(deviceNumber, _connection);
     if(setup(deviceNumber))return true;
     return false;
 }
@@ -1220,11 +1221,11 @@ bool videoInput::setupDeviceFourcc(int deviceNumber, int w, int h,int fourcc){
 //
 // ----------------------------------------------------------------------
 
-bool videoInput::setupDevice(int deviceNumber, int w, int h, int connection){
+bool videoInput::setupDevice(int deviceNumber, int w, int h, int _connection){
     if(deviceNumber >= VI_MAX_CAMERAS || VDList[deviceNumber]->readyToCapture) return false;
 
     setAttemptCaptureSize(deviceNumber,w,h);
-    setPhyCon(deviceNumber, connection);
+    setPhyCon(deviceNumber, _connection);
     if(setup(deviceNumber))return true;
     return false;
 }
@@ -2945,7 +2946,7 @@ HRESULT videoInput::ShowFilterPropertyPages(IBaseFilter *pFilter){
     return hr;
 }
 
-HRESULT videoInput::ShowStreamPropertyPages(IAMStreamConfig  *pStream){
+HRESULT videoInput::ShowStreamPropertyPages(IAMStreamConfig  * /*pStream*/){
 
     HRESULT hr             = NOERROR;
     return hr;
@@ -3035,11 +3036,11 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
         LONG lInpin, lOutpin;
         hr = Crossbar->get_PinCounts(&lOutpin , &lInpin);
 
-        BOOL IPin=TRUE; LONG pIndex=0 , pRIndex=0 , pType=0;
+        BOOL iPin=TRUE; LONG pIndex=0 , pRIndex=0 , pType=0;
 
         while( pIndex < lInpin)
         {
-            hr = Crossbar->get_CrossbarPinInfo( IPin , pIndex , &pRIndex , &pType);
+            hr = Crossbar->get_CrossbarPinInfo( iPin , pIndex , &pRIndex , &pType);
 
             if( pType == conType){
                     if(verbose)printf("SETUP: Found Physical Interface");

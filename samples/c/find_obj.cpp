@@ -32,23 +32,20 @@ static void help()
 // define whether to use approximate nearest-neighbor search
 #define USE_FLANN
 
-
-IplImage* image = 0;
-
 #ifdef USE_FLANN
 static void
 flannFindPairs( const CvSeq*, const CvSeq* objectDescriptors,
            const CvSeq*, const CvSeq* imageDescriptors, vector<int>& ptpairs )
 {
-	int length = (int)(objectDescriptors->elem_size/sizeof(float));
+    int length = (int)(objectDescriptors->elem_size/sizeof(float));
 
     cv::Mat m_object(objectDescriptors->total, length, CV_32F);
-	cv::Mat m_image(imageDescriptors->total, length, CV_32F);
+    cv::Mat m_image(imageDescriptors->total, length, CV_32F);
 
 
-	// copy descriptors
+    // copy descriptors
     CvSeqReader obj_reader;
-	float* obj_ptr = m_object.ptr<float>(0);
+    float* obj_ptr = m_object.ptr<float>(0);
     cvStartReadSeq( objectDescriptors, &obj_reader );
     for(int i = 0; i < objectDescriptors->total; i++ )
     {
@@ -58,7 +55,7 @@ flannFindPairs( const CvSeq*, const CvSeq* objectDescriptors,
         obj_ptr += length;
     }
     CvSeqReader img_reader;
-	float* img_ptr = m_image.ptr<float>(0);
+    float* img_ptr = m_image.ptr<float>(0);
     cvStartReadSeq( imageDescriptors, &img_reader );
     for(int i = 0; i < imageDescriptors->total; i++ )
     {
@@ -77,10 +74,10 @@ flannFindPairs( const CvSeq*, const CvSeq* objectDescriptors,
     int* indices_ptr = m_indices.ptr<int>(0);
     float* dists_ptr = m_dists.ptr<float>(0);
     for (int i=0;i<m_indices.rows;++i) {
-    	if (dists_ptr[2*i]<0.6*dists_ptr[2*i+1]) {
-    		ptpairs.push_back(i);
-    		ptpairs.push_back(indices_ptr[2*i]);
-    	}
+        if (dists_ptr[2*i]<0.6*dists_ptr[2*i+1]) {
+            ptpairs.push_back(i);
+            ptpairs.push_back(indices_ptr[2*i]);
+        }
     }
 }
 #else
@@ -234,7 +231,7 @@ int main(int argc, char** argv)
     cvNamedWindow("Object", 1);
     cvNamedWindow("Object Correspond", 1);
 
-    static CvScalar colors[] = 
+    static CvScalar colors[] =
     {
         {{0,0,255}},
         {{0,128,255}},

@@ -136,8 +136,8 @@ Params Params::read(int argc, char** argv)
 }
 
 
-App::App(const Params& p)
-    : p(p), running(false)
+App::App(const Params& params)
+    : p(params), running(false)
 {
     cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
 

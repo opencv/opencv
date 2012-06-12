@@ -143,7 +143,7 @@ static int64 icvGCMaxFlow( GCVtx* vtx, int nvtx, GCEdge* edges, GCVtx**& _orphan
     int norphans = 0, maxOrphans = _maxOrphans;
     GCVtx** orphans = _orphans;
     stub.next = nilNode;
-    
+
     // initialize the active queue and the graph vertices
     for( i = 0; i < nvtx; i++ )
     {
@@ -170,7 +170,7 @@ static int64 icvGCMaxFlow( GCVtx* vtx, int nvtx, GCEdge* edges, GCVtx**& _orphan
         GCVtx* v, *u;
         int e0 = -1, ei = 0, ej = 0, min_weight, weight;
         uchar vt;
-        
+
         // grow S & T search trees, find an edge connecting them
         while( first != nilNode )
         {
@@ -262,7 +262,7 @@ static int64 icvGCMaxFlow( GCVtx* vtx, int nvtx, GCEdge* edges, GCVtx**& _orphan
                     v->parent = ORPHAN;
                 }
             }
-            
+
             v->weight = (short)(v->weight + min_weight*(1-k*2));
             if( v->weight == 0 )
             {
@@ -277,12 +277,12 @@ static int64 icvGCMaxFlow( GCVtx* vtx, int nvtx, GCEdge* edges, GCVtx**& _orphan
         curr_ts++;
         while( norphans > 0 )
         {
-            GCVtx* v = orphans[--norphans];
+            GCVtx* v1 = orphans[--norphans];
             int d, min_dist = INT_MAX;
             e0 = 0;
-            vt = v->t;
+            vt = v1->t;
 
-            for( ei = v->first; ei != 0; ei = edges[ei].next )
+            for( ei = v1->first; ei != 0; ei = edges[ei].next )
             {
                 if( edges[ei^(vt^1)].weight == 0 )
                     continue;
@@ -329,16 +329,16 @@ static int64 icvGCMaxFlow( GCVtx* vtx, int nvtx, GCEdge* edges, GCVtx**& _orphan
                 }
             }
 
-            if( (v->parent = e0) > 0 )
+            if( (v1->parent = e0) > 0 )
             {
-                v->ts = curr_ts;
-                v->dist = min_dist;
+                v1->ts = curr_ts;
+                v1->dist = min_dist;
                 continue;
             }
 
             /* no parent is found */
-            v->ts = 0;
-            for( ei = v->first; ei != 0; ei = edges[ei].next )
+            v1->ts = 0;
+            for( ei = v1->first; ei != 0; ei = edges[ei].next )
             {
                 u = edges[ei].dst;
                 ej = u->parent;
@@ -349,7 +349,7 @@ static int64 icvGCMaxFlow( GCVtx* vtx, int nvtx, GCEdge* edges, GCVtx**& _orphan
                     u->next = nilNode;
                     last = last->next = u;
                 }
-                if( ej > 0 && edges[ej].dst == v )
+                if( ej > 0 && edges[ej].dst == v1 )
                 {
                     if( norphans >= maxOrphans )
                         maxOrphans = icvGCResizeOrphansBuf( orphans, norphans );
@@ -387,7 +387,7 @@ CvStereoGCState* cvCreateStereoGCState( int numberOfDisparities, int maxIters )
 void cvReleaseStereoGCState( CvStereoGCState** _state )
 {
     CvStereoGCState* state;
-    
+
     if( !_state && !*_state )
         return;
 
@@ -438,7 +438,7 @@ static void icvInitGraySubpix( const CvMat* left, const CvMat* right,
                                CvMat* left3, CvMat* right3 )
 {
     int k, x, y, rows = left->rows, cols = left->cols;
-    
+
     for( k = 0; k < 2; k++ )
     {
         const CvMat* src = k == 0 ? left : right;
@@ -452,11 +452,11 @@ static void icvInitGraySubpix( const CvMat* left, const CvMat* right,
             const uchar* sptr_next = y < rows-1 ? sptr + sstep : sptr;
             uchar* dptr = dst->data.ptr + dst->step*y;
             int v_prev = sptr[0];
-            
+
             for( x = 0; x < cols; x++, dptr += 3 )
             {
                 int v = sptr[x], v1, minv = v, maxv = v;
-                
+
                 v1 = (v + v_prev)/2;
                 minv = MIN(minv, v1); maxv = MAX(maxv, v1);
                 v1 = (v + sptr_prev[x])/2;
@@ -492,7 +492,7 @@ icvComputeK( CvStereoGCState* state )
     {
         const uchar* lptr = state->left->data.ptr + state->left->step*y;
         const uchar* rptr = state->right->data.ptr + state->right->step*y;
-        
+
         for( x = 0; x < cols; x++ )
         {
             for( d = maxd-1, i = 0; d >= mind; d-- )
@@ -701,7 +701,7 @@ static int64 icvAlphaExpand( int64 Eprev, int alpha, CvStereoGCState* state, CvS
         GCVtx** pright = pright0 + pstep*y;
         const uchar* lr[] = { left, right };
         const short* dlr[] = { dleft, dright };
-        GCVtx** plr[] = { pleft, pright }; 
+        GCVtx** plr[] = { pleft, pright };
 
         for( k = 0; k < 2; k++ )
         {
@@ -820,12 +820,12 @@ static int64 icvAlphaExpand( int64 Eprev, int alpha, CvStereoGCState* state, CvS
             GCVtx** pright = pright0 + pstep*y;
             for( x = 0; x < cols; x++ )
             {
-                GCVtx* var = pleft[x];
-                if( var && var->parent && var->t )
-                    dleft[x] = (short)alpha; 
+                GCVtx* var2 = pleft[x];
+                if( var2 && var2->parent && var2->t )
+                    dleft[x] = (short)alpha;
 
-                var = pright[x];
-                if( var && var->parent && var->t )
+                var2 = pright[x];
+                if( var2 && var2->parent && var2->t )
                     dright[x] = (short)-alpha;
             }
         }
@@ -903,7 +903,7 @@ CV_IMPL void cvFindStereoCorrespondenceGC( const CvArr* _left, const CvArr* _rig
 
     icvInitStereoConstTabs();
     icvInitGraySubpix( left, right, state->left, state->right );
-    
+
     std::vector<int> disp(state->numberOfDisparities);
     CvMat _disp = cvMat( 1, (int)disp.size(), CV_32S, &disp[0] );
     cvRange( &_disp, state->minDisparity, state->minDisparity + state->numberOfDisparities );

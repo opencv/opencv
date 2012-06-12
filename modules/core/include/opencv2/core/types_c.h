@@ -79,7 +79,7 @@
 #  define CV_ENABLE_UNROLLED 1
 #endif
 
-#if (defined _M_X64 && _MSC_VER >= 1400) || (__GNUC__ >= 4 && defined __x86_64__)
+#if (defined _M_X64 && defined _MSC_VER && _MSC_VER >= 1400) || (__GNUC__ >= 4 && defined __x86_64__)
 #  if defined WIN32
 #    include <intrin.h>
 #  endif

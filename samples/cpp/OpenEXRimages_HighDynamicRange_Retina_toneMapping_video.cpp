@@ -200,17 +200,18 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
     // TODO : take care of this step !!! maybe disable of do this in a nicer way ... each successive image should get the same transformation... but it depends on the initial image format
     double maxInput, minInput;
     minMaxLoc(inputImage, &minInput, &maxInput);
-    std::cout<<"ORIGINAL IMAGE pixels values range (max,min) : "<<maxInput<<", "<<minInput<<std::endl
-;if (firstTimeread)
+    std::cout<<"ORIGINAL IMAGE pixels values range (max,min) : "<<maxInput<<", "<<minInput<<std::endl;
+
+    if (firstTimeread)
     {
         /* the first time, get the pixel values range and rougthly update scaling value
         in order to center values around 128 and getting a range close to [0-255],
         => actually using a little less in order to let some more flexibility in range evolves...
         */
-        double maxInput, minInput;
-        minMaxLoc(inputImage, &minInput, &maxInput);
-        std::cout<<"FIRST IMAGE pixels values range (max,min) : "<<maxInput<<", "<<minInput<<std::endl;
-        globalRescalefactor=(float)(50.0/(maxInput-minInput)); // less than 255 for flexibility... experimental value to be carefull about
+        double maxInput1, minInput1;
+        minMaxLoc(inputImage, &minInput1, &maxInput1);
+        std::cout<<"FIRST IMAGE pixels values range (max,min) : "<<maxInput1<<", "<<minInput1<<std::endl;
+        globalRescalefactor=(float)(50.0/(maxInput1-minInput1)); // less than 255 for flexibility... experimental value to be carefull about
         double channelOffset = -1.5*minInput;
         globalOffset= cv::Scalar(channelOffset, channelOffset, channelOffset, channelOffset);
     }

@@ -455,7 +455,7 @@ struct MOG2Invoker
                 }
                 
                 //set the number of modes
-                modesUsed[x] = nmodes;
+                modesUsed[x] = uchar(nmodes);
                 mask[x] = background ? 0 :
                     detectShadows && detectShadowGMM(data, nchannels, nmodes, gmm, mean, Tb, TB, tau) ?
                     shadowVal : 255;
@@ -571,7 +571,7 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
                                  bgmodelUsedModes.data, nmixtures, (float)learningRate,
                                  (float)varThreshold,
                                  backgroundRatio, varThresholdGen,
-                                 fVarInit, fVarMin, fVarMax, -learningRate*fCT, fTau,
+                                 fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
                                  bShadowDetection, nShadowDetection));
     }
 }

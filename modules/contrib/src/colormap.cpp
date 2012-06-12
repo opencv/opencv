@@ -18,7 +18,7 @@
 #include "precomp.hpp"
 #include <iostream>
 
-#if defined _MSC_VER && _MSC_VER >= 1400
+#ifdef _MSC_VER
 #pragma warning( disable: 4305 )
 #endif
 

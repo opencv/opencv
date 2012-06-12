@@ -584,9 +584,17 @@ int64 TestBase::_calibrate()
     return (int64)compensation;
 }
 
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable:4355)  // 'this' : used in base member initializer list
+#endif
 TestBase::TestBase(): declare(this)
 {
 }
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
 
 void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype)
 {

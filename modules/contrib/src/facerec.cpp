@@ -22,7 +22,7 @@ namespace cv
 {
 
 using std::set;
-    
+
 // Reads a sequence from a FileNode::SEQ with type _Tp into a result vector.
 template<typename _Tp>
 inline void readFileNodeList(const FileNode& fn, vector<_Tp>& result) {
@@ -48,7 +48,7 @@ inline void writeFileNodeList(FileStorage& fs, const string& name,
     }
     fs << "]";
 }
-    
+
 static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
     // make sure the input data is a vector of matrices or vector of vector
     if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
@@ -63,7 +63,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     // dimensionality of (reshaped) samples
     size_t d = src.getMat(0).total();
     // create data matrix
-    Mat data(n, d, rtype);
+    Mat data((int)n, (int)d, rtype);
     // now copy data
     for(unsigned int i = 0; i < n; i++) {
         // make sure data can be reshaped, throw exception if not!
@@ -83,7 +83,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     return data;
 }
 
-    
+
 // Removes duplicate elements in a given vector.
 template<typename _Tp>
 inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
@@ -98,7 +98,7 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
-    
+
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
 class Eigenfaces : public FaceRecognizer
@@ -146,10 +146,10 @@ public:
 
     // See FaceRecognizer::save.
     void save(FileStorage& fs) const;
-    
+
     AlgorithmInfo* info() const;
 };
-    
+
 // Belhumeur, P. N., Hespanha, J., and Kriegman, D. "Eigenfaces vs. Fisher-
 // faces: Recognition using class specific linear projection.". IEEE
 // Transactions on Pattern Analysis and Machine Intelligence 19, 7 (1997),
@@ -232,13 +232,13 @@ public:
     //
     // radius, neighbors are used in the local binary patterns creation.
     // grid_x, grid_y control the grid size of the spatial histograms.
-    LBPH(int radius=1, int neighbors=8,
-            int grid_x=8, int grid_y=8,
+    LBPH(int radius_=1, int neighbors_=8,
+            int gridx=8, int gridy=8,
             double threshold = DBL_MAX) :
-        _grid_x(grid_x),
-        _grid_y(grid_y),
-        _radius(radius),
-        _neighbors(neighbors),
+        _grid_x(gridx),
+        _grid_y(gridy),
+        _radius(radius_),
+        _neighbors(neighbors_),
         _threshold(threshold) {}
 
     // Initializes and computes this LBPH Model. The current implementation is
@@ -248,13 +248,13 @@ public:
     // (grid_x=8), (grid_y=8) controls the grid size of the spatial histograms.
     LBPH(InputArray src,
             InputArray labels,
-            int radius=1, int neighbors=8,
-            int grid_x=8, int grid_y=8,
+            int radius_=1, int neighbors_=8,
+            int gridx=8, int gridy=8,
             double threshold = DBL_MAX) :
-                _grid_x(grid_x),
-                _grid_y(grid_y),
-                _radius(radius),
-                _neighbors(neighbors),
+                _grid_x(gridx),
+                _grid_y(gridy),
+                _radius(radius_),
+                _neighbors(neighbors_),
                 _threshold(threshold) {
         train(src, labels);
     }
@@ -367,7 +367,7 @@ void Eigenfaces::predict(InputArray _src, int &minClass, double &minDist) const 
         double dist = norm(_projections[sampleIdx], q, NORM_L2);
         if((dist < minDist) && (dist < _threshold)) {
             minDist = dist;
-            minClass = _labels.at<int>(sampleIdx);
+            minClass = _labels.at<int>((int)sampleIdx);
         }
     }
 }
@@ -473,7 +473,7 @@ void Fisherfaces::predict(InputArray _src, int &minClass, double &minDist) const
         double dist = norm(_projections[sampleIdx], q, NORM_L2);
         if((dist < minDist) && (dist < _threshold)) {
             minDist = dist;
-            minClass = _labels.at<int>(sampleIdx);
+            minClass = _labels.at<int>((int)sampleIdx);
         }
     }
 }
@@ -641,9 +641,9 @@ static Mat histc(InputArray _src, int minVal, int maxVal, bool normed)
     return Mat();
 }
 
-    
+
 static Mat spatial_histogram(InputArray _src, int numPatterns,
-                             int grid_x, int grid_y, bool normed)
+                             int grid_x, int grid_y, bool /*normed*/)
 {
     Mat src = _src.getMat();
     // calculate LBP patch size
@@ -681,7 +681,7 @@ static Mat elbp(InputArray src, int radius, int neighbors) {
     elbp(src, dst, radius, neighbors);
     return dst;
 }
-    
+
 void LBPH::load(const FileStorage& fs) {
     fs["radius"] >> _radius;
     fs["neighbors"] >> _neighbors;
@@ -758,7 +758,7 @@ void LBPH::predict(InputArray _src, int &minClass, double &minDist) const {
         double dist = compareHist(_histograms[sampleIdx], query, CV_COMP_CHISQR);
         if((dist < minDist) && (dist < _threshold)) {
             minDist = dist;
-            minClass = _labels.at<int>(sampleIdx);
+            minClass = _labels.at<int>((int)sampleIdx);
         }
     }
 }
@@ -770,23 +770,23 @@ int LBPH::predict(InputArray _src) const {
     return label;
 }
 
-    
+
 Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components, double threshold)
 {
     return new Eigenfaces(num_components, threshold);
 }
-    
+
 Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components, double threshold)
 {
     return new Fisherfaces(num_components, threshold);
 }
-    
+
 Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius, int neighbors,
                                              int grid_x, int grid_y, double threshold)
 {
     return new LBPH(radius, neighbors, grid_x, grid_y, threshold);
 }
-    
+
 CV_INIT_ALGORITHM(Eigenfaces, "FaceRecognizer.Eigenfaces",
                   obj.info()->addParam(obj, "ncomponents", obj._num_components);
                   obj.info()->addParam(obj, "threshold", obj._threshold);
@@ -803,8 +803,8 @@ CV_INIT_ALGORITHM(Fisherfaces, "FaceRecognizer.Fisherfaces",
                   obj.info()->addParam(obj, "labels", obj._labels, true);
                   obj.info()->addParam(obj, "eigenvectors", obj._eigenvectors, true);
                   obj.info()->addParam(obj, "eigenvalues", obj._eigenvalues, true);
-                  obj.info()->addParam(obj, "mean", obj._mean, true));    
-    
+                  obj.info()->addParam(obj, "mean", obj._mean, true));
+
 CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
                   obj.info()->addParam(obj, "radius", obj._radius);
                   obj.info()->addParam(obj, "neighbors", obj._neighbors);
@@ -813,7 +813,7 @@ CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
                   obj.info()->addParam(obj, "threshold", obj._threshold);
                   obj.info()->addParam(obj, "histograms", obj._histograms, true);
                   obj.info()->addParam(obj, "labels", obj._labels, true));
-    
+
 bool initModule_contrib()
 {
     Ptr<Algorithm> efaces = createEigenfaces(), ffaces = createFisherfaces(), lbph = createLBPH();

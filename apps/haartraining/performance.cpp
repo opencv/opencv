@@ -214,7 +214,7 @@ int main( int argc, char* argv[] )
     totaltime = 0.0;
     if( info != NULL )
     {
-        int x, y, width, height;
+        int x, y;
         IplImage* img;
         int hits, missed, falseAlarms;
         int totalHits, totalMissed, totalFalseAlarms;
@@ -249,11 +249,12 @@ int main( int argc, char* argv[] )
             ref = (ObjectPos*) cvAlloc( refcount * sizeof( *ref ) );
             for( i = 0; i < refcount; i++ )
             {
-                error = (fscanf( info, "%d %d %d %d", &x, &y, &width, &height ) != 4);
+                int w, h;
+                error = (fscanf( info, "%d %d %d %d", &x, &y, &w, &h ) != 4);
                 if( error ) break;
-                ref[i].x = 0.5F * width  + x;
-                ref[i].y = 0.5F * height + y;
-                ref[i].width = sqrtf( 0.5F * (width * width + height * height) );
+                ref[i].x = 0.5F * w  + x;
+                ref[i].y = 0.5F * h + y;
+                ref[i].width = sqrtf( 0.5F * (w * w + h * h) );
                 ref[i].found = 0;
                 ref[i].neghbors = 0;
             }

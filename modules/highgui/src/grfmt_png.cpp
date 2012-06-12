@@ -60,7 +60,7 @@
 #include "grfmt_png.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 1200
-    // disable warnings related to _setjmp
+    // interaction between '_setjmp' and C++ object destruction is non-portable
     #pragma warning( disable: 4611 )
 #endif
 

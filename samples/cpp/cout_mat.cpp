@@ -28,9 +28,9 @@ static void help()
 int main(int,char**)
 {
     help();
-    Mat i = Mat::eye(4, 4, CV_64F);
-    i.at<double>(1,1) = CV_PI;
-    cout << "i = " << i << ";" << endl;
+    Mat I = Mat::eye(4, 4, CV_64F);
+    I.at<double>(1,1) = CV_PI;
+    cout << "I = " << I << ";" << endl;
 
     Mat r = Mat(10, 3, CV_8UC3);
     randu(r, Scalar::all(0), Scalar::all(255));

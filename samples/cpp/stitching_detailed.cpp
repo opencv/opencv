@@ -126,7 +126,7 @@ double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
-string features = "surf";
+string features_type = "surf";
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
 bool do_wave_correct = true;
@@ -194,8 +194,8 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--features")
         {
-            features = argv[i + 1];
-            if (features == "orb")
+            features_type = argv[i + 1];
+            if (features_type == "orb")
                 match_conf = 0.3f;
             i++;
         }
@@ -345,7 +345,7 @@ int main(int argc, char* argv[])
     int64 t = getTickCount();
 
     Ptr<FeaturesFinder> finder;
-    if (features == "surf")
+    if (features_type == "surf")
     {
 #ifdef HAVE_OPENCV_GPU
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
@@ -354,13 +354,13 @@ int main(int argc, char* argv[])
 #endif
             finder = new SurfFeaturesFinder();
     }
-    else if (features == "orb")
+    else if (features_type == "orb")
     {
         finder = new OrbFeaturesFinder();
     }
     else
     {
-        cout << "Unknown 2D features type: '" << features << "'.\n";
+        cout << "Unknown 2D features type: '" << features_type << "'.\n";
         return -1;
     }
 

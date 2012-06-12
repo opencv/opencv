@@ -19,8 +19,8 @@
 
 #include <stdarg.h> // for va_list
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4251 4275 4355 4127 )
+#ifdef _MSC_VER
+#pragma warning( disable: 4127 )
 #endif
 
 #define GTEST_DONT_DEFINE_FAIL      0

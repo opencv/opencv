@@ -95,13 +95,13 @@ void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat
             yl = ML(1,0)*x + ML(1,1)*y + ML(1,2);
             zl = ML(2,0)*x + ML(2,1)*y + ML(2,2);
             xl /= zl; yl /= zl;
-            wl = idx - k1;
+            wl = float(idx - k1);
 
             xr = MR(0,0)*x + MR(0,1)*y + MR(0,2);
             yr = MR(1,0)*x + MR(1,1)*y + MR(1,2);
             zr = MR(2,0)*x + MR(2,1)*y + MR(2,2);
             xr /= zr; yr /= zr;
-            wr = k2 - idx;
+            wr = float(k2 - idx);
 
             mapx_(y,x) = (wr * xl + wl * xr) / (wl + wr);
             mapy_(y,x) = (wr * yl + wl * yr) / (wl + wr);

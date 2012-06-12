@@ -179,7 +179,7 @@ static const char* var_desc[] =
 };
 
 
-static void print_variable_importance( CvDTree* dtree, const char** var_desc )
+static void print_variable_importance( CvDTree* dtree )
 {
     const CvMat* var_importance = dtree->get_var_importance();
     int i;
@@ -201,21 +201,16 @@ static void print_variable_importance( CvDTree* dtree, const char** var_desc )
     for( i = 0; i < var_importance->cols*var_importance->rows; i++ )
     {
         double val = var_importance->data.db[i];
-        if( var_desc )
-        {
-            char buf[100];
-            int len = (int)(strchr( var_desc[i], '(' ) - var_desc[i] - 1);
-            strncpy( buf, var_desc[i], len );
-            buf[len] = '\0';
-            printf( "%s", buf );
-        }
-        else
-            printf( "var #%d", i );
+        char buf[100];
+        int len = (int)(strchr( var_desc[i], '(' ) - var_desc[i] - 1);
+        strncpy( buf, var_desc[i], len );
+        buf[len] = '\0';
+        printf( "%s", buf );
         printf( ": %g%%\n", val*100. );
     }
 }
 
-static void interactive_classification( CvDTree* dtree, const char** var_desc )
+static void interactive_classification( CvDTree* dtree )
 {
     char input[1000];
     const CvDTreeNode* root;
@@ -319,8 +314,8 @@ int main( int argc, char** argv )
     cvReleaseMat( &missing );
     cvReleaseMat( &responses );
 
-    print_variable_importance( dtree, var_desc );
-    interactive_classification( dtree, var_desc );
+    print_variable_importance( dtree );
+    interactive_classification( dtree );
     delete dtree;
 
     return 0;

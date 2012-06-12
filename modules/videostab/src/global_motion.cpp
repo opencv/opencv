@@ -730,8 +730,8 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
 
     // perform outlier rejection
 
-    IOutlierRejector *outlierRejector = static_cast<IOutlierRejector*>(outlierRejector_);
-    if (!dynamic_cast<NullOutlierRejector*>(outlierRejector))
+    IOutlierRejector *rejector = static_cast<IOutlierRejector*>(outlierRejector_);
+    if (!dynamic_cast<NullOutlierRejector*>(rejector))
     {
         outlierRejector_->process(frame0.size(), hostPointsPrev_, hostPoints_, rejectionStatus_);
 
@@ -750,8 +750,8 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
             }
         }
 
-        hostPointsPrev_ = Mat(1, hostPointsPrevTmp_.size(), CV_32FC2, &hostPointsPrevTmp_[0]);
-        hostPoints_ = Mat(1, hostPointsTmp_.size(), CV_32FC2, &hostPointsTmp_[0]);
+        hostPointsPrev_ = Mat(1, (int)hostPointsPrevTmp_.size(), CV_32FC2, &hostPointsPrevTmp_[0]);
+        hostPoints_ = Mat(1, (int)hostPointsTmp_.size(), CV_32FC2, &hostPointsTmp_[0]);
     }
 
     // estimate motion

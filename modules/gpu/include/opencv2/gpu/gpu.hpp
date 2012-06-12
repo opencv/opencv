@@ -1702,15 +1702,7 @@ class CV_EXPORTS GoodFeaturesToTrackDetector_GPU
 {
 public:
     explicit GoodFeaturesToTrackDetector_GPU(int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
-        int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
-    {
-        this->maxCorners = maxCorners;
-        this->qualityLevel = qualityLevel;
-        this->minDistance = minDistance;
-        this->blockSize = blockSize;
-        this->useHarrisDetector = useHarrisDetector;
-        this->harrisK = harrisK;
-    }
+        int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
 
     //! return 1 rows matrix with CV_32FC2 type
     void operator ()(const GpuMat& image, GpuMat& corners, const GpuMat& mask = GpuMat());
@@ -1741,6 +1733,18 @@ private:
     GpuMat minMaxbuf_;
     GpuMat tmpCorners_;
 };
+
+inline GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU(int maxCorners_, double qualityLevel_, double minDistance_,
+        int blockSize_, bool useHarrisDetector_, double harrisK_)
+{
+    maxCorners = maxCorners_;
+    qualityLevel = qualityLevel_;
+    minDistance = minDistance_;
+    blockSize = blockSize_;
+    useHarrisDetector = useHarrisDetector_;
+    harrisK = harrisK_;
+}
+
 
 class CV_EXPORTS PyrLKOpticalFlow
 {

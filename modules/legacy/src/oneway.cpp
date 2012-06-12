@@ -423,8 +423,8 @@ namespace cv{
             }
 
             cvAdd(pca_descriptors[0].GetPatch(i), m_samples[i], m_samples[i]);
-            double sum = cvSum(m_samples[i]).val[0];
-            cvConvertScale(m_samples[i], m_samples[i], 1.0/sum);
+            double sm = cvSum(m_samples[i]).val[0];
+            cvConvertScale(m_samples[i], m_samples[i], 1.0/sm);
 
 #if 0
             IplImage* test = cvCreateImage(cvSize(12, 12), IPL_DEPTH_8U, 1);
@@ -1671,7 +1671,6 @@ namespace cv{
 
             if (! m_pca_descriptors[i].ReadByName(fn, buf))
             {
-                char buf[1024];
                 sprintf(buf, "descriptor for pca component %d", i);
                 m_pca_descriptors[i].ReadByName(fn, buf);
             }

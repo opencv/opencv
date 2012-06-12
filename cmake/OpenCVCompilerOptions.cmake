@@ -14,6 +14,8 @@ if(MINGW)
 endif()
 
 if(MSVC)
+  string(REGEX REPLACE "^  *| * $" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "^  *| * $" "" CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT}")
   if(CMAKE_CXX_FLAGS STREQUAL CMAKE_CXX_FLAGS_INIT)
     # override cmake default exception handling option
     string(REPLACE "/EHsc" "/EHa" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -72,10 +74,16 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   add_extra_compiler_option(-Wundef)
   add_extra_compiler_option(-Winit-self)
   add_extra_compiler_option(-Wpointer-arith)
-  #add_extra_compiler_option(-Wcast-align)
-  #add_extra_compiler_option(-Wstrict-aliasing=2)
-  #add_extra_compiler_option(-Wshadow)
-  #add_extra_compiler_option(-Wno-unnamed-type-template-args)
+  add_extra_compiler_option(-Wshadow)
+
+  if(ENABLE_NOISY_WARNINGS)
+    add_extra_compiler_option(-Wcast-align)
+    add_extra_compiler_option(-Wstrict-aliasing=2)
+  else()
+    add_extra_compiler_option(-Wno-narrowing)
+    add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
+    #add_extra_compiler_option(-Wno-unnamed-type-template-args)
+  endif()
 
   # The -Wno-long-long is required in 64bit systems when including sytem headers.
   if(X86_64)
@@ -258,6 +266,10 @@ if(MSVC)
   string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
   string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
+  if(NOT ENABLE_NOISY_WARNINGS AND MSVC_VERSION EQUAL 1400)
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4510 /wd4610 /wd4312 /wd4201 /wd4244 /wd4328 /wd4267)
+  endif()
 
   # allow extern "C" functions throw exceptions
   foreach(flags CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
