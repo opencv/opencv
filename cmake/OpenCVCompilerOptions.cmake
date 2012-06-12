@@ -79,7 +79,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   else()
     add_extra_compiler_option(-Wno-narrowing)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
-    #add_extra_compiler_option(-Wno-unnamed-type-template-args)
+    add_extra_compiler_option(-Wno-unnamed-type-template-args)
   endif()
 
   # The -Wno-long-long is required in 64bit systems when including sytem headers.
