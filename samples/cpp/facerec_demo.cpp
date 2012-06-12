@@ -116,9 +116,8 @@ int main(int argc, const char *argv[]) {
     // test image:
     int predictedLabel = model->predict(testSample);
     //
-    // To get the confidence of a prediction call it with:
+    // To get the confidence of a prediction call the model with:
     //
-    // model with:
     //      int predictedLabel = -1;
     //      double confidence = 0.0;
     //      model->predict(testSample, predictedLabel, confidence);

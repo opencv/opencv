@@ -318,6 +318,15 @@ void Eigenfaces::train(InputArray _src, InputArray _local_labels) {
         string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _local_labels.type());
         CV_Error(CV_StsBadArg, error_message);
     }
+    // make sure data has correct size
+    if(_src.total() > 1) {
+        for(int i = 1; i < static_cast<int>(_src.total()); i++) {
+            if(_src.getMat(i-1).total() != _src.getMat(i).total()) {
+                string error_message = format("In the Eigenfaces method all input samples (training images) must be of equal size! Expected %d pixels, but was %d pixels.", _src.getMat(i-1).total(), _src.getMat(i).total());
+                CV_Error(CV_StsUnsupportedFormat, error_message);
+            }
+        }
+    }
     // get labels
     Mat labels = _local_labels.getMat();
     // observations in row
@@ -412,6 +421,15 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
         string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _lbls.type());
         CV_Error(CV_StsBadArg, error_message);
     }
+    // make sure data has correct size
+    if(src.total() > 1) {
+        for(int i = 1; i < static_cast<int>(src.total()); i++) {
+            if(src.getMat(i-1).total() != src.getMat(i).total()) {
+                string error_message = format("In the Fisherfaces method all input samples (training images) must be of equal size! Expected %d pixels, but was %d pixels.", src.getMat(i-1).total(), src.getMat(i).total());
+                CV_Error(CV_StsUnsupportedFormat, error_message);
+            }
+        }
+    }
     // get data
     Mat labels = _lbls.getMat();
     Mat data = asRowMatrix(src, CV_64FC1);
@@ -425,8 +443,7 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
         string error_message = format("Expected the labels in a matrix with one row or column! Given dimensions are rows=%s, cols=%d.", labels.rows, labels.cols);
        CV_Error(CV_StsBadArg, error_message);
     }
-    // Get the number of unique classes
-    // TODO Provide a cv::Mat version?
+    // Get the number of unique classes (provide a cv::Mat overloaded version?)
     vector<int> ll;
     labels.copyTo(ll);
     int C = (int) remove_dups(ll).size();
