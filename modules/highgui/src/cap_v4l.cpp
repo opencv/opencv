@@ -2769,9 +2769,9 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
            perror ("Unable to stop the stream.");
        }
 
-       for (unsigned int n_buffers = 0; n_buffers < capture->req.count; ++n_buffers)
+       for (unsigned int n_buffers_ = 0; n_buffers_ < capture->req.count; ++n_buffers_)
        {
-           if (-1 == munmap (capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
+           if (-1 == munmap (capture->buffers[n_buffers_].start, capture->buffers[n_buffers_].length)) {
                perror ("munmap");
            }
        }
