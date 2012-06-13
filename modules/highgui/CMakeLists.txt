@@ -188,7 +188,7 @@ elseif(APPLE)
     list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
   else()
     list(APPEND highgui_srcs src/cap_qtkit.mm)
-    list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore")
+    list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
   endif()
 endif()
 
