@@ -126,8 +126,6 @@ static dc1394error_t adaptBufferStereoLocal(dc1394video_frame_t *in, dc1394video
 static dc1394error_t dc1394_deinterlace_stereo_frames_fixed(dc1394video_frame_t *in,
     dc1394video_frame_t *out, dc1394stereo_method_t method)
 {
-    dc1394error_t err;
-
     if((in->color_coding == DC1394_COLOR_CODING_RAW16) ||
        (in->color_coding == DC1394_COLOR_CODING_MONO16) ||
        (in->color_coding == DC1394_COLOR_CODING_YUV422))
@@ -136,14 +134,14 @@ static dc1394error_t dc1394_deinterlace_stereo_frames_fixed(dc1394video_frame_t 
         {
 
         case DC1394_STEREO_METHOD_INTERLACED:
-            err = adaptBufferStereoLocal(in, out);
+            adaptBufferStereoLocal(in, out);
 //FIXED by AB:
 //          dc1394_deinterlace_stereo(in->image, out->image, in->size[0], in->size[1]);
             dc1394_deinterlace_stereo(in->image, out->image, out->size[0], out->size[1]);
             break;
 
         case DC1394_STEREO_METHOD_FIELD:
-            err = adaptBufferStereoLocal(in, out);
+            adaptBufferStereoLocal(in, out);
             memcpy(out->image, in->image, out->image_bytes);
             break;
         }

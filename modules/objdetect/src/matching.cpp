@@ -1396,7 +1396,7 @@ static int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObjec
                    const int threadsNum, int *kLevels, int **processingLevels)
 {
     int rootFilterDim, sumPartFiltersDim, i, numLevels, dbx, dby, numDotProducts;
-    int averNumDotProd, j, minValue, argMin, lambda, maxValue, k;
+    int j, minValue, argMin, lambda, maxValue, k;
     int *dotProd, *weights, *disp;
     if (H == NULL || all_F == NULL)
     {
@@ -1430,8 +1430,6 @@ static int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObjec
                      (H->pyramid[i]->sizeY + dby) * sumPartFiltersDim;
         numDotProducts += dotProd[i];
     }
-    // Average number of dot products that would be performed at the best
-    averNumDotProd = numDotProducts / threadsNum;
     // Allocation memory for saving dot product number performed by each thread
     weights = (int *)malloc(sizeof(int) * threadsNum);
     // Allocation memory for saving dispertion

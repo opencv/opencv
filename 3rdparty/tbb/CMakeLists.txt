@@ -119,10 +119,10 @@ endif()
 add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
 target_link_libraries(tbb c m dl)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
-
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
 
 set_target_properties(tbb
   PROPERTIES OUTPUT_NAME tbb
