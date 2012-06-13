@@ -99,12 +99,12 @@ const std::string XMLConfig =
 class ApproximateSyncGrabber
 {
 public:
-    ApproximateSyncGrabber( xn::Context &context,
-                            xn::DepthGenerator &depthGenerator,
-                            xn::ImageGenerator &imageGenerator,
-                            int maxBufferSize, bool isCircleBuffer, int maxTimeDuration ) :
-        context(context), depthGenerator(depthGenerator), imageGenerator(imageGenerator),
-        maxBufferSize(maxBufferSize), isCircleBuffer(isCircleBuffer), maxTimeDuration(maxTimeDuration)
+    ApproximateSyncGrabber( xn::Context &_context,
+                            xn::DepthGenerator &_depthGenerator,
+                            xn::ImageGenerator &_imageGenerator,
+                            int _maxBufferSize, bool _isCircleBuffer, int _maxTimeDuration ) :
+        context(_context), depthGenerator(_depthGenerator), imageGenerator(_imageGenerator),
+        maxBufferSize(_maxBufferSize), isCircleBuffer(_isCircleBuffer), maxTimeDuration(_maxTimeDuration)
     {
         task = 0;
 
@@ -179,8 +179,8 @@ private:
     class ApproximateSynchronizerBase
     {
     public:
-        ApproximateSynchronizerBase( ApproximateSyncGrabber& approxSyncGrabber ) :
-            approxSyncGrabber(approxSyncGrabber), isDepthFilled(false), isImageFilled(false)
+        ApproximateSynchronizerBase( ApproximateSyncGrabber& _approxSyncGrabber ) :
+            approxSyncGrabber(_approxSyncGrabber), isDepthFilled(false), isImageFilled(false)
         {}
 
         virtual ~ApproximateSynchronizerBase() {}
@@ -199,8 +199,8 @@ private:
                 if( status != XN_STATUS_OK )
                     continue;
 
-                xn::DepthMetaData depth;
-                xn::ImageMetaData image;
+                //xn::DepthMetaData depth;
+                //xn::ImageMetaData image;
                 approxSyncGrabber.depthGenerator.GetMetaData(depth);
                 approxSyncGrabber.imageGenerator.GetMetaData(image);
 
@@ -258,8 +258,8 @@ private:
     class ApproximateSynchronizer: public ApproximateSynchronizerBase
     {
     public:
-        ApproximateSynchronizer( ApproximateSyncGrabber& approxSyncGrabber ) :
-            ApproximateSynchronizerBase(approxSyncGrabber)
+        ApproximateSynchronizer( ApproximateSyncGrabber& _approxSyncGrabber ) :
+            ApproximateSynchronizerBase(_approxSyncGrabber)
         {}
 
         virtual bool isSpinContinue() const
@@ -461,6 +461,8 @@ protected:
 
     static const int outputMapsTypesCount = 7;
 
+    static XnMapOutputMode defaultMapOutputMode();
+
     IplImage* retrieveDepthMap();
     IplImage* retrievePointCloudMap();
     IplImage* retrieveDisparityMap();
@@ -524,15 +526,14 @@ bool CvCapture_OpenNI::isOpened() const
     return isContextOpened;
 }
 
-// static XnMapOutputMode defaultMapOutputMode()
-// {
-//     XnMapOutputMode mode;
-//     mode.nXRes = XN_VGA_X_RES;
-//     mode.nYRes = XN_VGA_Y_RES;
-//     mode.nFPS  = 30;
-//     return mode;
-// }
-
+XnMapOutputMode CvCapture_OpenNI::defaultMapOutputMode()
+{
+    XnMapOutputMode mode;
+    mode.nXRes = XN_VGA_X_RES;
+    mode.nYRes = XN_VGA_Y_RES;
+    mode.nFPS  = 30;
+    return mode;
+}
 
 CvCapture_OpenNI::CvCapture_OpenNI( int index )
 {
