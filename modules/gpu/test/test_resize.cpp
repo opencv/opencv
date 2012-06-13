@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 #ifdef HAVE_CUDA
 
@@ -186,19 +187,37 @@ TEST_P(ResizeArea, Accuracy)
     cv::Mat src = randomMat(size, type);
 
     cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
-    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
+    cv::gpu::GpuMat buffer = createMat(cv::Size(dst.cols, src.rows), CV_32FC1);
+
+    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), buffer, coeff, coeff, interpolation);
 
     cv::Mat dst_cpu;
+
     cv::resize(src, dst_cpu, cv::Size(), coeff, coeff, interpolation);
+
+//    cv::Mat gpu_buff;
+//    buffer.download(gpu_buff);
+
+//    cv::Mat gpu;
+//    dst.download(gpu);
+
+//    std::cout << src
+//    << std::endl << std::endl
+//    << gpu_buff
+//    << std::endl << std::endl
+//    << gpu
+//    << std::endl << std::endl
+//    << dst_cpu<<  std::endl;
+
 
     EXPECT_MAT_NEAR(dst_cpu, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeArea, testing::Combine(
     ALL_DEVICES,
-    DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC3), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(0.3, 0.5),
+    testing::Values(cv::Size(512, 256)),//DIFFERENT_SIZES,
+    testing::Values(MatType(CV_8UC1)/*MatType(CV_8UC3), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)*/),
+    testing::Values(0.5),
     testing::Values(Interpolation(cv::INTER_AREA)),
     WHOLE_SUBMAT));
 

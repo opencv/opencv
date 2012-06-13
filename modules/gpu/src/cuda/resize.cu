@@ -282,27 +282,232 @@ namespace cv { namespace gpu { namespace device
 
         template<> struct scan_traits<uchar>
         {
-            typedef int scan_line_type;
+            typedef float scan_line_type;
         };
 
-        template <typename Ptr2D, typename T>
-        __global__ void resize_area_scan(const Ptr2D src, int fx, int fy, DevMem2D_<T> dst, DevMem2D_<T> buffer)
+//        template <typename T>
+//        __global__ void resize_area_scan(const DevMem2D_<T> src, DevMem2D_<T> dst, int fx, int fy,  DevMem2D_<T> buffer)
+//        {
+//            typedef typename scan_traits<T>::scan_line_type W;
+//            extern __shared__ W line[];
+
+//            const int x = threadIdx.x;
+//            const int y = blockIdx.x;
+
+//            if (y >= src.rows) return;
+
+//            int offset = 1;
+
+//            line[2 * x + 0] = src(y, 2 * x + 0);
+//            line[2 * x + 1] = src(y, 2 * x + 1);
+
+//            __syncthreads();//???
+//            // reduction
+//            for (int d = blockDim.x; d > 0; d >>= 1)
+//            {
+//                __syncthreads();
+//                if (x < d)
+//                {
+//                    int ai = 2 * x * offset -1 + 1 * offset;
+//                    int bi = 2 * x * offset -1 + 2 * offset;
+//                    line[bi] += line[ai];
+//                }
+
+//                offset *= 2;
+//            }
+
+//            __syncthreads();
+//            // convolution
+//            if (x == 0) { line[(blockDim.x << 1) - 1] = 0; printf("offset: %d!!!!!!!!!!!!!\n", fx);}
+
+//            for (int d = 1; d < (blockDim.x << 1); d *= 2)
+//            {
+//                offset >>= 1;
+
+//                __syncthreads();
+//                if (x < d)
+//                {
+//                    int ai = offset * 2 * x + 1 * offset - 1;
+//                    int bi = offset * 2 * x + 2 * offset - 1;
+
+//                    W t = line[ai];
+//                    line[ai] = line[bi];
+//                    line[bi] += t;
+//                }
+//            }
+//            __syncthreads();
+
+//            // calculate sum
+//            int start = 0;
+//            int out_idx = 0;
+//            int end = start + fx;
+//            while (start < (blockDim.x << 1) && end < (blockDim.x << 1))
+//            {
+//                buffer(y, out_idx) = saturate_cast<T>((line[end] - line[start]) / fx);
+//                start = end;
+//                end = start + fx;
+//                out_idx++;
+//            }
+
+//        }
+
+        template <typename T>
+        __device__ void scan_y(DevMem2D_<typename scan_traits<T>::scan_line_type> buffer,int fx, int fy,  DevMem2D_<T> dst,
+                               typename scan_traits<T>::scan_line_type* line, int g_base)
+        {
+            typedef typename scan_traits<T>::scan_line_type W;
+
+            const int y = threadIdx.x;
+            const int x = blockIdx.x;
+
+            float scale = 1.f / (fx * fy);
+
+            if (x >= buffer.cols) return;
+
+            int offset = 1;
+            line[2 * y + 0] = buffer((g_base * fy) + 2 * y + 1, x);
+
+            if (y != (blockDim.x -1) )
+                line[2 * y + 1] = buffer((g_base * fy) + 2 * y + 2, x);
+            else
+                line[2 * y + 1] = 0;
+
+            __syncthreads();
+
+            // reduction
+            for (int d = blockDim.x; d > 0; d >>= 1)
+            {
+                __syncthreads();
+                if (y < d)
+                {
+                    int ai = 2 * y * offset -1 + 1 * offset;
+                    int bi = 2 * y * offset -1 + 2 * offset;
+                    line[bi] += line[ai];
+                }
+
+                offset *= 2;
+            }
+
+            __syncthreads();
+            // convolution
+            if (y == 0) line[(blockDim.x << 1) - 1] = (W)buffer(0, x);
+
+            for (int d = 1; d < (blockDim.x << 1); d *= 2)
+            {
+                offset >>= 1;
+
+                __syncthreads();
+                if (y < d)
+                {
+                    int ai = offset * 2 * y + 1 * offset - 1;
+                    int bi = offset * 2 * y + 2 * offset - 1;
+
+
+                    W t = line[ai];
+                    line[ai] = line[bi];
+                    line[bi] += t;
+                }
+            }
+            __syncthreads();
+
+            if (y < dst.rows)
+            {
+                W start = (y == 0)? (W)0:line[y * fy -1];
+                W end = line[y * fy + fy - 1];
+                dst(g_base +  y ,x) = saturate_cast<T>((end - start) * scale);
+            }
+        }
+
+        template <typename T>
+        __device__ void scan_x(const DevMem2D_<T> src, int fx, int fy, DevMem2D_<typename scan_traits<T>::scan_line_type> buffer,
+                               typename scan_traits<T>::scan_line_type* line, int g_base)
+        {
+            typedef typename scan_traits<T>::scan_line_type W;
+
+            const int x = threadIdx.x;
+            const int y = blockIdx.x;
+
+            float scale = 1.f / (fx * fy);
+
+            if (y >= src.rows) return;
+
+            int offset = 1;
+
+            line[2 * x + 0] = (W)src(y, (g_base * fx) + 2 * x + 1);
+
+            if (x != (blockDim.x -1) )
+                line[2 * x + 1] = (W)src(y, (g_base * fx) + 2 * x + 2);
+            else
+                line[2 * x + 1] = 0;
+
+            __syncthreads();
+
+            // reduction
+            for (int d = blockDim.x; d > 0; d >>= 1)
+            {
+                __syncthreads();
+                if (x < d)
+                {
+                    int ai = 2 * x * offset -1 + 1 * offset;
+                    int bi = 2 * x * offset -1 + 2 * offset;
+                    line[bi] += line[ai];
+                }
+
+                offset *= 2;
+            }
+
+            __syncthreads();
+            // convolution
+            if (x == 0) line[(blockDim.x << 1) - 1] = (W)src(y, 0);
+
+            for (int d = 1; d < (blockDim.x << 1); d *= 2)
+            {
+                offset >>= 1;
+
+                __syncthreads();
+                if (x < d)
+                {
+                    int ai = offset * 2 * x + 1 * offset - 1;
+                    int bi = offset * 2 * x + 2 * offset - 1;
+
+                    W t = line[ai];
+                    line[ai] = line[bi];
+                    line[bi] += t;
+                }
+            }
+            __syncthreads();
+
+            if (x < buffer.cols)
+            {
+                W start = (x == 0)? (W)0:line[x * fx -1];
+                W end = line[x * fx + fx - 1];
+                buffer(y, g_base +  x) =(end - start);
+            }
+        }
+
+        template <typename T>
+        __global__ void resize_area_scan_x(const DevMem2D_<T> src, DevMem2D_<T> dst, int fx, int fy,  DevMem2D_<typename scan_traits<T>::scan_line_type> buffer)
         {
             typedef typename scan_traits<T>::scan_line_type W;
             extern __shared__ W line[];
+            scan_x(src,fx,fy, buffer,line, 0);
+        }
 
-            const int x = blockDim.x * blockIdx.x + threadIdx.x;
-            const int y = blockDim.y * blockIdx.y + threadIdx.y;
+        template <typename T>
+        __global__ void resize_area_scan_y(const DevMem2D_<T> src, DevMem2D_<T> dst, int fx, int fy,  DevMem2D_<typename scan_traits<T>::scan_line_type> buffer)
+        {
+            typedef typename scan_traits<T>::scan_line_type W;
+            extern __shared__ W line[];
+            scan_y(buffer,fx, fy, dst, line, 0);
         }
 
         template <typename T> struct InterAreaDispatcherStream
         {
-            static void call(DevMem2D_<T> src, int fx, int fy, DevMem2D_<T> dst, DevMem2D_<T> buffer, cudaStream_t stream)
+            static void call(const DevMem2D_<T> src, int fx, int fy, DevMem2D_<T> dst, DevMem2D_<typename scan_traits<T>::scan_line_type> buffer, cudaStream_t stream)
             {
-                dim3 block(256, 1);
-                dim3 grid(divUp(dst.cols, block.x), 1);
+                resize_area_scan_x<T><<<src.rows, (src.cols >> 1), src.cols * sizeof(typename scan_traits<T>::scan_line_type) >>>(src, dst, fx, fy, buffer);
 
-                resize_area_scan<<<grid, block, 256 * 2 * sizeof(typename scan_traits<T>::scan_line_type) >>>(src, fx, fy, dst, buffer);
+                resize_area_scan_y<T><<<dst.cols, (src.rows >> 1), src.rows * sizeof(typename scan_traits<T>::scan_line_type) >>>(src, dst, fx, fy, buffer);
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
@@ -311,8 +516,8 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T>
-        void resize_area_gpu(DevMem2Db src, DevMem2Db dst,float fx, float fy,
-                             int interpolation, DevMem2Db buffer, cudaStream_t stream)
+        void resize_area_gpu(const DevMem2Db src, DevMem2Db dst,float fx, float fy,
+                             int interpolation, DevMem2Df buffer, cudaStream_t stream)
         {
             (void)interpolation;
 
@@ -322,7 +527,7 @@ namespace cv { namespace gpu { namespace device
             InterAreaDispatcherStream<T>::call(src, iscale_x, iscale_y, dst, buffer, stream);
         }
 
-        template void resize_area_gpu<uchar>(DevMem2Db src, DevMem2Db dst, float fx, float fy, int interpolation, DevMem2Db buffer, cudaStream_t stream);
+        template void resize_area_gpu<uchar>(DevMem2Db src, DevMem2Db dst, float fx, float fy, int interpolation, DevMem2Df buffer, cudaStream_t stream);
 
     } // namespace imgproc
 }}} // namespace cv { namespace gpu { namespace device

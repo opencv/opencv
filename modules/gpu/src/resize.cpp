@@ -82,8 +82,8 @@ namespace cv { namespace gpu { namespace device
                         DevMem2Db dst, int interpolation, cudaStream_t stream);
 
         template <typename T>
-        void resize_area_gpu(DevMem2Db src, DevMem2Db dst,float fx, float fy,
-                             int interpolation, DevMem2Db buffer, cudaStream_t stream);
+        void resize_area_gpu(const DevMem2Db src, DevMem2Db dst,float fx, float fy,
+                             int interpolation, DevMem2Df buffer, cudaStream_t stream);
     }
 }}}
 
@@ -107,7 +107,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, GpuMat& buffer,
     fy = static_cast<float>(1.0 / fy);
 
     dst.create(dsize, src.type());
-    buffer.create(cv::Size(dsize.width, src.rows), src.type());
+    buffer.create(cv::Size(dsize.width, src.rows), CV_32FC1);
 
     if (dsize == src.size())
     {
