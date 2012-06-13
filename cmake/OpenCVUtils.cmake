@@ -50,10 +50,10 @@ set(OCV_COMPILER_FAIL_REGEX
 MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
   if("_${LANG}_" MATCHES "_CXX_")
     set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx")
-    FILE(WRITE "${_fname}" "int main() { return 0;}\n")
+    FILE(WRITE "${_fname}" "#pragma\nint main() { return 0; }\n")
   elseif("_${LANG}_" MATCHES "_C_")
     set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.c")
-    FILE(WRITE "${_fname}" "int main(void) { return 0;}\n")
+    FILE(WRITE "${_fname}" "#pragma\nint main(void) { return 0; }\n")
   else()
     unset(_fname)
   endif()
@@ -64,7 +64,7 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       "${_fname}"
       COMPILE_DEFINITIONS "${FLAG}"
       OUTPUT_VARIABLE OUTPUT)
-  
+
     FOREACH(_regex ${OCV_COMPILER_FAIL_REGEX})
       IF("${OUTPUT}" MATCHES "${_regex}")
         SET(${RESULT} 0)
