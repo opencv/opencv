@@ -5,14 +5,15 @@
 Using Android binary package with Eclipse
 *****************************************
 
-This tutorial was tested using Ubuntu 10.04 and Windows 7 SP1 operating systems. Nevertheless, it should also work on any other **OS**\ es supported by Android SDK (including Mac OS X). If you encounter errors after following the steps described here, feel free to contact us via *android-opencv* discussion group https://groups.google.com/group/android-opencv/ and we will try to help you.
+This tutorial was tested using Ubuntu 10.04 and Windows 7 SP1 operating systems. 
+Nevertheless, it should also work on any other **OS**\ es supported by Android SDK (including Mac OS X). 
+If you encounter errors after following the steps described here, feel free to contact us via `android-opencv <https://groups.google.com/group/android-opencv/>`_ discussion group and we will try to help you.
 
 Quick environment setup for Android development
 ===============================================
 
-If you are making a clean environment installation then you can try **T**\ egra **A**\ ndroid **D**\ evelopment **P**\ ack (*TADP*) released by *NVIDIA*:
-
-  http://developer.nvidia.com/tegra-android-development-pack
+If you are making a clean environment installation then you can try `Tegra Android Development Pack <http://developer.nvidia.com/tegra-android-development-pack>`_ 
+(**TADP**) released by **NVIDIA**:
 
 It will cover all of the environment set up automatically and you can go to the next step :ref:`Get_the_OpenCV_package_for_Android_development` right after automatic setup.
 
@@ -45,9 +46,10 @@ You need the following tools to be installed:
 
 #. **Sun JDK 6**
 
-   Visit http://www.oracle.com/technetwork/java/javase/downloads/index.html and download installer for your OS.
+   Visit `Java SE Downloads page <http://www.oracle.com/technetwork/java/javase/downloads/>`_ and download installer for your OS.
 
-   Here is a detailed :abbr:`JDK (Java Development Kit)` installation guide for Ubuntu and Mac OS: http://source.android.com/source/initializing.html#installing-the-jdk (only JDK sections are applicable for OpenCV)
+   Here is a detailed :abbr:`JDK (Java Development Kit)` `installation guide <http://source.android.com/source/initializing.html#installing-the-jdk>`_ 
+   for Ubuntu and Mac OS (only JDK sections are applicable for OpenCV)
 
    .. note:: OpenJDK is not usable for Android development because Android SDK supports only Sun JDK.
         If you use Ubuntu, after installation of Sun JDK you should run the following command to set Sun java environment:
@@ -60,7 +62,7 @@ You need the following tools to be installed:
 
    Get the latest Android SDK from http://developer.android.com/sdk/index.html
 
-   Here is Google's install guide for SDK http://developer.android.com/sdk/installing.html
+   Here is Google's `install guide <http://developer.android.com/sdk/installing.html>`_ for SDK.
 
    .. note:: If you choose SDK packed into Windows installer, then you should have 32-bit JRE installed. It is not needed for Android development, but installer is x86 application and requires 32-bit Java runtime.
 
@@ -80,36 +82,34 @@ You need the following tools to be installed:
 
    You need the following SDK components to be installed:
 
-   * *Android SDK Tools, revision12* or newer
+   * *Android SDK Tools, revision14* or newer
 
      Older revisions should also work, but they are not recommended.
 
-   * *SDK Platform Android 2.2, API 8, revision 2* (also known as  *android-8*)
+   * *SDK Platform Android 3.0, API 11* (also known as  *android-11*)
 
-     This is minimal platform supported by OpenCV Java API. And it is set as default for OpenCV distribution. It is possible to use newer platform with OpenCV package, but it requires to edit OpenCV project settings.
-
+     The minimal platform supported by OpenCV Java API is **Android 2.2** (API 8). This is also the minimum API Level required for the provided samples to run.
+     See the ``<uses-sdk android:minSdkVersion="8"/>`` tag in their **AndroidManifest.xml** file.
+     But for successful compilation of some samples the **target** platform should be set to Android 3.0 (API 11) or higher. It will not block them from running on  Android 2.2+.
+     
      .. image:: images/android_sdk_and_avd_manager.png
-        :height: 400px 
-        :alt: Android SDK and AVD manager
+        :height: 500px 
+        :alt: Android SDK Manager
         :align: center
      
-     See `Adding SDK Components
-     <http://developer.android.com/sdk/adding-components.html>`_ for help with installing/updating SDK components.
+     See `Adding SDK Components  <http://developer.android.com/sdk/adding-components.html>`_ for help with installing/updating SDK components.
 
 #. **Eclipse IDE**
 
-   Check the `Android SDK System Requirements
-   <http://developer.android.com/sdk/requirements.html>`_ document for a list of Eclipse versions that are compatible with the Android SDK. 
-   For OpenCV 2.4.0 we recommend Eclipse 3.6 (Helios) or later versions. They work well for OpenCV under both Windows and Linux.
+   Check the `Android SDK System Requirements <http://developer.android.com/sdk/requirements.html>`_ document for a list of Eclipse versions that are compatible with the Android SDK. 
+   For OpenCV 2.4.0 we recommend Eclipse 3.7 (Indigo) or later versions. They work well for OpenCV under both Windows and Linux.
    
-   If you have no Eclipse installed, you can download it from this location:
-    
-      http://www.eclipse.org/downloads/ 
+   If you have no Eclipse installed, you can get it from the `download page  <http://www.eclipse.org/downloads/>`_.
       
 #. **ADT plugin for Eclipse**
 
-   This instruction is copied from http://developer.android.com/sdk/eclipse-adt.html#downloading
-   . Please, visit that page if you have any troubles with ADT plugin installation.
+   This instruction is copied from `Android Developers site <http://developer.android.com/sdk/eclipse-adt.html>`_.
+   Please, visit `that page <http://developer.android.com/sdk/eclipse-adt.html#downloading>`_ if you have any troubles with :abbr:`ADT(Android Development Tools)` plugin installation.
 
    Assuming that you have Eclipse IDE installed, as described above, follow these steps to download and install the ADT plugin:
 
@@ -136,7 +136,7 @@ You need the following tools to be installed:
 Get the OpenCV package for Android development
 ==============================================
 
-#. Go to the http://sourceforge.net/projects/opencvlibrary/files/opencv-android/ and download the latest available version. Currently it is |opencv_android_bin_pack_url|_
+#. Go to the `OpenCV dowload page on SourceForge <http://sourceforge.net/projects/opencvlibrary/files/opencv-android/>`_ and download the latest available version. Currently it is |opencv_android_bin_pack_url|_
 
 #. Create new folder for Android+OpenCV development.
 
