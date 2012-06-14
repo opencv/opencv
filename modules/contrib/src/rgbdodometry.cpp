@@ -393,7 +393,7 @@ bool computeKsi( int transformType,
                  const Mat& image0, const Mat&  cloud0,
                  const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
                  const Mat& corresps, int correspsCount,
-                 double fx, double fy, double sobelScale, double normScale, double determinantThreshold,
+                 double fx, double fy, double sobelScale, double determinantThreshold,
                  Mat& ksi )
 {
     int Cwidth = -1;
@@ -419,6 +419,7 @@ bool computeKsi( int transformType,
     Mat C( correspsCount, Cwidth, CV_64FC1 );
     Mat dI_dt( correspsCount, 1, CV_64FC1 );
 
+    double sigma = 0;
     int pointCount = 0;
     for( int v0 = 0; v0 < corresps.rows; v0++ )
     {
@@ -428,14 +429,35 @@ bool computeKsi( int transformType,
             {
                 int u1, v1;
                 get2shorts( corresps.at<int>(v0,u0), u1, v1 );
+                double diff = static_cast<double>(image1.at<uchar>(v1,u1)) -
+                              static_cast<double>(image0.at<uchar>(v0,u0));
+                sigma += diff * diff;
+                pointCount++;
+            }
+        }
+    }
+    sigma = std::sqrt(sigma/pointCount);
+
+    pointCount = 0;
+    for( int v0 = 0; v0 < corresps.rows; v0++ )
+    {
+        for( int u0 = 0; u0 < corresps.cols; u0++ )
+        {
+            if( corresps.at<int>(v0,u0) != -1 )
+            {
+                int u1, v1;
+                get2shorts( corresps.at<int>(v0,u0), u1, v1 );
+
+                double diff = static_cast<double>(image1.at<uchar>(v1,u1)) -
+                              static_cast<double>(image0.at<uchar>(v0,u0));
+                double w = 1./(sigma + std::abs(diff));
 
                 (*computeCFuncPtr)( (double*)C.ptr(pointCount),
-                                     normScale * sobelScale * dI_dx1.at<short int>(v1,u1),
-                                     normScale * sobelScale * dI_dy1.at<short int>(v1,u1),
+                                     w * sobelScale * dI_dx1.at<short int>(v1,u1),
+                                     w * sobelScale * dI_dy1.at<short int>(v1,u1),
                                      cloud0.at<Point3f>(v0,u0), fx, fy);
 
-                dI_dt.at<double>(pointCount) = normScale * (static_cast<double>(image1.at<uchar>(v1,u1)) -
-                                                            static_cast<double>(image0.at<uchar>(v0,u0)));
+                dI_dt.at<double>(pointCount) = w * diff;
                 pointCount++;
             }
         }
@@ -556,8 +578,6 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
 
         const double fx = levelCameraMatrix.at<double>(0,0);
         const double fy = levelCameraMatrix.at<double>(1,1);
-        const double avgf = 0.5 *(fx + fy);
-        const double normScale = 1./(255*avgf);
         const double determinantThreshold = 1e-6;
 
         Mat corresps( levelImage0.size(), levelImage0.type(), CV_32SC1 );
@@ -576,7 +596,7 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
                                              levelImage0, levelCloud0,
                                              levelImage1, level_dI_dx1, level_dI_dy1,
                                              corresps, correspsCount,
-                                             fx, fy, sobelScale, normScale, determinantThreshold,
+                                             fx, fy, sobelScale, determinantThreshold,
                                              ksi );
 
             if( !solutionExist )
