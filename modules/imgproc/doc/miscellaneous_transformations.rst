@@ -657,7 +657,7 @@ Applies a fixed-level threshold to each array element.
 
 .. ocv:pyoldfunction:: cv.Threshold(src, dst, threshold, maxValue, thresholdType)-> None
 
-    :param src: Source array (single-channel, 8-bit of 32-bit floating point).
+    :param src: Source array (single-channel, 8-bit or 32-bit floating point).
 
     :param dst: Destination array of the same size and type as  ``src`` .
 
