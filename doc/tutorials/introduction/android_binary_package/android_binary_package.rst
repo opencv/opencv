@@ -89,7 +89,7 @@ You need the following tools to be installed:
    * *SDK Platform Android 3.0, API 11* (also known as  *android-11*)
 
      The minimal platform supported by OpenCV Java API is **Android 2.2** (API 8). This is also the minimum API Level required for the provided samples to run.
-     See the ``<uses-sdk android:minSdkVersion="8"/>`` tag in their **AndroidManifest.xml** file.
+     See the ``<uses-sdk android:minSdkVersion="8"/>`` tag in their **AndroidManifest.xml** files.
      But for successful compilation of some samples the **target** platform should be set to Android 3.0 (API 11) or higher. It will not block them from running on  Android 2.2+.
      
      .. image:: images/android_sdk_and_avd_manager.png
@@ -175,23 +175,29 @@ Open OpenCV library and samples in Eclipse
          :alt: Choosing C:\Work\android-opencv\ as workspace location
          :align: center
 
-#. Configure your ADT plugin
+#. Configure your ADT plugin (if needed)
 
-   .. important:: ADT plugin settings are workspace-dependent. So you have to repeat this step each time when you create a new workspace.
+   .. important:: In most cases the ADT plugin finds Android SDK automatically, but  sometimes  it  fails and shows the following prompt:
 
-   Once you have created a new workspace, you have to point the ADT plugin to the Android SDK directory. This setting is stored in workspace metadata, as result this step is required each time when you are creating new workspace for Android development. See `Configuring the ADT Plugin
-   <http://developer.android.com/sdk/eclipse-adt.html#configuring>`_ document for the original instructions from *Google*.
+      .. image:: images/eclipse_1a_locate_sdk.png
+         :alt: Locating Android SDK
+         :align: center
+
+   Select  :guilabel:`Use existing SDKs` option, browse for Android SDK folder and click :guilabel:`Finish`.
+   
+   To make sure the SDK folder is set correctly do the following step taken from  `Configuring the ADT Plugin  <http://developer.android.com/sdk/eclipse-adt.html#configuring>`_ document from *Google*:
    
    * Select :menuselection:`Window --> Preferences...` to open the Preferences panel (Mac OS X: :menuselection:`Eclipse --> Preferences`):
 
       .. image:: images/eclipse_2_window_preferences.png
-         :height: 400px 
          :alt: Select Window > Preferences...
          :align: center
    
    * Select :guilabel:`Android` from the left panel.
 
-    You may see a dialog asking whether you want to send usage statistics to *Google*. If so, make your choice and click :guilabel:`Proceed`. You cannot continue with this procedure until you click :guilabel:`Proceed`.
+    You may see a dialog asking whether you want to send usage statistics to *Google*. If so, make your choice and click :guilabel:`Proceed`.  You cannot continue with this procedure until you click :guilabel:`Proceed`.
+
+   If the SDK folder isn't set you'll see the following:
 
       .. image:: images/eclipse_3_preferences_android.png
          :alt: Select Android from the left panel
@@ -199,7 +205,9 @@ Open OpenCV library and samples in Eclipse
 
    * For the SDK Location in the main panel, click :guilabel:`Browse...` and locate your Android SDK directory. 
 
-   * Click :guilabel:`Apply` button at the bottom right corner of main panel:
+   * Click :guilabel:`Apply` button at the bottom right corner of main panel.
+   
+   If the SDK folder is already set correctly you'll see something like this:
 
       .. image:: images/eclipse_4_locate_sdk.png
          :alt: Locate Android SDK
@@ -245,6 +253,20 @@ Open OpenCV library and samples in Eclipse
    
    To help Eclipse to understand that there are no any errors choose OpenCV library in :guilabel:`Package Explorer` (left mouse click) and press :kbd:`F5` button on your keyboard. Then choose any sample (except first samples in *Tutorial Base* and *Tutorial Advanced*) and also press :kbd:`F5`.
    
+   Sometimes more advanced manipulations are needed:
+
+   * The provided projects are configured for `android-11` target that can be missing platform in your Android SDK. After right click on any project select  :guilabel:`Properties` and then :guilabel:`Android` on the left pane. Click some target with `API Level` 11 or higher:
+
+      .. image:: images/eclipse_8a_target.png
+         :alt: Updating target
+         :align: center
+
+   * Sometimes a project needs fixing its project properties. After right click on any project select  :guilabel:`Android Tools` and then :guilabel:`Fix Project Properties` in sub-menu:
+
+      .. image:: images/eclipse_8b_fix_props.png
+         :alt: Fixing project properties
+         :align: center
+   
    After this manipulation Eclipse will rebuild your workspace and error icons will disappear one after another:
 
       .. image:: images/eclipse_9_errors_dissapearing.png
@@ -257,8 +279,6 @@ Open OpenCV library and samples in Eclipse
          :alt: OpenCV package imported into Eclipse
          :align: center
 
-   .. note:: If you are importing only OpenCV library without samples then instead of second refresh command (:kbd:`F5`) you might need to make :menuselection:`Android Tools --> Fix Project Properties` from project context menu.
-   
 Running OpenCV Samples
 ======================
 
@@ -266,7 +286,7 @@ At this point you should be able to build and run all samples except two from Ad
 
 Also I want to note that only ``Tutorial 1 Basic - 0. Android Camera`` and ``Tutorial 1 Basic - 1. Add OpenCV`` samples are able to run on Emulator from Android SDK. Other samples are using OpenCV Native Camera which does not work with emulator.
 
-.. note:: Latest *Android SDK tools, revision 12* can run ARM v7 OS images but *Google* does not provide such images with SDK.
+.. note:: Latest *Android SDK tools, revision 14* can run ARM v7 OS images but *Google* provides such image for Android 4.x only.
 
 Well, running samples from Eclipse is very simple:
 
