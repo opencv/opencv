@@ -2124,6 +2124,12 @@ float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
     return result;
 }
 
+void CvSVM::predict( cv::InputArray _samples, cv::OutputArray _results ) const
+{
+    _results.create(_samples.size().height, 1, CV_32F);
+    CvMat samples = _samples.getMat(), results = _results.getMat();
+    predict(&samples, &results);
+}
 
 CvSVM::CvSVM( const Mat& _train_data, const Mat& _responses,
               const Mat& _var_idx, const Mat& _sample_idx, CvSVMParams _params )

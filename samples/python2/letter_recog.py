@@ -88,7 +88,7 @@ class SVM(LetterStatModel):
         self.model.train(samples, responses, params = params)
 
     def predict(self, samples):
-        return np.float32( [self.model.predict(s) for s in samples] )
+        return self.model.predict_all(samples).ravel()
 
 
 class MLP(LetterStatModel):
