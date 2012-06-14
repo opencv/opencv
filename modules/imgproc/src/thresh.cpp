@@ -60,41 +60,10 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    switch( type )
-    {
-    case THRESH_BINARY:
-        if(tegra::thresh_8u_binary(_src, _dst, roi.width, roi.height, thresh, maxval))
- 		{
-			return;
-		}
-       break;
-    case THRESH_BINARY_INV:
-        if(tegra::thresh_8u_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval))
-		{
-			return;
-		}
-        break;
-    case THRESH_TRUNC:
-        if(tegra::thresh_8u_trunc(_src, _dst, roi.width, roi.height, thresh))
- 		{
-			return;
-		}
-       break;
-    case THRESH_TOZERO:
-        if(tegra::thresh_8u_tozero(_src, _dst, roi.width, roi.height, thresh))
-		{
-			return;
-		}
-        break;
-    case THRESH_TOZERO_INV:
-        if(tegra::thresh_8u_tozero_inv(_src, _dst, roi.width, roi.height, thresh))
-		{
-			return;
-		}
-        break;
-    }
+    if (tegra::thresh_8u(_src, _dst, roi.width, roi.height, thresh, maxval, type))
+        return;
 #endif
-  
+
     switch( type )
     {
     case THRESH_BINARY:
@@ -139,7 +108,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         __m128i thresh_s = _mm_set1_epi8(thresh ^ 0x80);
         __m128i maxval_ = _mm_set1_epi8(maxval);
         j_scalar = roi.width & -8;
-        
+
         for( i = 0; i < roi.height; i++ )
         {
             const uchar* src = (const uchar*)(_src.data + _src.step*i);
@@ -255,7 +224,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             }
         }
     }
-#endif        
+#endif
 
     if( j_scalar < roi.width )
     {
@@ -263,8 +232,8 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         {
             const uchar* src = (const uchar*)(_src.data + _src.step*i);
             uchar* dst = (uchar*)(_dst.data + _dst.step*i);
-			j = j_scalar;
-            #if CV_ENABLE_UNROLLED
+            j = j_scalar;
+#if CV_ENABLE_UNROLLED
             for( ; j <= roi.width - 4; j += 4 )
             {
                 uchar t0 = tab[src[j]];
@@ -279,7 +248,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
                 dst[j+2] = t0;
                 dst[j+3] = t1;
             }
-            #endif
+#endif
             for( ; j < roi.width; j++ )
                 dst[j] = tab[src[j]];
         }
@@ -297,7 +266,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     short* dst = (short*)_dst.data;
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
-    
+
 #if CV_SSE2
     volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
 #endif
@@ -307,41 +276,12 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         roi.width *= roi.height;
         roi.height = 1;
     }
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    switch( type )
-    {
-    case THRESH_BINARY:
-        if(tegra::thresh_16s_binary(_src, _dst, roi.width, roi.height, thresh, maxval))
-		{
-			return;
-		}
-        break;
-    case THRESH_BINARY_INV:
-        if(tegra::thresh_16s_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval))
-		{
-			return;
-		}
-        break;
-    case THRESH_TRUNC:
-        if(tegra::thresh_16s_trunc(_src, _dst, roi.width, roi.height, thresh))
- 		{
-			return;
-		}
-       break;
-    case THRESH_TOZERO:
-        if(tegra::thresh_16s_tozero(_src, _dst, roi.width, roi.height, thresh))
- 		{
-			return;
-		}
-       break;
-    case THRESH_TOZERO_INV:
-        if(tegra::thresh_16s_tozero_inv(_src, _dst, roi.width, roi.height, thresh))
-		{
-			return;
-		}
-        break;
-    }
-#endif 
+    if (tegra::thresh_16s(_src, _dst, roi.width, roi.height, thresh, maxval, type))
+        return;
+#endif
+
     switch( type )
     {
     case THRESH_BINARY:
@@ -393,8 +333,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                     _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
                 }
             }
-        #endif            
-            
+        #endif
+
             for( ; j < roi.width; j++ )
                 dst[j] = src[j] <= thresh ? maxval : 0;
         }
@@ -419,8 +359,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                     _mm_storeu_si128((__m128i*)(dst + j + 8), v1 );
                 }
             }
-        #endif            
-            
+        #endif
+
             for( ; j < roi.width; j++ )
                 dst[j] = std::min(src[j], thresh);
         }
@@ -446,7 +386,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 }
             }
         #endif
-            
+
             for( ; j < roi.width; j++ )
             {
                 short v = src[j];
@@ -487,7 +427,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     }
 }
 
-    
+
 static void
 thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
 {
@@ -498,52 +438,22 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     float* dst = (float*)_dst.data;
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
-    
+
 #if CV_SSE2
     volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
 #endif
-    
+
     if( _src.isContinuous() && _dst.isContinuous() )
     {
         roi.width *= roi.height;
         roi.height = 1;
     }
-    
+
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    switch( type )
-    {
-    case THRESH_BINARY:
-       if(tegra::thresh_32f_binary(_src, _dst, roi.width, roi.height, thresh, maxval))
-	   {
-			return;		
-	   }
-        break;
-    case THRESH_BINARY_INV:
-        if(tegra::thresh_32f_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval))
-		{
-			return;
-		}
-        break;
-    case THRESH_TRUNC:
-        if(tegra::thresh_32f_trunc(_src, _dst, roi.width, roi.height, thresh))
-		{
-			return;
-		}
-        break;
-    case THRESH_TOZERO:
-        if(tegra::thresh_32f_tozero(_src, _dst, roi.width, roi.height, thresh))
-		{
-			return;
-		}
-        break;
-    case THRESH_TOZERO_INV:
-        if(tegra::thresh_32f_tozero_inv(_src, _dst, roi.width, roi.height, thresh))
-		{
-			return;
-		}
-        break;
-    }
-#endif 
+    if (tegra::thresh_32f(_src, _dst, roi.width, roi.height, thresh, maxval, type))
+        return;
+#endif
+
     switch( type )
     {
         case THRESH_BINARY:
@@ -568,12 +478,12 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     }
                 }
 #endif
-                
+
                 for( ; j < roi.width; j++ )
                     dst[j] = src[j] > thresh ? maxval : 0;
             }
             break;
-            
+
         case THRESH_BINARY_INV:
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
@@ -595,13 +505,13 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                         _mm_storeu_ps( dst + j + 4, v1 );
                     }
                 }
-#endif            
-                
+#endif
+
                 for( ; j < roi.width; j++ )
                     dst[j] = src[j] <= thresh ? maxval : 0;
             }
             break;
-            
+
         case THRESH_TRUNC:
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
@@ -621,13 +531,13 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                         _mm_storeu_ps( dst + j + 4, v1 );
                     }
                 }
-#endif            
-                
+#endif
+
                 for( ; j < roi.width; j++ )
                     dst[j] = std::min(src[j], thresh);
             }
             break;
-            
+
         case THRESH_TOZERO:
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
@@ -648,7 +558,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     }
                 }
 #endif
-                
+
                 for( ; j < roi.width; j++ )
                 {
                     float v = src[j];
@@ -656,7 +566,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
             }
             break;
-            
+
         case THRESH_TOZERO_INV:
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
@@ -688,7 +598,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             return CV_Error( CV_StsBadArg, "" );
     }
 }
-    
+
 
 static double
 getThreshVal_Otsu_8u( const Mat& _src )
@@ -704,8 +614,8 @@ getThreshVal_Otsu_8u( const Mat& _src )
     for( i = 0; i < size.height; i++ )
     {
         const uchar* src = _src.data + _src.step*i;
-		j = 0;
-		#if CV_ENABLE_UNROLLED
+        j = 0;
+        #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
         {
             int v0 = src[j], v1 = src[j+1];
@@ -721,7 +631,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     double mu = 0, scale = 1./(size.width*size.height);
     for( i = 0; i < N; i++ )
         mu += i*(double)h[i];
-    
+
     mu *= scale;
     double mu1 = 0, q1 = 0;
     double max_sigma = 0, max_val = 0;
@@ -803,7 +713,7 @@ private:
 };
 
 }
-    
+
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
     Mat src = _src.getMat();
@@ -815,12 +725,12 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         CV_Assert( src.type() == CV_8UC1 );
         thresh = getThreshVal_Otsu_8u(src);
     }
-  
+
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
     int nStripes = 1;
-#if defined HAVE_TBB && defined HAVE_TEGRA_OPTIMIZATION
+#if defined HAVE_TBB && defined ANDROID
     nStripes = 4;
 #endif
 
@@ -849,7 +759,6 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         }
         else
         {
-            //thresh_8u( src, dst, (uchar)ithresh, (uchar)imaxval, type );
             parallel_for(BlockedRange(0, nStripes),
                          ThresholdRunner(src, dst, nStripes, (uchar)ithresh, (uchar)imaxval, type));
         }
@@ -862,7 +771,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         if( type == THRESH_TRUNC )
             imaxval = ithresh;
         imaxval = saturate_cast<short>(imaxval);
-        
+
         if( ithresh < SHRT_MIN || ithresh >= SHRT_MAX )
         {
             if( type == THRESH_BINARY || type == THRESH_BINARY_INV ||
@@ -879,14 +788,12 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         }
         else
         {
-            //thresh_16s( src, dst, (short)ithresh, (short)imaxval, type );
             parallel_for(BlockedRange(0, nStripes),
                          ThresholdRunner(src, dst, nStripes, (short)ithresh, (short)imaxval, type));
         }
     }
     else if( src.depth() == CV_32F )
     {
-        //thresh_32f( src, dst, (float)thresh, (float)maxval, type );
         parallel_for(BlockedRange(0, nStripes),
                      ThresholdRunner(src, dst, nStripes, (float)thresh, (float)maxval, type));
     }
@@ -913,7 +820,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         dst = Scalar(0);
         return;
     }
-    
+
     Mat mean;
 
     if( src.data != dst.data )
@@ -930,7 +837,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
     int i, j;
     uchar imaxval = saturate_cast<uchar>(maxValue);
     int idelta = type == THRESH_BINARY ? cvCeil(delta) : cvFloor(delta);
-    uchar tab[768];    
+    uchar tab[768];
 
     if( type == CV_THRESH_BINARY )
         for( i = 0; i < 768; i++ )
