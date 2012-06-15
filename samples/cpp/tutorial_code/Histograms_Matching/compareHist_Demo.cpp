@@ -44,8 +44,8 @@ int main( int argc, char** argv )
     int histSize[] = { h_bins, s_bins };
 
     // hue varies from 0 to 256, saturation from 0 to 180
-    float h_ranges[] = { 0, 256 };
-    float s_ranges[] = { 0, 180 };
+    float s_ranges[] = { 0, 256 };
+    float h_ranges[] = { 0, 180 };
 
     const float* ranges[] = { h_ranges, s_ranges };
 

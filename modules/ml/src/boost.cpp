@@ -1132,7 +1132,7 @@ CvBoost::update_weights( CvBoostTree* tree )
     else
     {
         if( have_subsample )
-            _buf_size += data->buf->step*(sizeof(float)+sizeof(uchar));
+            _buf_size += data->buf->cols*(sizeof(float)+sizeof(uchar));
     }
     inn_buf.allocate(_buf_size);
     uchar* cur_buf_pos = (uchar*)inn_buf;

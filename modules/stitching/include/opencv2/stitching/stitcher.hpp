@@ -45,13 +45,13 @@
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
-#include "warpers.hpp"
-#include "detail/matchers.hpp"
-#include "detail/motion_estimators.hpp"
-#include "detail/exposure_compensate.hpp"
-#include "detail/seam_finders.hpp"
-#include "detail/blenders.hpp"
-#include "detail/camera.hpp"
+#include "opencv2/stitching/warpers.hpp"
+#include "opencv2/stitching/detail/matchers.hpp"
+#include "opencv2/stitching/detail/motion_estimators.hpp"
+#include "opencv2/stitching/detail/exposure_compensate.hpp"
+#include "opencv2/stitching/detail/seam_finders.hpp"
+#include "opencv2/stitching/detail/blenders.hpp"
+#include "opencv2/stitching/detail/camera.hpp"
 
 namespace cv {
 
