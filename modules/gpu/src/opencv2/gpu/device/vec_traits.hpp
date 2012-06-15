@@ -221,7 +221,7 @@ namespace cv { namespace gpu { namespace device
 
     template<> struct VecTraits<char> 
     { 
-        typedef char elem_type; 
+        typedef char elem_type;
         enum {cn=1}; 
         static __device__ __host__ __forceinline__ char all(char v) {return v;}
         static __device__ __host__ __forceinline__ char make(char x) {return x;}
@@ -229,7 +229,7 @@ namespace cv { namespace gpu { namespace device
     };
     template<> struct VecTraits<schar> 
     { 
-        typedef schar elem_type; 
+        typedef schar elem_type;
         enum {cn=1}; 
         static __device__ __host__ __forceinline__ schar all(schar v) {return v;}
         static __device__ __host__ __forceinline__ schar make(schar x) {return x;}
