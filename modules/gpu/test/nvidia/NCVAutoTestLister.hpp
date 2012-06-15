@@ -26,11 +26,11 @@ class NCVAutoTestLister
 {
 public:
 
-    NCVAutoTestLister(std::string testSuiteName, OutputLevel outputLevel = OutputLevelCompact, NcvBool bStopOnFirstFail=false)
+    NCVAutoTestLister(std::string testSuiteName_, OutputLevel outputLevel_ = OutputLevelCompact, NcvBool bStopOnFirstFail_=false)
         :
-    testSuiteName(testSuiteName),
-    outputLevel(outputLevel),
-    bStopOnFirstFail(bStopOnFirstFail)
+    testSuiteName(testSuiteName_),
+    outputLevel(outputLevel_),
+    bStopOnFirstFail(bStopOnFirstFail_)
     {
     }
 

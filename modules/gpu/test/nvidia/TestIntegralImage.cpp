@@ -14,13 +14,13 @@
 
 
 template <class T_in, class T_out>
-TestIntegralImage<T_in, T_out>::TestIntegralImage(std::string testName, NCVTestSourceProvider<T_in> &src,
-                                                  Ncv32u width, Ncv32u height)
+TestIntegralImage<T_in, T_out>::TestIntegralImage(std::string testName_, NCVTestSourceProvider<T_in> &src_,
+                                                  Ncv32u width_, Ncv32u height_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    width(width),
-    height(height)
+    NCVTestProvider(testName_),
+    src(src_),
+    width(width_),
+    height(height_)
 {
 }
 

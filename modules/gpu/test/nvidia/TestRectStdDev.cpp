@@ -14,17 +14,17 @@
 #include "TestRectStdDev.h"
 
 
-TestRectStdDev::TestRectStdDev(std::string testName, NCVTestSourceProvider<Ncv8u> &src,
-                               Ncv32u width, Ncv32u height, NcvRect32u rect, Ncv32f scaleFactor,
-                               NcvBool bTextureCache)
+TestRectStdDev::TestRectStdDev(std::string testName_, NCVTestSourceProvider<Ncv8u> &src_,
+                               Ncv32u width_, Ncv32u height_, NcvRect32u rect_, Ncv32f scaleFactor_,
+                               NcvBool bTextureCache_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    width(width),
-    height(height),
-    rect(rect),
-    scaleFactor(scaleFactor),
-    bTextureCache(bTextureCache)
+    NCVTestProvider(testName_),
+    src(src_),
+    width(width_),
+    height(height_),
+    rect(rect_),
+    scaleFactor(scaleFactor_),
+    bTextureCache(bTextureCache_)
 {
 }
 

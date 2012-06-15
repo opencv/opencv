@@ -14,16 +14,17 @@
 
 
 template <class T>
-TestDrawRects<T>::TestDrawRects(std::string testName, NCVTestSourceProvider<T> &src, NCVTestSourceProvider<Ncv32u> &src32u,
-                                Ncv32u width, Ncv32u height, Ncv32u numRects, T color)
+TestDrawRects<T>::TestDrawRects(std::string testName_, NCVTestSourceProvider<T> &src_,
+                                NCVTestSourceProvider<Ncv32u> &src32u_,
+                                Ncv32u width_, Ncv32u height_, Ncv32u numRects_, T color_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    src32u(src32u),
-    width(width),
-    height(height),
-    numRects(numRects),
-    color(color)
+    NCVTestProvider(testName_),
+    src(src_),
+    src32u(src32u_),
+    width(width_),
+    height(height_),
+    numRects(numRects_),
+    color(color_)
 {
 }
 

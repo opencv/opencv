@@ -19,14 +19,14 @@
 #include "NCVHaarObjectDetection.hpp"
 
 
-TestHaarCascadeApplication::TestHaarCascadeApplication(std::string testName, NCVTestSourceProvider<Ncv8u> &src,
-                                                       std::string cascadeName, Ncv32u width, Ncv32u height)
+TestHaarCascadeApplication::TestHaarCascadeApplication(std::string testName_, NCVTestSourceProvider<Ncv8u> &src_,
+                                                       std::string cascadeName_, Ncv32u width_, Ncv32u height_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    cascadeName(cascadeName),
-    width(width),
-    height(height)
+    NCVTestProvider(testName_),
+    src(src_),
+    cascadeName(cascadeName_),
+    width(width_),
+    height(height_)
 {
 }
 

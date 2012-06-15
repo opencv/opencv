@@ -46,9 +46,9 @@ class NCVTestProvider : public INCVTest
 {
 public:
 
-    NCVTestProvider(std::string testName)
+    NCVTestProvider(std::string testName_)
         :
-        testName(testName)
+        testName(testName_)
     {
         int devId;
         ncvAssertPrintReturn(cudaSuccess == cudaGetDevice(&devId), "Error returned from cudaGetDevice", );

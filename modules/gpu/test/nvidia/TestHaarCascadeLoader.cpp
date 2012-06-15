@@ -13,10 +13,10 @@
 #include "NCVHaarObjectDetection.hpp"
 
 
-TestHaarCascadeLoader::TestHaarCascadeLoader(std::string testName, std::string cascadeName)
+TestHaarCascadeLoader::TestHaarCascadeLoader(std::string testName_, std::string cascadeName_)
     :
-    NCVTestProvider(testName),
-    cascadeName(cascadeName)
+    NCVTestProvider(testName_),
+    cascadeName(cascadeName_)
 {
 }
 
