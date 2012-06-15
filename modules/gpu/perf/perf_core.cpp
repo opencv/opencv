@@ -1149,6 +1149,7 @@ INSTANTIATE_TEST_CASE_P(Core, AddWeighted, testing::Combine(
 
 //////////////////////////////////////////////////////////////////////
 // GEMM
+#ifdef HAVE_CUBLAS
 
 CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T)
 #define ALL_GEMM_FLAGS testing::Values(GemmFlags(0), GemmFlags(cv::GEMM_1_T), GemmFlags(cv::GEMM_2_T), GemmFlags(cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T | cv::GEMM_3_T))
@@ -1192,6 +1193,7 @@ INSTANTIATE_TEST_CASE_P(Core, GEMM, testing::Combine(
     testing::Values<MatType>(CV_32FC1, CV_32FC2, CV_64FC1, CV_64FC2),
     ALL_GEMM_FLAGS));
 
+#endif
 //////////////////////////////////////////////////////////////////////
 // Transpose
 
