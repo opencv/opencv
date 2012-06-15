@@ -723,16 +723,16 @@ static NCVStatus drawRectsWrapperHost(T *h_dst,
 
         if (rect.x < dstWidth)
         {
-            for (Ncv32u i=rect.y; i<rect.y+rect.height && i<dstHeight; i++)
+            for (Ncv32u each=rect.y; each<rect.y+rect.height && each<dstHeight; each++)
             {
-                h_dst[i*dstStride+rect.x] = color;
+                h_dst[each*dstStride+rect.x] = color;
             }
         }
         if (rect.x+rect.width-1 < dstWidth)
         {
-            for (Ncv32u i=rect.y; i<rect.y+rect.height && i<dstHeight; i++)
+            for (Ncv32u each=rect.y; each<rect.y+rect.height && each<dstHeight; each++)
             {
-                h_dst[i*dstStride+rect.x+rect.width-1] = color;
+                h_dst[each*dstStride+rect.x+rect.width-1] = color;
             }
         }
         if (rect.y < dstHeight)
