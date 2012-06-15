@@ -450,7 +450,8 @@ bool computeKsi( int transformType,
 
                 double diff = static_cast<double>(image1.at<uchar>(v1,u1)) -
                               static_cast<double>(image0.at<uchar>(v0,u0));
-                double w = 1./(sigma + std::abs(diff));
+                double w = sigma + std::abs(diff);
+                w = w > DBL_EPSILON ? 1./w : 1.;
 
                 (*computeCFuncPtr)( (double*)C.ptr(pointCount),
                                      w * sobelScale * dI_dx1.at<short int>(v1,u1),
