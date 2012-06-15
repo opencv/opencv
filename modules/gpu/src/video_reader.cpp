@@ -391,11 +391,11 @@ void cv::gpu::VideoReader_GPU::dumpFormat(std::ostream& st)
         "YUV444"
     };
 
-    FormatInfo format = this->format();
+    FormatInfo _format = this->format();
 
-    st << "Frame Size    : " << format.width << "x" << format.height << std::endl;
-    st << "Codec         : " << (format.codec <= H264_MVC ? codecs[format.codec] : "Uncompressed YUV") << std::endl;
-    st << "Chroma Format : " << chromas[format.chromaFormat] << std::endl;
+    st << "Frame Size    : " << _format.width << "x" << _format.height << std::endl;
+    st << "Codec         : " << (_format.codec <= H264_MVC ? codecs[_format.codec] : "Uncompressed YUV") << std::endl;
+    st << "Chroma Format : " << chromas[_format.chromaFormat] << std::endl;
 }
 
 #endif // HAVE_CUDA
