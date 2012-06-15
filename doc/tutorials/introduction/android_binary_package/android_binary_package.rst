@@ -60,7 +60,7 @@ You need the following tools to be installed:
 
 #. **Android SDK**
 
-   Get the latest Android SDK from http://developer.android.com/sdk/index.html
+   Get the latest ``Android SDK`` from http://developer.android.com/sdk/index.html
 
    Here is Google's `install guide <http://developer.android.com/sdk/installing.html>`_ for SDK.
 
@@ -284,9 +284,9 @@ Running OpenCV Samples
 
 At this point you should be able to build and run all samples except two from Advanced tutorial (these samples require Android NDK to build working applications, see the next tutorial :ref:`Android_Binary_Package_with_NDK` to learn how to compile them).
 
-Also I want to note that only ``Tutorial 1 Basic - 0. Android Camera`` and ``Tutorial 1 Basic - 1. Add OpenCV`` samples are able to run on Emulator from Android SDK. Other samples are using OpenCV Native Camera which does not work with emulator.
+Also I want to note that only ``Tutorial 0 - Android Camera`` and ``Tutorial 1 - Add OpenCV`` samples are able to run on Emulator from Android SDK. Other samples are using OpenCV Native Camera which does not work with emulator.
 
-.. note:: Latest *Android SDK tools, revision 14* can run ARM v7 OS images but *Google* provides such image for Android 4.x only.
+.. note:: Latest *Android SDK tools, revision 19* can run ARM v7a OS images but *Google* provides such image for Android 4.x only.
 
 Well, running samples from Eclipse is very simple:
 
@@ -310,7 +310,7 @@ Well, running samples from Eclipse is very simple:
 
 * Select the :guilabel:`Android Application` option and click :guilabel:`OK` button. Eclipse will install and run the sample.
   
-  Here is ``Tutorial 1 Basic - 1. Add OpenCV`` sample detecting edges using Canny algorithm from OpenCV:
+  Here is ``Tutorial 1 - Add OpenCV`` sample detecting edges using Canny algorithm from OpenCV:
 
   .. image:: images/emulator_canny.png
      :height: 600px 
