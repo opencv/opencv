@@ -208,10 +208,17 @@ INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, testing::Combine(
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlowDense
 
-GPU_PERF_TEST_1(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo)
+IMPLEMENT_PARAM_CLASS(Levels, int)
+IMPLEMENT_PARAM_CLASS(Iters, int)
+
+GPU_PERF_TEST(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo, WinSize, Levels, Iters)
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
+
+    int winSize = GET_PARAM(1);
+    int levels = GET_PARAM(2);
+    int iters = GET_PARAM(3);
 
     cv::Mat frame0_host = readImage("gpu/opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0_host.empty());
@@ -226,9 +233,13 @@ GPU_PERF_TEST_1(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo)
 
     cv::gpu::PyrLKOpticalFlow pyrLK;
 
+    pyrLK.winSize = cv::Size(winSize, winSize);
+    pyrLK.maxLevel = levels - 1;
+    pyrLK.iters = iters;
+
     pyrLK.dense(frame0, frame1, u, v);
 
-    declare.time(10);
+    declare.time(30);
 
     TEST_CYCLE()
     {
@@ -236,7 +247,11 @@ GPU_PERF_TEST_1(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowDense, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowDense, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(WinSize(3), WinSize(5), WinSize(7), WinSize(9), WinSize(13), WinSize(17), WinSize(21)),
+    testing::Values(Levels(1), Levels(2), Levels(3)),
+    testing::Values(Iters(1), Iters(10))));
 
 //////////////////////////////////////////////////////
 // FarnebackOpticalFlowTest

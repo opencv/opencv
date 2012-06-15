@@ -1754,7 +1754,6 @@ public:
         winSize = Size(21, 21);
         maxLevel = 3;
         iters = 30;
-        derivLambda = 0.5;
         useInitialFlow = false;
         minEigThreshold = 1e-4f;
         getMinEigenVals = false;
@@ -1769,7 +1768,6 @@ public:
     Size winSize;
     int maxLevel;
     int iters;
-    double derivLambda;
     bool useInitialFlow;
     float minEigThreshold;
     bool getMinEigenVals;
