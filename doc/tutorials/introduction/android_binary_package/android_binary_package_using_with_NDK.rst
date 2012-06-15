@@ -179,7 +179,7 @@ then paste the CDT 8.0 repository URL http://download.eclipse.org/tools/cdt/rele
         :align: center
 
 #. Right click on your project in :guilabel:`Package Explorer`  window and select :guilabel:`Properties`, then :guilabel:`C/C++ Build`  in the left pane.
-     Unckeck :guilabel:`Use default build command` and put ndk-build invocation in the :guilabel:`Build command` edit box and click :guilabel:`Apply` :
+     Unckeck :guilabel:`Use default build command` and put ``ndk-build`` invocation in the :guilabel:`Build command` edit box and click :guilabel:`Apply` :
 
      .. image:: images/eclipse_cdt_cfg4.png
         :alt: Configure CDT
