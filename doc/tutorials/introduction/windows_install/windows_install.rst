@@ -16,7 +16,7 @@ Installation by using the pre-built libraries
 
 1. Open up a web browser and go to: http://sourceforge.net/projects/opencvlibrary/files/opencv-win/
 
-#. Open the folder for the latest version (currently this is 2.4).
+#. Open the folder for the latest version (currently this is 2.4.1).
 
 #. Choose a build you want to use and download it. The naming conventions used will show what kind of support they offer. For example:
    
@@ -60,10 +60,10 @@ If you are building your own libraries you can take either the source files from
 
    .. container:: enumeratevisibleitemswithsquare
 
-      + stable and tested build - http://code.opencv.org/svn/opencv/branches/2.4 (the number at the end will change with every new realease, so change it to that)
+      + stable and tested build - http://code.opencv.org/svn/opencv/tags/2.4.1 (the number at the end will change with every new realease, so change it to that)
       + development build - http://code.opencv.org/svn/opencv/trunk/
 
-While the later one may contain a couple of new and experimental algorithms, performance increases and interface improvements, be aware, that it may also contain many-many bugs. Using the first one is recommended in most of the cases. That is unless you are extending the OpenCV library itself or really need to most up to date version of it. 
+While the later one may contain a couple of new and experimental algorithms, performance increases and interface improvements, be aware, that it may also contain some bugs. Using the first one is recommended in most of the cases. That is unless you are extending the OpenCV library itself or really need the most up to date version of it. 
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
@@ -287,11 +287,11 @@ Building the library
        
       + *BUILD_DOCS* -> It creates two projects for building the documentation of OpenCV (there will be a separate project for building the HTML and the PDF files). Note that these aren't built together with the solution. You need to make an explicit build project command on these to do so.
       + *BUILD_EXAMPLES* -> OpenCV comes with many example applications from which you may learn most of the libraries capabilities. This will also come handy to easily try out if OpenCV is fully functional on your computer. 
-      + *BUILD_JAVA_SUPPORT* -> At the moment this has no real meaning on the Windows platform. Ignore it.
-      + *BUILD_NEW_PYTHON_SUPPORT* -> Self-explanatory. Create the binaries to use OpenCV from the Python language. 
       + *BUILD_PACKAGE* -> Prior to version 2.3 with this you could build a project that will build an OpenCV installer. With this you can easily install your OpenCV flavor on other systems.  For the latest source files of OpenCV it generates a new project that simply creates zip archive with OpenCV sources. 
       + *BUILD_SHARED_LIBS* -> With this you can control to build DLL files (when turned on) or static library files (\*.lib) otherwise. 
       + *BUILD_TESTS* -> Each module of OpenCV has a test project assigned to it. Building these test projects is also a good way to try out, that the modules work just as expected on your system too. 
+      + *BUILD_PERF_TESTS* -> There are also performance tests for many OpenCV functions. If you're concerned about performance, build them and run. 
+      + *BUILD_opencv_python* -> Self-explanatory. Create the binaries to use OpenCV from the Python language. 
    
    Press again the *Configure* button and ensure no errors are reported. If this is the case you can tell CMake to create the project files by pushing the *Generate* button. Go to the build directory and open the created **OpenCV** solution.
    Depending on just how much of the above options you have selected the solution may contain quite a lot of projects so be tolerant on the IDE at the startup. 

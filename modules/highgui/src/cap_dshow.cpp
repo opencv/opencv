@@ -445,12 +445,12 @@ class videoDevice{
         int  nFramesForReconnect;
         unsigned long nFramesRunning;
         int  connection;
-        int     storeConn;
+        int  storeConn;
         int  myID;
         long requestedFrameTime; //ie fps
 
-        char     nDeviceName[255];
-        WCHAR     wDeviceName[255];
+        char  nDeviceName[255];
+        WCHAR wDeviceName[255];
 
         unsigned char * pixels;
         char * pBuffer;
@@ -643,7 +643,7 @@ public:
 
         bufferSetup         = false;
         newFrame            = false;
-        latestBufferLength     = 0;
+        latestBufferLength  = 0;
 
         hEvent = CreateEvent(NULL, true, false, NULL);
     }
@@ -655,7 +655,7 @@ public:
         DeleteCriticalSection(&critSection);
         CloseHandle(hEvent);
         if(bufferSetup){
-            delete pixels;
+            delete[] pixels;
         }
     }
 
@@ -665,11 +665,11 @@ public:
         if(bufferSetup){
             return false;
         }else{
-            numBytes             = numBytesIn;
-            pixels                 = new unsigned char[numBytes];
+            numBytes            = numBytesIn;
+            pixels              = new unsigned char[numBytes];
             bufferSetup         = true;
             newFrame            = false;
-            latestBufferLength     = 0;
+            latestBufferLength  = 0;
         }
         return true;
     }
@@ -796,12 +796,12 @@ void videoDevice::setSize(int w, int h){
     }
     else
     {
-        width                 = w;
-        height                 = h;
-        videoSize             = w*h*3;
+        width               = w;
+        height              = h;
+        videoSize           = w*h*3;
         sizeSet             = true;
-        pixels                = new unsigned char[videoSize];
-        pBuffer                = new char[videoSize];
+        pixels              = new unsigned char[videoSize];
+        pBuffer             = new char[videoSize];
 
         memset(pixels, 0 , videoSize);
         sgCallback->setupBuffer(videoSize);

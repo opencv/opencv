@@ -190,3 +190,7 @@ def mosaic(w, imgs):
     imgs = it.chain([img0], imgs)
     rows = grouper(w, imgs, pad)
     return np.vstack(map(np.hstack, rows))
+
+def getsize(img):
+    h, w = img.shape[:2]
+    return w, h

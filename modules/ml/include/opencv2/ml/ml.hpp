@@ -488,7 +488,7 @@ public:
         bool balanced=false );
 
     virtual float predict( const CvMat* sample, bool returnDFVal=false ) const;
-    virtual float predict( const CvMat* samples, CvMat* results ) const;
+    virtual float predict( const CvMat* samples, CV_OUT CvMat* results ) const;
 
 #ifndef SWIG
     CV_WRAP CvSVM( const cv::Mat& trainData, const cv::Mat& responses,
@@ -510,6 +510,7 @@ public:
                             CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE),
                             bool balanced=false);
     CV_WRAP virtual float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
+    CV_WRAP_AS(predict_all) void predict( cv::InputArray samples, cv::OutputArray results ) const;
 #endif
 
     CV_WRAP virtual int get_support_vector_count() const;

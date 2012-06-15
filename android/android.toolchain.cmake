@@ -36,13 +36,13 @@
 #    ANDROID_NDK=/opt/android-ndk - path to the NDK root.
 #      Can be set as environment variable. Can be set only at first cmake run.
 #
-#    ANDROID_STANDALONE_TOOLCHAIN=/opt/android-toolchain - path to the 
+#    ANDROID_STANDALONE_TOOLCHAIN=/opt/android-toolchain - path to the
 #      standalone toolchain. This option is not used if full NDK is found
 #      (ignored if ANDROID_NDK is set).
 #      Can be set as environment variable. Can be set only at first cmake run.
 #
 #    ANDROID_ABI=armeabi-v7a -  specifies the target Application Binary
-#      Interface (ABI). This option nearly matches to the APP_ABI variable 
+#      Interface (ABI). This option nearly matches to the APP_ABI variable
 #      used by ndk-build tool from Android NDK.
 #      Possible values are:
 #        "armeabi" - matches to the NDK ABI with the same name.
@@ -94,10 +94,10 @@
 #      The flags will be prepopulated with critical flags, so don't loose them.
 #      Also be aware that toolchain also sets configuration-specific compiler
 #      flags and linker flags.
-#    
-#    ANDROID and BUILD_ANDROID will be set to true, you may test any of these 
+#
+#    ANDROID and BUILD_ANDROID will be set to true, you may test any of these
 #    variables to make necessary Android-specific configuration changes.
-#    
+#
 #    Also ARMEABI or ARMEABI_V7A or X86 will be set true, mutually exclusive.
 #    NEON option will be set true if VFP is set to NEON.
 #
@@ -131,7 +131,7 @@
 #         cmake pass
 #     [~] toolchain exits with error if ARM_TARGET is not recognized
 #   - modified June 2011
-#     [~] default NDK path is updated for version r5c 
+#     [~] default NDK path is updated for version r5c
 #     [+] variable CMAKE_SYSTEM_PROCESSOR is set based on ARM_TARGET
 #     [~] toolchain install directory is added to linker paths
 #     [-] removed SWIG-related stuff from toolchain
@@ -705,12 +705,14 @@ set( ANDROID_SYSTEM_LIB_DIRS "" )
 set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_SOURCE_DIR} CACHE PATH "root for library output, set this to change where android libs are installed to" )
 set( CMAKE_INSTALL_PREFIX "${ANDROID_TOOLCHAIN_ROOT}/user" CACHE STRING "path for installing" )
 
-if( EXISTS "${CMAKE_SOURCE_DIR}/jni/CMakeLists.txt" )
- set( EXECUTABLE_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/bin/${ANDROID_NDK_ABI_NAME}" CACHE PATH "Output directory for applications" )
-else()
- set( EXECUTABLE_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/bin" CACHE PATH "Output directory for applications" )
+if(NOT _CMAKE_IN_TRY_COMPILE)
+ if( EXISTS "${CMAKE_SOURCE_DIR}/jni/CMakeLists.txt" )
+  set( EXECUTABLE_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/bin/${ANDROID_NDK_ABI_NAME}" CACHE PATH "Output directory for applications" )
+ else()
+  set( EXECUTABLE_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/bin" CACHE PATH "Output directory for applications" )
+ endif()
+ set( LIBRARY_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ANDROID_NDK_ABI_NAME}" CACHE PATH "path for android libs" )
 endif()
-set( LIBRARY_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ANDROID_NDK_ABI_NAME}" CACHE PATH "path for android libs" )
 
 #includes
 list( APPEND ANDROID_SYSTEM_INCLUDE_DIRS "${ANDROID_SYSROOT}/usr/include" )
@@ -960,7 +962,7 @@ endif()
 set( ANDROID True )
 set( BUILD_ANDROID True )
 
-# where is the target environment 
+# where is the target environment
 set( CMAKE_FIND_ROOT_PATH "${ANDROID_TOOLCHAIN_ROOT}/bin" "${ANDROID_TOOLCHAIN_ROOT}/${ANDROID_TOOLCHAIN_MACHINE_NAME}" "${ANDROID_SYSROOT}" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_PREFIX}/share" )
 
 # only search for libraries and includes in the ndk toolchain
@@ -1053,7 +1055,7 @@ endif()
 #   ANDROID_ABI : "armeabi-v7a" (default), "armeabi", "armeabi-v7a with NEON", "armeabi-v7a with VFPV3", "armeabi-v6 with VFP", "x86", "mips"
 #   ANDROID_NATIVE_API_LEVEL : 3,4,5,8,9,14 (depends on NDK version)
 #   ANDROID_SET_OBSOLETE_VARIABLES : ON/OFF
-#   ANDROID_USE_STLPORT : OFF/ON - EXPERIMENTAL!!! 
+#   ANDROID_USE_STLPORT : OFF/ON - EXPERIMENTAL!!!
 #   ANDROID_FORBID_SYGWIN : ON/OFF
 #   ANDROID_NO_UNDEFINED : ON/OFF
 #   ANDROID_SO_UNDEFINED : OFF/ON  (default depends on NDK version)

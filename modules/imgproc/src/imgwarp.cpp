@@ -2839,6 +2839,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if( tegra::warpAffine(src, dst, M, flags, borderType, borderValue) )
+        return;
+#endif
+
     if( !(flags & WARP_INVERSE_MAP) )
     {
         double D = M[0]*M[4] - M[1]*M[3];
@@ -2850,22 +2855,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         double b2 = -M[3]*M[2] - M[4]*M[5];
         M[2] = b1; M[5] = b2;
     }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (borderType == BORDER_REPLICATE)
-    {
-        if( tegra::warpAffine(src, dst, M, interpolation, borderType, borderValue) )
-        return;
-    }
-    else
-    {
-        double warp_mat[6];
-        Mat warp_m(2, 3, CV_64F, warp_mat);
-        M0.convertTo(warp_m, warp_m.type());
-        if( tegra::warpAffine(src, dst, warp_mat, interpolation, borderType, borderValue) )
-        return;
-    }
-#endif
 
     int x, y, x1, y1, width = dst.cols, height = dst.rows;
     AutoBuffer<int> _abdelta(width*2);
@@ -2995,13 +2984,13 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 3 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-    if( !(flags & WARP_INVERSE_MAP) )
-         invert(matM, matM);
-
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if( tegra::warpPerspective(src, dst, M, interpolation, borderType, borderValue) )
+    if( tegra::warpPerspective(src, dst, M, flags, borderType, borderValue) )
         return;
 #endif
+
+    if( !(flags & WARP_INVERSE_MAP) )
+         invert(matM, matM);
 
     int x, y, x1, y1, width = dst.cols, height = dst.rows;
 

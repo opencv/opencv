@@ -1622,16 +1622,16 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
             continue;
         }
 
-        NcvSize32s srcRoi, srcIIRoi, scaledIIRoi, searchRoi;
+        NcvSize32s srcRoi_, srcIIRo_i, scaledIIRoi, searchRoi;
 
-        srcRoi.width = d_srcImg.width();
-        srcRoi.height = d_srcImg.height();
+        srcRoi_.width = d_srcImg.width();
+        srcRoi_.height = d_srcImg.height();
 
-        srcIIRoi.width = srcRoi.width + 1;
-        srcIIRoi.height = srcRoi.height + 1;
+        srcIIRo_i.width = srcRoi_.width + 1;
+        srcIIRo_i.height = srcRoi_.height + 1;
 
-        scaledIIRoi.width = srcIIRoi.width / scale;
-        scaledIIRoi.height = srcIIRoi.height / scale;
+        scaledIIRoi.width = srcIIRo_i.width / scale;
+        scaledIIRoi.height = srcIIRo_i.height / scale;
 
         searchRoi.width = scaledIIRoi.width - haar.ClassifierSize.width;
         searchRoi.height = scaledIIRoi.height - haar.ClassifierSize.height;
@@ -1659,12 +1659,12 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
     {
         Ncv32u scale = scalesVector[i];
 
-        NcvSize32u srcRoi, scaledIIRoi, searchRoi;
+        NcvSize32u srcRoi_, scaledIIRoi, searchRoi;
         NcvSize32u srcIIRoi;
-        srcRoi.width = d_srcImg.width();
-        srcRoi.height = d_srcImg.height();
-        srcIIRoi.width = srcRoi.width + 1;
-        srcIIRoi.height = srcRoi.height + 1;
+        srcRoi_.width = d_srcImg.width();
+        srcRoi_.height = d_srcImg.height();
+        srcIIRoi.width = srcRoi_.width + 1;
+        srcIIRoi.height = srcRoi_.height + 1;
         scaledIIRoi.width = srcIIRoi.width / scale;
         scaledIIRoi.height = srcIIRoi.height / scale;
         searchRoi.width = scaledIIRoi.width - haar.ClassifierSize.width;

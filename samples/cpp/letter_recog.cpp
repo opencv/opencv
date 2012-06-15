@@ -437,13 +437,20 @@ int build_mlp_classifier( char* data_filename,
             cvMat( 1, (int)(sizeof(layer_sz)/sizeof(layer_sz[0])), CV_32S, layer_sz );
         mlp.create( &layer_sizes );
         printf( "Training the classifier (may take a few minutes)...\n");
-        mlp.train( &train_data, new_responses, 0, 0,
-            CvANN_MLP_TrainParams(cvTermCriteria(CV_TERMCRIT_ITER,300,0.01),
+        
 #if 1
-            CvANN_MLP_TrainParams::BACKPROP,0.001));
+        int method = CvANN_MLP_TrainParams::BACKPROP;
+        double method_param = 0.001;
+        int max_iter = 300;
 #else
-            CvANN_MLP_TrainParams::RPROP,0.05));
+        int method = CvANN_MLP_TrainParams::RPROP;
+        double method_param = 0.1;
+        int max_iter = 1000;
 #endif
+        
+        mlp.train( &train_data, new_responses, 0, 0,
+            CvANN_MLP_TrainParams(cvTermCriteria(CV_TERMCRIT_ITER,max_iter,0.01),
+                                  method, method_param));
         cvReleaseMat( &new_responses );
         printf("\n");
     }

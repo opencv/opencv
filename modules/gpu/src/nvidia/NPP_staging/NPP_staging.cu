@@ -1414,17 +1414,17 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
         //calculate hierarchical partial sums
         for (Ncv32u i=1; i<partSumNums.size()-1; i++)
         {
-            dim3 grid(partSumNums[i+1]);
-            if (grid.x > 65535)
+            dim3 grid_partial(partSumNums[i+1]);
+            if (grid_partial.x > 65535)
             {
-                grid.y = (grid.x + 65534) / 65535;
-                grid.x = 65535;
+                grid_partial.y = (grid_partial.x + 65534) / 65535;
+                grid_partial.x = 65535;
             }
-            if (grid.x != 1)
+            if (grid_partial.x != 1)
             {
                 removePass1Scan
                     <false, true>
-                    <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
+                    <<<grid_partial, block, 0, nppStGetActiveCUDAstream()>>>
                     (d_hierSums.ptr() + partSumOffsets[i],
                      partSumNums[i], NULL,
                      d_hierSums.ptr() + partSumOffsets[i+1],
@@ -1434,7 +1434,7 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
             {
                 removePass1Scan
                     <false, false>
-                    <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
+                    <<<grid_partial, block, 0, nppStGetActiveCUDAstream()>>>
                     (d_hierSums.ptr() + partSumOffsets[i],
                      partSumNums[i], NULL,
                      NULL,

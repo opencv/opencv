@@ -623,11 +623,11 @@ class NCVVectorAlloc : public NCVVector<T>
 {
     NCVVectorAlloc();
     NCVVectorAlloc(const NCVVectorAlloc &);
-    NCVVectorAlloc& operator=(const NCVVectorAlloc<T>&);	
+    NCVVectorAlloc& operator=(const NCVVectorAlloc<T>&);
 
 public:
 
-    NCVVectorAlloc(INCVMemAllocator &allocator_, Ncv32u length)
+    NCVVectorAlloc(INCVMemAllocator &allocator_, Ncv32u length_)
         :
         allocator(allocator_)
     {
@@ -636,11 +636,11 @@ public:
         this->clear();
         this->allocatedMem.clear();
 
-        ncvStat = allocator.alloc(this->allocatedMem, length * sizeof(T));
+        ncvStat = allocator.alloc(this->allocatedMem, length_ * sizeof(T));
         ncvAssertPrintReturn(ncvStat == NCV_SUCCESS, "NCVVectorAlloc ctor:: alloc failed", );
 
         this->_ptr = (T *)this->allocatedMem.begin.ptr;
-        this->_length = length;
+        this->_length = length_;
         this->_memtype = this->allocatedMem.begin.memtype;
     }
 
@@ -698,15 +698,15 @@ public:
         this->bReused = true;
     }
 
-    NCVVectorReuse(const NCVMemSegment &memSegment, Ncv32u length)
+    NCVVectorReuse(const NCVMemSegment &memSegment, Ncv32u length_)
     {
         this->bReused = false;
         this->clear();
 
-        ncvAssertPrintReturn(length * sizeof(T) <= memSegment.size, \
+        ncvAssertPrintReturn(length_ * sizeof(T) <= memSegment.size, \
             "NCVVectorReuse ctor:: memory binding failed due to size mismatch", );
 
-        this->_length = length;
+        this->_length = length_;
         this->_ptr = (T *)memSegment.begin.ptr;
         this->_memtype = memSegment.begin.memtype;
 
@@ -841,34 +841,34 @@ class NCVMatrixAlloc : public NCVMatrix<T>
     NCVMatrixAlloc& operator=(const NCVMatrixAlloc &);
 public:
 
-    NCVMatrixAlloc(INCVMemAllocator &allocator, Ncv32u width, Ncv32u height, Ncv32u _pitch=0)
+    NCVMatrixAlloc(INCVMemAllocator &allocator_, Ncv32u width_, Ncv32u height_, Ncv32u pitch_=0)
         :
-        allocator(allocator)
+        allocator(allocator_)
     {
         NCVStatus ncvStat;
 
         this->clear();
         this->allocatedMem.clear();
 
-        Ncv32u widthBytes = width * sizeof(T);
+        Ncv32u widthBytes = width_ * sizeof(T);
         Ncv32u pitchBytes = alignUp(widthBytes, allocator.alignment());
 
-        if (_pitch != 0)
+        if (pitch_ != 0)
         {
-            ncvAssertPrintReturn(_pitch >= pitchBytes &&
-                (_pitch & (allocator.alignment() - 1)) == 0,
+            ncvAssertPrintReturn(pitch_ >= pitchBytes &&
+                (pitch_ & (allocator.alignment() - 1)) == 0,
                 "NCVMatrixAlloc ctor:: incorrect pitch passed", );
-            pitchBytes = _pitch;
+            pitchBytes = pitch_;
         }
 
-        Ncv32u requiredAllocSize = pitchBytes * height;
+        Ncv32u requiredAllocSize = pitchBytes * height_;
 
         ncvStat = allocator.alloc(this->allocatedMem, requiredAllocSize);
         ncvAssertPrintReturn(ncvStat == NCV_SUCCESS, "NCVMatrixAlloc ctor:: alloc failed", );
 
         this->_ptr = (T *)this->allocatedMem.begin.ptr;
-        this->_width = width;
-        this->_height = height;
+        this->_width = width_;
+        this->_height = height_;
         this->_pitch = pitchBytes;
         this->_memtype = this->allocatedMem.begin.memtype;
     }
@@ -916,34 +916,34 @@ class NCVMatrixReuse : public NCVMatrix<T>
 
 public:
 
-    NCVMatrixReuse(const NCVMemSegment &memSegment, Ncv32u alignment, Ncv32u width, Ncv32u height, Ncv32u pitch=0, NcvBool bSkipPitchCheck=false)
+    NCVMatrixReuse(const NCVMemSegment &memSegment, Ncv32u alignment, Ncv32u width_, Ncv32u height_, Ncv32u pitch_=0, NcvBool bSkipPitchCheck=false)
     {
         this->bReused = false;
         this->clear();
 
-        Ncv32u widthBytes = width * sizeof(T);
+        Ncv32u widthBytes = width_ * sizeof(T);
         Ncv32u pitchBytes = alignUp(widthBytes, alignment);
 
-        if (pitch != 0)
+        if (pitch_ != 0)
         {
             if (!bSkipPitchCheck)
             {
-                ncvAssertPrintReturn(pitch >= pitchBytes &&
-                    (pitch & (alignment - 1)) == 0,
+                ncvAssertPrintReturn(pitch_ >= pitchBytes &&
+                    (pitch_ & (alignment - 1)) == 0,
                     "NCVMatrixReuse ctor:: incorrect pitch passed", );
             }
             else
             {
-                ncvAssertPrintReturn(pitch >= widthBytes, "NCVMatrixReuse ctor:: incorrect pitch passed", );
+                ncvAssertPrintReturn(pitch_ >= widthBytes, "NCVMatrixReuse ctor:: incorrect pitch passed", );
             }
-            pitchBytes = pitch;
+            pitchBytes = pitch_;
         }
 
-        ncvAssertPrintReturn(pitchBytes * height <= memSegment.size, \
+        ncvAssertPrintReturn(pitchBytes * height_ <= memSegment.size, \
             "NCVMatrixReuse ctor:: memory binding failed due to size mismatch", );
 
-        this->_width = width;
-        this->_height = height;
+        this->_width = width_;
+        this->_height = height_;
         this->_pitch = pitchBytes;
         this->_ptr = (T *)memSegment.begin.ptr;
         this->_memtype = memSegment.begin.memtype;
