@@ -5,10 +5,11 @@ ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 if(HAVE_CUDA)
   file(GLOB lib_cuda "src/cuda/*.cu")
   source_group("Cuda" FILES "${lib_cuda}")
-  
-  ocv_include_directories(${CUDA_INCLUDE_DIRS} "${OpenCV_SOURCE_DIR}/modules/gpu/src" "${OpenCV_SOURCE_DIR}/modules/gpu/src/cuda")  
-  OCV_CUDA_COMPILE(cuda_objs ${lib_cuda})
-  
+
+  ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/src" "${OpenCV_SOURCE_DIR}/modules/gpu/src/cuda" ${CUDA_INCLUDE_DIRS})
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+  ocv_cuda_compile(cuda_objs ${lib_cuda})
+
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 else()
   set(lib_cuda "")

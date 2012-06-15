@@ -4,7 +4,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
-void help()
+static void help(void)
 {
     printf("\n This sample demonstrates cascade's convertation \n"
     "Usage:\n"

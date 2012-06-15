@@ -158,7 +158,7 @@ bool CvEM::train( const CvMat* _samples, const CvMat* _sample_idx,
     Mat samples = cvarrToMat(_samples), labels0, labels;
     if( _labels )
         labels0 = labels = cvarrToMat(_labels);
-    
+
     bool isOk = train(samples, Mat(), _params, _labels ? &labels : 0);
     CV_Assert( labels0.data == labels.data );
 
@@ -202,8 +202,8 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
 {
     CV_Assert(_sample_idx.empty());
     Mat prbs, weights, means, logLikelihoods;
-    std::vector<Mat> covsHdrs;
-    init_params(_params, prbs, weights, means, covsHdrs);
+    std::vector<Mat> covshdrs;
+    init_params(_params, prbs, weights, means, covshdrs);
 
     emObj = EM(_params.nclusters, _params.cov_mat_type, _params.term_crit);
     bool isOk = false;
@@ -211,14 +211,14 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
         isOk = emObj.train(_samples,
                            logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
     else if( _params.start_step == EM::START_E_STEP )
-        isOk = emObj.trainE(_samples, means, covsHdrs, weights,
+        isOk = emObj.trainE(_samples, means, covshdrs, weights,
                             logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
     else if( _params.start_step == EM::START_M_STEP )
         isOk = emObj.trainM(_samples, prbs,
                             logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
     else
         CV_Error(CV_StsBadArg, "Bad start type of EM algorithm");
-    
+
     if(isOk)
     {
         logLikelihood = sum(logLikelihoods).val[0];

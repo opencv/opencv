@@ -64,18 +64,18 @@ icvMinAreaState;
 //    Parameters:
 //      points      - convex hull vertices ( any orientation )
 //      n           - number of vertices
-//      mode        - concrete application of algorithm 
-//                    can be  CV_CALIPERS_MAXDIST   or   
-//                            CV_CALIPERS_MINAREARECT  
+//      mode        - concrete application of algorithm
+//                    can be  CV_CALIPERS_MAXDIST   or
+//                            CV_CALIPERS_MINAREARECT
 //      left, bottom, right, top - indexes of extremal points
 //      out         - output info.
-//                    In case CV_CALIPERS_MAXDIST it points to float value - 
+//                    In case CV_CALIPERS_MAXDIST it points to float value -
 //                    maximal height of polygon.
 //                    In case CV_CALIPERS_MINAREARECT
-//                    ((CvPoint2D32f*)out)[0] - corner 
+//                    ((CvPoint2D32f*)out)[0] - corner
 //                    ((CvPoint2D32f*)out)[1] - vector1
 //                    ((CvPoint2D32f*)out)[0] - corner2
-//                      
+//
 //                      ^
 //                      |
 //              vector2 |
@@ -94,15 +94,15 @@ icvRotatingCalipers( CvPoint2D32f* points, int n, int mode, float* out )
 {
     float minarea = FLT_MAX;
     float max_dist = 0;
-    char buffer[32];
+    char buffer[32] = {};
     int i, k;
     CvPoint2D32f* vect = (CvPoint2D32f*)cvAlloc( n * sizeof(vect[0]) );
     float* inv_vect_length = (float*)cvAlloc( n * sizeof(inv_vect_length[0]) );
     int left = 0, bottom = 0, right = 0, top = 0;
     int seq[4] = { -1, -1, -1, -1 };
 
-    /* rotating calipers sides will always have coordinates    
-       (a,b) (-b,a) (-a,-b) (b, -a)     
+    /* rotating calipers sides will always have coordinates
+       (a,b) (-b,a) (-a,-b) (b, -a)
      */
     /* this is a first base bector (a,b) initialized by (1,0) */
     float orientation = 0;
@@ -111,14 +111,14 @@ icvRotatingCalipers( CvPoint2D32f* points, int n, int mode, float* out )
 
     float left_x, right_x, top_y, bottom_y;
     CvPoint2D32f pt0 = points[0];
-    
+
     left_x = right_x = pt0.x;
     top_y = bottom_y = pt0.y;
-    
+
     for( i = 0; i < n; i++ )
     {
         double dx, dy;
-        
+
         if( pt0.x < left_x )
             left_x = pt0.x, left = i;
 
@@ -132,7 +132,7 @@ icvRotatingCalipers( CvPoint2D32f* points, int n, int mode, float* out )
             bottom_y = pt0.y, bottom = i;
 
         CvPoint2D32f pt = points[(i+1) & (i+1 < n ? -1 : 0)];
-        
+
         dx = pt.x - pt0.x;
         dy = pt.y - pt0.y;
 
@@ -149,7 +149,7 @@ icvRotatingCalipers( CvPoint2D32f* points, int n, int mode, float* out )
     {
         double ax = vect[n-1].x;
         double ay = vect[n-1].y;
-        
+
         for( i = 0; i < n; i++ )
         {
             double bx = vect[i].x;
@@ -218,7 +218,7 @@ icvRotatingCalipers( CvPoint2D32f* points, int n, int mode, float* out )
                 base_b = lead_y;
                 break;
             case 1:
-                base_a = lead_y; 
+                base_a = lead_y;
                 base_b = -lead_x;
                 break;
             case 2:
@@ -231,12 +231,12 @@ icvRotatingCalipers( CvPoint2D32f* points, int n, int mode, float* out )
                 break;
             default: assert(0);
             }
-        }                        
+        }
         /* change base point of main edge */
         seq[main_element] += 1;
         seq[main_element] = (seq[main_element] == n) ? 0 : seq[main_element];
 
-        
+
         switch (mode)
         {
         case CV_CALIPERS_MAXHEIGHT:
@@ -351,7 +351,7 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* storage )
     CvBox2D box;
     cv::AutoBuffer<CvPoint2D32f> _points;
     CvPoint2D32f* points;
-    
+
     memset(&box, 0, sizeof(box));
 
     int i, n;
@@ -409,7 +409,7 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* storage )
             CV_READ_SEQ_ELEM( points[i], reader );
         }
     }
-    
+
     if( n > 2 )
     {
         icvRotatingCalipers( points, n, CV_CALIPERS_MINAREARECT, (float*)out );

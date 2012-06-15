@@ -208,13 +208,13 @@ inline float VectorLength(CvPoint2D32f v1) {
 //HEAP::iterator Heap_Iterator;
 //HEAP Heap;
 
-float FastMarching_solve(int i1,int j1,int i2,int j2, const CvMat* f, const CvMat* t)
+static float FastMarching_solve(int i1,int j1,int i2,int j2, const CvMat* f, const CvMat* t)
 {
     double sol, a11, a22, m12;
     a11=CV_MAT_ELEM(*t,float,i1,j1);
     a22=CV_MAT_ELEM(*t,float,i2,j2);
     m12=MIN(a11,a22);
-    
+
     if( CV_MAT_ELEM(*f,uchar,i1,j1) != INSIDE )
         if( CV_MAT_ELEM(*f,uchar,i2,j2) != INSIDE )
             if( fabs(a11-a22) >= 1.0 )
@@ -227,7 +227,7 @@ float FastMarching_solve(int i1,int j1,int i2,int j2, const CvMat* f, const CvMa
         sol = 1+a22;
     else
         sol = 1+m12;
-            
+
     return (float)sol;
 }
 
@@ -724,19 +724,19 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     cv::Ptr<CvMat> mask, band, f, t, out;
     cv::Ptr<CvPriorityQueueFloat> Heap, Out;
     cv::Ptr<IplConvKernel> el_cross, el_range;
-    
+
     CvMat input_hdr, mask_hdr, output_hdr;
     CvMat* input_img, *inpaint_mask, *output_img;
-    int range=cvRound(inpaintRange);    
+    int range=cvRound(inpaintRange);
     int erows, ecols;
 
     input_img = cvGetMat( _input_img, &input_hdr );
     inpaint_mask = cvGetMat( _inpaint_mask, &mask_hdr );
     output_img = cvGetMat( _output_img, &output_hdr );
-    
+
     if( !CV_ARE_SIZES_EQ(input_img,output_img) || !CV_ARE_SIZES_EQ(input_img,inpaint_mask))
         CV_Error( CV_StsUnmatchedSizes, "All the input and output images must have the same size" );
-    
+
     if( (CV_MAT_TYPE(input_img->type) != CV_8UC1 &&
         CV_MAT_TYPE(input_img->type) != CV_8UC3) ||
         !CV_ARE_TYPES_EQ(input_img,output_img) )
@@ -757,7 +757,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     band = cvCreateMat(erows, ecols, CV_8UC1);
     mask = cvCreateMat(erows, ecols, CV_8UC1);
     el_cross = cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_CROSS,NULL);
-    
+
     cvCopy( input_img, output_img );
     cvSet(mask,cvScalar(KNOWN,0,0,0));
     COPY_MASK_BORDER1_C1(inpaint_mask,mask,uchar);
@@ -775,7 +775,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     cvSet(f,cvScalar(BAND,0,0,0),band);
     cvSet(f,cvScalar(INSIDE,0,0,0),mask);
     cvSet(t,cvScalar(0,0,0,0),band);
-    
+
     if( flags == CV_INPAINT_TELEA )
     {
         out = cvCreateMat(erows, ecols, CV_8UC1);

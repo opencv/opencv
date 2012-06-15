@@ -56,12 +56,12 @@ class CV_EXPORTS Estimator
 public:
     virtual ~Estimator() {}
 
-    void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+    void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
                      std::vector<CameraParams> &cameras)
         { estimate(features, pairwise_matches, cameras); }
 
 protected:
-    virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+    virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
                           std::vector<CameraParams> &cameras) = 0;
 };
 
@@ -72,8 +72,8 @@ public:
     HomographyBasedEstimator(bool is_focals_estimated = false)
         : is_focals_estimated_(is_focals_estimated) {}
 
-private:   
-    void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+private:
+    void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
                   std::vector<CameraParams> &cameras);
 
     bool is_focals_estimated_;
@@ -84,10 +84,10 @@ class CV_EXPORTS BundleAdjusterBase : public Estimator
 {
 public:
     const Mat refinementMask() const { return refinement_mask_.clone(); }
-    void setRefinementMask(const Mat &mask) 
-    { 
+    void setRefinementMask(const Mat &mask)
+    {
         CV_Assert(mask.type() == CV_8U && mask.size() == Size(3, 3));
-        refinement_mask_ = mask.clone(); 
+        refinement_mask_ = mask.clone();
     }
 
     double confThresh() const { return conf_thresh_; }
@@ -97,17 +97,17 @@ public:
     void setTermCriteria(const CvTermCriteria& term_criteria) { term_criteria_ = term_criteria; }
 
 protected:
-    BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement) 
-        : num_params_per_cam_(num_params_per_cam), 
-          num_errs_per_measurement_(num_errs_per_measurement) 
-    {    
+    BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement)
+        : num_params_per_cam_(num_params_per_cam),
+          num_errs_per_measurement_(num_errs_per_measurement)
+    {
         setRefinementMask(Mat::ones(3, 3, CV_8U));
-        setConfThresh(1.); 
+        setConfThresh(1.);
         setTermCriteria(cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
     }
 
     // Runs bundle adjustment
-    virtual void estimate(const std::vector<ImageFeatures> &features, 
+    virtual void estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,
                           std::vector<CameraParams> &cameras);
 
@@ -143,7 +143,7 @@ protected:
 
 
 // Minimizes reprojection error.
-// It can estimate focal length, aspect ratio, principal point. 
+// It can estimate focal length, aspect ratio, principal point.
 // You can affect only on them via the refinement mask.
 class CV_EXPORTS BundleAdjusterReproj : public BundleAdjusterBase
 {
@@ -177,7 +177,7 @@ private:
 };
 
 
-enum CV_EXPORTS WaveCorrectKind
+enum WaveCorrectKind
 {
     WAVE_CORRECT_HORIZ,
     WAVE_CORRECT_VERT
@@ -193,10 +193,10 @@ void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind);
 std::string CV_EXPORTS matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                             float conf_threshold);
 
-std::vector<int> CV_EXPORTS leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, 
+std::vector<int> CV_EXPORTS leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
                                                   float conf_threshold);
 
-void CV_EXPORTS findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
+void CV_EXPORTS findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches,
                                     Graph &span_tree, std::vector<int> &centers);
 
 } // namespace detail

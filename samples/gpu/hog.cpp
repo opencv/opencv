@@ -85,8 +85,7 @@ private:
     double work_fps;
 };
 
-
-void printHelp()
+static void printHelp()
 {
     cout << "Histogram of Oriented Gradients descriptor and detector sample.\n"
          << "\nUsage: hog_gpu\n"
@@ -166,10 +165,10 @@ Args Args::read(int argc, char** argv)
         else if (string(argv[i]) == "--resize_src") args.resize_src = (string(argv[++i]) == "true");
         else if (string(argv[i]) == "--width") args.width = atoi(argv[++i]);
         else if (string(argv[i]) == "--height") args.height = atoi(argv[++i]);
-        else if (string(argv[i]) == "--hit_threshold") 
-        { 
-            args.hit_threshold = atof(argv[++i]); 
-            args.hit_threshold_auto = false; 
+        else if (string(argv[i]) == "--hit_threshold")
+        {
+            args.hit_threshold = atof(argv[++i]);
+            args.hit_threshold_auto = false;
         }
         else if (string(argv[i]) == "--scale") args.scale = atof(argv[++i]);
         else if (string(argv[i]) == "--nlevels") args.nlevels = atoi(argv[++i]);
@@ -244,15 +243,15 @@ void App::run()
 
     // Create HOG descriptors and detectors here
     vector<float> detector;
-    if (win_size == Size(64, 128)) 
+    if (win_size == Size(64, 128))
         detector = cv::gpu::HOGDescriptor::getPeopleDetector64x128();
     else
         detector = cv::gpu::HOGDescriptor::getPeopleDetector48x96();
 
-    cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 
-                                   cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr, 
+    cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
+                                   cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
                                    cv::gpu::HOGDescriptor::DEFAULT_NLEVELS);
-    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1, 
+    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
                               HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     gpu_hog.setSVMDetector(detector);
     cpu_hog.setSVMDetector(detector);
@@ -315,10 +314,10 @@ void App::run()
             if (use_gpu)
             {
                 gpu_img.upload(img);
-                gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride, 
+                gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride,
                                          Size(0, 0), scale, gr_threshold);
             }
-            else cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride, 
+            else cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride,
                                           Size(0, 0), scale, gr_threshold);
             hogWorkEnd();
 
@@ -345,7 +344,7 @@ void App::run()
             {
                 if (!video_writer.isOpened())
                 {
-                    video_writer.open(args.dst_video, CV_FOURCC('x','v','i','d'), args.dst_video_fps, 
+                    video_writer.open(args.dst_video, CV_FOURCC('x','v','i','d'), args.dst_video_fps,
                                       img_to_show.size(), true);
                     if (!video_writer.isOpened())
                         throw std::runtime_error("can't create video writer");

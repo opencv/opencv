@@ -5,14 +5,14 @@
 using namespace cv;
 using namespace std;
 
-void help()
-{
-	cout << "\nThis program demonstrates kmeans clustering.\n"
-			"It generates an image with random points, then assigns a random number of cluster\n"
-			"centers and uses kmeans to move those cluster centers to their representitive location\n"
-			"Call\n"
-			"./kmeans\n" << endl;
-}
+// static void help()
+// {
+//     cout << "\nThis program demonstrates kmeans clustering.\n"
+//             "It generates an image with random points, then assigns a random number of cluster\n"
+//             "centers and uses kmeans to move those cluster centers to their representitive location\n"
+//             "Call\n"
+//             "./kmeans\n" << endl;
+// }
 
 int main( int /*argc*/, char** /*argv*/ )
 {
@@ -25,7 +25,7 @@ int main( int /*argc*/, char** /*argv*/ )
         Scalar(255,0,255),
         Scalar(0,255,255)
     };
-        
+
     Mat img(500, 500, CV_8UC3);
     RNG rng(12345);
 
@@ -34,7 +34,7 @@ int main( int /*argc*/, char** /*argv*/ )
         int k, clusterCount = rng.uniform(2, MAX_CLUSTERS+1);
         int i, sampleCount = rng.uniform(1, 1001);
         Mat points(sampleCount, 1, CV_32FC2), labels;
-        
+
         clusterCount = MIN(clusterCount, sampleCount);
         Mat centers(clusterCount, 1, points.type());
 
@@ -52,7 +52,7 @@ int main( int /*argc*/, char** /*argv*/ )
 
         randShuffle(points, 1, &rng);
 
-        kmeans(points, clusterCount, labels, 
+        kmeans(points, clusterCount, labels,
                TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0),
                3, KMEANS_PP_CENTERS, centers);
 

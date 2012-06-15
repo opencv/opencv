@@ -106,7 +106,7 @@ protected:
         }
     }
 
-    virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, const double* eps, double& maxError)
+    virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, const double* epsilon, double& maxError)
     {
         Mat rvec, tvec;
         vector<int> inliers;
@@ -136,7 +136,7 @@ protected:
         bool isTestSuccess = inliers.size() >= points.size()*0.95;
 
         double rvecDiff = norm(rvec-trueRvec), tvecDiff = norm(tvec-trueTvec);
-        isTestSuccess = isTestSuccess && rvecDiff < eps[method] && tvecDiff < eps[method];
+        isTestSuccess = isTestSuccess && rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
         double error = rvecDiff > tvecDiff ? rvecDiff : tvecDiff;
         //cout << error << " " << inliers.size() << " " << eps[method] << endl;
         if (error > maxError)
@@ -147,8 +147,7 @@ protected:
 
     void run(int)
     {
-        cvtest::TS& ts = *this->ts;
-        ts.set_failed_test_info(cvtest::TS::OK);
+        ts->set_failed_test_info(cvtest::TS::OK);
 
         vector<Point3f> points;
         const int pointsCount = 500;
@@ -157,7 +156,7 @@ protected:
 
 
         const int methodsCount = 3;
-        RNG rng = ts.get_rng();
+        RNG rng = ts->get_rng();
 
 
         for (int mode = 0; mode < 2; mode++)
@@ -174,9 +173,9 @@ protected:
                 //cout <<  maxError << " " << successfulTestsCount << endl;
                 if (successfulTestsCount < 0.7*totalTestsCount)
                 {
-                    ts.printf( cvtest::TS::LOG, "Invalid accuracy for method %d, failed %d tests from %d, maximum error equals %f, distortion mode equals %d\n",
+                    ts->printf( cvtest::TS::LOG, "Invalid accuracy for method %d, failed %d tests from %d, maximum error equals %f, distortion mode equals %d\n",
                         method, totalTestsCount - successfulTestsCount, totalTestsCount, maxError, mode);
-                    ts.set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 }
             }
         }
@@ -198,7 +197,7 @@ public:
 
     ~CV_solvePnP_Test() {}
 protected:
-    virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, const double* eps, double& maxError)
+    virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, const double* epsilon, double& maxError)
     {
         Mat rvec, tvec;
         Mat trueRvec, trueTvec;
@@ -226,7 +225,7 @@ protected:
             false, method);
 
         double rvecDiff = norm(rvec-trueRvec), tvecDiff = norm(tvec-trueTvec);
-        bool isTestSuccess = rvecDiff < eps[method] && tvecDiff < eps[method];
+        bool isTestSuccess = rvecDiff < epsilon[method] && tvecDiff < epsilon[method];
 
         double error = rvecDiff > tvecDiff ? rvecDiff : tvecDiff;
         if (error > maxError)

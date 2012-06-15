@@ -8,12 +8,12 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     // print a welcome message, and the OpenCV version
     cout << "\nThis is a demo of Lukas-Kanade optical flow lkdemo(),\n"
-    		"Using OpenCV version %s\n" << CV_VERSION << "\n"
-    		<< endl;
+            "Using OpenCV version %s\n" << CV_VERSION << "\n"
+            << endl;
 
     cout << "\nHot keys: \n"
             "\tESC - quit the program\n"
@@ -23,14 +23,14 @@ void help()
             "To add/remove a feature point click it\n" << endl;
 }
 
-Point2f pt;
+Point2f point;
 bool addRemovePt = false;
 
-void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
+static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
 {
     if( event == CV_EVENT_LBUTTONDOWN )
     {
-        pt = Point2f((float)x,(float)y);
+        point = Point2f((float)x,(float)y);
         addRemovePt = true;
     }
 }
@@ -40,11 +40,11 @@ int main( int argc, char** argv )
     VideoCapture cap;
     TermCriteria termcrit(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS,20,0.03);
     Size subPixWinSize(10,10), winSize(31,31);
-    
+
     const int MAX_COUNT = 500;
     bool needToInit = false;
     bool nightMode = false;
-    
+
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         cap.open(argc == 2 ? argv[1][0] - '0' : 0);
     else if( argc == 2 )
@@ -63,7 +63,7 @@ int main( int argc, char** argv )
 
     Mat gray, prevGray, image;
     vector<Point2f> points[2];
-    
+
     for(;;)
     {
         Mat frame;
@@ -72,7 +72,7 @@ int main( int argc, char** argv )
             break;
 
         frame.copyTo(image);
-        cvtColor(image, gray, CV_BGR2GRAY); 
+        cvtColor(image, gray, CV_BGR2GRAY);
 
         if( nightMode )
             image = Scalar::all(0);
@@ -97,7 +97,7 @@ int main( int argc, char** argv )
             {
                 if( addRemovePt )
                 {
-                    if( norm(pt - points[1][i]) <= 5 )
+                    if( norm(point - points[1][i]) <= 5 )
                     {
                         addRemovePt = false;
                         continue;
@@ -116,7 +116,7 @@ int main( int argc, char** argv )
         if( addRemovePt && points[1].size() < (size_t)MAX_COUNT )
         {
             vector<Point2f> tmp;
-            tmp.push_back(pt);
+            tmp.push_back(point);
             cornerSubPix( gray, tmp, winSize, cvSize(-1,-1), termcrit);
             points[1].push_back(tmp[0]);
             addRemovePt = false;
@@ -142,7 +142,7 @@ int main( int argc, char** argv )
         default:
             ;
         }
-        
+
         std::swap(points[1], points[0]);
         swap(prevGray, gray);
     }

@@ -24,10 +24,12 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
     ENDIF()
 
     SET(_PCH_include_prefix "-I")
+    SET(_PCH_isystem_prefix "-isystem")
 
 ELSEIF(WIN32)
     SET(PCHSupport_FOUND TRUE) # for experimental msvc support
     SET(_PCH_include_prefix "/I")
+    SET(_PCH_isystem_prefix "/I")
 ELSE()
     SET(PCHSupport_FOUND FALSE)
 ENDIF()
@@ -50,7 +52,11 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
 
     GET_DIRECTORY_PROPERTY(DIRINC INCLUDE_DIRECTORIES )
     FOREACH(item ${DIRINC})
-        LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
+        if(item MATCHES "^${OpenCV_SOURCE_DIR}/modules/")
+          LIST(APPEND ${_out_compile_flags} "${_PCH_include_prefix}\"${item}\"")
+        else()
+          LIST(APPEND ${_out_compile_flags} "${_PCH_isystem_prefix}\"${item}\"")
+        endif()
     ENDFOREACH(item)
 
     GET_DIRECTORY_PROPERTY(_directory_flags DEFINITIONS)
@@ -72,6 +78,7 @@ MACRO(_PCH_WRITE_PCHDEP_CXX _targetName _include_file _dephelp)
         ADD_CUSTOM_COMMAND(
           OUTPUT "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "#include \\\"${_include_file}\\\"" >  "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction();"               >> "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "int testfunction()"                >> "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "{"                                 >> "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "    return 0;"                     >> "${${_dephelp}}"
@@ -82,6 +89,7 @@ MACRO(_PCH_WRITE_PCHDEP_CXX _targetName _include_file _dephelp)
         ADD_CUSTOM_COMMAND(
           OUTPUT "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "\\#include \\\"${_include_file}\\\"" >  "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction\\(\\)\\;"         >> "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "int testfunction\\(\\)"            >> "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "{"                                 >> "${${_dephelp}}"
           COMMAND ${CMAKE_COMMAND} -E echo "    \\return 0\\;"                 >> "${${_dephelp}}"

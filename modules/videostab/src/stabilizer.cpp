@@ -66,8 +66,8 @@ StabilizerBase::StabilizerBase()
 
 void StabilizerBase::setUp(int cacheSize, const Mat &frame)
 {
-    InpainterBase *inpainter = static_cast<InpainterBase*>(inpainter_);
-    doInpainting_ = dynamic_cast<NullInpainter*>(inpainter) == 0;
+    InpainterBase *_inpainter = static_cast<InpainterBase*>(inpainter_);
+    doInpainting_ = dynamic_cast<NullInpainter*>(_inpainter) == 0;
     if (doInpainting_)
     {
         inpainter_->setRadius(radius_);
@@ -332,8 +332,8 @@ void TwoPassStabilizer::runPrePassIfNecessary()
             motions_.push_back(Mat::eye(3, 3, CV_32F));
         log_->print("\n");
 
-        IMotionStabilizer *motionStabilizer = static_cast<IMotionStabilizer*>(motionStabilizer_);
-        MotionFilterBase *motionFilterBase = dynamic_cast<MotionFilterBase*>(motionStabilizer);
+        IMotionStabilizer *_motionStabilizer = static_cast<IMotionStabilizer*>(motionStabilizer_);
+        MotionFilterBase *motionFilterBase = dynamic_cast<MotionFilterBase*>(_motionStabilizer);
         if (motionFilterBase)
         {
             motionFilterBase->setRadius(radius_);

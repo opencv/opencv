@@ -86,10 +86,10 @@ struct CV_EXPORTS CvMeanShiftTrackerParams
 struct CV_EXPORTS CvFeatureTrackerParams
 {
 	enum {	SIFT = 0, SURF = 1, OPTICAL_FLOW = 2 };
-	CvFeatureTrackerParams(int feature_type = 0, int window_size = 0)
+	CvFeatureTrackerParams(int featureType = 0, int windowSize = 0)
 	{
-		feature_type = 0;
-		window_size = 0;
+		featureType = 0;
+		windowSize = 0;
 	}
 
 	int feature_type; // Feature type to use

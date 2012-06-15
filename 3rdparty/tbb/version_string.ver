@@ -6,4 +6,4 @@
 #N": BUILD_GLIBC	Unknown" ENDL \
 #N": BUILD_LD		Unknown" ENDL \
 #N": BUILD_TARGET	Unknown" ENDL \
-#N": BUILD_COMMAND	use cv::getBuildInformation() for details" ENDL \
+#N": BUILD_COMMAND	use cv::getBuildInformation() for details" ENDL

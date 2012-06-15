@@ -3349,7 +3349,7 @@ cvTreeToNodeSeq( const void* first, int header_size, CvMemStorage* storage )
         }
     }
 
-    
+
 
     return allseq;
 }
@@ -3531,9 +3531,9 @@ namespace cv
 // both cv (CvFeatureTree) and ml (kNN).
 
 // The algorithm is taken from:
-// J.S. Beis and D.G. Lowe. Shape indexing using approximate nearest-neighbor search 
-// in highdimensional spaces. In Proc. IEEE Conf. Comp. Vision Patt. Recog., 
-// pages 1000--1006, 1997. http://citeseer.ist.psu.edu/beis97shape.html 
+// J.S. Beis and D.G. Lowe. Shape indexing using approximate nearest-neighbor search
+// in highdimensional spaces. In Proc. IEEE Conf. Comp. Vision Patt. Recog.,
+// pages 1000--1006, 1997. http://citeseer.ist.psu.edu/beis97shape.html
 
 const int MAX_TREE_DEPTH = 32;
 
@@ -3555,8 +3555,8 @@ KDTree::KDTree(InputArray _points, InputArray _labels, bool _copyData)
     maxDepth = -1;
     normType = NORM_L2;
     build(_points, _labels, _copyData);
-}    
-    
+}
+
 struct SubTree
 {
     SubTree() : first(0), last(0), nodeIdx(0), depth(0) {}
@@ -3596,7 +3596,7 @@ medianPartition( size_t* ofs, int a, int b, const float* vals )
         else
             a = i0;
     }
-    
+
     float pivot = vals[ofs[middle]];
     int less = 0, more = 0;
     for( k = a0; k < middle; k++ )
@@ -3632,7 +3632,7 @@ computeSums( const Mat& points, const size_t* ofs, int a, int b, double* sums )
     }
 }
 
-    
+
 void KDTree::build(InputArray _points, bool _copyData)
 {
     build(_points, noArray(), _copyData);
@@ -3652,8 +3652,8 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
         points.release();
         points.create(_points.size(), _points.type());
     }
-    
-    int i, j, n = _points.rows, dims = _points.cols, top = 0;
+
+    int i, j, n = _points.rows, ptdims = _points.cols, top = 0;
     const float* data = _points.ptr<float>(0);
     float* dstdata = points.ptr<float>(0);
     size_t step = _points.step1();
@@ -3661,7 +3661,7 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
     int ptpos = 0;
     labels.resize(n);
     const int* _labels_data = 0;
-    
+
     if( !_labels.empty() )
     {
         int nlabels = _labels.checkVector(1, CV_32S, true);
@@ -3669,9 +3669,9 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
         _labels_data = (const int*)_labels.data;
     }
 
-    Mat sumstack(MAX_TREE_DEPTH*2, dims*2, CV_64F);
+    Mat sumstack(MAX_TREE_DEPTH*2, ptdims*2, CV_64F);
     SubTree stack[MAX_TREE_DEPTH*2];
-    
+
     vector<size_t> _ptofs(n);
     size_t* ptofs = &_ptofs[0];
 
@@ -3682,7 +3682,7 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
     computeSums(points, ptofs, 0, n-1, sumstack.ptr<double>(top));
     stack[top++] = SubTree(0, n-1, 0, 0);
     int _maxDepth = 0;
-    
+
     while( --top >= 0 )
     {
         int first = stack[top].first, last = stack[top].last;
@@ -3700,16 +3700,16 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
             {
                 const float* src = data + ptofs[first];
                 float* dst = dstdata + idx*dstep;
-                for( j = 0; j < dims; j++ )
+                for( j = 0; j < ptdims; j++ )
                     dst[j] = src[j];
             }
-            labels[idx] = _labels_data ? _labels_data[idx0] : idx0; 
+            labels[idx] = _labels_data ? _labels_data[idx0] : idx0;
             _maxDepth = std::max(_maxDepth, depth);
             continue;
         }
 
         // find the dimensionality with the biggest variance
-        for( j = 0; j < dims; j++ )
+        for( j = 0; j < ptdims; j++ )
         {
             double m = sums[j*2]*invCount;
             double varj = sums[j*2+1]*invCount - m*m;
@@ -3729,9 +3729,9 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
         nodes[nidx].boundary = medianPartition(ptofs, first, last, data + dim);
 
         int middle = (first + last)/2;
-        double *lsums = (double*)sums, *rsums = lsums + dims*2;
+        double *lsums = (double*)sums, *rsums = lsums + ptdims*2;
         computeSums(points, ptofs, middle+1, last, rsums);
-        for( j = 0; j < dims*2; j++ )
+        for( j = 0; j < ptdims*2; j++ )
             lsums[j] = sums[j] - rsums[j];
         stack[top++] = SubTree(first, middle, left, depth+1);
         stack[top++] = SubTree(middle+1, last, right, depth+1);
@@ -3752,13 +3752,13 @@ struct PQueueElem
 int KDTree::findNearest(InputArray _vec, int K, int emax,
                         OutputArray _neighborsIdx, OutputArray _neighbors,
                         OutputArray _dist, OutputArray _labels) const
-    
+
 {
     Mat vecmat = _vec.getMat();
     CV_Assert( vecmat.isContinuous() && vecmat.type() == CV_32F && vecmat.total() == (size_t)points.cols );
     const float* vec = vecmat.ptr<float>();
     K = std::min(K, points.rows);
-    int dims = points.cols;
+    int ptdims = points.cols;
 
     CV_Assert(K > 0 && (normType == NORM_L2 || normType == NORM_L1));
 
@@ -3776,7 +3776,7 @@ int KDTree::findNearest(InputArray _vec, int K, int emax,
     {
         float d, alt_d = 0.f;
         int nidx;
-        
+
         if( e == 0 )
             nidx = 0;
         else
@@ -3803,7 +3803,7 @@ int KDTree::findNearest(InputArray _vec, int K, int emax,
                     i = left;
                 }
             }
-            
+
             if( ncount == K && alt_d > dist[ncount-1] )
                 continue;
         }
@@ -3813,21 +3813,21 @@ int KDTree::findNearest(InputArray _vec, int K, int emax,
             if( nidx < 0 )
                 break;
             const Node& n = nodes[nidx];
-            
+
             if( n.idx < 0 )
             {
                 i = ~n.idx;
                 const float* row = points.ptr<float>(i);
                 if( normType == NORM_L2 )
-                    for( j = 0, d = 0.f; j < dims; j++ )
+                    for( j = 0, d = 0.f; j < ptdims; j++ )
                     {
                         float t = vec[j] - row[j];
                         d += t*t;
                     }
                 else
-                    for( j = 0, d = 0.f; j < dims; j++ )
+                    for( j = 0, d = 0.f; j < ptdims; j++ )
                         d += std::abs(vec[j] - row[j]);
-                
+
                 dist[ncount] = d;
                 idx[ncount] = i;
                 for( i = ncount-1; i >= 0; i-- )
@@ -3839,9 +3839,9 @@ int KDTree::findNearest(InputArray _vec, int K, int emax,
                 }
                 ncount += ncount < K;
                 e++;
-                break; 
+                break;
             }
-            
+
             int alt;
             if( vec[n.idx] <= n.boundary )
             {
@@ -3853,7 +3853,7 @@ int KDTree::findNearest(InputArray _vec, int K, int emax,
                 nidx = n.right;
                 alt = n.left;
             }
-            
+
             d = vec[n.idx] - n.boundary;
             if( normType == NORM_L2 )
                 d = d*d + alt_d;
@@ -3898,22 +3898,22 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
                             OutputArray _neighbors,
                             OutputArray _labels ) const
 {
-    int dims = points.cols;
+    int ptdims = points.cols;
     Mat lowerBound = _lowerBound.getMat(), upperBound = _upperBound.getMat();
     CV_Assert( lowerBound.size == upperBound.size &&
                lowerBound.isContinuous() &&
                upperBound.isContinuous() &&
                lowerBound.type() == upperBound.type() &&
                lowerBound.type() == CV_32F &&
-               lowerBound.total() == (size_t)dims );
+               lowerBound.total() == (size_t)ptdims );
     const float* L = lowerBound.ptr<float>();
     const float* R = upperBound.ptr<float>();
-    
+
     vector<int> idx;
     AutoBuffer<int> _stack(MAX_TREE_DEPTH*2 + 1);
     int* stack = _stack;
     int top = 0;
-    
+
     stack[top++] = 0;
 
     while( --top >= 0 )
@@ -3926,10 +3926,10 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
         {
             int j, i = ~n.idx;
             const float* row = points.ptr<float>(i);
-            for( j = 0; j < dims; j++ )
+            for( j = 0; j < ptdims; j++ )
                 if( row[j] < L[j] || row[j] >= R[j] )
                     break;
-            if( j == dims )
+            if( j == ptdims )
                 idx.push_back(i);
             continue;
         }
@@ -3948,7 +3948,7 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
     getPoints( idx, _neighbors, _labels );
 }
 
-    
+
 void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) const
 {
     Mat idxmat = _idx.getMat(), pts, labelsmat;
@@ -3956,8 +3956,8 @@ void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) c
                (idxmat.cols == 1 || idxmat.rows == 1) );
     const int* idx = idxmat.ptr<int>();
     int* dstlabels = 0;
-    
-    int dims = points.cols;
+
+    int ptdims = points.cols;
     int i, nidx = (int)idxmat.total();
     if( nidx == 0 )
     {
@@ -3965,13 +3965,13 @@ void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) c
         _labels.release();
         return;
     }
-    
+
     if( _pts.needed() )
     {
-        _pts.create( nidx, dims, points.type());
+        _pts.create( nidx, ptdims, points.type());
         pts = _pts.getMat();
     }
-    
+
     if(_labels.needed())
     {
         _labels.create(nidx, 1, CV_32S, -1, true);
@@ -3980,14 +3980,14 @@ void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) c
         dstlabels = labelsmat.ptr<int>();
     }
     const int* srclabels = !labels.empty() ? &labels[0] : 0;
-    
+
     for( i = 0; i < nidx; i++ )
     {
         int k = idx[i];
         CV_Assert( (unsigned)k < (unsigned)points.rows );
         const float* src = points.ptr<float>(k);
         if( pts.data )
-            std::copy(src, src + dims, pts.ptr<float>(i));
+            std::copy(src, src + ptdims, pts.ptr<float>(i));
         if( dstlabels )
             dstlabels[i] = srclabels ? srclabels[k] : k;
     }
@@ -4007,9 +4007,9 @@ int KDTree::dims() const
 {
     return !points.empty() ? points.cols : 0;
 }
-    
+
 ////////////////////////////////////////////////////////////////////////////////
-    
+
 schar*  seqPush( CvSeq* seq, const void* element )
 {
     return cvSeqPush(seq, element);

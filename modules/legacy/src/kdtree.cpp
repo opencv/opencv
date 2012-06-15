@@ -48,10 +48,6 @@
 #include "_kdtree.hpp"
 #include "_featuretree.h"
 
-#if _MSC_VER >= 1400
-#pragma warning(disable:4996) // suppress "function call with parameters may be unsafe" in std::copy
-#endif
-
 class CvKDTreeWrap : public CvFeatureTree {
   template <class __scalartype, int __cvtype>
   struct deref {
@@ -93,18 +89,19 @@ class CvKDTreeWrap : public CvFeatureTree {
     assert(results->cols == k);
     assert(dist->cols == k);
 
-    for (int j = 0; j < d->rows; ++j) {
-      const typename __treetype::scalar_type* dj =
-	(const typename __treetype::scalar_type*) dptr;
+    for (int j = 0; j < d->rows; ++j)
+    {
+      const typename __treetype::scalar_type* dj = (const typename __treetype::scalar_type*) dptr;
 
       int* resultsj = (int*) resultsptr;
       double* distj = (double*) distptr;
       tr->find_nn_bbf(dj, k, emax, nn);
 
       assert((int)nn.size() <= k);
-      for (unsigned int j = 0; j < nn.size(); ++j) {
-	*resultsj++ = *nn[j].p;
-	*distj++ = nn[j].dist;
+      for (unsigned int i = 0; i < nn.size(); ++i)
+      {
+        *resultsj++ = *nn[i].p;
+        *distj++ = nn[i].dist;
       }
       std::fill(resultsj, resultsj + k - nn.size(), -1);
       std::fill(distj, distj + k - nn.size(), 0);
@@ -117,16 +114,16 @@ class CvKDTreeWrap : public CvFeatureTree {
 
   template <class __treetype>
   int find_ortho_range(CvMat* bounds_min, CvMat* bounds_max,
-		       CvMat* results) {
+           CvMat* results) {
     int rn = results->rows * results->cols;
     std::vector<int> inbounds;
     dispatch_cvtype(mat, ((__treetype*)data)->
-		    find_ortho_range((typename __treetype::scalar_type*)bounds_min->data.ptr, 
-				     (typename __treetype::scalar_type*)bounds_max->data.ptr, 
-				     inbounds));
+        find_ortho_range((typename __treetype::scalar_type*)bounds_min->data.ptr,
+             (typename __treetype::scalar_type*)bounds_max->data.ptr,
+             inbounds));
     std::copy(inbounds.begin(),
-	      inbounds.begin() + std::min((int)inbounds.size(), rn),
-	      (int*) results->data.ptr);
+        inbounds.begin() + std::min((int)inbounds.size(), rn),
+        (int*) results->data.ptr);
     return (int)inbounds.size();
   }
 
@@ -135,7 +132,7 @@ class CvKDTreeWrap : public CvFeatureTree {
 public:
   CvKDTreeWrap(CvMat* _mat) : mat(_mat) {
     // * a flag parameter should tell us whether
-    // * (a) user ensures *mat outlives *this and is unchanged, 
+    // * (a) user ensures *mat outlives *this and is unchanged,
     // * (b) we take reference and user ensures mat is unchanged,
     // * (c) we copy data, (d) we own and release data.
 
@@ -144,8 +141,8 @@ public:
       tmp[j] = j;
 
     dispatch_cvtype(mat, data = new tree_type
-		    (&tmp[0], &tmp[0] + tmp.size(), mat->cols,
-		     tree_type::deref_type(mat)));
+        (&tmp[0], &tmp[0] + tmp.size(), mat->cols,
+         tree_type::deref_type(mat)));
   }
   ~CvKDTreeWrap() {
     dispatch_cvtype(mat, delete (tree_type*) data);
@@ -185,15 +182,15 @@ public:
     assert(CV_MAT_TYPE(results->type) == CV_32SC1);
 
     dispatch_cvtype(mat, find_nn<tree_type>
-		    (desc, k, emax, results, dist));
+        (desc, k, emax, results, dist));
   }
   int FindOrthoRange(CvMat* bounds_min, CvMat* bounds_max,
-		     CvMat* results) {
+         CvMat* results) {
     bool free_bounds = false;
     int count = -1;
 
     if (bounds_min->cols * bounds_min->rows != dims() ||
-	bounds_max->cols * bounds_max->rows != dims())
+  bounds_max->cols * bounds_max->rows != dims())
       CV_Error(CV_StsUnmatchedSizes, "bounds_{min,max} must 1 x dims or dims x 1");
     if (CV_MAT_TYPE(bounds_min->type) != CV_MAT_TYPE(bounds_max->type))
       CV_Error(CV_StsUnmatchedFormats, "bounds_{min,max} must have same type");
@@ -218,7 +215,7 @@ public:
     assert(bounds_max->rows * bounds_max->cols == dims());
 
     dispatch_cvtype(mat, count = find_ortho_range<tree_type>
-		    (bounds_min, bounds_max,results));
+        (bounds_min, bounds_max,results));
 
     if (free_bounds) {
       cvReleaseMat(&bounds_min);

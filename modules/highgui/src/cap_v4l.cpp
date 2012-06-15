@@ -1736,7 +1736,7 @@ mjpeg_to_rgb24 (int width, int height,
  *
  */
 
-void bayer2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
+static void bayer2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
 {
     long int i;
     unsigned char *rawpt, *scanpt;
@@ -1814,7 +1814,7 @@ void bayer2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned c
 // at least for  046d:092f Logitech, Inc. QuickCam Express Plus to work
 //see: http://www.siliconimaging.com/RGB%20Bayer.htm
 //and 4.6 at http://tldp.org/HOWTO/html_single/libdc1394-HOWTO/
-void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
+static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
 {
     long int i;
     unsigned char *rawpt, *scanpt;
@@ -1921,7 +1921,7 @@ static int init_done = 0;
   present at the MSB of byte x.
 
 */
-void sonix_decompress_init(void)
+static void sonix_decompress_init(void)
 {
   int i;
   int is_abs, val, len;
@@ -1999,7 +1999,7 @@ void sonix_decompress_init(void)
   Returns <0 if operation failed.
 
 */
-int sonix_decompress(int width, int height, unsigned char *inp, unsigned char *outp)
+static int sonix_decompress(int width, int height, unsigned char *inp, unsigned char *outp)
 {
   int row, col;
   int val;
@@ -2769,9 +2769,9 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
            perror ("Unable to stop the stream.");
        }
 
-       for (unsigned int n_buffers = 0; n_buffers < capture->req.count; ++n_buffers)
+       for (unsigned int n_buffers_ = 0; n_buffers_ < capture->req.count; ++n_buffers_)
        {
-           if (-1 == munmap (capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
+           if (-1 == munmap (capture->buffers[n_buffers_].start, capture->buffers[n_buffers_].length)) {
                perror ("munmap");
            }
        }

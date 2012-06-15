@@ -72,8 +72,8 @@ struct CV_EXPORTS RansacParams
     float eps; // max outliers ratio
     float prob; // probability of success
 
-    RansacParams(int size, float thresh, float eps, float prob)
-        : size(size), thresh(thresh), eps(eps), prob(prob) {}
+    RansacParams(int _size, float _thresh, float _eps, float _prob)
+        : size(_size), thresh(_thresh), eps(_eps), prob(_prob) {}
 
     static RansacParams translationMotionStd() { return RansacParams(2, 0.5f, 0.5f, 0.99f); }
     static RansacParams translationAndScale2dMotionStd() { return RansacParams(3, 0.5f, 0.5f, 0.99f); }

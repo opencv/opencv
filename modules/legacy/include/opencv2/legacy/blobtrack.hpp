@@ -49,7 +49,7 @@
 #include "opencv2/core/core_c.h"
 #include <stdio.h>
 
-#if _MSC_VER >= 1200 || defined __BORLANDC__
+#if (defined _MSC_VER && _MSC_VER >= 1200) || defined __BORLANDC__
 #define cv_stricmp stricmp
 #define cv_strnicmp strnicmp
 #if defined WINCE

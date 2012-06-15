@@ -84,7 +84,7 @@ namespace cv { namespace gpu { namespace device
     }
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(double v)
     {
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         int iv = __double2int_rn(v); 
         return saturate_cast<uchar>(iv);
     #else
@@ -120,7 +120,7 @@ namespace cv { namespace gpu { namespace device
     }
     template<> __device__ __forceinline__ schar saturate_cast<schar>(double v)
     {             
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         int iv = __double2int_rn(v); 
         return saturate_cast<schar>(iv);
     #else
@@ -151,7 +151,7 @@ namespace cv { namespace gpu { namespace device
     }
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(double v)
     {             
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         int iv = __double2int_rn(v); 
         return saturate_cast<ushort>(iv);
     #else
@@ -178,7 +178,7 @@ namespace cv { namespace gpu { namespace device
     }
     template<> __device__ __forceinline__ short saturate_cast<short>(double v)
     {            
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         int iv = __double2int_rn(v); 
         return saturate_cast<short>(iv);
     #else
@@ -192,7 +192,7 @@ namespace cv { namespace gpu { namespace device
     }
     template<> __device__ __forceinline__ int saturate_cast<int>(double v) 
     {
-    #if __CUDA_ARCH__ >= 130 
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         return __double2int_rn(v);
     #else
         return saturate_cast<int>((float)v);
@@ -205,7 +205,7 @@ namespace cv { namespace gpu { namespace device
     }
     template<> __device__ __forceinline__ uint saturate_cast<uint>(double v) 
     {            
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         return __double2uint_rn(v);
     #else
         return saturate_cast<uint>((float)v);

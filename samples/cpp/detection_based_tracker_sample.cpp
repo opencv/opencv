@@ -14,7 +14,7 @@
 #define DEBUGLOGS 1
 
 
-#if ANDROID
+#ifdef ANDROID
 #include <android/log.h>
 #define LOG_TAG "DETECTIONBASEDTRACKER__TEST_APPLICAT"
 #define LOGD0(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
@@ -36,7 +36,7 @@
 #define LOGI(_str, ...) LOGI0(_str , ## __VA_ARGS__)
 #define LOGW(_str, ...) LOGW0(_str , ## __VA_ARGS__)
 #define LOGE(_str, ...) LOGE0(_str , ## __VA_ARGS__)
-#else 
+#else
 #define LOGD(...) do{} while(0)
 #define LOGI(...) do{} while(0)
 #define LOGW(...) do{} while(0)
@@ -51,7 +51,7 @@ using namespace std;
 #define ORIGINAL 0
 #define SHOULD_USE_EXTERNAL_BUFFERS 1
 
-void usage()
+static void usage()
 {
     LOGE0("usage: filepattern outfilepattern cascadefile");
     LOGE0("\t where ");
@@ -63,7 +63,7 @@ void usage()
     LOGE0("\t       (e.g.\"opencv/data/lbpcascades/lbpcascade_frontalface.xml\" ");
 }
 
-int test_FaceDetector(int argc, char *argv[])
+static int test_FaceDetector(int argc, char *argv[])
 {
     if (argc < 4) {
         usage();
@@ -102,7 +102,7 @@ int test_FaceDetector(int argc, char *argv[])
     fd.run();
 
     Mat gray;
-	Mat m;
+    Mat m;
 
     int64 tprev=getTickCount();
     double freq=getTickFrequency();

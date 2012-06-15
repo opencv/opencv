@@ -81,6 +81,7 @@ private:
     {
     public:
         virtual ImageIterator* iterator() const = 0;
+        virtual ~ImageRange() {}
     };
 
     // Sliding window

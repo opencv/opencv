@@ -11,15 +11,15 @@
 // Function prototypes
 void subtractPlane(const cv::Mat& depth, cv::Mat& mask, std::vector<CvPoint>& chain, double f);
 
-std::vector<CvPoint> maskFromTemplate(const std::vector<cv::linemod::Template>& templates, 
+std::vector<CvPoint> maskFromTemplate(const std::vector<cv::linemod::Template>& templates,
                                       int num_modalities, cv::Point offset, cv::Size size,
                                       cv::Mat& mask, cv::Mat& dst);
 
-void templateConvexHull(const std::vector<cv::linemod::Template>& templates, 
+void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
                         int num_modalities, cv::Point offset, cv::Size size,
                         cv::Mat& dst);
 
-void drawResponse(const std::vector<cv::linemod::Template>& templates, 
+void drawResponse(const std::vector<cv::linemod::Template>& templates,
                   int num_modalities, cv::Mat& dst, cv::Point offset, int T);
 
 cv::Mat displayQuantized(const cv::Mat& quantized);
@@ -54,7 +54,7 @@ private:
     m_x = a_x;
     m_y = a_y;
   }
-  
+
   static int m_event;
   static int m_x;
   static int m_y;
@@ -63,7 +63,7 @@ int Mouse::m_event;
 int Mouse::m_x;
 int Mouse::m_y;
 
-void help()
+static void help()
 {
   printf("Usage: openni_demo [templates.yml]\n\n"
          "Place your object on a planar, featureless surface. With the mouse,\n"
@@ -111,7 +111,7 @@ private:
 };
 
 // Functions to store detector and templates in single XML/YAML file
-cv::Ptr<cv::linemod::Detector> readLinemod(const std::string& filename)
+static cv::Ptr<cv::linemod::Detector> readLinemod(const std::string& filename)
 {
   cv::Ptr<cv::linemod::Detector> detector = new cv::linemod::Detector;
   cv::FileStorage fs(filename, cv::FileStorage::READ);
@@ -124,7 +124,7 @@ cv::Ptr<cv::linemod::Detector> readLinemod(const std::string& filename)
   return detector;
 }
 
-void writeLinemod(const cv::Ptr<cv::linemod::Detector>& detector, const std::string& filename)
+static void writeLinemod(const cv::Ptr<cv::linemod::Detector>& detector, const std::string& filename)
 {
   cv::FileStorage fs(filename, cv::FileStorage::WRITE);
   detector->write(fs);
@@ -207,7 +207,7 @@ int main(int argc, char * argv[])
     capture.grab();
     capture.retrieve(depth, CV_CAP_OPENNI_DEPTH_MAP);
     capture.retrieve(color, CV_CAP_OPENNI_BGR_IMAGE);
-    
+
     std::vector<cv::Mat> sources;
     sources.push_back(color);
     sources.push_back(depth);
@@ -235,7 +235,7 @@ int main(int argc, char * argv[])
         subtractPlane(depth, mask, chain, focal_length);
 
         cv::imshow("mask", mask);
-        
+
         // Extract template
         std::string class_id = cv::format("class%d", num_classes);
         cv::Rect bb;
@@ -267,7 +267,7 @@ int main(int argc, char * argv[])
 
     int classes_visited = 0;
     std::set<std::string> visited;
-    
+
     for (int i = 0; (i < (int)matches.size()) && (classes_visited < num_classes); ++i)
     {
       cv::linemod::Match m = matches[i];
@@ -281,7 +281,7 @@ int main(int argc, char * argv[])
           printf("Similarity: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
                  m.similarity, m.x, m.y, m.class_id.c_str(), m.template_id);
         }
-        
+
         // Draw matching template
         const std::vector<cv::linemod::Template>& templates = detector->getTemplates(m.class_id, m.template_id);
         drawResponse(templates, num_modalities, display, cv::Point(m.x, m.y), detector->getT(0));
@@ -290,7 +290,7 @@ int main(int argc, char * argv[])
         {
           /// @todo Online learning possibly broken by new gradient feature extraction,
           /// which assumes an accurate object outline.
-          
+
           // Compute masks based on convex hull of matched template
           cv::Mat color_mask, depth_mask;
           std::vector<CvPoint> chain = maskFromTemplate(templates, num_modalities,
@@ -376,11 +376,11 @@ int main(int argc, char * argv[])
   return 0;
 }
 
-void reprojectPoints(const std::vector<cv::Point3d>& proj, std::vector<cv::Point3d>& real, double f)
+static void reprojectPoints(const std::vector<cv::Point3d>& proj, std::vector<cv::Point3d>& real, double f)
 {
   real.resize(proj.size());
   double f_inv = 1.0 / f;
-  
+
   for (int i = 0; i < (int)proj.size(); ++i)
   {
     double Z = proj[i].z;
@@ -390,7 +390,7 @@ void reprojectPoints(const std::vector<cv::Point3d>& proj, std::vector<cv::Point
   }
 }
 
-void filterPlane(IplImage * ap_depth, std::vector<IplImage *> & a_masks, std::vector<CvPoint> & a_chain, double f)
+static void filterPlane(IplImage * ap_depth, std::vector<IplImage *> & a_masks, std::vector<CvPoint> & a_chain, double f)
 {
   const int l_num_cost_pts = 200;
 
@@ -576,7 +576,7 @@ void subtractPlane(const cv::Mat& depth, cv::Mat& mask, std::vector<CvPoint>& ch
   filterPlane(&depth_ipl, tmp, chain, f);
 }
 
-std::vector<CvPoint> maskFromTemplate(const std::vector<cv::linemod::Template>& templates, 
+std::vector<CvPoint> maskFromTemplate(const std::vector<cv::linemod::Template>& templates,
                                       int num_modalities, cv::Point offset, cv::Size size,
                                       cv::Mat& mask, cv::Mat& dst)
 {
@@ -629,7 +629,7 @@ cv::Mat displayQuantized(const cv::Mat& quantized)
   {
     const uchar* quant_r = quantized.ptr(r);
     cv::Vec3b* color_r = color.ptr<cv::Vec3b>(r);
-    
+
     for (int c = 0; c < quantized.cols; ++c)
     {
       cv::Vec3b& bgr = color_r[c];
@@ -649,12 +649,12 @@ cv::Mat displayQuantized(const cv::Mat& quantized)
       }
     }
   }
-  
+
   return color;
 }
 
 // Adapted from cv_line_template::convex_hull
-void templateConvexHull(const std::vector<cv::linemod::Template>& templates, 
+void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
                         int num_modalities, cv::Point offset, cv::Size size,
                         cv::Mat& dst)
 {
@@ -667,7 +667,7 @@ void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
       points.push_back(cv::Point(f.x, f.y) + offset);
     }
   }
-  
+
   std::vector<cv::Point> hull;
   cv::convexHull(points, hull);
 
@@ -677,7 +677,7 @@ void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
   cv::fillPoly(dst, &hull_pts, &hull_count, 1, cv::Scalar(255));
 }
 
-void drawResponse(const std::vector<cv::linemod::Template>& templates, 
+void drawResponse(const std::vector<cv::linemod::Template>& templates,
                   int num_modalities, cv::Mat& dst, cv::Point offset, int T)
 {
   static const cv::Scalar COLORS[5] = { CV_RGB(0, 0, 255),
@@ -692,7 +692,7 @@ void drawResponse(const std::vector<cv::linemod::Template>& templates,
     // box around it and chose the display color based on that response. Here
     // the display color just depends on the modality.
     cv::Scalar color = COLORS[m];
-    
+
     for (int i = 0; i < (int)templates[m].features.size(); ++i)
     {
       cv::linemod::Feature f = templates[m].features[i];

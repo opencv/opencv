@@ -142,7 +142,7 @@ struct NcvRect8u
     Ncv8u width;
     Ncv8u height;
     __host__ __device__ NcvRect8u() : x(0), y(0), width(0), height(0) {};
-    __host__ __device__ NcvRect8u(Ncv8u x, Ncv8u y, Ncv8u width, Ncv8u height) : x(x), y(y), width(width), height(height) {}
+    __host__ __device__ NcvRect8u(Ncv8u x_, Ncv8u y_, Ncv8u width_, Ncv8u height_) : x(x_), y(y_), width(width_), height(height_) {}
 };
 
 
@@ -153,7 +153,8 @@ struct NcvRect32s
     Ncv32s width;      ///< Rectangle width.
     Ncv32s height;     ///< Rectangle height.
     __host__ __device__ NcvRect32s() : x(0), y(0), width(0), height(0) {};
-    __host__ __device__ NcvRect32s(Ncv32s x, Ncv32s y, Ncv32s width, Ncv32s height) : x(x), y(y), width(width), height(height) {}
+    __host__ __device__ NcvRect32s(Ncv32s x_, Ncv32s y_, Ncv32s width_, Ncv32s height_)
+        : x(x_), y(y_), width(width_), height(height_) {}
 };
 
 
@@ -164,7 +165,8 @@ struct NcvRect32u
     Ncv32u width;      ///< Rectangle width.
     Ncv32u height;     ///< Rectangle height.
     __host__ __device__ NcvRect32u() : x(0), y(0), width(0), height(0) {};
-    __host__ __device__ NcvRect32u(Ncv32u x, Ncv32u y, Ncv32u width, Ncv32u height) : x(x), y(y), width(width), height(height) {}
+    __host__ __device__ NcvRect32u(Ncv32u x_, Ncv32u y_, Ncv32u width_, Ncv32u height_)
+        : x(x_), y(y_), width(width_), height(height_) {}
 };
 
 
@@ -173,7 +175,7 @@ struct NcvSize32s
     Ncv32s width;  ///< Rectangle width.
     Ncv32s height; ///< Rectangle height.
     __host__ __device__ NcvSize32s() : width(0), height(0) {};
-    __host__ __device__ NcvSize32s(Ncv32s width, Ncv32s height) : width(width), height(height) {}
+    __host__ __device__ NcvSize32s(Ncv32s width_, Ncv32s height_) : width(width_), height(height_) {}
 };
 
 
@@ -182,7 +184,7 @@ struct NcvSize32u
     Ncv32u width;  ///< Rectangle width.
     Ncv32u height; ///< Rectangle height.
     __host__ __device__ NcvSize32u() : width(0), height(0) {};
-    __host__ __device__ NcvSize32u(Ncv32u width, Ncv32u height) : width(width), height(height) {}
+    __host__ __device__ NcvSize32u(Ncv32u width_, Ncv32u height_) : width(width_), height(height_) {}
     __host__ __device__ bool operator == (const NcvSize32u &another) const {return this->width == another.width && this->height == another.height;}
 };
 
@@ -192,7 +194,7 @@ struct NcvPoint2D32s
     Ncv32s x; ///< Point X.
     Ncv32s y; ///< Point Y.
     __host__ __device__ NcvPoint2D32s() : x(0), y(0) {};
-    __host__ __device__ NcvPoint2D32s(Ncv32s x, Ncv32s y) : x(x), y(y) {}
+    __host__ __device__ NcvPoint2D32s(Ncv32s x_, Ncv32s y_) : x(x_), y(y_) {}
 };
 
 
@@ -201,7 +203,7 @@ struct NcvPoint2D32u
     Ncv32u x; ///< Point X.
     Ncv32u y; ///< Point Y.
     __host__ __device__ NcvPoint2D32u() : x(0), y(0) {};
-    __host__ __device__ NcvPoint2D32u(Ncv32u x, Ncv32u y) : x(x), y(y) {}
+    __host__ __device__ NcvPoint2D32u(Ncv32u x_, Ncv32u y_) : x(x_), y(y_) {}
 };
 
 
@@ -625,9 +627,9 @@ class NCVVectorAlloc : public NCVVector<T>
 
 public:
 
-    NCVVectorAlloc(INCVMemAllocator &allocator, Ncv32u length)
+    NCVVectorAlloc(INCVMemAllocator &allocator_, Ncv32u length)
         :
-        allocator(allocator)
+        allocator(allocator_)
     {
         NCVStatus ncvStat;
 
@@ -839,7 +841,7 @@ class NCVMatrixAlloc : public NCVMatrix<T>
     NCVMatrixAlloc& operator=(const NCVMatrixAlloc &);
 public:
 
-    NCVMatrixAlloc(INCVMemAllocator &allocator, Ncv32u width, Ncv32u height, Ncv32u pitch=0)
+    NCVMatrixAlloc(INCVMemAllocator &allocator, Ncv32u width, Ncv32u height, Ncv32u _pitch=0)
         :
         allocator(allocator)
     {
@@ -851,12 +853,12 @@ public:
         Ncv32u widthBytes = width * sizeof(T);
         Ncv32u pitchBytes = alignUp(widthBytes, allocator.alignment());
 
-        if (pitch != 0)
+        if (_pitch != 0)
         {
-            ncvAssertPrintReturn(pitch >= pitchBytes &&
-                (pitch & (allocator.alignment() - 1)) == 0,
+            ncvAssertPrintReturn(_pitch >= pitchBytes &&
+                (_pitch & (allocator.alignment() - 1)) == 0,
                 "NCVMatrixAlloc ctor:: incorrect pitch passed", );
-            pitchBytes = pitch;
+            pitchBytes = _pitch;
         }
 
         Ncv32u requiredAllocSize = pitchBytes * height;

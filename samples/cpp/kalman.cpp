@@ -10,9 +10,9 @@ static inline Point calcPoint(Point2f center, double R, double angle)
     return center + Point2f((float)cos(angle), (float)-sin(angle))*(float)R;
 }
 
-void help()
+static void help()
 {
-	printf( "\nExamle of c calls to OpenCV's Kalman filter.\n"
+    printf( "\nExamle of c calls to OpenCV's Kalman filter.\n"
 "   Tracking of rotating point.\n"
 "   Rotation speed is constant.\n"
 "   Both state and measurements vectors are 1D (a point angle),\n"
@@ -21,10 +21,10 @@ void help()
 "   the real and the measured points are connected with red line segment.\n"
 "   (if Kalman filter works correctly,\n"
 "    the yellow segment should be shorter than the red one).\n"
-			"\n"
+            "\n"
 "   Pressing any key (except ESC) will reset the tracking with a different speed.\n"
 "   Pressing ESC will stop the program.\n"
-			);
+            );
 }
 
 int main(int, char**)

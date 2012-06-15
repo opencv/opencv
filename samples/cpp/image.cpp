@@ -8,14 +8,14 @@ using namespace cv; // all the new API is put into "cv" namespace. Export its co
 using namespace std;
 using namespace cv::flann;
 
-void help()
+static void help()
 {
-	cout <<
-	"\nThis program shows how to use cv::Mat and IplImages converting back and forth.\n"
-	"It shows reading of images, converting to planes and merging back, color conversion\n"
-	"and also iterating through pixels.\n"
-	"Call:\n"
-	"./image [image-name Default: lena.jpg]\n" << endl;
+    cout <<
+    "\nThis program shows how to use cv::Mat and IplImages converting back and forth.\n"
+    "It shows reading of images, converting to planes and merging back, color conversion\n"
+    "and also iterating through pixels.\n"
+    "Call:\n"
+    "./image [image-name Default: lena.jpg]\n" << endl;
 }
 
 // enable/disable use of mixed API in the code below.
@@ -23,7 +23,7 @@ void help()
 
 int main( int argc, char** argv )
 {
-	help();
+    help();
     const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
 #if DEMO_MIXED_API_USE
     Ptr<IplImage> iplimg = cvLoadImage(imagename); // Ptr<T> is safe ref-conting pointer class
@@ -43,16 +43,16 @@ int main( int argc, char** argv )
         return -1;
     }
 #endif
-    
+
     if( !img.data ) // check if the image has been loaded properly
         return -1;
-    
+
     Mat img_yuv;
     cvtColor(img, img_yuv, CV_BGR2YCrCb); // convert image to YUV color space. The output image will be created automatically
-    
+
     vector<Mat> planes; // Vector is template vector class, similar to STL's vector. It can store matrices too.
     split(img_yuv, planes); // split the image into separate color planes
-    
+
 #if 1
     // method 1. process Y plane using an iterator
     MatIterator_<uchar> it = planes[0].begin<uchar>(), it_end = planes[0].end<uchar>();
@@ -61,7 +61,7 @@ int main( int argc, char** argv )
         double v = *it*1.7 + rand()%21-10;
         *it = saturate_cast<uchar>(v*v/255.);
     }
-    
+
     // method 2. process the first chroma plane using pre-stored row pointer.
     // method 3. process the second chroma plane using individual element access
     for( int y = 0; y < img_yuv.rows; y++ )
@@ -74,13 +74,13 @@ int main( int argc, char** argv )
             Vxy = saturate_cast<uchar>((Vxy-128)/2 + 128);
         }
     }
-    
+
 #else
     Mat noise(img.size(), CV_8U); // another Mat constructor; allocates a matrix of the specified size and type
     randn(noise, Scalar::all(128), Scalar::all(20)); // fills the matrix with normally distributed random values;
                                                      // there is also randu() for uniformly distributed random number generation
     GaussianBlur(noise, noise, Size(3, 3), 0.5, 0.5); // blur the noise a bit, kernel size is 3x3 and both sigma's are set to 0.5
-    
+
     const double brightness_gain = 0;
     const double contrast_gain = 1.7;
 #if DEMO_MIXED_API_USE
@@ -98,16 +98,16 @@ int main( int argc, char** argv )
     // alternative form of cv::convertScale if we know the datatype at compile time ("uchar" here).
     // This expression will not create any temporary arrays and should be almost as fast as the above variant
     planes[2] = Mat_<uchar>(planes[2]*color_scale + 128*(1-color_scale));
-    
+
     // Mat::mul replaces cvMul(). Again, no temporary arrays are created in case of simple expressions.
     planes[0] = planes[0].mul(planes[0], 1./255);
 #endif
-    
+
     // now merge the results back
     merge(planes, img_yuv);
     // and produce the output RGB image
     cvtColor(img_yuv, img, CV_YCrCb2BGR);
-    
+
     // this is counterpart for cvNamedWindow
     namedWindow("image with grain", CV_WINDOW_AUTOSIZE);
 #if DEMO_MIXED_API_USE
@@ -118,7 +118,7 @@ int main( int argc, char** argv )
     imshow("image with grain", img);
 #endif
     waitKey();
-    
+
     return 0;
     // all the memory will automatically be released by Vector<>, Mat and Ptr<> destructors.
 }

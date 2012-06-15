@@ -8,7 +8,7 @@
 
 using namespace cv;
 
-void help()
+static void help()
 {
     printf("Use the SURF descriptor for matching keypoints between 2 images\n");
     printf("Format: \n./generic_descriptor_match <image1> <image2> <algorithm> <XML params>\n");
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 {
     if (argc != 5)
     {
-    	help();
+        help();
         return 0;
     }
 
@@ -41,14 +41,14 @@ int main(int argc, char** argv)
     //printf("Reading the images...\n");
     Mat img1 = imread(img1_name, CV_LOAD_IMAGE_GRAYSCALE);
     Mat img2 = imread(img2_name, CV_LOAD_IMAGE_GRAYSCALE);
-    
+
     // extract keypoints from the first image
     SURF surf_extractor(5.0e3);
     vector<KeyPoint> keypoints1;
 
     // printf("Extracting keypoints\n");
     surf_extractor(img1, Mat(), keypoints1);
-    
+
     printf("Extracted %d keypoints from the first image\n", (int)keypoints1.size());
 
     vector<KeyPoint> keypoints2;

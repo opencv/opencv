@@ -421,7 +421,7 @@ void CV_StereoMatchingTest::run(int)
         ts->set_failed_test_info( code );
         return;
     }
-    
+
     string fullResultFilename = dataPath + ALGORITHMS_DIR + algorithmName + RESULT_FILE;
     FileStorage resFS( fullResultFilename, FileStorage::READ );
     bool isWrite = true; // write or compare results
@@ -593,11 +593,11 @@ int CV_StereoMatchingTest::readDatasetsParams( FileStorage& fs )
     assert(fn.isSeq());
     for( int i = 0; i < (int)fn.size(); i+=3 )
     {
-        string name = fn[i];
+        string _name = fn[i];
         DatasetParams params;
         string sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
         string uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
-        datasetsParams[name] = params;
+        datasetsParams[_name] = params;
     }
     return cvtest::TS::OK;
 }
@@ -713,7 +713,7 @@ class CV_StereoSGBMTest : public CV_StereoMatchingTest
 public:
     CV_StereoSGBMTest()
     {
-        name = "stereosgbm"; 
+        name = "stereosgbm";
         fill(rmsEps.begin(), rmsEps.end(), 0.25f);
         fill(fracEps.begin(), fracEps.end(), 0.01f);
     }

@@ -59,7 +59,7 @@ protected:
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
     virtual void init_hist( int test_case_idx, int i );
-    
+
     virtual void get_hist_params( int test_case_idx );
     virtual float** get_hist_ranges( int test_case_idx );
 
@@ -73,7 +73,7 @@ protected:
     int uniform;
     int gen_random_hist;
     double gen_hist_max_val, gen_hist_sparse_nz_ratio;
-    
+
     int init_ranges;
     int img_type;
     int img_max_log_size;
@@ -127,7 +127,7 @@ int CV_BaseHistTest::read_params( CvFileStorage* fs )
     max_log_size = cvtest::clipInt( max_log_size, 1, 20 );
     img_max_log_size = cvReadInt( find_param( fs, "max_log_array_size" ), img_max_log_size );
     img_max_log_size = cvtest::clipInt( img_max_log_size, 1, 9 );
-    
+
     max_cdims = cvReadInt( find_param( fs, "max_cdims" ), max_cdims );
     max_cdims = cvtest::clipInt( max_cdims, 1, 6 );
 
@@ -146,13 +146,13 @@ void CV_BaseHistTest::get_hist_params( int /*test_case_idx*/ )
     max_dim_size = cvRound(pow(hist_size,1./cdims));
     total_size = 1;
     uniform = cvtest::randInt(rng) % 2;
-    hist_type = cvtest::randInt(rng) % 2 ? CV_HIST_SPARSE : CV_HIST_ARRAY; 
-    
+    hist_type = cvtest::randInt(rng) % 2 ? CV_HIST_SPARSE : CV_HIST_ARRAY;
+
     for( i = 0; i < cdims; i++ )
     {
         dims[i] = cvtest::randInt(rng) % (max_dim_size + 2) + 2;
         if( !uniform )
-            dims[i] = MIN(dims[i], max_ni_dim_size);    
+            dims[i] = MIN(dims[i], max_ni_dim_size);
         total_size *= dims[i];
     }
 
@@ -178,12 +178,12 @@ void CV_BaseHistTest::get_hist_params( int /*test_case_idx*/ )
 float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
 {
     double _low = low + range_delta, _high = high - range_delta;
-    
+
     if( !init_ranges )
         return 0;
-    
+
     ranges.resize(cdims);
-    
+
     if( uniform )
     {
         _ranges.resize(cdims*2);
@@ -200,7 +200,7 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
         for( i = 0; i < cdims; i++ )
             dims_sum += dims[i] + 1;
         _ranges.resize(dims_sum);
-        
+
         for( i = 0; i < cdims; i++ )
         {
             int j, n = dims[i];
@@ -212,7 +212,7 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
                 if( (pow(q,(double)n)-1)/(q-1.) >= _high-_low )
                     break;
             }
-            
+
             if( j == 0 )
             {
                 delta = (_high-_low)/n;
@@ -223,9 +223,9 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
                 q = 1 + j*0.1;
                 delta = cvFloor((_high-_low)*(q-1)/(pow(q,(double)n) - 1));
                 delta = MAX(delta, 1.);
-            } 
+            }
             val = _low;
-            
+
             for( j = 0; j <= n; j++ )
             {
                 _ranges[j+ofs] = (float)MIN(val,_high);
@@ -236,7 +236,7 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
             ofs += n + 1;
         }
     }
-    
+
     return &ranges[0];
 }
 
@@ -246,7 +246,7 @@ void CV_BaseHistTest::init_hist( int /*test_case_idx*/, int hist_i )
     if( gen_random_hist )
     {
         RNG& rng = ts->get_rng();
-        
+
         if( hist_type == CV_HIST_ARRAY )
         {
             Mat h = cvarrToMat(hist[hist_i]->bins);
@@ -255,13 +255,13 @@ void CV_BaseHistTest::init_hist( int /*test_case_idx*/, int hist_i )
         else
         {
             CvArr* arr = hist[hist_i]->bins;
-            int i, j, total_size = 1, nz_count;
+            int i, j, totalSize = 1, nz_count;
             int idx[CV_MAX_DIM];
             for( i = 0; i < cdims; i++ )
-                total_size *= dims[i];
+                totalSize *= dims[i];
 
-            nz_count = cvtest::randInt(rng) % MAX( total_size/4, 100 );
-            nz_count = MIN( nz_count, total_size );
+            nz_count = cvtest::randInt(rng) % MAX( totalSize/4, 100 );
+            nz_count = MIN( nz_count, totalSize );
 
             // a zero number of non-zero elements should be allowed
             for( i = 0; i < nz_count; i++ )
@@ -286,7 +286,7 @@ int CV_BaseHistTest::prepare_test_case( int test_case_idx )
     get_hist_params( test_case_idx );
     r = get_hist_ranges( test_case_idx );
     hist.resize(hist_count);
-    
+
     for( i = 0; i < hist_count; i++ )
     {
         hist[i] = cvCreateHist( cdims, dims, hist_type, r, uniform );
@@ -323,7 +323,7 @@ protected:
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
     void init_hist( int test_case_idx, int i );
-    
+
     CvMat* indices;
     CvMat* values;
     CvMat* values0;
@@ -376,7 +376,7 @@ int CV_QueryHistTest::prepare_test_case( int test_case_idx )
 
         iters = (cvtest::randInt(rng) % MAX(total_size/10,100)) + 1;
         iters = MIN( iters, total_size*9/10 + 1 );
-        
+
         indices = cvCreateMat( 1, iters*cdims, CV_32S );
         values = cvCreateMat( 1, iters, CV_32F );
         values0 = cvCreateMat( 1, iters, CV_32F );
@@ -422,7 +422,7 @@ int CV_QueryHistTest::prepare_test_case( int test_case_idx )
             if( GET_BIT(lin_idx) )
                 values0->data.fl[i] = (float)(lin_idx+1);
         }
-    
+
         cvReleaseMat( &bit_mask );
     }
 
@@ -539,7 +539,7 @@ int CV_QueryHistTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
     int i, j, iters = values->cols;
-    
+
     for( i = 0; i < iters; i++ )
     {
         float v = values->data.fl[i], v0 = values0->data.fl[i];
@@ -613,7 +613,7 @@ void CV_MinMaxHistTest::init_hist(int test_case_idx, int hist_i)
         }
         if( !eq || total_size == 1 )
             break;
-    }        
+    }
 
     min_val0 = (float)(-cvtest::randReal(rng)*10 - FLT_EPSILON);
     max_val0 = (float)(cvtest::randReal(rng)*10 + FLT_EPSILON + gen_hist_max_val);
@@ -644,7 +644,7 @@ void CV_MinMaxHistTest::run_func(void)
 int CV_MinMaxHistTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
-    
+
     if( cvIsNaN(min_val) || cvIsInf(min_val) ||
         cvIsNaN(max_val) || cvIsInf(max_val) )
     {
@@ -728,7 +728,7 @@ void CV_NormHistTest::run_func(void)
     if( hist_type != CV_HIST_ARRAY && test_cpp )
     {
         cv::SparseMat h((CvSparseMat*)hist[0]->bins);
-        cv::normalize(h, h, factor, CV_L1); 
+        cv::normalize(h, h, factor, CV_L1);
         cvReleaseSparseMat((CvSparseMat**)&hist[0]->bins);
         hist[0]->bins = (CvSparseMat*)h;
     }
@@ -741,7 +741,7 @@ int CV_NormHistTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
     double sum = 0;
-    
+
     if( hist_type == CV_HIST_ARRAY )
     {
         int i;
@@ -755,7 +755,7 @@ int CV_NormHistTest::validate_test_results( int /*test_case_idx*/ )
         CvSparseMat* sparse = (CvSparseMat*)hist[0]->bins;
         CvSparseMatIterator iterator;
         CvSparseNode *node;
-        
+
         for( node = cvInitSparseMatIterator( sparse, &iterator );
              node != 0; node = cvGetNextSparseNode( &iterator ))
         {
@@ -839,7 +839,7 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
         if( hist_type == CV_HIST_ARRAY )
         {
             orig_nz_count = total_size;
-            
+
             values = cvCreateMat( 1, total_size, CV_32F );
             memcpy( values->data.fl, cvPtr1D( hist[0]->bins, 0 ), total_size*sizeof(float) );
         }
@@ -859,7 +859,7 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
                  node != 0; node = cvGetNextSparseNode( &iterator ), i++ )
             {
                  const int* idx = CV_NODE_IDX(sparse,node);
-                     
+
                  OPENCV_ASSERT( i < orig_nz_count, "CV_ThreshHistTest::prepare_test_case", "Buffer overflow" );
 
                  values->data.fl[i] = *(float*)CV_NODE_VAL(sparse,node);
@@ -924,7 +924,7 @@ int CV_ThreshHistTest::validate_test_results( int /*test_case_idx*/ )
             }
         }
     }
-    
+
     if( code > 0 && hist_type == CV_HIST_SPARSE )
     {
         if( sparse->heap->active_count > 0 )
@@ -1003,7 +1003,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
     {
         float* ptr0 = (float*)cvPtr1D( hist[0]->bins, 0 );
         float* ptr1 = (float*)cvPtr1D( hist[1]->bins, 0 );
-        
+
         for( i = 0; i < total_size; i++ )
         {
             double v0 = ptr0[i], v1 = ptr1[i];
@@ -1031,7 +1031,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             const int* idx = CV_NODE_IDX(sparse0, node);
             double v0 = *(float*)CV_NODE_VAL(sparse0, node);
             double v1 = (float)cvGetRealND(sparse1, idx);
-            
+
             result0[CV_COMP_CORREL] += v0*v1;
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
             if( fabs(v0) > DBL_EPSILON )
@@ -1134,7 +1134,7 @@ CV_CalcHistTest::~CV_CalcHistTest()
 void CV_CalcHistTest::clear()
 {
     int i;
-    
+
     for( i = 0; i <= CV_MAX_DIM; i++ )
         cvReleaseImage( &images[i] );
 
@@ -1160,7 +1160,7 @@ int CV_CalcHistTest::prepare_test_case( int test_case_idx )
                     img_type == CV_8U ? IPL_DEPTH_8U : IPL_DEPTH_32F, nch );
                 channels[i] = cvtest::randInt(rng) % nch;
                 Mat images_i = cvarrToMat(images[i]);
-                
+
                 cvtest::randUni( rng, images_i, Scalar::all(low), Scalar::all(high) );
             }
             else if( i == CV_MAX_DIM && cvtest::randInt(rng) % 2 )
@@ -1168,7 +1168,7 @@ int CV_CalcHistTest::prepare_test_case( int test_case_idx )
                 // create mask
                 images[i] = cvCreateImage( img_size, IPL_DEPTH_8U, 1 );
                 Mat images_i = cvarrToMat(images[i]);
-                
+
                 // make ~25% pixels in the mask non-zero
                 cvtest::randUni( rng, images_i, Scalar::all(-2), Scalar::all(2) );
             }
@@ -1230,7 +1230,7 @@ cvTsCalcHist( IplImage** _images, CvHistogram* hist, IplImage* _mask, int* chann
         {
             float val[CV_MAX_DIM];
             int idx[CV_MAX_DIM];
-            
+
             if( mptr && !mptr[x] )
                 continue;
             if( img_depth == IPL_DEPTH_8U )
@@ -1288,7 +1288,7 @@ int CV_CalcHistTest::validate_test_results( int /*test_case_idx*/ )
     {
         ts->printf( cvtest::TS::LOG, "The histogram does not match to the reference one\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
-        
+
     }
 
     if( code < 0 )
@@ -1345,7 +1345,7 @@ CV_CalcBackProjectTest::~CV_CalcBackProjectTest()
 void CV_CalcBackProjectTest::clear()
 {
     int i;
-    
+
     for( i = 0; i < CV_MAX_DIM+3; i++ )
         cvReleaseImage( &images[i] );
 
@@ -1399,7 +1399,7 @@ int CV_CalcBackProjectTest::prepare_test_case( int test_case_idx )
             {
                 int idx = cvtest::randInt(rng) % img_len;
                 double val = cvtest::randReal(rng)*(high - low) + low;
-                
+
                 if( img_type == CV_8U )
                     ((uchar*)data)[idx] = (uchar)cvRound(val);
                 else
@@ -1453,7 +1453,7 @@ cvTsCalcBackProject( IplImage** images, IplImage* dst, CvHistogram* hist, int* c
             float val[CV_MAX_DIM];
             float bin_val = 0;
             int idx[CV_MAX_DIM];
-            
+
             if( img_depth == IPL_DEPTH_8U )
                 for( k = 0; k < cdims; k++ )
                     val[k] = plane[k].ptr[x*nch[k]];
@@ -1569,7 +1569,7 @@ CV_CalcBackProjectPatchTest::~CV_CalcBackProjectPatchTest()
 void CV_CalcBackProjectPatchTest::clear()
 {
     int i;
-    
+
     for( i = 0; i < CV_MAX_DIM+2; i++ )
         cvReleaseImage( &images[i] );
 
@@ -1627,7 +1627,7 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
             {
                 int idx = cvtest::randInt(rng) % img_len;
                 double val = cvtest::randReal(rng)*(high - low) + low;
-                
+
                 if( img_type == CV_8U )
                     ((uchar*)data)[idx] = (uchar)cvRound(val);
                 else
@@ -1652,7 +1652,7 @@ cvTsCalcBackProjectPatch( IplImage** images, IplImage* dst, CvSize patch_size,
                           double factor, int* channels )
 {
     CvHistogram* model = 0;
-    
+
     IplImage imgstub[CV_MAX_DIM], *img[CV_MAX_DIM];
     IplROI roi;
     int i, dims;
@@ -1679,7 +1679,7 @@ cvTsCalcBackProjectPatch( IplImage** images, IplImage* dst, CvSize patch_size,
         for( x = 0; x < size.width; x++ )
         {
             double result;
-            
+
             roi.xOffset = x;
             roi.yOffset = y;
             roi.width = patch_size.width;
@@ -1703,7 +1703,7 @@ int CV_CalcBackProjectPatchTest::validate_test_results( int /*test_case_idx*/ )
 
     cvTsCalcBackProjectPatch( images, images[CV_MAX_DIM+1],
         patch_size, hist[0], method, factor, channels );
-    
+
     Mat a = cvarrToMat(images[CV_MAX_DIM]), b = cvarrToMat(images[CV_MAX_DIM+1]);
     code = cvtest::cmpEps2( ts, a, b, err_level, true, "BackProjectPatch result" );
 
@@ -1756,7 +1756,7 @@ void CV_BayesianProbTest::init_hist( int test_case_idx, int hist_i )
 int CV_BayesianProbTest::prepare_test_case( int test_case_idx )
 {
     RNG& rng = ts->get_rng();
-    
+
     hist_count = (cvtest::randInt(rng) % (MAX_HIST/2-1) + 2)*2;
     hist_count = MIN( hist_count, MAX_HIST );
     int code = CV_BaseHistTest::prepare_test_case( test_case_idx );
@@ -1833,5 +1833,5 @@ TEST(Imgproc_Hist_MinMaxVal, accuracy) { CV_MinMaxHistTest test; test.safe_run()
 TEST(Imgproc_Hist_CalcBackProject, accuracy) { CV_CalcBackProjectTest test; test.safe_run(); }
 TEST(Imgproc_Hist_CalcBackProjectPatch, accuracy) { CV_CalcBackProjectPatchTest test; test.safe_run(); }
 TEST(Imgproc_Hist_BayesianProb, accuracy) { CV_BayesianProbTest test; test.safe_run(); }
- 
+
 /* End Of File */

@@ -241,13 +241,13 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
             double* cov_data = cov->data.db + i*_var_count;
             double s1val = sum1[i];
             double avg1 = avg_data[i];
-            int count = count_data[i];
+            int _count = count_data[i];
 
             for( j = 0; j <= i; j++ )
             {
                 double avg2 = avg2_data[j];
-                double cov_val = prod_data[j] - avg1 * sum2[j] - avg2 * s1val + avg1 * avg2 * count;
-                cov_val = (count > 1) ? cov_val / (count - 1) : cov_val;
+                double cov_val = prod_data[j] - avg1 * sum2[j] - avg2 * s1val + avg1 * avg2 * _count;
+                cov_val = (_count > 1) ? cov_val / (_count - 1) : cov_val;
                 cov_data[j] = cov_val;
             }
         }
@@ -294,7 +294,7 @@ struct predict_body {
     value = _value;
     var_count1 = _var_count1;
   }
-  
+
   CvMat* c;
   CvMat** cov_rotate_mats;
   CvMat** inv_eigen_values;
@@ -306,15 +306,15 @@ struct predict_body {
   CvMat* results;
   float* value;
   int var_count1;
-  
+
   void operator()( const cv::BlockedRange& range ) const
   {
 
     int cls = -1;
-    int rtype = 0, rstep = 0; 
+    int rtype = 0, rstep = 0;
     int nclasses = cls_labels->cols;
     int _var_count = avg[0]->cols;
-    
+
     if (results)
     {
         rtype = CV_MAT_TYPE(results->type);
@@ -323,7 +323,7 @@ struct predict_body {
     // allocate memory and initializing headers for calculating
     cv::AutoBuffer<double> buffer(nclasses + var_count1);
     CvMat diff = cvMat( 1, var_count1, CV_64FC1, &buffer[0] );
-    
+
     for(int k = range.begin(); k < range.end(); k += 1 )
     {
         int ival;
@@ -592,7 +592,7 @@ CvNormalBayesClassifier::CvNormalBayesClassifier( const Mat& _train_data, const 
     cov_rotate_mats = 0;
     c = 0;
     default_model_name = "my_nb";
-    
+
     CvMat tdata = _train_data, responses = _responses, vidx = _var_idx, sidx = _sample_idx;
     train(&tdata, &responses, vidx.data.ptr ? &vidx : 0,
                  sidx.data.ptr ? &sidx : 0);
@@ -609,7 +609,7 @@ bool CvNormalBayesClassifier::train( const Mat& _train_data, const Mat& _respons
 float CvNormalBayesClassifier::predict( const Mat& _samples, Mat* _results ) const
 {
     CvMat samples = _samples, results, *presults = 0;
-    
+
     if( _results )
     {
         if( !(_results->data && _results->type() == CV_32F &&
@@ -618,7 +618,7 @@ float CvNormalBayesClassifier::predict( const Mat& _samples, Mat* _results ) con
             _results->create(_samples.rows, 1, CV_32F);
         presults = &(results = *_results);
     }
-    
+
     return predict(&samples, presults);
 }
 

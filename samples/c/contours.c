@@ -1,22 +1,23 @@
-#include <opencv2/imgproc/imgproc_c.h>
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/highgui/highgui_c.h"
 #include <stdio.h>
-void help()
+
+static void help(void)
 {
-	printf("\nThis program creates an image to demonstrate the use of the \"c\" contour\n"
-			"functions: cvFindContours() and cvApproxPoly() along with the storage\n"
-			"functions cvCreateMemStorage() and cvDrawContours().\n"
-			"It also shows the use of a trackbar to control contour retrieval.\n"
-			"\n"
+    printf("\nThis program creates an image to demonstrate the use of the \"c\" contour\n"
+            "functions: cvFindContours() and cvApproxPoly() along with the storage\n"
+            "functions cvCreateMemStorage() and cvDrawContours().\n"
+            "It also shows the use of a trackbar to control contour retrieval.\n"
+            "\n"
             "Usage :\n"
-			"./contours\n");
+            "./contours\n");
 }
 
 #define w 500
 int levels = 3;
 CvSeq* contours = 0;
 
-void on_trackbar(int pos)
+static void on_trackbar(int pos)
 {
     IplImage* cnt_img = cvCreateImage( cvSize(w,w), 8, 3 );
     CvSeq* _contours = contours;
@@ -36,7 +37,7 @@ static void findCComp( IplImage* img )
     cvZero(mask);
     cvRectangle( mask, cvPoint(0, 0), cvPoint(mask->width-1, mask->height-1),
                  cvScalarAll(1), 1, 8, 0 );
-    
+
     for( y = 0; y < img->height; y++ )
         for( x = 0; x < img->width; x++ )
         {
@@ -49,7 +50,7 @@ static void findCComp( IplImage* img )
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
     int i, j;
     CvMemStorage* storage = cvCreateMemStorage(0);
@@ -100,11 +101,11 @@ int main()
 
     cvFindContours( img32s, storage, &contours, sizeof(CvContour),
                     CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
-    
+
     //cvFindContours( img, storage, &contours, sizeof(CvContour),
     //                CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0) );
-    
-    
+
+
     {
     const char* attrs[] = {"recursive", "1", 0};
     cvSave("contours.xml", contours, 0, 0, cvAttrList(attrs, 0));
@@ -119,7 +120,7 @@ int main()
 
     {
         CvRNG rng = cvRNG(-1);
-        
+
         CvSeq* tcontours = contours;
         cvCvtColor( img, img3, CV_GRAY2BGR );
         while( tcontours->h_next )
@@ -142,9 +143,9 @@ int main()
                 cvDrawContours(img3, tcontours->v_next, color, color, 1, -1, 8, cvPoint(0,0));
             }
         }
-        
+
     }
-    
+
     cvShowImage( "colored", img3 );
     on_trackbar(0);
     cvWaitKey(0);
@@ -153,7 +154,7 @@ int main()
     cvReleaseImage( &img32f );
     cvReleaseImage( &img32s );
     cvReleaseImage( &img3 );
-    
+
     return 0;
 }
 

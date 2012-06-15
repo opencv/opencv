@@ -48,7 +48,7 @@ cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
     Mat cameraMatrix = _cameraMatrix.getMat();
     if( !centerPrincipalPoint && cameraMatrix.type() == CV_64F )
         return cameraMatrix;
-    
+
     Mat newCameraMatrix;
     cameraMatrix.convertTo(newCameraMatrix, CV_64F);
     if( centerPrincipalPoint )
@@ -65,7 +65,7 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
 {
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     Mat matR = _matR.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
-    
+
     if( m1type <= 0 )
         m1type = CV_16SC2;
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32FC1 || m1type == CV_32FC2 );
@@ -106,7 +106,7 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
     double u0 = A(0, 2),  v0 = A(1, 2);
     double fx = A(0, 0),  fy = A(1, 1);
 
-    CV_Assert( distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) || 
+    CV_Assert( distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) ||
                distCoeffs.size() == Size(1, 5) || distCoeffs.size() == Size(5, 1) ||
                distCoeffs.size() == Size(1, 8) || distCoeffs.size() == Size(8, 1));
 
@@ -166,10 +166,10 @@ void cv::undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
 {
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
-    
+
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    
+
     CV_Assert( dst.data != src.data );
 
     int stripe_size0 = std::min(std::max(1, (1 << 12) / std::max(src.cols, 1)), src.rows);
@@ -289,11 +289,11 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
             (_distCoeffs->rows == 1 || _distCoeffs->cols == 1) &&
             (_distCoeffs->rows*_distCoeffs->cols == 4 ||
              _distCoeffs->rows*_distCoeffs->cols == 5 ||
-             _distCoeffs->rows*_distCoeffs->cols == 8)); 
+             _distCoeffs->rows*_distCoeffs->cols == 8));
 
         _Dk = cvMat( _distCoeffs->rows, _distCoeffs->cols,
             CV_MAKETYPE(CV_64F,CV_MAT_CN(_distCoeffs->type)), k);
-        
+
         cvConvert( _distCoeffs, &_Dk );
         iters = 5;
     }
@@ -389,13 +389,13 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
 {
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
-    
+
     CV_Assert( src.isContinuous() && (src.depth() == CV_32F || src.depth() == CV_64F) &&
               ((src.rows == 1 && src.channels() == 2) || src.cols*src.channels() == 2));
-    
+
     _dst.create(src.size(), src.type(), -1, true);
     Mat dst = _dst.getMat();
-    
+
     CvMat _csrc = src, _cdst = dst, _ccameraMatrix = cameraMatrix;
     CvMat matR, matP, _cdistCoeffs, *pR=0, *pP=0, *pD=0;
     if( R.data )
@@ -416,11 +416,11 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
     double beta = 1 + 2*alpha;
     double v = x*x + y*y + 1, iv = 1/v;
     double u = sqrt(beta*v + alpha*alpha);
-    
+
     double k = (u - alpha)*iv;
     double kv = (v*beta/u - (u - alpha)*2)*iv*iv;
     double kx = kv*x, ky = kv*y;
-    
+
     if( projType == PROJ_SPHERICAL_ORTHO )
     {
         if(J)
@@ -433,7 +433,7 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
         double iR = 1/(alpha + 1);
         double x1 = std::max(std::min(x*k*iR, 1.), -1.);
         double y1 = std::max(std::min(y*k*iR, 1.), -1.);
-        
+
         if(J)
         {
             double fx1 = iR/sqrt(1 - x1*x1);
@@ -446,35 +446,35 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
     return Point2f();
 }
 
-    
+
 static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
 {
     static int avgiter = 0, avgn = 0;
-    
+
     double eps = 1e-12;
     Vec2d p(_p.x, _p.y), q(_p.x, _p.y), err;
     Vec4d J;
     int i, maxiter = 5;
-    
+
     for( i = 0; i < maxiter; i++ )
     {
         Point2f p1 = mapPointSpherical(Point2f((float)q[0], (float)q[1]), alpha, &J, projType);
         err = Vec2d(p1.x, p1.y) - p;
         if( err[0]*err[0] + err[1]*err[1] < eps )
             break;
-        
+
         Vec4d JtJ(J[0]*J[0] + J[2]*J[2], J[0]*J[1] + J[2]*J[3],
                   J[0]*J[1] + J[2]*J[3], J[1]*J[1] + J[3]*J[3]);
         double d = JtJ[0]*JtJ[3] - JtJ[1]*JtJ[2];
         d = d ? 1./d : 0;
         Vec4d iJtJ(JtJ[3]*d, -JtJ[1]*d, -JtJ[2]*d, JtJ[0]*d);
         Vec2d JtErr(J[0]*err[0] + J[2]*err[1], J[1]*err[0] + J[3]*err[1]);
-        
+
         q -= Vec2d(iJtJ[0]*JtErr[0] + iJtJ[1]*JtErr[1], iJtJ[2]*JtErr[0] + iJtJ[3]*JtErr[1]);
         //Matx22d J(kx*x + k, kx*y, ky*x, ky*y + k);
         //q -= Vec2d((J.t()*J).inv()*(J.t()*err));
     }
-    
+
     if( i < maxiter )
     {
         avgiter += i;
@@ -482,12 +482,12 @@ static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
         if( avgn == 1500 )
             printf("avg iters = %g\n", (double)avgiter/avgn);
     }
-    
+
     return i < maxiter ? Point2f((float)q[0], (float)q[1]) : Point2f(-FLT_MAX, -FLT_MAX);
 }
 
 }
-    
+
 float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeffs0,
                             Size imageSize, int destImageWidth, int m1type,
                             OutputArray _map1, OutputArray _map2, int projType, double _alpha )
@@ -500,40 +500,40 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
     Point2f dcenter((destImageWidth-1)*0.5f, 0.f);
     float xmin = FLT_MAX, xmax = -FLT_MAX, ymin = FLT_MAX, ymax = -FLT_MAX;
     int N = 9;
-    std::vector<Point2f> u(1), v(1);
-    Mat _u(u), I = Mat::eye(3,3,CV_64F);
+    std::vector<Point2f> uvec(1), vvec(1);
+    Mat I = Mat::eye(3,3,CV_64F);
     float alpha = (float)_alpha;
-    
+
     int ndcoeffs = distCoeffs0.cols*distCoeffs0.rows*distCoeffs0.channels();
     CV_Assert((distCoeffs0.cols == 1 || distCoeffs0.rows == 1) &&
               (ndcoeffs == 4 || ndcoeffs == 5 || ndcoeffs == 8));
     CV_Assert(cameraMatrix0.size() == Size(3,3));
     distCoeffs0.convertTo(distCoeffs,CV_64F);
     cameraMatrix0.convertTo(cameraMatrix,CV_64F);
-    
+
     alpha = std::min(alpha, 0.999f);
-    
+
     for( int i = 0; i < N; i++ )
         for( int j = 0; j < N; j++ )
         {
             Point2f p((float)j*imageSize.width/(N-1), (float)i*imageSize.height/(N-1));
-            u[0] = p;
-            undistortPoints(_u, v, cameraMatrix, distCoeffs, I, I);
-            Point2f q = mapPointSpherical(v[0], alpha, 0, projType);
+            uvec[0] = p;
+            undistortPoints(uvec, vvec, cameraMatrix, distCoeffs, I, I);
+            Point2f q = mapPointSpherical(vvec[0], alpha, 0, projType);
             if( xmin > q.x ) xmin = q.x;
             if( xmax < q.x ) xmax = q.x;
             if( ymin > q.y ) ymin = q.y;
             if( ymax < q.y ) ymax = q.y;
         }
-    
+
     float scale = (float)std::min(dcenter.x/fabs(xmax), dcenter.x/fabs(xmin));
     Size dsize(destImageWidth, cvCeil(std::max(scale*fabs(ymin)*2, scale*fabs(ymax)*2)));
     dcenter.y = (dsize.height - 1)*0.5f;
-    
+
     Mat mapxy(dsize, CV_32FC2);
     double k1 = k[0], k2 = k[1], k3 = k[2], p1 = k[3], p2 = k[4], k4 = k[5], k5 = k[6], k6 = k[7];
     double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = scenter.x, cy = scenter.y;
-    
+
     for( int y = 0; y < dsize.height; y++ )
     {
         Point2f* mxy = mapxy.ptr<Point2f>(y);
@@ -551,11 +551,11 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
             double kr = 1 + ((k3*r2 + k2)*r2 + k1)*r2/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
             double u = fx*(q.x*kr + p1*_2xy + p2*(r2 + 2*x2)) + cx;
             double v = fy*(q.y*kr + p1*(r2 + 2*y2) + p2*_2xy) + cy;
-            
+
             mxy[x] = Point2f((float)u, (float)v);
         }
     }
-    
+
     if(m1type == CV_32FC2)
     {
         _map1.create(mapxy.size(), mapxy.type());
@@ -565,7 +565,7 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
     }
     else
         convertMaps(mapxy, Mat(), _map1, _map2, m1type, false);
-    
+
     return scale;
 }
 

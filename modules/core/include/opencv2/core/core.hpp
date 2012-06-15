@@ -1299,6 +1299,7 @@ public:
         GPU_MAT           = 9 << KIND_SHIFT
     };
     _InputArray();
+
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
     template<typename _Tp> _InputArray(const _Tp* vec, int n);
@@ -1327,6 +1328,10 @@ public:
     virtual int depth(int i=-1) const;
     virtual int channels(int i=-1) const;
     virtual bool empty() const;
+
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
+    virtual ~_InputArray();
+#endif
 
     int flags;
     void* obj;
@@ -1384,6 +1389,10 @@ public:
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void release() const;
     virtual void clear() const;
+
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
+    virtual ~_OutputArray();
+#endif
 };
 
 typedef const _InputArray& InputArray;
@@ -3970,7 +3979,7 @@ public:
     CV_WRAP virtual bool isOpened() const;
     //! closes the file and releases all the memory buffers
     CV_WRAP virtual void release();
-    //! closes the file, releases all the memory buffers and returns the text string    
+    //! closes the file, releases all the memory buffers and returns the text string
     CV_WRAP string releaseAndGetString();
 
     //! returns the first element of the top-level mapping

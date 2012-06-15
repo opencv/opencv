@@ -1,6 +1,7 @@
 #include "perf_precomp.hpp"
 
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core/internal.hpp"
 #include "opencv2/flann/flann.hpp"
 #include "opencv2/opencv_modules.hpp"
 
@@ -17,7 +18,7 @@ using std::tr1::get;
 typedef TestBaseWithParam<String> stitch;
 typedef TestBaseWithParam<String> match;
 
-#if HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_NONFREE
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
 #define TEST_DETECTORS testing::Values<String>("orb")
@@ -26,13 +27,12 @@ typedef TestBaseWithParam<String> match;
 PERF_TEST_P(stitch, a123, TEST_DETECTORS)
 {
     Mat pano;
-    
+
     vector<Mat> imgs;
     imgs.push_back( imread( getDataPath("stitching/a1.jpg") ) );
     imgs.push_back( imread( getDataPath("stitching/a2.jpg") ) );
     imgs.push_back( imread( getDataPath("stitching/a3.jpg") ) );
 
-    Stitcher::Status status;
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
             : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
@@ -52,7 +52,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
-        status = stitcher.stitch(imgs, pano);
+        stitcher.stitch(imgs, pano);
         stopTimer();
     }
 }
@@ -60,12 +60,11 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
 PERF_TEST_P(stitch, b12, TEST_DETECTORS)
 {
     Mat pano;
-    
+
     vector<Mat> imgs;
     imgs.push_back( imread( getDataPath("stitching/b1.jpg") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.jpg") ) );
 
-    Stitcher::Status status;
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
             : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
@@ -85,7 +84,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
-        status = stitcher.stitch(imgs, pano);
+        stitcher.stitch(imgs, pano);
         stopTimer();
     }
 }

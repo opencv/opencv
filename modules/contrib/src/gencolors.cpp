@@ -46,7 +46,7 @@
 
 using namespace cv;
 
-void downsamplePoints( const Mat& src, Mat& dst, size_t count )
+static void downsamplePoints( const Mat& src, Mat& dst, size_t count )
 {
     CV_Assert( count >= 2 );
     CV_Assert( src.cols == 1 || src.rows == 1 );

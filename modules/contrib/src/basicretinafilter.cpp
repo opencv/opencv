@@ -180,13 +180,13 @@ void BasicRetinaFilter::setLPfilterParameters(const float beta, const float tau,
 	}
 
 	float _temp =  (1.0f+_beta)/(2.0f*_mu*_alpha);
-	float _a = _filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
-	_filteringCoeficientsTable[1+tableOffset]=(1.0f-_a)*(1.0f-_a)*(1.0f-_a)*(1.0f-_a)/(1.0f+_beta);
+	float a = _filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
+	_filteringCoeficientsTable[1+tableOffset]=(1.0f-a)*(1.0f-a)*(1.0f-a)*(1.0f-a)/(1.0f+_beta);
 	_filteringCoeficientsTable[2+tableOffset] =tau;
 
-	//std::cout<<"BasicRetinaFilter::normal:"<<(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta)<<" -> old:"<<(1-_a)*(1-_a)*(1-_a)*(1-_a)/(1+_beta)<<std::endl;
+	//std::cout<<"BasicRetinaFilter::normal:"<<(1.0-a)*(1.0-a)*(1.0-a)*(1.0-a)/(1.0+_beta)<<" -> old:"<<(1-a)*(1-a)*(1-a)*(1-a)/(1+_beta)<<std::endl;
 
-	//std::cout<<"BasicRetinaFilter::_a="<<_a<<", gain="<<_filteringCoeficientsTable[1+tableOffset]<<", tau="<<tau<<std::endl;
+	//std::cout<<"BasicRetinaFilter::a="<<a<<", gain="<<_filteringCoeficientsTable[1+tableOffset]<<", tau="<<tau<<std::endl;
 }
 
 void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const float beta, const float tau, const float alpha0, const unsigned int filterIndex)
@@ -210,8 +210,8 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const floa
 
 	float _alpha=0.8f;
 	float _temp =  (1.0f+_beta)/(2.0f*_mu*_alpha);
-	float _a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
-	_filteringCoeficientsTable[tableOffset+1]=(1.0f-_a)*(1.0f-_a)*(1.0f-_a)*(1.0f-_a)/(1.0f+_beta);
+	float a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
+	_filteringCoeficientsTable[tableOffset+1]=(1.0f-a)*(1.0f-a)*(1.0f-a)*(1.0f-a)/(1.0f+_beta);
 	_filteringCoeficientsTable[tableOffset+2] =tau;
 
 	float commonFactor=alpha0/(float)sqrt(_halfNBcolumns*_halfNBcolumns+_halfNBrows*_halfNBrows+1.0f);
@@ -266,8 +266,8 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const float
 	}
 	unsigned int tableOffset=filterIndex*3;
 	float _temp =  (1.0f+_beta)/(2.0f*_mu*_alpha);
-	float _a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
-	_filteringCoeficientsTable[tableOffset+1]=(1.0f-_a)*(1.0f-_a)*(1.0f-_a)*(1.0f-_a)/(1.0f+_beta);
+	float a=_filteringCoeficientsTable[tableOffset] = 1.0f + _temp - (float)sqrt( (1.0f+_temp)*(1.0f+_temp) - 1.0f);
+	_filteringCoeficientsTable[tableOffset+1]=(1.0f-a)*(1.0f-a)*(1.0f-a)*(1.0f-a)/(1.0f+_beta);
 	_filteringCoeficientsTable[tableOffset+2] =tau;
 
 	//memset(_progressiveSpatialConstant, 255, _filterOutput.getNBpixels());
@@ -335,7 +335,7 @@ void BasicRetinaFilter::_localLuminanceAdaptation(const float *inputFrame, const
 	{
 		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
 		// TODO : the following line can lead to a divide by zero ! A small offset is added, take care if the offset is too large in case of High Dynamic Range images which can use very small values...		
-		*(outputFramePTR++) = (_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001);
+		*(outputFramePTR++) = (_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001f);
 		//std::cout<<"BasicRetinaFilter::inputFrame[IDpixel]=%f, X0=%f, outputFrame[IDpixel]=%f\n", inputFrame[IDpixel], X0, outputFrame[IDpixel]);
 	}
 }

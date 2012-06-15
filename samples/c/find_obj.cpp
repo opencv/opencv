@@ -18,7 +18,7 @@
 #include <stdio.h>
 
 using namespace std;
-void help()
+static void help()
 {
     printf(
         "This program demonstrated the use of the SURF Detector and Descriptor using\n"
@@ -32,10 +32,57 @@ void help()
 // define whether to use approximate nearest-neighbor search
 #define USE_FLANN
 
+#ifdef USE_FLANN
+static void
+flannFindPairs( const CvSeq*, const CvSeq* objectDescriptors,
+           const CvSeq*, const CvSeq* imageDescriptors, vector<int>& ptpairs )
+{
+    int length = (int)(objectDescriptors->elem_size/sizeof(float));
 
-IplImage* image = 0;
+    cv::Mat m_object(objectDescriptors->total, length, CV_32F);
+    cv::Mat m_image(imageDescriptors->total, length, CV_32F);
 
-double
+
+    // copy descriptors
+    CvSeqReader obj_reader;
+    float* obj_ptr = m_object.ptr<float>(0);
+    cvStartReadSeq( objectDescriptors, &obj_reader );
+    for(int i = 0; i < objectDescriptors->total; i++ )
+    {
+        const float* descriptor = (const float*)obj_reader.ptr;
+        CV_NEXT_SEQ_ELEM( obj_reader.seq->elem_size, obj_reader );
+        memcpy(obj_ptr, descriptor, length*sizeof(float));
+        obj_ptr += length;
+    }
+    CvSeqReader img_reader;
+    float* img_ptr = m_image.ptr<float>(0);
+    cvStartReadSeq( imageDescriptors, &img_reader );
+    for(int i = 0; i < imageDescriptors->total; i++ )
+    {
+        const float* descriptor = (const float*)img_reader.ptr;
+        CV_NEXT_SEQ_ELEM( img_reader.seq->elem_size, img_reader );
+        memcpy(img_ptr, descriptor, length*sizeof(float));
+        img_ptr += length;
+    }
+
+    // find nearest neighbors using FLANN
+    cv::Mat m_indices(objectDescriptors->total, 2, CV_32S);
+    cv::Mat m_dists(objectDescriptors->total, 2, CV_32F);
+    cv::flann::Index flann_index(m_image, cv::flann::KDTreeIndexParams(4));  // using 4 randomized kdtrees
+    flann_index.knnSearch(m_object, m_indices, m_dists, 2, cv::flann::SearchParams(64) ); // maximum number of leafs checked
+
+    int* indices_ptr = m_indices.ptr<int>(0);
+    float* dists_ptr = m_dists.ptr<float>(0);
+    for (int i=0;i<m_indices.rows;++i) {
+        if (dists_ptr[2*i]<0.6*dists_ptr[2*i+1]) {
+            ptpairs.push_back(i);
+            ptpairs.push_back(indices_ptr[2*i]);
+        }
+    }
+}
+#else
+
+static double
 compareSURFDescriptors( const float* d1, const float* d2, double best, int length )
 {
     double total_cost = 0;
@@ -53,8 +100,7 @@ compareSURFDescriptors( const float* d1, const float* d2, double best, int lengt
     return total_cost;
 }
 
-
-int
+static int
 naiveNearestNeighbor( const float* vec, int laplacian,
                       const CvSeq* model_keypoints,
                       const CvSeq* model_descriptors )
@@ -70,7 +116,7 @@ naiveNearestNeighbor( const float* vec, int laplacian,
     {
         const CvSURFPoint* kp = (const CvSURFPoint*)kreader.ptr;
         const float* mvec = (const float*)reader.ptr;
-    	CV_NEXT_SEQ_ELEM( kreader.seq->elem_size, kreader );
+        CV_NEXT_SEQ_ELEM( kreader.seq->elem_size, kreader );
         CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
         if( laplacian != kp->laplacian )
             continue;
@@ -89,7 +135,7 @@ naiveNearestNeighbor( const float* vec, int laplacian,
     return -1;
 }
 
-void
+static void
 findPairs( const CvSeq* objectKeypoints, const CvSeq* objectDescriptors,
            const CvSeq* imageKeypoints, const CvSeq* imageDescriptors, vector<int>& ptpairs )
 {
@@ -113,59 +159,10 @@ findPairs( const CvSeq* objectKeypoints, const CvSeq* objectDescriptors,
         }
     }
 }
-
-
-void
-flannFindPairs( const CvSeq*, const CvSeq* objectDescriptors,
-           const CvSeq*, const CvSeq* imageDescriptors, vector<int>& ptpairs )
-{
-	int length = (int)(objectDescriptors->elem_size/sizeof(float));
-
-    cv::Mat m_object(objectDescriptors->total, length, CV_32F);
-	cv::Mat m_image(imageDescriptors->total, length, CV_32F);
-
-
-	// copy descriptors
-    CvSeqReader obj_reader;
-	float* obj_ptr = m_object.ptr<float>(0);
-    cvStartReadSeq( objectDescriptors, &obj_reader );
-    for(int i = 0; i < objectDescriptors->total; i++ )
-    {
-        const float* descriptor = (const float*)obj_reader.ptr;
-        CV_NEXT_SEQ_ELEM( obj_reader.seq->elem_size, obj_reader );
-        memcpy(obj_ptr, descriptor, length*sizeof(float));
-        obj_ptr += length;
-    }
-    CvSeqReader img_reader;
-	float* img_ptr = m_image.ptr<float>(0);
-    cvStartReadSeq( imageDescriptors, &img_reader );
-    for(int i = 0; i < imageDescriptors->total; i++ )
-    {
-        const float* descriptor = (const float*)img_reader.ptr;
-        CV_NEXT_SEQ_ELEM( img_reader.seq->elem_size, img_reader );
-        memcpy(img_ptr, descriptor, length*sizeof(float));
-        img_ptr += length;
-    }
-
-    // find nearest neighbors using FLANN
-    cv::Mat m_indices(objectDescriptors->total, 2, CV_32S);
-    cv::Mat m_dists(objectDescriptors->total, 2, CV_32F);
-    cv::flann::Index flann_index(m_image, cv::flann::KDTreeIndexParams(4));  // using 4 randomized kdtrees
-    flann_index.knnSearch(m_object, m_indices, m_dists, 2, cv::flann::SearchParams(64) ); // maximum number of leafs checked
-
-    int* indices_ptr = m_indices.ptr<int>(0);
-    float* dists_ptr = m_dists.ptr<float>(0);
-    for (int i=0;i<m_indices.rows;++i) {
-    	if (dists_ptr[2*i]<0.6*dists_ptr[2*i+1]) {
-    		ptpairs.push_back(i);
-    		ptpairs.push_back(indices_ptr[2*i]);
-    	}
-    }
-}
-
+#endif
 
 /* a rough implementation for object location */
-int
+static int
 locatePlanarObject( const CvSeq* objectKeypoints, const CvSeq* objectDescriptors,
                     const CvSeq* imageKeypoints, const CvSeq* imageDescriptors,
                     const CvPoint src_corners[4], CvPoint dst_corners[4] )
@@ -234,7 +231,7 @@ int main(int argc, char** argv)
     cvNamedWindow("Object", 1);
     cvNamedWindow("Object Correspond", 1);
 
-    static CvScalar colors[] = 
+    static CvScalar colors[] =
     {
         {{0,0,255}},
         {{0,128,255}},

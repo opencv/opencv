@@ -233,7 +233,7 @@ typedef DiffC3<cv::Vec3i> Diff32sC3;
 typedef DiffC1<float> Diff32fC1;
 typedef DiffC3<cv::Vec3f> Diff32fC3;
 
-cv::Vec3i& operator += (cv::Vec3i& a, const cv::Vec3b& b)
+static cv::Vec3i& operator += (cv::Vec3i& a, const cv::Vec3b& b)
 {
     a[0] += b[0];
     a[1] += b[1];
@@ -440,7 +440,7 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
 {
     cv::Ptr<CvMat> tempMask;
     cv::AutoBuffer<CvFFillSegment> buffer;
-    
+
     if( comp )
         memset( comp, 0, sizeof(*comp) );
 
@@ -491,16 +491,16 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
     {
         /*int elem_size = CV_ELEM_SIZE(type);
         const uchar* seed_ptr = img->data.ptr + img->step*seed_point.y + elem_size*seed_point.x;
-        
+
         // check if the new value is different from the current value at the seed point.
         // if they are exactly the same, use the generic version with mask to avoid infinite loops.
         for( i = 0; i < elem_size; i++ )
             if( seed_ptr[i] != ((uchar*)nv_buf)[i] )
                 break;
-        
+
         if( i == elem_size )
             return;*/
-        
+
         if( type == CV_8UC1 )
             icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.b[0],
                               comp, flags, buffer, buffer_size);
@@ -632,7 +632,7 @@ int cv::floodFill( InputOutputArray _image, Point seedPoint,
 }
 
 int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
-                   Point seedPoint, Scalar newVal, Rect* rect, 
+                   Point seedPoint, Scalar newVal, Rect* rect,
                    Scalar loDiff, Scalar upDiff, int flags )
 {
     CvConnectedComp ccomp;

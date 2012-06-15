@@ -175,6 +175,8 @@ public:
 
     void run();
 
+    virtual ~BaseQualityEvaluator(){}
+
 protected:
     virtual string getRunParamsFilename() const = 0;
     virtual string getResultsFilename() const = 0;
@@ -221,8 +223,8 @@ void BaseQualityEvaluator::readAllDatasetsRunParams()
         isWriteParams = false;
         FileNode topfn = fs.getFirstTopLevelNode();
 
-        FileNode fn = topfn[DEFAULT_PARAMS];
-        readDefaultRunParams(fn);
+        FileNode pfn = topfn[DEFAULT_PARAMS];
+        readDefaultRunParams(pfn);
 
         for( int i = 0; i < DATASETS_COUNT; i++ )
         {
@@ -278,7 +280,7 @@ bool BaseQualityEvaluator::readDataset( const string& datasetName, vector<Mat>& 
         if( !fs.isOpened() )
         {
             cout << "filename " << dirname + filename.str() << endl;
-            FileStorage fs( dirname + filename.str(), FileStorage::READ );
+            FileStorage fs2( dirname + filename.str(), FileStorage::READ );
             return false;
         }
         fs.getFirstTopLevelNode() >> Hs[i];
@@ -540,7 +542,7 @@ void DetectorQualityEvaluator::readAlgorithm ()
     }
 }
 
-int update_progress( const string& /*name*/, int progress, int test_case_idx, int count, double dt )
+static int update_progress( const string& /*name*/, int progress, int test_case_idx, int count, double dt )
 {
     int width = 60 /*- (int)name.length()*/;
     if( count > 0 )
@@ -588,13 +590,13 @@ void DetectorQualityEvaluator::runDatasetTest (const vector<Mat> &imgs, const ve
     }
 }
 
-void testLog( bool isBadAccuracy )
-{
-    if( isBadAccuracy )
-        printf(" bad accuracy\n");
-    else
-        printf("\n");
-}
+// static void testLog( bool isBadAccuracy )
+// {
+//     if( isBadAccuracy )
+//         printf(" bad accuracy\n");
+//     else
+//         printf("\n");
+// }
 
 /****************************************************************************************\
 *                                  Descriptors evaluation                                 *

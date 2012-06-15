@@ -80,7 +80,7 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
     CV_Assert( _means.rows == (int)sizes.size() && covs.size() == sizes.size() );
     CV_Assert( !data.empty() && data.rows == total );
     CV_Assert( data.type() == dataType );
-    
+
     labels.create( data.rows, 1, labelType );
 
     randn( data, Scalar::all(-1.0), Scalar::all(1.0) );
@@ -99,7 +99,7 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
         for( int i = bi; i < ei; i++, p++ )
         {
             Mat r = data.row(i);
-            r =  r * (*cit) + *mit; 
+            r =  r * (*cit) + *mit;
             if( labelType == CV_32FC1 )
                 labels.at<float>(p, 0) = (float)l;
             else if( labelType == CV_32SC1 )
@@ -224,14 +224,14 @@ void CV_KMeansTest::run( int /*start_from*/ )
     const int iters = 100;
     int sizesArr[] = { 5000, 7000, 8000 };
     int pointsCount = sizesArr[0]+ sizesArr[1] + sizesArr[2];
-    
+
     Mat data( pointsCount, 2, CV_32FC1 ), labels;
     vector<int> sizes( sizesArr, sizesArr + sizeof(sizesArr) / sizeof(sizesArr[0]) );
     Mat means;
     vector<Mat> covs;
     defaultDistribs( means, covs );
     generateData( data, labels, sizes, means, covs, CV_32FC1, CV_32SC1 );
-    
+
     int code = cvtest::TS::OK;
     float err;
     Mat bestLabels;
@@ -327,24 +327,24 @@ void CV_KNearestTest::run( int /*start_from*/ )
 class EM_Params
 {
 public:
-    EM_Params(int nclusters=10, int covMatType=EM::COV_MAT_DIAGONAL, int startStep=EM::START_AUTO_STEP,
-           const cv::TermCriteria& termCrit=cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 100, FLT_EPSILON),
-           const cv::Mat* probs=0, const cv::Mat* weights=0,
-           const cv::Mat* means=0, const std::vector<cv::Mat>* covs=0)
-        : nclusters(nclusters), covMatType(covMatType), startStep(startStep),
-        probs(probs), weights(weights), means(means), covs(covs), termCrit(termCrit)
+    EM_Params(int _nclusters=10, int _covMatType=EM::COV_MAT_DIAGONAL, int _startStep=EM::START_AUTO_STEP,
+           const cv::TermCriteria& _termCrit=cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 100, FLT_EPSILON),
+           const cv::Mat* _probs=0, const cv::Mat* _weights=0,
+           const cv::Mat* _means=0, const std::vector<cv::Mat>* _covs=0)
+        : nclusters(_nclusters), covMatType(_covMatType), startStep(_startStep),
+        probs(_probs), weights(_weights), means(_means), covs(_covs), termCrit(_termCrit)
     {}
-    
+
     int nclusters;
     int covMatType;
     int startStep;
-    
+
     // all 4 following matrices should have type CV_32FC1
     const cv::Mat* probs;
     const cv::Mat* weights;
     const cv::Mat* means;
     const std::vector<cv::Mat>* covs;
-    
+
     cv::TermCriteria termCrit;
 };
 
@@ -497,7 +497,7 @@ void CV_EMTest::run( int /*start_from*/ )
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
-    
+
     ts->set_failed_test_info( code );
 }
 

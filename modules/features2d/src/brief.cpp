@@ -61,7 +61,7 @@ inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
            + sum.at<int>(img_y - HALF_KERNEL, img_x - HALF_KERNEL);
 }
 
-void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
@@ -71,7 +71,7 @@ void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& d
     }
 }
 
-void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
@@ -82,7 +82,7 @@ void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& d
     }
 }
 
-void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
 {
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
@@ -127,8 +127,8 @@ int BriefDescriptorExtractor::descriptorType() const
 
 void BriefDescriptorExtractor::read( const FileNode& fn)
 {
-    int descriptorSize = fn["descriptorSize"];
-    switch (descriptorSize)
+    int dSize = fn["descriptorSize"];
+    switch (dSize)
     {
         case 16:
             test_fn_ = pixelTests16;
@@ -142,7 +142,7 @@ void BriefDescriptorExtractor::read( const FileNode& fn)
         default:
             CV_Error(CV_StsBadArg, "descriptorSize must be 16, 32, or 64");
     }
-    bytes_ = descriptorSize;
+    bytes_ = dSize;
 }
 
 void BriefDescriptorExtractor::write( FileStorage& fs) const

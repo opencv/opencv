@@ -1,3 +1,6 @@
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/internal.hpp"
+
 #include "cv.h"
 #include "cascadeclassifier.h"
 
@@ -13,11 +16,11 @@ int main( int argc, char* argv[] )
     int precalcValBufSize = 256,
         precalcIdxBufSize = 256;
     bool baseFormatSave = false;
-    
+
     CvCascadeParams cascadeParams;
     CvCascadeBoostParams stageParams;
     Ptr<CvFeatureParams> featureParams[] = { Ptr<CvFeatureParams>(new CvHaarFeatureParams),
-                                             Ptr<CvFeatureParams>(new CvLBPFeatureParams), 
+                                             Ptr<CvFeatureParams>(new CvLBPFeatureParams),
                                              Ptr<CvFeatureParams>(new CvHOGFeatureParams)
                                            };
     int fc = sizeof(featureParams)/sizeof(featureParams[0]);
@@ -85,7 +88,7 @@ int main( int argc, char* argv[] )
         {
             for( int fi = 0; fi < fc; fi++ )
             {
-                set = featureParams[fi]->scanAttr(argv[i], argv[i+1]);          
+                set = featureParams[fi]->scanAttr(argv[i], argv[i+1]);
                 if ( !set )
                 {
                     i++;
@@ -94,11 +97,11 @@ int main( int argc, char* argv[] )
             }
         }
     }
-  
+
     classifier.train( cascadeDirName,
                       vecName,
-                      bgName, 
-                      numPos, numNeg, 
+                      bgName,
+                      numPos, numNeg,
                       precalcValBufSize, precalcIdxBufSize,
                       numStages,
                       cascadeParams,

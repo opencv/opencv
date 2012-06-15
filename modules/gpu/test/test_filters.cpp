@@ -513,7 +513,6 @@ PARAM_TEST_CASE(Filter2D, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Anchor,
     bool useRoi;
 
     cv::Mat img;
-    cv::Mat kernel;
 
     virtual void SetUp()
     {

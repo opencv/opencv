@@ -63,7 +63,7 @@ class CV_EXPORTS StabilizerBase
 public:
     virtual ~StabilizerBase() {}
 
-    void setLog(Ptr<ILog> log) { log_ = log; }
+    void setLog(Ptr<ILog> _log) { log_ = _log; }
     Ptr<ILog> log() const { return log_; }
 
     void setRadius(int val) { radius_ = val; }

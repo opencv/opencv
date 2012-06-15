@@ -10,7 +10,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout << "\nThis program demonstrates the multi cascade recognizer. It is a generalization of facedetect sample.\n\n"
             "Usage: ./multicascadeclassifier \n"

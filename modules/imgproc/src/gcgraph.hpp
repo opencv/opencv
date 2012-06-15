@@ -64,7 +64,7 @@ private:
         int ts;
         int dist;
         TWeight weight;
-        uchar t; 
+        uchar t;
     };
     class Edge
     {
@@ -174,7 +174,7 @@ TWeight GCGraph<TWeight>::maxFlow()
             v->t = v->weight < 0;
         }
         else
-            v->parent = 0;        
+            v->parent = 0;
     }
     first = first->next;
     last->next = nilNode;
@@ -290,14 +290,14 @@ TWeight GCGraph<TWeight>::maxFlow()
         curr_ts++;
         while( !orphans.empty() )
         {
-            Vtx* v = orphans.back();
+            Vtx* v2 = orphans.back();
             orphans.pop_back();
 
             int d, minDist = INT_MAX;
             e0 = 0;
-            vt = v->t;
+            vt = v2->t;
 
-            for( ei = v->first; ei != 0; ei = edgePtr[ei].next )
+            for( ei = v2->first; ei != 0; ei = edgePtr[ei].next )
             {
                 if( edgePtr[ei^(vt^1)].weight == 0 )
                     continue;
@@ -344,16 +344,16 @@ TWeight GCGraph<TWeight>::maxFlow()
                 }
             }
 
-            if( (v->parent = e0) > 0 )
+            if( (v2->parent = e0) > 0 )
             {
-                v->ts = curr_ts;
-                v->dist = minDist;
+                v2->ts = curr_ts;
+                v2->dist = minDist;
                 continue;
             }
 
             /* no parent is found */
-            v->ts = 0;
-            for( ei = v->first; ei != 0; ei = edgePtr[ei].next )
+            v2->ts = 0;
+            for( ei = v2->first; ei != 0; ei = edgePtr[ei].next )
             {
                 u = vtxPtr+edgePtr[ei].dst;
                 ej = u->parent;
@@ -364,7 +364,7 @@ TWeight GCGraph<TWeight>::maxFlow()
                     u->next = nilNode;
                     last = last->next = u;
                 }
-                if( ej > 0 && vtxPtr+edgePtr[ej].dst == v )
+                if( ej > 0 && vtxPtr+edgePtr[ej].dst == v2 )
                 {
                     orphans.push_back(u);
                     u->parent = ORPHAN;

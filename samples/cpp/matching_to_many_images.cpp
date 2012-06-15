@@ -15,7 +15,7 @@ const string defaultQueryImageName = "../../opencv/samples/cpp/matching_to_many_
 const string defaultFileWithTrainImages = "../../opencv/samples/cpp/matching_to_many_images/train/trainImages.txt";
 const string defaultDirToSaveResImages = "../../opencv/samples/cpp/matching_to_many_images/results";
 
-void printPrompt( const string& applName )
+static void printPrompt( const string& applName )
 {
     cout << "/*\n"
          << " * This is a sample on matching descriptors detected on one image to descriptors detected in image set.\n"
@@ -36,7 +36,7 @@ void printPrompt( const string& applName )
          << defaultQueryImageName << " " << defaultFileWithTrainImages << " " << defaultDirToSaveResImages << endl;
 }
 
-void maskMatchesByTrainImgIdx( const vector<DMatch>& matches, int trainImgIdx, vector<char>& mask )
+static void maskMatchesByTrainImgIdx( const vector<DMatch>& matches, int trainImgIdx, vector<char>& mask )
 {
     mask.resize( matches.size() );
     fill( mask.begin(), mask.end(), 0 );
@@ -47,7 +47,7 @@ void maskMatchesByTrainImgIdx( const vector<DMatch>& matches, int trainImgIdx, v
     }
 }
 
-void readTrainFilenames( const string& filename, string& dirName, vector<string>& trainFilenames )
+static void readTrainFilenames( const string& filename, string& dirName, vector<string>& trainFilenames )
 {
     trainFilenames.clear();
 
@@ -73,7 +73,7 @@ void readTrainFilenames( const string& filename, string& dirName, vector<string>
     file.close();
 }
 
-bool createDetectorDescriptorMatcher( const string& detectorType, const string& descriptorType, const string& matcherType,
+static bool createDetectorDescriptorMatcher( const string& detectorType, const string& descriptorType, const string& matcherType,
                                       Ptr<FeatureDetector>& featureDetector,
                                       Ptr<DescriptorExtractor>& descriptorExtractor,
                                       Ptr<DescriptorMatcher>& descriptorMatcher )
@@ -91,7 +91,7 @@ bool createDetectorDescriptorMatcher( const string& detectorType, const string& 
     return isCreated;
 }
 
-bool readImages( const string& queryImageName, const string& trainFilename,
+static bool readImages( const string& queryImageName, const string& trainFilename,
                  Mat& queryImage, vector <Mat>& trainImages, vector<string>& trainImageNames )
 {
     cout << "< Reading the images..." << endl;
@@ -131,7 +131,7 @@ bool readImages( const string& queryImageName, const string& trainFilename,
     return true;
 }
 
-void detectKeypoints( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+static void detectKeypoints( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
                       const vector<Mat>& trainImages, vector<vector<KeyPoint> >& trainKeypoints,
                       Ptr<FeatureDetector>& featureDetector )
 {
@@ -141,14 +141,14 @@ void detectKeypoints( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
     cout << ">" << endl;
 }
 
-void computeDescriptors( const Mat& queryImage, vector<KeyPoint>& queryKeypoints, Mat& queryDescriptors,
+static void computeDescriptors( const Mat& queryImage, vector<KeyPoint>& queryKeypoints, Mat& queryDescriptors,
                          const vector<Mat>& trainImages, vector<vector<KeyPoint> >& trainKeypoints, vector<Mat>& trainDescriptors,
                          Ptr<DescriptorExtractor>& descriptorExtractor )
 {
     cout << "< Computing descriptors for keypoints..." << endl;
     descriptorExtractor->compute( queryImage, queryKeypoints, queryDescriptors );
     descriptorExtractor->compute( trainImages, trainKeypoints, trainDescriptors );
-    
+
     int totalTrainDesc = 0;
     for( vector<Mat>::const_iterator tdIter = trainDescriptors.begin(); tdIter != trainDescriptors.end(); tdIter++ )
         totalTrainDesc += tdIter->rows;
@@ -157,7 +157,7 @@ void computeDescriptors( const Mat& queryImage, vector<KeyPoint>& queryKeypoints
     cout << ">" << endl;
 }
 
-void matchDescriptors( const Mat& queryDescriptors, const vector<Mat>& trainDescriptors,
+static void matchDescriptors( const Mat& queryDescriptors, const vector<Mat>& trainDescriptors,
                        vector<DMatch>& matches, Ptr<DescriptorMatcher>& descriptorMatcher )
 {
     cout << "< Set train descriptors collection in the matcher and match query descriptors to them..." << endl;
@@ -175,13 +175,13 @@ void matchDescriptors( const Mat& queryDescriptors, const vector<Mat>& trainDesc
     double matchTime = tm.getTimeMilli();
 
     CV_Assert( queryDescriptors.rows == (int)matches.size() || matches.empty() );
-    
+
     cout << "Number of matches: " << matches.size() << endl;
     cout << "Build time: " << buildTime << " ms; Match time: " << matchTime << " ms" << endl;
     cout << ">" << endl;
 }
 
-void saveResultImages( const Mat& queryImage, const vector<KeyPoint>& queryKeypoints,
+static void saveResultImages( const Mat& queryImage, const vector<KeyPoint>& queryKeypoints,
                        const vector<Mat>& trainImages, const vector<vector<KeyPoint> >& trainKeypoints,
                        const vector<DMatch>& matches, const vector<string>& trainImagesNames, const string& resultDir )
 {

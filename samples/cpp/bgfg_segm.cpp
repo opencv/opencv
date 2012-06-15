@@ -7,7 +7,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
  printf("\nDo background segmentation, especially demonstrating the use of cvUpdateBGStatModel().\n"
 "Learns the background at the start and then segments.\n"

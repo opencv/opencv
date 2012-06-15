@@ -188,6 +188,8 @@ OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"              
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 
+OCV_OPTION(OPENCV_CAN_BREAK_BINARY_COMPATIBILITY "Allow changes breaking binary compatibility with OpenCV 2.4.0" OFF )
+
 # uncategorized options
 # ===================================================
 OCV_OPTION(CMAKE_VERBOSE "Verbose mode" OFF )
@@ -286,12 +288,12 @@ endif()
 # ----------------------------------------------------------------------------
 # OpenCV compiler and linker options
 # ----------------------------------------------------------------------------
-include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
-
 # In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
 if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Release)
 endif()
+
+include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 
 
 # ----------------------------------------------------------------------------
@@ -326,6 +328,15 @@ if(UNIX)
   else()
     add_definitions(-DHAVE_ALLOCA -DHAVE_ALLOCA_H -DHAVE_LIBPTHREAD -DHAVE_UNISTD_H)
   endif()
+endif()
+
+#
+# Check to see if we have large file support (needed by zlib)
+#
+include(CheckTypeSize)
+check_type_size(off64_t OFF64_T)
+if(HAVE_OFF64_T)
+  add_definitions(-D_LARGEFILE64_SOURCE=1)
 endif()
 
 include(cmake/OpenCVPCHSupport.cmake REQUIRED)
@@ -471,6 +482,7 @@ else()
   status("    Linker flags (Release):" ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_RELEASE})
   status("    Linker flags (Debug):"   ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
 endif()
+status("    Precompiled headers:"     PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS THEN YES ELSE NO)
 
 # ========================== OpenCV modules ==========================
 status("")
@@ -560,7 +572,7 @@ if(WITH_TIFF)
   if(TIFF_VERSION_STRING AND TIFF_FOUND)
     status("    TIFF:"     "${TIFF_LIBRARY} (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
   else()
-    status("    TIFF:"     TIFF_FOUND    THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION})"            ELSE "build (ver ${TIFF_VERSION})")
+    status("    TIFF:"     TIFF_FOUND    THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION})"            ELSE "build (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
   endif()
 else()
   status("    TIFF:"       "NO")

@@ -112,7 +112,7 @@ static const int tsSigId[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT, -1 };
 
 static jmp_buf tsJmpMark;
 
-void signalHandler( int sig_code )
+static void signalHandler( int sig_code )
 {
     int code = TS::FAIL_EXCEPTION;
     switch( sig_code )
@@ -197,7 +197,7 @@ void BaseTest::safe_run( int start_from )
     read_params( ts->get_file_storage() );
     ts->update_context( 0, -1, true );
     ts->update_context( this, -1, true );
-    
+
     if( !::testing::GTEST_FLAG(catch_exceptions) )
         run( start_from );
     else
@@ -218,7 +218,7 @@ void BaseTest::safe_run( int start_from )
         {
             const char* errorStr = cvErrorStr(exc.code);
             char buf[1 << 16];
-            
+
             sprintf( buf, "OpenCV Error: %s (%s) in %s, file %s, line %d",
                     errorStr, exc.err.c_str(), exc.func.size() > 0 ?
                     exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
@@ -230,7 +230,7 @@ void BaseTest::safe_run( int start_from )
             ts->set_failed_test_info( TS::FAIL_EXCEPTION );
         }
     }
-    
+
     ts->set_gtest_status();
 }
 
@@ -346,7 +346,7 @@ int BadArgTest::run_test_case( int expected_code, const string& _descr )
     int errcount = 0;
     bool thrown = false;
     const char* descr = _descr.c_str() ? _descr.c_str() : "";
-    
+
     try
     {
         run_func();
@@ -402,7 +402,7 @@ TestInfo::TestInfo()
     test_case_idx = -1;
 }
 
-    
+
 TS::TS()
 {
 } // ctor
@@ -450,7 +450,7 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 void TS::init( const string& modulename )
 {
     char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
-    
+
     if( datapath_dir )
     {
         char buf[1024];
@@ -459,7 +459,7 @@ void TS::init( const string& modulename )
         sprintf( buf, "%s%s%s/", datapath_dir, haveSlash ? "" : "/", modulename.c_str() );
         data_path = string(buf);
     }
-    
+
     cv::redirectError((cv::ErrorCallback)tsErrorCallback, this);
 
     if( ::testing::GTEST_FLAG(catch_exceptions) )
@@ -484,10 +484,10 @@ void TS::init( const string& modulename )
             signal( tsSigId[i], SIG_DFL );
 #endif
     }
-    
+
     if( params.use_optimized == 0 )
         cv::setUseOptimized(false);
-    
+
     rng = RNG(params.rng_seed);
 }
 
@@ -497,11 +497,11 @@ void TS::set_gtest_status()
     int code = get_err_code();
     if( code >= 0 )
         return SUCCEED();
-    
+
     char seedstr[32];
     sprintf(seedstr, "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
                                 (unsigned)(current_test_info.rng_seed));
-    
+
     string logs = "";
     if( !output_buf[SUMMARY_IDX].empty() )
         logs += "\n-----------------------------------\n\tSUM: " + output_buf[SUMMARY_IDX];
@@ -510,7 +510,7 @@ void TS::set_gtest_status()
     if( !output_buf[CONSOLE_IDX].empty() )
         logs += "\n-----------------------------------\n\tCONSOLE: " + output_buf[CONSOLE_IDX];
     logs += "\n-----------------------------------\n";
-    
+
     FAIL() << "\n\tfailure reason: " << str_from_code(code) <<
         "\n\ttest case #" << current_test_info.test_case_idx <<
         "\n\tseed: " << seedstr << logs;
@@ -518,7 +518,7 @@ void TS::set_gtest_status()
 
 
 CvFileStorage* TS::get_file_storage() { return 0; }
-    
+
 void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_context )
 {
     if( current_test_info.test != test )
@@ -528,7 +528,7 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
         rng = RNG(params.rng_seed);
         current_test_info.rng_seed0 = current_test_info.rng_seed = rng.state;
     }
-        
+
     current_test_info.test = test;
     current_test_info.test_case_idx = test_case_idx;
     current_test_info.code = 0;
@@ -537,7 +537,7 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
         current_test_info.rng_seed = rng.state;
 }
 
-    
+
 void TS::set_failed_test_info( int fail_code )
 {
     if( current_test_info.code >= 0 )
@@ -577,7 +577,7 @@ void TS::printf( int streams, const char* fmt, ... )
         va_end( l );
     }
 }
-    
+
 
 TS ts;
 TS* TS::ptr() { return &ts; }

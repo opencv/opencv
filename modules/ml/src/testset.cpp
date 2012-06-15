@@ -46,7 +46,7 @@ typedef struct CvDI
     int    i;
 } CvDI;
 
-int CV_CDECL
+static int CV_CDECL
 icvCmpDI( const void* a, const void* b, void* )
 {
     const CvDI* e1 = (const CvDI*) a;
@@ -65,7 +65,7 @@ cvCreateTestSet( int type, CvMat** samples,
     CvMat* mean = NULL;
     CvMat* cov = NULL;
     CvMemStorage* storage = NULL;
-    
+
     CV_FUNCNAME( "cvCreateTestSet" );
 
     __BEGIN__;
@@ -125,7 +125,7 @@ cvCreateTestSet( int type, CvMat** samples,
             CV_WRITE_SEQ_ELEM( elem, writer );
         }
         CV_CALL( seq = cvEndWriteSeq( &writer ) );
-    
+
         /* sort the sequence in a distance ascending order */
         CV_CALL( cvSeqSort( seq, icvCmpDI, NULL ) );
 
@@ -137,7 +137,7 @@ cvCreateTestSet( int type, CvMat** samples,
         {
             int last_idx;
             double max_dst;
-        
+
             last_idx = num_samples * (cur_class + 1) / num_classes - 1;
             CV_CALL( max_dst = (*((CvDI*) cvGetSeqElem( seq, last_idx ))).d );
             max_dst = MAX( max_dst, elem.d );

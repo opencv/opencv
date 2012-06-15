@@ -88,10 +88,6 @@ using namespace cv;
 #include <stdarg.h>
 #include <ctype.h>
 
-#if _MSC_VER >= 1200
-#pragma warning( disable: 4514 ) /* unreferenced inline functions */
-#endif
-
 #if 1
 typedef float Qfloat;
 #define QFLOAT_TYPE CV_32F
@@ -1065,10 +1061,10 @@ bool CvSVMSolver::solve_eps_svr( int _sample_count, int _var_count, const float*
                                  CvSVMKernel* _kernel, double* _alpha, CvSVMSolutionInfo& _si )
 {
     int i;
-    double p = _kernel->params->p, C = _kernel->params->C;
+    double p = _kernel->params->p, kernel_param_c = _kernel->params->C;
 
     if( !create( _sample_count, _var_count, _samples, 0,
-                 _sample_count*2, 0, C, C, _storage, _kernel, &CvSVMSolver::get_row_svr,
+                 _sample_count*2, 0, kernel_param_c, kernel_param_c, _storage, _kernel, &CvSVMSolver::get_row_svr,
                  &CvSVMSolver::select_working_set, &CvSVMSolver::calc_rho ))
         return false;
 
@@ -1101,7 +1097,7 @@ bool CvSVMSolver::solve_nu_svr( int _sample_count, int _var_count, const float**
                                 CvSVMKernel* _kernel, double* _alpha, CvSVMSolutionInfo& _si )
 {
     int i;
-    double C = _kernel->params->C, sum;
+    double kernel_param_c = _kernel->params->C, sum;
 
     if( !create( _sample_count, _var_count, _samples, 0,
                  _sample_count*2, 0, 1., 1., _storage, _kernel, &CvSVMSolver::get_row_svr,
@@ -1110,11 +1106,11 @@ bool CvSVMSolver::solve_nu_svr( int _sample_count, int _var_count, const float**
 
     y = (schar*)cvMemStorageAlloc( storage, sample_count*2*sizeof(y[0]) );
     alpha = (double*)cvMemStorageAlloc( storage, alpha_count*sizeof(alpha[0]) );
-    sum = C * _kernel->params->nu * sample_count * 0.5;
+    sum = kernel_param_c * _kernel->params->nu * sample_count * 0.5;
 
     for( i = 0; i < sample_count; i++ )
     {
-        alpha[i] = alpha[i + sample_count] = MIN(sum, C);
+        alpha[i] = alpha[i + sample_count] = MIN(sum, kernel_param_c);
         sum -= alpha[i];
 
         b[i] = -_y[i];
@@ -1593,7 +1589,7 @@ bool CvSVM::train( const CvMat* _train_data, const CvMat* _responses,
     return ok;
 }
 
-struct indexedratio 
+struct indexedratio
 {
     double val;
     int ind;
@@ -1628,12 +1624,11 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     int svm_type, sample_count, var_count, sample_size;
     int block_size = 1 << 16;
     double* alpha;
-    int i, k;
     RNG* rng = &theRNG();
 
     // all steps are logarithmic and must be > 1
     double degree_step = 10, g_step = 10, coef_step = 10, C_step = 10, nu_step = 10, p_step = 10;
-    double gamma = 0, C = 0, degree = 0, coef = 0, p = 0, nu = 0;
+    double gamma = 0, curr_c = 0, degree = 0, coef = 0, p = 0, nu = 0;
     double best_degree = 0, best_gamma = 0, best_coef = 0, best_C = 0, best_nu = 0, best_p = 0;
     float min_error = FLT_MAX, error;
 
@@ -1760,7 +1755,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     cvZero( responses_local );
 
     // randomly permute samples and responses
-    for( i = 0; i < sample_count; i++ )
+    for(int i = 0; i < sample_count; i++ )
     {
         int i1 = (*rng)(sample_count);
         int i2 = (*rng)(sample_count);
@@ -1774,25 +1769,25 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         else
             CV_SWAP( responses->data.i[i1], responses->data.i[i2], y );
     }
-        
+
     if (!is_regression && class_labels->cols==2 && balanced)
     {
         // count class samples
         int num_0=0,num_1=0;
-        for (i=0; i<sample_count; ++i)
+        for (int i=0; i<sample_count; ++i)
         {
             if (responses->data.i[i]==class_labels->data.i[0])
                 ++num_0;
             else
                 ++num_1;
         }
-        
+
         int label_smallest_class;
         int label_biggest_class;
         if (num_0 < num_1)
         {
             label_biggest_class = class_labels->data.i[1];
-            label_smallest_class = class_labels->data.i[0]; 
+            label_smallest_class = class_labels->data.i[0];
         }
         else
         {
@@ -1875,10 +1870,10 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
     }
 
     int* cls_lbls = class_labels ? class_labels->data.i : 0;
-    C = C_grid.min_val;
+    curr_c = C_grid.min_val;
     do
     {
-      params.C = C;
+      params.C = curr_c;
       gamma = gamma_grid.min_val;
       do
       {
@@ -1906,7 +1901,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
                 int train_size = trainset_size;
 
                 error = 0;
-                for( k = 0; k < k_fold; k++ )
+                for(int k = 0; k < k_fold; k++ )
                 {
                     memcpy( samples_local, samples, sizeof(samples[0])*test_size*k );
                     memcpy( samples_local + test_size*k, test_samples_ptr + test_size,
@@ -1930,7 +1925,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
                         EXIT;
 
                     // Compute test set error on <test_size> samples
-                    for( i = 0; i < test_size; i++, true_resp += resp_elem_size, test_samples_ptr++ )
+                    for(int i = 0; i < test_size; i++, true_resp += resp_elem_size, test_samples_ptr++ )
                     {
                         float resp = predict( *test_samples_ptr, var_count );
                         error += is_regression ? powf( resp - *(float*)true_resp, 2 )
@@ -1943,7 +1938,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
                     best_degree = degree;
                     best_gamma  = gamma;
                     best_coef   = coef;
-                    best_C      = C;
+                    best_C      = curr_c;
                     best_nu     = nu;
                     best_p      = p;
                 }
@@ -1962,9 +1957,9 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         gamma *= gamma_grid.step;
       }
       while( gamma < gamma_grid.max_val );
-      C *= C_grid.step;
+      curr_c *= C_grid.step;
     }
-    while( C < C_grid.max_val );
+    while( curr_c < C_grid.max_val );
     }
 
     min_error /= (float) sample_count;
@@ -2001,7 +1996,7 @@ float CvSVM::predict( const float* row_sample, int row_len, bool returnDFVal ) c
 
     int var_count = get_var_count();
     assert( row_len == var_count );
-	(void)row_len;
+    (void)row_len;
 
     int class_count = class_labels ? class_labels->cols :
                   params.svm_type == ONE_CLASS ? 1 : 0;
@@ -2072,7 +2067,7 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
     __BEGIN__;
 
     int class_count;
-    
+
     if( !kernel )
         CV_ERROR( CV_StsBadArg, "The SVM should be trained first" );
 
@@ -2082,7 +2077,7 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
     CV_CALL( cvPreparePredictData( sample, var_all, var_idx,
                                    class_count, 0, &row_sample ));
     result = predict( row_sample, get_var_count(), returnDFVal );
-  
+
     __END__;
 
     if( sample && (!CV_IS_MAT(sample) || sample->data.fl != row_sample) )
@@ -2099,12 +2094,12 @@ struct predict_body_svm {
         samples = _samples;
         results = _results;
     }
-    
+
     const CvSVM* pointer;
     float* result;
     const CvMat* samples;
     CvMat* results;
-  
+
     void operator()( const cv::BlockedRange& range ) const
     {
         for(int i = range.begin(); i < range.end(); i++ )
@@ -2116,15 +2111,15 @@ struct predict_body_svm {
                 results->data.fl[i] = (float)r;
             if (i == 0)
                 *result = (float)r;
-	}
+    }
     }
 };
 
 float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
 {
     float result = 0;
-    cv::parallel_for(cv::BlockedRange(0, samples->rows), 
-		     predict_body_svm(this, &result, samples, results)
+    cv::parallel_for(cv::BlockedRange(0, samples->rows),
+             predict_body_svm(this, &result, samples, results)
     );
     return result;
 }
@@ -2141,7 +2136,7 @@ CvSVM::CvSVM( const Mat& _train_data, const Mat& _responses,
     kernel = 0;
     solver = 0;
     default_model_name = "my_svm";
-    
+
     train( _train_data, _responses, _var_idx, _sample_idx, _params );
 }
 
@@ -2166,7 +2161,7 @@ bool CvSVM::train_auto( const Mat& _train_data, const Mat& _responses,
 
 float CvSVM::predict( const Mat& _sample, bool returnDFVal ) const
 {
-    CvMat sample = _sample; 
+    CvMat sample = _sample;
     return predict(&sample, returnDFVal);
 }
 
@@ -2648,11 +2643,11 @@ cvTrainSVM_CrossValidation( const CvMat* train_data, int tflag,
     __BEGIN__;
 
     double degree_step = 7,
-	       g_step      = 15,
-		   coef_step   = 14,
-		   C_step      = 20,
-		   nu_step     = 5,
-		   p_step      = 7; // all steps must be > 1
+           g_step      = 15,
+           coef_step   = 14,
+           C_step      = 20,
+           nu_step     = 5,
+           p_step      = 7; // all steps must be > 1
     double degree_begin = 0.01, degree_end = 2;
     double g_begin      = 1e-5, g_end      = 0.5;
     double coef_begin   = 0.1,  coef_end   = 300;
@@ -2662,12 +2657,12 @@ cvTrainSVM_CrossValidation( const CvMat* train_data, int tflag,
 
     double rate = 0, gamma = 0, C = 0, degree = 0, coef = 0, p = 0, nu = 0;
 
-	double best_rate    = 0;
+    double best_rate    = 0;
     double best_degree  = degree_begin;
     double best_gamma   = g_begin;
     double best_coef    = coef_begin;
-	double best_C       = C_begin;
-	double best_nu      = nu_begin;
+    double best_C       = C_begin;
+    double best_nu      = nu_begin;
     double best_p       = p_begin;
 
     CvSVMModelParams svm_params, *psvm_params;

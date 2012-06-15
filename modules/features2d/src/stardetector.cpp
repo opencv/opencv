@@ -48,13 +48,13 @@ static void
 computeIntegralImages( const Mat& matI, Mat& matS, Mat& matT, Mat& _FT )
 {
     CV_Assert( matI.type() == CV_8U );
-    
+
     int x, y, rows = matI.rows, cols = matI.cols;
-    
+
     matS.create(rows + 1, cols + 1, CV_32S);
     matT.create(rows + 1, cols + 1, CV_32S);
     _FT.create(rows + 1, cols + 1, CV_32S);
-    
+
     const uchar* I = matI.ptr<uchar>();
     int *S = matS.ptr<int>(), *T = matT.ptr<int>(), *FT = _FT.ptr<int>();
     int istep = (int)matI.step, step = (int)(matS.step/sizeof(S[0]));
@@ -121,29 +121,28 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
     StarFeature f[MAX_PATTERN];
 
     Mat sum, tilted, flatTilted;
-    int y, i=0, rows = img.rows, cols = img.cols;
+    int y, rows = img.rows, cols = img.cols;
     int border, npatterns=0, maxIdx=0;
 
     CV_Assert( img.type() == CV_8UC1 );
-    
+
     responses.create( img.size(), CV_32F );
     sizes.create( img.size(), CV_16S );
 
-    while( pairs[i][0] >= 0 && !
-          ( sizes0[pairs[i][0]] >= maxSize 
-           || sizes0[pairs[i+1][0]] + sizes0[pairs[i+1][0]]/2 >= std::min(rows, cols) ) )
+    while( pairs[npatterns][0] >= 0 && !
+          ( sizes0[pairs[npatterns][0]] >= maxSize
+           || sizes0[pairs[npatterns+1][0]] + sizes0[pairs[npatterns+1][0]]/2 >= std::min(rows, cols) ) )
     {
-        ++i;
+        ++npatterns;
     }
-    
-    npatterns = i;
+
     npatterns += (pairs[npatterns-1][0] >= 0);
     maxIdx = pairs[npatterns-1][0];
-    
+
     computeIntegralImages( img, sum, tilted, flatTilted );
     int step = (int)(sum.step/sum.elemSize());
 
-    for( i = 0; i <= maxIdx; i++ )
+    for(int i = 0; i <= maxIdx; i++ )
     {
         int ur_size = sizes0[i], t_size = sizes0[i] + sizes0[i]/2;
         int ur_area = (2*ur_size + 1)*(2*ur_size + 1);
@@ -169,24 +168,24 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
     sizes1[maxIdx] = -sizes1[maxIdx];
     border = sizes0[maxIdx] + sizes0[maxIdx]/2;
 
-    for( i = 0; i < npatterns; i++ )
+    for(int i = 0; i < npatterns; i++ )
     {
         int innerArea = f[pairs[i][1]].area;
         int outerArea = f[pairs[i][0]].area - innerArea;
         invSizes[i][0] = 1.f/outerArea;
         invSizes[i][1] = 1.f/innerArea;
     }
-    
+
 #if CV_SSE2
     if( useSIMD )
     {
-        for( i = 0; i < npatterns; i++ )
+        for(int i = 0; i < npatterns; i++ )
         {
             _mm_store_ps((float*)&invSizes4[i][0], _mm_set1_ps(invSizes[i][0]));
             _mm_store_ps((float*)&invSizes4[i][1], _mm_set1_ps(invSizes[i][1]));
         }
 
-        for( i = 0; i <= maxIdx; i++ )
+        for(int i = 0; i <= maxIdx; i++ )
             _mm_store_ps((float*)&sizes1_4[i], _mm_set1_ps((float)sizes1[i]));
     }
 #endif
@@ -197,7 +196,7 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
         float* r_ptr2 = responses.ptr<float>(rows - 1 - y);
         short* s_ptr = sizes.ptr<short>(y);
         short* s_ptr2 = sizes.ptr<short>(rows - 1 - y);
-        
+
         memset( r_ptr, 0, cols*sizeof(r_ptr[0]));
         memset( r_ptr2, 0, cols*sizeof(r_ptr2[0]));
         memset( s_ptr, 0, cols*sizeof(s_ptr[0]));
@@ -206,10 +205,10 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
 
     for( y = border; y < rows - border; y++ )
     {
-        int x = border, i;
+        int x = border;
         float* r_ptr = responses.ptr<float>(y);
         short* s_ptr = sizes.ptr<short>(y);
-        
+
         memset( r_ptr, 0, border*sizeof(r_ptr[0]));
         memset( s_ptr, 0, border*sizeof(s_ptr[0]));
         memset( r_ptr + cols - border, 0, border*sizeof(r_ptr[0]));
@@ -226,7 +225,7 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
                 __m128 bestResponse = _mm_setzero_ps();
                 __m128 bestSize = _mm_setzero_ps();
 
-                for( i = 0; i <= maxIdx; i++ )
+                for(int i = 0; i <= maxIdx; i++ )
                 {
                     const int** p = (const int**)&f[i].p[0];
                     __m128i r0 = _mm_sub_epi32(_mm_loadu_si128((const __m128i*)(p[0]+ofs)),
@@ -241,7 +240,7 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
                     _mm_store_ps((float*)&vals[i], _mm_cvtepi32_ps(r0));
                 }
 
-                for( i = 0; i < npatterns; i++ )
+                for(int i = 0; i < npatterns; i++ )
                 {
                     __m128 inner_sum = vals[pairs[i][1]];
                     __m128 outer_sum = _mm_sub_ps(vals[pairs[i][0]], inner_sum);
@@ -260,7 +259,7 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
                     _mm_packs_epi32(_mm_cvtps_epi32(bestSize),_mm_setzero_si128()));
             }
         }
-#endif        
+#endif
         for( ; x < cols - border; x++ )
         {
             int ofs = y*step + x;
@@ -268,13 +267,13 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes, int ma
             float bestResponse = 0;
             int bestSize = 0;
 
-            for( i = 0; i <= maxIdx; i++ )
+            for(int i = 0; i <= maxIdx; i++ )
             {
                 const int** p = (const int**)&f[i].p[0];
                 vals[i] = p[0][ofs] - p[1][ofs] - p[2][ofs] + p[3][ofs] +
                     p[4][ofs] - p[5][ofs] - p[6][ofs] + p[7][ofs];
             }
-            for( i = 0; i < npatterns; i++ )
+            for(int i = 0; i < npatterns; i++ )
             {
                 int inner_sum = vals[pairs[i][1]];
                 int outer_sum = vals[pairs[i][0]] - inner_sum;
@@ -306,7 +305,7 @@ static bool StarDetectorSuppressLines( const Mat& responses, const Mat& sizes, P
     int x, y, delta = sz/4, radius = delta*4;
     float Lxx = 0, Lyy = 0, Lxy = 0;
     int Lxxb = 0, Lyyb = 0, Lxyb = 0;
-    
+
     for( y = pt.y - radius; y <= pt.y + radius; y += delta )
         for( x = pt.x - radius; x <= pt.x + radius; x += delta )
         {
@@ -314,7 +313,7 @@ static bool StarDetectorSuppressLines( const Mat& responses, const Mat& sizes, P
             float Ly = r_ptr[(y+1)*rstep + x] - r_ptr[(y-1)*rstep + x];
             Lxx += Lx*Lx; Lyy += Ly*Ly; Lxy += Lx*Ly;
         }
-    
+
     if( (Lxx + Lyy)*(Lxx + Lyy) >= lineThresholdProjected*(Lxx*Lyy - Lxy*Lxy) )
         return true;
 
@@ -415,7 +414,7 @@ StarDetectorSuppressNonmax( const Mat& responses, const Mat& sizes,
             ;
         }
 }
-    
+
 StarDetector::StarDetector(int _maxSize, int _responseThreshold,
                            int _lineThresholdProjected,
                            int _lineThresholdBinarized,
@@ -431,10 +430,10 @@ void StarDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, co
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
-    
+
     (*this)(grayImage, keypoints);
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
-}    
+}
 
 void StarDetector::operator()(const Mat& img, vector<KeyPoint>& keypoints) const
 {
@@ -446,5 +445,5 @@ void StarDetector::operator()(const Mat& img, vector<KeyPoint>& keypoints) const
                                     responseThreshold, lineThresholdProjected,
                                     lineThresholdBinarized, suppressNonmaxSize );
 }
-    
+
 }

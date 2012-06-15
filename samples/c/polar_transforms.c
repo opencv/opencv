@@ -6,7 +6,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
-void help()
+static void help( void )
 {
 	printf("\nThis program illustrates Linear-Polar and Log-Polar image transforms\n"
             "Usage :\n"

@@ -12,8 +12,8 @@ class CV_GBTreesTest : public cvtest::BaseTest
 {
 public:
     CV_GBTreesTest();
-    ~CV_GBTreesTest(); 
-    
+    ~CV_GBTreesTest();
+
 protected:
     void run(int);
 
@@ -21,21 +21,21 @@ protected:
     int TestSaveLoad();
 
     int checkPredictError(int test_num);
-    int checkLoadSave();  
-    
+    int checkLoadSave();
+
     string model_file_name1;
     string model_file_name2;
 
     string* datasets;
     string data_path;
-    
+
     CvMLData* data;
     CvGBTrees* gtb;
-    
+
     vector<float> test_resps1;
     vector<float> test_resps2;
 
-	int64 initSeed;
+    int64 initSeed;
 };
 
 
@@ -47,7 +47,7 @@ int _get_len(const CvMat* mat)
 
 CV_GBTreesTest::CV_GBTreesTest()
 {
-	int64 seeds[] = { CV_BIG_INT(0x00009fff4f9c8d52),
+    int64 seeds[] = { CV_BIG_INT(0x00009fff4f9c8d52),
                       CV_BIG_INT(0x0000a17166072c7c),
                       CV_BIG_INT(0x0201b32115cd1f9a),
                       CV_BIG_INT(0x0513cb37abcd1234),
@@ -55,7 +55,7 @@ CV_GBTreesTest::CV_GBTreesTest()
                     };
 
     int seedCount = sizeof(seeds)/sizeof(seeds[0]);
-	cv::RNG& rng = cv::theRNG();
+    cv::RNG& rng = cv::theRNG();
     initSeed = rng.state;
     rng.state = seeds[rng(seedCount)];
 
@@ -69,14 +69,14 @@ CV_GBTreesTest::~CV_GBTreesTest()
     if (data)
         delete data;
     delete[] datasets;
-	cv::theRNG().state = initSeed;
+    cv::theRNG().state = initSeed;
 }
 
 
 int CV_GBTreesTest::TestTrainPredict(int test_num)
 {
     int code = cvtest::TS::OK;
-    
+
     int weak_count = 200;
     float shrinkage = 0.1f;
     float subsample_portion = 0.5f;
@@ -89,7 +89,7 @@ int CV_GBTreesTest::TestTrainPredict(int test_num)
         case (2) : loss_function_type = CvGBTrees::ABSOLUTE_LOSS; break;
         case (3) : loss_function_type = CvGBTrees::HUBER_LOSS; break;
         case (0) : loss_function_type = CvGBTrees::DEVIANCE_LOSS; break;
-        default  : 
+        default  :
             {
             ts->printf( cvtest::TS::LOG, "Bad test_num value in CV_GBTreesTest::TestTrainPredict(..) function." );
             return cvtest::TS::FAIL_BAD_ARG_CHECK;
@@ -101,7 +101,7 @@ int CV_GBTreesTest::TestTrainPredict(int test_num)
     {
         data = new CvMLData();
         data->set_delimiter(',');
-        
+
         if (data->read_csv(datasets[dataset_num].c_str()))
         {
             ts->printf( cvtest::TS::LOG, "File reading error." );
@@ -124,25 +124,25 @@ int CV_GBTreesTest::TestTrainPredict(int test_num)
         CvTrainTestSplit spl( train_sample_count );
         data->set_train_test_split( &spl );
     }
-    
-    data->mix_train_and_test_idx();    
-    
-    
+
+    data->mix_train_and_test_idx();
+
+
     if (gtb) delete gtb;
     gtb = new CvGBTrees();
     bool tmp_code = true;
     tmp_code = gtb->train(data, CvGBTreesParams(loss_function_type, weak_count,
                           shrinkage, subsample_portion,
                           max_depth, use_surrogates));
-    
+
     if (!tmp_code)
     {
         ts->printf( cvtest::TS::LOG, "Model training was failed.");
         return cvtest::TS::FAIL_INVALID_OUTPUT;
     }
-    
+
     code = checkPredictError(test_num);
-    
+
     return code;
 
 }
@@ -152,14 +152,14 @@ int CV_GBTreesTest::checkPredictError(int test_num)
 {
     if (!gtb)
         return cvtest::TS::FAIL_GENERIC;
-        
+
     //float mean[] = {5.430247f, 13.5654f, 12.6569f, 13.1661f};
     //float sigma[] = {0.4162694f, 3.21161f, 3.43297f, 3.00624f};
-	float mean[] = {5.80226f, 12.68689f, 13.49095f, 13.19628f};
+    float mean[] = {5.80226f, 12.68689f, 13.49095f, 13.19628f};
     float sigma[] = {0.4764534f, 3.166919f, 3.022405f, 2.868722f};
-    
+
     float current_error = gtb->calc_error(data, CV_TEST_ERROR);
-    
+
     if ( abs( current_error - mean[test_num]) > 6*sigma[test_num] )
     {
         ts->printf( cvtest::TS::LOG, "Test error is out of range:\n"
@@ -177,7 +177,7 @@ int CV_GBTreesTest::TestSaveLoad()
 {
     if (!gtb)
         return cvtest::TS::FAIL_GENERIC;
-        
+
     model_file_name1 = cv::tempfile();
     model_file_name2 = cv::tempfile();
 
@@ -186,9 +186,9 @@ int CV_GBTreesTest::TestSaveLoad()
     gtb->load(model_file_name1.c_str());
     gtb->calc_error(data, CV_TEST_ERROR, &test_resps2);
     gtb->save(model_file_name2.c_str());
-    
+
     return checkLoadSave();
-    
+
 }
 
 
@@ -200,7 +200,7 @@ int CV_GBTreesTest::checkLoadSave()
     // 1. compare files
     ifstream f1( model_file_name1.c_str() ), f2( model_file_name2.c_str() );
     string s1, s2;
-    int lineIdx = 0; 
+    int lineIdx = 0;
     CV_Assert( f1.is_open() && f2.is_open() );
     for( ; !f1.eof() && !f2.eof(); lineIdx++ )
     {
@@ -244,23 +244,23 @@ int CV_GBTreesTest::checkLoadSave()
 void CV_GBTreesTest::run(int)
 {
 
-    string data_path = string(ts->get_data_path());
+    string dataPath = string(ts->get_data_path());
     datasets = new string[2];
-    datasets[0] = data_path + string("spambase.data"); /*string("dataset_classification.csv");*/
-    datasets[1] = data_path + string("housing_.data");  /*string("dataset_regression.csv");*/
+    datasets[0] = dataPath + string("spambase.data"); /*string("dataset_classification.csv");*/
+    datasets[1] = dataPath + string("housing_.data");  /*string("dataset_regression.csv");*/
 
     int code = cvtest::TS::OK;
 
     for (int i = 0; i < 4; i++)
     {
-    
+
         int temp_code = TestTrainPredict(i);
         if (temp_code != cvtest::TS::OK)
         {
             code = temp_code;
             break;
         }
-            
+
         else if (i==0)
         {
             temp_code = TestSaveLoad();
@@ -269,13 +269,13 @@ void CV_GBTreesTest::run(int)
             delete data;
             data = 0;
         }
-        
+
         delete gtb;
         gtb = 0;
     }
     delete data;
     data = 0;
-    
+
     ts->set_failed_test_info( code );
 }
 

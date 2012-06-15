@@ -40,9 +40,10 @@
 //
 //M*/
 
-#include "internal_shared.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/color.hpp"
+#include <internal_shared.hpp>
+#include <opencv2/gpu/device/transform.hpp>
+#include <opencv2/gpu/device/color.hpp>
+#include <cvt_colot_internal.h>
 
 namespace cv { namespace gpu { namespace device 
 {

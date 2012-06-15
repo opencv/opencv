@@ -6,7 +6,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     cout << "\nThis program demonstrates line finding with the Hough transform.\n"
             "Usage:\n"

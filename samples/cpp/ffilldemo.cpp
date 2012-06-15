@@ -6,22 +6,22 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     cout << "\nThis program demonstrated the floodFill() function\n"
-    		"Call:\n"
-    		"./ffilldemo [image_name -- Default: fruits.jpg]\n" << endl;
+            "Call:\n"
+            "./ffilldemo [image_name -- Default: fruits.jpg]\n" << endl;
 
-	cout << "Hot keys: \n"
-			"\tESC - quit the program\n"
-			"\tc - switch color/grayscale mode\n"
-			"\tm - switch mask mode\n"
-			"\tr - restore the original image\n"
-			"\ts - use null-range floodfill\n"
-			"\tf - use gradient floodfill with fixed(absolute) range\n"
-			"\tg - use gradient floodfill with floating(relative) range\n"
-			"\t4 - use 4-connectivity mode\n"
-			"\t8 - use 8-connectivity mode\n" << endl;
+    cout << "Hot keys: \n"
+            "\tESC - quit the program\n"
+            "\tc - switch color/grayscale mode\n"
+            "\tm - switch mask mode\n"
+            "\tr - restore the original image\n"
+            "\ts - use null-range floodfill\n"
+            "\tf - use gradient floodfill with fixed(absolute) range\n"
+            "\tg - use gradient floodfill with floating(relative) range\n"
+            "\t4 - use 4-connectivity mode\n"
+            "\t8 - use 8-connectivity mode\n" << endl;
 }
 
 Mat image0, image, gray, mask;
@@ -32,7 +32,7 @@ int isColor = true;
 bool useMask = false;
 int newMaskVal = 255;
 
-void onMouse( int event, int x, int y, int, void* )
+static void onMouse( int event, int x, int y, int, void* )
 {
     if( event != CV_EVENT_LBUTTONDOWN )
         return;
@@ -50,7 +50,7 @@ void onMouse( int event, int x, int y, int, void* )
     Scalar newVal = isColor ? Scalar(b, g, r) : Scalar(r*0.299 + g*0.587 + b*0.114);
     Mat dst = isColor ? image : gray;
     int area;
-    
+
     if( useMask )
     {
         threshold(mask, mask, 1, 128, CV_THRESH_BINARY);
@@ -63,7 +63,7 @@ void onMouse( int event, int x, int y, int, void* )
         area = floodFill(dst, seed, newVal, &ccomp, Scalar(lo, lo, lo),
                   Scalar(up, up, up), flags);
     }
-    
+
     imshow("image", dst);
     cout << area << " pixels were repainted\n";
 }
@@ -73,7 +73,7 @@ int main( int argc, char** argv )
 {
     char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
     image0 = imread(filename, 1);
-    
+
     if( image0.empty() )
     {
         cout << "Image empty. Usage: ffilldemo <image_name>\n";

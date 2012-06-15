@@ -23,7 +23,7 @@
 */
 int convolution(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap *map, float *f)
 {
-    int n1, m1, n2, m2, p, size, diff1, diff2;
+    int n1, m1, n2, m2, p, /*size,*/ diff1, diff2;
     int i1, i2, j1, j2, k;
     float tmp_f1, tmp_f2, tmp_f3, tmp_f4;
     float *pMap = NULL;
@@ -37,7 +37,7 @@ int convolution(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap *map, float
 
     diff1 = n1 - n2 + 1;
     diff2 = m1 - m2 + 1;
-    size = diff1 * diff2;
+    //size = diff1 * diff2;
     for (j1 = diff2 - 1; j1 >= 0; j1--)
     {
 
@@ -333,7 +333,7 @@ int filterDispositionLevel(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap 
                            float **scoreFi,
                            int **pointsX, int **pointsY)
 {
-    int n1, m1, n2, m2, p, size, diff1, diff2;
+    int n1, m1, n2, m2, /*p,*/ size, diff1, diff2;
     float *f;
     int i1, j1;
     int res;
@@ -342,7 +342,7 @@ int filterDispositionLevel(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap 
     m1 = pyramid->sizeX;
     n2 = Fi->sizeY;
     m2 = Fi->sizeX;
-    p = pyramid->numFeatures;
+    //p = pyramid->numFeatures;
     (*scoreFi) = NULL;
     (*pointsX) = NULL;
     (*pointsY) = NULL;
@@ -418,7 +418,7 @@ int filterDispositionLevelFFT(const CvLSVMFilterObject *Fi, const CvLSVMFftImage
                               float **scoreFi,
                               int **pointsX, int **pointsY)
 {
-    int n1, m1, n2, m2, p, size, diff1, diff2;
+    int n1, m1, n2, m2, /*p,*/ size, diff1, diff2;
     float *f;
     int i1, j1;
     int res;
@@ -428,7 +428,7 @@ int filterDispositionLevelFFT(const CvLSVMFilterObject *Fi, const CvLSVMFftImage
     m1 = featMapImage->dimX;
     n2 = Fi->sizeY;
     m2 = Fi->sizeX;
-    p = featMapImage->numFeatures;
+    //p = featMapImage->numFeatures;
     (*scoreFi) = NULL;
     (*pointsX) = NULL;
     (*pointsY) = NULL;
@@ -547,7 +547,7 @@ int addNullableBorder(CvLSVMFeatureMap *map, int bx, int by)
     return LATENT_SVM_OK;
 }
 
-CvLSVMFeatureMap* featureMapBorderPartFilter(CvLSVMFeatureMap *map,
+static CvLSVMFeatureMap* featureMapBorderPartFilter(CvLSVMFeatureMap *map,
                                        int maxXBorder, int maxYBorder)
 {
     int bx, by;
@@ -611,7 +611,7 @@ int maxFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n,
                                  float *score, CvPoint **points,
                                  int *kPoints, CvPoint ***partsDisplacement)
 {
-    int i, j, k, dimX, dimY, nF0, mF0, p;
+    int i, j, k, dimX, dimY, nF0, mF0/*, p*/;
     int diff1, diff2, index, last, partsLevel;
     CvLSVMFilterDisposition **disposition;
     float *f;
@@ -639,7 +639,7 @@ int maxFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n,
     dimY = H->pyramid[level]->sizeY;
 
     // Number of features
-    p = H->pyramid[level]->numFeatures;
+    //p = H->pyramid[level]->numFeatures;
 
     // Getting dimension of root filter
     nF0 = all_F[0]->sizeY;
@@ -860,7 +860,7 @@ int thresholdFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n,
                                        float **score, CvPoint **points, int *kPoints,
                                        CvPoint ***partsDisplacement)
 {
-    int i, j, k, dimX, dimY, nF0, mF0, p;
+    int i, j, k, dimX, dimY, nF0, mF0/*, p*/;
     int diff1, diff2, index, last, partsLevel;
     CvLSVMFilterDisposition **disposition;
     float *f;
@@ -887,7 +887,7 @@ int thresholdFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n,
     dimY = H->pyramid[level]->sizeY;
 
     // Number of features
-    p = H->pyramid[level]->numFeatures;
+    //p = H->pyramid[level]->numFeatures;
 
     // Getting dimension of root filter
     nF0 = all_F[0]->sizeY;
@@ -1366,6 +1366,7 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     return LATENT_SVM_OK;
 }
 
+#ifdef HAVE_TBB
 /*
 // Creating schedule of pyramid levels processing
 //
@@ -1390,12 +1391,12 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
 // RESULT
 // Error status
 */
-int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F,
+static int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F,
                    const int n, const int bx, const int by,
                    const int threadsNum, int *kLevels, int **processingLevels)
 {
     int rootFilterDim, sumPartFiltersDim, i, numLevels, dbx, dby, numDotProducts;
-    int averNumDotProd, j, minValue, argMin, lambda, maxValue, k;
+    int j, minValue, argMin, lambda, maxValue, k;
     int *dotProd, *weights, *disp;
     if (H == NULL || all_F == NULL)
     {
@@ -1429,8 +1430,6 @@ int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all
                      (H->pyramid[i]->sizeY + dby) * sumPartFiltersDim;
         numDotProducts += dotProd[i];
     }
-    // Average number of dot products that would be performed at the best
-    averNumDotProd = numDotProducts / threadsNum;
     // Allocation memory for saving dot product number performed by each thread
     weights = (int *)malloc(sizeof(int) * threadsNum);
     // Allocation memory for saving dispertion
@@ -1521,7 +1520,6 @@ int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all
     return LATENT_SVM_OK;
 }
 
-#ifdef HAVE_TBB
 /*
 // int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
                                    const CvLSVMFeaturePyramid *H,
@@ -1679,7 +1677,7 @@ int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
 }
 #endif
 
-void sort(int n, const float* x, int* indices)
+static void sort(int n, const float* x, int* indices)
 {
     int i, j;
     for (i = 0; i < n; i++)

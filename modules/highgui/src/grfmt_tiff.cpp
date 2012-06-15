@@ -115,19 +115,19 @@ bool TiffDecoder::readHeader()
 
     if( tif )
     {
-        int width = 0, height = 0, photometric = 0;
+        int wdth = 0, hght = 0, photometric = 0;
         m_tif = tif;
 
-        if( TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &width ) &&
-            TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &height ) &&
+        if( TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &wdth ) &&
+            TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &hght ) &&
             TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric ))
         {
             int bpp=8, ncn = photometric > 1 ? 3 : 1;
             TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
             TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
-            
-            m_width = width;
-            m_height = height;
+
+            m_width = wdth;
+            m_height = hght;
             if( bpp > 8 &&
                ((photometric != 2 && photometric != 1) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
@@ -169,7 +169,7 @@ bool  TiffDecoder::readData( Mat& img )
     bool color = img.channels() > 1;
     uchar* data = img.data;
     int step = (int)img.step;
-    
+
     if( img.depth() != CV_8U && img.depth() != CV_16U && img.depth() != CV_32F && img.depth() != CV_64F )
         return false;
 
@@ -422,9 +422,9 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
         default:
         {
             return false;
-        }   
+        }
     }
-    
+
     const int bitsPerByte = 8;
     size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
     int rowsPerStrip = (int)((1 << 13)/fileStep);
@@ -443,7 +443,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
     {
         return false;
     }
-    
+
     // defaults for now, maybe base them on params in the future
     int   compression  = COMPRESSION_LZW;
     int   predictor    = PREDICTOR_HORIZONTAL;
@@ -516,7 +516,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
             return false;
         }
     }
-    
+
     TIFFClose(pTiffHandle);
     return true;
 }
@@ -546,7 +546,7 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& /*params*/)
         if( !strm.open(*m_buf) )
             return false;
     }
-    else 
+    else
     {
 #ifdef HAVE_TIFF
       return writeLibTiff(img, params);

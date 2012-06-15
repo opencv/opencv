@@ -1264,7 +1264,7 @@ struct NormOp : public BaseElemWiseOp
         dst.at<double>(0,0) = cvtest::norm(src[0], normType, mask);
         dst.at<double>(0,1) = cvtest::norm(src[0], src[1], normType, mask);
     }
-    void generateScalars(int, RNG& rng)
+    void generateScalars(int, RNG& /*rng*/)
     {
     }
     double getMaxErr(int)

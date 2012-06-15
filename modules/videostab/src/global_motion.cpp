@@ -239,19 +239,19 @@ Mat estimateGlobalMotionRobust(
 
         Mat_<float> M = impls[model](params.size, &subset0[0], &subset1[0], 0);
 
-        int ninliers = 0;
+        int _ninliers = 0;
         for (int i = 0; i < npoints; ++i)
         {
             p0 = points0[i]; p1 = points1[i];
             x = M(0,0)*p0.x + M(0,1)*p0.y + M(0,2);
             y = M(1,0)*p0.x + M(1,1)*p0.y + M(1,2);
             if (sqr(x - p1.x) + sqr(y - p1.y) < params.thresh * params.thresh)
-                ninliers++;
+                _ninliers++;
         }
-        if (ninliers >= ninliersMax)
+        if (_ninliers >= ninliersMax)
         {
             bestM = M;
-            ninliersMax = ninliers;
+            ninliersMax = _ninliers;
             subset0best.swap(subset0);
             subset1best.swap(subset1);
         }

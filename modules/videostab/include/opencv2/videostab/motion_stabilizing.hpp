@@ -55,6 +55,10 @@ class CV_EXPORTS IMotionStabilizer
 {
 public:
     virtual void stabilize(const Mat *motions, int size, Mat *stabilizationMotions) const = 0;
+
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
+    virtual ~IMotionStabilizer() {}
+#endif
 };
 
 class CV_EXPORTS MotionFilterBase : public IMotionStabilizer

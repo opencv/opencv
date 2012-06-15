@@ -54,7 +54,7 @@ template<typename T> static inline Scalar rawToScalar(const T& v)
     for( i = 0; i < n; i++ )
         s.val[i] = ((T1*)&v)[i];
     return s;
-}    
+}
 
 /****************************************************************************************\
 *                                        sum                                             *
@@ -72,7 +72,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
         {
             ST s0 = dst[0];
 
-			#if CV_ENABLE_UNROLLED
+            #if CV_ENABLE_UNROLLED
             for(; i <= len - 4; i += 4, src += cn*4 )
                 s0 += src[0] + src[cn] + src[cn*2] + src[cn*3];
             #endif
@@ -104,7 +104,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
             dst[1] = s1;
             dst[2] = s2;
         }
-        
+
         for( ; k < cn; k += 4 )
         {
             src = src0 + k;
@@ -121,7 +121,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
         }
         return len;
     }
-    
+
     int i, nzm = 0;
     if( cn == 1 )
     {
@@ -155,7 +155,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
             if( mask[i] )
             {
                 int k = 0;
-				#if CV_ENABLE_UNROLLED
+                #if CV_ENABLE_UNROLLED
                 for( ; k <= cn - 4; k += 4 )
                 {
                     ST s0, s1;
@@ -212,7 +212,7 @@ template<typename T>
 static int countNonZero_(const T* src, int len )
 {
     int i=0, nz = 0;
-	#if CV_ENABLE_UNROLLED
+    #if CV_ENABLE_UNROLLED
     for(; i <= len - 4; i += 4 )
         nz += (src[i] != 0) + (src[i+1] != 0) + (src[i+2] != 0) + (src[i+3] != 0);
     #endif
@@ -251,12 +251,12 @@ template<typename T, typename ST, typename SQT>
 static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int len, int cn )
 {
     const T* src = src0;
-    
+
     if( !mask )
     {
         int i;
         int k = cn % 4;
-        
+
         if( k == 1 )
         {
             ST s0 = sum[0];
@@ -296,7 +296,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             sum[0] = s0; sum[1] = s1; sum[2] = s2;
             sqsum[0] = sq0; sqsum[1] = sq1; sqsum[2] = sq2;
         }
-        
+
         for( ; k < cn; k += 4 )
         {
             src = src0 + k;
@@ -319,7 +319,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
         }
         return len;
     }
-    
+
     int i, nzm = 0;
 
     if( cn == 1 )
@@ -368,7 +368,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             }
     }
     return nzm;
-}    
+}
 
 
 static int sqsum8u( const uchar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
@@ -407,9 +407,9 @@ cv::Scalar cv::sum( InputArray _src )
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
     SumFunc func = sumTab[depth];
-    
+
     CV_Assert( cn <= 4 && func != 0 );
-    
+
     const Mat* arrays[] = {&src, 0};
     uchar* ptrs[1];
     NAryMatIterator it(arrays, ptrs);
@@ -420,7 +420,7 @@ cv::Scalar cv::sum( InputArray _src )
     int* buf = (int*)&s[0];
     size_t esz = 0;
     bool blockSum = depth < CV_32S;
-    
+
     if( blockSum )
     {
         intSumBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
@@ -459,30 +459,30 @@ int cv::countNonZero( InputArray _src )
 {
     Mat src = _src.getMat();
     CountNonZeroFunc func = countNonZeroTab[src.depth()];
-    
+
     CV_Assert( src.channels() == 1 && func != 0 );
-    
+
     const Mat* arrays[] = {&src, 0};
     uchar* ptrs[1];
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, nz = 0;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         nz += func( ptrs[0], total );
-    
+
     return nz;
-}    
+}
 
 cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
-    
+
     int k, cn = src.channels(), depth = src.depth();
     SumFunc func = sumTab[depth];
-    
+
     CV_Assert( cn <= 4 && func != 0 );
-    
+
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
@@ -493,19 +493,19 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     int* buf = (int*)&s[0];
     bool blockSum = depth <= CV_16S;
     size_t esz = 0, nz0 = 0;
-    
+
     if( blockSum )
     {
         intSumBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
         blockSize = std::min(blockSize, intSumBlockSize);
         _buf.allocate(cn);
         buf = _buf;
-        
+
         for( k = 0; k < cn; k++ )
             buf[k] = 0;
         esz = src.elemSize();
     }
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -529,19 +529,19 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
         }
     }
     return s*(nz0 ? 1./nz0 : 0);
-}    
+}
 
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
-    
+
     int k, cn = src.channels(), depth = src.depth();
     SumSqrFunc func = sumSqrTab[depth];
-    
+
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
@@ -552,10 +552,10 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     int *sbuf = (int*)s, *sqbuf = (int*)sq;
     bool blockSum = depth <= CV_16S, blockSqSum = depth <= CV_8S;
     size_t esz = 0;
-    
+
     for( k = 0; k < cn; k++ )
         s[k] = sq[k] = 0;
-    
+
     if( blockSum )
     {
         intSumBlockSize = 1 << 15;
@@ -567,7 +567,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             sbuf[k] = sqbuf[k] = 0;
         esz = src.elemSize();
     }
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -598,14 +598,14 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
                 ptrs[1] += bsz;
         }
     }
-    
+
     double scale = nz0 ? 1./nz0 : 0.;
     for( k = 0; k < cn; k++ )
     {
         s[k] *= scale;
         sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
     }
-    
+
     for( j = 0; j < 2; j++ )
     {
         const double* sptr = j == 0 ? s : sq;
@@ -640,7 +640,7 @@ minMaxIdx_( const T* src, const uchar* mask, WT* _minVal, WT* _maxVal,
 {
     WT minVal = *_minVal, maxVal = *_maxVal;
     size_t minIdx = *_minIdx, maxIdx = *_maxIdx;
-    
+
     if( !mask )
     {
         for( int i = 0; i < len; i++ )
@@ -708,7 +708,7 @@ static void minMaxIdx_32f(const float* src, const uchar* mask, float* minval, fl
 
 static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, double* maxval,
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
-{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }    
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
 
 typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, size_t*, int, size_t);
 
@@ -749,16 +749,16 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     int depth = src.depth(), cn = src.channels();
-    
+
     CV_Assert( (cn == 1 && (mask.empty() || mask.type() == CV_8U)) ||
                (cn >= 1 && mask.empty() && !minIdx && !maxIdx) );
     MinMaxIdxFunc func = minmaxTab[depth];
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
-    
+
     size_t minidx = 0, maxidx = 0;
     int iminval = INT_MAX, imaxval = INT_MIN;
     float fminval = FLT_MAX, fmaxval = -FLT_MAX;
@@ -766,39 +766,39 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     size_t startidx = 1;
     int *minval = &iminval, *maxval = &imaxval;
     int planeSize = (int)it.size*cn;
-    
+
     if( depth == CV_32F )
         minval = (int*)&fminval, maxval = (int*)&fmaxval;
     else if( depth == CV_64F )
         minval = (int*)&dminval, maxval = (int*)&dmaxval;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it, startidx += planeSize )
         func( ptrs[0], ptrs[1], minval, maxval, &minidx, &maxidx, planeSize, startidx );
-    
+
     if( minidx == 0 )
         dminval = dmaxval = 0;
     else if( depth == CV_32F )
         dminval = fminval, dmaxval = fmaxval;
     else if( depth <= CV_32S )
         dminval = iminval, dmaxval = imaxval;
-    
+
     if( minVal )
         *minVal = dminval;
     if( maxVal )
         *maxVal = dmaxval;
-    
+
     if( minIdx )
         ofs2idx(src, minidx, minIdx);
     if( maxIdx )
         ofs2idx(src, maxidx, maxIdx);
-}    
+}
 
 void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
                     Point* minLoc, Point* maxLoc, InputArray mask )
 {
     Mat img = _img.getMat();
     CV_Assert(img.dims <= 2);
-    
+
     minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
     if( minLoc )
         std::swap(minLoc->x, minLoc->y);
@@ -821,7 +821,7 @@ float normL2Sqr_(const float* a, const float* b, int n)
     {
         float CV_DECL_ALIGNED(16) buf[4];
         __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
-        
+
         for( ; j <= n - 8; j += 8 )
         {
             __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
@@ -834,14 +834,14 @@ float normL2Sqr_(const float* a, const float* b, int n)
     }
     else
 #endif
-	{
+    {
         for( ; j <= n - 4; j += 4 )
         {
             float t0 = a[j] - b[j], t1 = a[j+1] - b[j+1], t2 = a[j+2] - b[j+2], t3 = a[j+3] - b[j+3];
             d += t0*t0 + t1*t1 + t2*t2 + t3*t3;
         }
     }
- 
+
     for( ; j < n; j++ )
     {
         float t = a[j] - b[j];
@@ -861,7 +861,7 @@ float normL1_(const float* a, const float* b, int n)
         static const int CV_DECL_ALIGNED(16) absbuf[4] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
         __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
         __m128 absmask = _mm_load_ps((const float*)absbuf);
-        
+
         for( ; j <= n - 8; j += 8 )
         {
             __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
@@ -894,12 +894,12 @@ int normL1_(const uchar* a, const uchar* b, int n)
     if( USE_SSE2 )
     {
         __m128i d0 = _mm_setzero_si128();
-        
+
         for( ; j <= n - 16; j += 16 )
         {
             __m128i t0 = _mm_loadu_si128((const __m128i*)(a + j));
             __m128i t1 = _mm_loadu_si128((const __m128i*)(b + j));
-            
+
             d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
         }
 
@@ -907,7 +907,7 @@ int normL1_(const uchar* a, const uchar* b, int n)
         {
             __m128i t0 = _mm_cvtsi32_si128(*(const int*)(a + j));
             __m128i t1 = _mm_cvtsi32_si128(*(const int*)(b + j));
-            
+
             d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
         }
         d = _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
@@ -926,7 +926,7 @@ int normL1_(const uchar* a, const uchar* b, int n)
     return d;
 }
 
-static const uchar popCountTable[] = 
+static const uchar popCountTable[] =
 {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -962,7 +962,7 @@ static const uchar popCountTable4[] =
     1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
-int normHamming(const uchar* a, int n)
+static int normHamming(const uchar* a, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
@@ -989,7 +989,7 @@ int normHamming(const uchar* a, int n)
         result += popCountTable[a[i]];
     return result;
 }
-    
+
 int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0, result = 0;
@@ -1020,7 +1020,7 @@ int normHamming(const uchar* a, const uchar* b, int n)
     return result;
 }
 
-int normHamming(const uchar* a, int n, int cellSize)
+static int normHamming(const uchar* a, int n, int cellSize)
 {
     if( cellSize == 1 )
         return normHamming(a, n);
@@ -1039,8 +1039,8 @@ int normHamming(const uchar* a, int n, int cellSize)
     for( ; i < n; i++ )
         result += tab[a[i]];
     return result;
-}    
-    
+}
+
 int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 {
     if( cellSize == 1 )
@@ -1053,7 +1053,7 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
     else
         CV_Error( CV_StsBadSize, "bad cell size (not 1, 2 or 4) in normHamming" );
     int i = 0, result = 0;
-	#if CV_ENABLE_UNROLLED
+    #if CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
         result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
                 tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
@@ -1128,7 +1128,7 @@ normL2_(const T* src, const uchar* mask, ST* _result, int len, int cn)
     }
     *_result = result;
     return 0;
-}    
+}
 
 template<typename T, typename ST> int
 normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
@@ -1194,7 +1194,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     }
     *_result = result;
     return 0;
-}    
+}
 
 
 #define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
@@ -1219,7 +1219,7 @@ CV_DEF_NORM_ALL(64f, double, double, double, double)
 
 
 typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
-typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);    
+typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);
 
 static NormFunc normTab[3][8] =
 {
@@ -1265,11 +1265,11 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     int depth = src.depth(), cn = src.channels();
-    
+
     normType &= 7;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src.type() == CV_8U) );
-    
+
     if( src.isContinuous() && mask.empty() )
     {
         size_t len = src.total()*cn;
@@ -1278,7 +1278,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             if( depth == CV_32F )
             {
                 const float* data = src.ptr<float>();
-                
+
                 if( normType == NORM_L2 )
                 {
                     double result = 0;
@@ -1307,18 +1307,18 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             if( depth == CV_8U )
             {
                 const uchar* data = src.ptr<uchar>();
-                
+
                 if( normType == NORM_HAMMING )
                     return normHamming(data, (int)len);
-                
+
                 if( normType == NORM_HAMMING2 )
                     return normHamming(data, (int)len, 2);
             }
         }
     }
-    
+
     CV_Assert( mask.empty() || mask.type() == CV_8U );
-    
+
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         if( !mask.empty() )
@@ -1328,22 +1328,22 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             return norm(temp, normType);
         }
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
-        
+
         const Mat* arrays[] = {&src, 0};
         uchar* ptrs[1];
         NAryMatIterator it(arrays, ptrs);
         int total = (int)it.size;
         int result = 0;
-        
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             result += normHamming(ptrs[0], total, cellSize);
-        
+
         return result;
     }
-    
+
     NormFunc func = normTab[normType >> 1][depth];
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2];
     union
@@ -1361,7 +1361,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     int isum = 0;
     int *ibuf = &result.i;
     size_t esz = 0;
-    
+
     if( blockSum )
     {
         intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
@@ -1369,7 +1369,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         ibuf = &isum;
         esz = src.elemSize();
     }
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -1388,7 +1388,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                 ptrs[1] += bsz;
         }
     }
-    
+
     if( normType == NORM_INF )
     {
         if( depth == CV_64F )
@@ -1400,7 +1400,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     }
     else if( normType == NORM_L2 )
         result.d = std::sqrt(result.d);
-    
+
     return result.d;
 }
 
@@ -1409,16 +1409,16 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 {
     if( normType & CV_RELATIVE )
         return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
-    
+
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int depth = src1.depth(), cn = src1.channels();
-    
+
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
-    
+
     normType &= 7;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
-    
+
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
         size_t len = src1.total()*src1.channels();
@@ -1428,7 +1428,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             {
                 const float* data1 = src1.ptr<float>();
                 const float* data2 = src2.ptr<float>();
-                
+
                 if( normType == NORM_L2 )
                 {
                     double result = 0;
@@ -1456,9 +1456,9 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             }
         }
     }
-    
+
     CV_Assert( mask.empty() || mask.type() == CV_8U );
-    
+
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         if( !mask.empty() )
@@ -1469,22 +1469,22 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             return norm(temp, normType);
         }
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
-        
+
         const Mat* arrays[] = {&src1, &src2, 0};
         uchar* ptrs[2];
         NAryMatIterator it(arrays, ptrs);
         int total = (int)it.size;
         int result = 0;
-        
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             result += normHamming(ptrs[0], ptrs[1], total, cellSize);
-        
+
         return result;
     }
-    
+
     NormDiffFunc func = normDiffTab[normType >> 1][depth];
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
     uchar* ptrs[3];
     union
@@ -1503,7 +1503,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     unsigned isum = 0;
     unsigned *ibuf = &result.u;
     size_t esz = 0;
-    
+
     if( blockSum )
     {
         intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
@@ -1511,7 +1511,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         ibuf = &isum;
         esz = src1.elemSize();
     }
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -1531,7 +1531,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 ptrs[2] += bsz;
         }
     }
-    
+
     if( normType == NORM_INF )
     {
         if( depth == CV_64F )
@@ -1543,7 +1543,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     }
     else if( normType == NORM_L2 )
         result.d = std::sqrt(result.d);
-    
+
     return result.d;
 }
 
@@ -1692,7 +1692,7 @@ static void batchDistL2_32f(const float* src1, const float* src2, size_t step2,
 typedef void (*BatchDistFunc)(const uchar* src1, const uchar* src2, size_t step2,
                               int nvecs, int len, uchar* dist, const uchar* mask);
 
-    
+
 struct BatchDistInvoker
 {
     BatchDistInvoker( const Mat& _src1, const Mat& _src2,
@@ -1709,26 +1709,26 @@ struct BatchDistInvoker
         update = _update;
         func = _func;
     }
-    
+
     void operator()(const BlockedRange& range) const
     {
         AutoBuffer<int> buf(src2->rows);
         int* bufptr = buf;
-        
+
         for( int i = range.begin(); i < range.end(); i++ )
         {
             func(src1->ptr(i), src2->ptr(), src2->step, src2->rows, src2->cols,
                  K > 0 ? (uchar*)bufptr : dist->ptr(i), mask->data ? mask->ptr(i) : 0);
-            
+
             if( K > 0 )
             {
                 int* nidxptr = nidx->ptr<int>(i);
                 // since positive float's can be compared just like int's,
                 // we handle both CV_32S and CV_32F cases with a single branch
                 int* distptr = (int*)dist->ptr(i);
-                
+
                 int j, k;
-                
+
                 for( j = 0; j < src2->rows; j++ )
                 {
                     int d = bufptr[j];
@@ -1746,7 +1746,7 @@ struct BatchDistInvoker
             }
         }
     }
-    
+
     const Mat *src1;
     const Mat *src2;
     Mat *dist;
@@ -1756,9 +1756,9 @@ struct BatchDistInvoker
     int update;
     BatchDistFunc func;
 };
-    
+
 }
-    
+
 void cv::batchDistance( InputArray _src1, InputArray _src2,
                         OutputArray _dist, int dtype, OutputArray _nidx,
                         int normType, int K, InputArray _mask,
@@ -1769,7 +1769,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     CV_Assert( type == src2.type() && src1.cols == src2.cols &&
                (type == CV_32F || type == CV_8U));
     CV_Assert( _nidx.needed() == (K > 0) );
-    
+
     if( dtype == -1 )
     {
         dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
@@ -1777,7 +1777,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     CV_Assert( (type == CV_8U && dtype == CV_32S) || dtype == CV_32F);
 
     K = std::min(K, src2.rows);
-    
+
     _dist.create(src1.rows, (K > 0 ? K : src2.rows), dtype);
     Mat dist = _dist.getMat(), nidx;
     if( _nidx.needed() )
@@ -1785,19 +1785,19 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         _nidx.create(dist.size(), CV_32S);
         nidx = _nidx.getMat();
     }
-    
+
     if( update == 0 && K > 0 )
     {
         dist = Scalar::all(dtype == CV_32S ? (double)INT_MAX : (double)FLT_MAX);
         nidx = Scalar::all(-1);
     }
-    
+
     if( crosscheck )
     {
         CV_Assert( K == 1 && update == 0 && mask.empty() );
         Mat tdist, tidx;
         batchDistance(src2, src1, tdist, dtype, tidx, normType, K, mask, 0, false);
-        
+
         // if an idx-th element from src1 appeared to be the nearest to i-th element of src2,
         // we update the minimum mutual distance between idx-th element of src1 and the whole src2 set.
         // As a result, if nidx[idx] = i*, it means that idx-th element of src1 is the nearest
@@ -1832,7 +1832,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         }
         return;
     }
-    
+
     BatchDistFunc func = 0;
     if( type == CV_8U )
     {
@@ -1860,12 +1860,12 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         else if( normType == NORM_L2 )
             func = (BatchDistFunc)batchDistL2_32f;
     }
-    
+
     if( func == 0 )
         CV_Error_(CV_StsUnsupportedFormat,
                   ("The combination of type=%d, dtype=%d and normType=%d is not supported",
                    type, dtype, normType));
-    
+
     parallel_for(BlockedRange(0, src1.rows),
                  BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
 }

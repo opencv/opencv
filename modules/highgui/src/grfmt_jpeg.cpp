@@ -45,7 +45,8 @@
 #ifdef HAVE_JPEG
 
 #ifdef _MSC_VER
-#pragma warning(disable: 4324 4611)
+//interaction between '_setjmp' and C++ object destruction is non-portable
+#pragma warning(disable: 4611)
 #endif
 
 #include <stdio.h>
@@ -69,11 +70,18 @@ extern "C" {
 namespace cv
 {
 
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable:4324) //structure was padded due to __declspec(align())
+#endif
 struct JpegErrorMgr
 {
     struct jpeg_error_mgr pub;
     jmp_buf setjmp_buffer;
 };
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
 struct JpegSource
 {
@@ -126,8 +134,7 @@ skip_input_data(j_decompress_ptr cinfo, long num_bytes)
 }
 
 
-GLOBAL(void)
-jpeg_buffer_src(j_decompress_ptr cinfo, JpegSource* source)
+static void jpeg_buffer_src(j_decompress_ptr cinfo, JpegSource* source)
 {
     cinfo->src = &source->pub;
 
@@ -498,8 +505,7 @@ empty_output_buffer (j_compress_ptr cinfo)
     return TRUE;
 }
 
-GLOBAL(void)
-jpeg_buffer_dest(j_compress_ptr cinfo, JpegDestination* destination)
+static void jpeg_buffer_dest(j_compress_ptr cinfo, JpegDestination* destination)
 {
     cinfo->dest = &destination->pub;
 

@@ -55,22 +55,22 @@ using namespace cv;
 using namespace std;
 
 //template<class T> ostream& operator<<(ostream& out, const Mat_<T>& mat)
-//{    
+//{
 //    for(Mat_<T>::const_iterator pos = mat.begin(), end = mat.end(); pos != end; ++pos)
 //        out << *pos << " ";
 //    return out;
 //}
-//ostream& operator<<(ostream& out, const Mat& mat) { return out << Mat_<double>(mat); } 
+//ostream& operator<<(ostream& out, const Mat& mat) { return out << Mat_<double>(mat); }
 
 Mat calcRvec(const vector<Point3f>& points, const Size& cornerSize)
-{  
+{
     Point3f p00 = points[0];
     Point3f p10 = points[1];
-    Point3f p01 = points[cornerSize.width];            
+    Point3f p01 = points[cornerSize.width];
 
     Vec3d ex(p10.x - p00.x, p10.y - p00.y, p10.z - p00.z);
-    Vec3d ey(p01.x - p00.x, p01.y - p00.y, p01.z - p00.z);        
-    Vec3d ez = ex.cross(ey); 
+    Vec3d ey(p01.x - p00.x, p01.y - p00.y, p01.z - p00.z);
+    Vec3d ez = ex.cross(ey);
 
     Mat rot(3, 3, CV_64F);
     *rot.ptr<Vec3d>(0) = ex;
@@ -89,7 +89,7 @@ public:
     {
     }
     ~CV_CalibrateCameraArtificialTest() {}
-protected:     
+protected:
     int r;
 
     const static int JUST_FIND_CORNERS = 0;
@@ -111,7 +111,7 @@ protected:
         {
             ts->printf( cvtest::TS::LOG, "Bad shape of camera matrix returned \n");
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }        
+        }
 
         double fx_e = camMat_est.at<double>(0, 0), fy_e = camMat_est.at<double>(1, 1);
         double cx_e = camMat_est.at<double>(0, 2), cy_e = camMat_est.at<double>(1, 2);
@@ -121,19 +121,19 @@ protected:
         const double eps = 1e-2;
         const double dlt = 1e-5;
 
-        bool fail = checkErr(fx_e, fx, eps, dlt) || checkErr(fy_e, fy, eps, dlt) || 
-            checkErr(cx_e, cx, eps, dlt) || checkErr(cy_e, cy, eps, dlt);        
+        bool fail = checkErr(fx_e, fx, eps, dlt) || checkErr(fy_e, fy, eps, dlt) ||
+            checkErr(cx_e, cx, eps, dlt) || checkErr(cy_e, cy, eps, dlt);
 
         if (fail)
         {
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);                                        
-        }        
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        }
         ts->printf( cvtest::TS::LOG, "%d) Expected  [Fx Fy Cx Cy] = [%.3f %.3f %.3f %.3f]\n", r, fx, fy, cx, cy);
-        ts->printf( cvtest::TS::LOG, "%d) Estimated [Fx Fy Cx Cy] = [%.3f %.3f %.3f %.3f]\n", r, fx_e, fy_e, cx_e, cy_e);                        
+        ts->printf( cvtest::TS::LOG, "%d) Estimated [Fx Fy Cx Cy] = [%.3f %.3f %.3f %.3f]\n", r, fx_e, fy_e, cx_e, cy_e);
     }
 
     void compareDistCoeffs(const Mat_<double>& distCoeffs, const Mat& distCoeffs_est)
-    {          
+    {
         const double *dt_e = distCoeffs_est.ptr<double>();
 
         double k1_e = dt_e[0], k2_e = dt_e[1], k3_e = dt_e[4];
@@ -143,21 +143,21 @@ protected:
         double p1 = distCoeffs(0, 2), p2 = distCoeffs(0, 3);
 
         const double eps = 5e-2;
-        const double dlt = 1e-3;   
+        const double dlt = 1e-3;
 
         const double eps_k3 = 5;
-        const double dlt_k3 = 1e-3;   
+        const double dlt_k3 = 1e-3;
 
-        bool fail = checkErr(k1_e, k1, eps, dlt) || checkErr(k2_e, k2, eps, dlt) || checkErr(k3_e, k3, eps_k3, dlt_k3) || 
-            checkErr(p1_e, p1, eps, dlt) || checkErr(p2_e, p2, eps, dlt);        
+        bool fail = checkErr(k1_e, k1, eps, dlt) || checkErr(k2_e, k2, eps, dlt) || checkErr(k3_e, k3, eps_k3, dlt_k3) ||
+            checkErr(p1_e, p1, eps, dlt) || checkErr(p2_e, p2, eps, dlt);
 
         if (fail)
         {
             // commented according to vp123's recomendation. TODO - improve accuaracy
-            //ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY); ss                                    
-        }                
+            //ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY); ss
+        }
         ts->printf( cvtest::TS::LOG, "%d) DistCoeff exp=(%.2f, %.2f, %.4f, %.4f %.2f)\n", r, k1, k2, p1, p2, k3);
-        ts->printf( cvtest::TS::LOG, "%d) DistCoeff est=(%.2f, %.2f, %.4f, %.4f %.2f)\n", r, k1_e, k2_e, p1_e, p2_e, k3_e);                                    
+        ts->printf( cvtest::TS::LOG, "%d) DistCoeff est=(%.2f, %.2f, %.4f, %.4f %.2f)\n", r, k1_e, k2_e, p1_e, p2_e, k3_e);
         ts->printf( cvtest::TS::LOG, "%d) AbsError = [%.5f %.5f %.5f %.5f %.5f]\n", r, fabs(k1-k1_e), fabs(k2-k2_e), fabs(p1-p1_e), fabs(p2-p2_e), fabs(k3-k3_e));
     }
 
@@ -173,20 +173,20 @@ protected:
             const Point3d& tvec = *tvecs[i].ptr<Point3d>();
             const Point3d& tvec_est = *tvecs_est[i].ptr<Point3d>();
 
-            if (norm(tvec_est - tvec) > eps* (norm(tvec) + dlt))            
+            if (norm(tvec_est - tvec) > eps* (norm(tvec) + dlt))
             {
                 if (err_count++ < errMsgNum)
                 {
-                    if (err_count == errMsgNum)       
-                        ts->printf( cvtest::TS::LOG, "%d) ...\n", r);                                            
-                    else                
+                    if (err_count == errMsgNum)
+                        ts->printf( cvtest::TS::LOG, "%d) ...\n", r);
+                    else
                     {
-                        ts->printf( cvtest::TS::LOG, "%d) Bad accuracy in returned tvecs. Index = %d\n", r, i);                        
+                        ts->printf( cvtest::TS::LOG, "%d) Bad accuracy in returned tvecs. Index = %d\n", r, i);
                         ts->printf( cvtest::TS::LOG, "%d) norm(tvec_est - tvec) = %f, norm(tvec_exp) = %f \n", r, norm(tvec_est - tvec), norm(tvec));
                     }
                 }
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            }            
+            }
         }
     }
 
@@ -199,20 +199,20 @@ protected:
         int err_count = 0;
         const int errMsgNum = 4;
         for(size_t i = 0; i < rvecs.size(); ++i)
-        {             
+        {
             Rodrigues(rvecs[i], rmat);
-            Rodrigues(rvecs_est[i], rmat_est);            
+            Rodrigues(rvecs_est[i], rmat_est);
 
             if (norm(rmat_est, rmat) > eps* (norm(rmat) + dlt))
             {
                 if (err_count++ < errMsgNum)
                 {
                     if (err_count == errMsgNum)
-                        ts->printf( cvtest::TS::LOG, "%d) ...\n", r);                                            
+                        ts->printf( cvtest::TS::LOG, "%d) ...\n", r);
                     else
                     {
-                        ts->printf( cvtest::TS::LOG, "%d) Bad accuracy in returned rvecs (rotation matrs). Index = %d\n", r, i);                                                                
-                        ts->printf( cvtest::TS::LOG, "%d) norm(rot_mat_est - rot_mat_exp) = %f, norm(rot_mat_exp) = %f \n", r, norm(rmat_est, rmat), norm(rmat));                                
+                        ts->printf( cvtest::TS::LOG, "%d) Bad accuracy in returned rvecs (rotation matrs). Index = %d\n", r, i);
+                        ts->printf( cvtest::TS::LOG, "%d) norm(rot_mat_est - rot_mat_exp) = %f, norm(rot_mat_exp) = %f \n", r, norm(rmat_est, rmat), norm(rmat));
 
                     }
                 }
@@ -221,19 +221,19 @@ protected:
         }
     }
 
-    double reprojectErrorWithoutIntrinsics(const vector<Point3f>& cb3d, const vector<Mat>& rvecs_exp, const vector<Mat>& tvecs_exp,
+    double reprojectErrorWithoutIntrinsics(const vector<Point3f>& cb3d, const vector<Mat>& _rvecs_exp, const vector<Mat>& _tvecs_exp,
         const vector<Mat>& rvecs_est, const vector<Mat>& tvecs_est)
-    {                        
+    {
         const static Mat eye33 = Mat::eye(3, 3, CV_64F);
         const static Mat zero15 = Mat::zeros(1, 5, CV_64F);
-        Mat chessboard3D(cb3d);
+        Mat _chessboard3D(cb3d);
         vector<Point2f> uv_exp, uv_est;
-        double res = 0;        
+        double res = 0;
 
-        for(size_t i = 0; i < rvecs_exp.size(); ++i)  
-        {                        
-            projectPoints(chessboard3D, rvecs_exp[i], tvecs_exp[i], eye33, zero15, uv_exp);            
-            projectPoints(chessboard3D, rvecs_est[i], tvecs_est[i], eye33, zero15, uv_est);
+        for(size_t i = 0; i < rvecs_exp.size(); ++i)
+        {
+            projectPoints(_chessboard3D, _rvecs_exp[i], _tvecs_exp[i], eye33, zero15, uv_exp);
+            projectPoints(_chessboard3D, rvecs_est[i], tvecs_est[i], eye33, zero15, uv_est);
             for(size_t j = 0; j < cb3d.size(); ++j)
                 res += norm(uv_exp[i] - uv_est[i]);
         }
@@ -243,7 +243,7 @@ protected:
     Size2f sqSile;
 
     vector<Point3f> chessboard3D;
-    vector<Mat> boards, rvecs_exp, tvecs_exp, rvecs_spnp, tvecs_spnp;                
+    vector<Mat> boards, rvecs_exp, tvecs_exp, rvecs_spnp, tvecs_spnp;
     vector< vector<Point3f> > objectPoints;
     vector< vector<Point2f> > imagePoints_art;
     vector< vector<Point2f> > imagePoints_findCb;
@@ -268,29 +268,29 @@ protected:
         imagePoints_findCb.clear();
 
         vector<Point2f> corners_art, corners_fcb;
-        for(size_t i = 0; i < brdsNum; ++i)        
-        {                                    
+        for(size_t i = 0; i < brdsNum; ++i)
+        {
             for(;;)
             {
                 boards[i] = cbg(bg, camMat, distCoeffs, sqSile, corners_art);
-                if(findChessboardCorners(boards[i], cornersSize, corners_fcb))                    
-                    break;                    
-            }                   
+                if(findChessboardCorners(boards[i], cornersSize, corners_fcb))
+                    break;
+            }
 
             //cv::namedWindow("CB"); imshow("CB", boards[i]); cv::waitKey();
 
-            imagePoints_art.push_back(corners_art);                        
+            imagePoints_art.push_back(corners_art);
             imagePoints_findCb.push_back(corners_fcb);
 
             tvecs_exp[i].create(1, 3, CV_64F);
             *tvecs_exp[i].ptr<Point3d>() = cbg.corners3d[0];
-            rvecs_exp[i] = calcRvec(cbg.corners3d, cbg.cornersSize());            
+            rvecs_exp[i] = calcRvec(cbg.corners3d, cbg.cornersSize());
         }
 
     }
 
     void runTest(const Size& imgSize, const Mat_<double>& camMat, const Mat_<double>& distCoeffs, size_t brdsNum, const Size& cornersSize, int flag = 0)
-    {           
+    {
         const TermCriteria tc(TermCriteria::EPS|TermCriteria::MAX_ITER, 30, 0.1);
 
         vector< vector<Point2f> > imagePoints;
@@ -300,9 +300,9 @@ protected:
         case JUST_FIND_CORNERS: imagePoints = imagePoints_findCb; break;
         case ARTIFICIAL_CORNERS: imagePoints = imagePoints_art; break;
 
-        case USE_CORNERS_SUBPIX: 
+        case USE_CORNERS_SUBPIX:
             for(size_t i = 0; i < brdsNum; ++i)
-            {                
+            {
                 Mat gray;
                 cvtColor(boards[i], gray, CV_BGR2GRAY);
                 vector<Point2f> tmp = imagePoints_findCb[i];
@@ -312,9 +312,9 @@ protected:
             break;
         case USE_4QUAD_CORNERS:
             for(size_t i = 0; i < brdsNum; ++i)
-            {                
+            {
                 Mat gray;
-                cvtColor(boards[i], gray, CV_BGR2GRAY);                
+                cvtColor(boards[i], gray, CV_BGR2GRAY);
                 vector<Point2f> tmp = imagePoints_findCb[i];
                 find4QuadCornerSubpix(gray, tmp, Size(5, 5));
                 imagePoints.push_back(tmp);
@@ -323,7 +323,7 @@ protected:
         default:
             throw std::exception();
         }
-     
+
         Mat camMat_est = Mat::eye(3, 3, CV_64F), distCoeffs_est = Mat::zeros(1, 5, CV_64F);
         vector<Mat> rvecs_est, tvecs_est;
 
@@ -342,9 +342,9 @@ protected:
         compareCameraMatrs(camMat, camMat_est);
         compareDistCoeffs(distCoeffs, distCoeffs_est);
         compareShiftVecs(tvecs_exp, tvecs_est);
-        compareRotationVecs(rvecs_exp, rvecs_est);  
+        compareRotationVecs(rvecs_exp, rvecs_est);
 
-        double rep_errorWOI = reprojectErrorWithoutIntrinsics(chessboard3D, rvecs_exp, tvecs_exp, rvecs_est, tvecs_est);        
+        double rep_errorWOI = reprojectErrorWithoutIntrinsics(chessboard3D, rvecs_exp, tvecs_exp, rvecs_est, tvecs_est);
         rep_errorWOI /= brdsNum * cornersSize.area();
 
         const double thres2 = 0.01;
@@ -352,8 +352,8 @@ protected:
         {
             ts->printf( cvtest::TS::LOG, "%d) Too big reproject error without intrinsics = %f\n", r, rep_errorWOI);
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-        }    
-        
+        }
+
         ts->printf( cvtest::TS::LOG, "%d) Testing solvePnP...\n", r);
         rvecs_spnp.resize(brdsNum);
         tvecs_spnp.resize(brdsNum);
@@ -361,11 +361,11 @@ protected:
             solvePnP(Mat(objectPoints[i]), Mat(imagePoints[i]), camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
 
         compareShiftVecs(tvecs_exp, tvecs_spnp);
-        compareRotationVecs(rvecs_exp, rvecs_spnp);         
+        compareRotationVecs(rvecs_exp, rvecs_spnp);
     }
 
     void run(int)
-    {   
+    {
 
         ts->set_failed_test_info(cvtest::TS::OK);
         RNG& rng = theRNG();
@@ -373,11 +373,11 @@ protected:
         int progress = 0;
         int repeat_num = 3;
         for(r = 0; r < repeat_num; ++r)
-        {                        
-            const int brds_num = 20;              
+        {
+            const int brds_num = 20;
 
-            Mat bg(Size(640, 480), CV_8UC3);                
-            randu(bg, Scalar::all(32), Scalar::all(255));    
+            Mat bg(Size(640, 480), CV_8UC3);
+            randu(bg, Scalar::all(32), Scalar::all(255));
             GaussianBlur(bg, bg, Size(5, 5), 2);
 
             double fx = 300 + (20 * (double)rng - 10);
@@ -399,20 +399,20 @@ protected:
             Mat_<double> distCoeffs(1, 5, 0.0);
             distCoeffs << k1, k2, p1, p2, k3;
 
-            ChessBoardGenerator cbg(Size(9, 8)); 
+            ChessBoardGenerator cbg(Size(9, 8));
             cbg.min_cos = 0.9;
             cbg.cov = 0.8;
 
             progress = update_progress(progress, r, repeat_num, 0);
-            ts->printf( cvtest::TS::LOG, "\n");            
+            ts->printf( cvtest::TS::LOG, "\n");
             prepareForTest(bg, camMat, distCoeffs, brds_num, cbg);
 
-            ts->printf( cvtest::TS::LOG, "artificial corners\n");            
-            runTest(bg.size(), camMat, distCoeffs, brds_num, cbg.cornersSize(), ARTIFICIAL_CORNERS);       
+            ts->printf( cvtest::TS::LOG, "artificial corners\n");
+            runTest(bg.size(), camMat, distCoeffs, brds_num, cbg.cornersSize(), ARTIFICIAL_CORNERS);
             progress = update_progress(progress, r, repeat_num, 0);
 
             ts->printf( cvtest::TS::LOG, "findChessboard corners\n");
-            runTest(bg.size(), camMat, distCoeffs, brds_num, cbg.cornersSize(), JUST_FIND_CORNERS);       
+            runTest(bg.size(), camMat, distCoeffs, brds_num, cbg.cornersSize(), JUST_FIND_CORNERS);
             progress = update_progress(progress, r, repeat_num, 0);
 
             ts->printf( cvtest::TS::LOG, "cornersSubPix corners\n");
@@ -424,6 +424,6 @@ protected:
             progress = update_progress(progress, r, repeat_num, 0);
         }
     }
-};   
+};
 
 TEST(Calib3d_CalibrateCamera_CPP, accuracy_on_artificial_data) { CV_CalibrateCameraArtificialTest test; test.safe_run(); }

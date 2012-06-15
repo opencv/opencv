@@ -55,7 +55,9 @@ static void* OutOfMemoryError(size_t size)
 
 #if CV_USE_SYSTEM_MALLOC
 
+#if defined WIN32 || defined _WIN32
 void deleteThreadAllocData() {}
+#endif
 
 void* fastMalloc( size_t size )
 {
@@ -66,14 +68,14 @@ void* fastMalloc( size_t size )
     adata[-1] = udata;
     return adata;
 }
-    
+
 void fastFree(void* ptr)
 {
     if(ptr)
     {
         uchar* udata = ((uchar**)ptr)[-1];
         CV_DbgAssert(udata < (uchar*)ptr &&
-               ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN)); 
+               ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
         free(udata);
     }
 }
@@ -388,7 +390,7 @@ struct ThreadData
 
 #ifdef WIN32
 #ifdef WINCE
-#	define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
+#   define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
 #endif //WINCE
 
     static DWORD tlsKey;
@@ -535,7 +537,7 @@ void* fastMalloc( size_t size )
             freePtr = block;
             if( !data )
             {
-                block = gcPtr; 
+                block = gcPtr;
                 for( int k = 0; k < 2; k++ )
                 {
                     SANITY_CHECK(block);
@@ -620,7 +622,7 @@ void fastFree( void* ptr )
                 Block*& startPtr = tls->bins[idx][START];
                 Block*& freePtr = tls->bins[idx][FREE];
                 Block*& gcPtr = tls->bins[idx][GC];
-                
+
                 if( block == block->next )
                 {
                     CV_DbgAssert( startPtr == block && freePtr == block && gcPtr == block );

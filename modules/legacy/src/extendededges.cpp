@@ -41,14 +41,15 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32 /* make sure it builds under Linux whenever it is included into Makefile.am or not. */ 
+#if 0
+//#ifdef WIN32 /* make sure it builds under Linux whenever it is included into Makefile.am or not. */
 
 //void icvCutContour( CvSeq* current, IplImage* image );
 CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* image );
 
 
 //create lists of segments of all contours from image
-CvSeq* cvExtractSingleEdges( IplImage* image, //bw image - it's content will be destroyed by cvFindContours 
+CvSeq* cvExtractSingleEdges( IplImage* image, //bw image - it's content will be destroyed by cvFindContours
                              CvMemStorage* storage )
 {
     CvMemStorage* tmp_storage = cvCreateChildMemStorage( storage );
@@ -57,29 +58,29 @@ CvSeq* cvExtractSingleEdges( IplImage* image, //bw image - it's content will be 
     cvZero( image );
 
     //iterate through contours
-      //iterate through tree 
+      //iterate through tree
     CvSeq* current = contours;
     int number = 0;
     int level = 1;
 
     CvSeq* output = 0;
-    CvSeq* tail_seq = 0; 
+    CvSeq* tail_seq = 0;
 
     //actually this loop can iterates through tree,
     //but still we use CV_RETR_LIST it is not useful
     while( current )
     {
-        number++; 
-        
+        number++;
+
         //get vertical list of segments for one contour
         CvSeq* new_seq = icvCutContourRaster( current, storage,  image );
 
         //add this vertical list to horisontal list
         if( new_seq )
         {
-            if( tail_seq ) 
-            { 
-                tail_seq->h_next = new_seq; 
+            if( tail_seq )
+            {
+                tail_seq->h_next = new_seq;
                 new_seq->h_prev = tail_seq;
                 tail_seq = new_seq;
             }
@@ -90,13 +91,13 @@ CvSeq* cvExtractSingleEdges( IplImage* image, //bw image - it's content will be 
         }
 
         //iteration through tree
-        if( current->v_next ) 
-        {   
+        if( current->v_next )
+        {
             //goto child
             current = current->v_next;
             level++;
         }
-        else 
+        else
         {
             //go parent
             while( !current->h_next )
@@ -105,7 +106,7 @@ CvSeq* cvExtractSingleEdges( IplImage* image, //bw image - it's content will be 
                 level--;
                 if( !level ) break;
             }
-            
+
             if( current ) //go brother
                 current = current->h_next;
         }
@@ -114,25 +115,25 @@ CvSeq* cvExtractSingleEdges( IplImage* image, //bw image - it's content will be 
     //free temporary memstorage with initial contours
     cvReleaseMemStorage( &tmp_storage );
 
-    return output; 
+    return output;
 }
 
 //makes vertical list of segments for 1 contour
 CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* image /*tmp image*/)
 {
     //iplSet(image, 0 ); // this can cause double edges if two contours have common edge
-                       // for example if object is circle with 1 pixel width 
-                       // to remove such problem - remove this iplSet 
+                       // for example if object is circle with 1 pixel width
+                       // to remove such problem - remove this iplSet
 
     //approx contour by single edges
     CvSeqReader reader;
     CvSeqWriter writer;
-        
+
     int writing = 0;
     cvStartReadSeq( current, &reader, 0 );
     //below line just to avoid warning
     cvStartWriteSeq( current->flags, sizeof(CvContour), sizeof(CvPoint), storage, &writer );
-                
+
     CvSeq* output = 0;
     CvSeq* tail = 0;
 
@@ -147,7 +148,7 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
         //mark point
         ((uchar*)image->imageData)[image->widthStep * cur.y + cur.x]++;
         assert( ((uchar*)image->imageData)[image->widthStep * cur.y + cur.x] != 255 );
-        
+
     }
 
     //second pass - create separate edges
@@ -161,22 +162,22 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
         uchar flag = image->imageData[image->widthStep * cur.y + cur.x];
         if( flag != 255 && flag < 3) //
         {
-            if(!writing) 
+            if(!writing)
             {
                 cvStartWriteSeq( current->flags, sizeof(CvContour), sizeof(CvPoint), storage, &writer );
-                writing = 1 ; 
+                writing = 1 ;
             }
 
             //mark point
             if( flag < 3 ) ((uchar*)image->imageData)[image->widthStep * cur.y + cur.x] = 255;
             //add it to another seq
             CV_WRITE_SEQ_ELEM( cur, writer );
-            
+
         }
         else
         {
             //exclude this point from contour
-           if( writing ) 
+           if( writing )
            {
                CvSeq* newseq = cvEndWriteSeq( &writer );
                writing = 0;
@@ -191,7 +192,7 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
                {
                    output = tail = newseq;
                }
-           }    
+           }
         }
     }
 
@@ -211,7 +212,7 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
        {
            output = tail = newseq;
        }
-   }    
+   }
 
 
     return output;
@@ -224,12 +225,12 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
     //approx contour by single edges
     CvSeqReader reader;
     CvSeqReader rev_reader;
-    
+
     cvStartReadSeq( current, &reader, 0 );
 
     int64* cur_pt = (int64*)reader.ptr;
     int64* prev_pt = (int64*)reader.prev_elem;
-    
+
     //search for point a in aba position
     for( int i = 0; i < current->total; i++ )
     {
@@ -240,7 +241,7 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
         {
             //return to prev pos
             CV_PREV_SEQ_ELEM( sizeof(int64), reader );
-                                           
+
 
             //this point is end of edge
             //start going both directions and collect edge
@@ -248,7 +249,7 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
 
             int pos = cvGetSeqReaderPos( &reader );
             cvSetSeqReaderPos( &rev_reader, pos );
-            
+
             //walk in both directions
             while(1);
 
@@ -259,10 +260,10 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
 
     }
 }
-        
+
 */
 #endif /* WIN32 */
 
 
 
-                      
+

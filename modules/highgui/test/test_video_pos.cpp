@@ -112,9 +112,9 @@ public:
                 return;
             }
             
-            int N0 = cap.get(CV_CAP_PROP_FRAME_COUNT);
+            int N0 = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
             cap.set(CV_CAP_PROP_POS_FRAMES, 0);
-            int N = cap.get(CV_CAP_PROP_FRAME_COUNT);
+            int N = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
                                 
             if (N != n_frames || N != N0)
             {

@@ -636,11 +636,13 @@ struct CV_EXPORTS Feature
   int label; ///< Quantization
 
   Feature() : x(0), y(0), label(0) {}
-  Feature(int x, int y, int label) : x(x), y(y), label(label) {}
+  Feature(int x, int y, int label);
 
   void read(const FileNode& fn);
   void write(FileStorage& fs) const;
 };
+
+inline Feature::Feature(int _x, int _y, int _label) : x(_x), y(_y), label(_label) {}
 
 struct CV_EXPORTS Template
 {
@@ -688,10 +690,7 @@ protected:
   /// Candidate feature with a score
   struct Candidate
   {
-    Candidate(int x, int y, int label, float score)
-      : f(x, y, label), score(score)
-    {
-    }
+    Candidate(int x, int y, int label, float score);
 
     /// Sort candidates with high score to the front
     bool operator<(const Candidate& rhs) const
@@ -715,6 +714,8 @@ protected:
                                       std::vector<Feature>& features,
                                       size_t num_features, float distance);
 };
+
+inline QuantizedPyramid::Candidate::Candidate(int x, int y, int label, float _score) : f(x, y, label), score(_score) {}
 
 /**
  * \brief Interface for modalities that plug into the LINE template matching representation.
@@ -853,10 +854,7 @@ struct CV_EXPORTS Match
   {
   }
 
-  Match(int x, int y, float similarity, const std::string& class_id, int template_id)
-    : x(x), y(y), similarity(similarity), class_id(class_id), template_id(template_id)
-  {
-  }
+  Match(int x, int y, float similarity, const std::string& class_id, int template_id);
 
   /// Sort matches with high similarity to the front
   bool operator<(const Match& rhs) const
@@ -879,6 +877,11 @@ struct CV_EXPORTS Match
   std::string class_id;
   int template_id;
 };
+
+inline  Match::Match(int _x, int _y, float _similarity, const std::string& _class_id, int _template_id)
+    : x(_x), y(_y), similarity(_similarity), class_id(_class_id), template_id(_template_id)
+  {
+  }
 
 /**
  * \brief Object detector using the LINE template matching algorithm with any set of

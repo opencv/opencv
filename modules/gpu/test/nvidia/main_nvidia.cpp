@@ -21,11 +21,15 @@
 #include "NCVAutoTestLister.hpp"
 #include "NCVTestSourceProvider.hpp"
 
+#include <main_test_nvidia.h>
+
 static std::string path;
 
+namespace {
 
 template <class T_in, class T_out>
-void generateIntegralTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T_in> &src,
+void generateIntegralTests(NCVAutoTestLister &testLister,
+                           NCVTestSourceProvider<T_in> &src,
                            Ncv32u maxWidth, Ncv32u maxHeight)
 {
     for (Ncv32f _i=1.0; _i<maxWidth; _i*=1.2f)
@@ -43,12 +47,8 @@ void generateIntegralTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<
         testLister.add(new TestIntegralImage<T_in, T_out>(testName, src, 2, i));
     }
 
-    //test VGA
     testLister.add(new TestIntegralImage<T_in, T_out>("LinIntImg_VGA", src, 640, 480));
-
-    //TODO: add tests of various resolutions up to 4096x4096
 }
-
 
 void generateSquaredIntegralTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv8u> &src,
                                   Ncv32u maxWidth, Ncv32u maxHeight)
@@ -68,12 +68,8 @@ void generateSquaredIntegralTests(NCVAutoTestLister &testLister, NCVTestSourcePr
         testLister.add(new TestIntegralImageSquared(testName, src, 32, i));
     }
 
-    //test VGA
     testLister.add(new TestIntegralImageSquared("SqLinIntImg_VGA", src, 640, 480));
-
-    //TODO: add tests of various resolutions up to 4096x4096
 }
-
 
 void generateRectStdDevTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv8u> &src,
                              Ncv32u maxWidth, Ncv32u maxHeight)
@@ -91,17 +87,12 @@ void generateRectStdDevTests(NCVAutoTestLister &testLister, NCVTestSourceProvide
         testLister.add(new TestRectStdDev(testName, src, i-1, i*2-1, rect, 2.5, true));
     }
 
-    //test VGA
     testLister.add(new TestRectStdDev("RectStdDev_VGA", src, 640, 480, rect, 1, true));
-
-    //TODO: add tests of various resolutions up to 4096x4096
 }
-
 
 template <class T>
 void generateResizeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T> &src)
 {
-    //test VGA
     for (Ncv32u i=1; i<480; i+=3)
     {
         char testName[80];
@@ -110,7 +101,6 @@ void generateResizeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T>
         testLister.add(new TestResize<T>(testName, src, 640, 480, i, false));
     }
 
-    //test HD
     for (Ncv32u i=1; i<1080; i+=5)
     {
         char testName[80];
@@ -118,10 +108,7 @@ void generateResizeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T>
         testLister.add(new TestResize<T>(testName, src, 1920, 1080, i, true));
         testLister.add(new TestResize<T>(testName, src, 1920, 1080, i, false));
     }
-
-    //TODO: add tests of various resolutions up to 4096x4096
 }
-
 
 void generateNPPSTVectorTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv32u> &src, Ncv32u maxLength)
 {
@@ -186,9 +173,10 @@ void generateTransposeTests(NCVAutoTestLister &testLister, NCVTestSourceProvider
     testLister.add(new TestTranspose<T>("TestTranspose_reg_0", src, 1072, 375));
 }
 
-
 template <class T>
-void generateDrawRectsTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<T> &src, NCVTestSourceProvider<Ncv32u> &src32u,
+void generateDrawRectsTests(NCVAutoTestLister &testLister,
+                            NCVTestSourceProvider<T> &src,
+                            NCVTestSourceProvider<Ncv32u> &src32u,
                             Ncv32u maxWidth, Ncv32u maxHeight)
 {
     for (Ncv32f _i=16.0; _i<maxWidth; _i*=1.1f)
@@ -215,10 +203,7 @@ void generateDrawRectsTests(NCVAutoTestLister &testLister, NCVTestSourceProvider
 
     //test VGA
     testLister.add(new TestDrawRects<T>("DrawRects_VGA", src, src32u, 640, 480, 640*480/1000, (T)0xFF));
-
-    //TODO: add tests of various resolutions up to 4096x4096
 }
-
 
 void generateVectorTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv32u> &src, Ncv32u maxLength)
 {
@@ -236,7 +221,6 @@ void generateVectorTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Nc
     testLister.add(new TestHypothesesGrow("VectorGrow10b", src, 10, 42, 1.2f, 10, 1, 10, 0));
     testLister.add(new TestHypothesesGrow("VectorGrow00b", src, 10, 42, 1.2f, 10, 0, 10, 0));
 }
-
 
 void generateHypothesesFiltrationTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv32u> &src, Ncv32u maxLength)
 {
@@ -261,7 +245,6 @@ void generateHaarLoaderTests(NCVAutoTestLister &testLister)
     testLister.add(new TestHaarCascadeLoader("haarcascade_eye_tree_eyeglasses.xml", path + "haarcascade_eye_tree_eyeglasses.xml"));
 }
 
-
 void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv8u> &src,
                                   Ncv32u maxWidth, Ncv32u maxHeight)
 {
@@ -285,7 +268,6 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
 
 static void devNullOutput(const std::string& msg)
 {
-
 }
 
 bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel)
@@ -302,6 +284,8 @@ bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel 
     generateIntegralTests<Ncv32f, Ncv32f>(testListerII, testSrcRandom_32f, 4096, 4096);
 
     return testListerII.invoke();
+}
+
 }
 
 bool nvidia_NPPST_Squared_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel)

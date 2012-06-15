@@ -169,7 +169,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
     }
 
     int bt_pix0 = (int)img.elemSize(), bt_pix = bt_pix0;
-    size_t step = img.step;
+    size_t istep = img.step;
 
     int dx = pt2.x - pt1.x;
     int dy = pt2.y - pt1.y;
@@ -188,11 +188,11 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         bt_pix = (bt_pix ^ s) - s;
     }
 
-    ptr = (uchar*)(img.data + pt1.y * step + pt1.x * bt_pix0);
+    ptr = (uchar*)(img.data + pt1.y * istep + pt1.x * bt_pix0);
 
     s = dy < 0 ? -1 : 0;
     dy = (dy ^ s) - s;
-    step = (step ^ s) - s;
+    istep = (istep ^ s) - s;
 
     s = dy > dx ? -1 : 0;
 
@@ -201,9 +201,9 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
     dy ^= dx & s;
     dx ^= dy & s;
 
-    bt_pix ^= step & s;
-    step ^= bt_pix & s;
-    bt_pix ^= step & s;
+    bt_pix ^= istep & s;
+    istep ^= bt_pix & s;
+    bt_pix ^= istep & s;
 
     if( connectivity == 8 )
     {
@@ -212,7 +212,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         err = dx - (dy + dy);
         plusDelta = dx + dx;
         minusDelta = -(dy + dy);
-        plusStep = (int)step;
+        plusStep = (int)istep;
         minusStep = bt_pix;
         count = dx + 1;
     }
@@ -223,7 +223,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         err = 0;
         plusDelta = (dx + dx) + (dy + dy);
         minusDelta = -(dy + dy);
-        plusStep = (int)step - bt_pix;
+        plusStep = (int)istep - bt_pix;
         minusStep = bt_pix;
         count = dx + dy + 1;
     }

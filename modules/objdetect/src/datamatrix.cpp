@@ -256,14 +256,14 @@ static int decode(Sampler &sa, code &cc)
 {
   uchar binary[8] = {0,0,0,0,0,0,0,0};
   uchar b = 0;
-  int i, sum;
+  int sum;
 
   sum = 0;
 
-  for (i = 0; i < 64; i++)
+  for (int i = 0; i < 64; i++)
     sum += sa.getpixel(1 + (i & 7), 1 + (i >> 3));
   uchar mean = (uchar)(sum / 64);
-  for (i = 0; i < 64; i++) {
+  for (int i = 0; i < 64; i++) {
     b = (b << 1) + (sa.getpixel(pickup[i].x, pickup[i].y) <= mean);
     if ((i & 7) == 7) {
       binary[i >> 3] = b;
@@ -275,12 +275,11 @@ static int decode(Sampler &sa, code &cc)
 
   uchar c[5] = {0,0,0,0,0};
   {
-    int i, j;
     uchar a[5] = {228, 48, 15, 111, 62};
     int k = 5;
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
       uchar t = binary[i] ^ c[4];
-      for (j = k - 1; j != -1; j--) {
+      for (int j = k - 1; j != -1; j--) {
         if (t == 0)
             c[j] = 0;
         else
@@ -390,12 +389,12 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
   deque <CvPoint> candidates;
   {
     int x, y;
-    int r = cxy->rows;
-    int c = cxy->cols;
-    for (y = 0; y < r; y++) {
+    int rows = cxy->rows;
+    int cols = cxy->cols;
+    for (y = 0; y < rows; y++) {
       const short *cd = (const short*)cvPtr2D(cxy, y, 0);
       const short *ccd = (const short*)cvPtr2D(ccxy, y, 0);
-      for (x = 0; x < c; x += 4, cd += 8, ccd += 8) {
+      for (x = 0; x < cols; x += 4, cd += 8, ccd += 8) {
         __m128i v = _mm_loadu_si128((const __m128i*)cd);
         __m128 cyxyxA = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v, v), 16));
         __m128 cyxyxB = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v, v), 16));
@@ -496,7 +495,7 @@ endo: ; // end search for this o
 
 namespace cv
 {
-    
+
 void findDataMatrix(InputArray _image,
                     vector<string>& codes,
                     OutputArray _corners,
@@ -507,23 +506,23 @@ void findDataMatrix(InputArray _image,
     deque <CvDataMatrixCode> rc = cvFindDataMatrix(&m);
     int i, n = (int)rc.size();
     Mat corners;
-    
+
     if( _corners.needed() )
     {
         _corners.create(n, 4, CV_32SC2);
         corners = _corners.getMat();
     }
-    
+
     if( _dmtx.needed() )
         _dmtx.create(n, 1, CV_8U);
-    
+
     codes.resize(n);
-    
+
     for( i = 0; i < n; i++ )
     {
         CvDataMatrixCode& rc_i = rc[i];
         codes[i] = string(rc_i.msg);
-        
+
         if( corners.data )
         {
             const Point* srcpt = (Point*)rc_i.corners->data.ptr;
@@ -532,7 +531,7 @@ void findDataMatrix(InputArray _image,
                 dstpt[k] = srcpt[k];
         }
         cvReleaseMat(&rc_i.corners);
-        
+
         if( _dmtx.needed() )
         {
             _dmtx.create(rc_i.original->rows, rc_i.original->cols, rc_i.original->type, i);
@@ -550,20 +549,20 @@ void drawDataMatrixCodes(InputOutputArray _image,
     Mat image = _image.getMat();
     Mat corners = _corners.getMat();
     int i, n = corners.rows;
-    
+
     if( n > 0 )
     {
         CV_Assert( corners.depth() == CV_32S &&
                   corners.cols*corners.channels() == 8 &&
                   n == (int)codes.size() );
     }
-    
+
     for( i = 0; i < n; i++ )
     {
         Scalar c(0, 255, 0);
         Scalar c2(255, 0,0);
         const Point* pt = (const Point*)corners.ptr(i);
-        
+
         for( int k = 0; k < 4; k++ )
             line(image, pt[k], pt[(k+1)%4], c);
         //int baseline = 0;
@@ -571,5 +570,5 @@ void drawDataMatrixCodes(InputOutputArray _image,
         putText(image, codes[i], pt[0], CV_FONT_HERSHEY_SIMPLEX, 0.8, c2, 1, CV_AA, false);
     }
 }
-    
+
 }

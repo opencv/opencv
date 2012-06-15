@@ -666,7 +666,7 @@ CVAPI(int) cvSolveCubic( const CvMat* coeffs, CvMat* roots );
 
 /* Finds all real and complex roots of a polynomial equation */
 CVAPI(void) cvSolvePoly(const CvMat* coeffs, CvMat *roots2,
-			int maxiter CV_DEFAULT(20), int fig CV_DEFAULT(100));
+      int maxiter CV_DEFAULT(20), int fig CV_DEFAULT(100));
 
 /****************************************************************************************\
 *                                Matrix operations                                       *
@@ -1127,9 +1127,9 @@ CVAPI(void)   cvSetRemove( CvSet* set_header, int index );
 
 /* Returns a set element by index. If the element doesn't belong to the set,
    NULL is returned */
-CV_INLINE CvSetElem* cvGetSetElem( const CvSet* set_header, int index )
+CV_INLINE CvSetElem* cvGetSetElem( const CvSet* set_header, int idx )
 {
-    CvSetElem* elem = (CvSetElem*)cvGetSeqElem( (CvSeq*)set_header, index );
+    CvSetElem* elem = (CvSetElem*)cvGetSeqElem( (CvSeq*)set_header, idx );
     return elem && CV_IS_SET_ELEM( elem ) ? elem : 0;
 }
 
@@ -1283,8 +1283,8 @@ CVAPI(void)  cvRectangleR( CvArr* img, CvRect r,
                            CvScalar color, int thickness CV_DEFAULT(1),
                            int line_type CV_DEFAULT(8),
                            int shift CV_DEFAULT(0));
-    
-    
+
+
 /* Draws a circle with specified center and radius.
    Thickness works in the same way as with cvRectangle */
 CVAPI(void)  cvCircle( CvArr* img, CvPoint center, int radius,
@@ -1374,17 +1374,17 @@ CVAPI(int)  cvInitLineIterator( const CvArr* image, CvPoint pt1, CvPoint pt2,
 /* Font structure */
 typedef struct CvFont
 {
-	const char* nameFont;		//Qt:nameFont
-	CvScalar color;				//Qt:ColorFont -> cvScalar(blue_component, green_component, red\_component[, alpha_component])
-    int         font_face; 		//Qt: bool italic         /* =CV_FONT_* */
-    const int*  ascii; 			/* font data and metrics */
+  const char* nameFont;   //Qt:nameFont
+  CvScalar color;       //Qt:ColorFont -> cvScalar(blue_component, green_component, red\_component[, alpha_component])
+    int         font_face;    //Qt: bool italic         /* =CV_FONT_* */
+    const int*  ascii;      /* font data and metrics */
     const int*  greek;
     const int*  cyrillic;
     float       hscale, vscale;
-    float       shear; 			/* slope coefficient: 0 - normal, >0 - italic */
-    int         thickness; 		//Qt: weight               /* letters thickness */
-    float       dx; 			/* horizontal interval between letters */
-    int         line_type;		//Qt: PointSize
+    float       shear;      /* slope coefficient: 0 - normal, >0 - italic */
+    int         thickness;    //Qt: weight               /* letters thickness */
+    float       dx;       /* horizontal interval between letters */
+    int         line_type;    //Qt: PointSize
 }
 CvFont;
 
@@ -1696,7 +1696,7 @@ CVAPI(double) cvGetTickFrequency( void );
 
 /*********************************** CPU capabilities ***********************************/
 
-#define CV_CPU_NONE    0    
+#define CV_CPU_NONE    0
 #define CV_CPU_MMX     1
 #define CV_CPU_SSE     2
 #define CV_CPU_SSE2    3
@@ -1718,9 +1718,9 @@ CVAPI(void) cvSetNumThreads( int threads CV_DEFAULT(0) );
 /* get index of the thread being executed */
 CVAPI(int)  cvGetThreadNum( void );
 
-    
+
 /********************************** Error Handling **************************************/
-    
+
 /* Get current OpenCV error status */
 CVAPI(int) cvGetErrStatus( void );
 
@@ -1774,37 +1774,37 @@ CVAPI(int) cvStdErrReport( int status, const char* func_name, const char* err_ms
                           const char* file_name, int line, void* userdata );
 
 CVAPI(int) cvGuiBoxReport( int status, const char* func_name, const char* err_msg,
-                          const char* file_name, int line, void* userdata );    
-    
+                          const char* file_name, int line, void* userdata );
+
 #define OPENCV_ERROR(status,func,context)                           \
 cvError((status),(func),(context),__FILE__,__LINE__)
-    
+
 #define OPENCV_ERRCHK(func,context)                                 \
 {if (cvGetErrStatus() >= 0)                         \
 {OPENCV_ERROR(CV_StsBackTrace,(func),(context));}}
-    
+
 #define OPENCV_ASSERT(expr,func,context)                            \
 {if (! (expr))                                      \
 {OPENCV_ERROR(CV_StsInternal,(func),(context));}}
-    
+
 #define OPENCV_RSTERR() (cvSetErrStatus(CV_StsOk))
-    
+
 #define OPENCV_CALL( Func )                                         \
 {                                                                   \
 Func;                                                           \
-} 
-    
-    
+}
+
+
 /* CV_FUNCNAME macro defines icvFuncName constant which is used by CV_ERROR macro */
 #ifdef CV_NO_FUNC_NAMES
 #define CV_FUNCNAME( Name )
 #define cvFuncName ""
-#else    
+#else
 #define CV_FUNCNAME( Name )  \
 static char cvFuncName[] = Name
 #endif
-  
-    
+
+
 /*
  CV_ERROR macro unconditionally raises error with passed code and message.
  After raising error, control will be transferred to the exit label.
@@ -1814,11 +1814,11 @@ static char cvFuncName[] = Name
     cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );        \
     __CV_EXIT__;                                                   \
 }
-    
+
 /* Simplified form of CV_ERROR */
 #define CV_ERROR_FROM_CODE( code )   \
     CV_ERROR( code, "" )
-    
+
 /*
  CV_CHECK macro checks error status after CV (or IPL)
  function call. If error detected, control will be transferred to the exit
@@ -1829,8 +1829,8 @@ static char cvFuncName[] = Name
     if( cvGetErrStatus() < 0 )                                      \
         CV_ERROR( CV_StsBackTrace, "Inner function failed." );      \
 }
-    
-    
+
+
 /*
  CV_CALL macro calls CV (or IPL) function, checks error status and
  signals a error if the function failed. Useful in "parent node"
@@ -1841,19 +1841,19 @@ static char cvFuncName[] = Name
     Func;                                                           \
     CV_CHECK();                                                     \
 }
-    
-    
+
+
 /* Runtime assertion macro */
 #define CV_ASSERT( Condition )                                          \
 {                                                                       \
     if( !(Condition) )                                                  \
         CV_ERROR( CV_StsInternal, "Assertion: " #Condition " failed" ); \
 }
-    
+
 #define __CV_BEGIN__       {
 #define __CV_END__         goto exit; exit: ; }
-#define __CV_EXIT__        goto exit    
-    
+#define __CV_EXIT__        goto exit
+
 #ifdef __cplusplus
 }
 

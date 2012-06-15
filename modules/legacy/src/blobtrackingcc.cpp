@@ -301,8 +301,8 @@ public:
         {   /* Find a neighbour on current frame
              * for each blob from previous frame:
              */
-            CvBlob*         pB = m_BlobList.GetBlob(i-1);
-            DefBlobTracker* pBT = (DefBlobTracker*)pB;
+            CvBlob*         pBl = m_BlobList.GetBlob(i-1);
+            DefBlobTracker* pBT = (DefBlobTracker*)pBl;
             //int             BlobID = CV_BLOB_ID(pB);
             //CvBlob*         pBBest = NULL;
             //double          DistBest = -1;

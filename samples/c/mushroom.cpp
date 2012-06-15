@@ -2,9 +2,9 @@
 #include "opencv2/ml/ml.hpp"
 #include <stdio.h>
 
-void help()
+static void help()
 {
-	printf("\nThis program demonstrated the use of OpenCV's decision tree function for learning and predicting data\n"
+    printf("\nThis program demonstrated the use of OpenCV's decision tree function for learning and predicting data\n"
             "Usage :\n"
             "./mushroom <path to agaricus-lepiota.data>\n"
             "\n"
@@ -21,7 +21,7 @@ void help()
             "// the values are encoded by characters.\n\n");
 }
 
-int mushroom_read_database( const char* filename, CvMat** data, CvMat** missing, CvMat** responses )
+static int mushroom_read_database( const char* filename, CvMat** data, CvMat** missing, CvMat** responses )
 {
     const int M = 1024;
     FILE* f = fopen( filename, "rt" );
@@ -95,7 +95,7 @@ int mushroom_read_database( const char* filename, CvMat** data, CvMat** missing,
 }
 
 
-CvDTree* mushroom_create_dtree( const CvMat* data, const CvMat* missing,
+static CvDTree* mushroom_create_dtree( const CvMat* data, const CvMat* missing,
                                 const CvMat* responses, float p_weight )
 {
     CvDTree* dtree;
@@ -107,7 +107,7 @@ CvDTree* mushroom_create_dtree( const CvMat* data, const CvMat* missing,
     cvSet( var_type, cvScalarAll(CV_VAR_CATEGORICAL) ); // all the variables are categorical
 
     dtree = new CvDTree;
-    
+
     dtree->train( data, CV_ROW_SAMPLE, responses, 0, 0, var_type, missing,
                   CvDTreeParams( 8, // max depth
                                  10, // min sample count
@@ -179,7 +179,7 @@ static const char* var_desc[] =
 };
 
 
-void print_variable_importance( CvDTree* dtree, const char** var_desc )
+static void print_variable_importance( CvDTree* dtree )
 {
     const CvMat* var_importance = dtree->get_var_importance();
     int i;
@@ -201,21 +201,16 @@ void print_variable_importance( CvDTree* dtree, const char** var_desc )
     for( i = 0; i < var_importance->cols*var_importance->rows; i++ )
     {
         double val = var_importance->data.db[i];
-        if( var_desc )
-        {
-            char buf[100];
-            int len = (int)(strchr( var_desc[i], '(' ) - var_desc[i] - 1);
-            strncpy( buf, var_desc[i], len );
-            buf[len] = '\0';
-            printf( "%s", buf );
-        }
-        else
-            printf( "var #%d", i );
+        char buf[100];
+        int len = (int)(strchr( var_desc[i], '(' ) - var_desc[i] - 1);
+        strncpy( buf, var_desc[i], len );
+        buf[len] = '\0';
+        printf( "%s", buf );
         printf( ": %g%%\n", val*100. );
     }
 }
 
-void interactive_classification( CvDTree* dtree, const char** var_desc )
+static void interactive_classification( CvDTree* dtree )
 {
     char input[1000];
     const CvDTreeNode* root;
@@ -230,14 +225,14 @@ void interactive_classification( CvDTree* dtree, const char** var_desc )
     for(;;)
     {
         const CvDTreeNode* node;
-        
+
         printf( "Start/Proceed with interactive mushroom classification (y/n): " );
         int values_read = scanf( "%1s", input );
         CV_Assert(values_read == 1);
 
         if( input[0] != 'y' && input[0] != 'Y' )
             break;
-        printf( "Enter 1-letter answers, '?' for missing/unknown value...\n" ); 
+        printf( "Enter 1-letter answers, '?' for missing/unknown value...\n" );
 
         // custom version of predict
         node = root;
@@ -245,7 +240,7 @@ void interactive_classification( CvDTree* dtree, const char** var_desc )
         {
             CvDTreeSplit* split = node->split;
             int dir = 0;
-            
+
             if( !node->left || node->Tn <= dtree->get_pruned_tree_idx() || !node->split )
                 break;
 
@@ -279,7 +274,7 @@ void interactive_classification( CvDTree* dtree, const char** var_desc )
                 else
                     printf( "Error: unrecognized value\n" );
             }
-            
+
             if( !dir )
             {
                 printf( "Impossible to classify the sample\n");
@@ -319,8 +314,8 @@ int main( int argc, char** argv )
     cvReleaseMat( &missing );
     cvReleaseMat( &responses );
 
-    print_variable_importance( dtree, var_desc );
-    interactive_classification( dtree, var_desc );
+    print_variable_importance( dtree );
+    interactive_classification( dtree );
     delete dtree;
 
     return 0;

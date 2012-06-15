@@ -13,7 +13,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     cout << "LogPolar Blind Spot Model sample.\nShortcuts:"
         "\n\tn for nearest pixel technique"
@@ -22,7 +22,7 @@ void help()
         "\n\ta for adjacent receptive fields"
         "\n\tq or ESC quit\n";
 }
-    
+
 int main(int argc, char** argv)
 {
     Mat img = imread(argc > 1 ? argv[1] : "lena.jpg",1); // open the image
@@ -32,12 +32,12 @@ int main(int argc, char** argv)
         return 0;
     }
     help();
-    
+
     Size s=img.size();
     int w=s.width, h=s.height;
     int ro0=3; //radius of the blind spot
-    int R=120;  //number of rings   
-    
+    int R=120;  //number of rings
+
     //Creation of the four different objects that implement the four log-polar transformations
     //Off-line computation
     Point2i center(w/2,h/2);
@@ -60,13 +60,13 @@ int main(int argc, char** argv)
             Retinal=nearest.to_cartesian(Cortical);
         }else if (wk=='b'){
             Cortical=bilin.to_cortical(img);
-            Retinal=bilin.to_cartesian(Cortical);           
+            Retinal=bilin.to_cartesian(Cortical);
         }else if (wk=='o'){
             Cortical=overlap.to_cortical(img);
-            Retinal=overlap.to_cartesian(Cortical);         
+            Retinal=overlap.to_cartesian(Cortical);
         }else if (wk=='a'){
             Cortical=adj.to_cortical(img);
-            Retinal=adj.to_cartesian(Cortical); 
+            Retinal=adj.to_cartesian(Cortical);
         }
 
         imshow("Cartesian", img);

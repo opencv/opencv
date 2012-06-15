@@ -10,42 +10,42 @@ int edgeThresh = 1;
 Mat image, gray, edge, cedge;
 
 // define a trackbar callback
-void onTrackbar(int, void*)
+static void onTrackbar(int, void*)
 {
     blur(gray, edge, Size(3,3));
 
     // Run the edge detector on grayscale
     Canny(edge, edge, edgeThresh, edgeThresh*3, 3);
     cedge = Scalar::all(0);
-    
+
     image.copyTo(cedge, edge);
     imshow("Edge map", cedge);
 }
 
-void help()
+static void help()
 {
-	printf("\nThis sample demonstrates Canny edge detection\n"
-		   "Call:\n"
-		   "	/.edge [image_name -- Default is fruits.jpg]\n\n");
+    printf("\nThis sample demonstrates Canny edge detection\n"
+           "Call:\n"
+           "    /.edge [image_name -- Default is fruits.jpg]\n\n");
 }
 
-const char* keys = 
+const char* keys =
 {
-	"{1| |fruits.jpg|input image name}"
+    "{1| |fruits.jpg|input image name}"
 };
 
 int main( int argc, const char** argv )
 {
     help();
 
-	CommandLineParser parser(argc, argv, keys);
-	string filename = parser.get<string>("1");
+    CommandLineParser parser(argc, argv, keys);
+    string filename = parser.get<string>("1");
 
     image = imread(filename, 1);
     if(image.empty())
     {
-		printf("Cannot read image file: %s\n", filename.c_str());
-		help();
+        printf("Cannot read image file: %s\n", filename.c_str());
+        help();
         return -1;
     }
     cedge.create(image.size(), image.type());

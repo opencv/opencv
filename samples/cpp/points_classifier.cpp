@@ -29,7 +29,7 @@ vector<Scalar> classColors;
 #define _ANN_ 0 // artificial neural networks
 #define _EM_  0 // expectation-maximization
 
-void on_mouse( int event, int x, int y, int /*flags*/, void* )
+static void on_mouse( int event, int x, int y, int /*flags*/, void* )
 {
     if( img.empty() )
         return;
@@ -87,7 +87,7 @@ void on_mouse( int event, int x, int y, int /*flags*/, void* )
    }
 }
 
-void prepare_train_data( Mat& samples, Mat& classes )
+static void prepare_train_data( Mat& samples, Mat& classes )
 {
     Mat( trainedPoints ).copyTo( samples );
     Mat( trainedPointsMarkers ).copyTo( classes );
@@ -98,7 +98,7 @@ void prepare_train_data( Mat& samples, Mat& classes )
 }
 
 #if _NBC_
-void find_decision_boundary_NBC()
+static void find_decision_boundary_NBC()
 {
     img.copyTo( imgDst );
 
@@ -125,7 +125,7 @@ void find_decision_boundary_NBC()
 
 
 #if _KNN_
-void find_decision_boundary_KNN( int K )
+static void find_decision_boundary_KNN( int K )
 {
     img.copyTo( imgDst );
 
@@ -151,7 +151,7 @@ void find_decision_boundary_KNN( int K )
 #endif
 
 #if _SVM_
-void find_decision_boundary_SVM( CvSVMParams params )
+static void find_decision_boundary_SVM( CvSVMParams params )
 {
     img.copyTo( imgDst );
 
@@ -185,7 +185,7 @@ void find_decision_boundary_SVM( CvSVMParams params )
 #endif
 
 #if _DT_
-void find_decision_boundary_DT()
+static void find_decision_boundary_DT()
 {
     img.copyTo( imgDst );
 

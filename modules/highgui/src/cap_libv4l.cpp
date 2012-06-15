@@ -779,9 +779,9 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
            return -1;
        } else {
          buffer_number--;
-	 fprintf (stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
+   fprintf (stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
 
-	 goto try_again;
+   goto try_again;
        }
    }
 
@@ -824,8 +824,8 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
            if (capture->buffers[MAX_V4L_BUFFERS].start) {
                free(capture->buffers[MAX_V4L_BUFFERS].start);
                capture->buffers[MAX_V4L_BUFFERS].start = NULL;
-		   }
-		
+       }
+
            capture->buffers[MAX_V4L_BUFFERS].start = malloc(buf.length);
            capture->buffers[MAX_V4L_BUFFERS].length = buf.length;
        };
@@ -1080,11 +1080,11 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 
 #ifdef USE_TEMP_BUFFER
    memcpy(capture->buffers[MAX_V4L_BUFFERS].start,
-	  capture->buffers[buf.index].start,
-	  capture->buffers[MAX_V4L_BUFFERS].length );
+    capture->buffers[buf.index].start,
+    capture->buffers[MAX_V4L_BUFFERS].length );
    capture->bufferIndex = MAX_V4L_BUFFERS;
    //printf("got data in buff %d, len=%d, flags=0x%X, seq=%d, used=%d)\n",
-   //	  buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
+   //   buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
 #else
    capture->bufferIndex = buf.index;
 #endif
@@ -1211,9 +1211,9 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
      capture->mmaps[capture->bufferIndex].format = capture->imageProperties.palette;
 
      if (v4l1_ioctl (capture->deviceHandle, VIDIOCMCAPTURE,
-		&capture->mmaps[capture->bufferIndex]) == -1) {
-	 /* capture is on the way, so just exit */
-	 return 1;
+    &capture->mmaps[capture->bufferIndex]) == -1) {
+   /* capture is on the way, so just exit */
+   return 1;
      }
 
      ++capture->bufferIndex;
@@ -1273,11 +1273,11 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
   if (capture->is_v4l2_device == 1)
   {
 
-	  if(capture->buffers[capture->bufferIndex].start){
-		  memcpy((char *)capture->frame.imageData,
-				 (char *)capture->buffers[capture->bufferIndex].start,
-				 capture->frame.imageSize);
-	  }
+    if(capture->buffers[capture->bufferIndex].start){
+      memcpy((char *)capture->frame.imageData,
+         (char *)capture->buffers[capture->bufferIndex].start,
+         capture->frame.imageSize);
+    }
 
   } else
 #endif /* HAVE_CAMV4L2 */
@@ -1353,7 +1353,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
       sprintf(name, "<unknown property string>");
       capture->control.id = property_id;
   }
- 
+
   if(v4l2_ioctl(capture->deviceHandle, VIDIOC_G_CTRL, &capture->control) == 0) {
     /* all went well */
     is_v4l2_device = 1;
@@ -1519,7 +1519,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture, int property_id, double val
 
   CLEAR (capture->control);
   CLEAR (capture->queryctrl);
-  
+
   /* get current values */
   switch (property_id) {
     case CV_CAP_PROP_BRIGHTNESS:
@@ -1688,8 +1688,8 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
        if (xioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type) < 0) {
          perror ("Unable to stop the stream.");
        }
-       for (unsigned int n_buffers = 0; n_buffers < capture->req.count; ++n_buffers) {
-         if (-1 == v4l2_munmap (capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
+       for (unsigned int n_buffers2 = 0; n_buffers2 < capture->req.count; ++n_buffers2) {
+         if (-1 == v4l2_munmap (capture->buffers[n_buffers2].start, capture->buffers[n_buffers2].length)) {
            perror ("munmap");
          }
        }

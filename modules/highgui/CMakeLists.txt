@@ -76,11 +76,20 @@ if(HAVE_QT)
   endif()
   include(${QT_USE_FILE})
 
+  if(QT_INCLUDE_DIR)
+    ocv_include_directories(${QT_INCLUDE_DIR})
+  endif()
+
   QT4_ADD_RESOURCES(_RCC_OUTFILES src/window_QT.qrc)
   QT4_WRAP_CPP(_MOC_OUTFILES src/window_QT.h)
 
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
   list(APPEND highgui_srcs src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
+
+  ocv_check_flag_support(CXX -Wno-missing-declarations HAVE_CXX_WNO_MISSING_DECLARATIONS)
+  if(HAVE_CXX_WNO_MISSING_DECLARATIONS)
+    set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
+  endif()
 elseif(WIN32)
   list(APPEND highgui_srcs src/window_w32.cpp)
 elseif(HAVE_GTK)
@@ -166,7 +175,6 @@ if(WITH_IMAGEIO)
   if(IOS)
     list(APPEND HIGHGUI_LIBRARIES "-framework ImageIO")
   endif()
-  #TODO: check if need to link with some framework on OS X: -framework ApplicationServices ??
 endif(WITH_IMAGEIO)
 
 if(WITH_AVFOUNDATION)
@@ -186,7 +194,7 @@ endif()
 
 if(WIN32)
   link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
-  include_directories(AFTER "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
+  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
 endif()
 
 if(UNIX)
@@ -220,10 +228,7 @@ endif()
 set_target_properties(${the_module} PROPERTIES LINK_INTERFACE_LIBRARIES "")
 
 ocv_add_precompiled_headers(${the_module})
-
-if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
-endif()
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
 if(WIN32 AND WITH_FFMPEG)
   #copy ffmpeg dll to the output folder

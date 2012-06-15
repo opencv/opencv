@@ -128,9 +128,9 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
     CV_Assert(mask.size() == frame.size() && mask.type() == CV_8U);
 
     Mat invS = at(idx, *stabilizationMotions_).inv();
-    vector<Mat_<float> > motions(2*radius_ + 1);
+    vector<Mat_<float> > _motions(2*radius_ + 1);
     for (int i = -radius_; i <= radius_; ++i)
-        motions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
+        _motions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
 
     int n;
     float mean, var;
@@ -152,7 +152,7 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
                 for (int i = -radius_; i <= radius_; ++i)
                 {
                     const Mat_<Point3_<uchar> > &framei = at(idx + i, *frames_);
-                    const Mat_<float> &Mi = motions[radius_ + i];
+                    const Mat_<float> &Mi = _motions[radius_ + i];
                     int xi = cvRound(Mi(0,0)*x + Mi(0,1)*y + Mi(0,2));
                     int yi = cvRound(Mi(1,0)*x + Mi(1,1)*y + Mi(1,2));
                     if (xi >= 0 && xi < framei.cols && yi >= 0 && yi < framei.rows)
@@ -239,7 +239,7 @@ public:
             for (int dx = -rad; dx <= rad; ++dx)
             {
                 int qx0 = x + dx;
-                int qy0 = y + dy;               
+                int qy0 = y + dy;
 
                 if (qy0 >= 0 && qy0 < mask0.rows && qx0 >= 0 && qx0 < mask0.cols && mask0(qy0,qx0))
                 {
@@ -323,7 +323,7 @@ public:
 
 MotionInpainter::MotionInpainter()
 {
-#if HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPU
     setOptFlowEstimator(new DensePyrLkOptFlowEstimatorGpu());
 #else
     CV_Error(CV_StsNotImplemented, "Current implementation of MotionInpainter requires GPU");
@@ -337,12 +337,12 @@ MotionInpainter::MotionInpainter()
 void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 {
     priority_queue<pair<float,int> > neighbors;
-    vector<Mat> motions(2*radius_ + 1);
+    vector<Mat> _motions(2*radius_ + 1);
 
     for (int i = -radius_; i <= radius_; ++i)
     {
         Mat motion0to1 = getMotion(idx, idx + i, *motions_) * at(idx, *stabilizationMotions_).inv();
-        motions[radius_ + i] = motion0to1;
+        _motions[radius_ + i] = motion0to1;
 
         if (i != 0)
         {
@@ -368,7 +368,7 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         int neighbor = neighbors.top().second;
         neighbors.pop();
 
-        Mat motion1to0 = motions[radius_ + neighbor - idx].inv();
+        Mat motion1to0 = _motions[radius_ + neighbor - idx].inv();
 
         frame1_ = at(neighbor, *frames_);
         warpAffine(
@@ -514,7 +514,7 @@ void completeFrameAccordingToFlow(
 
                 if (x1 >= 0 && x1 < frame1.cols && y1 >= 0 && y1 < frame1.rows && mask1_(y1,x1)
                     && sqr(flowX_(y0,x0)) + sqr(flowY_(y0,x0)) < sqr(distThresh))
-                {                    
+                {
                     frame0.at<Point3_<uchar> >(y0,x0) = frame1.at<Point3_<uchar> >(y1,x1);
                     mask0_(y0,x0) = 255;
                     //count++;

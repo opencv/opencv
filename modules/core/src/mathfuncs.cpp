@@ -53,7 +53,7 @@ static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
 static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
 static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
 static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
-    
+
 float fastAtan2( float y, float x )
 {
     float ax = std::abs(x), ay = std::abs(y);
@@ -109,18 +109,18 @@ static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len,
             a = _mm_mul_ps(_mm_add_ps(a, p5), c2);
             a = _mm_mul_ps(_mm_add_ps(a, p3), c2);
             a = _mm_mul_ps(_mm_add_ps(a, p1), c);
-            
+
             __m128 b = _mm_sub_ps(_90, a);
             a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
-            
+
             b = _mm_sub_ps(_180, a);
             mask = _mm_cmplt_ps(x, z);
             a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
-            
+
             b = _mm_sub_ps(_360, a);
             mask = _mm_cmplt_ps(y, z);
             a = _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(a, b), mask));
-            
+
             a = _mm_mul_ps(a, scale4);
             _mm_storeu_ps(angle + i, a);
         }
@@ -197,7 +197,7 @@ float  cubeRoot( float value )
 static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 {
     int i = 0;
-    
+
 #if CV_SSE
     if( USE_SSE2 )
     {
@@ -223,8 +223,8 @@ static void Magnitude_32f(const float* x, const float* y, float* mag, int len)
 static void Magnitude_64f(const double* x, const double* y, double* mag, int len)
 {
     int i = 0;
-    
-#if CV_SSE2   
+
+#if CV_SSE2
     if( USE_SSE2 )
     {
         for( ; i <= len - 4; i += 4 )
@@ -238,7 +238,7 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
         }
     }
 #endif
-    
+
     for( ; i < len; i++ )
     {
         double x0 = x[i], y0 = y[i];
@@ -246,14 +246,14 @@ static void Magnitude_64f(const double* x, const double* y, double* mag, int len
     }
 }
 
-    
+
 static void InvSqrt_32f(const float* src, float* dst, int len)
 {
     int i = 0;
-    
-#if CV_SSE   
+
+#if CV_SSE
     if( USE_SSE2 )
-    {    
+    {
         __m128 _0_5 = _mm_set1_ps(0.5f), _1_5 = _mm_set1_ps(1.5f);
         if( (((size_t)src|(size_t)dst) & 15) == 0 )
             for( ; i <= len - 8; i += 8 )
@@ -277,24 +277,24 @@ static void InvSqrt_32f(const float* src, float* dst, int len)
             }
     }
 #endif
-    
+
     for( ; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
 }
 
-    
+
 static void InvSqrt_64f(const double* src, double* dst, int len)
 {
     for( int i = 0; i < len; i++ )
         dst[i] = 1/std::sqrt(src[i]);
-}    
-    
-    
+}
+
+
 static void Sqrt_32f(const float* src, float* dst, int len)
 {
     int i = 0;
-    
-#if CV_SSE    
+
+#if CV_SSE
     if( USE_SSE2 )
     {
         if( (((size_t)src|(size_t)dst) & 15) == 0 )
@@ -312,18 +312,18 @@ static void Sqrt_32f(const float* src, float* dst, int len)
                 _mm_storeu_ps(dst + i, t0); _mm_storeu_ps(dst + i + 4, t1);
             }
     }
-#endif    
-    
+#endif
+
     for( ; i < len; i++ )
         dst[i] = std::sqrt(src[i]);
 }
 
-    
+
 static void Sqrt_64f(const double* src, double* dst, int len)
 {
     int i = 0;
-    
-#if CV_SSE2    
+
+#if CV_SSE2
     if( USE_SSE2 )
     {
         if( (((size_t)src|(size_t)dst) & 15) == 0 )
@@ -342,7 +342,7 @@ static void Sqrt_64f(const double* src, double* dst, int len)
             }
     }
 #endif
-    
+
     for( ; i < len; i++ )
         dst[i] = std::sqrt(src[i]);
 }
@@ -359,12 +359,12 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 	CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
     dst.create(X.dims, X.size, X.type());
     Mat Mag = dst.getMat();
-    
+
     const Mat* arrays[] = {&X, &Y, &Mag, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size*cn;
-        
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
@@ -382,7 +382,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     }
 }
 
-    
+
 void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
     Mat X = src1.getMat(), Y = src2.getMat();
@@ -390,7 +390,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
     dst.create( X.dims, X.size, type );
     Mat Angle = dst.getMat();
-    
+
     const Mat* arrays[] = {&X, &Y, &Angle, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
@@ -398,7 +398,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     float* buf[2] = {0, 0};
     int j, k, total = (int)(it.size*cn), blockSize = total;
     size_t esz1 = X.elemSize1();
-    
+
     if( depth == CV_64F )
     {
         blockSize = std::min(blockSize, ((BLOCK_SIZE+cn-1)/cn)*cn);
@@ -406,7 +406,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
         buf[0] = _buf;
         buf[1] = buf[0] + blockSize;
     }
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -427,7 +427,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
                     buf[0][k] = (float)x[k];
                     buf[1][k] = (float)y[k];
                 }
-                    
+
                 FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
                 for( k = 0; k < len; k++ )
 					angle[k] = buf[0][k];
@@ -438,8 +438,8 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
         }
     }
 }
- 
-    
+
+
 void cartToPolar( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
@@ -449,7 +449,7 @@ void cartToPolar( InputArray src1, InputArray src2,
     dst1.create( X.dims, X.size, type );
     dst2.create( X.dims, X.size, type );
     Mat Mag = dst1.getMat(), Angle = dst2.getMat();
-    
+
     const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
     uchar* ptrs[4];
     NAryMatIterator it(arrays, ptrs);
@@ -457,14 +457,14 @@ void cartToPolar( InputArray src1, InputArray src2,
     float* buf[2] = {0, 0};
     int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = X.elemSize1();
-    
+
     if( depth == CV_64F )
     {
         _buf.allocate(blockSize*2);
         buf[0] = _buf;
         buf[1] = buf[0] + blockSize;
     }
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -481,14 +481,14 @@ void cartToPolar( InputArray src1, InputArray src2,
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
                 double *angle = (double*)ptrs[3];
-                
+
                 Magnitude_64f(x, y, (double*)ptrs[2], len);
                 for( k = 0; k < len; k++ )
                 {
                     buf[0][k] = (float)x[k];
                     buf[1][k] = (float)y[k];
                 }
-                
+
                 FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
                 for( k = 0; k < len; k++ )
 					angle[k] = buf[0][k];
@@ -595,7 +595,7 @@ void polarToCart( InputArray src1, InputArray src2,
     dst1.create( Angle.dims, Angle.size, type );
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
-    
+
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4];
     NAryMatIterator it(arrays, ptrs);
@@ -603,14 +603,14 @@ void polarToCart( InputArray src1, InputArray src2,
     float* buf[2] = {0, 0};
     int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = Angle.elemSize1();
-    
+
     if( depth == CV_64F )
     {
         _buf.allocate(blockSize*2);
         buf[0] = _buf;
         buf[1] = buf[0] + blockSize;
     }
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
@@ -620,7 +620,7 @@ void polarToCart( InputArray src1, InputArray src2,
             {
                 const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
                 float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
-                
+
                 SinCos_32f( angle, y, x, len, angleInDegrees );
                 if( mag )
                     for( k = 0; k < len; k++ )
@@ -633,10 +633,10 @@ void polarToCart( InputArray src1, InputArray src2,
             {
                 const double *mag = (const double*)ptrs[0], *angle = (const double*)ptrs[1];
                 double *x = (double*)ptrs[2], *y = (double*)ptrs[3];
-                
+
                 for( k = 0; k < len; k++ )
                     buf[0][k] = (float)angle[k];
-                
+
                 SinCos_32f( buf[0], buf[1], buf[0], len, angleInDegrees );
                 if( mag )
                     for( k = 0; k < len; k++ )
@@ -650,7 +650,7 @@ void polarToCart( InputArray src1, InputArray src2,
                         x[k] = buf[0][k]; y[k] = buf[1][k];
                     }
             }
-            
+
             if( ptrs[0] )
                 ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -759,8 +759,8 @@ static const double expTab[] = {
     (!defined __APPLE__ && defined __GNUC__ && __GNUC__*100 + __GNUC_MINOR__ < 402)
 #undef CV_SSE2
 #define CV_SSE2 0
-#endif    
-    
+#endif
+
 static const double exp_prescale = 1.4426950408889634073599246810019 * (1 << EXPTAB_SCALE);
 static const double exp_postscale = 1./(1 << EXPTAB_SCALE);
 static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) < 3000
@@ -772,11 +772,11 @@ static void Exp_32f( const float *_x, float *y, int n )
         A3 = (float)(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
         A2 = (float)(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
         A1 = (float)(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
-    
+
 #undef EXPPOLY
 #define EXPPOLY(x)  \
     (((((x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)
-    
+
     int i = 0;
     const Cv32suf* x = (const Cv32suf*)_x;
     Cv32suf buf[4];
@@ -788,90 +788,90 @@ static void Exp_32f( const float *_x, float *y, int n )
         static const __m128 postscale4 = _mm_set1_ps((float)exp_postscale);
         static const __m128 maxval4 = _mm_set1_ps((float)(exp_max_val/exp_prescale));
         static const __m128 minval4 = _mm_set1_ps((float)(-exp_max_val/exp_prescale));
-        
+
         static const __m128 mA1 = _mm_set1_ps(A1);
         static const __m128 mA2 = _mm_set1_ps(A2);
         static const __m128 mA3 = _mm_set1_ps(A3);
         static const __m128 mA4 = _mm_set1_ps(A4);
         bool y_aligned = (size_t)(void*)y % 16 == 0;
-        
+
         ushort CV_DECL_ALIGNED(16) tab_idx[8];
-        
+
         for( ; i <= n - 8; i += 8 )
         {
             __m128 xf0, xf1;
             xf0 = _mm_loadu_ps(&x[i].f);
             xf1 = _mm_loadu_ps(&x[i+4].f);
             __m128i xi0, xi1, xi2, xi3;
-            
+
             xf0 = _mm_min_ps(_mm_max_ps(xf0, minval4), maxval4);
             xf1 = _mm_min_ps(_mm_max_ps(xf1, minval4), maxval4);
-            
+
             __m128d xd0 = _mm_cvtps_pd(xf0);
             __m128d xd2 = _mm_cvtps_pd(_mm_movehl_ps(xf0, xf0));
             __m128d xd1 = _mm_cvtps_pd(xf1);
             __m128d xd3 = _mm_cvtps_pd(_mm_movehl_ps(xf1, xf1));
-            
+
             xd0 = _mm_mul_pd(xd0, prescale2);
             xd2 = _mm_mul_pd(xd2, prescale2);
             xd1 = _mm_mul_pd(xd1, prescale2);
             xd3 = _mm_mul_pd(xd3, prescale2);
-            
+
             xi0 = _mm_cvtpd_epi32(xd0);
             xi2 = _mm_cvtpd_epi32(xd2);
-            
+
             xi1 = _mm_cvtpd_epi32(xd1);
             xi3 = _mm_cvtpd_epi32(xd3);
-            
+
             xd0 = _mm_sub_pd(xd0, _mm_cvtepi32_pd(xi0));
             xd2 = _mm_sub_pd(xd2, _mm_cvtepi32_pd(xi2));
             xd1 = _mm_sub_pd(xd1, _mm_cvtepi32_pd(xi1));
             xd3 = _mm_sub_pd(xd3, _mm_cvtepi32_pd(xi3));
-            
+
             xf0 = _mm_movelh_ps(_mm_cvtpd_ps(xd0), _mm_cvtpd_ps(xd2));
             xf1 = _mm_movelh_ps(_mm_cvtpd_ps(xd1), _mm_cvtpd_ps(xd3));
-            
+
             xf0 = _mm_mul_ps(xf0, postscale4);
             xf1 = _mm_mul_ps(xf1, postscale4);
 
             xi0 = _mm_unpacklo_epi64(xi0, xi2);
             xi1 = _mm_unpacklo_epi64(xi1, xi3);
             xi0 = _mm_packs_epi32(xi0, xi1);
-            
+
             _mm_store_si128((__m128i*)tab_idx, _mm_and_si128(xi0, _mm_set1_epi16(EXPTAB_MASK)));
-            
+
             xi0 = _mm_add_epi16(_mm_srai_epi16(xi0, EXPTAB_SCALE), _mm_set1_epi16(127));
             xi0 = _mm_max_epi16(xi0, _mm_setzero_si128());
             xi0 = _mm_min_epi16(xi0, _mm_set1_epi16(255));
             xi1 = _mm_unpackhi_epi16(xi0, _mm_setzero_si128());
             xi0 = _mm_unpacklo_epi16(xi0, _mm_setzero_si128());
-            
+
             __m128d yd0 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[0]), _mm_load_sd(expTab + tab_idx[1]));
             __m128d yd1 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[2]), _mm_load_sd(expTab + tab_idx[3]));
             __m128d yd2 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[4]), _mm_load_sd(expTab + tab_idx[5]));
             __m128d yd3 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[6]), _mm_load_sd(expTab + tab_idx[7]));
-            
+
             __m128 yf0 = _mm_movelh_ps(_mm_cvtpd_ps(yd0), _mm_cvtpd_ps(yd1));
             __m128 yf1 = _mm_movelh_ps(_mm_cvtpd_ps(yd2), _mm_cvtpd_ps(yd3));
 
             yf0 = _mm_mul_ps(yf0, _mm_castsi128_ps(_mm_slli_epi32(xi0, 23)));
             yf1 = _mm_mul_ps(yf1, _mm_castsi128_ps(_mm_slli_epi32(xi1, 23)));
-            
+
             __m128 zf0 = _mm_add_ps(xf0, mA1);
             __m128 zf1 = _mm_add_ps(xf1, mA1);
-            
+
             zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA2);
             zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA2);
-            
+
             zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA3);
             zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA3);
-            
+
             zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA4);
             zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA4);
-            
+
             zf0 = _mm_mul_ps(zf0, yf0);
             zf1 = _mm_mul_ps(zf1, yf1);
-            
+
             if( y_aligned )
             {
                 _mm_store_ps(y + i, zf0);
@@ -893,77 +893,77 @@ static void Exp_32f( const float *_x, float *y, int n )
         double x2 = x[i + 2].f * exp_prescale;
         double x3 = x[i + 3].f * exp_prescale;
         int val0, val1, val2, val3, t;
-        
+
         if( ((x[i].i >> 23) & 255) > 127 + 10 )
             x0 = x[i].i < 0 ? -exp_max_val : exp_max_val;
-        
+
         if( ((x[i+1].i >> 23) & 255) > 127 + 10 )
             x1 = x[i+1].i < 0 ? -exp_max_val : exp_max_val;
-        
+
         if( ((x[i+2].i >> 23) & 255) > 127 + 10 )
             x2 = x[i+2].i < 0 ? -exp_max_val : exp_max_val;
-        
+
         if( ((x[i+3].i >> 23) & 255) > 127 + 10 )
             x3 = x[i+3].i < 0 ? -exp_max_val : exp_max_val;
-        
+
         val0 = cvRound(x0);
         val1 = cvRound(x1);
         val2 = cvRound(x2);
         val3 = cvRound(x3);
-        
+
         x0 = (x0 - val0)*exp_postscale;
         x1 = (x1 - val1)*exp_postscale;
         x2 = (x2 - val2)*exp_postscale;
         x3 = (x3 - val3)*exp_postscale;
-        
+
         t = (val0 >> EXPTAB_SCALE) + 127;
         t = !(t & ~255) ? t : t < 0 ? 0 : 255;
         buf[0].i = t << 23;
-        
+
         t = (val1 >> EXPTAB_SCALE) + 127;
         t = !(t & ~255) ? t : t < 0 ? 0 : 255;
         buf[1].i = t << 23;
-        
+
         t = (val2 >> EXPTAB_SCALE) + 127;
         t = !(t & ~255) ? t : t < 0 ? 0 : 255;
         buf[2].i = t << 23;
-        
+
         t = (val3 >> EXPTAB_SCALE) + 127;
         t = !(t & ~255) ? t : t < 0 ? 0 : 255;
         buf[3].i = t << 23;
-        
+
         x0 = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
         x1 = buf[1].f * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
-        
+
         y[i] = (float)x0;
         y[i + 1] = (float)x1;
-        
+
         x2 = buf[2].f * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
         x3 = buf[3].f * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
-        
+
         y[i + 2] = (float)x2;
         y[i + 3] = (float)x3;
     }
-    
+
     for( ; i < n; i++ )
     {
         double x0 = x[i].f * exp_prescale;
         int val0, t;
-        
+
         if( ((x[i].i >> 23) & 255) > 127 + 10 )
             x0 = x[i].i < 0 ? -exp_max_val : exp_max_val;
-        
+
         val0 = cvRound(x0);
         t = (val0 >> EXPTAB_SCALE) + 127;
         t = !(t & ~255) ? t : t < 0 ? 0 : 255;
-        
+
         buf[0].i = t << 23;
         x0 = (x0 - val0)*exp_postscale;
-        
+
         y[i] = (float)(buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0));
     }
 }
-    
+
 
 static void Exp_64f( const double *_x, double *y, int n )
 {
@@ -974,14 +974,14 @@ static void Exp_64f( const double *_x, double *y, int n )
     A2 = .55504108793649567998466049042729e-1 / EXPPOLY_32F_A0,
     A1 = .96180973140732918010002372686186e-2 / EXPPOLY_32F_A0,
     A0 = .13369713757180123244806654839424e-2 / EXPPOLY_32F_A0;
-    
+
 #undef EXPPOLY
 #define EXPPOLY(x)  (((((A0*(x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)*(x) + A5)
-    
+
     int i = 0;
     Cv64suf buf[4];
     const Cv64suf* x = (const Cv64suf*)_x;
-    
+
 #if CV_SSE2
     if( USE_SSE2 )
     {
@@ -989,16 +989,16 @@ static void Exp_64f( const double *_x, double *y, int n )
         static const __m128d postscale2 = _mm_set1_pd(exp_postscale);
         static const __m128d maxval2 = _mm_set1_pd(exp_max_val);
         static const __m128d minval2 = _mm_set1_pd(-exp_max_val);
-        
+
         static const __m128d mA0 = _mm_set1_pd(A0);
         static const __m128d mA1 = _mm_set1_pd(A1);
         static const __m128d mA2 = _mm_set1_pd(A2);
         static const __m128d mA3 = _mm_set1_pd(A3);
         static const __m128d mA4 = _mm_set1_pd(A4);
         static const __m128d mA5 = _mm_set1_pd(A5);
-        
+
         int CV_DECL_ALIGNED(16) tab_idx[4];
-        
+
         for( ; i <= n - 4; i += 4 )
         {
             __m128d xf0 = _mm_loadu_pd(&x[i].f), xf1 = _mm_loadu_pd(&x[i+2].f);
@@ -1007,15 +1007,15 @@ static void Exp_64f( const double *_x, double *y, int n )
             xf1 = _mm_min_pd(_mm_max_pd(xf1, minval2), maxval2);
             xf0 = _mm_mul_pd(xf0, prescale2);
             xf1 = _mm_mul_pd(xf1, prescale2);
-            
+
             xi0 = _mm_cvtpd_epi32(xf0);
             xi1 = _mm_cvtpd_epi32(xf1);
             xf0 = _mm_mul_pd(_mm_sub_pd(xf0, _mm_cvtepi32_pd(xi0)), postscale2);
             xf1 = _mm_mul_pd(_mm_sub_pd(xf1, _mm_cvtepi32_pd(xi1)), postscale2);
-            
+
             xi0 = _mm_unpacklo_epi64(xi0, xi1);
             _mm_store_si128((__m128i*)tab_idx, _mm_and_si128(xi0, _mm_set1_epi32(EXPTAB_MASK)));
-            
+
             xi0 = _mm_add_epi32(_mm_srai_epi32(xi0, EXPTAB_SCALE), _mm_set1_epi32(1023));
             xi0 = _mm_packs_epi32(xi0, xi0);
             xi0 = _mm_max_epi16(xi0, _mm_setzero_si128());
@@ -1023,30 +1023,30 @@ static void Exp_64f( const double *_x, double *y, int n )
             xi0 = _mm_unpacklo_epi16(xi0, _mm_setzero_si128());
             xi1 = _mm_unpackhi_epi32(xi0, _mm_setzero_si128());
             xi0 = _mm_unpacklo_epi32(xi0, _mm_setzero_si128());
-            
+
             __m128d yf0 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[0]), _mm_load_sd(expTab + tab_idx[1]));
             __m128d yf1 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[2]), _mm_load_sd(expTab + tab_idx[3]));
             yf0 = _mm_mul_pd(yf0, _mm_castsi128_pd(_mm_slli_epi64(xi0, 52)));
             yf1 = _mm_mul_pd(yf1, _mm_castsi128_pd(_mm_slli_epi64(xi1, 52)));
-            
+
             __m128d zf0 = _mm_add_pd(_mm_mul_pd(mA0, xf0), mA1);
             __m128d zf1 = _mm_add_pd(_mm_mul_pd(mA0, xf1), mA1);
-            
+
             zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA2);
             zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA2);
-            
+
             zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA3);
             zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA3);
-            
+
             zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA4);
             zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA4);
-            
+
             zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA5);
             zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA5);
-            
+
             zf0 = _mm_mul_pd(zf0, yf0);
             zf1 = _mm_mul_pd(zf1, yf1);
-            
+
             _mm_storeu_pd(y + i, zf0);
             _mm_storeu_pd(y + i + 2, zf1);
         }
@@ -1059,81 +1059,81 @@ static void Exp_64f( const double *_x, double *y, int n )
         double x1 = x[i + 1].f * exp_prescale;
         double x2 = x[i + 2].f * exp_prescale;
         double x3 = x[i + 3].f * exp_prescale;
-        
+
         double y0, y1, y2, y3;
         int val0, val1, val2, val3, t;
-        
+
         t = (int)(x[i].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x0 = t < 0 ? -exp_max_val : exp_max_val;
-        
+
         t = (int)(x[i+1].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x1 = t < 0 ? -exp_max_val : exp_max_val;
-        
+
         t = (int)(x[i+2].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x2 = t < 0 ? -exp_max_val : exp_max_val;
-        
+
         t = (int)(x[i+3].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x3 = t < 0 ? -exp_max_val : exp_max_val;
-        
+
         val0 = cvRound(x0);
         val1 = cvRound(x1);
         val2 = cvRound(x2);
         val3 = cvRound(x3);
-        
+
         x0 = (x0 - val0)*exp_postscale;
         x1 = (x1 - val1)*exp_postscale;
         x2 = (x2 - val2)*exp_postscale;
         x3 = (x3 - val3)*exp_postscale;
-        
+
         t = (val0 >> EXPTAB_SCALE) + 1023;
         t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
         buf[0].i = (int64)t << 52;
-        
+
         t = (val1 >> EXPTAB_SCALE) + 1023;
         t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
         buf[1].i = (int64)t << 52;
-        
+
         t = (val2 >> EXPTAB_SCALE) + 1023;
         t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
         buf[2].i = (int64)t << 52;
-        
+
         t = (val3 >> EXPTAB_SCALE) + 1023;
         t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
         buf[3].i = (int64)t << 52;
-        
+
         y0 = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
         y1 = buf[1].f * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
-        
+
         y[i] = y0;
         y[i + 1] = y1;
-        
+
         y2 = buf[2].f * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
         y3 = buf[3].f * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
-        
+
         y[i + 2] = y2;
         y[i + 3] = y3;
     }
-    
+
     for( ; i < n; i++ )
     {
         double x0 = x[i].f * exp_prescale;
         int val0, t;
-        
+
         t = (int)(x[i].i >> 52);
         if( (t & 2047) > 1023 + 10 )
             x0 = t < 0 ? -exp_max_val : exp_max_val;
-        
+
         val0 = cvRound(x0);
         t = (val0 >> EXPTAB_SCALE) + 1023;
         t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
-        
+
         buf[0].i = (int64)t << 52;
         x0 = (x0 - val0)*exp_postscale;
-        
+
         y[i] = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
     }
 }
@@ -1153,17 +1153,17 @@ void exp( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();
-    
+
     _dst.create( src.dims, src.size, type );
     Mat dst = _dst.getMat();
-    
+
     CV_Assert( depth == CV_32F || depth == CV_64F );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
@@ -1470,26 +1470,26 @@ static void Log_32f( const float *_x, float *y, int n )
         static const __m128d ln2_2 = _mm_set1_pd(ln_2);
         static const __m128 _1_4 = _mm_set1_ps(1.f);
         static const __m128 shift4 = _mm_set1_ps(-1.f/512);
-        
+
         static const __m128 mA0 = _mm_set1_ps(A0);
         static const __m128 mA1 = _mm_set1_ps(A1);
         static const __m128 mA2 = _mm_set1_ps(A2);
-        
+
         int CV_DECL_ALIGNED(16) idx[4];
-        
+
         for( ; i <= n - 4; i += 4 )
-        {            
+        {
             __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
             __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 23), _mm_set1_epi32(255)), _mm_set1_epi32(127));
             __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
             __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0,yi0)), ln2_2);
-            
+
             __m128i xi0 = _mm_or_si128(_mm_and_si128(h0, _mm_set1_epi32(LOGTAB_MASK2_32F)), _mm_set1_epi32(127 << 23));
-            
+
             h0 = _mm_and_si128(_mm_srli_epi32(h0, 23 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK*2));
             _mm_store_si128((__m128i*)idx, h0);
             h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
-            
+
             __m128d t0, t1, t2, t3, t4;
             t0 = _mm_load_pd(icvLogTab + idx[0]);
             t2 = _mm_load_pd(icvLogTab + idx[1]);
@@ -1499,21 +1499,21 @@ static void Log_32f( const float *_x, float *y, int n )
             t4 = _mm_load_pd(icvLogTab + idx[3]);
             t3 = _mm_unpackhi_pd(t2, t4);
             t2 = _mm_unpacklo_pd(t2, t4);
-            
+
             yd0 = _mm_add_pd(yd0, t0);
             yd1 = _mm_add_pd(yd1, t2);
-            
+
             __m128 yf0 = _mm_movelh_ps(_mm_cvtpd_ps(yd0), _mm_cvtpd_ps(yd1));
-            
+
             __m128 xf0 = _mm_sub_ps(_mm_castsi128_ps(xi0), _1_4);
             xf0 = _mm_mul_ps(xf0, _mm_movelh_ps(_mm_cvtpd_ps(t1), _mm_cvtpd_ps(t3)));
             xf0 = _mm_add_ps(xf0, _mm_and_ps(_mm_castsi128_ps(h0), shift4));
-            
+
             __m128 zf0 = _mm_mul_ps(xf0, mA0);
             zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA1), xf0);
             zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA2), xf0);
             yf0 = _mm_add_ps(yf0, zf0);
-            
+
             _mm_storeu_ps(y + i, yf0);
         }
     }
@@ -1626,10 +1626,10 @@ static void Log_64f( const double *x, double *y, int n )
         static const __m128d ln2_2 = _mm_set1_pd(ln_2);
         static const __m128d _1_2 = _mm_set1_pd(1.);
         static const __m128d shift2 = _mm_set1_pd(-1./512);
-        
+
         static const __m128i log_and_mask2 = _mm_set_epi32(LOGTAB_MASK2, 0xffffffff, LOGTAB_MASK2, 0xffffffff);
         static const __m128i log_or_mask2 = _mm_set_epi32(1023 << 20, 0, 1023 << 20, 0);
-        
+
         static const __m128d mA0 = _mm_set1_pd(A0);
         static const __m128d mA1 = _mm_set1_pd(A1);
         static const __m128d mA2 = _mm_set1_pd(A2);
@@ -1638,28 +1638,28 @@ static void Log_64f( const double *x, double *y, int n )
         static const __m128d mA5 = _mm_set1_pd(A5);
         static const __m128d mA6 = _mm_set1_pd(A6);
         static const __m128d mA7 = _mm_set1_pd(A7);
-        
+
         int CV_DECL_ALIGNED(16) idx[4];
-        
+
         for( ; i <= n - 4; i += 4 )
         {
             __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
             __m128i h1 = _mm_loadu_si128((const __m128i*)(x + i + 2));
-            
+
             __m128d xd0 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h0, log_and_mask2), log_or_mask2));
             __m128d xd1 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h1, log_and_mask2), log_or_mask2));
-            
+
             h0 = _mm_unpackhi_epi32(_mm_unpacklo_epi32(h0, h1), _mm_unpackhi_epi32(h0, h1));
-            
+
             __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 20),
                                     _mm_set1_epi32(2047)), _mm_set1_epi32(1023));
             __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
             __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0, yi0)), ln2_2);
-            
+
             h0 = _mm_and_si128(_mm_srli_epi32(h0, 20 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK * 2));
             _mm_store_si128((__m128i*)idx, h0);
             h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
-            
+
             __m128d t0, t1, t2, t3, t4;
             t0 = _mm_load_pd(icvLogTab + idx[0]);
             t2 = _mm_load_pd(icvLogTab + idx[1]);
@@ -1669,16 +1669,16 @@ static void Log_64f( const double *x, double *y, int n )
             t4 = _mm_load_pd(icvLogTab + idx[3]);
             t3 = _mm_unpackhi_pd(t2, t4);
             t2 = _mm_unpacklo_pd(t2, t4);
-            
+
             yd0 = _mm_add_pd(yd0, t0);
             yd1 = _mm_add_pd(yd1, t2);
-            
+
             xd0 = _mm_mul_pd(_mm_sub_pd(xd0, _1_2), t1);
             xd1 = _mm_mul_pd(_mm_sub_pd(xd1, _1_2), t3);
-            
+
             xd0 = _mm_add_pd(xd0, _mm_and_pd(_mm_castsi128_pd(_mm_unpacklo_epi32(h0, h0)), shift2));
             xd1 = _mm_add_pd(xd1, _mm_and_pd(_mm_castsi128_pd(_mm_unpackhi_epi32(h0, h0)), shift2));
-            
+
             __m128d zd0 = _mm_mul_pd(xd0, mA0);
             __m128d zd1 = _mm_mul_pd(xd1, mA0);
             zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA1), xd0);
@@ -1695,10 +1695,10 @@ static void Log_64f( const double *x, double *y, int n )
             zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA6), xd1);
             zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA7), xd0);
             zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA7), xd1);
-            
+
             yd0 = _mm_add_pd(yd0, zd0);
             yd1 = _mm_add_pd(yd1, zd1);
-            
+
             _mm_storeu_pd(y + i, yd0);
             _mm_storeu_pd(y + i + 2, yd1);
         }
@@ -1769,7 +1769,7 @@ static void Log_64f( const double *x, double *y, int n )
         y[i + 2] = y2;
         y[i + 3] = y3;
     }
-    
+
     for( ; i < n; i++ )
     {
         int h0 = X[i].i.hi;
@@ -1798,17 +1798,17 @@ void log( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();
-    
+
     _dst.create( src.dims, src.size, type );
     Mat dst = _dst.getMat();
-    
+
     CV_Assert( depth == CV_32F || depth == CV_64F );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         if( depth == CV_32F )
@@ -1816,7 +1816,7 @@ void log( InputArray _src, OutputArray _dst )
         else
             Log_64f( (const double*)ptrs[0], (double*)ptrs[1], len );
     }
-}    
+}
 
 /****************************************************************************************\
 *                                    P O W E R                                           *
@@ -1844,63 +1844,63 @@ iPow_( const T* src, T* dst, int len, int power )
     }
 }
 
-    
-void iPow8u(const uchar* src, uchar* dst, int len, int power)
+
+static void iPow8u(const uchar* src, uchar* dst, int len, int power)
 {
     iPow_<uchar, int>(src, dst, len, power);
 }
 
-void iPow8s(const schar* src, schar* dst, int len, int power)
+static void iPow8s(const schar* src, schar* dst, int len, int power)
 {
     iPow_<schar, int>(src, dst, len, power);
 }
-    
-void iPow16u(const ushort* src, ushort* dst, int len, int power)
+
+static void iPow16u(const ushort* src, ushort* dst, int len, int power)
 {
     iPow_<ushort, int>(src, dst, len, power);
 }
 
-void iPow16s(const short* src, short* dst, int len, int power)
+static void iPow16s(const short* src, short* dst, int len, int power)
 {
     iPow_<short, int>(src, dst, len, power);
 }
-    
-void iPow32s(const int* src, int* dst, int len, int power)
+
+static void iPow32s(const int* src, int* dst, int len, int power)
 {
     iPow_<int, int>(src, dst, len, power);
 }
 
-void iPow32f(const float* src, float* dst, int len, int power)
+static void iPow32f(const float* src, float* dst, int len, int power)
 {
     iPow_<float, float>(src, dst, len, power);
 }
 
-void iPow64f(const double* src, double* dst, int len, int power)
+static void iPow64f(const double* src, double* dst, int len, int power)
 {
     iPow_<double, double>(src, dst, len, power);
 }
 
-    
+
 typedef void (*IPowFunc)( const uchar* src, uchar* dst, int len, int power );
-    
+
 static IPowFunc ipowTab[] =
 {
     (IPowFunc)iPow8u, (IPowFunc)iPow8s, (IPowFunc)iPow16u, (IPowFunc)iPow16s,
     (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
 };
 
-    
+
 void pow( InputArray _src, double power, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();
-    
+
     _dst.create( src.dims, src.size, type );
     Mat dst = _dst.getMat();
-    
+
     int ipower = cvRound(power);
     bool is_ipower = false;
-    
+
     if( fabs(ipower - power) < DBL_EPSILON )
     {
         if( ipower < 0 )
@@ -1911,7 +1911,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
             ipower = -ipower;
             src = dst;
         }
-        
+
         switch( ipower )
         {
         case 0:
@@ -1929,17 +1929,17 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
-    
+
     if( is_ipower )
     {
         IPowFunc func = ipowTab[depth];
         CV_Assert( func != 0 );
-        
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func( ptrs[0], ptrs[1], len, ipower );
     }
@@ -1948,7 +1948,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
         MathFunc func = power < 0 ?
             (depth == CV_32F ? (MathFunc)InvSqrt_32f : (MathFunc)InvSqrt_64f) :
             (depth == CV_32F ? (MathFunc)Sqrt_32f : (MathFunc)Sqrt_64f);
-        
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func( ptrs[0], ptrs[1], len );
     }
@@ -1956,7 +1956,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     {
         int j, k, blockSize = std::min(len, ((BLOCK_SIZE + cn-1)/cn)*cn);
         size_t esz1 = src.elemSize1();
-        
+
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
             for( j = 0; j < len; j += blockSize )
@@ -1966,7 +1966,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
                 {
                     const float* x = (const float*)ptrs[0];
                     float* y = (float*)ptrs[1];
-                    
+
                     Log_32f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] = (float)(y[k]*power);
@@ -1976,7 +1976,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
                 {
                     const double* x = (const double*)ptrs[0];
                     double* y = (double*)ptrs[1];
-                    
+
                     Log_64f(x, y, bsz);
                     for( k = 0; k < bsz; k++ )
                         y[k] *= power;
@@ -2036,8 +2036,8 @@ template<> struct mat_type_assotiations<CV_32S>
 template<int depth>
 bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value)
 {
-    typedef mat_type_assotiations<depth> type_ass; 
-    
+    typedef mat_type_assotiations<depth> type_ass;
+
     if (minVal < type_ass::min_allowable && maxVal > type_ass::max_allowable)
     {
         return true;
@@ -2051,23 +2051,23 @@ bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal, doubl
 
     for (int j = 0; j < as_one_channel.rows; ++j)
         for (int i = 0; i < as_one_channel.cols; ++i)
-        {    
+        {
             if (as_one_channel.at<typename type_ass::type>(j ,i) < minVal || as_one_channel.at<typename type_ass::type>(j ,i) > maxVal)
-            {            
-                bad_pt.y = j ; 
+            {
+                bad_pt.y = j ;
                 bad_pt.x = i % src.channels();
                 bad_value = as_one_channel.at<typename type_ass::type>(j ,i);
                 return false;
             }
         }
     bad_value = 0.0;
-    
+
     return true;
 }
 
-typedef bool (*check_range_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value); 
+typedef bool (*check_range_function)(cv::Mat src, Point& bad_pt, int minVal, int maxVal, double& bad_value);
 
-check_range_function check_range_functions[] = 
+check_range_function check_range_functions[] =
 {
     &checkIntegerRange<CV_8U>,
     &checkIntegerRange<CV_8S>,
@@ -2085,7 +2085,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         const Mat* arrays[] = {&src, 0};
         Mat planes[1];
         NAryMatIterator it(arrays, planes);
-        
+
         for ( size_t i = 0; i < it.nplanes; i++, ++it )
         {
             if (!checkRange( it.planes[0], quiet, pt, minVal, maxVal ))
@@ -2096,7 +2096,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         }
         return true;
     }
-    
+
     int depth = src.depth();
     Point badPt(-1, -1);
     double badValue = 0;
@@ -2185,19 +2185,19 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     return badPt.x < 0;
 }
 
-    
+
 void patchNaNs( InputOutputArray _a, double _val )
 {
     Mat a = _a.getMat();
     CV_Assert( a.depth() == CV_32F );
-    
+
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1];
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
     Cv32suf val;
     val.f = (float)_val;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         int* tptr = ptrs[0];
@@ -2207,22 +2207,22 @@ void patchNaNs( InputOutputArray _a, double _val )
     }
 }
 
-    
+
 void exp(const float* src, float* dst, int n)
 {
     Exp_32f(src, dst, n);
 }
-    
+
 void log(const float* src, float* dst, int n)
 {
     Log_32f(src, dst, n);
 }
-    
+
 void fastAtan2(const float* y, const float* x, float* dst, int n, bool angleInDegrees)
 {
     FastAtan2_32f(y, x, dst, n, angleInDegrees);
 }
-    
+
 void magnitude(const float* x, const float* y, float* dst, int n)
 {
     Magnitude_32f(x, y, dst, n);
@@ -2343,26 +2343,26 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     const int n0 = 3;
     Mat coeffs = _coeffs.getMat();
     int ctype = coeffs.type();
-    
+
     CV_Assert( ctype == CV_32F || ctype == CV_64F );
     CV_Assert( (coeffs.size() == Size(n0, 1) ||
                 coeffs.size() == Size(n0+1, 1) ||
                 coeffs.size() == Size(1, n0) ||
                 coeffs.size() == Size(1, n0+1)) );
-    
+
     _roots.create(n0, 1, ctype, -1, true, DEPTH_MASK_FLT);
     Mat roots = _roots.getMat();
-    
+
     int i = -1, n = 0;
     double a0 = 1., a1, a2, a3;
     double x0 = 0., x1 = 0., x2 = 0.;
     int ncoeffs = coeffs.rows + coeffs.cols - 1;
-    
+
     if( ctype == CV_32FC1 )
     {
         if( ncoeffs == 4 )
             a0 = coeffs.at<float>(++i);
-        
+
         a1 = coeffs.at<float>(i+1);
         a2 = coeffs.at<float>(i+2);
         a3 = coeffs.at<float>(i+3);
@@ -2371,12 +2371,12 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     {
         if( ncoeffs == 4 )
             a0 = coeffs.at<double>(++i);
-        
+
         a1 = coeffs.at<double>(i+1);
         a2 = coeffs.at<double>(i+2);
         a3 = coeffs.at<double>(i+3);
     }
-    
+
     if( a0 == 0 )
     {
         if( a1 == 0 )
@@ -2419,12 +2419,12 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         a1 *= a0;
         a2 *= a0;
         a3 *= a0;
-        
+
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (2 * a1 * a1 * a1 - 9 * a1 * a2 + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
         double d = Qcubed - R * R;
-        
+
         if( d >= 0 )
         {
             double theta = acos(R / sqrt(Qcubed));
@@ -2448,7 +2448,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             n = 1;
         }
     }
-    
+
     if( roots.type() == CV_32FC1 )
     {
         roots.at<float>(0) = (float)x0;
@@ -2461,7 +2461,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         roots.at<double>(1) = x1;
         roots.at<double>(2) = x2;
     }
-    
+
     return n;
 }
 
@@ -2476,15 +2476,15 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     Mat coeffs0 = _coeffs0.getMat();
     int ctype = _coeffs0.type();
     int cdepth = CV_MAT_DEPTH(ctype);
-    
+
     CV_Assert( CV_MAT_DEPTH(ctype) >= CV_32F && CV_MAT_CN(ctype) <= 2 );
     CV_Assert( coeffs0.rows == 1 || coeffs0.cols == 1 );
-    
+
     int n = coeffs0.cols + coeffs0.rows - 2;
 
-    _roots0.create(n, 1, CV_MAKETYPE(cdepth, 2), -1, true, DEPTH_MASK_FLT);    
+    _roots0.create(n, 1, CV_MAKETYPE(cdepth, 2), -1, true, DEPTH_MASK_FLT);
     Mat roots0 = _roots0.getMat();
-    
+
     AutoBuffer<C> buf(n*2+2);
     C *coeffs = buf, *roots = coeffs + n + 1;
     Mat coeffs1(coeffs0.size(), CV_MAKETYPE(CV_64F, coeffs0.channels()), coeffs0.channels() == 2 ? coeffs : roots);

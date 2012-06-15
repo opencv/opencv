@@ -11,7 +11,9 @@
 #ifndef _ncvtest_hpp_
 #define _ncvtest_hpp_
 
-#pragma warning( disable : 4201 4408 4127 4100)
+#if defined _MSC_VER
+# pragma warning( disable : 4201 4408 4127 4100)
+#endif
 
 #include <string>
 #include <vector>
@@ -36,6 +38,7 @@ class INCVTest
 public:
     virtual bool executeTest(NCVTestReport &report) = 0;
     virtual std::string getName() const = 0;
+    virtual ~INCVTest(){}
 };
 
 

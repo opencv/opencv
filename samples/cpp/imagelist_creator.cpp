@@ -12,10 +12,10 @@ using std::endl;
 
 using namespace cv;
 
-void help(char** av)
+static void help(char** av)
 {
   cout << "\nThis creates a yaml or xml list of files from the command line args\n"
-		  "usage:\n./" << av[0] << " imagelist.yaml *.png\n"
+      "usage:\n./" << av[0] << " imagelist.yaml *.png\n"
       << "Try using different extensions.(e.g. yaml yml xml xml.gz etc...)\n"
       << "This will serialize this list of images or whatever with opencv's FileStorage framework" << endl;
 }

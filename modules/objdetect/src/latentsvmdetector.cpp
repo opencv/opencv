@@ -192,7 +192,7 @@ size_t LatentSvmDetector::getClassCount() const
     return classNames.size();
 }
 
-string extractModelName( const string& filename )
+static string extractModelName( const string& filename )
 {
     size_t startPos = filename.rfind('/');
     if( startPos == string::npos )

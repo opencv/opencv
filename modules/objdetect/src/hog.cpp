@@ -456,7 +456,6 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
     Size blockSize = descriptor->blockSize;
     Size blockStride = descriptor->blockStride;
     Size cellSize = descriptor->cellSize;
-    Size winSize = descriptor->winSize;
     int i, j, nbins = descriptor->nbins;
     int rawBlockSize = blockSize.width*blockSize.height;
 
@@ -471,10 +470,10 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
                        (winSize.height/cacheStride.height)+1);
         blockCache.create(cacheSize.height, cacheSize.width*blockHistogramSize);
         blockCacheFlags.create(cacheSize);
-        size_t i, cacheRows = blockCache.rows;
+        size_t cacheRows = blockCache.rows;
         ymaxCached.resize(cacheRows);
-        for( i = 0; i < cacheRows; i++ )
-            ymaxCached[i] = -1;
+        for(size_t ii = 0; ii < cacheRows; ii++ )
+            ymaxCached[ii] = -1;
     }
 
     Mat_<float> weights(blockSize);

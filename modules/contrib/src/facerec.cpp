@@ -22,7 +22,7 @@ namespace cv
 {
 
 using std::set;
-    
+
 // Reads a sequence from a FileNode::SEQ with type _Tp into a result vector.
 template<typename _Tp>
 inline void readFileNodeList(const FileNode& fn, vector<_Tp>& result) {
@@ -48,7 +48,7 @@ inline void writeFileNodeList(FileStorage& fs, const string& name,
     }
     fs << "]";
 }
-    
+
 static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0)
 {
     // number of samples
@@ -67,7 +67,7 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
     }
     return data;
 }
-    
+
 // Removes duplicate elements in a given vector.
 template<typename _Tp>
 inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
@@ -82,7 +82,7 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
     return elems;
 }
 
-    
+
 // Turk, M., and Pentland, A. "Eigenfaces for recognition.". Journal of
 // Cognitive Neuroscience 3 (1991), 71–86.
 class Eigenfaces : public FaceRecognizer
@@ -100,15 +100,15 @@ public:
     using FaceRecognizer::load;
 
     // Initializes an empty Eigenfaces model.
-    Eigenfaces(int num_components = 0) :
-        _num_components(num_components) { }
+    Eigenfaces(int numComponents = 0) :
+        _num_components(numComponents) { }
 
     // Initializes and computes an Eigenfaces model with images in src and
     // corresponding labels in labels. num_components will be kept for
     // classification.
     Eigenfaces(InputArray src, InputArray labels,
-            int num_components = 0) :
-        _num_components(num_components) {
+            int numComponents = 0) :
+        _num_components(numComponents) {
         train(src, labels);
     }
 
@@ -157,16 +157,16 @@ public:
     using FaceRecognizer::load;
 
     // Initializes an empty Fisherfaces model.
-    Fisherfaces(int num_components = 0) :
-        _num_components(num_components) {}
+    Fisherfaces(int numComponents = 0) :
+        _num_components(numComponents) {}
 
     // Initializes and computes a Fisherfaces model with images in src and
     // corresponding labels in labels. num_components will be kept for
     // classification.
     Fisherfaces(InputArray src,
             InputArray labels,
-            int num_components = 0) :
-        _num_components(num_components) {
+            int numComponents = 0) :
+        _num_components(numComponents) {
         train(src, labels);
     }
 
@@ -228,11 +228,11 @@ public:
     //
     // radius, neighbors are used in the local binary patterns creation.
     // grid_x, grid_y control the grid size of the spatial histograms.
-    LBPH(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8) :
-        _grid_x(grid_x),
-        _grid_y(grid_y),
-        _radius(radius),
-        _neighbors(neighbors) {}
+    LBPH(int radius_=1, int neighbors_=8, int grid_x_=8, int grid_y_=8) :
+        _grid_x(grid_x_),
+        _grid_y(grid_y_),
+        _radius(radius_),
+        _neighbors(neighbors_) {}
 
     // Initializes and computes this LBPH Model. The current implementation is
     // rather fixed as it uses the Extended Local Binary Patterns per default.
@@ -241,12 +241,12 @@ public:
     // (grid_x=8), (grid_y=8) controls the grid size of the spatial histograms.
     LBPH(InputArray src,
             InputArray labels,
-            int radius=1, int neighbors=8,
-            int grid_x=8, int grid_y=8) :
-                _grid_x(grid_x),
-                _grid_y(grid_y),
-                _radius(radius),
-                _neighbors(neighbors) {
+            int radius_=1, int neighbors_=8,
+            int grid_x_=8, int grid_y_=8) :
+                _grid_x(grid_x_),
+                _grid_y(grid_y_),
+                _radius(radius_),
+                _neighbors(neighbors_) {
         train(src, labels);
     }
 
@@ -582,7 +582,7 @@ static Mat histc(InputArray _src, int minVal, int maxVal, bool normed)
     return Mat();
 }
 
-    
+
 static Mat spatial_histogram(InputArray _src, int numPatterns,
                              int grid_x, int grid_y, bool normed)
 {
@@ -622,7 +622,7 @@ static Mat elbp(InputArray src, int radius, int neighbors) {
     elbp(src, dst, radius, neighbors);
     return dst;
 }
-    
+
 void LBPH::load(const FileStorage& fs) {
     fs["radius"] >> _radius;
     fs["neighbors"] >> _neighbors;
@@ -695,18 +695,18 @@ int LBPH::predict(InputArray _src) const {
     }
     return minClass;
 }
-    
-    
+
+
 Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components)
 {
     return new Eigenfaces(num_components);
 }
-    
+
 Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components)
 {
     return new Fisherfaces(num_components);
 }
-    
+
 Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius, int neighbors,
                                              int grid_x, int grid_y)
 {

@@ -45,7 +45,7 @@
 
 /****************** Capturing video from camera via CMU lib *******************/
 
-#if HAVE_CMU1394
+#ifdef HAVE_CMU1394
 
 // This firewire capability added by Philip Gruebele (pgruebele@cox.net).
 // For this to work you need to install the CMU firewire DCAM drivers,

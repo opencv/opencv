@@ -6,41 +6,41 @@
 
 using namespace cv;
 
-void help()
+static void help()
 {
-	printf("\n"
-			"This program demonstrated a simple method of connected components clean up of background subtraction\n"
-			"When the program starts, it begins learning the background.\n"
-			"You can toggle background learning on and off by hitting the space bar.\n"
-			"Call\n"
-			"./segment_objects [video file, else it reads camera 0]\n\n");
+    printf("\n"
+            "This program demonstrated a simple method of connected components clean up of background subtraction\n"
+            "When the program starts, it begins learning the background.\n"
+            "You can toggle background learning on and off by hitting the space bar.\n"
+            "Call\n"
+            "./segment_objects [video file, else it reads camera 0]\n\n");
 }
 
-void refineSegments(const Mat& img, Mat& mask, Mat& dst)
+static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
 {
     int niters = 3;
-    
+
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
-    
+
     Mat temp;
-    
+
     dilate(mask, temp, Mat(), Point(-1,-1), niters);
     erode(temp, temp, Mat(), Point(-1,-1), niters*2);
     dilate(temp, temp, Mat(), Point(-1,-1), niters);
-    
+
     findContours( temp, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
-	
-	dst = Mat::zeros(img.size(), CV_8UC3);
-    
+
+    dst = Mat::zeros(img.size(), CV_8UC3);
+
     if( contours.size() == 0 )
         return;
-        
+
     // iterate through all the top-level contours,
     // draw each connected component with its own random color
     int idx = 0, largestComp = 0;
     double maxArea = 0;
-    
+
     for( ; idx >= 0; idx = hierarchy[idx][0] )
     {
         const vector<Point>& c = contours[idx];
@@ -60,35 +60,35 @@ int main(int argc, char** argv)
 {
     VideoCapture cap;
     bool update_bg_model = true;
-    
+
     help();
 
     if( argc < 2 )
         cap.open(0);
     else
         cap.open(std::string(argv[1]));
-    
+
     if( !cap.isOpened() )
     {
         printf("\nCan not open camera or video file\n");
         return -1;
     }
-    
+
     Mat tmp_frame, bgmask, out_frame;
-    
+
     cap >> tmp_frame;
     if(!tmp_frame.data)
     {
         printf("can not read data from the video source\n");
         return -1;
     }
-    
+
     namedWindow("video", 1);
     namedWindow("segmented", 1);
-    
+
     BackgroundSubtractorMOG bgsubtractor;
     bgsubtractor.set("noiseSigma", 10);
-    
+
     for(;;)
     {
         cap >> tmp_frame;
@@ -109,6 +109,6 @@ int main(int argc, char** argv)
             printf("Learn background is in state = %d\n",update_bg_model);
         }
     }
-    
+
     return 0;
 }

@@ -65,9 +65,13 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
 */
 #define TRACK_BUNDLE_FILE            "d:\\test\\bundle.txt"
 
+void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPoints,
+                                       CvMat** pointsPres, int numImages,
+                                       CvMat** resultProjMatrs, CvMat* resultPoints4D,int maxIter,double epsilon );
+
 
 /* ============== Bundle adjustment optimization ================= */
-void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *status, CvMat *derivProj)
+static void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *status, CvMat *derivProj)
 {
     /* Compute derivate for given projection matrix points and status of points */
 
@@ -131,13 +135,11 @@ void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *status, CvMa
     }
     /* ----- End test ----- */
 
-    int i;
-
     /* Allocate memory for derivates */
 
     double p[12];
     /* Copy projection matrix */
-    for( i = 0; i < 12; i++ )
+    for(int i = 0; i < 12; i++ )
     {
         p[i] = cvmGet(projMatr,i/4,i%4);
     }
@@ -164,7 +166,6 @@ void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *status, CvMa
             piX[1] = X[0]*p[4] + X[1]*p[5] + X[2]*p[6]  + X[3]*p[7];
             piX[2] = X[0]*p[8] + X[1]*p[9] + X[2]*p[10] + X[3]*p[11];
 
-            int i;
             /* fill derivate by point */
 
             double tmp3 = 1/(piX[2]*piX[2]);
@@ -173,7 +174,7 @@ void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *status, CvMa
             double tmp2 = -piX[1]*tmp3;
 
             /* fill derivate by projection matrix */
-            for( i = 0; i < 4; i++ )
+            for(int i = 0; i < 4; i++ )
             {
                 /* derivate for x */
                 cvmSet(derivProj,currVisPoint*2,i,X[i]/piX[2]);//x' p1i
@@ -201,7 +202,7 @@ void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *status, CvMa
 }
 /*======================================================================================*/
 
-void icvComputeDerivateProjAll(CvMat *points4D, CvMat **projMatrs, CvMat **pointPres, int numImages,CvMat **projDerives)
+static void icvComputeDerivateProjAll(CvMat *points4D, CvMat **projMatrs, CvMat **pointPres, int numImages,CvMat **projDerives)
 {
     CV_FUNCNAME( "icvComputeDerivateProjAll" );
     __BEGIN__;
@@ -228,7 +229,7 @@ void icvComputeDerivateProjAll(CvMat *points4D, CvMat **projMatrs, CvMat **point
 }
 /*======================================================================================*/
 
-void icvComputeDerivatePoints(CvMat *points4D,CvMat *projMatr, CvMat *presPoints, CvMat *derivPoint)
+static void icvComputeDerivatePoints(CvMat *points4D,CvMat *projMatr, CvMat *presPoints, CvMat *derivPoint)
 {
 
     CV_FUNCNAME( "icvComputeDerivatePoints" );
@@ -267,7 +268,7 @@ void icvComputeDerivatePoints(CvMat *points4D,CvMat *projMatr, CvMat *presPoints
     {
         CV_ERROR( CV_StsOutOfRange, "Size of projection matrix (projMatr) must be 3x4" );
     }
-    
+
     if( !CV_IS_MAT(presPoints) )
     {
         CV_ERROR( CV_StsUnsupportedFormat, "Status must be a matrix 1xN" );
@@ -282,13 +283,12 @@ void icvComputeDerivatePoints(CvMat *points4D,CvMat *projMatr, CvMat *presPoints
     {
         CV_ERROR( CV_StsUnsupportedFormat, "derivPoint must be a matrix 2 x 4VisNum" );
     }
-    /* ----- End test ----- */    
-    
+    /* ----- End test ----- */
+
     /* Compute derivates by points */
-        
+
     double p[12];
-    int i;
-    for( i = 0; i < 12; i++ )
+    for(int i = 0; i < 12; i++ )
     {
         p[i] = cvmGet(projMatr,i/4,i%4);
     }
@@ -311,16 +311,14 @@ void icvComputeDerivatePoints(CvMat *points4D,CvMat *projMatr, CvMat *presPoints
             piX[0] = X[0]*p[0] + X[1]*p[1] + X[2]*p[2]  + X[3]*p[3];
             piX[1] = X[0]*p[4] + X[1]*p[5] + X[2]*p[6]  + X[3]*p[7];
             piX[2] = X[0]*p[8] + X[1]*p[9] + X[2]*p[10] + X[3]*p[11];
-            
-            int i,j;
 
             double tmp3 = 1/(piX[2]*piX[2]);
-                      
-            for( j = 0; j < 2; j++ )//for x and y
+
+            for(int j = 0; j < 2; j++ )//for x and y
             {
-                for( i = 0; i < 4; i++ )// for X,Y,Z,W
+                for(int i = 0; i < 4; i++ )// for X,Y,Z,W
                 {
-                    cvmSet( derivPoint, 
+                    cvmSet( derivPoint,
                             j, currVisPoint*4+i,
                             (p[j*4+i]*piX[2]-p[8+i]*piX[j]) * tmp3  );
                 }
@@ -337,8 +335,9 @@ void icvComputeDerivatePoints(CvMat *points4D,CvMat *projMatr, CvMat *presPoints
     __END__;
     return;
 }
+
 /*======================================================================================*/
-void icvComputeDerivatePointsAll(CvMat *points4D, CvMat **projMatrs, CvMat **pointPres, int numImages,CvMat **pointDerives)
+static void icvComputeDerivatePointsAll(CvMat *points4D, CvMat **projMatrs, CvMat **pointPres, int numImages,CvMat **pointDerives)
 {
     CV_FUNCNAME( "icvComputeDerivatePointsAll" );
     __BEGIN__;
@@ -364,7 +363,7 @@ void icvComputeDerivatePointsAll(CvMat *points4D, CvMat **projMatrs, CvMat **poi
     return;
 }
 /*======================================================================================*/
-void icvComputeMatrixVAll(int numImages,CvMat **pointDeriv,CvMat **presPoints, CvMat **matrV)
+static void icvComputeMatrixVAll(int numImages,CvMat **pointDeriv,CvMat **presPoints, CvMat **matrV)
 {
     int *shifts = 0;
 
@@ -404,10 +403,10 @@ void icvComputeMatrixVAll(int numImages,CvMat **pointDeriv,CvMat **presPoints, C
                 {
                     if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
                     {
-                        sum += cvmGet(pointDeriv[currImage],0,shifts[currImage]*4+i) * 
+                        sum += cvmGet(pointDeriv[currImage],0,shifts[currImage]*4+i) *
                                cvmGet(pointDeriv[currImage],0,shifts[currImage]*4+j);
 
-                        sum += cvmGet(pointDeriv[currImage],1,shifts[currImage]*4+i) * 
+                        sum += cvmGet(pointDeriv[currImage],1,shifts[currImage]*4+i) *
                                cvmGet(pointDeriv[currImage],1,shifts[currImage]*4+j);
                     }
                 }
@@ -429,11 +428,11 @@ void icvComputeMatrixVAll(int numImages,CvMat **pointDeriv,CvMat **presPoints, C
 
     __END__;
     cvFree( &shifts);
-    
+
     return;
 }
 /*======================================================================================*/
-void icvComputeMatrixUAll(int numImages,CvMat **projDeriv,CvMat** matrU)
+static void icvComputeMatrixUAll(int numImages,CvMat **projDeriv,CvMat** matrU)
 {
     CV_FUNCNAME( "icvComputeMatrixVAll" );
     __BEGIN__;
@@ -460,7 +459,7 @@ void icvComputeMatrixUAll(int numImages,CvMat **projDeriv,CvMat** matrU)
     return;
 }
 /*======================================================================================*/
-void icvComputeMatrixW(int numImages, CvMat **projDeriv, CvMat **pointDeriv, CvMat **presPoints, CvMat *matrW)
+static void icvComputeMatrixW(int numImages, CvMat **projDeriv, CvMat **pointDeriv, CvMat **presPoints, CvMat *matrW)
 {
     CV_FUNCNAME( "icvComputeMatrixW" );
     __BEGIN__;
@@ -509,10 +508,10 @@ void icvComputeMatrixW(int numImages, CvMat **projDeriv, CvMat **pointDeriv, CvM
                     for( int currCol = 0; currCol < 4; currCol++ )
                     {
                         double sum;
-                        sum = cvmGet(projDeriv[currImage],currVis*2+0,currLine) * 
+                        sum = cvmGet(projDeriv[currImage],currVis*2+0,currLine) *
                               cvmGet(pointDeriv[currImage],0,currVis*4+currCol);
 
-                        sum += cvmGet(projDeriv[currImage],currVis*2+1,currLine) * 
+                        sum += cvmGet(projDeriv[currImage],currVis*2+1,currLine) *
                               cvmGet(pointDeriv[currImage],1,currVis*4+currCol);
 
                         cvmSet(matrW,currImage*12+currLine,currPoint*4+currCol,sum);
@@ -529,7 +528,7 @@ void icvComputeMatrixW(int numImages, CvMat **projDeriv, CvMat **pointDeriv, CvM
             }
         }
     }
-    
+
 #ifdef TRACK_BUNDLE
     {
         FILE *file;
@@ -560,9 +559,10 @@ void icvComputeMatrixW(int numImages, CvMat **projDeriv, CvMat **pointDeriv, CvM
     __END__;
     return;
 }
+
 /*======================================================================================*/
 /* Compute jacobian mult projection matrices error */
-void icvComputeJacErrorProj(int numImages,CvMat **projDeriv,CvMat **projErrors,CvMat *jacProjErr )
+static void icvComputeJacErrorProj(int numImages,CvMat **projDeriv,CvMat **projErrors,CvMat *jacProjErr )
 {
     CV_FUNCNAME( "icvComputeJacErrorProj" );
     __BEGIN__;
@@ -596,7 +596,7 @@ void icvComputeJacErrorProj(int numImages,CvMat **projDeriv,CvMat **projErrors,C
             double sum = 0;
             for( int i = 0; i < num; i++ )
             {
-                sum += cvmGet(projDeriv[currImage],i,currCol) * 
+                sum += cvmGet(projDeriv[currImage],i,currCol) *
                        cvmGet(projErrors[currImage],i%2,i/2);
             }
             cvmSet(jacProjErr,currImage*12+currCol,0,sum);
@@ -627,9 +627,10 @@ void icvComputeJacErrorProj(int numImages,CvMat **projDeriv,CvMat **projErrors,C
     __END__;
     return;
 }
+
 /*======================================================================================*/
 /* Compute jacobian mult points error */
-void icvComputeJacErrorPoint(int numImages,CvMat **pointDeriv,CvMat **projErrors, CvMat **presPoints,CvMat *jacPointErr )
+static void icvComputeJacErrorPoint(int numImages,CvMat **pointDeriv,CvMat **projErrors, CvMat **presPoints,CvMat *jacPointErr )
 {
     int *shifts = 0;
 
@@ -734,6 +735,7 @@ void icvComputeJacErrorPoint(int numImages,CvMat **pointDeriv,CvMat **projErrors
 }
 /*======================================================================================*/
 
+
 /* Reconstruct 4D points using status */
 void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat** presPoints,
                                   CvMat *points4D,int numImages,CvMat **projError)
@@ -797,7 +799,7 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
                 numVisProj++;
             }
         }
-        
+
         if( numVisProj < 2 )
         {
             /* This point can't be reconstructed */
@@ -821,7 +823,7 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
                 y = cvmGet(projPoints[currImage],1,currPoint);
                 for( int k = 0; k < 4; k++ )
                 {
-                    matrA_dat[currVisProj*12   + k] = 
+                    matrA_dat[currVisProj*12   + k] =
                            x * cvmGet(projMatrs[currImage],2,k) -     cvmGet(projMatrs[currImage],0,k);
 
                     matrA_dat[currVisProj*12+4 + k] =
@@ -854,27 +856,26 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
             CvMat point3D;
             double point3D_dat[3];
             point3D = cvMat(3,1,CV_64F,point3D_dat);
-            
-            int currPoint;
+
             int numVis = 0;
             double totalError = 0;
-            for( currPoint = 0; currPoint < numPoints; currPoint++ )
+            for(int curPoint = 0; curPoint < numPoints; curPoint++ )
             {
-                if( cvmGet(presPoints[currImage],0,currPoint) > 0)
+                if( cvmGet(presPoints[currImage],0,curPoint) > 0)
                 {
                     double  dx,dy;
-                    cvGetCol(points4D,&point4D,currPoint);
+                    cvGetCol(points4D,&point4D,curPoint);
                     cvmMul(projMatrs[currImage],&point4D,&point3D);
                     double w = point3D_dat[2];
                     double x = point3D_dat[0] / w;
                     double y = point3D_dat[1] / w;
 
-                    dx = cvmGet(projPoints[currImage],0,currPoint) - x;
-                    dy = cvmGet(projPoints[currImage],1,currPoint) - y;
+                    dx = cvmGet(projPoints[currImage],0,curPoint) - x;
+                    dy = cvmGet(projPoints[currImage],1,curPoint) - y;
                     if( projError )
                     {
-                        cvmSet(projError[currImage],0,currPoint,dx);
-                        cvmSet(projError[currImage],1,currPoint,dy);
+                        cvmSet(projError[currImage],0,curPoint,dx);
+                        cvmSet(projError[currImage],1,curPoint,dy);
                     }
                     totalError += sqrt(dx*dx+dy*dy);
                     numVis++;
@@ -897,7 +898,7 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
 
 /*======================================================================================*/
 
-void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **projMatrs, CvMat **pointsPres, CvMat **projPoints)
+static void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **projMatrs, CvMat **pointsPres, CvMat **projPoints)
 {
     CV_FUNCNAME( "icvProjPointsStatusFunc" );
     __BEGIN__;
@@ -943,7 +944,7 @@ void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **projMatrs,
             fclose(file);
         }
 #endif
-    
+
     int currImage;
     for( currImage = 0; currImage < numImages; currImage++ )
     {
@@ -969,7 +970,7 @@ void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **projMatrs,
                     fclose(file);
                 }
 #endif
-                
+
                 cvmMul(projMatrs[currImage],&point4D,&point3D);
                 double w = point3D_dat[2];
                 cvmSet(projPoints[currImage],0,currVisPoint,point3D_dat[0]/w);
@@ -998,11 +999,11 @@ void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **projMatrs,
 }
 
 /*======================================================================================*/
-void icvFreeMatrixArray(CvMat ***matrArray,int numMatr)
+static void icvFreeMatrixArray(CvMat ***matrArray,int numMatr)
 {
     /* Free each matrix */
     int currMatr;
-    
+
     if( *matrArray != 0 )
     {/* Need delete */
         for( currMatr = 0; currMatr < numMatr; currMatr++ )
@@ -1015,7 +1016,7 @@ void icvFreeMatrixArray(CvMat ***matrArray,int numMatr)
 }
 
 /*======================================================================================*/
-void *icvClearAlloc(int size)
+static void *icvClearAlloc(int size)
 {
     void *ptr = 0;
 
@@ -1047,6 +1048,7 @@ int icvDeleteSparsInPoints(  int numImages,
 
 }
 #endif
+
 /*======================================================================================*/
 /* !!! may be useful to return norm of error */
 /* !!! may be does not work correct with not all visible 4D points */
@@ -1054,15 +1056,15 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                                        CvMat** pointsPres, int numImages,
                                        CvMat** resultProjMatrs, CvMat* resultPoints4D,int maxIter,double epsilon )
 {
-    
+
     CvMat  *vectorX_points4D = 0;
-    CvMat **vectorX_projMatrs = 0;    
+    CvMat **vectorX_projMatrs = 0;
 
     CvMat  *newVectorX_points4D = 0;
     CvMat **newVectorX_projMatrs = 0;
 
     CvMat  *changeVectorX_points4D = 0;
-    CvMat  *changeVectorX_projMatrs = 0;  
+    CvMat  *changeVectorX_projMatrs = 0;
 
     CvMat **observVisPoints = 0;
     CvMat **projVisPoints = 0;
@@ -1097,17 +1099,17 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
     {
         CV_ERROR( CV_StsOutOfRange, "Number of images must be more than zero" );
     }
-    
+
     if( maxIter < 1 || maxIter > 2000 )
     {
         CV_ERROR( CV_StsOutOfRange, "Maximum number of iteration must be in [1..1000]" );
     }
-    
+
     if( epsilon < 0  )
     {
         CV_ERROR( CV_StsOutOfRange, "Epsilon parameter must be >= 0" );
     }
-    
+
     if( !CV_IS_MAT(resultPoints4D) )
     {
         CV_ERROR( CV_StsUnsupportedFormat, "resultPoints4D must be a matrix 4 x NumPnt" );
@@ -1138,10 +1140,8 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
     CV_CALL( changeVectorX_points4D  = cvCreateMat(4,numPoints,CV_64F));
     CV_CALL( changeVectorX_projMatrs = cvCreateMat(3,4,CV_64F));
 
-    int currImage;
-    
     /* ----- Test input params ----- */
-    for( currImage = 0; currImage < numImages; currImage++ )
+    for(int currImage = 0; currImage < numImages; currImage++ )
     {
         /* Test size of input initial and result projection matrices */
         if( !CV_IS_MAT(projMatrs[currImage]) )
@@ -1185,7 +1185,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
     /* ----- End test ----- */
 
     /* Copy projection matrices to vectorX0 */
-    for( currImage = 0; currImage < numImages; currImage++ )
+    for(int currImage = 0; currImage < numImages; currImage++ )
     {
         CV_CALL( vectorX_projMatrs[currImage] = cvCreateMat(3,4,CV_64F));
         CV_CALL( newVectorX_projMatrs[currImage] = cvCreateMat(3,4,CV_64F));
@@ -1221,7 +1221,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
         CV_CALL( workMatrsInvVi[i] = cvCreateMat(4,4,CV_64F) );
     }
 
-    for( currImage = 0; currImage < numImages; currImage++ )
+    for(int currImage = 0; currImage < numImages; currImage++ )
     {
         CV_CALL( matrsUk[currImage]     = cvCreateMat(12,12,CV_64F) );
         CV_CALL( workMatrsUk[currImage] = cvCreateMat(12,12,CV_64F) );
@@ -1290,7 +1290,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
     /* Compute error with observed value and computed projection */
     double prevError;
     prevError = 0;
-    for( currImage = 0; currImage < numImages; currImage++ )
+    for(int currImage = 0; currImage < numImages; currImage++ )
     {
         cvSub(observVisPoints[currImage],projVisPoints[currImage],errorProjPoints[currImage]);
         double currNorm = cvNorm(errorProjPoints[currImage]);
@@ -1316,8 +1316,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
         fprintf(file,"projection errors\n");
 
         /* Print all proejction errors */
-        int currImage;
-        for( currImage = 0; currImage < numImages; currImage++)
+        for(int currImage = 0; currImage < numImages; currImage++)
         {
             fprintf(file,"\nImage=%d\n",currImage);
             int numPn = errorProjPoints[currImage]->cols;
@@ -1355,7 +1354,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 double norm = cvNorm(vectorX_projMatrs[i]);
                 fprintf(file,"        test 6.01 prev normProj=%lf\n",norm);
             }
-            
+
             fclose(file);
         }
 #endif
@@ -1384,7 +1383,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 double norm = cvNorm(matrsUk[i]);
                 fprintf(file,"        test 6.01 prev matrsUk=%lf\n",norm);
             }
-            
+
             for( i = 0; i < numPoints; i++ )
             {
                 double norm = cvNorm(matrsVi[i]);
@@ -1410,7 +1409,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
         }
 #endif
         /* Copy matrices Uk to work matrices Uk */
-        for( currImage = 0; currImage < numImages; currImage++ )
+        for(int currImage = 0; currImage < numImages; currImage++ )
         {
             cvCopy(matrsUk[currImage],workMatrsUk[currImage]);
         }
@@ -1427,7 +1426,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 double norm = cvNorm(matrsUk[i]);
                 fprintf(file,"        test 6.01 post1 matrsUk=%lf\n",norm);
             }
-            
+
             for( i = 0; i < numPoints; i++ )
             {
                 double norm = cvNorm(matrsVi[i]);
@@ -1450,7 +1449,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
             {
                 cvCopy(matrsVi[currV],workMatrVi);
 
-                for( int i = 0; i < 4; i++ )
+                for( i = 0; i < 4; i++ )
                 {
                     cvmSet(workMatrVi,i,i,cvmGet(matrsVi[currV],i,i)*(1+alpha) );
                 }
@@ -1459,7 +1458,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
             }
 
             /* Add alpha to matrUk and make matrix workMatrsUk */
-            for( currImage = 0; currImage< numImages; currImage++ )
+            for(int currImage = 0; currImage< numImages; currImage++ )
             {
 
                 for( i = 0; i < 12; i++ )
@@ -1476,7 +1475,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 int currRowV;
                 for( currRowV = 0; currRowV < 4; currRowV++ )
                 {
-                    for( currImage = 0; currImage < numImages; currImage++ )
+                    for(int currImage = 0; currImage < numImages; currImage++ )
                     {
                         for( int currCol = 0; currCol < 12; currCol++ )/* For each column of transposed matrix W */
                         {
@@ -1497,7 +1496,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
             cvmMul(matrW,matrTmpSys1,matrSysDeltaP);
 
             /* need to compute U-matrTmpSys2. But we compute matTmpSys2-U */
-            for( currImage = 0; currImage < numImages; currImage++ )
+            for(int currImage = 0; currImage < numImages; currImage++ )
             {
                 CvMat subMatr;
                 cvGetSubRect(matrSysDeltaP,&subMatr,cvRect(currImage*12,currImage*12,12,12));
@@ -1527,8 +1526,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 FILE* file;
                 file = fopen( TRACK_BUNDLE_FILE_DELTAP ,"w");
 
-                int currImage;
-                for( currImage = 0; currImage < numImages; currImage++ )
+                for(int currImage = 0; currImage < numImages; currImage++ )
                 {
                     fprintf(file,"\nImage=%d\n",currImage);
                     int i;
@@ -1567,7 +1565,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
             /* We know delta and compute new value of vector X: nextVectX = vectX + deltas */
 
             /* Compute new P */
-            for( currImage = 0; currImage < numImages; currImage++ )
+            for(int currImage = 0; currImage < numImages; currImage++ )
             {
                 for( i = 0; i < 3; i++ )
                 {
@@ -1595,7 +1593,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
             icvProjPointsStatusFunc(numImages, newVectorX_points4D, newVectorX_projMatrs, pointsPres, projVisPoints);
             /* Compute error with observed value and computed projection */
             double newError = 0;
-            for( currImage = 0; currImage < numImages; currImage++ )
+            for(int currImage = 0; currImage < numImages; currImage++ )
             {
                 cvSub(observVisPoints[currImage],projVisPoints[currImage],errorProjPoints[currImage]);
                 double currNorm = cvNorm(errorProjPoints[currImage]);
@@ -1612,7 +1610,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 newError += currNorm * currNorm;
             }
             newError = sqrt(newError);
-            
+
             currIter++;
 
 
@@ -1634,8 +1632,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 /* Print all projection errors */
 #if 0
                 fprintf(file,"projection errors\n");
-                int currImage;
-                for( currImage = 0; currImage < numImages; currImage++)
+                for(int currImage = 0; currImage < numImages; currImage++)
                 {
                     fprintf(file,"\nImage=%d\n",currImage);
                     int numPn = errorProjPoints[currImage]->cols;
@@ -1667,7 +1664,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                     double currNorm1 = 0;
                     double currNorm2 = 0;
                     /* compute norm for projection matrices */
-                    for( currImage = 0; currImage < numImages; currImage++ )
+                    for(int currImage = 0; currImage < numImages; currImage++ )
                     {
                         currNorm1 = cvNorm(newVectorX_projMatrs[currImage],vectorX_projMatrs[currImage]);
                         currNorm2 = cvNorm(newVectorX_projMatrs[currImage]);
@@ -1704,7 +1701,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                 }
 
                 alpha /= 10;
-                for( currImage = 0; currImage < numImages; currImage++ )
+                for(int currImage = 0; currImage < numImages; currImage++ )
                 {
                     cvCopy(newVectorX_projMatrs[currImage],vectorX_projMatrs[currImage]);
                 }
@@ -1732,11 +1729,11 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
 
 
     } while( change > epsilon && currIter < maxIter );
-     
+
     /*--------------------------------------------*/
     /* Optimization complete copy computed params */
     /* Copy projection matrices */
-    for( currImage = 0; currImage < numImages; currImage++ )
+    for(int currImage = 0; currImage < numImages; currImage++ )
     {
         cvCopy(newVectorX_projMatrs[currImage],resultProjMatrs[currImage]);
     }

@@ -150,8 +150,6 @@ PARAM_TEST_CASE(CalcHist, cv::gpu::DeviceInfo, cv::Size)
     cv::gpu::DeviceInfo devInfo;
 
     cv::Size size;
-    cv::Mat src;
-    cv::Mat hist_gold;
 
     virtual void SetUp()
     {
@@ -202,7 +200,7 @@ TEST_P(EqualizeHist, Accuracy)
 
     cv::gpu::GpuMat dst;
     cv::gpu::equalizeHist(loadMat(src), dst);
-        
+
     cv::Mat dst_gold;
     cv::equalizeHist(src, dst_gold);
 
@@ -220,8 +218,6 @@ PARAM_TEST_CASE(ColumnSum, cv::gpu::DeviceInfo, cv::Size)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
-
-    cv::Mat src;
 
     virtual void SetUp()
     {
@@ -275,8 +271,6 @@ PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, AppertureSize, L2gradient, UseRoi)
     int apperture_size;
     bool useL2gradient;
     bool useRoi;
-
-    cv::Mat edges_gold;
 
     virtual void SetUp()
     {
@@ -361,7 +355,7 @@ TEST_P(MeanShift, Filtering)
     else
         img_template = readImage("meanshift/con_result_CC1X.png");
     ASSERT_FALSE(img_template.empty());
-    
+
     cv::gpu::GpuMat d_dst;
     cv::gpu::meanShiftFiltering(loadMat(img), d_dst, spatialRad, colorRad);
 
@@ -396,7 +390,7 @@ TEST_P(MeanShift, Proc)
     cv::gpu::meanShiftProc(loadMat(img), rmap, spmap, spatialRad, colorRad);
 
     ASSERT_EQ(CV_8UC4, rmap.type());
-    
+
     EXPECT_MAT_NEAR(rmap_filtered, rmap, 0.0);
     EXPECT_MAT_NEAR(spmap_template, spmap, 0.0);
 }
@@ -573,11 +567,6 @@ PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, cv::Size, KSize, Ccorr)
     int ksize;
     bool ccorr;
 
-    cv::Mat src;
-    cv::Mat kernel;
-
-    cv::Mat dst_gold;
-
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
@@ -596,7 +585,7 @@ TEST_P(Convolve, Accuracy)
 
     cv::gpu::GpuMat dst;
     cv::gpu::convolve(loadMat(src), loadMat(kernel), dst, ccorr);
-    
+
     cv::Mat dst_gold;
     convolveDFT(src, kernel, dst_gold, ccorr);
 
@@ -670,9 +659,6 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::gpu::DeviceInfo, cv::Size, TemplateSize, C
     int method;
 
     int n, m, h, w;
-    cv::Mat image, templ;
-
-    cv::Mat dst_gold;
 
     virtual void SetUp()
     {
@@ -1080,7 +1066,7 @@ TEST_P(CornerHarris, Accuracy)
 
     cv::gpu::GpuMat dst;
     cv::gpu::cornerHarris(loadMat(src), dst, blockSize, apertureSize, k, borderType);
-    
+
     cv::Mat dst_gold;
     cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType);
 

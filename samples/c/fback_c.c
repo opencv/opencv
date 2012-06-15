@@ -2,16 +2,18 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include <stdio.h>
-void help()
+
+static void help(void)
 {
-	printf(
+    printf(
             "\n This program demonstrate dense \"Farneback\n optical flow\n"
-			"It read from camera 0, and shows how to use and display dense Franeback optical flow\n"
+            "It read from camera 0, and shows how to use and display dense Franeback optical flow\n"
             "Usage: \n"
             "./fback_c \n");
 
 }
-void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,
+
+static void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,
                     double scale, CvScalar color)
 {
     int x, y;
@@ -25,7 +27,7 @@ void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,
         }
 }
 
-int main()
+int main( int argc, char** argv )
 {
     CvCapture* capture = cvCreateCameraCapture(0);
     CvMat* prevgray = 0, *gray = 0, *flow = 0, *cflow = 0;
@@ -34,9 +36,9 @@ int main()
 
     if( !capture )
         return -1;
-    
+
     cvNamedWindow("flow", 1);
-    
+
     for(;;)
     {
         int firstFrame = gray == 0;
@@ -51,7 +53,7 @@ int main()
             cflow = cvCreateMat(gray->rows, gray->cols, CV_8UC3);
         }
         cvCvtColor(frame, gray, CV_BGR2GRAY);
-        
+
         if( !firstFrame )
         {
             cvCalcOpticalFlowFarneback(prevgray, gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
@@ -62,7 +64,7 @@ int main()
         if(cvWaitKey(30)>=0)
             break;
         {
-        CvMat* temp;    
+        CvMat* temp;
         CV_SWAP(prevgray, gray, temp);
         }
     }

@@ -20,14 +20,14 @@
 using namespace cv;
 using namespace std;
 
-void help()
-{
-	cout <<
-			"\nThis program is demonstration for ellipse fitting. The program finds\n"
-			"contours and approximate it by ellipses.\n"
-			"Call:\n"
-			"./fitellipse [image_name -- Default stuff.jpg]\n" << endl;
-}
+// static void help()
+// {
+//     cout <<
+//             "\nThis program is demonstration for ellipse fitting. The program finds\n"
+//             "contours and approximate it by ellipses.\n"
+//             "Call:\n"
+//             "./fitellipse [image_name -- Default stuff.jpg]\n" << endl;
+// }
 
 int sliderPos = 70;
 
@@ -47,7 +47,7 @@ int main( int argc, char** argv )
 
     imshow("source", image);
     namedWindow("result", 1);
-    
+
     // Create toolbars. HighGUI use.
     createTrackbar( "threshold", "result", &sliderPos, 255, processImage );
     processImage(0, 0);
@@ -63,7 +63,7 @@ void processImage(int /*h*/, void*)
 {
     vector<vector<Point> > contours;
     Mat bimage = image >= sliderPos;
-    
+
     findContours(bimage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 
     Mat cimage = Mat::zeros(bimage.size(), CV_8UC3);
@@ -73,11 +73,11 @@ void processImage(int /*h*/, void*)
         size_t count = contours[i].size();
         if( count < 6 )
             continue;
-        
+
         Mat pointsf;
         Mat(contours[i]).convertTo(pointsf, CV_32F);
         RotatedRect box = fitEllipse(pointsf);
-        
+
         if( MAX(box.size.width, box.size.height) > MIN(box.size.width, box.size.height)*30 )
             continue;
         drawContours(cimage, contours, (int)i, Scalar::all(255), 1, 8);

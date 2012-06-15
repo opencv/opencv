@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 using namespace cv;
-void help()
+static void help()
 {
     printf( "This program shows the use of the \"fern\" plannar PlanarObjectDetector point\n"
             "descriptor classifier\n"

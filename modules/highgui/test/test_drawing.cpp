@@ -60,9 +60,9 @@ protected:
 void CV_DrawingTest::run( int )
 {
     Mat testImg, valImg;
-    const string name = "drawing/image.jpg";
+    const string fname = "drawing/image.jpg";
     string path = ts->get_data_path(), filename;
-    filename = path + name;
+    filename = path + fname;
 
     draw( testImg );
 
@@ -415,30 +415,30 @@ class CV_FillConvexPolyTest : public cvtest::BaseTest
 {
 public:
     CV_FillConvexPolyTest() {}
-    ~CV_FillConvexPolyTest() {}   
+    ~CV_FillConvexPolyTest() {}
 protected:
     void run(int)
     {
         vector<Point> line1;
         vector<Point> line2;
-        
+
         line1.push_back(Point(1, 1));
         line1.push_back(Point(5, 1));
         line1.push_back(Point(5, 8));
         line1.push_back(Point(1, 8));
-        
+
         line2.push_back(Point(2, 2));
         line2.push_back(Point(10, 2));
         line2.push_back(Point(10, 16));
         line2.push_back(Point(2, 16));
-        
+
         Mat gray0(10,10,CV_8U, Scalar(0));
         fillConvexPoly(gray0, line1, Scalar(255), 8, 0);
         int nz1 = countNonZero(gray0);
-        
+
         fillConvexPoly(gray0, line2, Scalar(0), 8, 1);
         int nz2 = countNonZero(gray0)/255;
-        
+
         CV_Assert( nz1 == 40 && nz2 == 0 );
     }
 };

@@ -98,6 +98,7 @@ typedef struct _list _CVLIST;
     _LIST_INLINE CVPOS prefix##get_tail_pos_##type(_CVLIST*);\
     _LIST_INLINE type* prefix##get_next_##type(CVPOS*);\
     _LIST_INLINE type* prefix##get_prev_##type(CVPOS*);\
+    _LIST_INLINE int prefix##is_pos_##type(CVPOS pos);\
     /* Modification functions*/\
     _LIST_INLINE void prefix##clear_list_##type(_CVLIST*);\
     _LIST_INLINE CVPOS prefix##add_head_##type(_CVLIST*, type*);\
@@ -151,8 +152,8 @@ typedef struct _list _CVLIST;
     }\
     element->m_next = ((element_type*)l->m_head_free.m_pos);\
     l->m_head_free.m_pos = element;
-    
-    
+
+
 /*#define GET_FIRST_FREE(l) ((ELEMENT_##type*)(l->m_head_free.m_pos))*/
 
 #define IMPLEMENT_LIST(type, prefix)\

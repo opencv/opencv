@@ -42,7 +42,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#if HAVE_OPENCV_NONFREE
+#ifdef HAVE_OPENCV_NONFREE
 
 using namespace cv;
 using namespace std;
@@ -57,7 +57,7 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     rois.push_back(Rect(img.cols / 2, img.rows / 2, img.cols - img.cols / 2, img.rows - img.rows / 2));
     detail::ImageFeatures roi_features;
     (*finder)(img, roi_features, rois);
-    
+
     int tl_rect_count = 0, br_rect_count = 0, bad_count = 0;
     for (size_t i = 0; i < roi_features.keypoints.size(); ++i)
     {

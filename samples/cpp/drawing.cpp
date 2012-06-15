@@ -3,11 +3,11 @@
 #include <stdio.h>
 using namespace cv;
 
-void help()
+static void help()
 {
-	printf("\nThis program demonstrates OpenCV drawing and text output functions.\n"
-	"Usage:\n"
-	"	./drawing\n");
+    printf("\nThis program demonstrates OpenCV drawing and text output functions.\n"
+    "Usage:\n"
+    "   ./drawing\n");
 }
 static Scalar randomColor(RNG& rng)
 {
@@ -18,7 +18,7 @@ static Scalar randomColor(RNG& rng)
 int main()
 {
     help();
-	char wndname[] = "Drawing Demo";
+    char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
     const int DELAY = 5;
     int lineType = CV_AA; // change it to 8 to see non-antialiased graphics
@@ -39,7 +39,7 @@ int main()
         pt2.y = rng.uniform(y1, y2);
 
         line( image, pt1, pt2, randomColor(rng), rng.uniform(1,10), lineType );
-        
+
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
@@ -53,14 +53,14 @@ int main()
         pt2.x = rng.uniform(x1, x2);
         pt2.y = rng.uniform(y1, y2);
         int thickness = rng.uniform(-3, 10);
-        
+
         rectangle( image, pt1, pt2, randomColor(rng), MAX(thickness, -1), lineType );
-        
+
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
     }
-    
+
     for (i = 0; i < NUMBER; i++)
     {
         Point center;
@@ -73,7 +73,7 @@ int main()
 
         ellipse( image, center, axes, angle, angle - 100, angle + 200,
                  randomColor(rng), rng.uniform(-1,9), lineType );
-        
+
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
@@ -84,46 +84,46 @@ int main()
         Point pt[2][3];
         pt[0][0].x = rng.uniform(x1, x2);
         pt[0][0].y = rng.uniform(y1, y2);
-        pt[0][1].x = rng.uniform(x1, x2); 
-        pt[0][1].y = rng.uniform(y1, y2); 
+        pt[0][1].x = rng.uniform(x1, x2);
+        pt[0][1].y = rng.uniform(y1, y2);
         pt[0][2].x = rng.uniform(x1, x2);
         pt[0][2].y = rng.uniform(y1, y2);
-        pt[1][0].x = rng.uniform(x1, x2); 
+        pt[1][0].x = rng.uniform(x1, x2);
         pt[1][0].y = rng.uniform(y1, y2);
-        pt[1][1].x = rng.uniform(x1, x2); 
+        pt[1][1].x = rng.uniform(x1, x2);
         pt[1][1].y = rng.uniform(y1, y2);
-        pt[1][2].x = rng.uniform(x1, x2); 
+        pt[1][2].x = rng.uniform(x1, x2);
         pt[1][2].y = rng.uniform(y1, y2);
         const Point* ppt[2] = {pt[0], pt[1]};
         int npt[] = {3, 3};
-        
+
         polylines(image, ppt, npt, 2, true, randomColor(rng), rng.uniform(1,10), lineType);
-        
+
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
     }
-    
+
     for (i = 0; i< NUMBER; i++)
     {
         Point pt[2][3];
         pt[0][0].x = rng.uniform(x1, x2);
         pt[0][0].y = rng.uniform(y1, y2);
-        pt[0][1].x = rng.uniform(x1, x2); 
-        pt[0][1].y = rng.uniform(y1, y2); 
+        pt[0][1].x = rng.uniform(x1, x2);
+        pt[0][1].y = rng.uniform(y1, y2);
         pt[0][2].x = rng.uniform(x1, x2);
         pt[0][2].y = rng.uniform(y1, y2);
-        pt[1][0].x = rng.uniform(x1, x2); 
+        pt[1][0].x = rng.uniform(x1, x2);
         pt[1][0].y = rng.uniform(y1, y2);
-        pt[1][1].x = rng.uniform(x1, x2); 
+        pt[1][1].x = rng.uniform(x1, x2);
         pt[1][1].y = rng.uniform(y1, y2);
-        pt[1][2].x = rng.uniform(x1, x2); 
+        pt[1][2].x = rng.uniform(x1, x2);
         pt[1][2].y = rng.uniform(y1, y2);
         const Point* ppt[2] = {pt[0], pt[1]};
         int npt[] = {3, 3};
-        
+
         fillPoly(image, ppt, npt, 2, randomColor(rng), lineType);
-        
+
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
@@ -134,10 +134,10 @@ int main()
         Point center;
         center.x = rng.uniform(x1, x2);
         center.y = rng.uniform(y1, y2);
-        
+
         circle(image, center, rng.uniform(0, 300), randomColor(rng),
                rng.uniform(-1, 9), lineType);
-        
+
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
@@ -151,7 +151,7 @@ int main()
 
         putText(image, "Testing text rendering", org, rng.uniform(0,8),
                 rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
-        
+
         imshow(wndname, image);
         if(waitKey(DELAY) >= 0)
             return 0;
@@ -159,14 +159,14 @@ int main()
 
     Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
     Point org((width - textsize.width)/2, (height - textsize.height)/2);
-    
+
     Mat image2;
     for( i = 0; i < 255; i += 2 )
     {
         image2 = image - Scalar::all(i);
         putText(image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
                 Scalar(i, i, 255), 5, lineType);
-        
+
         imshow(wndname, image2);
         if(waitKey(DELAY) >= 0)
             return 0;

@@ -1,6 +1,6 @@
 if(ANDROID)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/tbb")
-  ocv_include_directories(${TBB_INCLUDE_DIRS})
+  include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
   add_definitions(-DTBB_USE_GCC_BUILTINS=1 -D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1 -D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1)
   set(HAVE_TBB 1)

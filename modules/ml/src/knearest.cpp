@@ -141,7 +141,7 @@ bool CvKNearest::train( const CvMat* _train_data, const CvMat* _responses,
     ok = true;
 
     __END__;
-    
+
     if( responses && responses->data.ptr != _responses->data.ptr )
         cvReleaseMat(&responses);
 
@@ -318,7 +318,7 @@ struct P1 {
     result = _result;
     buf_sz = _buf_sz;
   }
-  
+
   const CvKNearest* pointer;
   int k;
   const CvMat* _samples;
@@ -329,7 +329,7 @@ struct P1 {
   CvMat* _dist;
   float* result;
   int buf_sz;
-  
+
   void operator()( const cv::BlockedRange& range ) const
   {
     cv::AutoBuffer<float> buf(buf_sz);
@@ -429,7 +429,7 @@ bool CvKNearest::train( const Mat& _train_data, const Mat& _responses,
                         int _max_k, bool _update_base )
 {
     CvMat tdata = _train_data, responses = _responses, sidx = _sample_idx;
-    
+
     return train(&tdata, &responses, sidx.data.ptr ? &sidx : 0, _is_regression, _max_k, _update_base );
 }
 
@@ -439,7 +439,7 @@ float CvKNearest::find_nearest( const Mat& _samples, int k, Mat* _results,
                                 Mat* _dist ) const
 {
     CvMat s = _samples, results, *presults = 0, nresponses, *pnresponses = 0, dist, *pdist = 0;
-    
+
     if( _results )
     {
         if(!(_results->data && (_results->type() == CV_32F ||
@@ -449,7 +449,7 @@ float CvKNearest::find_nearest( const Mat& _samples, int k, Mat* _results,
             _results->create(_samples.rows, 1, CV_32F);
         presults = &(results = *_results);
     }
-    
+
     if( _neighbor_responses )
     {
         if(!(_neighbor_responses->data && _neighbor_responses->type() == CV_32F &&
@@ -457,7 +457,7 @@ float CvKNearest::find_nearest( const Mat& _samples, int k, Mat* _results,
             _neighbor_responses->create(_samples.rows, k, CV_32F);
         pnresponses = &(nresponses = *_neighbor_responses);
     }
-    
+
     if( _dist )
     {
         if(!(_dist->data && _dist->type() == CV_32F &&
@@ -465,15 +465,15 @@ float CvKNearest::find_nearest( const Mat& _samples, int k, Mat* _results,
             _dist->create(_samples.rows, k, CV_32F);
         pdist = &(dist = *_dist);
     }
-    
+
     return find_nearest(&s, k, presults, _neighbors, pnresponses, pdist );
 }
 
 
-float CvKNearest::find_nearest( const cv::Mat& samples, int k, CV_OUT cv::Mat& results,
+float CvKNearest::find_nearest( const cv::Mat& _samples, int k, CV_OUT cv::Mat& results,
                                 CV_OUT cv::Mat& neighborResponses, CV_OUT cv::Mat& dists) const
 {
-    return find_nearest(samples, k, &results, 0, &neighborResponses, &dists);
+    return find_nearest(_samples, k, &results, 0, &neighborResponses, &dists);
 }
 
 /* End of file */

@@ -72,10 +72,10 @@ struct MatchPairsBody
             : matcher(other.matcher), features(other.features),
               pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
 
-    MatchPairsBody(FeaturesMatcher &matcher, const vector<ImageFeatures> &features,
-                   vector<MatchesInfo> &pairwise_matches, vector<pair<int,int> > &near_pairs)
-            : matcher(matcher), features(features),
-              pairwise_matches(pairwise_matches), near_pairs(near_pairs) {}
+    MatchPairsBody(FeaturesMatcher &_matcher, const vector<ImageFeatures> &_features,
+                   vector<MatchesInfo> &_pairwise_matches, vector<pair<int,int> > &_near_pairs)
+            : matcher(_matcher), features(_features),
+              pairwise_matches(_pairwise_matches), near_pairs(_near_pairs) {}
 
     void operator ()(const BlockedRange &r) const
     {

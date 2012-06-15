@@ -58,7 +58,7 @@ public:
     enum { NO, FEATHER, MULTI_BAND };
     static Ptr<Blender> createDefault(int type, bool try_gpu = false);
 
-    void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);    
+    void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);
     virtual void prepare(Rect dst_roi);
     virtual void feed(const Mat &img, const Mat &mask, Point tl);
     virtual void blend(Mat &dst, Mat &dst_mask);
@@ -72,7 +72,7 @@ protected:
 class CV_EXPORTS FeatherBlender : public Blender
 {
 public:
-    FeatherBlender(float sharpness = 0.02f) { setSharpness(sharpness); }
+    FeatherBlender(float sharpness = 0.02f);
 
     float sharpness() const { return sharpness_; }
     void setSharpness(float val) { sharpness_ = val; }
@@ -91,6 +91,8 @@ private:
     Mat weight_map_;
     Mat dst_weight_map_;
 };
+
+inline FeatherBlender::FeatherBlender(float _sharpness) { setSharpness(_sharpness); }
 
 
 class CV_EXPORTS MultiBandBlender : public Blender

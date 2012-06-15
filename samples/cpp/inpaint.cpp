@@ -7,13 +7,13 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     cout << "\nCool inpainging demo. Inpainting repairs damage to images by floodfilling the damage \n"
-    		<< "with surrounding image areas.\n"
-    		"Using OpenCV version %s\n" << CV_VERSION << "\n"
-   	"Usage:\n"
-    	"./inpaint [image_name -- Default fruits.jpg]\n" << endl;
+            << "with surrounding image areas.\n"
+            "Using OpenCV version %s\n" << CV_VERSION << "\n"
+    "Usage:\n"
+        "./inpaint [image_name -- Default fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
         "\tESC - quit the program\n"
@@ -25,7 +25,7 @@ void help()
 Mat img, inpaintMask;
 Point prevPt(-1,-1);
 
-void onMouse( int event, int x, int y, int flags, void* )
+static void onMouse( int event, int x, int y, int flags, void* )
 {
     if( event == CV_EVENT_LBUTTONUP || !(flags & CV_EVENT_FLAG_LBUTTON) )
         prevPt = Point(-1,-1);
@@ -55,7 +55,7 @@ int main( int argc, char** argv )
     }
 
     help();
-    
+
     namedWindow( "image", 1 );
 
     img = img0.clone();

@@ -46,6 +46,10 @@ struct base_any_policy
     virtual ::size_t get_size() = 0;
     virtual const std::type_info& type() = 0;
     virtual void print(std::ostream& out, void* const* src) = 0;
+
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
+    virtual ~base_any_policy() {}
+#endif
 };
 
 template<typename T>

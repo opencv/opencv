@@ -14,7 +14,7 @@ int distType0 = CV_DIST_L1;
 Mat gray;
 
 // threshold trackbar callback
-void onTrackbar( int, void* )
+static void onTrackbar( int, void* )
 {
     static const Scalar colors[] =
     {
@@ -44,20 +44,20 @@ void onTrackbar( int, void* )
         // begin "painting" the distance transform result
         dist *= 5000;
         pow(dist, 0.5, dist);
-        
+
         Mat dist32s, dist8u1, dist8u2;
-        
+
         dist.convertTo(dist32s, CV_32S, 1, 0.5);
         dist32s &= Scalar::all(255);
-        
+
         dist32s.convertTo(dist8u1, CV_8U, 1, 0);
         dist32s *= -1;
-        
+
         dist32s += Scalar::all(255);
         dist32s.convertTo(dist8u2, CV_8U);
-        
+
         Mat planes[] = {dist8u1, dist8u2, dist8u2};
-        merge(planes, 3, dist8u); 
+        merge(planes, 3, dist8u);
     }
     else
     {
@@ -84,40 +84,40 @@ void onTrackbar( int, void* )
     imshow("Distance Map", dist8u );
 }
 
-void help()
+static void help()
 {
-	printf("\nProgram to demonstrate the use of the distance transform function between edge images.\n"
-			"Usage:\n"
-			"./distrans [image_name -- default image is stuff.jpg]\n"
-			"\nHot keys: \n"
-			"\tESC - quit the program\n"
-			"\tC - use C/Inf metric\n"
-			"\tL1 - use L1 metric\n"
-			"\tL2 - use L2 metric\n"
-			"\t3 - use 3x3 mask\n"
-			"\t5 - use 5x5 mask\n"
-			"\t0 - use precise distance transform\n"
-			"\tv - switch to Voronoi diagram mode\n"
+    printf("\nProgram to demonstrate the use of the distance transform function between edge images.\n"
+            "Usage:\n"
+            "./distrans [image_name -- default image is stuff.jpg]\n"
+            "\nHot keys: \n"
+            "\tESC - quit the program\n"
+            "\tC - use C/Inf metric\n"
+            "\tL1 - use L1 metric\n"
+            "\tL2 - use L2 metric\n"
+            "\t3 - use 3x3 mask\n"
+            "\t5 - use 5x5 mask\n"
+            "\t0 - use precise distance transform\n"
+            "\tv - switch to Voronoi diagram mode\n"
             "\tp - switch to pixel-based Voronoi diagram mode\n"
-			"\tSPACE - loop through all the modes\n\n");
+            "\tSPACE - loop through all the modes\n\n");
 }
 
-const char* keys = 
+const char* keys =
 {
-	"{1| |stuff.jpg|input image file}"
+    "{1| |stuff.jpg|input image file}"
 };
 
 int main( int argc, const char** argv )
 {
     help();
-	CommandLineParser parser(argc, argv, keys);
-	string filename = parser.get<string>("1");
-	gray = imread(filename.c_str(), 0);
+    CommandLineParser parser(argc, argv, keys);
+    string filename = parser.get<string>("1");
+    gray = imread(filename.c_str(), 0);
     if(gray.empty())
     {
-		printf("Cannot read image file: %s\n", filename.c_str());
-		help();
-    	return -1;
+        printf("Cannot read image file: %s\n", filename.c_str());
+        help();
+        return -1;
     }
 
     namedWindow("Distance Map", 1);
@@ -136,7 +136,7 @@ int main( int argc, const char** argv )
         if( c == 'c' || c == 'C' || c == '1' || c == '2' ||
             c == '3' || c == '5' || c == '0' )
             voronoiType = -1;
-        
+
         if( c == 'c' || c == 'C' )
             distType0 = CV_DIST_C;
         else if( c == '1' )

@@ -3,7 +3,7 @@
 #include "opencv2/highgui/highgui.hpp"
 
 #include <stdio.h>
-void help()
+static void help( void )
 {
 	printf("\nThis program demostrates iterative construction of\n"
 			"delaunay triangulation and voronoi tesselation.\n"
@@ -14,7 +14,7 @@ void help()
 			"hitting any key.\n");
 }
 
-CvSubdiv2D* init_delaunay( CvMemStorage* storage,
+static CvSubdiv2D* init_delaunay( CvMemStorage* storage,
                            CvRect rect )
 {
     CvSubdiv2D* subdiv;
@@ -29,13 +29,13 @@ CvSubdiv2D* init_delaunay( CvMemStorage* storage,
 }
 
 
-void draw_subdiv_point( IplImage* img, CvPoint2D32f fp, CvScalar color )
+static void draw_subdiv_point( IplImage* img, CvPoint2D32f fp, CvScalar color )
 {
     cvCircle( img, cvPoint(cvRound(fp.x), cvRound(fp.y)), 3, color, CV_FILLED, 8, 0 );
 }
 
 
-void draw_subdiv_edge( IplImage* img, CvSubdiv2DEdge edge, CvScalar color )
+static void draw_subdiv_edge( IplImage* img, CvSubdiv2DEdge edge, CvScalar color )
 {
     CvSubdiv2DPoint* org_pt;
     CvSubdiv2DPoint* dst_pt;
@@ -59,7 +59,7 @@ void draw_subdiv_edge( IplImage* img, CvSubdiv2DEdge edge, CvScalar color )
 }
 
 
-void draw_subdiv( IplImage* img, CvSubdiv2D* subdiv,
+static void draw_subdiv( IplImage* img, CvSubdiv2D* subdiv,
                   CvScalar delaunay_color, CvScalar voronoi_color )
 {
     CvSeqReader  reader;
@@ -83,7 +83,7 @@ void draw_subdiv( IplImage* img, CvSubdiv2D* subdiv,
 }
 
 
-void locate_point( CvSubdiv2D* subdiv, CvPoint2D32f fp, IplImage* img,
+static void locate_point( CvSubdiv2D* subdiv, CvPoint2D32f fp, IplImage* img,
                    CvScalar active_color )
 {
     CvSubdiv2DEdge e;
@@ -107,7 +107,7 @@ void locate_point( CvSubdiv2D* subdiv, CvPoint2D32f fp, IplImage* img,
 }
 
 
-void draw_subdiv_facet( IplImage* img, CvSubdiv2DEdge edge )
+static void draw_subdiv_facet( IplImage* img, CvSubdiv2DEdge edge )
 {
     CvSubdiv2DEdge t = edge;
     int i, count = 0;
@@ -142,7 +142,7 @@ void draw_subdiv_facet( IplImage* img, CvSubdiv2DEdge edge )
     free( buf );
 }
 
-void paint_voronoi( CvSubdiv2D* subdiv, IplImage* img )
+static void paint_voronoi( CvSubdiv2D* subdiv, IplImage* img )
 {
     CvSeqReader  reader;
     int i, total = subdiv->edges->total;
@@ -171,7 +171,7 @@ void paint_voronoi( CvSubdiv2D* subdiv, IplImage* img )
 }
 
 
-void run(void)
+static void run(void)
 {
     char win[] = "source";
     int i;

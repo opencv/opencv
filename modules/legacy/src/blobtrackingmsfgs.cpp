@@ -47,7 +47,7 @@ typedef float DefHistType;
 #define DefHistTypeMat CV_32F
 #define HIST_INDEX(_pData) (((_pData)[0]>>m_ByteShift) + (((_pData)[1]>>(m_ByteShift))<<m_BinBit)+((pImgData[2]>>m_ByteShift)<<(m_BinBit*2)))
 
-void calcKernelEpanechnikov(CvMat* pK)
+static void calcKernelEpanechnikov(CvMat* pK)
 {    /* Allocate kernel for histogramm creation: */
     int     x,y;
     int     w = pK->width;
@@ -395,7 +395,7 @@ public:
 
             {   /* Mean shift in scale space: */
                 float   news = 0;
-                float   sum = 0;
+                float   sum1 = 0;
                 float   scale;
 
                 Center = cvPoint(cvRound(m_Blob.x),cvRound(m_Blob.y));
@@ -407,13 +407,13 @@ public:
                 {
                     double  W = cvDotProduct(m_Weights, m_KernelMeanShiftG[si]);;
                     int     s = si-SCALE_RANGE;
-                    sum += (float)fabs(W);
+                    sum1 += (float)fabs(W);
                     news += (float)(s*W);
                 }
 
-                if(sum>0)
+                if(sum1>0)
                 {
-                    news /= sum;
+                    news /= sum1;
                 }
 
                 scale = (float)pow((double)SCALE_BASE,(double)news);
@@ -445,7 +445,7 @@ public:
     virtual void Release(){delete this;};
 }; /*CvBlobTrackerOneMSFGS*/
 
-CvBlobTrackerOne* cvCreateBlobTrackerOneMSFGS()
+static CvBlobTrackerOne* cvCreateBlobTrackerOneMSFGS()
 {
     return (CvBlobTrackerOne*) new CvBlobTrackerOneMSFGS;
 }

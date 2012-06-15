@@ -394,7 +394,7 @@ void icvSaveStageHaarClassifier( CvIntHaarClassifier* classifier, FILE* file )
 
 
 
-CvIntHaarClassifier* icvLoadCARTStageHaarClassifierF( FILE* file, int step )
+static CvIntHaarClassifier* icvLoadCARTStageHaarClassifierF( FILE* file, int step )
 {
     CvStageHaarClassifier* ptr = NULL;
 
@@ -525,9 +525,9 @@ float icvEvalTreeCascadeClassifierFilter( CvIntHaarClassifier* classifier, sum_t
                                           sum_type* tilted, float normfactor )
 {
     CvTreeCascadeNode* ptr;
-    CvTreeCascadeClassifier* tree;
+    //CvTreeCascadeClassifier* tree;
 
-    tree = (CvTreeCascadeClassifier*) classifier;
+    //tree = (CvTreeCascadeClassifier*) classifier;
 
 
 

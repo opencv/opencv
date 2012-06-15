@@ -28,7 +28,7 @@ using std::map;
 using std::set;
 using std::cout;
 using std::endl;
-    
+
 // Removes duplicate elements in a given vector.
 template<typename _Tp>
 inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
@@ -42,40 +42,58 @@ inline vector<_Tp> remove_dups(const vector<_Tp>& src) {
         elems.push_back(*it);
     return elems;
 }
-    
+
 static Mat argsort(InputArray _src, bool ascending=true)
 {
     Mat src = _src.getMat();
-    if (src.rows != 1 && src.cols != 1)
-        CV_Error(CV_StsBadArg, "cv::argsort only sorts 1D matrices.");
+    if (src.rows != 1 && src.cols != 1) {
+    	string error_message = "Wrong shape of input matrix! Expected a matrix with one row or column.";
+    	CV_Error(CV_StsBadArg, error_message);
+    }
     int flags = CV_SORT_EVERY_ROW+(ascending ? CV_SORT_ASCENDING : CV_SORT_DESCENDING);
     Mat sorted_indices;
     sortIdx(src.reshape(1,1),sorted_indices,flags);
     return sorted_indices;
 }
 
-static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0)
-{
+static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
+    // make sure the input data is a vector of matrices or vector of vector
+    if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_VECTOR_VECTOR) {
+    	string error_message = "The data is expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
+        CV_Error(CV_StsBadArg, error_message);
+    }
     // number of samples
-    int n = (int) src.total();
-    // return empty matrix if no data given
+    size_t n = src.total();
+    // return empty matrix if no matrices given
     if(n == 0)
         return Mat();
-    // dimensionality of samples
-    int d = (int)src.getMat(0).total();
+    // dimensionality of (reshaped) samples
+    size_t d = src.getMat(0).total();
     // create data matrix
-    Mat data(n, d, rtype);
-    // copy data
-    for(int i = 0; i < n; i++) {
+    Mat data((int)n, (int)d, rtype);
+    // now copy data
+    for(int i = 0; i < (int)n; i++) {
+        // make sure data can be reshaped, throw exception if not!
+        if(src.getMat(i).total() != d) {
+            string error_message = format("Wrong number of elements in matrix #%d! Expected %d was %d.", i, (int)d, (int)src.getMat(i).total());
+            CV_Error(CV_StsBadArg, error_message);
+        }
+        // get a hold of the current row
         Mat xi = data.row(i);
-        src.getMat(i).reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+        // make reshape happy by cloning for non-continuous matrices
+        if(src.getMat(i).isContinuous()) {
+            src.getMat(i).reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+        } else {
+            src.getMat(i).clone().reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+        }
     }
     return data;
 }
-    
-void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, OutputArray _dst) {
-    if(_indices.getMat().type() != CV_32SC1)
+
+static void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, OutputArray _dst) {
+    if(_indices.getMat().type() != CV_32SC1) {
         CV_Error(CV_StsUnsupportedFormat, "cv::sortColumnsByIndices only works on integer indices!");
+    }
     Mat src = _src.getMat();
     vector<int> indices = _indices.getMat();
     _dst.create(src.rows, src.cols, src.type());
@@ -87,13 +105,13 @@ void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, OutputArra
     }
 }
 
-Mat sortMatrixColumnsByIndices(InputArray src, InputArray indices) {
+static Mat sortMatrixColumnsByIndices(InputArray src, InputArray indices) {
     Mat dst;
     sortMatrixColumnsByIndices(src, indices, dst);
     return dst;
 }
-    
-    
+
+
 template<typename _Tp> static bool
 isSymmetric_(InputArray src) {
     Mat _src = src.getMat();
@@ -151,33 +169,46 @@ static bool isSymmetric(InputArray src, double eps=1e-16)
     return false;
 }
 
-    
+
 //------------------------------------------------------------------------------
-// subspace::project
+// cv::subspaceProject
 //------------------------------------------------------------------------------
-Mat subspaceProject(InputArray _W, InputArray _mean, InputArray _src)
-{
+Mat subspaceProject(InputArray _W, InputArray _mean, InputArray _src) {
     // get data matrices
     Mat W = _W.getMat();
     Mat mean = _mean.getMat();
     Mat src = _src.getMat();
+    // get number of samples and dimension
+    int n = src.rows;
+    int d = src.cols;
+    // make sure the data has the correct shape
+    if(W.rows != d) {
+        string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
+        CV_Error(CV_StsBadArg, error_message);
+    }
+    // make sure mean is correct if not empty
+    if(!mean.empty() && (mean.total() != (size_t) d)) {
+        string error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
+        CV_Error(CV_StsBadArg, error_message);
+    }
     // create temporary matrices
     Mat X, Y;
-    // copy data & make sure we are using the correct type
+    // make sure you operate on correct type
     src.convertTo(X, W.type());
-    // get number of samples and dimension
-    int n = X.rows;
-    int d = X.cols;
-    // center the data if correct aligned sample mean is given
-    if(mean.total() == (size_t)d)
-        subtract(X, repeat(mean.reshape(1,1), n, 1), X);
+    // safe to do, because of above assertion
+    if(!mean.empty()) {
+    	for(int i=0; i<n; i++) {
+    		Mat r_i = X.row(i);
+    		subtract(r_i, mean.reshape(1,1), r_i);
+    	}
+    }
     // finally calculate projection as Y = (X-mean)*W
     gemm(X, W, 1.0, Mat(), 0.0, Y);
     return Y;
 }
 
 //------------------------------------------------------------------------------
-// subspace::reconstruct
+// cv::subspaceReconstruct
 //------------------------------------------------------------------------------
 Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
 {
@@ -185,45 +216,61 @@ Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     Mat W = _W.getMat();
     Mat mean = _mean.getMat();
     Mat src = _src.getMat();
-    // get number of samples
+    // get number of samples and dimension
     int n = src.rows;
+    int d = src.cols;
+    // make sure the data has the correct shape
+    if(W.cols != d) {
+        string error_message = format("Wrong shapes for given matrices. Was size(src) = (%d,%d), size(W) = (%d,%d).", src.rows, src.cols, W.rows, W.cols);
+        CV_Error(CV_StsBadArg, error_message);
+    }
+    // make sure mean is correct if not empty
+    if(!mean.empty() && (mean.total() != (size_t) W.rows)) {
+        string error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
+        CV_Error(CV_StsBadArg, error_message);
+    }
     // initalize temporary matrices
     Mat X, Y;
     // copy data & make sure we are using the correct type
     src.convertTo(Y, W.type());
     // calculate the reconstruction
     gemm(Y, W, 1.0, Mat(), 0.0, X, GEMM_2_T);
-    if(mean.total() == (size_t) X.cols)
-        add(X, repeat(mean.reshape(1,1), n, 1), X);
+    // safe to do because of above assertion
+    if(!mean.empty()) {
+    	for(int i=0; i<n; i++) {
+    		Mat r_i = X.row(i);
+    		add(r_i, mean.reshape(1,1), r_i);
+    	}
+    }
     return X;
 }
 
-    
+
 class EigenvalueDecomposition {
 private:
-    
+
     // Holds the data dimension.
     int n;
-    
+
     // Stores real/imag part of a complex division.
     double cdivr, cdivi;
-    
+
     // Pointer to internal memory.
     double *d, *e, *ort;
     double **V, **H;
-    
+
     // Holds the computed eigenvalues.
     Mat _eigenvalues;
-    
+
     // Holds the computed eigenvectors.
     Mat _eigenvectors;
-    
+
     // Allocates memory.
     template<typename _Tp>
     _Tp *alloc_1d(int m) {
         return new _Tp[m];
     }
-    
+
     // Allocates memory.
     template<typename _Tp>
     _Tp *alloc_1d(int m, _Tp val) {
@@ -232,63 +279,63 @@ private:
             arr[i] = val;
         return arr;
     }
-    
+
     // Allocates memory.
     template<typename _Tp>
-    _Tp **alloc_2d(int m, int n) {
+    _Tp **alloc_2d(int m, int _n) {
         _Tp **arr = new _Tp*[m];
         for (int i = 0; i < m; i++)
-            arr[i] = new _Tp[n];
+            arr[i] = new _Tp[_n];
         return arr;
     }
-    
+
     // Allocates memory.
     template<typename _Tp>
-    _Tp **alloc_2d(int m, int n, _Tp val) {
-        _Tp **arr = alloc_2d<_Tp> (m, n);
+    _Tp **alloc_2d(int m, int _n, _Tp val) {
+        _Tp **arr = alloc_2d<_Tp> (m, _n);
         for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
+            for (int j = 0; j < _n; j++) {
                 arr[i][j] = val;
             }
         }
         return arr;
     }
-    
+
     void cdiv(double xr, double xi, double yr, double yi) {
-        double r, d;
+        double r, dv;
         if (std::abs(yr) > std::abs(yi)) {
             r = yi / yr;
-            d = yr + r * yi;
-            cdivr = (xr + r * xi) / d;
-            cdivi = (xi - r * xr) / d;
+            dv = yr + r * yi;
+            cdivr = (xr + r * xi) / dv;
+            cdivi = (xi - r * xr) / dv;
         } else {
             r = yr / yi;
-            d = yi + r * yr;
-            cdivr = (r * xr + xi) / d;
-            cdivi = (r * xi - xr) / d;
+            dv = yi + r * yr;
+            cdivr = (r * xr + xi) / dv;
+            cdivi = (r * xi - xr) / dv;
         }
     }
-    
+
     // Nonsymmetric reduction from Hessenberg to real Schur form.
-    
+
     void hqr2() {
-        
+
         //  This is derived from the Algol procedure hqr2,
         //  by Martin and Wilkinson, Handbook for Auto. Comp.,
         //  Vol.ii-Linear Algebra, and the corresponding
         //  Fortran subroutine in EISPACK.
-        
+
         // Initialize
         int nn = this->n;
-        int n = nn - 1;
+        int n1 = nn - 1;
         int low = 0;
         int high = nn - 1;
         double eps = pow(2.0, -52.0);
         double exshift = 0.0;
         double p = 0, q = 0, r = 0, s = 0, z = 0, t, w, x, y;
-        
+
         // Store roots isolated by balanc and compute matrix norm
-        
+
         double norm = 0.0;
         for (int i = 0; i < nn; i++) {
             if (i < low || i > high) {
@@ -299,13 +346,13 @@ private:
                 norm = norm + std::abs(H[i][j]);
             }
         }
-        
+
         // Outer loop over eigenvalue index
         int iter = 0;
-        while (n >= low) {
-            
+        while (n1 >= low) {
+
             // Look for single small sub-diagonal element
-            int l = n;
+            int l = n1;
             while (l > low) {
                 s = std::abs(H[l - 1][l - 1]) + std::abs(H[l][l]);
                 if (s == 0.0) {
@@ -316,114 +363,114 @@ private:
                 }
                 l--;
             }
-            
+
             // Check for convergence
             // One root found
-            
-            if (l == n) {
-                H[n][n] = H[n][n] + exshift;
-                d[n] = H[n][n];
-                e[n] = 0.0;
-                n--;
+
+            if (l == n1) {
+                H[n1][n1] = H[n1][n1] + exshift;
+                d[n1] = H[n1][n1];
+                e[n1] = 0.0;
+                n1--;
                 iter = 0;
-                
+
                 // Two roots found
-                
-            } else if (l == n - 1) {
-                w = H[n][n - 1] * H[n - 1][n];
-                p = (H[n - 1][n - 1] - H[n][n]) / 2.0;
+
+            } else if (l == n1 - 1) {
+                w = H[n1][n1 - 1] * H[n1 - 1][n1];
+                p = (H[n1 - 1][n1 - 1] - H[n1][n1]) / 2.0;
                 q = p * p + w;
                 z = sqrt(std::abs(q));
-                H[n][n] = H[n][n] + exshift;
-                H[n - 1][n - 1] = H[n - 1][n - 1] + exshift;
-                x = H[n][n];
-                
+                H[n1][n1] = H[n1][n1] + exshift;
+                H[n1 - 1][n1 - 1] = H[n1 - 1][n1 - 1] + exshift;
+                x = H[n1][n1];
+
                 // Real pair
-                
+
                 if (q >= 0) {
                     if (p >= 0) {
                         z = p + z;
                     } else {
                         z = p - z;
                     }
-                    d[n - 1] = x + z;
-                    d[n] = d[n - 1];
+                    d[n1 - 1] = x + z;
+                    d[n1] = d[n1 - 1];
                     if (z != 0.0) {
-                        d[n] = x - w / z;
+                        d[n1] = x - w / z;
                     }
-                    e[n - 1] = 0.0;
-                    e[n] = 0.0;
-                    x = H[n][n - 1];
+                    e[n1 - 1] = 0.0;
+                    e[n1] = 0.0;
+                    x = H[n1][n1 - 1];
                     s = std::abs(x) + std::abs(z);
                     p = x / s;
                     q = z / s;
                     r = sqrt(p * p + q * q);
                     p = p / r;
                     q = q / r;
-                    
+
                     // Row modification
-                    
-                    for (int j = n - 1; j < nn; j++) {
-                        z = H[n - 1][j];
-                        H[n - 1][j] = q * z + p * H[n][j];
-                        H[n][j] = q * H[n][j] - p * z;
+
+                    for (int j = n1 - 1; j < nn; j++) {
+                        z = H[n1 - 1][j];
+                        H[n1 - 1][j] = q * z + p * H[n1][j];
+                        H[n1][j] = q * H[n1][j] - p * z;
                     }
-                    
+
                     // Column modification
-                    
-                    for (int i = 0; i <= n; i++) {
-                        z = H[i][n - 1];
-                        H[i][n - 1] = q * z + p * H[i][n];
-                        H[i][n] = q * H[i][n] - p * z;
+
+                    for (int i = 0; i <= n1; i++) {
+                        z = H[i][n1 - 1];
+                        H[i][n1 - 1] = q * z + p * H[i][n1];
+                        H[i][n1] = q * H[i][n1] - p * z;
                     }
-                    
+
                     // Accumulate transformations
-                    
+
                     for (int i = low; i <= high; i++) {
-                        z = V[i][n - 1];
-                        V[i][n - 1] = q * z + p * V[i][n];
-                        V[i][n] = q * V[i][n] - p * z;
+                        z = V[i][n1 - 1];
+                        V[i][n1 - 1] = q * z + p * V[i][n1];
+                        V[i][n1] = q * V[i][n1] - p * z;
                     }
-                    
+
                     // Complex pair
-                    
+
                 } else {
-                    d[n - 1] = x + p;
-                    d[n] = x + p;
-                    e[n - 1] = z;
-                    e[n] = -z;
+                    d[n1 - 1] = x + p;
+                    d[n1] = x + p;
+                    e[n1 - 1] = z;
+                    e[n1] = -z;
                 }
-                n = n - 2;
+                n1 = n1 - 2;
                 iter = 0;
-                
+
                 // No convergence yet
-                
+
             } else {
-                
+
                 // Form shift
-                
-                x = H[n][n];
+
+                x = H[n1][n1];
                 y = 0.0;
                 w = 0.0;
-                if (l < n) {
-                    y = H[n - 1][n - 1];
-                    w = H[n][n - 1] * H[n - 1][n];
+                if (l < n1) {
+                    y = H[n1 - 1][n1 - 1];
+                    w = H[n1][n1 - 1] * H[n1 - 1][n1];
                 }
-                
+
                 // Wilkinson's original ad hoc shift
-                
+
                 if (iter == 10) {
                     exshift += x;
-                    for (int i = low; i <= n; i++) {
+                    for (int i = low; i <= n1; i++) {
                         H[i][i] -= x;
                     }
-                    s = std::abs(H[n][n - 1]) + std::abs(H[n - 1][n - 2]);
+                    s = std::abs(H[n1][n1 - 1]) + std::abs(H[n1 - 1][n1 - 2]);
                     x = y = 0.75 * s;
                     w = -0.4375 * s * s;
                 }
-                
+
                 // MATLAB's new ad hoc shift
-                
+
                 if (iter == 30) {
                     s = (y - x) / 2.0;
                     s = s * s + w;
@@ -433,18 +480,18 @@ private:
                             s = -s;
                         }
                         s = x - w / ((y - x) / 2.0 + s);
-                        for (int i = low; i <= n; i++) {
+                        for (int i = low; i <= n1; i++) {
                             H[i][i] -= s;
                         }
                         exshift += s;
                         x = y = w = 0.964;
                     }
                 }
-                
+
                 iter = iter + 1; // (Could check iteration count here.)
-                
+
                 // Look for two consecutive small sub-diagonal elements
-                int m = n - 2;
+                int m = n1 - 2;
                 while (m >= l) {
                     z = H[m][m];
                     r = x - z;
@@ -466,18 +513,18 @@ private:
                     }
                     m--;
                 }
-                
-                for (int i = m + 2; i <= n; i++) {
+
+                for (int i = m + 2; i <= n1; i++) {
                     H[i][i - 2] = 0.0;
                     if (i > m + 2) {
                         H[i][i - 3] = 0.0;
                     }
                 }
-                
+
                 // Double QR step involving rows l:n and columns m:n
-                
-                for (int k = m; k <= n - 1; k++) {
-                    bool notlast = (k != n - 1);
+
+                for (int k = m; k <= n1 - 1; k++) {
+                    bool notlast = (k != n1 - 1);
                     if (k != m) {
                         p = H[k][k - 1];
                         q = H[k + 1][k - 1];
@@ -508,9 +555,9 @@ private:
                         z = r / s;
                         q = q / p;
                         r = r / p;
-                        
+
                         // Row modification
-                        
+
                         for (int j = k; j < nn; j++) {
                             p = H[k][j] + q * H[k + 1][j];
                             if (notlast) {
@@ -520,10 +567,10 @@ private:
                             H[k][j] = H[k][j] - p * x;
                             H[k + 1][j] = H[k + 1][j] - p * y;
                         }
-                        
+
                         // Column modification
-                        
-                        for (int i = 0; i <= min(n, k + 3); i++) {
+
+                        for (int i = 0; i <= min(n1, k + 3); i++) {
                             p = x * H[i][k] + y * H[i][k + 1];
                             if (notlast) {
                                 p = p + z * H[i][k + 2];
@@ -532,9 +579,9 @@ private:
                             H[i][k] = H[i][k] - p;
                             H[i][k + 1] = H[i][k + 1] - p * q;
                         }
-                        
+
                         // Accumulate transformations
-                        
+
                         for (int i = low; i <= high; i++) {
                             p = x * V[i][k] + y * V[i][k + 1];
                             if (notlast) {
@@ -547,28 +594,28 @@ private:
                     } // (s != 0)
                 } // k loop
             } // check convergence
-        } // while (n >= low)
-        
+        } // while (n1 >= low)
+
         // Backsubstitute to find vectors of upper triangular form
-        
+
         if (norm == 0.0) {
             return;
         }
-        
-        for (n = nn - 1; n >= 0; n--) {
-            p = d[n];
-            q = e[n];
-            
+
+        for (n1 = nn - 1; n1 >= 0; n1--) {
+            p = d[n1];
+            q = e[n1];
+
             // Real vector
-            
+
             if (q == 0) {
-                int l = n;
-                H[n][n] = 1.0;
-                for (int i = n - 1; i >= 0; i--) {
+                int l = n1;
+                H[n1][n1] = 1.0;
+                for (int i = n1 - 1; i >= 0; i--) {
                     w = H[i][i] - p;
                     r = 0.0;
-                    for (int j = l; j <= n; j++) {
-                        r = r + H[i][j] * H[j][n];
+                    for (int j = l; j <= n1; j++) {
+                        r = r + H[i][j] * H[j][n1];
                     }
                     if (e[i] < 0.0) {
                         z = w;
@@ -577,64 +624,62 @@ private:
                         l = i;
                         if (e[i] == 0.0) {
                             if (w != 0.0) {
-                                H[i][n] = -r / w;
+                                H[i][n1] = -r / w;
                             } else {
-                                H[i][n] = -r / (eps * norm);
+                                H[i][n1] = -r / (eps * norm);
                             }
-                            
+
                             // Solve real equations
-                            
+
                         } else {
                             x = H[i][i + 1];
                             y = H[i + 1][i];
                             q = (d[i] - p) * (d[i] - p) + e[i] * e[i];
                             t = (x * s - z * r) / q;
-                            H[i][n] = t;
+                            H[i][n1] = t;
                             if (std::abs(x) > std::abs(z)) {
-                                H[i + 1][n] = (-r - w * t) / x;
+                                H[i + 1][n1] = (-r - w * t) / x;
                             } else {
-                                H[i + 1][n] = (-s - y * t) / z;
+                                H[i + 1][n1] = (-s - y * t) / z;
                             }
                         }
-                        
+
                         // Overflow control
-                        
-                        t = std::abs(H[i][n]);
+
+                        t = std::abs(H[i][n1]);
                         if ((eps * t) * t > 1) {
-                            for (int j = i; j <= n; j++) {
-                                H[j][n] = H[j][n] / t;
+                            for (int j = i; j <= n1; j++) {
+                                H[j][n1] = H[j][n1] / t;
                             }
                         }
                     }
                 }
-                
                 // Complex vector
-                
             } else if (q < 0) {
-                int l = n - 1;
-                
+                int l = n1 - 1;
+
                 // Last vector component imaginary so matrix is triangular
-                
-                if (std::abs(H[n][n - 1]) > std::abs(H[n - 1][n])) {
-                    H[n - 1][n - 1] = q / H[n][n - 1];
-                    H[n - 1][n] = -(H[n][n] - p) / H[n][n - 1];
+
+                if (std::abs(H[n1][n1 - 1]) > std::abs(H[n1 - 1][n1])) {
+                    H[n1 - 1][n1 - 1] = q / H[n1][n1 - 1];
+                    H[n1 - 1][n1] = -(H[n1][n1] - p) / H[n1][n1 - 1];
                 } else {
-                    cdiv(0.0, -H[n - 1][n], H[n - 1][n - 1] - p, q);
-                    H[n - 1][n - 1] = cdivr;
-                    H[n - 1][n] = cdivi;
+                    cdiv(0.0, -H[n1 - 1][n1], H[n1 - 1][n1 - 1] - p, q);
+                    H[n1 - 1][n1 - 1] = cdivr;
+                    H[n1 - 1][n1] = cdivi;
                 }
-                H[n][n - 1] = 0.0;
-                H[n][n] = 1.0;
-                for (int i = n - 2; i >= 0; i--) {
+                H[n1][n1 - 1] = 0.0;
+                H[n1][n1] = 1.0;
+                for (int i = n1 - 2; i >= 0; i--) {
                     double ra, sa, vr, vi;
                     ra = 0.0;
                     sa = 0.0;
-                    for (int j = l; j <= n; j++) {
-                        ra = ra + H[i][j] * H[j][n - 1];
-                        sa = sa + H[i][j] * H[j][n];
+                    for (int j = l; j <= n1; j++) {
+                        ra = ra + H[i][j] * H[j][n1 - 1];
+                        sa = sa + H[i][j] * H[j][n1];
                     }
                     w = H[i][i] - p;
-                    
+
                     if (e[i] < 0.0) {
                         z = w;
                         r = ra;
@@ -643,12 +688,12 @@ private:
                         l = i;
                         if (e[i] == 0) {
                             cdiv(-ra, -sa, w, q);
-                            H[i][n - 1] = cdivr;
-                            H[i][n] = cdivi;
+                            H[i][n1 - 1] = cdivr;
+                            H[i][n1] = cdivi;
                         } else {
-                            
+
                             // Solve complex equations
-                            
+
                             x = H[i][i + 1];
                             y = H[i + 1][i];
                             vr = (d[i] - p) * (d[i] - p) + e[i] * e[i] - q * q;
@@ -659,37 +704,37 @@ private:
                             }
                             cdiv(x * r - z * ra + q * sa,
                                  x * s - z * sa - q * ra, vr, vi);
-                            H[i][n - 1] = cdivr;
-                            H[i][n] = cdivi;
+                            H[i][n1 - 1] = cdivr;
+                            H[i][n1] = cdivi;
                             if (std::abs(x) > (std::abs(z) + std::abs(q))) {
-                                H[i + 1][n - 1] = (-ra - w * H[i][n - 1] + q
-                                                   * H[i][n]) / x;
-                                H[i + 1][n] = (-sa - w * H[i][n] - q * H[i][n
+                                H[i + 1][n1 - 1] = (-ra - w * H[i][n1 - 1] + q
+                                                   * H[i][n1]) / x;
+                                H[i + 1][n1] = (-sa - w * H[i][n1] - q * H[i][n1
                                                                             - 1]) / x;
                             } else {
-                                cdiv(-r - y * H[i][n - 1], -s - y * H[i][n], z,
+                                cdiv(-r - y * H[i][n1 - 1], -s - y * H[i][n1], z,
                                      q);
-                                H[i + 1][n - 1] = cdivr;
-                                H[i + 1][n] = cdivi;
+                                H[i + 1][n1 - 1] = cdivr;
+                                H[i + 1][n1] = cdivi;
                             }
                         }
-                        
+
                         // Overflow control
-                        
-                        t = max(std::abs(H[i][n - 1]), std::abs(H[i][n]));
+
+                        t = max(std::abs(H[i][n1 - 1]), std::abs(H[i][n1]));
                         if ((eps * t) * t > 1) {
-                            for (int j = i; j <= n; j++) {
-                                H[j][n - 1] = H[j][n - 1] / t;
-                                H[j][n] = H[j][n] / t;
+                            for (int j = i; j <= n1; j++) {
+                                H[j][n1 - 1] = H[j][n1 - 1] / t;
+                                H[j][n1] = H[j][n1] / t;
                             }
                         }
                     }
                 }
             }
         }
-        
+
         // Vectors of isolated roots
-        
+
         for (int i = 0; i < nn; i++) {
             if (i < low || i > high) {
                 for (int j = i; j < nn; j++) {
@@ -697,9 +742,9 @@ private:
                 }
             }
         }
-        
+
         // Back transformation to get eigenvectors of original matrix
-        
+
         for (int j = nn - 1; j >= low; j--) {
             for (int i = low; i <= high; i++) {
                 z = 0.0;
@@ -710,7 +755,7 @@ private:
             }
         }
     }
-    
+
     // Nonsymmetric reduction to Hessenberg form.
     void orthes() {
         //  This is derived from the Algol procedures orthes and ortran,
@@ -719,19 +764,19 @@ private:
         //  Fortran subroutines in EISPACK.
         int low = 0;
         int high = n - 1;
-        
+
         for (int m = low + 1; m <= high - 1; m++) {
-            
+
             // Scale column.
-            
+
             double scale = 0.0;
             for (int i = m; i <= high; i++) {
                 scale = scale + std::abs(H[i][m - 1]);
             }
             if (scale != 0.0) {
-                
+
                 // Compute Householder transformation.
-                
+
                 double h = 0.0;
                 for (int i = high; i >= m; i--) {
                     ort[i] = H[i][m - 1] / scale;
@@ -743,10 +788,10 @@ private:
                 }
                 h = h - ort[m] * g;
                 ort[m] = ort[m] - g;
-                
+
                 // Apply Householder similarity transformation
                 // H = (I-u*u'/h)*H*(I-u*u')/h)
-                
+
                 for (int j = m; j < n; j++) {
                     double f = 0.0;
                     for (int i = high; i >= m; i--) {
@@ -757,7 +802,7 @@ private:
                         H[i][j] -= f * ort[i];
                     }
                 }
-                
+
                 for (int i = 0; i <= high; i++) {
                     double f = 0.0;
                     for (int j = high; j >= m; j--) {
@@ -772,15 +817,15 @@ private:
                 H[m][m - 1] = scale * g;
             }
         }
-        
+
         // Accumulate transformations (Algol's ortran).
-        
+
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 V[i][j] = (i == j ? 1.0 : 0.0);
             }
         }
-        
+
         for (int m = high - 1; m >= low + 1; m--) {
             if (H[m][m - 1] != 0.0) {
                 for (int i = m + 1; i <= high; i++) {
@@ -800,7 +845,7 @@ private:
             }
         }
     }
-    
+
     // Releases all internal working memory.
     void release() {
         // releases the working data
@@ -814,7 +859,7 @@ private:
         delete[] H;
         delete[] V;
     }
-    
+
     // Computes the Eigenvalue Decomposition for a matrix given in H.
     void compute() {
         // Allocate memory for the working data.
@@ -839,11 +884,11 @@ private:
         // Deallocate the memory by releasing all internal working data.
         release();
     }
-    
+
 public:
     EigenvalueDecomposition()
     : n(0) { }
-    
+
     // Initializes & computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
@@ -851,7 +896,7 @@ public:
     EigenvalueDecomposition(InputArray src) {
         compute(src);
     }
-    
+
     // This function computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
@@ -883,9 +928,9 @@ public:
             compute();
         }
     }
-    
+
     ~EigenvalueDecomposition() {}
-    
+
     // Returns the eigenvalues of the Eigenvalue Decomposition.
     Mat eigenvalues() {    return _eigenvalues; }
     // Returns the eigenvectors of the Eigenvalue Decomposition.
@@ -898,8 +943,9 @@ public:
 //------------------------------------------------------------------------------
 void LDA::save(const string& filename) const {
     FileStorage fs(filename, FileStorage::WRITE);
-    if (!fs.isOpened())
+    if (!fs.isOpened()) {
         CV_Error(CV_StsError, "File can't be opened for writing!");
+    }
     this->save(fs);
     fs.release();
 }
@@ -941,8 +987,8 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     vector<int> mapped_labels(labels.size());
     vector<int> num2label = remove_dups(labels);
     map<int, int> label2num;
-    for (size_t i = 0; i < num2label.size(); i++)
-        label2num[num2label[i]] = (int)i;
+    for (int i = 0; i < (int)num2label.size(); i++)
+        label2num[num2label[i]] = i;
     for (size_t i = 0; i < labels.size(); i++)
         mapped_labels[i] = label2num[labels[i]];
     // get sample size, dimension
@@ -950,17 +996,27 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     int D = data.cols;
     // number of unique labels
     int C = (int)num2label.size();
+    // we can't do a LDA on one class, what do you
+    // want to separate from each other then?
+    if(C == 1) {
+        string error_message = "At least two classes are needed to perform a LDA. Reason: Only one class was given!";
+        CV_Error(CV_StsBadArg, error_message);
+    }
     // throw error if less labels, than samples
-    if (labels.size() != (size_t)N)
-        CV_Error(CV_StsBadArg, "Error: The number of samples must equal the number of labels.");
+    if (labels.size() != static_cast<size_t>(N)) {
+        string error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
+        CV_Error(CV_StsBadArg, error_message);
+    }
     // warn if within-classes scatter matrix becomes singular
-    if (N < D)
+    if (N < D) {
         cout << "Warning: Less observations than feature dimension given!"
-        << "Computation will probably fail."
-        << endl;
+        	 << "Computation will probably fail."
+             << endl;
+    }
     // clip number of components to be a valid number
-    if ((_num_components <= 0) || (_num_components > (C - 1)))
+    if ((_num_components <= 0) || (_num_components > (C - 1))) {
         _num_components = (C - 1);
+    }
     // holds the mean over all classes
     Mat meanTotal = Mat::zeros(1, D, data.type());
     // holds the mean for each class
@@ -979,12 +1035,12 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
         add(meanClass[classIdx], instance, meanClass[classIdx]);
         numClass[classIdx]++;
     }
-    // calculate means
-    meanTotal.convertTo(meanTotal, meanTotal.type(),
-            1.0 / static_cast<double> (N));
-    for (int i = 0; i < C; i++)
-        meanClass[i].convertTo(meanClass[i], meanClass[i].type(),
-                1.0 / static_cast<double> (numClass[i]));
+    // calculate total mean
+    meanTotal.convertTo(meanTotal, meanTotal.type(), 1.0 / static_cast<double> (N));
+    // calculate class means
+    for (int i = 0; i < C; i++) {
+        meanClass[i].convertTo(meanClass[i], meanClass[i].type(), 1.0 / static_cast<double> (numClass[i]));
+    }
     // subtract class means
     for (int i = 0; i < N; i++) {
         int classIdx = mapped_labels[i];
@@ -1031,7 +1087,8 @@ void LDA::compute(InputArray _src, InputArray _lbls) {
         lda(_src.getMat(), _lbls);
         break;
     default:
-        CV_Error(CV_StsNotImplemented, "This data type is not supported by subspace::LDA::compute.");
+    	string error_message= format("InputArray Datatype %d is not supported.", _src.kind());
+        CV_Error(CV_StsBadArg, error_message);
         break;
     }
 }
@@ -1045,6 +1102,6 @@ Mat LDA::project(InputArray src) {
 Mat LDA::reconstruct(InputArray src) {
    return subspaceReconstruct(_eigenvectors, Mat(), _dataAsRow ? src : src.getMat().t());
 }
-    
+
 }
 

@@ -175,8 +175,8 @@ private:
 class CV_EXPORTS ColorInpainter : public InpainterBase
 {
 public:
-    ColorInpainter(int method = INPAINT_TELEA, double radius = 2.)
-        : method_(method), radius_(radius) {}
+    ColorInpainter(int method = INPAINT_TELEA, double _radius = 2.)
+        : method_(method), radius_(_radius) {}
 
     virtual void inpaint(int idx, Mat &frame, Mat &mask);
 

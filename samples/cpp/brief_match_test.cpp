@@ -16,7 +16,7 @@ using namespace cv;
 using namespace std;
 
 //Copy (x,y) location of descriptor matches found from KeyPoint data structures into Point2f vectors
-void matches2points(const vector<DMatch>& matches, const vector<KeyPoint>& kpts_train,
+static void matches2points(const vector<DMatch>& matches, const vector<KeyPoint>& kpts_train,
                     const vector<KeyPoint>& kpts_query, vector<Point2f>& pts_train, vector<Point2f>& pts_query)
 {
   pts_train.clear();
@@ -32,7 +32,7 @@ void matches2points(const vector<DMatch>& matches, const vector<KeyPoint>& kpts_
 
 }
 
-double match(const vector<KeyPoint>& /*kpts_train*/, const vector<KeyPoint>& /*kpts_query*/, DescriptorMatcher& matcher,
+static double match(const vector<KeyPoint>& /*kpts_train*/, const vector<KeyPoint>& /*kpts_query*/, DescriptorMatcher& matcher,
             const Mat& train, const Mat& query, vector<DMatch>& matches)
 {
 
@@ -41,7 +41,7 @@ double match(const vector<KeyPoint>& /*kpts_train*/, const vector<KeyPoint>& /*k
   return ((double)getTickCount() - t) / getTickFrequency();
 }
 
-void help()
+static void help()
 {
        cout << "This program shows how to use BRIEF descriptor to match points in features2d" << endl <<
                "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results" << endl <<
@@ -112,12 +112,11 @@ int main(int argc, const char ** argv)
 
   vector<Point2f> mpts_1, mpts_2;
   matches2points(matches_popcount, kpts_1, kpts_2, mpts_1, mpts_2); //Extract a list of the (x,y) location of the matches
-  vector<uchar> outlier_mask;
+  vector<char> outlier_mask;
   Mat H = findHomography(mpts_2, mpts_1, RANSAC, 1, outlier_mask);
 
   Mat outimg;
-  drawMatches(im2, kpts_2, im1, kpts_1, matches_popcount, outimg, Scalar::all(-1), Scalar::all(-1),
-              *(const vector<char>*)(void*)(&outlier_mask));
+  drawMatches(im2, kpts_2, im1, kpts_1, matches_popcount, outimg, Scalar::all(-1), Scalar::all(-1), outlier_mask);
   imshow("matches - popcount - outliers removed", outimg);
 
   Mat warped;

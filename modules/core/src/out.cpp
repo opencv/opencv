@@ -116,13 +116,13 @@ static void writeMat(std::ostream& out, const Mat& m, char rowsep, char elembrac
 {
     CV_Assert(m.dims <= 2);
     int type = m.type();
-    
+
     char crowbrace = getCloseBrace(rowsep);
     char orowbrace = crowbrace ? rowsep : '\0';
-    
+
     if( orowbrace || isspace(rowsep) )
         rowsep = '\0';
-    
+
     for( int i = 0; i < m.rows; i++ )
     {
         if(orowbrace)
@@ -151,7 +151,7 @@ public:
         writeMat(out, m, ';', ' ', m.cols == 1);
         out << "]";
     }
-    
+
     void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
     {
         writeElems(out, data, nelems, type, ' ');
@@ -168,7 +168,7 @@ public:
         writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.cols*m.channels() == 1);
         out << "]";
     }
-    
+
     void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
     {
         writeElems(out, data, nelems, type, '[');
@@ -190,7 +190,7 @@ public:
         writeMat(out, m, m.cols > 1 ? '[' : ' ', '[', m.cols*m.channels() == 1);
         out << "], type='" << numpyTypes[m.depth()] << "')";
     }
-    
+
     void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
     {
         writeElems(out, data, nelems, type, '[');
@@ -208,7 +208,7 @@ public:
         if(m.rows > 1)
             out << "\n";
     }
-    
+
     void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
     {
         writeElems(out, data, nelems, type, ' ');
@@ -226,7 +226,7 @@ public:
         writeMat(out, m, ',', ' ', m.cols==1);
         out << "}";
     }
-    
+
     void write(std::ostream& out, const void* data, int nelems, int type, const int*, int) const
     {
         writeElems(out, data, nelems, type, ' ');
@@ -243,7 +243,7 @@ static CFormatter cFormatter;
 static const Formatter* g_defaultFormatter0 = &matlabFormatter;
 static const Formatter* g_defaultFormatter = &matlabFormatter;
 
-bool my_streq(const char* a, const char* b)
+static bool my_streq(const char* a, const char* b)
 {
     size_t i, alen = strlen(a), blen = strlen(b);
     if( alen != blen )
@@ -280,7 +280,7 @@ const Formatter* Formatter::setDefault(const Formatter* fmt)
     g_defaultFormatter = fmt;
     return prevFmt;
 }
-    
+
 Formatted::Formatted(const Mat& _m, const Formatter* _fmt,
                      const vector<int>& _params)
 {
@@ -288,12 +288,12 @@ Formatted::Formatted(const Mat& _m, const Formatter* _fmt,
     fmt = _fmt ? _fmt : Formatter::get();
     std::copy(_params.begin(), _params.end(), back_inserter(params));
 }
-    
+
 Formatted::Formatted(const Mat& _m, const Formatter* _fmt, const int* _params)
 {
     mtx = _m;
     fmt = _fmt ? _fmt : Formatter::get();
-    
+
     if( _params )
     {
         int i, maxParams = 100;

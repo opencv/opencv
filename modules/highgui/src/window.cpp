@@ -724,10 +724,10 @@ CV_IMPL void cvSaveWindowParameters(const char* name)
     CV_NO_GUI_ERROR("cvSaveWindowParameters");
 }
 
-CV_IMPL void cvLoadWindowParameterss(const char* name)
-{
-    CV_NO_GUI_ERROR("cvLoadWindowParameters");
-}
+// CV_IMPL void cvLoadWindowParameterss(const char* name)
+// {
+//     CV_NO_GUI_ERROR("cvLoadWindowParameters");
+// }
 
 CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
 {

@@ -1,4 +1,4 @@
-#if _MSC_VER >= 1400
+#if defined _MSC_VER && _MSC_VER >= 1400
 #pragma warning( disable : 4201 4408 4127 4100)
 #endif
 
@@ -135,13 +135,13 @@ NCVStatus CopyData(const IplImage *image, const NCVMatrixAlloc<Ncv32f> &dst)
     return NCV_SUCCESS;
 }
 
-NCVStatus LoadImages (const char *frame0Name, 
-                      const char *frame1Name, 
-                      int &width, 
-                      int &height, 
+NCVStatus LoadImages (const char *frame0Name,
+                      const char *frame1Name,
+                      int &width,
+                      int &height,
                       Ptr<NCVMatrixAlloc<Ncv32f> > &src,
                       Ptr<NCVMatrixAlloc<Ncv32f> > &dst,
-                      IplImage *&firstFrame, 
+                      IplImage *&firstFrame,
                       IplImage *&lastFrame)
 {
     IplImage *image;
@@ -151,11 +151,11 @@ NCVStatus LoadImages (const char *frame0Name,
         std::cout << "Could not open '" << frame0Name << "'\n";
         return NCV_FILE_ERROR;
     }
-    
+
     firstFrame = image;
     // copy data to src
     ncvAssertReturnNcvStat (CopyData<RgbToMonochrome> (image, src));
-    
+
     IplImage *image2;
     image2 = cvLoadImage (frame1Name);
     if (image2 == 0)
@@ -189,7 +189,7 @@ inline T MapValue (T x, T a, T b, T c, T d)
 NCVStatus ShowFlow (NCVMatrixAlloc<Ncv32f> &u, NCVMatrixAlloc<Ncv32f> &v, const char *name)
 {
     IplImage *flowField;
-    
+
     NCVMatrixAlloc<Ncv32f> host_u(*g_pHostMemAllocator, u.width(), u.height());
     ncvAssertReturn(host_u.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
@@ -240,7 +240,7 @@ NCVStatus ShowFlow (NCVMatrixAlloc<Ncv32f> &u, NCVMatrixAlloc<Ncv32f> &v, const 
         ptr_u += u.stride () - u.width ();
         ptr_v += v.stride () - v.width ();
     }
-    
+
     cvShowImage (name, flowField);
 
     return NCV_SUCCESS;
@@ -253,7 +253,7 @@ IplImage *CreateImage (NCVMatrixAlloc<Ncv32f> &h_r, NCVMatrixAlloc<Ncv32f> &h_g,
     if (image == 0) return 0;
 
     unsigned char *row = reinterpret_cast<unsigned char*> (image->imageData);
-    
+
     for (int i = 0; i < image->height; ++i)
     {
         for (int j = 0; j < image->width; ++j)
@@ -286,10 +286,10 @@ void PrintHelp ()
     std::cout << "\t" << std::setw(15) << PARAM_HELP << " - display this help message\n";
 }
 
-int ProcessCommandLine(int argc, char **argv, 
-                       Ncv32f &timeStep, 
-                       char *&frame0Name, 
-                       char *&frame1Name, 
+int ProcessCommandLine(int argc, char **argv,
+                       Ncv32f &timeStep,
+                       char *&frame0Name,
+                       char *&frame1Name,
                        NCVBroxOpticalFlowDescriptor &desc)
 {
     timeStep = 0.25f;
@@ -461,7 +461,7 @@ int main(int argc, char **argv)
         std::cout << "Failed\n";
         return -1;
     }
-    
+
     std::cout << "Backward...\n";
     if (NCV_SUCCESS != NCVBroxOpticalFlow (desc, *g_pGPUMemAllocator, *dst, *src, uBck, vBck, 0))
     {

@@ -35,8 +35,8 @@ string vec2str( const string& sep, const int* v, size_t nelems )
     }
     return result;
 }
-    
-    
+
+
 Size randomSize(RNG& rng, double maxSizeLog)
 {
     double width_log = rng.uniform(0., maxSizeLog);
@@ -99,8 +99,8 @@ double getMaxVal(int depth)
     depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX : -1;
     CV_Assert(val != -1);
     return val;
-}    
-    
+}
+
 Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool useRoi)
 {
     Size size0 = size;
@@ -109,9 +109,9 @@ Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool 
         size0.width += std::max(rng.uniform(0, 10) - 5, 0);
         size0.height += std::max(rng.uniform(0, 10) - 5, 0);
     }
-        
+
     Mat m(size0, type);
-    
+
     rng.fill(m, RNG::UNIFORM, Scalar::all(minVal), Scalar::all(maxVal));
     if( size0 == size )
         return m;
@@ -135,15 +135,15 @@ Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double
         }
         eqsize = eqsize && size[i] == size0[i];
     }
-    
+
     Mat m(dims, &size0[0], type);
-    
+
     rng.fill(m, RNG::UNIFORM, Scalar::all(minVal), Scalar::all(maxVal));
     if( eqsize )
         return m;
     return m(&r[0]);
 }
-    
+
 void add(const Mat& _a, double alpha, const Mat& _b, double beta,
         Scalar gamma, Mat& c, int ctype, bool calcAbs)
 {
@@ -168,26 +168,26 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
     }
     else
         CV_Assert(a.size == b.size);
-    
+
     if( ctype < 0 )
         ctype = a.depth();
     ctype = CV_MAKETYPE(CV_MAT_DEPTH(ctype), a.channels());
     c.create(a.dims, &a.size[0], ctype);
     const Mat *arrays[] = {&a, &b, &c, 0};
     Mat planes[3], buf[3];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t i, nplanes = it.nplanes;
-	int cn=a.channels();
+    int cn=a.channels();
     int total = (int)planes[0].total(), maxsize = std::min(12*12*std::max(12/cn, 1), total);
-    
+
     CV_Assert(planes[0].rows == 1);
     buf[0].create(1, maxsize, CV_64FC(cn));
     if(!b.empty())
         buf[1].create(1, maxsize, CV_64FC(cn));
     buf[2].create(1, maxsize, CV_64FC(cn));
     scalarToRawData(gamma, buf[2].data, CV_64FC(cn), (int)(maxsize*cn));
-    
+
     for( i = 0; i < nplanes; i++, ++it)
     {
         for( int j = 0; j < total; j += maxsize )
@@ -196,12 +196,12 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
             Mat apart0 = planes[0].colRange(j, j2);
             Mat cpart0 = planes[2].colRange(j, j2);
             Mat apart = buf[0].colRange(0, j2 - j);
-            
+
             apart0.convertTo(apart, apart.type(), alpha);
             size_t k, n = (j2 - j)*cn;
             double* aptr = (double*)apart.data;
             const double* gptr = (const double*)buf[2].data;
-            
+
             if( b.empty() )
             {
                 for( k = 0; k < n; k++ )
@@ -213,7 +213,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
                 Mat bpart = buf[1].colRange(0, (int)(j2 - j));
                 bpart0.convertTo(bpart, bpart.type(), beta);
                 const double* bptr = (const double*)bpart.data;
-                
+
                 for( k = 0; k < n; k++ )
                     aptr[k] += bptr[k] + gptr[k];
             }
@@ -271,7 +271,7 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
         CV_Assert(0);
     }
 }
-    
+
 void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
 {
     dtype = CV_MAKETYPE(CV_MAT_DEPTH(dtype), src.channels());
@@ -286,19 +286,19 @@ void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
         copy( src, dst );
         return;
     }
-    
+
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].channels();
     size_t i, nplanes = it.nplanes;
-    
+
     for( i = 0; i < nplanes; i++, ++it)
     {
         const uchar* sptr = planes[0].data;
         uchar* dptr = planes[1].data;
-        
+
         switch( src.depth() )
         {
         case CV_8U:
@@ -325,12 +325,12 @@ void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
         }
     }
 }
-    
-     
+
+
 void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
 {
     dst.create(src.dims, &src.size[0], src.type());
-    
+
     if(mask.empty())
     {
         const Mat* arrays[] = {&src, &dst, 0};
@@ -338,28 +338,28 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
         NAryMatIterator it(arrays, planes);
         size_t i, nplanes = it.nplanes;
         size_t planeSize = planes[0].total()*src.elemSize();
-        
+
         for( i = 0; i < nplanes; i++, ++it )
             memcpy(planes[1].data, planes[0].data, planeSize);
-        
+
         return;
     }
-    
+
     CV_Assert( src.size == mask.size && mask.type() == CV_8U );
-    
+
     const Mat *arrays[]={&src, &dst, &mask, 0};
     Mat planes[3];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t j, k, elemSize = src.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-    
+
     for( i = 0; i < nplanes; i++, ++it)
     {
         const uchar* sptr = planes[0].data;
         uchar* dptr = planes[1].data;
         const uchar* mptr = planes[2].data;
-        
+
         for( j = 0; j < total; j++, sptr += elemSize, dptr += elemSize )
         {
             if( (mptr[j] != 0) ^ invertMask )
@@ -369,13 +369,13 @@ void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
     }
 }
 
-    
+
 void set(Mat& dst, const Scalar& gamma, const Mat& mask)
 {
     double buf[12];
     scalarToRawData(gamma, &buf, dst.type(), dst.channels());
     const uchar* gptr = (const uchar*)&buf[0];
-    
+
     if(mask.empty())
     {
         const Mat* arrays[] = {&dst, 0};
@@ -383,12 +383,12 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
         NAryMatIterator it(arrays, &plane);
         size_t i, nplanes = it.nplanes;
         size_t j, k, elemSize = dst.elemSize(), planeSize = plane.total()*elemSize;
-        
+
         for( k = 1; k < elemSize; k++ )
             if( gptr[k] != gptr[0] )
                 break;
         bool uniform = k >= elemSize;
-        
+
         for( i = 0; i < nplanes; i++, ++it )
         {
             uchar* dptr = plane.data;
@@ -405,21 +405,21 @@ void set(Mat& dst, const Scalar& gamma, const Mat& mask)
         }
         return;
     }
-    
+
     CV_Assert( dst.size == mask.size && mask.type() == CV_8U );
-    
+
     const Mat *arrays[]={&dst, &mask, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t j, k, elemSize = dst.elemSize(), total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-    
+
     for( i = 0; i < nplanes; i++, ++it)
     {
         uchar* dptr = planes[0].data;
         const uchar* mptr = planes[1].data;
-        
+
         for( j = 0; j < total; j++, dptr += elemSize )
         {
             if( mptr[j] )
@@ -434,18 +434,18 @@ void insert(const Mat& src, Mat& dst, int coi)
 {
     CV_Assert( dst.size == src.size && src.depth() == dst.depth() &&
               0 <= coi && coi < dst.channels() );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     Mat planes[2];
     NAryMatIterator it(arrays, planes);
     size_t i, nplanes = it.nplanes;
     size_t j, k, size0 = src.elemSize(), size1 = dst.elemSize(), total = planes[0].total();
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr = planes[0].data;
         uchar* dptr = planes[1].data + coi*size0;
-        
+
         for( j = 0; j < total; j++, sptr += size0, dptr += size1 )
         {
             for( k = 0; k < size0; k++ )
@@ -454,23 +454,23 @@ void insert(const Mat& src, Mat& dst, int coi)
     }
 }
 
-    
+
 void extract(const Mat& src, Mat& dst, int coi)
 {
     dst.create( src.dims, &src.size[0], src.depth() );
     CV_Assert( 0 <= coi && coi < src.channels() );
-    
+
     const Mat* arrays[] = {&src, &dst, 0};
     Mat planes[2];
     NAryMatIterator it(arrays, planes);
     size_t i, nplanes = it.nplanes;
     size_t j, k, size0 = src.elemSize(), size1 = dst.elemSize(), total = planes[0].total();
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr = planes[0].data + coi*size1;
         uchar* dptr = planes[1].data;
-        
+
         for( j = 0; j < total; j++, sptr += size0, dptr += size1 )
         {
             for( k = 0; k < size1; k++ )
@@ -478,19 +478,19 @@ void extract(const Mat& src, Mat& dst, int coi)
         }
     }
 }
-    
-    
+
+
 void transpose(const Mat& src, Mat& dst)
 {
     CV_Assert(src.dims == 2);
     dst.create(src.cols, src.rows, src.type());
     int i, j, k, esz = (int)src.elemSize();
-    
+
     for( i = 0; i < dst.rows; i++ )
     {
         const uchar* sptr = src.ptr(0) + i*esz;
         uchar* dptr = dst.ptr(i);
-        
+
         for( j = 0; j < dst.cols; j++, sptr += src.step[0], dptr += esz )
         {
             for( k = 0; k < esz; k++ )
@@ -499,7 +499,7 @@ void transpose(const Mat& src, Mat& dst)
     }
 }
 
-    
+
 template<typename _Tp> static void
 randUniInt_(RNG& rng, _Tp* data, size_t total, int cn, const Scalar& scale, const Scalar& delta)
 {
@@ -511,7 +511,7 @@ randUniInt_(RNG& rng, _Tp* data, size_t total, int cn, const Scalar& scale, cons
         }
 }
 
-    
+
 template<typename _Tp> static void
 randUniFlt_(RNG& rng, _Tp* data, size_t total, int cn, const Scalar& scale, const Scalar& delta)
 {
@@ -523,13 +523,13 @@ randUniFlt_(RNG& rng, _Tp* data, size_t total, int cn, const Scalar& scale, cons
         }
 }
 
-    
+
 void randUni( RNG& rng, Mat& a, const Scalar& param0, const Scalar& param1 )
 {
     Scalar scale = param0;
     Scalar delta = param1;
     double C = a.depth() < CV_32F ? 1./(65536.*65536.) : 1.;
-    
+
     for( int k = 0; k < 4; k++ )
     {
         double s = scale.val[k] - delta.val[k];
@@ -545,12 +545,12 @@ void randUni( RNG& rng, Mat& a, const Scalar& param0, const Scalar& param1 )
 
     const Mat *arrays[]={&a, 0};
     Mat plane;
-    
+
     NAryMatIterator it(arrays, &plane);
     size_t i, nplanes = it.nplanes;
-	int depth = a.depth(), cn = a.channels();
+    int depth = a.depth(), cn = a.channels();
     size_t total = plane.total()*cn;
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         switch( depth )
@@ -581,19 +581,19 @@ void randUni( RNG& rng, Mat& a, const Scalar& param0, const Scalar& param1 )
         }
     }
 }
-    
-    
+
+
 template<typename _Tp> static void
 erode_(const Mat& src, Mat& dst, const vector<int>& ofsvec)
 {
     int width = dst.cols*src.channels(), n = (int)ofsvec.size();
     const int* ofs = &ofsvec[0];
-    
+
     for( int y = 0; y < dst.rows; y++ )
     {
         const _Tp* sptr = src.ptr<_Tp>(y);
         _Tp* dptr = dst.ptr<_Tp>(y);
-        
+
         for( int x = 0; x < width; x++ )
         {
             _Tp result = sptr[x + ofs[0]];
@@ -604,18 +604,18 @@ erode_(const Mat& src, Mat& dst, const vector<int>& ofsvec)
     }
 }
 
-    
+
 template<typename _Tp> static void
 dilate_(const Mat& src, Mat& dst, const vector<int>& ofsvec)
 {
     int width = dst.cols*src.channels(), n = (int)ofsvec.size();
     const int* ofs = &ofsvec[0];
-    
+
     for( int y = 0; y < dst.rows; y++ )
     {
         const _Tp* sptr = src.ptr<_Tp>(y);
         _Tp* dptr = dst.ptr<_Tp>(y);
-        
+
         for( int x = 0; x < width; x++ )
         {
             _Tp result = sptr[x + ofs[0]];
@@ -625,8 +625,8 @@ dilate_(const Mat& src, Mat& dst, const vector<int>& ofsvec)
         }
     }
 }
-    
-    
+
+
 void erode(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
            int borderType, const Scalar& _borderValue)
 {
@@ -648,7 +648,7 @@ void erode(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
                    anchor.x, kernel.cols - anchor.x - 1,
                    borderType, borderValue);
     dst.create( _src.size(), src.type() );
-    
+
     vector<int> ofs;
     int step = (int)(src.step/src.elemSize1()), cn = src.channels();
     for( int i = 0; i < kernel.rows; i++ )
@@ -657,7 +657,7 @@ void erode(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
                 ofs.push_back(i*step + j*cn);
     if( ofs.empty() )
         ofs.push_back(anchor.y*step + anchor.x*cn);
-    
+
     switch( src.depth() )
     {
     case CV_8U:
@@ -705,7 +705,7 @@ void dilate(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
                    anchor.x, kernel.cols - anchor.x - 1,
                    borderType, borderValue);
     dst.create( _src.size(), src.type() );
-    
+
     vector<int> ofs;
     int step = (int)(src.step/src.elemSize1()), cn = src.channels();
     for( int i = 0; i < kernel.rows; i++ )
@@ -714,7 +714,7 @@ void dilate(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
                 ofs.push_back(i*step + j*cn);
     if( ofs.empty() )
         ofs.push_back(anchor.y*step + anchor.x*cn);
-    
+
     switch( src.depth() )
     {
     case CV_8U:
@@ -741,21 +741,21 @@ void dilate(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
     default:
         CV_Assert(0);
     }
-}    
+}
 
-    
+
 template<typename _Tp> static void
 filter2D_(const Mat& src, Mat& dst, const vector<int>& ofsvec, const vector<double>& coeffvec)
 {
     const int* ofs = &ofsvec[0];
     const double* coeff = &coeffvec[0];
     int width = dst.cols*dst.channels(), ncoeffs = (int)ofsvec.size();
-    
+
     for( int y = 0; y < dst.rows; y++ )
     {
         const _Tp* sptr = src.ptr<_Tp>(y);
         double* dptr = dst.ptr<double>(y);
-        
+
         for( int x = 0; x < width; x++ )
         {
             double s = 0;
@@ -765,8 +765,8 @@ filter2D_(const Mat& src, Mat& dst, const vector<int>& ofsvec, const vector<doub
         }
     }
 }
-    
-    
+
+
 void filter2D(const Mat& _src, Mat& dst, int ddepth, const Mat& kernel,
               Point anchor, double delta, int borderType, const Scalar& _borderValue)
 {
@@ -781,17 +781,17 @@ void filter2D(const Mat& _src, Mat& dst, int ddepth, const Mat& kernel,
                    anchor.x, kernel.cols - anchor.x - 1,
                    borderType, borderValue);
     _dst.create( _src.size(), CV_MAKETYPE(CV_64F, src.channels()) );
-    
+
     vector<int> ofs;
     vector<double> coeff(kernel.rows*kernel.cols);
     Mat cmat(kernel.rows, kernel.cols, CV_64F, &coeff[0]);
     convert(kernel, cmat, cmat.type());
-    
+
     int step = (int)(src.step/src.elemSize1()), cn = src.channels();
     for( int i = 0; i < kernel.rows; i++ )
         for( int j = 0; j < kernel.cols; j++ )
                 ofs.push_back(i*step + j*cn);
-    
+
     switch( src.depth() )
     {
     case CV_8U:
@@ -818,7 +818,7 @@ void filter2D(const Mat& _src, Mat& dst, int ddepth, const Mat& kernel,
     default:
         CV_Assert(0);
     }
-    
+
     convert(_dst, dst, ddepth, 1, delta);
 }
 
@@ -855,8 +855,8 @@ static int borderInterpolate( int p, int len, int borderType )
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
     return p;
-}    
-    
+}
+
 
 void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int right,
                     int borderType, const Scalar& borderValue)
@@ -864,13 +864,13 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
     dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
     int i, j, k, esz = (int)src.elemSize();
     int width = src.cols*esz, width1 = dst.cols*esz;
-    
+
     if( borderType == IPL_BORDER_CONSTANT )
     {
         vector<uchar> valvec((src.cols + left + right)*esz);
         uchar* val = &valvec[0];
         scalarToRawData(borderValue, val, src.type(), (src.cols + left + right)*src.channels());
-        
+
         left *= esz;
         right *= esz;
         for( i = 0; i < src.rows; i++ )
@@ -885,14 +885,14 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
             for( j = 0; j < right; j++ )
                 dptr[j + width] = val[j];
         }
-        
+
         for( i = 0; i < top; i++ )
         {
             uchar* dptr = dst.ptr(i);
             for( j = 0; j < width1; j++ )
                 dptr[j] = val[j];
         }
-        
+
         for( i = 0; i < bottom; i++ )
         {
             uchar* dptr = dst.ptr(i + top + src.rows);
@@ -917,14 +917,14 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
             for( k = 0; k < esz; k++ )
                 rtab[i*esz + k] = j + k;
         }
-        
+
         left *= esz;
         right *= esz;
         for( i = 0; i < src.rows; i++ )
         {
             const uchar* sptr = src.ptr(i);
             uchar* dptr = dst.ptr(i + top);
-            
+
             for( j = 0; j < left; j++ )
                 dptr[j] = sptr[ltab[j]];
             if( dptr + left != sptr )
@@ -935,29 +935,29 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
             for( j = 0; j < right; j++ )
                 dptr[j + left + width] = sptr[rtab[j]];
         }
-        
+
         for( i = 0; i < top; i++ )
         {
             j = borderInterpolate(i - top, src.rows, borderType);
             const uchar* sptr = dst.ptr(j + top);
             uchar* dptr = dst.ptr(i);
-            
+
             for( k = 0; k < width1; k++ )
                 dptr[k] = sptr[k];
         }
-        
+
         for( i = 0; i < bottom; i++ )
         {
             j = borderInterpolate(i + src.rows, src.rows, borderType);
             const uchar* sptr = dst.ptr(j + top);
             uchar* dptr = dst.ptr(i + top + src.rows);
-            
+
             for( k = 0; k < width1; k++ )
                 dptr[k] = sptr[k];
         }
     }
 }
-    
+
 
 template<typename _Tp> static void
 minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
@@ -967,7 +967,7 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
 {
     _Tp maxval = saturate_cast<_Tp>(*_maxval), minval = saturate_cast<_Tp>(*_minval);
     size_t minpos = *_minpos, maxpos = *_maxpos;
-    
+
     if( !mask )
     {
         for( size_t i = 0; i < total; i++ )
@@ -1002,7 +1002,7 @@ minMaxLoc_(const _Tp* src, size_t total, size_t startidx,
             }
         }
     }
-    
+
     *_maxval = maxval;
     *_minval = minval;
     *_maxpos = maxpos;
@@ -1029,7 +1029,7 @@ static void setpos( const Mat& mtx, vector<int>& pos, size_t idx )
             pos[i] = -1;
     }
 }
-    
+
 void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
                vector<int>* _minloc, vector<int>* _maxloc,
                const Mat& mask)
@@ -1037,20 +1037,20 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
     CV_Assert( src.channels() == 1 );
     const Mat *arrays[]={&src, &mask, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t startidx = 1, total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-	int depth = src.depth();
+    int depth = src.depth();
     double maxval = depth < CV_32F ? INT_MIN : depth == CV_32F ? -FLT_MAX : -DBL_MAX;
     double minval = depth < CV_32F ? INT_MAX : depth == CV_32F ? FLT_MAX : DBL_MAX;
     size_t maxidx = 0, minidx = 0;
-    
+
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
         const uchar* sptr = planes[0].data;
         const uchar* mptr = planes[1].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -1085,10 +1085,10 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
             CV_Assert(0);
         }
     }
-    
+
     if( minidx == 0 )
         minval = maxval = 0;
-    
+
     if( _maxval )
         *_maxval = maxval;
     if( _minval )
@@ -1099,14 +1099,14 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
         setpos( src, *_minloc, minidx );
 }
 
-    
+
 static int
 normHamming(const uchar* src, size_t total, int cellSize)
 {
     int result = 0;
     int mask = cellSize == 1 ? 1 : cellSize == 2 ? 3 : cellSize == 4 ? 15 : -1;
     CV_Assert( mask >= 0 );
-    
+
     for( size_t i = 0; i < total; i++ )
     {
         unsigned a = src[i];
@@ -1115,8 +1115,8 @@ normHamming(const uchar* src, size_t total, int cellSize)
     }
     return result;
 }
-    
-    
+
+
 template<typename _Tp> static double
 norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const uchar* mask)
 {
@@ -1124,7 +1124,7 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
     double result = startval;
     if( !mask )
         total *= cn;
-    
+
     if( normType == NORM_INF )
     {
         if( !mask )
@@ -1181,7 +1181,7 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
     double result = startval;
     if( !mask )
         total *= cn;
-    
+
     if( normType == NORM_INF )
     {
         if( !mask )
@@ -1229,8 +1229,8 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
     }
     return result;
 }
-    
-    
+
+
 double norm(const Mat& src, int normType, const Mat& mask)
 {
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
@@ -1241,42 +1241,42 @@ double norm(const Mat& src, int normType, const Mat& mask)
             bitwise_and(src, mask, temp);
             return norm(temp, normType, Mat());
         }
-        
+
         CV_Assert( src.depth() == CV_8U );
-        
+
         const Mat *arrays[]={&src, 0};
         Mat planes[1];
-        
+
         NAryMatIterator it(arrays, planes);
         size_t total = planes[0].total();
         size_t i, nplanes = it.nplanes;
         double result = 0;
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
-        
+
         for( i = 0; i < nplanes; i++, ++it )
             result += normHamming(planes[0].data, total, cellSize);
         return result;
     }
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
-    
+
     CV_Assert( mask.empty() || (src.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
-    
+
     const Mat *arrays[]={&src, &mask, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
     int depth = src.depth(), cn = planes[0].channels();
     double result = 0;
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr = planes[0].data;
         const uchar* mptr = planes[1].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -1309,7 +1309,7 @@ double norm(const Mat& src, int normType, const Mat& mask)
     return result;
 }
 
-    
+
 double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
 {
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
@@ -1318,43 +1318,43 @@ double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
         bitwise_xor(src1, src2, temp);
         if( !mask.empty() )
             bitwise_and(temp, mask, temp);
-        
+
         CV_Assert( temp.depth() == CV_8U );
-        
+
         const Mat *arrays[]={&temp, 0};
         Mat planes[1];
-        
+
         NAryMatIterator it(arrays, planes);
         size_t total = planes[0].total();
         size_t i, nplanes = it.nplanes;
         double result = 0;
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
-        
+
         for( i = 0; i < nplanes; i++, ++it )
             result += normHamming(planes[0].data, total, cellSize);
         return result;
     }
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
-    
+
     CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
     CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};
     Mat planes[3];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-	int depth = src1.depth(), cn = planes[0].channels();
+    int depth = src1.depth(), cn = planes[0].channels();
     double result = 0;
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr1 = planes[0].data;
         const uchar* sptr2 = planes[1].data;
         const uchar* mptr = planes[2].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -1387,7 +1387,7 @@ double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
     return result;
 }
 
-    
+
 template<typename _Tp> static double
 crossCorr_(const _Tp* src1, const _Tp* src2, size_t total)
 {
@@ -1396,24 +1396,24 @@ crossCorr_(const _Tp* src1, const _Tp* src2, size_t total)
         result += (double)src1[i]*src2[i];
     return result;
 }
-    
+
 double crossCorr(const Mat& src1, const Mat& src2)
 {
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
     const Mat *arrays[]={&src1, &src2, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].channels();
     size_t i, nplanes = it.nplanes;
-	int depth = src1.depth();
+    int depth = src1.depth();
     double result = 0;
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr1 = planes[0].data;
         const uchar* sptr2 = planes[1].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -1443,7 +1443,7 @@ double crossCorr(const Mat& src1, const Mat& src2)
     }
     return result;
 }
-    
+
 
 static void
 logicOp_(const uchar* src1, const uchar* src2, uchar* dst, size_t total, char c)
@@ -1491,9 +1491,9 @@ logicOpS_(const uchar* src, const uchar* scalar, uchar* dst, size_t total, char 
     else
         for( i = 0; i < total; i++ )
             dst[i] = ~src[i];
-}    
- 
-    
+}
+
+
 void logicOp( const Mat& src1, const Mat& src2, Mat& dst, char op )
 {
     CV_Assert( op == '&' || op == '|' || op == '^' );
@@ -1501,40 +1501,40 @@ void logicOp( const Mat& src1, const Mat& src2, Mat& dst, char op )
     dst.create( src1.dims, &src1.size[0], src1.type() );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].elemSize();
     size_t i, nplanes = it.nplanes;
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr1 = planes[0].data;
         const uchar* sptr2 = planes[1].data;
         uchar* dptr = planes[2].data;
-        
+
         logicOp_(sptr1, sptr2, dptr, total, op);
     }
 }
-    
-    
+
+
 void logicOp(const Mat& src, const Scalar& s, Mat& dst, char op)
 {
     CV_Assert( op == '&' || op == '|' || op == '^' || op == '~' );
     dst.create( src.dims, &src.size[0], src.type() );
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].elemSize();
     size_t i, nplanes = it.nplanes;
     double buf[12];
     scalarToRawData(s, buf, src.type(), (int)(96/planes[0].elemSize1()));
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr = planes[0].data;
         uchar* dptr = planes[1].data;
-        
+
         logicOpS_(sptr, (uchar*)&buf[0], dptr, total, op);
     }
 }
@@ -1609,27 +1609,27 @@ compareS_(const _Tp* src1, _WTp value, uchar* dst, size_t total, int cmpop)
     default:
         CV_Error(CV_StsBadArg, "Unknown comparison operation");
     }
-}    
-    
-    
+}
+
+
 void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
 {
     CV_Assert( src1.type() == src2.type() && src1.channels() == 1 && src1.size == src2.size );
     dst.create( src1.dims, &src1.size[0], CV_8U );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-	int depth = src1.depth();
-    
+    int depth = src1.depth();
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr1 = planes[0].data;
         const uchar* sptr2 = planes[1].data;
         uchar* dptr = planes[2].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -1658,25 +1658,25 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
         }
     }
 }
-    
+
 void compare(const Mat& src, double value, Mat& dst, int cmpop)
 {
     CV_Assert( src.channels() == 1 );
     dst.create( src.dims, &src.size[0], CV_8U );
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-	int depth = src.depth();
+    int depth = src.depth();
     int ivalue = saturate_cast<int>(value);
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr = planes[0].data;
         uchar* dptr = planes[1].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -1706,7 +1706,7 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
     }
 }
 
-    
+
 template<typename _Tp> double
 cmpUlpsInt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff,
            size_t startidx, size_t& idx)
@@ -1726,7 +1726,7 @@ cmpUlpsInt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff,
     return realmaxdiff;
 }
 
-    
+
 template<> double cmpUlpsInt_<int>(const int* src1, const int* src2,
                                           size_t total, int imaxdiff,
                                           size_t startidx, size_t& idx)
@@ -1744,8 +1744,8 @@ template<> double cmpUlpsInt_<int>(const int* src1, const int* src2,
         }
     }
     return realmaxdiff;
-}    
-    
+}
+
 
 static double
 cmpUlpsFlt_(const int* src1, const int* src2, size_t total, int imaxdiff, size_t startidx, size_t& idx)
@@ -1767,7 +1767,7 @@ cmpUlpsFlt_(const int* src1, const int* src2, size_t total, int imaxdiff, size_t
     }
     return realmaxdiff;
 }
-    
+
 
 static double
 cmpUlpsFlt_(const int64* src1, const int64* src2, size_t total, int imaxdiff, size_t startidx, size_t& idx)
@@ -1789,7 +1789,7 @@ cmpUlpsFlt_(const int64* src1, const int64* src2, size_t total, int imaxdiff, si
     }
     return realmaxdiff;
 }
-    
+
 bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdiff, vector<int>* loc)
 {
     CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
@@ -1798,11 +1798,11 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].channels();
     size_t i, nplanes = it.nplanes;
-	int depth = src1.depth();
+    int depth = src1.depth();
     size_t startidx = 1, idx = 0;
     if(_realmaxdiff)
         *_realmaxdiff = 0;
-    
+
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
         const uchar* sptr1 = planes[0].data;
@@ -1835,7 +1835,7 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
         default:
             CV_Error(CV_StsUnsupportedFormat, "");
         }
-        
+
         if(_realmaxdiff)
             *_realmaxdiff = std::max(*_realmaxdiff, realmaxdiff);
     }
@@ -1844,7 +1844,7 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
     return idx == 0;
 }
 
-    
+
 template<typename _Tp> static void
 checkInt_(const _Tp* a, size_t total, int imin, int imax, size_t startidx, size_t& idx)
 {
@@ -1859,7 +1859,7 @@ checkInt_(const _Tp* a, size_t total, int imin, int imax, size_t startidx, size_
     }
 }
 
-    
+
 template<typename _Tp> static void
 checkFlt_(const _Tp* a, size_t total, double fmin, double fmax, size_t startidx, size_t& idx)
 {
@@ -1873,7 +1873,7 @@ checkFlt_(const _Tp* a, size_t total, double fmin, double fmax, size_t startidx,
         }
     }
 }
-        
+
 
 // checks that the array does not have NaNs and/or Infs and all the elements are
 // within [min_val,max_val). idx is the index of the first "bad" element.
@@ -1884,20 +1884,20 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
     NAryMatIterator it(arrays, &plane);
     size_t total = plane.total()*plane.channels();
     size_t i, nplanes = it.nplanes;
-	int depth = a.depth();
+    int depth = a.depth();
     size_t startidx = 1, idx = 0;
     int imin = 0, imax = 0;
-    
+
     if( depth <= CV_32S )
     {
         imin = cvCeil(fmin);
         imax = cvFloor(fmax);
-    }    
-    
+    }
+
     for( i = 0; i < nplanes; i++, ++it, startidx += total )
     {
         const uchar* aptr = plane.data;
-        
+
         switch( depth )
         {
             case CV_8U:
@@ -1924,11 +1924,11 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
             default:
                 CV_Error(CV_StsUnsupportedFormat, "");
         }
-        
+
         if( idx != 0 )
             break;
     }
-    
+
     if(idx != 0 && _idx)
         setpos(a, *_idx, idx);
     return idx == 0 ? 0 : -1;
@@ -1944,7 +1944,7 @@ int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
             bool element_wise_relative_error )
 {
     CV_Assert( arr.type() == refarr.type() && arr.size == refarr.size );
-    
+
     int ilevel = refarr.depth() <= CV_32S ? cvFloor(success_err_level) : 0;
     int result = 0;
 
@@ -1953,10 +1953,10 @@ int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].channels(), j = total;
     size_t i, nplanes = it.nplanes;
-	int depth = arr.depth();
+    int depth = arr.depth();
     size_t startidx = 1, idx = 0;
     double realmaxdiff = 0, maxval = 0;
-    
+
     if(_realmaxdiff)
         *_realmaxdiff = 0;
 
@@ -2066,7 +2066,7 @@ int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
         *_realmaxdiff = exp(1000.);
     if(idx > 0 && _idx)
         setpos(arr, *_idx, idx);
-    
+
     return result;
 }
 
@@ -2127,7 +2127,7 @@ int cmpEps2_64f( TS* ts, const double* val, const double* refval, int len,
     return cmpEps2( ts, _val, _refval, eps, true, param_name );
 }
 
-    
+
 template<typename _Tp> static void
 GEMM_(const _Tp* a_data0, int a_step, int a_delta,
       const _Tp* b_data0, int b_step, int b_delta,
@@ -2143,7 +2143,7 @@ GEMM_(const _Tp* a_data0, int a_step, int a_delta,
             const _Tp* a_data = a_data0;
             const _Tp* b_data = b_data0 + j*b_delta;
             const _Tp* c_data = c_data0 + j*c_delta;
-            
+
             if( cn == 1 )
             {
                 double s = 0;
@@ -2158,7 +2158,7 @@ GEMM_(const _Tp* a_data0, int a_step, int a_delta,
             else
             {
                 double s_re = 0, s_im = 0;
-                
+
                 for( int k = 0; k < a_cols; k++ )
                 {
                     s_re += ((double)a_data[0])*b_data[0] - ((double)a_data[1])*b_data[1];
@@ -2166,38 +2166,38 @@ GEMM_(const _Tp* a_data0, int a_step, int a_delta,
                     a_data += a_delta;
                     b_data += b_step;
                 }
-                
+
                 s_re *= alpha;
                 s_im *= alpha;
-                
+
                 if( c_data )
                 {
                     s_re += c_data[0]*beta;
                     s_im += c_data[1]*beta;
                 }
-                
+
                 d_data[j*2] = (_Tp)s_re;
                 d_data[j*2+1] = (_Tp)s_im;
             }
         }
     }
 }
- 
-    
+
+
 void gemm( const Mat& _a, const Mat& _b, double alpha,
            const Mat& _c, double beta, Mat& d, int flags )
 {
     Mat a = _a, b = _b, c = _c;
-    
-    if( a.data == d.data ) 
+
+    if( a.data == d.data )
         a = a.clone();
-    
-    if( b.data == d.data ) 
+
+    if( b.data == d.data )
         b = b.clone();
-    
+
     if( !c.empty() && c.data == d.data && (flags & cv::GEMM_3_T) )
         c = c.clone();
-    
+
     int a_rows = a.rows, a_cols = a.cols, b_rows = b.rows, b_cols = b.cols;
     int cn = a.channels();
     int a_step = (int)a.step1(), a_delta = cn;
@@ -2211,31 +2211,31 @@ void gemm( const Mat& _a, const Mat& _b, double alpha,
         std::swap( a_rows, a_cols );
         std::swap( a_step, a_delta );
     }
-    
+
     if( flags & cv::GEMM_2_T )
     {
         std::swap( b_rows, b_cols );
         std::swap( b_step, b_delta );
     }
-    
+
     if( !c.empty() )
     {
         c_rows = c.rows;
         c_cols = c.cols;
         c_step = (int)c.step1();
         c_delta = cn;
-        
+
         if( flags & cv::GEMM_3_T )
         {
             std::swap( c_rows, c_cols );
             std::swap( c_step, c_delta );
         }
-        
+
         CV_Assert( c.dims == 2 && c.type() == a.type() && c_rows == a_rows && c_cols == b_cols );
     }
 
     d.create(a_rows, b_cols, a.type());
-        
+
     if( a.depth() == CV_32F )
         GEMM_(a.ptr<float>(), a_step, a_delta, b.ptr<float>(), b_step, b_delta,
               !c.empty() ? c.ptr<float>() : 0, c_step, c_delta, d.ptr<float>(),
@@ -2244,61 +2244,6 @@ void gemm( const Mat& _a, const Mat& _b, double alpha,
         GEMM_(a.ptr<double>(), a_step, a_delta, b.ptr<double>(), b_step, b_delta,
               !c.empty() ? c.ptr<double>() : 0, c_step, c_delta, d.ptr<double>(),
               (int)d.step1(), a_rows, b_cols, a_cols, cn, alpha, beta );
-}
-
-
-double cvTsCrossCorr( const CvMat* a, const CvMat* b )
-{
-    int i, j;
-    int cn, ncols;
-    double s = 0;
-
-    cn = CV_MAT_CN(a->type);
-    ncols = a->cols*cn;
-
-    assert( CV_ARE_SIZES_EQ( a, b ) && CV_ARE_TYPES_EQ( a, b ) );
-    for( i = 0; i < a->rows; i++ )
-    {
-        uchar* a_data = a->data.ptr + a->step*i;
-        uchar* b_data = b->data.ptr + b->step*i;
-
-        switch( CV_MAT_DEPTH(a->type) )
-        {
-        case CV_8U:
-            for( j = 0; j < ncols; j++ )
-                s += ((uchar*)a_data)[j]*((uchar*)b_data)[j];
-            break;
-        case CV_8S:
-            for( j = 0; j < ncols; j++ )
-                s += ((schar*)a_data)[j]*((schar*)b_data)[j];
-            break;
-        case CV_16U:
-            for( j = 0; j < ncols; j++ )
-                s += (double)((ushort*)a_data)[j]*((ushort*)b_data)[j];
-            break;
-        case CV_16S:
-            for( j = 0; j < ncols; j++ )
-                s += ((short*)a_data)[j]*((short*)b_data)[j];
-            break;
-        case CV_32S:
-            for( j = 0; j < ncols; j++ )
-                s += ((double)((int*)a_data)[j])*((int*)b_data)[j];
-            break;
-        case CV_32F:
-            for( j = 0; j < ncols; j++ )
-                s += ((double)((float*)a_data)[j])*((float*)b_data)[j];
-            break;
-        case CV_64F:
-            for( j = 0; j < ncols; j++ )
-                s += ((double*)a_data)[j]*((double*)b_data)[j];
-            break;
-        default:
-            assert(0);
-            return log(-1.);
-        }
-    }
-
-    return s;
 }
 
 
@@ -2316,8 +2261,8 @@ transform_(const _Tp* sptr, _Tp* dptr, size_t total, int scn, int dcn, const dou
         }
     }
 }
-    
-    
+
+
 void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift )
 {
     double mat[20];
@@ -2328,7 +2273,7 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
     int mattype = transmat.depth();
     Mat shift = _shift.reshape(1, 0);
     bool haveShift = !shift.empty();
-    
+
     CV_Assert( scn <= 4 && dcn <= 4 &&
               (mattype == CV_32F || mattype == CV_64F) &&
               (!haveShift || (shift.type() == mattype && (shift.rows == 1 || shift.cols == 1))) );
@@ -2362,12 +2307,12 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr = planes[0].data;
         uchar* dptr = planes[1].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -2396,7 +2341,7 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
         }
     }
 }
-    
+
 template<typename _Tp> static void
 minmax_(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, char op)
 {
@@ -2414,17 +2359,17 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
     CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].channels();
     size_t i, nplanes = it.nplanes, depth = src1.depth();
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr1 = planes[0].data;
         const uchar* sptr2 = planes[1].data;
         uchar* dptr = planes[2].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -2454,7 +2399,7 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
     }
 }
 
-    
+
 void min(const Mat& src1, const Mat& src2, Mat& dst)
 {
     minmax( src1, src2, dst, 'm' );
@@ -2482,17 +2427,17 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
     dst.create(src1.dims, src1.size, src1.type());
     const Mat *arrays[]={&src1, &dst, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].channels();
     size_t i, nplanes = it.nplanes, depth = src1.depth();
     int ival = saturate_cast<int>(val);
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr1 = planes[0].data;
         uchar* dptr = planes[1].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -2522,7 +2467,7 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
     }
 }
 
-    
+
 void min(const Mat& src1, double val, Mat& dst)
 {
     minmax( src1, val, dst, 'm' );
@@ -2532,8 +2477,8 @@ void max(const Mat& src1, double val, Mat& dst)
 {
     minmax( src1, val, dst, 'M' );
 }
-    
-    
+
+
 template<typename _Tp> static void
 muldiv_(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, double scale, char op)
 {
@@ -2554,17 +2499,17 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
     CV_Assert( src1.empty() || (src1.type() == src2.type() && src1.size == src2.size) );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[1].total()*planes[1].channels();
     size_t i, nplanes = it.nplanes, depth = src2.depth();
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr1 = planes[0].data;
         const uchar* sptr2 = planes[1].data;
         uchar* dptr = planes[2].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -2593,7 +2538,7 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
         }
     }
 }
-    
+
 
 void multiply(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 {
@@ -2603,9 +2548,9 @@ void multiply(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 void divide(const Mat& src1, const Mat& src2, Mat& dst, double scale)
 {
     muldiv( src1, src2, dst, scale, '/' );
-}    
- 
-    
+}
+
+
 template<typename _Tp> static void
 mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int& nz)
 {
@@ -2630,26 +2575,26 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int&
             }
     }
 }
-    
+
 Scalar mean(const Mat& src, const Mat& mask)
 {
     CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size == src.size));
     Scalar sum;
     int nz = 0;
-    
+
     const Mat *arrays[]={&src, &mask, 0};
     Mat planes[2];
-    
+
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
     int depth = src.depth(), cn = src.channels();
-    
+
     for( i = 0; i < nplanes; i++, ++it )
     {
         const uchar* sptr = planes[0].data;
         const uchar* mptr = planes[1].data;
-        
+
         switch( depth )
         {
         case CV_8U:
@@ -2677,17 +2622,17 @@ Scalar mean(const Mat& src, const Mat& mask)
             CV_Error(CV_StsUnsupportedFormat, "");
         }
     }
-    
+
     return sum * (1./std::max(nz, 1));
 }
 
-    
+
 void  patchZeros( Mat& mat, double level )
 {
     int j, ncols = mat.cols * mat.channels();
     int depth = mat.depth();
     CV_Assert( depth == CV_32F || depth == CV_64F );
-    
+
     for( int i = 0; i < mat.rows; i++ )
     {
         if( depth == CV_32F )
@@ -2707,12 +2652,12 @@ void  patchZeros( Mat& mat, double level )
     }
 }
 
-    
+
 static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<int>& kernel )
 {
     int i, j, oldval, newval;
     kernel.resize(size + 1);
-    
+
     if( _aperture_size < 0 )
     {
         static const int scharr[] = { 3, 10, 3, -1, 0, 1 };
@@ -2721,11 +2666,11 @@ static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<i
             kernel[i] = scharr[order*3 + i];
         return;
     }
-    
+
     for( i = 1; i <= size; i++ )
         kernel[i] = 0;
     kernel[0] = 1;
-    
+
     for( i = 0; i < size - order - 1; i++ )
     {
         oldval = kernel[0];
@@ -2736,7 +2681,7 @@ static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<i
             oldval = newval;
         }
     }
-    
+
     for( i = 0; i < order; i++ )
     {
         oldval = -kernel[0];
@@ -2756,31 +2701,31 @@ Mat calcSobelKernel2D( int dx, int dy, int _aperture_size, int origin )
               dx >= 0 && dy >= 0 && dx + dy <= 3 );
     Size ksize = _aperture_size == -1 ? Size(3,3) : _aperture_size > 1 ?
         Size(_aperture_size, _aperture_size) : dx > 0 ? Size(3, 1) : Size(1, 3);
-    
+
     Mat kernel(ksize, CV_32F);
     vector<int> kx, ky;
-    
+
     calcSobelKernel1D( dx, _aperture_size, ksize.width, kx );
     calcSobelKernel1D( dy, _aperture_size, ksize.height, ky );
-    
+
     for( int i = 0; i < kernel.rows; i++ )
     {
         float ay = (float)ky[i]*(origin && (dy & 1) ? -1 : 1);
         for( int j = 0; j < kernel.cols; j++ )
             kernel.at<float>(i, j) = kx[j]*ay;
     }
-    
+
     return kernel;
 }
 
-    
+
 Mat calcLaplaceKernel2D( int aperture_size )
 {
     int ksize = aperture_size == 1 ? 3 : aperture_size;
     Mat kernel(ksize, ksize, CV_32F);
-    
+
     vector<int> kx, ky;
-    
+
     calcSobelKernel1D( 2, aperture_size, ksize, kx );
     if( aperture_size > 1 )
         calcSobelKernel1D( 0, aperture_size, ksize, ky );
@@ -2789,32 +2734,32 @@ Mat calcLaplaceKernel2D( int aperture_size )
         ky.resize(3);
         ky[0] = ky[2] = 0; ky[1] = 1;
     }
-    
+
     for( int i = 0; i < ksize; i++ )
         for( int j = 0; j < ksize; j++ )
             kernel.at<float>(i, j) = (float)(kx[j]*ky[i] + kx[i]*ky[j]);
-    
+
     return kernel;
 }
 
-    
+
 void initUndistortMap( const Mat& _a0, const Mat& _k0, Size sz, Mat& _mapx, Mat& _mapy )
 {
     _mapx.create(sz, CV_32F);
     _mapy.create(sz, CV_32F);
-    
+
     double a[9], k[5]={0,0,0,0,0};
     Mat _a(3, 3, CV_64F, a);
     Mat _k(_k0.rows,_k0.cols, CV_MAKETYPE(CV_64F,_k0.channels()),k);
     double fx, fy, cx, cy, ifx, ify, cxn, cyn;
-    
+
     _a0.convertTo(_a, CV_64F);
     _k0.convertTo(_k, CV_64F);
     fx = a[0]; fy = a[4]; cx = a[2]; cy = a[5];
     ifx = 1./fx; ify = 1./fy;
     cxn = cx;
     cyn = cy;
-    
+
     for( int v = 0; v < sz.height; v++ )
     {
         for( int u = 0; u < sz.width; u++ )
@@ -2826,14 +2771,14 @@ void initUndistortMap( const Mat& _a0, const Mat& _k0, Size sz, Mat& _mapx, Mat&
             double cdist = 1 + (k[0] + (k[1] + k[4]*r2)*r2)*r2;
             double x1 = x*cdist + k[2]*2*x*y + k[3]*(r2 + 2*x2);
             double y1 = y*cdist + k[3]*2*x*y + k[2]*(r2 + 2*y2);
-            
+
             _mapy.at<float>(v, u) = (float)(y1*fy + cy);
             _mapx.at<float>(v, u) = (float)(x1*fx + cx);
         }
     }
 }
-    
-    
+
+
 std::ostream& operator << (std::ostream& out, const MatInfo& m)
 {
     if( !m.m || m.m->empty() )
@@ -2938,11 +2883,11 @@ static std::ostream& operator << (std::ostream& out, const MatPart& m)
         }
     }
     return out;
-}    
-    
+}
+
 MatComparator::MatComparator(double _maxdiff, int _context)
     : maxdiff(_maxdiff), context(_context) {}
-    
+
 ::testing::AssertionResult
 MatComparator::operator()(const char* expr1, const char* expr2,
                           const Mat& m1, const Mat& m2)
@@ -2952,18 +2897,18 @@ MatComparator::operator()(const char* expr1, const char* expr2,
         << "The reference and the actual output arrays have different type or size:\n"
         << expr1 << " ~ " << MatInfo(m1) << "\n"
         << expr2 << " ~ " << MatInfo(m2) << "\n";
-    
+
     //bool ok = cvtest::cmpUlps(m1, m2, maxdiff, &realmaxdiff, &loc0);
     int code = cmpEps( m1, m2, &realmaxdiff, maxdiff, &loc0, true);
-    
+
     if(code >= 0)
         return ::testing::AssertionSuccess();
-    
+
     Mat m[] = {m1.reshape(1,0), m2.reshape(1,0)};
     int dims = m[0].dims;
     vector<int> loc;
     int border = dims <= 2 ? context : 0;
-    
+
     Mat m1part, m2part;
     if( border == 0 )
     {
@@ -2976,7 +2921,7 @@ MatComparator::operator()(const char* expr1, const char* expr2,
         m1part = getSubArray(m[0], border, loc0, loc);
         m2part = getSubArray(m[1], border, loc0, loc);
     }
-    
+
     return ::testing::AssertionFailure()
     << "too big relative difference (" << realmaxdiff << " > "
     << maxdiff << ") between "

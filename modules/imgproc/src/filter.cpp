@@ -48,11 +48,11 @@
 
 /*
  Various border types, image boundaries are denoted with '|'
- 
+
  * BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
  * BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
  * BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
- * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg        
+ * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
  * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
  */
 int cv::borderInterpolate( int p, int len, int borderType )
@@ -113,7 +113,7 @@ FilterEngine::FilterEngine()
 
     wholeSize = Size(-1,-1);
 }
-    
+
 
 FilterEngine::FilterEngine( const Ptr<BaseFilter>& _filter2D,
                             const Ptr<BaseRowFilter>& _rowFilter,
@@ -125,7 +125,7 @@ FilterEngine::FilterEngine( const Ptr<BaseFilter>& _filter2D,
     init(_filter2D, _rowFilter, _columnFilter, _srcType, _dstType, _bufType,
          _rowBorderType, _columnBorderType, _borderValue);
 }
-    
+
 FilterEngine::~FilterEngine()
 {
 }
@@ -141,24 +141,24 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     _srcType = CV_MAT_TYPE(_srcType);
     _bufType = CV_MAT_TYPE(_bufType);
     _dstType = CV_MAT_TYPE(_dstType);
-        
+
     srcType = _srcType;
     int srcElemSize = (int)getElemSize(srcType);
     dstType = _dstType;
     bufType = _bufType;
-    
+
     filter2D = _filter2D;
     rowFilter = _rowFilter;
     columnFilter = _columnFilter;
 
     if( _columnBorderType < 0 )
         _columnBorderType = _rowBorderType;
-    
+
     rowBorderType = _rowBorderType;
     columnBorderType = _columnBorderType;
-    
+
     CV_Assert( columnBorderType != BORDER_WRAP );
-    
+
     if( isSeparable() )
     {
         CV_Assert( !rowFilter.empty() && !columnFilter.empty() );
@@ -175,7 +175,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     CV_Assert( 0 <= anchor.x && anchor.x < ksize.width &&
                0 <= anchor.y && anchor.y < ksize.height );
 
-    borderElemSize = srcElemSize/(CV_MAT_DEPTH(srcType) >= CV_32S ? sizeof(int) : 1);    
+    borderElemSize = srcElemSize/(CV_MAT_DEPTH(srcType) >= CV_32S ? sizeof(int) : 1);
     int borderLength = std::max(ksize.width - 1, 1);
     borderTab.resize(borderLength*borderElemSize);
 
@@ -198,7 +198,7 @@ static const int VEC_ALIGN = CV_MALLOC_ALIGN;
 int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
 {
     int i, j;
-    
+
     wholeSize = _wholeSize;
     roi = _roi;
     CV_Assert( roi.x >= 0 && roi.y >= 0 && roi.width >= 0 && roi.height >= 0 &&
@@ -226,7 +226,7 @@ int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
             int n = (int)constBorderValue.size(), N;
             N = (maxWidth + ksize.width - 1)*esz;
             tdst = isSeparable() ? &srcRow[0] : dst;
-            
+
             for( i = 0; i < N; i += n )
             {
                 n = std::min( n, N - i );
@@ -237,7 +237,7 @@ int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
             if( isSeparable() )
                 (*rowFilter)(&srcRow[0], dst, maxWidth, cn);
         }
-        
+
         int maxBufStep = bufElemSize*(int)alignSize(maxWidth +
             (!isSeparable() ? ksize.width - 1 : 0),VEC_ALIGN);
         ringBuf.resize(maxBufStep*rows.size()+VEC_ALIGN);
@@ -265,10 +265,10 @@ int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
         else
         {
             int xofs1 = std::min(roi.x, anchor.x) - roi.x;
-            
+
             int btab_esz = borderElemSize, wholeWidth = wholeSize.width;
             int* btab = (int*)&borderTab[0];
-            
+
             for( i = 0; i < dx1; i++ )
             {
                 int p0 = (borderInterpolate(i-dx1, wholeWidth, rowBorderType) + xofs1)*btab_esz;
@@ -301,20 +301,20 @@ int FilterEngine::start(const Mat& src, const Rect& _srcRoi,
                         bool isolated, int maxBufRows)
 {
     Rect srcRoi = _srcRoi;
-    
+
     if( srcRoi == Rect(0,0,-1,-1) )
         srcRoi = Rect(0,0,src.cols,src.rows);
-    
+
     CV_Assert( srcRoi.x >= 0 && srcRoi.y >= 0 &&
         srcRoi.width >= 0 && srcRoi.height >= 0 &&
         srcRoi.x + srcRoi.width <= src.cols &&
         srcRoi.y + srcRoi.height <= src.rows );
 
     Point ofs;
-    Size wholeSize(src.cols, src.rows);
+    Size wsz(src.cols, src.rows);
     if( !isolated )
-        src.locateROI( wholeSize, ofs );
-    start( wholeSize, srcRoi + ofs, maxBufRows );
+        src.locateROI( wsz, ofs );
+    start( wsz, srcRoi + ofs, maxBufRows );
 
     return startY - ofs.y;
 }
@@ -334,7 +334,7 @@ int FilterEngine::proceed( const uchar* src, int srcstep, int count,
                            uchar* dst, int dststep )
 {
     CV_Assert( wholeSize.width > 0 && wholeSize.height > 0 );
-    
+
     const int *btab = &borderTab[0];
     int esz = (int)getElemSize(srcType), btab_esz = borderElemSize;
     uchar** brows = &rows[0];
@@ -365,7 +365,7 @@ int FilterEngine::proceed( const uchar* src, int srcstep, int count,
             int bi = (startY - startY0 + rowCount) % bufRows;
             uchar* brow = alignPtr(&ringBuf[0], VEC_ALIGN) + bi*bufStep;
             uchar* row = isSep ? &srcRow[0] : brow;
-            
+
             if( ++rowCount > bufRows )
             {
                 --rowCount;
@@ -394,7 +394,7 @@ int FilterEngine::proceed( const uchar* src, int srcstep, int count,
                         row[i + (width1 - _dx2)*esz] = src[btab[i+_dx1*esz]];
                 }
             }
-            
+
             if( isSep )
                 (*rowFilter)(row, brow, width, CV_MAT_CN(srcType));
         }
@@ -434,11 +434,11 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
     const Rect& _srcRoi, Point dstOfs, bool isolated)
 {
     CV_Assert( src.type() == srcType && dst.type() == dstType );
-    
+
     Rect srcRoi = _srcRoi;
     if( srcRoi == Rect(0,0,-1,-1) )
         srcRoi = Rect(0,0,src.cols,src.rows);
-    
+
     if( srcRoi.area() == 0 )
         return;
 
@@ -560,7 +560,7 @@ struct RowVec_8u32s
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
         int* dst = (int*)_dst;
         const int* _kx = (const int*)kernel.data;
@@ -593,7 +593,7 @@ struct RowVec_8u32s
                     s2 = _mm_add_epi32(s2, _mm_unpacklo_epi16(x2, x3));
                     s3 = _mm_add_epi32(s3, _mm_unpackhi_epi16(x2, x3));
                 }
-                
+
                 _mm_store_si128((__m128i*)(dst + i), s0);
                 _mm_store_si128((__m128i*)(dst + i + 4), s1);
                 _mm_store_si128((__m128i*)(dst + i + 8), s2);
@@ -652,7 +652,7 @@ struct SymmRowSmallVec_8u32s
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         int i = 0, j, k, _ksize = kernel.rows + kernel.cols - 1;
         int* dst = (int*)_dst;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
@@ -973,7 +973,7 @@ struct SymmColumnVec_32s8u
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
         const float* ky = (const float*)kernel.data + ksize2;
         int i = 0, k;
@@ -1121,7 +1121,7 @@ struct SymmColumnSmallVec_32s16s
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
         const float* ky = (const float*)kernel.data + ksize2;
         int i = 0;
@@ -1237,9 +1237,9 @@ struct SymmColumnSmallVec_32s16s
     Mat kernel;
 };
 
-    
+
 /////////////////////////////////////// 16s //////////////////////////////////
-    
+
 struct RowVec_16s32f
 {
     RowVec_16s32f() {}
@@ -1248,17 +1248,17 @@ struct RowVec_16s32f
         kernel = _kernel;
         sse2_supported = checkHardwareSupport(CV_CPU_SSE2);
     }
-    
+
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         if( !sse2_supported )
             return 0;
-        
+
         int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
         float* dst = (float*)_dst;
         const float* _kx = (const float*)kernel.data;
         width *= cn;
-        
+
         for( ; i <= width - 8; i += 8 )
         {
             const short* src = (const short*)_src + i;
@@ -1267,7 +1267,7 @@ struct RowVec_16s32f
             {
                 f = _mm_load_ss(_kx+k);
                 f = _mm_shuffle_ps(f, f, 0);
-                
+
                 __m128i x0i = _mm_loadu_si128((const __m128i*)src);
                 __m128i x1i = _mm_srai_epi32(_mm_unpackhi_epi16(x0i, x0i), 16);
                 x0i = _mm_srai_epi32(_mm_unpacklo_epi16(x0i, x0i), 16);
@@ -1281,12 +1281,12 @@ struct RowVec_16s32f
         }
         return i;
     }
-    
+
     Mat kernel;
     bool sse2_supported;
 };
-    
-    
+
+
 struct SymmColumnVec_32f16s
 {
     SymmColumnVec_32f16s() { symmetryType=0; }
@@ -1298,12 +1298,12 @@ struct SymmColumnVec_32f16s
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
         sse2_supported = checkHardwareSupport(CV_CPU_SSE2);
     }
-    
+
     int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         if( !sse2_supported )
             return 0;
-        
+
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
         const float* ky = (const float*)kernel.data + ksize2;
         int i = 0, k;
@@ -1312,7 +1312,7 @@ struct SymmColumnVec_32f16s
         const float *S, *S2;
         short* dst = (short*)_dst;
         __m128 d4 = _mm_set1_ps(delta);
-        
+
         if( symmetrical )
         {
             for( ; i <= width - 16; i += 16 )
@@ -1330,7 +1330,7 @@ struct SymmColumnVec_32f16s
                 s3 = _mm_load_ps(S+12);
                 s2 = _mm_add_ps(_mm_mul_ps(s2, f), d4);
                 s3 = _mm_add_ps(_mm_mul_ps(s3, f), d4);
-                
+
                 for( k = 1; k <= ksize2; k++ )
                 {
                     S = src[k] + i;
@@ -1346,23 +1346,23 @@ struct SymmColumnVec_32f16s
                     s2 = _mm_add_ps(s2, _mm_mul_ps(x0, f));
                     s3 = _mm_add_ps(s3, _mm_mul_ps(x1, f));
                 }
-                
+
                 __m128i s0i = _mm_cvtps_epi32(s0);
                 __m128i s1i = _mm_cvtps_epi32(s1);
                 __m128i s2i = _mm_cvtps_epi32(s2);
                 __m128i s3i = _mm_cvtps_epi32(s3);
-                
+
                 _mm_storeu_si128((__m128i*)(dst + i), _mm_packs_epi32(s0i, s1i));
                 _mm_storeu_si128((__m128i*)(dst + i + 8), _mm_packs_epi32(s2i, s3i));
             }
-            
+
             for( ; i <= width - 4; i += 4 )
             {
                 __m128 f = _mm_load_ss(ky);
                 f = _mm_shuffle_ps(f, f, 0);
                 __m128 x0, s0 = _mm_load_ps(src[0] + i);
                 s0 = _mm_add_ps(_mm_mul_ps(s0, f), d4);
-                
+
                 for( k = 1; k <= ksize2; k++ )
                 {
                     f = _mm_load_ss(ky+k);
@@ -1372,7 +1372,7 @@ struct SymmColumnVec_32f16s
                     x0 = _mm_add_ps(_mm_load_ps(src[k]+i), _mm_load_ps(src[-k] + i));
                     s0 = _mm_add_ps(s0, _mm_mul_ps(x0, f));
                 }
-                
+
                 __m128i s0i = _mm_cvtps_epi32(s0);
                 _mm_storel_epi64((__m128i*)(dst + i), _mm_packs_epi32(s0i, s0i));
             }
@@ -1384,7 +1384,7 @@ struct SymmColumnVec_32f16s
                 __m128 f, s0 = d4, s1 = d4, s2 = d4, s3 = d4;
                 __m128 x0, x1;
                 S = src[0] + i;
-                
+
                 for( k = 1; k <= ksize2; k++ )
                 {
                     S = src[k] + i;
@@ -1400,20 +1400,20 @@ struct SymmColumnVec_32f16s
                     s2 = _mm_add_ps(s2, _mm_mul_ps(x0, f));
                     s3 = _mm_add_ps(s3, _mm_mul_ps(x1, f));
                 }
-                
+
                 __m128i s0i = _mm_cvtps_epi32(s0);
                 __m128i s1i = _mm_cvtps_epi32(s1);
                 __m128i s2i = _mm_cvtps_epi32(s2);
                 __m128i s3i = _mm_cvtps_epi32(s3);
-                
+
                 _mm_storeu_si128((__m128i*)(dst + i), _mm_packs_epi32(s0i, s1i));
                 _mm_storeu_si128((__m128i*)(dst + i + 8), _mm_packs_epi32(s2i, s3i));
             }
-            
+
             for( ; i <= width - 4; i += 4 )
             {
                 __m128 f, x0, s0 = d4;
-                
+
                 for( k = 1; k <= ksize2; k++ )
                 {
                     f = _mm_load_ss(ky+k);
@@ -1421,21 +1421,21 @@ struct SymmColumnVec_32f16s
                     x0 = _mm_sub_ps(_mm_load_ps(src[k]+i), _mm_load_ps(src[-k] + i));
                     s0 = _mm_add_ps(s0, _mm_mul_ps(x0, f));
                 }
-                
+
                 __m128i s0i = _mm_cvtps_epi32(s0);
                 _mm_storel_epi64((__m128i*)(dst + i), _mm_packs_epi32(s0i, s0i));
             }
         }
-        
+
         return i;
     }
-    
+
     int symmetryType;
     float delta;
     Mat kernel;
     bool sse2_supported;
-};    
-    
+};
+
 
 /////////////////////////////////////// 32f //////////////////////////////////
 
@@ -1451,7 +1451,7 @@ struct RowVec_32f
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
         float* dst = (float*)_dst;
         const float* _kx = (const float*)kernel.data;
@@ -1494,7 +1494,7 @@ struct SymmRowSmallVec_32f
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         int i = 0, _ksize = kernel.rows + kernel.cols - 1;
         float* dst = (float*)_dst;
         const float* src = (const float*)_src + (_ksize/2)*cn;
@@ -1594,12 +1594,12 @@ struct SymmRowSmallVec_32f
                         y0 = _mm_mul_ps(_mm_add_ps(y0, y2), k1);
                         x0 = _mm_add_ps(x0, _mm_mul_ps(x1, k0));
                         y0 = _mm_add_ps(y0, _mm_mul_ps(y1, k0));
-                        
+
                         x2 = _mm_add_ps(_mm_loadu_ps(src + cn*2), _mm_loadu_ps(src - cn*2));
                         y2 = _mm_add_ps(_mm_loadu_ps(src + cn*2 + 4), _mm_loadu_ps(src - cn*2 + 4));
                         x0 = _mm_add_ps(x0, _mm_mul_ps(x2, k2));
                         y0 = _mm_add_ps(y0, _mm_mul_ps(y2, k2));
-                        
+
                         _mm_store_ps(dst + i, x0);
                         _mm_store_ps(dst + i + 4, y0);
                     }
@@ -1654,12 +1654,12 @@ struct SymmRowSmallVec_32f
 
                     x0 = _mm_mul_ps(_mm_sub_ps(x0, x2), k1);
                     y0 = _mm_mul_ps(_mm_sub_ps(y0, y2), k1);
-                    
+
                     x2 = _mm_sub_ps(_mm_loadu_ps(src + cn*2), _mm_loadu_ps(src - cn*2));
                     y2 = _mm_sub_ps(_mm_loadu_ps(src + cn*2 + 4), _mm_loadu_ps(src - cn*2 + 4));
                     x0 = _mm_add_ps(x0, _mm_mul_ps(x2, k2));
                     y0 = _mm_add_ps(y0, _mm_mul_ps(y2, k2));
-                    
+
                     _mm_store_ps(dst + i, x0);
                     _mm_store_ps(dst + i + 4, y0);
                 }
@@ -1689,7 +1689,7 @@ struct SymmColumnVec_32f
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
         const float* ky = (const float*)kernel.data + ksize2;
         int i = 0, k;
@@ -1829,7 +1829,7 @@ struct SymmColumnSmallVec_32f
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         int ksize2 = (kernel.rows + kernel.cols - 1)/2;
         const float* ky = (const float*)kernel.data + ksize2;
         int i = 0;
@@ -1963,7 +1963,7 @@ struct FilterVec_8u
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         const float* kf = (const float*)&coeffs[0];
         int i = 0, k, nz = _nz;
         __m128 d4 = _mm_set1_ps(delta);
@@ -2046,7 +2046,7 @@ struct FilterVec_8u16s
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         const float* kf = (const float*)&coeffs[0];
         short* dst = (short*)_dst;
         int i = 0, k, nz = _nz;
@@ -2127,7 +2127,7 @@ struct FilterVec_32f
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         const float* kf = (const float*)&coeffs[0];
         const float** src = (const float**)_src;
         float* dst = (float*)_dst;
@@ -2217,7 +2217,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
                    (kernel.rows == 1 || kernel.cols == 1));
         vecOp = _vecOp;
     }
-    
+
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         int _ksize = ksize;
@@ -2242,7 +2242,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
                 s0 += f*S[0]; s1 += f*S[1];
                 s2 += f*S[2]; s3 += f*S[3];
             }
-            
+
             D[i] = s0; D[i+1] = s1;
             D[i+2] = s2; D[i+3] = s3;
         }
@@ -2275,7 +2275,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
         symmetryType = _symmetryType;
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 && this->ksize <= 5 );
     }
-    
+
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         int ksize2 = this->ksize/2, ksize2n = ksize2*cn;
@@ -2397,7 +2397,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
 {
     typedef typename CastOp::type1 ST;
     typedef typename CastOp::rtype DT;
-    
+
     ColumnFilter( const Mat& _kernel, int _anchor,
         double _delta, const CastOp& _castOp=CastOp(),
         const VecOp& _vecOp=VecOp() )
@@ -2427,7 +2427,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
         {
             DT* D = (DT*)dst;
             i = vecOp(src, dst, width);
-			#if CV_ENABLE_UNROLLED
+            #if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
                 ST f = ky[0];
@@ -2574,7 +2574,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
 {
     typedef typename CastOp::type1 ST;
     typedef typename CastOp::rtype DT;
-    
+
     SymmColumnSmallFilter( const Mat& _kernel, int _anchor,
                            double _delta, int _symmetryType,
                            const CastOp& _castOp=CastOp(),
@@ -2610,7 +2610,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
             {
                 if( is_1_2_1 )
                 {
-					#if CV_ENABLE_UNROLLED
+                    #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = S0[i] + S1[i]*2 + S2[i] + _delta;
@@ -2624,7 +2624,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+3] = castOp(s1);
                     }
                     #else
-		            for( ; i < width; i ++ )
+                    for( ; i < width; i ++ )
                     {
                         ST s0 = S0[i] + S1[i]*2 + S2[i] + _delta;
                         D[i] = castOp(s0);
@@ -2633,7 +2633,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                 }
                 else if( is_1_m2_1 )
                 {
-					#if CV_ENABLE_UNROLLED
+                    #if CV_ENABLE_UNROLLED
                     for( ; i <= width - 4; i += 4 )
                     {
                         ST s0 = S0[i] - S1[i]*2 + S2[i] + _delta;
@@ -2647,7 +2647,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+3] = castOp(s1);
                     }
                     #else
-		            for( ; i < width; i ++ )
+                    for( ; i < width; i ++ )
                     {
                         ST s0 = S0[i] - S1[i]*2 + S2[i] + _delta;
                         D[i] = castOp(s0);
@@ -2700,7 +2700,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
                         D[i+3] = castOp(s1);
                     }
                     #else
-	                for( ; i < width; i ++ )
+                    for( ; i < width; i ++ )
                     {
                         ST s0 = S2[i] - S0[i] + _delta;
                         D[i] = castOp(s0);
@@ -2763,7 +2763,7 @@ template<typename ST, typename DT> struct FixedPtCastEx
 };
 
 }
-    
+
 cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
                                                    InputArray _kernel, int anchor,
                                                    int symmetryType )
@@ -2785,7 +2785,7 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
             return Ptr<BaseRowFilter>(new SymmRowSmallFilter<float, float, SymmRowSmallVec_32f>
                 (kernel, anchor, symmetryType, SymmRowSmallVec_32f(kernel, symmetryType)));
     }
-        
+
     if( sdepth == CV_8U && ddepth == CV_32S )
         return Ptr<BaseRowFilter>(new RowFilter<uchar, int, RowVec_8u32s>
             (kernel, anchor, RowVec_8u32s(kernel)));
@@ -2820,7 +2820,7 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
 
 cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstType,
                                              InputArray _kernel, int anchor,
-                                             int symmetryType, double delta, 
+                                             int symmetryType, double delta,
                                              int bits )
 {
     Mat kernel = _kernel.getMat();
@@ -3045,7 +3045,7 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
 {
     typedef typename CastOp::type1 KT;
     typedef typename CastOp::rtype DT;
-    
+
     Filter2D( const Mat& _kernel, Point _anchor,
         double _delta, const CastOp& _castOp=CastOp(),
         const VecOp& _vecOp=VecOp() )
@@ -3143,7 +3143,7 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
         kernel = _kernel;
     else
         _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32S ? 1./(1 << bits) : 1.);
-    
+
     if( sdepth == CV_8U && ddepth == CV_8U )
         return Ptr<BaseFilter>(new Filter2D<uchar, Cast<float, uchar>, FilterVec_8u>
             (kernel, anchor, delta, Cast<float, uchar>(), FilterVec_8u(kernel, 0, delta)));
@@ -3203,7 +3203,7 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
 {
     Mat _kernel = filter_kernel.getMat();
     _srcType = CV_MAT_TYPE(_srcType);
-    _dstType = CV_MAT_TYPE(_dstType);    
+    _dstType = CV_MAT_TYPE(_dstType);
     int cn = CV_MAT_CN(_srcType);
     CV_Assert( cn == CV_MAT_CN(_dstType) );
 
@@ -3211,14 +3211,14 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
     int bits = 0;
 
     /*int sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
-    int ktype = _kernel.depth() == CV_32S ? KERNEL_INTEGER : getKernelType(_kernel, _anchor); 
+    int ktype = _kernel.depth() == CV_32S ? KERNEL_INTEGER : getKernelType(_kernel, _anchor);
     if( sdepth == CV_8U && (ddepth == CV_8U || ddepth == CV_16S) &&
         _kernel.rows*_kernel.cols <= (1 << 10) )
     {
         bits = (ktype & KERNEL_INTEGER) ? 0 : 11;
         _kernel.convertTo(kernel, CV_32S, 1 << bits);
     }*/
-    
+
     Ptr<BaseFilter> _filter2D = getLinearFilter(_srcType, _dstType,
         kernel, _anchor, _delta, bits);
 
@@ -3233,7 +3233,7 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    double delta, int borderType )
 {
     Mat src = _src.getMat(), kernel = _kernel.getMat();
-    
+
     if( ddepth < 0 )
         ddepth = src.depth();
 
@@ -3279,7 +3279,7 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       double delta, int borderType )
 {
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
-    
+
     if( ddepth < 0 )
         ddepth = src.depth();
 

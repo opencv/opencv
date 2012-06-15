@@ -6,7 +6,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     cout << "\nThis program demonstrates circle finding with the Hough transform.\n"
             "Usage:\n"
@@ -28,10 +28,10 @@ int main(int argc, char** argv)
     Mat cimg;
     medianBlur(img, img, 5);
     cvtColor(img, cimg, CV_GRAY2BGR);
-    
+
     vector<Vec3f> circles;
     HoughCircles(img, circles, CV_HOUGH_GRADIENT, 1, 10,
-                 100, 30, 1, 30 // change the last two parameters 
+                 100, 30, 1, 30 // change the last two parameters
                                 // (min_radius & max_radius) to detect larger circles
                  );
     for( size_t i = 0; i < circles.size(); i++ )

@@ -91,7 +91,8 @@ void CV_ThreshTest::get_test_array_types_and_sizes( int test_case_idx,
     }
     else if( depth == CV_16S )
     {
-        float min_val = SHRT_MIN-100.f, max_val = SHRT_MAX+100.f;
+        float min_val = SHRT_MIN-100.f;
+        max_val = SHRT_MAX+100.f;
         thresh_val = (float)(cvtest::randReal(rng)*(max_val - min_val) + min_val);
         max_val = (float)(cvtest::randReal(rng)*(max_val - min_val) + min_val);
         if( cvtest::randInt(rng)%4 == 0 )

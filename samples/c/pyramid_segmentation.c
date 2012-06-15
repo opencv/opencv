@@ -4,7 +4,7 @@
 #include "opencv2/legacy/legacy.hpp"
 #include <stdio.h>
 
-void help()
+static void help(void)
 {
 	printf("\nThis program demonstrated color pyramid segmentation cvcvPyrSegmentation() which is controlled\n"
 			"by two trhesholds which can be manipulated by a trackbar. It can take an image file name or defaults to 'fruits.jpg'\n"
@@ -32,7 +32,7 @@ CvMemStorage *storage;
 
 CvPoint pt1, pt2;
 
-void ON_SEGMENT(int a)
+static void ON_SEGMENT(int a)
 {
     cvPyrSegmentation(image0, image1, storage, &comp,
                       level, threshold1+1, threshold2+1);

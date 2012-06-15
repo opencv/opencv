@@ -13,15 +13,15 @@ using std::cerr;
 using std::ostream;
 using namespace cv;
 
-void help(char** av)
+static void help(char** av)
 {
   cout << "\nfilestorage_sample demonstrate the usage of the opencv serialization functionality.\n"
-		  << "usage:\n"
-		  <<  av[0] << " outputfile.yml.gz\n"
-		  << "\n   outputfile above can have many different extenstions, see below."
-		  << "\nThis program demonstrates the use of FileStorage for serialization, that is use << and >>  in OpenCV\n"
-		  << "For example, how to create a class and have it serialize, but also how to use it to read and write matrices.\n"
-		  << "FileStorage allows you to serialize to various formats specified by the file end type."
+      << "usage:\n"
+      <<  av[0] << " outputfile.yml.gz\n"
+      << "\n   outputfile above can have many different extenstions, see below."
+      << "\nThis program demonstrates the use of FileStorage for serialization, that is use << and >>  in OpenCV\n"
+      << "For example, how to create a class and have it serialize, but also how to use it to read and write matrices.\n"
+      << "FileStorage allows you to serialize to various formats specified by the file end type."
           << "\nYou should try using different file extensions.(e.g. yaml yml xml xml.gz yaml.gz etc...)\n" << endl;
 }
 
@@ -52,17 +52,17 @@ struct MyData
 };
 
 //These write and read functions must exist as per the inline functions in operations.hpp
-void write(FileStorage& fs, const std::string&, const MyData& x){
+static void write(FileStorage& fs, const std::string&, const MyData& x){
   x.write(fs);
 }
-void read(const FileNode& node, MyData& x, const MyData& default_value = MyData()){
+static void read(const FileNode& node, MyData& x, const MyData& default_value = MyData()){
   if(node.empty())
     x = default_value;
   else
     x.read(node);
 }
 
-ostream& operator<<(ostream& out, const MyData& m){
+static ostream& operator<<(ostream& out, const MyData& m){
   out << "{ id = " << m.id << ", ";
   out << "X = " << m.X << ", ";
   out << "A = " << m.A << "}";

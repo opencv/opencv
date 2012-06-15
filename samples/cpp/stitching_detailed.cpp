@@ -37,7 +37,7 @@
 // and on any theory of liability, whether in contract, strict liability,
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
-// 
+//
 //
 //M*/
 
@@ -60,7 +60,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
-void printUsage()
+static void printUsage()
 {
     cout <<
         "Rotation model images stitcher.\n\n"
@@ -126,7 +126,7 @@ double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
-string features = "surf";
+string features_type = "surf";
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
 bool do_wave_correct = true;
@@ -141,7 +141,7 @@ int blend_type = Blender::MULTI_BAND;
 float blend_strength = 5;
 string result_name = "result.jpg";
 
-int parseCmdArgs(int argc, char** argv)
+static int parseCmdArgs(int argc, char** argv)
 {
     if (argc == 1)
     {
@@ -194,8 +194,8 @@ int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--features")
         {
-            features = argv[i + 1];
-            if (features == "orb")
+            features_type = argv[i + 1];
+            if (features_type == "orb")
                 match_conf = 0.3f;
             i++;
         }
@@ -345,7 +345,7 @@ int main(int argc, char* argv[])
     int64 t = getTickCount();
 
     Ptr<FeaturesFinder> finder;
-    if (features == "surf")
+    if (features_type == "surf")
     {
 #ifdef HAVE_OPENCV_GPU
         if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
@@ -354,13 +354,13 @@ int main(int argc, char* argv[])
 #endif
             finder = new SurfFeaturesFinder();
     }
-    else if (features == "orb")
+    else if (features_type == "orb")
     {
         finder = new OrbFeaturesFinder();
     }
     else
     {
-        cout << "Unknown 2D features type: '" << features << "'.\n";
+        cout << "Unknown 2D features type: '" << features_type << "'.\n";
         return -1;
     }
 
@@ -471,10 +471,10 @@ int main(int argc, char* argv[])
     Ptr<detail::BundleAdjusterBase> adjuster;
     if (ba_cost_func == "reproj") adjuster = new detail::BundleAdjusterReproj();
     else if (ba_cost_func == "ray") adjuster = new detail::BundleAdjusterRay();
-    else 
-    { 
-        cout << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n"; 
-        return -1; 
+    else
+    {
+        cout << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n";
+        return -1;
     }
     adjuster->setConfThresh(conf_thresh);
     Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
@@ -544,18 +544,18 @@ int main(int argc, char* argv[])
         if (warp_type == "plane") warper_creator = new cv::PlaneWarper();
         else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarper();
         else if (warp_type == "spherical") warper_creator = new cv::SphericalWarper();
-		else if (warp_type == "fisheye") warper_creator = new cv::FisheyeWarper();
-		else if (warp_type == "stereographic") warper_creator = new cv::StereographicWarper();
-		else if (warp_type == "compressedPlaneA2B1") warper_creator = new cv::CompressedRectilinearWarper(2, 1);
-		else if (warp_type == "compressedPlaneA1.5B1") warper_creator = new cv::CompressedRectilinearWarper(1.5, 1);
-		else if (warp_type == "compressedPlanePortraitA2B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(2, 1);
-		else if (warp_type == "compressedPlanePortraitA1.5B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(1.5, 1);
-		else if (warp_type == "paniniA2B1") warper_creator = new cv::PaniniWarper(2, 1);
-		else if (warp_type == "paniniA1.5B1") warper_creator = new cv::PaniniWarper(1.5, 1);
-		else if (warp_type == "paniniPortraitA2B1") warper_creator = new cv::PaniniPortraitWarper(2, 1);
-		else if (warp_type == "paniniPortraitA1.5B1") warper_creator = new cv::PaniniPortraitWarper(1.5, 1);
-		else if (warp_type == "mercator") warper_creator = new cv::MercatorWarper();
-		else if (warp_type == "transverseMercator") warper_creator = new cv::TransverseMercatorWarper();
+        else if (warp_type == "fisheye") warper_creator = new cv::FisheyeWarper();
+        else if (warp_type == "stereographic") warper_creator = new cv::StereographicWarper();
+        else if (warp_type == "compressedPlaneA2B1") warper_creator = new cv::CompressedRectilinearWarper(2, 1);
+        else if (warp_type == "compressedPlaneA1.5B1") warper_creator = new cv::CompressedRectilinearWarper(1.5, 1);
+        else if (warp_type == "compressedPlanePortraitA2B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(2, 1);
+        else if (warp_type == "compressedPlanePortraitA1.5B1") warper_creator = new cv::CompressedRectilinearPortraitWarper(1.5, 1);
+        else if (warp_type == "paniniA2B1") warper_creator = new cv::PaniniWarper(2, 1);
+        else if (warp_type == "paniniA1.5B1") warper_creator = new cv::PaniniWarper(1.5, 1);
+        else if (warp_type == "paniniPortraitA2B1") warper_creator = new cv::PaniniPortraitWarper(2, 1);
+        else if (warp_type == "paniniPortraitA1.5B1") warper_creator = new cv::PaniniPortraitWarper(1.5, 1);
+        else if (warp_type == "mercator") warper_creator = new cv::MercatorWarper();
+        else if (warp_type == "transverseMercator") warper_creator = new cv::TransverseMercatorWarper();
     }
 
     if (warper_creator.empty())
@@ -563,7 +563,7 @@ int main(int argc, char* argv[])
         cout << "Can't create the following warper '" << warp_type << "'\n";
         return 1;
     }
-    
+
     Ptr<RotationWarper> warper = warper_creator->create(static_cast<float>(warped_image_scale * seam_work_aspect));
 
     for (int i = 0; i < num_images; ++i)
@@ -632,7 +632,7 @@ int main(int argc, char* argv[])
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
     Ptr<Blender> blender;
-    double compose_seam_aspect = 1;
+    //double compose_seam_aspect = 1;
     double compose_work_aspect = 1;
 
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
@@ -648,7 +648,7 @@ int main(int argc, char* argv[])
             is_compose_scale_set = true;
 
             // Compute relative scales
-            compose_seam_aspect = compose_scale / seam_scale;
+            //compose_seam_aspect = compose_scale / seam_scale;
             compose_work_aspect = compose_scale / work_scale;
 
             // Update warped image scale

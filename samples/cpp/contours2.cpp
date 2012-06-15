@@ -6,7 +6,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
 	cout
 	<< "\nThis program illustrates the use of findContours and drawContours\n"
@@ -23,7 +23,7 @@ int levels = 3;
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
 
-void on_trackbar(int, void*)
+static void on_trackbar(int, void*)
 {
 	Mat cnt_img = Mat::zeros(w, w, CV_8UC3);
     int _levels = levels - 3;

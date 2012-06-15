@@ -974,7 +974,7 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
         scbuf[i] = scbuf[i - esz];
 }
 
-void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+static void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                InputArray _mask, const BinaryFunc* tab, bool bitwise)
 {
     int kind1 = _src1.kind(), kind2 = _src2.kind();
@@ -1216,7 +1216,7 @@ void cv::min(const Mat& src1, double src2, Mat& dst)
 namespace cv
 {
 
-void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                InputArray _mask, int dtype, BinaryFunc* tab, bool muldiv=false, void* usrdata=0)
 {
     int kind1 = _src1.kind(), kind2 = _src2.kind();

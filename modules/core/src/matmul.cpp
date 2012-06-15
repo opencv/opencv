@@ -63,7 +63,7 @@ GEMM_CopyBlock( const uchar* src, size_t src_step,
 
     for( ; size.height--; src += src_step, dst += dst_step )
     {
-		j=0;
+        j=0;
          #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
         {
@@ -345,7 +345,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             for( k = 0; k < n; k++, b_data += b_step )
             {
                 WT al(a_data[k]);
-				j=0;
+                j=0;
                  #if CV_ENABLE_UNROLLED
                 for(; j <= m - 4; j += 4 )
                 {
@@ -513,8 +513,8 @@ GEMMStore( const T* c_data, size_t c_step,
         if( _c_data )
         {
             c_data = _c_data;
-			j=0;
-			 #if CV_ENABLE_UNROLLED
+            j=0;
+             #if CV_ENABLE_UNROLLED
             for(; j <= d_size.width - 4; j += 4, c_data += 4*c_step1 )
             {
                 WT t0 = alpha*d_buf[j];
@@ -539,8 +539,8 @@ GEMMStore( const T* c_data, size_t c_step,
         }
         else
         {
-			j = 0;
-			 #if CV_ENABLE_UNROLLED
+            j = 0;
+             #if CV_ENABLE_UNROLLED
             for( ; j <= d_size.width - 4; j += 4 )
             {
                 WT t0 = alpha*d_buf[j];
@@ -552,7 +552,7 @@ GEMMStore( const T* c_data, size_t c_step,
                 d_data[j+2] = T(t0);
                 d_data[j+3] = T(t1);
             }
-			#endif
+            #endif
             for( ; j < d_size.width; j++ )
                 d_data[j] = T(alpha*d_buf[j]);
         }
@@ -597,7 +597,7 @@ static void GEMMSingleMul_64f( const double* a_data, size_t a_step,
                                 alpha, beta, flags);
 }
 
-    
+
 static void GEMMSingleMul_32fc( const Complexf* a_data, size_t a_step,
                               const Complexf* b_data, size_t b_step,
                               const Complexf* c_data, size_t c_step,
@@ -620,7 +620,7 @@ static void GEMMSingleMul_64fc( const Complexd* a_data, size_t a_step,
     GEMMSingleMul<Complexd,Complexd>(a_data, a_step, b_data, b_step, c_data,
                                  c_step, d_data, d_step, a_size, d_size,
                                  alpha, beta, flags);
-}    
+}
 
 static void GEMMBlockMul_32f( const float* a_data, size_t a_step,
              const float* b_data, size_t b_step,
@@ -696,7 +696,7 @@ static void GEMMStore_64fc( const Complexd* c_data, size_t c_step,
 }
 
 void cv::gemm( InputArray matA, InputArray matB, double alpha,
-           InputArray matC, double beta, OutputArray matD, int flags )
+           InputArray matC, double beta, OutputArray _matD, int flags )
 {
     const int block_lin_size = 128;
     const int block_size = block_lin_size * block_lin_size;
@@ -741,8 +741,8 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
              ((flags&GEMM_3_T) != 0 && C.rows == d_size.width && C.cols == d_size.height)));
     }
 
-    matD.create( d_size.height, d_size.width, type );
-    Mat D = matD.getMat();
+    _matD.create( d_size.height, d_size.width, type );
+    Mat D = _matD.getMat();
     if( (flags & GEMM_3_T) != 0 && C.data == D.data )
     {
         transpose( C, C );
@@ -2008,7 +2008,7 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
         t1 = src1[i+3]*alpha + src2[i+3];
         dst[i+2] = t0; dst[i+3] = t1;
     }
-	for(; i < len; i++ )
+    for(; i < len; i++ )
         dst[i] = src1[i]*alpha + src2[i];
 }
 
@@ -2035,7 +2035,7 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
     }
     else
 #endif
-     //vz why do we need unroll here? 
+     //vz why do we need unroll here?
     for( ; i <= len - 4; i += 4 )
     {
         double t0, t1;
@@ -2046,7 +2046,7 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
         t1 = src1[i+3]*alpha + src2[i+3];
         dst[i+2] = t0; dst[i+3] = t1;
     }
-	for(; i < len; i++ )
+    for(; i < len; i++ )
         dst[i] = src1[i]*alpha + src2[i];
 }
 
@@ -2072,7 +2072,7 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
     float falpha = (float)alpha;
     void* palpha = depth == CV_32F ? (void*)&falpha : (void*)&alpha;
 
-    ScaleAddFunc func = depth == CV_32F ? (ScaleAddFunc)scaleAdd_32f : (ScaleAddFunc)scaleAdd_64f; 
+    ScaleAddFunc func = depth == CV_32F ? (ScaleAddFunc)scaleAdd_32f : (ScaleAddFunc)scaleAdd_64f;
 
     if( src1.isContinuous() && src2.isContinuous() && dst.isContinuous() )
     {
@@ -2134,12 +2134,12 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
         _mean = mean.reshape(1, size.height);
 }
 
-void cv::calcCovarMatrix( InputArray _data, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
+void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
 {
-    if(_data.kind() == _InputArray::STD_VECTOR_MAT)
+    if(_src.kind() == _InputArray::STD_VECTOR_MAT)
     {
         std::vector<cv::Mat> src;
-        _data.getMatVector(src);
+        _src.getMatVector(src);
 
         CV_Assert( src.size() > 0 );
 
@@ -2185,7 +2185,7 @@ void cv::calcCovarMatrix( InputArray _data, OutputArray _covar, InputOutputArray
         return;
     }
 
-    Mat data = _data.getMat(), mean;
+    Mat data = _src.getMat(), mean;
     CV_Assert( ((flags & CV_COVAR_ROWS) != 0) ^ ((flags & CV_COVAR_COLS) != 0) );
     bool takeRows = (flags & CV_COVAR_ROWS) != 0;
     int type = data.type();
@@ -2209,7 +2209,7 @@ void cv::calcCovarMatrix( InputArray _data, OutputArray _covar, InputOutputArray
     else
     {
         ctype = std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), CV_32F);
-        reduce( _data, _mean, takeRows ? 0 : 1, CV_REDUCE_AVG, ctype );
+        reduce( _src, _mean, takeRows ? 0 : 1, CV_REDUCE_AVG, ctype );
         mean = _mean.getMat();
     }
 
@@ -2223,7 +2223,7 @@ void cv::calcCovarMatrix( InputArray _data, OutputArray _covar, InputOutputArray
 
 double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
 {
-    Mat v1 = _v1.getMat(), v2 = _v2.getMat(), icovar = _icovar.getMat(); 
+    Mat v1 = _v1.getMat(), v2 = _v2.getMat(), icovar = _icovar.getMat();
     int type = v1.type(), depth = v1.depth();
     Size sz = v1.size();
     int i, j, len = sz.width*sz.height*v1.channels();
@@ -2261,7 +2261,7 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         {
             double row_sum = 0;
             j = 0;
-			 #if CV_ENABLE_UNROLLED
+             #if CV_ENABLE_UNROLLED
             for(; j <= len - 4; j += 4 )
                 row_sum += diff[j]*mat[j] + diff[j+1]*mat[j+1] +
                            diff[j+2]*mat[j+2] + diff[j+3]*mat[j+3];
@@ -2292,7 +2292,7 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         {
             double row_sum = 0;
             j = 0;
-			 #if CV_ENABLE_UNROLLED
+             #if CV_ENABLE_UNROLLED
             for(; j <= len - 4; j += 4 )
                 row_sum += diff[j]*mat[j] + diff[j+1]*mat[j+1] +
                            diff[j+2]*mat[j+2] + diff[j+3]*mat[j+3];
@@ -2642,7 +2642,7 @@ dotProd_(const T* src1, const T* src2, int len)
 {
     int i = 0;
     double result = 0;
-	 #if CV_ENABLE_UNROLLED
+     #if CV_ENABLE_UNROLLED
     for( ; i <= len - 4; i += 4 )
         result += (double)src1[i]*src2[i] + (double)src1[i+1]*src2[i+1] +
             (double)src1[i+2]*src2[i+2] + (double)src1[i+3]*src2[i+3];
@@ -2674,7 +2674,7 @@ static double dotProd_8u(const uchar* src1, const uchar* src2, int len)
         {
             blockSize = std::min(len0 - i, blockSize0);
             __m128i s = _mm_setzero_si128();
-			j = 0;
+            j = 0;
             for( ; j <= blockSize - 16; j += 16 )
             {
                 __m128i b0 = _mm_loadu_si128((const __m128i*)(src1 + j));
@@ -2806,9 +2806,9 @@ double Mat::dot(InputArray _mat) const
 
 PCA::PCA() {}
 
-PCA::PCA(InputArray data, InputArray mean, int flags, int maxComponents)
+PCA::PCA(InputArray data, InputArray _mean, int flags, int maxComponents)
 {
-    operator()(data, mean, flags, maxComponents);
+    operator()(data, _mean, flags, maxComponents);
 }
 
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComponents)
@@ -2964,7 +2964,7 @@ void cv::PCACompute(InputArray data, InputOutputArray mean,
     pca.mean.copyTo(mean);
     pca.eigenvectors.copyTo(eigenvectors);
 }
-    
+
 void cv::PCAProject(InputArray data, InputArray mean,
                     InputArray eigenvectors, OutputArray result)
 {

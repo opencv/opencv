@@ -162,6 +162,8 @@ else()
 endif()
 add_dependencies(${the_module} ${api_target})
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations)
+
 # Additional target properties
 set_target_properties(${the_module} PROPERTIES
     OUTPUT_NAME "${the_module}"

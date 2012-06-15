@@ -45,7 +45,7 @@ using namespace std;
 
 namespace cv
 {
-    
+
 /*
  *  FeatureDetector
  */
@@ -95,19 +95,19 @@ Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
         return new GridAdaptedFeatureDetector(FeatureDetector::create(
                                 detectorType.substr(strlen("Grid"))));
     }
-    
+
     if( detectorType.find("Pyramid") == 0 )
     {
         return new PyramidAdaptedFeatureDetector(FeatureDetector::create(
                                 detectorType.substr(strlen("Pyramid"))));
     }
-    
+
     if( detectorType.find("Dynamic") == 0 )
     {
         return new DynamicAdaptedFeatureDetector(AdjusterAdapter::create(
                                 detectorType.substr(strlen("Dynamic"))));
     }
-    
+
     if( detectorType.compare( "HARRIS" ) == 0 )
     {
         Ptr<FeatureDetector> fd = FeatureDetector::create("GFTT");
@@ -149,13 +149,13 @@ void GFTTDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, co
 /*
  *  DenseFeatureDetector
  */
-DenseFeatureDetector::DenseFeatureDetector( float _initFeatureScale, int _featureScaleLevels, 
-									  float _featureScaleMul, int _initXyStep, 
-									  int _initImgBound, bool _varyXyStepWithScale, 
-									  bool _varyImgBoundWithScale ) :
-	initFeatureScale(_initFeatureScale), featureScaleLevels(_featureScaleLevels),
-	featureScaleMul(_featureScaleMul), initXyStep(_initXyStep), initImgBound(_initImgBound),
-	varyXyStepWithScale(_varyXyStepWithScale), varyImgBoundWithScale(_varyImgBoundWithScale)
+DenseFeatureDetector::DenseFeatureDetector( float _initFeatureScale, int _featureScaleLevels,
+                                      float _featureScaleMul, int _initXyStep,
+                                      int _initImgBound, bool _varyXyStepWithScale,
+                                      bool _varyImgBoundWithScale ) :
+    initFeatureScale(_initFeatureScale), featureScaleLevels(_featureScaleLevels),
+    featureScaleMul(_featureScaleMul), initXyStep(_initXyStep), initImgBound(_initImgBound),
+    varyXyStepWithScale(_varyXyStepWithScale), varyImgBoundWithScale(_varyImgBoundWithScale)
 {}
 
 
@@ -203,7 +203,7 @@ struct ResponseComparator
     }
 };
 
-void keepStrongest( int N, vector<KeyPoint>& keypoints )
+static void keepStrongest( int N, vector<KeyPoint>& keypoints )
 {
     if( (int)keypoints.size() > N )
     {

@@ -143,7 +143,7 @@
 
 /* Signed 64-bit type formatter */
 /* Unsigned 64-bit type formatter */
-#ifdef _MSC_VER
+#if defined _MSC_VER || defined __MINGW__ || defined __MINGW32__
 # define TIFF_UINT64_FORMAT "%I64u"
 # define TIFF_SSIZE_FORMAT "%Iu"
 #else

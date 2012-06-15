@@ -50,7 +50,7 @@ namespace {
 
 struct IncDistance
 {
-    IncDistance(vector<int> &dists) : dists(&dists[0]) {}
+    IncDistance(vector<int> &vdists) : dists(&vdists[0]) {}
     void operator ()(const GraphEdge &edge) { dists[edge.to] = dists[edge.from] + 1; }
     int* dists;
 };
@@ -58,8 +58,8 @@ struct IncDistance
 
 struct CalcRotation
 {
-    CalcRotation(int num_images, const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras)
-        : num_images(num_images), pairwise_matches(&pairwise_matches[0]), cameras(&cameras[0]) {}
+    CalcRotation(int _num_images, const vector<MatchesInfo> &_pairwise_matches, vector<CameraParams> &_cameras)
+        : num_images(_num_images), pairwise_matches(&_pairwise_matches[0]), cameras(&_cameras[0]) {}
 
     void operator ()(const GraphEdge &edge)
     {
@@ -195,10 +195,10 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
     // Compute number of correspondences
     total_num_matches_ = 0;
     for (size_t i = 0; i < edges_.size(); ++i)
-        total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + 
+        total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ +
                                                                 edges_[i].second].num_inliers);
 
-    CvLevMarq solver(num_images_ * num_params_per_cam_, 
+    CvLevMarq solver(num_images_ * num_params_per_cam_,
                      total_num_matches_ * num_errs_per_measurement_,
                      term_criteria_);
 
@@ -270,7 +270,7 @@ void BundleAdjusterReproj::setUpInitialCameraParams(const vector<CameraParams> &
 
         svd(cameras[i].R, SVD::FULL_UV);
         Mat R = svd.u * svd.vt;
-        if (determinant(R) < 0) 
+        if (determinant(R) < 0)
             R *= -1;
 
         Mat rvec;
@@ -392,7 +392,7 @@ void BundleAdjusterReproj::calcJacobian(Mat &jac)
             calcDeriv(err1_, err2_, 2 * step, jac.col(i * 7));
             cam_params_.at<double>(i * 7, 0) = val;
         }
-        if (refinement_mask_.at<uchar>(0, 2))        
+        if (refinement_mask_.at<uchar>(0, 2))
         {
             val = cam_params_.at<double>(i * 7 + 1, 0);
             cam_params_.at<double>(i * 7 + 1, 0) = val - step;
@@ -402,7 +402,7 @@ void BundleAdjusterReproj::calcJacobian(Mat &jac)
             calcDeriv(err1_, err2_, 2 * step, jac.col(i * 7 + 1));
             cam_params_.at<double>(i * 7 + 1, 0) = val;
         }
-        if (refinement_mask_.at<uchar>(1, 2))        
+        if (refinement_mask_.at<uchar>(1, 2))
         {
             val = cam_params_.at<double>(i * 7 + 2, 0);
             cam_params_.at<double>(i * 7 + 2, 0) = val - step;
@@ -448,7 +448,7 @@ void BundleAdjusterRay::setUpInitialCameraParams(const vector<CameraParams> &cam
 
         svd(cameras[i].R, SVD::FULL_UV);
         Mat R = svd.u * svd.vt;
-        if (determinant(R) < 0) 
+        if (determinant(R) < 0)
             R *= -1;
 
         Mat rvec;
@@ -546,7 +546,7 @@ void BundleAdjusterRay::calcError(Mat &err)
             double mult = sqrt(f1 * f2);
             err.at<double>(3 * match_idx, 0) = mult * (x1 - x2);
             err.at<double>(3 * match_idx + 1, 0) = mult * (y1 - y2);
-            err.at<double>(3 * match_idx + 2, 0) = mult * (z1 - z2);           
+            err.at<double>(3 * match_idx + 2, 0) = mult * (z1 - z2);
 
             match_idx++;
         }
@@ -728,7 +728,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
                 continue;
             int comp1 = comps.findSetByElem(i);
             int comp2 = comps.findSetByElem(j);
-            if (comp1 != comp2) 
+            if (comp1 != comp2)
                 comps.mergeSets(comp1, comp2);
         }
     }
@@ -739,7 +739,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
     vector<int> indices_removed;
     for (int i = 0; i < num_images; ++i)
         if (comps.findSetByElem(i) == max_comp)
-            indices.push_back(i);    
+            indices.push_back(i);
         else
             indices_removed.push_back(i);
 
@@ -761,7 +761,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
 
     LOG("Removed some images, because can't match them or there are too similar images: (");
     LOG(indices_removed[0] + 1);
-    for (size_t i = 1; i < indices_removed.size(); ++i) 
+    for (size_t i = 1; i < indices_removed.size(); ++i)
         LOG(", " << indices_removed[i]+1);
     LOGLN(").");
     LOGLN("Try to decrease --match_conf value and/or check if you're stitching duplicates.");
