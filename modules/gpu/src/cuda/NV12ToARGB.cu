@@ -50,11 +50,11 @@
  * is strictly prohibited.
  *
  */
- 
+
 /*
     NV12ToARGB color space conversion CUDA kernel
 
-    This sample uses CUDA to perform a simple NV12 (YUV 4:2:0 planar) 
+    This sample uses CUDA to perform a simple NV12 (YUV 4:2:0 planar)
     source and converts to output in ARGB format
 */
 
@@ -82,16 +82,16 @@ namespace cv { namespace gpu { namespace device {
             chromaCr = (float)((int)yuvi[2] - 512.0f);
 
            // Convert YUV To RGB with hue adjustment
-           *red   = (luma     * constHueColorSpaceMat[0]) + 
-                    (chromaCb * constHueColorSpaceMat[1]) + 
+           *red   = (luma     * constHueColorSpaceMat[0]) +
+                    (chromaCb * constHueColorSpaceMat[1]) +
                     (chromaCr * constHueColorSpaceMat[2]);
 
-           *green = (luma     * constHueColorSpaceMat[3]) + 
-                    (chromaCb * constHueColorSpaceMat[4]) + 
+           *green = (luma     * constHueColorSpaceMat[3]) +
+                    (chromaCb * constHueColorSpaceMat[4]) +
                     (chromaCr * constHueColorSpaceMat[5]);
 
-           *blue  = (luma     * constHueColorSpaceMat[6]) + 
-                    (chromaCb * constHueColorSpaceMat[7]) + 
+           *blue  = (luma     * constHueColorSpaceMat[6]) +
+                    (chromaCb * constHueColorSpaceMat[7]) +
                     (chromaCr * constHueColorSpaceMat[8]);
         }
 
@@ -105,9 +105,9 @@ namespace cv { namespace gpu { namespace device {
             blue  = ::fmin(::fmax(blue,  0.0f), 1023.f);
 
             // Convert to 8 bit unsigned integers per color component
-            ARGBpixel = (((uint)blue  >> 2) | 
-                        (((uint)green >> 2) << 8)  | 
-                        (((uint)red   >> 2) << 16) | 
+            ARGBpixel = (((uint)blue  >> 2) |
+                        (((uint)green >> 2) << 8)  |
+                        (((uint)red   >> 2) << 16) |
                         (uint)alpha);
 
             return ARGBpixel;
@@ -118,8 +118,8 @@ namespace cv { namespace gpu { namespace device {
         #define COLOR_COMPONENT_BIT_SIZE 10
         #define COLOR_COMPONENT_MASK     0x3FF
 
-        __global__ void NV12ToARGB(uchar* srcImage, size_t nSourcePitch, 
-                                   uint* dstImage, size_t nDestPitch,  
+        __global__ void NV12ToARGB(uchar* srcImage, size_t nSourcePitch,
+                                   uint* dstImage, size_t nDestPitch,
                                    uint width, uint height)
         {
             // Pad borders with duplicate pixels, and we multiply by 2 because we process 2 pixels per thread
@@ -127,7 +127,7 @@ namespace cv { namespace gpu { namespace device {
             const int y = blockIdx.y *  blockDim.y       +  threadIdx.y;
 
             if (x >= width || y >= height)
-                return; 
+                return;
 
             // Read 2 Luma components at a time, so we don't waste processing since CbCr are decimated this way.
             // if we move to texture we could read 4 luminance values
@@ -142,7 +142,7 @@ namespace cv { namespace gpu { namespace device {
             const int y_chroma = y >> 1;
 
             if (y & 1)  // odd scanline ?
-            {                
+            {
                 uint chromaCb = srcImage[chromaOffset + y_chroma * nSourcePitch + x    ];
                 uint chromaCr = srcImage[chromaOffset + y_chroma * nSourcePitch + x + 1];
 
@@ -151,7 +151,7 @@ namespace cv { namespace gpu { namespace device {
                     chromaCb = (chromaCb + srcImage[chromaOffset + (y_chroma + 1) * nSourcePitch + x    ] + 1) >> 1;
                     chromaCr = (chromaCr + srcImage[chromaOffset + (y_chroma + 1) * nSourcePitch + x + 1] + 1) >> 1;
                 }
-                
+
                 yuv101010Pel[0] |= (chromaCb << ( COLOR_COMPONENT_BIT_SIZE       + 2));
                 yuv101010Pel[0] |= (chromaCr << ((COLOR_COMPONENT_BIT_SIZE << 1) + 2));
 
@@ -166,17 +166,17 @@ namespace cv { namespace gpu { namespace device {
                 yuv101010Pel[1] |= ((uint)srcImage[chromaOffset + y_chroma * nSourcePitch + x    ] << ( COLOR_COMPONENT_BIT_SIZE       + 2));
                 yuv101010Pel[1] |= ((uint)srcImage[chromaOffset + y_chroma * nSourcePitch + x + 1] << ((COLOR_COMPONENT_BIT_SIZE << 1) + 2));
             }
-            
+
             // this steps performs the color conversion
             uint yuvi[6];
             float red[2], green[2], blue[2];
-           
-            yuvi[0] =  (yuv101010Pel[0] &   COLOR_COMPONENT_MASK    );	
-            yuvi[1] = ((yuv101010Pel[0] >>  COLOR_COMPONENT_BIT_SIZE)       & COLOR_COMPONENT_MASK); 
+
+            yuvi[0] =  (yuv101010Pel[0] &   COLOR_COMPONENT_MASK    );
+            yuvi[1] = ((yuv101010Pel[0] >>  COLOR_COMPONENT_BIT_SIZE)       & COLOR_COMPONENT_MASK);
             yuvi[2] = ((yuv101010Pel[0] >> (COLOR_COMPONENT_BIT_SIZE << 1)) & COLOR_COMPONENT_MASK);
 
-            yuvi[3] =  (yuv101010Pel[1] &   COLOR_COMPONENT_MASK    );	
-            yuvi[4] = ((yuv101010Pel[1] >>  COLOR_COMPONENT_BIT_SIZE)       & COLOR_COMPONENT_MASK); 
+            yuvi[3] =  (yuv101010Pel[1] &   COLOR_COMPONENT_MASK    );
+            yuvi[4] = ((yuv101010Pel[1] >>  COLOR_COMPONENT_BIT_SIZE)       & COLOR_COMPONENT_MASK);
             yuvi[5] = ((yuv101010Pel[1] >> (COLOR_COMPONENT_BIT_SIZE << 1)) & COLOR_COMPONENT_MASK);
 
             // YUV to RGB Transformation conversion
@@ -184,7 +184,7 @@ namespace cv { namespace gpu { namespace device {
             YUV2RGB(&yuvi[3], &red[1], &green[1], &blue[1]);
 
             // Clamp the results to RGBA
-           
+
             const size_t dstImagePitch = nDestPitch >> 2;
 
             dstImage[y * dstImagePitch + x     ] = RGBAPACK_10bit(red[0], green[0], blue[0], constAlpha);
@@ -194,9 +194,9 @@ namespace cv { namespace gpu { namespace device {
         void NV12ToARGB_gpu(const PtrStepb decodedFrame, DevMem2D_<uint> interopFrame, cudaStream_t stream)
         {
             dim3 block(32, 8);
-            dim3 grid(divUp(interopFrame.cols, 2 * block.x), divUp(interopFrame.rows, block.y)); 
+            dim3 grid(divUp(interopFrame.cols, 2 * block.x), divUp(interopFrame.rows, block.y));
 
-            NV12ToARGB<<<grid, block, 0, stream>>>(decodedFrame.data, decodedFrame.step, interopFrame.data, interopFrame.step, 
+            NV12ToARGB<<<grid, block, 0, stream>>>(decodedFrame.data, decodedFrame.step, interopFrame.data, interopFrame.step,
                 interopFrame.cols, interopFrame.rows);
 
             cudaSafeCall( cudaGetLastError() );

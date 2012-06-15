@@ -42,9 +42,9 @@
 
 #include "internal_shared.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace blend 
+    namespace blend
     {
         template <typename T>
         __global__ void blendLinearKernel(int rows, int cols, int cn, const PtrStep<T> img1, const PtrStep<T> img2,
@@ -62,14 +62,14 @@ namespace cv { namespace gpu { namespace device
                 T p2 = img2.ptr(y)[x];
                 result.ptr(y)[x] = (p1 * w1 + p2 * w2) / (w1 + w2 + 1e-5f);
             }
-        }	
+        }
 
         template <typename T>
         void blendLinearCaller(int rows, int cols, int cn, PtrStep<T> img1, PtrStep<T> img2, PtrStepf weights1, PtrStepf weights2, PtrStep<T> result, cudaStream_t stream)
         {
             dim3 threads(16, 16);
             dim3 grid(divUp(cols * cn, threads.x), divUp(rows, threads.y));
-            
+
             blendLinearKernel<<<grid, threads, 0, stream>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
             cudaSafeCall( cudaGetLastError() );
 
@@ -105,12 +105,12 @@ namespace cv { namespace gpu { namespace device
         {
             dim3 threads(16, 16);
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
-            
+
             blendLinearKernel8UC4<<<grid, threads, 0, stream>>>(rows, cols, img1, img2, weights1, weights2, result);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall(cudaDeviceSynchronize());
         }
-    } // namespace blend 
+    } // namespace blend
 }}} // namespace cv { namespace gpu { namespace device
