@@ -965,9 +965,7 @@ namespace cv
         COLORMAP_COOL = 8,
         COLORMAP_HSV = 9,
         COLORMAP_PINK = 10,
-        COLORMAP_HOT = 11,
-        COLORMAP_MKPJ1 = 12,
-        COLORMAP_MKPJ2 = 13
+        COLORMAP_HOT = 11
     };
 
     CV_EXPORTS void applyColorMap(InputArray src, OutputArray dst, int colormap);
