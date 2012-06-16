@@ -48,10 +48,12 @@
 #include <iostream>
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
-#include <Eigen/Core>
-#include <unsupported/Eigen/MatrixFunctions>
-
-#include <Eigen/Dense>
+#  include <Eigen/Core>
+#  ifdef ANDROID
+     template <typename Scalar> Scalar log2(Scalar v) { using std::log; return log(v)/log(Scalar(2)); }
+#  endif
+#  include <unsupported/Eigen/MatrixFunctions>
+#  include <Eigen/Dense>
 #endif
 
 #include <limits>
