@@ -571,16 +571,16 @@ namespace colormap
         colormap::ColorMap* cm =
             colormap == COLORMAP_AUTUMN ? (colormap::ColorMap*)(new colormap::Autumn) :
             colormap == COLORMAP_BONE ? (colormap::ColorMap*)(new colormap::Bone) :
-            colormap == COLORMAP_JET ? (colormap::ColorMap*)(new colormap::Jet) :
-            colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) :
-            colormap == COLORMAP_OCEAN ? (colormap::ColorMap*)(new colormap::Ocean) :
-            colormap == COLORMAP_SUMMER ? (colormap::ColorMap*)(new colormap::Summer) :
-            colormap == COLORMAP_SPRING ? (colormap::ColorMap*)(new colormap::Spring) :
             colormap == COLORMAP_COOL ? (colormap::ColorMap*)(new colormap::Cool) :
-            colormap == COLORMAP_HSV ? (colormap::ColorMap*)(new colormap::HSV) :
             colormap == COLORMAP_HOT ? (colormap::ColorMap*)(new colormap::Hot) :
-            colormap == COLORMAP_MKPJ1 ? (colormap::ColorMap*)(new colormap::MKPJ1) :
-            colormap == COLORMAP_MKPJ2 ? (colormap::ColorMap*)(new colormap::MKPJ2) : 0;
+            colormap == COLORMAP_HSV ? (colormap::ColorMap*)(new colormap::HSV) :
+            colormap == COLORMAP_JET ? (colormap::ColorMap*)(new colormap::Jet) :
+            colormap == COLORMAP_OCEAN ? (colormap::ColorMap*)(new colormap::Ocean) :
+            colormap == COLORMAP_PINK ? (colormap::ColorMap*)(new colormap::Pink) :
+            colormap == COLORMAP_RAINBOW ? (colormap::ColorMap*)(new colormap::Rainbow) :
+            colormap == COLORMAP_SPRING ? (colormap::ColorMap*)(new colormap::Spring) :
+            colormap == COLORMAP_SUMMER ? (colormap::ColorMap*)(new colormap::Summer) :
+            colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) : 0;
 
         if( !cm )
             CV_Error( CV_StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
