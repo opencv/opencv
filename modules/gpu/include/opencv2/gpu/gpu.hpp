@@ -631,7 +631,7 @@ CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, 
 
 //! resizes the image
 //! Supports INTER_AREA
-CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, GpuMat& buffer, double fx=0, double fy=0, int interpolation = INTER_AREA, Stream& stream = Stream::Null());
+CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, GpuMat& buffer, Size dsize, double fx=0, double fy=0, int interpolation = INTER_AREA, Stream& stream = Stream::Null());
 
 //! warps the image using affine transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC

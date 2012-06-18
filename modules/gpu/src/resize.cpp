@@ -56,7 +56,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     throw_nogpu();
 }
-void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, GpuMat& buffer,
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst,GpuMat& buffer, Size dsize,
             double fx, double fy, int interpolation, Stream& s)
 {
     (void)src;
@@ -87,7 +87,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, GpuMat& buffer, double fx, double fy,
+void cv::gpu::resize(const GpuMat& src, GpuMat& dst, GpuMat& buffer, Size dsize, double fx, double fy,
                      int interpolation, Stream& s)
 {
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);

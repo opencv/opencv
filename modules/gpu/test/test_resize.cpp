@@ -189,7 +189,7 @@ TEST_P(ResizeArea, Accuracy)
     cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
     cv::gpu::GpuMat buffer = createMat(cv::Size(dst.cols, src.rows), CV_32FC1);
 
-    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), buffer, coeff, coeff, interpolation);
+    cv::gpu::resize(loadMat(src, useRoi), dst, buffer, cv::Size(), coeff, coeff, interpolation);
 
     cv::Mat dst_cpu;
 
