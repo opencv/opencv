@@ -34,12 +34,16 @@ INSTANTIATE_TEST_CASE_P(Video, GoodFeaturesToTrack, testing::Combine(
 IMPLEMENT_PARAM_CLASS(GraySource, bool)
 IMPLEMENT_PARAM_CLASS(Points, int)
 IMPLEMENT_PARAM_CLASS(WinSize, int)
+IMPLEMENT_PARAM_CLASS(Levels, int)
+IMPLEMENT_PARAM_CLASS(Iters, int)
 
-GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, GraySource, Points, WinSize)
+GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, GraySource, Points, WinSize, Levels, Iters)
 {
     bool useGray = GET_PARAM(1);
     int points = GET_PARAM(2);
     int win_size = GET_PARAM(3);
+    int levels = GET_PARAM(4);
+    int iters = GET_PARAM(5);
 
     cv::Mat frame0 = readImage("gpu/opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
@@ -59,11 +63,17 @@ GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, GraySource, Points, W
     cv::Mat nextPts;
     cv::Mat status;
 
-    cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(), cv::Size(win_size, win_size));
+    cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(),
+                             cv::Size(win_size, win_size), levels - 1,
+                             cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, iters, 0.01));
+
+    declare.time(20.0);
 
     TEST_CYCLE()
     {
-        cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(), cv::Size(win_size, win_size));
+        cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, cv::noArray(),
+                                 cv::Size(win_size, win_size), levels - 1,
+                                 cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, iters, 0.01));
     }
 }
 
@@ -71,7 +81,9 @@ INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, testing::Combine(
     ALL_DEVICES,
     testing::Values(GraySource(true), GraySource(false)),
     testing::Values(Points(1000), Points(2000), Points(4000), Points(8000)),
-    testing::Values(WinSize(17), WinSize(21))));
+    testing::Values(WinSize(9), WinSize(13), WinSize(17), WinSize(21)),
+    testing::Values(Levels(1), Levels(2), Levels(3)),
+    testing::Values(Iters(1), Iters(10), Iters(30))));
 
 //////////////////////////////////////////////////////
 // FarnebackOpticalFlowTest
@@ -100,6 +112,7 @@ GPU_PERF_TEST_1(FarnebackOpticalFlowTest, cv::gpu::DeviceInfo)
 
     TEST_CYCLE()
     {
+        cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
     }
 }
 

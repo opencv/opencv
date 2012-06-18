@@ -1749,60 +1749,28 @@ inline GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU(int maxC
 class CV_EXPORTS PyrLKOpticalFlow
 {
 public:
-    PyrLKOpticalFlow()
-    {
-        winSize = Size(21, 21);
-        maxLevel = 3;
-        iters = 30;
-        useInitialFlow = false;
-        minEigThreshold = 1e-4f;
-        getMinEigenVals = false;
-        isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
-    }
+    PyrLKOpticalFlow();
 
     void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
         GpuMat& status, GpuMat* err = 0);
 
     void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
 
+    void releaseMemory();
+
     Size winSize;
     int maxLevel;
     int iters;
     bool useInitialFlow;
-    float minEigThreshold;
-    bool getMinEigenVals;
-
-    void releaseMemory()
-    {
-        dx_calcBuf_.release();
-        dy_calcBuf_.release();
-
-        prevPyr_.clear();
-        nextPyr_.clear();
-
-        dx_buf_.release();
-        dy_buf_.release();
-
-        uPyr_.clear();
-        vPyr_.clear();
-    }
 
 private:
-    void calcSharrDeriv(const GpuMat& src, GpuMat& dx, GpuMat& dy);
-
-    void buildImagePyramid(const GpuMat& img0, vector<GpuMat>& pyr, bool withBorder);
-
-    GpuMat dx_calcBuf_;
-    GpuMat dy_calcBuf_;
-
     vector<GpuMat> prevPyr_;
     vector<GpuMat> nextPyr_;
 
-    GpuMat dx_buf_;
-    GpuMat dy_buf_;
+    GpuMat buf_;
 
-    vector<GpuMat> uPyr_;
-    vector<GpuMat> vPyr_;
+    GpuMat uPyr_[2];
+    GpuMat vPyr_[2];
 
     bool isDeviceArch11_;
 };

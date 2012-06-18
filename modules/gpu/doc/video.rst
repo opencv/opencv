@@ -204,10 +204,7 @@ Class used for calculating an optical flow. ::
         Size winSize;
         int maxLevel;
         int iters;
-        double derivLambda;
         bool useInitialFlow;
-        float minEigThreshold;
-        bool getMinEigenVals;
 
         void releaseMemory();
     };

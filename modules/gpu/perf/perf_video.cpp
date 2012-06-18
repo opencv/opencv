@@ -156,15 +156,19 @@ INSTANTIATE_TEST_CASE_P(Video, GoodFeaturesToTrack, testing::Combine(
 IMPLEMENT_PARAM_CLASS(GraySource, bool)
 IMPLEMENT_PARAM_CLASS(Points, int)
 IMPLEMENT_PARAM_CLASS(WinSize, int)
+IMPLEMENT_PARAM_CLASS(Levels, int)
+IMPLEMENT_PARAM_CLASS(Iters, int)
 
-GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, GraySource, Points, WinSize)
+GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, GraySource, Points, WinSize, Levels, Iters)
 {
     cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
 
     bool useGray = GET_PARAM(1);
     int points = GET_PARAM(2);
-    int win_size = GET_PARAM(3);
+    int winSize = GET_PARAM(3);
+    int levels = GET_PARAM(4);
+    int iters = GET_PARAM(5);
 
     cv::Mat frame0_host = readImage("gpu/opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0_host.empty());
@@ -184,7 +188,9 @@ GPU_PERF_TEST(PyrLKOpticalFlowSparse, cv::gpu::DeviceInfo, GraySource, Points, W
     detector(cv::gpu::GpuMat(gray_frame), pts);
 
     cv::gpu::PyrLKOpticalFlow pyrLK;
-    pyrLK.winSize = cv::Size(win_size, win_size);
+    pyrLK.winSize = cv::Size(winSize, winSize);
+    pyrLK.maxLevel = levels - 1;
+    pyrLK.iters = iters;
 
     cv::gpu::GpuMat frame0(frame0_host);
     cv::gpu::GpuMat frame1(frame1_host);
@@ -203,13 +209,12 @@ INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlowSparse, testing::Combine(
     ALL_DEVICES,
     testing::Values(GraySource(true), GraySource(false)),
     testing::Values(Points(1000), Points(2000), Points(4000), Points(8000)),
-    testing::Values(WinSize(17), WinSize(21))));
+    testing::Values(WinSize(9), WinSize(13), WinSize(17), WinSize(21)),
+    testing::Values(Levels(1), Levels(2), Levels(3)),
+    testing::Values(Iters(1), Iters(10), Iters(30))));
 
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlowDense
-
-IMPLEMENT_PARAM_CLASS(Levels, int)
-IMPLEMENT_PARAM_CLASS(Iters, int)
 
 GPU_PERF_TEST(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo, WinSize, Levels, Iters)
 {

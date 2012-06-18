@@ -249,8 +249,7 @@ TEST_P(PyrLKOpticalFlow, Sparse)
 
     cv::gpu::GpuMat d_nextPts;
     cv::gpu::GpuMat d_status;
-    cv::gpu::GpuMat d_err;
-    pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status, &d_err);
+    pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status);
 
     std::vector<cv::Point2f> nextPts(d_nextPts.cols);
     cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*)&nextPts[0]);
@@ -260,22 +259,19 @@ TEST_P(PyrLKOpticalFlow, Sparse)
     cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void*)&status[0]);
     d_status.download(status_mat);
 
-    std::vector<float> err(d_err.cols);
-    cv::Mat err_mat(1, d_err.cols, CV_32FC1, (void*)&err[0]);
-    d_err.download(err_mat);
-
     std::vector<cv::Point2f> nextPts_gold;
     std::vector<unsigned char> status_gold;
-    std::vector<float> err_gold;
-    cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, err_gold);
+    cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, cv::noArray());
 
     ASSERT_EQ(nextPts_gold.size(), nextPts.size());
     ASSERT_EQ(status_gold.size(), status.size());
-    ASSERT_EQ(err_gold.size(), err.size());
 
     size_t mistmatch = 0;
     for (size_t i = 0; i < nextPts.size(); ++i)
     {
+        cv::Point2i a = nextPts[i];
+        cv::Point2i b = nextPts_gold[i];
+
         if (status[i] != status_gold[i])
         {
             ++mistmatch;
@@ -284,13 +280,9 @@ TEST_P(PyrLKOpticalFlow, Sparse)
 
         if (status[i])
         {
-            cv::Point2i a = nextPts[i];
-            cv::Point2i b = nextPts_gold[i];
+            bool eq = std::abs(a.x - b.x) <= 1 && std::abs(a.y - b.y) <= 1;
 
-            bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
-            float errdiff = std::abs(err[i] - err_gold[i]);
-
-            if (!eq || errdiff > 1e-1)
+            if (!eq)
                 ++mistmatch;
         }
     }
