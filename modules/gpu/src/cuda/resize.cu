@@ -537,7 +537,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template<typename T, typename W>
-        __global__ void resise_scan_fast_x(const DevMem2D_<T> src, DevMem2D_<W> dst, int fx, int fy, int thred_lines)
+        __global__ void resise_scan_fast_x(const DevMem2D_<T> src, DevMem2D_<W> dst, int fx, int fy, int thred_lines, int stride)
         {
             extern __shared__ W sbuf[];
 
@@ -545,11 +545,14 @@ namespace cv { namespace gpu { namespace device
 
             // load line-block on shared memory
             int y = blockIdx.x / thred_lines;
-            int input_stride = (blockIdx.x - y * thred_lines) * blockDim.x;
+            int input_stride = (blockIdx.x % thred_lines) * stride;
             int x = input_stride  + tid;
 
             // store global data in shared memory
-            sbuf[tid] = src(y, x);
+            if (x  < src.cols && y < src.rows)
+                sbuf[tid] = src(y, x);
+            else
+                sbuf[tid] = 0;
             __syncthreads();
 
             scan_block<inclusive, W>(sbuf);
@@ -575,7 +578,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template<typename T, typename W>
-        __global__ void resise_scan_fast_y(const DevMem2D_<W> src, DevMem2D_<T> dst, int fx, int fy, int thred_lines)
+        __global__ void resise_scan_fast_y(const DevMem2D_<W> src, DevMem2D_<T> dst, int fx, int fy, int thred_lines, int stride)
         {
             extern __shared__ W sbuf[];
 
@@ -584,13 +587,15 @@ namespace cv { namespace gpu { namespace device
             // load line-block on shared memory
             int x = blockIdx.x / thred_lines;
 
-            int global_stride = (blockIdx.x % thred_lines) * blockDim.x;
-            if (!tid) printf("STRIDE : %d", global_stride);
+            int global_stride = (blockIdx.x % thred_lines) * stride;
             int y = global_stride + tid;
 
             // store global data in shared memory
+            if (x  < src.cols && y < src.rows)
+                sbuf[tid] = src(y, x);
+            else
+                sbuf[tid] = 0;
 
-            sbuf[tid] = src(y, x);
             __syncthreads();
             scan_block<inclusive, W>(sbuf);
 
@@ -623,28 +628,30 @@ namespace cv { namespace gpu { namespace device
             int iscale_x = round(fx);
             int iscale_y = round(fy);
 
-            const int warps = 4;
+            int warps = 4;
             const int threads = 32 * warps;
+            int input_stride = threads / iscale_x;
 
-            int thred_lines = divUp(src.cols, threads);
+            int thred_lines = divUp(src.cols, input_stride * iscale_x);
             int blocks = src.rows * thred_lines;
 
-            printf("device code executed for X coordinate with:\nsize %d warps %d, threads %d, thred_lines %d, blocks %d\n",
-                   src.cols, warps, threads, thred_lines, blocks);
+            printf("device code executed for X coordinate with:\nsize %d warps %d, threads %d, thred_lines %d, blocks %d input strude %d\n",
+                   src.cols, warps, threads, thred_lines, blocks, input_stride * iscale_x);
 
             typedef typename scan_traits<T>::scan_line_type smem_type;
 
             resise_scan_fast_x<T, smem_type><<<blocks, threads, warps * 32 * sizeof(smem_type)>>>
-                    (src, buffer, iscale_x, iscale_y, thred_lines);
+                    (src, buffer, iscale_x, iscale_y, thred_lines, input_stride * iscale_x);
 
-            thred_lines = divUp(src.rows, threads);
+            input_stride = threads / iscale_y;
+            thred_lines = divUp(src.rows, input_stride * iscale_y);
             blocks = dst.cols * thred_lines;
 
             printf("device code executed for Y coordinate with:\nsize %d warps %d, threads %d, thred_lines %d, blocks %d\n",
                    dst.rows, warps, threads, thred_lines, blocks);
 
             resise_scan_fast_y<T, smem_type><<<blocks, threads, warps * 32 * sizeof(smem_type)>>>
-                    (buffer, dst, iscale_x, iscale_y, thred_lines);
+                    (buffer, dst, iscale_x, iscale_y, thred_lines, input_stride * iscale_y);
 
             cudaSafeCall( cudaGetLastError() );
 

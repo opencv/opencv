@@ -201,13 +201,13 @@ TEST_P(ResizeArea, Accuracy)
    cv::Mat gpu;
    dst.download(gpu);
 
-   std::cout //<< src
+   // std::cout // << src
+   // // << std::endl << std::endl
+   // // << gpu_buff
+   // // << std::endl << std::endl
+   // << gpu
    // << std::endl << std::endl
-   // << gpu_buff
-   // << std::endl << std::endl
-   << gpu
-   << std::endl << std::endl
-   << dst_cpu<<  std::endl;
+   // << dst_cpu<<  std::endl;
 
 
     EXPECT_MAT_NEAR(dst_cpu, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
@@ -215,9 +215,9 @@ TEST_P(ResizeArea, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeArea, testing::Combine(
     ALL_DEVICES,
-    testing::Values(cv::Size(640, 10 *  128)),//DIFFERENT_SIZES,
+    testing::Values(cv::Size(640, 480)),//DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1)/*MatType(CV_8UC3), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)*/),
-    testing::Values(0.1),
+    testing::Values(0.05, 0.1),
     testing::Values(Interpolation(cv::INTER_AREA)),
     WHOLE_SUBMAT));
 
