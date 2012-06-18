@@ -195,19 +195,19 @@ TEST_P(ResizeArea, Accuracy)
 
     cv::resize(src, dst_cpu, cv::Size(), coeff, coeff, interpolation);
 
-//    cv::Mat gpu_buff;
-//    buffer.download(gpu_buff);
+   cv::Mat gpu_buff;
+   buffer.download(gpu_buff);
 
-//    cv::Mat gpu;
-//    dst.download(gpu);
+   cv::Mat gpu;
+   dst.download(gpu);
 
-//    std::cout << src
-//    << std::endl << std::endl
-//    << gpu_buff
-//    << std::endl << std::endl
-//    << gpu
-//    << std::endl << std::endl
-//    << dst_cpu<<  std::endl;
+   // std::cout << src
+   // << std::endl << std::endl
+   // << gpu_buff
+   // << std::endl << std::endl
+   // << gpu
+   // << std::endl << std::endl
+   // << dst_cpu<<  std::endl;
 
 
     EXPECT_MAT_NEAR(dst_cpu, dst, src.depth() == CV_32F ? 1e-2 : 1.0);

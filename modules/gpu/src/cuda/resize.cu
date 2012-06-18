@@ -485,35 +485,134 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        template <typename T>
-        __global__ void resize_area_scan_x(const DevMem2D_<T> src, DevMem2D_<T> dst, int fx, int fy,  DevMem2D_<typename scan_traits<T>::scan_line_type> buffer)
+        enum ScanKind { exclusive,  inclusive } ;
+
+        template <ScanKind Kind , class T>
+        __device__ __forceinline__ T scan_warp ( volatile T *ptr , const unsigned int idx = threadIdx.x )
         {
-            typedef typename scan_traits<T>::scan_line_type W;
-            extern __shared__ W line[];
-            scan_x(src,fx,fy, buffer,line, 0);
+            const unsigned int lane = idx & 31;
+
+            if ( lane >=  1) ptr [idx ] = ptr [idx -  1] + ptr [idx];
+            if ( lane >=  2) ptr [idx ] = ptr [idx -  2] + ptr [idx];
+            if ( lane >=  4) ptr [idx ] = ptr [idx -  4] + ptr [idx];
+            if ( lane >=  8) ptr [idx ] = ptr [idx -  8] + ptr [idx];
+            if ( lane >= 16) ptr [idx ] = ptr [idx - 16] + ptr [idx];
+
+            if( Kind == inclusive )
+                return ptr [idx ];
+            else
+                return (lane > 0) ? ptr [idx - 1] : 0;
         }
 
-        template <typename T>
-        __global__ void resize_area_scan_y(const DevMem2D_<T> src, DevMem2D_<T> dst, int fx, int fy,  DevMem2D_<typename scan_traits<T>::scan_line_type> buffer)
+        template <ScanKind Kind , class T>
+        __device__ __forceinline__ T scan_block( volatile T *ptr)
         {
-            typedef typename scan_traits<T>::scan_line_type W;
-            extern __shared__ W line[];
-            scan_y(buffer,fx, fy, dst, line, 0);
+            const unsigned int idx = threadIdx.x;
+            const unsigned int lane = idx & 31;
+            const unsigned int warp = idx >> 5;
+
+            T val = scan_warp <Kind>( ptr , idx );
+            __syncthreads ();
+
+            if( lane == 31 )
+                ptr [ warp ] = ptr [idx ];
+
+            __syncthreads ();
+
+            if( warp == 0 )
+                scan_warp<inclusive>( ptr , idx );
+
+            __syncthreads ();
+
+            if ( warp > 0)
+                val = ptr [warp -1] + val;
+
+            __syncthreads ();
+
+            ptr[idx] = val;
+
+            __syncthreads ();
+
+            return val ;
         }
 
-        template <typename T> struct InterAreaDispatcherStream
+        template<typename T, typename W>
+        __global__ void resise_scan_fast_x(const DevMem2D_<T> src, DevMem2D_<W> dst, int fx, int fy, int thred_lines)
         {
-            static void call(const DevMem2D_<T> src, int fx, int fy, DevMem2D_<T> dst, DevMem2D_<typename scan_traits<T>::scan_line_type> buffer, cudaStream_t stream)
+            extern __shared__ W sbuf[];
+
+            const unsigned int tid = threadIdx. x;
+
+            // load line-block on shared memory
+            int y = blockIdx.x / thred_lines;
+            int input_stride = (blockIdx.x - y * thred_lines) * blockDim.x;
+            int x = input_stride  + tid;
+
+            // store global data in shared memory
+            sbuf[tid] = src(y, x);
+            __syncthreads();
+
+            scan_block<inclusive, W>(sbuf);
+
+            float scale =  __fdividef(1.f, fx);
+            int out_stride = input_stride / fx;
+            int count = blockDim.x / fx;
+
+            if (tid < count)
             {
-                resize_area_scan_x<T><<<src.rows, (src.cols >> 1), src.cols * sizeof(typename scan_traits<T>::scan_line_type) >>>(src, dst, fx, fy, buffer);
+                int start_idx = (tid == 0)? 0 : tid * fx - 1;
+                int end_idx = tid * fx + fx - 1;
 
-                resize_area_scan_y<T><<<dst.cols, (src.rows >> 1), src.rows * sizeof(typename scan_traits<T>::scan_line_type) >>>(src, dst, fx, fy, buffer);
-                cudaSafeCall( cudaGetLastError() );
+                W start = (tid == 0)? (W)0:sbuf[start_idx];
+                W end = sbuf[end_idx];
 
-                if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );
+                if (blockIdx.x == 0)
+                    printf("%d~~~~~~~~ start_idx %d, end_idx %d, start %f, end %f\n",
+                           tid, start_idx, end_idx, start, end);
+
+                dst(y, out_stride  +  tid) = (end - start);
             }
-        };
+        }
+
+        template<typename T, typename W>
+        __global__ void resise_scan_fast_y(const DevMem2D_<W> src, DevMem2D_<T> dst, int fx, int fy, int thred_lines)
+        {
+            extern __shared__ W sbuf[];
+
+            const unsigned int tid = threadIdx. x;
+
+            // load line-block on shared memory
+            int x = blockIdx.x / thred_lines;
+
+            int global_stride = (blockIdx.x % thred_lines) * blockDim.x;
+            if (!tid) printf("STRIDE : %d", global_stride);
+            int y = global_stride + tid;
+
+            // store global data in shared memory
+
+            sbuf[tid] = src(y, x);
+            __syncthreads();
+            scan_block<inclusive, W>(sbuf);
+
+            float scale =  __fdividef(1.f, fx * fy);
+            int out_stride = global_stride / fx;
+            int count = blockDim.x / fx;
+
+            if (tid < count)
+            {
+                int start_idx = (tid == 0)? 0 : tid * fx - 1;
+                int end_idx = tid * fx + fx - 1;
+
+                W start = (tid == 0)? (W)0:sbuf[start_idx];
+                W end = sbuf[end_idx];
+
+                if (blockIdx.x == 0)
+                    printf("!!!!!!!!%d~~~~~~~~ start_idx %d, end_idx %d, start %f, end %f\n",
+                           tid, start_idx, end_idx, start, end);
+
+                dst(out_stride  +  tid, x) = saturate_cast<T>((end - start) * scale);
+            }
+        }
 
         template <typename T>
         void resize_area_gpu(const DevMem2Db src, DevMem2Db dst,float fx, float fy,
@@ -521,10 +620,37 @@ namespace cv { namespace gpu { namespace device
         {
             (void)interpolation;
 
+            //TODO: add assert to picture size
             int iscale_x = round(fx);
             int iscale_y = round(fy);
 
-            InterAreaDispatcherStream<T>::call(src, iscale_x, iscale_y, dst, buffer, stream);
+            const int warps = 4;
+            const int threads = 32 * warps;
+
+            int thred_lines = divUp(src.cols, threads);
+            int blocks = src.rows * thred_lines;
+
+            printf("device code executed for X coordinate with:\nsize %d warps %d, threads %d, thred_lines %d, blocks %d\n",
+                   src.cols, warps, threads, thred_lines, blocks);
+
+            typedef typename scan_traits<T>::scan_line_type smem_type;
+
+            resise_scan_fast_x<T, smem_type><<<blocks, threads, warps * 32 * sizeof(smem_type)>>>
+                    (src, buffer, iscale_x, iscale_y, thred_lines);
+
+            thred_lines = divUp(src.rows, threads);
+            blocks = dst.cols * thred_lines;
+
+            printf("device code executed for Y coordinate with:\nwarps %d, threads %d, thred_lines %d, blocks %d\n",
+                   warps, threads, thred_lines, blocks);
+
+            resise_scan_fast_y<T, smem_type><<<blocks, threads, warps * 32 * sizeof(smem_type)>>>
+                    (buffer, dst, iscale_x, iscale_y, thred_lines);
+
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         template void resize_area_gpu<uchar>(DevMem2Db src, DevMem2Db dst, float fx, float fy, int interpolation, DevMem2Df buffer, cudaStream_t stream);
