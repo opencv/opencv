@@ -198,7 +198,7 @@ Trains an SVM with optimal parameters.
 
 .. ocv:pyfunction:: cv2.SVM.train_auto(trainData, responses, varIdx, sampleIdx, params[, k_fold[, Cgrid[, gammaGrid[, pGrid[, nuGrid[, coeffGrid[, degreeGrid[, balanced]]]]]]]]) -> retval
 
-    :param k_fold: Cross-validation parameter. The training set is divided into ``k_fold`` subsets. One subset is used to train the model, the others form the test set. So, the SVM algorithm is executed ``k_fold`` times.
+    :param k_fold: Cross-validation parameter. The training set is divided into ``k_fold`` subsets. One subset is used to test the model, the others form the train set. So, the SVM algorithm is executed ``k_fold`` times.
 
     :param \*Grid: Iteration grid for the corresponding SVM parameter.
 
