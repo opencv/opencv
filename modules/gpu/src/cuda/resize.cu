@@ -620,7 +620,6 @@ namespace cv { namespace gpu { namespace device
         {
             (void)interpolation;
 
-            //TODO: add assert to picture size
             int iscale_x = round(fx);
             int iscale_y = round(fy);
 
@@ -641,8 +640,8 @@ namespace cv { namespace gpu { namespace device
             thred_lines = divUp(src.rows, threads);
             blocks = dst.cols * thred_lines;
 
-            printf("device code executed for Y coordinate with:\nwarps %d, threads %d, thred_lines %d, blocks %d\n",
-                   warps, threads, thred_lines, blocks);
+            printf("device code executed for Y coordinate with:\nsize %d warps %d, threads %d, thred_lines %d, blocks %d\n",
+                   dst.rows, warps, threads, thred_lines, blocks);
 
             resise_scan_fast_y<T, smem_type><<<blocks, threads, warps * 32 * sizeof(smem_type)>>>
                     (buffer, dst, iscale_x, iscale_y, thred_lines);

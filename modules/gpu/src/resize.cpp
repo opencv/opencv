@@ -94,6 +94,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, GpuMat& buffer, Size dsize,
     CV_Assert(interpolation == INTER_AREA);
     CV_Assert( (fx < 1.0) && (fy < 1.0));
     CV_Assert(!(dsize == Size()) || (fx > 0 && fy > 0));
+    CV_Assert(src.cols >= 128 && src.rows >= 128);
 
     if (dsize == Size())
         dsize = Size(saturate_cast<int>(src.cols * fx), saturate_cast<int>(src.rows * fy));
