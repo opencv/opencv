@@ -151,7 +151,7 @@ cv::string cv::FileStorage::getDefaultObjectName(const string& _filename)
 
 namespace cv
 {
-#if !defined(ANDROID) || defined(_GLIBCXX_USE_WCHAR_T)
+#if !defined(ANDROID) || (defined(_GLIBCXX_USE_WCHAR_T) && _GLIBCXX_USE_WCHAR_T)
 string fromUtf16(const WString& str)
 {
     cv::AutoBuffer<char> _buf(str.size()*4 + 1);
