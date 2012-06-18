@@ -146,7 +146,7 @@ int main(int argc, char** argv)
     minGradMagnitudes[3] = 1;
 
     const float minDepth = 0.f; //in meters
-    const float maxDepth = 3.f; //in meters
+    const float maxDepth = 4.f; //in meters
     const float maxDepthDiff = 0.07f; //in meters
 
     tm.start();
