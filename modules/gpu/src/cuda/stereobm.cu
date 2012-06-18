@@ -42,9 +42,9 @@
 
 #include "internal_shared.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace stereobm 
+    namespace stereobm
     {
         //////////////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////// Stereo BM ////////////////////////////////////////////////
@@ -70,7 +70,7 @@ namespace cv { namespace gpu { namespace device
 
         template<int RADIUS>
         __device__ unsigned int CalcSSD(volatile unsigned int *col_ssd_cache, volatile unsigned int *col_ssd)
-        {	
+        {
             unsigned int cache = 0;
             unsigned int cache2 = 0;
 
@@ -401,8 +401,8 @@ namespace cv { namespace gpu { namespace device
             prefilter_kernel<<<grid, threads, 0, stream>>>(output, prefilterCap);
             cudaSafeCall( cudaGetLastError() );
 
-            if (stream == 0)   
-                cudaSafeCall( cudaDeviceSynchronize() );    
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
 
             cudaSafeCall( cudaUnbindTexture (texForSobel ) );
         }

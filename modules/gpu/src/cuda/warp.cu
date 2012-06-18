@@ -98,7 +98,7 @@ namespace cv { namespace gpu { namespace device
         {
             dim3 block(32, 8);
             dim3 grid(divUp(xmap.cols, block.x), divUp(xmap.rows, block.y));
-            
+
             buildWarpMaps<Transform><<<grid, block, 0, stream>>>(xmap, ymap);
             cudaSafeCall( cudaGetLastError() );
 
@@ -158,7 +158,7 @@ namespace cv { namespace gpu { namespace device
         {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2D_<T> dst, const float* borderValue, int)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
+                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type;
 
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -256,7 +256,7 @@ namespace cv { namespace gpu { namespace device
         #undef OPENCV_GPU_IMPLEMENT_WARP_TEX
 
         template <class Transform, template <typename> class Filter, template <typename> class B, typename T> struct WarpDispatcher
-        { 
+        {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int cc)
             {
                 if (stream == 0)
@@ -266,7 +266,7 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        template <class Transform, typename T> 
+        template <class Transform, typename T>
         void warp_caller(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Db dst, int interpolation,
                          int borderMode, const float* borderValue, cudaStream_t stream, int cc)
         {

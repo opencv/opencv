@@ -50,9 +50,9 @@
 #include "safe_call.hpp"
 #include "opencv2/gpu/device/common.hpp"
 
-namespace cv { namespace gpu 
+namespace cv { namespace gpu
 {
-    enum 
+    enum
     {
         BORDER_REFLECT101_GPU = 0,
         BORDER_REPLICATE_GPU,
@@ -60,7 +60,7 @@ namespace cv { namespace gpu
         BORDER_REFLECT_GPU,
         BORDER_WRAP_GPU
     };
-            
+
     // Converts CPU border extrapolation mode into GPU internal analogue.
     // Returns true if the GPU analogue exists, false otherwise.
     bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);

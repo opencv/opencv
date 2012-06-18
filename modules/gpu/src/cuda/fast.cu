@@ -40,7 +40,7 @@
 //
 // Copyright (c) 2010, Paul Furgale, Chi Hay Tong
 //
-// The original code was written by Paul Furgale and Chi Hay Tong 
+// The original code was written by Paul Furgale and Chi Hay Tong
 // and later optimized and prepared for integration into OpenCV by Itseez.
 //
 //M*/
@@ -48,9 +48,9 @@
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace fast 
+    namespace fast
     {
         __device__ unsigned int g_counter = 0;
 
@@ -78,14 +78,14 @@ namespace cv { namespace gpu { namespace device
 
 
 
-            d1 = diffType(v, C[0] & 0xff, th);            
+            d1 = diffType(v, C[0] & 0xff, th);
             d2 = diffType(v, C[2] & 0xff, th);
 
             if ((d1 | d2) == 0)
                 return;
 
             mask1 |= (d1 & 1) << 0;
-            mask2 |= ((d1 & 2) >> 1) << 0;            
+            mask2 |= ((d1 & 2) >> 1) << 0;
 
             mask1 |= (d2 & 1) << 8;
             mask2 |= ((d2 & 2) >> 1) << 8;
@@ -141,7 +141,7 @@ namespace cv { namespace gpu { namespace device
                 return;*/
 
             mask1 |= (d1 & 1) << 1;
-            mask2 |= ((d1 & 2) >> 1) << 1; 
+            mask2 |= ((d1 & 2) >> 1) << 1;
 
             mask1 |= (d2 & 1) << 9;
             mask2 |= ((d2 & 2) >> 1) << 9;
@@ -169,7 +169,7 @@ namespace cv { namespace gpu { namespace device
                 return;*/
 
             mask1 |= (d1 & 1) << 5;
-            mask2 |= ((d1 & 2) >> 1) << 5; 
+            mask2 |= ((d1 & 2) >> 1) << 5;
 
             mask1 |= (d2 & 1) << 13;
             mask2 |= ((d2 & 2) >> 1) << 13;
@@ -191,7 +191,7 @@ namespace cv { namespace gpu { namespace device
         // 0 -> not a keypoint
         __device__ __forceinline__ bool isKeyPoint(int mask1, int mask2)
         {
-            return (__popc(mask1) > 8 && (c_table[(mask1 >> 3) - 63] & (1 << (mask1 & 7)))) || 
+            return (__popc(mask1) > 8 && (c_table[(mask1 >> 3) - 63] & (1 << (mask1 & 7)))) ||
                    (__popc(mask2) > 8 && (c_table[(mask2 >> 3) - 63] & (1 << (mask2 & 7))));
         }
 
@@ -212,14 +212,14 @@ namespace cv { namespace gpu { namespace device
                 calcMask(C, v, mid, mask1, mask2);
 
                 int isKp = static_cast<int>(isKeyPoint(mask1, mask2));
-                
+
                 min = isKp * (mid + 1) + (isKp ^ 1) * min;
                 max = (isKp ^ 1) * (mid - 1) + isKp * max;
             }
 
             return min - 1;
         }
-        
+
         template <bool calcScore, class Mask>
         __global__ void calcKeypoints(const DevMem2Db img, const Mask mask, short2* kpLoc, const unsigned int maxKeypoints, PtrStepi score, const int threshold)
         {
@@ -243,7 +243,7 @@ namespace cv { namespace gpu { namespace device
                 C[2] |= static_cast<uint>(img(i - 1, j - 3)) << (3 * 8);
                 C[1] |= static_cast<uint>(img(i - 1, j + 3)) << 8;
 
-                C[3] |= static_cast<uint>(img(i, j - 3));                
+                C[3] |= static_cast<uint>(img(i, j - 3));
                 v     = static_cast<int>(img(i, j));
                 C[1] |= static_cast<uint>(img(i, j + 3));
 
@@ -313,7 +313,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
-            
+
             unsigned int count;
             cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 
@@ -335,14 +335,14 @@ namespace cv { namespace gpu { namespace device
 
                 int score = scoreMat(loc.y, loc.x);
 
-                bool ismax = 
+                bool ismax =
                     score > scoreMat(loc.y - 1, loc.x - 1) &&
                     score > scoreMat(loc.y - 1, loc.x    ) &&
                     score > scoreMat(loc.y - 1, loc.x + 1) &&
 
                     score > scoreMat(loc.y    , loc.x - 1) &&
                     score > scoreMat(loc.y    , loc.x + 1) &&
-                
+
                     score > scoreMat(loc.y + 1, loc.x - 1) &&
                     score > scoreMat(loc.y + 1, loc.x    ) &&
                     score > scoreMat(loc.y + 1, loc.x + 1);
@@ -375,7 +375,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
-            
+
             unsigned int new_count;
             cudaSafeCall( cudaMemcpy(&new_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 

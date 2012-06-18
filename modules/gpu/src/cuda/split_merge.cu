@@ -42,12 +42,12 @@
 
 #include "internal_shared.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace split_merge 
+    namespace split_merge
     {
         template <typename T, size_t elem_size = sizeof(T)>
-        struct TypeTraits 
+        struct TypeTraits
         {
             typedef T type;
             typedef T type2;
@@ -74,7 +74,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T>
-        struct TypeTraits<T, 4> 
+        struct TypeTraits<T, 4>
         {
             typedef int type;
             typedef int2 type2;
@@ -83,7 +83,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T>
-        struct TypeTraits<T, 8> 
+        struct TypeTraits<T, 8>
         {
             typedef double type;
             typedef double2 type2;
@@ -95,11 +95,11 @@ namespace cv { namespace gpu { namespace device
         typedef void (*SplitFunction)(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream);
 
         //------------------------------------------------------------
-        // Merge    
+        // Merge
 
         template <typename T>
-        __global__ void mergeC2_(const uchar* src0, size_t src0_step, 
-                                 const uchar* src1, size_t src1_step, 
+        __global__ void mergeC2_(const uchar* src0, size_t src0_step,
+                                 const uchar* src1, size_t src1_step,
                                  int rows, int cols, uchar* dst, size_t dst_step)
         {
             typedef typename TypeTraits<T>::type2 dst_type;
@@ -111,8 +111,8 @@ namespace cv { namespace gpu { namespace device
             const T* src1_y = (const T*)(src1 + y * src1_step);
             dst_type* dst_y = (dst_type*)(dst + y * dst_step);
 
-            if (x < cols && y < rows) 
-            {                        
+            if (x < cols && y < rows)
+            {
                 dst_type dst_elem;
                 dst_elem.x = src0_y[x];
                 dst_elem.y = src1_y[x];
@@ -122,9 +122,9 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        __global__ void mergeC3_(const uchar* src0, size_t src0_step, 
-                                 const uchar* src1, size_t src1_step, 
-                                 const uchar* src2, size_t src2_step, 
+        __global__ void mergeC3_(const uchar* src0, size_t src0_step,
+                                 const uchar* src1, size_t src1_step,
+                                 const uchar* src2, size_t src2_step,
                                  int rows, int cols, uchar* dst, size_t dst_step)
         {
             typedef typename TypeTraits<T>::type3 dst_type;
@@ -137,8 +137,8 @@ namespace cv { namespace gpu { namespace device
             const T* src2_y = (const T*)(src2 + y * src2_step);
             dst_type* dst_y = (dst_type*)(dst + y * dst_step);
 
-            if (x < cols && y < rows) 
-            {                        
+            if (x < cols && y < rows)
+            {
                 dst_type dst_elem;
                 dst_elem.x = src0_y[x];
                 dst_elem.y = src1_y[x];
@@ -149,9 +149,9 @@ namespace cv { namespace gpu { namespace device
 
 
         template <>
-        __global__ void mergeC3_<double>(const uchar* src0, size_t src0_step, 
-                                 const uchar* src1, size_t src1_step, 
-                                 const uchar* src2, size_t src2_step, 
+        __global__ void mergeC3_<double>(const uchar* src0, size_t src0_step,
+                                 const uchar* src1, size_t src1_step,
+                                 const uchar* src2, size_t src2_step,
                                  int rows, int cols, uchar* dst, size_t dst_step)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -162,8 +162,8 @@ namespace cv { namespace gpu { namespace device
             const double* src2_y = (const double*)(src2 + y * src2_step);
             double* dst_y = (double*)(dst + y * dst_step);
 
-            if (x < cols && y < rows) 
-            {                        
+            if (x < cols && y < rows)
+            {
                 dst_y[3 * x] = src0_y[x];
                 dst_y[3 * x + 1] = src1_y[x];
                 dst_y[3 * x + 2] = src2_y[x];
@@ -172,10 +172,10 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        __global__ void mergeC4_(const uchar* src0, size_t src0_step, 
-                                 const uchar* src1, size_t src1_step, 
-                                 const uchar* src2, size_t src2_step, 
-                                 const uchar* src3, size_t src3_step, 
+        __global__ void mergeC4_(const uchar* src0, size_t src0_step,
+                                 const uchar* src1, size_t src1_step,
+                                 const uchar* src2, size_t src2_step,
+                                 const uchar* src3, size_t src3_step,
                                  int rows, int cols, uchar* dst, size_t dst_step)
         {
             typedef typename TypeTraits<T>::type4 dst_type;
@@ -189,8 +189,8 @@ namespace cv { namespace gpu { namespace device
             const T* src3_y = (const T*)(src3 + y * src3_step);
             dst_type* dst_y = (dst_type*)(dst + y * dst_step);
 
-            if (x < cols && y < rows) 
-            {                        
+            if (x < cols && y < rows)
+            {
                 dst_type dst_elem;
                 dst_elem.x = src0_y[x];
                 dst_elem.y = src1_y[x];
@@ -202,10 +202,10 @@ namespace cv { namespace gpu { namespace device
 
 
         template <>
-        __global__ void mergeC4_<double>(const uchar* src0, size_t src0_step, 
-                                 const uchar* src1, size_t src1_step, 
-                                 const uchar* src2, size_t src2_step, 
-                                 const uchar* src3, size_t src3_step, 
+        __global__ void mergeC4_<double>(const uchar* src0, size_t src0_step,
+                                 const uchar* src1, size_t src1_step,
+                                 const uchar* src2, size_t src2_step,
+                                 const uchar* src3, size_t src3_step,
                                  int rows, int cols, uchar* dst, size_t dst_step)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -217,8 +217,8 @@ namespace cv { namespace gpu { namespace device
             const double* src3_y = (const double*)(src3 + y * src3_step);
             double2* dst_y = (double2*)(dst + y * dst_step);
 
-            if (x < cols && y < rows) 
-            {                        
+            if (x < cols && y < rows)
+            {
                 dst_y[2 * x] = make_double2(src0_y[x], src1_y[x]);
                 dst_y[2 * x + 1] = make_double2(src2_y[x], src3_y[x]);
             }
@@ -303,7 +303,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        __global__ void splitC2_(const uchar* src, size_t src_step, 
+        __global__ void splitC2_(const uchar* src, size_t src_step,
                                 int rows, int cols,
                                 uchar* dst0, size_t dst0_step,
                                 uchar* dst1, size_t dst1_step)
@@ -317,7 +317,7 @@ namespace cv { namespace gpu { namespace device
             T* dst0_y = (T*)(dst0 + y * dst0_step);
             T* dst1_y = (T*)(dst1 + y * dst1_step);
 
-            if (x < cols && y < rows) 
+            if (x < cols && y < rows)
             {
                 src_type src_elem = src_y[x];
                 dst0_y[x] = src_elem.x;
@@ -327,7 +327,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        __global__ void splitC3_(const uchar* src, size_t src_step, 
+        __global__ void splitC3_(const uchar* src, size_t src_step,
                                 int rows, int cols,
                                 uchar* dst0, size_t dst0_step,
                                 uchar* dst1, size_t dst1_step,
@@ -343,7 +343,7 @@ namespace cv { namespace gpu { namespace device
             T* dst1_y = (T*)(dst1 + y * dst1_step);
             T* dst2_y = (T*)(dst2 + y * dst2_step);
 
-            if (x < cols && y < rows) 
+            if (x < cols && y < rows)
             {
                 src_type src_elem = src_y[x];
                 dst0_y[x] = src_elem.x;
@@ -368,7 +368,7 @@ namespace cv { namespace gpu { namespace device
             double* dst1_y = (double*)(dst1 + y * dst1_step);
             double* dst2_y = (double*)(dst2 + y * dst2_step);
 
-            if (x < cols && y < rows) 
+            if (x < cols && y < rows)
             {
                 dst0_y[x] = src_y[3 * x];
                 dst1_y[x] = src_y[3 * x + 1];
@@ -395,7 +395,7 @@ namespace cv { namespace gpu { namespace device
             T* dst2_y = (T*)(dst2 + y * dst2_step);
             T* dst3_y = (T*)(dst3 + y * dst3_step);
 
-            if (x < cols && y < rows) 
+            if (x < cols && y < rows)
             {
                 src_type src_elem = src_y[x];
                 dst0_y[x] = src_elem.x;
@@ -423,7 +423,7 @@ namespace cv { namespace gpu { namespace device
             double* dst2_y = (double*)(dst2 + y * dst2_step);
             double* dst3_y = (double*)(dst3 + y * dst3_step);
 
-            if (x < cols && y < rows) 
+            if (x < cols && y < rows)
             {
                 double2 src_elem1 = src_y[2 * x];
                 double2 src_elem2 = src_y[2 * x + 1];

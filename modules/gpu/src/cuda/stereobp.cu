@@ -44,9 +44,9 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace stereobp 
+    namespace stereobp
     {
         ///////////////////////////////////////////////////////////////
         /////////////////////// load constants ////////////////////////

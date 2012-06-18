@@ -43,7 +43,7 @@
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace video_encoding
     {
@@ -159,12 +159,12 @@ namespace cv { namespace gpu { namespace device
         void YV12_gpu(const DevMem2Db src, int cn, DevMem2Db dst)
         {
             typedef void (*func_t)(const DevMem2Db src, PtrStepb dst);
-            
-            static const func_t funcs[] = 
+
+            static const func_t funcs[] =
             {
                 0, Gray_to_YV12_caller, 0, BGR_to_YV12_caller<3>, BGR_to_YV12_caller<4>
             };
-            
+
             funcs[cn](src, dst);
         }
     }

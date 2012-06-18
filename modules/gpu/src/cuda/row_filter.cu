@@ -48,9 +48,9 @@
 #include "opencv2/gpu/device/border_interpolate.hpp"
 #include "opencv2/gpu/device/static_check.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace row_filter 
+    namespace row_filter
     {
         #define MAX_KERNEL_SIZE 32
 
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace device
             typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
 
             __shared__ sum_t smem[BLOCK_DIM_Y][(PATCH_PER_BLOCK + 2 * HALO_SIZE) * BLOCK_DIM_X];
-            
+
             const int y = blockIdx.y * BLOCK_DIM_Y + threadIdx.y;
 
             if (y >= src.rows)
@@ -161,7 +161,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, int cc, cudaStream_t stream);
 
-            static const caller_t callers[5][33] = 
+            static const caller_t callers[5][33] =
             {
                 {
                     0,
@@ -337,9 +337,9 @@ namespace cv { namespace gpu { namespace device
                     linearRowFilter_caller<30, T, D, BrdRowWrap>,
                     linearRowFilter_caller<31, T, D, BrdRowWrap>,
                     linearRowFilter_caller<32, T, D, BrdRowWrap>
-                }               
+                }
             };
-            
+
             loadKernel(kernel, ksize);
 
             callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, cc, stream);

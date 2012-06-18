@@ -40,7 +40,7 @@
 //
 // Copyright (c) 2010, Paul Furgale, Chi Hay Tong
 //
-// The original code was written by Paul Furgale and Chi Hay Tong 
+// The original code was written by Paul Furgale and Chi Hay Tong
 // and later optimized and prepared for integration into OpenCV by Itseez.
 //
 //M*/
@@ -50,9 +50,9 @@
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace gfft 
+    namespace gfft
     {
         texture<float, cudaTextureType2D, cudaReadModeElementType> eigTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
@@ -117,7 +117,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
-            
+
             uint count;
             cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(uint), cudaMemcpyDeviceToHost) );
 
@@ -126,9 +126,9 @@ namespace cv { namespace gpu { namespace device
 
         class EigGreater
         {
-        public:            
-            __device__ __forceinline__ bool operator()(float2 a, float2 b) const 
-            { 
+        public:
+            __device__ __forceinline__ bool operator()(float2 a, float2 b) const
+            {
                 return tex2D(eigTex, a.x, a.y) > tex2D(eigTex, b.x, b.y);
             }
         };

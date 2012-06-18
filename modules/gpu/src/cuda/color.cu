@@ -45,7 +45,7 @@
 #include <opencv2/gpu/device/color.hpp>
 #include <cvt_colot_internal.h>
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_rgba_traits<uchar>::functor_type)
     {
@@ -153,7 +153,7 @@ namespace cv { namespace gpu { namespace device
     {
         enum { smart_block_dim_y = 8 };
         enum { smart_shift = 4 };
-    };    
+    };
 
     OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_xyz4_traits<uchar>::functor_type)
     {

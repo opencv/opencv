@@ -40,7 +40,7 @@
 //
 // Copyright (c) 2010, Paul Furgale, Chi Hay Tong
 //
-// The original code was written by Paul Furgale and Chi Hay Tong 
+// The original code was written by Paul Furgale and Chi Hay Tong
 // and later optimized and prepared for integration into OpenCV by Itseez.
 //
 //M*/
@@ -51,7 +51,7 @@
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace orb
     {
@@ -59,7 +59,7 @@ namespace cv { namespace gpu { namespace device
         // cull
 
         int cull_gpu(int* loc, float* response, int size, int n_points)
-        {            
+        {
             thrust::device_ptr<int> loc_ptr(loc);
             thrust::device_ptr<float> response_ptr(response);
 
@@ -83,10 +83,10 @@ namespace cv { namespace gpu { namespace device
             {
                 const short2 loc = loc_[ptidx];
 
-                const int r = blockSize / 2;                
+                const int r = blockSize / 2;
                 const int x0 = loc.x - r;
                 const int y0 = loc.y - r;
-                
+
                 int a = 0, b = 0, c = 0;
 
                 for (int ind = threadIdx.x; ind < blockSize * blockSize; ind += blockDim.x)
@@ -94,12 +94,12 @@ namespace cv { namespace gpu { namespace device
                     const int i = ind / blockSize;
                     const int j = ind % blockSize;
 
-                    int Ix = (img(y0 + i, x0 + j + 1) - img(y0 + i, x0 + j - 1)) * 2 + 
-                        (img(y0 + i - 1, x0 + j + 1) - img(y0 + i - 1, x0 + j - 1)) + 
+                    int Ix = (img(y0 + i, x0 + j + 1) - img(y0 + i, x0 + j - 1)) * 2 +
+                        (img(y0 + i - 1, x0 + j + 1) - img(y0 + i - 1, x0 + j - 1)) +
                         (img(y0 + i + 1, x0 + j + 1) - img(y0 + i + 1, x0 + j - 1));
 
-                    int Iy = (img(y0 + i + 1, x0 + j) - img(y0 + i - 1, x0 + j)) * 2 + 
-                        (img(y0 + i + 1, x0 + j - 1) - img(y0 + i - 1, x0 + j - 1)) + 
+                    int Iy = (img(y0 + i + 1, x0 + j) - img(y0 + i - 1, x0 + j)) * 2 +
+                        (img(y0 + i + 1, x0 + j - 1) - img(y0 + i - 1, x0 + j - 1)) +
                         (img(y0 + i + 1, x0 + j + 1) - img(y0 + i - 1, x0 + j + 1));
 
                     a += Ix * Ix;
@@ -160,7 +160,7 @@ namespace cv { namespace gpu { namespace device
                 int m_01 = 0, m_10 = 0;
 
                 const short2 loc = loc_[ptidx];
-                        
+
                 // Treat the center line differently, v=0
                 for (int u = threadIdx.x - half_k; u <= half_k; u += blockDim.x)
                     m_10 += u * image(loc.y, loc.x + u);
@@ -173,7 +173,7 @@ namespace cv { namespace gpu { namespace device
                     int v_sum = 0;
                     int m_sum = 0;
                     const int d = c_u_max[v];
-                    
+
                     for (int u = threadIdx.x - d; u <= d; u += blockDim.x)
                     {
                         int val_plus = image(loc.y + v, loc.x + u);
@@ -229,7 +229,7 @@ namespace cv { namespace gpu { namespace device
         {
             __device__ static int calc(const PtrStepb& img, short2 loc, const int* pattern_x, const int* pattern_y, float sina, float cosa, int i)
             {
-                pattern_x += 16 * i; 
+                pattern_x += 16 * i;
                 pattern_y += 16 * i;
 
                 int t0, t1, val;
@@ -257,7 +257,7 @@ namespace cv { namespace gpu { namespace device
 
                 t0 = GET_VALUE(14); t1 = GET_VALUE(15);
                 val |= (t0 < t1) << 7;
-                
+
                 return val;
             }
         };
@@ -266,23 +266,23 @@ namespace cv { namespace gpu { namespace device
         {
             __device__ static int calc(const PtrStepb& img, short2 loc, const int* pattern_x, const int* pattern_y, float sina, float cosa, int i)
             {
-                pattern_x += 12 * i; 
+                pattern_x += 12 * i;
                 pattern_y += 12 * i;
-             
+
                 int t0, t1, t2, val;
 
                 t0 = GET_VALUE(0); t1 = GET_VALUE(1); t2 = GET_VALUE(2);
                 val = t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0);
-                
+
                 t0 = GET_VALUE(3); t1 = GET_VALUE(4); t2 = GET_VALUE(5);
                 val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 2;
-                
+
                 t0 = GET_VALUE(6); t1 = GET_VALUE(7); t2 = GET_VALUE(8);
                 val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 4;
-                
+
                 t0 = GET_VALUE(9); t1 = GET_VALUE(10); t2 = GET_VALUE(11);
                 val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 6;
-                
+
                 return val;
             }
         };
@@ -291,9 +291,9 @@ namespace cv { namespace gpu { namespace device
         {
             __device__ static int calc(const PtrStepb& img, short2 loc, const int* pattern_x, const int* pattern_y, float sina, float cosa, int i)
             {
-                pattern_x += 16 * i; 
+                pattern_x += 16 * i;
                 pattern_y += 16 * i;
-             
+
                 int t0, t1, t2, t3, k, val;
                 int a, b;
 
@@ -304,7 +304,7 @@ namespace cv { namespace gpu { namespace device
                 if( t3 > t2 ) t2 = t3, b = 3;
                 k = t0 > t2 ? a : b;
                 val = k;
-                
+
                 t0 = GET_VALUE(4); t1 = GET_VALUE(5);
                 t2 = GET_VALUE(6); t3 = GET_VALUE(7);
                 a = 0, b = 2;
@@ -312,7 +312,7 @@ namespace cv { namespace gpu { namespace device
                 if( t3 > t2 ) t2 = t3, b = 3;
                 k = t0 > t2 ? a : b;
                 val |= k << 2;
-                
+
                 t0 = GET_VALUE(8); t1 = GET_VALUE(9);
                 t2 = GET_VALUE(10); t3 = GET_VALUE(11);
                 a = 0, b = 2;
@@ -320,7 +320,7 @@ namespace cv { namespace gpu { namespace device
                 if( t3 > t2 ) t2 = t3, b = 3;
                 k = t0 > t2 ? a : b;
                 val |= k << 4;
-                
+
                 t0 = GET_VALUE(12); t1 = GET_VALUE(13);
                 t2 = GET_VALUE(14); t3 = GET_VALUE(15);
                 a = 0, b = 2;
@@ -328,7 +328,7 @@ namespace cv { namespace gpu { namespace device
                 if( t3 > t2 ) t2 = t3, b = 3;
                 k = t0 > t2 ? a : b;
                 val |= k << 6;
-                
+
                 return val;
             }
         };
@@ -399,7 +399,7 @@ namespace cv { namespace gpu { namespace device
                 y[ptidx] = loc.y * scale;
             }
         }
-        
+
         void mergeLocation_gpu(const short2* loc, float* x, float* y, int npoints, float scale, cudaStream_t stream)
         {
             dim3 block(256);

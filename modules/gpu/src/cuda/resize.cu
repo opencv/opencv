@@ -228,7 +228,7 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        template <typename T> void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, 
+        template <typename T> void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy,
             DevMem2Db dst, int interpolation, cudaStream_t stream)
         {
             typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream);
@@ -244,7 +244,7 @@ namespace cv { namespace gpu { namespace device
             if (interpolation == 3 && (fx <= 1.f || fy <= 1.f))
                 interpolation = 1;
 
-            callers[interpolation](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, fx, fy, 
+            callers[interpolation](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, fx, fy,
                 static_cast< DevMem2D_<T> >(dst), stream);
         }
 

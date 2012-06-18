@@ -44,9 +44,9 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace stereocsbp 
+    namespace stereocsbp
     {
         ///////////////////////////////////////////////////////////////
         /////////////////////// load constants ////////////////////////
@@ -62,7 +62,7 @@ namespace cv { namespace gpu { namespace device
         __constant__ int cth;
 
         __constant__ size_t cimg_step;
-        __constant__ size_t cmsg_step;        
+        __constant__ size_t cmsg_step;
         __constant__ size_t cdisp_step1;
         __constant__ size_t cdisp_step2;
 
@@ -392,7 +392,7 @@ namespace cv { namespace gpu { namespace device
                 get_first_k_initial_local<<<grid, threads, 0, stream>>> (data_cost_selected, disp_selected_pyr, h, w, nr_plane);
             else
                 get_first_k_initial_global<<<grid, threads, 0, stream>>>(data_cost_selected, disp_selected_pyr, h, w, nr_plane);
-            
+
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
@@ -575,7 +575,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
             cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,  &msg_step,  sizeof(size_t)) );
-            
+
             callers[level](disp_selected_pyr, data_cost, rows, cols, h, w, level, nr_plane, channels, stream);
             cudaSafeCall( cudaGetLastError() );
 
@@ -588,13 +588,13 @@ namespace cv { namespace gpu { namespace device
 
         template void compute_data_cost(const float* disp_selected_pyr, float* data_cost, size_t msg_step,
                                int rows, int cols, int h, int w, int h2, int level, int nr_plane, int channels, cudaStream_t stream);
-             
+
 
         ///////////////////////////////////////////////////////////////
         //////////////////////// init message /////////////////////////
         ///////////////////////////////////////////////////////////////
 
-         
+
          template <typename T>
         __device__ void get_first_k_element_increase(T* u_new, T* d_new, T* l_new, T* r_new,
                                                      const T* u_cur, const T* d_cur, const T* l_cur, const T* r_cur,
@@ -691,7 +691,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step1, &disp_step1, sizeof(size_t)) );
             cudaSafeCall( cudaMemcpyToSymbol(cdisp_step2, &disp_step2, sizeof(size_t)) );
             cudaSafeCall( cudaMemcpyToSymbol(cmsg_step,   &msg_step, sizeof(size_t)) );
-            
+
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
 
@@ -720,7 +720,7 @@ namespace cv { namespace gpu { namespace device
                           const float* u_cur, const float* d_cur, const float* l_cur, const float* r_cur,
                           float* selected_disp_pyr_new, const float* selected_disp_pyr_cur,
                           float* data_cost_selected, const float* data_cost, size_t msg_step,
-                          int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);        
+                          int h, int w, int nr_plane, int h2, int w2, int nr_plane2, cudaStream_t stream);
 
         ///////////////////////////////////////////////////////////////
         ////////////////////  calc all iterations /////////////////////
@@ -805,7 +805,7 @@ namespace cv { namespace gpu { namespace device
             for(int t = 0; t < iters; ++t)
             {
                 compute_message<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
-                cudaSafeCall( cudaGetLastError() );                
+                cudaSafeCall( cudaGetLastError() );
             }
 			if (stream == 0)
                     cudaSafeCall( cudaDeviceSynchronize() );
@@ -814,7 +814,7 @@ namespace cv { namespace gpu { namespace device
         template void calc_all_iterations(short* u, short* d, short* l, short* r, const short* data_cost_selected, const short* selected_disp_pyr_cur, size_t msg_step,
             int h, int w, int nr_plane, int iters, cudaStream_t stream);
 
-        template void calc_all_iterations(float* u, float* d, float* l, float* r, const float* data_cost_selected, const float* selected_disp_pyr_cur, size_t msg_step, 
+        template void calc_all_iterations(float* u, float* d, float* l, float* r, const float* data_cost_selected, const float* selected_disp_pyr_cur, size_t msg_step,
             int h, int w, int nr_plane, int iters, cudaStream_t stream);
 
 
@@ -879,7 +879,7 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void compute_disp(const short* u, const short* d, const short* l, const short* r, const short* data_cost_selected, const short* disp_selected, size_t msg_step, 
+        template void compute_disp(const short* u, const short* d, const short* l, const short* r, const short* data_cost_selected, const short* disp_selected, size_t msg_step,
             const DevMem2D_<short>& disp, int nr_plane, cudaStream_t stream);
 
         template void compute_disp(const float* u, const float* d, const float* l, const float* r, const float* data_cost_selected, const float* disp_selected, size_t msg_step,

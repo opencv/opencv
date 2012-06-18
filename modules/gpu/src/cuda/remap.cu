@@ -69,7 +69,7 @@ namespace cv { namespace gpu { namespace device
         {
             static void call(DevMem2D_<T> src, DevMem2Df mapx, DevMem2Df mapy, DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
+                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type;
 
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -159,7 +159,7 @@ namespace cv { namespace gpu { namespace device
                     cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
             };
-            
+
         OPENCV_GPU_IMPLEMENT_REMAP_TEX(uchar)
         //OPENCV_GPU_IMPLEMENT_REMAP_TEX(uchar2)
         OPENCV_GPU_IMPLEMENT_REMAP_TEX(uchar4)
@@ -188,7 +188,7 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcher
         {
-            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy, 
+            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df mapx, DevMem2Df mapy,
                 DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int cc)
             {
                 if (stream == 0)
@@ -198,13 +198,13 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        template <typename T> void remap_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, 
+        template <typename T> void remap_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap,
             DevMem2Db dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc)
         {
-            typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, 
+            typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap,
                 DevMem2D_<T> dst, const float* borderValue, cudaStream_t stream, int cc);
 
-            static const caller_t callers[3][5] = 
+            static const caller_t callers[3][5] =
             {
                 {
                     RemapDispatcher<PointFilter, BrdReflect101, T>::call,
@@ -229,7 +229,7 @@ namespace cv { namespace gpu { namespace device
                 }
             };
 
-            callers[interpolation][borderMode](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, xmap, ymap, 
+            callers[interpolation][borderMode](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, xmap, ymap,
                 static_cast< DevMem2D_<T> >(dst), borderValue, stream, cc);
         }
 

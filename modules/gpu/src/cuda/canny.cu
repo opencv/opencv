@@ -44,9 +44,9 @@
 #include <algorithm>
 #include "internal_shared.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace canny 
+    namespace canny
     {
         __global__ void calcSobelRowPass(const PtrStepb src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols)
         {
@@ -99,7 +99,7 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        template <typename Norm> __global__ void calcMagnitude(const PtrStepi dx_buf, const PtrStepi dy_buf, 
+        template <typename Norm> __global__ void calcMagnitude(const PtrStepi dx_buf, const PtrStepi dy_buf,
             PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols)
         {
             __shared__ int sdx[18][16];
@@ -175,7 +175,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         //////////////////////////////////////////////////////////////////////////////////////////
-            
+
         #define CANNY_SHIFT 15
         #define TG22        (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5)
 
@@ -236,7 +236,7 @@ namespace cv { namespace gpu { namespace device
                             edge_type = 1 + (int)(m > high_thresh);
                     }
                 }
-                
+
                 map.ptr(i + 1)[j + 1] = edge_type;
             }
         }
@@ -270,7 +270,7 @@ namespace cv { namespace gpu { namespace device
 
             const int tid = threadIdx.y * 16 + threadIdx.x;
             const int lx = tid % 18;
-            const int ly = tid / 18; 
+            const int ly = tid / 18;
 
             if (ly < 14)
                 smem[ly][lx] = map.ptr(blockIdx.y * 16 + ly)[blockIdx.x * 16 + lx];
@@ -294,10 +294,10 @@ namespace cv { namespace gpu { namespace device
                         n += smem[threadIdx.y    ][threadIdx.x    ] == 2;
                         n += smem[threadIdx.y    ][threadIdx.x + 1] == 2;
                         n += smem[threadIdx.y    ][threadIdx.x + 2] == 2;
-                        
+
                         n += smem[threadIdx.y + 1][threadIdx.x    ] == 2;
                         n += smem[threadIdx.y + 1][threadIdx.x + 2] == 2;
-                        
+
                         n += smem[threadIdx.y + 2][threadIdx.x    ] == 2;
                         n += smem[threadIdx.y + 2][threadIdx.x + 1] == 2;
                         n += smem[threadIdx.y + 2][threadIdx.x + 2] == 2;
@@ -318,10 +318,10 @@ namespace cv { namespace gpu { namespace device
                     n += smem[threadIdx.y    ][threadIdx.x    ] == 1;
                     n += smem[threadIdx.y    ][threadIdx.x + 1] == 1;
                     n += smem[threadIdx.y    ][threadIdx.x + 2] == 1;
-                    
+
                     n += smem[threadIdx.y + 1][threadIdx.x    ] == 1;
                     n += smem[threadIdx.y + 1][threadIdx.x + 2] == 1;
-                    
+
                     n += smem[threadIdx.y + 2][threadIdx.x    ] == 1;
                     n += smem[threadIdx.y + 2][threadIdx.x + 1] == 1;
                     n += smem[threadIdx.y + 2][threadIdx.x + 2] == 1;
@@ -361,7 +361,7 @@ namespace cv { namespace gpu { namespace device
             #if __CUDA_ARCH__ >= 120
 
             const int stack_size = 512;
-            
+
             __shared__ unsigned int s_counter;
             __shared__ unsigned int s_ind;
             __shared__ ushort2 s_st[stack_size];
@@ -404,11 +404,11 @@ namespace cv { namespace gpu { namespace device
                         if (subTaskIdx < portion)
                             pos = s_st[s_counter - 1 - subTaskIdx];
                         __syncthreads();
-                            
+
                         if (threadIdx.x == 0)
                             s_counter -= portion;
                         __syncthreads();
-                         
+
                         if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows)
                         {
                             pos.x += c_dx[threadIdx.x & 7];
@@ -452,7 +452,7 @@ namespace cv { namespace gpu { namespace device
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
-            
+
             unsigned int count;
             cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 

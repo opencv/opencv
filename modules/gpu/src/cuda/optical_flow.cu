@@ -42,7 +42,7 @@
 
 #include "opencv2/gpu/device/common.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace optical_flow
     {
@@ -50,7 +50,7 @@ namespace cv { namespace gpu { namespace device
         #define NUM_VERTS_PER_ARROW 6
 
         __global__ void NeedleMapAverageKernel(const DevMem2Df u, const PtrStepf v, PtrStepf u_avg, PtrStepf v_avg)
-        {   
+        {
             __shared__ float smem[2 * NEEDLE_MAP_SCALE];
 
             volatile float* u_col_sum = smem;
@@ -70,7 +70,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             if (threadIdx.x < 8)
-            {        	
+            {
                 // now add the column sums
                 const uint X = threadIdx.x;
 
@@ -80,8 +80,8 @@ namespace cv { namespace gpu { namespace device
                     v_col_sum[threadIdx.x] += v_col_sum[threadIdx.x + 1];
                 }
 
-                if (X | 0xfe == 0xfc) // bits 0 & 1 == 0 
-                { 
+                if (X | 0xfe == 0xfc) // bits 0 & 1 == 0
+                {
                     u_col_sum[threadIdx.x] += u_col_sum[threadIdx.x + 2];
                     v_col_sum[threadIdx.x] += v_col_sum[threadIdx.x + 2];
                 }
@@ -110,7 +110,7 @@ namespace cv { namespace gpu { namespace device
                 v_avg(blockIdx.y, blockIdx.x) = v_col_sum[0];
             }
         }
-        
+
         void NeedleMapAverage_gpu(DevMem2Df u, DevMem2Df v, DevMem2Df u_avg, DevMem2Df v_avg)
         {
             const dim3 block(NEEDLE_MAP_SCALE);
