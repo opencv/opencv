@@ -384,6 +384,17 @@ macro(ocv_list_add_suffix LST SUFFIX)
 endmacro()
 
 
+# gets and removes the first element from list
+macro(ocv_list_pop_front LST VAR)
+  if(${LST})
+    list(GET ${LST} 0 ${VAR})
+    list(REMOVE_AT ${LST} 0)
+  else()
+    set(${VAR} "")
+  endif()
+endmacro()
+
+
 # simple regex escaping routine (does not cover all cases!!!)
 macro(ocv_regex_escape var regex)
   string(REGEX REPLACE "([+.*^$])" "\\\\1" ${var} "${regex}")
@@ -401,7 +412,7 @@ endmacro()
 
 
 # convert list of paths to full paths
-macro(ocv_to_full_paths VAR)
+macro(ocv_convert_to_full_paths VAR)
   if(${VAR})
     set(__tmp "")
     foreach(path ${${VAR}})
