@@ -583,7 +583,7 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
         const double fy = levelCameraMatrix.at<double>(1,1);
         const double determinantThreshold = 1e-6;
 
-        Mat corresps( levelImage0.size(), levelImage0.type(), CV_32SC1 );
+        Mat corresps( levelImage0.size(), levelImage0.type() );
 
         // Run transformation search on current level iteratively.
         for( int iter = 0; iter < (*iterCountsPtr)[level]; iter ++ )
