@@ -22,53 +22,53 @@ class DetectionBasedTracker
         {
             public:
                 IDetector():
-                    MinObjSize(96, 96),
-                    MaxObjSize(INT_MAX, INT_MAX),
-                    ScaleFactor(1.1f),
-                    MinNeighbours(2)
+                    minObjSize(96, 96),
+                    maxObjSize(INT_MAX, INT_MAX),
+                    scaleFactor(1.1f),
+                    minNeighbours(2)
                 {}
 
                 virtual void detect(const cv::Mat& Image, std::vector<cv::Rect>& objects) = 0;
 
                 void setMinObjectSize(const cv::Size& min)
                 {
-                    MinObjSize = min;
+                    minObjSize = min;
                 }
                 void setMaxObjectSize(const cv::Size& max)
                 {
-                    MaxObjSize = max;
+                    maxObjSize = max;
                 }
                 cv::Size getMinObjectSize() const
                 {
-                    return MinObjSize;
+                    return minObjSize;
                 }
                 cv::Size getMaxObjectSize() const
                 {
-                    return MaxObjSize;
+                    return maxObjSize;
                 }
                 float getScaleFactor()
                 {
-                    return ScaleFactor;
+                    return scaleFactor;
                 }
                 void setScaleFactor(float value)
                 {
-                    ScaleFactor = value;
+                    scaleFactor = value;
                 }
                 int getMinNeighbours()
                 {
-                    return ScaleFactor;
+                    return minNeighbours;
                 }
                 void setMinNeighbours(int value)
                 {
-
+                    minNeighbours = value;
                 }
                 virtual ~IDetector() {}
 
             protected:
-                cv::Size MinObjSize;
-                cv::Size MaxObjSize;
-                int MinNeighbours;
-                float ScaleFactor;
+                cv::Size minObjSize;
+                cv::Size maxObjSize;
+                int minNeighbours;
+                float scaleFactor;
         };
 
         DetectionBasedTracker(cv::Ptr<IDetector> MainDetector, cv::Ptr<IDetector> TrackingDetector, const Parameters& params);

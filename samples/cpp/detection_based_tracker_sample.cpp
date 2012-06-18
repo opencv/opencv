@@ -65,6 +65,7 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
 {
     public:
         CascadeDetectorAdapter(cv::Ptr<cv::CascadeClassifier> detector):
+            IDetector(),
             Detector(detector)
         {
             CV_Assert(!detector.empty());
@@ -72,7 +73,7 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
 
         void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects)
         {
-            Detector->detectMultiScale(Image, objects, 1.1, 3, 0, MinObjSize, MaxObjSize);
+            Detector->detectMultiScale(Image, objects, 1.1, 3, 0, minObjSize, maxObjSize);
         }
         virtual ~CascadeDetectorAdapter()
         {}

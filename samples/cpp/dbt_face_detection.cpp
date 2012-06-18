@@ -1,3 +1,5 @@
+#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
+
 #include <opencv2/imgproc/imgproc.hpp>  // Gaussian Blur
 #include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
 #include <opencv2/highgui/highgui.hpp>  // OpenCV window I/O
@@ -16,6 +18,7 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
 {
     public:
         CascadeDetectorAdapter(cv::Ptr<cv::CascadeClassifier> detector):
+            IDetector(),
             Detector(detector)
         {
             CV_Assert(!detector.empty());
@@ -23,7 +26,7 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
 
         void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects)
         {
-            Detector->detectMultiScale(Image, objects, ScaleFactor, MinNeighbours, 0, MinObjSize, MaxObjSize);
+            Detector->detectMultiScale(Image, objects, scaleFactor, minNeighbours, 0, minObjSize, maxObjSize);
         }
         virtual ~CascadeDetectorAdapter()
         {}
@@ -86,5 +89,16 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
+#else
+
+#include <stdio.h>
+int main()
+{
+    printf("This sample works for UNIX or ANDROID only\n");
+    return 0;
+}
+
+#endif
 
 
