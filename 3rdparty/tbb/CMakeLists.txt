@@ -114,6 +114,7 @@ add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
 if(tbb_need_GENERIC_DWORD_LOAD_STORE)
   #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
   add_definitions(-D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1)
+  set(tbb_need_GENERIC_DWORD_LOAD_STORE ON PARENT_SCOPE)
 endif()
 
 add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")

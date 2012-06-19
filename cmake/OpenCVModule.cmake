@@ -220,9 +220,9 @@ endmacro()
 
 # Internal macro for dependencies tracking
 macro(__ocv_flatten_module_optional_dependencies the_module)
-  set(__flattened_deps ${OPENCV_MODULE_${the_module}_DEPS})
-  set(__resolved_deps ${OPENCV_MODULE_${the_module}_DEPS})
-  set(__opt_depends ${OPENCV_MODULE_${the_module}_OPT_DEPS})
+  set(__flattened_deps "")
+  set(__resolved_deps "")
+  set(__opt_depends ${OPENCV_MODULE_${the_module}_REQ_DEPS} ${OPENCV_MODULE_${the_module}_OPT_DEPS})
 
   while(__opt_depends)
     ocv_list_pop_front(__opt_depends __dep)
@@ -275,8 +275,15 @@ macro(__ocv_flatten_module_dependencies)
     set(OPENCV_MODULE_${m}_DEPS_EXT ${OPENCV_MODULE_${m}_DEPS_EXT} CACHE INTERNAL "Extra dependencies of ${m} module")
   endforeach()
 
+  # order modules by dependencies
+  set(OPENCV_MODULES_BUILD_ "")
+  foreach(m ${OPENCV_MODULES_BUILD})
+    list(APPEND OPENCV_MODULES_BUILD_ ${OPENCV_MODULE_${m}_DEPS} ${m})
+  endforeach()
+  ocv_list_unique(OPENCV_MODULES_BUILD_)
+
   set(OPENCV_MODULES_PUBLIC        ${OPENCV_MODULES_PUBLIC}        CACHE INTERNAL "List of OpenCV modules marked for export")
-  set(OPENCV_MODULES_BUILD         ${OPENCV_MODULES_BUILD}         CACHE INTERNAL "List of OpenCV modules included into the build")
+  set(OPENCV_MODULES_BUILD         ${OPENCV_MODULES_BUILD_}         CACHE INTERNAL "List of OpenCV modules included into the build")
   set(OPENCV_MODULES_DISABLED_AUTO ${OPENCV_MODULES_DISABLED_AUTO} CACHE INTERNAL "List of OpenCV modules implicitly disabled due to dependencies")
 endmacro()
 
@@ -312,7 +319,16 @@ macro(ocv_glob_modules)
           endif()
           list(APPEND __directories_observed "${__modpath}")
 
-          add_subdirectory("${__modpath}" "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+          if(OCV_MODULE_RELOCATE_ON_INITIAL_PASS)
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+            file(COPY "${__modpath}/CMakeLists.txt" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+            add_subdirectory("${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}" "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+            if("${OPENCV_MODULE_opencv_${mod}_LOCATION}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+              set(OPENCV_MODULE_opencv_${mod}_LOCATION "${__modpath}" CACHE PATH "" FORCE)
+            endif()
+          else()
+            add_subdirectory("${__modpath}" "${CMAKE_CURRENT_BINARY_DIR}/${mod}/.${mod}")
+          endif()
         endif()
       endforeach()
     endif()
@@ -322,17 +338,10 @@ macro(ocv_glob_modules)
   # resolve dependencies
   __ocv_flatten_module_dependencies()
 
-  # order modules by dependencies
-  set(OPENCV_MODULES_BUILD_ "")
-  foreach(m ${OPENCV_MODULES_BUILD})
-    list(APPEND OPENCV_MODULES_BUILD_ ${OPENCV_MODULE_${m}_DEPS} ${m})
-  endforeach()
-  ocv_list_unique(OPENCV_MODULES_BUILD_)
-
   # create modules
   set(OPENCV_INITIAL_PASS OFF PARENT_SCOPE)
   set(OPENCV_INITIAL_PASS OFF)
-  foreach(m ${OPENCV_MODULES_BUILD_})
+  foreach(m ${OPENCV_MODULES_BUILD})
     if(m MATCHES "^opencv_")
       string(REGEX REPLACE "^opencv_" "" __shortname "${m}")
       add_subdirectory("${OPENCV_MODULE_${m}_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/${__shortname}")
