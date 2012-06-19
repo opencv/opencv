@@ -569,10 +569,6 @@ namespace cv { namespace gpu { namespace device
                 W start = (tid == 0)? (W)0:sbuf[start_idx];
                 W end = sbuf[end_idx];
 
-                if (blockIdx.x == 0)
-                    printf("%d~~~~~~~~ start_idx %d, end_idx %d, start %f, end %f\n",
-                           tid, start_idx, end_idx, start, end);
-
                 dst(y, out_stride  +  tid) = (end - start);
             }
         }
@@ -611,10 +607,6 @@ namespace cv { namespace gpu { namespace device
                 W start = (tid == 0)? (W)0:sbuf[start_idx];
                 W end = sbuf[end_idx];
 
-                if (blockIdx.x == 0)
-                    printf("!!!!!!!!%d~~~~~~~~ start_idx %d, end_idx %d, start %f, end %f\n",
-                           tid, start_idx, end_idx, start, end);
-
                 dst(out_stride  +  tid, x) = saturate_cast<T>((end - start) * scale);
             }
         }
@@ -635,9 +627,6 @@ namespace cv { namespace gpu { namespace device
             int thred_lines = divUp(src.cols, input_stride * iscale_x);
             int blocks = src.rows * thred_lines;
 
-            printf("device code executed for X coordinate with:\nsize %d warps %d, threads %d, thred_lines %d, blocks %d input strude %d\n",
-                   src.cols, warps, threads, thred_lines, blocks, input_stride * iscale_x);
-
             typedef typename scan_traits<T>::scan_line_type smem_type;
 
             resise_scan_fast_x<T, smem_type><<<blocks, threads, warps * 32 * sizeof(smem_type)>>>
@@ -646,9 +635,6 @@ namespace cv { namespace gpu { namespace device
             input_stride = threads / iscale_y;
             thred_lines = divUp(src.rows, input_stride * iscale_y);
             blocks = dst.cols * thred_lines;
-
-            printf("device code executed for Y coordinate with:\nsize %d warps %d, threads %d, thred_lines %d, blocks %d\n",
-                   dst.rows, warps, threads, thred_lines, blocks);
 
             resise_scan_fast_y<T, smem_type><<<blocks, threads, warps * 32 * sizeof(smem_type)>>>
                     (buffer, dst, iscale_x, iscale_y, thred_lines, input_stride * iscale_y);
