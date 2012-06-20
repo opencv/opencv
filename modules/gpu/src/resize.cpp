@@ -56,20 +56,6 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     throw_nogpu();
 }
-void cv::gpu::resize(const GpuMat& src, GpuMat& dst,GpuMat& buffer, Size dsize,
-            double fx, double fy, int interpolation, Stream& s)
-{
-    (void)src;
-    (void)dst;
-    (void)dsize;
-    (void)fx;
-    (void)fy;
-    (void)interpolation;
-    (void)buffer;
-    (void)s;
-
-    throw_nogpu();
-}
 
 #else // HAVE_CUDA
 
