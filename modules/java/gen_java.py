@@ -11,10 +11,6 @@ class_ignore_list = (
     "FileNode", "FileStorage", "KDTree",
     #highgui
     "VideoWriter", "VideoCapture",
-    #features2d
-    #"KeyPoint", "MSER", "StarDetector", "SURF", "DMatch",
-    #ml
-    #"EM",
 )
 
 const_ignore_list = (
@@ -1381,7 +1377,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
     delete (%(cls)s*) self;
 }
 
-""" % {"module" : module, "cls" : name, "j_cls" : ci.jname}
+""" % {"module" : module, "cls" : name, "j_cls" : ci.jname.replace('_', '_1')}
             )
 
 
