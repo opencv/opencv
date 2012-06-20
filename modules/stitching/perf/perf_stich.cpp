@@ -1,5 +1,9 @@
 #include "perf_precomp.hpp"
 
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wsign-promo"
+#endif
+
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/core/internal.hpp"
 #include "opencv2/flann/flann.hpp"

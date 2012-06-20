@@ -94,7 +94,7 @@ void Blender::feed(const Mat &img, const Mat &mask, Point tl)
 
         for (int x = 0; x < img.cols; ++x)
         {
-            if (mask_row[x]) 
+            if (mask_row[x])
                 dst_row[dx + x] = src_row[x];
             dst_mask_row[dx + x] |= mask_row[x];
         }
@@ -136,7 +136,7 @@ void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
         const float* weight_row = weight_map_.ptr<float>(y);
         float* dst_weight_row = dst_weight_map_.ptr<float>(dy + y);
 
-        for (int x = 0; x < img.cols; ++x)               
+        for (int x = 0; x < img.cols; ++x)
         {
             dst_row[dx + x].x += static_cast<short>(src_row[x].x * weight_row[x]);
             dst_row[dx + x].y += static_cast<short>(src_row[x].y * weight_row[x]);
@@ -157,7 +157,7 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 
 Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Point> &corners,
                                       vector<Mat> &weight_maps)
-{    
+{
     weight_maps.resize(masks.size());
     for (size_t i = 0; i < masks.size(); ++i)
         createWeightMap(masks[i], sharpness_, weight_maps[i]);
@@ -168,14 +168,14 @@ Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Poi
 
     for (size_t i = 0; i < weight_maps.size(); ++i)
     {
-        Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y, 
+        Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y,
                  weight_maps[i].cols, weight_maps[i].rows);
         weights_sum(roi) += weight_maps[i];
     }
 
     for (size_t i = 0; i < weight_maps.size(); ++i)
     {
-        Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y, 
+        Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y,
                  weight_maps[i].cols, weight_maps[i].rows);
         Mat tmp = weights_sum(roi);
         tmp.setTo(1, tmp < numeric_limits<float>::epsilon());
@@ -192,6 +192,7 @@ MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 #ifdef HAVE_OPENCV_GPU
     can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
 #else
+    (void)try_gpu;
     can_use_gpu_ = false;
 #endif
     CV_Assert(weight_type == CV_32F || weight_type == CV_16S);
@@ -222,7 +223,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
 
     for (int i = 1; i <= num_bands_; ++i)
     {
-        dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2, 
+        dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2,
                                    (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
         dst_band_weights_[i].create((dst_band_weights_[i - 1].rows + 1) / 2,
                                     (dst_band_weights_[i - 1].cols + 1) / 2, weight_type_);
@@ -239,15 +240,15 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 
     // Keep source image in memory with small border
     int gap = 3 * (1 << num_bands_);
-    Point tl_new(max(dst_roi_.x, tl.x - gap), 
+    Point tl_new(max(dst_roi_.x, tl.x - gap),
                  max(dst_roi_.y, tl.y - gap));
-    Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap), 
+    Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap),
                  min(dst_roi_.br().y, tl.y + img.rows + gap));
 
-    // Ensure coordinates of top-left, bottom-right corners are divided by (1 << num_bands_). 
+    // Ensure coordinates of top-left, bottom-right corners are divided by (1 << num_bands_).
     // After that scale between layers is exactly 2.
     //
-    // We do it to avoid interpolation problems when keeping sub-images only. There is no such problem when 
+    // We do it to avoid interpolation problems when keeping sub-images only. There is no such problem when
     // image is bordered to have size equal to the final image size, but this is too memory hungry approach.
     tl_new.x = dst_roi_.x + (((tl_new.x - dst_roi_.x) >> num_bands_) << num_bands_);
     tl_new.y = dst_roi_.y + (((tl_new.y - dst_roi_.y) >> num_bands_) << num_bands_);
@@ -507,6 +508,10 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
     }
 
     gpu_pyr[num_levels].download(pyr[num_levels]);
+#else
+    (void)img;
+    (void)num_levels;
+    (void)pyr;
 #endif
 }
 
@@ -542,6 +547,8 @@ void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
     }
 
     gpu_pyr[0].download(pyr[0]);
+#else
+    (void)pyr;
 #endif
 }
 

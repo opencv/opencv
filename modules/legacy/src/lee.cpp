@@ -3078,8 +3078,8 @@ static int _cvFindOppositSiteCW(pCvVoronoiHole pHole, CvVoronoiDiagramInt* pVoro
     pCvVoronoiEdge pEdge_left = pSite_left->edge2->next_edge;
     pCvVoronoiEdge pEdge_right = &Edge_right;
 
-    CvVoronoiEdgeInt Edge = {NULL,pNode,pSite_right,NULL,NULL,NULL,NULL,NULL};
-    CvVoronoiEdgeInt Edge_cur = {NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+    CvVoronoiEdgeInt Edge     = {NULL,pNode,pSite_right,NULL,NULL,NULL,NULL,NULL};
+    CvVoronoiEdgeInt Edge_cur = {NULL,NULL, NULL,       NULL,NULL,NULL,NULL,NULL};
     pCvVoronoiEdge pEdge = &Edge;
 
     float radius1, radius2,dist1, dist2;
@@ -3133,8 +3133,8 @@ static int _cvFindOppositSiteCCW(pCvVoronoiHole pHole,CvVoronoiDiagramInt* pVoro
     pCvVoronoiEdge pEdge_left = &Edge_left;
     pCvVoronoiEdge pEdge_right = pSite_right->edge1->prev_edge;
 
-    CvVoronoiEdgeInt Edge = {NULL,pNode,pSite_left,NULL,NULL,NULL,NULL};
-    CvVoronoiEdgeInt Edge_cur = {NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+    CvVoronoiEdgeInt Edge     = {NULL,pNode,pSite_left,NULL,NULL,NULL,NULL,NULL};
+    CvVoronoiEdgeInt Edge_cur = {NULL,NULL, NULL,      NULL,NULL,NULL,NULL,NULL};
     pCvVoronoiEdge pEdge = &Edge;
 
     double dist1, dist2;

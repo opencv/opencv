@@ -368,7 +368,7 @@ static void print_params(CvVSModule* pM, const char* module, const char* log_nam
 int main(int argc, char* argv[])
 {   /* Main function: */
     CvCapture*                  pCap = NULL;
-    CvBlobTrackerAutoParam1     param = {0};
+    CvBlobTrackerAutoParam1     param = {0,0,0,0,0,0,0,0};
     CvBlobTrackerAuto*          pTracker = NULL;
 
     //float       scale = 1;

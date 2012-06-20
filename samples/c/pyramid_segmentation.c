@@ -34,6 +34,7 @@ CvPoint pt1, pt2;
 
 static void ON_SEGMENT(int a)
 {
+    (void)a;
     cvPyrSegmentation(image0, image1, storage, &comp,
                       level, threshold1+1, threshold2+1);
 

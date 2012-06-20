@@ -231,9 +231,7 @@ static void run(void)
 
 int main( int argc, char** argv )
 {
-#ifdef _MSC_VER
-    argc, argv;
-#endif
+    (void)argc; (void)argv;
     help();
     run();
     return 0;

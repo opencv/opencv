@@ -362,7 +362,7 @@ ManualFuncs = {
 // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
-  (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
+  (JNIEnv* env, jclass, jlong src_nativeObj, jlong mask_nativeObj)
 {
     try {
         LOGD("Core::n_1minMaxLoc()");
@@ -432,7 +432,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 // C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
-  (JNIEnv* env, jclass cls, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
+  (JNIEnv* env, jclass, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
 {
     try {
         LOGD("Core::n_1getTextSize()");
@@ -1010,7 +1010,7 @@ extern "C" {
              # java native method args
             jn_args = []
             # jni (cpp) function args
-            jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "cls", "", [], "" ])]
+            jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "", "", [], "" ])]
             j_prologue = []
             j_epilogue = []
             c_prologue = []
@@ -1375,7 +1375,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete(JNIEnv*, jclass, jlong);
 
 JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
-  (JNIEnv* env, jclass cls, jlong self)
+  (JNIEnv*, jclass, jlong self)
 {
     delete (%(cls)s*) self;
 }

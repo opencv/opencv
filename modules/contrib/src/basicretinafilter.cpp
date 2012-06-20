@@ -426,7 +426,7 @@ void BasicRetinaFilter::_spatiotemporalLPfilter(const float *inputFrame, float *
 }
 
 // run SQUARING LP filter for a new frame input and save result at a specific output adress
-const float BasicRetinaFilter::_squaringSpatiotemporalLPfilter(const float *inputFrame, float *outputFrame, const unsigned int filterIndex)
+float BasicRetinaFilter::_squaringSpatiotemporalLPfilter(const float *inputFrame, float *outputFrame, const unsigned int filterIndex)
 {
 	unsigned int coefTableOffset=filterIndex*3;
 	/**********/
@@ -597,7 +597,7 @@ void BasicRetinaFilter::_squaringHorizontalCausalFilter(const float *inputFrame,
 }
 
 //  vertical anticausal filter that returns the mean value of its result
-const float BasicRetinaFilter::_verticalAnticausalFilter_returnMeanValue(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+float BasicRetinaFilter::_verticalAnticausalFilter_returnMeanValue(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
 	register float meanValue=0;
 	float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();

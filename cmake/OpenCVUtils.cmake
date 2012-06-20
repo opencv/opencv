@@ -34,6 +34,7 @@ endmacro()
 
 set(OCV_COMPILER_FAIL_REGEX
     "command line option .* is valid for .* but not for C\\+\\+" # GNU
+    "command line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU
     "unknown .*option"                          # Clang
     "ignoring unknown option"                   # MSVC

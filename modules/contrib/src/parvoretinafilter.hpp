@@ -195,12 +195,12 @@ public:
 	/**
 	* @return the photoreceptors's temporal constant
 	*/
-	inline const float getPhotoreceptorsTemporalConstant(){return this->_filteringCoeficientsTable[2];};
+	inline float getPhotoreceptorsTemporalConstant(){return this->_filteringCoeficientsTable[2];};
 
 	/**
 	* @return the horizontal cells' temporal constant
 	*/
-	inline const float getHcellsTemporalConstant(){return this->_filteringCoeficientsTable[5];};
+	inline float getHcellsTemporalConstant(){return this->_filteringCoeficientsTable[5];};
 
 private:
 	// template buffers

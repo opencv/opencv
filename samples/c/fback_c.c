@@ -16,6 +16,7 @@ static void help(void)
 static void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,
                     double scale, CvScalar color)
 {
+    (void)scale;
     int x, y;
     for( y = 0; y < cflowmap->rows; y += step)
         for( x = 0; x < cflowmap->cols; x += step)
@@ -29,6 +30,7 @@ static void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,
 
 int main( int argc, char** argv )
 {
+    (void)argc; (void)argv;
     CvCapture* capture = cvCreateCameraCapture(0);
     CvMat* prevgray = 0, *gray = 0, *flow = 0, *cflow = 0;
 

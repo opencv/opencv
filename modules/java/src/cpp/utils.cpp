@@ -25,7 +25,10 @@ extern "C" {
  */
 
 JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
-  (JNIEnv * env, jclass cls, jobject bitmap, jlong m_addr)
+  (JNIEnv * env, jclass, jobject bitmap, jlong m_addr);
+
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
+  (JNIEnv * env, jclass, jobject bitmap, jlong m_addr)
 {
     AndroidBitmapInfo  info;
     void*              pixels = 0;
@@ -73,7 +76,10 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
  * Method:    void nMatToBitmap(long m_addr, Bitmap b)
  */
 JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
-  (JNIEnv * env, jclass cls, jlong m_addr, jobject bitmap)
+  (JNIEnv * env, jclass, jlong m_addr, jobject bitmap);
+
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
+  (JNIEnv * env, jclass, jlong m_addr, jobject bitmap)
 {
     AndroidBitmapInfo  info;
     void*              pixels = 0;

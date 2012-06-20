@@ -30,16 +30,20 @@
 #    Advanced variables:
 #      - OpenCV_SHARED
 #      - OpenCV_CONFIG_PATH
-#      - OpenCV_INSTALL_PATH  (not set on Windows)
 #      - OpenCV_LIB_COMPONENTS
-#      - OpenCV_USE_MANGLED_PATHS
-#      - OpenCV_HAVE_ANDROID_CAMERA
 #
 # ===================================================================================
 #
 #    Windows pack specific options:
 #      - OpenCV_STATIC
 #      - OpenCV_CUDA
+
+if(CMAKE_VERSION VERSION_GREATER 2.6)
+  get_property(OpenCV_LANGUAGES GLOBAL PROPERTY ENABLED_LANGUAGES)
+  if(NOT ";${OpenCV_LANGUAGES};" MATCHES ";CXX;")
+    enable_language(CXX)
+  endif()
+endif()
 
 if(NOT DEFINED OpenCV_STATIC)
   # look for global setting

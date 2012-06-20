@@ -534,6 +534,8 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuMatcher(match_conf);
     else
+#else
+    (void)try_use_gpu;
 #endif
         impl_ = new CpuMatcher(match_conf);
 
