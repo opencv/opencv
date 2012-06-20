@@ -17,9 +17,10 @@ int erode_dilate_pos = 0;
 // callback function for open/close trackbar
 static void OpenClose(int pos)
 {
-    (void)pos;
     int n = open_close_pos - max_iters;
     int an = n > 0 ? n : -n;
+    (void)pos;
+
     element = cvCreateStructuringElementEx( an*2+1, an*2+1, an, an, element_shape, 0 );
     if( n < 0 )
     {
@@ -38,9 +39,10 @@ static void OpenClose(int pos)
 // callback function for erode/dilate trackbar
 static void ErodeDilate(int pos)
 {
-    (void)pos;
     int n = erode_dilate_pos - max_iters;
     int an = n > 0 ? n : -n;
+    (void)pos;
+
     element = cvCreateStructuringElementEx( an*2+1, an*2+1, an, an, element_shape, 0 );
     if( n < 0 )
     {
