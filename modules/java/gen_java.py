@@ -1248,6 +1248,7 @@ extern "C" {
                 clazz = self.classes[fi.classname].jname
             cpp_code.write ( Template( \
 """
+JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname ($argst);
 
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
   ($args)
@@ -1278,7 +1279,8 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         module = self.module, \
         clazz = clazz.replace('_', '_1'), \
         fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'), \
-        args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
+        args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
+        argst = ", ".join([type_dict[a.ctype].get("jni_type") for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
         epilogue = "  ".join(c_epilogue), \
         ret = ret, \
@@ -1370,6 +1372,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 //  native support for java finalize()
 //  static void %(cls)s::delete( __int64 self )
 //
+JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete(JNIEnv*, jclass, jlong);
 
 JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
   (JNIEnv* env, jclass cls, jlong self)
