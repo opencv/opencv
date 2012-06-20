@@ -1,7 +1,3 @@
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wsign-promo"
-#endif
-
 #ifndef _OPENCV_FLANN_PRECOMP_HPP_
 #define _OPENCV_FLANN_PRECOMP_HPP_
 

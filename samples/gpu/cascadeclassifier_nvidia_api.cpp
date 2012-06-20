@@ -18,7 +18,7 @@ using namespace cv;
 
 
 #if !defined(HAVE_CUDA)
-int main( int argc, const char** argv )
+int main( int, const char** )
 {
     cout << "Please compile the library with CUDA support" << endl;
     return -1;

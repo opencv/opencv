@@ -542,8 +542,6 @@ bool  JpegEncoder::write( const Mat& img, const vector<int>& params )
     };
     bool result = false;
     fileWrapper fw;
-    int _channels = img.channels();
-    int channels = _channels > 1 ? 3 : 1;
     int width = img.cols, height = img.rows;
 
     vector<uchar> out_buf(1 << 12);
@@ -580,6 +578,9 @@ bool  JpegEncoder::write( const Mat& img, const vector<int>& params )
     {
         cinfo.image_width = width;
         cinfo.image_height = height;
+
+        int _channels = img.channels();
+        int channels = _channels > 1 ? 3 : 1;
         cinfo.input_components = channels;
         cinfo.in_color_space = channels > 1 ? JCS_RGB : JCS_GRAYSCALE;
 
