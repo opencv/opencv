@@ -108,7 +108,7 @@ public class Mat {
     public Mat(Mat m, Rect roi)
     {
 
-        nativeObj = n_Mat(m.nativeObj, roi.x, roi.x + roi.width, roi.y, roi.y + roi.height);
+        nativeObj = n_Mat(m.nativeObj, roi.y, roi.y + roi.height, roi.x, roi.x + roi.width);
 
         return;
     }

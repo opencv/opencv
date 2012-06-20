@@ -569,12 +569,27 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testMatMatRect() {
-        dst = new Mat(gray255_32f, new Rect(2, 2, 7, 7));
+        Mat m = new Mat(7, 6, CvType.CV_32SC1);
+        m.put(0,  0, 
+        		 0,  1,  2,  3,  4,  5,
+        		10, 11, 12, 13, 14, 15,
+        		20, 21, 22, 23, 24, 25,
+        		30, 31, 32, 33, 34, 35,
+        		40, 41, 42, 43, 44, 45,
+        		50, 51, 52, 53, 54, 55,
+        		60, 61, 62, 63, 64, 65 );
 
-        truth = new Mat(7, 7, CvType.CV_32FC1, new Scalar(255));
+        dst = new Mat(m, new Rect(1, 2, 3, 4));
+
+        truth = new Mat(4, 3, CvType.CV_32SC1);
+        truth.put(0,  0, 
+	       		21, 22, 23,
+	       		31, 32, 33,
+	       		41, 42, 43,
+	       		51, 52, 53 );
 
         assertFalse(dst.empty());
-        assertMatEqual(truth, dst, EPS);
+        assertMatEqual(truth, dst);
     }
 
     public void testMatSizeInt() {
