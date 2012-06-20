@@ -1253,7 +1253,7 @@ namespace cv { namespace gpu { namespace device
     {
         const T val;
 
-        __host__ explicit CompareScalar(T val) : val(val) {}
+        __host__ explicit CompareScalar(T val_) : val(val_) {}
 
         __device__ __forceinline__ uchar operator()(T src) const
         {
@@ -1266,7 +1266,7 @@ namespace cv { namespace gpu { namespace device
     {
         const TYPE_VEC(T, 2) val;
 
-        __host__ explicit CompareScalar(TYPE_VEC(T, 2) val) : val(val) {}
+        __host__ explicit CompareScalar(TYPE_VEC(T, 2) val_) : val(val_) {}
 
         __device__ __forceinline__ TYPE_VEC(uchar, 2) operator()(const TYPE_VEC(T, 2) & src) const
         {
@@ -1281,7 +1281,7 @@ namespace cv { namespace gpu { namespace device
     {
         const TYPE_VEC(T, 3) val;
 
-        __host__ explicit CompareScalar(TYPE_VEC(T, 3) val) : val(val) {}
+        __host__ explicit CompareScalar(TYPE_VEC(T, 3) val_) : val(val_) {}
 
         __device__ __forceinline__ TYPE_VEC(uchar, 3) operator()(const TYPE_VEC(T, 3) & src) const
         {
@@ -1297,7 +1297,7 @@ namespace cv { namespace gpu { namespace device
     {
         const TYPE_VEC(T, 4) val;
 
-        __host__ explicit CompareScalar(TYPE_VEC(T, 4) val) : val(val) {}
+        __host__ explicit CompareScalar(TYPE_VEC(T, 4) val_) : val(val_) {}
 
         __device__ __forceinline__ TYPE_VEC(uchar, 4) operator()(const TYPE_VEC(T, 4) & src) const
         {

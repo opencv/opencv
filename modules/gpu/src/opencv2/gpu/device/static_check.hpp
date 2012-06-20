@@ -43,27 +43,27 @@
 #ifndef __OPENCV_GPU_GPU_DEVICE_STATIC_CHECK_HPP__
 #define __OPENCV_GPU_GPU_DEVICE_STATIC_CHECK_HPP__
 
-#if defined(__CUDACC__) 
-    #define __OPENCV_GPU_HOST_DEVICE__ __host__ __device__ __forceinline__ 
+#if defined(__CUDACC__)
+    #define __OPENCV_GPU_HOST_DEVICE__ __host__ __device__ __forceinline__
 #else
     #define __OPENCV_GPU_HOST_DEVICE__
-#endif  
+#endif
 
-namespace cv { namespace gpu 
-{ 
+namespace cv { namespace gpu
+{
     namespace device
     {
         template<bool expr> struct Static {};
-        
-        template<> struct Static<true> 
-        { 
-            __OPENCV_GPU_HOST_DEVICE__ static void check() {}; 
+
+        template<> struct Static<true>
+        {
+            __OPENCV_GPU_HOST_DEVICE__ static void check() {};
         };
-    }    
+    }
 
     using ::cv::gpu::device::Static;
 }}
 
 #undef __OPENCV_GPU_HOST_DEVICE__
 
-#endif /* __OPENCV_GPU_GPU_DEVICE_STATIC_CHECK_HPP__ */ 
+#endif /* __OPENCV_GPU_GPU_DEVICE_STATIC_CHECK_HPP__ */

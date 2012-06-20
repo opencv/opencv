@@ -629,10 +629,6 @@ CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, doubl
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA
 CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
-//! resizes the image
-//! Supports INTER_AREA
-CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, GpuMat& buffer, Size dsize, double fx=0, double fy=0, int interpolation = INTER_AREA, Stream& stream = Stream::Null());
-
 //! warps the image using affine transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
 CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR,

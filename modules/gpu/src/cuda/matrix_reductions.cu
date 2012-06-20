@@ -72,7 +72,7 @@ namespace cv { namespace gpu { namespace device
 
         struct Mask8U
         {
-            explicit Mask8U(PtrStepb mask): mask(mask) {}
+            explicit Mask8U(PtrStepb mask_): mask(mask_) {}
 
             __device__ __forceinline__ bool operator()(int y, int x) const
             {

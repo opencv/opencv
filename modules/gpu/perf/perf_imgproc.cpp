@@ -118,10 +118,10 @@ GPU_PERF_TEST(ResizeArea, cv::gpu::DeviceInfo, cv::Size, MatType, Scale)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, ResizeArea, testing::Combine(
     ALL_DEVICES,
-    testing::Values(perf::sz1080p, cv::Size(4096, 2048)),
-    testing::Values(MatType(CV_8UC1)/*, MatType(CV_8UC3), MatType(CV_8UC4),
+    testing::Values(perf::sz1080p/*, cv::Size(4096, 2048)*/),
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
                     MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)*/),
+                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     testing::Values(Scale(0.2),Scale(0.1),Scale(0.05))));
 
 //////////////////////////////////////////////////////////////////////

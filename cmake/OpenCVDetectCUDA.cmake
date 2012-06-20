@@ -1,8 +1,8 @@
 if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
   message(STATUS WITH_CUDA flag requires CMake 2.8.3. CUDA support is disabled.)
-  return()  
+  return()
 endif()
-  
+
 find_package(CUDA 4.1)
 
 if(CUDA_FOUND)
@@ -23,7 +23,7 @@ if(CUDA_FOUND)
   else()
     set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0)" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
   endif()
-    
+
   set(CUDA_ARCH_PTX "2.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
 
   string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
@@ -89,8 +89,8 @@ if(CUDA_FOUND)
       set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
     endif()
 
-    # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1) 
-    set(CMAKE_CXX_FLAGS_DEBUG_ ${CMAKE_CXX_FLAGS_DEBUG}) 
+    # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
+    set(CMAKE_CXX_FLAGS_DEBUG_ ${CMAKE_CXX_FLAGS_DEBUG})
     string(REPLACE "-ggdb3" "" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
     CUDA_COMPILE(${VAR} ${ARGN})
     set(CMAKE_CXX_DEBUG_FLAGS ${CMAKE_CXX_FLAGS_DEBUG_})

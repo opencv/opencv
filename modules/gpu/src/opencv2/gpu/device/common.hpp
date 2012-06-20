@@ -64,7 +64,7 @@
     #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
 #endif
 
-namespace cv { namespace gpu 
+namespace cv { namespace gpu
 {
     void error(const char *error_string, const char *file, const int line, const char *func);
 
@@ -87,14 +87,14 @@ static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int 
 
 #ifdef __CUDACC__
 
-namespace cv { namespace gpu 
-{     
-    __host__ __device__ __forceinline__ int divUp(int total, int grain) 
-    { 
-        return (total + grain - 1) / grain; 
+namespace cv { namespace gpu
+{
+    __host__ __device__ __forceinline__ int divUp(int total, int grain)
+    {
+        return (total + grain - 1) / grain;
     }
 
-    namespace device 
+    namespace device
     {
         typedef unsigned char uchar;
         typedef unsigned short ushort;

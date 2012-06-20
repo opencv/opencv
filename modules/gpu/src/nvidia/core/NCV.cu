@@ -252,7 +252,7 @@ NCVStatus memSegCopyHelper2D(void *dst, Ncv32u dstPitch, NCVMemoryType dstType,
 //===================================================================
 
 
-NCVMemStackAllocator::NCVMemStackAllocator(Ncv32u alignment)
+NCVMemStackAllocator::NCVMemStackAllocator(Ncv32u alignment_)
     :
     currentSize(0),
     _maxSize(0),
@@ -260,23 +260,23 @@ NCVMemStackAllocator::NCVMemStackAllocator(Ncv32u alignment)
     begin(NULL),
     end(NULL),
     _memType(NCVMemoryTypeNone),
-    _alignment(alignment),
+    _alignment(alignment_),
     bReusesMemory(false)
 {
-    NcvBool bProperAlignment = (alignment & (alignment-1)) == 0;
+    NcvBool bProperAlignment = (alignment_ & (alignment_ - 1)) == 0;
     ncvAssertPrintCheck(bProperAlignment, "NCVMemStackAllocator ctor:: alignment not power of 2");
 }
 
 
-NCVMemStackAllocator::NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, Ncv32u alignment, void *reusePtr)
+NCVMemStackAllocator::NCVMemStackAllocator(NCVMemoryType memT, size_t capacity, Ncv32u alignment_, void *reusePtr)
     :
     currentSize(0),
     _maxSize(0),
     allocBegin(NULL),
     _memType(memT),
-    _alignment(alignment)
+    _alignment(alignment_)
 {
-    NcvBool bProperAlignment = (alignment & (alignment-1)) == 0;
+    NcvBool bProperAlignment = (alignment_ & (alignment_ - 1)) == 0;
     ncvAssertPrintCheck(bProperAlignment, "NCVMemStackAllocator ctor:: _alignment not power of 2");
     ncvAssertPrintCheck(memT != NCVMemoryTypeNone, "NCVMemStackAllocator ctor:: Incorrect allocator type");
 
@@ -425,12 +425,12 @@ size_t NCVMemStackAllocator::maxSize(void) const
 //===================================================================
 
 
-NCVMemNativeAllocator::NCVMemNativeAllocator(NCVMemoryType memT, Ncv32u alignment)
+NCVMemNativeAllocator::NCVMemNativeAllocator(NCVMemoryType memT, Ncv32u alignment_)
     :
     currentSize(0),
     _maxSize(0),
     _memType(memT),
-    _alignment(alignment)
+    _alignment(alignment_)
 {
     ncvAssertPrintReturn(memT != NCVMemoryTypeNone, "NCVMemNativeAllocator ctor:: counting not permitted for this allocator type", );
 }

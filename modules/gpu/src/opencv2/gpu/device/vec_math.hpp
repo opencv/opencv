@@ -47,7 +47,7 @@
 #include "vec_traits.hpp"
 #include "functional.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace vec_math_detail
     {
@@ -150,7 +150,7 @@ namespace cv { namespace gpu { namespace device
     }
 
     namespace vec_math_detail
-    {    
+    {
         template <typename T1, typename T2> struct BinOpTraits
         {
             typedef int argument_type;
@@ -326,5 +326,5 @@ namespace cv { namespace gpu { namespace device
     #undef OPENCV_GPU_IMPLEMENT_VEC_OP
     #undef OPENCV_GPU_IMPLEMENT_VEC_INT_OP
 }}} // namespace cv { namespace gpu { namespace device
-        
+
 #endif // __OPENCV_GPU_VECMATH_HPP__

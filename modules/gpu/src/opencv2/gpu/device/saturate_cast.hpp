@@ -57,35 +57,35 @@ namespace cv { namespace gpu { namespace device
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(double v) { return _Tp(v); }
 
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(schar v)
-    { 
-        return (uchar) ::max((int)v, 0); 
+    {
+        return (uchar) ::max((int)v, 0);
     }
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(ushort v)
-    { 
-        return (uchar) ::min((uint)v, (uint)UCHAR_MAX); 
+    {
+        return (uchar) ::min((uint)v, (uint)UCHAR_MAX);
     }
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(int v)
-    { 
-        return (uchar)((uint)v <= UCHAR_MAX ? v : v > 0 ? UCHAR_MAX : 0); 
+    {
+        return (uchar)((uint)v <= UCHAR_MAX ? v : v > 0 ? UCHAR_MAX : 0);
     }
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(uint v)
-    { 
-        return (uchar) ::min(v, (uint)UCHAR_MAX); 
+    {
+        return (uchar) ::min(v, (uint)UCHAR_MAX);
     }
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(short v)
-    { 
-        return saturate_cast<uchar>((uint)v); 
+    {
+        return saturate_cast<uchar>((uint)v);
     }
 
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(float v)
-    { 
-        int iv = __float2int_rn(v); 
-        return saturate_cast<uchar>(iv); 
+    {
+        int iv = __float2int_rn(v);
+        return saturate_cast<uchar>(iv);
     }
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(double v)
     {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
-        int iv = __double2int_rn(v); 
+        int iv = __double2int_rn(v);
         return saturate_cast<uchar>(iv);
     #else
         return saturate_cast<uchar>((float)v);
@@ -93,35 +93,35 @@ namespace cv { namespace gpu { namespace device
     }
 
     template<> __device__ __forceinline__ schar saturate_cast<schar>(uchar v)
-    { 
-        return (schar) ::min((int)v, SCHAR_MAX); 
+    {
+        return (schar) ::min((int)v, SCHAR_MAX);
     }
     template<> __device__ __forceinline__ schar saturate_cast<schar>(ushort v)
-    { 
-        return (schar) ::min((uint)v, (uint)SCHAR_MAX); 
+    {
+        return (schar) ::min((uint)v, (uint)SCHAR_MAX);
     }
     template<> __device__ __forceinline__ schar saturate_cast<schar>(int v)
     {
         return (schar)((uint)(v-SCHAR_MIN) <= (uint)UCHAR_MAX ? v : v > 0 ? SCHAR_MAX : SCHAR_MIN);
     }
     template<> __device__ __forceinline__ schar saturate_cast<schar>(short v)
-    { 
-        return saturate_cast<schar>((int)v); 
+    {
+        return saturate_cast<schar>((int)v);
     }
     template<> __device__ __forceinline__ schar saturate_cast<schar>(uint v)
-    { 
-        return (schar) ::min(v, (uint)SCHAR_MAX); 
+    {
+        return (schar) ::min(v, (uint)SCHAR_MAX);
     }
 
     template<> __device__ __forceinline__ schar saturate_cast<schar>(float v)
-    { 
-        int iv = __float2int_rn(v); 
-        return saturate_cast<schar>(iv); 
+    {
+        int iv = __float2int_rn(v);
+        return saturate_cast<schar>(iv);
     }
     template<> __device__ __forceinline__ schar saturate_cast<schar>(double v)
-    {             
+    {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
-        int iv = __double2int_rn(v); 
+        int iv = __double2int_rn(v);
         return saturate_cast<schar>(iv);
     #else
         return saturate_cast<schar>((float)v);
@@ -129,30 +129,30 @@ namespace cv { namespace gpu { namespace device
     }
 
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(schar v)
-    { 
-        return (ushort) ::max((int)v, 0); 
+    {
+        return (ushort) ::max((int)v, 0);
     }
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(short v)
-    { 
-        return (ushort) ::max((int)v, 0); 
+    {
+        return (ushort) ::max((int)v, 0);
     }
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(int v)
-    { 
-        return (ushort)((uint)v <= (uint)USHRT_MAX ? v : v > 0 ? USHRT_MAX : 0); 
+    {
+        return (ushort)((uint)v <= (uint)USHRT_MAX ? v : v > 0 ? USHRT_MAX : 0);
     }
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(uint v)
-    { 
-        return (ushort) ::min(v, (uint)USHRT_MAX); 
+    {
+        return (ushort) ::min(v, (uint)USHRT_MAX);
     }
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(float v)
     {
-        int iv = __float2int_rn(v); 
-        return saturate_cast<ushort>(iv); 
+        int iv = __float2int_rn(v);
+        return saturate_cast<ushort>(iv);
     }
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(double v)
-    {             
+    {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
-        int iv = __double2int_rn(v); 
+        int iv = __double2int_rn(v);
         return saturate_cast<ushort>(iv);
     #else
         return saturate_cast<ushort>((float)v);
@@ -160,37 +160,37 @@ namespace cv { namespace gpu { namespace device
     }
 
     template<> __device__ __forceinline__ short saturate_cast<short>(ushort v)
-    { 
-        return (short) ::min((int)v, SHRT_MAX); 
+    {
+        return (short) ::min((int)v, SHRT_MAX);
     }
     template<> __device__ __forceinline__ short saturate_cast<short>(int v)
     {
         return (short)((uint)(v - SHRT_MIN) <= (uint)USHRT_MAX ? v : v > 0 ? SHRT_MAX : SHRT_MIN);
     }
     template<> __device__ __forceinline__ short saturate_cast<short>(uint v)
-    { 
-        return (short) ::min(v, (uint)SHRT_MAX); 
+    {
+        return (short) ::min(v, (uint)SHRT_MAX);
     }
     template<> __device__ __forceinline__ short saturate_cast<short>(float v)
-    { 
-        int iv = __float2int_rn(v); 
-        return saturate_cast<short>(iv); 
+    {
+        int iv = __float2int_rn(v);
+        return saturate_cast<short>(iv);
     }
     template<> __device__ __forceinline__ short saturate_cast<short>(double v)
-    {            
+    {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
-        int iv = __double2int_rn(v); 
+        int iv = __double2int_rn(v);
         return saturate_cast<short>(iv);
     #else
         return saturate_cast<short>((float)v);
     #endif
     }
 
-    template<> __device__ __forceinline__ int saturate_cast<int>(float v) 
-    { 
-        return __float2int_rn(v); 
+    template<> __device__ __forceinline__ int saturate_cast<int>(float v)
+    {
+        return __float2int_rn(v);
     }
-    template<> __device__ __forceinline__ int saturate_cast<int>(double v) 
+    template<> __device__ __forceinline__ int saturate_cast<int>(double v)
     {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         return __double2int_rn(v);
@@ -200,11 +200,11 @@ namespace cv { namespace gpu { namespace device
     }
 
     template<> __device__ __forceinline__ uint saturate_cast<uint>(float v)
-    { 
-        return __float2uint_rn(v); 
+    {
+        return __float2uint_rn(v);
     }
-    template<> __device__ __forceinline__ uint saturate_cast<uint>(double v) 
-    {            
+    template<> __device__ __forceinline__ uint saturate_cast<uint>(double v)
+    {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         return __double2uint_rn(v);
     #else
