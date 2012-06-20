@@ -257,11 +257,11 @@ typedef struct CvFileStorage
     CvWriteString write_string;
     CvWriteComment write_comment;
     CvStartNextStream start_next_stream;
-    
+
     const char* strbuf;
     size_t strbufsize, strbufpos;
     std::deque<char>* outbuf;
-    
+
     bool is_opened;
 }
 CvFileStorage;
@@ -543,10 +543,10 @@ icvClose( CvFileStorage* fs, std::string* out )
 {
     if( out )
         out->clear();
-    
+
     if( !fs )
         CV_Error( CV_StsNullPtr, "NULL double pointer to file storage" );
-    
+
     if( fs->is_opened )
     {
         if( fs->write_mode && (fs->file || fs->gzfile || fs->outbuf) )
@@ -560,10 +560,10 @@ icvClose( CvFileStorage* fs, std::string* out )
             if( fs->fmt == CV_STORAGE_FORMAT_XML )
                 icvPuts( fs, "</opencv_storage>\n" );
         }
-        
+
         icvCloseFile(fs);
     }
-        
+
     if( fs->outbuf && out )
     {
         out->resize(fs->outbuf->size());
@@ -578,21 +578,21 @@ cvReleaseFileStorage( CvFileStorage** p_fs )
 {
     if( !p_fs )
         CV_Error( CV_StsNullPtr, "NULL double pointer to file storage" );
-    
+
     if( *p_fs )
     {
         CvFileStorage* fs = *p_fs;
         *p_fs = 0;
-        
+
         icvClose(fs, 0);
-        
-        cvReleaseMemStorage( &fs->strstorage );        
+
+        cvReleaseMemStorage( &fs->strstorage );
         cvFree( &fs->buffer_start );
         cvReleaseMemStorage( &fs->memstorage );
-        
+
         if( fs->outbuf )
             delete fs->outbuf;
-        
+
         memset( fs, 0, sizeof(*fs) );
         cvFree( &fs );
     }
@@ -2697,7 +2697,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
     }
     else
         fnamelen = strlen(filename);
-    
+
     if( mem && append )
         CV_Error( CV_StsBadFlag, "CV_STORAGE_APPEND and CV_STORAGE_MEMORY are not currently compatible" );
 
@@ -2709,7 +2709,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
 
     fs->flags = CV_FILE_STORAGE;
     fs->write_mode = write_mode;
-    
+
     if( !mem )
     {
         fs->filename = (char*)cvMemStorageAlloc( fs->memstorage, fnamelen+1 );
@@ -2747,7 +2747,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             #endif
         }
     }
-    
+
     fs->roots = 0;
     fs->struct_indent = 0;
     fs->struct_flags = 0;
@@ -2756,10 +2756,10 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
     if( fs->write_mode )
     {
         int fmt = flags & CV_STORAGE_FORMAT_MASK;
-        
+
         if( mem )
             fs->outbuf = new std::deque<char>;
-        
+
         if( fmt == CV_STORAGE_FORMAT_AUTO && filename )
         {
             const char* dot_pos = filename + fnamelen - (isGZ ? 7 : 4);
@@ -2769,7 +2769,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
         }
         else
             fs->fmt = fmt != CV_STORAGE_FORMAT_AUTO ? fmt : CV_STORAGE_FORMAT_XML;
-        
+
         // we use factor=6 for XML (the longest characters (' and ") are encoded with 6 bytes (&apos; and &quot;)
         // and factor=4 for YAML ( as we use 4 bytes for non ASCII characters (e.g. \xAB))
         int buf_size = CV_FS_MAX_LEN*(fs->fmt == CV_STORAGE_FORMAT_XML ? 6 : 4) + 1024;
@@ -2871,7 +2871,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
             fs->strbuf = filename;
             fs->strbufsize = fnamelen;
         }
-        
+
         size_t buf_size = 1 << 20;
         const char* yaml_signature = "%YAML:";
         char buf[16];
@@ -2917,7 +2917,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
         fs->buffer = fs->buffer_end = 0;
     }
     fs->is_opened = true;
-    
+
 _exit_:
     if( fs )
     {
@@ -3120,7 +3120,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
 
     if( !len )
         return;
-    
+
     if( !data0 )
         CV_Error( CV_StsNullPtr, "Null data pointer" );
 
@@ -3564,7 +3564,7 @@ icvReadMat( CvFileStorage* fs, CvFileNode* node )
     cols = cvReadIntByName( fs, node, "cols", -1 );
     dt = cvReadStringByName( fs, node, "dt", 0 );
 
-    if( rows < 0 || cols < 0 || dt < 0 )
+    if( rows < 0 || cols < 0 || !dt )
         CV_Error( CV_StsError, "Some of essential matrix attributes are absent" );
 
     elem_type = icvDecodeSimpleFormat( dt );
@@ -4632,7 +4632,7 @@ icvReadGraph( CvFileStorage* fs, CvFileNode* node )
     if( header_dt )
         header_size = icvCalcElemSize( header_dt, header_size );
 
-    if( vtx_dt > 0 )
+    if( vtx_dt )
     {
         src_vtx_size = icvCalcElemSize( vtx_dt, 0 );
         vtx_size = icvCalcElemSize( vtx_dt, vtx_size );
@@ -5192,16 +5192,16 @@ void FileStorage::release()
 
 string FileStorage::releaseAndGetString()
 {
-	string buf;
+    string buf;
     if( fs.obj && fs.obj->outbuf )
         icvClose(fs.obj, &buf);
-    
+
     fs.release();
     structs.clear();
     state = UNDEFINED;
-	return buf;
-}    
-    
+    return buf;
+}
+
 FileNode FileStorage::root(int streamidx) const
 {
     return isOpened() ? FileNode(fs, cvGetRootFileNode(fs, streamidx)) : FileNode();
@@ -5498,7 +5498,7 @@ void write( FileStorage& fs, const string& name, const SparseMat& value )
     Ptr<CvSparseMat> mat = (CvSparseMat*)value;
     cvWrite( *fs, name.size() ? name.c_str() : 0, mat );
 }
-    
+
 
 WriteStructContext::WriteStructContext(FileStorage& _fs, const string& name,
                    int flags, const string& typeName) : fs(&_fs)
