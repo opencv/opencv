@@ -238,7 +238,7 @@ if __name__ == "__main__":
         exit(0)
    
     selfpath = os.path.dirname(os.path.abspath(sys.argv[0]))
-    hdr_parser_path = os.path.join(selfpath, "../python/src2")
+    hdr_parser_path = os.path.join(selfpath, "../../python/src2")
     
     sys.path.append(selfpath)
     sys.path.append(hdr_parser_path)
