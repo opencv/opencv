@@ -2505,10 +2505,10 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetD
 }
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count);
+    (JNIEnv* env, jclass, jlong self, jint row, jint col);
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
-    (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count)
+    (JNIEnv* env, jclass, jlong self, jint row, jint col)
 {
     try {
         LOGD("Mat::nGet()");
