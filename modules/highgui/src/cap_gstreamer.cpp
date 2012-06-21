@@ -274,7 +274,7 @@ void CvCapture_GStreamer::removeFilter(const char *filter)
 //
 // connect uridecodebin dynamically created source pads to colourconverter
 //
-void CvCapture_GStreamer::newPad(GstElement *uridecodebin,
+void CvCapture_GStreamer::newPad(GstElement * /*uridecodebin*/,
                              GstPad     *pad,
                              gpointer    data)
 {
