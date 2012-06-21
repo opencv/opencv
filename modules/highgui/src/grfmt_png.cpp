@@ -51,12 +51,21 @@
     and png2bmp sample from libpng distribution (Copyright (C) 1999-2001 MIYASAKA Masaru)
 \****************************************************************************************/
 
+#undef HAVE_UNISTD_H //to avoid redefinition
+#ifndef _LFS64_LARGEFILE
+#  define _LFS64_LARGEFILE 0
+#endif
+#ifndef _FILE_OFFSET_BITS
+#  define _FILE_OFFSET_BITS 0
+#endif
+
 #ifdef HAVE_LIBPNG_PNG_H
 #include <libpng/png.h>
 #else
 #include <png.h>
 #endif
 #include <zlib.h>
+
 #include "grfmt_png.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 1200

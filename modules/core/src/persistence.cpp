@@ -59,7 +59,14 @@ typedef void* gzFile;
 #endif
 
 #if USE_ZLIB
-#include <zlib.h>
+#  undef HAVE_UNISTD_H //to avoid redefinition
+#  ifndef _LFS64_LARGEFILE
+#    define _LFS64_LARGEFILE 0
+#  endif
+#  ifndef _FILE_OFFSET_BITS
+#    define _FILE_OFFSET_BITS 0
+#  endif
+#  include <zlib.h>
 #endif
 
 /****************************************************************************************\
