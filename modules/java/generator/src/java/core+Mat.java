@@ -1082,13 +1082,6 @@ public class Mat {
         return nativeObj;
     }
 
-    //
-    // native stuff
-    //
-    static {
-        System.loadLibrary("opencv_java");
-    }
-
     // C++: Mat::Mat()
     private static native long n_Mat();
 

@@ -717,12 +717,12 @@ $imports
 public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
-        self.java_code[class_name]["jn_code"].write("""
-    //
-    // native stuff
-    //
-    static { System.loadLibrary("opencv_java"); }
-""" )
+#        self.java_code[class_name]["jn_code"].write("""
+#    //
+#    // native stuff
+#    //
+#    static { System.loadLibrary("opencv_java"); }
+#""" )
 
 
 

@@ -719,14 +719,14 @@ if __name__ == "__main__":
             verbose = True
 
     rst_parser_dir  = os.path.dirname(os.path.abspath(sys.argv[0]))
-    hdr_parser_path = os.path.join(rst_parser_dir, "../python/src2")
+    hdr_parser_path = os.path.join(rst_parser_dir, "../../python/src2")
 
     sys.path.append(hdr_parser_path)
     import hdr_parser
 
     module = sys.argv[1]
 
-    if module != "all" and not os.path.isdir(os.path.join(rst_parser_dir, "../" + module)):
+    if module != "all" and not os.path.isdir(os.path.join(rst_parser_dir, "../../" + module)):
         print "RST parser error E%03d: module \"%s\" could not be found." % (ERROR_010_NOMODULE, module)
         exit(1)
 
@@ -734,9 +734,9 @@ if __name__ == "__main__":
 
     if module == "all":
         for m in allmodules:
-            parser.parse(m, os.path.join(rst_parser_dir, "../" + m))
+            parser.parse(m, os.path.join(rst_parser_dir, "../../" + m))
     else:
-        parser.parse(module, os.path.join(rst_parser_dir, "../" + module))
+        parser.parse(module, os.path.join(rst_parser_dir, "../../" + module))
 
     # summary
     parser.printSummary()

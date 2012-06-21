@@ -178,7 +178,7 @@ endmacro()
 #add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
 macro(add_android_project target path)
   # parse arguments
-  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET)
+  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA)
   set(__varname "android_proj_")
   foreach(v ${android_proj_arglist})
     set(${__varname}${v} "")
@@ -205,7 +205,11 @@ macro(add_android_project target path)
   endif()
 
   # check native dependencies
-  ocv_check_dependencies(${android_proj_NATIVE_DEPS} opencv_java)
+  if(android_proj_IGNORE_JAVA)
+    ocv_check_dependencies(${android_proj_NATIVE_DEPS})
+  else()
+    ocv_check_dependencies(${android_proj_NATIVE_DEPS} opencv_java)
+  endif()
 
   if(OCV_DEPENDENCIES_FOUND AND android_proj_sdk_target AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13 AND EXISTS "${path}/${ANDROID_MANIFEST_FILE}")
 
@@ -255,7 +259,7 @@ macro(add_android_project target path)
     file(GLOB_RECURSE android_proj_jni_files "${path}/jni/*.c" "${path}/jni/*.h" "${path}/jni/*.cpp" "${path}/jni/*.hpp")
     ocv_list_filterout(android_proj_jni_files ".svn")
 
-    if(android_proj_jni_files AND EXISTS ${path}/jni/Android.mk)
+    if(android_proj_jni_files AND EXISTS ${path}/jni/Android.mk AND NOT DEFINED JNI_LIB_NAME)
       file(STRINGS "${path}/jni/Android.mk" JNI_LIB_NAME REGEX "LOCAL_MODULE[ ]*:=[ ]*.*" )
       string(REGEX REPLACE "LOCAL_MODULE[ ]*:=[ ]*([a-zA-Z_][a-zA-Z_0-9]*)[ ]*" "\\1" JNI_LIB_NAME "${JNI_LIB_NAME}")
 
@@ -279,6 +283,15 @@ macro(add_android_project target path)
     endif()
 
     # build java part
+    if(android_proj_IGNORE_JAVA)
+      add_custom_command(
+         OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
+         COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
+         COMMAND ${CMAKE_COMMAND} -E touch "${android_proj_bin_dir}/bin/${target}-debug.apk" # needed because ant does not update the timestamp of updated apk
+         WORKING_DIRECTORY "${android_proj_bin_dir}"
+         MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
+         DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
+    else()
     add_custom_command(
        OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
        COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
@@ -287,9 +300,15 @@ macro(add_android_project target path)
        MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
        DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar" opencv_java # as we are part of OpenCV we can just force this dependency
        DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
+    endif()
 
     add_custom_target(${target} ALL SOURCES "${android_proj_bin_dir}/bin/${target}-debug.apk" )
-    add_dependencies(${target} opencv_java ${android_proj_native_deps})
+    if(NOT android_proj_IGNORE_JAVA)
+      add_dependencies(${target} opencv_java)
+    endif()
+    if(android_proj_native_deps)
+      add_dependencies(${target} ${android_proj_native_deps})
+    endif()
 
     # put the final .apk to the OpenCV's bin folder
     add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")

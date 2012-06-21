@@ -121,7 +121,7 @@ set(JAVA_OUTPUT_DIR "src/org/opencv")
 
 # copy each documented header to the final destination
 set(java_files "")
-foreach(java_file ${documented_java_files})
+foreach(java_file ${documented_java_files} ${handwrittren_aidl_sources})
   get_filename_component(java_file_name "${java_file}" NAME)
   string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
   string(REPLACE "+" "/" java_file_name "${java_file_name}")
@@ -249,8 +249,8 @@ if(ANDROID)
         DEPENDS ${lib_proj_files} ${lib_target_files} ${java_files}
         COMMENT "Building OpenCV Android library project"
         )
-      install(FILES "${OpenCV_BINARY_DIR}/bin/classes.jar" "${OpenCV_BINARY_DIR}/bin/jarlist.cache" "${OpenCV_BINARY_DIR}/bin/build.prop" DESTINATION bin COMPONENT main)
-      install(DIRECTORY "${OpenCV_BINARY_DIR}/bin/res" "${OpenCV_BINARY_DIR}/bin/classes" DESTINATION bin COMPONENT main)
+      #install(FILES "${OpenCV_BINARY_DIR}/bin/classes.jar" "${OpenCV_BINARY_DIR}/bin/jarlist.cache" "${OpenCV_BINARY_DIR}/bin/build.prop" DESTINATION bin COMPONENT main)
+      #install(DIRECTORY "${OpenCV_BINARY_DIR}/bin/res" "${OpenCV_BINARY_DIR}/bin/classes" DESTINATION bin COMPONENT main)
       list(APPEND lib_target_files "${OpenCV_BINARY_DIR}/bin/classes.jar")
     endif()
 

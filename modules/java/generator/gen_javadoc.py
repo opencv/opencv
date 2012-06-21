@@ -248,7 +248,7 @@ if __name__ == "__main__":
     print "Parsing documentation..."
     parser = rst_parser.RstParser(hdr_parser.CppHeaderParser())
     for m in allmodules:
-        parser.parse(m, os.path.join(selfpath, "../" + m))
+        parser.parse(m, os.path.join(selfpath, "../../" + m))
         
     parser.printSummary()
 
