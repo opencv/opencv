@@ -91,7 +91,7 @@ public class FdActivity extends Activity {
 			ad.setMessage("Fatal error: can't open camera!");  
 			ad.setButton("OK", new DialogInterface.OnClickListener() {  
 			    public void onClick(DialogInterface dialog, int which) {  
-			        dialog.dismiss();                      
+			        dialog.dismiss();
 					finish();
 			    }  
 			});  

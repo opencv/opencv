@@ -7,22 +7,73 @@
 
 #include <vector>
 
+namespace cv
+{
 class DetectionBasedTracker
 {
     public:
         struct Parameters
         {
-            int minObjectSize;
-            int maxObjectSize;
-            double scaleFactor;
             int maxTrackLifetime;
-            int minNeighbors;
             int minDetectionPeriod; //the minimal time between run of the big object detector (on the whole frame) in ms (1000 mean 1 sec), default=0
 
             Parameters();
         };
 
-        DetectionBasedTracker(const std::string& cascadeFilename, const Parameters& params);
+        class IDetector
+        {
+            public:
+                IDetector():
+                    minObjSize(96, 96),
+                    maxObjSize(INT_MAX, INT_MAX),
+                    minNeighbours(2),
+                    scaleFactor(1.1f)
+                {}
+
+                virtual void detect(const cv::Mat& Image, std::vector<cv::Rect>& objects) = 0;
+
+                void setMinObjectSize(const cv::Size& min)
+                {
+                    minObjSize = min;
+                }
+                void setMaxObjectSize(const cv::Size& max)
+                {
+                    maxObjSize = max;
+                }
+                cv::Size getMinObjectSize() const
+                {
+                    return minObjSize;
+                }
+                cv::Size getMaxObjectSize() const
+                {
+                    return maxObjSize;
+                }
+                float getScaleFactor()
+                {
+                    return scaleFactor;
+                }
+                void setScaleFactor(float value)
+                {
+                    scaleFactor = value;
+                }
+                int getMinNeighbours()
+                {
+                    return minNeighbours;
+                }
+                void setMinNeighbours(int value)
+                {
+                    minNeighbours = value;
+                }
+                virtual ~IDetector() {}
+
+            protected:
+                cv::Size minObjSize;
+                cv::Size maxObjSize;
+                int minNeighbours;
+                float scaleFactor;
+        };
+
+        DetectionBasedTracker(cv::Ptr<IDetector> MainDetector, cv::Ptr<IDetector> TrackingDetector, const Parameters& params);
         virtual ~DetectionBasedTracker();
 
         virtual bool run();
@@ -43,7 +94,6 @@ class DetectionBasedTracker
         class SeparateDetectionWork;
         cv::Ptr<SeparateDetectionWork> separateDetectionWork;
         friend void* workcycleObjectDetectorFunction(void* p);
-
 
         struct InnerParameters
         {
@@ -90,13 +140,11 @@ class DetectionBasedTracker
         std::vector<float> weightsPositionsSmoothing;
         std::vector<float> weightsSizesSmoothing;
 
-        cv::CascadeClassifier cascadeForTracking;
-
+        cv::Ptr<IDetector> cascadeForTracking;
 
         void updateTrackedObjects(const std::vector<cv::Rect>& detectedObjects);
         cv::Rect calcTrackedObjectPositionToShow(int i) const;
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
-
+} //end of cv namespace
 #endif
-
