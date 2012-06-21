@@ -211,6 +211,7 @@ namespace NCVRuntimeTemplateBool
 
         static void call(Func &functor, std::vector<int> &templateParams)
         {
+            (void)templateParams;
             functor.call(TList());
         }
     };

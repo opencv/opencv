@@ -619,6 +619,7 @@ namespace cv { namespace gpu { namespace device
         void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2Db& img,
                                     float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
         {
+            (void)nbins;
             const int nthreads = 256;
 
             dim3 bdim(nthreads, 1);
@@ -691,6 +692,7 @@ namespace cv { namespace gpu { namespace device
         void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2Db& img,
                                     float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
         {
+            (void)nbins;
             const int nthreads = 256;
 
             dim3 bdim(nthreads, 1);

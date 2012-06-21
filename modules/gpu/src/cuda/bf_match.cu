@@ -567,6 +567,7 @@ namespace cv { namespace gpu { namespace device
                              const DevMem2Di& trainIdx, const DevMem2Df& distance,
                              int cc, cudaStream_t stream)
         {
+            (void)cc;
             if (query.cols <= 64)
             {
                 matchUnrolledCached<16, 64, Dist>(query, train, mask, trainIdx, distance, stream);
@@ -598,6 +599,7 @@ namespace cv { namespace gpu { namespace device
                              const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
                              int cc, cudaStream_t stream)
         {
+            (void)cc;
             if (query.cols <= 64)
             {
                 matchUnrolledCached<16, 64, Dist>(query, trains, n, mask, trainIdx, imgIdx, distance, stream);

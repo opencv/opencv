@@ -248,6 +248,7 @@ void generateHaarLoaderTests(NCVAutoTestLister &testLister)
 void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourceProvider<Ncv8u> &src,
                                   Ncv32u maxWidth, Ncv32u maxHeight)
 {
+    (void)maxHeight;
     for (Ncv32u i=20; i<512; i+=11)
     {
         for (Ncv32u j=20; j<128; j+=5)
@@ -268,11 +269,12 @@ void generateHaarApplicationTests(NCVAutoTestLister &testLister, NCVTestSourcePr
 
 static void devNullOutput(const std::string& msg)
 {
+    (void)msg;
 }
 
 bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel)
 {
-    path = test_data_path;
+    path = test_data_path.c_str();
     ncvSetDebugOutputHandler(devNullOutput);
 
     NCVAutoTestLister testListerII("NPPST Integral Image", outputLevel);
@@ -374,6 +376,7 @@ bool nvidia_NCV_Vector_Operations(const std::string& test_data_path, OutputLevel
     generateVectorTests(testListerVectorOperations, testSrcRandom_32u, 4096*4096);
 
     return testListerVectorOperations.invoke();
+
 }
 
 bool nvidia_NCV_Haar_Cascade_Loader(const std::string& test_data_path, OutputLevel outputLevel)

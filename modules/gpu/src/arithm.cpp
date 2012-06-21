@@ -68,7 +68,7 @@ void cv::gpu::polarToCart(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool, 
 void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
-
+    (void)src1; (void)src2; (void)alpha; (void)src3; (void)beta; (void)dst; (void)flags; (void)stream;
     CV_Error(CV_StsNotImplemented, "The library was build without CUBLAS");
 
 #else

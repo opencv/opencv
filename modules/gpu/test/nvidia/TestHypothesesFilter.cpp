@@ -1,11 +1,11 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual 
- * property and proprietary rights in and to this software and 
- * related documentation and any modifications thereto.  
- * Any use, reproduction, disclosure, or distribution of this 
- * software and related documentation without an express license 
+ * NVIDIA Corporation and its licensors retain all intellectual
+ * property and proprietary rights in and to this software and
+ * related documentation and any modifications thereto.
+ * Any use, reproduction, disclosure, or distribution of this
+ * software and related documentation without an express license
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
@@ -13,14 +13,14 @@
 #include "NCVHaarObjectDetection.hpp"
 
 
-TestHypothesesFilter::TestHypothesesFilter(std::string testName, NCVTestSourceProvider<Ncv32u> &src,
-                                           Ncv32u numDstRects, Ncv32u minNeighbors, Ncv32f eps)
+TestHypothesesFilter::TestHypothesesFilter(std::string testName, NCVTestSourceProvider<Ncv32u> &src_,
+                                           Ncv32u numDstRects_, Ncv32u minNeighbors_, Ncv32f eps_)
     :
     NCVTestProvider(testName),
-    src(src),
-    numDstRects(numDstRects),
-    minNeighbors(minNeighbors),
-    eps(eps)
+    src(src_),
+    numDstRects(numDstRects_),
+    minNeighbors(minNeighbors_),
+    eps(eps_)
 {
 }
 
@@ -94,11 +94,11 @@ bool TestHypothesesFilter::process()
         for (Ncv32u j=0; j<numNeighbors; j++)
         {
             randVal = (1.0 * h_random32u.ptr()[randCnt++]) / 0xFFFFFFFF; randCnt = randCnt % h_random32u.length();
-            h_vecSrc.ptr()[srcSlotSize * i + j].x = 
+            h_vecSrc.ptr()[srcSlotSize * i + j].x =
                 h_vecDst_groundTruth.ptr()[i].x +
                 (Ncv32s)(h_vecDst_groundTruth.ptr()[i].width * this->eps * (randVal - 0.5));
             randVal = (1.0 * h_random32u.ptr()[randCnt++]) / 0xFFFFFFFF; randCnt = randCnt % h_random32u.length();
-            h_vecSrc.ptr()[srcSlotSize * i + j].y = 
+            h_vecSrc.ptr()[srcSlotSize * i + j].y =
                 h_vecDst_groundTruth.ptr()[i].y +
                 (Ncv32s)(h_vecDst_groundTruth.ptr()[i].height * this->eps * (randVal - 0.5));
             h_vecSrc.ptr()[srcSlotSize * i + j].width = h_vecDst_groundTruth.ptr()[i].width;
@@ -109,11 +109,11 @@ bool TestHypothesesFilter::process()
         for (Ncv32u j=numNeighbors; j<srcSlotSize; j++)
         {
             randVal = (1.0 * h_random32u.ptr()[randCnt++]) / 0xFFFFFFFF; randCnt = randCnt % h_random32u.length();
-            h_vecSrc.ptr()[srcSlotSize * i + j].x = 
+            h_vecSrc.ptr()[srcSlotSize * i + j].x =
                 this->canvasWidth + h_vecDst_groundTruth.ptr()[i].x +
                 (Ncv32s)(h_vecDst_groundTruth.ptr()[i].width * this->eps * (randVal - 0.5));
             randVal = (1.0 * h_random32u.ptr()[randCnt++]) / 0xFFFFFFFF; randCnt = randCnt % h_random32u.length();
-            h_vecSrc.ptr()[srcSlotSize * i + j].y = 
+            h_vecSrc.ptr()[srcSlotSize * i + j].y =
                 this->canvasHeight + h_vecDst_groundTruth.ptr()[i].y +
                 (Ncv32s)(h_vecDst_groundTruth.ptr()[i].height * this->eps * (randVal - 0.5));
             h_vecSrc.ptr()[srcSlotSize * i + j].width = h_vecDst_groundTruth.ptr()[i].width;
@@ -124,8 +124,8 @@ bool TestHypothesesFilter::process()
     //shuffle
     for (Ncv32u i=0; i<this->numDstRects*srcSlotSize-1; i++)
     {
-        Ncv32u randVal = h_random32u.ptr()[randCnt++]; randCnt = randCnt % h_random32u.length();
-        Ncv32u secondSwap = randVal % (this->numDstRects*srcSlotSize-1 - i);
+        Ncv32u randValLocal = h_random32u.ptr()[randCnt++]; randCnt = randCnt % h_random32u.length();
+        Ncv32u secondSwap = randValLocal % (this->numDstRects*srcSlotSize-1 - i);
         NcvRect32u tmp = h_vecSrc.ptr()[i + secondSwap];
         h_vecSrc.ptr()[i + secondSwap] = h_vecSrc.ptr()[i];
         h_vecSrc.ptr()[i] = tmp;

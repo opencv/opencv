@@ -158,6 +158,10 @@ namespace cv { namespace gpu { namespace device
         {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2D_<T> dst, const float* borderValue, int)
             {
+                (void)xoff;
+                (void)yoff;
+                (void)srcWhole;
+
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type;
 
                 dim3 block(32, 8);

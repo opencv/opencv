@@ -55,7 +55,12 @@ namespace cv { namespace gpu { namespace device
         typedef typename Ptr2D::elem_type elem_type;
         typedef float index_type;
 
-        explicit __host__ __device__ __forceinline__ PointFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f) : src(src_) {}
+        explicit __host__ __device__ __forceinline__ PointFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
+        : src(src_)
+        {
+            (void)fx;
+            (void)fy;
+        }
 
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
         {
@@ -70,8 +75,12 @@ namespace cv { namespace gpu { namespace device
         typedef typename Ptr2D::elem_type elem_type;
         typedef float index_type;
 
-        explicit __host__ __device__ __forceinline__ LinearFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f) : src(src_) {}
-
+        explicit __host__ __device__ __forceinline__ LinearFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
+        : src(src_)
+        {
+            (void)fx;
+            (void)fy;
+        }
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
         {
             typedef typename TypeVec<float, VecTraits<elem_type>::cn>::vec_type work_type;
@@ -107,7 +116,12 @@ namespace cv { namespace gpu { namespace device
         typedef float index_type;
         typedef typename TypeVec<float, VecTraits<elem_type>::cn>::vec_type work_type;
 
-        explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f) : src(src_) {}
+        explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f) 
+        : src(src_)
+        {
+            (void)fx;
+            (void)fy;
+        }
 
         static __device__ __forceinline__ float bicubicCoeff(float x_)
         {

@@ -131,6 +131,10 @@ namespace cv { namespace gpu { namespace device
         {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst)
             {
+                (void)srcWhole;
+                (void)xoff;
+                (void)yoff;
+
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
@@ -219,6 +223,9 @@ namespace cv { namespace gpu { namespace device
         {
             static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
             {
+                (void)srcWhole;
+                (void)xoff;
+                (void)yoff;
                 int iscale_x = round(fx);
                 int iscale_y = round(fy);
 
