@@ -416,9 +416,9 @@ struct Hamming
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
         ResultType result = 0;
-#if __GNUC__
-#if CV_NEON
-        if (CPU_HAS_NEON_FEATURE) {
+#ifdef __GNUC__
+#ifdef __ARM_NEON__
+        {
             uint32x4_t bits = vmovq_n_u32(0);
             for (size_t i = 0; i < size; i += 16) {
                 uint8x16_t A_vec = vld1q_u8 (a + i);
@@ -433,8 +433,7 @@ struct Hamming
             result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
             result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
         }
-        else
-#endif
+#else
         {
             //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
             typedef unsigned long long pop_t;
@@ -454,6 +453,7 @@ struct Hamming
                 result += __builtin_popcountll(a_final ^ b_final);
             }
         }
+#endif //NEON
 #else
         HammingLUT lut;
         result = lut(reinterpret_cast<const unsigned char*> (a),
