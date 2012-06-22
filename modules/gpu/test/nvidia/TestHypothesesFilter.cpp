@@ -13,10 +13,10 @@
 #include "NCVHaarObjectDetection.hpp"
 
 
-TestHypothesesFilter::TestHypothesesFilter(std::string testName, NCVTestSourceProvider<Ncv32u> &src_,
+TestHypothesesFilter::TestHypothesesFilter(std::string testName_, NCVTestSourceProvider<Ncv32u> &src_,
                                            Ncv32u numDstRects_, Ncv32u minNeighbors_, Ncv32f eps_)
     :
-    NCVTestProvider(testName),
+    NCVTestProvider(testName_),
     src(src_),
     numDstRects(numDstRects_),
     minNeighbors(minNeighbors_),

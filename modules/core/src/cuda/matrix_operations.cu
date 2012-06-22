@@ -96,7 +96,7 @@ namespace cv { namespace gpu { namespace device
     __constant__ ushort scalar_16u[4];
     __constant__ short scalar_16s[4];
     __constant__ int scalar_32s[4];
-    __constant__ float scalar_32f[4]; 
+    __constant__ float scalar_32f[4];
     __constant__ double scalar_64f[4];
 
     template <typename T> __device__ __forceinline__ T readScalar(int i);

@@ -357,6 +357,7 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, const Mat &T,
                                  float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
+    (void)src_size;
     using namespace ::cv::gpu::device::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
@@ -390,6 +391,7 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                        GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
+    (void)src_size;
     using namespace ::cv::gpu::device::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
@@ -422,6 +424,7 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                      GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
+    (void)src_size;
     using namespace ::cv::gpu::device::imgproc;
 
     CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
@@ -466,6 +469,7 @@ namespace
 
         static void call(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, cudaStream_t stream)
         {
+            (void)dsize;
             static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
 
             NppStreamHandler h(stream);
@@ -1139,6 +1143,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream)
 {
+    (void)flags;
     using namespace ::cv::gpu::device::imgproc;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, DevMem2D_<cufftComplex>, cudaStream_t stream);
@@ -1169,6 +1174,7 @@ namespace cv { namespace gpu { namespace device
 
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream)
 {
+    (void)flags;
     using namespace ::cv::gpu::device::imgproc;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, DevMem2D_<cufftComplex>, cudaStream_t stream);

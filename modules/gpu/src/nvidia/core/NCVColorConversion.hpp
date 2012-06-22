@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -39,11 +39,14 @@
 //
 //M*/
 
+// this file does not contain any used code.
+
 #ifndef _ncv_color_conversion_hpp_
 #define _ncv_color_conversion_hpp_
 
 #include "NCVPixelOperations.hpp"
 
+#if 0
 enum NCVColorSpace
 {
     NCVColorSpaceGray,
@@ -71,8 +74,7 @@ static void _pixColorConv(const Tin &pixIn, Tout &pixOut)
 }};
 
 template<NCVColorSpace CSin, NCVColorSpace CSout, typename Tin, typename Tout>
-static
-NCVStatus _ncvColorConv_host(const NCVMatrix<Tin> &h_imgIn,
+static NCVStatus _ncvColorConv_host(const NCVMatrix<Tin> &h_imgIn,
                              const NCVMatrix<Tout> &h_imgOut)
 {
     ncvAssertReturn(h_imgIn.size() == h_imgOut.size(), NCV_DIMENSIONS_INVALID);
@@ -92,5 +94,6 @@ NCVStatus _ncvColorConv_host(const NCVMatrix<Tin> &h_imgIn,
     NCV_SKIP_COND_END
     return NCV_SUCCESS;
 }
+#endif
 
 #endif //_ncv_color_conversion_hpp_

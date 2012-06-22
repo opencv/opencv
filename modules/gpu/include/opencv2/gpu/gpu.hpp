@@ -1422,6 +1422,44 @@ private:
     CascadeClassifierImpl* impl;
 };
 
+// The cascade classifier class for object detection.
+class CV_EXPORTS CascadeClassifier_GPU_LBP
+{
+public:
+    enum stage { BOOST = 0 };
+    enum feature { LBP = 0 };
+    CascadeClassifier_GPU_LBP();
+    ~CascadeClassifier_GPU_LBP();
+
+    bool empty() const;
+    bool load(const std::string& filename);
+    void release();
+
+    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4, Size minSize = Size());
+
+    bool findLargestObject;
+    bool visualizeInPlace;
+
+    Size getClassifierSize() const;
+private:
+    bool read(const FileNode &root);
+
+    static const stage stageType = BOOST;
+    static const feature feature = LBP;
+
+    cv::Size NxM;
+    bool isStumps;
+    int ncategories;
+    struct Stage;
+    Stage* stages;
+
+    struct DTree;
+    // DTree* classifiers;
+
+    struct DTreeNode;
+    // DTreeNode* nodes;
+};
+
 ////////////////////////////////// SURF //////////////////////////////////////////
 
 class CV_EXPORTS SURF_GPU

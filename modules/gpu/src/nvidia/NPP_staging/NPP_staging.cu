@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -94,11 +94,6 @@ inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
     s_Data[pos] = 0;
     pos += K_WARP_SIZE;
     s_Data[pos] = idata;
-
-    //for(Ncv32u offset = 1; offset < K_WARP_SIZE; offset <<= 1)
-    //{
-    //    s_Data[pos] += s_Data[pos - offset];
-    //}
 
     s_Data[pos] += s_Data[pos - 1];
     s_Data[pos] += s_Data[pos - 2];
@@ -315,7 +310,7 @@ NCVStatus scanRowsWrapperDevice(T_in *d_src, Ncv32u srcStride,
         <T_in, T_out, tbDoSqr>
         <<<roi.height, NUM_SCAN_THREADS, 0, nppStGetActiveCUDAstream()>>>
         (d_src, (Ncv32u)alignmentOffset, roi.width, srcStride, d_dst, dstStride);
-    
+
     ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
     return NPPST_SUCCESS;
@@ -1447,14 +1442,14 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
         //adjust hierarchical partial sums
         for (Ncv32s i=(Ncv32s)partSumNums.size()-3; i>=0; i--)
         {
-            dim3 grid(partSumNums[i+1]);
-            if (grid.x > 65535)
+            dim3 grid_local(partSumNums[i+1]);
+            if (grid_local.x > 65535)
             {
-                grid.y = (grid.x + 65534) / 65535;
-                grid.x = 65535;
+                grid_local.y = (grid_local.x + 65534) / 65535;
+                grid_local.x = 65535;
             }
             removePass2Adjust
-                <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
+                <<<grid_local, block, 0, nppStGetActiveCUDAstream()>>>
                 (d_hierSums.ptr() + partSumOffsets[i], partSumNums[i],
                  d_hierSums.ptr() + partSumOffsets[i+1]);
 
@@ -1463,10 +1458,10 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
     }
     else
     {
-        dim3 grid(partSumNums[1]);
+        dim3 grid_local(partSumNums[1]);
         removePass1Scan
             <true, false>
-            <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
+            <<<grid_local, block, 0, nppStGetActiveCUDAstream()>>>
             (d_src, srcLen,
              d_hierSums.ptr(),
              NULL, elemRemove);
@@ -1651,7 +1646,7 @@ __forceinline__ __device__ float getValueMirrorColumn(const int offset,
 
 
 __global__ void FilterRowBorderMirror_32f_C1R(Ncv32u srcStep,
-                                              Ncv32f *pDst, 
+                                              Ncv32f *pDst,
                                               NcvSize32u dstSize,
                                               Ncv32u dstStep,
                                               NcvRect32u roi,
@@ -1677,7 +1672,7 @@ __global__ void FilterRowBorderMirror_32f_C1R(Ncv32u srcStep,
     float sum = 0.0f;
     for (int m = 0; m < nKernelSize; ++m)
     {
-        sum += getValueMirrorRow (rowOffset, ix + m - p, roi.width) 
+        sum += getValueMirrorRow (rowOffset, ix + m - p, roi.width)
             * tex1Dfetch (texKernel, m);
     }
 
@@ -1709,7 +1704,7 @@ __global__ void FilterColumnBorderMirror_32f_C1R(Ncv32u srcStep,
     float sum = 0.0f;
     for (int m = 0; m < nKernelSize; ++m)
     {
-        sum += getValueMirrorColumn (offset, srcStep, iy + m - p, roi.height) 
+        sum += getValueMirrorColumn (offset, srcStep, iy + m - p, roi.height)
             * tex1Dfetch (texKernel, m);
     }
 
@@ -1879,7 +1874,7 @@ texture<float, 2, cudaReadModeElementType> tex_src0;
 __global__ void BlendFramesKernel(const float *u, const float *v,   // forward flow
                                   const float *ur, const float *vr, // backward flow
                                   const float *o0, const float *o1, // coverage masks
-                                  int w, int h, int s, 
+                                  int w, int h, int s,
                                   float theta, float *out)
 {
     const int ix = threadIdx.x + blockDim.x * blockIdx.x;
@@ -1903,7 +1898,7 @@ __global__ void BlendFramesKernel(const float *u, const float *v,   // forward f
     if (b0 && b1)
     {
         // pixel is visible on both frames
-        out[pos] = tex2D(tex_src0, x - _u * theta, y - _v * theta) * (1.0f - theta) + 
+        out[pos] = tex2D(tex_src0, x - _u * theta, y - _v * theta) * (1.0f - theta) +
             tex2D(tex_src1, x + _u * (1.0f - theta), y + _v * (1.0f - theta)) * theta;
     }
     else if (b0)
@@ -2004,8 +1999,8 @@ NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState)
     Ncv32f *bwdV = pState->ppBuffers[5]; // backward v
     // warp flow
     ncvAssertReturnNcvStat (
-        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pFU, 
-        pState->size, 
+        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pFU,
+        pState->size,
         pState->nStep,
         pState->pFU,
         pState->pFV,
@@ -2014,8 +2009,8 @@ NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState)
         pState->pos,
         fwdU) );
     ncvAssertReturnNcvStat (
-        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pFV, 
-        pState->size, 
+        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pFV,
+        pState->size,
         pState->nStep,
         pState->pFU,
         pState->pFV,
@@ -2025,8 +2020,8 @@ NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState)
         fwdV) );
     // warp backward flow
     ncvAssertReturnNcvStat (
-        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pBU, 
-        pState->size, 
+        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pBU,
+        pState->size,
         pState->nStep,
         pState->pBU,
         pState->pBV,
@@ -2035,8 +2030,8 @@ NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState)
         1.0f - pState->pos,
         bwdU) );
     ncvAssertReturnNcvStat (
-        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pBV, 
-        pState->size, 
+        nppiStVectorWarp_PSF2x2_32f_C1 (pState->pBV,
+        pState->size,
         pState->nStep,
         pState->pBU,
         pState->pBV,
@@ -2252,7 +2247,7 @@ NCVStatus nppiStVectorWarp_PSF1x1_32f_C1(const Ncv32f *pSrc,
                                          Ncv32f timeScale,
                                          Ncv32f *pDst)
 {
-    ncvAssertReturn (pSrc != NULL && 
+    ncvAssertReturn (pSrc != NULL &&
         pU   != NULL &&
         pV   != NULL &&
         pDst != NULL, NPPST_NULL_POINTER_ERROR);
@@ -2286,7 +2281,7 @@ NCVStatus nppiStVectorWarp_PSF2x2_32f_C1(const Ncv32f *pSrc,
                                          Ncv32f timeScale,
                                          Ncv32f *pDst)
 {
-    ncvAssertReturn (pSrc != NULL && 
+    ncvAssertReturn (pSrc != NULL &&
         pU   != NULL &&
         pV   != NULL &&
         pDst != NULL &&
@@ -2375,7 +2370,7 @@ __global__ void resizeSuperSample_32f(NcvSize32u srcSize,
     }
 
     float rw = (float) srcROI.width;
-    float rh = (float) srcROI.height; 
+    float rh = (float) srcROI.height;
 
     // source position
     float x = scaleX * (float) ix;
@@ -2529,7 +2524,7 @@ NCVStatus nppiStResize_32f_C1R(const Ncv32f *pSrc,
     ncvAssertReturn (pSrc != NULL && pDst != NULL, NPPST_NULL_POINTER_ERROR);
     ncvAssertReturn (xFactor != 0.0 && yFactor != 0.0, NPPST_INVALID_SCALE);
 
-    ncvAssertReturn (nSrcStep >= sizeof (Ncv32f) * (Ncv32u) srcSize.width && 
+    ncvAssertReturn (nSrcStep >= sizeof (Ncv32f) * (Ncv32u) srcSize.width &&
         nDstStep >= sizeof (Ncv32f) * (Ncv32f) dstSize.width,
         NPPST_INVALID_STEP);
 
@@ -2547,7 +2542,7 @@ NCVStatus nppiStResize_32f_C1R(const Ncv32f *pSrc,
         dim3 gridSize ((dstROI.width  + ctaSize.x - 1) / ctaSize.x,
             (dstROI.height + ctaSize.y - 1) / ctaSize.y);
 
-        resizeSuperSample_32f <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream ()>>> 
+        resizeSuperSample_32f <<<gridSize, ctaSize, 0, nppStGetActiveCUDAstream ()>>>
             (srcSize, srcStep, srcROI, pDst, dstSize, dstStep, dstROI, 1.0f / xFactor, 1.0f / yFactor);
     }
     else if (interpolation == nppStBicubic)

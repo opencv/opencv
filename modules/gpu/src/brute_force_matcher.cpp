@@ -272,14 +272,14 @@ void cv::gpu::BFMatcher_GPU::matchConvert(const Mat& trainIdx, const Mat& distan
     const float* distance_ptr =  distance.ptr<float>();
     for (int queryIdx = 0; queryIdx < nQuery; ++queryIdx, ++trainIdx_ptr, ++distance_ptr)
     {
-        int trainIdx = *trainIdx_ptr;
+        int train_idx = *trainIdx_ptr;
 
-        if (trainIdx == -1)
+        if (train_idx == -1)
             continue;
 
-        float distance = *distance_ptr;
+        float distance_local = *distance_ptr;
 
-        DMatch m(queryIdx, trainIdx, 0, distance);
+        DMatch m(queryIdx, train_idx, 0, distance_local);
 
         matches.push_back(m);
     }

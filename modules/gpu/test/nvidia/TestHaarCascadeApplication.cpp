@@ -1,11 +1,11 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual 
- * property and proprietary rights in and to this software and 
- * related documentation and any modifications thereto.  
- * Any use, reproduction, disclosure, or distribution of this 
- * software and related documentation without an express license 
+ * NVIDIA Corporation and its licensors retain all intellectual
+ * property and proprietary rights in and to this software and
+ * related documentation and any modifications thereto.
+ * Any use, reproduction, disclosure, or distribution of this
+ * software and related documentation without an express license
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
@@ -204,7 +204,7 @@ bool TestHaarCascadeApplication::process()
     ncvAssertReturn(cudaSuccess == cudaStreamSynchronize(0), false);
 
 #if !defined(__APPLE__)
-	
+
 #if defined(__GNUC__)
     //http://www.christian-seiler.de/projekte/fpmath/
 
@@ -239,7 +239,7 @@ bool TestHaarCascadeApplication::process()
     _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
 #endif
 #endif
-	
+
 #endif
     NCV_SKIP_COND_END
 

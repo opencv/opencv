@@ -15,10 +15,10 @@
 
 
 template <class T>
-TestResize<T>::TestResize(std::string testName, NCVTestSourceProvider<T> &src_,
+TestResize<T>::TestResize(std::string testName_, NCVTestSourceProvider<T> &src_,
                           Ncv32u width_, Ncv32u height_, Ncv32u scaleFactor_, NcvBool bTextureCache_)
     :
-    NCVTestProvider(testName),
+    NCVTestProvider(testName_),
     src(src_),
     width(width_),
     height(height_),

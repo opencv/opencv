@@ -34,7 +34,7 @@ PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
     if (cc.empty())
         FAIL() << "Can't load cascade file";
 
-    Mat img=imread(getDataPath(filename), 0);
+    Mat img = imread(getDataPath(filename), 0);
     if (img.empty())
         FAIL() << "Can't load source image";
 

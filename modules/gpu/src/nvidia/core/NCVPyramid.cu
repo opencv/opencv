@@ -202,7 +202,7 @@ __global__ void kernelDownsampleX2(T *d_src,
     }
 }
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace pyramid
     {
@@ -211,7 +211,7 @@ namespace cv { namespace gpu { namespace device
             dim3 bDim(16, 8);
             dim3 gDim(divUp(src.cols, bDim.x), divUp(src.rows, bDim.y));
 
-            kernelDownsampleX2<<<gDim, bDim, 0, stream>>>((T*)src.data, static_cast<Ncv32u>(src.step), 
+            kernelDownsampleX2<<<gDim, bDim, 0, stream>>>((T*)src.data, static_cast<Ncv32u>(src.step),
                 (T*)dst.data, static_cast<Ncv32u>(dst.step), NcvSize32u(dst.cols, dst.rows));
 
             cudaSafeCall( cudaGetLastError() );
@@ -277,7 +277,7 @@ __global__ void kernelInterpolateFrom1(T *d_srcTop,
         d_dst_line[j] = outPix;
     }
 }
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace pyramid
     {
@@ -286,7 +286,7 @@ namespace cv { namespace gpu { namespace device
             dim3 bDim(16, 8);
             dim3 gDim(divUp(dst.cols, bDim.x), divUp(dst.rows, bDim.y));
 
-            kernelInterpolateFrom1<<<gDim, bDim, 0, stream>>>((T*) src.data, static_cast<Ncv32u>(src.step), NcvSize32u(src.cols, src.rows), 
+            kernelInterpolateFrom1<<<gDim, bDim, 0, stream>>>((T*) src.data, static_cast<Ncv32u>(src.step), NcvSize32u(src.cols, src.rows),
                 (T*) dst.data, static_cast<Ncv32u>(dst.step), NcvSize32u(dst.cols, dst.rows));
 
             cudaSafeCall( cudaGetLastError() );

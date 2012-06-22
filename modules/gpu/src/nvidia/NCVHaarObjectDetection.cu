@@ -232,7 +232,7 @@ __device__ Ncv32u d_outMaskPosition;
 __device__ void compactBlockWriteOutAnchorParallel(Ncv32u threadPassFlag, Ncv32u threadElem, Ncv32u *vectorOut)
 {
 #if __CUDA_ARCH__ && __CUDA_ARCH__ >= 110
-    
+
     __shared__ Ncv32u shmem[NUM_THREADS_ANCHORSPARALLEL * 2];
     __shared__ Ncv32u numPassed;
     __shared__ Ncv32u outMaskOffset;
@@ -927,7 +927,7 @@ Ncv32u getStageNumWithNotLessThanNclassifiers(Ncv32u N, HaarClassifierCascadeDes
 }
 
 
-NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImage,
+NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &integral,
                                                NCVMatrix<Ncv32f> &d_weights,
                                                NCVMatrixAlloc<Ncv32u> &d_pixelMask,
                                                Ncv32u &numDetections,
@@ -945,32 +945,41 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
                                                cudaDeviceProp &devProp,
                                                cudaStream_t cuStream)
 {
-    ncvAssertReturn(d_integralImage.memType() == d_weights.memType() &&
-                    d_integralImage.memType() == d_pixelMask.memType() &&
-                    d_integralImage.memType() == gpuAllocator.memType() &&
-                     (d_integralImage.memType() == NCVMemoryTypeDevice ||
-                      d_integralImage.memType() == NCVMemoryTypeNone), NCV_MEM_RESIDENCE_ERROR);
+    ncvAssertReturn(integral.memType() == d_weights.memType()&&
+                    integral.memType() == d_pixelMask.memType() &&
+                    integral.memType() == gpuAllocator.memType() &&
+                   (integral.memType() == NCVMemoryTypeDevice ||
+                    integral.memType() == NCVMemoryTypeNone), NCV_MEM_RESIDENCE_ERROR);
+
     ncvAssertReturn(d_HaarStages.memType() == d_HaarNodes.memType() &&
                     d_HaarStages.memType() == d_HaarFeatures.memType() &&
                      (d_HaarStages.memType() == NCVMemoryTypeDevice ||
                       d_HaarStages.memType() == NCVMemoryTypeNone), NCV_MEM_RESIDENCE_ERROR);
+
     ncvAssertReturn(h_HaarStages.memType() != NCVMemoryTypeDevice, NCV_MEM_RESIDENCE_ERROR);
+
     ncvAssertReturn(gpuAllocator.isInitialized() && cpuAllocator.isInitialized(), NCV_ALLOCATOR_NOT_INITIALIZED);
-    ncvAssertReturn((d_integralImage.ptr() != NULL && d_weights.ptr() != NULL && d_pixelMask.ptr() != NULL &&
+
+    ncvAssertReturn((integral.ptr() != NULL && d_weights.ptr() != NULL && d_pixelMask.ptr() != NULL &&
                      h_HaarStages.ptr() != NULL && d_HaarStages.ptr() != NULL && d_HaarNodes.ptr() != NULL &&
                      d_HaarFeatures.ptr() != NULL) || gpuAllocator.isCounting(), NCV_NULL_PTR);
+
     ncvAssertReturn(anchorsRoi.width > 0 && anchorsRoi.height > 0 &&
                     d_pixelMask.width() >= anchorsRoi.width && d_pixelMask.height() >= anchorsRoi.height &&
                     d_weights.width() >= anchorsRoi.width && d_weights.height() >= anchorsRoi.height &&
-                    d_integralImage.width() >= anchorsRoi.width + haar.ClassifierSize.width &&
-                    d_integralImage.height() >= anchorsRoi.height + haar.ClassifierSize.height, NCV_DIMENSIONS_INVALID);
+                    integral.width() >= anchorsRoi.width + haar.ClassifierSize.width &&
+                    integral.height() >= anchorsRoi.height + haar.ClassifierSize.height, NCV_DIMENSIONS_INVALID);
+
     ncvAssertReturn(scaleArea > 0, NCV_INVALID_SCALE);
+
     ncvAssertReturn(d_HaarStages.length() >= haar.NumStages &&
                     d_HaarNodes.length() >= haar.NumClassifierTotalNodes &&
                     d_HaarFeatures.length() >= haar.NumFeatures &&
                     d_HaarStages.length() == h_HaarStages.length() &&
                     haar.NumClassifierRootNodes <= haar.NumClassifierTotalNodes, NCV_DIMENSIONS_INVALID);
+
     ncvAssertReturn(haar.bNeedsTiltedII == false || gpuAllocator.isCounting(), NCV_NOIMPL_HAAR_TILTED_FEATURES);
+
     ncvAssertReturn(pixelStep == 1 || pixelStep == 2, NCV_HAAR_INVALID_PIXEL_STEP);
 
     NCV_SET_SKIP_COND(gpuAllocator.isCounting());
@@ -979,7 +988,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
 
     NCVStatus ncvStat;
 
-    NCVMatrixAlloc<Ncv32u> h_integralImage(cpuAllocator, d_integralImage.width, d_integralImage.height, d_integralImage.pitch);
+    NCVMatrixAlloc<Ncv32u> h_integralImage(cpuAllocator, integral.width, integral.height, integral.pitch);
     ncvAssertReturn(h_integralImage.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
     NCVMatrixAlloc<Ncv32f> h_weights(cpuAllocator, d_weights.width, d_weights.height, d_weights.pitch);
     ncvAssertReturn(h_weights.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
@@ -997,7 +1006,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
 
     ncvStat = d_pixelMask.copySolid(h_pixelMask, 0);
     ncvAssertReturnNcvStat(ncvStat);
-    ncvStat = d_integralImage.copySolid(h_integralImage, 0);
+    ncvStat = integral.copySolid(h_integralImage, 0);
     ncvAssertReturnNcvStat(ncvStat);
     ncvStat = d_weights.copySolid(h_weights, 0);
     ncvAssertReturnNcvStat(ncvStat);
@@ -1071,8 +1080,8 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
         cfdTexIImage = cudaCreateChannelDesc<Ncv32u>();
 
         size_t alignmentOffset;
-        ncvAssertCUDAReturn(cudaBindTexture(&alignmentOffset, texIImage, d_integralImage.ptr(), cfdTexIImage,
-            (anchorsRoi.height + haar.ClassifierSize.height) * d_integralImage.pitch()), NCV_CUDA_ERROR);
+        ncvAssertCUDAReturn(cudaBindTexture(&alignmentOffset, texIImage, integral.ptr(), cfdTexIImage,
+            (anchorsRoi.height + haar.ClassifierSize.height) * integral.pitch()), NCV_CUDA_ERROR);
         ncvAssertReturn(alignmentOffset==0, NCV_TEXTURE_BIND_ERROR);
     }
 
@@ -1189,7 +1198,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
             grid1,
             block1,
             cuStream,
-            d_integralImage.ptr(), d_integralImage.stride(),
+            integral.ptr(), integral.stride(),
             d_weights.ptr(), d_weights.stride(),
             d_HaarFeatures.ptr(), d_HaarNodes.ptr(), d_HaarStages.ptr(),
             d_ptrNowData->ptr(),
@@ -1259,7 +1268,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
             grid2,
             block2,
             cuStream,
-            d_integralImage.ptr(), d_integralImage.stride(),
+            integral.ptr(), integral.stride(),
             d_weights.ptr(), d_weights.stride(),
             d_HaarFeatures.ptr(), d_HaarNodes.ptr(), d_HaarStages.ptr(),
             d_ptrNowData->ptr(),
@@ -1320,7 +1329,7 @@ NCVStatus ncvApplyHaarClassifierCascade_device(NCVMatrix<Ncv32u> &d_integralImag
             grid3,
             block3,
             cuStream,
-            d_integralImage.ptr(), d_integralImage.stride(),
+            integral.ptr(), integral.stride(),
             d_weights.ptr(), d_weights.stride(),
             d_HaarFeatures.ptr(), d_HaarNodes.ptr(), d_HaarStages.ptr(),
             d_ptrNowData->ptr(),
@@ -1455,10 +1464,14 @@ NCVStatus ncvGrowDetectionsVector_device(NCVVector<Ncv32u> &pixelMask,
                                          cudaStream_t cuStream)
 {
     ncvAssertReturn(pixelMask.ptr() != NULL && hypotheses.ptr() != NULL, NCV_NULL_PTR);
+
     ncvAssertReturn(pixelMask.memType() == hypotheses.memType() &&
                     pixelMask.memType() == NCVMemoryTypeDevice, NCV_MEM_RESIDENCE_ERROR);
+
     ncvAssertReturn(rectWidth > 0 && rectHeight > 0 && curScale > 0, NCV_INVALID_ROI);
+
     ncvAssertReturn(curScale > 0, NCV_INVALID_SCALE);
+
     ncvAssertReturn(totalMaxDetections <= hypotheses.length() &&
                     numPixelMaskDetections <= pixelMask.length() &&
                     totalMaxDetections <= totalMaxDetections, NCV_INCONSISTENT_INPUT);
@@ -1527,12 +1540,16 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
                     d_srcImg.memType() == gpuAllocator.memType() &&
                      (d_srcImg.memType() == NCVMemoryTypeDevice ||
                       d_srcImg.memType() == NCVMemoryTypeNone), NCV_MEM_RESIDENCE_ERROR);
+
     ncvAssertReturn(d_HaarStages.memType() == d_HaarNodes.memType() &&
                     d_HaarStages.memType() == d_HaarFeatures.memType() &&
                      (d_HaarStages.memType() == NCVMemoryTypeDevice ||
                       d_HaarStages.memType() == NCVMemoryTypeNone), NCV_MEM_RESIDENCE_ERROR);
+
     ncvAssertReturn(h_HaarStages.memType() != NCVMemoryTypeDevice, NCV_MEM_RESIDENCE_ERROR);
+
     ncvAssertReturn(gpuAllocator.isInitialized() && cpuAllocator.isInitialized(), NCV_ALLOCATOR_NOT_INITIALIZED);
+
     ncvAssertReturn((d_srcImg.ptr() != NULL && d_dstRects.ptr() != NULL &&
                      h_HaarStages.ptr() != NULL && d_HaarStages.ptr() != NULL && d_HaarNodes.ptr() != NULL &&
                      d_HaarFeatures.ptr() != NULL) || gpuAllocator.isCounting(), NCV_NULL_PTR);
@@ -1540,13 +1557,17 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
                     d_srcImg.width() >= srcRoi.width && d_srcImg.height() >= srcRoi.height &&
                     srcRoi.width >= minObjSize.width && srcRoi.height >= minObjSize.height &&
                     d_dstRects.length() >= 1, NCV_DIMENSIONS_INVALID);
+
     ncvAssertReturn(scaleStep > 1.0f, NCV_INVALID_SCALE);
+
     ncvAssertReturn(d_HaarStages.length() >= haar.NumStages &&
                     d_HaarNodes.length() >= haar.NumClassifierTotalNodes &&
                     d_HaarFeatures.length() >= haar.NumFeatures &&
                     d_HaarStages.length() == h_HaarStages.length() &&
                     haar.NumClassifierRootNodes <= haar.NumClassifierTotalNodes, NCV_DIMENSIONS_INVALID);
+
     ncvAssertReturn(haar.bNeedsTiltedII == false, NCV_NOIMPL_HAAR_TILTED_FEATURES);
+
     ncvAssertReturn(pixelStep == 1 || pixelStep == 2, NCV_HAAR_INVALID_PIXEL_STEP);
 
     //TODO: set NPP active stream to cuStream
@@ -1557,8 +1578,8 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
     Ncv32u integralWidth = d_srcImg.width() + 1;
     Ncv32u integralHeight = d_srcImg.height() + 1;
 
-    NCVMatrixAlloc<Ncv32u> d_integralImage(gpuAllocator, integralWidth, integralHeight);
-    ncvAssertReturn(d_integralImage.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
+    NCVMatrixAlloc<Ncv32u> integral(gpuAllocator, integralWidth, integralHeight);
+    ncvAssertReturn(integral.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
     NCVMatrixAlloc<Ncv64u> d_sqIntegralImage(gpuAllocator, integralWidth, integralHeight);
     ncvAssertReturn(d_sqIntegralImage.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
@@ -1589,7 +1610,7 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
     NCV_SKIP_COND_BEGIN
 
     nppStat = nppiStIntegral_8u32u_C1R(d_srcImg.ptr(), d_srcImg.pitch(),
-                                       d_integralImage.ptr(), d_integralImage.pitch(),
+                                       integral.ptr(), integral.pitch(),
                                        NcvSize32u(d_srcImg.width(), d_srcImg.height()),
                                        d_tmpIIbuf.ptr(), szTmpBufIntegral, devProp);
     ncvAssertReturnNcvStat(nppStat);
@@ -1676,7 +1697,7 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
         NCV_SKIP_COND_BEGIN
 
         nppStat = nppiStDecimate_32u_C1R(
-            d_integralImage.ptr(), d_integralImage.pitch(),
+            integral.ptr(), integral.pitch(),
             d_scaledIntegralImage.ptr(), d_scaledIntegralImage.pitch(),
             srcIIRoi, scale, true);
         ncvAssertReturnNcvStat(nppStat);

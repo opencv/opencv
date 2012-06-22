@@ -41,16 +41,40 @@
 //M*/
 
 #include "precomp.hpp"
+#include <vector>
 
 using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-#if !defined (HAVE_CUDA)
+struct cv::gpu::CascadeClassifier_GPU_LBP::Stage
+{
+    int    first;
+    int    ntrees;
+    float  threshold;
+    Stage(int f = 0, int n = 0, float t = 0.f) : first(f), ntrees(n), threshold(t) {}
+};
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()  { throw_nogpu(); }
+struct cv::gpu::CascadeClassifier_GPU_LBP::DTree
+{
+    int nodeCount;
+    DTree(int n = 0) : nodeCount(n) {}
+};
+
+struct cv::gpu::CascadeClassifier_GPU_LBP::DTreeNode
+{
+    int   featureIdx;
+    //float threshold; // for ordered features only
+    int   left;
+    int   right;
+    DTreeNode(int f = 0, int l = 0, int r = 0) : featureIdx(f), left(l), right(r) {}
+};
+
+#if !defined (HAVE_CUDA)
+// ============ old fashioned haar cascade ==============================================//
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_nogpu(); }
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string&)  { throw_nogpu(); }
-cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()  { throw_nogpu(); }
+cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_nogpu(); }
 
 bool cv::gpu::CascadeClassifier_GPU::empty() const { throw_nogpu(); return true; }
 bool cv::gpu::CascadeClassifier_GPU::load(const string&)  { throw_nogpu(); return true; }
@@ -58,8 +82,174 @@ Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const { throw_nogpu(); 
 
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
 
+// ============ LBP cascade ==============================================//
+cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP()               { throw_nogpu(); }
+cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()              { throw_nogpu(); }
+
+bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                        { throw_nogpu(); return true; }
+bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string&)                  { throw_nogpu(); return true; }
+Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const            { throw_nogpu(); return Size(); }
+
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
+
 #else
 
+cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP()
+{
+}
+
+cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()
+{
+}
+
+bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                        { throw_nogpu(); return true; }
+
+bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
+{
+    FileStorage fs(classifierAsXml, FileStorage::READ);
+    if (!fs.isOpened())
+        return false;
+    if (read(fs.getFirstTopLevelNode()))
+        return true;
+    return false;
+}
+
+#define GPU_CC_STAGE_TYPE           "stageType"
+#define GPU_CC_FEATURE_TYPE         "featureType"
+#define GPU_CC_BOOST                "BOOST"
+#define GPU_CC_LBP                  "LBP"
+#define GPU_CC_MAX_CAT_COUNT        "maxCatCount"
+#define GPU_CC_HEIGHT               "height"
+#define GPU_CC_WIDTH                "width"
+#define GPU_CC_STAGE_PARAMS         "stageParams"
+#define GPU_CC_MAX_DEPTH            "maxDepth"
+#define GPU_CC_FEATURE_PARAMS       "featureParams"
+#define GPU_CC_STAGES               "stages"
+#define GPU_CC_STAGE_THRESHOLD      "stageThreshold"
+#define GPU_THRESHOLD_EPS           1e-5f
+#define GPU_CC_WEAK_CLASSIFIERS     "weakClassifiers"
+#define GPU_CC_INTERNAL_NODES       "internalNodes"
+#define GPU_CC_LEAF_VALUES          "leafValues"
+
+bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
+{
+    string stageTypeStr = (string)root[GPU_CC_STAGE_TYPE];
+    CV_Assert(stageTypeStr == GPU_CC_BOOST);
+
+    string featureTypeStr = (string)root[GPU_CC_FEATURE_TYPE];
+    CV_Assert(featureTypeStr == GPU_CC_LBP);
+
+    NxM.width =  (int)root[GPU_CC_WIDTH];
+    NxM.height = (int)root[GPU_CC_HEIGHT];
+    CV_Assert( NxM.height > 0 && NxM.width > 0 );
+
+    isStumps = ((int)(root[GPU_CC_STAGE_PARAMS][GPU_CC_MAX_DEPTH]) == 1) ? true : false;
+
+    // features
+    FileNode fn = root[GPU_CC_FEATURE_PARAMS];
+    if (fn.empty())
+        return false;
+
+    ncategories = fn[GPU_CC_MAX_CAT_COUNT];
+    int subsetSize = (ncategories + 31)/32, nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );// ?
+
+    fn = root[GPU_CC_STAGES];
+    if (fn.empty())
+        return false;
+
+    delete[] stages;
+    // delete[] classifiers;
+    // delete[] nodes;
+
+    stages = new Stage[fn.size()];
+
+    std::vector<DTree> cl_trees;
+    std::vector<DTreeNode> cl_nodes;
+    std::vector<float> cl_leaves;
+    std::vector<int> subsets;
+
+    FileNodeIterator it = fn.begin(), it_end = fn.end();
+    size_t s_it = 0;
+
+    for (size_t si = 0; it != it_end; si++, ++it )
+    {
+        FileNode fns = *it;
+
+        fns = fns[GPU_CC_WEAK_CLASSIFIERS];
+        if (fns.empty())
+            return false;
+
+        stages[s_it++] = Stage((float)fns[GPU_CC_STAGE_THRESHOLD] - GPU_THRESHOLD_EPS,
+                               (int)cl_trees.size(), (int)fns.size());
+
+        cl_trees.reserve(stages[si].first + stages[si].ntrees);
+
+        // weak trees
+        FileNodeIterator it1 = fns.begin(), it1_end = fns.end();
+        for ( ; it1 != it1_end; ++it1 )
+        {
+            FileNode fnw = *it1;
+
+            FileNode internalNodes = fnw[GPU_CC_INTERNAL_NODES];
+            FileNode leafValues = fnw[GPU_CC_LEAF_VALUES];
+            if ( internalNodes.empty() || leafValues.empty() )
+                return false;
+            DTree tree((int)internalNodes.size()/nodeStep );
+            cl_trees.push_back(tree);
+
+            cl_nodes.reserve(cl_nodes.size() + tree.nodeCount);
+            cl_leaves.reserve(cl_leaves.size() + leafValues.size());
+
+            if( subsetSize > 0 )
+                subsets.reserve(subsets.size() + tree.nodeCount * subsetSize);
+
+            // nodes
+            FileNodeIterator iIt = internalNodes.begin(), iEnd = internalNodes.end();
+
+            for( ; iIt != iEnd; )
+            {
+                DTreeNode node((int)*(iIt++), (int)*(iIt++), (int)*(iIt++));
+                cl_nodes.push_back(node);
+
+                if ( subsetSize > 0 )
+                {
+                    for( int j = 0; j < subsetSize; j++, ++iIt )
+                        subsets.push_back((int)*iIt); //????
+                }
+            }
+
+            iIt = leafValues.begin(), iEnd = leafValues.end();
+            // leaves
+            for( ; iIt != iEnd; ++iIt )
+                cl_leaves.push_back((float)*iIt);
+        }
+    }
+
+    return true;
+}
+
+#undef GPU_CC_STAGE_TYPE
+#undef GPU_CC_BOOST
+#undef GPU_CC_FEATURE_TYPE
+#undef GPU_CC_LBP
+#undef GPU_CC_MAX_CAT_COUNT
+#undef GPU_CC_HEIGHT
+#undef GPU_CC_WIDTH
+#undef GPU_CC_STAGE_PARAMS
+#undef GPU_CC_MAX_DEPTH
+#undef GPU_CC_FEATURE_PARAMS
+#undef GPU_CC_STAGES
+#undef GPU_CC_STAGE_THRESHOLD
+#undef GPU_THRESHOLD_EPS
+#undef GPU_CC_WEAK_CLASSIFIERS
+#undef GPU_CC_INTERNAL_NODES
+#undef GPU_CC_LEAF_VALUES
+
+Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const            { throw_nogpu(); return Size(); }
+
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
+
+// ============ old fashioned haar cascade ==============================================//
 struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
 {
     CascadeClassifierImpl(const string& filename) : lastAllocatedFrameSize(-1, -1)

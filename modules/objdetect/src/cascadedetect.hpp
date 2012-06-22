@@ -56,8 +56,8 @@ namespace cv
            + (step) * ((rect).y + (rect).width + (rect).height)
 
 #define CALC_SUM_(p0, p1, p2, p3, offset) \
-    ((p0)[offset] - (p1)[offset] - (p2)[offset] + (p3)[offset])   
-    
+    ((p0)[offset] - (p1)[offset] - (p2)[offset] + (p3)[offset])
+
 #define CALC_SUM(rect,offset) CALC_SUM_((rect)[0], (rect)[1], (rect)[2], (rect)[3], offset)
 
 
@@ -68,24 +68,24 @@ public:
     struct Feature
     {
         Feature();
-        
+
         float calc( int offset ) const;
         void updatePtrs( const Mat& sum );
         bool read( const FileNode& node );
-        
+
         bool tilted;
-        
+
         enum { RECT_NUM = 3 };
-        
+
         struct
         {
             Rect r;
             float weight;
         } rect[RECT_NUM];
-        
+
         const int* p[RECT_NUM][4];
     };
-    
+
     HaarEvaluator();
     virtual ~HaarEvaluator();
 
@@ -109,13 +109,13 @@ protected:
 
     Mat sum0, sqsum0, tilted0;
     Mat sum, sqsum, tilted;
-    
+
     Rect normrect;
     const int *p[4];
     const double *pq[4];
-    
+
     int offset;
-    double varianceNormFactor;    
+    double varianceNormFactor;
 };
 
 inline HaarEvaluator::Feature :: Feature()
@@ -123,8 +123,8 @@ inline HaarEvaluator::Feature :: Feature()
     tilted = false;
     rect[0].r = rect[1].r = rect[2].r = Rect();
     rect[0].weight = rect[1].weight = rect[2].weight = 0;
-    p[0][0] = p[0][1] = p[0][2] = p[0][3] = 
-        p[1][0] = p[1][1] = p[1][2] = p[1][3] = 
+    p[0][0] = p[0][1] = p[0][2] = p[0][3] =
+        p[1][0] = p[1][1] = p[1][2] = p[1][3] =
         p[2][0] = p[2][1] = p[2][2] = p[2][3] = 0;
 }
 
@@ -134,7 +134,7 @@ inline float HaarEvaluator::Feature :: calc( int offset ) const
 
     if( rect[2].weight != 0.0f )
         ret += rect[2].weight * CALC_SUM(p[2], offset);
-    
+
     return ret;
 }
 
@@ -167,27 +167,27 @@ public:
     struct Feature
     {
         Feature();
-        Feature( int x, int y, int _block_w, int _block_h  ) : 
+        Feature( int x, int y, int _block_w, int _block_h  ) :
         rect(x, y, _block_w, _block_h) {}
-        
+
         int calc( int offset ) const;
         void updatePtrs( const Mat& sum );
         bool read(const FileNode& node );
-        
+
         Rect rect; // weight and height for block
         const int* p[16]; // fast
     };
-    
+
     LBPEvaluator();
     virtual ~LBPEvaluator();
-    
+
     virtual bool read( const FileNode& node );
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
     virtual bool setImage(const Mat& image, Size _origWinSize);
     virtual bool setWindow(Point pt);
-    
+
     int operator()(int featureIdx) const
     { return featuresPtr[featureIdx].calc(offset); }
     virtual int calcCat(int featureIdx) const
@@ -200,9 +200,9 @@ protected:
     Rect normrect;
 
     int offset;
-};    
-    
-    
+};
+
+
 inline LBPEvaluator::Feature :: Feature()
 {
     rect = Rect();
@@ -213,7 +213,7 @@ inline LBPEvaluator::Feature :: Feature()
 inline int LBPEvaluator::Feature :: calc( int offset ) const
 {
     int cval = CALC_SUM_( p[5], p[6], p[9], p[10], offset );
-    
+
     return (CALC_SUM_( p[0], p[1], p[4], p[5], offset ) >= cval ? 128 : 0) |   // 0
            (CALC_SUM_( p[1], p[2], p[5], p[6], offset ) >= cval ? 64 : 0) |    // 1
            (CALC_SUM_( p[2], p[3], p[6], p[7], offset ) >= cval ? 32 : 0) |    // 2
@@ -248,7 +248,7 @@ public:
         Feature();
         float calc( int offset ) const;
         void updatePtrs( const vector<Mat>& _hist, const Mat &_normSum );
-        bool read( const FileNode& node );  
+        bool read( const FileNode& node );
 
         enum { CELL_NUM = 4, BIN_NUM = 9 };
 
@@ -331,13 +331,13 @@ inline int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_f
     CascadeClassifier::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
     CascadeClassifier::Data::DTree* cascadeWeaks = &cascade.data.classifiers[0];
     CascadeClassifier::Data::Stage* cascadeStages = &cascade.data.stages[0];
-    
+
     for( int si = 0; si < nstages; si++ )
     {
         CascadeClassifier::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
         sum = 0;
-        
+
         for( wi = 0; wi < ntrees; wi++ )
         {
             CascadeClassifier::Data::DTree& weak = cascadeWeaks[stage.first + wi];
@@ -355,7 +355,7 @@ inline int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_f
             leafOfs += weak.nodeCount + 1;
         }
         if( sum < stage.threshold )
-            return -si;            
+            return -si;
     }
     return 1;
 }
@@ -372,13 +372,13 @@ inline int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator>
     CascadeClassifier::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
     CascadeClassifier::Data::DTree* cascadeWeaks = &cascade.data.classifiers[0];
     CascadeClassifier::Data::Stage* cascadeStages = &cascade.data.stages[0];
-    
+
     for(int si = 0; si < nstages; si++ )
     {
         CascadeClassifier::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
         sum = 0;
-        
+
         for( wi = 0; wi < ntrees; wi++ )
         {
             CascadeClassifier::Data::DTree& weak = cascadeWeaks[stage.first + wi];
@@ -396,7 +396,7 @@ inline int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator>
             leafOfs += weak.nodeCount + 1;
         }
         if( sum < stage.threshold )
-            return -si;            
+            return -si;
     }
     return 1;
 }
@@ -444,7 +444,7 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
     CascadeClassifier::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    float tmp; // float accumulator -- float operations are quicker 
+    float tmp; // float accumulator -- float operations are quicker
 #endif
     for( int si = 0; si < nstages; si++ )
     {
@@ -472,11 +472,11 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
 #ifdef HAVE_TEGRA_OPTIMIZATION
         if( tmp < stage.threshold ) {
             sum = (double)tmp;
-            return -si;            
+            return -si;
         }
 #else
         if( sum < stage.threshold )
-            return -si;            
+            return -si;
 #endif
     }
 
