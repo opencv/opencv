@@ -96,6 +96,14 @@ CV_INIT_ALGORITHM(ORB, "Feature2D.ORB",
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+CV_INIT_ALGORITHM(FREAK, "Feature2D.FREAK",
+    			  obj.info()->addParam(obj, "orientationNormalized", obj.orientationNormalized);
+			      obj.info()->addParam(obj, "scaleNormalized", obj.scaleNormalized);
+			      obj.info()->addParam(obj, "patternScale", obj.patternScale);
+			      obj.info()->addParam(obj, "nbOctave", obj.nOctaves));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
                   obj.info()->addParam(obj, "nfeatures", obj.nfeatures);
                   obj.info()->addParam(obj, "qualityLevel", obj.qualityLevel);
