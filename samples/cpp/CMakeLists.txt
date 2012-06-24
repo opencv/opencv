@@ -3,7 +3,7 @@
 #
 # ----------------------------------------------------------------------------
 
-SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core_vision_api opencv_core opencv_flann opencv_imgproc
+SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc
     opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree
     opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab)
 
