@@ -1,10 +1,10 @@
 //  freak.cpp
 //
-//	Copyright (C) 2011-2012  Signal processing laboratory 2, EPFL,
-//	Kirell Benzi (kirell.benzi@epfl.ch),
-//	Raphael Ortiz (raphael.ortiz@a3.epfl.ch)
-//	Alexandre Alahi (alexandre.alahi@epfl.ch)
-//	and Pierre Vandergheynst (pierre.vandergheynst@epfl.ch)
+//  Copyright (C) 2011-2012  Signal processing laboratory 2, EPFL,
+//  Kirell Benzi (kirell.benzi@epfl.ch),
+//  Raphael Ortiz (raphael.ortiz@a3.epfl.ch)
+//  Alexandre Alahi (alexandre.alahi@epfl.ch)
+//  and Pierre Vandergheynst (pierre.vandergheynst@epfl.ch)
 //
 //  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
@@ -119,12 +119,12 @@ void FREAK::buildPattern()
 {
     if( patternScale == patternScale0 && nOctaves == nOctaves0 && !patternLookup.empty() )
         return;
-    
+
     nOctaves0 = nOctaves;
     patternScale0 = patternScale;
-    
+
     patternLookup.resize(FREAK_NB_SCALES*FREAK_NB_ORIENTATION*FREAK_NB_POINTS);
-	double scaleStep = pow(2.0, (double)(nOctaves)/FREAK_NB_SCALES ); // 2 ^ ( (nOctaves-1) /nbScales)
+    double scaleStep = pow(2.0, (double)(nOctaves)/FREAK_NB_SCALES ); // 2 ^ ( (nOctaves-1) /nbScales)
     double scalingFactor, alpha, beta, theta = 0;
 
     // pattern definition, radius normalized to 1.0 (outer point position+sigma=1.0)
@@ -147,21 +147,21 @@ void FREAK::buildPattern()
         for( int orientationIdx = 0; orientationIdx < FREAK_NB_ORIENTATION; ++orientationIdx ) {
             theta = double(orientationIdx)* 2*CV_PI/double(FREAK_NB_ORIENTATION); // orientation of the pattern
             int pointIdx = 0;
-			
-			PatternPoint* patternLookupPtr = &patternLookup[0];
+
+            PatternPoint* patternLookupPtr = &patternLookup[0];
             for( size_t i = 0; i < 8; ++i ) {
                 for( int k = 0 ; k < n[i]; ++k ) {
-                    beta = M_PI/n[i] * (i%2); // orientation offset so that groups of points on each circles are staggered
-                    alpha = double(k)* 2*M_PI/double(n[i])+beta+theta;
+                    beta = CV_PI/n[i] * (i%2); // orientation offset so that groups of points on each circles are staggered
+                    alpha = double(k)* 2*CV_PI/double(n[i])+beta+theta;
 
                     // add the point to the look-up table
                     PatternPoint& point = patternLookupPtr[ scaleIdx*FREAK_NB_ORIENTATION*FREAK_NB_POINTS+orientationIdx*FREAK_NB_POINTS+pointIdx ];
-                    point.x = radius[i] * cos(alpha) * scalingFactor * patternScale;
-                    point.y = radius[i] * sin(alpha) * scalingFactor * patternScale;
-                    point.sigma = sigma[i] * scalingFactor * patternScale;
+                    point.x = static_cast<float>(radius[i] * cos(alpha) * scalingFactor * patternScale);
+                    point.y = static_cast<float>(radius[i] * sin(alpha) * scalingFactor * patternScale);
+                    point.sigma = static_cast<float>(sigma[i] * scalingFactor * patternScale);
 
                     // adapt the sizeList if necessary
-                    const int sizeMax = ceil((radius[i]+sigma[i])*scalingFactor*patternScale) + 1;
+                    const int sizeMax = static_cast<int>(ceil((radius[i]+sigma[i])*scalingFactor*patternScale)) + 1;
                     if( patternSizes[scaleIdx] < sizeMax )
                         patternSizes[scaleIdx] = sizeMax;
 
@@ -231,9 +231,9 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
         return;
     if( keypoints.empty() )
         return;
-    
+
     ((FREAK*)this)->buildPattern();
-    
+
 #if CV_SSSE3
     register __m128i operand1;
     register __m128i operand2;
@@ -246,7 +246,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
     std::vector<int> kpScaleIdx(keypoints.size()); // used to save pattern scale index corresponding to each keypoints
     const std::vector<int>::iterator ScaleIdxBegin = kpScaleIdx.begin(); // used in std::vector erase function
     const std::vector<cv::KeyPoint>::iterator kpBegin = keypoints.begin(); // used in std::vector erase function
-    const float sizeCst = FREAK_NB_SCALES/(FREAK_LOG2* nOctaves );
+    const float sizeCst = static_cast<float>(FREAK_NB_SCALES/(FREAK_LOG2* nOctaves));
     uchar pointsValue[FREAK_NB_POINTS];
     int thetaIdx = 0;
     int direction0;
@@ -317,7 +317,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
                     direction1 += delta*(orientationPairs[m].weight_dy)/2048;
                 }
 
-                keypoints[k].angle = atan2((float)direction1,(float)direction0)*(180.0/M_PI);//estimate orientation
+                keypoints[k].angle = static_cast<float>(atan2((float)direction1,(float)direction0)*(180.0/CV_PI));//estimate orientation
                 thetaIdx = int(FREAK_NB_ORIENTATION*keypoints[k].angle*(1/360.0)+0.5);
                 if( thetaIdx < 0 )
                     thetaIdx += FREAK_NB_ORIENTATION;
@@ -328,7 +328,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
             // extract descriptor at the computed orientation
             for( int i = FREAK_NB_POINTS; i--; ) {
                 pointsValue[i] = meanIntensity(image, imgIntegral, keypoints[k].pt.x,keypoints[k].pt.y, kpScaleIdx[k], thetaIdx, i);
-            }           
+            }
 #if CV_SSSE3
             // extracting descriptor by blocks of 128 bits using SSE instructions
             // note that comparisons order is modified in each block (but first 128 comparisons remain globally the same-->does not affect the 128,384 bits segmanted matching strategy)
@@ -388,7 +388,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
                     direction1 += delta*(orientationPairs[m].weight_dy)/2048;
                 }
 
-                keypoints[k].angle = atan2((float)direction1,(float)direction0)*(180.0/M_PI); //estimate orientation
+                keypoints[k].angle = static_cast<float>(atan2((float)direction1,(float)direction0)*(180.0/CV_PI)); //estimate orientation
                 thetaIdx = int(FREAK_NB_ORIENTATION*keypoints[k].angle*(1/360.0)+0.5);
 
                 if( thetaIdx < 0 )
@@ -438,8 +438,8 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     int ret_val;
     if( radius < 0.5 ) {
         // interpolation multipliers:
-        const int r_x = (xf-x)*1024;
-        const int r_y = (yf-y)*1024;
+        const int r_x = static_cast<int>((xf-x)*1024);
+        const int r_y = static_cast<int>((yf-y)*1024);
         const int r_x_1 = (1024-r_x);
         const int r_y_1 = (1024-r_y);
         uchar* ptr = image.data+x+y*imagecols;
@@ -451,7 +451,7 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
         ret_val += (r_x*r_y*int(*ptr));
         ptr--;
         ret_val += (r_x_1*r_y*int(*ptr));
-        return (ret_val+512)/1024;
+        return static_cast<uchar>((ret_val+512)/1024);
     }
 
     // expected case:
@@ -468,7 +468,7 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     ret_val -= integral.at<int>(y_top,x_right);
     ret_val = ret_val/( (x_right-x_left)* (y_bottom-y_top) );
     //~ std::cout<<integral.step[1]<<std::endl;
-    return ret_val;
+    return static_cast<uchar>(ret_val);
 }
 
 // pair selection algorithm from a set of training images and corresponding keypoints
@@ -583,8 +583,8 @@ void FREAKImpl::drawPattern()
 /* FREAK interface implementation */
 FREAK::FREAK( bool _orientationNormalized, bool _scaleNormalized
             , float _patternScale, int _nOctaves, const std::vector<int>& _selectedPairs )
-	: orientationNormalized(_orientationNormalized), scaleNormalized(_scaleNormalized),
-	patternScale(_patternScale), nOctaves(_nOctaves), selectedPairs0(_selectedPairs)
+    : orientationNormalized(_orientationNormalized), scaleNormalized(_scaleNormalized),
+    patternScale(_patternScale), nOctaves(_nOctaves), selectedPairs0(_selectedPairs)
 {
 }
 
