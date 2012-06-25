@@ -1450,14 +1450,13 @@ private:
     cv::Size NxM;
     bool isStumps;
     int ncategories;
-    struct Stage;
-    // Stage* stages;
 
-    struct DTree;
-    // DTree* classifiers;
-
-    struct DTreeNode;
-    // DTreeNode* nodes;
+    // located on gpu
+    GpuMat stage_mat;
+    GpuMat trees_mat;
+    GpuMat nodes_mat;
+    GpuMat leaves_mat;
+    GpuMat subsets_mat;
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////

@@ -48,7 +48,7 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-struct cv::gpu::CascadeClassifier_GPU_LBP::Stage
+struct Stage
 {
     int    first;
     int    ntrees;
@@ -56,13 +56,7 @@ struct cv::gpu::CascadeClassifier_GPU_LBP::Stage
     Stage(int f = 0, int n = 0, float t = 0.f) : first(f), ntrees(n), threshold(t) {}
 };
 
-struct cv::gpu::CascadeClassifier_GPU_LBP::DTree
-{
-    int nodeCount;
-    DTree(int n = 0) : nodeCount(n) {}
-};
-
-struct cv::gpu::CascadeClassifier_GPU_LBP::DTreeNode
+struct DTreeNode
 {
     int   featureIdx;
     //float threshold; // for ordered features only
@@ -162,7 +156,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     std::vector<Stage> stages;
     stages.reserve(fn.size());
 
-    std::vector<DTree> cl_trees;
+    std::vector<int> cl_trees;
     std::vector<DTreeNode> cl_nodes;
     std::vector<float> cl_leaves;
     std::vector<int> subsets;
@@ -196,15 +190,14 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
             FileNode leafValues = fnw[GPU_CC_LEAF_VALUES];
             if ( internalNodes.empty() || leafValues.empty() )
                 return false;
+            int nodeCount = (int)internalNodes.size()/nodeStep;
+            cl_trees.push_back(nodeCount);
 
-            DTree tree((int)internalNodes.size()/nodeStep );
-            cl_trees.push_back(tree);
-
-            cl_nodes.reserve(cl_nodes.size() + tree.nodeCount);
+            cl_nodes.reserve(cl_nodes.size() + nodeCount);
             cl_leaves.reserve(cl_leaves.size() + leafValues.size());
 
             if( subsetSize > 0 )
-                subsets.reserve(subsets.size() + tree.nodeCount * subsetSize);
+                subsets.reserve(subsets.size() + nodeCount * subsetSize);
 
             // nodes
             FileNodeIterator iIt = internalNodes.begin(), iEnd = internalNodes.end();
@@ -226,7 +219,21 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
         }
     }
     // copy data structures on gpu
-    // GpuMat stages;
+    stage_mat = cv::gpu::GpuMat(1, (int)stages.size() * sizeof(Stage), CV_8UC1);
+    stage_mat.upload(cv::Mat(1, stages.size() * sizeof(Stage), CV_8UC1, &(stages[0]) ));
+
+    trees_mat = cv::gpu::GpuMat(1, (int)cl_trees.size(), CV_32SC1);
+    stage_mat.upload(cv::Mat(cl_trees));
+
+    nodes_mat = cv::gpu::GpuMat(1, (int)cl_nodes.size() * sizeof(DTreeNode), CV_8UC1);
+    stage_mat.upload(cv::Mat(1, cl_nodes.size() * sizeof(DTreeNode), CV_8UC1, &(cl_nodes[0]) ));
+
+    leaves_mat = cv::gpu::GpuMat(1, (int)cl_leaves.size(), CV_32FC1);
+    stage_mat.upload(cv::Mat(cl_leaves));
+
+    subsets_mat = cv::gpu::GpuMat(1, (int)subsets.size(), CV_32SC1);
+    stage_mat.upload(cv::Mat(subsets));
+
     return true;
 }
 
