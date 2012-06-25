@@ -1451,7 +1451,7 @@ private:
     bool isStumps;
     int ncategories;
     struct Stage;
-    Stage* stages;
+    // Stage* stages;
 
     struct DTree;
     // DTree* classifiers;

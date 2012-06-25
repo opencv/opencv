@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <string>
 
 namespace {
 
@@ -283,5 +284,29 @@ TEST_P(HOG, GetDescriptors)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, ALL_DEVICES);
+
+PARAM_TEST_CASE(LBP_Read_classifier, cv::gpu::DeviceInfo, int)
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(LBP_Read_classifier, Accuracy)
+{
+    cv::gpu::CascadeClassifier_GPU_LBP classifier;
+    std::cout << (std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml") << std::endl;
+    std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
+    classifier.load(classifierXmlPath);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier, testing::Combine(
+    ALL_DEVICES,
+    testing::Values<int>(0)
+    ));
 
 } // namespace

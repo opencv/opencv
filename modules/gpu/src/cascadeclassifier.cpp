@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <vector>
+#include <iostream>
 
 using namespace cv;
 using namespace cv::gpu;
@@ -133,7 +134,7 @@ bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
 
 bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 {
-    string stageTypeStr = (string)root[GPU_CC_STAGE_TYPE];
+    std::string stageTypeStr = (string)root[GPU_CC_STAGE_TYPE];
     CV_Assert(stageTypeStr == GPU_CC_BOOST);
 
     string featureTypeStr = (string)root[GPU_CC_FEATURE_TYPE];
@@ -151,17 +152,15 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
         return false;
 
     ncategories = fn[GPU_CC_MAX_CAT_COUNT];
-    int subsetSize = (ncategories + 31)/32, nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );// ?
+
+    int subsetSize = (ncategories + 31) / 32, nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );
 
     fn = root[GPU_CC_STAGES];
     if (fn.empty())
         return false;
 
-    delete[] stages;
-    // delete[] classifiers;
-    // delete[] nodes;
-
-    stages = new Stage[fn.size()];
+    std::vector<Stage> stages;
+    stages.reserve(fn.size());
 
     std::vector<DTree> cl_trees;
     std::vector<DTreeNode> cl_nodes;
@@ -169,18 +168,21 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     std::vector<int> subsets;
 
     FileNodeIterator it = fn.begin(), it_end = fn.end();
-    size_t s_it = 0;
-
+    int i = 0;
     for (size_t si = 0; it != it_end; si++, ++it )
     {
         FileNode fns = *it;
+        Stage st;
+        st.threshold = (float)fns[GPU_CC_STAGE_THRESHOLD] - GPU_THRESHOLD_EPS;
 
         fns = fns[GPU_CC_WEAK_CLASSIFIERS];
         if (fns.empty())
             return false;
 
-        stages[s_it++] = Stage((float)fns[GPU_CC_STAGE_THRESHOLD] - GPU_THRESHOLD_EPS,
-                               (int)cl_trees.size(), (int)fns.size());
+        st.ntrees = (int)fns.size();
+        st.first = (int)cl_trees.size();
+
+        stages.push_back(st);
 
         cl_trees.reserve(stages[si].first + stages[si].ntrees);
 
@@ -194,6 +196,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
             FileNode leafValues = fnw[GPU_CC_LEAF_VALUES];
             if ( internalNodes.empty() || leafValues.empty() )
                 return false;
+
             DTree tree((int)internalNodes.size()/nodeStep );
             cl_trees.push_back(tree);
 
@@ -211,20 +214,19 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
                 DTreeNode node((int)*(iIt++), (int)*(iIt++), (int)*(iIt++));
                 cl_nodes.push_back(node);
 
-                if ( subsetSize > 0 )
-                {
+                if( subsetSize > 0 )
                     for( int j = 0; j < subsetSize; j++, ++iIt )
-                        subsets.push_back((int)*iIt); //????
-                }
+                        subsets.push_back((int)*iIt);
             }
 
-            iIt = leafValues.begin(), iEnd = leafValues.end();
             // leaves
+            iIt = leafValues.begin(), iEnd = leafValues.end();
             for( ; iIt != iEnd; ++iIt )
                 cl_leaves.push_back((float)*iIt);
         }
     }
-
+    // copy data structures on gpu
+    // GpuMat stages;
     return true;
 }
 
@@ -513,9 +515,6 @@ void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, do
     hypotheses.resize(rects.size());
 }
 
-
-#if 1 /* loadFromXML implementation switch */
-
 NCVStatus loadFromXML(const std::string &filename,
                       HaarClassifierCascadeDescriptor &haar,
                       std::vector<HaarStage64> &haarStages,
@@ -713,273 +712,5 @@ NCVStatus loadFromXML(const std::string &filename,
 
     return NCV_SUCCESS;
 }
-
-#else /* loadFromXML implementation switch */
-
-#include "e:/devNPP-OpenCV/src/external/_rapidxml-1.13/rapidxml.hpp"
-
-NCVStatus loadFromXML(const std::string &filename,
-                      HaarClassifierCascadeDescriptor &haar,
-                      std::vector<HaarStage64> &haarStages,
-                      std::vector<HaarClassifierNode128> &haarClassifierNodes,
-                      std::vector<HaarFeature64> &haarFeatures)
-{
-    NCVStatus ncvStat;
-
-    haar.NumStages = 0;
-    haar.NumClassifierRootNodes = 0;
-    haar.NumClassifierTotalNodes = 0;
-    haar.NumFeatures = 0;
-    haar.ClassifierSize.width = 0;
-    haar.ClassifierSize.height = 0;
-    haar.bNeedsTiltedII = false;
-    haar.bHasStumpsOnly = false;
-
-    FILE *fp;
-    fopen_s(&fp, filename.c_str(), "r");
-    ncvAssertReturn(fp != NULL, NCV_FILE_ERROR);
-
-    //get file size
-    fseek(fp, 0, SEEK_END);
-    Ncv32u xmlSize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    //load file to vector
-    std::vector<char> xmlFileCont;
-    xmlFileCont.resize(xmlSize+1);
-    memset(&xmlFileCont[0], 0, xmlSize+1);
-    fread_s(&xmlFileCont[0], xmlSize, 1, xmlSize, fp);
-    fclose(fp);
-
-    haar.bHasStumpsOnly = true;
-    haar.bNeedsTiltedII = false;
-    Ncv32u curMaxTreeDepth;
-
-    std::vector<HaarClassifierNode128> h_TmpClassifierNotRootNodes;
-    haarStages.resize(0);
-    haarClassifierNodes.resize(0);
-    haarFeatures.resize(0);
-
-    //XML loading and OpenCV XML classifier syntax verification
-    try
-    {
-        rapidxml::xml_document<> doc;
-        doc.parse<0>(&xmlFileCont[0]);
-
-        //opencv_storage
-        rapidxml::xml_node<> *parserGlobal = doc.first_node();
-        ncvAssertReturn(!strcmp(parserGlobal->name(), "opencv_storage"), NCV_HAAR_XML_LOADING_EXCEPTION);
-
-        //classifier type
-        parserGlobal = parserGlobal->first_node();
-        ncvAssertReturn(parserGlobal, NCV_HAAR_XML_LOADING_EXCEPTION);
-        rapidxml::xml_attribute<> *attr = parserGlobal->first_attribute("type_id");
-        ncvAssertReturn(!strcmp(attr->value(), "opencv-haar-classifier"), NCV_HAAR_XML_LOADING_EXCEPTION);
-
-        //classifier size
-        parserGlobal = parserGlobal->first_node("size");
-        ncvAssertReturn(parserGlobal, NCV_HAAR_XML_LOADING_EXCEPTION);
-        sscanf_s(parserGlobal->value(), "%d %d", &(haar.ClassifierSize.width), &(haar.ClassifierSize.height));
-
-        //parse stages
-        parserGlobal = parserGlobal->next_sibling("stages");
-        ncvAssertReturn(parserGlobal, NCV_HAAR_XML_LOADING_EXCEPTION);
-        parserGlobal = parserGlobal->first_node("_");
-        ncvAssertReturn(parserGlobal, NCV_HAAR_XML_LOADING_EXCEPTION);
-
-        while (parserGlobal)
-        {
-            HaarStage64 curStage;
-            curStage.setStartClassifierRootNodeOffset(haarClassifierNodes.size());
-            Ncv32u tmpNumClassifierRootNodes = 0;
-
-            rapidxml::xml_node<> *parserStageThreshold = parserGlobal->first_node("stage_threshold");
-            ncvAssertReturn(parserStageThreshold, NCV_HAAR_XML_LOADING_EXCEPTION);
-            Ncv32f tmpStageThreshold;
-            sscanf_s(parserStageThreshold->value(), "%f", &tmpStageThreshold);
-            curStage.setStageThreshold(tmpStageThreshold);
-
-            //parse trees
-            rapidxml::xml_node<> *parserTree;
-            parserTree = parserGlobal->first_node("trees");
-            ncvAssertReturn(parserTree, NCV_HAAR_XML_LOADING_EXCEPTION);
-            parserTree = parserTree->first_node("_");
-            ncvAssertReturn(parserTree, NCV_HAAR_XML_LOADING_EXCEPTION);
-
-            while (parserTree)
-            {
-                rapidxml::xml_node<> *parserNode;
-                parserNode = parserTree->first_node("_");
-                ncvAssertReturn(parserNode, NCV_HAAR_XML_LOADING_EXCEPTION);
-                Ncv32u nodeId = 0;
-
-                while (parserNode)
-                {
-                    HaarClassifierNode128 curNode;
-
-                    rapidxml::xml_node<> *parserNodeThreshold = parserNode->first_node("threshold");
-                    ncvAssertReturn(parserNodeThreshold, NCV_HAAR_XML_LOADING_EXCEPTION);
-                    Ncv32f tmpThreshold;
-                    sscanf_s(parserNodeThreshold->value(), "%f", &tmpThreshold);
-                    curNode.setThreshold(tmpThreshold);
-
-                    rapidxml::xml_node<> *parserNodeLeft = parserNode->first_node("left_val");
-                    HaarClassifierNodeDescriptor32 nodeLeft;
-                    if (parserNodeLeft)
-                    {
-                        Ncv32f leftVal;
-                        sscanf_s(parserNodeLeft->value(), "%f", &leftVal);
-                        ncvStat = nodeLeft.create(leftVal);
-                        ncvAssertReturn(ncvStat == NCV_SUCCESS, ncvStat);
-                    }
-                    else
-                    {
-                        parserNodeLeft = parserNode->first_node("left_node");
-                        ncvAssertReturn(parserNodeLeft, NCV_HAAR_XML_LOADING_EXCEPTION);
-                        Ncv32u leftNodeOffset;
-                        sscanf_s(parserNodeLeft->value(), "%d", &leftNodeOffset);
-                        nodeLeft.create(h_TmpClassifierNotRootNodes.size() + leftNodeOffset - 1);
-                        haar.bHasStumpsOnly = false;
-                    }
-                    curNode.setLeftNodeDesc(nodeLeft);
-
-                    rapidxml::xml_node<> *parserNodeRight = parserNode->first_node("right_val");
-                    HaarClassifierNodeDescriptor32 nodeRight;
-                    if (parserNodeRight)
-                    {
-                        Ncv32f rightVal;
-                        sscanf_s(parserNodeRight->value(), "%f", &rightVal);
-                        ncvStat = nodeRight.create(rightVal);
-                        ncvAssertReturn(ncvStat == NCV_SUCCESS, ncvStat);
-                    }
-                    else
-                    {
-                        parserNodeRight = parserNode->first_node("right_node");
-                        ncvAssertReturn(parserNodeRight, NCV_HAAR_XML_LOADING_EXCEPTION);
-                        Ncv32u rightNodeOffset;
-                        sscanf_s(parserNodeRight->value(), "%d", &rightNodeOffset);
-                        nodeRight.create(h_TmpClassifierNotRootNodes.size() + rightNodeOffset - 1);
-                        haar.bHasStumpsOnly = false;
-                    }
-                    curNode.setRightNodeDesc(nodeRight);
-
-                    rapidxml::xml_node<> *parserNodeFeatures = parserNode->first_node("feature");
-                    ncvAssertReturn(parserNodeFeatures, NCV_HAAR_XML_LOADING_EXCEPTION);
-
-                    rapidxml::xml_node<> *parserNodeFeaturesTilted = parserNodeFeatures->first_node("tilted");
-                    ncvAssertReturn(parserNodeFeaturesTilted, NCV_HAAR_XML_LOADING_EXCEPTION);
-                    Ncv32u tiltedVal;
-                    sscanf_s(parserNodeFeaturesTilted->value(), "%d", &tiltedVal);
-                    haar.bNeedsTiltedII = (tiltedVal != 0);
-
-                    rapidxml::xml_node<> *parserNodeFeaturesRects = parserNodeFeatures->first_node("rects");
-                    ncvAssertReturn(parserNodeFeaturesRects, NCV_HAAR_XML_LOADING_EXCEPTION);
-                    parserNodeFeaturesRects = parserNodeFeaturesRects->first_node("_");
-                    ncvAssertReturn(parserNodeFeaturesRects, NCV_HAAR_XML_LOADING_EXCEPTION);
-                    Ncv32u featureId = 0;
-
-                    while (parserNodeFeaturesRects)
-                    {
-                        Ncv32u rectX, rectY, rectWidth, rectHeight;
-                        Ncv32f rectWeight;
-                        sscanf_s(parserNodeFeaturesRects->value(), "%d %d %d %d %f", &rectX, &rectY, &rectWidth, &rectHeight, &rectWeight);
-                        HaarFeature64 curFeature;
-                        ncvStat = curFeature.setRect(rectX, rectY, rectWidth, rectHeight, haar.ClassifierSize.width, haar.ClassifierSize.height);
-                        curFeature.setWeight(rectWeight);
-                        ncvAssertReturn(NCV_SUCCESS == ncvStat, ncvStat);
-                        haarFeatures.push_back(curFeature);
-
-                        parserNodeFeaturesRects = parserNodeFeaturesRects->next_sibling("_");
-                        featureId++;
-                    }
-
-                    HaarFeatureDescriptor32 tmpFeatureDesc;
-                    ncvStat = tmpFeatureDesc.create(haar.bNeedsTiltedII, featureId, haarFeatures.size() - featureId);
-                    ncvAssertReturn(NCV_SUCCESS == ncvStat, ncvStat);
-                    curNode.setFeatureDesc(tmpFeatureDesc);
-
-                    if (!nodeId)
-                    {
-                        //root node
-                        haarClassifierNodes.push_back(curNode);
-                        curMaxTreeDepth = 1;
-                    }
-                    else
-                    {
-                        //other node
-                        h_TmpClassifierNotRootNodes.push_back(curNode);
-                        curMaxTreeDepth++;
-                    }
-
-                    parserNode = parserNode->next_sibling("_");
-                    nodeId++;
-                }
-
-                parserTree = parserTree->next_sibling("_");
-                tmpNumClassifierRootNodes++;
-            }
-
-            curStage.setNumClassifierRootNodes(tmpNumClassifierRootNodes);
-            haarStages.push_back(curStage);
-
-            parserGlobal = parserGlobal->next_sibling("_");
-        }
-    }
-    catch (...)
-    {
-        return NCV_HAAR_XML_LOADING_EXCEPTION;
-    }
-
-    //fill in cascade stats
-    haar.NumStages = haarStages.size();
-    haar.NumClassifierRootNodes = haarClassifierNodes.size();
-    haar.NumClassifierTotalNodes = haar.NumClassifierRootNodes + h_TmpClassifierNotRootNodes.size();
-    haar.NumFeatures = haarFeatures.size();
-
-    //merge root and leaf nodes in one classifiers array
-    Ncv32u offsetRoot = haarClassifierNodes.size();
-    for (Ncv32u i=0; i<haarClassifierNodes.size(); i++)
-    {
-        HaarClassifierNodeDescriptor32 nodeLeft = haarClassifierNodes[i].getLeftNodeDesc();
-        if (!nodeLeft.isLeaf())
-        {
-            Ncv32u newOffset = nodeLeft.getNextNodeOffset() + offsetRoot;
-            nodeLeft.create(newOffset);
-        }
-        haarClassifierNodes[i].setLeftNodeDesc(nodeLeft);
-
-        HaarClassifierNodeDescriptor32 nodeRight = haarClassifierNodes[i].getRightNodeDesc();
-        if (!nodeRight.isLeaf())
-        {
-            Ncv32u newOffset = nodeRight.getNextNodeOffset() + offsetRoot;
-            nodeRight.create(newOffset);
-        }
-        haarClassifierNodes[i].setRightNodeDesc(nodeRight);
-    }
-    for (Ncv32u i=0; i<h_TmpClassifierNotRootNodes.size(); i++)
-    {
-        HaarClassifierNodeDescriptor32 nodeLeft = h_TmpClassifierNotRootNodes[i].getLeftNodeDesc();
-        if (!nodeLeft.isLeaf())
-        {
-            Ncv32u newOffset = nodeLeft.getNextNodeOffset() + offsetRoot;
-            nodeLeft.create(newOffset);
-        }
-        h_TmpClassifierNotRootNodes[i].setLeftNodeDesc(nodeLeft);
-
-        HaarClassifierNodeDescriptor32 nodeRight = h_TmpClassifierNotRootNodes[i].getRightNodeDesc();
-        if (!nodeRight.isLeaf())
-        {
-            Ncv32u newOffset = nodeRight.getNextNodeOffset() + offsetRoot;
-            nodeRight.create(newOffset);
-        }
-        h_TmpClassifierNotRootNodes[i].setRightNodeDesc(nodeRight);
-
-        haarClassifierNodes.push_back(h_TmpClassifierNotRootNodes[i]);
-    }
-
-    return NCV_SUCCESS;
-}
-
-#endif /* loadFromXML implementation switch */
 
 #endif /* HAVE_CUDA */
