@@ -584,7 +584,7 @@ void FREAKImpl::drawPattern()
 FREAK::FREAK( bool _orientationNormalized, bool _scaleNormalized
             , float _patternScale, int _nOctaves, const std::vector<int>& _selectedPairs )
     : orientationNormalized(_orientationNormalized), scaleNormalized(_scaleNormalized),
-    patternScale(_patternScale), nOctaves(_nOctaves), selectedPairs0(_selectedPairs)
+    patternScale(_patternScale), nOctaves(_nOctaves), extAll(false), nOctaves0(0), selectedPairs0(_selectedPairs)
 {
 }
 

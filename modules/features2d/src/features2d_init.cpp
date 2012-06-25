@@ -156,6 +156,7 @@ bool cv::initModule_features2d(void)
     all &= !FastFeatureDetector_info_auto.name().empty();
     all &= !StarDetector_info_auto.name().empty();
     all &= !MSER_info_auto.name().empty();
+    all &= !FREAK_info_auto.name().empty();
     all &= !ORB_info_auto.name().empty();
     all &= !GFTTDetector_info_auto.name().empty();
     all &= !HarrisDetector_info_auto.name().empty();

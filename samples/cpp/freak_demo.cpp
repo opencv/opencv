@@ -46,7 +46,7 @@
 
 using namespace cv;
 
-void help( char** argv )
+static void help( char** argv )
 {
     std::cout << "\nUsage: " << argv[0] << " [path/to/image1] [path/to/image2] \n"
               << "This is an example on how to use the keypoint descriptor presented in the following paper: \n"
