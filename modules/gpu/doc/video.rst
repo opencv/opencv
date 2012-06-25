@@ -324,9 +324,9 @@ Class used for background/foreground segmentation. ::
         std::vector< std::vector<cv::Point> > foreground_regions;
     };
 
-The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
 
-The results are available through the class fields:
+  The results are available through the class fields:
 
     .. ocv:member:: cv::gpu::GpuMat background
 
@@ -383,7 +383,7 @@ gpu::FGDStatModel::update
 --------------------------
 Updates the background model and returns foreground regions count.
 
-.. ocv:function:: int gpu::FGDStatModel::update(const cv::gpu::GpuMat& curFrame);
+.. ocv:function:: int gpu::FGDStatModel::update(const cv::gpu::GpuMat& curFrame)
 
     :param curFrame: Next video frame.
 
@@ -615,7 +615,7 @@ Class for reading video from files.
 gpu::VideoReader_GPU::Codec
 ---------------------------
 
-Video codecs supported by ocv:class:`gpu::VideoReader_GPU` . ::
+Video codecs supported by :ocv:class:`gpu::VideoReader_GPU` . ::
 
     enum Codec
     {
@@ -640,7 +640,7 @@ Video codecs supported by ocv:class:`gpu::VideoReader_GPU` . ::
 gpu::VideoReader_GPU::ChromaFormat
 ----------------------------------
 
-Chroma formats supported by ocv:class:`gpu::VideoReader_GPU` . ::
+Chroma formats supported by :ocv:class:`gpu::VideoReader_GPU` . ::
 
     enum ChromaFormat
     {
@@ -783,7 +783,7 @@ Starts processing.
 
 .. ocv:function:: virtual void gpu::VideoReader_GPU::VideoSource::start() = 0
 
-Implementation must create own thread with video processing and call periodic ocv:func:`gpu::VideoReader_GPU::VideoSource::parseVideoData` .
+Implementation must create own thread with video processing and call periodic :ocv:func:`gpu::VideoReader_GPU::VideoSource::parseVideoData` .
 
 
 

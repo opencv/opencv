@@ -588,11 +588,11 @@ GetSetElem
 ----------
 Finds a set element by its index.
 
-.. ocv:cfunction:: CvSetElem* cvGetSetElem( const CvSet* set_header, int index )
+.. ocv:cfunction:: CvSetElem* cvGetSetElem( const CvSet* set_header, int idx )
 
     :param set_header: Set
 
-    :param index: Index of the set element within a sequence
+    :param idx: Index of the set element within a sequence
 
 The function finds a set element by its index. The function returns the pointer to it or 0 if the index is invalid or the corresponding node is free. The function supports negative indices as it uses
 :ocv:cfunc:`GetSeqElem`

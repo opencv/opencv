@@ -94,9 +94,9 @@ Finds keypoints in an image and computes their descriptors
 
     :param useProvidedKeypoints: If it is true, then the method will use the provided vector of keypoints instead of detecting them.
 
-    FREAK
+FREAK
 -----
-.. ocv:class:: FREAK
+.. ocv:class:: FREAK : public DescriptorExtractor
 
 Class implementing the FREAK (*Fast Retina Keypoint*) keypoint descriptor, described in [AOV12]_. The algorithm propose a novel keypoint descriptor inspired by the human visual system and more precisely the retina, coined Fast Retina Key- point (FREAK). A cascade of binary strings is computed by efficiently comparing image intensities over a retinal sampling pattern. FREAKs are in general faster to compute with lower memory load and also more robust than SIFT, SURF or BRISK. They are competitive alternatives to existing keypoints in particular for embedded applications.
 
@@ -106,12 +106,12 @@ FREAK::FREAK
 ------------
 The FREAK constructor
 
-.. ocv:function:: FREAK::FREAK(bool orientationNormalized = true, bool scaleNormalized = true, float patternScale = 22.0f, int nbOctave = 4, const vector<int>& selectedPairs = vector<int>())
+.. ocv:function:: FREAK::FREAK( bool orientationNormalized=true, bool scaleNormalized=true, float patternScale=22.0f, int nOctaves=4, const vector<int>& selectedPairs=vector<int>() )
 
     :param orientationNormalized: Enable orientation normalization.
     :param scaleNormalized: Enable scale normalization.
     :param patternScale: Scaling of the description pattern.
-    :param nbOctave: Number of octaves covered by the detected keypoints.
+    :param nOctaves: Number of octaves covered by the detected keypoints.
     :param selectedPairs: (Optional) user defined selected pairs indexes,
 
 FREAK::selectPairs
@@ -126,4 +126,3 @@ We notice that for keypoint matching applications, image content has little effe
     :param keypoints: Set of detected keypoints
     :param corrThresh: Correlation threshold.
     :param verbose: Prints pair selection informations.
-        

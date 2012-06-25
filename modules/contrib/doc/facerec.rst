@@ -4,16 +4,18 @@ Face Recognition with OpenCV
 .. highlight:: cpp
 
 This document is going to explain how to perform face recognition with the new
-:ocv:class:`FaceRecognizer`, which is available from OpenCV 2.4 onwards. 
+:ocv:class:`FaceRecognizer`, which is available from OpenCV 2.4 onwards.
 
 FaceRecognizer
 --------------
 
-All face recognition models in OpenCV are derived from the abstract base 
-class :ocv:class:`FaceRecognizer`, which provides a unified access to all face 
+All face recognition models in OpenCV are derived from the abstract base
+class :ocv:class:`FaceRecognizer`, which provides a unified access to all face
 recongition algorithms in OpenCV.
 
-.. ocv:class:: FaceRecognizer
+.. ocv:class:: FaceRecognizer : public Algorithm
+
+.. code-block:: cpp
 
   class FaceRecognizer : public Algorithm
   {
@@ -43,7 +45,7 @@ recongition algorithms in OpenCV.
       virtual void load(const FileStorage& fs) = 0;
 
   };
-  
+
   Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
   Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
   Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8, double threshold = DBL_MAX);
@@ -55,10 +57,10 @@ Trains a FaceRecognizer with given data and associated labels.
 
 .. ocv:function:: void FaceRecognizer::train(InputArray src, InputArray labels)
 
-Every model subclassing :ocv:class:`FaceRecognizer` is able to work with 
-image data in ``src``, which must be given as a ``vector<Mat>``. A ``vector<Mat>`` 
-was chosen, so that no preliminary assumptions about the input samples is made. 
-The Local Binary Patterns for example process 2D images of different size, while 
+Every model subclassing :ocv:class:`FaceRecognizer` is able to work with
+image data in ``src``, which must be given as a ``vector<Mat>``. A ``vector<Mat>``
+was chosen, so that no preliminary assumptions about the input samples is made.
+The Local Binary Patterns for example process 2D images of different size, while
 Eigenfaces and Fisherfaces method reshape all images in ``src`` to a data matrix.
 
 The associated labels in ``labels`` have to be given either in a ``Mat``
@@ -87,16 +89,16 @@ The following example shows how to learn a Eigenfaces model with OpenCV:
 FaceRecognizer::predict
 -----------------------
 
-Predicts the label for a given query image in ``src``. 
+Predicts the label for a given query image in ``src``.
 
 .. ocv:function:: int FaceRecognizer::predict(InputArray src) const
 
-Predicts the label for a given query image in ``src``. 
+Predicts the label for a given query image in ``src``.
 
 .. ocv:function:: void FaceRecognizer::predict(InputArray src, int &label, double &dist) const
 
 
-The suffix ``const`` means that prediction does not affect the internal model 
+The suffix ``const`` means that prediction does not affect the internal model
 state, so the method can be safely called from within different threads.
 
 The following example shows how to get a prediction from a trained model:
@@ -104,7 +106,7 @@ The following example shows how to get a prediction from a trained model:
 .. code-block:: cpp
 
   int predictedLabel = model->predict(testSample);
-  
+
 To get the confidence of a prediction call the model with:
 
 .. code-block:: cpp
@@ -122,11 +124,11 @@ Saves a :ocv:class:`FaceRecognizer` and its model state.
 .. ocv:function:: void FaceRecognizer::save(FileStorage& fs) const
 
 Every :ocv:class:`FaceRecognizer` overwrites ``FaceRecognizer::save(FileStorage& fs)``
-to save its internal model state. You can then either call ``FaceRecognizer::save(FileStorage& fs)`` 
-to save the model or use ``FaceRecognizer::save(const string& filename)``, which eases saving a 
+to save its internal model state. You can then either call ``FaceRecognizer::save(FileStorage& fs)``
+to save the model or use ``FaceRecognizer::save(const string& filename)``, which eases saving a
 model.
 
-The suffix ``const`` means that prediction does not affect the internal model 
+The suffix ``const`` means that prediction does not affect the internal model
 state, so the method can be safely called from within different threads.
 
 FaceRecognizer::load
@@ -135,12 +137,12 @@ FaceRecognizer::load
 Loads a :ocv:class:`FaceRecognizer` and its model state.
 
 .. ocv:function:: void FaceRecognizer::load(const string& filename)
-.. ocv:function:: void FaceRecognizer::load(FileStorage& fs)
+.. ocv:function:: void FaceRecognizer::load(const FileStorage& fs)
 
-Loads a persisted model and state from a given XML or YAML file . Every 
-:ocv:class:`FaceRecognizer` has overwrites ``FaceRecognizer::load(FileStorage& fs)`` 
+Loads a persisted model and state from a given XML or YAML file . Every
+:ocv:class:`FaceRecognizer` has overwrites ``FaceRecognizer::load(FileStorage& fs)``
 to enable loading the internal model state. ``FaceRecognizer::load(const string& filename)``
- eases saving a model, so you just need to call it on the filename.
+eases saving a model, so you just need to call it on the filename.
 
 createEigenFaceRecognizer
 -------------------------
@@ -151,28 +153,28 @@ Creates an Eigenfaces model with given number of components (if given) and thres
 
 This model implements the Eigenfaces method as described in [TP91]_.
 
-* ``num_components`` (default 0) number of components are kept for classification. If no number of 
-components is given, it is automatically determined from given data in 
-:ocv:func:`FaceRecognizer::train`. If (and only if) ``num_components`` <= 0, then 
-``num_components`` is set to (N-1) in ocv:func:`Eigenfaces::train`, with *N* being the 
-total number of samples in ``src``.
+ * ``num_components`` (default 0) number of components are kept for classification. If no number of
+   components is given, it is automatically determined from given data in
+   :ocv:func:`FaceRecognizer::train`. If (and only if) ``num_components`` <= 0, then
+   ``num_components`` is set to (N-1) in :ocv:func:`Eigenfaces::train`, with *N* being the
+   total number of samples in ``src``.
 
-* ``threshold`` (default DBL_MAX) 
+ * ``threshold`` (default DBL_MAX)
 
 Internal model data, which can be accessed through cv::Algorithm:
 
- * ``ncomponents`` 
- 
+ * ``ncomponents``
+
  * ``threshold``
- 
+
  * ``eigenvectors``
 
  * ``eigenvalues``
- 
+
  * ``mean``
- 
+
  * ``labels``
- 
+
  * ``projections``
 
 createFisherFaceRecognizer
@@ -184,26 +186,26 @@ Creates a Fisherfaces model for given a given number of components and threshold
 
 This model implements the Fisherfaces method as described in [BHK97]_.
 
-* ``num_components`` number of components are kept for classification. If no number 
-of components is given (default 0), it is automatically determined from given data 
-in :ocv:func:`Fisherfaces::train` (model implementation). If (and only if) 
-``num_components`` <= 0, then ``num_components`` is set to (C-1) in 
-ocv:func:`train`, with *C* being the number of unique classes in ``labels``.
+ * ``num_components`` number of components are kept for classification. If no number
+   of components is given (default 0), it is automatically determined from given data
+   in :ocv:func:`Fisherfaces::train` (model implementation). If (and only if)
+   ``num_components`` <= 0, then ``num_components`` is set to (C-1) in
+   :ocv:func:`train`, with *C* being the number of unique classes in ``labels``.
 
-* ``threshold`` (default DBL_MAX) 
+ * ``threshold`` (default DBL_MAX)
 
 Internal model data, which can be accessed through cv::Algorithm:
 
  * ``ncomponents``
- 
+
  * ``threshold``
- 
+
  * ``projections``
- 
+
  * ``labels``
- 
+
  * ``eigenvectors``
- 
+
  * ``eigenvalues``
 
  * ``mean``
@@ -213,41 +215,41 @@ createLBPHFaceRecognizer
 
 Implements face recognition with Local Binary Patterns Histograms as described in [Ahonen04]_.
 
-.. ocv:function:: Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8, double threshold = DBL_MAX);
+.. ocv:function:: Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8, double threshold = DBL_MAX)
 
 Internal model data, which can be accessed through cv::Algorithm:
 
 
  * ``radius``
- 
+
  * ``neighbors``
- 
+
  * ``grid_x``
- 
+
  * ``grid_y``
- 
+
  * ``threshold``
- 
+
  * ``histograms``
- 
+
  * ``labels``
 
 Example: Working with a cv::FaceRecognizer
 ===========================================
 
-In this tutorial you'll see how to do face recognition with OpenCV on real image data. We'll work through a complete example, so you know how to work with it. While this example is based on Eigenfaces, it works the same for all the other available :ocv:class:`FaceRecognizer` implementations. 
+In this tutorial you'll see how to do face recognition with OpenCV on real image data. We'll work through a complete example, so you know how to work with it. While this example is based on Eigenfaces, it works the same for all the other available :ocv:class:`FaceRecognizer` implementations.
 
 Getting Image Data
 ------------------
 
-We are doing face recognition, so you'll need some face images first! You can decide to either create your own database or start with one of the many available datasets. `face-rec.org/databases <http://face-rec.org/databases/>`_ gives an up-to-date overview of public available datasets (parts of the following descriptions are quoted from there). 
+We are doing face recognition, so you'll need some face images first! You can decide to either create your own database or start with one of the many available datasets. `face-rec.org/databases <http://face-rec.org/databases/>`_ gives an up-to-date overview of public available datasets (parts of the following descriptions are quoted from there).
 
 Three interesting databases are:
 
 * `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_ The AT&T Facedatabase, sometimes also referred to as *ORL Database of Faces*, contains ten different images of each of 40 distinct subjects. For some subjects, the images were taken at different times, varying the lighting, facial expressions (open / closed eyes, smiling / not smiling) and facial details (glasses / no glasses). All the images were taken against a dark homogeneous background with the subjects in an upright, frontal position (with tolerance for some side movement).
-  
-* `Yale Facedatabase A <http://cvc.yale.edu/projects/yalefaces/yalefaces.html>`_ The AT&T Facedatabase is good for initial tests, but it's a fairly easy database. The Eigenfaces method already has a 97% recognition rate, so you won't see any improvements with other algorithms. The Yale Facedatabase A is a more appropriate dataset for initial experiments, because the recognition problem is harder. The database consists of 15 people (14 male, 1 female) each with 11 grayscale images sized :math:`320 \times 243` pixel. There are changes in the light conditions (center light, left light, right light), facial expressions (happy, normal, sad, sleepy, surprised, wink) and glasses (glasses, no-glasses). 
-  
+
+* `Yale Facedatabase A <http://cvc.yale.edu/projects/yalefaces/yalefaces.html>`_ The AT&T Facedatabase is good for initial tests, but it's a fairly easy database. The Eigenfaces method already has a 97% recognition rate, so you won't see any improvements with other algorithms. The Yale Facedatabase A is a more appropriate dataset for initial experiments, because the recognition problem is harder. The database consists of 15 people (14 male, 1 female) each with 11 grayscale images sized :math:`320 \times 243` pixel. There are changes in the light conditions (center light, left light, right light), facial expressions (happy, normal, sad, sleepy, surprised, wink) and glasses (glasses, no-glasses).
+
 *  `Extended Yale Facedatabase B <http://vision.ucsd.edu/~leekc/ExtYaleDatabase/ExtYaleB.html>`_ The Extended Yale Facedatabase B contains 2414 images of 38 different people in its cropped version. The focus of this database is set on extracting features that are robust to illumination, the images have almost no variation in emotion/occlusion/... . I personally think, that this dataset is too large for the experiments I perform in this document. You better use the `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_ for intial testing. A first version of the Yale Facedatabase B was used in [Belhumeur97]_ to see how the Eigenfaces and Fisherfaces method perform under heavy illumination changes. [Lee2005]_ used the same setup to take 16128 images of 28 people. The Extended Yale Facedatabase B is the merge of the two databases, which is now known as Extended Yalefacedatabase B.
 
 For this tutorial I am going to use the `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_, which is available from: `http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_. All credit for this dataset is given to the *AT&T Laboratories, Cambridge*, also make sure to read the  README
@@ -255,7 +257,7 @@ For this tutorial I am going to use the `AT&T Facedatabase <http://www.cl.cam.ac
 Reading the Image Data
 -----------------------
 
-In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a **filename** followed by a **;** followed by the **label** (as integer number), making up a line like this: 
+In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a **filename** followed by a **;** followed by the **label** (as integer number), making up a line like this:
 
 .. code-block:: none
 
@@ -466,15 +468,15 @@ Results
 Saving and Loading a cv::FaceRecognizer
 =======================================
 
-Saving and loading a :ocv:class:`FaceRecognizer` is a very important task, because 
-training a :ocv:class:`FaceRecognizer` can be a very time-intense task for large 
-datasets (depending on your algorithm). In OpenCV you only have to call 
-:ocv:func:`FaceRecognizer::load` for loading, and :ocv:func:`FaceRecognizer::save` 
+Saving and loading a :ocv:class:`FaceRecognizer` is a very important task, because
+training a :ocv:class:`FaceRecognizer` can be a very time-intense task for large
+datasets (depending on your algorithm). In OpenCV you only have to call
+:ocv:func:`FaceRecognizer::load` for loading, and :ocv:func:`FaceRecognizer::save`
 for saving the internal state of a :ocv:class:`FaceRecognizer`.
 
-Imagine we are using the same example as above. We want to learn the Eigenfaces of 
-the `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_, 
-but store the model to a YAML file so we can load it from somewhere else. 
+Imagine we are using the same example as above. We want to learn the Eigenfaces of
+the `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_,
+but store the model to a YAML file so we can load it from somewhere else.
 
 To see if everything went fine, we'll have a look at the stored data and the first 10 Eigenfaces.
 
@@ -484,12 +486,12 @@ Demo application
 .. code-block:: none
 
   TODO
-  
+
 Results
 -------
 
-``eigenfaces_at.yml`` contains the model state, we'll simply show the first 10 
-lines with ``head eigenfaces_at.yml``: 
+``eigenfaces_at.yml`` contains the model state, we'll simply show the first 10
+lines with ``head eigenfaces_at.yml``:
 
 .. code-block:: none
 
