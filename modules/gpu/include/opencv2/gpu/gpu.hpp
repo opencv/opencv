@@ -1436,6 +1436,7 @@ public:
     void release();
 
     int detectMultiScale(const GpuMat& image, GpuMat& scaledImageBuffer, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4/*, Size minSize = Size()*/);
+    void preallocateIntegralBuffer(cv::Size desired);
 
     bool findLargestObject;
     bool visualizeInPlace;
@@ -1450,6 +1451,8 @@ private:
     cv::Size NxM;
     bool isStumps;
     int ncategories;
+    int subsetSize;
+    int nodeStep;
 
     // located on gpu
     GpuMat stage_mat;
@@ -1457,6 +1460,7 @@ private:
     GpuMat nodes_mat;
     GpuMat leaves_mat;
     GpuMat subsets_mat;
+    GpuMat integral;
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////

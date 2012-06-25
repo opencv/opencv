@@ -81,9 +81,10 @@ int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& , GpuMat& , 
 cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP()               { throw_nogpu(); }
 cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()              { throw_nogpu(); }
 
-bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                        { throw_nogpu(); return true; }
-bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string&)                  { throw_nogpu(); return true; }
-Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const            { throw_nogpu(); return Size(); }
+bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                               { throw_nogpu(); return true; }
+bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string&)                         { throw_nogpu(); return true; }
+Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const                   { throw_nogpu(); return Size(); }
+void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size desired) { throw_nogpu();}
 
 int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
 
@@ -96,6 +97,12 @@ cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP()
 cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()
 {
 }
+
+void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size desired)
+{
+    integral.create(desired.width + 1, desired.height + 1, CV_32FC1);
+}
+
 
 bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const
 {
@@ -140,6 +147,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     CV_Assert( NxM.height > 0 && NxM.width > 0 );
 
     isStumps = ((int)(root[GPU_CC_STAGE_PARAMS][GPU_CC_MAX_DEPTH]) == 1) ? true : false;
+    CV_Assert(isStumps);
 
     // features
     FileNode fn = root[GPU_CC_FEATURE_PARAMS];
@@ -148,7 +156,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 
     ncategories = fn[GPU_CC_MAX_CAT_COUNT];
 
-    int subsetSize = (ncategories + 31) / 32, nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );
+    subsetSize = (ncategories + 31) / 32, nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );
 
     fn = root[GPU_CC_STAGES];
     if (fn.empty())
@@ -293,9 +301,23 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
             break;
         // TODO: min max object sizes cheching
         cv::gpu::resize(image, scaledImageBuffer, scaledImageSize, 0, 0, INTER_NEAREST);
+        //prepare image for evaluation
+        integral.create(cv::Size(scaledImageSize.width + 1, scaledImageSize.height + 1), CV_32FC1);
+        cv::gpu::integral(scaledImageBuffer, integral);
 
-        int yStep = (factor > 2.) + 1;
+        int step = (factor <= 2.) + 1;
         int stripCount = 1, stripSize = processingRectSize.height;
+
+        int y1 = 0;
+        int y2 = processingRectSize.height;
+
+        for (int y = y1; y < y2; y += step)
+            for (int x = 0; x < processingRectSize.width; x+=step)
+            {
+                //ToDO: classify
+                int result = 0;
+
+            }
 
     }
     // TODO: reject levels
