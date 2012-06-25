@@ -332,6 +332,191 @@ INSTANTIATE_TEST_CASE_P(Video, FGDStatModel, testing::Combine(
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
 //////////////////////////////////////////////////////
+// MOG
+
+IMPLEMENT_PARAM_CLASS(LearningRate, double)
+
+GPU_PERF_TEST(MOG, cv::gpu::DeviceInfo, std::string, Channels, LearningRate)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+    int cn = GET_PARAM(2);
+    double learningRate = GET_PARAM(3);
+
+    cv::VideoCapture cap(inputFile);
+    ASSERT_TRUE(cap.isOpened());
+
+    cv::Mat frame;
+
+    cv::gpu::GpuMat d_frame;
+    cv::gpu::MOG_GPU mog;
+    cv::gpu::GpuMat foreground;
+
+    cap >> frame;
+    ASSERT_FALSE(frame.empty());
+
+    if (cn != 3)
+    {
+        cv::Mat temp;
+        if (cn == 1)
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+        else
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+        cv::swap(temp, frame);
+    }
+
+    d_frame.upload(frame);
+
+    mog(d_frame, foreground, learningRate);
+
+    for (int i = 0; i < 10; ++i)
+    {
+        cap >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        if (cn != 3)
+        {
+            cv::Mat temp;
+            if (cn == 1)
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+            else
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+            cv::swap(temp, frame);
+        }
+
+        d_frame.upload(frame);
+
+        startTimer(); next();
+        mog(d_frame, foreground, learningRate);
+        stopTimer();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, MOG, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi")),
+    testing::Values(Channels(1), Channels(3), Channels(4)),
+    testing::Values(LearningRate(0.0), LearningRate(0.01))));
+
+//////////////////////////////////////////////////////
+// MOG2
+
+GPU_PERF_TEST(MOG2_update, cv::gpu::DeviceInfo, std::string, Channels)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+    int cn = GET_PARAM(2);
+
+    cv::VideoCapture cap(inputFile);
+    ASSERT_TRUE(cap.isOpened());
+
+    cv::Mat frame;
+
+    cv::gpu::GpuMat d_frame;
+    cv::gpu::MOG2_GPU mog2;
+    cv::gpu::GpuMat foreground;
+
+    cap >> frame;
+    ASSERT_FALSE(frame.empty());
+
+    if (cn != 3)
+    {
+        cv::Mat temp;
+        if (cn == 1)
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+        else
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+        cv::swap(temp, frame);
+    }
+
+    d_frame.upload(frame);
+
+    mog2(d_frame, foreground);
+
+    for (int i = 0; i < 10; ++i)
+    {
+        cap >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        if (cn != 3)
+        {
+            cv::Mat temp;
+            if (cn == 1)
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+            else
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+            cv::swap(temp, frame);
+        }
+
+        d_frame.upload(frame);
+
+        startTimer(); next();
+        mog2(d_frame, foreground);
+        stopTimer();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, MOG2_update, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi")),
+    testing::Values(Channels(1), Channels(3), Channels(4))));
+
+GPU_PERF_TEST(MOG2_getBackgroundImage, cv::gpu::DeviceInfo, std::string, Channels)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+    int cn = GET_PARAM(2);
+
+    cv::VideoCapture cap(inputFile);
+    ASSERT_TRUE(cap.isOpened());
+
+    cv::Mat frame;
+
+    cv::gpu::GpuMat d_frame;
+    cv::gpu::MOG2_GPU mog2;
+    cv::gpu::GpuMat foreground;
+
+    for (int i = 0; i < 10; ++i)
+    {
+        cap >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        if (cn != 3)
+        {
+            cv::Mat temp;
+            if (cn == 1)
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+            else
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+            cv::swap(temp, frame);
+        }
+
+        d_frame.upload(frame);
+
+        mog2(d_frame, foreground);
+    }
+
+    cv::gpu::GpuMat background;
+    mog2.getBackgroundImage(background);
+
+    TEST_CYCLE()
+    {
+        mog2.getBackgroundImage(background);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, MOG2_getBackgroundImage, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi")),
+    testing::Values(Channels(1), Channels(3), Channels(4))));
+
+//////////////////////////////////////////////////////
 // VideoWriter
 
 #ifdef WIN32
