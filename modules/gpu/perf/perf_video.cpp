@@ -529,7 +529,7 @@ GPU_PERF_TEST(VideoWriter, cv::gpu::DeviceInfo, std::string)
     cv::gpu::setDevice(devInfo.deviceID());
 
     std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
-    std::string outputFile = inputFile.substr(0, inputFile.find('.')) + "_test.avi";
+    std::string outputFile = cv::tempfile(".avi");
 
     cv::VideoCapture reader(inputFile);
     ASSERT_TRUE( reader.isOpened() );

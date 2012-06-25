@@ -52,10 +52,10 @@ class CV_GrabcutTest : public cvtest::BaseTest
 {
 public:
     CV_GrabcutTest();
-    ~CV_GrabcutTest();    
+    ~CV_GrabcutTest();
 protected:
     bool verify(const Mat& mask, const Mat& exp);
-    void run(int);    
+    void run(int);
 };
 
 CV_GrabcutTest::CV_GrabcutTest() {}
@@ -73,29 +73,29 @@ bool CV_GrabcutTest::verify(const Mat& mask, const Mat& exp)
 }
 
 void CV_GrabcutTest::run( int /* start_from */)
-{       
+{
     cvtest::DefaultRngAuto defRng;
-        
-    Mat img = imread(string(ts->get_data_path()) + "shared/airplane.jpg");    
+
+    Mat img = imread(string(ts->get_data_path()) + "shared/airplane.jpg");
     Mat mask_prob = imread(string(ts->get_data_path()) + "grabcut/mask_prob.png", 0);
     Mat exp_mask1 = imread(string(ts->get_data_path()) + "grabcut/exp_mask1.png", 0);
     Mat exp_mask2 = imread(string(ts->get_data_path()) + "grabcut/exp_mask2.png", 0);
-    
+
     if (img.empty() || (!mask_prob.empty() && img.size() != mask_prob.size()) ||
                        (!exp_mask1.empty() && img.size() != exp_mask1.size()) ||
                        (!exp_mask2.empty() && img.size() != exp_mask2.size()) )
     {
-         ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);         
+         ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
          return;
     }
-    
+
     Rect rect(Point(24, 126), Point(483, 294));
     Mat exp_bgdModel, exp_fgdModel;
 
     Mat mask;
     mask = Scalar(0);
     Mat bgdModel, fgdModel;
-    grabCut( img, mask, rect, bgdModel, fgdModel, 0, GC_INIT_WITH_RECT );    
+    grabCut( img, mask, rect, bgdModel, fgdModel, 0, GC_INIT_WITH_RECT );
     grabCut( img, mask, rect, bgdModel, fgdModel, 2, GC_EVAL );
 
     // Multiply images by 255 for more visuality of test data.
@@ -109,16 +109,16 @@ void CV_GrabcutTest::run( int /* start_from */)
         exp_mask1 = (mask & 1) * 255;
         imwrite(string(ts->get_data_path()) + "grabcut/exp_mask1.png", exp_mask1);
     }
-    
+
     if (!verify((mask & 1) * 255, exp_mask1))
-    {        
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);        
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;
     }
-    
+
     mask = mask_prob;
     bgdModel.release();
-    fgdModel.release(); 
+    fgdModel.release();
     rect = Rect();
     grabCut( img, mask, rect, bgdModel, fgdModel, 0, GC_INIT_WITH_MASK );
     grabCut( img, mask, rect, bgdModel, fgdModel, 1, GC_EVAL );
@@ -128,13 +128,13 @@ void CV_GrabcutTest::run( int /* start_from */)
         exp_mask2 = (mask & 1) * 255;
         imwrite(string(ts->get_data_path()) + "grabcut/exp_mask2.png", exp_mask2);
     }
-    
+
     if (!verify((mask & 1) * 255, exp_mask2))
     {
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);        
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;
-    }                    
-    ts->set_failed_test_info(cvtest::TS::OK);    
+    }
+    ts->set_failed_test_info(cvtest::TS::OK);
 }
 
 TEST(Imgproc_GrabCut, regression) { CV_GrabcutTest test; test.safe_run(); }

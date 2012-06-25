@@ -59,7 +59,7 @@ public:
         const int img_c = 4096;
         const double fps0 = 15;
         const double time_sec = 1;
-        
+
         const size_t n = sizeof(codec_bmp_tags)/sizeof(codec_bmp_tags[0]);
 
         bool created = false;
@@ -68,7 +68,7 @@ public:
         {
         stringstream s; s << codec_bmp_tags[j].tag;
         int tag = codec_bmp_tags[j].tag;
-        
+
         if( tag != MKTAG('H', '2', '6', '3') &&
             tag != MKTAG('H', '2', '6', '1') &&
             //tag != MKTAG('D', 'I', 'V', 'X') &&
@@ -93,7 +93,7 @@ public:
         {
             double fps = fps0;
             Size frame_s = Size(img_c, img_r);
-            
+
             if( tag == CV_FOURCC('H', '2', '6', '1') )
                 frame_s = Size(352, 288);
             else if( tag == CV_FOURCC('H', '2', '6', '3') )
@@ -101,10 +101,10 @@ public:
             /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
                      tag == CV_FOURCC('j', 'p', 'e', 'g') )
                 frame_s = Size(1920, 1080);*/
-            
+
             if( tag == CV_FOURCC('M', 'P', 'E', 'G') )
                 fps = 25;
-            
+
             VideoWriter writer(filename, tag, fps, frame_s);
 
             if (writer.isOpened() == false)
@@ -157,9 +157,9 @@ public:
             Mat img, img_next;
             cap >> img;
             cap >> img_next;
-            
+
             CV_Assert( !img0.empty() && !img.empty() && img_next.empty() );
-            
+
             double diff = norm(img0, img, CV_C);
             CV_Assert( diff == 0 );
         }

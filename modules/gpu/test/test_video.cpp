@@ -687,7 +687,7 @@ PARAM_TEST_CASE(VideoWriter, cv::gpu::DeviceInfo, std::string)
         cv::gpu::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
-        outputFile = inputFile.substr(0, inputFile.find('.')) + "_test.avi";
+        outputFile = cv::tempfile(".avi");
     }
 };
 

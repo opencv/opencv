@@ -96,13 +96,13 @@ def query_yes_no(stdout, question, default="yes"):
         else:
             stdout.write("Please respond with 'yes' or 'no' "\
                              "(or 'y' or 'n').\n")
-                             
+
 def getRunningProcessExePathByName_win32(name):
     from ctypes import windll, POINTER, pointer, Structure, sizeof
     from ctypes import c_long , c_int , c_uint , c_char , c_ubyte , c_char_p , c_void_p
-    
+
     class PROCESSENTRY32(Structure):
-        _fields_ = [ ( 'dwSize' , c_uint ) , 
+        _fields_ = [ ( 'dwSize' , c_uint ) ,
                     ( 'cntUsage' , c_uint) ,
                     ( 'th32ProcessID' , c_uint) ,
                     ( 'th32DefaultHeapID' , c_uint) ,
@@ -111,25 +111,25 @@ def getRunningProcessExePathByName_win32(name):
                     ( 'th32ParentProcessID' , c_uint) ,
                     ( 'pcPriClassBase' , c_long) ,
                     ( 'dwFlags' , c_uint) ,
-                    ( 'szExeFile' , c_char * 260 ) , 
+                    ( 'szExeFile' , c_char * 260 ) ,
                     ( 'th32MemoryBase' , c_long) ,
                     ( 'th32AccessKey' , c_long ) ]
-                    
+
     class MODULEENTRY32(Structure):
-        _fields_ = [ ( 'dwSize' , c_long ) , 
+        _fields_ = [ ( 'dwSize' , c_long ) ,
                     ( 'th32ModuleID' , c_long ),
                     ( 'th32ProcessID' , c_long ),
                     ( 'GlblcntUsage' , c_long ),
                     ( 'ProccntUsage' , c_long ) ,
                     ( 'modBaseAddr' , c_long ) ,
-                    ( 'modBaseSize' , c_long ) , 
+                    ( 'modBaseSize' , c_long ) ,
                     ( 'hModule' , c_void_p ) ,
                     ( 'szModule' , c_char * 256 ),
                     ( 'szExePath' , c_char * 260 ) ]
-                
+
     TH32CS_SNAPPROCESS = 2
     TH32CS_SNAPMODULE = 0x00000008
-    
+
     ## CreateToolhelp32Snapshot
     CreateToolhelp32Snapshot= windll.kernel32.CreateToolhelp32Snapshot
     CreateToolhelp32Snapshot.reltype = c_long
@@ -150,7 +150,7 @@ def getRunningProcessExePathByName_win32(name):
     Module32First = windll.kernel32.Module32First
     Module32First.argtypes = [ c_void_p , POINTER(MODULEENTRY32) ]
     Module32First.rettype = c_int
-                    
+
     hProcessSnap = c_void_p(0)
     hProcessSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS , 0 )
 
@@ -180,7 +180,7 @@ def getRunningProcessExePathByName_posix(name):
     for pid in pids:
         try:
             path = os.readlink(os.path.join('/proc', pid, 'exe'))
-            if path and path.endswith(name):  
+            if path and path.endswith(name):
                 return path
         except:
             pass
@@ -195,7 +195,7 @@ def getRunningProcessExePathByName(name):
             return None
     except:
         return None
-        
+
 class RunInfo(object):
     def setCallback(self, name, callback):
         setattr(self, name, callback)
@@ -224,7 +224,7 @@ class RunInfo(object):
         except:
             pass
         cachefile.close()
-        
+
         # fix empty tests dir
         if not self.tests_dir:
             self.tests_dir = self.path
@@ -236,12 +236,12 @@ class RunInfo(object):
         else:
             self.adb = None
 
-        # detect target platform    
+        # detect target platform
         if self.android_executable or self.android_abi or self.ndk_path:
             self.targetos = "android"
         else:
             self.targetos = hostos
-            
+
         if self.targetos == "android":
             # fix adb tool location
             if not self.adb:
@@ -250,7 +250,7 @@ class RunInfo(object):
                 self.adb = "adb"
             if options.adb_serial:
                 self.adb = [self.adb, "-s", options.adb_serial]
-	    else:
+            else:
                 self.adb = [self.adb]
             try:
                 output = Popen(self.adb + ["shell", "ls"], stdout=PIPE, stderr=PIPE).communicate()
@@ -317,23 +317,23 @@ class RunInfo(object):
             self.targetarch = "x86"
         else:
             self.targetarch = "unknown"
-            
+
         # fix CUDA attributes
         self.with_cuda = self.with_cuda == "ON"
         if self.cuda_library and self.cuda_library.endswith("-NOTFOUND"):
             self.cuda_library = None
         self.has_cuda = self.with_cuda and self.cuda_library and self.targetarch in ["x86", "x64"]
-            
+
         self.hardware = None
-        
+
         self.getSvnVersion(self.cmake_home, "cmake_home_svn")
         if self.opencv_home == self.cmake_home:
             self.opencv_home_svn = self.cmake_home_svn
         else:
             self.getSvnVersion(self.opencv_home, "opencv_home_svn")
-            
+
         self.tests = self.getAvailableTestApps()
-        
+
     def getSvnVersion(self, path, name):
         if not path:
             setattr(self, name, None)
@@ -352,7 +352,7 @@ class RunInfo(object):
                     setattr(self, name, None)
             except OSError:
                 setattr(self, name, None)
-        
+
     def tryGetSvnVersionWithTortoise(self, path, name):
         try:
             wcrev = "SubWCRev.exe"
@@ -377,7 +377,7 @@ class RunInfo(object):
             if dir:
                 import shutil
                 shutil.rmtree(dir)
-                
+
     def isTest(self, fullpath):
         if not os.path.isfile(fullpath):
             return False
@@ -388,14 +388,14 @@ class RunInfo(object):
         if self.targetos == "android" and fullpath.endswith(".apk"):
             return True
         return True
-                
+
     def getAvailableTestApps(self):
         if self.tests_dir and os.path.isdir(self.tests_dir):
             files = glob.glob(os.path.join(self.tests_dir, self.nameprefix + "*"))
             files = [f for f in files if self.isTest(f)]
             return files
         return []
-    
+
     def getLogName(self, app, timestamp):
         app = os.path.basename(app)
         if app.endswith(".exe"):
@@ -508,17 +508,17 @@ class RunInfo(object):
                 hw = ""
             tstamp = timestamp.strftime("%Y-%m-%d--%H-%M-%S")
             return "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
-        
+
     def getTest(self, name):
         # full path
         if self.isTest(name):
             return name
-        
+
         # name only
         fullname = os.path.join(self.tests_dir, name)
         if self.isTest(fullname):
             return fullname
-        
+
         # name without extension
         fullname += ".exe"
         if self.isTest(fullname):
@@ -527,7 +527,7 @@ class RunInfo(object):
             fullname += ".apk"
             if self.isTest(fullname):
                 return fullname
-        
+
         # short name for OpenCV tests
         for t in self.tests:
             if t == name:
@@ -547,7 +547,7 @@ class RunInfo(object):
             if fname == name:
                 return t
         return None
-    
+
     def runAdb(self, *args):
         cmd = self.adb[:]
         cmd.extend(args)
@@ -559,7 +559,7 @@ class RunInfo(object):
         except OSError:
             pass
         return None
-    
+
     def isRunnable(self):
         if self.error:
             return False
@@ -585,7 +585,7 @@ class RunInfo(object):
                 if hw:
                     self.hardware = hw.groups()[0].strip()
         return True
-    
+
     def runTest(self, path, workingDir, _stdout, _stderr, args = []):
         if self.error:
             return
@@ -593,13 +593,13 @@ class RunInfo(object):
         timestamp = datetime.datetime.now()
         logfile = self.getLogName(path, timestamp)
         exe = os.path.abspath(path)
-        
+
         userlog = [a for a in args if a.startswith("--gtest_output=")]
         if len(userlog) == 0:
             args.append("--gtest_output=xml:" + logfile)
         else:
             logfile = userlog[0][userlog[0].find(":")+1:]
-        
+
         if self.targetos == "android" and exe.endswith(".apk"):
             print "running java tests:", exe
             try:
@@ -653,10 +653,11 @@ class RunInfo(object):
         elif self.targetos == "android":
             hostlogpath = ""
             usercolor = [a for a in args if a.startswith("--gtest_color=")]
-            if len(userlog) == 0 and _stdout.isatty() and hostos != "nt":
+            if len(usercolor) == 0 and _stdout.isatty() and hostos != "nt":
                 args.append("--gtest_color=yes")
             try:
-                andoidcwd = "/data/bin/" + getpass.getuser().replace(" ","") + "_" + self.options.mode +"/"
+                tempdir = "/data/local/tmp/"
+                andoidcwd = tempdir + getpass.getuser().replace(" ","") + "_" + self.options.mode +"/"
                 exename = os.path.basename(exe)
                 androidexe = andoidcwd + exename
                 #upload
@@ -692,6 +693,9 @@ class RunInfo(object):
                         return
                     #rm log
                     Popen(self.adb + ["shell", "rm " + andoidcwd + logfile], stdout=_stdout, stderr=_stderr).wait()
+
+                # clean temporary files
+                Popen(self.adb + ["shell", "rm " + tempdir + "__opencv_temp.*"], stdout=_stdout, stderr=_stderr).wait()
             except OSError:
                 pass
             if os.path.isfile(hostlogpath):
@@ -704,16 +708,27 @@ class RunInfo(object):
             else:
                 cmd.extend(args)
             print >> _stderr, "Running:", " ".join(cmd)
-            try: 
+            try:
                 Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
             except OSError:
                 pass
-            
+
+            # clean temporary files
+            temp_path = os.environ.get('OPENCV_TEMP_PATH')
+            if not temp_path:
+                if hostos == "nt":
+                    temp_path = tempfile.gettempdir()
+                else:
+                    temp_path = "/tmp"
+
+            for filename in glob.glob(os.path.join(temp_path, "__opencv_temp.*")) :
+                os.remove( filename )
+
             logpath = os.path.join(workingDir, logfile)
             if os.path.isfile(logpath):
                 return logpath
             return None
-            
+
     def runTests(self, tests, _stdout, _stderr, workingDir, args = []):
         if self.error:
             return []
@@ -747,10 +762,10 @@ def getRunArgs(args):
 if __name__ == "__main__":
     test_args = [a for a in sys.argv if a.startswith("--perf_") or a.startswith("--gtest_")]
     argv =      [a for a in sys.argv if not(a.startswith("--perf_") or a.startswith("--gtest_"))]
-    
+
     parser = OptionParser()
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
-    
+
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
     parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
     parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
@@ -759,26 +774,26 @@ if __name__ == "__main__":
     parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
     parser.add_option("", "--package", dest="junit_package", help="Android: run jUnit tests for specified package", metavar="package", default="")
     parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
-    
+
     (options, args) = parser.parse_args(argv)
 
     if options.accuracy:
         options.mode = "test"
     else:
         options.mode = "perf"
-    
+
     run_args = getRunArgs(args[1:] or ['.'])
-    
+
     if len(run_args) == 0:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<build_path>"
         exit(1)
-        
+
     tests = [s.strip() for s in options.tests.split(",") if s]
-            
+
     if len(tests) != 1 or len(run_args) != 1:
         #remove --gtest_output from params
         test_args = [a for a in test_args if not a.startswith("--gtest_output=")]
-    
+
     logs = []
     for path in run_args:
         info = RunInfo(path, options)
@@ -789,5 +804,5 @@ if __name__ == "__main__":
             info.test_data_path = options.test_data_path
             logs.extend(info.runTests(tests, sys.stdout, sys.stderr, options.cwd, test_args))
 
-    if logs:            
+    if logs:
         print >> sys.stderr, "Collected:", " ".join(logs)

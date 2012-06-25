@@ -328,7 +328,7 @@ public:
            float patternScale = 22.0f,
            int nOctaves = 4,
            const vector<int>& selectedPairs = vector<int>());
-	FREAK( const FREAK& rhs );
+    FREAK( const FREAK& rhs );
     FREAK& operator=( const FREAK& );
 
     virtual ~FREAK();
@@ -349,51 +349,51 @@ public:
     vector<int> selectPairs( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints,
                       const double corrThresh = 0.7, bool verbose = true );
 
-	AlgorithmInfo* info() const;
+    AlgorithmInfo* info() const;
 
-	enum
-	{
-		NB_SCALES = 64, NB_PAIRS = 512, NB_ORIENPAIRS = 45
-	};
+    enum
+    {
+        NB_SCALES = 64, NB_PAIRS = 512, NB_ORIENPAIRS = 45
+    };
 
 protected:
     virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-	void buildPattern();
-	uchar meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
+    void buildPattern();
+    uchar meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
                          const unsigned int scale, const unsigned int rot, const unsigned int point ) const;
 
-	bool orientationNormalized; //true if the orientation is normalized, false otherwise
+    bool orientationNormalized; //true if the orientation is normalized, false otherwise
     bool scaleNormalized; //true if the scale is normalized, false otherwise
     double patternScale; //scaling of the pattern
     int nOctaves; //number of octaves
     bool extAll; // true if all pairs need to be extracted for pairs selection
-    
+
     double patternScale0;
     int nOctaves0;
     vector<int> selectedPairs0;
 
-	struct PatternPoint
-	{
-	    float x; // x coordinate relative to center
-	    float y; // x coordinate relative to center
-	    float sigma; // Gaussian smoothing sigma
-	};
+    struct PatternPoint
+    {
+        float x; // x coordinate relative to center
+        float y; // x coordinate relative to center
+        float sigma; // Gaussian smoothing sigma
+    };
 
-	struct DescriptionPair
-	{
-	    uchar i; // index of the first point
-	    uchar j; // index of the second point
-	};
+    struct DescriptionPair
+    {
+        uchar i; // index of the first point
+        uchar j; // index of the second point
+    };
 
-	struct OrientationPair
-	{
-	    uchar i; // index of the first point
-	    uchar j; // index of the second point
-	    int weight_dx; // dx/(norm_sq))*4096
-	    int weight_dy; // dy/(norm_sq))*4096
-	};
-	
-	vector<PatternPoint> patternLookup; // look-up table for the pattern points (position+sigma of all points at all scales and orientation)
+    struct OrientationPair
+    {
+        uchar i; // index of the first point
+        uchar j; // index of the second point
+        int weight_dx; // dx/(norm_sq))*4096
+        int weight_dy; // dy/(norm_sq))*4096
+    };
+
+    vector<PatternPoint> patternLookup; // look-up table for the pattern points (position+sigma of all points at all scales and orientation)
     int patternSizes[NB_SCALES]; // size of the pattern at a specific scale (used to check if a point is within image boundaries)
     DescriptionPair descriptionPairs[NB_PAIRS];
     OrientationPair orientationPairs[NB_ORIENPAIRS];
@@ -603,7 +603,7 @@ public:
 
     // TODO implement read/write
     virtual bool empty() const;
-    
+
     AlgorithmInfo* info() const;
 
 protected:
@@ -641,8 +641,8 @@ protected:
 class CV_EXPORTS AdjusterAdapter: public FeatureDetector
 {
 public:
-	/** pure virtual interface
-	 */
+    /** pure virtual interface
+     */
     virtual ~AdjusterAdapter() {}
     /** too few features were detected so, adjust the detector params accordingly
      * \param min the minimum number of desired features
@@ -682,7 +682,7 @@ public:
     /** \param adjuster an AdjusterAdapter that will do the detection and parameter adjustment
      *  \param max_features the maximum desired number of features
      *  \param max_iters the maximum number of times to try to adjust the feature detector params
-     * 			for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
+     *          for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
      *  \param min_features the minimum desired features
      */
     DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjuster, int min_features=400, int max_features=500, int max_iters=5 );
@@ -693,8 +693,8 @@ protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
 private:
-	DynamicAdaptedFeatureDetector& operator=(const DynamicAdaptedFeatureDetector&);
-	DynamicAdaptedFeatureDetector(const DynamicAdaptedFeatureDetector&);
+    DynamicAdaptedFeatureDetector& operator=(const DynamicAdaptedFeatureDetector&);
+    DynamicAdaptedFeatureDetector(const DynamicAdaptedFeatureDetector&);
 
     int escape_iters_;
     int min_features_, max_features_;
@@ -792,7 +792,7 @@ public:
     virtual bool empty() const;
 
 protected:
-	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     Ptr<DescriptorExtractor> descriptorExtractor;
 };
@@ -962,7 +962,7 @@ class CV_EXPORTS_W DescriptorMatcher : public Algorithm
 public:
     virtual ~DescriptorMatcher();
 
-	/*
+    /*
      * Add descriptors to train descriptor collection.
      * descriptors      Descriptors to add. Each descriptors[i] is a descriptors set from one image.
      */
@@ -1078,7 +1078,7 @@ protected:
     static bool isMaskedOut( const vector<Mat>& masks, int queryIdx );
 
     static Mat clone_op( Mat m ) { return m.clone(); }
-	void checkMasks( const vector<Mat>& masks, int queryDescriptorsCount ) const;
+    void checkMasks( const vector<Mat>& masks, int queryDescriptorsCount ) const;
 
     // Collection of descriptors from train images.
     vector<Mat> trainDescCollection;

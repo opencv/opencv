@@ -421,7 +421,7 @@ void CV_StereoMatchingTest::run(int)
         ts->set_failed_test_info( code );
         return;
     }
-    
+
     string fullResultFilename = dataPath + ALGORITHMS_DIR + algorithmName + RESULT_FILE;
     FileStorage resFS( fullResultFilename, FileStorage::READ );
     bool isWrite = true; // write or compare results
@@ -660,7 +660,7 @@ class CV_StereoGCTest : public CV_StereoMatchingTest
 public:
     CV_StereoGCTest()
     {
-        name = "stereogc"; 
+        name = "stereogc";
         fill(rmsEps.begin(), rmsEps.end(), 3.f);
         fracEps[0] = 0.05f; // all
         fracEps[1] = 0.05f; // noOccl

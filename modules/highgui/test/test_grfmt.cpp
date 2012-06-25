@@ -59,7 +59,7 @@ public:
             ts->printf(cvtest::TS::LOG, "finish reading big image\n");
             if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
             ts->printf(cvtest::TS::LOG, "start  writing big image\n");
-            imwrite(string(ts->get_data_path()) + "readwrite/write.png", img);
+            imwrite(cv::tempfile(".png"), img);
             ts->printf(cvtest::TS::LOG, "finish writing big image\n");
         }
         catch(...)
@@ -72,10 +72,14 @@ public:
 
 string ext_from_int(int ext)
 {
+#ifdef HAVE_PNG
     if (ext == 0) return ".png";
+#endif
     if (ext == 1) return ".bmp";
     if (ext == 2) return ".pgm";
+#ifdef HAVE_TIFF
     if (ext == 3) return ".tiff";
+#endif
     return "";
 }
 
@@ -92,16 +96,21 @@ public:
             for (int k = 1; k <= 5; ++k)
             {
                 for (int ext = 0; ext < 4; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
+                {
+                    if(ext_from_int(ext).empty())
+                        continue;
                     for (int num_channels = 1; num_channels <= 3; num_channels+=2)
                     {
                         ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
                         Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
                         circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
-                        ts->printf(ts->LOG, "writing      image : %s\n", string(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext)).c_str());
-                        imwrite(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext), img);
-                        ts->printf(ts->LOG, "reading test image : %s\n", string(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext)).c_str());
 
-                        Mat img_test = imread(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext), CV_LOAD_IMAGE_UNCHANGED);
+                        string img_path = cv::tempfile(ext_from_int(ext).c_str());
+                        ts->printf(ts->LOG, "writing      image : %s\n", img_path.c_str());
+                        imwrite(img_path, img);
+
+                        ts->printf(ts->LOG, "reading test image : %s\n", img_path.c_str());
+                        Mat img_test = imread(img_path, CV_LOAD_IMAGE_UNCHANGED);
 
                         if (img_test.empty()) ts->set_failed_test_info(ts->FAIL_MISMATCH);
 
@@ -115,14 +124,17 @@ public:
                             ts->set_failed_test_info(ts->FAIL_MISMATCH);
                         }
                     }
+                }
 
+#ifdef HAVE_JPEG
                 for (int num_channels = 1; num_channels <= 3; num_channels+=2)
                 {
                     // jpeg
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ".jpg");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
                     circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
-                    string filename = string(ts->get_data_path() + "readwrite/test_" + char(k + 48) + "_c" + char(num_channels + 48) + "_.jpg");
+
+                    string filename = cv::tempfile(".jpg");
                     imwrite(filename, img);
                     img = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
 
@@ -142,14 +154,17 @@ public:
                         ts->set_failed_test_info(ts->FAIL_MISMATCH);
                     }
                 }
+#endif
 
+#ifdef HAVE_TIFF
                 for (int num_channels = 1; num_channels <= 3; num_channels+=2)
                 {
                     // tiff
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
                     circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
-                    string filename = string(ts->get_data_path() + "readwrite/test.tiff");
+
+                    string filename = cv::tempfile(".tiff");
                     imwrite(filename, img);
                     ts->printf(ts->LOG, "reading test image : %s\n", filename.c_str());
                     Mat img_test = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
@@ -171,6 +186,7 @@ public:
                         ts->set_failed_test_info(ts->FAIL_MISMATCH);
                     }
                 }
+#endif
             }
         }
         catch(const cv::Exception & e)
@@ -205,9 +221,7 @@ public:
 TEST(Highgui_Image, write_big) { CV_GrfmtWriteBigImageTest      test; test.safe_run(); }
 #endif
 
-#if defined(HAVE_PNG) && defined(HAVE_TIFF) && defined(HAVE_JPEG)
 TEST(Highgui_Image, write_imageseq) { CV_GrfmtWriteSequenceImageTest test; test.safe_run(); }
-#endif
 
 TEST(Highgui_Image, read_bmp_rle8) { CV_GrfmtReadBMPRLE8Test test; test.safe_run(); }
 
