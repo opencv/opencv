@@ -1435,7 +1435,7 @@ public:
     bool load(const std::string& filename);
     void release();
 
-    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4, Size minSize = Size());
+    int detectMultiScale(const GpuMat& image, GpuMat& scaledImageBuffer, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4/*, Size minSize = Size()*/);
 
     bool findLargestObject;
     bool visualizeInPlace;

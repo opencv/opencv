@@ -259,8 +259,47 @@ Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const
     return NxM;
 }
 
-int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size())
+namespace cv { namespace gpu { namespace device
 {
+    namespace lbp
+    {
+        void CascadeClassify(DevMem2Db image, DevMem2Db objects, double scaleFactor = 1.2, int minNeighbors = 4, cudaStream_t stream = 0);
+    }
+}}}
+
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& scaledImageBuffer, GpuMat& objects, double scaleFactor, int minNeighbors /*, Size minSize=Size()*/)
+{
+    CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
+    CV_Assert(empty());
+
+    const int defaultObjSearchNum = 100;
+
+    if( !objects.empty() && objects.depth() == CV_32S)
+        objects.reshape(4, 1);
+    else
+        objects.create(1 , defaultObjSearchNum, CV_32SC4);
+
+    scaledImageBuffer.create(image.size(), image.type());
+
+    // TODO: specify max objects size
+    for( double factor = 1; ; factor *= scaleFactor )
+    {
+        cv::Size windowSize(cvRound(NxM.width * factor), cvRound(NxM.height * factor));
+        cv::Size scaledImageSize(cvRound( image.cols / factor ), cvRound( image.rows / factor ));
+        cv::Size processingRectSize( scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
+
+        // nothing to do
+        if (processingRectSize.width <= 0 || processingRectSize.height <= 0 )
+            break;
+        // TODO: min max object sizes cheching
+        cv::gpu::resize(image, scaledImageBuffer, scaledImageSize, 0, 0, INTER_NEAREST);
+
+        int yStep = (factor > 2.) + 1;
+        int stripCount = 1, stripSize = processingRectSize.height;
+
+    }
+    // TODO: reject levels
+
     return 0;
 }
 
