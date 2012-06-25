@@ -59,7 +59,6 @@ struct Stage
 struct DTreeNode
 {
     int   featureIdx;
-    //float threshold; // for ordered features only
     int   left;
     int   right;
     DTreeNode(int f = 0, int l = 0, int r = 0) : featureIdx(f), left(l), right(r) {}
@@ -271,7 +270,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        void CascadeClassify(DevMem2Db image, DevMem2Db objects, double scaleFactor = 1.2, int minNeighbors = 4, cudaStream_t stream = 0);
+        void cascadeClassify(const DevMem2Db stages, const DevMem2Di trees, const DevMem2Db nodes, const DevMem2Df leaves, const DevMem2Di subsets,
+            const DevMem2Db integral, int workWidth, int workHeight, int step, int subsetSize, DevMem2D_<int4> objects, int minNeighbors = 4, cudaStream_t stream = 0);
     }
 }}}
 
@@ -308,17 +308,8 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         int step = (factor <= 2.) + 1;
         int stripCount = 1, stripSize = processingRectSize.height;
 
-        int y1 = 0;
-        int y2 = processingRectSize.height;
-
-        for (int y = y1; y < y2; y += step)
-            for (int x = 0; x < processingRectSize.width; x+=step)
-            {
-                //ToDO: classify
-                int result = 0;
-
-            }
-
+        cv::gpu::device::lbp::cascadeClassify(stage_mat, trees_mat, nodes_mat, leaves_mat, subsets_mat,
+         integral, processingRectSize.width, processingRectSize.height, step, subsetSize, objects, minNeighbors);
     }
     // TODO: reject levels
 

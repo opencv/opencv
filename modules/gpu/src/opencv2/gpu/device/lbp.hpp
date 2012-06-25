@@ -43,6 +43,13 @@
 #ifndef __OPENCV_GPU_DEVICE_LBP_HPP_
 #define __OPENCV_GPU_DEVICE_LBP_HPP_
 
+#include "internal_shared.hpp"
+// #include "opencv2/gpu/device/border_interpolate.hpp"
+// #include "opencv2/gpu/device/vec_traits.hpp"
+// #include "opencv2/gpu/device/vec_math.hpp"
+// #include "opencv2/gpu/device/saturate_cast.hpp"
+// #include "opencv2/gpu/device/filters.hpp"
+
 // #define CALC_SUM_(p0, p1, p2, p3, offset) \
 //     ((p0)[offset] - (p1)[offset] - (p2)[offset] + (p3)[offset])
 
@@ -53,16 +60,34 @@
 
 namespace cv { namespace gpu { namespace device {
 
+    struct Stage
+    {
+        int    first;
+        int    ntrees;
+        float  threshold;
+        __device__ __forceinline__ Stage(int f = 0, int n = 0, float t = 0.f) : first(f), ntrees(n), threshold(t) {}
+        __device__ __forceinline__ Stage(const Stage& other) : first(other.first), ntrees(other.ntrees), threshold(other.threshold) {}
+    };
+
+    struct ClNode
+    {
+        int   featureIdx;
+        int   left;
+        int   right;
+        __device__ __forceinline__  ClNode(int f = 0, int l = 0, int r = 0) : featureIdx(f), left(l), right(r) {}
+        __device__ __forceinline__  ClNode(const ClNode& other) : featureIdx(other.featureIdx), left(other.left), right(other.right) {}
+    };
+
     struct Feature
     {
         __device__ __forceinline__ Feature(const Feature& other) {(void)other;}
         __device__ __forceinline__ Feature() {}
-        __device__ __forceinline__ char operator() (volatile int* ptr, int offset)
+        __device__ __forceinline__ char operator() ()//(volatile int* ptr, int offset)
         {
             return char(0);
         }
 
-    }
-}// namespaces
+    };
+} } }// namespaces
 
 #endif

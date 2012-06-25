@@ -1454,12 +1454,14 @@ private:
     int subsetSize;
     int nodeStep;
 
-    // located on gpu
+    // gpu representation of classifier
     GpuMat stage_mat;
     GpuMat trees_mat;
     GpuMat nodes_mat;
     GpuMat leaves_mat;
     GpuMat subsets_mat;
+
+    // current integral image
     GpuMat integral;
 };
 

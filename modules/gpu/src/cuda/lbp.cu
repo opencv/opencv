@@ -40,15 +40,51 @@
 //
 //M*/
 
-#include <opencv2/gpu/device/detail/lbp.hpp>
+#include <opencv2/gpu/device/lbp.hpp>
 
 namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        void CascadeClassify(DevMem2Db image, DevMem2Db objects, double scaleFactor=1.2, int minNeighbors=4, cudaStream_t stream)
+        __global__ void lbp_classify(const DevMem2D_< ::cv::gpu::device::Stage> stages, const DevMem2Di trees, const DevMem2Db nodes, const DevMem2Df leaves, const DevMem2Di subsets,
+            const DevMem2Db integral, float step, int subsetSize, DevMem2D_<int4> objects)
+        {
+            unsigned int x = threadIdx.x;
+            unsigned int y = blockIdx.x;
+            int nodeOfs = 0, leafOfs = 0;
+            ::cv::gpu::device::Feature feature;
+
+            for (int s = 0; s < stages.cols; s++ )
+            {
+                ::cv::gpu::device::Stage stage = stages(0, s);
+                int sum = 0;
+                for (int w = 0; w < stage.ntrees; w++)
+                {
+                    ::cv::gpu::device::ClNode node = nodes(0, nodeOfs);
+                    char c = feature();// TODO: inmplement it
+                    const int subsetIdx = (nodeOfs * subsetSize);
+                    int idx = subsetIdx + ((c >> 5) & ( 1 << (c & 31)) ? leafOfs : leafOfs + 1);
+                    sum += leaves(0, subsets(0, idx) );
+                    nodeOfs++;
+                    leafOfs += 2;
+                }
+
+                if (sum < stage.threshold)
+                    return; // nothing matched
+                return;//mathed
+            }
+
+        }
+
+        void cascadeClassify(const DevMem2Db bstages, const DevMem2Di trees, const DevMem2Db nodes, const DevMem2Df leaves, const DevMem2Di subsets,
+            const DevMem2Db integral, int workWidth, int workHeight, int step, int subsetSize, DevMem2D_<int4> objects, int minNeighbors, cudaStream_t stream)
         {
             printf("CascadeClassify");
+            int blocks = ceilf(workHeight / (float)step);
+            int threads = ceilf(workWidth / (float)step);
+            DevMem2D_< ::cv::gpu::device::Stage> stages = DevMem2D_< ::cv::gpu::device::Stage>(bstages);
+
+            lbp_classify<<<blocks, threads>>>(stages, trees, nodes, leaves, subsets, integral, step, subsetSize, objects);
         }
     }
 }}}
