@@ -47,6 +47,7 @@
 cv::gpu::MOG_GPU::MOG_GPU(int) { throw_nogpu(); }
 void cv::gpu::MOG_GPU::initialize(cv::Size, int) { throw_nogpu(); }
 void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, Stream&) { throw_nogpu(); }
+void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_nogpu(); }
 
 cv::gpu::MOG2_GPU::MOG2_GPU(int) { throw_nogpu(); }
 void cv::gpu::MOG2_GPU::initialize(cv::Size, int) { throw_nogpu(); }
@@ -62,10 +63,11 @@ namespace cv { namespace gpu { namespace device
         void mog_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Df weight, DevMem2Df sortKey, DevMem2Db mean, DevMem2Db var,
                      int nmixtures, float varThreshold, float learningRate, float backgroundRatio, float noiseSigma,
                      cudaStream_t stream);
+        void getBackgroundImage_gpu(int cn, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream);
 
         void loadConstants(int nmixtures, float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, unsigned char shadowVal);
         void mog2_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Df variance, DevMem2Db mean, float alphaT, float prune, bool detectShadows, cudaStream_t stream);
-        void getBackgroundImage_gpu(int cn, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream);
+        void getBackgroundImage2_gpu(int cn, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream);
     }
 }}}
 
@@ -80,7 +82,7 @@ namespace mog
 }
 
 cv::gpu::MOG_GPU::MOG_GPU(int nmixtures) :
-    frameSize_(0, 0), nframes_(0)
+    frameSize_(0, 0), frameType_(0), nframes_(0)
 {
     nmixtures_ = std::min(nmixtures > 0 ? nmixtures : mog::defaultNMixtures, 8);
     history = mog::defaultHistory;
@@ -94,6 +96,7 @@ void cv::gpu::MOG_GPU::initialize(cv::Size frameSize, int frameType)
     CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4);
 
     frameSize_ = frameSize;
+    frameType_ = frameType;
 
     int ch = CV_MAT_CN(frameType);
     int work_ch = ch;
@@ -137,6 +140,15 @@ void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat&
     mog_gpu(frame, ch, fgmask, weight_, sortKey_, mean_, var_, nmixtures_,
             varThreshold, learningRate, backgroundRatio, noiseSigma,
             StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream) const
+{
+    using namespace cv::gpu::device::mog;
+
+    backgroundImage.create(frameSize_, frameType_);
+
+    getBackgroundImage_gpu(backgroundImage.channels(), weight_, mean_, backgroundImage, nmixtures_, backgroundRatio, StreamAccessor::getStream(stream));
 }
 
 /////////////////////////////////////////////////////////////////
@@ -235,7 +247,7 @@ void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stre
 
     backgroundImage.create(frameSize_, frameType_);
 
-    getBackgroundImage_gpu(backgroundImage.channels(), bgmodelUsedModes_, weight_, mean_, backgroundImage, StreamAccessor::getStream(stream));
+    getBackgroundImage2_gpu(backgroundImage.channels(), bgmodelUsedModes_, weight_, mean_, backgroundImage, StreamAccessor::getStream(stream));
 }
 
 #endif

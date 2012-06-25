@@ -1984,6 +1984,9 @@ public:
     //! the update operator
     void operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null());
 
+    //! computes a background image which are the mean of all background gaussians
+    void getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const;
+
     int history;
     float varThreshold;
     float backgroundRatio;
@@ -1993,6 +1996,7 @@ private:
     int nmixtures_;
 
     Size frameSize_;
+    int frameType_;
     int nframes_;
 
     GpuMat weight_;

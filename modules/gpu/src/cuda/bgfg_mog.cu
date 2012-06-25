@@ -369,6 +369,63 @@ namespace cv { namespace gpu { namespace device
                 withoutLearning[cn](frame, fgmask, weight, mean, var, nmixtures, varThreshold, backgroundRatio, stream);
         }
 
+        template <typename WorkT, typename OutT>
+        __global__ void getBackgroundImage(const PtrStepf gmm_weight, const PtrStep_<WorkT> gmm_mean, DevMem2D_<OutT> dst, const int nmixtures, const float backgroundRatio)
+        {
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+            if (x >= dst.cols || y >= dst.rows)
+                return;
+
+            WorkT meanVal = VecTraits<WorkT>::all(0.0f);
+            float totalWeight = 0.0f;
+
+            for (int mode = 0; mode < nmixtures; ++mode)
+            {
+                float weight = gmm_weight(mode * dst.rows + y, x);
+
+                WorkT mean = gmm_mean(mode * dst.rows + y, x);
+                meanVal = meanVal + weight * mean;
+
+                totalWeight += weight;
+
+                if(totalWeight > backgroundRatio)
+                    break;
+            }
+
+            meanVal = meanVal * (1.f / totalWeight);
+
+            dst(y, x) = saturate_cast<OutT>(meanVal);
+        }
+
+        template <typename WorkT, typename OutT>
+        void getBackgroundImage_caller(DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream)
+        {
+            dim3 block(32, 8);
+            dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage<WorkT, OutT>, cudaFuncCachePreferL1) );
+
+            getBackgroundImage<WorkT, OutT><<<grid, block, 0, stream>>>(weight, (DevMem2D_<WorkT>) mean, (DevMem2D_<OutT>) dst, nmixtures, backgroundRatio);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        void getBackgroundImage_gpu(int cn, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream)
+        {
+            typedef void (*func_t)(DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream);
+
+            static const func_t funcs[] =
+            {
+                0, getBackgroundImage_caller<float, uchar>, 0, getBackgroundImage_caller<float3, uchar3>, getBackgroundImage_caller<float4, uchar4>
+            };
+
+            funcs[cn](weight, mean, dst, nmixtures, backgroundRatio, stream);
+        }
+
         ///////////////////////////////////////////////////////////////
         // MOG2
 
@@ -642,7 +699,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename WorkT, typename OutT>
-        __global__ void getBackgroundImage(const DevMem2Db modesUsed, const PtrStepf gmm_weight, const PtrStep_<WorkT> gmm_mean, PtrStep_<OutT> dst)
+        __global__ void getBackgroundImage2(const DevMem2Db modesUsed, const PtrStepf gmm_weight, const PtrStep_<WorkT> gmm_mean, PtrStep_<OutT> dst)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -674,27 +731,27 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename WorkT, typename OutT>
-        void getBackgroundImage_caller(DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream)
+        void getBackgroundImage2_caller(DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(modesUsed.cols, block.x), divUp(modesUsed.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage<WorkT, OutT>, cudaFuncCachePreferL1) );
+            cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage2<WorkT, OutT>, cudaFuncCachePreferL1) );
 
-            getBackgroundImage<WorkT, OutT><<<grid, block, 0, stream>>>(modesUsed, weight, (DevMem2D_<WorkT>) mean, (DevMem2D_<OutT>) dst);
+            getBackgroundImage2<WorkT, OutT><<<grid, block, 0, stream>>>(modesUsed, weight, (DevMem2D_<WorkT>) mean, (DevMem2D_<OutT>) dst);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void getBackgroundImage_gpu(int cn, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream)
+        void getBackgroundImage2_gpu(int cn, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream)
         {
             typedef void (*func_t)(DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream);
 
             static const func_t funcs[] =
             {
-                0, getBackgroundImage_caller<float, uchar>, 0, getBackgroundImage_caller<float3, uchar3>, getBackgroundImage_caller<float4, uchar4>
+                0, getBackgroundImage2_caller<float, uchar>, 0, getBackgroundImage2_caller<float3, uchar3>, getBackgroundImage2_caller<float4, uchar4>
             };
 
             funcs[cn](modesUsed, weight, mean, dst, stream);
