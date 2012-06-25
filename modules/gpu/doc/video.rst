@@ -389,6 +389,176 @@ Updates the background model and returns foreground regions count.
 
 
 
+gpu::MOG_GPU
+------------
+.. ocv:class:: gpu::MOG_GPU
+
+Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm. ::
+
+    class MOG_GPU
+    {
+    public:
+        MOG_GPU(int nmixtures = -1);
+
+        void initialize(Size frameSize, int frameType);
+
+        void operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null());
+
+        void getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const;
+
+        int history;
+        float varThreshold;
+        float backgroundRatio;
+        float noiseSigma;
+    };
+
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG]_.
+
+.. seealso:: :ocv:class:`BackgroundSubtractorMOG`
+
+
+
+gpu::MOG_GPU::MOG_GPU
+---------------------
+The constructor.
+
+.. ocv:function:: gpu::MOG_GPU::MOG_GPU(int nmixtures = -1)
+
+    :param nmixtures: Number of Gaussian mixtures.
+
+Default constructor sets all parameters to default values.
+
+
+
+gpu::MOG_GPU::operator()
+------------------------
+Updates the background model and returns the foreground mask
+
+.. ocv:function:: void gpu::MOG_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null())
+
+    :param frame: Next video frame.
+
+    :param fgmask: The output foreground mask as an 8-bit binary image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::MOG_GPU::getBackgroundImage
+--------------------------------
+Computes a background image.
+
+.. ocv:function:: void gpu::MOG_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const
+
+    :param backgroundImage: The output background image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::MOG2_GPU
+-------------
+.. ocv:class:: gpu::MOG2_GPU
+
+Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
+
+    class MOG2_GPU
+    {
+    public:
+        MOG2_GPU(int nmixtures = -1);
+
+        void initialize(Size frameSize, int frameType);
+
+        void operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null());
+
+        void getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const;
+
+        // parameters
+        ...
+    };
+
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2]_.
+
+  Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+
+    .. ocv:member:: float backgroundRatio
+
+        Threshold defining whether the component is significant enough to be included into the background model ( corresponds to ``TB=1-cf`` from the paper??which paper??). ``cf=0.1 => TB=0.9`` is default. For ``alpha=0.001``, it means that the mode should exist for approximately 105 frames before it is considered foreground.
+
+    .. ocv:member:: float varThreshold
+
+        Threshold for the squared Mahalanobis distance that helps decide when a sample is close to the existing components (corresponds to ``Tg``). If it is not close to any component, a new component is generated. ``3 sigma => Tg=3*3=9`` is default. A smaller ``Tg`` value generates more components. A higher ``Tg`` value may result in a small number of components but they can grow too large.
+
+    .. ocv:member:: float fVarInit
+
+        Initial variance for the newly generated components. It affects the speed of adaptation. The parameter value is based on your estimate of the typical standard deviation from the images. OpenCV uses 15 as a reasonable value.
+
+    .. ocv:member:: float fVarMin
+
+        Parameter used to further control the variance.
+
+    .. ocv:member:: float fVarMax
+
+        Parameter used to further control the variance.
+
+    .. ocv:member:: float fCT
+
+        Complexity reduction parameter. This parameter defines the number of samples needed to accept to prove the component exists. ``CT=0.05`` is a default value for all the samples. By setting ``CT=0`` you get an algorithm very similar to the standard Stauffer&Grimson algorithm.
+
+    .. ocv:member:: uchar nShadowDetection
+
+        The value for marking shadow pixels in the output foreground mask. Default value is 127.
+
+    .. ocv:member:: float fTau
+
+        Shadow threshold. The shadow is detected if the pixel is a darker version of the background. ``Tau`` is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See [ShadowDetect]_.
+
+    .. ocv:member:: bool bShadowDetection
+
+        Parameter defining whether shadow detection should be enabled.
+
+.. seealso:: :ocv:class:`BackgroundSubtractorMOG2`
+
+
+
+gpu::MOG2_GPU::MOG2_GPU
+-----------------------
+The constructor.
+
+.. ocv:function:: gpu::MOG2_GPU::MOG2_GPU(int nmixtures = -1)
+
+    :param nmixtures: Number of Gaussian mixtures.
+
+Default constructor sets all parameters to default values.
+
+
+
+gpu::MOG2_GPU::operator()
+------------------------
+Updates the background model and returns the foreground mask
+
+.. ocv:function:: void gpu::MOG2_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null())
+
+    :param frame: Next video frame.
+
+    :param fgmask: The output foreground mask as an 8-bit binary image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::MOG2_GPU::getBackgroundImage
+---------------------------------
+Computes a background image.
+
+.. ocv:function:: void gpu::MOG2_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const
+
+    :param backgroundImage: The output background image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
 gpu::VideoWriter_GPU
 ---------------------
 Video writer class.
@@ -610,6 +780,8 @@ Class for reading video from files.
 
 .. ocv:class:: gpu::VideoReader_GPU
 
+.. note:: Currently only Windows and Linux platforms are supported.
+
 
 
 gpu::VideoReader_GPU::Codec
@@ -827,3 +999,6 @@ Parse next video frame. Implementation must call this method after new frame was
 
 .. [Brox2004] T. Brox, A. Bruhn, N. Papenberg, J. Weickert. *High accuracy optical flow estimation based on a theory for warping*. ECCV 2004.
 .. [FGD2003] Liyuan Li, Weimin Huang, Irene Y.H. Gu, and Qi Tian. *Foreground Object Detection from Videos Containing Complex Background*. ACM MM2003 9p, 2003.
+.. [MOG] P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001
+.. [MOG2] Z.Zivkovic, *Improved adaptive Gausian mixture model for background subtraction*, International Conference Pattern Recognition, UK, August, 2004
+.. [ShadowDetect] Prati, Mikic, Trivedi and Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI, 2003
