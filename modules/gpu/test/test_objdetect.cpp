@@ -299,9 +299,8 @@ PARAM_TEST_CASE(LBP_Read_classifier, cv::gpu::DeviceInfo, int)
 TEST_P(LBP_Read_classifier, Accuracy)
 {
     cv::gpu::CascadeClassifier_GPU_LBP classifier;
-    std::cout << (std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml") << std::endl;
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
-    classifier.load(classifierXmlPath);
+    ASSERT_TRUE(classifier.load(classifierXmlPath));
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier, testing::Combine(

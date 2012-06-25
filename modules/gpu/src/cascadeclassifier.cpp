@@ -97,16 +97,17 @@ cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()
 {
 }
 
-bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                        { throw_nogpu(); return true; }
+bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const
+{
+    return stage_mat.empty();
+}
 
 bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
 {
     FileStorage fs(classifierAsXml, FileStorage::READ);
     if (!fs.isOpened())
         return false;
-    if (read(fs.getFirstTopLevelNode()))
-        return true;
-    return false;
+    return read(fs.getFirstTopLevelNode());
 }
 
 #define GPU_CC_STAGE_TYPE           "stageType"
@@ -162,7 +163,6 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     std::vector<int> subsets;
 
     FileNodeIterator it = fn.begin(), it_end = fn.end();
-    int i = 0;
     for (size_t si = 0; it != it_end; si++, ++it )
     {
         FileNode fns = *it;
@@ -254,9 +254,15 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 #undef GPU_CC_INTERNAL_NODES
 #undef GPU_CC_LEAF_VALUES
 
-Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const            { throw_nogpu(); return Size(); }
+Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const
+{
+    return NxM;
+}
 
-int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size())
+{
+    return 0;
+}
 
 // ============ old fashioned haar cascade ==============================================//
 struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
