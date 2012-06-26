@@ -84,10 +84,9 @@ if(HAVE_QT)
   QT4_WRAP_CPP(_MOC_OUTFILES src/window_QT.h)
 
   list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
-  list(APPEND highgui_srcs src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
-
-  ocv_check_flag_support(CXX -Wno-missing-declarations HAVE_CXX_WNO_MISSING_DECLARATIONS)
-  if(HAVE_CXX_WNO_MISSING_DECLARATIONS)
+  list(APPEND highgui_srcs src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES})
+  ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag)
+  if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
 elseif(WIN32)
