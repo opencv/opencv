@@ -478,7 +478,7 @@ string tempfile( const char* suffix )
     char temp_file[MAX_PATH + 1] = { 0 };
 
     ::GetTempPathA(sizeof(temp_dir), temp_dir);
-    if(0 != ::GetTempFileNameA(temp_dir, "__opencv_temp.", 0, temp_file))
+    if(0 == ::GetTempFileNameA(temp_dir, "__opencv_temp.", 0, temp_file))
         return string();
 
     string name = temp_file;
