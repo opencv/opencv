@@ -1,7 +1,7 @@
 FaceRecognizer - Face Recognition with OpenCV
 ##############################################
 
-OpenCV 2.4 now comes with the very new :ocv:class:`FaceRecognizer` class for face recognition. This documentation is going to explain you `the API <facerec_api.rst>`_ in detail and it will give you a lot of help to get started (full source code examples). `Face Recognition with OpenCV <facerec_tutorial.rst>`_ is the definite guide to the new :ocv:class:`FaceRecognizer`. There's also a `tutorial on gender classification <tutorial/facerec_gender_classification.rst>`_, a `tutorial for face recognition in videos <tutorial/facerec_video_recognition.rst>`_ and it's shown `how to load & save your results <tutorial/facerec_save_load.rst>`_. 
+OpenCV 2.4 now comes with the very new :ocv:class:`FaceRecognizer` class for face recognition. This documentation is going to explain you `the API <facerec_api>`_ in detail and it will give you a lot of help to get started (full source code examples). :doc:`Face Recognition with OpenCV <facerec_tutorial>` is the definite guide to the new :ocv:class:`FaceRecognizer`. There's also a :doc:`tutorial on gender classification <tutorial/facerec_gender_classification>`, a :doc:`tutorial for face recognition in videos <tutorial/facerec_video_recognition>` and it's shown :doc:`how to load & save your results <tutorial/facerec_save_load>`. 
 
 These documents are the help I have wished for, when I was working myself into face recognition. I hope you also think the new :ocv:class:`FaceRecognizer` is a useful addition to OpenCV. 
 
