@@ -8,3 +8,4 @@ The module contains some recently added functionality that has not been stabiliz
     :maxdepth: 2
 
     stereo
+    FaceRecognizer Documentation <facerec/index>
