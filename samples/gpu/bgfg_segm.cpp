@@ -13,7 +13,8 @@ enum Method
 {
     FGD_STAT,
     MOG,
-    MOG2
+    MOG2,
+    VIBE
 };
 
 int main(int argc, const char** argv)
@@ -21,7 +22,7 @@ int main(int argc, const char** argv)
     cv::CommandLineParser cmd(argc, argv,
         "{ c | camera | false       | use camera }"
         "{ f | file   | 768x576.avi | input video file }"
-        "{ m | method | mog         | method (fgd_stat, mog, mog2) }"
+        "{ m | method | mog         | method (fgd_stat, mog, mog2, vibe) }"
         "{ h | help   | false       | print help message }");
 
     if (cmd.get<bool>("help"))
@@ -36,13 +37,13 @@ int main(int argc, const char** argv)
     string file = cmd.get<string>("file");
     string method = cmd.get<string>("method");
 
-    if (method != "fgd_stat" && method != "mog" && method != "mog2")
+    if (method != "fgd_stat" && method != "mog" && method != "mog2" && method != "vibe")
     {
         cerr << "Incorrect method" << endl;
         return -1;
     }
 
-    Method m = method == "fgd_stat" ? FGD_STAT : method == "mog" ? MOG : MOG2;
+    Method m = method == "fgd_stat" ? FGD_STAT : method == "mog" ? MOG : method == "mog2" ? MOG2 : VIBE;
 
     VideoCapture cap;
 
@@ -65,6 +66,7 @@ int main(int argc, const char** argv)
     FGDStatModel fgd_stat;
     MOG_GPU mog;
     MOG2_GPU mog2;
+    VIBE_GPU vibe;
 
     GpuMat d_fgmask;
     GpuMat d_fgimg;
@@ -87,12 +89,17 @@ int main(int argc, const char** argv)
     case MOG2:
         mog2(d_frame, d_fgmask);
         break;
+
+    case VIBE:
+        vibe.initialize(d_frame);
+        break;
     }
 
     namedWindow("image", WINDOW_NORMAL);
     namedWindow("foreground mask", WINDOW_NORMAL);
     namedWindow("foreground image", WINDOW_NORMAL);
-    namedWindow("mean background image", WINDOW_NORMAL);
+    if (m != VIBE)
+        namedWindow("mean background image", WINDOW_NORMAL);
 
     for(;;)
     {
@@ -118,6 +125,10 @@ int main(int argc, const char** argv)
         case MOG2:
             mog2(d_frame, d_fgmask);
             mog2.getBackgroundImage(d_bgimg);
+            break;
+
+        case VIBE:
+            vibe(d_frame, d_fgmask);
             break;
         }
 

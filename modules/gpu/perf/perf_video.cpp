@@ -517,6 +517,68 @@ INSTANTIATE_TEST_CASE_P(Video, MOG2_getBackgroundImage, testing::Combine(
     testing::Values(Channels(1), Channels(3), Channels(4))));
 
 //////////////////////////////////////////////////////
+// VIBE
+
+GPU_PERF_TEST(VIBE, cv::gpu::DeviceInfo, std::string, Channels)
+{
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+    int cn = GET_PARAM(2);
+
+    cv::VideoCapture cap(inputFile);
+    ASSERT_TRUE(cap.isOpened());
+
+    cv::Mat frame;
+    cap >> frame;
+    ASSERT_FALSE(frame.empty());
+
+    if (cn != 3)
+    {
+        cv::Mat temp;
+        if (cn == 1)
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+        else
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+        cv::swap(temp, frame);
+    }
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::VIBE_GPU vibe;
+    cv::gpu::GpuMat foreground;
+
+    vibe(d_frame, foreground);
+
+    for (int i = 0; i < 10; ++i)
+    {
+        cap >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        if (cn != 3)
+        {
+            cv::Mat temp;
+            if (cn == 1)
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+            else
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+            cv::swap(temp, frame);
+        }
+
+        d_frame.upload(frame);
+
+        startTimer(); next();
+        vibe(d_frame, foreground);
+        stopTimer();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, VIBE, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi")),
+    testing::Values(Channels(1), Channels(3), Channels(4))));
+
+//////////////////////////////////////////////////////
 // VideoWriter
 
 #ifdef WIN32

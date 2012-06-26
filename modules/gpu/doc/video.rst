@@ -324,9 +324,9 @@ Class used for background/foreground segmentation. ::
         std::vector< std::vector<cv::Point> > foreground_regions;
     };
 
-  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
+The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
 
-  The results are available through the class fields:
+The results are available through the class fields:
 
     .. ocv:member:: cv::gpu::GpuMat background
 
@@ -406,13 +406,15 @@ Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm. ::
 
         void getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const;
 
+        void release();
+
         int history;
         float varThreshold;
         float backgroundRatio;
         float noiseSigma;
     };
 
-  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG]_.
+The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2001]_.
 
 .. seealso:: :ocv:class:`BackgroundSubtractorMOG`
 
@@ -432,7 +434,7 @@ Default constructor sets all parameters to default values.
 
 gpu::MOG_GPU::operator()
 ------------------------
-Updates the background model and returns the foreground mask
+Updates the background model and returns the foreground mask.
 
 .. ocv:function:: void gpu::MOG_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null())
 
@@ -456,6 +458,14 @@ Computes a background image.
 
 
 
+gpu::MOG_GPU::release
+---------------------
+Releases all inner buffer's memory.
+
+.. ocv:function:: void gpu::MOG_GPU::release()
+
+
+
 gpu::MOG2_GPU
 -------------
 .. ocv:class:: gpu::MOG2_GPU
@@ -473,13 +483,15 @@ Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
 
         void getBackgroundImage(GpuMat& backgroundImage, Stream& stream = Stream::Null()) const;
 
+        void release();
+
         // parameters
         ...
     };
 
-  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2]_.
+The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_.
 
-  Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
 
     .. ocv:member:: float backgroundRatio
 
@@ -511,7 +523,7 @@ Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
 
     .. ocv:member:: float fTau
 
-        Shadow threshold. The shadow is detected if the pixel is a darker version of the background. ``Tau`` is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See [ShadowDetect]_.
+        Shadow threshold. The shadow is detected if the pixel is a darker version of the background. ``Tau`` is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See [ShadowDetect2003]_.
 
     .. ocv:member:: bool bShadowDetection
 
@@ -534,8 +546,8 @@ Default constructor sets all parameters to default values.
 
 
 gpu::MOG2_GPU::operator()
-------------------------
-Updates the background model and returns the foreground mask
+-------------------------
+Updates the background model and returns the foreground mask.
 
 .. ocv:function:: void gpu::MOG2_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null())
 
@@ -556,6 +568,84 @@ Computes a background image.
     :param backgroundImage: The output background image.
 
     :param stream: Stream for the asynchronous version.
+
+
+
+gpu::MOG2_GPU::release
+----------------------
+Releases all inner buffer's memory.
+
+.. ocv:function:: void gpu::MOG2_GPU::release()
+
+
+
+gpu::VIBE_GPU
+-------------
+.. ocv:class:: gpu::VIBE_GPU
+
+Class used for background/foreground segmentation. ::
+
+    class VIBE_GPU
+    {
+    public:
+        explicit VIBE_GPU(unsigned long rngSeed = 1234567);
+
+        void initialize(const GpuMat& firstFrame, Stream& stream = Stream::Null());
+
+        void operator()(const GpuMat& frame, GpuMat& fgmask, Stream& stream = Stream::Null());
+
+        void release();
+
+        ...
+    };
+
+The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [VIBE2011]_.
+
+
+
+gpu::VIBE_GPU::VIBE_GPU
+-----------------------
+The constructor.
+
+.. ocv:function:: gpu::VIBE_GPU::VIBE_GPU(unsigned long rngSeed = 1234567)
+
+    :param rngSeed: Value used to initiate a random sequence.
+
+Default constructor sets all parameters to default values.
+
+
+
+gpu::VIBE_GPU::initialize
+-------------------------
+Initialize background model and allocates all inner buffers.
+
+.. ocv:function:: void gpu::VIBE_GPU::initialize(const GpuMat& firstFrame, Stream& stream = Stream::Null())
+
+    :param firstFrame: First frame from video sequence.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::VIBE_GPU::operator()
+-------------------------
+Updates the background model and returns the foreground mask
+
+.. ocv:function:: void gpu::VIBE_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, Stream& stream = Stream::Null())
+
+    :param frame: Next video frame.
+
+    :param fgmask: The output foreground mask as an 8-bit binary image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::VIBE_GPU::release
+----------------------
+Releases all inner buffer's memory.
+
+.. ocv:function:: void gpu::VIBE_GPU::release()
 
 
 
@@ -999,6 +1089,7 @@ Parse next video frame. Implementation must call this method after new frame was
 
 .. [Brox2004] T. Brox, A. Bruhn, N. Papenberg, J. Weickert. *High accuracy optical flow estimation based on a theory for warping*. ECCV 2004.
 .. [FGD2003] Liyuan Li, Weimin Huang, Irene Y.H. Gu, and Qi Tian. *Foreground Object Detection from Videos Containing Complex Background*. ACM MM2003 9p, 2003.
-.. [MOG] P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001
-.. [MOG2] Z.Zivkovic, *Improved adaptive Gausian mixture model for background subtraction*, International Conference Pattern Recognition, UK, August, 2004
-.. [ShadowDetect] Prati, Mikic, Trivedi and Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI, 2003
+.. [MOG2001] P. KadewTraKuPong and R. Bowden. *An improved adaptive background mixture model for real-time tracking with shadow detection*. Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001
+.. [MOG2004] Z. Zivkovic. *Improved adaptive Gausian mixture model for background subtraction*. International Conference Pattern Recognition, UK, August, 2004
+.. [ShadowDetect2003] Prati, Mikic, Trivedi and Cucchiarra. *Detecting Moving Shadows...*. IEEE PAMI, 2003
+.. [VIBE2011] O. Barnich and M. Van D Roogenbroeck. *ViBe: A universal background subtraction algorithm for video sequences*. IEEE Transactions on Image Processing, 20(6) :1709-1724, June 2011

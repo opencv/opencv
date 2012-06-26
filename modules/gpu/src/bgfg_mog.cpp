@@ -48,11 +48,13 @@ cv::gpu::MOG_GPU::MOG_GPU(int) { throw_nogpu(); }
 void cv::gpu::MOG_GPU::initialize(cv::Size, int) { throw_nogpu(); }
 void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, Stream&) { throw_nogpu(); }
 void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_nogpu(); }
+void cv::gpu::MOG_GPU::release() {}
 
 cv::gpu::MOG2_GPU::MOG2_GPU(int) { throw_nogpu(); }
 void cv::gpu::MOG2_GPU::initialize(cv::Size, int) { throw_nogpu(); }
 void cv::gpu::MOG2_GPU::operator()(const GpuMat&, GpuMat&, float, Stream&) { throw_nogpu(); }
 void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_nogpu(); }
+void cv::gpu::MOG2_GPU::release() {}
 
 #else
 
@@ -149,6 +151,18 @@ void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& strea
     backgroundImage.create(frameSize_, frameType_);
 
     getBackgroundImage_gpu(backgroundImage.channels(), weight_, mean_, backgroundImage, nmixtures_, backgroundRatio, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::MOG_GPU::release()
+{
+    frameSize_ = Size(0, 0);
+    frameType_ = 0;
+    nframes_ = 0;
+
+    weight_.release();
+    sortKey_.release();
+    mean_.release();
+    var_.release();
 }
 
 /////////////////////////////////////////////////////////////////
@@ -248,6 +262,19 @@ void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stre
     backgroundImage.create(frameSize_, frameType_);
 
     getBackgroundImage2_gpu(backgroundImage.channels(), bgmodelUsedModes_, weight_, mean_, backgroundImage, StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::MOG2_GPU::release()
+{
+    frameSize_ = Size(0, 0);
+    frameType_ = 0;
+    nframes_ = 0;
+
+    weight_.release();
+    variance_.release();
+    mean_.release();
+
+    bgmodelUsedModes_.release();
 }
 
 #endif

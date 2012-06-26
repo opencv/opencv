@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include <stdio.h>
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
