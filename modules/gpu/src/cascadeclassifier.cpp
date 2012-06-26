@@ -234,7 +234,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     FileNodeIterator f_it = fn.begin(), f_end = fn.end();
     for (; f_it != f_end; ++f_it)
     {
-        FileNode rect = fn[GPU_CC_RECT];
+        FileNode rect = (*it)[GPU_CC_RECT];
         FileNodeIterator r_it = rect.begin();
         features.push_back(saturate_cast<uchar>((int)*(r_it++)));
         features.push_back(saturate_cast<uchar>((int)*(r_it++)));
@@ -280,6 +280,8 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 #undef GPU_CC_WEAK_CLASSIFIERS
 #undef GPU_CC_INTERNAL_NODES
 #undef GPU_CC_LEAF_VALUES
+#undef GPU_CC_FEATURES
+#undef GPU_CC_RECT
 
 Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const
 {
