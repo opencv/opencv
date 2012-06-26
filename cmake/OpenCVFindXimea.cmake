@@ -8,6 +8,7 @@
 #  XIMEA_LIBRARY_DIR    - XIMEA libraries folder
 #
 # Created: 5 Aug 2011 by Marian Zajko (marian.zajko@ximea.com)
+# Updated: 25 June 2012 by Igor Kuzmin (parafin@ximea.com)
 #
 
 set(XIMEA_FOUND)
@@ -20,10 +21,16 @@ if(WIN32)
 
   if(EXISTS XIMEA_PATH)
     set(XIMEA_FOUND 1)
-
     # set LIB folders
-    set(XIMEA_LIBRARY_DIR "${XIMEA_PATH}\\x86")
-
+    set(XIMEA_LIBRARY_DIR "${XIMEA_PATH}/x86")
+  else()
+    set(XIMEA_FOUND 0)
+  endif()
+else()
+  if(EXISTS /opt/XIMEA)
+    set(XIMEA_FOUND 1)
+    # set folders
+    set(XIMEA_PATH /opt/XIMEA/include)
   else()
     set(XIMEA_FOUND 0)
   endif()
