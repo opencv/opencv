@@ -46,13 +46,14 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        __global__ void lbp_classify(const DevMem2D_< ::cv::gpu::device::Stage> stages, const DevMem2Di trees, const DevMem2Db nodes, const DevMem2Df leaves, const DevMem2Di subsets,
-            const DevMem2Db integral, float step, int subsetSize, DevMem2D_<int4> objects)
+        __global__ void lbp_classify(const DevMem2D_< ::cv::gpu::device::Stage> stages, const DevMem2Di trees, const DevMem2D_< ::cv::gpu::device::ClNode> nodes,
+            const DevMem2Df leaves, const DevMem2Di subsets,
+            const DevMem2D_<uchar4> features, const DevMem2Di integral, float step, int subsetSize, DevMem2D_<int4> objects, float scale, int clWidth, int clHeight)
         {
-            unsigned int x = threadIdx.x;
-            unsigned int y = blockIdx.x;
+            unsigned int x = threadIdx.x * step;
+            unsigned int y = blockIdx.x  * step;
             int nodeOfs = 0, leafOfs = 0;
-            ::cv::gpu::device::Feature feature;
+            ::cv::gpu::device::Feature evaluator;
 
             for (int s = 0; s < stages.cols; s++ )
             {
@@ -61,7 +62,9 @@ namespace cv { namespace gpu { namespace device
                 for (int w = 0; w < stage.ntrees; w++)
                 {
                     ::cv::gpu::device::ClNode node = nodes(0, nodeOfs);
-                    char c = feature();// TODO: inmplement it
+                    uchar4 feature = features(0, node.featureIdx);
+
+                    uchar c = evaluator(y, x, feature, integral);
                     const int subsetIdx = (nodeOfs * subsetSize);
                     int idx = subsetIdx + ((c >> 5) & ( 1 << (c & 31)) ? leafOfs : leafOfs + 1);
                     sum += leaves(0, subsets(0, idx) );
@@ -70,21 +73,27 @@ namespace cv { namespace gpu { namespace device
                 }
 
                 if (sum < stage.threshold)
-                    return; // nothing matched
-                return;//mathed
+                    return;
             }
-
+            int4 rect;
+            rect.x = roundf(x * scale);
+            rect.y = roundf(y * scale);
+            rect.z = roundf(clWidth * scale);
+            rect.w = roundf(clHeight * scale);
+            objects(blockIdx.x, threadIdx.x) = rect;
         }
 
-        void cascadeClassify(const DevMem2Db bstages, const DevMem2Di trees, const DevMem2Db nodes, const DevMem2Df leaves, const DevMem2Di subsets,
-            const DevMem2Db integral, int workWidth, int workHeight, int step, int subsetSize, DevMem2D_<int4> objects, int minNeighbors, cudaStream_t stream)
+        void cascadeClassify(const DevMem2Db bstages, const DevMem2Di trees, const DevMem2Db bnodes, const DevMem2Df leaves, const DevMem2Di subsets, const DevMem2Db bfeatures,
+            const DevMem2Di integral, int workWidth, int workHeight, int clWidth, int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, int minNeighbors, cudaStream_t stream)
         {
             printf("CascadeClassify");
             int blocks = ceilf(workHeight / (float)step);
             int threads = ceilf(workWidth / (float)step);
             DevMem2D_< ::cv::gpu::device::Stage> stages = DevMem2D_< ::cv::gpu::device::Stage>(bstages);
+            DevMem2D_<uchar4> features = (DevMem2D_<uchar4>)bfeatures;
+            DevMem2D_< ::cv::gpu::device::ClNode> nodes = DevMem2D_< ::cv::gpu::device::ClNode>(bnodes);
 
-            lbp_classify<<<blocks, threads>>>(stages, trees, nodes, leaves, subsets, integral, step, subsetSize, objects);
+            lbp_classify<<<blocks, threads>>>(stages, trees, nodes, leaves, subsets, features, integral, step, subsetSize, objects, scale, clWidth, clHeight);
         }
     }
 }}}

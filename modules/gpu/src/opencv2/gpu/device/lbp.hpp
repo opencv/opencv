@@ -82,9 +82,48 @@ namespace cv { namespace gpu { namespace device {
     {
         __device__ __forceinline__ Feature(const Feature& other) {(void)other;}
         __device__ __forceinline__ Feature() {}
-        __device__ __forceinline__ char operator() ()//(volatile int* ptr, int offset)
+
+        //feature as uchar x, y - left top, z,w - right bottom
+        __device__ __forceinline__ uchar operator() (unsigned int y, unsigned int x, uchar4 feature, const DevMem2Di integral) const
         {
-            return char(0);
+            int x_off = 2 * feature.z;
+            int y_off = 2 * feature.w;
+
+            // load feature key points
+            int anchors[16];
+            anchors[0]  = integral(y + feature.y, x + feature.x);
+            anchors[1]  = integral(y + feature.y, x + feature.z);
+            anchors[2]  = integral(y + feature.y, x + x_off + feature.x);
+            anchors[3]  = integral(y + feature.y, x + x_off + feature.z);
+
+            anchors[4]  = integral(y + feature.w, x + feature.x);
+            anchors[5]  = integral(y + feature.w, x + feature.z);
+            anchors[6]  = integral(y + feature.w, x + x_off + feature.x);
+            anchors[7]  = integral(y + feature.w, x + x_off + feature.z);
+
+            anchors[8]  = integral(y + y_off + feature.y, x + feature.x);
+            anchors[9]  = integral(y + y_off + feature.y, x + feature.z);
+            anchors[10] = integral(y + y_off + feature.y, x + x_off + feature.x);
+            anchors[11] = integral(y + y_off + feature.y, x + x_off + feature.z);
+
+            anchors[12] = integral(y + y_off + feature.w, x + feature.x);
+            anchors[13] = integral(y + y_off + feature.w, x + feature.z);
+            anchors[14] = integral(y + y_off + feature.w, x + x_off + feature.x);
+            anchors[15] = integral(y + y_off + feature.w, x + x_off + feature.z);
+
+            // calculate feature
+            int sum = anchors[5] - anchors[6] - anchors[9] + anchors[10];
+
+            uchar response = (( (anchors[ 0] - anchors[ 1] - anchors[ 4] + anchors[ 5]) >= sum )? 128 : 0)
+                            |(( (anchors[ 1] - anchors[ 2] - anchors[ 5] + anchors[ 6]) >= sum )? 64  : 0)
+                            |(( (anchors[ 2] - anchors[ 3] - anchors[ 6] + anchors[ 7]) >= sum )? 32  : 0)
+                            |(( (anchors[ 6] - anchors[ 7] - anchors[10] + anchors[11]) >= sum )? 16  : 0)
+                            |(( (anchors[10] - anchors[11] - anchors[14] + anchors[15]) >= sum )? 8   : 0)
+                            |(( (anchors[ 9] - anchors[10] - anchors[13] + anchors[14]) >= sum )? 4   : 0)
+                            |(( (anchors[ 8] - anchors[ 9] - anchors[12] + anchors[13]) >= sum )? 2   : 0)
+                            |(( (anchors[ 4] - anchors[ 5] - anchors[ 8] + anchors[ 9]) >= sum )? 1   : 0);
+
+            return response;
         }
 
     };

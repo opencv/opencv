@@ -99,9 +99,8 @@ cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()
 
 void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size desired)
 {
-    integral.create(desired.width + 1, desired.height + 1, CV_32FC1);
+    integral.create(desired.width + 1, desired.height + 1, CV_32SC1);
 }
-
 
 bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const
 {
@@ -132,6 +131,8 @@ bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
 #define GPU_CC_WEAK_CLASSIFIERS     "weakClassifiers"
 #define GPU_CC_INTERNAL_NODES       "internalNodes"
 #define GPU_CC_LEAF_VALUES          "leafValues"
+#define GPU_CC_FEATURES             "features"
+#define GPU_CC_RECT                 "rect"
 
 bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 {
@@ -225,6 +226,22 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
                 cl_leaves.push_back((float)*iIt);
         }
     }
+    fn = root[GPU_CC_FEATURES];
+    if( fn.empty() )
+        return false;
+    std::vector<char> features;
+    features.reserve(fn.size() * 4);
+    FileNodeIterator f_it = fn.begin(), f_end = fn.end();
+    for (; f_it != f_end; ++f_it)
+    {
+        FileNode rect = fn[GPU_CC_RECT];
+        FileNodeIterator r_it = rect.begin();
+        features.push_back(saturate_cast<uchar>((int)*(r_it++)));
+        features.push_back(saturate_cast<uchar>((int)*(r_it++)));
+        features.push_back(saturate_cast<uchar>((int)*(r_it++)));
+        features.push_back(saturate_cast<uchar>((int)*(r_it++)));
+    }
+
     // copy data structures on gpu
     stage_mat = cv::gpu::GpuMat(1, (int)stages.size() * sizeof(Stage), CV_8UC1);
     stage_mat.upload(cv::Mat(1, stages.size() * sizeof(Stage), CV_8UC1, &(stages[0]) ));
@@ -240,6 +257,9 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 
     subsets_mat = cv::gpu::GpuMat(1, (int)subsets.size(), CV_32SC1);
     stage_mat.upload(cv::Mat(subsets));
+
+    features_mat = cv::gpu::GpuMat(1, (int)features.size(), CV_8UC1);
+    features_mat.upload(cv::Mat(features));
 
     return true;
 }
@@ -270,22 +290,25 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        void cascadeClassify(const DevMem2Db stages, const DevMem2Di trees, const DevMem2Db nodes, const DevMem2Df leaves, const DevMem2Di subsets,
-            const DevMem2Db integral, int workWidth, int workHeight, int step, int subsetSize, DevMem2D_<int4> objects, int minNeighbors = 4, cudaStream_t stream = 0);
+        void cascadeClassify(const DevMem2Db stages, const DevMem2Di trees, const DevMem2Db nodes, const DevMem2Df leaves, const DevMem2Di subsets, const DevMem2Db features,
+            const DevMem2Di integral, int workWidth, int workHeight, int clWidth, int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, int minNeighbors = 4, cudaStream_t stream = 0);
     }
 }}}
 
 int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& scaledImageBuffer, GpuMat& objects, double scaleFactor, int minNeighbors /*, Size minSize=Size()*/)
 {
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
-    CV_Assert(empty());
+    CV_Assert(!empty());
 
     const int defaultObjSearchNum = 100;
 
-    if( !objects.empty() && objects.depth() == CV_32S)
-        objects.reshape(4, 1);
-    else
-        objects.create(1 , defaultObjSearchNum, CV_32SC4);
+    // if( !objects.empty() && objects.depth() == CV_32S)
+    //     objects.reshape(4, 1);
+    // else
+    //     objects.create(1 , defaultObjSearchNum, CV_32SC4);
+
+    // temp solution
+    objects.create(image.rows, image.cols, CV_32SC4);
 
     scaledImageBuffer.create(image.size(), image.type());
 
@@ -302,14 +325,13 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         // TODO: min max object sizes cheching
         cv::gpu::resize(image, scaledImageBuffer, scaledImageSize, 0, 0, INTER_NEAREST);
         //prepare image for evaluation
-        integral.create(cv::Size(scaledImageSize.width + 1, scaledImageSize.height + 1), CV_32FC1);
+        integral.create(cv::Size(scaledImageSize.width + 1, scaledImageSize.height + 1), CV_32SC1);
         cv::gpu::integral(scaledImageBuffer, integral);
 
         int step = (factor <= 2.) + 1;
-        int stripCount = 1, stripSize = processingRectSize.height;
 
-        cv::gpu::device::lbp::cascadeClassify(stage_mat, trees_mat, nodes_mat, leaves_mat, subsets_mat,
-         integral, processingRectSize.width, processingRectSize.height, step, subsetSize, objects, minNeighbors);
+        cv::gpu::device::lbp::cascadeClassify(stage_mat, trees_mat, nodes_mat, leaves_mat, subsets_mat, features_mat,
+         integral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, scaleFactor, step, subsetSize, objects, minNeighbors);
     }
     // TODO: reject levels
 

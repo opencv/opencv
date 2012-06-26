@@ -1460,6 +1460,7 @@ private:
     GpuMat nodes_mat;
     GpuMat leaves_mat;
     GpuMat subsets_mat;
+    GpuMat features_mat;
 
     // current integral image
     GpuMat integral;
