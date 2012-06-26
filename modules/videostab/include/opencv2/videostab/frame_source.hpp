@@ -46,7 +46,6 @@
 #include <vector>
 #include <string>
 #include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
 
 namespace cv
 {
@@ -76,15 +75,17 @@ public:
     virtual void reset();
     virtual Mat nextFrame();
 
-    int width() { return static_cast<int>(reader_.get(CV_CAP_PROP_FRAME_WIDTH)); }
-    int height() { return static_cast<int>(reader_.get(CV_CAP_PROP_FRAME_HEIGHT)); }
-    int count() { return static_cast<int>(reader_.get(CV_CAP_PROP_FRAME_COUNT)); }
-    double fps() { return reader_.get(CV_CAP_PROP_FPS); }
+    int width();
+    int height();
+    int count();
+    double fps();
 
 private:
     std::string path_;
     bool volatileFrame_;
-    VideoCapture reader_;
+
+    struct VideoReader;
+    const VideoReader& reader_;
 };
 
 } // namespace videostab

@@ -46,7 +46,10 @@
 // */
 
 #include "precomp.hpp"
-#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_HIGHGUI
+#  include "opencv2/highgui/highgui_c.h"
+#endif
 
 /////////////////////////////// CvImage implementation //////////////////////////////////
 
@@ -112,8 +115,10 @@ bool CvImage::load( const char* filename, const char* imgname, int color )
             img = temp_img;
         }*/
     }
+#ifdef HAVE_OPENCV_HIGHGUI
     else
         img = cvLoadImage( filename, color );
+#endif
 
     attach( img );
     return img != 0;
@@ -161,8 +166,12 @@ void CvImage::save( const char* filename, const char* imgname, const int* params
         return;
     if( icvIsXmlOrYaml( filename ) )
         cvSave( filename, image, imgname );
+#ifdef HAVE_OPENCV_HIGHGUI
     else
         cvSaveImage( filename, image, params );
+#else
+    (void)params;
+#endif
 }
 
 
@@ -175,8 +184,12 @@ void CvImage::write( CvFileStorage* fs, const char* imgname )
 
 void CvImage::show( const char* window_name )
 {
+#ifdef HAVE_OPENCV_HIGHGUI
     if( image )
         cvShowImage( window_name, image );
+#else
+    (void)window_name;
+#endif
 }
 
 
@@ -238,8 +251,10 @@ bool CvMatrix::load( const char* filename, const char* matname, int color )
             m = temp_mat;
         }*/
     }
+#ifdef HAVE_OPENCV_HIGHGUI
     else
         m = cvLoadImageM( filename, color );
+#endif
 
     set( m, false );
     return m != 0;
@@ -287,8 +302,12 @@ void CvMatrix::save( const char* filename, const char* matname, const int* param
         return;
     if( icvIsXmlOrYaml( filename ) )
         cvSave( filename, matrix, matname );
+#ifdef HAVE_OPENCV_HIGHGUI
     else
         cvSaveImage( filename, matrix, params );
+#else
+    (void)params;
+#endif
 }
 
 
@@ -301,8 +320,12 @@ void CvMatrix::write( CvFileStorage* fs, const char* matname )
 
 void CvMatrix::show( const char* window_name )
 {
+#ifdef HAVE_OPENCV_HIGHGUI
     if( matrix )
         cvShowImage( window_name, matrix );
+#else
+    (void)window_name;
+#endif
 }
 
 

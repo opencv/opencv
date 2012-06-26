@@ -39,10 +39,16 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
+#define SHOW_DEBUG_IMAGES 0
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 
-#include "opencv2/highgui/highgui.hpp"
+#if SHOW_DEBUG_IMAGES
+#  include "opencv2/highgui/highgui.hpp"
+#endif
+
 #include "precomp.hpp"
 
 #include <iostream>
@@ -58,7 +64,6 @@
 
 #include <limits>
 
-#define SHOW_DEBUG_IMAGES 0
 using namespace cv;
 
 inline static

@@ -38,7 +38,7 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
         cv::Ptr<cv::CascadeClassifier> Detector;
  };
 
-int main(int argc, char* argv[])
+int main(int , char** )
 {
     namedWindow(WindowName);
 
