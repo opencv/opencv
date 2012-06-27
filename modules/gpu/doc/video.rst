@@ -549,7 +549,7 @@ gpu::MOG2_GPU::operator()
 -------------------------
 Updates the background model and returns the foreground mask.
 
-.. ocv:function:: void gpu::MOG2_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate = 0.0f, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::MOG2_GPU::operator()( const GpuMat& frame, GpuMat& fgmask, float learningRate=-1.0f, Stream& stream=Stream::Null() )
 
     :param frame: Next video frame.
 
