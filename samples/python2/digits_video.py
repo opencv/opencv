@@ -42,7 +42,7 @@ def main():
             #sub = ~cv2.equalizeHist(sub)
             #_, sub_bin = cv2.threshold(sub, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
 
-            s = float(h)/SZ
+            s = 1.5*float(h)/SZ
             m = cv2.moments(sub)
             m00 = m['m00']
             if m00/255 < 0.1*w*h or m00/255 > 0.9*w*h:
