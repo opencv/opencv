@@ -26,12 +26,17 @@ def main():
 
         bin = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 31, 10)
         bin = cv2.medianBlur(bin, 3)
-        contours, _ = cv2.findContours( bin.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        contours, heirs = cv2.findContours( bin.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        rects = map(cv2.boundingRect, contours)
+        valid_flags = [ 16 <= h <= 64  and w <= 1.2*h  for x, y, w, h in rects]
 
-        for cnt in contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            if h < 16 or h > 60 or 1.2*h < w:
+        for i, cnt in enumerate(contours):
+            if not valid_flags[i]:
                 continue
+            _, _, _, outer_i = heirs[0, i]
+            if outer_i >=0 and valid_flags[outer_i]:
+                continue
+            x, y, w, h = rects[i]
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0))
             sub = bin[y:,x:][:h,:w]
             #sub = ~cv2.equalizeHist(sub)
