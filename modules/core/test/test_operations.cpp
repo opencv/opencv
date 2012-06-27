@@ -758,6 +758,13 @@ bool CV_OperationsTest::TestTemplateMat()
         split(mf2, mvf2);
         CV_Assert( norm(mvf2[0], mvf[0], CV_C) == 0 &&
                   norm(mvf2[1], mvf[1], CV_C) == 0 );
+        
+        {
+        Mat a(2,2,CV_32F,1.f);
+        Mat b(1,2,CV_32F,1.f);
+        Mat c = (a*b.t()).t();
+        CV_Assert( norm(c, CV_L1) == 4. );
+        }
     }
     catch (const test_excep& e)
     {
