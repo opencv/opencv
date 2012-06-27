@@ -29,6 +29,8 @@ else()
   set(OpenCV_ADD_DEBUG_RELEASE_CONFIGCMAKE FALSE)
 endif()
 
+
+
 if(WIN32)
   if(MINGW)
     set(OPENCV_LINK_LIBRARY_SUFFIX ".dll.a")
@@ -107,13 +109,14 @@ configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.
 # --------------------------------------------------------------------------------------------
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
-set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}/opencv" "\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}\"")
+set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_INSTALL_PATH}/opencv" "\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_INSTALL_PATH}\"")
 
 set(OpenCV2_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
 set(OpenCV_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_LIB_INSTALL_PATH}\"")
 set(OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_3P_LIB_INSTALL_PATH}\"")
 if(INSTALL_TO_MANGLED_PATHS)
-  set(OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV-${OPENCV_VERSION}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+  string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE "${OPENCV_3P_LIB_INSTALL_PATH}")
+  set(OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OpenCV_3RDPARTY_LIB_DIRS_CONFIGCMAKE}\"")
 endif()
 
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
@@ -126,26 +129,17 @@ if(UNIX)
   #                <prefix>/(share|lib)/cmake/<name>*/                     (U)
   #                <prefix>/(share|lib)/<name>*/                           (U)
   #                <prefix>/(share|lib)/<name>*/(cmake|CMake)/             (U)
-  math(EXPR SIZEOF_VOID_P_BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
-  if(LIB_SUFFIX AND NOT SIZEOF_VOID_P_BITS EQUAL LIB_SUFFIX)
-    set(OPENCV_CONFIG_INSTALL_PREFIX lib${LIB_SUFFIX}/cmake/opencv)
-  elseif(ANDROID)
-    set(OPENCV_CONFIG_INSTALL_PREFIX sdk/native/jni)
-  else()
-    set(OPENCV_CONFIG_INSTALL_PREFIX share/OpenCV)
-  endif()
-
   if(INSTALL_TO_MANGLED_PATHS)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PREFIX}-${OPENCV_VERSION}/)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PREFIX}-${OPENCV_VERSION}/)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}-${OPENCV_VERSION}/)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}-${OPENCV_VERSION}/)
   else()
-    install(FILES "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" DESTINATION ${OPENCV_CONFIG_INSTALL_PREFIX}/)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PREFIX}/)
+    install(FILES "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
   endif()
 endif()
 
 if(ANDROID)
-  install(FILES "${OpenCV_SOURCE_DIR}/android/android.toolchain.cmake" DESTINATION ${OPENCV_CONFIG_INSTALL_PREFIX}/)
+  install(FILES "${OpenCV_SOURCE_DIR}/android/android.toolchain.cmake" DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
 endif()
 
 # --------------------------------------------------------------------------------------------
