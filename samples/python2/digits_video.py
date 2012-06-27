@@ -31,14 +31,14 @@ def main():
         boxes = []
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            if h < 20 or h > 60 or 1.2*h < w:
+            if h < 16 or h > 60 or 1.2*h < w:
                 continue
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0))
             sub = bin[y:,x:][:h,:w]
             #sub = ~cv2.equalizeHist(sub)
             #_, sub_bin = cv2.threshold(sub, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
 
-            s = 1.1*h/SZ
+            s = float(h)/SZ
             m = cv2.moments(sub)
             m00 = m['m00']
             if m00/255 < 0.1*w*h or m00/255 > 0.9*w*h:
@@ -49,7 +49,7 @@ def main():
             c0 = np.float32([SZ/2, SZ/2])
             t = c1 - s*c0
             A = np.zeros((2, 3), np.float32)
-            A[:,:2] = np.eye(2)*2
+            A[:,:2] = np.eye(2)*s
             A[:,2] = t
             sub1 = cv2.warpAffine(sub, A, (SZ, SZ), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
             sub1 = digits.deskew(sub1)
