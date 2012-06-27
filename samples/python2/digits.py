@@ -124,5 +124,7 @@ if __name__ == '__main__':
     model.train(samples_train, labels_train)
     vis = evaluate_model(model, digits_test, samples_test, labels_test)
     cv2.imshow('SVM test', vis)
+    print 'saving SVM as "digits_svm.dat"...'
+    model.save('digits_svm.dat')
 
     cv2.waitKey(0)
