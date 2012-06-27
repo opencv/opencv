@@ -118,6 +118,8 @@ add_custom_command(
 
 # copy generated java files to the final location
 set(JAVA_OUTPUT_DIR "src/org/opencv")
+set(JAVA_INSTALL_ROOT "sdk/java")
+set(JNI_INSTALL_ROOT "sdk/native")
 
 # copy each documented header to the final destination
 set(java_files "")
@@ -137,7 +139,7 @@ foreach(java_file ${documented_java_files} ${handwrittren_aidl_sources})
 
   if(ANDROID)
     get_filename_component(install_subdir "${java_file_name}" PATH)
-    install(FILES "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
+    install(FILES "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_INSTALL_ROOT}/${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
   endif()
 endforeach()
 
@@ -199,7 +201,8 @@ if(ANDROID)
       list(APPEND lib_proj_files "${OpenCV_BINARY_DIR}/${f}")
 
       if(NOT f MATCHES "jni/.+")
-        install(FILES "${OpenCV_BINARY_DIR}/${f}" DESTINATION . COMPONENT main)
+        get_filename_component(install_subdir "${f}" PATH)
+        install(FILES "${OpenCV_BINARY_DIR}/${f}" DESTINATION "${JAVA_INSTALL_ROOT}/${install_subdir}" COMPONENT main)
       endif()
     endif()
   endforeach()
@@ -235,8 +238,11 @@ if(ANDROID)
         DEPENDS ${lib_proj_files}
         COMMENT "Generating OpenCV Android library project. SDK target: ${lib_target_sdk_target}"
         )
-    install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION . COMPONENT main)
-    install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION . COMPONENT main)
+    install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_PROJECT_PROPERTIES_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT main)
+    install(FILES "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" DESTINATION ${JAVA_INSTALL_ROOT} COMPONENT main)
+    # creating empty 'gen' and 'res' folders
+    install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/sdk/java/gen\")" COMPONENT main)
+    install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/sdk/java/res\")" COMPONENT main)
 
     if(ANT_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13)
       # build the library project

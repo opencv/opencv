@@ -55,9 +55,9 @@ get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACH
 if(NOT WIN32)
   # Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
   if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_LESS 2.8)
-    get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../.." ABSOLUTE)
+    get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../../.." ABSOLUTE)
   else()
-    get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../.." REALPATH)
+    get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../../.." REALPATH)
   endif()
 endif()
 

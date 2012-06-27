@@ -7,6 +7,7 @@ LOCAL_PATH:=$(subst ?,,$(firstword ?$(subst \, ,$(subst /, ,$(call my-dir)))))
 OPENCV_THIS_DIR:=$(patsubst $(LOCAL_PATH)\\%,%,$(patsubst $(LOCAL_PATH)/%,%,$(call my-dir)))
 OPENCV_MK_DIR:=$(dir $(lastword $(MAKEFILE_LIST)))
 OPENCV_LIBS_DIR:=@OPENCV_LIBS_DIR_CONFIGCMAKE@
+OPENCV_3RDPARTY_LIBS_DIR:=@OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE@
 OPENCV_BASEDIR:=@OPENCV_BASE_INCLUDE_DIR_CONFIGCMAKE@
 OPENCV_LOCAL_C_INCLUDES:=@OPENCV_INCLUDE_DIRS_CONFIGCMAKE@	
 OPENCV_MODULES:=@OPENCV_MODULES_CONFIGMAKE@
@@ -31,9 +32,7 @@ else
 	OPENCV_EXTRA_COMPONENTS:=@OPENCV_EXTRA_COMPONENTS_CONFIGMAKE@
 endif
 
-ifeq (${OPENCV_CAMERA_MODULES},off)
-	OPENCV_CAMERA_MODULES:=
-else
+ifeq (${OPENCV_CAMERA_MODULES},on)
 	ifeq ($(TARGET_ARCH_ABI),armeabi)
 		OPENCV_CAMERA_MODULES:=@OPENCV_CAMERA_LIBS_ARMEABI_CONFIGCMAKE@
 	endif
@@ -43,6 +42,8 @@ else
 	ifeq ($(TARGET_ARCH_ABI),x86)
 		OPENCV_CAMERA_MODULES:=@OPENCV_CAMERA_LIBS_X86_CONFIGCMAKE@
 	endif
+else
+	OPENCV_CAMERA_MODULES:=
 endif
 
 ifeq ($(OPENCV_LIB_TYPE),SHARED)
@@ -55,21 +56,21 @@ endif
 define add_opencv_module
 	include $(CLEAR_VARS)
 	LOCAL_MODULE:=opencv_$1
-	LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/libs/$(TARGET_ARCH_ABI)/libopencv_$1.$(OPENCV_LIB_SUFFIX)
+	LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/libopencv_$1.$(OPENCV_LIB_SUFFIX)
 	include $(PREBUILT_$(OPENCV_LIB_TYPE)_LIBRARY)
 endef
 
 define add_opencv_3rdparty_component
 	include $(CLEAR_VARS)
 	LOCAL_MODULE:=$1
-	LOCAL_SRC_FILES:=$(OPENCV_THIS_DIR)/3rdparty/libs/$(TARGET_ARCH_ABI)/lib$1.a
+	LOCAL_SRC_FILES:=$(OPENCV_3RDPARTY_LIBS_DIR)/lib$1.a
 	include $(PREBUILT_STATIC_LIBRARY)
 endef
 
 define add_opencv_camera_module
 	include $(CLEAR_VARS)
 	LOCAL_MODULE:=$1
-	LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/libs/$(TARGET_ARCH_ABI)/lib$1.so
+	LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/lib$1.so
 	include $(PREBUILT_SHARED_LIBRARY)
 endef
 
@@ -94,7 +95,7 @@ LOCAL_CFLAGS     += $(OPENCV_LOCAL_CFLAGS)
 ifeq ($(OPENCV_INSTALL_MODULES),on)
 	LOCAL_$(OPENCV_LIB_TYPE)_LIBRARIES += $(foreach mod, $(OPENCV_LIBS), opencv_$(mod))
 else
-	LOCAL_LDLIBS += -L$(call host-path,$(LOCAL_PATH)/$(OPENCV_LIBS_DIR)/libs/$(TARGET_ARCH_ABI)) $(foreach lib, $(OPENCV_LIBS), -lopencv_$(lib))
+	LOCAL_LDLIBS += -L$(call host-path,$(LOCAL_PATH)/$(OPENCV_LIBS_DIR)) $(foreach lib, $(OPENCV_LIBS), -lopencv_$(lib))
 endif
 
 ifeq ($(OPENCV_LIB_TYPE),STATIC)

@@ -37,6 +37,7 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
 else(NOT CMAKE_TOOLCHAIN_FILE)
   #Android: set output folder to ${CMAKE_BINARY_DIR}
   set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
 endif(NOT CMAKE_TOOLCHAIN_FILE)
 
 # --------------------------------------------------------------
@@ -217,7 +218,6 @@ include(cmake/OpenCVVersion.cmake REQUIRED)
 # ----------------------------------------------------------------------------
 
 # Save libs and executables in the same place
-set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib" CACHE PATH "Output directory for libraries" )
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications" )
 
 if(ANDROID OR WIN32)
@@ -229,15 +229,25 @@ else()
 endif()
 
 if(ANDROID)
-    set(OPENCV_LIB_INSTALL_PATH libs/${ANDROID_NDK_ABI_NAME})
+    set(   LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
+    set(3P_LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
+    set(   OPENCV_LIB_INSTALL_PATH sdk/native/libs/${ANDROID_NDK_ABI_NAME})
+    set(OPENCV_3P_LIB_INSTALL_PATH sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
 else()
-    set(OPENCV_LIB_INSTALL_PATH lib${LIB_SUFFIX})
+    set(   LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
+    set(3P_LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
+    set(   OPENCV_LIB_INSTALL_PATH lib${LIB_SUFFIX})
+    set(OPENCV_3P_LIB_INSTALL_PATH share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
 endif()
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-set(OPENCV_INCLUDE_PREFIX include)
+if(ANDROID)
+    set(OPENCV_INCLUDE_PREFIX sdk/native/jni/include)
+else()
+    set(OPENCV_INCLUDE_PREFIX include)
+endif()
 if(INSTALL_TO_MANGLED_PATHS)
   set(OPENCV_INCLUDE_PREFIX include/opencv-${OPENCV_VERSION})
 endif()
