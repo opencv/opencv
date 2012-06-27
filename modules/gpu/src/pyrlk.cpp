@@ -66,8 +66,8 @@ namespace cv { namespace gpu { namespace device
             const float2* prevPts, float2* nextPts, uchar* status, float* err, bool GET_MIN_EIGENVALS, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
-        void lkDense_gpu(DevMem2Db I, DevMem2Db J, DevMem2D_<short> dIdx, DevMem2D_<short> dIdy,
-            DevMem2Df u, DevMem2Df v, DevMem2Df* err, bool GET_MIN_EIGENVALS, cudaStream_t stream = 0);
+        void lkDense_gpu(DevMem2Db I, DevMem2Df J, DevMem2Df u, DevMem2Df v, DevMem2Df prevU, DevMem2Df prevV,
+                         DevMem2Df err, int2 winSize, cudaStream_t stream = 0);
     }
 }}}
 
@@ -160,16 +160,11 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
         return;
     }
 
-    derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);
-
-    iters = std::min(std::max(iters, 0), 100);
-
     const int cn = prevImg.channels();
 
     dim3 block, patch;
-    calcPatchSize(winSize, cn, block, patch, isDeviceArch11_);   
+    calcPatchSize(winSize, cn, block, patch, isDeviceArch11_);
 
-    CV_Assert(derivLambda >= 0);
     CV_Assert(maxLevel >= 0 && winSize.width > 2 && winSize.height > 2);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
     CV_Assert(patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6);
@@ -227,80 +222,53 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 {
     using namespace cv::gpu::device::pyrlk;
 
-    derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);
-
-    iters = std::min(std::max(iters, 0), 100);
-
     CV_Assert(prevImg.type() == CV_8UC1);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
-    CV_Assert(derivLambda >= 0);
-    CV_Assert(maxLevel >= 0 && winSize.width > 2 && winSize.height > 2);
-
-    if (useInitialFlow)
-    {
-        CV_Assert(u.size() == prevImg.size() && u.type() == CV_32FC1);
-        CV_Assert(v.size() == prevImg.size() && v.type() == CV_32FC1);
-    }
-    else
-    {
-        u.create(prevImg.size(), CV_32FC1);
-        v.create(prevImg.size(), CV_32FC1);
-
-        u.setTo(Scalar::all(0));
-        v.setTo(Scalar::all(0));
-    }
+    CV_Assert(maxLevel >= 0);
+    CV_Assert(winSize.width > 2 && winSize.height > 2);
 
     if (err)
         err->create(prevImg.size(), CV_32FC1);
 
     // build the image pyramids.
-    // we pad each level with +/-winSize.{width|height}
-    // pixels to simplify the further patch extraction.
 
-    buildImagePyramid(prevImg, prevPyr_, true);
-    buildImagePyramid(nextImg, nextPyr_, true);
-    buildImagePyramid(u, uPyr_, false);
-    buildImagePyramid(v, vPyr_, false);
+    buildImagePyramid(prevImg, prevPyr_, false);
 
-    // dI/dx ~ Ix, dI/dy ~ Iy
+    nextPyr_.resize(maxLevel + 1);
+    nextImg.convertTo(nextPyr_[0], CV_32F);
+    for (int level = 1; level <= maxLevel; ++level)
+        pyrDown(nextPyr_[level - 1], nextPyr_[level]);
 
-    ensureSizeIsEnough(prevImg.rows + winSize.height * 2, prevImg.cols + winSize.width * 2, CV_16SC1, dx_buf_);
-    ensureSizeIsEnough(prevImg.rows + winSize.height * 2, prevImg.cols + winSize.width * 2, CV_16SC1, dy_buf_);
+    uPyr_.resize(2);
+    vPyr_.resize(2);
 
-    loadConstants(1, minEigThreshold, make_int2(winSize.width, winSize.height), iters);
+    ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[0]);
+    ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[0]);
+    ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[1]);
+    ensureSizeIsEnough(prevImg.size(), CV_32FC1, vPyr_[1]);
+    uPyr_[1].setTo(Scalar::all(0));
+    vPyr_[1].setTo(Scalar::all(0));
+
+    int2 winSize2i = make_int2(winSize.width, winSize.height);
+    loadConstants(1, minEigThreshold, winSize2i, iters);
 
     DevMem2Df derr = err ? *err : DevMem2Df();
 
+    int idx = 0;
+
     for (int level = maxLevel; level >= 0; level--)
     {
-        Size imgSize = prevPyr_[level].size();
+        int idx2 = (idx + 1) & 1;
 
-        GpuMat dxWhole(imgSize.height + winSize.height * 2, imgSize.width + winSize.width * 2, dx_buf_.type(), dx_buf_.data, dx_buf_.step);
-        GpuMat dyWhole(imgSize.height + winSize.height * 2, imgSize.width + winSize.width * 2, dy_buf_.type(), dy_buf_.data, dy_buf_.step);
-        dxWhole.setTo(Scalar::all(0));
-        dyWhole.setTo(Scalar::all(0));
-        GpuMat dIdx = dxWhole(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
-        GpuMat dIdy = dyWhole(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
+        lkDense_gpu(prevPyr_[level], nextPyr_[level], uPyr_[idx], vPyr_[idx], uPyr_[idx2], vPyr_[idx2],
+            level == 0 ? derr : DevMem2Df(), winSize2i);
 
-        calcSharrDeriv(prevPyr_[level], dIdx, dIdy);
-
-        lkDense_gpu(prevPyr_[level], nextPyr_[level], dIdx, dIdy, uPyr_[level], vPyr_[level],
-            level == 0 && err ? &derr : 0, getMinEigenVals);
-
-        if (level == 0)
-        {
-            uPyr_[0].copyTo(u);
-            vPyr_[0].copyTo(v);
-        }
-        else
-        {
-            resize(uPyr_[level], uPyr_[level - 1], uPyr_[level - 1].size());
-            resize(vPyr_[level], vPyr_[level - 1], vPyr_[level - 1].size());
-
-            multiply(uPyr_[level - 1], Scalar::all(2), uPyr_[level - 1]);
-            multiply(vPyr_[level - 1], Scalar::all(2), vPyr_[level - 1]);
-        }
+        if (level > 0)
+            idx = idx2;
     }
+
+    uPyr_[idx].copyTo(u);
+    vPyr_[idx].copyTo(v);
 }
 
 #endif /* !defined (HAVE_CUDA) */
