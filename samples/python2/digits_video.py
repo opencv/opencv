@@ -28,7 +28,6 @@ def main():
         bin = cv2.medianBlur(bin, 3)
         contours, _ = cv2.findContours( bin.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-        boxes = []
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
             if h < 16 or h > 60 or 1.2*h < w:
@@ -44,7 +43,6 @@ def main():
             if m00/255 < 0.1*w*h or m00/255 > 0.9*w*h:
                 continue
 
-            #frame[y:,x:][:h,:w] = sub[...,np.newaxis]
             c1 = np.float32([m['m10'], m['m01']]) / m00
             c0 = np.float32([SZ/2, SZ/2])
             t = c1 - s*c0
@@ -53,17 +51,14 @@ def main():
             A[:,2] = t
             sub1 = cv2.warpAffine(sub, A, (SZ, SZ), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
             sub1 = digits.deskew(sub1)
+            if x+w+SZ < frame.shape[1] and y+SZ < frame.shape[0]:
+                frame[y:,x+w:][:SZ, :SZ] = sub1[...,np.newaxis]
+                
             sample = np.float32(sub1).reshape(1,SZ*SZ) / 255.0
             digit = model.predict(sample)[0]
 
             cv2.putText(frame, '%d'%digit, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)
 
-            boxes.append(sub1)
-
-
-        if len(boxes) > 0:
-            cv2.imshow('box', mosaic(10, boxes))
-            
 
         cv2.imshow('frame', frame)
         cv2.imshow('bin', bin)
