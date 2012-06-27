@@ -15,7 +15,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
-    
+
   ocv_include_modules(${OPENCV_C_SAMPLES_REQUIRED_DEPS})
 
   # ---------------------------------------------
@@ -42,9 +42,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
               RUNTIME DESTINATION "samples/c" COMPONENT main)
     endif()
   ENDMACRO()
-    
+
   file(GLOB cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c)
-    
+
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     OPENCV_DEFINE_C_EXAMPLE(${sample}  ${sample_filename})
@@ -54,7 +54,7 @@ endif()
 if (INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB C_SAMPLES *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${C_SAMPLES}
-          DESTINATION share/opencv/samples/c
+          DESTINATION share/OpenCV/samples/c
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif ()
 

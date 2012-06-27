@@ -142,7 +142,7 @@ void LpMotionStabilizer::stabilize(int, const vector<Mat>&, pair<int,int>, Mat*)
 #else
 
 void LpMotionStabilizer::stabilize(
-        int size, const vector<Mat> &motions, pair<int,int> range, Mat *stabilizationMotions)
+        int size, const vector<Mat> &motions, pair<int,int> /*range*/, Mat *stabilizationMotions)
 {
     CV_Assert(model_ <= MM_AFFINE);
 

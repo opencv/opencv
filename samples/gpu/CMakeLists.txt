@@ -8,7 +8,7 @@ ocv_check_dependencies(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   set(project "gpu")
   string(TOUPPER "${project}" project_upper)
-    
+
   project("${project}_samples")
 
   ocv_include_modules(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
@@ -35,9 +35,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
-      OUTPUT_NAME "${name}_${project}"                                       
+      OUTPUT_NAME "${name}_${project}"
       PROJECT_LABEL "(EXAMPLE_${project_upper}) ${name}")
-        
+
     if(ENABLE_SOLUTION_FOLDERS)
       set_target_properties(${the_target} PROPERTIES FOLDER "samples//${project}")
     endif()
@@ -61,10 +61,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   include("performance/CMakeLists.txt")
 endif()
 
-if (NOT WIN32)
+if (INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${install_list}
-          DESTINATION share/opencv/samples/${project}
+          DESTINATION share/OpenCV/samples/${project}
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()
 

@@ -9,18 +9,18 @@ target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_R
 set_target_properties(${the_target} PROPERTIES
     OUTPUT_NAME "performance_gpu"
     PROJECT_LABEL "(EXAMPLE_GPU) performance")
-    
+
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_target} PROPERTIES FOLDER "samples//gpu")
-endif()	
+endif()
 
 if(WIN32)
   install(TARGETS ${the_target} RUNTIME DESTINATION "samples/gpu" COMPONENT main)
 endif()
 
-if(NOT WIN32)
+if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB GPU_FILES performance/*.cpp performance/*.h)
   install(FILES ${GPU_FILES}
-          DESTINATION share/opencv/samples/gpu/performance
+          DESTINATION share/OpenCV/samples/gpu/performance
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()

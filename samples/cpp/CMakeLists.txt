@@ -23,7 +23,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
-    
+
   # ---------------------------------------------
   #      Define executable targets
   # ---------------------------------------------
@@ -39,7 +39,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${name}"
       PROJECT_LABEL "(EXAMPLE) ${name}")
-            
+
     if(ENABLE_SOLUTION_FOLDERS)
       set_target_properties(${the_target} PROPERTIES FOLDER "samples//cpp")
     endif()
@@ -52,9 +52,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
               RUNTIME DESTINATION "samples/cpp" COMPONENT main)
     endif()
   ENDMACRO()
-    
+
   file(GLOB cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-    
+
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
@@ -64,7 +64,7 @@ endif()
 if (INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB C_SAMPLES *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${C_SAMPLES}
-          DESTINATION share/opencv/samples/cpp
+          DESTINATION share/OpenCV/samples/cpp
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()
 
