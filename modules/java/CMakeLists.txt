@@ -248,9 +248,9 @@ if(ANDROID)
       # build the library project
       # normally we should do this after a native part, but for a library project we can build the java part first
       add_custom_command(
-        OUTPUT "${OpenCV_BINARY_DIR}/bin/classes.jar"
+        OUTPUT "${OpenCV_BINARY_DIR}/bin/classes.jar" "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper"
         COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
-        COMMAND ${CMAKE_COMMAND} -E touch "${OpenCV_BINARY_DIR}/bin/classes.jar" # needed because ant does not update the timestamp of updated jar
+        COMMAND ${CMAKE_COMMAND} -E touch "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" # can not rely on classes.jar because different versions of SDK update timestamp at different times
         WORKING_DIRECTORY "${OpenCV_BINARY_DIR}"
         DEPENDS ${lib_proj_files} ${lib_target_files} ${java_files}
         COMMENT "Building OpenCV Android library project"
