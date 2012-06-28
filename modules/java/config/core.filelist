@@ -1,2 +1,0 @@
-include/opencv2/core/core.hpp
-../java/src/cpp/core_manual.hpp

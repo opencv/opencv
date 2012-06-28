@@ -149,6 +149,8 @@ OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"         
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF ANDROID AND NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
+OCV_OPTION(BUILD_ANDROID_SERVICE    "TBD" OFF IF ANDROID )
+OCV_OPTION(BUILD_ANDROID_PACKAGE    "TBD" OFF IF ANDROID )
 
 # 3rd party libs
 OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS OR APPLE )
@@ -417,6 +419,13 @@ if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(samples)
 endif()
 
+if(BUILD_ANDROID_SERVICE)
+  add_subdirectory(android/service)
+endif()
+
+if(BUILD_ANDROID_PACKAGE)
+  add_subdirectory(android/package)
+endif()
 
 # ----------------------------------------------------------------------------
 # Finalization: generate configuration-based files
@@ -521,6 +530,7 @@ if(ANDROID)
   endif()
   status("    android tool:"  ANDROID_EXECUTABLE  THEN "${ANDROID_EXECUTABLE} (${ANDROID_TOOLS_Pkg_Desc})" ELSE NO)
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"            ELSE NO)
+  status("    Build service:" BUILD_ANDROID_SERVICE THEN YES ELSE NO)
 endif()
 
 # ========================== GUI ==========================
