@@ -1005,11 +1005,11 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatchConvert(const Mat& trainIdx
 
         for (int i = 0; i < nMatches; ++i, ++trainIdx_ptr, ++imgIdx_ptr, ++distance_ptr)
         {
-            int trainIdx = *trainIdx_ptr;
-            int imgIdx = *imgIdx_ptr;
-            float distance = *distance_ptr;
+            int _trainIdx = *trainIdx_ptr;
+            int _imgIdx = *imgIdx_ptr;
+            float _distance = *distance_ptr;
 
-            DMatch m(queryIdx, trainIdx, imgIdx, distance);
+            DMatch m(queryIdx, _trainIdx, _imgIdx, _distance);
 
             curMatches.push_back(m);
         }

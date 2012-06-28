@@ -970,12 +970,12 @@ namespace cv { namespace gpu { namespace device
         #undef IMPLEMENT_FILTER2D_TEX_READER
 
         template <typename T, typename D>
-        void filter2D_gpu(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, 
-                          int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, 
+        void filter2D_gpu(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst,
+                          int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel,
                           int borderMode, const float* borderValue, cudaStream_t stream)
         {
             typedef void (*func_t)(const DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2D_<D> dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream);
-            static const func_t funcs[] = 
+            static const func_t funcs[] =
             {
                 Filter2DCaller<T, D, BrdReflect101>::call,
                 Filter2DCaller<T, D, BrdReplicate>::call,

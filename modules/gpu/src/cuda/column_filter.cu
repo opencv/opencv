@@ -48,9 +48,9 @@
 #include "opencv2/gpu/device/border_interpolate.hpp"
 #include "opencv2/gpu/device/static_check.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace column_filter 
+    namespace column_filter
     {
         #define MAX_KERNEL_SIZE 32
 
@@ -146,7 +146,7 @@ namespace cv { namespace gpu { namespace device
 
             const dim3 block(BLOCK_DIM_X, BLOCK_DIM_Y);
             const dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y * PATCH_PER_BLOCK));
-            
+
             B<T> brd(src.rows);
 
             linearColumnFilter<KSIZE, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, brd);
@@ -162,7 +162,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, int cc, cudaStream_t stream);
 
-            static const caller_t callers[5][33] = 
+            static const caller_t callers[5][33] =
             {
                 {
                     0,
@@ -338,9 +338,9 @@ namespace cv { namespace gpu { namespace device
                     linearColumnFilter_caller<30, T, D, BrdColWrap>,
                     linearColumnFilter_caller<31, T, D, BrdColWrap>,
                     linearColumnFilter_caller<32, T, D, BrdColWrap>
-                }               
+                }
             };
-            
+
             loadKernel(kernel, ksize);
 
             callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, cc, stream);

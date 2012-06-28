@@ -43,9 +43,9 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace match_template 
+    namespace match_template
     {
         __device__ __forceinline__ float sum(float v) { return v; }
         __device__ __forceinline__ float sum(float2 v) { return v.x + v.y; }
@@ -80,7 +80,7 @@ namespace cv { namespace gpu { namespace device
         //////////////////////////////////////////////////////////////////////
         // Naive_CCORR
 
-        template <typename T, int cn> 
+        template <typename T, int cn>
         __global__ void matchTemplateNaiveKernel_CCORR(int w, int h, const PtrStepb image, const PtrStepb templ, DevMem2Df result)
         {
             typedef typename TypeVec<T, cn>::vec_type Type;
@@ -122,7 +122,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, cudaStream_t stream);
 
-            static const caller_t callers[] = 
+            static const caller_t callers[] =
             {
                 0, matchTemplateNaive_CCORR<float, 1>, matchTemplateNaive_CCORR<float, 2>, matchTemplateNaive_CCORR<float, 3>, matchTemplateNaive_CCORR<float, 4>
             };
@@ -135,7 +135,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, cudaStream_t stream);
 
-            static const caller_t callers[] = 
+            static const caller_t callers[] =
             {
                 0, matchTemplateNaive_CCORR<uchar, 1>, matchTemplateNaive_CCORR<uchar, 2>, matchTemplateNaive_CCORR<uchar, 3>, matchTemplateNaive_CCORR<uchar, 4>
             };
@@ -192,7 +192,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, cudaStream_t stream);
 
-            static const caller_t callers[] = 
+            static const caller_t callers[] =
             {
                 0, matchTemplateNaive_SQDIFF<float, 1>, matchTemplateNaive_SQDIFF<float, 2>, matchTemplateNaive_SQDIFF<float, 3>, matchTemplateNaive_SQDIFF<float, 4>
             };
@@ -204,7 +204,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, cudaStream_t stream);
 
-            static const caller_t callers[] = 
+            static const caller_t callers[] =
             {
                 0, matchTemplateNaive_SQDIFF<uchar, 1>, matchTemplateNaive_SQDIFF<uchar, 2>, matchTemplateNaive_SQDIFF<uchar, 3>, matchTemplateNaive_SQDIFF<uchar, 4>
             };
@@ -249,7 +249,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result, cudaStream_t stream);
 
-            static const caller_t callers[] = 
+            static const caller_t callers[] =
             {
                 0, matchTemplatePrepared_SQDIFF_8U<1>, matchTemplatePrepared_SQDIFF_8U<2>, matchTemplatePrepared_SQDIFF_8U<3>, matchTemplatePrepared_SQDIFF_8U<4>
             };
@@ -321,7 +321,7 @@ namespace cv { namespace gpu { namespace device
                                                     DevMem2Df result, int cn, cudaStream_t stream)
         {
             typedef void (*caller_t)(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result, cudaStream_t stream);
-            static const caller_t callers[] = 
+            static const caller_t callers[] =
             {
                 0, matchTemplatePrepared_SQDIFF_NORMED_8U<1>, matchTemplatePrepared_SQDIFF_NORMED_8U<2>, matchTemplatePrepared_SQDIFF_NORMED_8U<3>, matchTemplatePrepared_SQDIFF_NORMED_8U<4>
             };
@@ -379,16 +379,16 @@ namespace cv { namespace gpu { namespace device
                         (image_sum_g.ptr(y + h)[x + w] - image_sum_g.ptr(y)[x + w]) -
                         (image_sum_g.ptr(y + h)[x] - image_sum_g.ptr(y)[x]));
                 float ccorr = result.ptr(y)[x];
-                result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r 
+                result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r
                                          - image_sum_g_ * templ_sum_scale_g;
             }
         }
 
         void matchTemplatePrepared_CCOFF_8UC2(
-                int w, int h, 
-                const DevMem2D_<unsigned int> image_sum_r, 
+                int w, int h,
+                const DevMem2D_<unsigned int> image_sum_r,
                 const DevMem2D_<unsigned int> image_sum_g,
-                unsigned int templ_sum_r, unsigned int templ_sum_g, 
+                unsigned int templ_sum_r, unsigned int templ_sum_g,
                 DevMem2Df result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
@@ -406,7 +406,7 @@ namespace cv { namespace gpu { namespace device
 
 
         __global__ void matchTemplatePreparedKernel_CCOFF_8UC3(
-                int w, int h, 
+                int w, int h,
                 float templ_sum_scale_r,
                 float templ_sum_scale_g,
                 float templ_sum_scale_b,
@@ -437,20 +437,20 @@ namespace cv { namespace gpu { namespace device
         }
 
         void matchTemplatePrepared_CCOFF_8UC3(
-                int w, int h, 
-                const DevMem2D_<unsigned int> image_sum_r, 
+                int w, int h,
+                const DevMem2D_<unsigned int> image_sum_r,
                 const DevMem2D_<unsigned int> image_sum_g,
                 const DevMem2D_<unsigned int> image_sum_b,
-                unsigned int templ_sum_r, 
-                unsigned int templ_sum_g, 
-                unsigned int templ_sum_b, 
+                unsigned int templ_sum_r,
+                unsigned int templ_sum_g,
+                unsigned int templ_sum_b,
                 DevMem2Df result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
             dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
             matchTemplatePreparedKernel_CCOFF_8UC3<<<grid, threads, 0, stream>>>(
-                    w, h, 
+                    w, h,
                     (float)templ_sum_r / (w * h),
                     (float)templ_sum_g / (w * h),
                     (float)templ_sum_b / (w * h),
@@ -464,8 +464,8 @@ namespace cv { namespace gpu { namespace device
 
 
         __global__ void matchTemplatePreparedKernel_CCOFF_8UC4(
-                int w, int h, 
-                float templ_sum_scale_r, 
+                int w, int h,
+                float templ_sum_scale_r,
                 float templ_sum_scale_g,
                 float templ_sum_scale_b,
                 float templ_sum_scale_a,
@@ -493,7 +493,7 @@ namespace cv { namespace gpu { namespace device
                         (image_sum_a.ptr(y + h)[x + w] - image_sum_a.ptr(y)[x + w]) -
                         (image_sum_a.ptr(y + h)[x] - image_sum_a.ptr(y)[x]));
                 float ccorr = result.ptr(y)[x];
-                result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r 
+                result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r
                                          - image_sum_g_ * templ_sum_scale_g
                                          - image_sum_b_ * templ_sum_scale_b
                                          - image_sum_a_ * templ_sum_scale_a;
@@ -501,24 +501,24 @@ namespace cv { namespace gpu { namespace device
         }
 
         void matchTemplatePrepared_CCOFF_8UC4(
-                int w, int h, 
-                const DevMem2D_<unsigned int> image_sum_r, 
+                int w, int h,
+                const DevMem2D_<unsigned int> image_sum_r,
                 const DevMem2D_<unsigned int> image_sum_g,
                 const DevMem2D_<unsigned int> image_sum_b,
                 const DevMem2D_<unsigned int> image_sum_a,
-                unsigned int templ_sum_r, 
-                unsigned int templ_sum_g, 
-                unsigned int templ_sum_b, 
-                unsigned int templ_sum_a, 
+                unsigned int templ_sum_r,
+                unsigned int templ_sum_g,
+                unsigned int templ_sum_b,
+                unsigned int templ_sum_a,
                 DevMem2Df result, cudaStream_t stream)
         {
             dim3 threads(32, 8);
             dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
 
             matchTemplatePreparedKernel_CCOFF_8UC4<<<grid, threads, 0, stream>>>(
-                    w, h, 
-                    (float)templ_sum_r / (w * h), 
-                    (float)templ_sum_g / (w * h), 
+                    w, h,
+                    (float)templ_sum_r / (w * h),
+                    (float)templ_sum_g / (w * h),
                     (float)templ_sum_b / (w * h),
                     (float)templ_sum_a / (w * h),
                     image_sum_r, image_sum_g, image_sum_b, image_sum_a,
@@ -533,9 +533,9 @@ namespace cv { namespace gpu { namespace device
         // Prepared_CCOFF_NORMED
 
         __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8U(
-                int w, int h, float weight, 
+                int w, int h, float weight,
                 float templ_sum_scale, float templ_sqsum_scale,
-                const PtrStep<unsigned int> image_sum, 
+                const PtrStep<unsigned int> image_sum,
                 const PtrStep<unsigned long long> image_sqsum,
                 DevMem2Df result)
         {
@@ -557,7 +557,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void matchTemplatePrepared_CCOFF_NORMED_8U(
-                    int w, int h, const DevMem2D_<unsigned int> image_sum, 
+                    int w, int h, const DevMem2D_<unsigned int> image_sum,
                     const DevMem2D_<unsigned long long> image_sqsum,
                     unsigned int templ_sum, unsigned long long templ_sqsum,
                     DevMem2Df result, cudaStream_t stream)
@@ -570,7 +570,7 @@ namespace cv { namespace gpu { namespace device
             float templ_sqsum_scale = templ_sqsum - weight * templ_sum * templ_sum;
 
             matchTemplatePreparedKernel_CCOFF_NORMED_8U<<<grid, threads, 0, stream>>>(
-                    w, h, weight, templ_sum_scale, templ_sqsum_scale, 
+                    w, h, weight, templ_sum_scale, templ_sqsum_scale,
                     image_sum, image_sqsum, result);
             cudaSafeCall( cudaGetLastError() );
 
@@ -581,8 +581,8 @@ namespace cv { namespace gpu { namespace device
 
 
         __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC2(
-                int w, int h, float weight, 
-                float templ_sum_scale_r, float templ_sum_scale_g, 
+                int w, int h, float weight,
+                float templ_sum_scale_r, float templ_sum_scale_g,
                 float templ_sqsum_scale,
                 const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
                 const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
@@ -615,7 +615,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void matchTemplatePrepared_CCOFF_NORMED_8UC2(
-                    int w, int h, 
+                    int w, int h,
                     const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
                     const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
                     unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
@@ -628,15 +628,15 @@ namespace cv { namespace gpu { namespace device
             float weight = 1.f / (w * h);
             float templ_sum_scale_r = templ_sum_r * weight;
             float templ_sum_scale_g = templ_sum_g * weight;
-            float templ_sqsum_scale = templ_sqsum_r - weight * templ_sum_r * templ_sum_r 
+            float templ_sqsum_scale = templ_sqsum_r - weight * templ_sum_r * templ_sum_r
                                        + templ_sqsum_g - weight * templ_sum_g * templ_sum_g;
 
             matchTemplatePreparedKernel_CCOFF_NORMED_8UC2<<<grid, threads, 0, stream>>>(
-                    w, h, weight, 
+                    w, h, weight,
                     templ_sum_scale_r, templ_sum_scale_g,
                     templ_sqsum_scale,
-                    image_sum_r, image_sqsum_r, 
-                    image_sum_g, image_sqsum_g, 
+                    image_sum_r, image_sqsum_r,
+                    image_sum_g, image_sqsum_g,
                     result);
             cudaSafeCall( cudaGetLastError() );
 
@@ -647,8 +647,8 @@ namespace cv { namespace gpu { namespace device
 
 
         __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC3(
-                int w, int h, float weight, 
-                float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b, 
+                int w, int h, float weight,
+                float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b,
                 float templ_sqsum_scale,
                 const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
                 const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
@@ -690,7 +690,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void matchTemplatePrepared_CCOFF_NORMED_8UC3(
-                    int w, int h, 
+                    int w, int h,
                     const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
                     const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
                     const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
@@ -706,17 +706,17 @@ namespace cv { namespace gpu { namespace device
             float templ_sum_scale_r = templ_sum_r * weight;
             float templ_sum_scale_g = templ_sum_g * weight;
             float templ_sum_scale_b = templ_sum_b * weight;
-            float templ_sqsum_scale = templ_sqsum_r - weight * templ_sum_r * templ_sum_r 
+            float templ_sqsum_scale = templ_sqsum_r - weight * templ_sum_r * templ_sum_r
                                       + templ_sqsum_g - weight * templ_sum_g * templ_sum_g
                                       + templ_sqsum_b - weight * templ_sum_b * templ_sum_b;
 
             matchTemplatePreparedKernel_CCOFF_NORMED_8UC3<<<grid, threads, 0, stream>>>(
-                    w, h, weight, 
-                    templ_sum_scale_r, templ_sum_scale_g, templ_sum_scale_b, 
-                    templ_sqsum_scale, 
-                    image_sum_r, image_sqsum_r, 
-                    image_sum_g, image_sqsum_g, 
-                    image_sum_b, image_sqsum_b, 
+                    w, h, weight,
+                    templ_sum_scale_r, templ_sum_scale_g, templ_sum_scale_b,
+                    templ_sqsum_scale,
+                    image_sum_r, image_sqsum_r,
+                    image_sum_g, image_sqsum_g,
+                    image_sum_b, image_sqsum_b,
                     result);
             cudaSafeCall( cudaGetLastError() );
 
@@ -727,8 +727,8 @@ namespace cv { namespace gpu { namespace device
 
 
         __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC4(
-                int w, int h, float weight, 
-                float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b, 
+                int w, int h, float weight,
+                float templ_sum_scale_r, float templ_sum_scale_g, float templ_sum_scale_b,
                 float templ_sum_scale_a, float templ_sqsum_scale,
                 const PtrStep<unsigned int> image_sum_r, const PtrStep<unsigned long long> image_sqsum_r,
                 const PtrStep<unsigned int> image_sum_g, const PtrStep<unsigned long long> image_sqsum_g,
@@ -777,7 +777,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void matchTemplatePrepared_CCOFF_NORMED_8UC4(
-                    int w, int h, 
+                    int w, int h,
                     const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
                     const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
                     const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
@@ -802,13 +802,13 @@ namespace cv { namespace gpu { namespace device
                                       + templ_sqsum_a - weight * templ_sum_a * templ_sum_a;
 
             matchTemplatePreparedKernel_CCOFF_NORMED_8UC4<<<grid, threads, 0, stream>>>(
-                    w, h, weight, 
-                    templ_sum_scale_r, templ_sum_scale_g, templ_sum_scale_b, templ_sum_scale_a, 
-                    templ_sqsum_scale, 
-                    image_sum_r, image_sqsum_r, 
-                    image_sum_g, image_sqsum_g, 
-                    image_sum_b, image_sqsum_b, 
-                    image_sum_a, image_sqsum_a, 
+                    w, h, weight,
+                    templ_sum_scale_r, templ_sum_scale_g, templ_sum_scale_b, templ_sum_scale_a,
+                    templ_sqsum_scale,
+                    image_sum_r, image_sqsum_r,
+                    image_sum_g, image_sqsum_g,
+                    image_sum_b, image_sqsum_b,
+                    image_sum_a, image_sqsum_a,
                     result);
             cudaSafeCall( cudaGetLastError() );
 
@@ -821,7 +821,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int cn>
         __global__ void normalizeKernel_8U(
-                int w, int h, const PtrStep<unsigned long long> image_sqsum, 
+                int w, int h, const PtrStep<unsigned long long> image_sqsum,
                 unsigned long long templ_sqsum, DevMem2Df result)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -836,7 +836,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, 
+        void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum,
                           unsigned long long templ_sqsum, DevMem2Df result, int cn, cudaStream_t stream)
         {
             dim3 threads(32, 8);

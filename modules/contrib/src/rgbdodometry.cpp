@@ -48,10 +48,12 @@
 #include <iostream>
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
-#include <Eigen/Core>
-#include <unsupported/Eigen/MatrixFunctions>
-
-#include <Eigen/Dense>
+#  include <Eigen/Core>
+#  ifdef ANDROID
+     template <typename Scalar> Scalar log2(Scalar v) { using std::log; return log(v)/log(Scalar(2)); }
+#  endif
+#  include <unsupported/Eigen/MatrixFunctions>
+#  include <Eigen/Dense>
 #endif
 
 #include <limits>
@@ -581,7 +583,7 @@ bool cv::RGBDOdometry( cv::Mat& Rt, const Mat& initRt,
         const double fy = levelCameraMatrix.at<double>(1,1);
         const double determinantThreshold = 1e-6;
 
-        Mat corresps( levelImage0.size(), levelImage0.type(), CV_32SC1 );
+        Mat corresps( levelImage0.size(), levelImage0.type() );
 
         // Run transformation search on current level iteratively.
         for( int iter = 0; iter < (*iterCountsPtr)[level]; iter ++ )

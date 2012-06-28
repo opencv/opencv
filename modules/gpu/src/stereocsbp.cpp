@@ -171,8 +171,8 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat& mbuf, GpuMat& te
     {
         cols_pyr[i]     = cols_pyr[i-1] / 2;
         rows_pyr[i]     = rows_pyr[i-1] / 2;
-        nr_plane_pyr[i] = nr_plane_pyr[i-1] * 2;        
-    }		
+        nr_plane_pyr[i] = nr_plane_pyr[i-1] * 2;
+    }
 
 
 	GpuMat u[2], d[2], l[2], r[2], disp_selected_pyr[2], data_cost, data_cost_selected;
@@ -193,14 +193,14 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat& mbuf, GpuMat& te
 		GpuMat sub2 = sub1.rowRange((k+0)*sub1.rows/2, (k+1)*sub1.rows/2);
 
 		GpuMat *buf_ptrs[] = { &u[k], &d[k], &l[k], &r[k], &disp_selected_pyr[k] };						
-		for(int r = 0; r < 5; ++r)		
+        for(int _r = 0; _r < 5; ++_r)
 		{
-			*buf_ptrs[r] = sub2.rowRange(r * sub2.rows/5, (r+1) * sub2.rows/5);
-			assert(buf_ptrs[r]->cols == cols && buf_ptrs[r]->rows == rows * rthis.nr_plane);
+            *buf_ptrs[_r] = sub2.rowRange(_r * sub2.rows/5, (_r+1) * sub2.rows/5);
+            assert(buf_ptrs[_r]->cols == cols && buf_ptrs[_r]->rows == rows * rthis.nr_plane);
 		}
 	};
 	      
-    size_t elem_step = mbuf.step / sizeof(T);	
+    size_t elem_step = mbuf.step / sizeof(T);
 
 	Size temp_size = data_cost.size();
 	if ((size_t)temp_size.area() < elem_step * rows_pyr[levels - 1] * rthis.ndisp)	

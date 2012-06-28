@@ -43,9 +43,9 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace imgproc 
+    namespace imgproc
     {
         template <typename Ptr2D, typename T> __global__ void copyMakeBorder(const Ptr2D src, DevMem2D_<T> dst, int top, int left)
         {
@@ -58,9 +58,9 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class B, typename T> struct CopyMakeBorderDispatcher
         {
-            static void call(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, int top, int left, 
+            static void call(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, int top, int left,
                 const typename VecTraits<T>::elem_type* borderValue, cudaStream_t stream)
-            {        
+            {
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
@@ -75,20 +75,20 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, 
+        template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode,
             const T* borderValue, cudaStream_t stream)
         {
             typedef typename TypeVec<T, cn>::vec_type vec_type;
 
             typedef void (*caller_t)(const DevMem2D_<vec_type>& src, const DevMem2D_<vec_type>& dst, int top, int left, const T* borderValue, cudaStream_t stream);
 
-            static const caller_t callers[5] = 
+            static const caller_t callers[5] =
             {
-                CopyMakeBorderDispatcher<BrdReflect101, vec_type>::call, 
-                CopyMakeBorderDispatcher<BrdReplicate, vec_type>::call, 
-                CopyMakeBorderDispatcher<BrdConstant, vec_type>::call, 
-                CopyMakeBorderDispatcher<BrdReflect, vec_type>::call, 
-                CopyMakeBorderDispatcher<BrdWrap, vec_type>::call 
+                CopyMakeBorderDispatcher<BrdReflect101, vec_type>::call,
+                CopyMakeBorderDispatcher<BrdReplicate, vec_type>::call,
+                CopyMakeBorderDispatcher<BrdConstant, vec_type>::call,
+                CopyMakeBorderDispatcher<BrdReflect, vec_type>::call,
+                CopyMakeBorderDispatcher<BrdWrap, vec_type>::call
             };
 
             callers[borderMode](DevMem2D_<vec_type>(src), DevMem2D_<vec_type>(dst), top, left, borderValue, stream);

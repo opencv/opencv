@@ -98,17 +98,17 @@ namespace cv { namespace gpu { namespace device
 
 using namespace ::cv::gpu::device;
     
-cv::gpu::HOGDescriptor::HOGDescriptor(Size win_size, Size block_size, Size block_stride, Size cell_size, 
-									  int nbins, double win_sigma, double threshold_L2hys, bool gamma_correction, int nlevels)
-        : win_size(win_size), 
-          block_size(block_size), 
-          block_stride(block_stride), 
-          cell_size(cell_size),
-          nbins(nbins), 
-          win_sigma(win_sigma),
-          threshold_L2hys(threshold_L2hys),
-          gamma_correction(gamma_correction),
-          nlevels(nlevels)
+cv::gpu::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size block_stride_, Size cell_size_,
+                                      int nbins_, double win_sigma_, double threshold_L2hys_, bool gamma_correction_, int nlevels_)
+        : win_size(win_size_),
+          block_size(block_size_),
+          block_stride(block_stride_),
+          cell_size(cell_size_),
+          nbins(nbins_),
+          win_sigma(win_sigma_),
+          threshold_L2hys(threshold_L2hys_),
+          gamma_correction(gamma_correction_),
+          nlevels(nlevels_)
 {
     CV_Assert((win_size.width  - block_size.width ) % block_stride.width  == 0 && 
               (win_size.height - block_size.height) % block_stride.height == 0);
@@ -149,9 +149,9 @@ bool cv::gpu::HOGDescriptor::checkDetectorSize() const
     return detector_size == 0 || detector_size == descriptor_size || detector_size == descriptor_size + 1;
 }
 
-void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>& detector)
+void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>& _detector)
 {
-    std::vector<float> detector_reordered(detector.size());
+    std::vector<float> detector_reordered(_detector.size());
 
     size_t block_hist_size = getBlockHistogramSize();
     cv::Size blocks_per_img = numPartsWithin(win_size, block_size, block_stride);
@@ -159,7 +159,7 @@ void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>& detector)
     for (int i = 0; i < blocks_per_img.height; ++i)
         for (int j = 0; j < blocks_per_img.width; ++j)
         {
-            const float* src = &detector[0] + (j * blocks_per_img.height + i) * block_hist_size;
+            const float* src = &_detector[0] + (j * blocks_per_img.height + i) * block_hist_size;
             float* dst = &detector_reordered[0] + (i * blocks_per_img.width + j) * block_hist_size;
             for (size_t k = 0; k < block_hist_size; ++k)
                 dst[k] = src[k];
@@ -168,7 +168,7 @@ void cv::gpu::HOGDescriptor::setSVMDetector(const vector<float>& detector)
     this->detector.upload(Mat(detector_reordered).reshape(1, 1));
 
     size_t descriptor_size = getDescriptorSize();  
-    free_coef = detector.size() > descriptor_size ? detector[descriptor_size] : 0;
+    free_coef = _detector.size() > descriptor_size ? _detector[descriptor_size] : 0;
 
     CV_Assert(checkDetectorSize());
 }
@@ -190,24 +190,24 @@ cv::gpu::GpuMat cv::gpu::HOGDescriptor::getBuffer(int rows, int cols, int type, 
 }
 
 
-void cv::gpu::HOGDescriptor::computeGradient(const GpuMat& img, GpuMat& grad, GpuMat& qangle)
+void cv::gpu::HOGDescriptor::computeGradient(const GpuMat& img, GpuMat& _grad, GpuMat& _qangle)
 {
     CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
 	
     //   grad.create(img.size(), CV_32FC2);
-	grad = getBuffer(img.size(), CV_32FC2, grad_buf);    
+    _grad = getBuffer(img.size(), CV_32FC2, grad_buf);
 
     //   qangle.create(img.size(), CV_8UC2);
-	qangle = getBuffer(img.size(), CV_8UC2, qangle_buf);  
+    _qangle = getBuffer(img.size(), CV_8UC2, qangle_buf);
 
     float angleScale = (float)(nbins / CV_PI);
     switch (img.type()) 
 	{
         case CV_8UC1:
-            hog::compute_gradients_8UC1(nbins, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction);
+            hog::compute_gradients_8UC1(nbins, img.rows, img.cols, img, angleScale, _grad, _qangle, gamma_correction);
             break;
         case CV_8UC4:
-            hog::compute_gradients_8UC4(nbins, img.rows, img.cols, img, angleScale, grad, qangle, gamma_correction);
+            hog::compute_gradients_8UC4(nbins, img.rows, img.cols, img, angleScale, _grad, _qangle, gamma_correction);
             break;
     }
 }
@@ -323,8 +323,8 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& f
 
     for (size_t i = 0; i < level_scale.size(); i++)
     {
-        double scale = level_scale[i];
-        Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
+        double _scale = level_scale[i];
+        Size sz(cvRound(img.cols / _scale), cvRound(img.rows / _scale));
         GpuMat smaller_img;
 
         if (sz == img.size())

@@ -42,7 +42,7 @@
 
 #include "internal_shared.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     // Other values are not supported
     #define CELL_WIDTH 8
@@ -50,7 +50,7 @@ namespace cv { namespace gpu { namespace device
     #define CELLS_PER_BLOCK_X 2
     #define CELLS_PER_BLOCK_Y 2
 
-    namespace hog 
+    namespace hog
     {
         __constant__ int cnbins;
         __constant__ int cblock_stride_x;
@@ -63,7 +63,7 @@ namespace cv { namespace gpu { namespace device
         __constant__ int cdescr_width;
 
 
-        /* Returns the nearest upper power of two, works only for 
+        /* Returns the nearest upper power of two, works only for
         the typical GPU thread count (pert block) values */
         int power_2up(unsigned int n)
         {
@@ -82,19 +82,19 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void set_up_constants(int nbins, int block_stride_x, int block_stride_y, 
+        void set_up_constants(int nbins, int block_stride_x, int block_stride_y,
                               int nblocks_win_x, int nblocks_win_y)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(cnbins, &nbins, sizeof(nbins)) ); 
-            cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_x, &block_stride_x, sizeof(block_stride_x)) ); 
-            cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_y, &block_stride_y, sizeof(block_stride_y)) ); 
-            cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_x, &nblocks_win_x, sizeof(nblocks_win_x)) );  
-            cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_y, &nblocks_win_y, sizeof(nblocks_win_y)) ); 
+            cudaSafeCall( cudaMemcpyToSymbol(cnbins, &nbins, sizeof(nbins)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_x, &block_stride_x, sizeof(block_stride_x)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cblock_stride_y, &block_stride_y, sizeof(block_stride_y)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_x, &nblocks_win_x, sizeof(nblocks_win_x)) );
+            cudaSafeCall( cudaMemcpyToSymbol(cnblocks_win_y, &nblocks_win_y, sizeof(nblocks_win_y)) );
 
-            int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y; 
-            cudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size, &block_hist_size, sizeof(block_hist_size)) ); 
+            int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
+            cudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size, &block_hist_size, sizeof(block_hist_size)) );
 
-            int block_hist_size_2up = power_2up(block_hist_size);  
+            int block_hist_size_2up = power_2up(block_hist_size);
             cudaSafeCall( cudaMemcpyToSymbol(cblock_hist_size_2up, &block_hist_size_2up, sizeof(block_hist_size_2up)) );
 
             int descr_width = nblocks_win_x * block_hist_size;
@@ -110,7 +110,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <int nblocks> // Number of histogram blocks processed by single GPU thread block
-        __global__ void compute_hists_kernel_many_blocks(const int img_block_width, const PtrElemStepf grad, 
+        __global__ void compute_hists_kernel_many_blocks(const int img_block_width, const PtrElemStepf grad,
                                                          const PtrElemStep qangle, float scale, float* block_hists)
         {
             const int block_x = threadIdx.z;
@@ -125,7 +125,7 @@ namespace cv { namespace gpu { namespace device
             float* hists = smem;
             float* final_hist = smem + cnbins * 48 * nblocks;
 
-            const int offset_x = (blockIdx.x * blockDim.z + block_x) * cblock_stride_x + 
+            const int offset_x = (blockIdx.x * blockDim.z + block_x) * cblock_stride_x +
                                  4 * cell_x + cell_thread_x;
             const int offset_y = blockIdx.y * cblock_stride_y + 4 * cell_y;
 
@@ -135,8 +135,8 @@ namespace cv { namespace gpu { namespace device
             // 12 means that 12 pixels affect on block's cell (in one row)
             if (cell_thread_x < 12)
             {
-                float* hist = hists + 12 * (cell_y * blockDim.z * CELLS_PER_BLOCK_Y + 
-                                            cell_x + block_x * CELLS_PER_BLOCK_X) + 
+                float* hist = hists + 12 * (cell_y * blockDim.z * CELLS_PER_BLOCK_Y +
+                                            cell_x + block_x * CELLS_PER_BLOCK_X) +
                                            cell_thread_x;
                 for (int bin_id = 0; bin_id < cnbins; ++bin_id)
                     hist[bin_id * 48 * nblocks] = 0.f;
@@ -155,9 +155,9 @@ namespace cv { namespace gpu { namespace device
                     int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
                     int dist_center_x = dist_x - 4 * (1 - 2 * cell_x);
 
-                    float gaussian = ::expf(-(dist_center_y * dist_center_y + 
+                    float gaussian = ::expf(-(dist_center_y * dist_center_y +
                                               dist_center_x * dist_center_x) * scale);
-                    float interp_weight = (8.f - ::fabs(dist_y + 0.5f)) * 
+                    float interp_weight = (8.f - ::fabs(dist_y + 0.5f)) *
                                           (8.f - ::fabs(dist_x + 0.5f)) / 64.f;
 
                     hist[bin.x * 48 * nblocks] += gaussian * interp_weight * vote.x;
@@ -169,41 +169,41 @@ namespace cv { namespace gpu { namespace device
                 {
                     if (cell_thread_x < 6) hist_[0] += hist_[6];
                     if (cell_thread_x < 3) hist_[0] += hist_[3];
-                    if (cell_thread_x == 0) 
-                        final_hist[((cell_x + block_x * 2) * 2 + cell_y) * cnbins + bin_id] 
+                    if (cell_thread_x == 0)
+                        final_hist[((cell_x + block_x * 2) * 2 + cell_y) * cnbins + bin_id]
                             = hist_[0] + hist_[1] + hist_[2];
                 }
             }
 
             __syncthreads();
 
-            float* block_hist = block_hists + (blockIdx.y * img_block_width + 
-                                               blockIdx.x * blockDim.z + block_x) * 
-                                              cblock_hist_size;        
+            float* block_hist = block_hists + (blockIdx.y * img_block_width +
+                                               blockIdx.x * blockDim.z + block_x) *
+                                              cblock_hist_size;
 
             int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 16 + cell_thread_x;
             if (tid < cblock_hist_size)
-                block_hist[tid] = final_hist[block_x * cblock_hist_size + tid];     
+                block_hist[tid] = final_hist[block_x * cblock_hist_size + tid];
         }
 
 
-        void compute_hists(int nbins, int block_stride_x, int block_stride_y, 
-                           int height, int width, const DevMem2Df& grad, 
-                           const DevMem2Db& qangle, float sigma, float* block_hists)                             
+        void compute_hists(int nbins, int block_stride_x, int block_stride_y,
+                           int height, int width, const DevMem2Df& grad,
+                           const DevMem2Db& qangle, float sigma, float* block_hists)
         {
             const int nblocks = 1;
 
-            int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / 
+            int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
                                   block_stride_x;
-            int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y) / 
+            int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y) /
                                    block_stride_y;
 
             dim3 grid(divUp(img_block_width, nblocks), img_block_height);
             dim3 threads(32, 2, nblocks);
 
-            cudaSafeCall(cudaFuncSetCacheConfig(compute_hists_kernel_many_blocks<nblocks>, 
+            cudaSafeCall(cudaFuncSetCacheConfig(compute_hists_kernel_many_blocks<nblocks>,
                                                 cudaFuncCachePreferL1));
-         
+
             // Precompute gaussian spatial window parameter
             float scale = 1.f / (2.f * sigma * sigma);
 
@@ -223,18 +223,18 @@ namespace cv { namespace gpu { namespace device
         //
 
 
-        template<int size> 
+        template<int size>
         __device__ float reduce_smem(volatile float* smem)
-        {        
+        {
             unsigned int tid = threadIdx.x;
             float sum = smem[tid];
 
             if (size >= 512) { if (tid < 256) smem[tid] = sum = sum + smem[tid + 256]; __syncthreads(); }
             if (size >= 256) { if (tid < 128) smem[tid] = sum = sum + smem[tid + 128]; __syncthreads(); }
             if (size >= 128) { if (tid < 64) smem[tid] = sum = sum + smem[tid + 64]; __syncthreads(); }
-            
+
             if (tid < 32)
-            {        
+            {
                 if (size >= 64) smem[tid] = sum = sum + smem[tid + 32];
                 if (size >= 32) smem[tid] = sum = sum + smem[tid + 16];
                 if (size >= 16) smem[tid] = sum = sum + smem[tid + 8];
@@ -245,54 +245,54 @@ namespace cv { namespace gpu { namespace device
 
             __syncthreads();
             sum = smem[0];
-            
+
             return sum;
         }
 
 
-        template <int nthreads, // Number of threads which process one block historgam 
+        template <int nthreads, // Number of threads which process one block historgam
                   int nblocks> // Number of block hisograms processed by one GPU thread block
         __global__ void normalize_hists_kernel_many_blocks(const int block_hist_size,
-                                                           const int img_block_width, 
+                                                           const int img_block_width,
                                                            float* block_hists, float threshold)
         {
             if (blockIdx.x * blockDim.z + threadIdx.z >= img_block_width)
                 return;
 
-            float* hist = block_hists + (blockIdx.y * img_block_width + 
-                                         blockIdx.x * blockDim.z + threadIdx.z) * 
+            float* hist = block_hists + (blockIdx.y * img_block_width +
+                                         blockIdx.x * blockDim.z + threadIdx.z) *
                                         block_hist_size + threadIdx.x;
-            
+
             __shared__ float sh_squares[nthreads * nblocks];
             float* squares = sh_squares + threadIdx.z * nthreads;
-            
+
             float elem = 0.f;
             if (threadIdx.x < block_hist_size)
                 elem = hist[0];
-            
-            squares[threadIdx.x] = elem * elem;        
+
+            squares[threadIdx.x] = elem * elem;
 
             __syncthreads();
             float sum = reduce_smem<nthreads>(squares);
-            
-            float scale = 1.0f / (::sqrtf(sum) + 0.1f * block_hist_size);        
+
+            float scale = 1.0f / (::sqrtf(sum) + 0.1f * block_hist_size);
             elem = ::min(elem * scale, threshold);
-            
+
             __syncthreads();
             squares[threadIdx.x] = elem * elem;
 
             __syncthreads();
             sum = reduce_smem<nthreads>(squares);
             scale = 1.0f / (::sqrtf(sum) + 1e-3f);
-            
+
             if (threadIdx.x < block_hist_size)
                 hist[0] = elem * scale;
         }
 
 
-        void normalize_hists(int nbins, int block_stride_x, int block_stride_y, 
+        void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
                              int height, int width, float* block_hists, float threshold)
-        {   
+        {
             const int nblocks = 1;
 
             int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
@@ -327,19 +327,19 @@ namespace cv { namespace gpu { namespace device
         //
 
 
-        template <int nthreads, // Number of threads per one histogram block 
+        template <int nthreads, // Number of threads per one histogram block
                   int nblocks> // Number of histogram block processed by single GPU thread block
-        __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const int img_block_width, 
+        __global__ void classify_hists_kernel_many_blocks(const int img_win_width, const int img_block_width,
                                                           const int win_block_stride_x, const int win_block_stride_y,
                                                           const float* block_hists, const float* coefs,
                                                           float free_coef, float threshold, unsigned char* labels)
-        {            
+        {
             const int win_x = threadIdx.z;
             if (blockIdx.x * blockDim.z + win_x >= img_win_width)
                 return;
 
-            const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
-                                               blockIdx.x * win_block_stride_x * blockDim.z + win_x) * 
+            const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
+                                               blockIdx.x * win_block_stride_x * blockDim.z + win_x) *
                                               cblock_hist_size;
 
             float product = 0.f;
@@ -357,24 +357,24 @@ namespace cv { namespace gpu { namespace device
 
             __syncthreads();
 
-            if (nthreads >= 512) 
-            { 
+            if (nthreads >= 512)
+            {
                 if (threadIdx.x < 256) products[tid] = product = product + products[tid + 256];
-                __syncthreads(); 
+                __syncthreads();
             }
-            if (nthreads >= 256) 
-            { 
-                if (threadIdx.x < 128) products[tid] = product = product + products[tid + 128]; 
-                __syncthreads(); 
+            if (nthreads >= 256)
+            {
+                if (threadIdx.x < 128) products[tid] = product = product + products[tid + 128];
+                __syncthreads();
             }
-            if (nthreads >= 128) 
-            { 
-                if (threadIdx.x < 64) products[tid] = product = product + products[tid + 64]; 
-                __syncthreads(); 
+            if (nthreads >= 128)
+            {
+                if (threadIdx.x < 64) products[tid] = product = product + products[tid + 64];
+                __syncthreads();
             }
-            
+
             if (threadIdx.x < 32)
-            {        
+            {
                 volatile float* smem = products;
                 if (nthreads >= 64) smem[tid] = product = product + smem[tid + 32];
                 if (nthreads >= 32) smem[tid] = product = product + smem[tid + 16];
@@ -389,10 +389,10 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void classify_hists(int win_height, int win_width, int block_stride_y, int block_stride_x, 
-                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+        void classify_hists(int win_height, int win_width, int block_stride_y, int block_stride_x,
+                            int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
                             float* coefs, float free_coef, float threshold, unsigned char* labels)
-        {   
+        {
             const int nthreads = 256;
             const int nblocks = 1;
 
@@ -408,7 +408,7 @@ namespace cv { namespace gpu { namespace device
 
             int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
             classify_hists_kernel_many_blocks<nthreads, nblocks><<<grid, threads>>>(
-                img_win_width, img_block_width, win_block_stride_x, win_block_stride_y, 
+                img_win_width, img_block_width, win_block_stride_x, win_block_stride_y,
                 block_hists, coefs, free_coef, threshold, labels);
             cudaSafeCall( cudaGetLastError() );
 
@@ -420,11 +420,11 @@ namespace cv { namespace gpu { namespace device
 
 
         template <int nthreads>
-        __global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, const int win_block_stride_y, 
+        __global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
 											          const float* block_hists, PtrElemStepf descriptors)
         {
             // Get left top corner of the window in src
-            const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
+            const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
                                                blockIdx.x * win_block_stride_x) * cblock_hist_size;
 
             // Get left top corner of the window in dst
@@ -440,7 +440,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x, 
+        void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x,
 							        int height, int width, float* block_hists, DevMem2Df descriptors)
         {
             const int nthreads = 256;
@@ -462,12 +462,12 @@ namespace cv { namespace gpu { namespace device
 
 
         template <int nthreads>
-        __global__ void extract_descrs_by_cols_kernel(const int img_block_width, const int win_block_stride_x, 
-                                                      const int win_block_stride_y, const float* block_hists, 
+        __global__ void extract_descrs_by_cols_kernel(const int img_block_width, const int win_block_stride_x,
+                                                      const int win_block_stride_y, const float* block_hists,
                                                       PtrElemStepf descriptors)
         {
             // Get left top corner of the window in src
-            const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width + 
+            const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
                                                blockIdx.x * win_block_stride_x) * cblock_hist_size;
 
             // Get left top corner of the window in dst
@@ -482,14 +482,14 @@ namespace cv { namespace gpu { namespace device
                 int y = block_idx / cnblocks_win_x;
                 int x = block_idx - y * cnblocks_win_x;
 
-                descriptor[(x * cnblocks_win_y + y) * cblock_hist_size + idx_in_block] 
+                descriptor[(x * cnblocks_win_y + y) * cblock_hist_size + idx_in_block]
                     = hist[(y * img_block_width  + x) * cblock_hist_size + idx_in_block];
             }
         }
 
 
-        void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x, 
-                                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists, 
+        void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x,
+                                    int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
                                     DevMem2Df descriptors)
         {
             const int nthreads = 256;
@@ -514,7 +514,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <int nthreads, int correct_gamma>
-        __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrElemStep img, 
+        __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrElemStep img,
                                                       float angle_scale, PtrElemStepf grad, PtrElemStep qangle)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -524,9 +524,9 @@ namespace cv { namespace gpu { namespace device
             __shared__ float sh_row[(nthreads + 2) * 3];
 
             uchar4 val;
-            if (x < width) 
-                val = row[x]; 
-            else 
+            if (x < width)
+                val = row[x];
+            else
                 val = row[width - 2];
 
             sh_row[threadIdx.x + 1] = val.x;
@@ -563,9 +563,9 @@ namespace cv { namespace gpu { namespace device
 
                 float3 dx;
                 if (correct_gamma)
-                    dx = make_float3(::sqrtf(b.x) - ::sqrtf(a.x), ::sqrtf(b.y) - ::sqrtf(a.y), ::sqrtf(b.z) - ::sqrtf(a.z));    
+                    dx = make_float3(::sqrtf(b.x) - ::sqrtf(a.x), ::sqrtf(b.y) - ::sqrtf(a.y), ::sqrtf(b.z) - ::sqrtf(a.z));
                 else
-                    dx = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);    
+                    dx = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);
 
                 float3 dy = make_float3(0.f, 0.f, 0.f);
 
@@ -588,7 +588,7 @@ namespace cv { namespace gpu { namespace device
 
                 float mag0 = dx.x * dx.x + dy.x * dy.x;
                 float mag1 = dx.y * dx.y + dy.y * dy.y;
-                if (mag0 < mag1) 
+                if (mag0 < mag1)
                 {
                     best_dx = dx.y;
                     best_dy = dy.y;
@@ -616,7 +616,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2Db& img, 
+        void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2Db& img,
                                     float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
         {
             const int nthreads = 256;
@@ -635,7 +635,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int nthreads, int correct_gamma>
-        __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrElemStep img, 
+        __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrElemStep img,
                                                       float angle_scale, PtrElemStepf grad, PtrElemStep qangle)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -644,9 +644,9 @@ namespace cv { namespace gpu { namespace device
 
             __shared__ float sh_row[nthreads + 2];
 
-            if (x < width) 
-                sh_row[threadIdx.x + 1] = row[x]; 
-            else 
+            if (x < width)
+                sh_row[threadIdx.x + 1] = row[x];
+            else
                 sh_row[threadIdx.x + 1] = row[width - 2];
 
             if (threadIdx.x == 0)
@@ -688,7 +688,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2Db& img, 
+        void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2Db& img,
                                     float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
         {
             const int nthreads = 256;
@@ -729,13 +729,13 @@ namespace cv { namespace gpu { namespace device
             unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
             if (x < dst.cols && y < dst.rows)
-	        {        
+	        {
 		        float4 val = tex2D(resize8UC4_tex, x * sx + colOfs, y * sy);
                 dst.ptr(y)[x] = make_uchar4(val.x * 255, val.y * 255, val.z * 255, val.w * 255);
 	        }
         }
 
-        template<class T, class TEX> 
+        template<class T, class TEX>
         static void resize_for_hog(const DevMem2Db& src, DevMem2Db dst, TEX& tex)
         {
             tex.filterMode = cudaFilterModeLinear;
@@ -743,19 +743,19 @@ namespace cv { namespace gpu { namespace device
             size_t texOfs = 0;
             int colOfs = 0;
 
-            cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();    
+            cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
             cudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
 
-            if (texOfs != 0) 
+            if (texOfs != 0)
             {
                 colOfs = static_cast<int>( texOfs/sizeof(T) );
                 cudaSafeCall( cudaUnbindTexture(tex) );
                 cudaSafeCall( cudaBindTexture2D(&texOfs, tex, src.data, desc, src.cols, src.rows, src.step) );
-            }    
+            }
 
             dim3 threads(32, 8);
             dim3 grid(divUp(dst.cols, threads.x), divUp(dst.rows, threads.y));
-            
+
 	        float sx = static_cast<float>(src.cols) / dst.cols;
             float sy = static_cast<float>(src.rows) / dst.rows;
 
@@ -769,5 +769,5 @@ namespace cv { namespace gpu { namespace device
 
         void resize_8UC1(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
         void resize_8UC4(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
-    } // namespace hog 
+    } // namespace hog
 }}} // namespace cv { namespace gpu { namespace device

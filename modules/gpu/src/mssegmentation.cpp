@@ -78,7 +78,7 @@ template <typename T>
 struct GraphEdge
 {
     GraphEdge() {}
-    GraphEdge(int to, int next, const T& val) : to(to), next(next), val(val) {}
+    GraphEdge(int to_, int next_, const T& val_) : to(to_), next(next_), val(val_) {}
     int to;
     int next;
     T val;
@@ -110,7 +110,7 @@ private:
 struct SegmLinkVal
 {
     SegmLinkVal() {}
-    SegmLinkVal(int dr, int dsp) : dr(dr), dsp(dsp) {}
+    SegmLinkVal(int dr_, int dsp_) : dr(dr_), dsp(dsp_) {}
     bool operator <(const SegmLinkVal& other) const
     {
         return dr + dsp < other.dr + other.dsp;
@@ -123,8 +123,8 @@ struct SegmLinkVal
 struct SegmLink
 {
     SegmLink() {}
-    SegmLink(int from, int to, const SegmLinkVal& val)
-        : from(from), to(to), val(val) {}
+    SegmLink(int from_, int to_, const SegmLinkVal& val_)
+        : from(from_), to(to_), val(val_) {}
     bool operator <(const SegmLink& other) const
     {
         return val < other.val;
@@ -182,10 +182,10 @@ inline int DjSets::merge(int set1, int set2)
 
 
 template <typename T>
-Graph<T>::Graph(int numv, int nume_max) : start(numv, -1), edges(nume_max)
+Graph<T>::Graph(int numv_, int nume_max_) : start(numv_, -1), edges(nume_max_)
 {
-    this->numv = numv;
-    this->nume_max = nume_max;
+    this->numv = numv_;
+    this->nume_max = nume_max_;
     nume = 0;
 }
 

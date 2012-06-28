@@ -60,7 +60,7 @@
     #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__)
 #endif
 
-namespace cv { namespace gpu 
+namespace cv { namespace gpu
 {
     void nppError(int err, const char *file, const int line, const char *func = "");
     void ncvError(int err, const char *file, const int line, const char *func = "");

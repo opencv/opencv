@@ -42,9 +42,9 @@
 
 #include "internal_shared.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace mathfunc 
+    namespace mathfunc
     {
         //////////////////////////////////////////////////////////////////////////////////////
         // Cart <-> Polar
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace device
             }
         };
         template <typename Mag, typename Angle>
-        __global__ void cartToPolar(const float* xptr, size_t x_step, const float* yptr, size_t y_step, 
+        __global__ void cartToPolar(const float* xptr, size_t x_step, const float* yptr, size_t y_step,
                                     float* mag, size_t mag_step, float* angle, size_t angle_step, float scale, int width, int height)
         {
 	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -137,11 +137,11 @@ namespace cv { namespace gpu { namespace device
 
             grid.x = divUp(x.cols, threads.x);
             grid.y = divUp(x.rows, threads.y);
-            
+
             const float scale = angleInDegrees ? (float)(180.0f / CV_PI) : 1.f;
 
             cartToPolar<Mag, Angle><<<grid, threads, 0, stream>>>(
-                x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), 
+                x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(),
                 mag.data, mag.step/mag.elemSize(), angle.data, angle.step/angle.elemSize(), scale, x.cols, x.rows);
             cudaSafeCall( cudaGetLastError() );
 
@@ -152,7 +152,7 @@ namespace cv { namespace gpu { namespace device
         void cartToPolar_gpu(DevMem2Df x, DevMem2Df y, DevMem2Df mag, bool magSqr, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream)
         {
             typedef void (*caller_t)(DevMem2Df x, DevMem2Df y, DevMem2Df mag, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream);
-            static const caller_t callers[2][2][2] = 
+            static const caller_t callers[2][2][2] =
             {
                 {
                     {
@@ -187,10 +187,10 @@ namespace cv { namespace gpu { namespace device
 
             grid.x = divUp(mag.cols, threads.x);
             grid.y = divUp(mag.rows, threads.y);
-            
+
             const float scale = angleInDegrees ? (float)(CV_PI / 180.0f) : 1.0f;
 
-            polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.data, mag.step/mag.elemSize(), 
+            polarToCart<Mag><<<grid, threads, 0, stream>>>(mag.data, mag.step/mag.elemSize(),
                 angle.data, angle.step/angle.elemSize(), scale, x.data, x.step/x.elemSize(), y.data, y.step/y.elemSize(), mag.cols, mag.rows);
             cudaSafeCall( cudaGetLastError() );
 
@@ -201,7 +201,7 @@ namespace cv { namespace gpu { namespace device
         void polarToCart_gpu(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream)
         {
             typedef void (*caller_t)(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream);
-            static const caller_t callers[2] = 
+            static const caller_t callers[2] =
             {
                 polarToCart_caller<NonEmptyMag>,
                 polarToCart_caller<EmptyMag>

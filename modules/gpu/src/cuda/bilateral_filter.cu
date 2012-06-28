@@ -43,9 +43,9 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace bilateral_filter 
+    namespace bilateral_filter
     {
         __constant__ float* ctable_color;
         __constant__ float* ctable_space;
@@ -108,7 +108,7 @@ namespace cv { namespace gpu { namespace device
                 dp[3] = *(disp + (y+1) * disp_step + x + 0);
                 dp[4] = *(disp + (y  ) * disp_step + x + 1);
 
-                if(::abs(dp[1] - dp[0]) >= cedge_disc || ::abs(dp[2] - dp[0]) >= cedge_disc || ::abs(dp[3] - dp[0]) >= cedge_disc || ::abs(dp[4] - dp[0]) >= cedge_disc)            
+                if(::abs(dp[1] - dp[0]) >= cedge_disc || ::abs(dp[2] - dp[0]) >= cedge_disc || ::abs(dp[3] - dp[0]) >= cedge_disc || ::abs(dp[4] - dp[0]) >= cedge_disc)
                 {
                     const int ymin = ::max(0, y - cradius);
                     const int xmin = ::max(0, x - cradius);
@@ -175,7 +175,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        template <typename T>     
+        template <typename T>
         void bilateral_filter_caller(DevMem2D_<T> disp, DevMem2Db img, int channels, int iters, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);

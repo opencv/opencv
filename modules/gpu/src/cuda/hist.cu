@@ -45,7 +45,7 @@
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     #define UINT_BITS 32U
 
@@ -65,7 +65,7 @@ namespace cv { namespace gpu { namespace device
 
     #define USE_SMEM_ATOMICS (__CUDA_ARCH__ >= 120)
 
-    namespace hist 
+    namespace hist
     {
         #if (!USE_SMEM_ATOMICS)
 
@@ -173,7 +173,7 @@ namespace cv { namespace gpu { namespace device
         {
             histogram256<<<PARTIAL_HISTOGRAM256_COUNT, HISTOGRAM256_THREADBLOCK_SIZE, 0, stream>>>(
                 DevMem2D_<uint>(src),
-                buf, 
+                buf,
                 static_cast<uint>(src.rows * src.step / sizeof(uint)),
                 src.cols);
 

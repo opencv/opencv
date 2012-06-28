@@ -44,7 +44,7 @@
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     #define SOLVE_PNP_RANSAC_MAX_NUM_ITERS 200
 
