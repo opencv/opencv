@@ -57,9 +57,9 @@ class CV_OperationsTest : public cvtest::BaseTest
 {
 public:
     CV_OperationsTest();
-    ~CV_OperationsTest();    
+    ~CV_OperationsTest();
 protected:
-    void run(int);    
+    void run(int);
 
     struct test_excep
     {
@@ -117,8 +117,8 @@ bool CV_OperationsTest::TestMat()
 
         float data[] = { sqrt(2.f)/2, -sqrt(2.f)/2, 1.f, sqrt(2.f)/2, sqrt(2.f)/2, 10.f };
         Mat rot_2x3(2, 3, CV_32F, data);
-        
-		Mat res = one_3x1 + shi_3x1 + shi_3x1 + shi_3x1;
+
+                Mat res = one_3x1 + shi_3x1 + shi_3x1 + shi_3x1;
         res = Mat(Mat(2 * rot_2x3) * res - shi_2x1) + shift;
 
         Mat tmp, res2;
@@ -127,22 +127,22 @@ bool CV_OperationsTest::TestMat()
         add(tmp, shi_3x1, tmp);
         gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
         add(res2, Mat(2, 1, CV_32F, shift), res2);
-        
+
         CHECK_DIFF(res, res2);
-            
+
         Mat mat4x4(4, 4, CV_32F);
         randu(mat4x4, Scalar(0), Scalar(10));
 
         Mat roi1 = mat4x4(Rect(Point(1, 1), Size(2, 2)));
         Mat roi2 = mat4x4(Range(1, 3), Range(1, 3));
-        
+
         CHECK_DIFF(roi1, roi2);
-        CHECK_DIFF(mat4x4, mat4x4(Rect(Point(0,0), mat4x4.size())));        
+        CHECK_DIFF(mat4x4, mat4x4(Rect(Point(0,0), mat4x4.size())));
 
         Mat intMat10(3, 3, CV_32S, Scalar(10));
         Mat intMat11(3, 3, CV_32S, Scalar(11));
         Mat resMat(3, 3, CV_8U, Scalar(255));
-                        
+
         CHECK_DIFF(resMat, intMat10 == intMat10);
         CHECK_DIFF(resMat, intMat10 <  intMat11);
         CHECK_DIFF(resMat, intMat11 >  intMat10);
@@ -169,7 +169,7 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(maskMat0, maskMat4 & maskMat1);
         CHECK_DIFF(maskMat0, Scalar(1) & maskMat4);
         CHECK_DIFF(maskMat0, maskMat4 & Scalar(1));
-        
+
         Mat m;
         m = maskMat4.clone(); m &= maskMat1; CHECK_DIFF(maskMat0, m);
         m = maskMat4.clone(); m &= maskMat1 | maskMat1; CHECK_DIFF(maskMat0, m);
@@ -184,14 +184,14 @@ bool CV_OperationsTest::TestMat()
         m = maskMat4.clone(); m |= Scalar(1); CHECK_DIFF(maskMat5, m);
         m = maskMat5.clone(); m ^= Scalar(1); CHECK_DIFF(maskMat4, m);
 
-           
-        
+
+
         CHECK_DIFF(maskMat0, (maskMat4 | maskMat4) & (maskMat1 | maskMat1));
         CHECK_DIFF(maskMat0, (maskMat4 | maskMat4) & maskMat1);
         CHECK_DIFF(maskMat0, maskMat4 & (maskMat1 | maskMat1));
         CHECK_DIFF(maskMat0, (maskMat1 | maskMat1) & Scalar(4));
         CHECK_DIFF(maskMat0, Scalar(4) & (maskMat1 | maskMat1));
-        
+
         CHECK_DIFF(maskMat0, maskMat5 ^ (maskMat4 | maskMat1));
         CHECK_DIFF(maskMat0, (maskMat4 | maskMat1) ^ maskMat5);
         CHECK_DIFF(maskMat0, (maskMat4 + maskMat1) ^ (maskMat4 + maskMat1));
@@ -202,7 +202,7 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(maskMat0, (maskMat4 + maskMat1) ^ Scalar(5));
 
         CHECK_DIFF(maskMat5, maskMat5 | (maskMat4 ^ maskMat1));
-        CHECK_DIFF(maskMat5, (maskMat4 ^ maskMat1) | maskMat5);        
+        CHECK_DIFF(maskMat5, (maskMat4 ^ maskMat1) | maskMat5);
         CHECK_DIFF(maskMat5, maskMat5 | (maskMat4 ^ Scalar(1)));
         CHECK_DIFF(maskMat5, (maskMat4 | maskMat4) | Scalar(1));
         CHECK_DIFF(maskMat5, Scalar(1) | (maskMat4 | maskMat4));
@@ -220,9 +220,9 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(maskMat5, max(maskMat1, maskMat5 | maskMat5));
 
         CHECK_DIFF(~maskMat1, maskMat1 ^ -1);
-        CHECK_DIFF(~(maskMat1 | maskMat1), maskMat1 ^ -1); 
+        CHECK_DIFF(~(maskMat1 | maskMat1), maskMat1 ^ -1);
 
-        CHECK_DIFF(maskMat1, maskMat4/4.0);   
+        CHECK_DIFF(maskMat1, maskMat4/4.0);
 
         /////////////////////////////
 
@@ -237,33 +237,33 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(5.0 - ((maskMat1 | maskMat1) * 1.0 + 3.0), maskMat1);
         CHECK_DIFF( ( (maskMat1 | maskMat1) * 2.0 + 2.0) * 1.25, maskMat5);
         CHECK_DIFF( 1.25 * ( (maskMat1 | maskMat1) * 2.0 + 2.0), maskMat5);
-        CHECK_DIFF( -( (maskMat1 | maskMat1) * (-2.0) + 1.0), maskMat1);      
-        CHECK_DIFF( maskMat1 * 1.0 + maskMat4 * 0.5 + 2.0, maskMat5);         
-        CHECK_DIFF( 1.0 + (maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0), maskMat5);         
-        CHECK_DIFF( (maskMat1 * 1.0 + maskMat4 * 0.5 + 2.0) - 1.0, maskMat4);         
-        CHECK_DIFF(5.0 -  (maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0), maskMat1);         
-        CHECK_DIFF((maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0)*1.25, maskMat5);         
-        CHECK_DIFF(1.25 * (maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0), maskMat5);         
-        CHECK_DIFF(-(maskMat1 * 2.0 + maskMat4 * (-1) + 1.0), maskMat1);         
-        CHECK_DIFF((maskMat1 * 1.0 + maskMat4), maskMat5);         
-        CHECK_DIFF((maskMat4 + maskMat1 * 1.0), maskMat5);         
-        CHECK_DIFF((maskMat1 * 3.0 + 1.0) + maskMat1, maskMat5);         
-        CHECK_DIFF(maskMat1 + (maskMat1 * 3.0 + 1.0), maskMat5);         
-        CHECK_DIFF(maskMat1*4.0 + (maskMat1 | maskMat1), maskMat5);         
-        CHECK_DIFF((maskMat1 | maskMat1) + maskMat1*4.0, maskMat5);         
-        CHECK_DIFF((maskMat1*3.0 + 1.0) + (maskMat1 | maskMat1), maskMat5);         
+        CHECK_DIFF( -( (maskMat1 | maskMat1) * (-2.0) + 1.0), maskMat1);
+        CHECK_DIFF( maskMat1 * 1.0 + maskMat4 * 0.5 + 2.0, maskMat5);
+        CHECK_DIFF( 1.0 + (maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0), maskMat5);
+        CHECK_DIFF( (maskMat1 * 1.0 + maskMat4 * 0.5 + 2.0) - 1.0, maskMat4);
+        CHECK_DIFF(5.0 -  (maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0), maskMat1);
+        CHECK_DIFF((maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0)*1.25, maskMat5);
+        CHECK_DIFF(1.25 * (maskMat1 * 1.0 + maskMat4 * 0.5 + 1.0), maskMat5);
+        CHECK_DIFF(-(maskMat1 * 2.0 + maskMat4 * (-1) + 1.0), maskMat1);
+        CHECK_DIFF((maskMat1 * 1.0 + maskMat4), maskMat5);
+        CHECK_DIFF((maskMat4 + maskMat1 * 1.0), maskMat5);
+        CHECK_DIFF((maskMat1 * 3.0 + 1.0) + maskMat1, maskMat5);
+        CHECK_DIFF(maskMat1 + (maskMat1 * 3.0 + 1.0), maskMat5);
+        CHECK_DIFF(maskMat1*4.0 + (maskMat1 | maskMat1), maskMat5);
+        CHECK_DIFF((maskMat1 | maskMat1) + maskMat1*4.0, maskMat5);
+        CHECK_DIFF((maskMat1*3.0 + 1.0) + (maskMat1 | maskMat1), maskMat5);
         CHECK_DIFF((maskMat1 | maskMat1) + (maskMat1*3.0 + 1.0), maskMat5);
         CHECK_DIFF(maskMat1*4.0 + maskMat4*2.0, maskMat1 * 12);
         CHECK_DIFF((maskMat1*3.0 + 1.0) + maskMat4*2.0, maskMat1 * 12);
         CHECK_DIFF(maskMat4*2.0 + (maskMat1*3.0 + 1.0), maskMat1 * 12);
         CHECK_DIFF((maskMat1*3.0 + 1.0) + (maskMat1*2.0 + 2.0), maskMat1 * 8);
-                                                     
+
         CHECK_DIFF(maskMat5*1.0 - maskMat4, maskMat1);
         CHECK_DIFF(maskMat5 - maskMat1 * 4.0, maskMat1);
         CHECK_DIFF((maskMat4 * 1.0 + 4.0)- maskMat4, maskMat4);
         CHECK_DIFF(maskMat5 - (maskMat1 * 2.0 + 2.0), maskMat1);
         CHECK_DIFF(maskMat5*1.0 - (maskMat4 | maskMat4), maskMat1);
-        CHECK_DIFF((maskMat5 | maskMat5) - maskMat1 * 4.0, maskMat1);                
+        CHECK_DIFF((maskMat5 | maskMat5) - maskMat1 * 4.0, maskMat1);
         CHECK_DIFF((maskMat4 * 1.0 + 4.0)- (maskMat4 | maskMat4), maskMat4);
         CHECK_DIFF((maskMat5 | maskMat5) - (maskMat1 * 2.0 + 2.0), maskMat1);
         CHECK_DIFF(maskMat1*5.0 - maskMat4 * 1.0, maskMat1);
@@ -273,7 +273,7 @@ bool CV_OperationsTest::TestMat()
 
         CHECK_DIFF((maskMat5 - maskMat4)* 4.0, maskMat4);
         CHECK_DIFF(4.0 * (maskMat5 - maskMat4), maskMat4);
-        
+
         CHECK_DIFF(-((maskMat4 | maskMat4) - (maskMat5 | maskMat5)), maskMat1);
 
         CHECK_DIFF(4.0 * (maskMat1 | maskMat1), maskMat4);
@@ -284,9 +284,9 @@ bool CV_OperationsTest::TestMat()
 #endif
         CHECK_DIFF((maskMat4 / 2.0) / 2.0 , maskMat1);
         CHECK_DIFF(-(maskMat4 - maskMat5) , maskMat1);
-        CHECK_DIFF(-((maskMat4 - maskMat5) * 1.0), maskMat1);        
-                      
-                                    
+        CHECK_DIFF(-((maskMat4 - maskMat5) * 1.0), maskMat1);
+
+
         /////////////////////////////
         CHECK_DIFF(maskMat4 /  maskMat4, maskMat1);
 
@@ -298,7 +298,7 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(maskMat4.mul(maskMat4 / 4), maskMat4);
         CHECK_DIFF(maskMat4.mul(maskMat4) * 0.25, maskMat4);
         CHECK_DIFF(0.25 * maskMat4.mul(maskMat4), maskMat4);
-      
+
         ////// Element-wise division
 
         CHECK_DIFF(maskMat4 / maskMat4, maskMat1);
@@ -314,8 +314,8 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(maskMat4 / maskMat4.mul(maskMat1), maskMat1);
         CHECK_DIFF((maskMat4 & maskMat4) / maskMat4.mul(maskMat1), maskMat1);
 
-        CHECK_DIFF(4.0 / maskMat4, maskMat1);        
-        CHECK_DIFF(4.0 / (maskMat4 | maskMat4), maskMat1);        
+        CHECK_DIFF(4.0 / maskMat4, maskMat1);
+        CHECK_DIFF(4.0 / (maskMat4 | maskMat4), maskMat1);
         CHECK_DIFF(4.0 / (maskMat1 * 4.0), maskMat1);
         CHECK_DIFF(4.0 / (maskMat4 / maskMat1), maskMat1);
 
@@ -323,9 +323,9 @@ bool CV_OperationsTest::TestMat()
         m = maskMat4.clone(); m/=maskMat4; CHECK_DIFF(m, maskMat1);
         m = maskMat4.clone(); m/=(maskMat1 * 4.0); CHECK_DIFF(m, maskMat1);
         m = maskMat4.clone(); m/=(maskMat4 / maskMat1); CHECK_DIFF(m, maskMat1);
-      
-        /////////////////////////////        
-        float matrix_data[] = { 3, 1, -4, -5, 1, 0, 0, 1.1f, 1.5f};        
+
+        /////////////////////////////
+        float matrix_data[] = { 3, 1, -4, -5, 1, 0, 0, 1.1f, 1.5f};
         Mat mt(3, 3, CV_32F, matrix_data);
         Mat mi = mt.inv();
         Mat d1 = Mat::eye(3, 3, CV_32F);
@@ -355,13 +355,13 @@ bool CV_OperationsTest::TestMat()
         m = mi.clone(); m*=mt_tr.t(); CHECK_DIFF_FLT(m, d1);
 
         CHECK_DIFF_FLT( (mi * 2) * mt, d2);
-        CHECK_DIFF_FLT( mi * (2 * mt), d2);           
+        CHECK_DIFF_FLT( mi * (2 * mt), d2);
         CHECK_DIFF_FLT( mt.t() * mi_tr, d1 );
-        CHECK_DIFF_FLT( mt_tr * mi.t(), d1 );           
+        CHECK_DIFF_FLT( mt_tr * mi.t(), d1 );
         CHECK_DIFF_FLT( (mi * 0.4) * (mt * 5), d2);
 
         CHECK_DIFF_FLT( mt.t() * (mi_tr * 2), d2 );
-        CHECK_DIFF_FLT( (mt_tr * 2) * mi.t(), d2 );           
+        CHECK_DIFF_FLT( (mt_tr * 2) * mi.t(), d2 );
 
         CHECK_DIFF_FLT(mt.t() * mi.t(), d1);
         CHECK_DIFF_FLT( (mi * mt) * 2.0, d2);
@@ -372,9 +372,9 @@ bool CV_OperationsTest::TestMat()
 
         Mat mt_mul_2_plus_1;
         gemm(mt, d1, 2, Mat::ones(3, 3, CV_32F), 1, mt_mul_2_plus_1);
-        
+
         CHECK_DIFF( (mt * 2.0 + 1.0) * mi, mt_mul_2_plus_1 * mi);        // (A*alpha + beta)*B
-        CHECK_DIFF( mi * (mt * 2.0 + 1.0), mi * mt_mul_2_plus_1);        // A*(B*alpha + beta)            
+        CHECK_DIFF( mi * (mt * 2.0 + 1.0), mi * mt_mul_2_plus_1);        // A*(B*alpha + beta)
         CHECK_DIFF( (mt * 2.0 + 1.0) * (mi * 2), mt_mul_2_plus_1 * mi2); // (A*alpha + beta)*(B*gamma)
         CHECK_DIFF( (mi *2)* (mt * 2.0 + 1.0), mi2 * mt_mul_2_plus_1);   // (A*gamma)*(B*alpha + beta)
         CHECK_DIFF_FLT( (mt * 2.0 + 1.0) * mi.t(), mt_mul_2_plus_1 * mi_tr); // (A*alpha + beta)*B^t
@@ -391,7 +391,7 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF_FLT( (mi * mt) + d2 * 0.5, d2);
         CHECK_DIFF_FLT( d2 * 0.5 + (mi * mt), d2);
         CHECK_DIFF_FLT( (mi * mt) - d1 * 2, -d1);
-        CHECK_DIFF_FLT( d1 * 2 - (mi * mt), d1);      
+        CHECK_DIFF_FLT( d1 * 2 - (mi * mt), d1);
 
         CHECK_DIFF_FLT( (mi * mt) + mi.t(), mi_tr + d1);
         CHECK_DIFF_FLT( mi.t() + (mi * mt), mi_tr + d1);
@@ -403,7 +403,7 @@ bool CV_OperationsTest::TestMat()
 
         CHECK_DIFF_FLT(mt.inv() * mt, d1);
 
-        CHECK_DIFF_FLT(mt.inv() * (2*mt - mt), d1);               
+        CHECK_DIFF_FLT(mt.inv() * (2*mt - mt), d1);
 #endif
     }
     catch (const test_excep& e)
@@ -421,18 +421,18 @@ bool CV_OperationsTest::SomeMatFunctions()
     {
         Mat rgba( 10, 10, CV_8UC4, Scalar(1,2,3,4) );
         Mat bgr( rgba.rows, rgba.cols, CV_8UC3 );
-        Mat alpha( rgba.rows, rgba.cols, CV_8UC1 );        
+        Mat alpha( rgba.rows, rgba.cols, CV_8UC1 );
         Mat out[] = { bgr, alpha };
         // rgba[0] -> bgr[2], rgba[1] -> bgr[1],
         // rgba[2] -> bgr[0], rgba[3] -> alpha[0]
         int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
-        mixChannels( &rgba, 1, out, 2, from_to, 4 );        
+        mixChannels( &rgba, 1, out, 2, from_to, 4 );
 
         Mat bgr_exp( rgba.size(), CV_8UC3, Scalar(3,2,1));
         Mat alpha_exp( rgba.size(), CV_8UC1, Scalar(4));
 
-        CHECK_DIFF(bgr_exp, bgr);      
-        CHECK_DIFF(alpha_exp, alpha);      
+        CHECK_DIFF(bgr_exp, bgr);
+        CHECK_DIFF(alpha_exp, alpha);
     }
     catch (const test_excep& e)
     {
@@ -463,7 +463,7 @@ bool CV_OperationsTest::TestSubMatAccess()
 
         // set up display coords, really just the S frame
         std::vector<float>coords;
-        
+
         for (int i=0; i<16; i++)
         {
             coords.push_back(T_bs(i));
@@ -481,7 +481,7 @@ bool CV_OperationsTest::TestSubMatAccess()
 }
 
 bool CV_OperationsTest::TestTemplateMat()
-{  
+{
     try
     {
         Mat_<float> one_3x1(3, 1, 1.0f);
@@ -491,7 +491,7 @@ bool CV_OperationsTest::TestTemplateMat()
 
         float data[] = { sqrt(2.f)/2, -sqrt(2.f)/2, 1.f, sqrt(2.f)/2, sqrt(2.f)/2, 10.f };
         Mat_<float> rot_2x3(2, 3, data);
-               
+
         Mat_<float> res = Mat(Mat(2 * rot_2x3) * Mat(one_3x1 + shi_3x1 + shi_3x1 + shi_3x1) - shi_2x1) + shift;
         Mat_<float> resS = rot_2x3 * one_3x1;
 
@@ -501,25 +501,25 @@ bool CV_OperationsTest::TestTemplateMat()
         add(tmp, shi_3x1, tmp);
         gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
         add(res2, Mat(2, 1, CV_32F, shift), res2);
-        
+
         gemm(rot_2x3, one_3x1, 1, shi_2x1, 0, resS2, 0);
-        CHECK_DIFF(res, res2);        
+        CHECK_DIFF(res, res2);
         CHECK_DIFF(resS, resS2);
 
-            
+
         Mat_<float> mat4x4(4, 4);
         randu(mat4x4, Scalar(0), Scalar(10));
 
         Mat_<float> roi1 = mat4x4(Rect(Point(1, 1), Size(2, 2)));
         Mat_<float> roi2 = mat4x4(Range(1, 3), Range(1, 3));
-        
+
         CHECK_DIFF(roi1, roi2);
-        CHECK_DIFF(mat4x4, mat4x4(Rect(Point(0,0), mat4x4.size())));        
+        CHECK_DIFF(mat4x4, mat4x4(Rect(Point(0,0), mat4x4.size())));
 
         Mat_<int> intMat10(3, 3, 10);
         Mat_<int> intMat11(3, 3, 11);
         Mat_<uchar> resMat(3, 3, 255);
-                
+
         CHECK_DIFF(resMat, intMat10 == intMat10);
         CHECK_DIFF(resMat, intMat10 <  intMat11);
         CHECK_DIFF(resMat, intMat11 >  intMat10);
@@ -537,17 +537,17 @@ bool CV_OperationsTest::TestTemplateMat()
         Mat_<uchar> maskMat5(3, 3, 5);
         Mat_<uchar> maskMat0(3, 3, (uchar)0);
 
-        CHECK_DIFF(maskMat0, maskMat4 & maskMat1);        
+        CHECK_DIFF(maskMat0, maskMat4 & maskMat1);
         CHECK_DIFF(maskMat0, Scalar(1) & maskMat4);
         CHECK_DIFF(maskMat0, maskMat4 & Scalar(1));
-                        
+
         Mat_<uchar> m;
         m = maskMat4.clone(); m&=maskMat1; CHECK_DIFF(maskMat0, m);
         m = maskMat4.clone(); m&=Scalar(1); CHECK_DIFF(maskMat0, m);
 
         m = maskMat4.clone(); m|=maskMat1; CHECK_DIFF(maskMat5, m);
         m = maskMat4.clone(); m^=maskMat1; CHECK_DIFF(maskMat5, m);
-        
+
         CHECK_DIFF(maskMat0, (maskMat4 | maskMat4) & (maskMat1 | maskMat1));
         CHECK_DIFF(maskMat0, (maskMat4 | maskMat4) & maskMat1);
         CHECK_DIFF(maskMat0, maskMat4 & (maskMat1 | maskMat1));
@@ -559,7 +559,7 @@ bool CV_OperationsTest::TestTemplateMat()
         CHECK_DIFF(maskMat5, maskMat5 | (maskMat4 ^ Scalar(1)));
 
         CHECK_DIFF(~maskMat1, maskMat1 ^ 0xFF);
-        CHECK_DIFF(~(maskMat1 | maskMat1), maskMat1 ^ 0xFF); 
+        CHECK_DIFF(~(maskMat1 | maskMat1), maskMat1 ^ 0xFF);
 
         CHECK_DIFF(maskMat1 + maskMat4, maskMat5);
         CHECK_DIFF(maskMat1 + Scalar(4), maskMat5);
@@ -583,7 +583,7 @@ bool CV_OperationsTest::TestTemplateMat()
 
         CHECK_DIFF(maskMat1, min(maskMat1, maskMat5));
         CHECK_DIFF(maskMat5, max(maskMat1, maskMat5));
-        
+
         m = maskMat5.clone(); m-=Scalar(1); CHECK_DIFF(m, maskMat4);
         m = maskMat5.clone(); m-=maskMat1; CHECK_DIFF(m, maskMat4);
         m = maskMat5.clone(); m-=(maskMat1 | maskMat1); CHECK_DIFF(m, maskMat4);
@@ -591,31 +591,31 @@ bool CV_OperationsTest::TestTemplateMat()
         m = maskMat4.clone(); m |= Scalar(1); CHECK_DIFF(maskMat5, m);
         m = maskMat5.clone(); m ^= Scalar(1); CHECK_DIFF(maskMat4, m);
 
-        CHECK_DIFF(maskMat1, maskMat4/4.0);       
+        CHECK_DIFF(maskMat1, maskMat4/4.0);
 
-        Mat_<float> negf(3, 3, -3.0);                
+        Mat_<float> negf(3, 3, -3.0);
         Mat_<float> posf = -negf;
         Mat_<float> posf2 = posf * 2;
-        Mat_<int> negi(3, 3, -3);        
+        Mat_<int> negi(3, 3, -3);
 
-        CHECK_DIFF(abs(negf), -negf);         
-        CHECK_DIFF(abs(posf - posf2), -negf);         
+        CHECK_DIFF(abs(negf), -negf);
+        CHECK_DIFF(abs(posf - posf2), -negf);
         CHECK_DIFF(abs(negi), -(negi & negi));
 
         CHECK_DIFF(5.0 - maskMat4, maskMat1);
-        
+
 
         CHECK_DIFF(maskMat4.mul(maskMat4, 0.25), maskMat4);
         CHECK_DIFF(maskMat4.mul(maskMat1 * 4, 0.25), maskMat4);
         CHECK_DIFF(maskMat4.mul(maskMat4 / 4), maskMat4);
 
-          
+
         ////// Element-wise division
 
         CHECK_DIFF(maskMat4 / maskMat4, maskMat1);
         CHECK_DIFF(4.0 / maskMat4, maskMat1);
         m = maskMat4.clone(); m/=4.0; CHECK_DIFF(m, maskMat1);
-        
+
         ////////////////////////////////
 
         typedef Mat_<int> TestMat_t;
@@ -624,7 +624,7 @@ bool CV_OperationsTest::TestTemplateMat()
 
         TestMat_t::iterator beg = negi.begin();
         TestMat_t::iterator end = negi.end();
-        
+
         TestMat_t::const_iterator cbeg = cnegi.begin();
         TestMat_t::const_iterator cend = cnegi.end();
 
@@ -640,14 +640,14 @@ bool CV_OperationsTest::TestTemplateMat()
         CHECK_DIFF(negi.col(1), negi.col(2));
         CHECK_DIFF(negi.row(1), negi.row(2));
         CHECK_DIFF(negi.col(1), negi.diag());
-        
+
         if (Mat_<Point2f>(1, 1).elemSize1() != sizeof(float)) throw test_excep();
         if (Mat_<Point2f>(1, 1).elemSize() != 2 * sizeof(float)) throw test_excep();
         if (Mat_<Point2f>(1, 1).depth() != CV_32F) throw test_excep();
         if (Mat_<float>(1, 1).depth() != CV_32F) throw test_excep();
         if (Mat_<int>(1, 1).depth() != CV_32S) throw test_excep();
         if (Mat_<double>(1, 1).depth() != CV_64F) throw test_excep();
-        if (Mat_<Point3d>(1, 1).depth() != CV_64F) throw test_excep();        
+        if (Mat_<Point3d>(1, 1).depth() != CV_64F) throw test_excep();
         if (Mat_<signed char>(1, 1).depth() != CV_8S) throw test_excep();
         if (Mat_<unsigned short>(1, 1).depth() != CV_16U) throw test_excep();
         if (Mat_<unsigned short>(1, 1).channels() != 1) throw test_excep();
@@ -657,10 +657,10 @@ bool CV_OperationsTest::TestTemplateMat()
 
         Mat_<uchar> eye = Mat_<uchar>::zeros(2, 2); CHECK_DIFF(Mat_<uchar>::zeros(Size(2, 2)), eye);
         eye.at<uchar>(Point(0,0)) = 1; eye.at<uchar>(1, 1) = 1;
-                
+
         CHECK_DIFF(Mat_<uchar>::eye(2, 2), eye);
-        CHECK_DIFF(eye, Mat_<uchar>::eye(Size(2,2)));        
-        
+        CHECK_DIFF(eye, Mat_<uchar>::eye(Size(2,2)));
+
         Mat_<uchar> ones(2, 2, (uchar)1);
         CHECK_DIFF(ones, Mat_<uchar>::ones(Size(2,2)));
         CHECK_DIFF(Mat_<uchar>::ones(2, 2), ones);
@@ -678,22 +678,22 @@ bool CV_OperationsTest::TestTemplateMat()
 
         if (matFromData(0,0) != uchar_data[0])throw test_excep();
         if (mat2(0,0) != uchar_data[0]) throw test_excep();
-                
+
         Mat_<uchar> rect(eye, Rect(0, 0, 1, 1));
         if (rect.cols != 1 || rect.rows != 1 || rect(0,0) != uchar_data[0]) throw test_excep();
 
         //cv::Mat_<_Tp>::adjustROI(int,int,int,int)
-        //cv::Mat_<_Tp>::cross(const Mat_&) const	        
+        //cv::Mat_<_Tp>::cross(const Mat_&) const
         //cv::Mat_<_Tp>::Mat_(const vector<_Tp>&,bool)
         //cv::Mat_<_Tp>::Mat_(int,int,_Tp*,size_t)
-        //cv::Mat_<_Tp>::Mat_(int,int,const _Tp&)	
-        //cv::Mat_<_Tp>::Mat_(Size,const _Tp&)	
-        //cv::Mat_<_Tp>::mul(const Mat_<_Tp>&,double) const	
-        //cv::Mat_<_Tp>::mul(const MatExpr_<MatExpr_Op2_<Mat_<_Tp>,double,Mat_<_Tp>,MatOp_DivRS_<Mat> >,Mat_<_Tp> >&,double) const	
-        //cv::Mat_<_Tp>::mul(const MatExpr_<MatExpr_Op2_<Mat_<_Tp>,double,Mat_<_Tp>,MatOp_Scale_<Mat> >,Mat_<_Tp> >&,double) const	
-        //cv::Mat_<_Tp>::operator Mat_<T2>() const	
-        //cv::Mat_<_Tp>::operator MatExpr_<Mat_<_Tp>,Mat_<_Tp> >() const	
-        //cv::Mat_<_Tp>::operator()(const Range&,const Range&) const	
+        //cv::Mat_<_Tp>::Mat_(int,int,const _Tp&)
+        //cv::Mat_<_Tp>::Mat_(Size,const _Tp&)
+        //cv::Mat_<_Tp>::mul(const Mat_<_Tp>&,double) const
+        //cv::Mat_<_Tp>::mul(const MatExpr_<MatExpr_Op2_<Mat_<_Tp>,double,Mat_<_Tp>,MatOp_DivRS_<Mat> >,Mat_<_Tp> >&,double) const
+        //cv::Mat_<_Tp>::mul(const MatExpr_<MatExpr_Op2_<Mat_<_Tp>,double,Mat_<_Tp>,MatOp_Scale_<Mat> >,Mat_<_Tp> >&,double) const
+        //cv::Mat_<_Tp>::operator Mat_<T2>() const
+        //cv::Mat_<_Tp>::operator MatExpr_<Mat_<_Tp>,Mat_<_Tp> >() const
+        //cv::Mat_<_Tp>::operator()(const Range&,const Range&) const
         //cv::Mat_<_Tp>::operator()(const Rect&) const
 
         //cv::Mat_<_Tp>::operator=(const MatExpr_Base&)
@@ -702,7 +702,7 @@ bool CV_OperationsTest::TestTemplateMat()
 
         ///////////////////////////////
 
-        float matrix_data[] = { 3, 1, -4, -5, 1, 0, 0, 1.1f, 1.5f};        
+        float matrix_data[] = { 3, 1, -4, -5, 1, 0, 0, 1.1f, 1.5f};
         Mat_<float> mt(3, 3, matrix_data);
         Mat_<float> mi = mt.inv();
         Mat_<float> d1 = Mat_<float>::eye(3, 3);
@@ -750,21 +750,12 @@ bool CV_OperationsTest::TestTemplateMat()
         if (Mat3i(1, 1).channels() != 3) throw test_excep();
         if (Mat3w(1, 1).channels() != 3) throw test_excep();
         if (Mat3s(1, 1).channels() != 3) throw test_excep();
-        
-        vector<Mat_<float> > mvf, mvf2;
-        Mat_<Vec2f> mf2;
-        mvf.push_back(Mat_<float>::ones(4, 3));
-        mvf.push_back(Mat_<float>::zeros(4, 3));
-        merge(mvf, mf2);
-        split(mf2, mvf2);
-        CV_Assert( norm(mvf2[0], mvf[0], CV_C) == 0 &&
-                  norm(mvf2[1], mvf[1], CV_C) == 0 );
-        
+
         {
-        Mat a(2,2,CV_32F,1.f);
-        Mat b(1,2,CV_32F,1.f);
-        Mat c = (a*b.t()).t();
-        CV_Assert( norm(c, CV_L1) == 4. );
+            Mat a(2,2,CV_32F,1.f);
+            Mat b(1,2,CV_32F,1.f);
+            Mat c = (a*b.t()).t();
+            CV_Assert( norm(c, CV_L1) == 4. );
         }
     }
     catch (const test_excep& e)
@@ -777,7 +768,7 @@ bool CV_OperationsTest::TestTemplateMat()
 }
 
 bool CV_OperationsTest::TestMatND()
-{  
+{
     int sizes[] = { 3, 3, 3};
     cv::MatND nd(3, sizes, CV_32F);
 
@@ -785,7 +776,7 @@ bool CV_OperationsTest::TestMatND()
 }
 
 bool CV_OperationsTest::TestSparseMat()
-{  
+{
     try
     {
         int sizes[] = { 10, 10, 10};
@@ -807,62 +798,62 @@ bool CV_OperationsTest::TestSparseMat()
 }
 
 
-bool CV_OperationsTest::TestMatxMultiplication() 
-{ 
-    try 
-    { 
-        Matx33f mat(1, 1, 1, 0, 1, 1, 0, 0, 1); // Identity matrix 
-        Point2f pt(3, 4); 
-        Point3f res = mat * pt; // Correctly assumes homogeneous coordinates 
-        
+bool CV_OperationsTest::TestMatxMultiplication()
+{
+    try
+    {
+        Matx33f mat(1, 1, 1, 0, 1, 1, 0, 0, 1); // Identity matrix
+        Point2f pt(3, 4);
+        Point3f res = mat * pt; // Correctly assumes homogeneous coordinates
+
         Vec3f res2 = mat*Vec3f(res.x, res.y, res.z);
-        
-        if(res.x != 8.0) throw test_excep(); 
-        if(res.y != 5.0) throw test_excep(); 
+
+        if(res.x != 8.0) throw test_excep();
+        if(res.y != 5.0) throw test_excep();
         if(res.z != 1.0) throw test_excep();
-        
-        if(res2[0] != 14.0) throw test_excep(); 
-        if(res2[1] != 6.0) throw test_excep(); 
+
+        if(res2[0] != 14.0) throw test_excep();
+        if(res2[1] != 6.0) throw test_excep();
         if(res2[2] != 1.0) throw test_excep();
-        
+
         Matx44f mat44f(1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1);
         Matx44d mat44d(1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1);
         Scalar s(4, 3, 2, 1);
         Scalar sf = mat44f*s;
         Scalar sd = mat44d*s;
-        
-        if(sf[0] != 10.0) throw test_excep(); 
-        if(sf[1] != 6.0) throw test_excep(); 
+
+        if(sf[0] != 10.0) throw test_excep();
+        if(sf[1] != 6.0) throw test_excep();
         if(sf[2] != 3.0) throw test_excep();
         if(sf[3] != 1.0) throw test_excep();
-        
-        if(sd[0] != 10.0) throw test_excep(); 
-        if(sd[1] != 6.0) throw test_excep(); 
+
+        if(sd[0] != 10.0) throw test_excep();
+        if(sd[1] != 6.0) throw test_excep();
         if(sd[2] != 3.0) throw test_excep();
         if(sd[3] != 1.0) throw test_excep();
-    } 
-    catch(const test_excep&) 
-    { 
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT); 
-        return false; 
-    } 
-    return true; 
-} 
+    }
+    catch(const test_excep&)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+    return true;
+}
 
 
-bool CV_OperationsTest::TestVec() 
-{ 
-    try 
-    { 
+bool CV_OperationsTest::TestVec()
+{
+    try
+    {
         cv::Mat hsvImage_f(5, 5, CV_32FC3), hsvImage_b(5, 5, CV_8UC3);
         int i = 0,j = 0;
         cv::Vec3f a;
-        
+
         //these compile
         cv::Vec3b b = a;
         hsvImage_f.at<cv::Vec3f>(i,j) = cv::Vec3f((float)i,0,1);
         hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3b(cv::Vec3f((float)i,0,1));
-        
+
         //these don't
         b = cv::Vec3f(1,0,0);
         cv::Vec3b c;
@@ -870,37 +861,37 @@ bool CV_OperationsTest::TestVec()
         hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3f((float)i,0,1);
         hsvImage_b.at<cv::Vec3b>(i,j) = a;
         hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3f(1,2,3);
-    } 
-    catch(const test_excep&) 
-    { 
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT); 
-        return false; 
-    } 
-    return true; 
-} 
+    }
+    catch(const test_excep&)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+    return true;
+}
 
 bool CV_OperationsTest::operations1()
-{    
-    try 
+{
+    try
     {
-        Point3d p1(1, 1, 1), p2(2, 2, 2), p4(4, 4, 4);    
-        p1*=2;    
+        Point3d p1(1, 1, 1), p2(2, 2, 2), p4(4, 4, 4);
+        p1*=2;
         if (!(p1     == p2)) throw test_excep();
         if (!(p2 * 2 == p4)) throw test_excep();
         if (!(p2 * 2.f == p4)) throw test_excep();
         if (!(p2 * 2.f == p4)) throw test_excep();
 
-        Point2d pi1(1, 1), pi2(2, 2), pi4(4, 4);    
+        Point2d pi1(1, 1), pi2(2, 2), pi4(4, 4);
         pi1*=2;
         if (!(pi1     == pi2)) throw test_excep();
         if (!(pi2 * 2 == pi4)) throw test_excep();
         if (!(pi2 * 2.f == pi4)) throw test_excep();
         if (!(pi2 * 2.f == pi4)) throw test_excep();
-        
+
         Vec2d v12(1, 1), v22(2, 2);
         v12*=2.0;
         if (!(v12 == v22)) throw test_excep();
-        
+
         Vec3d v13(1, 1, 1), v23(2, 2, 2);
         v13*=2.0;
         if (!(v13 == v23)) throw test_excep();
@@ -908,12 +899,12 @@ bool CV_OperationsTest::operations1()
         Vec4d v14(1, 1, 1, 1), v24(2, 2, 2, 2);
         v14*=2.0;
         if (!(v14 == v24)) throw test_excep();
-        
+
         Size sz(10, 20);
         if (sz.area() != 200) throw test_excep();
         if (sz.width != 10 || sz.height != 20) throw test_excep();
         if (((CvSize)sz).width != 10 || ((CvSize)sz).height != 20) throw test_excep();
-        
+
         Vec<double, 5> v5d(1, 1, 1, 1, 1);
         Vec<double, 6> v6d(1, 1, 1, 1, 1, 1);
         Vec<double, 7> v7d(1, 1, 1, 1, 1, 1, 1);
@@ -937,8 +928,8 @@ bool CV_OperationsTest::operations1()
 
 
 bool CV_OperationsTest::TestSVD()
-{    
-    try 
+{
+    try
     {
         Mat A = (Mat_<double>(3,4) << 1, 2, -1, 4, 2, 4, 3, 5, -1, -2, 6, 7);
         Mat x;
@@ -946,7 +937,7 @@ bool CV_OperationsTest::TestSVD()
         if( norm(A*x, CV_C) > FLT_EPSILON )
             throw test_excep();
 
-        SVD svd(A, SVD::FULL_UV); 
+        SVD svd(A, SVD::FULL_UV);
         if( norm(A*svd.vt.row(3).t(), CV_C) > FLT_EPSILON )
             throw test_excep();
     }
@@ -974,16 +965,16 @@ void CV_OperationsTest::run( int /* start_from */)
 
     if (!TestSparseMat())
         return;
-    
+
     if (!TestVec())
         return;
-    
+
     if (!TestMatxMultiplication())
         return;
-    
+
     if (!TestSubMatAccess())
         return;
-    
+
     if (!TestSVD())
         return;
 
@@ -999,7 +990,7 @@ class CV_SparseMatTest : public cvtest::BaseTest
 {
 public:
     CV_SparseMatTest() {}
-    ~CV_SparseMatTest() {}   
+    ~CV_SparseMatTest() {}
 protected:
     void run(int)
     {
@@ -1020,16 +1011,16 @@ protected:
                 }
                 int j, nz = rng.uniform(0, (p+2)/2), nz0 = 0;
                 SparseMat_<int> v(dims,sizes);
-                
+
                 CV_Assert( (int)v.nzcount() == 0 );
-                
+
                 SparseMatIterator_<int> it = v.begin();
                 SparseMatIterator_<int> it_end = v.end();
-                
+
                 for( k = 0; it != it_end; ++it, ++k )
                     ;
                 CV_Assert( k == 0 );
-                
+
                 int sum0 = 0, sum = 0;
                 for( j = 0; j < nz; j++ )
                 {
@@ -1054,22 +1045,22 @@ protected:
                         nz0++;
                     sum0 += val;
                 }
-            
+
                 CV_Assert( (int)v.nzcount() == nz0 );
-                
+
                 it = v.begin();
                 it_end = v.end();
-                
+
                 for( k = 0; it != it_end; ++it, ++k )
                     sum += *it;
                 CV_Assert( k == nz0 && sum == sum0 );
-                
+
                 v.clear();
                 CV_Assert( (int)v.nzcount() == 0 );
-                
+
                 it = v.begin();
                 it_end = v.end();
-                
+
                 for( k = 0; it != it_end; ++it, ++k )
                     ;
                 CV_Assert( k == 0 );
