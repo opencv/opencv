@@ -442,18 +442,20 @@ cv::DetectionBasedTracker::InnerParameters::InnerParameters()
 
 }
 
-cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> MainDetector, cv::Ptr<IDetector> TrackingDetector, const Parameters& params)
+cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector, cv::Ptr<IDetector> trackingDetector, const Parameters& params)
     :separateDetectionWork(),
     parameters(params),
     innerParameters(),
     numTrackedSteps(0),
-    cascadeForTracking(TrackingDetector)
+    cascadeForTracking(trackingDetector)
 {
     CV_Assert( (params.maxTrackLifetime >= 0)
-            && (!MainDetector.empty())
-            && (!TrackingDetector.empty()) );
+//            && (!mainDetector.empty())
+            && (!trackingDetector.empty()) );
 
-    separateDetectionWork = new SeparateDetectionWork(*this, MainDetector);
+    if (!mainDetector.empty()) {
+        separateDetectionWork = new SeparateDetectionWork(*this, mainDetector);
+    }
 
     weightsPositionsSmoothing.push_back(1);
     weightsSizesSmoothing.push_back(0.5);
@@ -469,7 +471,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
 {
     CV_Assert(imageGray.type()==CV_8UC1);
 
-    if (!separateDetectionWork->isWorking()) {
+    if ( (!separateDetectionWork.empty()) && (!separateDetectionWork->isWorking()) ) {
         separateDetectionWork->run();
     }
 
@@ -485,7 +487,10 @@ void DetectionBasedTracker::process(const Mat& imageGray)
     Mat imageDetect=imageGray;
 
     vector<Rect> rectsWhereRegions;
-    bool shouldHandleResult=separateDetectionWork->communicateWithDetectingThread(imageGray, rectsWhereRegions);
+    bool shouldHandleResult=false;
+    if (!separateDetectionWork.empty()) {
+        shouldHandleResult = separateDetectionWork->communicateWithDetectingThread(imageGray, rectsWhereRegions);
+    }
 
     if (shouldHandleResult) {
         LOGD("DetectionBasedTracker::process: get _rectsWhereRegions were got from resultDetect");
@@ -560,17 +565,24 @@ void cv::DetectionBasedTracker::getObjects(std::vector<Object>& result) const
 
 bool cv::DetectionBasedTracker::run()
 {
-    return separateDetectionWork->run();
+    if (!separateDetectionWork.empty()) {
+        return separateDetectionWork->run();
+    }
+    return false;
 }
 
 void cv::DetectionBasedTracker::stop()
 {
-    separateDetectionWork->stop();
+    if (!separateDetectionWork.empty()) {
+        separateDetectionWork->stop();
+    }
 }
 
 void cv::DetectionBasedTracker::resetTracking()
 {
-    separateDetectionWork->resetTracking();
+    if (!separateDetectionWork.empty()) {
+        separateDetectionWork->resetTracking();
+    }
     trackedObjects.clear();
 }
 
@@ -692,6 +704,12 @@ void cv::DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detecte
             it++;
         }
     }
+}
+
+void cv::DetectionBasedTracker::addObject(const Rect& location)
+{
+    LOGD("DetectionBasedTracker::addObject: new object {%d, %d %dx%d}",location.x, location.y, location.width, location.height);
+    trackedObjects.push_back(location);
 }
 
 Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i) const
@@ -819,9 +837,13 @@ bool cv::DetectionBasedTracker::setParameters(const Parameters& params)
         return false;
     }
 
-    separateDetectionWork->lock();
+    if (!separateDetectionWork.empty()) {
+        separateDetectionWork->lock();
+    }
     parameters=params;
-    separateDetectionWork->unlock();
+    if (!separateDetectionWork.empty()) {
+        separateDetectionWork->unlock();
+    }
     return true;
 }
 

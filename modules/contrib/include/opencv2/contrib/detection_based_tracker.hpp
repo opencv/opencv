@@ -30,7 +30,7 @@ class DetectionBasedTracker
                     scaleFactor(1.1f)
                 {}
 
-                virtual void detect(const cv::Mat& Image, std::vector<cv::Rect>& objects) = 0;
+                virtual void detect(const cv::Mat& image, std::vector<cv::Rect>& objects) = 0;
 
                 void setMinObjectSize(const cv::Size& min)
                 {
@@ -73,7 +73,7 @@ class DetectionBasedTracker
                 float scaleFactor;
         };
 
-        DetectionBasedTracker(cv::Ptr<IDetector> MainDetector, cv::Ptr<IDetector> TrackingDetector, const Parameters& params);
+        DetectionBasedTracker(cv::Ptr<IDetector> mainDetector, cv::Ptr<IDetector> trackingDetector, const Parameters& params);
         virtual ~DetectionBasedTracker();
 
         virtual bool run();
@@ -89,6 +89,8 @@ class DetectionBasedTracker
         typedef std::pair<cv::Rect, int> Object;
         virtual void getObjects(std::vector<cv::Rect>& result) const;
         virtual void getObjects(std::vector<Object>& result) const;
+
+        virtual void addObject(const cv::Rect& location);
 
     protected:
         class SeparateDetectionWork;
