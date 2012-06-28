@@ -54,13 +54,13 @@ void CV_BackgroundSubtractorTest::run(int)
 	/**
 	 * Generate bounds for the values in the matrix for each type
 	 */
-	uchar maxuc,minuc = 0;
-	char maxc,minc = 0;
-	uint maxui,minui = 0;
-	int maxi,mini = 0;
-	long int maxli,minli = 0;
-	float maxf,minf = 0.0;
-	double maxd,mind = 0.0;
+	uchar maxuc = 0, minuc = 0;
+	char maxc = 0, minc = 0;
+	uint maxui = 0, minui = 0;
+	int maxi=0, mini = 0;
+	long int maxli = 0, minli = 0;
+	float maxf = 0, minf = 0;
+	double maxd = 0, mind = 0;
 
 	/**
 	 * Max value for simulated images picked randomly in upper half of type range
