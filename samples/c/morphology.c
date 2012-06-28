@@ -19,6 +19,8 @@ static void OpenClose(int pos)
 {
     int n = open_close_pos - max_iters;
     int an = n > 0 ? n : -n;
+    (void)pos;
+
     element = cvCreateStructuringElementEx( an*2+1, an*2+1, an, an, element_shape, 0 );
     if( n < 0 )
     {
@@ -39,6 +41,8 @@ static void ErodeDilate(int pos)
 {
     int n = erode_dilate_pos - max_iters;
     int an = n > 0 ? n : -n;
+    (void)pos;
+
     element = cvCreateStructuringElementEx( an*2+1, an*2+1, an, an, element_shape, 0 );
     if( n < 0 )
     {

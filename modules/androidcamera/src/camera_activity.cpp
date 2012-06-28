@@ -340,7 +340,7 @@ CameraActivity::~CameraActivity()
         disconnect();
 }
 
-bool CameraActivity::onFrameBuffer(void* buffer, int bufferSize)
+bool CameraActivity::onFrameBuffer(void* /*buffer*/, int /*bufferSize*/)
 {
     LOGD("CameraActivity::onFrameBuffer - empty callback");
     return true;

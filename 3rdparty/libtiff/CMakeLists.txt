@@ -81,18 +81,15 @@ set(lib_srcs
 
 if(UNIX)
   list(APPEND lib_srcs tif_unix.c)
-  if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
-    set_source_files_properties(tif_unix.c PROPERTIES COMPILE_FLAGS "-w")
-  endif()
 endif()
 
 if(WIN32)
   list(APPEND lib_srcs tif_win32.c)
 endif(WIN32)
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef
+ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wunused -Wsign-compare
                                    -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast)
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations /wd4100 /wd4244 /wd4706 /wd4127 /wd4701 /wd4018 /wd4267 /wd4306 /wd4305 /wd4312 /wd4311)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter /wd4100 /wd4244 /wd4706 /wd4127 /wd4701 /wd4018 /wd4267 /wd4306 /wd4305 /wd4312 /wd4311)
 
 if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")

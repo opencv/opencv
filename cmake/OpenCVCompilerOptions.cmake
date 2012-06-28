@@ -62,6 +62,7 @@ endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
+  add_extra_compiler_option(-W)
   add_extra_compiler_option(-Wall)
   add_extra_compiler_option(-Werror=return-type)
   if(OPENCV_CAN_BREAK_BINARY_COMPATIBILITY)
@@ -78,6 +79,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   add_extra_compiler_option(-Winit-self)
   add_extra_compiler_option(-Wpointer-arith)
   add_extra_compiler_option(-Wshadow)
+  add_extra_compiler_option(-Wsign-promo)
 
   if(ENABLE_NOISY_WARNINGS)
     add_extra_compiler_option(-Wcast-align)
@@ -87,6 +89,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
   endif()
+  add_extra_compiler_option(-fdiagnostics-show-option)
 
   # The -Wno-long-long is required in 64bit systems when including sytem headers.
   if(X86_64)

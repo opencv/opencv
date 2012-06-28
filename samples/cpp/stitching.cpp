@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 
     if (status != Stitcher::OK)
     {
-        cout << "Can't stitch images, error code = " << status << endl;
+        cout << "Can't stitch images, error code = " << int(status) << endl;
         return -1;
     }
 

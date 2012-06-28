@@ -75,7 +75,7 @@ public:
     };
     inline void AddPoint(float x, float y, float r)
     {
-        DefTrackPoint   p = {x,y,r,0};
+        DefTrackPoint   p = {x,y,r,0,0,0};
         int             Num = GetPointNum();
 
         if(Num > 0)

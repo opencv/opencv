@@ -687,7 +687,7 @@ void RetinaColor::_computeGradient(const float *luminance)
 	}
 
 }
-const bool RetinaColor::applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result)
+bool RetinaColor::applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result)
 {
 	bool processSuccess=true;
 	// basic preliminary error check
@@ -703,7 +703,7 @@ const bool RetinaColor::applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> 
 	return processSuccess;
 }
 
-const bool RetinaColor::applyLMS2LabTransform(std::valarray<float> &result)
+bool RetinaColor::applyLMS2LabTransform(std::valarray<float> &result)
 {
 	bool processSuccess=true;
 	// basic preliminary error check

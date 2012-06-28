@@ -1,11 +1,11 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual 
- * property and proprietary rights in and to this software and 
- * related documentation and any modifications thereto.  
- * Any use, reproduction, disclosure, or distribution of this 
- * software and related documentation without an express license 
+ * NVIDIA Corporation and its licensors retain all intellectual
+ * property and proprietary rights in and to this software and
+ * related documentation and any modifications thereto.
+ * Any use, reproduction, disclosure, or distribution of this
+ * software and related documentation without an express license
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
@@ -15,15 +15,15 @@
 
 
 template <class T>
-TestResize<T>::TestResize(std::string testName, NCVTestSourceProvider<T> &src,
-                          Ncv32u width, Ncv32u height, Ncv32u scaleFactor, NcvBool bTextureCache)
+TestResize<T>::TestResize(std::string testName, NCVTestSourceProvider<T> &src_,
+                          Ncv32u width_, Ncv32u height_, Ncv32u scaleFactor_, NcvBool bTextureCache_)
     :
     NCVTestProvider(testName),
-    src(src),
-    width(width),
-    height(height),
-    scaleFactor(scaleFactor),
-    bTextureCache(bTextureCache)
+    src(src_),
+    width(width_),
+    height(height_),
+    scaleFactor(scaleFactor_),
+    bTextureCache(bTextureCache_)
 {
 }
 

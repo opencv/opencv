@@ -12,6 +12,7 @@
  * Adapted for FLANN by Marius Muja
  */
 
+#include "defines.h"
 #include <stdexcept>
 #include <ostream>
 #include <typeinfo>
@@ -97,6 +98,16 @@ struct big_any_policy : typed_base_any_policy<T>
     virtual void* get_value(void** src) { return *src; }
     virtual void print(std::ostream& out, void* const* src) { out << *reinterpret_cast<T const*>(*src); }
 };
+
+template<> inline void big_any_policy<flann_centers_init_t>::print(std::ostream& out, void* const* src)
+{
+    out << int(*reinterpret_cast<flann_centers_init_t const*>(*src));
+}
+
+template<> inline void big_any_policy<flann_algorithm_t>::print(std::ostream& out, void* const* src)
+{
+    out << int(*reinterpret_cast<flann_algorithm_t const*>(*src));
+}
 
 template<typename T>
 struct choose_policy

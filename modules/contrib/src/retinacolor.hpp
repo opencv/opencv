@@ -163,14 +163,14 @@ public:
 	* @param result: the input buffer to fill with the transformed colorspace retina output
 	* @return true if process ended successfully
 	*/
-	const bool applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result);
+	bool applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result);
 
 	/**
 	* apply to the retina color output the CIE Lab color transformation
 	* @param result: the input buffer to fill with the transformed colorspace retina output
 	* @return true if process ended successfully
 	*/
-	const bool applyLMS2LabTransform(std::valarray<float> &result);
+	bool applyLMS2LabTransform(std::valarray<float> &result);
 
 	/**
 	* @return the multiplexed frame result (use this after function runColorMultiplexing)

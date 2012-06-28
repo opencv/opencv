@@ -1136,7 +1136,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                     ptrVNew->ptr(), dstSize, ns * sizeof (float), dstROI, 1.0f/scale_factor, 1.0f/scale_factor, nppStBicubic) );
 
                 ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
-                ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
+                ncvAssertCUDALastErrorReturn((int)NCV_CUDA_ERROR);
 
                 cv::gpu::device::swap<FloatVector*>(ptrU, ptrUNew);
                 cv::gpu::device::swap<FloatVector*>(ptrV, ptrVNew);
@@ -1145,17 +1145,17 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
         }
 
         // end of warping iterations
-        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
+        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), (int)NCV_CUDA_ERROR);
 
         ncvAssertCUDAReturn( cudaMemcpy2DAsync
             (uOut.ptr(), uOut.pitch(), ptrU->ptr(),
-            kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
+            kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), (int)NCV_CUDA_ERROR );
 
         ncvAssertCUDAReturn( cudaMemcpy2DAsync
             (vOut.ptr(), vOut.pitch(), ptrV->ptr(),
-            kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
+            kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), (int)NCV_CUDA_ERROR );
 
-        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
+        ncvAssertCUDAReturn(cudaStreamSynchronize(stream), (int)NCV_CUDA_ERROR);
     }
 
     return NCV_SUCCESS;

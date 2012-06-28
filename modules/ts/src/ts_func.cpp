@@ -1129,26 +1129,26 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
     {
         if( !mask )
             for( i = 0; i < total; i++ )
-                result = std::max(result, (double)std::abs(src[i]));
+                result = std::max(result, (double)std::abs(int(src[i])));
         else
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
-                        result = std::max(result, (double)std::abs(src[i*cn + c]));
+                        result = std::max(result, (double)std::abs(int(src[i*cn + c])));
             }
     }
     else if( normType == NORM_L1 )
     {
         if( !mask )
             for( i = 0; i < total; i++ )
-                result += std::abs(src[i]);
+                result += std::abs(int(src[i]));
         else
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
-                        result += std::abs(src[i*cn + c]);
+                        result += std::abs(int(src[i*cn + c]));
             }
     }
     else

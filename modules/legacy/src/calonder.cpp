@@ -273,6 +273,9 @@ inline void sum_50t_176c(uchar **pp, uchar *sig, unsigned short *temp)
   ssig[9] =_mm_packus_epi16(_mm_srai_epi16(ttemp[18],2),_mm_srai_epi16(ttemp[19],2));
   ssig[10] =_mm_packus_epi16(_mm_srai_epi16(ttemp[20],2),_mm_srai_epi16(ttemp[21],2));
 #else
+  (void)pp;
+  (void)sig;
+  (void)temp;
   CV_Error( CV_StsNotImplemented, "Not supported without SSE2" );
 #endif
 }

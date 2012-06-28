@@ -635,9 +635,9 @@ cvCreateTrackbar( const char*, const char*,
 }
 
 CV_IMPL int
-cvCreateTrackbar2( const char* trackbar_name, const char* window_name,
-                   int* val, int count, CvTrackbarCallback2 on_notify2,
-                   void* userdata )
+cvCreateTrackbar2( const char* /*trackbar_name*/, const char* /*window_name*/,
+                   int* /*val*/, int /*count*/, CvTrackbarCallback2 /*on_notify2*/,
+                   void* /*userdata*/ )
 {
     CV_NO_GUI_ERROR( "cvCreateTrackbar2" );
     return -1;
@@ -678,7 +678,7 @@ CV_IMPL int cvWaitKey( int )
     return -1;
 }
 
-CV_IMPL int cvInitSystem( int argc, char** argv )
+CV_IMPL int cvInitSystem( int , char** )
 {
 
     CV_NO_GUI_ERROR( "cvInitSystem" );
@@ -693,23 +693,24 @@ CV_IMPL int cvStartWindowThread()
 }
 
 //-------- Qt ---------
-CV_IMPL void cvAddText( const CvArr*, const char*, CvPoint org, CvFont* font)
+CV_IMPL void cvAddText( const CvArr*, const char*, CvPoint , CvFont* )
 {
     CV_NO_GUI_ERROR("cvAddText");
 }
 
-CV_IMPL void cvDisplayStatusBar(const char* name, const char* arg2, int arg3)
+CV_IMPL void cvDisplayStatusBar(const char* , const char* , int )
 {
     CV_NO_GUI_ERROR("cvDisplayStatusBar");
 }
 
-CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
+CV_IMPL void cvDisplayOverlay(const char* , const char* , int )
 {
     CV_NO_GUI_ERROR("cvNamedWindow");
 }
 
-CV_IMPL int cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
+CV_IMPL int cvStartLoop(int (*)(int argc, char *argv[]), int , char* argv[])
 {
+    (void)argv;
     CV_NO_GUI_ERROR("cvStartLoop");
     return -1;
 }
@@ -719,7 +720,7 @@ CV_IMPL void cvStopLoop()
     CV_NO_GUI_ERROR("cvStopLoop");
 }
 
-CV_IMPL void cvSaveWindowParameters(const char* name)
+CV_IMPL void cvSaveWindowParameters(const char* )
 {
     CV_NO_GUI_ERROR("cvSaveWindowParameters");
 }

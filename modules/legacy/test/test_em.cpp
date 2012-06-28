@@ -105,7 +105,9 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
             else if( labelType == CV_32SC1 )
                 labels.at<int>(p, 0) = l;
             else
+            {
                 CV_DbgAssert(0);
+            }
         }
     }
 }

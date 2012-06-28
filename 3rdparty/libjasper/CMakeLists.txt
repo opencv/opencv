@@ -23,7 +23,7 @@ if(MSVC)
   add_definitions(-DJAS_WIN_MSVC_BUILD)
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-uninitialized -Wmissing-prototypes -Wmissing-declarations -Wunused -Wshadow
+ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-uninitialized -Wmissing-prototypes -Wmissing-declarations -Wunused -Wshadow -Wsign-compare
                                    /wd4013 /wd4018 /wd4715 /wd4244 /wd4101 /wd4267)
 
 if(UNIX)

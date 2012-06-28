@@ -21,7 +21,7 @@
 extern "C" {
 
 JNIEXPORT jint JNICALL
-JNI_OnLoad(JavaVM* vm, void* reserved)
+JNI_OnLoad(JavaVM* vm, void* )
 {
     JNIEnv* env;
     if (vm->GetEnv((void**) &env, JNI_VERSION_1_6) != JNI_OK)
@@ -51,7 +51,7 @@ JNI_OnLoad(JavaVM* vm, void* reserved)
 }
 
 JNIEXPORT void JNICALL
-JNI_OnUnload(JavaVM *vm, void *reserved)
+JNI_OnUnload(JavaVM*, void*)
 {
   //do nothing
 }

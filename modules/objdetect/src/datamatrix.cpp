@@ -486,6 +486,7 @@ endo: ; // end search for this o
   }
   return rc;
 #else
+  (void)im;
   deque <CvDataMatrixCode> rc;
   return rc;
 #endif

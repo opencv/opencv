@@ -181,7 +181,7 @@ public:
         datastart = data = (uchar*)PyArray_DATA(o);
     }
 
-    void deallocate(int* refcount, uchar* datastart, uchar* data)
+    void deallocate(int* refcount, uchar*, uchar*)
     {
         PyEnsureGIL gil;
         if( !refcount )
@@ -349,6 +349,7 @@ static PyObject* pyopencv_from(bool value)
 
 static bool pyopencv_to(PyObject* obj, bool& value, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     int _val = PyObject_IsTrue(obj);
@@ -365,6 +366,7 @@ static PyObject* pyopencv_from(size_t value)
 
 static bool pyopencv_to(PyObject* obj, size_t& value, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     value = (int)PyLong_AsUnsignedLong(obj);
@@ -376,8 +378,19 @@ static PyObject* pyopencv_from(int value)
     return PyInt_FromLong(value);
 }
 
+static PyObject* pyopencv_from(cvflann_flann_algorithm_t value)
+{
+    return PyInt_FromLong(int(value));
+}
+
+static PyObject* pyopencv_from(cvflann_flann_distance_t value)
+{
+    return PyInt_FromLong(int(value));
+}
+
 static bool pyopencv_to(PyObject* obj, int& value, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     value = (int)PyInt_AsLong(obj);
@@ -391,6 +404,7 @@ static PyObject* pyopencv_from(uchar value)
 
 static bool pyopencv_to(PyObject* obj, uchar& value, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     int ivalue = (int)PyInt_AsLong(obj);
@@ -405,6 +419,7 @@ static PyObject* pyopencv_from(double value)
 
 static bool pyopencv_to(PyObject* obj, double& value, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     if(PyInt_CheckExact(obj))
@@ -421,6 +436,7 @@ static PyObject* pyopencv_from(float value)
 
 static bool pyopencv_to(PyObject* obj, float& value, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     if(PyInt_CheckExact(obj))
@@ -442,6 +458,7 @@ static PyObject* pyopencv_from(const string& value)
 
 static bool pyopencv_to(PyObject* obj, string& value, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     char* str = PyString_AsString(obj);
@@ -453,6 +470,7 @@ static bool pyopencv_to(PyObject* obj, string& value, const char* name = "<unkno
 
 static inline bool pyopencv_to(PyObject* obj, Size& sz, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "ii", &sz.width, &sz.height) > 0;
@@ -465,6 +483,7 @@ static inline PyObject* pyopencv_from(const Size& sz)
 
 static inline bool pyopencv_to(PyObject* obj, Rect& r, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
@@ -477,6 +496,7 @@ static inline PyObject* pyopencv_from(const Rect& r)
 
 static inline bool pyopencv_to(PyObject* obj, Range& r, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     if(PyObject_Size(obj) == 0)
@@ -494,6 +514,7 @@ static inline PyObject* pyopencv_from(const Range& r)
 
 static inline bool pyopencv_to(PyObject* obj, CvSlice& r, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     if(PyObject_Size(obj) == 0)
@@ -511,6 +532,7 @@ static inline PyObject* pyopencv_from(const CvSlice& r)
 
 static inline bool pyopencv_to(PyObject* obj, Point& p, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     if(PyComplex_CheckExact(obj))
@@ -525,6 +547,7 @@ static inline bool pyopencv_to(PyObject* obj, Point& p, const char* name = "<unk
 
 static inline bool pyopencv_to(PyObject* obj, Point2f& p, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj || obj == Py_None)
         return true;
     if(PyComplex_CheckExact(obj))
@@ -549,6 +572,7 @@ static inline PyObject* pyopencv_from(const Point2f& p)
 
 static inline bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name = "<unknown>")
 {
+    (void)name;
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "ddd", &v[0], &v[1], &v[2]) > 0;
@@ -792,6 +816,7 @@ template<> struct pyopencvVecConverter<string>
 
 static inline bool pyopencv_to(PyObject *obj, CvTermCriteria& dst, const char *name="<unknown>")
 {
+    (void)name;
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.max_iter, &dst.epsilon) > 0;
@@ -804,6 +829,7 @@ static inline PyObject* pyopencv_from(const CvTermCriteria& src)
 
 static inline bool pyopencv_to(PyObject *obj, TermCriteria& dst, const char *name="<unknown>")
 {
+    (void)name;
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.maxCount, &dst.epsilon) > 0;
@@ -816,6 +842,7 @@ static inline PyObject* pyopencv_from(const TermCriteria& src)
 
 static inline bool pyopencv_to(PyObject *obj, RotatedRect& dst, const char *name="<unknown>")
 {
+    (void)name;
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "(ff)(ff)f", &dst.center.x, &dst.center.y, &dst.size.width, &dst.size.height, &dst.angle) > 0;
@@ -847,6 +874,7 @@ static inline PyObject* pyopencv_from(const CvDTreeNode* node)
 
 static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name="<unknown>")
 {
+    (void)name;
     bool ok = false;
     PyObject* keys = PyObject_CallMethod(o,(char*)"keys",0);
     PyObject* values = PyObject_CallMethod(o,(char*)"values",0);
@@ -927,7 +955,7 @@ static void OnMouse(int event, int x, int y, int flags, void* param)
     PyGILState_Release(gstate);
 }
 
-static PyObject *pycvSetMouseCallback(PyObject *self, PyObject *args, PyObject *kw)
+static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
 {
     const char *keywords[] = { "window_name", "on_mouse", "param", NULL };
     char* name;
@@ -961,7 +989,7 @@ static void OnChange(int pos, void *param)
     PyGILState_Release(gstate);
 }
 
-static PyObject *pycvCreateTrackbar(PyObject *self, PyObject *args)
+static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 {
     PyObject *on_change;
     char* trackbar_name;
@@ -982,6 +1010,11 @@ static PyObject *pycvCreateTrackbar(PyObject *self, PyObject *args)
 ///////////////////////////////////////////////////////////////////////////////////////
 
 #define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return
+
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wunused-parameter"
+#  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#endif
 
 #include "pyopencv_generated_types.h"
 #include "pyopencv_generated_funcs.h"

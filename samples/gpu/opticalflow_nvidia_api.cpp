@@ -20,7 +20,7 @@
 #endif
 
 #if !defined(HAVE_CUDA)
-int main( int argc, const char** argv )
+int main( int, const char** )
 {
     std::cout << "Please compile the library with CUDA support" << std::endl;
     return -1;

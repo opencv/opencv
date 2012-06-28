@@ -11,10 +11,6 @@ class_ignore_list = (
     "FileNode", "FileStorage", "KDTree",
     #highgui
     "VideoWriter", "VideoCapture",
-    #features2d
-    #"KeyPoint", "MSER", "StarDetector", "SURF", "DMatch",
-    #ml
-    #"EM",
 )
 
 const_ignore_list = (
@@ -364,9 +360,10 @@ ManualFuncs = {
             'cpp_code' :
 """
 // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual (JNIEnv*, jclass, jlong, jlong);
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
-  (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
+  (JNIEnv* env, jclass, jlong src_nativeObj, jlong mask_nativeObj)
 {
     try {
         LOGD("Core::n_1minMaxLoc()");
@@ -434,9 +431,10 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
             'cpp_code' :
 """
 // C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
-  (JNIEnv* env, jclass cls, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
+  (JNIEnv* env, jclass, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
 {
     try {
         LOGD("Core::n_1getTextSize()");
@@ -1014,7 +1012,7 @@ extern "C" {
              # java native method args
             jn_args = []
             # jni (cpp) function args
-            jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "cls", "", [], "" ])]
+            jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "", "", [], "" ])]
             j_prologue = []
             j_epilogue = []
             c_prologue = []
@@ -1252,6 +1250,7 @@ extern "C" {
                 clazz = self.classes[fi.classname].jname
             cpp_code.write ( Template( \
 """
+JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname ($argst);
 
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
   ($args)
@@ -1282,7 +1281,8 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         module = self.module, \
         clazz = clazz.replace('_', '_1'), \
         fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'), \
-        args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
+        args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
+        argst = ", ".join([type_dict[a.ctype].get("jni_type") for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
         epilogue = "  ".join(c_epilogue), \
         ret = ret, \
@@ -1374,14 +1374,15 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 //  native support for java finalize()
 //  static void %(cls)s::delete( __int64 self )
 //
+JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete(JNIEnv*, jclass, jlong);
 
 JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
-  (JNIEnv* env, jclass cls, jlong self)
+  (JNIEnv*, jclass, jlong self)
 {
     delete (%(cls)s*) self;
 }
 
-""" % {"module" : module, "cls" : name, "j_cls" : ci.jname}
+""" % {"module" : module, "cls" : name, "j_cls" : ci.jname.replace('_', '_1')}
             )
 
 

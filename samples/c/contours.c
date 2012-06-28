@@ -22,6 +22,8 @@ static void on_trackbar(int pos)
     IplImage* cnt_img = cvCreateImage( cvSize(w,w), 8, 3 );
     CvSeq* _contours = contours;
     int _levels = levels - 3;
+    (void)pos;
+
     if( _levels <= 0 ) // get to the nearest face to make it look more funny
         _contours = _contours->h_next->h_next->h_next;
     cvZero( cnt_img );
@@ -58,6 +60,8 @@ int main(int argc, char* argv[])
     IplImage* img32f = cvCreateImage( cvSize(w,w), IPL_DEPTH_32F, 1 );
     IplImage* img32s = cvCreateImage( cvSize(w,w), IPL_DEPTH_32S, 1 );
     IplImage* img3 = cvCreateImage( cvSize(w,w), 8, 3 );
+    (void)argc; (void)argv;
+
     help();
     cvZero( img );
 

@@ -36,7 +36,7 @@ namespace cvflann
     */
     flann_distance_t flann_distance_type_ = FLANN_DIST_L2;
     flann_distance_t flann_distance_type() { return flann_distance_type_; }
-    
+
     /**
      * Set distance type to used
      * \deprecated
@@ -52,6 +52,6 @@ namespace cvflann
         }
         flann_distance_type_ = distance_type;
     }
-    
+
     void dummyfunc() {}
 }

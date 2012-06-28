@@ -20,17 +20,19 @@ extern "C" {
 //   VideoCapture::VideoCapture()
 //
 
+JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__
+  (JNIEnv* env, jclass);
 
 JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__
-  (JNIEnv* env, jclass cls)
+  (JNIEnv* env, jclass)
 {
     try {
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1VideoCapture__()");
 #endif // DEBUG
-        
+
         VideoCapture* _retval_ = new VideoCapture(  );
-        
+
         return (jlong) _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -55,17 +57,19 @@ JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__
 //   VideoCapture::VideoCapture(int device)
 //
 
+JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__I
+  (JNIEnv* env, jclass, jint device);
 
 JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__I
-  (JNIEnv* env, jclass cls, jint device)
+  (JNIEnv* env, jclass, jint device)
 {
     try {
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1VideoCapture__I()");
 #endif // DEBUG
-        
+
         VideoCapture* _retval_ = new VideoCapture( device );
-        
+
         return (jlong) _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -91,9 +95,11 @@ JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__I
 //  double VideoCapture::get(int propId)
 //
 
+JNIEXPORT jdouble JNICALL Java_org_opencv_highgui_VideoCapture_n_1get
+  (JNIEnv* env, jclass, jlong self, jint propId);
 
 JNIEXPORT jdouble JNICALL Java_org_opencv_highgui_VideoCapture_n_1get
-  (JNIEnv* env, jclass cls, jlong self, jint propId)
+  (JNIEnv* env, jclass, jlong self, jint propId)
 {
     try {
 #ifdef DEBUG
@@ -101,7 +107,7 @@ JNIEXPORT jdouble JNICALL Java_org_opencv_highgui_VideoCapture_n_1get
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         double _retval_ = me->get( propId );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -127,9 +133,11 @@ JNIEXPORT jdouble JNICALL Java_org_opencv_highgui_VideoCapture_n_1get
 //  bool VideoCapture::grab()
 //
 
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1grab
+  (JNIEnv* env, jclass, jlong self);
 
 JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1grab
-  (JNIEnv* env, jclass cls, jlong self)
+  (JNIEnv* env, jclass, jlong self)
 {
     try {
 #ifdef DEBUG
@@ -137,7 +145,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1grab
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         bool _retval_ = me->grab(  );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -163,9 +171,11 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1grab
 //  bool VideoCapture::isOpened()
 //
 
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1isOpened
+  (JNIEnv* env, jclass, jlong self);
 
 JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1isOpened
-  (JNIEnv* env, jclass cls, jlong self)
+  (JNIEnv* env, jclass, jlong self)
 {
     try {
 #ifdef DEBUG
@@ -173,7 +183,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1isOpened
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         bool _retval_ = me->isOpened(  );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -198,9 +208,11 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1isOpened
 //  bool VideoCapture::open(int device)
 //
 
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JI
+  (JNIEnv* env, jclass, jlong self, jint device);
 
 JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JI
-  (JNIEnv* env, jclass cls, jlong self, jint device)
+  (JNIEnv* env, jclass, jlong self, jint device)
 {
     try {
 #ifdef DEBUG
@@ -208,7 +220,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JI
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         bool _retval_ = me->open( device );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -234,9 +246,11 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JI
 //  bool VideoCapture::read(Mat image)
 //
 
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1read
+  (JNIEnv* env, jclass, jlong self, jlong image_nativeObj);
 
 JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1read
-  (JNIEnv* env, jclass cls, jlong self, jlong image_nativeObj)
+  (JNIEnv* env, jclass, jlong self, jlong image_nativeObj)
 {
     try {
 #ifdef DEBUG
@@ -245,7 +259,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1read
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         Mat& image = *((Mat*)image_nativeObj);
         bool _retval_ = me->read( image );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -271,9 +285,11 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1read
 //  void VideoCapture::release()
 //
 
+JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1release
+  (JNIEnv* env, jclass, jlong self);
 
 JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1release
-  (JNIEnv* env, jclass cls, jlong self)
+  (JNIEnv* env, jclass, jlong self)
 {
     try {
 #ifdef DEBUG
@@ -281,7 +297,7 @@ JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1release
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         me->release(  );
-        
+
         return;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -307,9 +323,11 @@ JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1release
 //  bool VideoCapture::retrieve(Mat image, int channel = 0)
 //
 
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJI
+  (JNIEnv* env, jclass, jlong self, jlong image_nativeObj, jint channel);
 
 JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJI
-  (JNIEnv* env, jclass cls, jlong self, jlong image_nativeObj, jint channel)
+  (JNIEnv* env, jclass, jlong self, jlong image_nativeObj, jint channel)
 {
     try {
 #ifdef DEBUG
@@ -318,7 +336,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJI
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         Mat& image = *((Mat*)image_nativeObj);
         bool _retval_ = me->retrieve( image, channel );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -340,9 +358,11 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJI
 
 
 
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJ
+  (JNIEnv* env, jclass, jlong self, jlong image_nativeObj);
 
 JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJ
-  (JNIEnv* env, jclass cls, jlong self, jlong image_nativeObj)
+  (JNIEnv* env, jclass, jlong self, jlong image_nativeObj)
 {
     try {
 #ifdef DEBUG
@@ -351,7 +371,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJ
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         Mat& image = *((Mat*)image_nativeObj);
         bool _retval_ = me->retrieve( image );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -377,9 +397,11 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJ
 //  bool VideoCapture::set(int propId, double value)
 //
 
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1set
+  (JNIEnv* env, jclass, jlong self, jint propId, jdouble value);
 
 JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1set
-  (JNIEnv* env, jclass cls, jlong self, jint propId, jdouble value)
+  (JNIEnv* env, jclass, jlong self, jint propId, jdouble value)
 {
     try {
 #ifdef DEBUG
@@ -387,7 +409,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1set
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         bool _retval_ = me->set( propId, value );
-        
+
         return _retval_;
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -408,14 +430,17 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1set
 }
 
 JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_n_1getSupportedPreviewSizes
-  (JNIEnv *env, jclass cls, jlong self)
+  (JNIEnv *env, jclass, jlong self);
+
+JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_n_1getSupportedPreviewSizes
+  (JNIEnv *env, jclass, jlong self)
 {
     try {
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1set()");
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
-		union {double prop; const char* name;} u;
+        union {double prop; const char* name;} u;
         u.prop = me->get(CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING);
         return env->NewStringUTF(u.name);
     } catch(cv::Exception e) {
@@ -444,7 +469,10 @@ JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_n_1getSupportedPr
 //
 
 JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1delete
-  (JNIEnv* env, jclass cls, jlong self)
+  (JNIEnv*, jclass, jlong self);
+
+JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1delete
+  (JNIEnv*, jclass, jlong self)
 {
     delete (VideoCapture*) self;
 }

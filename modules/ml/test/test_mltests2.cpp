@@ -52,7 +52,7 @@ void nbayes_check_data( CvMLData* _data )
         CV_Error( CV_StsBadArg, "missing values are not supported" );
     const CvMat* var_types = _data->get_var_types();
     bool is_classifier = var_types->data.ptr[var_types->cols-1] == CV_VAR_CATEGORICAL;
-    if( ( fabs( cvNorm( var_types, 0, CV_L1 ) - 
+    if( ( fabs( cvNorm( var_types, 0, CV_L1 ) -
         (var_types->rows + var_types->cols - 2)*CV_VAR_ORDERED - CV_VAR_CATEGORICAL ) > FLT_EPSILON ) ||
         !is_classifier )
         CV_Error( CV_StsBadArg, "incorrect types of predictors or responses" );
@@ -89,7 +89,7 @@ float nbayes_calc_error( CvNormalBayesClassifier* nbayes, CvMLData* _data, int t
     {
         CvMat sample;
         int si = sidx ? sidx[i] : i;
-        cvGetRow( values, &sample, si ); 
+        cvGetRow( values, &sample, si );
         float r = (float)nbayes->predict( &sample, 0 );
         if( pred_resp )
             pred_resp[i] = r;
@@ -151,7 +151,7 @@ float knearest_calc_error( CvKNearest* knearest, CvMLData* _data, int k, int typ
         {
             CvMat sample;
             int si = sidx ? sidx[i] : i;
-            cvGetRow( &predictors, &sample, si ); 
+            cvGetRow( &predictors, &sample, si );
             float r = knearest->find_nearest( &sample, k );
             if( pred_resp )
                 pred_resp[i] = r;
@@ -166,14 +166,14 @@ float knearest_calc_error( CvKNearest* knearest, CvMLData* _data, int k, int typ
         {
             CvMat sample;
             int si = sidx ? sidx[i] : i;
-            cvGetRow( &predictors, &sample, si ); 
+            cvGetRow( &predictors, &sample, si );
             float r = knearest->find_nearest( &sample, k );
             if( pred_resp )
                 pred_resp[i] = r;
             float d = r - response->data.fl[si*r_step];
             err += d*d;
         }
-        err = sample_count ? err / (float)sample_count : -FLT_MAX;    
+        err = sample_count ? err / (float)sample_count : -FLT_MAX;
     }
     return err;
 }
@@ -239,7 +239,7 @@ bool svm_train_auto( CvSVM* svm, CvMLData* _data, CvSVMParams _params,
     const CvMat* _responses = _data->get_responses();
     const CvMat* _var_idx = _data->get_var_idx();
     const CvMat* _sample_idx = _data->get_train_sample_idx();
-    return svm->train_auto( _train_data, _responses, _var_idx, 
+    return svm->train_auto( _train_data, _responses, _var_idx,
         _sample_idx, _params, k_fold, C_grid, gamma_grid, p_grid, nu_grid, coef_grid, degree_grid );
 }
 float svm_calc_error( CvSVM* svm, CvMLData* _data, int type, vector<float> *resp )
@@ -268,7 +268,7 @@ float svm_calc_error( CvSVM* svm, CvMLData* _data, int type, vector<float> *resp
         {
             CvMat sample;
             int si = sidx ? sidx[i] : i;
-            cvGetRow( values, &sample, si ); 
+            cvGetRow( values, &sample, si );
             float r = svm->predict( &sample );
             if( pred_resp )
                 pred_resp[i] = r;
@@ -290,7 +290,7 @@ float svm_calc_error( CvSVM* svm, CvMLData* _data, int type, vector<float> *resp
             float d = r - response->data.fl[si*r_step];
             err += d*d;
         }
-        err = sample_count ? err / (float)sample_count : -FLT_MAX;    
+        err = sample_count ? err / (float)sample_count : -FLT_MAX;
     }
     return err;
 }
@@ -395,7 +395,7 @@ float ann_calc_error( CvANN_MLP* ann, CvMLData* _data, map<int, int>& cls_map, i
     {
         CvMat sample;
         int si = sidx ? sidx[i] : i;
-        cvGetRow( &predictors, &sample, si ); 
+        cvGetRow( &predictors, &sample, si );
         ann->predict( &sample, &_output );
         CvPoint best_cls = {0,0};
         cvMinMaxLoc( &_output, 0, 0, 0, &best_cls, 0 );
@@ -417,7 +417,7 @@ int str_to_boost_type( string& str )
     if ( !str.compare("DISCRETE") )
         return CvBoost::DISCRETE;
     if ( !str.compare("REAL") )
-        return CvBoost::REAL;    
+        return CvBoost::REAL;
     if ( !str.compare("LOGIT") )
         return CvBoost::LOGIT;
     if ( !str.compare("GENTLE") )
@@ -480,7 +480,7 @@ CV_MLBaseTest::~CV_MLBaseTest()
         validationFS.release();
     if( nbayes )
         delete nbayes;
-    if( knearest ) 
+    if( knearest )
         delete knearest;
     if( svm )
         delete svm;
@@ -519,15 +519,14 @@ int CV_MLBaseTest::read_params( CvFileStorage* _fs )
     return cvtest::TS::OK;;
 }
 
-void CV_MLBaseTest::run( int start_from )
+void CV_MLBaseTest::run( int )
 {
     string filename = ts->get_data_path();
     filename += get_validation_filename();
     validationFS.open( filename, FileStorage::READ );
     read_params( *validationFS );
-    
+
     int code = cvtest::TS::OK;
-    start_from = 0;
     for (int i = 0; i < test_case_count; i++)
     {
         int temp_code = run_test_case( i );
@@ -594,7 +593,7 @@ string& CV_MLBaseTest::get_validation_filename()
 int CV_MLBaseTest::train( int testCaseIdx )
 {
     bool is_trained = false;
-    FileNode modelParamsNode = 
+    FileNode modelParamsNode =
         validationFS.getFirstTopLevelNode()["validation"][modelName][dataSetNames[testCaseIdx]]["model_params"];
 
     if( !modelName.compare(CV_NBAYES) )
@@ -651,7 +650,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
         modelParamsNode["max_categories"] >> MAX_CATEGORIES;
         modelParamsNode["cv_folds"] >> CV_FOLDS;
         modelParamsNode["is_pruned"] >> IS_PRUNED;
-        is_trained = dtree->train( &data, 
+        is_trained = dtree->train( &data,
             CvDTreeParams(MAX_DEPTH, MIN_SAMPLE_COUNT, REG_ACCURACY, USE_SURROGATE,
             MAX_CATEGORIES, CV_FOLDS, false, IS_PRUNED, 0 )) != 0;
     }
@@ -683,7 +682,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
         modelParamsNode["is_pruned"] >> IS_PRUNED;
         modelParamsNode["nactive_vars"] >> NACTIVE_VARS;
         modelParamsNode["max_trees_num"] >> MAX_TREES_NUM;
-        is_trained = rtrees->train( &data, CvRTParams(	MAX_DEPTH, MIN_SAMPLE_COUNT, REG_ACCURACY,
+        is_trained = rtrees->train( &data, CvRTParams(  MAX_DEPTH, MIN_SAMPLE_COUNT, REG_ACCURACY,
             USE_SURROGATE, MAX_CATEGORIES, 0, true, // (calc_var_importance == true) <=> RF processes variable importance
             NACTIVE_VARS, MAX_TREES_NUM, OOB_EPS, CV_TERMCRIT_ITER)) != 0;
     }
@@ -713,7 +712,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
     return cvtest::TS::OK;
 }
 
-float CV_MLBaseTest::get_error( int testCaseIdx, int type, vector<float> *resp )
+float CV_MLBaseTest::get_error( int /*testCaseIdx*/, int type, vector<float> *resp )
 {
     float err = 0;
     if( !modelName.compare(CV_NBAYES) )
@@ -721,8 +720,8 @@ float CV_MLBaseTest::get_error( int testCaseIdx, int type, vector<float> *resp )
     else if( !modelName.compare(CV_KNEAREST) )
     {
         assert( 0 );
-        testCaseIdx = 0;
-        /*int k = 2;
+        /*testCaseIdx = 0;
+        int k = 2;
         validationFS.getFirstTopLevelNode()["validation"][modelName][dataSetNames[testCaseIdx]]["model_params"]["k"] >> k;
         err = knearest->calc_error( &data, k, type, resp );*/
     }

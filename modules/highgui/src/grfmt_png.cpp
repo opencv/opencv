@@ -51,12 +51,21 @@
     and png2bmp sample from libpng distribution (Copyright (C) 1999-2001 MIYASAKA Masaru)
 \****************************************************************************************/
 
+#undef HAVE_UNISTD_H //to avoid redefinition
+#ifndef _LFS64_LARGEFILE
+#  define _LFS64_LARGEFILE 0
+#endif
+#ifndef _FILE_OFFSET_BITS
+#  define _FILE_OFFSET_BITS 0
+#endif
+
 #ifdef HAVE_LIBPNG_PNG_H
 #include <libpng/png.h>
 #else
 #include <png.h>
 #endif
 #include <zlib.h>
+
 #include "grfmt_png.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 1200
@@ -317,23 +326,6 @@ void PngEncoder::flushBuf(void*)
 
 bool  PngEncoder::write( const Mat& img, const vector<int>& params )
 {
-    int compression_level = 0;
-    int compression_strategy = Z_RLE;
-
-    for( size_t i = 0; i < params.size(); i += 2 )
-    {
-        if( params[i] == CV_IMWRITE_PNG_COMPRESSION )
-        {
-            compression_level = params[i+1];
-            compression_level = MIN(MAX(compression_level, 0), MAX_MEM_LEVEL);
-        }
-        if( params[i] == CV_IMWRITE_PNG_STRATEGY )
-        {
-            compression_strategy = params[i+1];
-            compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
-        }
-    }
-
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
     png_infop info_ptr = 0;
     FILE* f = 0;
@@ -363,6 +355,23 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
                     f = fopen( m_filename.c_str(), "wb" );
                     if( f )
                         png_init_io( png_ptr, f );
+                }
+
+                int compression_level = 0;
+                int compression_strategy = Z_RLE;
+
+                for( size_t i = 0; i < params.size(); i += 2 )
+                {
+                    if( params[i] == CV_IMWRITE_PNG_COMPRESSION )
+                    {
+                        compression_level = params[i+1];
+                        compression_level = MIN(MAX(compression_level, 0), MAX_MEM_LEVEL);
+                    }
+                    if( params[i] == CV_IMWRITE_PNG_STRATEGY )
+                    {
+                        compression_strategy = params[i+1];
+                        compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+                    }
                 }
 
                 if( m_buf || f )

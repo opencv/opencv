@@ -687,6 +687,7 @@ struct applyHaarClassifierAnchorParallelFunctor
     template<class TList>
     void call(TList tl)
     {
+        (void)tl;
         applyHaarClassifierAnchorParallel <
             Loki::TL::TypeAt<TList, 0>::Result::value,
             Loki::TL::TypeAt<TList, 1>::Result::value,
@@ -796,6 +797,7 @@ struct applyHaarClassifierClassifierParallelFunctor
     template<class TList>
     void call(TList tl)
     {
+        (void)tl;
         applyHaarClassifierClassifierParallel <
             Loki::TL::TypeAt<TList, 0>::Result::value,
             Loki::TL::TypeAt<TList, 1>::Result::value,
@@ -876,6 +878,7 @@ struct initializeMaskVectorFunctor
     template<class TList>
     void call(TList tl)
     {
+        (void)tl;
         initializeMaskVector <
             Loki::TL::TypeAt<TList, 0>::Result::value,
             Loki::TL::TypeAt<TList, 1>::Result::value >
