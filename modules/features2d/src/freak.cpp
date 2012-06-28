@@ -44,16 +44,6 @@
 namespace cv
 {
 
-#if CV_SSSE3
-// binary: 10000000 => char: 128 or hex: 0x80
-static const __m128i binMask = _mm_set_epi8(0x80, 0x80, 0x80,
-                                            0x80, 0x80, 0x80,
-                                            0x80, 0x80, 0x80,
-                                            0x80, 0x80, 0x80,
-                                            0x80, 0x80, 0x80,
-                                            0x80);
-#endif
-
 static const double FREAK_SQRT2 = 1.4142135623731;
 static const double FREAK_INV_SQRT2 = 1.0 / FREAK_SQRT2;
 static const double FREAK_LOG2 = 0.693147180559945;
@@ -234,13 +224,6 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
 
     ((FREAK*)this)->buildPattern();
 
-#if CV_SSSE3
-    register __m128i operand1;
-    register __m128i operand2;
-    register __m128i workReg;
-    register __m128i result128;
-#endif
-
     Mat imgIntegral;
     integral(image, imgIntegral);
     std::vector<int> kpScaleIdx(keypoints.size()); // used to save pattern scale index corresponding to each keypoints
@@ -292,8 +275,13 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
     if( !extAll ) {
         // extract the best comparisons only
         descriptors = cv::Mat::zeros(keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
-#if CV_SSSE3
+#if CV_SSE2
         __m128i* ptr= (__m128i*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
+        // binary: 10000000 => char: 128 or hex: 0x80
+        const __m128i binMask = _mm_set_epi8(0x80, 0x80, 0x80, 0x80,
+                                             0x80, 0x80, 0x80, 0x80,
+                                             0x80, 0x80, 0x80, 0x80,
+                                             0x80, 0x80, 0x80, 0x80);
 #else
         std::bitset<FREAK_NB_PAIRS>* ptr = (std::bitset<FREAK_NB_PAIRS>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 #endif
@@ -329,25 +317,52 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
             for( int i = FREAK_NB_POINTS; i--; ) {
                 pointsValue[i] = meanIntensity(image, imgIntegral, keypoints[k].pt.x,keypoints[k].pt.y, kpScaleIdx[k], thetaIdx, i);
             }
-#if CV_SSSE3
-            // extracting descriptor by blocks of 128 bits using SSE instructions
+#if CV_SSE2
             // note that comparisons order is modified in each block (but first 128 comparisons remain globally the same-->does not affect the 128,384 bits segmanted matching strategy)
-            int cnt(0);
-            for( int n = 4; n-- ; ) {
-                result128 = _mm_setzero_si128();
-                for( int m = 8; m--; cnt+=16 ) {
-                    operand1 = _mm_set_epi8(pointsValue[descriptionPairs[cnt].i],pointsValue[descriptionPairs[cnt+1].i],pointsValue[descriptionPairs[cnt+2].i],pointsValue[descriptionPairs[cnt+3].i],
-                                          pointsValue[descriptionPairs[cnt+4].i],pointsValue[descriptionPairs[cnt+5].i],pointsValue[descriptionPairs[cnt+6].i],pointsValue[descriptionPairs[cnt+7].i],
-                                          pointsValue[descriptionPairs[cnt+8].i],pointsValue[descriptionPairs[cnt+9].i],pointsValue[descriptionPairs[cnt+10].i],pointsValue[descriptionPairs[cnt+11].i],
-                                          pointsValue[descriptionPairs[cnt+12].i],pointsValue[descriptionPairs[cnt+13].i],pointsValue[descriptionPairs[cnt+14].i],pointsValue[descriptionPairs[cnt+15].i]);
+            int cnt = 0;
+            for( int n = FREAK_NB_PAIRS/128; n-- ; )
+            {
+                __m128i result128 = _mm_setzero_si128();
+                for( int m = 128/16; m--; cnt += 16 )
+                {
+                    __m128i operand1 = _mm_set_epi8(
+                        pointsValue[descriptionPairs[cnt+0].i],
+                        pointsValue[descriptionPairs[cnt+1].i],
+                        pointsValue[descriptionPairs[cnt+2].i],
+                        pointsValue[descriptionPairs[cnt+3].i],
+                        pointsValue[descriptionPairs[cnt+4].i],
+                        pointsValue[descriptionPairs[cnt+5].i],
+                        pointsValue[descriptionPairs[cnt+6].i],
+                        pointsValue[descriptionPairs[cnt+7].i],
+                        pointsValue[descriptionPairs[cnt+8].i],
+                        pointsValue[descriptionPairs[cnt+9].i],
+                        pointsValue[descriptionPairs[cnt+10].i],
+                        pointsValue[descriptionPairs[cnt+11].i],
+                        pointsValue[descriptionPairs[cnt+12].i],
+                        pointsValue[descriptionPairs[cnt+13].i],
+                        pointsValue[descriptionPairs[cnt+14].i],
+                        pointsValue[descriptionPairs[cnt+15].i]);
 
-                    operand2 = _mm_set_epi8(pointsValue[descriptionPairs[cnt].j],pointsValue[descriptionPairs[cnt+1].j],pointsValue[descriptionPairs[cnt+2].j],pointsValue[descriptionPairs[cnt+3].j],
-                                          pointsValue[descriptionPairs[cnt+4].j],pointsValue[descriptionPairs[cnt+5].j],pointsValue[descriptionPairs[cnt+6].j],pointsValue[descriptionPairs[cnt+7].j],
-                                          pointsValue[descriptionPairs[cnt+8].j],pointsValue[descriptionPairs[cnt+9].j],pointsValue[descriptionPairs[cnt+10].j],pointsValue[descriptionPairs[cnt+11].j],
-                                          pointsValue[descriptionPairs[cnt+12].j],pointsValue[descriptionPairs[cnt+13].j],pointsValue[descriptionPairs[cnt+14].j],pointsValue[descriptionPairs[cnt+15].j]);
+                    __m128i operand2 = _mm_set_epi8(
+                        pointsValue[descriptionPairs[cnt+0].j],
+                        pointsValue[descriptionPairs[cnt+1].j],
+                        pointsValue[descriptionPairs[cnt+2].j],
+                        pointsValue[descriptionPairs[cnt+3].j],
+                        pointsValue[descriptionPairs[cnt+4].j],
+                        pointsValue[descriptionPairs[cnt+5].j],
+                        pointsValue[descriptionPairs[cnt+6].j],
+                        pointsValue[descriptionPairs[cnt+7].j],
+                        pointsValue[descriptionPairs[cnt+8].j],
+                        pointsValue[descriptionPairs[cnt+9].j],
+                        pointsValue[descriptionPairs[cnt+10].j],
+                        pointsValue[descriptionPairs[cnt+11].j],
+                        pointsValue[descriptionPairs[cnt+12].j],
+                        pointsValue[descriptionPairs[cnt+13].j],
+                        pointsValue[descriptionPairs[cnt+14].j],
+                        pointsValue[descriptionPairs[cnt+15].j]);
 
-                    workReg = _mm_min_epu8(operand1, operand2); // emulated "greater than" for UNSIGNED int
-                    workReg = _mm_cmpeq_epi8(workReg, operand2); // emulated "greater than" for UNSIGNED int
+                    __m128i workReg = _mm_min_epu8(operand1, operand2); // emulated "not less than" for 8-bit UNSIGNED integers
+                    workReg = _mm_cmpeq_epi8(workReg, operand2);        // emulated "not less than" for 8-bit UNSIGNED integers
 
                     workReg = _mm_and_si128(_mm_srli_epi16(binMask, m), workReg); // merge the last 16 bits with the 128bits std::vector until full
                     result128 = _mm_or_si128(result128, workReg);
@@ -355,10 +370,20 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
                 (*ptr) = result128;
                 ++ptr;
             }
-            ptr-=8;
+            ptr -= 8;
 #else
-            for( int m = FREAK_NB_PAIRS; m--; ) {
-                ptr->set(m, pointsValue[descriptionPairs[m].i]>  pointsValue[descriptionPairs[m].j ] );
+            // extracting descriptor preserving the order of SSE version
+            int cnt = 0;
+            for( int n = 7; n < FREAK_NB_PAIRS; n += 128)
+            {
+                for( int m = 8; m--; )
+                {
+                    int nm = n-m;
+                    for(int kk = nm+15*8; kk >= nm; kk-=8, ++cnt)
+                    {
+                        ptr->set(kk, pointsValue[descriptionPairs[cnt].i] >= pointsValue[descriptionPairs[cnt].j]);
+                    }
+                }
             }
             --ptr;
 #endif
@@ -407,7 +432,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
             for( int i = 1; i < FREAK_NB_POINTS; ++i ) {
                 //(generate all the pairs)
                 for( int j = 0; j < i; ++j ) {
-                    ptr->set(cnt, pointsValue[i]>pointsValue[j] );
+                    ptr->set(cnt, pointsValue[i] >= pointsValue[j] );
                     ++cnt;
                 }
             }
