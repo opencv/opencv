@@ -150,7 +150,37 @@ int main(int ac, char** av)
 
   }
 
-  cout << "Try opening " << filename << " to see the serialized data." << endl;
+  cout << "Try opening " << filename << " to see the serialized data." << endl << endl;
+
+  //read from string
+  {
+    cout << "Read data from string\n";
+    string dataString = 
+        "%YAML:1.0\n"
+        "mdata:\n"
+        "   A: 97\n"
+        "   X: 3.1415926535897931e+00\n"
+        "   id: mydata1234\n";
+    MyData m;
+    FileStorage fs(dataString, FileStorage::READ | FileStorage::MEMORY);
+    cout << "attempting to read mdata_b from string\n";   //Show default behavior for empty matrix
+    fs["mdata"] >> m;
+    cout << "read mdata\n";
+    cout << m << endl;
+  }
+
+  //write to string
+  {
+    cout << "Write data to string\n";
+    FileStorage fs(filename, FileStorage::WRITE | FileStorage::MEMORY | FileStorage::FORMAT_YAML);
+
+    cout << "writing MyData struct\n";
+    MyData m(1);
+    fs << "mdata" << m;
+    cout << m << endl;
+    string createdString = fs.releaseAndGetString();
+    cout << "Created string:\n" << createdString << "\n";
+  }
 
   return 0;
 }
