@@ -17,16 +17,16 @@
  * Redistribution and use in source and binary forms, with or
  * without modification, are permitted provided that the following
  * conditions are met:
- * 	Redistributions of source code must retain the above
- * 	copyright notice, this list of conditions and the following
- * 	disclaimer.
- * 	Redistributions in binary form must reproduce the above
- * 	copyright notice, this list of conditions and the following
- * 	disclaimer in the documentation and/or other materials
- * 	provided with the distribution.
- * 	The name of Contributor may not be used to endorse or
- * 	promote products derived from this software without
- * 	specific prior written permission.
+ *  Redistributions of source code must retain the above
+ *  copyright notice, this list of conditions and the following
+ *  disclaimer.
+ *  Redistributions in binary form must reproduce the above
+ *  copyright notice, this list of conditions and the following
+ *  disclaimer in the documentation and/or other materials
+ *  provided with the distribution.
+ *  The name of Contributor may not be used to endorse or
+ *  promote products derived from this software without
+ *  specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
  * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
@@ -71,26 +71,26 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
         mask = cvarrToMat(_mask);
     vector<KeyPoint> kpt;
     Mat descr;
-    
+
     Ptr<Feature2D> surf = Algorithm::create<Feature2D>("Feature2D.SURF");
     if( surf.empty() )
         CV_Error(CV_StsNotImplemented, "OpenCV was built without SURF support");
-    
+
     surf->set("hessianThreshold", params.hessianThreshold);
     surf->set("nOctaves", params.nOctaves);
     surf->set("nOctaveLayers", params.nOctaveLayers);
     surf->set("upright", params.upright != 0);
     surf->set("extended", params.extended != 0);
-    
+
     surf->operator()(img, mask, kpt, _descriptors ? _OutputArray(descr) : noArray(),
                      useProvidedKeyPts != 0);
-    
+
     if( _keypoints )
         *_keypoints = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvSURFPoint), storage);
-    
+
     if( _descriptors )
-        *_descriptors = cvCreateSeq(0, sizeof(CvSeq), descr.cols*descr.elemSize(), storage);
-    
+        *_descriptors = cvCreateSeq(0, sizeof(CvSeq), surf->descriptorSize() * CV_ELEM_SIZE(surf->descriptorType()), storage);
+
     for( size_t i = 0; i < kpt.size(); i++ )
     {
         if( _keypoints )
@@ -113,7 +113,7 @@ cvGetStarKeypoints( const CvArr* _img, CvMemStorage* storage,
                                               params.suppressNonmaxSize);
     vector<KeyPoint> kpts;
     star->detect(cvarrToMat(_img), kpts, Mat());
-    
+
     CvSeq* seq = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvStarKeypoint), storage);
     for( size_t i = 0; i < kpts.size(); i++ )
     {
