@@ -949,6 +949,34 @@ bool CV_OperationsTest::TestSVD()
         SVD svd(A, SVD::FULL_UV); 
         if( norm(A*svd.vt.row(3).t(), CV_C) > FLT_EPSILON )
             throw test_excep();
+        
+        Mat Dp(3,3,CV_32FC1);
+        Mat Dc(3,3,CV_32FC1);
+        Mat Q(3,3,CV_32FC1);
+        Mat U,Vt,R,T,W;
+        
+        Dp.at<float>(0,0)=0.86483884; Dp.at<float>(0,1)= -0.3077251; Dp.at<float>(0,2)=-0.55711365;
+        Dp.at<float>(1,0)=0.49294353; Dp.at<float>(1,1)=-0.24209651; Dp.at<float>(1,2)=-0.25084701;
+        Dp.at<float>(2,0)=0;          Dp.at<float>(2,1)=0;           Dp.at<float>(2,2)=0;
+        
+        Dc.at<float>(0,0)=0.75632739; Dc.at<float>(0,1)= -0.38859656; Dc.at<float>(0,2)=-0.36773083;
+        Dc.at<float>(1,0)=0.9699229; Dc.at<float>(1,1)=-0.49858192; Dc.at<float>(1,2)=-0.47134098;
+        Dc.at<float>(2,0)=0.10566688; Dc.at<float>(2,1)=-0.060333252; Dc.at<float>(2,2)=-0.045333147;
+        
+        Q=Dp*Dc.t();
+        SVD decomp;
+        decomp=SVD(Q);
+        U=decomp.u;
+        Vt=decomp.vt;
+        W=decomp.w;
+        Mat I = Mat::eye(3, 3, CV_32F);
+        
+        if( norm(U*U.t(), I, CV_C) > FLT_EPSILON ||
+            norm(Vt*Vt.t(), I, CV_C) > FLT_EPSILON ||
+            W.at<float>(2) < 0 || W.at<float>(1) < W.at<float>(2) ||
+            W.at<float>(0) < W.at<float>(1) ||
+            norm(U*Mat::diag(W)*Vt, Q, CV_C) > FLT_EPSILON )
+            throw test_excep();
     }
     catch(const test_excep&)
     {
