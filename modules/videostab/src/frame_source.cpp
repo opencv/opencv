@@ -43,11 +43,6 @@
 #include "precomp.hpp"
 #include "opencv2/videostab/frame_source.hpp"
 
-#include "opencv2/opencv_modules.hpp"
-#ifdef HAVE_OPENCV_HIGHGUI
-#  include "opencv2/highgui/highgui.hpp"
-#endif
-
 using namespace std;
 
 namespace cv
@@ -55,73 +50,24 @@ namespace cv
 namespace videostab
 {
 
-struct VideoFileSource::VideoReader
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    mutable VideoCapture vc;
-#endif
-};
-
 VideoFileSource::VideoFileSource(const string &path, bool volatileFrame)
-    : path_(path), volatileFrame_(volatileFrame), reader_(VideoReader()) { reset(); }
+    : path_(path), volatileFrame_(volatileFrame) { reset(); }
 
 
 void VideoFileSource::reset()
 {
-#ifdef HAVE_OPENCV_HIGHGUI
-    reader_.vc.release();
-    reader_.vc.open(path_);
-    if (!reader_.vc.isOpened())
+    reader_.release();
+    reader_.open(path_);
+    if (!reader_.isOpened())
         throw runtime_error("can't open file: " + path_);
-#else
-    CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without video I/O support");
-#endif
 }
 
 
 Mat VideoFileSource::nextFrame()
 {
     Mat frame;
-#ifdef HAVE_OPENCV_HIGHGUI
-    reader_.vc >> frame;
-#endif
+    reader_ >> frame;
     return volatileFrame_ ? frame : frame.clone();
-}
-
-int VideoFileSource::width()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return static_cast<int>(reader_.vc.get(CV_CAP_PROP_FRAME_WIDTH));
-#else
-    return 0;
-#endif
-}
-
-int VideoFileSource::height()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return static_cast<int>(reader_.vc.get(CV_CAP_PROP_FRAME_HEIGHT));
-#else
-    return 0;
-#endif
-}
-
-int VideoFileSource::count()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return static_cast<int>(reader_.vc.get(CV_CAP_PROP_FRAME_COUNT));
-#else
-    return 0;
-#endif
-}
-
-double VideoFileSource::fps()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return reader_.vc.get(CV_CAP_PROP_FPS);
-#else
-    return 0;
-#endif
 }
 
 } // namespace videostab
