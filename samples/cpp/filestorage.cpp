@@ -162,7 +162,7 @@ int main(int ac, char** av)
         "   X: 3.1415926535897931e+00\n"
         "   id: mydata1234\n";
     MyData m;
-    FileStorage fs(dataString, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_YAML);
+    FileStorage fs(dataString, FileStorage::READ | FileStorage::MEMORY);
     cout << "attempting to read mdata_b from string\n";   //Show default behavior for empty matrix
     fs["mdata"] >> m;
     cout << "read mdata\n";
