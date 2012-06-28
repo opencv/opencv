@@ -8,7 +8,7 @@
 #define ARCH_X64_NAME "x64"
 #define ARCH_ARMv5_NAME "armv5"
 #define ARCH_ARMv6_NAME "armv6"
-#define ARCH_ARMv7_NAME "armv7"
+#define ARCH_ARMv7_NAME "armv7a"
 #define ARCH_ARMv8_NAME "armv8"
 
 #define FEATURES_HAS_VFPv3d16_NAME "vfpv3d16"
@@ -26,7 +26,7 @@
 
 
 class PackageInfo
-{ 
+{
 public:
     PackageInfo(const std::string& version, int platform, int cpu_id);
     PackageInfo(const std::string& fullname, const std::string& install_path, const std::string& package_version = "0.0");
@@ -38,7 +38,7 @@ public:
     bool operator==(const PackageInfo& package) const;
     static const std::map<int, std::string> PlatformNameMap;
     bool IsValid() const;
-    
+
 protected:
     static std::map<int, std::string> InitPlatformNameMap();
     std::string Version;
