@@ -75,6 +75,7 @@ protected:
     bool TestVec();
     bool TestMatxMultiplication();
     bool TestSubMatAccess();
+    bool TestSVD();
     bool operations1();
 
     void checkDiff(const Mat& m1, const Mat& m2, const string& s)
@@ -934,6 +935,29 @@ bool CV_OperationsTest::operations1()
     return true;
 }
 
+
+bool CV_OperationsTest::TestSVD()
+{    
+    try 
+    {
+        Mat A = (Mat_<double>(3,4) << 1, 2, -1, 4, 2, 4, 3, 5, -1, -2, 6, 7);
+        Mat x;
+        SVD::solveZ(A,x);
+        if( norm(A*x, CV_C) > FLT_EPSILON )
+            throw test_excep();
+
+        SVD svd(A, SVD::FULL_UV); 
+        if( norm(A*svd.vt.row(3).t(), CV_C) > FLT_EPSILON )
+            throw test_excep();
+    }
+    catch(const test_excep&)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        return false;
+    }
+    return true;
+}
+
 void CV_OperationsTest::run( int /* start_from */)
 {
     if (!TestMat())
@@ -958,6 +982,9 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
     
     if (!TestSubMatAccess())
+        return;
+    
+    if (!TestSVD())
         return;
 
     if (!operations1())
