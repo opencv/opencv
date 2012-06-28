@@ -45,7 +45,7 @@
 
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 200
 
@@ -54,13 +54,13 @@ namespace cv { namespace gpu { namespace device
         {
             __device__ __forceinline__ static void Load(const T* ptr, int offset, T& val)  { val = ptr[offset];  }
         };
-            
-    #else // __CUDA_ARCH__ >= 200        
 
-        #if defined(_WIN64) || defined(__LP64__)		
+    #else // __CUDA_ARCH__ >= 200
+
+        #if defined(_WIN64) || defined(__LP64__)
             // 64-bit register modifier for inlined asm
             #define OPENCV_GPU_ASM_PTR "l"
-        #else	
+        #else
             // 32-bit register modifier for inlined asm
             #define OPENCV_GPU_ASM_PTR "r"
         #endif
@@ -84,21 +84,21 @@ namespace cv { namespace gpu { namespace device
                     asm("ld.global."#ptx_type" %0, [%1];" : "=r"(*reinterpret_cast<uint*>(&val)) : OPENCV_GPU_ASM_PTR(ptr + offset)); \
                 } \
             };
-        
+
             OPENCV_GPU_DEFINE_FORCE_GLOB_B(uchar,  u8)
             OPENCV_GPU_DEFINE_FORCE_GLOB_B(schar,  s8)
             OPENCV_GPU_DEFINE_FORCE_GLOB_B(char,   b8)
             OPENCV_GPU_DEFINE_FORCE_GLOB  (ushort, u16, h)
             OPENCV_GPU_DEFINE_FORCE_GLOB  (short,  s16, h)
             OPENCV_GPU_DEFINE_FORCE_GLOB  (uint,   u32, r)
-            OPENCV_GPU_DEFINE_FORCE_GLOB  (int,    s32, r)	
-            OPENCV_GPU_DEFINE_FORCE_GLOB  (float,  f32, f)	
-            OPENCV_GPU_DEFINE_FORCE_GLOB  (double, f64, d)	            
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (int,    s32, r)
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (float,  f32, f)
+            OPENCV_GPU_DEFINE_FORCE_GLOB  (double, f64, d)
 
         #undef OPENCV_GPU_DEFINE_FORCE_GLOB
         #undef OPENCV_GPU_DEFINE_FORCE_GLOB_B
         #undef OPENCV_GPU_ASM_PTR
-        
+
     #endif // __CUDA_ARCH__ >= 200
 }}} // namespace cv { namespace gpu { namespace device
 

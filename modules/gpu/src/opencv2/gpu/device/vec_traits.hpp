@@ -45,7 +45,7 @@
 
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     template<typename T, int N> struct TypeVec;
 
@@ -219,18 +219,18 @@ namespace cv { namespace gpu { namespace device
 
     #undef OPENCV_GPU_IMPLEMENT_VEC_TRAITS
 
-    template<> struct VecTraits<char> 
-    { 
+    template<> struct VecTraits<char>
+    {
         typedef char elem_type;
-        enum {cn=1}; 
+        enum {cn=1};
         static __device__ __host__ __forceinline__ char all(char v) {return v;}
         static __device__ __host__ __forceinline__ char make(char x) {return x;}
         static __device__ __host__ __forceinline__ char make(const char* x) {return *x;}
     };
-    template<> struct VecTraits<schar> 
-    { 
+    template<> struct VecTraits<schar>
+    {
         typedef schar elem_type;
-        enum {cn=1}; 
+        enum {cn=1};
         static __device__ __host__ __forceinline__ schar all(schar v) {return v;}
         static __device__ __host__ __forceinline__ schar make(schar x) {return x;}
         static __device__ __host__ __forceinline__ schar make(const schar* x) {return *x;}

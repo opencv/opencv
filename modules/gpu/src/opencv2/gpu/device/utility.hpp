@@ -47,17 +47,17 @@
 #include "datamov_utils.hpp"
 #include "detail/utility_detail.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    #define OPENCV_GPU_LOG_WARP_SIZE	    (5)
-    #define OPENCV_GPU_WARP_SIZE	        (1 << OPENCV_GPU_LOG_WARP_SIZE)
+    #define OPENCV_GPU_LOG_WARP_SIZE        (5)
+    #define OPENCV_GPU_WARP_SIZE            (1 << OPENCV_GPU_LOG_WARP_SIZE)
     #define OPENCV_GPU_LOG_MEM_BANKS        ((__CUDA_ARCH__ >= 200) ? 5 : 4) // 32 banks on fermi, 16 on tesla
     #define OPENCV_GPU_MEM_BANKS            (1 << OPENCV_GPU_LOG_MEM_BANKS)
 
     ///////////////////////////////////////////////////////////////////////////////
     // swap
 
-    template <typename T> void __device__ __host__ __forceinline__ swap(T& a, T& b) 
+    template <typename T> void __device__ __host__ __forceinline__ swap(T& a, T& b)
     {
         const T temp = a;
         a = b;
@@ -71,9 +71,9 @@ namespace cv { namespace gpu { namespace device
     {
         explicit __host__ __device__ __forceinline__ SingleMask(PtrStepb mask_) : mask(mask_) {}
         __host__ __device__ __forceinline__ SingleMask(const SingleMask& mask_): mask(mask_.mask){}
-        
+
         __device__ __forceinline__ bool operator()(int y, int x) const
-        {            
+        {
             return mask.ptr(y)[x] != 0;
         }
 
@@ -82,13 +82,13 @@ namespace cv { namespace gpu { namespace device
 
     struct SingleMaskChannels
     {
-        __host__ __device__ __forceinline__ SingleMaskChannels(PtrStepb mask_, int channels_) 
+        __host__ __device__ __forceinline__ SingleMaskChannels(PtrStepb mask_, int channels_)
         : mask(mask_), channels(channels_) {}
         __host__ __device__ __forceinline__ SingleMaskChannels(const SingleMaskChannels& mask_)
             :mask(mask_.mask), channels(mask_.channels){}
-        
+
         __device__ __forceinline__ bool operator()(int y, int x) const
-        {            
+        {
             return mask.ptr(y)[x / channels] != 0;
         }
 
@@ -112,7 +112,7 @@ namespace cv { namespace gpu { namespace device
         {
             curMask = maskCollection[z];
         }
-        
+
         __device__ __forceinline__ bool operator()(int y, int x) const
         {
             uchar val;
@@ -165,20 +165,20 @@ namespace cv { namespace gpu { namespace device
         utility_detail::ReductionDispatcher<n <= 64>::reduce<n>(data, partial_reduction, tid, op);
     }
 
-    template <int n, typename T, typename V, typename Pred> 
+    template <int n, typename T, typename V, typename Pred>
     __device__ __forceinline__ void reducePredVal(volatile T* sdata, T& myData, V* sval, V& myVal, int tid, const Pred& pred)
     {
         StaticAssert<n >= 8 && n <= 512>::check();
         utility_detail::PredValReductionDispatcher<n <= 64>::reduce<n>(myData, myVal, sdata, sval, tid, pred);
     }
 
-    template <int n, typename T, typename V1, typename V2, typename Pred> 
+    template <int n, typename T, typename V1, typename V2, typename Pred>
     __device__ __forceinline__ void reducePredVal2(volatile T* sdata, T& myData, V1* sval1, V1& myVal1, V2* sval2, V2& myVal2, int tid, const Pred& pred)
     {
         StaticAssert<n >= 8 && n <= 512>::check();
         utility_detail::PredVal2ReductionDispatcher<n <= 64>::reduce<n>(myData, myVal1, myVal2, sdata, sval1, sval2, tid, pred);
     }
-    
+
     ///////////////////////////////////////////////////////////////////////////////
     // Solve linear system
 
@@ -212,17 +212,17 @@ namespace cv { namespace gpu { namespace device
         {
             double invdet = 1.0 / det;
 
-            x[0] = saturate_cast<T>(invdet * 
+            x[0] = saturate_cast<T>(invdet *
                 (b[0]    * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) -
                  A[0][1] * (b[1]    * A[2][2] - A[1][2] * b[2]   ) +
                  A[0][2] * (b[1]    * A[2][1] - A[1][1] * b[2]   )));
 
-            x[1] = saturate_cast<T>(invdet * 
+            x[1] = saturate_cast<T>(invdet *
                 (A[0][0] * (b[1]    * A[2][2] - A[1][2] * b[2]   ) -
                  b[0]    * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
                  A[0][2] * (A[1][0] * b[2]    - b[1]    * A[2][0])));
 
-            x[2] = saturate_cast<T>(invdet * 
+            x[2] = saturate_cast<T>(invdet *
                 (A[0][0] * (A[1][1] * b[2]    - b[1]    * A[2][1]) -
                  A[0][1] * (A[1][0] * b[2]    - b[1]    * A[2][0]) +
                  b[0]    * (A[1][0] * A[2][1] - A[1][1] * A[2][0])));

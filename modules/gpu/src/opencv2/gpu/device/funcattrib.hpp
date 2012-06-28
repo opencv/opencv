@@ -46,14 +46,14 @@
 
 #include <cstdio>
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    template<class Func> 
+    template<class Func>
     void printFuncAttrib(Func& func)
     {
 
         cudaFuncAttributes attrs;
-        cudaFuncGetAttributes(&attrs, func);  
+        cudaFuncGetAttributes(&attrs, func);
 
         printf("=== Function stats ===\n");
         printf("Name: \n");
@@ -65,7 +65,7 @@ namespace cv { namespace gpu { namespace device
         printf("ptxVersion         = %d\n", attrs.ptxVersion);
         printf("binaryVersion      = %d\n", attrs.binaryVersion);
         printf("\n");
-        fflush(stdout); 
+        fflush(stdout);
     }
 }}} // namespace cv { namespace gpu { namespace device
 

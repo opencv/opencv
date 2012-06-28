@@ -46,7 +46,7 @@
 #include <limits>
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     template<class T> struct numeric_limits
     {

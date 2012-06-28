@@ -45,21 +45,21 @@
 
 #include "warp_reduce.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     struct Emulation
     {
-	    static __forceinline__ __device__ int Ballot(int predicate, volatile int* cta_buffer)
-	    {
+        static __forceinline__ __device__ int Ballot(int predicate, volatile int* cta_buffer)
+        {
     #if __CUDA_ARCH__ >= 200
-		    (void)cta_buffer;
-		    return __ballot(predicate);
+            (void)cta_buffer;
+            return __ballot(predicate);
     #else
-		    int tid = threadIdx.x;				
-		    cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
-		    return warp_reduce(cta_buffer);
+            int tid = threadIdx.x;
+            cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
+            return warp_reduce(cta_buffer);
     #endif
-	    }
+        }
     };
 }}} // namespace cv { namespace gpu { namespace device
 

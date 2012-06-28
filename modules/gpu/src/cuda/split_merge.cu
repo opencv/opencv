@@ -228,9 +228,9 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         static void mergeC2_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
         {
-            dim3 blockDim(32, 8);
-            dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
-            mergeC2_<T><<<gridDim, blockDim, 0, stream>>>(
+            dim3 block(32, 8);
+            dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+            mergeC2_<T><<<grid, block, 0, stream>>>(
                     src[0].data, src[0].step,
                     src[1].data, src[1].step,
                     dst.rows, dst.cols, dst.data, dst.step);
@@ -244,9 +244,9 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         static void mergeC3_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
         {
-            dim3 blockDim(32, 8);
-            dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
-            mergeC3_<T><<<gridDim, blockDim, 0, stream>>>(
+            dim3 block(32, 8);
+            dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+            mergeC3_<T><<<grid, block, 0, stream>>>(
                     src[0].data, src[0].step,
                     src[1].data, src[1].step,
                     src[2].data, src[2].step,
@@ -261,9 +261,9 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         static void mergeC4_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
         {
-            dim3 blockDim(32, 8);
-            dim3 gridDim(divUp(dst.cols, blockDim.x), divUp(dst.rows, blockDim.y));
-            mergeC4_<T><<<gridDim, blockDim, 0, stream>>>(
+            dim3 block(32, 8);
+            dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+            mergeC4_<T><<<grid, block, 0, stream>>>(
                     src[0].data, src[0].step,
                     src[1].data, src[1].step,
                     src[2].data, src[2].step,
@@ -437,9 +437,9 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         static void splitC2_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
         {
-            dim3 blockDim(32, 8);
-            dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
-            splitC2_<T><<<gridDim, blockDim, 0, stream>>>(
+            dim3 block(32, 8);
+            dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+            splitC2_<T><<<grid, block, 0, stream>>>(
                     src.data, src.step, src.rows, src.cols,
                     dst[0].data, dst[0].step,
                     dst[1].data, dst[1].step);
@@ -453,9 +453,9 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         static void splitC3_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
         {
-            dim3 blockDim(32, 8);
-            dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
-            splitC3_<T><<<gridDim, blockDim, 0, stream>>>(
+            dim3 block(32, 8);
+            dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+            splitC3_<T><<<grid, block, 0, stream>>>(
                     src.data, src.step, src.rows, src.cols,
                     dst[0].data, dst[0].step,
                     dst[1].data, dst[1].step,
@@ -470,9 +470,9 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         static void splitC4_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
         {
-            dim3 blockDim(32, 8);
-            dim3 gridDim(divUp(src.cols, blockDim.x), divUp(src.rows, blockDim.y));
-            splitC4_<T><<<gridDim, blockDim, 0, stream>>>(
+            dim3 block(32, 8);
+            dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+            splitC4_<T><<<grid, block, 0, stream>>>(
                      src.data, src.step, src.rows, src.cols,
                      dst[0].data, dst[0].step,
                      dst[1].data, dst[1].step,

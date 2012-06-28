@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -129,9 +129,9 @@ texture<float, 1, cudaReadModeElementType> tex_diffusivity_y;
 __global__ void pointwise_add(float *d_res, const float *d_op1, const float *d_op2, const int len)
 {
     const int pos = blockIdx.x*blockDim.x + threadIdx.x;
-    
+
     if(pos >= len) return;
-    
+
     d_res[pos] = d_op1[pos] + d_op2[pos];
 }
 
@@ -265,7 +265,7 @@ __forceinline__ __device__ void diffusivity_along_y(float *s, int pos, const flo
 ///////////////////////////////////////////////////////////////////////////////
 template<int tex_id>
 __forceinline__ __device__ void load_array_element(float *smem, int is, int js, int i, int j, int w, int h, int p)
-{    
+{
     //position within shared memory array
     const int ijs = js * PSOR_PITCH + is;
     //mirror reflection across borders
@@ -299,7 +299,7 @@ __forceinline__ __device__ void load_array_element(float *smem, int is, int js, 
 ///\param h number of rows in global memory array
 ///\param p global memory array pitch in floats
 ///////////////////////////////////////////////////////////////////////////////
-template<int tex> 
+template<int tex>
 __forceinline__ __device__ void load_array(float *smem, int ig, int jg, int w, int h, int p)
 {
     const int i = threadIdx.x + 2;
@@ -381,7 +381,7 @@ __forceinline__ __device__ void load_array(float *smem, int ig, int jg, int w, i
 /// \param gamma (in) gamma in Brox model (edge importance)
 ///////////////////////////////////////////////////////////////////////////////
 
-__global__ void prepare_sor_stage_1_tex(float *diffusivity_x, float *diffusivity_y, 
+__global__ void prepare_sor_stage_1_tex(float *diffusivity_x, float *diffusivity_y,
                                                         float *denominator_u, float *denominator_v,
                                                         float *numerator_dudv,
                                                         float *numerator_u, float *numerator_v,
@@ -532,16 +532,16 @@ __global__ void prepare_sor_stage_2(float *inv_denominator_u, float *inv_denomin
 // Red-Black SOR
 /////////////////////////////////////////////////////////////////////////////////////////
 
-template<int isBlack> __global__ void sor_pass(float *new_du, 
-                                               float *new_dv, 
-                                               const float *g_inv_denominator_u, 
+template<int isBlack> __global__ void sor_pass(float *new_du,
+                                               float *new_dv,
+                                               const float *g_inv_denominator_u,
                                                const float *g_inv_denominator_v,
-                                               const float *g_numerator_u, 
-                                               const float *g_numerator_v, 
-                                               const float *g_numerator_dudv, 
-                                               float omega, 
-                                               int width, 
-                                               int height, 
+                                               const float *g_numerator_u,
+                                               const float *g_numerator_v,
+                                               const float *g_numerator_dudv,
+                                               float omega,
+                                               int width,
+                                               int height,
                                                int stride)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -604,7 +604,7 @@ template<int isBlack> __global__ void sor_pass(float *new_du,
     if((i+j)%2 == isBlack)
     {
         // update du
-        float numerator_u = (s_left*(u_left + du_left) + s_up*(u_up + du_up) + s_right*(u_right + du_right) + s_down*(u_down + du_down) - 
+        float numerator_u = (s_left*(u_left + du_left) + s_up*(u_up + du_up) + s_right*(u_right + du_right) + s_down*(u_down + du_down) -
                              u * (s_left + s_right + s_up + s_down) - g_numerator_u[pos] - numerator_dudv*dv);
 
         du = (1.0f - omega) * du + omega * g_inv_denominator_u[pos] * numerator_u;
@@ -644,7 +644,7 @@ void InitTextures()
     initTexture2D(tex_I1);
     initTexture2D(tex_fine);      // for downsampling
     initTexture2D(tex_coarse);    // for prolongation
-    
+
     initTexture2D(tex_Ix);
     initTexture2D(tex_Ixx);
     initTexture2D(tex_Ix0);
@@ -725,7 +725,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     const Ncv32u kSourceHeight = frame0.height();
 
     ncvAssertPrintReturn(frame1.width() == kSourceWidth && frame1.height() == kSourceHeight, "Frame dims do not match", NCV_INCONSISTENT_INPUT);
-    ncvAssertReturn(uOut.width() == kSourceWidth && vOut.width() == kSourceWidth && 
+    ncvAssertReturn(uOut.width() == kSourceWidth && vOut.width() == kSourceWidth &&
         uOut.height() == kSourceHeight && vOut.height() == kSourceHeight, NCV_INCONSISTENT_INPUT);
 
     ncvAssertReturn(gpu_mem_allocator.isInitialized(), NCV_ALLOCATOR_NOT_INITIALIZED);
@@ -780,7 +780,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     SAFE_VECTOR_DECL(dv_new, gpu_mem_allocator, kSizeInPixelsAligned);
 
     // temporary storage
-    SAFE_VECTOR_DECL(device_buffer, gpu_mem_allocator, 
+    SAFE_VECTOR_DECL(device_buffer, gpu_mem_allocator,
         alignUp(kSourceWidth, kStrideAlignmentFloat) * alignUp(kSourceHeight, kStrideAlignmentFloat));
 
     // image derivatives
@@ -800,7 +800,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     {
         const float derivativeFilterHost[kDFilterSize] = {1.0f, -8.0f, 0.0f, 8.0f, -1.0f};
 
-        ncvAssertCUDAReturn(cudaMemcpy(derivativeFilter.ptr(), derivativeFilterHost, sizeof(float) * kDFilterSize, 
+        ncvAssertCUDAReturn(cudaMemcpy(derivativeFilter.ptr(), derivativeFilterHost, sizeof(float) * kDFilterSize,
             cudaMemcpyHostToDevice), NCV_CUDA_ERROR);
 
         InitTextures();
@@ -827,10 +827,10 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
         size_t src_width_in_bytes = kSourceWidth * sizeof(float);
         size_t src_pitch_in_bytes = frame0.pitch();
 
-        ncvAssertCUDAReturn( cudaMemcpy2DAsync(pI0->ptr(), dst_width_in_bytes, frame0.ptr(), 
+        ncvAssertCUDAReturn( cudaMemcpy2DAsync(pI0->ptr(), dst_width_in_bytes, frame0.ptr(),
             src_pitch_in_bytes, src_width_in_bytes, kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
 
-        ncvAssertCUDAReturn( cudaMemcpy2DAsync(pI1->ptr(), dst_width_in_bytes, frame1.ptr(), 
+        ncvAssertCUDAReturn( cudaMemcpy2DAsync(pI1->ptr(), dst_width_in_bytes, frame1.ptr(),
             src_pitch_in_bytes, src_width_in_bytes, kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
     }
 
@@ -876,11 +876,11 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
             NcvRect32u dstROI (0, 0, level_width, level_height);
 
             // frame 0
-            ncvAssertReturnNcvStat( nppiStResize_32f_C1R (I0->ptr(), srcSize, prev_level_pitch, srcROI, 
+            ncvAssertReturnNcvStat( nppiStResize_32f_C1R (I0->ptr(), srcSize, prev_level_pitch, srcROI,
                 level_frame0->ptr(), dstSize, level_width_aligned * sizeof (float), dstROI, scale_factor, scale_factor, nppStSupersample) );
 
             // frame 1
-            ncvAssertReturnNcvStat( nppiStResize_32f_C1R (I1->ptr(), srcSize, prev_level_pitch, srcROI, 
+            ncvAssertReturnNcvStat( nppiStResize_32f_C1R (I1->ptr(), srcSize, prev_level_pitch, srcROI,
                 level_frame1->ptr(), dstSize, level_width_aligned * sizeof (float), dstROI, scale_factor, scale_factor, nppStSupersample) );
         }
 
@@ -956,14 +956,14 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
             dim3 dThreads(32, 6);
 
             const int kPitchTex = kLevelStride * sizeof(float);
-        
+
             NcvSize32u srcSize(kLevelWidth, kLevelHeight);
             Ncv32u nSrcStep = kLevelStride * sizeof(float);
             NcvRect32u oROI(0, 0, kLevelWidth, kLevelHeight);
 
             // Ix0
             ncvAssertReturnNcvStat( nppiStFilterRowBorder_32f_C1R (I0->ptr(), srcSize, nSrcStep, Ix0.ptr(), srcSize, nSrcStep, oROI,
-                nppStBorderMirror, derivativeFilter.ptr(), kDFilterSize, kDFilterSize/2, 1.0f/12.0f) ); 
+                nppStBorderMirror, derivativeFilter.ptr(), kDFilterSize, kDFilterSize/2, 1.0f/12.0f) );
 
             // Iy0
             ncvAssertReturnNcvStat( nppiStFilterColumnBorder_32f_C1R (I0->ptr(), srcSize, nSrcStep, Iy0.ptr(), srcSize, nSrcStep, oROI,
@@ -987,8 +987,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
             // Ixy
             ncvAssertReturnNcvStat( nppiStFilterRowBorder_32f_C1R (Iy.ptr(), srcSize, nSrcStep, Ixy.ptr(), srcSize, nSrcStep, oROI,
-                nppStBorderMirror, derivativeFilter.ptr(), kDFilterSize, kDFilterSize/2, 1.0f/12.0f) ); 
-      
+                nppStBorderMirror, derivativeFilter.ptr(), kDFilterSize, kDFilterSize/2, 1.0f/12.0f) );
+
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_Ix,  Ix.ptr(),  ch_desc, kLevelWidth, kLevelHeight, kPitchTex), NCV_CUDA_ERROR);
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_Ixx, Ixx.ptr(), ch_desc, kLevelWidth, kLevelHeight, kPitchTex), NCV_CUDA_ERROR);
             ncvAssertCUDAReturn(cudaBindTexture2D(0, tex_Ix0, Ix0.ptr(), ch_desc, kLevelWidth, kLevelHeight, kPitchTex), NCV_CUDA_ERROR);
@@ -1017,21 +1017,21 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
             {
                 //compute coefficients
                 prepare_sor_stage_1_tex<<<psor_blocks, psor_threads, 0, stream>>>
-                    (diffusivity_x.ptr(), 
-                     diffusivity_y.ptr(), 
-                     denom_u.ptr(), 
-                     denom_v.ptr(), 
-                     num_dudv.ptr(), 
-                     num_u.ptr(), 
-                     num_v.ptr(), 
-                     kLevelWidth, 
-                     kLevelHeight, 
-                     kLevelStride, 
-                     alpha, 
+                    (diffusivity_x.ptr(),
+                     diffusivity_y.ptr(),
+                     denom_u.ptr(),
+                     denom_v.ptr(),
+                     num_dudv.ptr(),
+                     num_u.ptr(),
+                     num_v.ptr(),
+                     kLevelWidth,
+                     kLevelHeight,
+                     kLevelStride,
+                     alpha,
                      gamma);
 
                 ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
-                    
+
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_diffusivity_x, diffusivity_x.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_diffusivity_y, diffusivity_y.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
 
@@ -1043,7 +1043,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                 prepare_sor_stage_2<<<psor_blocks, psor_threads, 0, stream>>>(denom_u.ptr(), denom_v.ptr(), kLevelWidth, kLevelHeight, kLevelStride);
 
                 ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
-                
+
                 //    linear system coefficients
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_diffusivity_x, diffusivity_x.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_diffusivity_y, diffusivity_y.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
@@ -1055,26 +1055,26 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_inv_denominator_u, denom_u.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
                 ncvAssertCUDAReturn(cudaBindTexture(0, tex_inv_denominator_v, denom_v.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
-            
+
                 //solve linear system
                 for (Ncv32u solver_iteration = 0; solver_iteration < desc.number_of_solver_iterations; ++solver_iteration)
                 {
                     float omega = 1.99f;
-                
+
                     ncvAssertCUDAReturn(cudaBindTexture(0, tex_du, du.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
                     ncvAssertCUDAReturn(cudaBindTexture(0, tex_dv, dv.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
 
                     sor_pass<0><<<sor_blocks, sor_threads, 0, stream>>>
-                        (du_new.ptr(), 
-                        dv_new.ptr(), 
-                        denom_u.ptr(), 
+                        (du_new.ptr(),
+                        dv_new.ptr(),
+                        denom_u.ptr(),
                         denom_v.ptr(),
-                        num_u.ptr(), 
-                        num_v.ptr(), 
-                        num_dudv.ptr(), 
-                        omega, 
-                        kLevelWidth, 
-                        kLevelHeight, 
+                        num_u.ptr(),
+                        num_v.ptr(),
+                        num_dudv.ptr(),
+                        omega,
+                        kLevelWidth,
+                        kLevelHeight,
                         kLevelStride);
 
                     ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
@@ -1083,16 +1083,16 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
                     ncvAssertCUDAReturn(cudaBindTexture(0, tex_dv, dv_new.ptr(), ch_desc, kLevelSizeInBytes), NCV_CUDA_ERROR);
 
                     sor_pass<1><<<sor_blocks, sor_threads, 0, stream>>>
-                        (du.ptr(), 
-                        dv.ptr(), 
-                        denom_u.ptr(), 
+                        (du.ptr(),
+                        dv.ptr(),
+                        denom_u.ptr(),
                         denom_v.ptr(),
-                        num_u.ptr(), 
-                        num_v.ptr(), 
-                        num_dudv.ptr(), 
-                        omega, 
-                        kLevelWidth, 
-                        kLevelHeight, 
+                        num_u.ptr(),
+                        num_v.ptr(),
+                        num_dudv.ptr(),
+                        omega,
+                        kLevelWidth,
+                        kLevelHeight,
                         kLevelStride);
 
                     ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
@@ -1120,19 +1120,19 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
                 dim3 p_blocks(iDivUp(nw, 32), iDivUp(nh, 8));
                 dim3 p_threads(32, 8);
-            
-                NcvSize32u srcSize (kLevelWidth, kLevelHeight);
+
+                NcvSize32u inner_srcSize (kLevelWidth, kLevelHeight);
                 NcvSize32u dstSize (nw, nh);
                 NcvRect32u srcROI (0, 0, kLevelWidth, kLevelHeight);
                 NcvRect32u dstROI (0, 0, nw, nh);
 
-                ncvAssertReturnNcvStat( nppiStResize_32f_C1R (ptrU->ptr(), srcSize, kLevelStride * sizeof (float), srcROI, 
+                ncvAssertReturnNcvStat( nppiStResize_32f_C1R (ptrU->ptr(), inner_srcSize, kLevelStride * sizeof (float), srcROI,
                     ptrUNew->ptr(), dstSize, ns * sizeof (float), dstROI, 1.0f/scale_factor, 1.0f/scale_factor, nppStBicubic) );
 
                 ScaleVector(ptrUNew->ptr(), ptrUNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
                 ncvAssertCUDALastErrorReturn(NCV_CUDA_ERROR);
 
-                ncvAssertReturnNcvStat( nppiStResize_32f_C1R (ptrV->ptr(), srcSize, kLevelStride * sizeof (float), srcROI, 
+                ncvAssertReturnNcvStat( nppiStResize_32f_C1R (ptrV->ptr(), inner_srcSize, kLevelStride * sizeof (float), srcROI,
                     ptrVNew->ptr(), dstSize, ns * sizeof (float), dstROI, 1.0f/scale_factor, 1.0f/scale_factor, nppStBicubic) );
 
                 ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
@@ -1148,11 +1148,11 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
         ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
 
         ncvAssertCUDAReturn( cudaMemcpy2DAsync
-            (uOut.ptr(), uOut.pitch(), ptrU->ptr(), 
+            (uOut.ptr(), uOut.pitch(), ptrU->ptr(),
             kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
 
         ncvAssertCUDAReturn( cudaMemcpy2DAsync
-            (vOut.ptr(), vOut.pitch(), ptrV->ptr(), 
+            (vOut.ptr(), vOut.pitch(), ptrV->ptr(),
             kSourcePitch, kSourceWidth*sizeof(float), kSourceHeight, cudaMemcpyDeviceToDevice, stream), NCV_CUDA_ERROR );
 
         ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);

@@ -46,7 +46,8 @@
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/filters.hpp"
-# include <cfloat>
+#include <cfloat>
+#include <opencv2/gpu/device/scan.hpp>
 
 namespace cv { namespace gpu { namespace device
 {

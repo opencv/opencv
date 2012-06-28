@@ -48,7 +48,7 @@
 #include "vec_traits.hpp"
 #include "type_traits.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     // Function Objects
 
@@ -257,7 +257,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T> struct bit_not : unary_function<T, T>
     {
-        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType v) const 
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType v) const
         {
             return ~v;
         }
@@ -268,7 +268,7 @@ namespace cv { namespace gpu { namespace device
     // Generalized Identity Operations
     template <typename T> struct identity : unary_function<T, T>
     {
-        __device__ __forceinline__ typename TypeTraits<T>::ParameterType operator()(typename TypeTraits<T>::ParameterType x) const 
+        __device__ __forceinline__ typename TypeTraits<T>::ParameterType operator()(typename TypeTraits<T>::ParameterType x) const
         {
             return x;
         }
@@ -278,7 +278,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T1, typename T2> struct project1st : binary_function<T1, T2, T1>
     {
-        __device__ __forceinline__ typename TypeTraits<T1>::ParameterType operator()(typename TypeTraits<T1>::ParameterType lhs, typename TypeTraits<T2>::ParameterType rhs) const 
+        __device__ __forceinline__ typename TypeTraits<T1>::ParameterType operator()(typename TypeTraits<T1>::ParameterType lhs, typename TypeTraits<T2>::ParameterType rhs) const
         {
             return lhs;
         }
@@ -288,7 +288,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T1, typename T2> struct project2nd : binary_function<T1, T2, T2>
     {
-        __device__ __forceinline__ typename TypeTraits<T2>::ParameterType operator()(typename TypeTraits<T1>::ParameterType lhs, typename TypeTraits<T2>::ParameterType rhs) const 
+        __device__ __forceinline__ typename TypeTraits<T2>::ParameterType operator()(typename TypeTraits<T1>::ParameterType lhs, typename TypeTraits<T2>::ParameterType rhs) const
         {
             return rhs;
         }
@@ -308,7 +308,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T> struct maximum : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator()(typename TypeTraits<T>::ParameterType lhs, typename TypeTraits<T>::ParameterType rhs) const 
+        __device__ __forceinline__ T operator()(typename TypeTraits<T>::ParameterType lhs, typename TypeTraits<T>::ParameterType rhs) const
         {
             return lhs < rhs ? rhs : lhs;
         }
@@ -328,7 +328,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename T> struct minimum : binary_function<T, T, T>
     {
-        __device__ __forceinline__ T operator()(typename TypeTraits<T>::ParameterType lhs, typename TypeTraits<T>::ParameterType rhs) const 
+        __device__ __forceinline__ T operator()(typename TypeTraits<T>::ParameterType lhs, typename TypeTraits<T>::ParameterType rhs) const
         {
             return lhs < rhs ? lhs : rhs;
         }
@@ -410,12 +410,14 @@ namespace cv { namespace gpu { namespace device
     #undef OPENCV_GPU_IMPLEMENT_UN_FUNCTOR
     #undef OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR
 
-    template<typename T> struct hypot_sqr_func : binary_function<T, T, float> 
+    template<typename T> struct hypot_sqr_func : binary_function<T, T, float>
     {
         __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType src1, typename TypeTraits<T>::ParameterType src2) const
         {
             return src1 * src1 + src2 * src2;
         }
+        __device__ __forceinline__ hypot_sqr_func(const hypot_sqr_func& other) : binary_function<T, T, float>(){}
+        __device__ __forceinline__ hypot_sqr_func() : binary_function<T, T, float>(){}
     };
 
     // Saturate Cast Functor
@@ -438,6 +440,7 @@ namespace cv { namespace gpu { namespace device
         {
             return (src > thresh) * maxVal;
         }
+
         __device__ __forceinline__ thresh_binary_func(const thresh_binary_func& other)
             : unary_function<T, T>(), thresh(other.thresh), maxVal(other.maxVal){}
 
@@ -455,6 +458,7 @@ namespace cv { namespace gpu { namespace device
         {
             return (src <= thresh) * maxVal;
         }
+
         __device__ __forceinline__ thresh_binary_inv_func(const thresh_binary_inv_func& other)
             : unary_function<T, T>(), thresh(other.thresh), maxVal(other.maxVal){}
 
@@ -519,12 +523,16 @@ namespace cv { namespace gpu { namespace device
       explicit __host__ __device__ __forceinline__ unary_negate(const Predicate& p) : pred(p) {}
 
       __device__ __forceinline__ bool operator()(typename TypeTraits<typename Predicate::argument_type>::ParameterType x) const
-      { 
-          return !pred(x); 
+      {
+          return !pred(x);
       }
+
+        __device__ __forceinline__ unary_negate(const unary_negate& other) : unary_function<typename Predicate::argument_type, bool>(){}
+        __device__ __forceinline__ unary_negate() : unary_function<typename Predicate::argument_type, bool>(){}
 
       const Predicate pred;
     };
+
     template <typename Predicate> __host__ __device__ __forceinline__ unary_negate<Predicate> not1(const Predicate& pred)
     {
         return unary_negate<Predicate>(pred);
@@ -534,19 +542,26 @@ namespace cv { namespace gpu { namespace device
     {
         explicit __host__ __device__ __forceinline__ binary_negate(const Predicate& p) : pred(p) {}
 
-        __device__ __forceinline__ bool operator()(typename TypeTraits<typename Predicate::first_argument_type>::ParameterType x, typename TypeTraits<typename Predicate::second_argument_type>::ParameterType y) const
-        { 
-            return !pred(x,y); 
+        __device__ __forceinline__ bool operator()(typename TypeTraits<typename Predicate::first_argument_type>::ParameterType x,
+                                                   typename TypeTraits<typename Predicate::second_argument_type>::ParameterType y) const
+        {
+            return !pred(x,y);
         }
+        __device__ __forceinline__ binary_negate(const binary_negate& other)
+        : binary_function<typename Predicate::first_argument_type, typename Predicate::second_argument_type, bool>(){}
+
+        __device__ __forceinline__ binary_negate() :
+        binary_function<typename Predicate::first_argument_type, typename Predicate::second_argument_type, bool>(){}
 
         const Predicate pred;
     };
+
     template <typename BinaryPredicate> __host__ __device__ __forceinline__ binary_negate<BinaryPredicate> not2(const BinaryPredicate& pred)
     {
         return binary_negate<BinaryPredicate>(pred);
     }
 
-    template <typename Op> struct binder1st : unary_function<typename Op::second_argument_type, typename Op::result_type> 
+    template <typename Op> struct binder1st : unary_function<typename Op::second_argument_type, typename Op::result_type>
     {
         __host__ __device__ __forceinline__ binder1st(const Op& op_, const typename Op::first_argument_type& arg1_) : op(op_), arg1(arg1_) {}
 
@@ -555,15 +570,19 @@ namespace cv { namespace gpu { namespace device
             return op(arg1, a);
         }
 
+        __device__ __forceinline__ binder1st(const binder1st& other) :
+        unary_function<typename Op::second_argument_type, typename Op::result_type>(){}
+
         const Op op;
         const typename Op::first_argument_type arg1;
     };
+
     template <typename Op, typename T> __host__ __device__ __forceinline__ binder1st<Op> bind1st(const Op& op, const T& x)
     {
         return binder1st<Op>(op, typename Op::first_argument_type(x));
     }
 
-    template <typename Op> struct binder2nd : unary_function<typename Op::first_argument_type, typename Op::result_type> 
+    template <typename Op> struct binder2nd : unary_function<typename Op::first_argument_type, typename Op::result_type>
     {
         __host__ __device__ __forceinline__ binder2nd(const Op& op_, const typename Op::second_argument_type& arg2_) : op(op_), arg2(arg2_) {}
 
@@ -572,16 +591,19 @@ namespace cv { namespace gpu { namespace device
             return op(a, arg2);
         }
 
+         __device__ __forceinline__ binder2nd(const binder2nd& other) :
+        unary_function<typename Op::first_argument_type, typename Op::result_type>(), op(other.op), arg2(other.arg2){}
+
         const Op op;
         const typename Op::second_argument_type arg2;
     };
+
     template <typename Op, typename T> __host__ __device__ __forceinline__ binder2nd<Op> bind2nd(const Op& op, const T& x)
     {
         return binder2nd<Op>(op, typename Op::second_argument_type(x));
     }
 
     // Functor Traits
-
     template <typename F> struct IsUnaryFunction
     {
         typedef char Yes;
@@ -618,7 +640,7 @@ namespace cv { namespace gpu { namespace device
         {
             enum { shift = UnOpShift<sizeof(T), sizeof(D)>::shift };
         };
-        
+
         template <size_t src_elem_size1, size_t src_elem_size2, size_t dst_elem_size> struct BinOpShift { enum { shift = 1 }; };
         template <size_t src_elem_size1, size_t src_elem_size2> struct BinOpShift<src_elem_size1, src_elem_size2, 1> { enum { shift = 4 }; };
         template <size_t src_elem_size1, size_t src_elem_size2> struct BinOpShift<src_elem_size1, src_elem_size2, 2> { enum { shift = 2 }; };

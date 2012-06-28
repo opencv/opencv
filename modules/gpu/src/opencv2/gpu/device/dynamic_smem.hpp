@@ -44,7 +44,7 @@
 #define __OPENCV_GPU_DYNAMIC_SMEM_HPP__
 
 namespace cv { namespace gpu { namespace device
-{   
+{
     template<class T> struct DynamicSharedMem
     {
         __device__ __forceinline__ operator T*()
