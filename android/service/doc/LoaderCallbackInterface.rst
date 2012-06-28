@@ -11,12 +11,12 @@ Loader Callback Interface
     Interface for callback object in case of asynchronous initialization of OpenCV
 
 void onManagerConnected()
-------------------------
+-------------------------
 
 .. method:: void onManagerConnected(int status)
 
     Callback method that is called after OpenCV library initialization
- 
+
     :param status: Status of initialization. See Initialization status constants
 
 void onPackageInstall()

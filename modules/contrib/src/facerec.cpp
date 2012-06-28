@@ -584,7 +584,7 @@ static Mat histc(InputArray _src, int minVal, int maxVal, bool normed)
 
 
 static Mat spatial_histogram(InputArray _src, int numPatterns,
-                             int grid_x, int grid_y, bool normed)
+                             int grid_x, int grid_y, bool /*normed*/)
 {
     Mat src = _src.getMat();
     // calculate LBP patch size
