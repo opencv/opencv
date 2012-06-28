@@ -47,8 +47,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E touch "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" # needed because ant does not update the timestamp of updated apk
     WORKING_DIRECTORY "${opencv_test_java_bin_dir}"
     MAIN_DEPENDENCY "${opencv_test_java_bin_dir}/${ANDROID_MANIFEST_FILE}"
-    DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar" opencv_java
-    DEPENDS ${opencv_test_java_file_deps})
+    DEPENDS "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" opencv_java
+    DEPENDS ${opencv_test_java_file_deps} ${__android_project_chain})
+set(__android_project_chain ${PROJECT_NAME} CACHE INTERNAL "auxiliary variable used for Android progects chaining")
 
 add_custom_target(${PROJECT_NAME} ALL SOURCES "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" )
 add_dependencies(${PROJECT_NAME} opencv_java)
