@@ -62,7 +62,7 @@ protected:
 class CV_AMLTest : public CV_MLBaseTest
 {
 public:
-    CV_AMLTest( const char* _modelName ); 
+    CV_AMLTest( const char* _modelName );
 protected:
     virtual int run_test_case( int testCaseIdx );
     virtual int validate_test_results( int testCaseIdx );
@@ -71,7 +71,7 @@ protected:
 class CV_SLMLTest : public CV_MLBaseTest
 {
 public:
-    CV_SLMLTest( const char* _modelName ); 
+    CV_SLMLTest( const char* _modelName );
 protected:
     virtual int run_test_case( int testCaseIdx );
     virtual int validate_test_results( int testCaseIdx );

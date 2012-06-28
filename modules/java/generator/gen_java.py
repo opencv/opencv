@@ -922,7 +922,7 @@ extern "C" {
 
         self.save(output_path+"/"+module+".txt", report.getvalue())
 
-        print "Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
+        #print "Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
 
 
 
@@ -1402,7 +1402,7 @@ if __name__ == "__main__":
     import hdr_parser
     module = sys.argv[2]
     srcfiles = sys.argv[3:]
-    print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
+    #print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
     generator = JavaWrapperGenerator()
     generator.gen(srcfiles, module, dstdir)
 

@@ -155,7 +155,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
     for(size_t i = 0; i < ext_num; ++i)
     {
         string ext = exts[i];
-        string full_name = "img." + ext;
+        string full_name = cv::tempfile(ext.c_str());
         ts->printf(ts->LOG, " full_name : %s\n", full_name.c_str());
 
         imwrite(full_name, image);
@@ -225,7 +225,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
 void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt)
 {
     string src_file = dir + "../cv/shared/video_for_test.avi";
-    string tmp_name = format("video_%s.%s", cvtest::fourccToString(fmt.fourcc).c_str(), fmt.ext.c_str());
+    string tmp_name = cv::tempfile((cvtest::fourccToString(fmt.fourcc) + "."  + fmt.ext).c_str());
 
     ts->printf(ts->LOG, "reading video : %s and converting it to %s\n", src_file.c_str(), tmp_name.c_str());
 
@@ -291,8 +291,8 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
         if (psnr < thresDbell)
         {
             printf("Too low psnr = %gdb\n", psnr);
-            imwrite("img.png", img);
-            imwrite("img1.png", img1);
+            // imwrite("img.png", img);
+            // imwrite("img1.png", img1);
             ts->set_failed_test_info(ts->FAIL_MISMATCH);
             break;
         }
@@ -323,7 +323,7 @@ void CV_HighGuiTest::SpecificImageTest(const string& dir)
 
         stringstream s_digit; s_digit << i;
 
-        string full_name = "img_"+s_digit.str()+".bmp";
+        string full_name = cv::tempfile((s_digit.str() + ".bmp").c_str());
         ts->printf(ts->LOG, " full_name : %s\n", full_name.c_str());
 
         imwrite(full_name, image);
@@ -395,7 +395,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     int fourcc = fmt.fourcc;
 
     string fourcc_str = cvtest::fourccToString(fourcc);
-    const string video_file = "video_" + fourcc_str + "." + ext;
+    const string video_file = cv::tempfile((fourcc_str + "." + ext).c_str());
 
     Size frame_size(968 & -2, 757 & -2);
     VideoWriter writer(video_file, fourcc, 25, frame_size, true);

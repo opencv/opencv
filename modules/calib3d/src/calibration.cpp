@@ -2366,7 +2366,8 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     // calculate global Z rotation
     cvCrossProduct(&t,&uu,&ww);
     double nw = cvNorm(&ww, 0, CV_L2);
-    cvConvertScale(&ww, &ww, acos(fabs(c)/nt)/nw);
+    if (nw > 0.0)
+        cvConvertScale(&ww, &ww, acos(fabs(c)/nt)/nw);
     cvRodrigues2(&ww, &wR);
 
     // apply to both views

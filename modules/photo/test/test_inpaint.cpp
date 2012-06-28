@@ -49,8 +49,8 @@ class CV_InpaintTest : public cvtest::BaseTest
 {
 public:
     CV_InpaintTest();
-    ~CV_InpaintTest();    
-protected:    
+    ~CV_InpaintTest();
+protected:
     void run(int);
 };
 
@@ -61,43 +61,40 @@ CV_InpaintTest::~CV_InpaintTest() {}
 
 void CV_InpaintTest::run( int )
 {
-    string folder = string(ts->get_data_path()) + "inpaint/";    
-    Mat orig = imread(folder + "orig.jpg");    
+    string folder = string(ts->get_data_path()) + "inpaint/";
+    Mat orig = imread(folder + "orig.jpg");
     Mat exp1 = imread(folder + "exp1.png");
     Mat exp2 = imread(folder + "exp2.png");
-    Mat mask = imread(folder + "mask.png");    
+    Mat mask = imread(folder + "mask.png");
 
     if (orig.empty() || exp1.empty() || exp2.empty() || mask.empty())
     {
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );  
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         return;
     }
 
-    Mat inv_mask;    
+    Mat inv_mask;
     mask.convertTo(inv_mask, CV_8UC3, -1.0, 255.0);
-            
+
     Mat mask1ch;
     cv::cvtColor(mask, mask1ch, CV_BGR2GRAY);
 
     Mat test = orig.clone();
-    test.setTo(Scalar::all(255), mask1ch);   
+    test.setTo(Scalar::all(255), mask1ch);
 
     Mat res1, res2;
     inpaint( test, mask1ch, res1, 5, CV_INPAINT_NS );
-    inpaint( test, mask1ch, res2, 5, CV_INPAINT_TELEA );    
-    
-    imwrite("d:/exp1.png", res1);
-    imwrite("d:/exp2.png", res2);
-    
+    inpaint( test, mask1ch, res2, 5, CV_INPAINT_TELEA );
+
     Mat diff1, diff2;
     absdiff( orig, res1, diff1 );
     absdiff( orig, res2, diff2 );
-        
+
     double n1 = norm(diff1.reshape(1), NORM_INF, inv_mask.reshape(1));
     double n2 = norm(diff2.reshape(1), NORM_INF, inv_mask.reshape(1));
-  
+
     if (n1 != 0 || n2 != 0)
-    {        
+    {
         ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         return;
     }
@@ -109,9 +106,9 @@ void CV_InpaintTest::run( int )
     n2 = norm(diff2.reshape(1), NORM_INF, mask.reshape(1));
 
     const int jpeg_thres = 3;
-    if (n1 > jpeg_thres || n2 > jpeg_thres)   
+    if (n1 > jpeg_thres || n2 > jpeg_thres)
     {
-        ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );       
+        ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
         return;
     }
 

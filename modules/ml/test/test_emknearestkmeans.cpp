@@ -527,7 +527,7 @@ protected:
             firstResult.at<int>(i) = static_cast<int>(em.predict(samples.row(i))[1]);
 
         // Write out
-        string filename = tempfile() + ".xml";
+        string filename = cv::tempfile(".xml");
         {
             FileStorage fs = FileStorage(filename, FileStorage::WRITE);
             try

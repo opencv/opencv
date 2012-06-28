@@ -473,20 +473,59 @@ string format( const char* fmt, ... )
 
 string tempfile( const char* suffix )
 {
-    char buf[L_tmpnam];
-    char* name = 0;
-#ifdef ANDROID
-    strcpy(buf, "/sdcard/__opencv_temp_XXXXXX");
-    name = mktemp(buf);
-#else
-    name = tmpnam(buf);
-#endif
-    if (*name == '\\')
-        ++name;
-    string n(name);
-    if (suffix != 0)
-        n += (n[n.size()-1] == '.' && suffix[0] == '.' ? suffix + 1 : suffix);
-    return n;
+#if defined WIN32 || defined _WIN32
+    char temp_dir[MAX_PATH + 1] = { 0 };
+    char temp_file[MAX_PATH + 1] = { 0 };
+
+    ::GetTempPathA(sizeof(temp_dir), temp_dir);
+    if(0 == ::GetTempFileNameA(temp_dir, "__opencv_temp.", 0, temp_file))
+        return string();
+
+    string name = temp_file;
+    if(suffix)
+    {
+        if (suffix[0] != '.')
+            return name + "." + suffix;
+        else
+            return name + suffix;
+    }
+    else
+        return name;
+# else
+#  ifdef ANDROID
+    //char defaultTemplate[] = "/mnt/sdcard/__opencv_temp.XXXXXX";
+    char defaultTemplate[] = "/data/local/tmp/__opencv_temp.XXXXXX";
+#  else
+    char defaultTemplate[] = "/tmp/__opencv_temp.XXXXXX";
+#  endif
+
+    string fname;
+    const char *temp_dir = getenv("OPENCV_TEMP_PATH");
+    if(temp_dir == 0 || temp_dir[0] == 0)
+        fname = defaultTemplate;
+    else
+    {
+        fname = temp_dir;
+        char ech = fname[fname.size() - 1];
+        if(ech != '/' && ech != '\\')
+            fname += "/";
+        fname += "__opencv_temp.XXXXXX";
+    }
+
+    const int fd = mkstemp((char*)fname.c_str());
+    if(fd == -1) return "";
+    close(fd);
+    remove(fname.c_str());
+
+    if(suffix)
+    {
+        if (suffix[0] != '.')
+            fname = fname + "." + suffix;
+        else
+            fname += suffix;
+    }
+    return fname;
+# endif
 }
 
 static CvErrorCallback customErrorCallback = 0;

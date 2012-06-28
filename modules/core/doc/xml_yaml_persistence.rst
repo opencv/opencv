@@ -167,7 +167,7 @@ The constructors.
         * **FileStorage::WRITE** Open the file for writing.
 
         * **FileStorage::APPEND** Open the file for appending.
-        
+
         * **FileStorage::MEMORY** Read data from ``source`` or write data to the internal buffer (which is returned by ``FileStorage::release``)
 
     :param encoding: Encoding of the file. Note that UTF-16 XML encoding is not supported currently and you should use 8-bit encoding instead of it.

@@ -215,7 +215,7 @@ macro(add_android_project target path)
 
     project(${target})
     set(android_proj_bin_dir "${CMAKE_CURRENT_BINARY_DIR}/.build")
-   
+
     # get project sources
     file(GLOB_RECURSE android_proj_files RELATIVE "${path}" "${path}/res/*" "${path}/src/*")
     ocv_list_filterout(android_proj_files ".svn")
@@ -278,8 +278,6 @@ macro(add_android_project target path)
         get_target_property(android_proj_jni_location "${JNI_LIB_NAME}" LOCATION)
         add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${android_proj_jni_location}")
       endif()
-    else()
-      unset(JNI_LIB_NAME)
     endif()
 
     # build java part
@@ -301,6 +299,8 @@ macro(add_android_project target path)
        DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar" opencv_java # as we are part of OpenCV we can just force this dependency
        DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
     endif()
+
+    unset(JNI_LIB_NAME)
 
     add_custom_target(${target} ALL SOURCES "${android_proj_bin_dir}/bin/${target}-debug.apk" )
     if(NOT android_proj_IGNORE_JAVA)

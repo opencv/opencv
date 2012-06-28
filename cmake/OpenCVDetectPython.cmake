@@ -30,7 +30,11 @@ if(PYTHON_EXECUTABLE)
   endif()
   
   if(NOT ANDROID AND NOT IOS)
-    find_host_package(PythonLibs ${PYTHON_VERSION_FULL})
+    if(CMAKE_VERSION VERSION_GREATER 2.8.8)
+      find_host_package(PythonLibs ${PYTHON_VERSION_FULL} EXACT)
+    else()
+      find_host_package(PythonLibs ${PYTHON_VERSION_FULL})
+    endif()
     # cmake 2.4 (at least on Ubuntu 8.04 (hardy)) don't define PYTHONLIBS_FOUND
     if(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
       set(PYTHONLIBS_FOUND ON)

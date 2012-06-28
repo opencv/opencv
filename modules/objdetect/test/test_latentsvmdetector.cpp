@@ -44,7 +44,7 @@
 
 #include <string>
 
-#ifdef HAVE_CVCONFIG_H 
+#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
 #endif
 
@@ -61,7 +61,7 @@ const CvRect true_bounding_boxes[3] = {cvRect(0, 45, 362, 452), cvRect(304, 0, 6
 
 class CV_LatentSVMDetectorTest : public cvtest::BaseTest
 {
-protected:    
+protected:
     void run(int);
     bool isEqual(CvRect r1, CvRect r2, int eps);
 };
@@ -75,7 +75,7 @@ bool CV_LatentSVMDetectorTest::isEqual(CvRect r1, CvRect r2, int eps)
 }
 
 void CV_LatentSVMDetectorTest::run( int /* start_from */)
-{      
+{
     string img_path = string(ts->get_data_path()) + "latentsvmdetector/cat.jpg";
     string model_path = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
     int numThreads = -1;
@@ -102,7 +102,7 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
     }
 
     CvMemStorage* storage = cvCreateMemStorage(0);
-    CvSeq* detections = 0;         
+    CvSeq* detections = 0;
     detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
     if (detections->total != num_detections)
     {

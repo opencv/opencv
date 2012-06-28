@@ -40,6 +40,7 @@
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
 // The following lines pull in the real gtest *.cc files.
@@ -300,7 +301,7 @@ class GTEST_API_ SingleFailureChecker {
         (substr));\
     {\
       ::testing::ScopedFakeTestPartResultReporter gtest_reporter(\
-          ::testing::ScopedFakeTestPartResultReporter::INTERCEPT_ALL_THREADS,\
+          ::testing::ScopedFakeTestPartResultReporter::INTERCEPT_ALL_THREADS, \
           &gtest_failures);\
       if (::testing::internal::AlwaysTrue()) { statement; }\
     }\
@@ -313,6 +314,7 @@ class GTEST_API_ SingleFailureChecker {
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <wchar.h>
 #include <wctype.h>
 
@@ -514,6 +516,12 @@ GTEST_API_ bool ShouldUseColor(bool stdout_is_tty);
 // Formats the given time in milliseconds as seconds.
 GTEST_API_ std::string FormatTimeInMillisAsSeconds(TimeInMillis ms);
 
+// Converts the given time in milliseconds to a date string in the ISO 8601
+// format, without the timezone information.  N.B.: due to the use the
+// non-reentrant localtime() function, this function is not thread safe.  Do
+// not use it in any code that can be called from multiple threads.
+GTEST_API_ std::string FormatEpochTimeInMillisAsIso8601(TimeInMillis ms);
+
 // Parses a string for an Int32 flag, in the form of "--flag=value".
 //
 // On success, stores the value of the flag in *value, and returns
@@ -592,6 +600,7 @@ class GTestFlagSaver {
     GTEST_FLAG(stream_result_to) = stream_result_to_;
     GTEST_FLAG(throw_on_failure) = throw_on_failure_;
   }
+
  private:
   // Fields for saving the original values of flags.
   bool also_run_disabled_tests_;
@@ -834,8 +843,11 @@ class OsStackTraceGetterInterface {
 class OsStackTraceGetter : public OsStackTraceGetterInterface {
  public:
   OsStackTraceGetter() : caller_frame_(NULL) {}
-  virtual String CurrentStackTrace(int max_depth, int skip_count);
-  virtual void UponLeavingGTest();
+
+  virtual String CurrentStackTrace(int max_depth, int skip_count)
+      GTEST_LOCK_EXCLUDED_(mutex_);
+
+  virtual void UponLeavingGTest() GTEST_LOCK_EXCLUDED_(mutex_);
 
   // This string is inserted in place of stack frames that are part of
   // Google Test's implementation.
@@ -950,6 +962,10 @@ class GTEST_API_ UnitTestImpl {
   // Gets the number of tests that should run.
   int test_to_run_count() const;
 
+  // Gets the time of the test program start, in ms from the start of the
+  // UNIX epoch.
+  TimeInMillis start_timestamp() const { return start_timestamp_; }
+
   // Gets the elapsed time, in milliseconds.
   TimeInMillis elapsed_time() const { return elapsed_time_; }
 
@@ -1008,7 +1024,7 @@ class GTEST_API_ UnitTestImpl {
   // For example, if Foo() calls Bar(), which in turn calls
   // CurrentOsStackTraceExceptTop(1), Foo() will be included in the
   // trace but Bar() and CurrentOsStackTraceExceptTop() won't.
-  String CurrentOsStackTraceExceptTop(int skip_count);
+  String CurrentOsStackTraceExceptTop(int skip_count) GTEST_NO_INLINE_;
 
   // Finds and returns a TestCase with the given name.  If one doesn't
   // exist, creates one and returns it.
@@ -1281,6 +1297,10 @@ class GTEST_API_ UnitTestImpl {
 
   // Our random number generator.
   internal::Random random_;
+
+  // The time of the test program start, in ms from the start of the
+  // UNIX epoch.
+  TimeInMillis start_timestamp_;
 
   // How long the test took to run, in milliseconds.
   TimeInMillis elapsed_time_;
@@ -1613,7 +1633,7 @@ UInt32 Random::Generate(UInt32 range) {
 // Test.  g_init_gtest_count is set to the number of times
 // InitGoogleTest() has been called.  We don't protect this variable
 // under a mutex as it is only accessed in the main thread.
-int g_init_gtest_count = 0;
+GTEST_API_ int g_init_gtest_count = 0;
 static bool GTestIsInitialized() { return g_init_gtest_count != 0; }
 
 // Iterates over a vector of TestCases, keeping a running sum of the
@@ -1668,7 +1688,7 @@ void AssertHelper::operator=(const Message& message) const {
 }
 
 // Mutex for linked pointers.
-GTEST_DEFINE_STATIC_MUTEX_(g_linked_ptr_mutex);
+GTEST_API_ GTEST_DEFINE_STATIC_MUTEX_(g_linked_ptr_mutex);
 
 // Application pathname gotten in InitGoogleTest.
 String g_executable_path;
@@ -2125,17 +2145,6 @@ TimeInMillis GetTimeInMillis() {
 
 // class String
 
-// Returns the input enclosed in double quotes if it's not NULL;
-// otherwise returns "(null)".  For example, "\"Hello\"" is returned
-// for input "Hello".
-//
-// This is useful for printing a C string in the syntax of a literal.
-//
-// Known issue: escape sequences are not handled yet.
-String String::ShowCStringQuoted(const char* c_str) {
-  return c_str ? String::Format("\"%s\"", c_str) : String("(null)");
-}
-
 // Copies at most length characters from str into a newly-allocated
 // piece of memory of size length+1.  The memory is allocated with new[].
 // A terminating null byte is written to the memory, and a pointer to it
@@ -2476,8 +2485,8 @@ AssertionResult CmpHelperSTREQ(const char* expected_expression,
 
   return EqFailure(expected_expression,
                    actual_expression,
-                   String::ShowCStringQuoted(expected),
-                   String::ShowCStringQuoted(actual),
+                   PrintToString(expected),
+                   PrintToString(actual),
                    false);
 }
 
@@ -2492,8 +2501,8 @@ AssertionResult CmpHelperSTRCASEEQ(const char* expected_expression,
 
   return EqFailure(expected_expression,
                    actual_expression,
-                   String::ShowCStringQuoted(expected),
-                   String::ShowCStringQuoted(actual),
+                   PrintToString(expected),
+                   PrintToString(actual),
                    true);
 }
 
@@ -2841,15 +2850,6 @@ String String::ShowWideCString(const wchar_t * wide_c_str) {
   return String(internal::WideStringToUtf8(wide_c_str, -1).c_str());
 }
 
-// Similar to ShowWideCString(), except that this function encloses
-// the converted string in double quotes.
-String String::ShowWideCStringQuoted(const wchar_t* wide_c_str) {
-  if (wide_c_str == NULL) return String("(null)");
-
-  return String::Format("L\"%s\"",
-                        String::ShowWideCString(wide_c_str).c_str());
-}
-
 // Compares two wide C strings.  Returns true iff they have the same
 // content.
 //
@@ -2875,8 +2875,8 @@ AssertionResult CmpHelperSTREQ(const char* expected_expression,
 
   return EqFailure(expected_expression,
                    actual_expression,
-                   String::ShowWideCStringQuoted(expected),
-                   String::ShowWideCStringQuoted(actual),
+                   PrintToString(expected),
+                   PrintToString(actual),
                    false);
 }
 
@@ -2891,8 +2891,8 @@ AssertionResult CmpHelperSTRNE(const char* s1_expression,
 
   return AssertionFailure() << "Expected: (" << s1_expression << ") != ("
                             << s2_expression << "), actual: "
-                            << String::ShowWideCStringQuoted(s1)
-                            << " vs " << String::ShowWideCStringQuoted(s2);
+                            << PrintToString(s1)
+                            << " vs " << PrintToString(s2);
 }
 
 // Compares two C strings, ignoring case.  Returns true iff they have
@@ -4015,8 +4015,6 @@ class PrettyUnitTestResultPrinter : public TestEventListener {
 
  private:
   static void PrintFailedTests(const UnitTest& unit_test);
-
-  internal::String test_case_name_;
 };
 
   // Fired before each iteration of tests starts.
@@ -4063,11 +4061,10 @@ void PrettyUnitTestResultPrinter::OnEnvironmentsSetUpStart(
 }
 
 void PrettyUnitTestResultPrinter::OnTestCaseStart(const TestCase& test_case) {
-  test_case_name_ = test_case.name();
   const internal::String counts =
       FormatCountableNoun(test_case.test_to_run_count(), "test", "tests");
   ColoredPrintf(COLOR_GREEN, "[----------] ");
-  printf("%s from %s", counts.c_str(), test_case_name_.c_str());
+  printf("%s from %s", counts.c_str(), test_case.name());
   if (test_case.type_param() == NULL) {
     printf("\n");
   } else {
@@ -4078,7 +4075,7 @@ void PrettyUnitTestResultPrinter::OnTestCaseStart(const TestCase& test_case) {
 
 void PrettyUnitTestResultPrinter::OnTestStart(const TestInfo& test_info) {
   ColoredPrintf(COLOR_GREEN,  "[ RUN      ] ");
-  PrintTestName(test_case_name_.c_str(), test_info.name());
+  PrintTestName(test_info.test_case_name(), test_info.name());
   printf("\n");
   fflush(stdout);
 }
@@ -4101,7 +4098,7 @@ void PrettyUnitTestResultPrinter::OnTestEnd(const TestInfo& test_info) {
   } else {
     ColoredPrintf(COLOR_RED, "[  FAILED  ] ");
   }
-  PrintTestName(test_case_name_.c_str(), test_info.name());
+  PrintTestName(test_info.test_case_name(), test_info.name());
   if (test_info.result()->Failed())
     PrintFullTestCommentIfPresent(test_info);
 
@@ -4117,12 +4114,11 @@ void PrettyUnitTestResultPrinter::OnTestEnd(const TestInfo& test_info) {
 void PrettyUnitTestResultPrinter::OnTestCaseEnd(const TestCase& test_case) {
   if (!GTEST_FLAG(print_time)) return;
 
-  test_case_name_ = test_case.name();
   const internal::String counts =
       FormatCountableNoun(test_case.test_to_run_count(), "test", "tests");
   ColoredPrintf(COLOR_GREEN, "[----------] ");
   printf("%s from %s (%s ms total)\n\n",
-         counts.c_str(), test_case_name_.c_str(),
+         counts.c_str(), test_case.name(),
          internal::StreamableToString(test_case.elapsed_time()).c_str());
   fflush(stdout);
 }
@@ -4507,6 +4503,32 @@ std::string FormatTimeInMillisAsSeconds(TimeInMillis ms) {
   return ss.str();
 }
 
+// Converts the given epoch time in milliseconds to a date string in the ISO
+// 8601 format, without the timezone information.
+std::string FormatEpochTimeInMillisAsIso8601(TimeInMillis ms) {
+  // Using non-reentrant version as localtime_r is not portable.
+  time_t seconds = static_cast<time_t>(ms / 1000);
+#ifdef _MSC_VER
+# pragma warning(push)          // Saves the current warning state.
+# pragma warning(disable:4996)  // Temporarily disables warning 4996
+                                // (function or variable may be unsafe).
+  const struct tm* const time_struct = localtime(&seconds);  // NOLINT
+# pragma warning(pop)           // Restores the warning state again.
+#else
+  const struct tm* const time_struct = localtime(&seconds);  // NOLINT
+#endif
+  if (time_struct == NULL)
+    return "";  // Invalid ms value
+
+  return String::Format("%d-%02d-%02dT%02d:%02d:%02d",  // YYYY-MM-DDThh:mm:ss
+                        time_struct->tm_year + 1900,
+                        time_struct->tm_mon + 1,
+                        time_struct->tm_mday,
+                        time_struct->tm_hour,
+                        time_struct->tm_min,
+                        time_struct->tm_sec);
+}
+
 // Streams an XML CDATA section, escaping invalid CDATA sequences as needed.
 void XmlUnitTestResultPrinter::OutputXmlCDataSection(::std::ostream* stream,
                                                      const char* data) {
@@ -4556,16 +4578,17 @@ void XmlUnitTestResultPrinter::OutputXmlTestInfo(::std::ostream* stream,
   for (int i = 0; i < result.total_part_count(); ++i) {
     const TestPartResult& part = result.GetTestPartResult(i);
     if (part.failed()) {
-      if (++failures == 1)
+      if (++failures == 1) {
         *stream << ">\n";
-      *stream << "      <failure message=\""
-              << EscapeXmlAttribute(part.summary()).c_str()
-              << "\" type=\"\">";
+      }
       const string location = internal::FormatCompilerIndependentFileLocation(
           part.file_name(), part.line_number());
-      const string message = location + "\n" + part.message();
-      OutputXmlCDataSection(stream,
-                            RemoveInvalidXmlCharacters(message).c_str());
+      const string summary = location + "\n" + part.summary();
+      *stream << "      <failure message=\""
+              << EscapeXmlAttribute(summary.c_str())
+              << "\" type=\"\">";
+      const string detail = location + "\n" + part.message();
+      OutputXmlCDataSection(stream, RemoveInvalidXmlCharacters(detail).c_str());
       *stream << "</failure>\n";
     }
   }
@@ -4603,10 +4626,11 @@ void XmlUnitTestResultPrinter::PrintXmlUnitTest(FILE* out,
   fprintf(out, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
   fprintf(out,
           "<testsuites tests=\"%d\" failures=\"%d\" disabled=\"%d\" "
-          "errors=\"0\" time=\"%s\" ",
+          "errors=\"0\" timestamp=\"%s\" time=\"%s\" ",
           unit_test.total_test_count(),
           unit_test.failed_test_count(),
           unit_test.disabled_test_count(),
+          FormatEpochTimeInMillisAsIso8601(unit_test.start_timestamp()).c_str(),
           FormatTimeInMillisAsSeconds(unit_test.elapsed_time()).c_str());
   if (GTEST_FLAG(shuffle)) {
     fprintf(out, "random_seed=\"%d\" ", unit_test.random_seed());
@@ -4812,8 +4836,8 @@ void StreamingListener::MakeConnection() {
 
 // Pushes the given source file location and message onto a per-thread
 // trace stack maintained by Google Test.
-// L < UnitTest::mutex_
-ScopedTrace::ScopedTrace(const char* file, int line, const Message& message) {
+ScopedTrace::ScopedTrace(const char* file, int line, const Message& message)
+    GTEST_LOCK_EXCLUDED_(&UnitTest::mutex_) {
   TraceInfo trace;
   trace.file = file;
   trace.line = line;
@@ -4823,8 +4847,8 @@ ScopedTrace::ScopedTrace(const char* file, int line, const Message& message) {
 }
 
 // Pops the info pushed by the c'tor.
-// L < UnitTest::mutex_
-ScopedTrace::~ScopedTrace() {
+ScopedTrace::~ScopedTrace()
+    GTEST_LOCK_EXCLUDED_(&UnitTest::mutex_) {
   UnitTest::GetInstance()->PopGTestTrace();
 }
 
@@ -4838,14 +4862,14 @@ ScopedTrace::~ScopedTrace() {
 //   skip_count - the number of top frames to be skipped; doesn't count
 //                against max_depth.
 //
-// L < mutex_
-// We use "L < mutex_" to denote that the function may acquire mutex_.
-String OsStackTraceGetter::CurrentStackTrace(int, int) {
+String OsStackTraceGetter::CurrentStackTrace(int /* max_depth */,
+                                             int /* skip_count */)
+    GTEST_LOCK_EXCLUDED_(mutex_) {
   return String("");
 }
 
-// L < mutex_
-void OsStackTraceGetter::UponLeavingGTest() {
+void OsStackTraceGetter::UponLeavingGTest()
+    GTEST_LOCK_EXCLUDED_(mutex_) {
 }
 
 const char* const
@@ -4999,6 +5023,12 @@ int UnitTest::total_test_count() const { return impl()->total_test_count(); }
 // Gets the number of tests that should run.
 int UnitTest::test_to_run_count() const { return impl()->test_to_run_count(); }
 
+// Gets the time of the test program start, in ms from the start of the
+// UNIX epoch.
+internal::TimeInMillis UnitTest::start_timestamp() const {
+    return impl()->start_timestamp();
+}
+
 // Gets the elapsed time, in milliseconds.
 internal::TimeInMillis UnitTest::elapsed_time() const {
   return impl()->elapsed_time();
@@ -5052,12 +5082,13 @@ Environment* UnitTest::AddEnvironment(Environment* env) {
 // assertion macros (e.g. ASSERT_TRUE, EXPECT_EQ, etc) eventually call
 // this to report their results.  The user code should use the
 // assertion macros instead of calling this directly.
-// L < mutex_
-void UnitTest::AddTestPartResult(TestPartResult::Type result_type,
-                                 const char* file_name,
-                                 int line_number,
-                                 const internal::String& message,
-                                 const internal::String& os_stack_trace) {
+void UnitTest::AddTestPartResult(
+    TestPartResult::Type result_type,
+    const char* file_name,
+    int line_number,
+    const internal::String& message,
+    const internal::String& os_stack_trace)
+        GTEST_LOCK_EXCLUDED_(mutex_) {
   Message msg;
   msg << message;
 
@@ -5141,7 +5172,6 @@ int UnitTest::Run() {
   // process. In either case the user does not want to see pop-up dialogs
   // about crashes - they are expected.
   if (impl()->catch_exceptions() || in_death_test_child_process) {
-
 # if !GTEST_OS_WINDOWS_MOBILE
     // SetErrorMode doesn't exist on CE.
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOALIGNMENTFAULTEXCEPT |
@@ -5172,7 +5202,6 @@ int UnitTest::Run() {
           0x0,                                    // Clear the following flags:
           _WRITE_ABORT_MSG | _CALL_REPORTFAULT);  // pop-up window, core dump.
 # endif
-
   }
 #endif  // GTEST_HAS_SEH
 
@@ -5190,16 +5219,16 @@ const char* UnitTest::original_working_dir() const {
 
 // Returns the TestCase object for the test that's currently running,
 // or NULL if no test is running.
-// L < mutex_
-const TestCase* UnitTest::current_test_case() const {
+const TestCase* UnitTest::current_test_case() const
+    GTEST_LOCK_EXCLUDED_(mutex_) {
   internal::MutexLock lock(&mutex_);
   return impl_->current_test_case();
 }
 
 // Returns the TestInfo object for the test that's currently running,
 // or NULL if no test is running.
-// L < mutex_
-const TestInfo* UnitTest::current_test_info() const {
+const TestInfo* UnitTest::current_test_info() const
+    GTEST_LOCK_EXCLUDED_(mutex_) {
   internal::MutexLock lock(&mutex_);
   return impl_->current_test_info();
 }
@@ -5210,9 +5239,9 @@ int UnitTest::random_seed() const { return impl_->random_seed(); }
 #if GTEST_HAS_PARAM_TEST
 // Returns ParameterizedTestCaseRegistry object used to keep track of
 // value-parameterized tests and instantiate and register them.
-// L < mutex_
 internal::ParameterizedTestCaseRegistry&
-    UnitTest::parameterized_test_registry() {
+    UnitTest::parameterized_test_registry()
+        GTEST_LOCK_EXCLUDED_(mutex_) {
   return impl_->parameterized_test_registry();
 }
 #endif  // GTEST_HAS_PARAM_TEST
@@ -5229,15 +5258,15 @@ UnitTest::~UnitTest() {
 
 // Pushes a trace defined by SCOPED_TRACE() on to the per-thread
 // Google Test trace stack.
-// L < mutex_
-void UnitTest::PushGTestTrace(const internal::TraceInfo& trace) {
+void UnitTest::PushGTestTrace(const internal::TraceInfo& trace)
+    GTEST_LOCK_EXCLUDED_(mutex_) {
   internal::MutexLock lock(&mutex_);
   impl_->gtest_trace_stack().push_back(trace);
 }
 
 // Pops a trace from the per-thread Google Test trace stack.
-// L < mutex_
-void UnitTest::PopGTestTrace() {
+void UnitTest::PopGTestTrace()
+    GTEST_LOCK_EXCLUDED_(mutex_) {
   internal::MutexLock lock(&mutex_);
   impl_->gtest_trace_stack().pop_back();
 }
@@ -5273,6 +5302,7 @@ UnitTestImpl::UnitTestImpl(UnitTest* parent)
       post_flag_parse_init_performed_(false),
       random_seed_(0),  // Will be overridden by the flag before first use.
       random_(0),  // Will be reseeded before first use.
+      start_timestamp_(0),
       elapsed_time_(0),
 #if GTEST_HAS_DEATH_TEST
       internal_run_death_test_flag_(NULL),
@@ -5504,6 +5534,7 @@ bool UnitTestImpl::RunAllTests() {
 
   TestEventListener* repeater = listeners()->repeater();
 
+  start_timestamp_ = GetTimeInMillis();
   repeater->OnTestProgramStart(*parent_);
 
   // How many times to repeat the tests?  We don't want to repeat them
@@ -5865,7 +5896,7 @@ bool SkipPrefix(const char* prefix, const char** pstr) {
 // part can be omitted.
 //
 // Returns the value of the flag, or NULL if the parsing failed.
-static const char* ParseFlagValue(const char* str,
+const char* ParseFlagValue(const char* str,
                            const char* flag,
                            bool def_optional) {
   // str and flag must not be NULL.
@@ -6240,13 +6271,18 @@ void InitGoogleTest(int* argc, wchar_t** argv) {
 
 #if GTEST_HAS_DEATH_TEST
 
-# if GTEST_OS_MAC && !GTEST_OS_MAC_IOS
+# if GTEST_OS_MAC
 #  include <crt_externs.h>
 # endif  // GTEST_OS_MAC
 
 # include <errno.h>
 # include <fcntl.h>
 # include <limits.h>
+
+# if GTEST_OS_LINUX
+#  include <signal.h>
+# endif  // GTEST_OS_LINUX
+
 # include <stdarg.h>
 
 # if GTEST_OS_WINDOWS
@@ -6255,6 +6291,10 @@ void InitGoogleTest(int* argc, wchar_t** argv) {
 #  include <sys/mman.h>
 #  include <sys/wait.h>
 # endif  // GTEST_OS_WINDOWS
+
+# if GTEST_OS_QNX
+#  include <spawn.h>
+# endif  // GTEST_OS_QNX
 
 #endif  // GTEST_HAS_DEATH_TEST
 
@@ -6301,12 +6341,41 @@ GTEST_DEFINE_string_(
     "Indicates the file, line number, temporal index of "
     "the single death test to run, and a file descriptor to "
     "which a success code may be sent, all separated by "
-    "colons.  This flag is specified if and only if the current "
+    "the '|' characters.  This flag is specified if and only if the current "
     "process is a sub-process launched for running a thread-safe "
     "death test.  FOR INTERNAL USE ONLY.");
 }  // namespace internal
 
 #if GTEST_HAS_DEATH_TEST
+
+namespace internal {
+
+// Valid only for fast death tests. Indicates the code is running in the
+// child process of a fast style death test.
+static bool g_in_fast_death_test_child = false;
+
+// Returns a Boolean value indicating whether the caller is currently
+// executing in the context of the death test child process.  Tools such as
+// Valgrind heap checkers may need this to modify their behavior in death
+// tests.  IMPORTANT: This is an internal utility.  Using it may break the
+// implementation of death tests.  User code MUST NOT use it.
+bool InDeathTestChild() {
+# if GTEST_OS_WINDOWS
+
+  // On Windows, death tests are thread-safe regardless of the value of the
+  // death_test_style flag.
+  return !GTEST_FLAG(internal_run_death_test).empty();
+
+# else
+
+  if (GTEST_FLAG(death_test_style) == "threadsafe")
+    return !GTEST_FLAG(internal_run_death_test).empty();
+  else
+    return g_in_fast_death_test_child;
+#endif
+}
+
+}  // namespace internal
 
 // ExitedWithCode constructor.
 ExitedWithCode::ExitedWithCode(int exit_code) : exit_code_(exit_code) {
@@ -7017,6 +7086,7 @@ DeathTest::TestRole NoExecDeathTest::AssumeRole() {
     // Event forwarding to the listeners of event listener API mush be shut
     // down in death test subprocesses.
     GetUnitTestImpl()->listeners()->SuppressEventForwarding();
+    g_in_fast_death_test_child = true;
     return EXECUTE_TEST;
   } else {
     GTEST_DEATH_TEST_CHECK_SYSCALL_(close(pipe_fd[1]));
@@ -7036,6 +7106,11 @@ class ExecDeathTest : public ForkingDeathTest {
       ForkingDeathTest(a_statement, a_regex), file_(file), line_(line) { }
   virtual TestRole AssumeRole();
  private:
+  static ::std::vector<testing::internal::string>
+  GetArgvsForDeathTestChildProcess() {
+    ::std::vector<testing::internal::string> args = GetInjectableArgvs();
+    return args;
+  }
   // The name of the file in which the death test is located.
   const char* const file_;
   // The line number on which the death test is located.
@@ -7070,6 +7145,7 @@ class Arguments {
   char* const* Argv() {
     return &args_[0];
   }
+
  private:
   std::vector<char*> args_;
 };
@@ -7081,7 +7157,7 @@ struct ExecDeathTestArgs {
   int close_fd;       // File descriptor to close; the read end of a pipe
 };
 
-#  if GTEST_OS_MAC && !GTEST_OS_MAC_IOS
+#  if GTEST_OS_MAC
 inline char** GetEnviron() {
   // When Google Test is built as a framework on MacOS X, the environ variable
   // is unavailable. Apple's documentation (man environ) recommends using
@@ -7095,6 +7171,7 @@ extern "C" char** environ;
 inline char** GetEnviron() { return environ; }
 #  endif  // GTEST_OS_MAC
 
+#  if !GTEST_OS_QNX
 // The main function for a threadsafe-style death test child process.
 // This function is called in a clone()-ed process and thus must avoid
 // any potentially unsafe operations like malloc or libc functions.
@@ -7127,6 +7204,7 @@ static int ExecDeathTestChildMain(void* child_arg) {
                                 GetLastErrnoDescription().c_str()));
   return EXIT_FAILURE;
 }
+#  endif  // !GTEST_OS_QNX
 
 // Two utility routines that together determine the direction the stack
 // grows.
@@ -7137,25 +7215,76 @@ static int ExecDeathTestChildMain(void* child_arg) {
 // GTEST_NO_INLINE_ is required to prevent GCC 4.6 from inlining
 // StackLowerThanAddress into StackGrowsDown, which then doesn't give
 // correct answer.
-bool StackLowerThanAddress(const void* ptr) GTEST_NO_INLINE_;
-bool StackLowerThanAddress(const void* ptr) {
+void StackLowerThanAddress(const void* ptr, bool* result) GTEST_NO_INLINE_;
+void StackLowerThanAddress(const void* ptr, bool* result) {
   int dummy;
-  return &dummy < ptr;
+  *result = (&dummy < ptr);
 }
 
 static bool StackGrowsDown() {
   int dummy;
-  return StackLowerThanAddress(&dummy);
+  bool result;
+  StackLowerThanAddress(&dummy, &result);
+  return result;
 }
 
-// A threadsafe implementation of fork(2) for threadsafe-style death tests
-// that uses clone(2).  It dies with an error message if anything goes
-// wrong.
-static pid_t ExecDeathTestFork(char* const* argv, int close_fd) {
+// Spawns a child process with the same executable as the current process in
+// a thread-safe manner and instructs it to run the death test.  The
+// implementation uses fork(2) + exec.  On systems where clone(2) is
+// available, it is used instead, being slightly more thread-safe.  On QNX,
+// fork supports only single-threaded environments, so this function uses
+// spawn(2) there instead.  The function dies with an error message if
+// anything goes wrong.
+static pid_t ExecDeathTestSpawnChild(char* const* argv, int close_fd) {
   ExecDeathTestArgs args = { argv, close_fd };
   pid_t child_pid = -1;
 
-#  if GTEST_HAS_CLONE
+#  if GTEST_OS_QNX
+  // Obtains the current directory and sets it to be closed in the child
+  // process.
+  const int cwd_fd = open(".", O_RDONLY);
+  GTEST_DEATH_TEST_CHECK_(cwd_fd != -1);
+  GTEST_DEATH_TEST_CHECK_SYSCALL_(fcntl(cwd_fd, F_SETFD, FD_CLOEXEC));
+  // We need to execute the test program in the same environment where
+  // it was originally invoked.  Therefore we change to the original
+  // working directory first.
+  const char* const original_dir =
+      UnitTest::GetInstance()->original_working_dir();
+  // We can safely call chdir() as it's a direct system call.
+  if (chdir(original_dir) != 0) {
+    DeathTestAbort(String::Format("chdir(\"%s\") failed: %s",
+                                  original_dir,
+                                  GetLastErrnoDescription().c_str()));
+    return EXIT_FAILURE;
+  }
+
+  int fd_flags;
+  // Set close_fd to be closed after spawn.
+  GTEST_DEATH_TEST_CHECK_SYSCALL_(fd_flags = fcntl(close_fd, F_GETFD));
+  GTEST_DEATH_TEST_CHECK_SYSCALL_(fcntl(close_fd, F_SETFD,
+                                        fd_flags | FD_CLOEXEC));
+  struct inheritance inherit = {0};
+  // spawn is a system call.
+  child_pid = spawn(args.argv[0], 0, NULL, &inherit, args.argv, GetEnviron());
+  // Restores the current working directory.
+  GTEST_DEATH_TEST_CHECK_(fchdir(cwd_fd) != -1);
+  GTEST_DEATH_TEST_CHECK_SYSCALL_(close(cwd_fd));
+
+#  else   // GTEST_OS_QNX
+#   if GTEST_OS_LINUX
+  // When a SIGPROF signal is received while fork() or clone() are executing,
+  // the process may hang. To avoid this, we ignore SIGPROF here and re-enable
+  // it after the call to fork()/clone() is complete.
+  struct sigaction saved_sigprof_action;
+  struct sigaction ignore_sigprof_action;
+  memset(&ignore_sigprof_action, 0, sizeof(ignore_sigprof_action));
+  sigemptyset(&ignore_sigprof_action.sa_mask);
+  ignore_sigprof_action.sa_handler = SIG_IGN;
+  GTEST_DEATH_TEST_CHECK_SYSCALL_(sigaction(
+      SIGPROF, &ignore_sigprof_action, &saved_sigprof_action));
+#   endif  // GTEST_OS_LINUX
+
+#   if GTEST_HAS_CLONE
   const bool use_fork = GTEST_FLAG(death_test_use_fork);
 
   if (!use_fork) {
@@ -7172,14 +7301,19 @@ static pid_t ExecDeathTestFork(char* const* argv, int close_fd) {
 
     GTEST_DEATH_TEST_CHECK_(munmap(stack, stack_size) != -1);
   }
-#  else
+#   else
   const bool use_fork = true;
-#  endif  // GTEST_HAS_CLONE
+#   endif  // GTEST_HAS_CLONE
 
   if (use_fork && (child_pid = fork()) == 0) {
       ExecDeathTestChildMain(&args);
       _exit(0);
   }
+#  endif  // GTEST_OS_QNX
+#  if GTEST_OS_LINUX
+  GTEST_DEATH_TEST_CHECK_SYSCALL_(
+      sigaction(SIGPROF, &saved_sigprof_action, NULL));
+#  endif  // GTEST_OS_LINUX
 
   GTEST_DEATH_TEST_CHECK_(child_pid != -1);
   return child_pid;
@@ -7216,7 +7350,7 @@ DeathTest::TestRole ExecDeathTest::AssumeRole() {
                      GTEST_FLAG_PREFIX_, kInternalRunDeathTestFlag,
                      file_, line_, death_test_index, pipe_fd[1]);
   Arguments args;
-  args.AddArguments(GetArgvs());
+  args.AddArguments(GetArgvsForDeathTestChildProcess());
   args.AddArgument(filter_flag.c_str());
   args.AddArgument(internal_flag.c_str());
 
@@ -7227,7 +7361,7 @@ DeathTest::TestRole ExecDeathTest::AssumeRole() {
   // is necessary.
   FlushInfoLog();
 
-  const pid_t child_pid = ExecDeathTestFork(args.Argv(), pipe_fd[0]);
+  const pid_t child_pid = ExecDeathTestSpawnChild(args.Argv(), pipe_fd[0]);
   GTEST_DEATH_TEST_CHECK_SYSCALL_(close(pipe_fd[1]));
   set_child_pid(child_pid);
   set_read_fd(pipe_fd[0]);
@@ -7862,6 +7996,11 @@ void FilePath::Normalize() {
 # include <mach/vm_map.h>
 #endif  // GTEST_OS_MAC
 
+#if GTEST_OS_QNX
+# include <devctl.h>
+# include <sys/procfs.h>
+#endif  // GTEST_OS_QNX
+
 
 // Indicates that this translation unit is part of Google Test's
 // implementation.  It must come before gtest-internal-inl.h is
@@ -7899,6 +8038,26 @@ size_t GetThreadCount() {
                   reinterpret_cast<vm_address_t>(thread_list),
                   sizeof(thread_t) * thread_count);
     return static_cast<size_t>(thread_count);
+  } else {
+    return 0;
+  }
+}
+
+#elif GTEST_OS_QNX
+
+// Returns the number of threads running in the process, or 0 to indicate that
+// we cannot detect it.
+size_t GetThreadCount() {
+  const int fd = open("/proc/self/as", O_RDONLY);
+  if (fd < 0) {
+    return 0;
+  }
+  procfs_info process_info;
+  const int status =
+      devctl(fd, DCMD_PROC_INFO, &process_info, sizeof(process_info), NULL);
+  close(fd);
+  if (status == EOK) {
+    return static_cast<size_t>(process_info.num_threads);
   } else {
     return 0;
   }
@@ -8295,7 +8454,6 @@ class CapturedStream {
  public:
   // The ctor redirects the stream to a temporary file.
   CapturedStream(int fd) : fd_(fd), uncaptured_fd_(dup(fd)) {
-
 # if GTEST_OS_WINDOWS
     char temp_dir_path[MAX_PATH + 1] = { '\0' };  // NOLINT
     char temp_file_path[MAX_PATH + 1] = { '\0' };  // NOLINT
@@ -8312,10 +8470,15 @@ class CapturedStream {
                                     << temp_file_path;
     filename_ = temp_file_path;
 # else
-    // There's no guarantee that a test has write access to the
-    // current directory, so we create the temporary file in the /tmp
-    // directory instead.
+    // There's no guarantee that a test has write access to the current
+    // directory, so we create the temporary file in the /tmp directory instead.
+    // We use /tmp on most systems, and /mnt/sdcard on Android. That's because
+    // Android doesn't have /tmp.
+#  if GTEST_OS_LINUX_ANDROID
+    char name_template[] = "/mnt/sdcard/gtest_captured_stream.XXXXXX";
+#  else
     char name_template[] = "/tmp/captured_stream.XXXXXX";
+#  endif  // GTEST_OS_LINUX_ANDROID
     const int captured_fd = mkstemp(name_template);
     filename_ = name_template;
 # endif  // GTEST_OS_WINDOWS
@@ -8434,11 +8597,23 @@ String GetCapturedStderr() { return GetCapturedStream(&g_captured_stderr); }
 #if GTEST_HAS_DEATH_TEST
 
 // A copy of all command line arguments.  Set by InitGoogleTest().
-::std::vector<String> g_argvs;
+::std::vector<testing::internal::string> g_argvs;
 
-// Returns the command line as a vector of strings.
-const ::std::vector<String>& GetArgvs() { return g_argvs; }
+static const ::std::vector<testing::internal::string>* g_injected_test_argvs =
+                                        NULL;  // Owned.
 
+void SetInjectableArgvs(const ::std::vector<testing::internal::string>* argvs) {
+  if (g_injected_test_argvs != argvs)
+    delete g_injected_test_argvs;
+  g_injected_test_argvs = argvs;
+}
+
+const ::std::vector<testing::internal::string>& GetInjectableArgvs() {
+  if (g_injected_test_argvs != NULL) {
+    return *g_injected_test_argvs;
+  }
+  return g_argvs;
+}
 #endif  // GTEST_HAS_DEATH_TEST
 
 #if GTEST_OS_WINDOWS_MOBILE
@@ -8605,14 +8780,6 @@ namespace {
 
 using ::std::ostream;
 
-#if GTEST_OS_WINDOWS_MOBILE  // Windows CE does not define _snprintf_s.
-# define snprintf _snprintf
-#elif defined(_MSC_VER) && _MSC_VER >= 1400  // VC 8.0 and later deprecate snprintf and _snprintf.
-# define snprintf _snprintf_s
-#elif defined(_MSC_VER) && _MSC_VER
-# define snprintf _snprintf
-#endif  // GTEST_OS_WINDOWS_MOBILE
-
 // Prints a segment of bytes in the given object.
 void PrintByteSegmentInObjectTo(const unsigned char* obj_bytes, size_t start,
                                 size_t count, ostream* os) {
@@ -8627,7 +8794,7 @@ void PrintByteSegmentInObjectTo(const unsigned char* obj_bytes, size_t start,
       else
         *os << '-';
     }
-    snprintf(text, sizeof(text), "%02X", obj_bytes[j]);
+    GTEST_SNPRINTF_(text, sizeof(text), "%02X", obj_bytes[j]);
     *os << text;
   }
 }
@@ -8741,9 +8908,9 @@ static CharFormat PrintAsCharLiteralTo(Char c, ostream* os) {
   return kSpecialEscape;
 }
 
-// Prints a char c as if it's part of a string literal, escaping it when
+// Prints a wchar_t c as if it's part of a string literal, escaping it when
 // necessary; returns how c was formatted.
-static CharFormat PrintAsWideStringLiteralTo(wchar_t c, ostream* os) {
+static CharFormat PrintAsStringLiteralTo(wchar_t c, ostream* os) {
   switch (c) {
     case L'\'':
       *os << "'";
@@ -8758,8 +8925,9 @@ static CharFormat PrintAsWideStringLiteralTo(wchar_t c, ostream* os) {
 
 // Prints a char c as if it's part of a string literal, escaping it when
 // necessary; returns how c was formatted.
-static CharFormat PrintAsNarrowStringLiteralTo(char c, ostream* os) {
-  return PrintAsWideStringLiteralTo(static_cast<unsigned char>(c), os);
+static CharFormat PrintAsStringLiteralTo(char c, ostream* os) {
+  return PrintAsStringLiteralTo(
+      static_cast<wchar_t>(static_cast<unsigned char>(c)), os);
 }
 
 // Prints a wide or narrow character c and its code.  '\0' is printed
@@ -8805,48 +8973,63 @@ void PrintTo(wchar_t wc, ostream* os) {
   PrintCharAndCodeTo<wchar_t>(wc, os);
 }
 
-// Prints the given array of characters to the ostream.
-// The array starts at *begin, the length is len, it may include '\0' characters
-// and may not be null-terminated.
-static void PrintCharsAsStringTo(const char* begin, size_t len, ostream* os) {
-  *os << "\"";
+// Prints the given array of characters to the ostream.  CharType must be either
+// char or wchar_t.
+// The array starts at begin, the length is len, it may include '\0' characters
+// and may not be NUL-terminated.
+template <typename CharType>
+static void PrintCharsAsStringTo(
+    const CharType* begin, size_t len, ostream* os) {
+  const char* const kQuoteBegin = sizeof(CharType) == 1 ? "\"" : "L\"";
+  *os << kQuoteBegin;
   bool is_previous_hex = false;
   for (size_t index = 0; index < len; ++index) {
-    const char cur = begin[index];
+    const CharType cur = begin[index];
     if (is_previous_hex && IsXDigit(cur)) {
       // Previous character is of '\x..' form and this character can be
       // interpreted as another hexadecimal digit in its number. Break string to
       // disambiguate.
-      *os << "\" \"";
+      *os << "\" " << kQuoteBegin;
     }
-    is_previous_hex = PrintAsNarrowStringLiteralTo(cur, os) == kHexEscape;
+    is_previous_hex = PrintAsStringLiteralTo(cur, os) == kHexEscape;
   }
   *os << "\"";
+}
+
+// Prints a (const) char/wchar_t array of 'len' elements, starting at address
+// 'begin'.  CharType must be either char or wchar_t.
+template <typename CharType>
+static void UniversalPrintCharArray(
+    const CharType* begin, size_t len, ostream* os) {
+  // The code
+  //   const char kFoo[] = "foo";
+  // generates an array of 4, not 3, elements, with the last one being '\0'.
+  //
+  // Therefore when printing a char array, we don't print the last element if
+  // it's '\0', such that the output matches the string literal as it's
+  // written in the source code.
+  if (len > 0 && begin[len - 1] == '\0') {
+    PrintCharsAsStringTo(begin, len - 1, os);
+    return;
+  }
+
+  // If, however, the last element in the array is not '\0', e.g.
+  //    const char kFoo[] = { 'f', 'o', 'o' };
+  // we must print the entire array.  We also print a message to indicate
+  // that the array is not NUL-terminated.
+  PrintCharsAsStringTo(begin, len, os);
+  *os << " (no terminating NUL)";
 }
 
 // Prints a (const) char array of 'len' elements, starting at address 'begin'.
 void UniversalPrintArray(const char* begin, size_t len, ostream* os) {
-  PrintCharsAsStringTo(begin, len, os);
+  UniversalPrintCharArray(begin, len, os);
 }
 
-// Prints the given array of wide characters to the ostream.
-// The array starts at *begin, the length is len, it may include L'\0'
-// characters and may not be null-terminated.
-static void PrintWideCharsAsStringTo(const wchar_t* begin, size_t len,
-                                     ostream* os) {
-  *os << "L\"";
-  bool is_previous_hex = false;
-  for (size_t index = 0; index < len; ++index) {
-    const wchar_t cur = begin[index];
-    if (is_previous_hex && isascii(cur) && IsXDigit(static_cast<char>(cur))) {
-      // Previous character is of '\x..' form and this character can be
-      // interpreted as another hexadecimal digit in its number. Break string to
-      // disambiguate.
-      *os << "\" L\"";
-    }
-    is_previous_hex = PrintAsWideStringLiteralTo(cur, os) == kHexEscape;
-  }
-  *os << "\"";
+// Prints a (const) wchar_t array of 'len' elements, starting at address
+// 'begin'.
+void UniversalPrintArray(const wchar_t* begin, size_t len, ostream* os) {
+  UniversalPrintCharArray(begin, len, os);
 }
 
 // Prints the given C string to the ostream.
@@ -8872,7 +9055,7 @@ void PrintTo(const wchar_t* s, ostream* os) {
     *os << "NULL";
   } else {
     *os << ImplicitCast_<const void*>(s) << " pointing to ";
-    PrintWideCharsAsStringTo(s, wcslen(s), os);
+    PrintCharsAsStringTo(s, wcslen(s), os);
   }
 }
 #endif  // wchar_t is native
@@ -8891,13 +9074,13 @@ void PrintStringTo(const ::std::string& s, ostream* os) {
 // Prints a ::wstring object.
 #if GTEST_HAS_GLOBAL_WSTRING
 void PrintWideStringTo(const ::wstring& s, ostream* os) {
-  PrintWideCharsAsStringTo(s.data(), s.size(), os);
+  PrintCharsAsStringTo(s.data(), s.size(), os);
 }
 #endif  // GTEST_HAS_GLOBAL_WSTRING
 
 #if GTEST_HAS_STD_WSTRING
 void PrintWideStringTo(const ::std::wstring& s, ostream* os) {
-  PrintWideCharsAsStringTo(s.data(), s.size(), os);
+  PrintCharsAsStringTo(s.data(), s.size(), os);
 }
 #endif  // GTEST_HAS_STD_WSTRING
 

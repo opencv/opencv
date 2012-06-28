@@ -8,7 +8,10 @@
  */
 
 #include "precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_HIGHGUI
+#  include "opencv2/highgui/highgui.hpp"
+#endif
 #include <stdio.h>
 
 namespace cv{
@@ -665,7 +668,11 @@ namespace cv{
             cvMinMaxLoc(m_samples[i], 0, &maxval);
             cvConvertScale(m_samples[i], patch, 255/maxval);
 
+#ifdef HAVE_OPENCV_HIGHGUI
             cvSaveImage(buf, patch);
+#else
+            CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without image I/O support");
+#endif
 
             cvReleaseImage(&patch);
         }
@@ -1794,7 +1801,12 @@ namespace cv{
             sprintf(filename, "%s/%s", path, imagename);
 
             //printf("Reading image %s...", filename);
-            IplImage* img = cvLoadImage(filename, CV_LOAD_IMAGE_GRAYSCALE);
+            IplImage* img = 0;
+#ifdef HAVE_OPENCV_HIGHGUI
+            img = cvLoadImage(filename, CV_LOAD_IMAGE_GRAYSCALE);
+#else
+            CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without image I/O support");
+#endif
             //printf("done\n");
 
             extractPatches (img, patches, patch_size);

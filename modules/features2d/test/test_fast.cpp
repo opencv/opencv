@@ -48,8 +48,8 @@ class CV_FastTest : public cvtest::BaseTest
 {
 public:
     CV_FastTest();
-    ~CV_FastTest();    
-protected:    
+    ~CV_FastTest();
+protected:
     void run(int);
 };
 
@@ -58,13 +58,13 @@ CV_FastTest::~CV_FastTest() {}
 
 void CV_FastTest::run( int )
 {
-    Mat image1 = imread(string(ts->get_data_path()) + "inpaint/orig.jpg");   
-    Mat image2 = imread(string(ts->get_data_path()) + "cameracalibration/chess9.jpg");   
+    Mat image1 = imread(string(ts->get_data_path()) + "inpaint/orig.jpg");
+    Mat image2 = imread(string(ts->get_data_path()) + "cameracalibration/chess9.jpg");
     string xml = string(ts->get_data_path()) + "fast/result.xml";
-        
+
     if (image1.empty() || image2.empty())
     {
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );  
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         return;
     }
 
@@ -73,20 +73,20 @@ void CV_FastTest::run( int )
     cvtColor(image2, gray2, CV_BGR2GRAY);
 
     vector<KeyPoint> keypoints1;
-    vector<KeyPoint> keypoints2;    
+    vector<KeyPoint> keypoints2;
     FAST(gray1, keypoints1, 30);
     FAST(gray2, keypoints2, 30);
 
     for(size_t i = 0; i < keypoints1.size(); ++i)
     {
         const KeyPoint& kp = keypoints1[i];
-        cv::circle(image1, kp.pt, cvRound(kp.size/2), CV_RGB(255, 0, 0));        
+        cv::circle(image1, kp.pt, cvRound(kp.size/2), CV_RGB(255, 0, 0));
     }
 
     for(size_t i = 0; i < keypoints2.size(); ++i)
     {
         const KeyPoint& kp = keypoints2[i];
-        cv::circle(image2, kp.pt, cvRound(kp.size/2), CV_RGB(255, 0, 0));        
+        cv::circle(image2, kp.pt, cvRound(kp.size/2), CV_RGB(255, 0, 0));
     }
 
     Mat kps1(1, (int)(keypoints1.size() * sizeof(KeyPoint)), CV_8U, &keypoints1[0]);
@@ -99,14 +99,14 @@ void CV_FastTest::run( int )
         fs << "exp_kps1" << kps1;
         fs << "exp_kps2" << kps2;
         fs.release();
-    }              
+    }
 
     if (!fs.isOpened())
         fs.open(xml, FileStorage::READ);
- 
-    Mat exp_kps1, exp_kps2;        
+
+    Mat exp_kps1, exp_kps2;
     read( fs["exp_kps1"], exp_kps1, Mat() );
-    read( fs["exp_kps2"], exp_kps2, Mat() );                
+    read( fs["exp_kps2"], exp_kps2, Mat() );
     fs.release();
 
     if ( 0 != norm(exp_kps1, kps1, NORM_L2) || 0 != norm(exp_kps2, kps2, NORM_L2))
@@ -114,7 +114,7 @@ void CV_FastTest::run( int )
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;
     }
-    
+
  /*   cv::namedWindow("Img1"); cv::imshow("Img1", image1);
     cv::namedWindow("Img2"); cv::imshow("Img2", image2);
     cv::waitKey(0);*/

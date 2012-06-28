@@ -2,14 +2,13 @@ set(engine OpenCVEngine)
 set(JNI_LIB_NAME ${engine} ${engine}_jni)
 add_android_project(opencv_engine "${CMAKE_CURRENT_SOURCE_DIR}" SDK_TARGET 8 ${ANDROID_SDK_TARGET} IGNORE_JAVA ON)
 
-link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib" "${ANDROID_SOURCE_TREE}/bin_${ANDROID_ARCH_NAME}/system/lib")
+link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib" "${ANDROID_SOURCE_TREE}/out/target/product/${ANDROID_PRODUCT}/system/lib" "${ANDROID_SOURCE_TREE}/bin_${ANDROID_ARCH_NAME}/system/lib")
+
 SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
-
-
-
 file(GLOB engine_files "jni/BinderComponent/*.cpp" "jni/BinderComponent/*.h" "jni/include/*.h")
 
-include_directories(jni/BinderComponent jni/include "${ANDROID_SOURCE_TREE}/frameworks/base/include" "${ANDROID_SOURCE_TREE}/system/core/include")
+include_directories(jni/BinderComponent jni/include)
+include_directories(SYSTEM "${ANDROID_SOURCE_TREE}/frameworks/base/include" "${ANDROID_SOURCE_TREE}/system/core/include")
 add_library(${engine} SHARED ${engine_files})
 target_link_libraries(${engine} z binder log utils)
 

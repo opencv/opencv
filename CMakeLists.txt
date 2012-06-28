@@ -116,14 +116,14 @@ OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"         ON 
 OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON)
 OCV_OPTION(WITH_FFMPEG         "Include FFMPEG support"                      ON   IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_GSTREAMER      "Include Gstreamer support"                   ON   IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_GTK            "Include GTK support"                         ON   IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_GSTREAMER      "Include Gstreamer support"                   ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
+OCV_OPTION(WITH_GTK            "Include GTK support"                         ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_IMAGEIO        "ImageIO support for OS X"                    OFF  IF APPLE)
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   OFF  IF (MSVC OR X86 OR X86_64) )
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENEXR        "Include ILM support via OpenEXR"             ON   IF (NOT IOS) )
-OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID AND NOT IOS AND NOT APPLE) )
+OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON   IF (NOT IOS) )
 OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
@@ -131,10 +131,10 @@ OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O insted of QTKit" OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS) )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
-OCV_OPTION(WITH_UNICAP         "Include Unicap support (GPL)"                OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON   IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_UNICAP         "Include Unicap support (GPL)"                OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
+OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON   IF WIN32 )
-OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF WIN32 )
+OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID AND NOT IOS) )
 
 # OpenCV build components
@@ -149,8 +149,14 @@ OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"         
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF ANDROID AND NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
-OCV_OPTION(BUILD_ANDROID_SERVICE    "TBD" OFF IF ANDROID )
-OCV_OPTION(BUILD_ANDROID_PACKAGE    "TBD" OFF IF ANDROID )
+OCV_OPTION(BUILD_ANDROID_SERVICE    "TBD" OFF IF ANDROID AND ANDROID_USE_STLPORT AND ANDROID_SOURCE_TREE )
+
+if(DEFINED BUILD_opencv_nonfree AND NOT BUILD_opencv_nonfree)
+  OCV_OPTION(BUILD_ANDROID_PACKAGE  "TBD" OFF IF ANDROID )
+else()
+  unset(BUILD_ANDROID_PACKAGE CACHE)
+endif()
+
 
 # 3rd party libs
 OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS OR APPLE )
@@ -330,15 +336,6 @@ if(UNIX)
   else()
     add_definitions(-DHAVE_ALLOCA -DHAVE_ALLOCA_H -DHAVE_LIBPTHREAD -DHAVE_UNISTD_H)
   endif()
-endif()
-
-#
-# Check to see if we have large file support (needed by zlib)
-#
-include(CheckTypeSize)
-check_type_size(off64_t OFF64_T)
-if(HAVE_OFF64_T)
-  add_definitions(-D_LARGEFILE64_SOURCE=1)
 endif()
 
 include(cmake/OpenCVPCHSupport.cmake REQUIRED)
@@ -530,7 +527,7 @@ if(ANDROID)
   endif()
   status("    android tool:"  ANDROID_EXECUTABLE  THEN "${ANDROID_EXECUTABLE} (${ANDROID_TOOLS_Pkg_Desc})" ELSE NO)
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"            ELSE NO)
-  status("    Build service:" BUILD_ANDROID_SERVICE THEN YES ELSE NO)
+  status("    Google Play package:" BUILD_ANDROID_PACKAGE THEN YES ELSE NO)
 endif()
 
 # ========================== GUI ==========================

@@ -37,8 +37,6 @@ for l in open("%s/api" % sys.argv[1]):
 # Validation: check that any optional arguments are last
 had_error = False
 for (f, args, ty, flags) in api:
-    if f == 'PolarToCart':
-        print f, [(a.init != None) for a in args]
     has_init = [(a.init != None) for a in args if not 'O' in a.flags]
     if True in has_init and not all(has_init[has_init.index(True):]):
         print 'Error in definition for "%s", optional arguments must be last' % f
@@ -130,7 +128,7 @@ def has_optional(al):
 def gen(name, args, ty, flags):
   yield ""
   if has_optional(args):
-      yield "static PyObject *pycv%s(PyObject *self, PyObject *args, PyObject *kw)" % cname(name) 
+      yield "static PyObject *pycv%s(PyObject *self, PyObject *args, PyObject *kw)" % cname(name)
   else:
       yield "static PyObject *pycv%s(PyObject *self, PyObject *args)" % cname(name)
   if 'doconly' in flags:
@@ -185,7 +183,7 @@ def gen(name, args, ty, flags):
     in_args = [ a for a in args if not 'O' in a.flags ]
     fmt0 = "".join([ fmap[a.ty] for a in in_args if not a.init])
     fmt1 = "".join([ fmap[a.ty] for a in in_args if a.init])
-        
+
     yield ''
     if len(fmt0 + fmt1) > 0:
       if len(fmt1) > 0:

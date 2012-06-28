@@ -1,3 +1,28 @@
+'''
+The sample demonstrates how to train Random Trees classifier
+(or Boosting classifier, or MLP, or Knearest, or Support Vector Machines) using the provided dataset.
+
+We use the sample database letter-recognition.data
+from UCI Repository, here is the link:
+
+Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).
+UCI Repository of machine learning databases
+[http://www.ics.uci.edu/~mlearn/MLRepository.html].
+Irvine, CA: University of California, Department of Information and Computer Science.
+
+The dataset consists of 20000 feature vectors along with the
+responses - capital latin letters A..Z.
+The first 10000 samples are used for training
+and the remaining 10000 - to test the classifier.
+======================================================
+USAGE: 
+  letter_recog.py [--model <model>] 
+                  [--data <data fn>] 
+                  [--load <model fn>] [--save <model fn>]
+
+  Models: RTrees, KNearest, Boost, SVM, MLP
+'''
+
 import numpy as np
 import cv2
 
@@ -77,7 +102,6 @@ class Boost(LetterStatModel):
 
 
 class SVM(LetterStatModel):
-    train_ratio = 0.1
     def __init__(self):
         self.model = cv2.SVM()
 
@@ -118,12 +142,11 @@ if __name__ == '__main__':
     import getopt
     import sys
 
+    print  __doc__
+
     models = [RTrees, KNearest, Boost, SVM, MLP] # NBayes
     models = dict( [(cls.__name__.lower(), cls) for cls in models] )
 
-    print 'USAGE: letter_recog.py [--model <model>] [--data <data fn>] [--load <model fn>] [--save <model fn>]'
-    print 'Models: ', ', '.join(models)
-    print
     
     args, dummy = getopt.getopt(sys.argv[1:], '', ['model=', 'data=', 'load=', 'save='])
     args = dict(args)

@@ -1,3 +1,12 @@
+'''
+This program illustrates the use of findContours and drawContours.
+The original image is put up along with the image of drawn contours.
+
+Usage:
+    contours.py
+A trackbar is put up which controls the contour level from -3 to 3
+'''
+
 import numpy as np
 import cv2
 
@@ -30,6 +39,8 @@ def make_image():
     return img
 
 if __name__ == '__main__':
+    print __doc__
+
     img = make_image()
     h, w = img.shape[:2]
 

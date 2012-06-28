@@ -84,7 +84,7 @@ int CV_SLMLTest::validate_test_results( int testCaseIdx )
     // 1. compare files
     ifstream f1( fname1.c_str() ), f2( fname2.c_str() );
     string s1, s2;
-    int lineIdx = 0; 
+    int lineIdx = 0;
     CV_Assert( f1.is_open() && f2.is_open() );
     for( ; !f1.eof() && !f2.eof(); lineIdx++ )
     {

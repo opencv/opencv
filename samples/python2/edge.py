@@ -1,8 +1,21 @@
+'''
+This sample demonstrates Canny edge detection.
+
+Usage:
+  edge.py [<video source>]
+
+  Trackbars control edge thresholds.
+
+'''
+
 import cv2
 import video
 import sys
 
+
 if __name__ == '__main__':
+    print __doc__
+    
     try: fn = sys.argv[1]
     except: fn = 0
 

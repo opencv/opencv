@@ -21,10 +21,10 @@ GPU_PERF_TEST_1(BroxOpticalFlow, cv::gpu::DeviceInfo)
 
     cv::gpu::GpuMat frame0(frame0_host);
     cv::gpu::GpuMat frame1(frame1_host);
-    cv::gpu::GpuMat u; 
+    cv::gpu::GpuMat u;
     cv::gpu::GpuMat v;
 
-    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
+    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
                                     10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
     d_flow(frame0, frame1, u, v);
@@ -58,12 +58,12 @@ GPU_PERF_TEST_1(InterpolateFrames, cv::gpu::DeviceInfo)
 
     cv::gpu::GpuMat frame0(frame0_host);
     cv::gpu::GpuMat frame1(frame1_host);
-    cv::gpu::GpuMat fu, fv; 
+    cv::gpu::GpuMat fu, fv;
     cv::gpu::GpuMat bu, bv;
 
-    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
+    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
                                     10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-    
+
     d_flow(frame0, frame1, fu, fv);
     d_flow(frame1, frame0, bu, bv);
 
@@ -101,9 +101,9 @@ GPU_PERF_TEST_1(CreateOpticalFlowNeedleMap, cv::gpu::DeviceInfo)
     cv::gpu::GpuMat frame1(frame1_host);
     cv::gpu::GpuMat u, v;
 
-    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/, 
+    cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
                                     10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-    
+
     d_flow(frame0, frame1, u, v);
 
     cv::gpu::GpuMat vertex, colors;
@@ -127,7 +127,7 @@ GPU_PERF_TEST(GoodFeaturesToTrack, cv::gpu::DeviceInfo, MinDistance)
 {
     cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
-    
+
     double minDistance = GET_PARAM(1);
 
     cv::Mat image_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
@@ -233,7 +233,7 @@ GPU_PERF_TEST(PyrLKOpticalFlowDense, cv::gpu::DeviceInfo, WinSize, Levels, Iters
 
     cv::gpu::GpuMat frame0(frame0_host);
     cv::gpu::GpuMat frame1(frame1_host);
-    cv::gpu::GpuMat u; 
+    cv::gpu::GpuMat u;
     cv::gpu::GpuMat v;
 
     cv::gpu::PyrLKOpticalFlow pyrLK;

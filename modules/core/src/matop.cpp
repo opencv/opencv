@@ -1491,7 +1491,9 @@ void MatOp_GEMM::multiply(const MatExpr& e, double s, MatExpr& res) const
 void MatOp_GEMM::transpose(const MatExpr& e, MatExpr& res) const
 {
     res = e;
-    res.flags ^= CV_GEMM_A_T | CV_GEMM_B_T | CV_GEMM_C_T;
+    res.flags = (!(e.flags & CV_GEMM_A_T) ? CV_GEMM_B_T : 0) |
+                (!(e.flags & CV_GEMM_B_T) ? CV_GEMM_A_T : 0) |
+                (!(e.flags & CV_GEMM_C_T) ? CV_GEMM_C_T : 0);
     swap(res.a, res.b);
 }
 

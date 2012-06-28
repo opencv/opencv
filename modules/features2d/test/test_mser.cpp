@@ -50,8 +50,8 @@ using namespace cv;
 class CV_MserTest : public cvtest::BaseTest
 {
 public:
-    CV_MserTest();  
-protected:    
+    CV_MserTest();
+protected:
     void run(int);
     int LoadBoxes(const char* path, vector<CvBox2D>& boxes);
     int SaveBoxes(const char* path, const vector<CvBox2D>& boxes);
@@ -71,7 +71,7 @@ int CV_MserTest::LoadBoxes(const char* path, vector<CvBox2D>& boxes)
     {
         return 0;
     }
-    
+
     while (!feof(f))
     {
         CvBox2D box;
@@ -175,12 +175,12 @@ void CV_MserTest::run(int)
     {
         RotatedRect box = fitEllipse(msers[i]);
         box.angle=(float)CV_PI/2-box.angle;
-        boxes.push_back(box);           
+        boxes.push_back(box);
     }
 
     string boxes_path = string(ts->get_data_path()) + "mser/boxes.txt";
     string calc_boxes_path = string(ts->get_data_path()) + "mser/boxes.calc.txt";
-    
+
     if (!LoadBoxes(boxes_path.c_str(),boxes_orig))
     {
         SaveBoxes(boxes_path.c_str(),boxes);
