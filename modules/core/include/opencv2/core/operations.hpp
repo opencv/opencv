@@ -3842,6 +3842,22 @@ template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const string& name)
     return _create(name).ptr<_Tp>();
 }
 
+template<typename _Tp>
+void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
+{
+    Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
+    if (algo_ptr.empty()) {
+        CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
+    }
+    info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
+}
+template<typename _Tp>
+void Algorithm::set(const string& _name, const Ptr<_Tp>& value)
+{
+    this->set<_Tp>(_name.c_str(), value);
+}
+    
+
 template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const string& _name) const
 {
     typename ParamType<_Tp>::member_type value;

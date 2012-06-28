@@ -4323,6 +4323,7 @@ public:
     CV_WRAP_AS(setMat) void set(const string& name, const Mat& value);
     CV_WRAP_AS(setMatVector) void set(const string& name, const vector<Mat>& value);
     CV_WRAP_AS(setAlgorithm) void set(const string& name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void set(const string& name, const Ptr<_Tp>& value);
 
     void set(const char* name, int value);
     void set(const char* name, double value);
@@ -4331,6 +4332,7 @@ public:
     void set(const char* name, const Mat& value);
     void set(const char* name, const vector<Mat>& value);
     void set(const char* name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void set(const char* name, const Ptr<_Tp>& value);
 
     CV_WRAP string paramHelp(const string& name) const;
     int paramType(const char* name) const;
