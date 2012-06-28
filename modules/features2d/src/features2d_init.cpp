@@ -96,6 +96,14 @@ CV_INIT_ALGORITHM(ORB, "Feature2D.ORB",
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+CV_INIT_ALGORITHM(FREAK, "Feature2D.FREAK",
+    			  obj.info()->addParam(obj, "orientationNormalized", obj.orientationNormalized);
+			      obj.info()->addParam(obj, "scaleNormalized", obj.scaleNormalized);
+			      obj.info()->addParam(obj, "patternScale", obj.patternScale);
+			      obj.info()->addParam(obj, "nbOctave", obj.nOctaves));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
                   obj.info()->addParam(obj, "nfeatures", obj.nfeatures);
                   obj.info()->addParam(obj, "qualityLevel", obj.qualityLevel);
@@ -148,6 +156,7 @@ bool cv::initModule_features2d(void)
     all &= !FastFeatureDetector_info_auto.name().empty();
     all &= !StarDetector_info_auto.name().empty();
     all &= !MSER_info_auto.name().empty();
+    all &= !FREAK_info_auto.name().empty();
     all &= !ORB_info_auto.name().empty();
     all &= !GFTTDetector_info_auto.name().empty();
     all &= !HarrisDetector_info_auto.name().empty();

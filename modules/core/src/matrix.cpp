@@ -150,8 +150,8 @@ static void updateContinuityFlag(Mat& m)
             break;
     }
 
-    int64 t = (int64)m.step[0]*m.size[0];
-    if( j <= i && t == (int)t )
+    uint64 t = (uint64)m.step[0]*m.size[0];
+    if( j <= i && t == (size_t)t )
         m.flags |= Mat::CONTINUOUS_FLAG;
     else
         m.flags &= ~Mat::CONTINUOUS_FLAG;
