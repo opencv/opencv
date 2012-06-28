@@ -678,6 +678,8 @@ double cvGetOpenGlProp_GTK(const char* name)
     result = window->useGl;
 
     __END__;
+#else
+    (void)name;
 #endif
 
     return result;
@@ -1004,6 +1006,8 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
         drawGl(window);
         return TRUE;
     }
+#else
+    (void)data;
 #endif
 
   CvImageWidget *image_widget;

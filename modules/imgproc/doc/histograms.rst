@@ -174,10 +174,12 @@ Compares two histograms.
             * **CV_COMP_INTERSECT**     Intersection
 
             * **CV_COMP_BHATTACHARYYA**     Bhattacharyya distance
+            
+            * **CV_COMP_HELLINGER**     Synonym for ``CV_COMP_BHATTACHARYYA``
 
 The functions ``compareHist`` compare two dense or two sparse histograms using the specified method:
 
-* Correlation (method=CV\_COMP\_CORREL)
+* Correlation (``method=CV_COMP_CORREL``)
 
     .. math::
 
@@ -192,19 +194,19 @@ The functions ``compareHist`` compare two dense or two sparse histograms using t
     and
     :math:`N`     is a total number of histogram bins.
 
-* Chi-Square (method=CV\_COMP\_CHISQR)
+* Chi-Square (``method=CV_COMP_CHISQR``)
 
     .. math::
 
         d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}
 
-* Intersection (method=CV\_COMP\_INTERSECT)
+* Intersection (``method=CV_COMP_INTERSECT``)
 
     .. math::
 
         d(H_1,H_2) =  \sum _I  \min (H_1(I), H_2(I))
 
-* Bhattacharyya distance (method=CV\_COMP\_BHATTACHARYYA)
+* Bhattacharyya distance (``method=CV_COMP_BHATTACHARYYA`` or ``method=CV_COMP_HELLINGER``). In fact, OpenCV computes Hellinger distance, which is related to Bhattacharyya coefficient.
 
     .. math::
 

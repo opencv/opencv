@@ -533,7 +533,8 @@ enum
     CV_COMP_CORREL        =0,
     CV_COMP_CHISQR        =1,
     CV_COMP_INTERSECT     =2,
-    CV_COMP_BHATTACHARYYA =3
+    CV_COMP_BHATTACHARYYA =3,
+    CV_COMP_HELLINGER     =CV_COMP_BHATTACHARYYA
 };
 
 /* Mask size for distance transform */
