@@ -26,9 +26,7 @@ class Sample3View extends SampleViewBase {
 			mBitmap.recycle();
 			mBitmap = null;
 		}
-		mRGBA = null;
-		
-		
+		mRGBA = null;	
 	}
 
     @Override
@@ -43,8 +41,4 @@ class Sample3View extends SampleViewBase {
     }
 
     public native void FindFeatures(int width, int height, byte yuv[], int[] rgba);
-
-    static {
-        System.loadLibrary("native_sample");
-    }
 }

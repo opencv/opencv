@@ -104,11 +104,6 @@ class Sample4View extends SampleViewBase {
 
     public native void FindFeatures(long matAddrGr, long matAddrRgba);
 
-    static {
-	System.loadLibrary("opencv_java");
-        System.loadLibrary("mixed_sample");
-    }
-
     public void setViewMode(int viewMode) {
 		mViewMode = viewMode;
     }
