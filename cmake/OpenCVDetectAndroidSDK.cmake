@@ -218,7 +218,7 @@ macro(add_android_project target path)
 
     # get project sources
     file(GLOB_RECURSE android_proj_files RELATIVE "${path}" "${path}/res/*" "${path}/src/*")
-    ocv_list_filterout(android_proj_files ".svn")
+    ocv_list_filterout(android_proj_files "\\\\.svn")
 
     # copy sources out from the build tree
     set(android_proj_file_deps "")
@@ -257,7 +257,7 @@ macro(add_android_project target path)
 
     # build native part
     file(GLOB_RECURSE android_proj_jni_files "${path}/jni/*.c" "${path}/jni/*.h" "${path}/jni/*.cpp" "${path}/jni/*.hpp")
-    ocv_list_filterout(android_proj_jni_files ".svn")
+    ocv_list_filterout(android_proj_jni_files "\\\\.svn")
 
     if(android_proj_jni_files AND EXISTS ${path}/jni/Android.mk AND NOT DEFINED JNI_LIB_NAME)
       file(STRINGS "${path}/jni/Android.mk" JNI_LIB_NAME REGEX "LOCAL_MODULE[ ]*:=[ ]*.*" )
@@ -313,7 +313,30 @@ macro(add_android_project target path)
     # put the final .apk to the OpenCV's bin folder
     add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")
     if(INSTALL_ANDROID_EXAMPLES AND "${target}" MATCHES "^example-")
-      install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "bin" COMPONENT main)
+      #apk
+      install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT main)
+      get_filename_component(sample_dir "${path}" NAME)
+      #java part
+      foreach(f ${android_proj_files} ${ANDROID_MANIFEST_FILE})
+        get_filename_component(install_subdir "${f}" PATH)
+        install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
+      endforeach()
+      #jni part + eclipse files
+      file(GLOB_RECURSE jni_files RELATIVE "${path}" "${path}/jni/*")
+      ocv_list_filterout(jni_files "\\\\.svn")
+      foreach(f ${jni_files} ".classpath" ".project" ".settings/org.eclipse.jdt.core.prefs")
+        get_filename_component(install_subdir "${f}" PATH)
+        install(FILES "${path}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
+      endforeach()
+      #update proj
+      if(android_proj_lib_deps_commands)
+        set(inst_lib_opt " --library ../../sdk/java")
+      endif()
+      install(CODE "EXECUTE_PROCESS(COMMAND ${ANDROID_EXECUTABLE} --silent update project --path . --target \"${android_proj_sdk_target}\" --name \"${target}\" ${inst_lib_opt}
+                                    WORKING_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}\"
+                                   )"  COMPONENT main)
+      #empty 'gen'
+      install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}/gen\")" COMPONENT main)
     endif()
   endif()
 endmacro()

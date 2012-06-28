@@ -73,7 +73,7 @@ if(HAVE_CUDA)
   endif()
 
   install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
-    DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
+    DESTINATION ${OPENCV_INCLUDE_INSTALL_PATH}/opencv2/${name}
     COMPONENT main)
 endif()
 

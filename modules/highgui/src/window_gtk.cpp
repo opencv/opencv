@@ -851,7 +851,7 @@ namespace
         __END__;
     }
 
-    void GlFuncTab_GTK::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const
+    void GlFuncTab_GTK::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool /*underline*/, int start, int count, int base) const
     {
         PangoFontDescription* fontDecr;
         PangoFont* pangoFont;

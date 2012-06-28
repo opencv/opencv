@@ -42,6 +42,7 @@ list(APPEND opencv_test_java_file_deps ${android_proj_target_files})
 # build java part
 add_custom_command(
     OUTPUT "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk"
+    COMMAND ${CMAKE_COMMAND} -E copy "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}/libopencv_java.so" "${opencv_test_java_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/libopencv_java.so"
     COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
     COMMAND ${CMAKE_COMMAND} -E touch "${opencv_test_java_bin_dir}/bin/OpenCVTest-debug.apk" # needed because ant does not update the timestamp of updated apk
     WORKING_DIRECTORY "${opencv_test_java_bin_dir}"

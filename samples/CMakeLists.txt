@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-#  CMake file for samples. See root CMakeLists.txt 
+#  CMake file for samples. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
 
