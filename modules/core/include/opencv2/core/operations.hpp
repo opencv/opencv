@@ -3843,7 +3843,7 @@ template<typename _Tp> inline Ptr<_Tp> Algorithm::create(const string& name)
 }
 
 template<typename _Tp>
-void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
+inline void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
 {
     Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
     if (algo_ptr.empty()) {
@@ -3851,12 +3851,12 @@ void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
     }
     info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
 }
+
 template<typename _Tp>
-void Algorithm::set(const string& _name, const Ptr<_Tp>& value)
+inline void Algorithm::set(const string& _name, const Ptr<_Tp>& value)
 {
     this->set<_Tp>(_name.c_str(), value);
 }
-    
 
 template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const string& _name) const
 {
@@ -3870,6 +3870,24 @@ template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::ge
     typename ParamType<_Tp>::member_type value;
     info()->get(this, _name, ParamType<_Tp>::type, &value);
     return value;
+}
+
+template<typename _Tp, typename _Base> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
+                  Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
+                  const string& help)
+{
+    //TODO: static assert: _Tp inherits from _Base
+    addParam_(algo, parameter, ParamType<_Base>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
+}
+
+template<typename _Tp> inline void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
+                  Ptr<_Tp>& value, bool readOnly, Ptr<_Tp> (Algorithm::*getter)(), void (Algorithm::*setter)(const Ptr<_Tp>&),
+                  const string& help)
+{
+    //TODO: static assert: _Tp inherits from Algorithm
+    addParam_(algo, parameter, ParamType<Algorithm>::type, &value, readOnly,
+              (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
 }

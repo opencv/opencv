@@ -2414,13 +2414,13 @@ void DefaultViewPort::startDisplayInfo(QString text, int delayms)
 }
 
 
-void DefaultViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata)
+void DefaultViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback /*callback*/, void* /*userdata*/)
 {
     CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
 }
 
 
-void DefaultViewPort::setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata)
+void DefaultViewPort::setOpenGlCleanCallback(CvOpenGlCleanCallback /*callback*/, void* /*userdata*/)
 {
     CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
 }
@@ -3058,7 +3058,7 @@ void DefaultViewPort::drawInstructions(QPainter *painter)
 }
 
 
-void DefaultViewPort::setSize(QSize size_)
+void DefaultViewPort::setSize(QSize /*size_*/)
 {
 }
 
@@ -3101,11 +3101,11 @@ void OpenGlViewPort::setMouseCallBack(CvMouseCallback callback, void* param)
     mouseData = param;
 }
 
-void OpenGlViewPort::writeSettings(QSettings& settings)
+void OpenGlViewPort::writeSettings(QSettings& /*settings*/)
 {
 }
 
-void OpenGlViewPort::readSettings(QSettings& settings)
+void OpenGlViewPort::readSettings(QSettings& /*settings*/)
 {
 }
 
@@ -3114,15 +3114,15 @@ double OpenGlViewPort::getRatio()
     return (double)width() / height();
 }
 
-void OpenGlViewPort::setRatio(int flags)
+void OpenGlViewPort::setRatio(int /*flags*/)
 {
 }
 
-void OpenGlViewPort::updateImage(const CvArr* arr)
+void OpenGlViewPort::updateImage(const CvArr* /*arr*/)
 {
 }
 
-void OpenGlViewPort::startDisplayInfo(QString text, int delayms)
+void OpenGlViewPort::startDisplayInfo(QString /*text*/, int /*delayms*/)
 {
 }
 
@@ -3350,9 +3350,9 @@ void GlFuncTab_QT::unmapBuffer(unsigned int target) const
     __END__;
 }
 
-void GlFuncTab_QT::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const
+void GlFuncTab_QT::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool /*underline*/, int start, int count, int base) const
 {
-    CV_FUNCNAME( "GlFuncTab_QT::generateBitmapFont" );
+    //CV_FUNCNAME( "GlFuncTab_QT::generateBitmapFont" );
 
     QFont font(QString(family.c_str()), height, weight, italic);
 

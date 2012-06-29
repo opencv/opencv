@@ -4409,6 +4409,16 @@ public:
                   Ptr<Algorithm> (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(const Ptr<Algorithm>&)=0,
                   const string& help=string());
+    template<typename _Tp, typename _Base> void addParam(Algorithm& algo, const char* name,
+                  Ptr<_Tp>& value, bool readOnly=false,
+                  Ptr<_Tp> (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
+                  const string& help=string());
+    template<typename _Tp> void addParam(Algorithm& algo, const char* name,
+                  Ptr<_Tp>& value, bool readOnly=false,
+                  Ptr<_Tp> (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(const Ptr<_Tp>&)=0,
+                  const string& help=string());
 protected:
     AlgorithmInfoData* data;
     void set(Algorithm* algo, const char* name, int argType,
