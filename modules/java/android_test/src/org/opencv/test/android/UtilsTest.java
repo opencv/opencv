@@ -130,4 +130,43 @@ public class UtilsTest extends OpenCVTestCase {
 
     }
 
+    public void testAlphaPremultiplication() {
+        final int size = 256;
+        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Mat mOrig  = new Mat(size, size, CvType.CV_8UC4);
+        Mat mUnPre = new Mat(size, size, CvType.CV_8UC4);
+        for(int y=0; y<size; y++) {
+            int a = y;
+            for(int x=0; x<size; x++) {
+                int color = Color.argb(a, 0, x, y);
+                bmp.setPixel(x, y, color);
+                mOrig.put(y, x, Color.red(color), Color.green(color), Color.blue(color), Color.alpha(color));
+                int colorUnPre = bmp.getPixel(x, y);
+                mUnPre.put(y, x, Color.red(colorUnPre), Color.green(colorUnPre), Color.blue(colorUnPre), Color.alpha(colorUnPre));
+            }
+        }
+        
+        // Bitmap -> Mat
+        Mat m1 = new Mat();
+        Mat m2 = new Mat();
+        
+        Utils.bitmapToMat(bmp, m1, false);
+        Imgproc.cvtColor(mOrig, m2, Imgproc.COLOR_RGBA2mRGBA);
+        assertMatEqual(m1, m2, 1.1);
+
+        Utils.bitmapToMat(bmp, m1, true);
+        assertMatEqual(m1, mUnPre, 1.1);
+        
+        // Mat -> Bitmap 
+        Bitmap bmp1 = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        
+        Utils.matToBitmap(mOrig, bmp1, true);
+        Utils.bitmapToMat(bmp1, m1, true);
+        //assertMatEqual(m1, mUnPre, 1.1);
+        Mat diff = new Mat();
+        Core.absdiff(m1, mUnPre, diff);
+        int numDiff = Core.countNonZero(diff.reshape(1));
+        assertTrue(numDiff < size * 4);
+    }
+
 }

@@ -400,12 +400,13 @@ public class OpenCVTestCase extends TestCase {
 
         Mat diff = new Mat();
         Core.absdiff(expected, actual, diff);
+        double maxDiff = Core.norm(diff, Core.NORM_INF);
 
         if (isEqualityMeasured)
-            assertTrue("Max difference between expected and actiual Mats is bigger than " + eps,
+            assertTrue("Max difference between expected and actiual Mats is "+ maxDiff + ", that bigger than " + eps,
                     Core.checkRange(diff, true, 0.0, eps));
         else
-            assertFalse("Max difference between expected and actiual Mats is less than " + eps,
+            assertFalse("Max difference between expected and actiual Mats is "+ maxDiff + ", that less than " + eps,
                     Core.checkRange(diff, true, 0.0, eps));
     }
 

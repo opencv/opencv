@@ -306,7 +306,11 @@ enum
     CV_YUV2GRAY_YUYV = CV_YUV2GRAY_YUY2,
     CV_YUV2GRAY_YUNV = CV_YUV2GRAY_YUY2,
 
-    CV_COLORCVT_MAX  = 125
+    // alpha premultiplication
+    CV_RGBA2mRGBA = 125,
+    CV_mRGBA2RGBA = 126,
+
+    CV_COLORCVT_MAX  = 127
 };
 
 
