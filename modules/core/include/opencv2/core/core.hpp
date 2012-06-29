@@ -1249,6 +1249,7 @@ public:
     ~Ptr();
     //! copy constructor. Copies the members and calls addref()
     Ptr(const Ptr& ptr);
+    template<typename _Tp2> Ptr(const Ptr<_Tp2>& ptr);
     //! copy operator. Calls ptr.addref() and release() before copying the members
     Ptr& operator = (const Ptr& ptr);
     //! increments the reference counter
