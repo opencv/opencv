@@ -521,7 +521,7 @@ void icvSetOpenGlCleanCallback(const char*, CvOpenGlCleanCallback, void*)
 
 #if defined (HAVE_QT)
 
-CvFont cv::fontQt(const string& nameFont, int pointSize, Scalar color, int weight,  int style, int spacing)
+CvFont cv::fontQt(const string& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
 {
 return cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
 }

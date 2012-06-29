@@ -527,7 +527,7 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
 #endif
 
 template<typename _Tp> void
-JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int n, int n1)
+JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int n, int n1, double minval)
 {
     VBLAS<_Tp> vblas;
     AutoBuffer<double> Wbuf(n);
@@ -587,11 +587,11 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
                     delta = p*p*0.5/(gamma + beta);
                 }
                 
-                if( iter % 2 )
+                W[i] += delta;
+                W[j] -= delta;
+                
+                if( iter % 2 != 0 && W[i] > 0 && W[j] > 0 )
                 {
-                    W[i] += delta;
-                    W[j] -= delta;
-                    
                     k = vblas.givens(Ai, Aj, m, c, s);
                     
                     for( ; k < m; k++ )
@@ -671,12 +671,13 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
     
     if( !Vt )
         return;
+    
     RNG rng(0x12345678);
     for( i = 0; i < n1; i++ )
     {
         sd = i < n ? W[i] : 0;
         
-        while( sd == 0 )
+        while( sd <= minval )
         {
             // if we got a zero singular value, then in order to get the corresponding left singular vector
             // we generate a random vector, project it to the previously computed left singular vectors,
@@ -724,12 +725,12 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep, int m, int
     
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, FLT_MIN);
 }
 
 static void JacobiSVD(double* At, size_t astep, double* W, double* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1);
+    JacobiSVDImpl_(At, astep, W, Vt, vstep, m, n, !Vt ? 0 : n1 < 0 ? n : n1, DBL_MIN);
 }
     
 /* y[0:m,0:n] += diag(a[0:1,0:m]) * x[0:m,0:n] */
