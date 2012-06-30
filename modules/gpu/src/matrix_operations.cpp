@@ -189,12 +189,12 @@ GpuMat cv::gpu::CudaMem::createGpuMatHeader () const { throw_nogpu(); return Gpu
 
 #else /* !defined (HAVE_CUDA) */
 
-void registerPageLocked(Mat& m)
+void cv::gpu::registerPageLocked(Mat& m)
 {
     cudaSafeCall( cudaHostRegister(m.ptr(), m.step * m.rows, cudaHostRegisterPortable) );
 }
 
-void unregisterPageLocked(Mat& m)
+void cv::gpu::unregisterPageLocked(Mat& m)
 {
     cudaSafeCall( cudaHostUnregister(m.ptr()) );
 }
