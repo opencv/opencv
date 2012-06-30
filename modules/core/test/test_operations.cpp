@@ -955,13 +955,13 @@ bool CV_OperationsTest::TestSVD()
         Mat Q(3,3,CV_32FC1);
         Mat U,Vt,R,T,W;
         
-        Dp.at<float>(0,0)=0.86483884; Dp.at<float>(0,1)= -0.3077251; Dp.at<float>(0,2)=-0.55711365;
-        Dp.at<float>(1,0)=0.49294353; Dp.at<float>(1,1)=-0.24209651; Dp.at<float>(1,2)=-0.25084701;
-        Dp.at<float>(2,0)=0;          Dp.at<float>(2,1)=0;           Dp.at<float>(2,2)=0;
+        Dp.at<float>(0,0)=0.86483884f; Dp.at<float>(0,1)= -0.3077251f; Dp.at<float>(0,2)=-0.55711365f;
+        Dp.at<float>(1,0)=0.49294353f; Dp.at<float>(1,1)=-0.24209651f; Dp.at<float>(1,2)=-0.25084701f;
+        Dp.at<float>(2,0)=0;           Dp.at<float>(2,1)=0;            Dp.at<float>(2,2)=0;
         
-        Dc.at<float>(0,0)=0.75632739; Dc.at<float>(0,1)= -0.38859656; Dc.at<float>(0,2)=-0.36773083;
-        Dc.at<float>(1,0)=0.9699229; Dc.at<float>(1,1)=-0.49858192; Dc.at<float>(1,2)=-0.47134098;
-        Dc.at<float>(2,0)=0.10566688; Dc.at<float>(2,1)=-0.060333252; Dc.at<float>(2,2)=-0.045333147;
+        Dc.at<float>(0,0)=0.75632739f; Dc.at<float>(0,1)= -0.38859656f; Dc.at<float>(0,2)=-0.36773083f;
+        Dc.at<float>(1,0)=0.9699229f;  Dc.at<float>(1,1)=-0.49858192f;  Dc.at<float>(1,2)=-0.47134098f;
+        Dc.at<float>(2,0)=0.10566688f; Dc.at<float>(2,1)=-0.060333252f; Dc.at<float>(2,2)=-0.045333147f;
         
         Q=Dp*Dc.t();
         SVD decomp;

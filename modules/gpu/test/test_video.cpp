@@ -545,7 +545,7 @@ TEST_P(MOG, Update)
             cv::swap(temp, frame);
         }
 
-        mog(loadMat(frame, useRoi), foreground, learningRate);
+        mog(loadMat(frame, useRoi), foreground, (float)learningRate);
 
         mog_gold(frame, foreground_gold, learningRate);
 

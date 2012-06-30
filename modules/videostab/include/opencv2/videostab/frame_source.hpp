@@ -81,11 +81,7 @@ public:
     double fps();
 
 private:
-    std::string path_;
-    bool volatileFrame_;
-
-    struct VideoReader;
-    const VideoReader& reader_;
+    Ptr<IFrameSource> impl;
 };
 
 } // namespace videostab

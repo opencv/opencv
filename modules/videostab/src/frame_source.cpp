@@ -56,74 +56,67 @@ namespace cv
 namespace videostab
 {
 
-struct VideoFileSource::VideoReader
+namespace {
+
+class VideoFileSourceImpl : public IFrameSource
 {
+public:
+    VideoFileSourceImpl(const std::string &path, bool volatileFrame)
+        : path_(path), volatileFrame_(volatileFrame) { reset(); }
+
+    virtual void reset()
+    {
 #ifdef HAVE_OPENCV_HIGHGUI
-    mutable VideoCapture vc;
+        vc.release();
+        vc.open(path_);
+        if (!vc.isOpened())
+            throw runtime_error("can't open file: " + path_);
+#else
+        CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without video I/O support");
+#endif
+    }
+
+    virtual Mat nextFrame()
+    {
+        Mat frame;
+#ifdef HAVE_OPENCV_HIGHGUI
+        vc >> frame;
+#endif
+        return volatileFrame_ ? frame : frame.clone();
+    }
+
+#ifdef HAVE_OPENCV_HIGHGUI
+    int width() {return static_cast<int>(vc.get(CV_CAP_PROP_FRAME_WIDTH));}
+    int height() {return static_cast<int>(vc.get(CV_CAP_PROP_FRAME_HEIGHT));}
+    int count() {return static_cast<int>(vc.get(CV_CAP_PROP_FRAME_COUNT));}
+    double fps() {return vc.get(CV_CAP_PROP_FPS);}
+#else
+    int width() {return 0;}
+    int height() {return 0;}
+    int count() {return 0;}
+    double fps() {return 0;}
+#endif
+
+private:
+    std::string path_;
+    bool volatileFrame_;
+#ifdef HAVE_OPENCV_HIGHGUI
+    VideoCapture vc;
 #endif
 };
 
+}//namespace
+
 VideoFileSource::VideoFileSource(const string &path, bool volatileFrame)
-    : path_(path), volatileFrame_(volatileFrame), reader_(VideoReader()) { reset(); }
+    : impl(new VideoFileSourceImpl(path, volatileFrame)) {}
 
+void VideoFileSource::reset() { impl->reset(); }
+Mat VideoFileSource::nextFrame() { return impl->nextFrame(); }
 
-void VideoFileSource::reset()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    reader_.vc.release();
-    reader_.vc.open(path_);
-    if (!reader_.vc.isOpened())
-        throw runtime_error("can't open file: " + path_);
-#else
-    CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without video I/O support");
-#endif
-}
-
-
-Mat VideoFileSource::nextFrame()
-{
-    Mat frame;
-#ifdef HAVE_OPENCV_HIGHGUI
-    reader_.vc >> frame;
-#endif
-    return volatileFrame_ ? frame : frame.clone();
-}
-
-int VideoFileSource::width()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return static_cast<int>(reader_.vc.get(CV_CAP_PROP_FRAME_WIDTH));
-#else
-    return 0;
-#endif
-}
-
-int VideoFileSource::height()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return static_cast<int>(reader_.vc.get(CV_CAP_PROP_FRAME_HEIGHT));
-#else
-    return 0;
-#endif
-}
-
-int VideoFileSource::count()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return static_cast<int>(reader_.vc.get(CV_CAP_PROP_FRAME_COUNT));
-#else
-    return 0;
-#endif
-}
-
-double VideoFileSource::fps()
-{
-#ifdef HAVE_OPENCV_HIGHGUI
-    return reader_.vc.get(CV_CAP_PROP_FPS);
-#else
-    return 0;
-#endif
-}
+int VideoFileSource::width() { return ((VideoFileSourceImpl*)impl.obj)->width(); }
+int VideoFileSource::height() { return ((VideoFileSourceImpl*)impl.obj)->height(); }
+int VideoFileSource::count() { return ((VideoFileSourceImpl*)impl.obj)->count(); }
+double VideoFileSource::fps() { return ((VideoFileSourceImpl*)impl.obj)->fps(); }
 
 } // namespace videostab
 } // namespace cv

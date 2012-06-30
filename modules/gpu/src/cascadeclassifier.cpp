@@ -83,7 +83,7 @@ cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()              { 
 bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                               { throw_nogpu(); return true; }
 bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string&)                         { throw_nogpu(); return true; }
 Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const                   { throw_nogpu(); return Size(); }
-void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size desired) { throw_nogpu();}
+void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size /*desired*/) { throw_nogpu();}
 
 int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, cv::gpu::GpuMat&, double, int)  { throw_nogpu(); return 0; }
 
