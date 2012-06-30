@@ -5202,13 +5202,11 @@ string FileStorage::releaseAndGetString()
     string buf;
     if( fs.obj && fs.obj->outbuf )
         icvClose(fs.obj, &buf);
-
-    fs.release();
-    structs.clear();
-    state = UNDEFINED;
-    return buf;
-}
-
+    
+    release();
+	return buf;
+}    
+    
 FileNode FileStorage::root(int streamidx) const
 {
     return isOpened() ? FileNode(fs, cvGetRootFileNode(fs, streamidx)) : FileNode();

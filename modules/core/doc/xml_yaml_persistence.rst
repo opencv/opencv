@@ -201,6 +201,15 @@ Closes the file and releases all the memory buffers.
 
 .. ocv:function:: void FileStorage::release()
 
+Call this method after all I/O operations with the storage are finished.
+
+
+FileStorage::releaseAndGetString
+--------------------------------
+Closes the file and releases all the memory buffers.
+
+.. ocv:function:: string FileStorage::releaseAndGetString()
+
 Call this method after all I/O operations with the storage are finished. If the storage was opened for writing data and ``FileStorage::WRITE`` was specified
 
 
