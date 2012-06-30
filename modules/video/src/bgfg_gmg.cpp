@@ -67,7 +67,7 @@ BackgroundSubtractorGMG::BackgroundSubtractorGMG()
     smoothingRadius = 7;
 }
 
-void BackgroundSubtractorGMG::initializeType(InputArray _image,flexitype min, flexitype max)
+void BackgroundSubtractorGMG::initializeType(InputArray _image, double min, double max)
 {
     minVal = min;
     maxVal = max;
@@ -114,7 +114,6 @@ void BackgroundSubtractorGMG::initializeType(InputArray _image,flexitype min, fl
      * Detect and accommodate the image depth
      */
     Mat image = _image.getMat();
-    imageDepth = image.depth();  // 32f, 8u, etc.
     numChannels = image.channels();
 
     /*
@@ -127,16 +126,15 @@ void BackgroundSubtractorGMG::initializeType(InputArray _image,flexitype min, fl
     /*
      * Data Structure Initialization
      */
-    Size imsize = image.size();
-    imWidth = imsize.width;
-    imHeight = imsize.height;
-    numPixels = imWidth*imHeight;
+    imWidth = image.cols;
+    imHeight = image.rows;
+    numPixels = image.total();
     pixels.resize(numPixels);
     frameNum = 0;
 
     // used to iterate through matrix of type unknown at compile time
-    elemSize = image.elemSize();
-    elemSize1 = image.elemSize1();
+    //elemSize = image.elemSize();
+    //elemSize1 = image.elemSize1();
 
     vector<PixelModelGMG>::iterator pixel;
     vector<PixelModelGMG>::iterator pixel_end = pixels.end();
@@ -145,8 +143,8 @@ void BackgroundSubtractorGMG::initializeType(InputArray _image,flexitype min, fl
         pixel->setMaxFeatures(maxFeatures);
     }
 
-    fgMaskImage = Mat::zeros(imHeight,imWidth,CV_8UC1);  // 8-bit unsigned mask. 255 for FG, 0 for BG
-    posteriorImage = Mat::zeros(imHeight,imWidth,CV_32FC1);  // float for storing probabilities. Can be viewed directly with imshow.
+    fgMaskImage = Mat::zeros(imHeight, imWidth, CV_8UC1);  // 8-bit unsigned mask. 255 for FG, 0 for BG
+    posteriorImage = Mat::zeros(imHeight, imWidth, CV_32FC1);  // float for storing probabilities. Can be viewed directly with imshow.
     isDataInitialized = true;
 }
 
@@ -171,7 +169,7 @@ void BackgroundSubtractorGMG::operator()(InputArray _image, OutputArray _fgmask,
 
     Mat image = _image.getMat();
 
-    _fgmask.create(Size(imHeight,imWidth),CV_8U);
+    _fgmask.create(imHeight,imWidth,CV_8U);
     fgMaskImage = _fgmask.getMat();  // 8-bit unsigned mask. 255 for FG, 0 for BG
 
     /*
@@ -183,54 +181,32 @@ void BackgroundSubtractorGMG::operator()(InputArray _image, OutputArray _fgmask,
     vector<PixelModelGMG>::iterator pixel;
     vector<PixelModelGMG>::iterator pixel_end = pixels.end();
     size_t i;
-//#pragma omp parallel
+    //#pragma omp parallel
     for (i = 0, pixel=pixels.begin(); pixel != pixel_end; ++i,++pixel)
     {
         HistogramFeatureGMG newFeature;
         newFeature.color.clear();
+        int irow = int(i / imWidth);
+        int icol = i % imWidth;
         for (size_t c = 0; c < numChannels; ++c)
         {
             /*
              * Perform quantization. in each channel. (color-min)*(levels)/(max-min).
              * Shifts min to 0 and scales, finally casting to an int.
              */
-            size_t quantizedColor;
-            // pixel at data+elemSize*i. Individual channel c at data+elemSize*i+elemSize1*c
-            if (imageDepth == CV_8U)
+            double color;
+            switch(image.depth())
             {
-                uchar *color = (uchar*)(image.data+elemSize*i+elemSize1*c);
-                quantizedColor = (size_t)((double)(*color-minVal.uc)*quantizationLevels/(maxVal.uc-minVal.uc));
+                case CV_8U: color = image.ptr<uchar>(irow)[icol * numChannels + c]; break;
+                case CV_8S: color = image.ptr<schar>(irow)[icol * numChannels + c]; break;
+                case CV_16U: color = image.ptr<ushort>(irow)[icol * numChannels + c]; break;
+                case CV_16S: color = image.ptr<short>(irow)[icol * numChannels + c]; break;
+                case CV_32S: color = image.ptr<int>(irow)[icol * numChannels + c]; break;
+                case CV_32F: color = image.ptr<float>(irow)[icol * numChannels + c]; break;
+                case CV_64F: color = image.ptr<double>(irow)[icol * numChannels + c]; break;
+                default: color = 0; break;
             }
-            else if (imageDepth == CV_8S)
-            {
-                char *color = (char*)(image.data+elemSize*i+elemSize1*c);
-                quantizedColor = (size_t)((double)(*color-minVal.c)*quantizationLevels/(maxVal.c-minVal.c));
-            }
-            else if (imageDepth == CV_16U)
-            {
-                unsigned int *color = (unsigned int*)(image.data+elemSize*i+elemSize1*c);
-                quantizedColor = (size_t)((double)(*color-minVal.ui)*quantizationLevels/(maxVal.ui-minVal.ui));
-            }
-            else if (imageDepth == CV_16S)
-            {
-                int *color = (int*)(image.data+elemSize*i+elemSize1*c);
-                quantizedColor = (size_t)((double)(*color-minVal.i)*quantizationLevels/(maxVal.i-minVal.i));
-            }
-            else if (imageDepth == CV_32F)
-            {
-                float *color = (float*)image.data+elemSize*i+elemSize1*c;
-                quantizedColor = (size_t)((double)(*color-minVal.ui)*quantizationLevels/(maxVal.ui-minVal.ui));
-            }
-            else if (imageDepth == CV_32S)
-            {
-                long int *color = (long int*)(image.data+elemSize*i+elemSize1*c);
-                quantizedColor = (size_t)((double)(*color-minVal.li)*quantizationLevels/(maxVal.li-minVal.li));
-            }
-            else if (imageDepth == CV_64F)
-            {
-                double *color = (double*)image.data+elemSize*i+elemSize1*c;
-                quantizedColor = (size_t)((double)(*color-minVal.d)*quantizationLevels/(maxVal.d-minVal.d));
-            }
+            size_t quantizedColor = (size_t)((color-minVal)*quantizationLevels/(maxVal-minVal));
             newFeature.color.push_back(quantizedColor);
         }
         // now that the feature is ready for use, put it in the histogram
@@ -251,7 +227,7 @@ void BackgroundSubtractorGMG::operator()(InputArray _image, OutputArray _fgmask,
              */
             int row,col;
             col = i%imWidth;
-            row = (i-col)/imWidth;
+            row = int(i-col)/imWidth;
             posteriorImage.at<float>(row,col) = (1.0f-posterior);
         }
         pixel->setLastObservedFeature(newFeature);
@@ -284,10 +260,10 @@ void BackgroundSubtractorGMG::updateBackgroundModel(InputArray _mask)
 
     Mat maskImg = _mask.getMat();
 //#pragma omp parallel
-    for (size_t i = 0; i < imHeight; ++i)
+    for (int i = 0; i < imHeight; ++i)
     {
 //#pragma omp parallel
-        for (size_t j = 0; j < imWidth; ++j)
+        for (int j = 0; j < imWidth; ++j)
         {
             if (frameNum <= numInitializationFrames + 1)
             {

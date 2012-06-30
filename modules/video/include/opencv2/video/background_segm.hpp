@@ -199,75 +199,7 @@ protected:
  */
 class CV_EXPORTS BackgroundSubtractorGMG: public cv::BackgroundSubtractor
 {
-private:
-    /**
-     *  A general flexible datatype.
-     *
-     *  Used internally to enable background subtraction algorithm to be robust to any input Mat type.
-     *  Datatype can be char, unsigned char, int, unsigned int, long int, float, or double.
-     */
-    union flexitype{
-        char c;
-        uchar uc;
-        int i;
-        unsigned int ui;
-        long int li;
-        float f;
-        double d;
-
-        flexitype(){d = 0.0;}  //!< Default constructor, set all bits of the union to 0.
-        flexitype(char cval){c = cval;} //!< Char type constructor
-
-        bool operator ==(flexitype& rhs)
-        {
-            return d == rhs.d;
-        }
-
-        //! Char type assignment operator
-        flexitype& operator =(char cval){
-            if (this->c == cval){return *this;}
-            c = cval; return *this;
-        }
-        flexitype(unsigned char ucval){uc = ucval;} //!< unsigned char type constructor
-
-        //! unsigned char type assignment operator
-        flexitype& operator =(unsigned char ucval){
-            if (this->uc == ucval){return *this;}
-            uc = ucval; return *this;
-        }
-        flexitype(int ival){i = ival;} //!< int type constructor
-        //! int type assignment operator
-        flexitype& operator =(int ival){
-            if (this->i == ival){return *this;}
-            i = ival; return *this;
-        }
-        flexitype(unsigned int uival){ui = uival;} //!< unsigned int type constructor
-
-        //! unsigned int type assignment operator
-        flexitype& operator =(unsigned int uival){
-            if (this->ui == uival){return *this;}
-            ui = uival; return *this;
-        }
-        flexitype(float fval){f = fval;} //!< float type constructor
-        //! float type assignment operator
-        flexitype& operator =(float fval){
-            if (this->f == fval){return *this;}
-            f = fval; return *this;
-        }
-        flexitype(long int lival){li = lival;} //!< long int type constructor
-        //! long int type assignment operator
-        flexitype& operator =(long int lival){
-            if (this->li == lival){return *this;}
-            li = lival; return *this;
-        }
-
-        flexitype(double dval){d=dval;} //!< double type constructor
-        //! double type assignment operator
-        flexitype& operator =(double dval){
-            if (this->d == dval){return *this;}
-        d = dval; return *this;
-        }
-    };
+protected:
     /**
      *  Used internally to represent a single feature in a histogram.
      *  Feature is a color and an associated likelihood (weight in the histogram).
@@ -387,7 +319,7 @@ public:
      * @param min   minimum value taken on by pixels in image sequence. Usually 0
      * @param max   maximum value taken on by pixels in image sequence. e.g. 1.0 or 255
      */
-    void    initializeType(InputArray image, flexitype min, flexitype max);
+    void    initializeType(InputArray image, double min, double max);
     /**
      * Selectively update the background model. Only update background model for pixels identified
      * as background.
@@ -417,23 +349,19 @@ protected:
     double  decisionThreshold; //!< value above which pixel is determined to be FG.
     int     smoothingRadius;  //!< smoothing radius, in pixels, for cleaning up FG image.
 
-    flexitype maxVal, minVal;
+    double maxVal, minVal;
 
     /*
      * General Parameters
      */
-    size_t      imWidth;        //!< width of image.
-    size_t      imHeight;       //!< height of image.
-    size_t      numPixels;
+    int      imWidth;        //!< width of image.
+    int      imHeight;       //!< height of image.
+    size_t   numPixels;
 
-    int                 imageDepth;  //!< Depth of image, e.g. CV_8U
-    unsigned int        numChannels; //!< Number of channels in image.
+    unsigned int numChannels; //!< Number of channels in image.
 
     bool    isDataInitialized;
     //!< After general parameters are set, data structures must be initialized.
-
-    size_t  elemSize;  //!< store image mat element sizes
-    size_t  elemSize1;
 
     /*
      * Data Structures
