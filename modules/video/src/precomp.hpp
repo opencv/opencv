@@ -53,7 +53,6 @@
 #include "opencv2/core/internal.hpp"
 
 #include <list>
-#include <stdint.h>
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/video/video_tegra.hpp"
