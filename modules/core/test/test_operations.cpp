@@ -926,6 +926,25 @@ bool CV_OperationsTest::operations1()
             if (!v10dzero[ii] == 0.0)
                 throw test_excep();
         }
+        
+        Mat A(1, 32, CV_32F), B;
+        for( int i = 0; i < A.cols; i++ )
+            A.at<float>(i) = (float)(i <= 12 ? i : 24 - i);
+        transpose(A, B);
+        
+        int minidx[2] = {0, 0}, maxidx[2] = {0, 0};
+        double minval = 0, maxval = 0;
+        minMaxIdx(A, &minval, &maxval, minidx, maxidx);
+        
+        if( !(minidx[0] == 0 && minidx[1] == 31 && maxidx[0] == 0 && maxidx[1] == 12 &&
+                  minval == -7 && maxval == 12))
+            throw test_excep();
+        
+        minMaxIdx(B, &minval, &maxval, minidx, maxidx);
+        
+        if( !(minidx[0] == 31 && minidx[1] == 0 && maxidx[0] == 12 && maxidx[1] == 0 &&
+              minval == -7 && maxval == 12))
+            throw test_excep();
     }
     catch(const test_excep&)
     {
