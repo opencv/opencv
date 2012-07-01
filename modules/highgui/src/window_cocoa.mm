@@ -109,13 +109,15 @@ static bool wasInitialized = false;
 	CvMouseCallback mouseCallback;
 	void *mouseParam;
 	BOOL autosize;
-	BOOL firstContent; 
+	BOOL firstContent;
+    int status;
 }
 @property(assign) CvMouseCallback mouseCallback;
 @property(assign) void *mouseParam;
 @property(assign) BOOL autosize;
 @property(assign) BOOL firstContent; 
 @property(retain) NSMutableDictionary *sliders;
+@property(readwrite) int status;
 - (CVView *)contentView;
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags;
 - (void)cvMouseEvent:(NSEvent *)event;
@@ -533,6 +535,75 @@ CV_IMPL int cvWaitKey (int maxWait)
 	return returnCode;
 }
 
+double cvGetModeWindow_COCOA( const char* name )
+{
+    double result = -1;
+    CVWindow *window = nil;
+
+    CV_FUNCNAME( "cvGetModeWindow_COCOA" );
+
+    __BEGIN__;
+    if( name == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+    }
+
+    window = cvGetWindow( name );
+    if ( window == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+    }
+
+    result = window.status;
+
+    __END__;
+    return result;
+}
+
+void cvSetModeWindow_COCOA( const char* name, double prop_value )
+{
+    CVWindow *window = nil;
+    NSDictionary *fullscreenOptions = nil;
+    NSAutoreleasePool* localpool = nil;
+
+    CV_FUNCNAME( "cvSetModeWindow_COCOA" );
+
+    __BEGIN__;
+    if( name == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+    }
+
+    window = cvGetWindow(name);
+    if ( window == NULL )
+    {
+        CV_ERROR( CV_StsNullPtr, "NULL window" );
+    }
+
+    if ( [window autosize] )
+    {
+        return;
+    }
+
+    localpool = [[NSAutoreleasePool alloc] init];
+
+    fullscreenOptions = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:NSFullScreenModeSetting];
+    if ( [[window contentView] isInFullScreenMode] && prop_value==CV_WINDOW_NORMAL )
+    {
+        [[window contentView] exitFullScreenModeWithOptions:fullscreenOptions];
+        window.status=CV_WINDOW_NORMAL;
+    }
+    else if( ![[window contentView] isInFullScreenMode] && prop_value==CV_WINDOW_FULLSCREEN )
+    {
+        [[window contentView] enterFullScreenMode:[NSScreen mainScreen] withOptions:fullscreenOptions];
+        window.status=CV_WINDOW_FULLSCREEN;
+    }
+
+    [localpool drain];
+
+    __END__;
+}
+
 @implementation CVWindow 
 
 @synthesize mouseCallback;
@@ -540,6 +611,7 @@ CV_IMPL int cvWaitKey (int maxWait)
 @synthesize autosize;
 @synthesize firstContent; 
 @synthesize sliders;
+@synthesize status;
 
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags {
 	//cout << "cvSendMouseEvent" << endl; 
@@ -787,9 +859,11 @@ CV_IMPL int cvWaitKey (int maxWait)
 	NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 	CVWindow *cvwindow = (CVWindow *)[self window];
 	int height = 0;
-	for(NSString *key in [cvwindow sliders]) {
-		height += [[[cvwindow sliders] valueForKey:key] frame].size.height;
-	}
+    if ([cvwindow respondsToSelector:@selector(sliders)]) {
+        for(NSString *key in [cvwindow sliders]) {
+            height += [[[cvwindow sliders] valueForKey:key] frame].size.height;
+        }
+    }
 	
 
 	NSRect imageRect = {{0,0}, {[image size].width, [image size].height}};
