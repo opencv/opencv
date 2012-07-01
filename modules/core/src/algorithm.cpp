@@ -321,7 +321,8 @@ AlgorithmInfo::AlgorithmInfo(const string& _name, Algorithm::Constructor create)
 {
     data = new AlgorithmInfoData;
     data->_name = _name;
-    alglist().add(_name, create);
+    if (!alglist().find(_name, create))
+        alglist().add(_name, create);
 }
 
 AlgorithmInfo::~AlgorithmInfo()
