@@ -158,39 +158,18 @@ then paste the CDT 8.0 repository URL http://download.eclipse.org/tools/cdt/rele
 .. image:: images/eclipse_inst_cdt_2.png
   :alt: Configure builders
   :align: center
-.. important:: This instructions should be applied for each Android project in *Eclipse* workspace having native (JNI) part to build.
 
-#. Right click on your project in :guilabel:`Package Explorer`  window and select :guilabel:`New` -> :guilabel:`Other`:
+  
+.. important:: OpenCV 2.4.2 for Android package contains samples projects pre-configured to use CDT Builder for JNI part build via ``ndk-build``.
 
-     .. image:: images/eclipse_cdt_cfg1.png
-        :alt: Configure CDT
-        :align: center
+#. Define the ``NDKROOT`` environment variable containing the path to Android NDK in your system (e.g. **"X:\\Apps\\android-ndk-r8"** or **"/opt/android-ndk-r8"**)
 
-#. Select :guilabel:`C/C++` -> :guilabel:`Convert to C/C++ project`:
+#. CDT Builder is configured for Windows hosts, on Linux or MacOS open `Project Properties` of the projects having JNI part (`face-detection`, `Tutorial 3` and `Tutorial 4`), select :guilabel:`C/C++ Build`   in the left pane, remove **".cmd"** and leave ``"${NDKROOT}/ndk-build"`` in the :guilabel:`Build command`   edit box and click :guilabel:`OK`.
 
-     .. image:: images/eclipse_cdt_cfg2.png
-        :alt: Configure CDT
-        :align: center
-
-#. Select :guilabel:`"C++"`, :guilabel:`"Makefile Project"`, :guilabel:`"Other Toolchain"`:
-
-     .. image:: images/eclipse_cdt_cfg3.png
-        :alt: Configure CDT
-        :align: center
-
-#. Right click on your project in :guilabel:`Package Explorer`  window and select :guilabel:`Properties`, then :guilabel:`C/C++ Build`  in the left pane.
-     Unckeck :guilabel:`Use default build command` and put ``ndk-build`` invocation in the :guilabel:`Build command` edit box and click :guilabel:`Apply` :
 
      .. image:: images/eclipse_cdt_cfg4.png
         :alt: Configure CDT
         :align: center
-
-#. Select :guilabel:`Builders` in the left pane, select :guilabel:`"CDT Builder"`, press :guilabel:`Edit`  button on the righ and set check-boxes as on the picture below for automatic rebuild of JNI part:
-
-     .. image:: images/eclipse_cdt_cfg5.png
-        :alt: Configure CDT
-        :align: center
-
 
 #. Use menu :guilabel:`Project` -> :guilabel:`Clean...`  to make sure that NDK build is invoked on the project build:
 
@@ -243,7 +222,7 @@ OpenCV binary package includes 3 samples having JNI resources:
 
   This sample illustrates usage of both simple OpenCV face detector via Java API and advanced detection based face tracker via JNI and C++.
   
-Before OpenCV 2.4.2 for Android these projects are not configured to use CDT for building their native part , so you can do it yourself.
+.. important:: Before OpenCV **2.4.2** for Android these projects were not configured to use CDT for building their native part , so you can do it yourself.
 
 Practice: Create an Android application, which uses OpenCV
 ==========================================================
