@@ -324,7 +324,7 @@ macro(add_android_project target path)
         install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
       endforeach()
       #jni part + eclipse files
-      file(GLOB_RECURSE jni_files RELATIVE "${path}" "${path}/jni/*")
+      file(GLOB_RECURSE jni_files RELATIVE "${path}" "${path}/jni/*" "${path}/.cproject")
       ocv_list_filterout(jni_files "\\\\.svn")
       foreach(f ${jni_files} ".classpath" ".project" ".settings/org.eclipse.jdt.core.prefs")
         get_filename_component(install_subdir "${f}" PATH)
