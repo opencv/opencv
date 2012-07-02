@@ -47,6 +47,6 @@ public class DetectionBasedTracker
 	
 	static
 	{
-		System.loadLibrary("detection_based_tacker");
+		System.loadLibrary("detection_based_tracker");
 	}
 }
