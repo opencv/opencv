@@ -1,10 +1,10 @@
 import numpy as np
 import cv2
-import digits
 import os
 import video
 from common import mosaic
 
+from digits import *
 
 
 def main():
@@ -15,10 +15,8 @@ def main():
         print '"%s" not found, run digits.py first' % classifier_fn
         return 
     
-    model = digits.SVM()
+    model = SVM()
     model.load('digits_svm.dat')
-
-    SZ = 20
 
     while True:
         ret, frame = cap.read()
@@ -55,13 +53,12 @@ def main():
             A[:,:2] = np.eye(2)*s
             A[:,2] = t
             sub1 = cv2.warpAffine(sub, A, (SZ, SZ), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
-            sub1 = digits.deskew(sub1)
+            sub1 = deskew(sub1)
             if x+w+SZ < frame.shape[1] and y+SZ < frame.shape[0]:
                 frame[y:,x+w:][:SZ, :SZ] = sub1[...,np.newaxis]
                 
-            sample = np.float32(sub1).reshape(1,SZ*SZ) / 255.0
+            sample = preprocess_hog([sub1])
             digit = model.predict(sample)[0]
-
             cv2.putText(frame, '%d'%digit, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)
 
 
