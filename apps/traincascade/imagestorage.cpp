@@ -154,12 +154,15 @@ bool CvCascadeImageReader::PosReader::get( Mat &_img )
     CV_Assert( _img.rows * _img.cols == vecSize );
     uchar tmp = 0;
     size_t elements_read = fread( &tmp, sizeof( tmp ), 1, file );
-    CV_Assert(elements_read == 1);
+    if( elements_read != 1 )
+        CV_Error( CV_StsBadArg, "Can not get new positive sample. The most possible reason is "
+                                "insufficient count of samples in given vec-file.\n");
     elements_read = fread( vec, sizeof( vec[0] ), vecSize, file );
-    CV_Assert(elements_read == (size_t)(vecSize));
+    if( elements_read != (size_t)(vecSize) )
+        CV_Error( CV_StsBadArg, "Can not get new positive sample. Seems that vec-file has incorrect structure.\n");
 
     if( feof( file ) || last++ >= count )
-        return false;
+        CV_Error( CV_StsBadArg, "Can not get new positive sample. vec-file is over.\n");
 
     for( int r = 0; r < _img.rows; r++ )
     {
