@@ -291,9 +291,9 @@ public:
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
 
-    CV_DescriptorExtractorTest( const string _name, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime,
+    CV_DescriptorExtractorTest( const string _name, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor,
                                 Distance d = Distance() ):
-            name(_name), maxDist(_maxDist), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
+            name(_name), maxDist(_maxDist), dextractor(_dextractor), distance(d) {}
 protected:
     virtual void createDescriptorExtractor() {}
 
@@ -401,7 +401,7 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms (previous time = %g ms).\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
+            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows );
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
@@ -486,7 +486,6 @@ protected:
 
     string name;
     const DistanceType maxDist;
-    const float prevTime;
     Ptr<DescriptorExtractor> dextractor;
     Distance distance;
 
@@ -988,28 +987,28 @@ TEST( Features2d_Detector_SURF, regression )
 TEST( Features2d_DescriptorExtractor_SIFT, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-sift", 0.03f,
-                                                  DescriptorExtractor::create("SIFT"), 8.06652f  );
+                                                  DescriptorExtractor::create("SIFT") );
     test.safe_run();
 }
 
 TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
-                                                 DescriptorExtractor::create("SURF"), 0.147372f );
+                                                 DescriptorExtractor::create("SURF") );
     test.safe_run();
 }
 
 TEST( Features2d_DescriptorExtractor_OpponentSIFT, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-sift", 0.18f,
-                                                 DescriptorExtractor::create("OpponentSIFT"), 8.06652f  );
+                                                 DescriptorExtractor::create("OpponentSIFT") );
     test.safe_run();
 }
 
 TEST( Features2d_DescriptorExtractor_OpponentSURF, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-surf",  0.3f,
-                                                 DescriptorExtractor::create("OpponentSURF"), 0.147372f );
+                                                 DescriptorExtractor::create("OpponentSURF") );
     test.safe_run();
 }
 
