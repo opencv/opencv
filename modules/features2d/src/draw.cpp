@@ -68,8 +68,8 @@ static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& col
         if( p.angle != -1 )
         {
             float srcAngleRad = p.angle*(float)CV_PI/180.f;
-            Point orient( cvRound( cos(srcAngleRad)*radius ),
-                          cvRound(-sin(srcAngleRad)*radius ) // "-" to invert orientation of axis y
+            Point orient( cvRound(cos(srcAngleRad)*radius ),
+                          cvRound(sin(srcAngleRad)*radius )
                         );
             line( img, center, center+orient, color, 1, CV_AA, draw_shift_bits );
         }
