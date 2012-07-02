@@ -9,14 +9,14 @@ Introduction
 
 Whenever you hear the term *face recognition*, you instantly think of surveillance in videos. So performing face recognition in videos (e.g. webcam) is one of the most requested features I got. I have heard your cries, so here it is. For face detection we'll use the awesome :ocv:class:`CascadeClassifier`, and we'll use :ocv:class:`FaceRecognizer` for face recognition. This example uses the Fisherfaces method for face recognition, because it is robust against large changes in illumination.
 
-Here is what the final application looks like, as you can see I am only writing the id of the recognized person (by the way this id is Arnold Schwarzenegger for my data set) above the detected face. 
+Here is what the final application looks like, as you can see I am only writing the id of the recognized person (by the way this id is Arnold Schwarzenegger for my data set) above the detected face.
 
 .. image:: ../img/tutorial/facerec_video/facerec_video.png
     :align: center
     :scale: 70%
 
 This demo is a basis for your research, and it shows you how to implement face recognition in videos. You probably want to extend the application and make it more sophisticated: You could combine the id with the name, show the confidence of the prediction, recognize the emotion... and and and. But before you send mails, asking what these Haar-Cascade thing is or what a CSV is... Make sure you have read the entire tutorial. It's all explained in here. If you just want to scroll down to the code, please note:
-  
+
 * The available Haar-Cascades are located in the ``data`` folder of your OpenCV installation! One of the available Haar-Cascades for face detection is for example ``data/haarcascades/haarcascade_frontalface_default.xml``.
 
 I encourage you to experiment with the application. Play around with the available :ocv:class:`FaceRecognizer`, try the available cascades in OpenCV and see if you can improve your results!
@@ -24,7 +24,7 @@ I encourage you to experiment with the application. Play around with the availab
 Prerequisites
 --------------
 
-You want to do face recognition, so you need some face images to learn a :ocv:class:`FaceRecognizer` on. I have decided to reuse the images from the gender classification example: :doc:`../facerec_gender_classification`.
+You want to do face recognition, so you need some face images to learn a :ocv:class:`FaceRecognizer` on. I have decided to reuse the images from the gender classification example: :doc:`facerec_gender_classification`.
 
 I have the following celebrities in my training data set:
 
@@ -39,12 +39,12 @@ I have the following celebrities in my training data set:
 * Patrick Stewart
 * Tom Cruise
 
-In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this: 
+In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this:
 
 .. code-block:: none
 
     /path/to/image.ext;0
-    
+
 Let's dissect the line. ``/path/to/image.ext`` is the path to an image, probably something like this if you are in Windows: ``C:/faces/person0/image0.jpg``. Then there is the separator ``;`` and finally we assign a label ``0`` to the image. Think of the label as the subject (the person, the gender or whatever comes to your mind). In the face recognition scenario, the label is the person this image belongs to. In the gender classification scenario, the label is the gender the person has. So my CSV file looks like this:
 
 .. code-block:: none
@@ -65,7 +65,7 @@ Let's dissect the line. ``/path/to/image.ext`` is the path to an image, probably
     /home/philipp/facerec/data/c1/crop_arnold_schwarzenegger/crop_05.jpg;6
     /home/philipp/facerec/data/c1/crop_arnold_schwarzenegger/crop_02.jpg;6
     /home/philipp/facerec/data/c1/crop_arnold_schwarzenegger/crop_03.jpg;6
-    
+
 All images for this example were chosen to have a frontal face perspective. They have been cropped, scaled and rotated to be aligned at the eyes, just like this set of George Clooney images:
 
 .. image:: ../img/tutorial/gender_classification/clooney_set.png
@@ -85,7 +85,7 @@ Running the Demo
 
 You'll need:
 
-* The path to a valid Haar-Cascade for detecting a face with a :ocv:class:`CascadeClassifier`.    
+* The path to a valid Haar-Cascade for detecting a face with a :ocv:class:`CascadeClassifier`.
 * The path to a valid CSV File for learning a :ocv:class:`FaceRecognizer`.
 * A webcam and its device id (you don't know the device id? Simply start from 0 on and see what happens).
 
@@ -94,7 +94,7 @@ If you are in Windows, then simply start the demo by running (from command line)
 .. code-block:: none
 
     facerec_video.exe <C:/path/to/your/haar_cascade.xml> <C:/path/to/your/csv.ext> <video device>
-    
+
 If you are in Linux, then simply start the demo by running:
 
 .. code-block:: none
@@ -137,8 +137,8 @@ You don't really want to create the CSV file by hand. I have prepared you a litt
     |   |-- 1.pgm
     |   |-- ...
     |   |-- 10.pgm
-    
-    
+
+
 Then simply call ``create_csv.py`` with the path to the folder, just like this and you could save the output:
 
 .. code-block:: none
@@ -167,7 +167,7 @@ Here is the script, if you can't find it:
 .. literalinclude:: ../src/create_csv.py
    :language: python
    :linenos:
-   
+
 Aligning Face Images
 ++++++++++++++++++++
 
@@ -184,9 +184,9 @@ If you are using the same *offset_pct* and *dest_sz* for your images, they are a
    :language: python
    :linenos:
 
-Imagine we are given `this photo of Arnold Schwarzenegger <http://en.wikipedia.org/wiki/File:Arnold_Schwarzenegger_edit%28ws%29.jpg>`_, which is under a Public Domain license. The (x,y)-position of the eyes is approximately *(252,364)* for the left and *(420,366)* for the right eye. Now you only need to define the horizontal offset, vertical offset and the size your scaled, rotated & cropped face should have. 
+Imagine we are given `this photo of Arnold Schwarzenegger <http://en.wikipedia.org/wiki/File:Arnold_Schwarzenegger_edit%28ws%29.jpg>`_, which is under a Public Domain license. The (x,y)-position of the eyes is approximately *(252,364)* for the left and *(420,366)* for the right eye. Now you only need to define the horizontal offset, vertical offset and the size your scaled, rotated & cropped face should have.
 
-Here are some examples: 
+Here are some examples:
 
 +---------------------------------+----------------------------------------------------------------------------+
 | Configuration                   | Cropped, Scaled, Rotated Face                                              |
@@ -200,4 +200,4 @@ Here are some examples:
 | 0.2 (20%), 0.2 (20%), (70,70)   | .. image:: ../img/tutorial/gender_classification/arnie_20_20_70_70.jpg     |
 +---------------------------------+----------------------------------------------------------------------------+
 
- 
+

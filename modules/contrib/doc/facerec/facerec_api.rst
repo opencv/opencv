@@ -8,7 +8,7 @@ FaceRecognizer
 
 .. ocv:class:: FaceRecognizer
 
-All face recognition models in OpenCV are derived from the abstract base class :ocv:class:`FaceRecognizer`, which provides 
+All face recognition models in OpenCV are derived from the abstract base class :ocv:class:`FaceRecognizer`, which provides
 a unified access to all face recongition algorithms in OpenCV. ::
 
   class FaceRecognizer : public Algorithm
@@ -40,17 +40,17 @@ a unified access to all face recongition algorithms in OpenCV. ::
   };
 
 
-I'll go a bit more into detail explaining :ocv:class:`FaceRecognizer`, because it doesn't look like a powerful interface at first sight. But: Every :ocv:class:`FaceRecognizer` is an :ocv:class:`Algorithm`, so you can easily get/set all model internals (if allowed by the implementation). :ocv:class:`Algorithm` is a relatively new OpenCV concept, which is available since the 2.4 release. I suggest you take a look at its description. 
+I'll go a bit more into detail explaining :ocv:class:`FaceRecognizer`, because it doesn't look like a powerful interface at first sight. But: Every :ocv:class:`FaceRecognizer` is an :ocv:class:`Algorithm`, so you can easily get/set all model internals (if allowed by the implementation). :ocv:class:`Algorithm` is a relatively new OpenCV concept, which is available since the 2.4 release. I suggest you take a look at its description.
 
 :ocv:class:`Algorithm` provides the following features for all derived classes:
 
     * So called “virtual constructor”. That is, each Algorithm derivative is registered at program start and you can get the list of registered algorithms and create instance of a particular algorithm by its name (see :ocv:func:`Algorithm::create`). If you plan to add your own algorithms, it is good practice to add a unique prefix to your algorithms to distinguish them from other algorithms.
 
-    * Setting/Retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with :ocv:cfunc:`cvSetCaptureProperty`, :ocv:cfunc:`cvGetCaptureProperty`, :ocv:func:`VideoCapture::set` and :ocv:func:`VideoCapture::get`. :ocv:class:`Algorithm` provides similar method where instead of integer id's you specify the parameter names as text strings. See :ocv:func:`Algorithm::set` and :ocv:func:`Algorithm::get for details.
+    * Setting/Retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with :ocv:cfunc:`cvSetCaptureProperty`, :ocv:cfunc:`cvGetCaptureProperty`, :ocv:func:`VideoCapture::set` and :ocv:func:`VideoCapture::get`. :ocv:class:`Algorithm` provides similar method where instead of integer id's you specify the parameter names as text strings. See :ocv:func:`Algorithm::set` and :ocv:func:`Algorithm::get` for details.
 
     * Reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store all its parameters and then read them back. There is no need to re-implement it each time.
 
-Moreover every :ocv:class:`FaceRecognizer` supports the: 
+Moreover every :ocv:class:`FaceRecognizer` supports the:
 
     * **Training** of a :ocv:class:`FaceRecognizer` with :ocv:func:`FaceRecognizer::train` on a given set of images (your face database!).
 
@@ -63,11 +63,11 @@ Sometimes you run into the situation, when you want to apply a threshold on the 
 Here is an example of setting a threshold for the Eigenfaces method, when creating the model:
 
 .. code-block:: cpp
-    
+
     // Let's say we want to keep 10 Eigenfaces and have a threshold value of 10.0
     int num_components = 10;
     double threshold = 10.0;
-    // Then if you want to have a cv::FaceRecognizer with a confidence threshold, 
+    // Then if you want to have a cv::FaceRecognizer with a confidence threshold,
     // create the concrete implementation with the appropiate parameters:
     Ptr<FaceRecognizer> model = createEigenFaceRecognizer(num_components, threshold);
 
@@ -83,13 +83,13 @@ Sometimes it's impossible to train the model, just to experiment with threshold 
 If you've set the threshold to ``0.0`` as we did above, then:
 
 .. code-block:: cpp
-    
-    // 
+
+    //
     Mat img = imread("person1/3.jpg", CV_LOAD_IMAGE_GRAYSCALE);
     // Get a prediction from the model. Note: We've set a threshold of 0.0 above,
-    // since the distance is almost always larger than 0.0, you'll get -1 as 
+    // since the distance is almost always larger than 0.0, you'll get -1 as
     // label, which indicates, this face is unknown
-    int predicted_label = model->predict(img); 
+    int predicted_label = model->predict(img);
     // ...
 
 is going to yield ``-1`` as predicted label, which states this face is unknown.
@@ -100,9 +100,9 @@ FaceRecognizer::train
 Trains a FaceRecognizer with given data and associated labels.
 
 .. ocv:function:: void FaceRecognizer::train(InputArray src, InputArray labels)
-    
+
     :param src: The training images, that means the faces you want to learn. The data has to be given as a ``vector<Mat>``.
-    
+
     :param labels: The labels corresponding to the images have to be given either as a ``vector<int>`` or a
 
 The following source code snippet shows you how to learn a Fisherfaces model on a given set of images. The images are read with ocv:func:`imread` and pushed into a `std::vector<Mat>`. The labels of each image are stored within a ``std::vector<int>`` (you could also use a :ocv:class:`Mat` of type `CV_32SC1`). Think of the label as the subject (the person) this image belongs to, so same subjects (persons) should have the same label. For the available :ocv:class:`FaceRecognizer` you don't have to pay any attention to the order of the labels, just make sure same persons have the same label:
@@ -130,7 +130,7 @@ Now that you have read some images, we can create a new :ocv:class:`FaceRecogniz
     // this is the most common usage of this specific FaceRecognizer:
     //
     Ptr<FaceRecognizer> model =  createFisherFaceRecognizer();
-  
+
 And finally train it on the given dataset (the face images and labels):
 
 .. code-block:: cpp
@@ -148,7 +148,7 @@ FaceRecognizer::predict
     Predicts a label for a given input image.
 
     :param src: Sample image to get a prediction from.
-    
+
 
 .. ocv:function:: void predict(InputArray src, int &label, double &confidence) const
 
@@ -160,7 +160,7 @@ FaceRecognizer::predict
 
 
 
-The suffix ``const`` means that prediction does not affect the internal model 
+The suffix ``const`` means that prediction does not affect the internal model
 state, so the method can be safely called from within different threads.
 
 The following example shows how to get a prediction from a trained model:
@@ -174,7 +174,7 @@ The following example shows how to get a prediction from a trained model:
     Mat img = imread("person1/3.jpg", CV_LOAD_IMAGE_GRAYSCALE);
     // And get a prediction from the cv::FaceRecognizer:
     int predicted = model->predict(img);
-  
+
 Or to get a prediction and the associated confidence (e.g. distance):
 
 .. code-block:: cpp
@@ -199,19 +199,19 @@ Saves a :ocv:class:`FaceRecognizer` and its model state.
     Saves this model to a given filename, either as XML or YAML.
 
     :param filename: The filename to store this :ocv:class:`FaceRecognizer` to (either XML/YAML).
-  
+
 .. ocv:function:: void FaceRecognizer::save(FileStorage& fs) const
 
     Saves this model to a given :ocv:class:`FileStorage`.
 
     :param fs: The :ocv:class:`FileStorage` to store this :ocv:class:`FaceRecognizer` to.
-  
+
 
 Every :ocv:class:`FaceRecognizer` overwrites ``FaceRecognizer::save(FileStorage& fs)``
-to save the internal model state. ``FaceRecognizer::save(const string& filename)`` saves 
- the state of a model to the given filename.
+to save the internal model state. ``FaceRecognizer::save(const string& filename)`` saves
+the state of a model to the given filename.
 
-The suffix ``const`` means that prediction does not affect the internal model 
+The suffix ``const`` means that prediction does not affect the internal model
 state, so the method can be safely called from within different threads.
 
 FaceRecognizer::load
@@ -222,10 +222,10 @@ Loads a :ocv:class:`FaceRecognizer` and its model state.
 .. ocv:function:: void FaceRecognizer::load(const string& filename)
 .. ocv:function:: void FaceRecognizer::load(FileStorage& fs)
 
-Loads a persisted model and state from a given XML or YAML file . Every 
-:ocv:class:`FaceRecognizer` has to overwrite ``FaceRecognizer::load(FileStorage& fs)`` 
-to enable loading the model state. ``FaceRecognizer::load(FileStorage& fs)`` in 
-turn gets called by ``FaceRecognizer::load(const string& filename)``, to ease 
+Loads a persisted model and state from a given XML or YAML file . Every
+:ocv:class:`FaceRecognizer` has to overwrite ``FaceRecognizer::load(FileStorage& fs)``
+to enable loading the model state. ``FaceRecognizer::load(FileStorage& fs)`` in
+turn gets called by ``FaceRecognizer::load(const string& filename)``, to ease
 saving a model.
 
 createEigenFaceRecognizer
@@ -235,8 +235,8 @@ createEigenFaceRecognizer
 
     :param num_components: The number of components (read: Eigenfaces) kept for this Prinicpal Component Analysis. As a hint: There's no rule how many components (read: Eigenfaces) should be kept for good reconstruction capabilities. It is based on your input data, so experiment with the number. Keeping 80 components should almost always be sufficient.
 
-    :param threshold: The threshold applied in the prediciton. 
-    
+    :param threshold: The threshold applied in the prediciton.
+
 Notes:
 ++++++
 
@@ -255,10 +255,10 @@ Model internal data:
     * ``labels`` The threshold applied in the prediction. If the distance to the nearest neighbor is larger than the threshold, this method returns -1.
 
 createFisherFaceRecognizer
--------------------------
+--------------------------
 
 .. ocv:function:: Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0, double threshold = DBL_MAX)
-    
+
     :param num_components: The number of components (read: Fisherfaces) kept for this Linear Discriminant Analysis with the Fisherfaces criterion. It's useful to keep all components, that means the number of your classes ``c`` (read: subjects, persons you want to recognize). If you leave this at the default (``0``) or set it to a value  less-equal ``0`` or greater ``(c-1)``, it will be set to the correct number ``(c-1)`` automatically.
 
     :param threshold: The threshold applied in the prediction. If the distance to the nearest neighbor is larger than the threshold, this method returns -1.
@@ -268,7 +268,7 @@ Notes:
 
     * Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
     * **THE FISHERFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
-    
+
 Model internal data:
 ++++++++++++++++++++
 
@@ -284,10 +284,10 @@ Model internal data:
 createLBPHFaceRecognizer
 -------------------------
 
-.. ocv:function:: Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8, double threshold = DBL_MAX);
+.. ocv:function:: Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8, int grid_x=8, int grid_y=8, double threshold = DBL_MAX)
 
-    :param radius: The radius used for building the Circular Local Binary Pattern. The greater the radius, the 
-    :param neighbors: The number of sample points to build a Circular Local Binary Pattern from. An appropriate value is to use `` 8`` sample points. Keep in mind: the more sample points you include, the higher the computational cost. 
+    :param radius: The radius used for building the Circular Local Binary Pattern. The greater the radius, the
+    :param neighbors: The number of sample points to build a Circular Local Binary Pattern from. An appropriate value is to use `` 8`` sample points. Keep in mind: the more sample points you include, the higher the computational cost.
     :param grid_x: The number of cells in the horizontal direction, ``8`` is a common value used in publications. The more cells, the finer the grid, the higher the dimensionality of the resulting feature vector.
     :param grid_y: The number of cells in the vertical direction, ``8`` is a common value used in publications. The more cells, the finer the grid, the higher the dimensionality of the resulting feature vector.
     :param threshold: The threshold applied in the prediction. If the distance to the nearest neighbor is larger than the threshold, this method returns -1.
@@ -296,7 +296,7 @@ Notes:
 ++++++
 
     * The Circular Local Binary Patterns (used in training and prediction) expect the data given as grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
-    
+
 Model internal data:
 ++++++++++++++++++++
 
