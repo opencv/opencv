@@ -90,7 +90,7 @@ public class Utils {
             throw new java.lang.IllegalArgumentException("bmp == null");
         if (mat == null)
             throw new java.lang.IllegalArgumentException("mat == null");
-        nBitmapToMat(bmp, mat.nativeObj, unPremultiplyAlpha);
+        nBitmapToMat2(bmp, mat.nativeObj, unPremultiplyAlpha);
     }
 
     /**
@@ -120,7 +120,7 @@ public class Utils {
             throw new java.lang.IllegalArgumentException("mat == null");
         if (bmp == null)
             throw new java.lang.IllegalArgumentException("bmp == null");
-        nMatToBitmap(mat.nativeObj, bmp, premultiplyAlpha);
+        nMatToBitmap2(mat.nativeObj, bmp, premultiplyAlpha);
     }
 
     /**
@@ -138,7 +138,7 @@ public class Utils {
         System.loadLibrary("opencv_java");
     }
 
-    private static native void nBitmapToMat(Bitmap b, long m_addr, boolean unPremultiplyAlpha);
+    private static native void nBitmapToMat2(Bitmap b, long m_addr, boolean unPremultiplyAlpha);
 
-    private static native void nMatToBitmap(long m_addr, Bitmap b, boolean premultiplyAlpha);
+    private static native void nMatToBitmap2(long m_addr, Bitmap b, boolean premultiplyAlpha);
 }

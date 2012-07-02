@@ -21,13 +21,13 @@ extern "C" {
 
 /*
  * Class:     org_opencv_android_Utils
- * Method:    void nBitmapToMat(Bitmap b, long m_addr, boolean unPremultiplyAlpha)
+ * Method:    void nBitmapToMat2(Bitmap b, long m_addr, boolean unPremultiplyAlpha)
  */
 
-JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat2
   (JNIEnv * env, jclass, jobject bitmap, jlong m_addr, jboolean needUnPremultiplyAlpha);
 
-JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat2
   (JNIEnv * env, jclass, jobject bitmap, jlong m_addr, jboolean needUnPremultiplyAlpha)
 {
     AndroidBitmapInfo  info;
@@ -72,14 +72,25 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
         }
 }
 
+// old signature is left for binary compatibility with 2.4.0 & 2.4.1, to removed in 2.5
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
+  (JNIEnv * env, jclass, jobject bitmap, jlong m_addr);
+
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat
+  (JNIEnv * env, jclass, jobject bitmap, jlong m_addr)
+{
+    Java_org_opencv_android_Utils_nBitmapToMat2(env, 0, bitmap, m_addr, false);
+}  
+
 /*
  * Class:     org_opencv_android_Utils
- * Method:    void nMatToBitmap(long m_addr, Bitmap b, boolean premultiplyAlpha)
+ * Method:    void nMatToBitmap2(long m_addr, Bitmap b, boolean premultiplyAlpha)
  */
-JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
+
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap2
   (JNIEnv * env, jclass, jlong m_addr, jobject bitmap, jboolean needPremultiplyAlpha);
 
-JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap2
   (JNIEnv * env, jclass, jlong m_addr, jobject bitmap, jboolean needPremultiplyAlpha)
 {
     AndroidBitmapInfo  info;
@@ -141,6 +152,16 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
             env->ThrowNew(je, "Unknown exception in JNI code {nMatToBitmap}");
             return;
         }
+}
+
+// old signature is left for binary compatibility with 2.4.0 & 2.4.1, to removed in 2.5
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
+  (JNIEnv * env, jclass, jlong m_addr, jobject bitmap);
+
+JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
+  (JNIEnv * env, jclass, jlong m_addr, jobject bitmap)
+{
+    Java_org_opencv_android_Utils_nMatToBitmap2(env, 0, m_addr, bitmap, false);
 }
 
 } // extern "C"
