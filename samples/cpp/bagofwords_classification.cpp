@@ -2014,7 +2014,7 @@ struct VocabTrainParams
                           // It shouldn't matter which object class is specified here - visual vocab will still be the same.
     int vocabSize; //number of visual words in vocabulary to train
     int memoryUse; // Memory to preallocate (in MB) when training vocab.
-                      // Change this depending on the size of the dataset/available memory.
+                   // Change this depending on the size of the dataset/available memory.
     float descProportion; // Specifies the number of descriptors to use from each image as a proportion of the total num descs.
 };
 
@@ -2126,8 +2126,10 @@ static Mat trainVocabulary( const string& filename, VocData& vocData, const Voca
     if( !readVocabulary( filename, vocabulary) )
     {
         CV_Assert( dextractor->descriptorType() == CV_32FC1 );
-        const int descByteSize = dextractor->descriptorSize()*4;
-        const int maxDescCount = (trainParams.memoryUse * 1048576) / descByteSize; // Total number of descs to use for training.
+        const int elemSize = CV_ELEM_SIZE(dextractor->descriptorType());
+        const int descByteSize = dextractor->descriptorSize() * elemSize;
+        const int bytesInMB = 1048576;
+        const int maxDescCount = (trainParams.memoryUse * bytesInMB) / descByteSize; // Total number of descs to use for training.
 
         cout << "Extracting VOC data..." << endl;
         vector<ObdImage> images;
@@ -2142,9 +2144,8 @@ static Mat trainVocabulary( const string& filename, VocData& vocData, const Voca
 
         while( images.size() > 0 )
         {
-            if( bowTrainer.descripotorsCount() >= maxDescCount )
+            if( bowTrainer.descripotorsCount() > maxDescCount )
             {
-                assert( bowTrainer.descripotorsCount() == maxDescCount );
 #ifdef DEBUG_DESC_PROGRESS
                 cout << "Breaking due to full memory ( descriptors count = " << bowTrainer.descripotorsCount()
                         << "; descriptor size in bytes = " << descByteSize << "; all used memory = "
