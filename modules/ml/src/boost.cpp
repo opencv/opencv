@@ -1896,7 +1896,7 @@ void CvBoost::write_params( CvFileStorage* fs ) const
     else
         cvWriteInt( fs, "splitting_criteria", params.split_criteria );
 
-    cvWriteInt( fs, "ntrees", params.weak_count );
+	cvWriteInt( fs, "ntrees", weak->total );
     cvWriteReal( fs, "weight_trimming_rate", params.weight_trim_rate );
 
     data->write_params( fs );

@@ -273,14 +273,14 @@ namespace cv {
 namespace detail {
 
 void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
-{ 
+{
     find(image, features);
     features.img_size = image.size();
 }
 
 
 void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, const vector<Rect> &rois)
-{ 
+{
     vector<ImageFeatures> roi_features(rois.size());
     size_t total_kps_count = 0;
     int total_descriptors_height = 0;
@@ -294,8 +294,8 @@ void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, cons
 
     features.img_size = image.size();
     features.keypoints.resize(total_kps_count);
-    features.descriptors.create(total_descriptors_height, 
-                                roi_features[0].descriptors.cols, 
+    features.descriptors.create(total_descriptors_height,
+                                roi_features[0].descriptors.cols,
                                 roi_features[0].descriptors.type());
 
     int kp_idx = 0;
@@ -332,14 +332,14 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
     {
         detector_ = Algorithm::create<FeatureDetector>("Feature2D.SURF");
         extractor_ = Algorithm::create<DescriptorExtractor>("Feature2D.SURF");
-        
+
         if( detector_.empty() || extractor_.empty() )
             CV_Error( CV_StsNotImplemented, "OpenCV was built without SURF support" );
-        
+
         detector_->set("hessianThreshold", hess_thresh);
         detector_->set("nOctaves", num_octaves);
         detector_->set("nOctaveLayers", num_layers);
-        
+
         extractor_->set("nOctaves", num_octaves_descr);
         extractor_->set("nOctaveLayers", num_layers_descr);
     }
@@ -403,17 +403,17 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
                 int xr = (c+1) * gray_image.cols / grid_size.width;
                 int yr = (r+1) * gray_image.rows / grid_size.height;
 
-                LOGLN("OrbFeaturesFinder::find: gray_image.empty=" << (gray_image.empty()?"true":"false") << ", "
-                    << " gray_image.size()=(" << gray_image.size().width << "x" << gray_image.size().height << "), "
-                    << " yl=" << yl << ", yr=" << yr << ", "
-                    << " xl=" << xl << ", xr=" << xr << ", gray_image.data=" << ((size_t)gray_image.data) << ", "
-                    << "gray_image.dims=" << gray_image.dims << "\n");
+                // LOGLN("OrbFeaturesFinder::find: gray_image.empty=" << (gray_image.empty()?"true":"false") << ", "
+                //     << " gray_image.size()=(" << gray_image.size().width << "x" << gray_image.size().height << "), "
+                //     << " yl=" << yl << ", yr=" << yr << ", "
+                //     << " xl=" << xl << ", xr=" << xr << ", gray_image.data=" << ((size_t)gray_image.data) << ", "
+                //     << "gray_image.dims=" << gray_image.dims << "\n");
 
                 Mat gray_image_part=gray_image(Range(yl, yr), Range(xl, xr));
-                LOGLN("OrbFeaturesFinder::find: gray_image_part.empty=" << (gray_image_part.empty()?"true":"false") << ", "
-                    << " gray_image_part.size()=(" << gray_image_part.size().width << "x" << gray_image_part.size().height << "), "
-                    << " gray_image_part.dims=" << gray_image_part.dims << ", "
-                    << " gray_image_part.data=" << ((size_t)gray_image_part.data) << "\n");
+                // LOGLN("OrbFeaturesFinder::find: gray_image_part.empty=" << (gray_image_part.empty()?"true":"false") << ", "
+                //     << " gray_image_part.size()=(" << gray_image_part.size().width << "x" << gray_image_part.size().height << "), "
+                //     << " gray_image_part.dims=" << gray_image_part.dims << ", "
+                //     << " gray_image_part.data=" << ((size_t)gray_image_part.data) << "\n");
 
                 (*orb)(gray_image_part, Mat(), points, descriptors);
 
@@ -583,11 +583,11 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
         if (matches_info.inliers_mask[i])
             matches_info.num_inliers++;
 
-    // These coeffs are from paper M. Brown and D. Lowe. "Automatic Panoramic Image Stitching 
+    // These coeffs are from paper M. Brown and D. Lowe. "Automatic Panoramic Image Stitching
     // using Invariant Features"
     matches_info.confidence = matches_info.num_inliers / (8 + 0.3 * matches_info.matches.size());
 
-    // Set zero confidence to remove matches between too close images, as they don't provide 
+    // Set zero confidence to remove matches between too close images, as they don't provide
     // additional information anyway. The threshold was set experimentally.
     matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 

@@ -1,17 +1,30 @@
-import numpy as np
-import cv2
-from common import Sketcher
+'''
+Watershed segmentation
+=========
 
-help_message = '''
-  USAGE: watershed.py [<image>]
+This program demonstrates the watershed segmentation algorithm 
+in OpenCV: watershed().
 
-  Use keys 1 - 7 to switch marker color
+Usage
+-----
+watershed.py [image filename]
+
+Keys
+----
+  1-7   - switch marker color
   SPACE - update segmentation
   r     - reset
-  a     - switch autoupdate
+  a     - toggle autoupdate
   ESC   - exit
 
 '''
+
+
+
+
+import numpy as np
+import cv2
+from common import Sketcher
 
 class App:
     def __init__(self, fn):
@@ -60,5 +73,5 @@ if __name__ == '__main__':
     import sys
     try: fn = sys.argv[1]
     except: fn = '../cpp/fruits.jpg'
-    print help_message
+    print __doc__
     App(fn).run()

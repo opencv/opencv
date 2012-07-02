@@ -11,11 +11,10 @@ Usage:
   digits_adjust.py [--model {svm|knearest}] [--cloud] [--env <PiCloud environment>]
   
   --model {svm|knearest}   - select the classifier (SVM is the default)
-  --cloud                  - use PiCloud computing platform (for SVM only)
+  --cloud                  - use PiCloud computing platform
   --env                    - cloud environment name
 
 '''
-# TODO dataset preprocessing in cloud
 # TODO cloud env setup tutorial
 
 import numpy as np
@@ -23,6 +22,14 @@ import cv2
 from multiprocessing.pool import ThreadPool
 
 from digits import *
+
+try: 
+    import cloud
+    have_cloud = True
+except ImportError:
+    have_cloud = False
+    
+
 
 def cross_validate(model_class, params, samples, labels, kfold = 3, pool = None):
     n = len(samples)
@@ -46,72 +53,95 @@ def cross_validate(model_class, params, samples, labels, kfold = 3, pool = None)
         scores = pool.map(f, xrange(kfold))
     return np.mean(scores)
 
-def adjust_KNearest(samples, labels):
-    print 'adjusting KNearest ...'
-    best_err, best_k = np.inf, -1
-    for k in xrange(1, 9):
-        err = cross_validate(KNearest, dict(k=k), samples, labels)
-        if err < best_err:
-            best_err, best_k = err, k
-        print 'k = %d, error: %.2f %%' % (k, err*100)
-    best_params = dict(k=best_k)
-    print 'best params:', best_params
-    return best_params
 
-def adjust_SVM(samples, labels, usecloud=False, cloud_env=''):
-    Cs = np.logspace(0, 5, 10, base=2)
-    gammas = np.logspace(-7, -2, 10, base=2)
-    scores = np.zeros((len(Cs), len(gammas)))
-    scores[:] = np.nan
-
-    if usecloud:
-        try: 
-            import cloud
-        except ImportError: 
-            print 'cloud module is not installed'
+class App(object):
+    def __init__(self, usecloud=False, cloud_env=''):
+        if usecloud and not have_cloud:
+            print 'warning: cloud module is not installed, running locally'
             usecloud = False
-    if usecloud:
-        print 'uploading dataset to cloud...'
-        np.savez('train.npz', samples=samples, labels=labels)
-        cloud.files.put('train.npz')
+        self.usecloud = usecloud
+        self.cloud_env = cloud_env
 
-    print 'adjusting SVM (may take a long time) ...'
-    def f(job):
-        i, j = job
-        params = dict(C = Cs[i], gamma=gammas[j])
-        score = cross_validate(SVM, params, samples, labels)
-        return i, j, score
-    def fcloud(job):
-        i, j = job
-        cloud.files.get('train.npz')
-        npz = np.load('train.npz')
-        params = dict(C = Cs[i], gamma=gammas[j])
-        score = cross_validate(SVM, params, npz['samples'], npz['labels'])
-        return i, j, score
-    
-    if usecloud:
-        jids = cloud.map(fcloud, np.ndindex(*scores.shape), _env=cloud_env, _profile=True)
-        ires = cloud.iresult(jids)
-    else:
-        pool = ThreadPool(processes=cv2.getNumberOfCPUs())
-        ires = pool.imap_unordered(f, np.ndindex(*scores.shape))
+        if self.usecloud:
+            print 'uploading dataset to cloud...'
+            cloud.files.put(DIGITS_FN)
+            self.preprocess_job = cloud.call(self.preprocess, _env=self.cloud_env)
+        else:
+            self._samples, self._labels = self.preprocess()
 
-    for count, (i, j, score) in enumerate(ires):
-        scores[i, j] = score
-        print '%d / %d (best error: %.2f %%, last: %.2f %%)' % (count+1, scores.size, np.nanmin(scores)*100, score*100)
-    print scores
+    def preprocess(self):
+        if self.usecloud:
+            cloud.files.get(DIGITS_FN)
+        digits, labels = load_digits(DIGITS_FN)
+        shuffle = np.random.permutation(len(digits))
+        digits, labels = digits[shuffle], labels[shuffle]
+        digits2 = map(deskew, digits)
+        samples = np.float32(digits2).reshape(-1, SZ*SZ) / 255.0
+        return samples, labels
 
-    i, j = np.unravel_index(scores.argmin(), scores.shape)
-    best_params = dict(C = Cs[i], gamma=gammas[j])
-    print 'best params:', best_params
-    print 'best error: %.2f %%' % (scores.min()*100)
-    return best_params
+    def get_dataset(self):
+        if self.usecloud:
+            return cloud.result(self.preprocess_job)
+        else:
+            return self._samples, self._labels
+
+    def run_jobs(self, f, jobs):
+        if self.usecloud:
+            jids = cloud.map(f, jobs, _env=self.cloud_env, _profile=True, _depends_on=self.preprocess_job)
+            ires = cloud.iresult(jids)
+        else:
+            pool = ThreadPool(processes=cv2.getNumberOfCPUs())
+            ires = pool.imap_unordered(f, jobs)
+        return ires
+            
+    def adjust_SVM(self):
+        Cs = np.logspace(0, 5, 10, base=2)
+        gammas = np.logspace(-7, -2, 10, base=2)
+        scores = np.zeros((len(Cs), len(gammas)))
+        scores[:] = np.nan
+
+        print 'adjusting SVM (may take a long time) ...'
+        def f(job):
+            i, j = job
+            samples, labels = self.get_dataset()
+            params = dict(C = Cs[i], gamma=gammas[j])
+            score = cross_validate(SVM, params, samples, labels)
+            return i, j, score
+        
+        ires = self.run_jobs(f, np.ndindex(*scores.shape))
+        for count, (i, j, score) in enumerate(ires):
+            scores[i, j] = score
+            print '%d / %d (best error: %.2f %%, last: %.2f %%)' % (count+1, scores.size, np.nanmin(scores)*100, score*100)
+        print scores
+
+        i, j = np.unravel_index(scores.argmin(), scores.shape)
+        best_params = dict(C = Cs[i], gamma=gammas[j])
+        print 'best params:', best_params
+        print 'best error: %.2f %%' % (scores.min()*100)
+        return best_params
+
+    def adjust_KNearest(self):
+        print 'adjusting KNearest ...'
+        def f(k):
+            samples, labels = self.get_dataset()
+            err = cross_validate(KNearest, dict(k=k), samples, labels)
+            return k, err
+        best_err, best_k = np.inf, -1
+        for k, err in self.run_jobs(f, xrange(1, 9)):
+            if err < best_err:
+                best_err, best_k = err, k
+            print 'k = %d, error: %.2f %%' % (k, err*100)
+        best_params = dict(k=best_k)
+        print 'best params:', best_params, 'err: %.2f' % (best_err*100)
+        return best_params
+
 
 if __name__ == '__main__':
     import getopt
     import sys
     
     print __doc__
+
 
     args, _ = getopt.getopt(sys.argv[1:], '', ['model=', 'cloud', 'env='])
     args = dict(args)
@@ -121,16 +151,10 @@ if __name__ == '__main__':
         print 'unknown model "%s"' % args['--model']
         sys.exit(1)
 
-    digits, labels = load_digits('digits.png')
-    shuffle = np.random.permutation(len(digits))
-    digits, labels = digits[shuffle], labels[shuffle]
-    digits2 = map(deskew, digits)
-    samples = np.float32(digits2).reshape(-1, SZ*SZ) / 255.0
-    
     t = clock()
+    app = App(usecloud='--cloud' in args, cloud_env = args['--env'])
     if args['--model'] == 'knearest':
-        adjust_KNearest(samples, labels)
+        app.adjust_KNearest()
     else:
-        adjust_SVM(samples, labels, usecloud='--cloud' in args, cloud_env = args['--env'])
+        app.adjust_SVM()
     print 'work time: %f s' % (clock() - t)
-        

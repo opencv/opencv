@@ -1128,6 +1128,8 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 {
     Mat points = _points.getMat(), F = _Fmat.getMat();
     int npoints = points.checkVector(2);
+    if( npoints < 0 )
+        npoints = points.checkVector(3);
     CV_Assert( npoints >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
     
     _lines.create(npoints, 1, CV_32FC3, -1, true);

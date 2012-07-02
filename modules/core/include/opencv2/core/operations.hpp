@@ -2642,14 +2642,35 @@ template<typename _Tp> inline Ptr<_Tp>::operator const _Tp*() const { return obj
 
 template<typename _Tp> inline bool Ptr<_Tp>::empty() const { return obj == 0; }
 
+template<typename _Tp> template<typename _Tp2> Ptr<_Tp>::Ptr(const Ptr<_Tp2>& p)
+    : obj(0), refcount(0)
+{
+    if (p.empty())
+        return;
+    
+    _Tp* p_casted = dynamic_cast<_Tp*>(p.obj);
+    if (!p_casted)
+        return;
+
+    obj = p_casted;
+    refcount = p.refcount;
+    addref();
+}
+
 template<typename _Tp> template<typename _Tp2> inline Ptr<_Tp2> Ptr<_Tp>::ptr()
 {
     Ptr<_Tp2> p;
     if( !obj )
         return p;
+
+    _Tp2* obj_casted = dynamic_cast<_Tp2*>(obj);
+    if (!obj_casted)
+        return p;
+
     if( refcount )
         CV_XADD(refcount, 1);
-    p.obj = dynamic_cast<_Tp2*>(obj);
+
+    p.obj = obj_casted;
     p.refcount = refcount;
     return p;
 }
@@ -2659,9 +2680,15 @@ template<typename _Tp> template<typename _Tp2> inline const Ptr<_Tp2> Ptr<_Tp>::
     Ptr<_Tp2> p;
     if( !obj )
         return p;
+
+    _Tp2* obj_casted = dynamic_cast<_Tp2*>(obj);
+    if (!obj_casted)
+        return p;
+
     if( refcount )
         CV_XADD(refcount, 1);
-    p.obj = dynamic_cast<_Tp2*>(obj);
+
+    p.obj = obj_casted;
     p.refcount = refcount;
     return p;
 }

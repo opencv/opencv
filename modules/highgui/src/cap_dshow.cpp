@@ -3278,7 +3278,7 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
 
     case CV_CAP_PROP_FPS:
         int fps = cvRound(value);
-        if (fps != VI.getFPS(0))
+        if (fps != VI.getFPS(index))
         {
             VI.stopDevice(index);
             VI.setIdealFramerate(index,fps);

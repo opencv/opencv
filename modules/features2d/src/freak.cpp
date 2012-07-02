@@ -274,14 +274,14 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
     // allocate descriptor memory, estimate orientations, extract descriptors
     if( !extAll ) {
         // extract the best comparisons only
-        descriptors = cv::Mat::zeros(keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
+        descriptors = cv::Mat::zeros((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
 #if CV_SSE2
         __m128i* ptr= (__m128i*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
         // binary: 10000000 => char: 128 or hex: 0x80
-        const __m128i binMask = _mm_set_epi8(0x80, 0x80, 0x80, 0x80,
-                                             0x80, 0x80, 0x80, 0x80,
-                                             0x80, 0x80, 0x80, 0x80,
-                                             0x80, 0x80, 0x80, 0x80);
+        const __m128i binMask = _mm_set_epi8('\x80', '\x80', '\x80', '\x80',
+                                             '\x80', '\x80', '\x80', '\x80',
+                                             '\x80', '\x80', '\x80', '\x80',
+                                             '\x80', '\x80', '\x80', '\x80');
 #else
         std::bitset<FREAK_NB_PAIRS>* ptr = (std::bitset<FREAK_NB_PAIRS>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 #endif
@@ -390,7 +390,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
         }
     }
     else { // extract all possible comparisons for selection
-        descriptors = cv::Mat::zeros(keypoints.size(), 128, CV_8U);
+        descriptors = cv::Mat::zeros((int)keypoints.size(), 128, CV_8U);
         std::bitset<1024>* ptr = (std::bitset<1024>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 
         for( size_t k = keypoints.size(); k--; ) {
@@ -522,16 +522,16 @@ vector<int> FREAK::selectPairs(const std::vector<Mat>& images
     Mat descriptorsFloat = Mat::zeros(descriptors.rows, 903, CV_32F);
 
     std::bitset<1024>* ptr = (std::bitset<1024>*) (descriptors.data+(descriptors.rows-1)*descriptors.step[0]);
-    for( size_t m = descriptors.rows; m--; ) {
-        for( size_t n = 903; n--; ) {
+    for( int m = descriptors.rows; m--; ) {
+        for( int n = 903; n--; ) {
             if( ptr->test(n) == true )
-                descriptorsFloat.at<float>(m,n)=1.0;
+                descriptorsFloat.at<float>(m,n)=1.0f;
         }
         --ptr;
     }
 
     std::vector<PairStat> pairStat;
-    for( size_t n = 903; n--; ) {
+    for( int n = 903; n--; ) {
         // the higher the variance, the better --> mean = 0.5
         PairStat tmp = { fabs( mean(descriptorsFloat.col(n))[0]-0.5 ) ,n};
         pairStat.push_back(tmp);

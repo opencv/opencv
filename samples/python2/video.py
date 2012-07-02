@@ -1,3 +1,32 @@
+'''
+Video capture sample.
+
+Sample shows how VideoCapture class can be used to acquire video
+frames from a camera of a movie file. Also the sample provides 
+an example of procedural video generation by an object, mimicking 
+the VideoCapture interface (see Chess class). 
+
+'create_capture' is a convinience function for capture creation, 
+falling back to procedural video in case of error.
+
+Usage:
+    video.py [--shotdir <shot path>] [source0] [source1] ...'
+
+    sourceN is an
+     - integer number for camera capture
+     - name of video file
+     - synth:<params> for procedural video
+
+Synth examples:
+    synth:bg=../cpp/lena.jpg:noise=0.1
+    synth:class=chess:bg=../cpp/lena.jpg:noise=0.1:size=640x480
+
+Keys:
+    ESC    - exit
+    SPACE  - save current frame to <shot path> directory
+
+'''
+
 import numpy as np
 import cv2
 from time import clock
@@ -100,8 +129,7 @@ presets = dict(
 
 
 def create_capture(source = 0, fallback = presets['chess']):
-    '''
-      source: <int> or '<int>|<filename>|synth [:<param_name>=<value> [:...]]'
+    '''source: <int> or '<int>|<filename>|synth [:<param_name>=<value> [:...]]'
     '''
     source = str(source).strip()
     chunks = source.split(':')
@@ -136,17 +164,13 @@ if __name__ == '__main__':
     import sys
     import getopt
 
-    print 'USAGE: video.py [--shotdir <dir>] [source0] [source1] ...'
-    print "source: '<int>' or '<filename>' or 'synth:<params>'"
-    print
+    print __doc__
 
     args, sources = getopt.getopt(sys.argv[1:], '', 'shotdir=')
     args = dict(args)
     shotdir = args.get('--shotdir', '.')
     if len(sources) == 0:
         sources = [ 0 ]
-
-    print 'Press SPACE to save current frame'
 
     caps = map(create_capture, sources)
     shot_idx = 0

@@ -917,6 +917,25 @@ bool CV_OperationsTest::operations1()
             if (!v10dzero[ii] == 0.0)
                 throw test_excep();
         }
+        
+        Mat A(1, 32, CV_32F), B;
+        for( int i = 0; i < A.cols; i++ )
+            A.at<float>(i) = (float)(i <= 12 ? i : 24 - i);
+        transpose(A, B);
+        
+        int minidx[2] = {0, 0}, maxidx[2] = {0, 0};
+        double minval = 0, maxval = 0;
+        minMaxIdx(A, &minval, &maxval, minidx, maxidx);
+        
+        if( !(minidx[0] == 0 && minidx[1] == 31 && maxidx[0] == 0 && maxidx[1] == 12 &&
+                  minval == -7 && maxval == 12))
+            throw test_excep();
+        
+        minMaxIdx(B, &minval, &maxval, minidx, maxidx);
+        
+        if( !(minidx[0] == 31 && minidx[1] == 0 && maxidx[0] == 12 && maxidx[1] == 0 &&
+              minval == -7 && maxval == 12))
+            throw test_excep();
     }
     catch(const test_excep&)
     {
@@ -946,13 +965,13 @@ bool CV_OperationsTest::TestSVD()
         Mat Q(3,3,CV_32FC1);
         Mat U,Vt,R,T,W;
         
-        Dp.at<float>(0,0)=0.86483884; Dp.at<float>(0,1)= -0.3077251; Dp.at<float>(0,2)=-0.55711365;
-        Dp.at<float>(1,0)=0.49294353; Dp.at<float>(1,1)=-0.24209651; Dp.at<float>(1,2)=-0.25084701;
-        Dp.at<float>(2,0)=0;          Dp.at<float>(2,1)=0;           Dp.at<float>(2,2)=0;
+        Dp.at<float>(0,0)=0.86483884f; Dp.at<float>(0,1)= -0.3077251f; Dp.at<float>(0,2)=-0.55711365f;
+        Dp.at<float>(1,0)=0.49294353f; Dp.at<float>(1,1)=-0.24209651f; Dp.at<float>(1,2)=-0.25084701f;
+        Dp.at<float>(2,0)=0;           Dp.at<float>(2,1)=0;            Dp.at<float>(2,2)=0;
         
-        Dc.at<float>(0,0)=0.75632739; Dc.at<float>(0,1)= -0.38859656; Dc.at<float>(0,2)=-0.36773083;
-        Dc.at<float>(1,0)=0.9699229; Dc.at<float>(1,1)=-0.49858192; Dc.at<float>(1,2)=-0.47134098;
-        Dc.at<float>(2,0)=0.10566688; Dc.at<float>(2,1)=-0.060333252; Dc.at<float>(2,2)=-0.045333147;
+        Dc.at<float>(0,0)=0.75632739f; Dc.at<float>(0,1)= -0.38859656f; Dc.at<float>(0,2)=-0.36773083f;
+        Dc.at<float>(1,0)=0.9699229f;  Dc.at<float>(1,1)=-0.49858192f;  Dc.at<float>(1,2)=-0.47134098f;
+        Dc.at<float>(2,0)=0.10566688f; Dc.at<float>(2,1)=-0.060333252f; Dc.at<float>(2,2)=-0.045333147f;
         
         Q=Dp*Dc.t();
         SVD decomp;

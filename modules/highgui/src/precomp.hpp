@@ -172,10 +172,12 @@ CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
 void cvSetModeWindow_W32(const char* name, double prop_value);
 void cvSetModeWindow_GTK(const char* name, double prop_value);
 void cvSetModeWindow_CARBON(const char* name, double prop_value);
+void cvSetModeWindow_COCOA(const char* name, double prop_value);
 
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);
 double cvGetModeWindow_CARBON(const char* name);
+double cvGetModeWindow_COCOA(const char* name);
 
 double cvGetPropWindowAutoSize_W32(const char* name);
 double cvGetPropWindowAutoSize_GTK(const char* name);

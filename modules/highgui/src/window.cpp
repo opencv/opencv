@@ -62,6 +62,8 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_GTK(name,prop_value);
         #elif defined (HAVE_CARBON)
             cvSetModeWindow_CARBON(name,prop_value);
+        #elif defined (HAVE_COCOA)
+            cvSetModeWindow_COCOA(name,prop_value);
         #endif
     break;
 
@@ -99,6 +101,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_GTK(name);
         #elif defined (HAVE_CARBON)
             return cvGetModeWindow_CARBON(name);
+        #elif defined (HAVE_COCOA)
+            return cvGetModeWindow_COCOA(name);
         #else
             return -1;
         #endif
