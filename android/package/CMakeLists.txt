@@ -85,8 +85,8 @@ add_custom_command(
          COMMAND ${ANT_EXECUTABLE} -q -noinput -k release
          COMMAND ${CMAKE_COMMAND} -E touch "${APK_NAME}"
          WORKING_DIRECTORY "${PACKAGE_DIR}"
-         MAIN_DEPENDENCY "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper"
-         DEPENDS "${PACKAGE_DIR}/${ANDROID_MANIFEST_FILE}" "${PACKAGE_DIR}/res/values/strings.xml" "${PACKAGE_DIR}/res/drawable/icon.png" ${camera_wrappers}
+         MAIN_DEPENDENCY "${PACKAGE_DIR}/${ANDROID_MANIFEST_FILE}"
+         DEPENDS "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" "${PACKAGE_DIR}/res/values/strings.xml" "${PACKAGE_DIR}/res/drawable/icon.png" ${camera_wrappers}
        )
 
 add_custom_target(android_package ALL SOURCES "${APK_NAME}" )
