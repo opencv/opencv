@@ -17,6 +17,7 @@ from common import clock, mosaic
 
 SZ = 20 # size of each digit is SZ x SZ
 CLASS_N = 10
+DIGITS_FN = 'digits.png'
 
 def load_digits(fn):
     print 'loading "%s" ...' % fn
@@ -95,7 +96,7 @@ def evaluate_model(model, digits, samples, labels):
 if __name__ == '__main__':
     print __doc__
 
-    digits, labels = load_digits('digits.png')
+    digits, labels = load_digits(DIGITS_FN)
     
     print 'preprocessing...'
     # shuffle digits
