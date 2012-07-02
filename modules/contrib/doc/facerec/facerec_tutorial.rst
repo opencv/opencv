@@ -30,7 +30,7 @@ Face recognition based on the geometric features of a face is probably the most 
 
 The Eigenfaces method described in [TP91]_ took a holistic approach to face recognition: A facial image is a point from a high-dimensional image space and a lower-dimensional representation is found, where classification becomes easy. The lower-dimensional subspace is found with Principal Component Analysis, which identifies the axes with maximum variance. While this kind of transformation is optimal from a reconstruction standpoint, it doesn't take any class labels into account. Imagine a situation where the variance is generated from external sources, let it be light. The axes with maximum variance do not necessarily contain any discriminative information at all, hence a classification becomes impossible. So a class-specific projection with a Linear Discriminant Analysis was applied to face recognition in [BHK97]_. The basic idea is to minimize the variance within a class, while maximizing the variance between the classes at the same time. 
 
-Recently various methods for a local feature extraction emerged. To avoid the high-dimensionality of the input data only local regions of an image are described, the extracted features are (hopefully) more robust against partial occlusion, illumation and small sample size. Algorithms used for a local feature extraction are Gabor Wavelets ([Wiskott97]_), Discrete Cosinus Transform ([Messer06]_) and Local Binary Patterns ([Ahonen04]_). It's still an open research question what's the best way to preserve spatial information when applying a local feature extraction, because spatial information is potentially useful information.
+Recently various methods for a local feature extraction emerged. To avoid the high-dimensionality of the input data only local regions of an image are described, the extracted features are (hopefully) more robust against partial occlusion, illumation and small sample size. Algorithms used for a local feature extraction are Gabor Wavelets ([Wiskott97]_), Discrete Cosinus Transform ([Messer06]_) and Local Binary Patterns ([AHP04]_). It's still an open research question what's the best way to preserve spatial information when applying a local feature extraction, because spatial information is potentially useful information.
 
 Face Database
 ==============
@@ -43,7 +43,7 @@ Let's get some data to experiment with first. I don't want to do a toy example h
 
   Bad news is it's not available for public download anymore, because the original server seems to be down. You can find some sites mirroring it (`like the MIT <http://vismod.media.mit.edu/vismod/classes/mas622-00/datasets/>`_), but I can't make guarantees about the integrity. If you need to crop and align the images yourself, read my notes at `bytefish.de/blog/fisherfaces <http://bytefish.de/blog/fisherfaces>`_.
 	
-* `Extended Yale Facedatabase B <http://vision.ucsd.edu/~leekc/ExtYaleDatabase/ExtYaleB.html>`_ The Extended Yale Facedatabase B contains 2414 images of 38 different people in its cropped version. The focus of this database is set on extracting features that are robust to illumination, the images have almost no variation in emotion/occlusion/... . I personally think, that this dataset is too large for the experiments I perform in this document. You better use the `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_ for intial testing. A first version of the Yale Facedatabase B was used in [Belhumeur97]_ to see how the Eigenfaces and Fisherfaces method perform under heavy illumination changes. [Lee2005]_ used the same setup to take 16128 images of 28 people. The Extended Yale Facedatabase B is the merge of the two databases, which is now known as Extended Yalefacedatabase B.
+* `Extended Yale Facedatabase B <http://vision.ucsd.edu/~leekc/ExtYaleDatabase/ExtYaleB.html>`_ The Extended Yale Facedatabase B contains 2414 images of 38 different people in its cropped version. The focus of this database is set on extracting features that are robust to illumination, the images have almost no variation in emotion/occlusion/... . I personally think, that this dataset is too large for the experiments I perform in this document. You better use the `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_ for intial testing. A first version of the Yale Facedatabase B was used in [BHK97]_ to see how the Eigenfaces and Fisherfaces method perform under heavy illumination changes. [Lee05]_ used the same setup to take 16128 images of 28 people. The Extended Yale Facedatabase B is the merge of the two databases, which is now known as Extended Yalefacedatabase B.
 
 Preparing the data
 -------------------
@@ -122,6 +122,7 @@ Then simply call create_csv.py with the path to the folder, just like this and y
     at/s17/3.pgm;1
     [...]
 
+Please see the :ref:`appendix` for additional informations.
 
 Eigenfaces
 ==========
@@ -206,7 +207,7 @@ I've used the jet colormap, so you can see how the grayscale values are distribu
 .. image:: img/eigenfaces_opencv.png
     :align: center
     
-We've already seen in Equation \ref{eqn:pca_reconstruction}, that we can reconstruct a face from its lower dimensional approximation. So let's see how many Eigenfaces are needed for a good reconstruction. I'll do a subplot with :math:`10,30,\ldots,310` Eigenfaces:
+We've already seen, that we can reconstruct a face from its lower dimensional approximation. So let's see how many Eigenfaces are needed for a good reconstruction. I'll do a subplot with :math:`10,30,\ldots,310` Eigenfaces:
 
 .. code-block:: cpp
 
@@ -293,7 +294,7 @@ Following [BHK97]_, a solution for this optimization problem is given by solving
         S_{W}^{-1} S_{B} v_{i} & = & \lambda_{i} v_{i}
     \end{align*}
 
-There's one problem left to solve: The rank of :math:`S_{W}` is at most :math:`(N-c)`, with :math:`N` samples and :math:`c` classes. In pattern recognition problems the number of samples :math:`N` is almost always samller than the dimension of the input data (the number of pixels), so the scatter matrix :math:`S_{W}` becomes singular (see [Raudys1991]_). In [BHK97]_ this was solved by performing a Principal Component Analysis on the data and projecting the samples into the :math:`(N-c)`-dimensional space. A Linear Discriminant Analysis was then performed on the reduced data, because :math:`S_{W}` isn't singular anymore.
+There's one problem left to solve: The rank of :math:`S_{W}` is at most :math:`(N-c)`, with :math:`N` samples and :math:`c` classes. In pattern recognition problems the number of samples :math:`N` is almost always samller than the dimension of the input data (the number of pixels), so the scatter matrix :math:`S_{W}` becomes singular (see [RJ91]_). In [BHK97]_ this was solved by performing a Principal Component Analysis on the data and projecting the samples into the :math:`(N-c)`-dimensional space. A Linear Discriminant Analysis was then performed on the reduced data, because :math:`S_{W}` isn't singular anymore.
 
 The optimization problem can then be rewritten as:
 
@@ -499,6 +500,8 @@ Literature
 
 .. [KM01] Martinez, A and Kak, A. *PCA versus LDA* IEEE Transactions on Pattern Analysis and Machine Intelligence, Vol. 23, No.2, pp. 228-233, 2001.
 
+.. [Lee05] Lee, K., Ho, J., Kriegman, D. *Acquiring Linear Subspaces for Face Recognition under Variable Lighting.* In: IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI) 27 (2005), Nr. 5
+
 .. [Messer06] Messer, K. et al. *Performance Characterisation of Face Recognition Algorithms and Their Sensitivity to Severe Illumination Changes.* In: In: ICB, 2006, S. 1–11.
 
 .. [RJ91] S. Raudys and  A.K. Jain.  *Small  sample  size  effects in statistical  pattern  recognition: Recommendations for  practitioneers.* - IEEE Transactions on Pattern Analysis and Machine Intelligence 13, 3 (1991), 252-264.
@@ -513,8 +516,95 @@ Literature
 
 .. [Zhao03] Zhao, W., Chellappa, R., Phillips, P., and Rosenfeld, A. Face recognition: A literature survey. ACM Computing Surveys (CSUR) 35, 4 (2003), 399–458.
 
+.. _appendix:
+
 Appendix
 ========
+
+Creating the CSV File
+---------------------
+
+You don't really want to create the CSV file by hand. I have prepared you a little Python script ``create_csv.py`` (you find it at ``/src/create_csv.py`` coming with this tutorial) that automatically creates you a CSV file. If you have your images in hierarchie like this (``/basepath/<subject>/<image.ext>``):
+
+.. code-block:: none
+
+    philipp@mango:~/facerec/data/at$ tree
+    .
+    |-- s1
+    |   |-- 1.pgm
+    |   |-- ...
+    |   |-- 10.pgm
+    |-- s2
+    |   |-- 1.pgm
+    |   |-- ...
+    |   |-- 10.pgm
+    ...
+    |-- s40
+    |   |-- 1.pgm
+    |   |-- ...
+    |   |-- 10.pgm
+    
+    
+Then simply call ``create_csv.py`` with the path to the folder, just like this and you could save the output:
+
+.. code-block:: none
+
+    philipp@mango:~/facerec/data$ python create_csv.py
+    at/s13/2.pgm;0
+    at/s13/7.pgm;0
+    at/s13/6.pgm;0
+    at/s13/9.pgm;0
+    at/s13/5.pgm;0
+    at/s13/3.pgm;0
+    at/s13/4.pgm;0
+    at/s13/10.pgm;0
+    at/s13/8.pgm;0
+    at/s13/1.pgm;0
+    at/s17/2.pgm;1
+    at/s17/7.pgm;1
+    at/s17/6.pgm;1
+    at/s17/9.pgm;1
+    at/s17/5.pgm;1
+    at/s17/3.pgm;1
+    [...]
+
+Here is the script, if you can't find it:
+
+.. literalinclude:: ./src/create_csv.py
+   :language: python
+   :linenos:
+   
+Aligning Face Images
+---------------------
+
+An accurate alignment of your image data is especially important in tasks like emotion detection, were you need as much detail as possible. Believe me... You don't want to do this by hand. So I've prepared you a tiny Python script. The code is really easy to use. To scale, rotate and crop the face image you just need to call *CropFace(image, eye_left, eye_right, offset_pct, dest_sz)*, where:
+
+* *eye_left* is the position of the left eye
+* *eye_right* is the position of the right eye
+* *offset_pct* is the percent of the image you want to keep next to the eyes (horizontal, vertical direction)
+* *dest_sz* is the size of the output image
+
+If you are using the same *offset_pct* and *dest_sz* for your images, they are all aligned at the eyes.
+
+.. literalinclude:: ./src/crop_face.py
+   :language: python
+   :linenos:
+
+Imagine we are given `this photo of Arnold Schwarzenegger <http://en.wikipedia.org/wiki/File:Arnold_Schwarzenegger_edit%28ws%29.jpg>`_, which is under a Public Domain license. The (x,y)-position of the eyes is approximately *(252,364)* for the left and *(420,366)* for the right eye. Now you only need to define the horizontal offset, vertical offset and the size your scaled, rotated & cropped face should have. 
+
+Here are some examples: 
+
++---------------------------------+----------------------------------------------------------------------------+
+| Configuration                   | Cropped, Scaled, Rotated Face                                              |
++=================================+============================================================================+
+| 0.1 (10%), 0.1 (10%), (200,200) | .. image:: ./img/tutorial/gender_classification/arnie_10_10_200_200.jpg    |
++---------------------------------+----------------------------------------------------------------------------+
+| 0.2 (20%), 0.2 (20%), (200,200) | .. image:: ./img/tutorial/gender_classification/arnie_20_20_200_200.jpg    |
++---------------------------------+----------------------------------------------------------------------------+
+| 0.3 (30%), 0.3 (30%), (200,200) | .. image:: ./img/tutorial/gender_classification/arnie_30_30_200_200.jpg    |
++---------------------------------+----------------------------------------------------------------------------+
+| 0.2 (20%), 0.2 (20%), (70,70)   | .. image:: ./img/tutorial/gender_classification/arnie_20_20_70_70.jpg      |
++---------------------------------+----------------------------------------------------------------------------+
 
 CSV for the AT&T Facedatabase
 ------------------------------
@@ -522,3 +612,5 @@ CSV for the AT&T Facedatabase
 .. literalinclude:: etc/at.txt
    :language: none
    :linenos:
+   
+
